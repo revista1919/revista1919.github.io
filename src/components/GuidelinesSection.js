@@ -12,6 +12,7 @@ function GuidelinesSection() {
       React.createElement('li', null, 'Formato: Word (.docx), sin nombre del autor en el documento'),
       React.createElement('li', null, 'Originalidad: El artículo debe ser inédito, no publicado ni enviado a otro medio, y no puede usar IA para redactar'),
       React.createElement('li', null, 'Citación: Exclusivamente estilo Chicago'),
+      React.createElement('li', null, 'Aceptamos artículos en español y en inglés'),
       React.createElement('li', null, 'Elementos permitidos: Gráficas, ecuaciones, imágenes, tablas (fuera del conteo de palabras)')
     )
   );
