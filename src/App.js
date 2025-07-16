@@ -22,15 +22,17 @@ function App() {
     const fetchArticles = async () => {
       try {
         const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p32EM6-0VYy18AdREQwXdpeet1WHTA4H2-W2FX7HKe1HPSyApWadUw9sKHdVYQXL5tP6yDRs/pub?output=csv');
+        if (!response.ok) throw new Error('Network response was not ok');
         const csvText = await response.text();
         const articlesData = parseCSV(csvText);
+        if (articlesData.length === 0) throw new Error('No articles found in CSV');
         setArticles(articlesData);
         setFilteredArticles(articlesData);
-        const uniqueAreas = [...new Set(articlesData.map(article => article['Área temática'] || ''))];
+        const uniqueAreas = [...new Set(articlesData.map(article => article['Área temática'] || ''))].filter(area => area);
         setAreas(uniqueAreas);
         setLoading(false);
       } catch (error) {
-        console.error('Error fetching articles:', error);
+        console.error('Error fetching or parsing articles:', error.message);
         setLoading(false);
       }
     };
@@ -38,7 +40,8 @@ function App() {
   }, []);
 
   const parseCSV = (csv) => {
-    const lines = csv.split('\n');
+    const lines = csv.trim().split('\n').filter(line => line); // Remove empty lines
+    if (lines.length < 2) return []; // Need at least header and one data row
     const headers = lines[0].split(',').map(header => header.trim());
     const result = [];
     for (let i = 1; i < lines.length; i++) {
@@ -46,14 +49,16 @@ function App() {
       if (values.length === headers.length) {
         const article = {};
         headers.forEach((header, index) => {
-          article[header] = values[index];
+          article[header] = values[index] || ''; // Default to empty string if undefined
         });
-        result.push(article);
+        // Ensure required fields exist
+        if (article['Título'] && article['Autor'] && article['Fecha de publicación']) {
+          result.push(article);
+        }
       }
     }
     return result;
   };
-
   const handleSearch = (term, area) => {
     setSearchTerm(term);
     setSelectedArea(area);
