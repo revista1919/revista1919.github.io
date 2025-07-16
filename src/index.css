@@ -12,8 +12,8 @@ html, body, #root {
 
 body {
   font-family: 'Roboto', sans-serif;
-  background-color: #f9fafb;
-  color: #54250aff;
+  background-color: #edf0f3;
+  color: rgb(0, 0, 0);
 }
 
 .container {

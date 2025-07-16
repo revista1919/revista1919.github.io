@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Papa from 'papaparse';
 import Header from './components/Header';
 import SearchAndFilters from './components/SearchAndFilters';
 import ArticleCard from './components/ArticleCard';
@@ -7,7 +8,7 @@ import AdminSection from './components/AdminSection';
 import AboutSection from './components/AboutSection';
 import GuidelinesSection from './components/GuidelinesSection';
 import FAQSection from './components/FAQSection';
-import Footer from './components/Footer'; // ✅ Importación agregada
+import Footer from './components/Footer';
 import './index.css';
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
   const [selectedArea, setSelectedArea] = useState('');
   const [areas, setAreas] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [visibleArticles, setVisibleArticles] = useState(6);
 
   useEffect(() => {
     const fetchArticles = async () => {
@@ -40,44 +42,87 @@ function App() {
   }, []);
 
   const parseCSV = (csv) => {
-    const lines = csv.trim().split('\n').filter(line => line); // Remove empty lines
-    if (lines.length < 2) return []; // Need at least header and one data row
-    const headers = lines[0].split(',').map(header => header.trim());
     const result = [];
-    for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(value => value.trim());
-      if (values.length === headers.length) {
-        const article = {};
-        headers.forEach((header, index) => {
-          article[header] = values[index] || ''; // Default to empty string if undefined
+    Papa.parse(csv, {
+      header: true,
+      skipEmptyLines: true,
+      complete: ({ data }) => {
+        data.forEach(row => {
+          if (row['Título'] && row['Autor'] && row['Fecha de publicación']) {
+            const article = {
+              Título: row['Título'] || '',
+              Autor: row['Autor'] || '',
+              Resumen: row['Resumen'] || '',
+              'Link al PDF': row['Link al PDF'] || '',
+              'Fecha de publicación': row['Fecha de publicación'] || '',
+              'Área temática': row['Área temática'] || '',
+              Area: row['Área temática'] || 'No especificada',
+            };
+            result.push(article);
+          }
         });
-        // Ensure required fields exist
-        if (article['Título'] && article['Autor'] && article['Fecha de publicación']) {
-          result.push(article);
-        }
-      }
-    }
+      },
+      error: (error) => {
+        console.error('Error parsing CSV:', error);
+      },
+    });
     return result;
   };
+
+  const journal = 'Revista Nacional de las Ciencias para Estudiantes';
+  const getAPACitation = (article) => {
+    const date = new Date(article['Fecha de publicación']);
+    return `${article['Autor']}. (${date.getFullYear()}). ${article['Título']}. ${journal}.`;
+  };
+  const getMLACitation = (article) => {
+    const date = new Date(article['Fecha de publicación']);
+    return `${article['Autor']}. "${article['Título']}." ${journal}, ${date.getFullYear()}.`;
+  };
+  const getChicagoCitation = (article) => {
+    const date = new Date(article['Fecha de publicación']);
+    return `${article['Autor']}. "${article['Título']}." ${journal} (${date.getFullYear()}).`;
+  };
+
   const handleSearch = (term, area) => {
     setSearchTerm(term);
     setSelectedArea(area);
-    const filtered = articles.filter(article =>
-      article['Título'].toLowerCase().includes(term.toLowerCase()) &&
-      (area === '' || (article['Área temática'] || '').toLowerCase() === area.toLowerCase())
-    );
+    const lowerTerm = term.toLowerCase();
+    const filtered = articles.filter(article => {
+      const apaCitation = getAPACitation(article);
+      const mlaCitation = getMLACitation(article);
+      const chicagoCitation = getChicagoCitation(article);
+      const matchesSearch =
+        article['Título'].toLowerCase().includes(lowerTerm) ||
+        article['Autor'].toLowerCase().includes(lowerTerm) ||
+        article['Resumen'].toLowerCase().includes(lowerTerm) ||
+        apaCitation.toLowerCase().includes(lowerTerm) ||
+        mlaCitation.toLowerCase().includes(lowerTerm) ||
+        chicagoCitation.toLowerCase().includes(lowerTerm);
+      const matchesArea = area === '' || (article['Área temática'] || '').toLowerCase() === area.toLowerCase();
+      return matchesSearch && matchesArea;
+    });
     setFilteredArticles(filtered);
+    setVisibleArticles(6);
   };
 
   const clearFilters = () => {
     setSearchTerm('');
     setSelectedArea('');
     setFilteredArticles(articles);
+    setVisibleArticles(6);
+  };
+
+  const loadMoreArticles = () => {
+    setVisibleArticles(prev => prev + 6);
+  };
+
+  const showLessArticles = () => {
+    setVisibleArticles(6);
   };
 
   return React.createElement(
     'div',
-    { className: 'container' },
+    { className: 'container relative' },
     React.createElement(Header, null),
     React.createElement(SearchAndFilters, {
       searchTerm,
@@ -93,16 +138,38 @@ function App() {
       { className: 'articles grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6' },
       loading
         ? React.createElement('p', { className: 'text-center' }, 'Cargando...')
-        : filteredArticles.map(article =>
+        : filteredArticles.slice(0, visibleArticles).map(article =>
             React.createElement(ArticleCard, { key: article['Título'], article })
           )
     ),
+    !loading && filteredArticles.length > visibleArticles &&
+      React.createElement(
+        'div',
+        { className: 'text-center mt-6' },
+        React.createElement(
+          'button',
+          {
+            className: 'bg-brown-800 text-cream-100 px-4 py-2 rounded hover:bg-brown-700',
+            onClick: loadMoreArticles,
+          },
+          'Cargar más'
+        )
+      ),
+    !loading && visibleArticles > 6 &&
+      React.createElement(
+        'button',
+        {
+          className: 'fixed bottom-4 right-4 bg-brown-800 text-cream-100 px-4 py-2 rounded hover:bg-brown-700 z-10',
+          onClick: showLessArticles,
+        },
+        'Mostrar menos'
+      ),
     React.createElement(SubmitSection, null),
     React.createElement(AdminSection, null),
     React.createElement(AboutSection, null),
     React.createElement(GuidelinesSection, null),
     React.createElement(FAQSection, null),
-    React.createElement(Footer, null) // ✅ Ahora sí se renderiza sin romper nada
+    React.createElement(Footer, null)
   );
 }
 
