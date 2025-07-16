@@ -1,7 +1,6 @@
 const path = require('path');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
-const HtmlWebpackPlugin = require('html-webpack-plugin');
-const CopyWebpackPlugin = require('copy-webpack-plugin'); // Opcional para assets estáticos
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
@@ -64,20 +63,14 @@ module.exports = (env, argv) => {
     },
     plugins: [
       new CleanWebpackPlugin(),
-      new HtmlWebpackPlugin({
-        template: './public/index.html',
-        inject: 'body',
-        minify: isProduction ? {
-          removeComments: true,
-          collapseWhitespace: true,
-        } : false,
-      }),
-      
       new CopyWebpackPlugin({
-      patterns: [
-      { from: 'public/logo.png', to: 'assets/logo.png' },
-      ],
-       }),
+        patterns: [
+          {
+            from: path.resolve(__dirname, 'public'),
+            to: path.resolve(__dirname, 'dist'),
+          },
+        ],
+      }),
     ],
     devtool: isProduction ? 'source-map' : 'eval-source-map',
     resolve: {
