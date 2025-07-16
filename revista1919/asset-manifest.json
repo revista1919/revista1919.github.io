@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/revista1919/static/css/main.f6f4cbcb.css",
+    "main.js": "/revista1919/static/js/main.785f3aa9.js",
+    "index.html": "/revista1919/index.html",
+    "main.f6f4cbcb.css.map": "/revista1919/static/css/main.f6f4cbcb.css.map",
+    "main.785f3aa9.js.map": "/revista1919/static/js/main.785f3aa9.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.f6f4cbcb.css",
+    "static/js/main.785f3aa9.js"
+  ]
+}
