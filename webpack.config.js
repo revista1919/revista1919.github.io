@@ -5,8 +5,7 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
-  // Configurar publicPath para GitHub Pages en producción
-  const publicPath = isProduction ? '/Revista1919/' : '/';
+  const publicPath = isProduction ? '/revista1919/' : '/';
 
   return {
     entry: './src/index.js',
@@ -66,7 +65,7 @@ module.exports = (env, argv) => {
           test: /\.(png|jpg|jpeg|gif|svg|ico)$/,
           type: 'asset/resource',
           generator: {
-            filename: 'assets/[name][ext]', // Copiar imágenes a assets/
+            filename: 'assets/[name][ext]',
           },
         },
       ],
@@ -83,7 +82,8 @@ module.exports = (env, argv) => {
       }),
       new CopyWebpackPlugin({
         patterns: [
-          { from: 'public', to: '.', filter: (resourcePath) => !resourcePath.endsWith('index.html') }, // Copiar todo excepto index.html
+          { from: 'public', to: '.', filter: (resourcePath) => !resourcePath.endsWith('index.html') },
+          { from: path.resolve(__dirname, '.nojekyll'), to: '.nojekyll' }, // Añadir .nojekyll
         ],
       }),
     ],
