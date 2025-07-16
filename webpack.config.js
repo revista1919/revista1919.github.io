@@ -1,11 +1,10 @@
 const path = require('path');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const CopyWebpackPlugin = require('copy-webpack-plugin');
+const CopyWebpackPlugin = require('copy-webpack-plugin'); // Opcional para assets estáticos
 
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
-  const publicPath = isProduction ? '/revista1919/' : '/';
 
   return {
     entry: './src/index.js',
@@ -13,7 +12,7 @@ module.exports = (env, argv) => {
       path: path.resolve(__dirname, 'dist'),
       filename: isProduction ? '[name].[contenthash].js' : 'bundle.js',
       clean: true,
-      publicPath: publicPath,
+      publicPath: '/',
     },
     mode: isProduction ? 'production' : 'development',
     devServer: {
@@ -61,13 +60,6 @@ module.exports = (env, argv) => {
             },
           ],
         },
-        {
-          test: /\.(png|jpg|jpeg|gif|svg|ico)$/,
-          type: 'asset/resource',
-          generator: {
-            filename: 'assets/[name][ext]',
-          },
-        },
       ],
     },
     plugins: [
@@ -80,12 +72,12 @@ module.exports = (env, argv) => {
           collapseWhitespace: true,
         } : false,
       }),
+      
       new CopyWebpackPlugin({
-        patterns: [
-          { from: 'public', to: '.', filter: (resourcePath) => !resourcePath.endsWith('index.html') },
-          { from: path.resolve(__dirname, '.nojekyll'), to: '.nojekyll' }, // Añadir .nojekyll
-        ],
-      }),
+      patterns: [
+      { from: 'public/logo.png', to: 'assets/logo.png' },
+      ],
+       }),
     ],
     devtool: isProduction ? 'source-map' : 'eval-source-map',
     resolve: {
