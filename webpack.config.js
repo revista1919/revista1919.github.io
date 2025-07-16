@@ -1,9 +1,12 @@
 const path = require('path');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
+  // Configurar publicPath para GitHub Pages en producción
+  const publicPath = isProduction ? '/Revista1919/' : '/';
 
   return {
     entry: './src/index.js',
@@ -11,7 +14,7 @@ module.exports = (env, argv) => {
       path: path.resolve(__dirname, 'dist'),
       filename: isProduction ? '[name].[contenthash].js' : 'bundle.js',
       clean: true,
-      publicPath: '/',
+      publicPath: publicPath,
     },
     mode: isProduction ? 'production' : 'development',
     devServer: {
@@ -59,16 +62,28 @@ module.exports = (env, argv) => {
             },
           ],
         },
+        {
+          test: /\.(png|jpg|jpeg|gif|svg|ico)$/,
+          type: 'asset/resource',
+          generator: {
+            filename: 'assets/[name][ext]', // Copiar imágenes a assets/
+          },
+        },
       ],
     },
     plugins: [
       new CleanWebpackPlugin(),
+      new HtmlWebpackPlugin({
+        template: './public/index.html',
+        inject: 'body',
+        minify: isProduction ? {
+          removeComments: true,
+          collapseWhitespace: true,
+        } : false,
+      }),
       new CopyWebpackPlugin({
         patterns: [
-          {
-            from: path.resolve(__dirname, 'public'),
-            to: path.resolve(__dirname, 'dist'),
-          },
+          { from: 'public', to: '.', filter: (resourcePath) => !resourcePath.endsWith('index.html') }, // Copiar todo excepto index.html
         ],
       }),
     ],
