@@ -12,7 +12,7 @@ module.exports = (env, argv) => {
       path: path.resolve(__dirname, 'dist'),
       filename: isProduction ? '[name].[contenthash].js' : 'bundle.js',
       clean: true,
-      publicPath: '/',
+      publicPath: isProduction ? '/revista1919/' : '/', // 👈 CAMBIO AQUÍ
     },
     mode: isProduction ? 'production' : 'development',
     devServer: {
@@ -72,12 +72,11 @@ module.exports = (env, argv) => {
           collapseWhitespace: true,
         } : false,
       }),
-      
       new CopyWebpackPlugin({
-      patterns: [
-      { from: 'public/logo.png', to: 'assets/logo.png' },
-      ],
-       }),
+        patterns: [
+          { from: 'public/logo.png', to: 'assets/logo.png' },
+        ],
+      }),
     ],
     devtool: isProduction ? 'source-map' : 'eval-source-map',
     resolve: {
