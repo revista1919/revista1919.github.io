@@ -1,11 +1,12 @@
 import React from 'react';
+import logo from '../../public/logo.png'; // Ruta corregida
 
 function Header() {
   return React.createElement(
     'header',
     {
-      className: 'text-white p-4 mb-6 relative', // Añadir relative para posicionamiento absoluto
-      style: { backgroundColor: '#52262dff' } // café oscuro con toque morado
+      className: 'text-white p-4 mb-6 relative',
+      style: { backgroundColor: '#52262dff' },
     },
     React.createElement(
       'div',
@@ -13,8 +14,7 @@ function Header() {
       React.createElement(
         'div',
         { className: 'flex items-center' },
-        // ✅ Ruta corregida: era '/logo.png', ahora es 'assets/logo.png'
-        React.createElement('img', { src: 'assets/logo.png', alt: 'Revista Logo', className: 'h-40 mr-5' }),
+        React.createElement('img', { src: logo, alt: 'Revista Logo', className: 'h-40 mr-5' }),
         React.createElement('h1', { className: 'text-4xl font-semibold italic font-serif' }, 'Revista Nacional de las Ciencias para Estudiantes')
       ),
       React.createElement(

@@ -1,7 +1,6 @@
 const path = require('path');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const CopyWebpackPlugin = require('copy-webpack-plugin'); // Opcional para assets estáticos
 
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
@@ -12,12 +11,13 @@ module.exports = (env, argv) => {
       path: path.resolve(__dirname, 'dist'),
       filename: isProduction ? '[name].[contenthash].js' : 'bundle.js',
       clean: true,
-      publicPath: isProduction ? '/revista1919/' : '/', // 👈 CAMBIO AQUÍ
+      publicPath: '/', // Simplificado para ambos entornos
     },
     mode: isProduction ? 'production' : 'development',
     devServer: {
       static: {
         directory: path.join(__dirname, 'public'),
+        publicPath: '/',
       },
       compress: true,
       port: process.env.PORT || 3000,
@@ -60,6 +60,13 @@ module.exports = (env, argv) => {
             },
           ],
         },
+        {
+          test: /\.(png|jpe?g|gif|svg)$/i,
+          type: 'asset/resource',
+          generator: {
+            filename: 'assets/[name][ext]',
+          },
+        },
       ],
     },
     plugins: [
@@ -71,11 +78,6 @@ module.exports = (env, argv) => {
           removeComments: true,
           collapseWhitespace: true,
         } : false,
-      }),
-      new CopyWebpackPlugin({
-        patterns: [
-          { from: 'public/logo.png', to: 'assets/logo.png' },
-        ],
       }),
     ],
     devtool: isProduction ? 'source-map' : 'eval-source-map',
