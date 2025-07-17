@@ -13,7 +13,8 @@ function Header() {
       React.createElement(
         'div',
         { className: 'flex items-center' },
-        React.createElement('img', { src: '/logo.png', alt: 'Revista Logo', className: 'h-40 mr-5' }),
+        // ✅ Ruta corregida: era '/logo.png', ahora es 'assets/logo.png'
+        React.createElement('img', { src: 'assets/logo.png', alt: 'Revista Logo', className: 'h-40 mr-5' }),
         React.createElement('h1', { className: 'text-4xl font-semibold italic font-serif' }, 'Revista Nacional de las Ciencias para Estudiantes')
       ),
       React.createElement(
