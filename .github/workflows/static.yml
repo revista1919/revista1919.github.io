@@ -1,65 +1,59 @@
-# Workflow for deploying a React app to GitHub Pages
-name: Deploy React App to GitHub Pages
+name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: ["main"]
-  workflow_dispatch:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
+# Permisos necesarios para escribir en la rama gh-pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
-
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
+      # 1. Clona el repositorio
+      - name: Checkout code
         uses: actions/checkout@v4
 
+      # 2. Configura Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
-      - name: Install Dependencies
-        run: npm ci
+      # 3. Instala dependencias con caché
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
-      - name: Build React App
+      - name: Install dependencies
+        run: npm install
+
+      # 4. Construye el proyecto React
+      - name: Build project
         run: npm run build
-        env:
-          PUBLIC_URL: https://revista1919.github.io/
 
-      - name: Add .nojekyll
-        run: touch build/.nojekyll
-
-      - name: Copy index.html to 404.html
-        run: cp build/index.html build/404.html
-
-      - name: List Build Files
-        run: ls -la build
-
-      - name: Verify index.html Exists
-        run: |
-          test -f build/index.html || { echo "Error: index.html not found in build folder"; exit 1; }
-
+      # 5. Configura GitHub Pages
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload Artifact
+      # 6. Sube la carpeta dist como artefacto
+      - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'build'
+          path: ./dist
 
+      # 7. Despliega a GitHub Pages
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
