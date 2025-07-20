@@ -3,6 +3,7 @@ import Papa from 'papaparse';
 import Header from './components/Header';
 import SearchAndFilters from './components/SearchAndFilters';
 import ArticleCard from './components/ArticleCard';
+import Tabs from './components/Tabs';
 import SubmitSection from './components/SubmitSection';
 import AdminSection from './components/AdminSection';
 import AboutSection from './components/AboutSection';
@@ -120,55 +121,68 @@ function App() {
     setVisibleArticles(6);
   };
 
+  // Definir las secciones para las pestañas
+  const sections = [
+    {
+      name: 'articles',
+      label: 'Artículos',
+      component: React.createElement(
+        'div',
+        null,
+        React.createElement(SearchAndFilters, {
+          searchTerm,
+          setSearchTerm,
+          selectedArea,
+          setSelectedArea,
+          areas,
+          onSearch: handleSearch,
+          clearFilters,
+        }),
+        React.createElement(
+          'div',
+          { className: 'articles grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6' },
+          loading
+            ? React.createElement('p', { className: 'text-center' }, 'Cargando...')
+            : filteredArticles.slice(0, visibleArticles).map(article =>
+                React.createElement(ArticleCard, { key: article['Título'], article })
+              )
+        ),
+        !loading && filteredArticles.length > visibleArticles &&
+          React.createElement(
+            'div',
+            { className: 'text-center mt-6' },
+            React.createElement(
+              'button',
+              {
+                className: 'bg-brown-800 text-cream-100 px-4 py-2 rounded hover:bg-brown-700',
+                onClick: loadMoreArticles,
+              },
+              'Cargar más'
+            )
+          ),
+        !loading && visibleArticles > 6 &&
+          React.createElement(
+            'button',
+            {
+              className: 'fixed bottom-4 right-4 bg-brown-800 text-cream-100 px-4 py-2 rounded hover:bg-brown-700 z-10',
+              onClick: showLessArticles,
+            },
+            'Mostrar menos'
+          )
+      ),
+    },
+    { name: 'submit', label: 'Enviar Artículo', component: React.createElement(SubmitSection, null) },
+    { name: 'admin', label: 'Administración', component: React.createElement(AdminSection, null) },
+    { name: 'about', label: 'Acerca de', component: React.createElement(AboutSection, null) },
+    { name: 'guidelines', label: 'Guías', component: React.createElement(GuidelinesSection, null) },
+    { name: 'faq', label: 'Preguntas Frecuentes', component: React.createElement(FAQSection, null) },
+  ];
+
   return React.createElement(
     'div',
     { className: 'container relative' },
     React.createElement(Header, null),
-    React.createElement(SearchAndFilters, {
-      searchTerm,
-      setSearchTerm,
-      selectedArea,
-      setSelectedArea,
-      areas,
-      onSearch: handleSearch,
-      clearFilters,
-    }),
-    React.createElement(
-      'div',
-      { className: 'articles grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6' },
-      loading
-        ? React.createElement('p', { className: 'text-center' }, 'Cargando...')
-        : filteredArticles.slice(0, visibleArticles).map(article =>
-            React.createElement(ArticleCard, { key: article['Título'], article })
-          )
-    ),
-    !loading && filteredArticles.length > visibleArticles &&
-      React.createElement(
-        'div',
-        { className: 'text-center mt-6' },
-        React.createElement(
-          'button',
-          {
-            className: 'bg-brown-800 text-cream-100 px-4 py-2 rounded hover:bg-brown-700',
-            onClick: loadMoreArticles,
-          },
-          'Cargar más'
-        )
-      ),
-    !loading && visibleArticles > 6 &&
-      React.createElement(
-        'button',
-        {
-          className: 'fixed bottom-4 right-4 bg-brown-800 text-cream-100 px-4 py-2 rounded hover:bg-brown-700 z-10',
-          onClick: showLessArticles,
-        },
-        'Mostrar menos'
-      ),
-    React.createElement(SubmitSection, null),
-    React.createElement(AdminSection, null),
-    React.createElement(AboutSection, null),
-    React.createElement(GuidelinesSection, null),
-    React.createElement(FAQSection, null),
+    React.createElement(Tabs, { sections }),
     React.createElement(Footer, null)
   );
 }
