@@ -1,6 +1,7 @@
 const path = require('path');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
@@ -11,7 +12,7 @@ module.exports = (env, argv) => {
       path: path.resolve(__dirname, 'dist'),
       filename: isProduction ? '[name].[contenthash].js' : 'bundle.js',
       clean: true,
-      publicPath: '/', // Simplificado para ambos entornos
+      publicPath: isProduction ? '/revista1919/' : '/', // Ajustado para GitHub Pages
     },
     mode: isProduction ? 'production' : 'development',
     devServer: {
@@ -78,6 +79,11 @@ module.exports = (env, argv) => {
           removeComments: true,
           collapseWhitespace: true,
         } : false,
+      }),
+      new CopyWebpackPlugin({
+        patterns: [
+          { from: 'public/logo.png', to: 'logo.png' }, // Copia logo.png a la raíz de dist
+        ],
       }),
     ],
     devtool: isProduction ? 'source-map' : 'eval-source-map',
