@@ -140,9 +140,9 @@ function App() {
         }),
         React.createElement(
           'div',
-          { className: 'articles grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6' },
+          { className: 'articles grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 mt-4 sm:mt-6' },
           loading
-            ? React.createElement('p', { className: 'text-center' }, 'Cargando...')
+            ? React.createElement('p', { className: 'text-center text-sm sm:text-base' }, 'Cargando...')
             : filteredArticles.slice(0, visibleArticles).map(article =>
                 React.createElement(ArticleCard, { key: article['Título'], article })
               )
@@ -150,11 +150,11 @@ function App() {
         !loading && filteredArticles.length > visibleArticles &&
           React.createElement(
             'div',
-            { className: 'text-center mt-6' },
+            { className: 'text-center mt-4 sm:mt-6' },
             React.createElement(
               'button',
               {
-                className: 'bg-brown-800 text-cream-100 px-4 py-2 rounded hover:bg-brown-700',
+                className: 'bg-blue-500 text-white px-3 sm:px-4 py-2 sm:py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base',
                 onClick: loadMoreArticles,
               },
               'Cargar más'
@@ -164,7 +164,7 @@ function App() {
           React.createElement(
             'button',
             {
-              className: 'fixed bottom-4 right-4 bg-brown-800 text-cream-100 px-4 py-2 rounded hover:bg-brown-700 z-10',
+              className: 'fixed bottom-4 right-4 bg-blue-500 text-white px-3 sm:px-4 py-2 sm:py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 z-10 text-sm sm:text-base',
               onClick: showLessArticles,
             },
             'Mostrar menos'
