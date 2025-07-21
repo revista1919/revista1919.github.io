@@ -9,6 +9,7 @@ import AdminSection from './components/AdminSection';
 import AboutSection from './components/AboutSection';
 import GuidelinesSection from './components/GuidelinesSection';
 import FAQSection from './components/FAQSection';
+import TeamSection from './components/TeamSection';
 import Footer from './components/Footer';
 import './index.css';
 
@@ -172,6 +173,7 @@ function App() {
       ),
     },
     { name: 'submit', label: 'Enviar Artículo', component: React.createElement(SubmitSection, null) },
+    { name: 'team', label: 'Nuestro Equipo', component: React.createElement(TeamSection, null) },
     { name: 'admin', label: 'Administración', component: React.createElement(AdminSection, null) },
     { name: 'about', label: 'Acerca de', component: React.createElement(AboutSection, null) },
     { name: 'guidelines', label: 'Guías', component: React.createElement(GuidelinesSection, null) },
