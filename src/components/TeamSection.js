@@ -34,14 +34,23 @@ function TeamSection() {
 
   // Extraer roles únicos
   const roles = useMemo(() => {
-    const uniqueRoles = [...new Set(authorsData.map((data) => data['Rol en la Revista'] || 'No especificado'))];
+    const allRoles = authorsData.flatMap((data) => {
+      const rolesString = data['Rol en la Revista'] || 'No especificado';
+      return rolesString.split(';').map((role) => role.trim()).filter((role) => role);
+    });
+    const uniqueRoles = [...new Set(allRoles)];
     return ['Todos', ...uniqueRoles.sort()];
   }, [authorsData]);
 
   // Filtrar miembros por rol
   const filteredMembers = useMemo(() => {
     if (selectedRole === 'Todos') return authorsData;
-    return authorsData.filter((data) => (data['Rol en la Revista'] || 'No especificado') === selectedRole);
+    return authorsData.filter((data) => {
+      const memberRoles = (data['Rol en la Revista'] || 'No especificado')
+        .split(';')
+        .map((role) => role.trim());
+      return memberRoles.includes(selectedRole);
+    });
   }, [authorsData, selectedRole]);
 
   // Manejar clic en un miembro
@@ -202,7 +211,15 @@ function TeamSection() {
                     'div',
                     null,
                     React.createElement('p', { className: 'font-semibold text-blue-600' }, 'Rol en la Revista:'),
-                    React.createElement('p', { className: 'text-gray-600' }, selectedMember['Rol en la Revista'] || 'No especificado')
+                    React.createElement(
+                      'p',
+                      { className: 'text-gray-600' },
+                      (selectedMember['Rol en la Revista'] || 'No especificado')
+                        .split(';')
+                        .map((role) => role.trim())
+                        .filter((role) => role)
+                        .join(', ') || 'No especificado'
+                    )
                   )
                 )
               )
