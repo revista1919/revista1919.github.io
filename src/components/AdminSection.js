@@ -27,12 +27,12 @@ function AdminSection() {
     },
     {
       name: 'Editor en Jefe',
-      description: 'Supervisa todos los contenidos, decide qué se publica y coordina al equipo editorial. Garantiza la calidad de los artículos.',
+      description: 'Supervisa todos los contenidos y coordina al equipo editorial. Garantiza la calidad de los artículos.',
       isPostulable: true,
     },
     {
       name: 'Editor de Sección',
-      description: 'Revisa y edita textos de una sección específica (por ejemplo, Opinión, Cultura, Actualidad).',
+      description: 'Revisa y edita textos de una sección específica (por ejemplo, Opinión, Cultura, Actualidad). Vota por publicar o no un trabajo',
       isPostulable: true,
     },
     {
@@ -43,7 +43,7 @@ function AdminSection() {
     {
       name: 'Responsable de Desarrollo Web',
       description: 'Administra el sitio web, corrige errores técnicos y implementa mejoras de diseño y funcionalidad.',
-      isPostulable: true,
+      isPostulable: false,
     },
     {
       name: 'Encargado de Soporte Técnico',
@@ -53,7 +53,7 @@ function AdminSection() {
     {
       name: 'Encargado/a de Redes Sociales',
       description: 'Gestiona las redes sociales (Instagram, X, TikTok, etc.), publica contenido y promueve la revista.',
-      isPostulable: true,
+      isPostulable: false,
     },
     {
       name: 'Diseñador/a Gráfico/a',
@@ -82,12 +82,12 @@ function AdminSection() {
     },
     {
       name: 'Asesor/a Legal/Editorial',
-      description: 'Revisa términos legales, normas editoriales y derechos de autor para la revista.',
+      description: 'Revisa términos legales, normas editoriales y derechos de autor para la revista (NO NECESARIO POR EL MOMENTO).',
       isPostulable: true,
     },
     {
       name: 'Responsable de Finanzas / Transparencia',
-      description: 'Gestiona donaciones o presupuestos, asegurando transparencia en las finanzas.',
+      description: 'Gestiona donaciones o presupuestos, asegurando transparencia en las finanzas (NO NECESARIO POR EL MOMENTO).',
       isPostulable: true,
     },
   ];
