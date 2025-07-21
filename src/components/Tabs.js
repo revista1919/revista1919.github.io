@@ -1,8 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 
-function Tabs({ sections }) {
-  const [activeTab, setActiveTab] = useState(sections[0]?.name || 'articles');
-
+function Tabs({ sections, activeTab, setActiveTab }) {
   return React.createElement(
     'div',
     null,

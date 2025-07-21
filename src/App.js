@@ -21,6 +21,7 @@ function App() {
   const [areas, setAreas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [visibleArticles, setVisibleArticles] = useState(6);
+  const [activeTab, setActiveTab] = useState('articles');
 
   useEffect(() => {
     const fetchArticles = async () => {
@@ -122,7 +123,6 @@ function App() {
     setVisibleArticles(6);
   };
 
-  // Definir las secciones para las pestañas
   const sections = [
     {
       name: 'articles',
@@ -173,7 +173,7 @@ function App() {
       ),
     },
     { name: 'submit', label: 'Enviar Artículo', component: React.createElement(SubmitSection, null) },
-    { name: 'team', label: 'Nuestro Equipo', component: React.createElement(TeamSection, null) },
+    { name: 'team', label: 'Nuestro Equipo', component: React.createElement(TeamSection, { setActiveTab }) },
     { name: 'admin', label: 'Administración', component: React.createElement(AdminSection, null) },
     { name: 'about', label: 'Acerca de', component: React.createElement(AboutSection, null) },
     { name: 'guidelines', label: 'Guías', component: React.createElement(GuidelinesSection, null) },
@@ -184,7 +184,7 @@ function App() {
     'div',
     { className: 'container relative' },
     React.createElement(Header, null),
-    React.createElement(Tabs, { sections }),
+    React.createElement(Tabs, { sections, activeTab, setActiveTab }),
     React.createElement(Footer, null)
   );
 }
