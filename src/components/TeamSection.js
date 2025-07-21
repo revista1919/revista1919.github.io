@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Papa from 'papaparse';
 
-function TeamSection() {
+function TeamSection({ setActiveTab }) {
   const [authorsData, setAuthorsData] = useState([]);
   const [selectedRole, setSelectedRole] = useState('Todos');
   const [isLoading, setIsLoading] = useState(false);
@@ -153,7 +153,7 @@ function TeamSection() {
           'span',
           {
             className: 'text-blue-600 hover:underline font-semibold cursor-pointer',
-            onClick: () => window.location.href = '#admin',
+            onClick: () => setActiveTab('admin'),
             'aria-label': 'Ir a la pestaña de Administración para postular',
           },
           'Administración'
