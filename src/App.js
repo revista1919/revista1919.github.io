@@ -57,6 +57,7 @@ function App() {
               Autor: row['Autor'] || '',
               Resumen: row['Resumen'] || '',
               'Link al PDF': row['Link al PDF'] || '',
+              'Link al texto': row['Link al texto'] || '',
               'Fecha de publicación': row['Fecha de publicación'] || '',
               'Área temática': row['Área temática'] || '',
               Area: row['Área temática'] || 'No especificada',

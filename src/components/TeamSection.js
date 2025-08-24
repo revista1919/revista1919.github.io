@@ -9,7 +9,8 @@ function TeamSection({ setActiveTab }) {
   const [selectedMember, setSelectedMember] = useState(null);
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
 
-  const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
+  const csvUrl =
+    'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 
   // Cargar datos del CSV
   useEffect(() => {
@@ -20,7 +21,16 @@ function TeamSection({ setActiveTab }) {
       header: true,
       skipEmptyLines: true,
       complete: (result) => {
-        setAuthorsData(result.data || []);
+        // Filtrar aquí: excluir si el único rol es "Autor"
+        const filtered = (result.data || []).filter((data) => {
+          const memberRoles = (data['Rol en la Revista'] || '')
+            .split(';')
+            .map((role) => role.trim())
+            .filter((role) => role);
+          return !(memberRoles.length === 1 && memberRoles[0] === 'Autor');
+        });
+
+        setAuthorsData(filtered);
         setIsLoading(false);
       },
       error: (error) => {
@@ -32,7 +42,7 @@ function TeamSection({ setActiveTab }) {
     });
   }, []);
 
-  // Extraer roles únicos
+  // Extraer roles únicos (sin "Autor" puro)
   const roles = useMemo(() => {
     const allRoles = authorsData.flatMap((data) => {
       const rolesString = data['Rol en la Revista'] || 'No especificado';
@@ -45,6 +55,7 @@ function TeamSection({ setActiveTab }) {
   // Filtrar miembros por rol
   const filteredMembers = useMemo(() => {
     if (selectedRole === 'Todos') return authorsData;
+
     return authorsData.filter((data) => {
       const memberRoles = (data['Rol en la Revista'] || 'No especificado')
         .split(';')
@@ -107,40 +118,40 @@ function TeamSection({ setActiveTab }) {
     isLoading
       ? React.createElement('p', { className: 'text-gray-600 text-sm sm:text-lg text-center' }, 'Cargando...')
       : csvError
-        ? React.createElement('p', { className: 'text-red-600 text-sm sm:text-lg text-center' }, csvError)
-        : filteredMembers.length === 0
-          ? React.createElement(
-              'p',
-              { className: 'text-gray-600 text-sm sm:text-lg text-center' },
-              'No se encontraron miembros para este rol.'
-            )
-          : React.createElement(
+      ? React.createElement('p', { className: 'text-red-600 text-sm sm:text-lg text-center' }, csvError)
+      : filteredMembers.length === 0
+      ? React.createElement(
+          'p',
+          { className: 'text-gray-600 text-sm sm:text-lg text-center' },
+          'No se encontraron miembros para este rol.'
+        )
+      : React.createElement(
+          'div',
+          { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6' },
+          filteredMembers.map((member) =>
+            React.createElement(
               'div',
-              { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6' },
-              filteredMembers.map((member) =>
-                React.createElement(
-                  'div',
-                  {
-                    key: member['Nombre'],
-                    className: 'bg-gray-50 p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow',
-                  },
-                  React.createElement(
-                    'p',
-                    {
-                      className: 'text-base sm:text-lg font-semibold text-blue-600 cursor-pointer hover:underline',
-                      onClick: () => handleMemberClick(member['Nombre']),
-                      'aria-label': `Ver información de ${member['Nombre']}`,
-                    },
-                    member['Nombre']
-                  ),
-                  React.createElement(
-                    'p',
-                    { className: 'text-gray-600 text-sm sm:text-base' },
-                    member['Rol en la Revista'] || 'No especificado'
-                  )
-                )
+              {
+                key: member['Nombre'],
+                className: 'bg-gray-50 p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow',
+              },
+              React.createElement(
+                'p',
+                {
+                  className: 'text-base sm:text-lg font-semibold text-blue-600 cursor-pointer hover:underline',
+                  onClick: () => handleMemberClick(member['Nombre']),
+                  'aria-label': `Ver información de ${member['Nombre']}`,
+                },
+                member['Nombre']
+              ),
+              React.createElement(
+                'p',
+                { className: 'text-gray-600 text-sm sm:text-base' },
+                member['Rol en la Revista'] || 'No especificado'
               )
-            ),
+            )
+          )
+        ),
     // Mensaje de postulación
     React.createElement(
       'div',

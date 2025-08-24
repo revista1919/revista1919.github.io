@@ -173,10 +173,23 @@ function ArticleCard({ article }) {
               href: article['Link al PDF'],
               target: '_blank',
               rel: 'noopener noreferrer',
-              className: 'text-blue-500 hover:underline text-sm sm:text-base',
-              'aria-label': 'Leer PDF del artículo',
+              className: 'text-blue-500 hover:underline text-sm sm:text-base block mb-2',
+              download: true,
+              'aria-label': 'Descargar PDF del artículo',
             },
-            'Leer PDF'
+            'Descargar PDF'
+          ),
+        article['Link al texto'] &&
+          React.createElement(
+            'a',
+            {
+              href: article['Link al texto'],
+              target: '_blank',
+              rel: 'noopener noreferrer',
+              className: 'text-blue-500 hover:underline text-sm sm:text-base block mb-2',
+              'aria-label': 'Leer artículo completo',
+            },
+            'Leer artículo'
           ),
         React.createElement(
           'div',
@@ -188,7 +201,7 @@ function ArticleCard({ article }) {
               onClick: () => setShowCitations(!showCitations),
               'aria-label': showCitations ? 'Ocultar citas' : 'Mostrar citas',
             },
-            showCitations ? 'Ocultar citas' : 'Mostrar citas'
+            showCitations ? 'Ocultar citas' : 'Como citar este artículo'
           ),
           showCitations &&
             React.createElement(
@@ -274,9 +287,22 @@ function ArticleCard({ article }) {
                 target: '_blank',
                 rel: 'noopener noreferrer',
                 className: 'text-blue-500 hover:underline text-sm block mb-3',
-                'aria-label': 'Leer PDF del artículo',
+                download: true,
+                'aria-label': 'Descargar PDF del artículo',
               },
-              'Leer PDF'
+              'Descargar PDF'
+            ),
+          article['Link al texto'] &&
+            React.createElement(
+              'a',
+              {
+                href: article['Link al texto'],
+                target: '_blank',
+                rel: 'noopener noreferrer',
+                className: 'text-blue-500 hover:underline text-sm block mb-3',
+                'aria-label': 'Leer artículo completo',
+              },
+              'Leer artículo'
             ),
           React.createElement(
             'div',
