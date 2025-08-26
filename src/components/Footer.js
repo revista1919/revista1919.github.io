@@ -22,9 +22,17 @@ function Footer() {
         [
           React.createElement('img', {
             key: 'logo',
-            src: '/logoig.png', // ponlo en /public/logoig.png
+            src: '/logoig.png', // archivo en /public/
             alt: 'Instagram',
-            className: 'h-5 w-auto sm:h-6 object-contain'
+            width: 24, // tamaño fijo → evita "saltos"
+            height: 24,
+            className: 'object-contain',
+            onError: (e) => {
+              e.currentTarget.style.display = 'none'; // oculta si falla
+              const fallback = document.createElement('span');
+              fallback.textContent = '📷'; // emoji de cámara como backup
+              e.currentTarget.parentNode.insertBefore(fallback, e.currentTarget);
+            }
           }),
           '@revistanacionalcienciae'
         ]
