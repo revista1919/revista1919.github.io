@@ -8,7 +8,7 @@ function GuidelinesSection() {
     React.createElement(
       'ul',
       { className: 'list-disc pl-4 sm:pl-5 text-sm sm:text-base' },
-      React.createElement('li', { className: 'mb-2 sm:mb-3' }, 'Extensión: 2.000–10.000 palabras (tablas no cuentan como palabras)'),
+      React.createElement('li', { className: 'mb-2 sm:mb-3' }, 'Extensión: 1.000–10.000 palabras (tablas no cuentan como palabras)'),
       React.createElement('li', { className: 'mb-2 sm:mb-3' }, 'Formato: Word (.docx), sin nombre del autor en el documento'),
       React.createElement('li', { className: 'mb-2 sm:mb-3' }, 'Originalidad: El artículo debe ser inédito, no publicado ni enviado a otro medio, y no puede usar IA para redactar'),
       React.createElement('li', { className: 'mb-2 sm:mb-3' }, 'Citación: Exclusivamente estilo Chicago'),
