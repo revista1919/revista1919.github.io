@@ -1,11 +1,17 @@
 import React from 'react';
+import logoIG from '/public/logoig.png'; // webpack se encarga
+import logoYT from '/public/logoyt.png';
 
 function Footer() {
   return (
     <footer className="bg-gray-800 text-white p-3 sm:p-4 mt-4 sm:mt-6 text-center text-xs sm:text-sm">
-      <p>© 2025 Revista Nacional de las Ciencias para Estudiantes. Todos los derechos reservados.</p>
+      <p>
+        © 2025 Revista Nacional de las Ciencias para Estudiantes. Todos los
+        derechos reservados.
+      </p>
 
-      <div className="flex flex-wrap justify-center items-center gap-6 mt-3 sm:mt-4">
+      {/* Contenedor de redes sociales centrado */}
+      <div className="flex justify-center items-center gap-6 mt-2">
         {/* Instagram */}
         <a
           href="https://www.instagram.com/revistanacionalcienciae"
@@ -14,15 +20,18 @@ function Footer() {
           className="flex items-center gap-2 text-blue-400 hover:text-blue-500"
         >
           <img
-            src="/logoig.png"
+            src={logoIG}
             alt="Instagram"
             className="h-5 w-auto sm:h-6 object-contain"
             onError={(e) => {
-              e.target.onerror = null;
-              e.target.replaceWith(document.createTextNode("📷"));
+              e.currentTarget.style.display = 'none';
+              e.currentTarget.insertAdjacentHTML(
+                'afterend',
+                '<span class="text-gray-400">[IG]</span>'
+              );
             }}
           />
-          <span>@revistanacionalcienciae</span>
+          @revistanacionalcienciae
         </a>
 
         {/* YouTube */}
@@ -33,15 +42,18 @@ function Footer() {
           className="flex items-center gap-2 text-red-400 hover:text-red-500"
         >
           <img
-            src="/logoyt.png"
+            src={logoYT}
             alt="YouTube"
             className="h-5 w-auto sm:h-6 object-contain"
             onError={(e) => {
-              e.target.onerror = null;
-              e.target.replaceWith(document.createTextNode("▶️"));
+              e.currentTarget.style.display = 'none';
+              e.currentTarget.insertAdjacentHTML(
+                'afterend',
+                '<span class="text-gray-400">[YT]</span>'
+              );
             }}
           />
-          <span>Revista Nacional de las Ciencias para Estudiantes</span>
+          Revista Nacional de las Ciencias para Estudiantes
         </a>
       </div>
     </footer>
