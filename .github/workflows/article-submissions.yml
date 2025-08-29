@@ -1,0 +1,74 @@
+name: Notificación de nuevos artículos
+
+on:
+  schedule:
+    - cron: "*/5 * * * *" # corre cada 5 minutos (ajústalo luego a 10-30 min)
+  workflow_dispatch:
+
+jobs:
+  check-and-send:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+
+    - name: Descargar CSV de artículos
+      run: curl -s "https://docs.google.com/spreadsheets/d/e/2PACX-1vQJx5loBW2UoEAhkdkkjad7VQxtjBJKtZT8ZIBMd0NGdAZH7Z2hKNczn1OrTHZRrBzI5_mQRHzxYxHS/pub?gid=1161174444&single=true&output=csv" -o sheet.csv
+
+    - name: Comparar con CSV anterior
+      id: diff
+      run: |
+        mkdir -p data
+        if [ -f data/last.csv ]; then
+          diff=$(comm -13 <(sort data/last.csv) <(sort sheet.csv))
+          echo "$diff" > data/diff.txt
+        else
+          cp sheet.csv data/last.csv
+          echo "" > data/diff.txt
+        fi
+        echo "diff<<EOF" >> $GITHUB_OUTPUT
+        cat data/diff.txt >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Formatear HTML con nuevos artículos
+      if: steps.diff.outputs.diff != ''
+      id: format
+      run: |
+        echo "<h2>📰 Nuevos artículos recibidos</h2>" > email.html
+        echo "<p>Se detectaron nuevas postulaciones de artículos. Aquí están los detalles:</p>" >> email.html
+        echo "<hr/>" >> email.html
+
+        while IFS=',' read -r marca nombre correo colegio area abstract wordlink
+        do
+          echo "<div style='margin-bottom:20px; padding:15px; border:1px solid #ccc; border-radius:8px; background:#f9f9f9;'>" >> email.html
+          echo "<b>⏰ Fecha:</b> $marca <br/>" >> email.html
+          echo "<b>👤 Autor:</b> $nombre <br/>" >> email.html
+          echo "<b>📧 Correo:</b> $correo <br/>" >> email.html
+          echo "<b>🏫 Establecimiento:</b> $colegio <br/>" >> email.html
+          echo "<b>📚 Área:</b> $area <br/>" >> email.html
+          echo "<b>📝 Abstract:</b><br/><blockquote style='color:#333; font-style:italic;'>$abstract</blockquote>" >> email.html
+          echo "<b>📎 Documento Word:</b> <a href='$wordlink' target='_blank'>Abrir artículo</a><br/>" >> email.html
+          echo "</div><hr/>" >> email.html
+        done < data/diff.txt
+
+        echo "body<<EOF" >> $GITHUB_OUTPUT
+        cat email.html >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Enviar correo con nuevos artículos
+      if: steps.diff.outputs.diff != ''
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 465
+        username: ${{ secrets.GMAIL_USER }}
+        password: ${{ secrets.GMAIL_PASS }}
+        subject: "📬 Nueva recepción de artículo académico"
+        to: "revistaestudiantespentauc@gmail.com"
+        from: "Revista Nacional - Comité Editorial <${{ secrets.GMAIL_USER }}>"
+        content_type: text/html
+        body: ${{ steps.format.outputs.body }}
+
+    - name: Guardar CSV actual
+      run: cp sheet.csv data/last.csv
