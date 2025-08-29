@@ -10,19 +10,19 @@ function Footer() {
         derechos reservados.
       </p>
 
-      {/* Contenedor de redes sociales centrado y responsivo */}
-      <div className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-6 mt-2">
+      {/* Redes sociales responsivas y simétricas */}
+      <div className="flex flex-col sm:flex-row justify-center items-center gap-6 mt-4">
         {/* Instagram */}
         <a
           href="https://www.instagram.com/revistanacionalcienciae"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-2 text-blue-400 hover:text-blue-500 break-words"
+          className="flex flex-col items-center text-blue-400 hover:text-blue-500 text-center max-w-[200px]"
         >
           <img
             src={logoIG}
             alt="Instagram"
-            className="h-6 w-auto sm:h-6 object-contain"
+            className="h-8 w-8 sm:h-6 sm:w-6 object-contain mb-1"
             onError={(e) => {
               e.currentTarget.style.display = 'none';
               e.currentTarget.insertAdjacentHTML(
@@ -31,7 +31,7 @@ function Footer() {
               );
             }}
           />
-          @revistanacionalcienciae
+          <span>@revistanacionalcienciae</span>
         </a>
 
         {/* YouTube */}
@@ -39,12 +39,12 @@ function Footer() {
           href="https://www.youtube.com/@RevistaNacionaldelasCienciaspa"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-2 text-red-400 hover:text-red-500 break-words"
+          className="flex flex-col items-center text-red-400 hover:text-red-500 text-center max-w-[200px]"
         >
           <img
             src={logoYT}
             alt="YouTube"
-            className="h-6 w-auto sm:h-6 object-contain"
+            className="h-8 w-8 sm:h-6 sm:w-6 object-contain mb-1"
             onError={(e) => {
               e.currentTarget.style.display = 'none';
               e.currentTarget.insertAdjacentHTML(
@@ -53,7 +53,7 @@ function Footer() {
               );
             }}
           />
-          Revista Nacional de las Ciencias para Estudiantes
+          <span>Revista Nacional de las Ciencias</span>
         </a>
       </div>
     </footer>
