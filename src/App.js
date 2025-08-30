@@ -1,5 +1,7 @@
+// App.js
 import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
+
 import Header from './components/Header';
 import SearchAndFilters from './components/SearchAndFilters';
 import ArticleCard from './components/ArticleCard';
@@ -11,6 +13,8 @@ import GuidelinesSection from './components/GuidelinesSection';
 import FAQSection from './components/FAQSection';
 import TeamSection from './components/TeamSection';
 import Footer from './components/Footer';
+import NewsletterSection from './components/NewsletterSection';
+
 import './index.css';
 
 function App() {
@@ -23,17 +27,21 @@ function App() {
   const [visibleArticles, setVisibleArticles] = useState(6);
   const [activeTab, setActiveTab] = useState('articles');
 
+  // ---------------- Cargar CSV ----------------
   useEffect(() => {
     const fetchArticles = async () => {
       try {
-        const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p32EM6-0VYy18AdREQwXdpeet1WHTA4H2-W2FX7HKe1HPSyApWadUw9sKHdVYQXL5tP6yDRs/pub?output=csv');
+        const response = await fetch(
+          'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p32EM6-0VYy18AdREQwXdpeet1WHTA4H2-W2FX7HKe1HPSyApWadUw9sKHdVYQXL5tP6yDRs/pub?output=csv'
+        );
         if (!response.ok) throw new Error('Network response was not ok');
         const csvText = await response.text();
         const articlesData = parseCSV(csvText);
-        if (articlesData.length === 0) throw new Error('No articles found in CSV');
         setArticles(articlesData);
         setFilteredArticles(articlesData);
-        const uniqueAreas = [...new Set(articlesData.map(article => article['Área temática'] || ''))].filter(area => area);
+        const uniqueAreas = [
+          ...new Set(articlesData.map((article) => article['Área temática'] || ''))
+        ].filter((area) => area);
         setAreas(uniqueAreas);
         setLoading(false);
       } catch (error) {
@@ -50,7 +58,7 @@ function App() {
       header: true,
       skipEmptyLines: true,
       complete: ({ data }) => {
-        data.forEach(row => {
+        data.forEach((row) => {
           if (row['Título'] && row['Autor'] && row['Fecha de publicación']) {
             const article = {
               Título: row['Título'] || '',
@@ -60,19 +68,18 @@ function App() {
               'Link al texto': row['Link al texto'] || '',
               'Fecha de publicación': row['Fecha de publicación'] || '',
               'Área temática': row['Área temática'] || '',
-              Area: row['Área temática'] || 'No especificada',
+              Area: row['Área temática'] || 'No especificada'
             };
             result.push(article);
           }
         });
       },
-      error: (error) => {
-        console.error('Error parsing CSV:', error);
-      },
+      error: (error) => console.error('Error parsing CSV:', error)
     });
     return result;
   };
 
+  // ---------------- Citaciones ----------------
   const journal = 'Revista Nacional de las Ciencias para Estudiantes';
   const getAPACitation = (article) => {
     const date = new Date(article['Fecha de publicación']);
@@ -87,11 +94,12 @@ function App() {
     return `${article['Autor']}. "${article['Título']}." ${journal} (${date.getFullYear()}).`;
   };
 
+  // ---------------- Filtros y búsqueda ----------------
   const handleSearch = (term, area) => {
     setSearchTerm(term);
     setSelectedArea(area);
     const lowerTerm = term.toLowerCase();
-    const filtered = articles.filter(article => {
+    const filtered = articles.filter((article) => {
       const apaCitation = getAPACitation(article);
       const mlaCitation = getMLACitation(article);
       const chicagoCitation = getChicagoCitation(article);
@@ -116,77 +124,69 @@ function App() {
     setVisibleArticles(6);
   };
 
-  const loadMoreArticles = () => {
-    setVisibleArticles(prev => prev + 6);
-  };
+  const loadMoreArticles = () => setVisibleArticles((prev) => prev + 6);
+  const showLessArticles = () => setVisibleArticles(6);
 
-  const showLessArticles = () => {
-    setVisibleArticles(6);
-  };
-
+  // ---------------- Pestañas ----------------
   const sections = [
     {
       name: 'articles',
       label: 'Artículos',
-      component: React.createElement(
-        'div',
-        null,
-        React.createElement(SearchAndFilters, {
-          searchTerm,
-          setSearchTerm,
-          selectedArea,
-          setSelectedArea,
-          areas,
-          onSearch: handleSearch,
-          clearFilters,
-        }),
-        React.createElement(
-          'div',
-          { className: 'articles grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 mt-4 sm:mt-6' },
-          loading
-            ? React.createElement('p', { className: 'text-center text-sm sm:text-base' }, 'Cargando...')
-            : filteredArticles.slice(0, visibleArticles).map(article =>
-                React.createElement(ArticleCard, { key: article['Título'], article })
-              )
-        ),
-        !loading && filteredArticles.length > visibleArticles &&
-          React.createElement(
-            'div',
-            { className: 'text-center mt-4 sm:mt-6' },
-            React.createElement(
-              'button',
-              {
-                className: 'bg-blue-500 text-white px-3 sm:px-4 py-2 sm:py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base',
-                onClick: loadMoreArticles,
-              },
-              'Cargar más'
-            )
-          ),
-        !loading && visibleArticles > 6 &&
-          React.createElement(
-            'button',
-            {
-              className: 'fixed bottom-4 right-4 bg-blue-500 text-white px-3 sm:px-4 py-2 sm:py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 z-10 text-sm sm:text-base',
-              onClick: showLessArticles,
-            },
-            'Mostrar menos'
-          )
-      ),
+      component: (
+        <div>
+          <SearchAndFilters
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            selectedArea={selectedArea}
+            setSelectedArea={setSelectedArea}
+            areas={areas}
+            onSearch={handleSearch}
+            clearFilters={clearFilters}
+          />
+          <div className="articles grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 mt-4 sm:mt-6">
+            {loading
+              ? <p className="text-center text-sm sm:text-base">Cargando...</p>
+              : filteredArticles.slice(0, visibleArticles).map((article) => (
+                  <ArticleCard key={article['Título']} article={article} />
+                ))
+            }
+          </div>
+          {!loading && filteredArticles.length > visibleArticles && (
+            <div className="text-center mt-4 sm:mt-6">
+              <button
+                className="bg-blue-500 text-white px-3 sm:px-4 py-2 sm:py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+                onClick={loadMoreArticles}
+              >
+                Cargar más
+              </button>
+            </div>
+          )}
+          {!loading && visibleArticles > 6 && (
+            <button
+              className="fixed bottom-4 right-4 bg-blue-500 text-white px-3 sm:px-4 py-2 sm:py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 z-10 text-sm sm:text-base"
+              onClick={showLessArticles}
+            >
+              Mostrar menos
+            </button>
+          )}
+        </div>
+      )
     },
-    { name: 'submit', label: 'Enviar Artículo', component: React.createElement(SubmitSection, null) },
-    { name: 'team', label: 'Nuestro Equipo', component: React.createElement(TeamSection, { setActiveTab }) },
-    { name: 'admin', label: 'Administración', component: React.createElement(AdminSection, null) },
-    { name: 'about', label: 'Acerca de', component: React.createElement(AboutSection, null) },
-    { name: 'guidelines', label: 'Guías', component: React.createElement(GuidelinesSection, null) },
-    { name: 'faq', label: 'Preguntas Frecuentes', component: React.createElement(FAQSection, null) },
+    { name: 'submit', label: 'Enviar Artículo', component: <SubmitSection /> },
+    { name: 'team', label: 'Nuestro Equipo', component: <TeamSection setActiveTab={setActiveTab} /> },
+    { name: 'admin', label: 'Administración', component: <AdminSection /> },
+    { name: 'about', label: 'Acerca de', component: <AboutSection /> },
+    { name: 'guidelines', label: 'Guías', component: <GuidelinesSection /> },
+    { name: 'faq', label: 'Preguntas Frecuentes', component: <FAQSection /> },
+    { name: 'newsletter', label: 'Newsletter', component: <NewsletterSection /> }
   ];
 
-  return React.createElement(
-    'div',
-    { className: 'container relative' },
-    React.createElement(Header, null),
-    React.createElement(Tabs, { sections, activeTab, setActiveTab }),
-    React.createElement(Footer, null)
+  return (
+    <div className="container relative">
+      <Header />
+      <Tabs sections={sections} activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Footer />
+    </div>
   );
 }
 
