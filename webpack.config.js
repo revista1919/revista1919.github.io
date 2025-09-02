@@ -83,6 +83,7 @@ module.exports = (env, argv) => {
       new CopyWebpackPlugin({   // 👈 aquí copiamos tu sitemap
         patterns: [
           { from: 'sitemap.xml', to: '.' }, // copia desde raíz → dist/
+          { from: 'public/logo.png', to: '.' }
         ],
       }),
     ],
