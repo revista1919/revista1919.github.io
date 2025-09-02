@@ -1,0 +1,38 @@
+[
+  {
+    "titulo": "Mi amigo el perro",
+    "autores": "Javier Vergara",
+    "resumen": "Es un perro que habla y come manjar",
+    "pdf": "/Articles/Articulo1.pdf",
+    "fecha": "2023-04-17",
+    "volumen": "1",
+    "numero": "2",
+    "primeraPagina": "1",
+    "ultimaPagina": "20",
+    "area": "Economía",
+    "numeroArticulo": "1",
+    "palabras_clave": [
+      "Libre mercado",
+      "Libertad",
+      "Opresión"
+    ]
+  },
+  {
+    "titulo": "Mi amigo el gato",
+    "autores": "Javier Vergara",
+    "resumen": "Es un gato que habla y come manjar",
+    "pdf": "/Articles/Articulo2.pdf",
+    "fecha": "2024-04-16",
+    "volumen": "1",
+    "numero": "4",
+    "primeraPagina": "21",
+    "ultimaPagina": "30",
+    "area": "Sociología",
+    "numeroArticulo": "2",
+    "palabras_clave": [
+      "Libre",
+      "Libertad",
+      "Opresión"
+    ]
+  }
+]

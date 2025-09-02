@@ -1,4 +1,3 @@
-// App.js
 import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 
@@ -34,65 +33,29 @@ function App() {
         const response = await fetch(
           'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p32EM6-0VYy18AdREQwXdpeet1WHTA4H2-W2FX7HKe1HPSyApWadUw9sKHdVYQXL5tP6yDRs/pub?output=csv'
         );
-        if (!response.ok) throw new Error('Network response was not ok');
         const csvText = await response.text();
-        const articlesData = parseCSV(csvText);
-        setArticles(articlesData);
-        setFilteredArticles(articlesData);
-        const uniqueAreas = [
-          ...new Set(articlesData.map((article) => article['Área temática'] || ''))
-        ].filter((area) => area);
-        setAreas(uniqueAreas);
-        setLoading(false);
+        Papa.parse(csvText, {
+          header: true,
+          skipEmptyLines: true,
+          complete: ({ data }) => {
+            setArticles(data);
+            setFilteredArticles(data);
+            const uniqueAreas = [...new Set(data.map((a) => a['Área temática']))].filter(Boolean);
+            setAreas(uniqueAreas);
+            setLoading(false);
+          },
+          error: (error) => {
+            console.error('Error parsing CSV:', error);
+            setLoading(false);
+          },
+        });
       } catch (error) {
-        console.error('Error fetching or parsing articles:', error.message);
+        console.error('Error fetching CSV:', error);
         setLoading(false);
       }
     };
     fetchArticles();
   }, []);
-
-  const parseCSV = (csv) => {
-    const result = [];
-    Papa.parse(csv, {
-      header: true,
-      skipEmptyLines: true,
-      complete: ({ data }) => {
-        data.forEach((row) => {
-          if (row['Título'] && row['Autor'] && row['Fecha de publicación']) {
-            const article = {
-              Título: row['Título'] || '',
-              Autor: row['Autor'] || '',
-              Resumen: row['Resumen'] || '',
-              'Link al PDF': row['Link al PDF'] || '',
-              'Link al texto': row['Link al texto'] || '',
-              'Fecha de publicación': row['Fecha de publicación'] || '',
-              'Área temática': row['Área temática'] || '',
-              Area: row['Área temática'] || 'No especificada'
-            };
-            result.push(article);
-          }
-        });
-      },
-      error: (error) => console.error('Error parsing CSV:', error)
-    });
-    return result;
-  };
-
-  // ---------------- Citaciones ----------------
-  const journal = 'Revista Nacional de las Ciencias para Estudiantes';
-  const getAPACitation = (article) => {
-    const date = new Date(article['Fecha de publicación']);
-    return `${article['Autor']}. (${date.getFullYear()}). ${article['Título']}. ${journal}.`;
-  };
-  const getMLACitation = (article) => {
-    const date = new Date(article['Fecha de publicación']);
-    return `${article['Autor']}. "${article['Título']}." ${journal}, ${date.getFullYear()}.`;
-  };
-  const getChicagoCitation = (article) => {
-    const date = new Date(article['Fecha de publicación']);
-    return `${article['Autor']}. "${article['Título']}." ${journal} (${date.getFullYear()}).`;
-  };
 
   // ---------------- Filtros y búsqueda ----------------
   const handleSearch = (term, area) => {
@@ -100,16 +63,10 @@ function App() {
     setSelectedArea(area);
     const lowerTerm = term.toLowerCase();
     const filtered = articles.filter((article) => {
-      const apaCitation = getAPACitation(article);
-      const mlaCitation = getMLACitation(article);
-      const chicagoCitation = getChicagoCitation(article);
       const matchesSearch =
-        article['Título'].toLowerCase().includes(lowerTerm) ||
-        article['Autor'].toLowerCase().includes(lowerTerm) ||
-        article['Resumen'].toLowerCase().includes(lowerTerm) ||
-        apaCitation.toLowerCase().includes(lowerTerm) ||
-        mlaCitation.toLowerCase().includes(lowerTerm) ||
-        chicagoCitation.toLowerCase().includes(lowerTerm);
+        article['Título']?.toLowerCase().includes(lowerTerm) ||
+        article['Autor(es)']?.toLowerCase().includes(lowerTerm) ||
+        article['Resumen']?.toLowerCase().includes(lowerTerm);
       const matchesArea = area === '' || (article['Área temática'] || '').toLowerCase() === area.toLowerCase();
       return matchesSearch && matchesArea;
     });

@@ -1,7 +1,7 @@
 const path = require('path');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const CopyWebpackPlugin = require('copy-webpack-plugin'); // 👈 añadido
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
@@ -11,8 +11,8 @@ module.exports = (env, argv) => {
     output: {
       path: path.resolve(__dirname, 'dist'),
       filename: isProduction ? '[name].[contenthash].js' : 'bundle.js',
+      publicPath: '/',
       clean: true,
-      publicPath: '/', 
     },
     mode: isProduction ? 'production' : 'development',
     devServer: {
@@ -34,7 +34,7 @@ module.exports = (env, argv) => {
     module: {
       rules: [
         {
-          test: /\.js$/,
+          test: /\.js$/i,
           exclude: /node_modules/,
           use: {
             loader: 'babel-loader',
@@ -44,7 +44,7 @@ module.exports = (env, argv) => {
           },
         },
         {
-          test: /\.css$/,
+          test: /\.css$/i,
           use: [
             'style-loader',
             'css-loader',
@@ -52,10 +52,7 @@ module.exports = (env, argv) => {
               loader: 'postcss-loader',
               options: {
                 postcssOptions: {
-                  plugins: [
-                    require('tailwindcss'),
-                    require('autoprefixer'),
-                  ],
+                  plugins: [require('tailwindcss'), require('autoprefixer')],
                 },
               },
             },
@@ -68,6 +65,13 @@ module.exports = (env, argv) => {
             filename: 'assets/[name][ext]',
           },
         },
+        {
+          test: /\.pdf$/i, // Para manejar PDFs de artículos
+          type: 'asset/resource',
+          generator: {
+            filename: 'Articles/[name][ext]',
+          },
+        },
       ],
     },
     plugins: [
@@ -75,15 +79,18 @@ module.exports = (env, argv) => {
       new HtmlWebpackPlugin({
         template: './public/index.html',
         inject: 'body',
-        minify: isProduction ? {
-          removeComments: true,
-          collapseWhitespace: true,
-        } : false,
+        minify: isProduction
+          ? {
+              removeComments: true,
+              collapseWhitespace: true,
+            }
+          : false,
       }),
-      new CopyWebpackPlugin({   // 👈 aquí copiamos tu sitemap
+      new CopyWebpackPlugin({
         patterns: [
-          { from: 'sitemap.xml', to: '.' }, // copia desde raíz → dist/
-          { from: 'public/logo.png', to: '.' }
+          { from: 'public/logo.png', to: '.' },
+          { from: 'public/Articles', to: 'Articles' }, // 👈 Copia toda la carpeta de PDFs
+          { from: 'sitemap.xml', to: '.' },
         ],
       }),
     ],
