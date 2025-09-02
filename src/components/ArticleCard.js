@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 
 function parseDateFlexible(dateStr) {
@@ -7,10 +7,24 @@ function parseDateFlexible(dateStr) {
   if (!isNaN(date)) return date.toLocaleDateString();
   const parts = dateStr.split(/[\/.-]/);
   if (parts.length === 3) {
-    let [day, month, year] = parts.map(p => p.padStart(2, '0'));
+    let [day, month, year] = parts.map((p) => p.padStart(2, '0'));
     if (year.length === 2) year = '20' + year;
     date = new Date(`${year}-${month}-${day}`);
     if (!isNaN(date)) return date.toLocaleDateString();
+  }
+  return dateStr;
+}
+
+function getYear(dateStr) {
+  if (!dateStr) return 's.f.'; // sin fecha
+  let date = new Date(dateStr);
+  if (!isNaN(date)) return date.getFullYear();
+  const parts = dateStr.split(/[\/.-]/);
+  if (parts.length === 3) {
+    let [day, month, year] = parts.map((p) => p.padStart(2, '0'));
+    if (year.length === 2) year = '20' + year;
+    date = new Date(`${year}-${month}-${day}`);
+    if (!isNaN(date)) return date.getFullYear();
   }
   return dateStr;
 }
@@ -26,10 +40,13 @@ function ArticleCard({ article }) {
 
   const journal = 'Revista Nacional de las Ciencias para Estudiantes';
   const csvUrl =
-    'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfXf9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
+    'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 
-  const pdfUrl = article['Número de artículo'] ? `/Articles/Articulo${article['Número de artículo']}.pdf` : null;
+  const pdfUrl = article['Número de artículo']
+    ? `https://www.revistacienciasestudiantes.com/Articles/Articulo${article['Número de artículo']}.pdf`
+    : null;
 
+  // Cargar autores desde CSV
   useEffect(() => {
     setIsLoading(true);
     setCsvError(null);
@@ -41,7 +58,7 @@ function ArticleCard({ article }) {
         setAuthorsData(result.data || []);
         setIsLoading(false);
       },
-      error: (error) => {
+      error: () => {
         setCsvError('No se pudo cargar la información de los autores.');
         setAuthorsData([]);
         setIsLoading(false);
@@ -52,31 +69,76 @@ function ArticleCard({ article }) {
   const handleAuthorClick = (authorName) => {
     if (!authorName) return;
     setIsLoading(true);
-    const author = authorsData.find((data) => data['Nombre'] === authorName) || {
-      Nombre: authorName,
-      Descripción: 'Información no disponible',
-      'Áreas de interés': 'No especificadas',
-      'Rol en la Revista': 'No especificado',
-    };
+    const author =
+      authorsData.find((data) => data['Nombre'] === authorName) || {
+        Nombre: authorName,
+        Descripción: 'Información no disponible',
+        'Áreas de interés': 'No especificadas',
+      };
     setSelectedAuthor(author);
     setIsAuthorModalOpen(true);
     setIsLoading(false);
   };
 
-  const citation = (style) => {
+  // Citas con JSX (para cursivas y links)
+  const getChicagoCitation = () => {
     const authors = article['Autor(es)'] || 'Autor desconocido';
     const title = article['Título'] || 'Sin título';
-    const date = parseDateFlexible(article['Fecha']);
-    switch (style) {
-      case 'APA':
-        return `${authors}. (${new Date(date).getFullYear()}). ${title}. ${journal}.`;
-      case 'MLA':
-        return `${authors}. "${title}." ${journal}, ${new Date(date).getFullYear()}.`;
-      case 'Chicago':
-        return `${authors}. "${title}." ${journal} (${new Date(date).getFullYear()}).`;
-      default:
-        return '';
-    }
+    const volume = article['Volumen'] || '';
+    const number = article['Número'] || '';
+    const year = getYear(article['Fecha']);
+    const pages = article['Páginas'] || '';
+
+    return (
+      <>
+        {authors}. “{title}.” <em>{journal}</em> {volume}, no. {number} ({year}): {pages}.{' '}
+        {pdfUrl && (
+          <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline break-words">
+            {pdfUrl}
+          </a>
+        )}
+      </>
+    );
+  };
+
+  const getApaCitation = () => {
+    const authors = article['Autor(es)'] || 'Autor desconocido';
+    const title = article['Título'] || 'Sin título';
+    const volume = article['Volumen'] || '';
+    const number = article['Número'] || '';
+    const year = getYear(article['Fecha']);
+    const pages = article['Páginas'] || '';
+
+    return (
+      <>
+        {authors} ({year}). {title}. <em>{journal}</em>, {volume}({number}), {pages}.{' '}
+        {pdfUrl && (
+          <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline break-words">
+            {pdfUrl}
+          </a>
+        )}
+      </>
+    );
+  };
+
+  const getMlaCitation = () => {
+    const authors = article['Autor(es)'] || 'Autor desconocido';
+    const title = article['Título'] || 'Sin título';
+    const volume = article['Volumen'] || '';
+    const number = article['Número'] || '';
+    const year = getYear(article['Fecha']);
+    const pages = article['Páginas'] || '';
+
+    return (
+      <>
+        {authors}. “{title}.” <em>{journal}</em>, vol. {volume}, no. {number}, {year}, pp. {pages}.{' '}
+        {pdfUrl && (
+          <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline break-words">
+            {pdfUrl}
+          </a>
+        )}
+      </>
+    );
   };
 
   return (
@@ -136,7 +198,7 @@ function ArticleCard({ article }) {
         )}
       </p>
 
-      {/* Botones compactos */}
+      {/* Botones */}
       <div className="flex gap-3 mb-3">
         {pdfUrl && (
           <>
@@ -167,37 +229,40 @@ function ArticleCard({ article }) {
         {showCitations ? 'Ocultar citas' : 'Cómo citar este artículo'}
       </button>
       {showCitations && (
-        <div className="text-gray-700 text-sm sm:text-base">
-          <p className="font-semibold">APA:</p>
-          <p>{citation('APA')}</p>
-          <p className="font-semibold mt-1">MLA:</p>
-          <p>{citation('MLA')}</p>
-          <p className="font-semibold mt-1">Chicago:</p>
-          <p>{citation('Chicago')}</p>
+        <div className="text-gray-700 text-sm sm:text-base space-y-3 break-words">
+          <p><strong>Chicago:</strong> {getChicagoCitation()}</p>
+          <p><strong>APA:</strong> {getApaCitation()}</p>
+          <p><strong>MLA:</strong> {getMlaCitation()}</p>
         </div>
       )}
 
-      {/* Modal Autor */}
-      {isAuthorModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-4 sm:p-6 rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg sm:text-xl font-bold">{selectedAuthor?.Nombre || 'Autor desconocido'}</h2>
-              <button
-                className="text-gray-500 hover:text-gray-700 text-xl"
-                onClick={() => setIsAuthorModalOpen(false)}
-              >
-                ×
-              </button>
-            </div>
-            <div className="text-gray-700 text-sm sm:text-base space-y-3">
-              <p><strong>Descripción:</strong> {selectedAuthor?.Descripción}</p>
-              <p><strong>Áreas de interés:</strong> {selectedAuthor?.['Áreas de interés']}</p>
-              <p><strong>Rol en la Revista:</strong> {selectedAuthor?.['Rol en la Revista']}</p>
-            </div>
-          </div>
-        </div>
-      )}
+{isAuthorModalOpen && selectedAuthor && (
+  <div className="fixed inset-0 flex items-center justify-center z-50">
+    {/* Fondo oscuro */}
+    <div
+      className="absolute inset-0 bg-black bg-opacity-40"
+      onClick={() => setIsAuthorModalOpen(false)}
+    ></div>
+
+    {/* Contenedor del modal */}
+    <div className="bg-white p-4 sm:p-6 rounded-lg max-w-sm w-full max-h-[80vh] overflow-y-auto shadow-xl z-50">
+      <div className="flex justify-between items-center mb-3">
+        <h3 className="text-lg font-bold">{selectedAuthor.Nombre || 'Autor desconocido'}</h3>
+        <button
+          className="text-gray-500 hover:text-gray-700 text-xl"
+          onClick={() => setIsAuthorModalOpen(false)}
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="text-gray-700 text-sm sm:text-base space-y-2">
+        <p><strong>Descripción:</strong> {selectedAuthor.Descripción || 'No disponible'}</p>
+        <p><strong>Áreas de interés:</strong> {selectedAuthor['Áreas de interés'] || 'No especificadas'}</p>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }
