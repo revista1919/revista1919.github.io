@@ -2,7 +2,7 @@
   {
     "titulo": "Mi amigo el perro",
     "autores": "Javier Vergara",
-    "resumen": "Es un perro que habla y come manjar",
+    "resumen": "El latifundio chileno fue la estructura agrícola que se estaba ocupando en Chile hacía más de 300 años: “La Hacienda, en cuanto sistema productivo, pero también como estructura de dominación y subordinación, determinó la Historia de Chile hasta la segunda parte del siglo XX.” (Theza, Cáceres, and Jiménez 2017, 141). Por lo que el campesinado, harto del abuso y el aprovechamiento que sufría, fue en busca de apoyo a la acomplejada clase política, los cuales, exceptuando algunos sectores, tomaron de las quejumbres del campesinado y formaron a este parte de su campaña y comenzaron una serie de peticiones que buscaban favorecer al inquilino.\n",
     "pdf": "/Articles/Articulo1.pdf",
     "fecha": "2023-04-17",
     "volumen": "1",
@@ -33,6 +33,24 @@
       "Libre",
       "Libertad",
       "Opresión"
+    ]
+  },
+  {
+    "titulo": "Mi amigo el pulpo",
+    "autores": "Francisco Correa",
+    "resumen": "Es un pulpo que habla y come manjar. El latifundio chileno fue la estructura agrícola que se estaba ocupando en Chile hacía más de 300 años: “La Hacienda, en cuanto sistema productivo, pero también como estructura de dominación y subordinación, determinó la Historia de Chile hasta la segunda parte del siglo XX.” (Theza, Cáceres, and Jiménez 2017, 141). Por lo que el campesinado, harto del abuso y el aprovechamiento que sufría, fue en busca de apoyo a la acomplejada clase política, los cuales, exceptuando algunos sectores, tomaron de las quejumbres del campesinado y formaron a este parte de su campaña y comenzaron una serie de peticiones que buscaban favorecer al inquilino.\n",
+    "pdf": "/Articles/Articulo3.pdf",
+    "fecha": "2024-04-23",
+    "volumen": "1",
+    "numero": "3",
+    "primeraPagina": "31",
+    "ultimaPagina": "45",
+    "area": "Filosofía",
+    "numeroArticulo": "3",
+    "palabras_clave": [
+      "Libre",
+      "Libertad",
+      "Comprensión"
     ]
   }
 ]
