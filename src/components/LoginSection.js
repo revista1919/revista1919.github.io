@@ -1,12 +1,13 @@
-
 import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
+import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'; // Asumiendo Heroicons, instala si necesario
 
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 
 export default function LoginSection({ onLogin }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState('');
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -115,10 +116,10 @@ export default function LoginSection({ onLogin }) {
             />
             {errors.email && <p className="mt-1 text-xs sm:text-sm text-red-500">{errors.email}</p>}
           </div>
-          <div>
+          <div className="relative">
             <label className="block text-sm font-medium text-gray-700">Contraseña</label>
             <input
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               onKeyPress={handleKeyPress}
@@ -128,6 +129,13 @@ export default function LoginSection({ onLogin }) {
               placeholder="••••••"
               disabled={isLoading}
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700 top-6"
+            >
+              {showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+            </button>
             {errors.password && <p className="mt-1 text-xs sm:text-sm text-red-500">{errors.password}</p>}
           </div>
           <button
