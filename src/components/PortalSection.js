@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 
 const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyJ9znuf_Pa8Hyh4BnsO1pTTduBsXC7kDD0pORWccMTBlckgt0I--NKG69aR_puTAZ5/exec'; // Tu URL de Apps Script
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRijRvEy6oTLIh67CsiKzXEoHUI2QWqbO6eBZKf-jQ0RjRoVqHQKSaKioB2n-2XD2B/exec'; // Tu URL de Apps Script
 
 export default function PortalSection({ user, onLogout }) {
   const [assignments, setAssignments] = useState([]);
@@ -13,6 +13,7 @@ export default function PortalSection({ user, onLogout }) {
   const [tutorialVisible, setTutorialVisible] = useState({});
   const [submitStatus, setSubmitStatus] = useState({});
   const [error, setError] = useState('');
+  const [visibleAssignments, setVisibleAssignments] = useState(3); // Mostrar 3 iniciales
 
   const fetchAssignments = async () => {
     try {
@@ -67,6 +68,7 @@ export default function PortalSection({ user, onLogout }) {
             });
           }
           setLoading(false);
+          setVisibleAssignments(3); // Reset visible
         },
         error: (err) => {
           console.error('Error al parsear CSV:', err);
@@ -121,13 +123,17 @@ export default function PortalSection({ user, onLogout }) {
 
   const getTutorialText = (role) => {
     if (role === 'Revisor 1') {
-      return 'Como Revisor 1, corrige gramática, citación, filtro IA, coherencia, etc. Deja comentarios en Drive.';
+      return 'Como Revisor 1, tu rol es revisar aspectos técnicos como gramática, ortografía, citación de fuentes, detección de contenido generado por IA, coherencia lógica y estructura general del artículo. Deja comentarios detallados en el documento de Google Drive para sugerir mejoras. Asegúrate de que el lenguaje sea claro y académico.';
     } else if (role === 'Revisor 2') {
-      return 'Como Revisor 2, revisa los contenidos, fuentes, seriedad, etc. Deja comentarios en Drive.';
+      return 'Como Revisor 2, enfócate en el contenido sustantivo: verifica la precisión de las fuentes, la seriedad y originalidad del tema, la relevancia de los argumentos, y la contribución al campo de estudio. Evalúa si el artículo es innovador y bien fundamentado. Deja comentarios en el documento de Google Drive.';
     } else if (role === 'Editor') {
-      return 'Como Editor, revisa las retroalimentaciones e informes de los revisores y redacta una retroalimentación final sensible para el autor.';
+      return 'Como Editor, tu responsabilidad es revisar las retroalimentaciones e informes de los revisores, integrarlas con tu propia evaluación, y redactar una retroalimentación final sensible y constructiva para el autor. Corrige directamente el texto si es necesario y decide el estado final del artículo. Usa el documento de Google Drive para ediciones.';
     }
     return '';
+  };
+
+  const loadMoreAssignments = () => {
+    setVisibleAssignments((prev) => prev + 3);
   };
 
   if (loading) {
@@ -187,7 +193,7 @@ export default function PortalSection({ user, onLogout }) {
         </div>
         <h3 className="text-lg font-semibold text-gray-800">Estado de tus Artículos</h3>
         <div className="space-y-6">
-          {assignments.map((assignment) => (
+          {assignments.slice(0, visibleAssignments).map((assignment) => (
             <div key={assignment['Nombre Artículo']} className="bg-white p-6 rounded-lg shadow-md space-y-4">
               <h4 className="text-lg font-semibold text-gray-800">{assignment['Nombre Artículo']}</h4>
               <p className="text-gray-600">Estado: {assignment['Estado']}</p>
@@ -200,6 +206,16 @@ export default function PortalSection({ user, onLogout }) {
             </div>
           ))}
         </div>
+        {visibleAssignments < assignments.length && (
+          <div className="text-center">
+            <button
+              onClick={loadMoreAssignments}
+              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
+            >
+              Mostrar más
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -217,14 +233,14 @@ export default function PortalSection({ user, onLogout }) {
         </button>
         <button
           onClick={onLogout}
-          className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
+          className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
         >
           Cerrar Sesión
         </button>
       </div>
       <h3 className="text-lg font-semibold text-gray-800">Tus Asignaciones</h3>
       <div className="space-y-6">
-        {assignments.map((assignment) => (
+        {assignments.slice(0, visibleAssignments).map((assignment) => (
           <div key={assignment['Link Artículo']} className="bg-white p-6 rounded-lg shadow-md space-y-4">
             <h4 className="text-lg font-semibold text-gray-800">{assignment['Nombre Artículo']}</h4>
             <div className="space-y-4">
@@ -304,9 +320,26 @@ export default function PortalSection({ user, onLogout }) {
                 placeholder="Escribe tu informe aquí..."
               />
             </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">Voto</label>
+              <div className="flex space-x-4">
+                <button
+                  onClick={() => handleVote(assignment['Link Artículo'], 'si')}
+                  className={`px-4 py-2 rounded-md ${vote[assignment['Link Artículo']] === 'si' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-800'} focus:outline-none focus:ring-2 focus:ring-green-500`}
+                >
+                  Sí
+                </button>
+                <button
+                  onClick={() => handleVote(assignment['Link Artículo'], 'no')}
+                  className={`px-4 py-2 rounded-md ${vote[assignment['Link Artículo']] === 'no' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-800'} focus:outline-none focus:ring-2 focus:ring-red-500`}
+                >
+                  No
+                </button>
+              </div>
+            </div>
             <button
               onClick={() => handleSubmit(assignment['Link Artículo'], assignment.role, feedback[assignment['Link Artículo']] || '', report[assignment['Link Artículo']] || '', vote[assignment['Link Artículo']] || '')}
-              className="w-full px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               Enviar
             </button>
@@ -318,6 +351,16 @@ export default function PortalSection({ user, onLogout }) {
           </div>
         ))}
       </div>
+      {visibleAssignments < assignments.length && (
+        <div className="text-center">
+          <button
+            onClick={loadMoreAssignments}
+            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
+          >
+            Mostrar más
+          </button>
+        </div>
+      )}
     </div>
   );
 }
