@@ -89,7 +89,11 @@ module.exports = (env, argv) => {
       new CopyWebpackPlugin({
         patterns: [
           { from: 'public/logo.png', to: '.' },
-          { from: 'public/Articles', to: 'Articles' }, // 👈 Copia toda la carpeta de PDFs
+          { 
+            from: 'public/Articles', 
+            to: 'Articles',
+            noErrorOnMissing: true, // 👈 evita errores si no existe o está vacía
+          },
           { from: 'sitemap.xml', to: '.' },
         ],
       }),
