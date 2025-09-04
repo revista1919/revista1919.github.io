@@ -5,30 +5,34 @@ function Header() {
   return React.createElement(
     'header',
     {
-      className: 'text-white p-3 sm:p-6 mb-4 sm:mb-6 relative',
+      className: 'text-white p-6 sm:p-6 mb-4 sm:mb-6 relative shadow-md',
       style: { backgroundColor: '#52262dff' },
     },
     React.createElement(
       'div',
-      { className: 'container flex flex-col items-center justify-between' },
+      { className: 'container flex flex-row items-center justify-between sm:flex-col sm:items-center max-w-5xl mx-auto' },
       React.createElement(
         'div',
-        { className: 'flex flex-col items-center mb-3 sm:mb-0 sm:flex-row sm:items-center' },
+        { className: 'flex items-center w-full sm:flex-col sm:items-center sm:mb-3' },
         React.createElement('img', { 
           src: logo, 
           alt: 'Revista Logo', 
-          className: 'h-20 sm:h-24 lg:h-32 mb-2 sm:mb-0 sm:mr-5' 
+          className: 'h-24 sm:h-28 lg:h-36 mr-4 sm:mr-0 sm:mb-3' 
         }),
         React.createElement(
-          'h1', 
-          { className: 'text-2xl sm:text-3xl lg:text-4xl font-bold italic font-serif text-center' }, 
-          'Revista Nacional de las Ciencias para Estudiantes'
+          'div',
+          { className: 'flex flex-col items-end sm:items-center' },
+          React.createElement(
+            'h1', 
+            { className: 'text-lg sm:text-3xl lg:text-4xl font-bold italic font-serif text-center sm:text-center' }, 
+            'Revista Nacional de las Ciencias para Estudiantes'
+          ),
+          React.createElement(
+            'p',
+            { className: 'text-[9px] sm:text-sm text-cream-100 italic font-serif text-center sm:text-center sm:absolute sm:bottom-2 sm:right-4 sm:text-right mt-1 sm:mt-0' },
+            'Una revista por y para estudiantes'
+          )
         )
-      ),
-      React.createElement(
-        'p',
-        { className: 'text-cream-100 text-xs sm:text-sm italic font-serif text-center sm:absolute sm:bottom-2 sm:right-4 sm:text-right' },
-        'Una revista por y para estudiantes'
       )
     )
   );
