@@ -3,13 +3,13 @@ import React from 'react';
 function Tabs({ sections, activeTab, setActiveTab }) {
   return React.createElement(
     'div',
-    null,
+    { className: 'tabs-container' },
     React.createElement(
       'nav',
-      { className: 'bg-white shadow-md' },
+      { className: 'bg-[#f8f1e9] shadow-sm border-b-2 border-[#e6d9c6] py-4' },
       React.createElement(
         'ul',
-        { className: 'flex flex-wrap justify-center sm:justify-start space-x-2 sm:space-x-4 p-4' },
+        { className: 'flex flex-wrap justify-center gap-2 sm:gap-4 px-4 max-w-4xl mx-auto' },
         sections.map((section) =>
           React.createElement(
             'li',
@@ -17,11 +17,11 @@ function Tabs({ sections, activeTab, setActiveTab }) {
             React.createElement(
               'button',
               {
-                className: `px-3 py-2 text-sm sm:text-base font-medium rounded-md transition-colors ${
+                className: `px-4 py-2 text-sm sm:text-base font-medium rounded-md transition-all duration-300 ${
                   activeTab === section.name
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-700 hover:bg-blue-100 hover:text-blue-600'
-                }`,
+                    ? 'bg-[#8b6f47] text-white shadow-md'
+                    : 'bg-[#e6d9c6] text-[#5a3e36] hover:bg-[#d9c8a9] hover:text-[#5a3e36]'
+                } focus:outline-none focus:ring-2 focus:ring-[#8b6f47]`,
                 onClick: () => setActiveTab(section.name),
                 'aria-label': `Ir a la pestaña ${section.label}`,
               },

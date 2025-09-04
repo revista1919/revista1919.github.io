@@ -12,7 +12,6 @@ import GuidelinesSection from './components/GuidelinesSection';
 import FAQSection from './components/FAQSection';
 import TeamSection from './components/TeamSection';
 import Footer from './components/Footer';
-import NewsletterSection from './components/NewsletterSection';
 import LoginSection from './components/LoginSection';
 import PortalSection from './components/PortalSection';
 import NewsSection from './components/NewsSection';
@@ -185,11 +184,7 @@ function App() {
       label: 'Preguntas Frecuentes',
       component: <FAQSection className="py-8 max-w-7xl mx-auto" />,
     },
-    {
-      name: 'newsletter',
-      label: 'Newsletter',
-      component: <NewsletterSection className="py-8 max-w-7xl mx-auto" />,
-    },
+    
     {
       name: 'news',
       label: 'Noticias',
