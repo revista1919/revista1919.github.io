@@ -1,8 +1,10 @@
+// PortalSection.js (added console logs, mostly unchanged but ensured editor access)
 import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
+import NewsUploadSection from './NewsUploadSection';
 
 const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRijRvEy6oTLIh67CsiKzXEoHUI2QWqbO6eBZKf-jQ0RjRoVqHQKSaKioB2n-2XD2B/exec'; // Tu URL de Apps Script
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyJ9znuf_Pa8Hyh4BnsO1pTTduBsXC7kDD0pORWccMTBlckgt0I--NKG69aR_puTAZ5/exec';
 
 export default function PortalSection({ user, onLogout }) {
   const [assignments, setAssignments] = useState([]);
@@ -13,7 +15,8 @@ export default function PortalSection({ user, onLogout }) {
   const [tutorialVisible, setTutorialVisible] = useState({});
   const [submitStatus, setSubmitStatus] = useState({});
   const [error, setError] = useState('');
-  const [visibleAssignments, setVisibleAssignments] = useState(3); // Mostrar 3 iniciales
+  const [visibleAssignments, setVisibleAssignments] = useState(3);
+  const [activeTab, setActiveTab] = useState('assignments');
 
   const fetchAssignments = async () => {
     try {
@@ -27,7 +30,7 @@ export default function PortalSection({ user, onLogout }) {
         delimiter: ',',
         transform: (value) => value.trim(),
         complete: ({ data }) => {
-          console.log('Parsed assignments data:', data); // Debug: Log parsed data
+          console.log('Parsed assignments data:', data);
           const isAuthor = data.some((row) => row['Autor'] === user.name);
           if (isAuthor) {
             const authorAssignments = data
@@ -68,7 +71,7 @@ export default function PortalSection({ user, onLogout }) {
             });
           }
           setLoading(false);
-          setVisibleAssignments(3); // Reset visible
+          setVisibleAssignments(3);
         },
         error: (err) => {
           console.error('Error al parsear CSV:', err);
@@ -100,6 +103,8 @@ export default function PortalSection({ user, onLogout }) {
       report: reportText || '',
     };
 
+    console.log('Sending assignment data:', data); // Debug log
+
     try {
       await fetch(SCRIPT_URL, {
         method: 'POST',
@@ -109,8 +114,9 @@ export default function PortalSection({ user, onLogout }) {
         },
         body: JSON.stringify(data),
       });
+      console.log('Assignment request sent (no-cors, assuming success)'); // Debug log
       setSubmitStatus((prev) => ({ ...prev, [link]: 'Enviado exitosamente (CORS workaround applied)' }));
-      await fetchAssignments(); // Refresh assignments
+      await fetchAssignments();
     } catch (err) {
       console.error('Error al enviar datos:', err);
       setSubmitStatus((prev) => ({ ...prev, [link]: 'Error al enviar: ' + err.message }));
@@ -233,133 +239,156 @@ export default function PortalSection({ user, onLogout }) {
         </button>
         <button
           onClick={onLogout}
-          className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
+          className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
         >
           Cerrar Sesión
         </button>
       </div>
-      <h3 className="text-lg font-semibold text-gray-800">Tus Asignaciones</h3>
-      <div className="space-y-6">
-        {assignments.slice(0, visibleAssignments).map((assignment) => (
-          <div key={assignment['Link Artículo']} className="bg-white p-6 rounded-lg shadow-md space-y-4">
-            <h4 className="text-lg font-semibold text-gray-800">{assignment['Nombre Artículo']}</h4>
-            <div className="space-y-4">
-              <a
-                href={assignment['Link Artículo']}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block bg-blue-600 text-white px-4 py-2 rounded-md shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-              >
-                Abrir en Google Drive
-              </a>
-              <iframe
-                src={assignment['Link Artículo'].replace('/edit', '/preview')}
-                className="w-full h-[300px] sm:h-[500px] rounded-xl shadow border border-gray-200"
-                title="Vista previa del artículo"
-                sandbox="allow-same-origin allow-scripts"
-              ></iframe>
-            </div>
-            <p className="text-gray-600">Rol: {assignment.role}</p>
-            <p className="text-gray-600">Estado: {assignment['Estado']}</p>
-            {assignment.role === 'Editor' && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Retroalimentación de Revisor 1</label>
-                  <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-                    <p className="text-gray-600">{assignment.feedback1}</p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Retroalimentación de Revisor 2</label>
-                  <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-                    <p className="text-gray-600">{assignment.feedback2}</p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Informe de Revisor 1</label>
-                  <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-                    <p className="text-gray-600">{assignment.informe1}</p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Informe de Revisor 2</label>
-                  <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-                    <p className="text-gray-600">{assignment.informe2}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-            <button
-              onClick={() => toggleTutorial(assignment['Link Artículo'])}
-              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
-            >
-              {tutorialVisible[assignment['Link Artículo']] ? 'Ocultar Tutorial' : 'Ver Tutorial'}
-            </button>
-            {tutorialVisible[assignment['Link Artículo']] && (
-              <p className="text-gray-600 bg-gray-50 p-4 rounded-md border border-gray-200">{getTutorialText(assignment.role)}</p>
-            )}
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                {assignment.role === 'Editor' ? 'Retroalimentación Final al Autor' : 'Retroalimentación al Autor'}
-              </label>
-              <textarea
-                value={feedback[assignment['Link Artículo']] || ''}
-                onChange={(e) => setFeedback((prev) => ({ ...prev, [assignment['Link Artículo']]: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                rows="4"
-                placeholder={assignment.role === 'Editor' ? 'Redacta una retroalimentación final sensible, sintetizando las opiniones de los revisores y la tuya.' : 'Escribe tu retroalimentación aquí...'}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">Informe al Editor</label>
-              <textarea
-                value={report[assignment['Link Artículo']] || ''}
-                onChange={(e) => setReport((prev) => ({ ...prev, [assignment['Link Artículo']]: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                rows="4"
-                placeholder="Escribe tu informe aquí..."
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">Voto</label>
-              <div className="flex space-x-4">
-                <button
-                  onClick={() => handleVote(assignment['Link Artículo'], 'si')}
-                  className={`px-4 py-2 rounded-md ${vote[assignment['Link Artículo']] === 'si' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-800'} focus:outline-none focus:ring-2 focus:ring-green-500`}
-                >
-                  Sí
-                </button>
-                <button
-                  onClick={() => handleVote(assignment['Link Artículo'], 'no')}
-                  className={`px-4 py-2 rounded-md ${vote[assignment['Link Artículo']] === 'no' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-800'} focus:outline-none focus:ring-2 focus:ring-red-500`}
-                >
-                  No
-                </button>
-              </div>
-            </div>
-            <button
-              onClick={() => handleSubmit(assignment['Link Artículo'], assignment.role, feedback[assignment['Link Artículo']] || '', report[assignment['Link Artículo']] || '', vote[assignment['Link Artículo']] || '')}
-              className="w-full px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              Enviar
-            </button>
-            {submitStatus[assignment['Link Artículo']] && (
-              <p className={`text-center text-sm ${submitStatus[assignment['Link Artículo']].includes('Error') ? 'text-red-500' : 'text-green-500'}`}>
-                {submitStatus[assignment['Link Artículo']]}
-              </p>
-            )}
-          </div>
-        ))}
-      </div>
-      {visibleAssignments < assignments.length && (
-        <div className="text-center">
+      <div className="flex space-x-4">
+        <button
+          onClick={() => setActiveTab('assignments')}
+          className={`px-4 py-2 rounded-md ${activeTab === 'assignments' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}
+        >
+          Asignaciones
+        </button>
+        {user.role.includes('Editor') && (
           <button
-            onClick={loadMoreAssignments}
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
+            onClick={() => setActiveTab('news')}
+            className={`px-4 py-2 rounded-md ${activeTab === 'news' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}
           >
-            Mostrar más
+            Subir Noticia
           </button>
+        )}
+      </div>
+      {activeTab === 'assignments' && (
+        <div>
+          <h3 className="text-lg font-semibold text-gray-800">Tus Asignaciones</h3>
+          <div className="space-y-6">
+            {assignments.slice(0, visibleAssignments).map((assignment) => (
+              <div key={assignment['Link Artículo']} className="bg-white p-6 rounded-lg shadow-md space-y-4">
+                <h4 className="text-lg font-semibold text-gray-800">{assignment['Nombre Artículo']}</h4>
+                <div className="space-y-4">
+                  <a
+                    href={assignment['Link Artículo']}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block bg-blue-600 text-white px-4 py-2 rounded-md shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  >
+                    Abrir en Google Drive
+                  </a>
+                  <iframe
+                    src={assignment['Link Artículo'].replace('/edit', '/preview')}
+                    className="w-full h-[300px] sm:h-[500px] rounded-xl shadow border border-gray-200"
+                    title="Vista previa del artículo"
+                    sandbox="allow-same-origin allow-scripts"
+                  ></iframe>
+                </div>
+                <p className="text-gray-600">Rol: {assignment.role}</p>
+                <p className="text-gray-600">Estado: {assignment['Estado']}</p>
+                {assignment.role === 'Editor' && (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700">Retroalimentación de Revisor 1</label>
+                      <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+                        <p className="text-gray-600">{assignment.feedback1}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700">Retroalimentación de Revisor 2</label>
+                      <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+                        <p className="text-gray-600">{assignment.feedback2}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700">Informe de Revisor 1</label>
+                      <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+                        <p className="text-gray-600">{assignment.informe1}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700">Informe de Revisor 2</label>
+                      <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+                        <p className="text-gray-600">{assignment.informe2}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <button
+                  onClick={() => toggleTutorial(assignment['Link Artículo'])}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
+                >
+                  {tutorialVisible[assignment['Link Artículo']] ? 'Ocultar Tutorial' : 'Ver Tutorial'}
+                </button>
+                {tutorialVisible[assignment['Link Artículo']] && (
+                  <p className="text-gray-600 bg-gray-50 p-4 rounded-md border border-gray-200">{getTutorialText(assignment.role)}</p>
+                )}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    {assignment.role === 'Editor' ? 'Retroalimentación Final al Autor' : 'Retroalimentación al Autor'}
+                  </label>
+                  <textarea
+                    value={feedback[assignment['Link Artículo']] || ''}
+                    onChange={(e) => setFeedback((prev) => ({ ...prev, [assignment['Link Artículo']]: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows="4"
+                    placeholder={assignment.role === 'Editor' ? 'Redacta una retroalimentación final sensible, sintetizando las opiniones de los revisores y la tuya.' : 'Escribe tu retroalimentación aquí...'}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">Informe al Editor</label>
+                  <textarea
+                    value={report[assignment['Link Artículo']] || ''}
+                    onChange={(e) => setReport((prev) => ({ ...prev, [assignment['Link Artículo']]: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows="4"
+                    placeholder="Escribe tu informe aquí..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">Voto</label>
+                  <div className="flex space-x-4">
+                    <button
+                      onClick={() => handleVote(assignment['Link Artículo'], 'si')}
+                      className={`px-4 py-2 rounded-md ${vote[assignment['Link Artículo']] === 'si' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-800'} focus:outline-none focus:ring-2 focus:ring-green-500`}
+                    >
+                      Sí
+                    </button>
+                    <button
+                      onClick={() => handleVote(assignment['Link Artículo'], 'no')}
+                      className={`px-4 py-2 rounded-md ${vote[assignment['Link Artículo']] === 'no' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-800'} focus:outline-none focus:ring-2 focus:ring-red-500`}
+                    >
+                      No
+                    </button>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleSubmit(assignment['Link Artículo'], assignment.role, feedback[assignment['Link Artículo']] || '', report[assignment['Link Artículo']] || '', vote[assignment['Link Artículo']] || '')}
+                  className="w-full px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  Enviar
+                </button>
+                {submitStatus[assignment['Link Artículo']] && (
+                  <p className={`text-center text-sm ${submitStatus[assignment['Link Artículo']].includes('Error') ? 'text-red-500' : 'text-green-500'}`}>
+                    {submitStatus[assignment['Link Artículo']]}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+          {visibleAssignments < assignments.length && (
+            <div className="text-center">
+              <button
+                onClick={loadMoreAssignments}
+                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
+              >
+                Mostrar más
+              </button>
+            </div>
+          )}
         </div>
+      )}
+      {activeTab === 'news' && user.role.includes('Editor') && (
+        <NewsUploadSection />
       )}
     </div>
   );
