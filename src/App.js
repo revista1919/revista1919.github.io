@@ -1,4 +1,4 @@
-
+// App.js (corrected, but mostly unchanged; ensured consistency)
 import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 
@@ -16,6 +16,7 @@ import Footer from './components/Footer';
 import NewsletterSection from './components/NewsletterSection';
 import LoginSection from './components/LoginSection';
 import PortalSection from './components/PortalSection';
+import NewsSection from './components/NewsSection';
 
 import './index.css';
 
@@ -133,7 +134,7 @@ function App() {
           {!loading && filteredArticles.length > visibleArticles && (
             <div className="text-center mt-6">
               <button
-                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+                className="bg-[#5a3e36] text-white px-4 py-2 rounded-md hover:bg-[#7a5c4f] focus:outline-none focus:ring-2 focus:ring-[#5a3e36] text-sm sm:text-base"
                 onClick={loadMoreArticles}
               >
                 Cargar más
@@ -142,7 +143,7 @@ function App() {
           )}
           {!loading && visibleArticles > 6 && (
             <button
-              className="fixed bottom-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 z-10 text-sm sm:text-base"
+              className="fixed bottom-4 right-4 bg-[#5a3e36] text-white px-4 py-2 rounded-md hover:bg-[#7a5c4f] focus:outline-none focus:ring-2 focus:ring-[#5a3e36] z-10 text-sm sm:text-base"
               onClick={showLessArticles}
             >
               Mostrar menos
@@ -191,14 +192,19 @@ function App() {
       component: <NewsletterSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
+      name: 'news',
+      label: 'Noticias',
+      component: <NewsSection className="py-8 max-w-7xl mx-auto" />,
+    },
+    {
       name: 'login',
       label: 'Login / Estado de Artículos',
       component: (
         <div className="py-8 max-w-lg mx-auto">
-          <h2 className="text-2xl font-semibold text-center text-gray-800 mb-4">
+          <h2 className="text-2xl font-semibold text-center text-[#5a3e36] mb-4">
             Interfaz para Autores y Revisores
           </h2>
-          <p className="text-center text-gray-600 mb-6">
+          <p className="text-center text-[#7a5c4f] mb-6">
             Esta sección es solo para autores y revisores/autores con permisos especiales.
           </p>
           {user ? (
@@ -212,7 +218,7 @@ function App() {
   ];
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 min-h-screen bg-gray-100">
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 min-h-screen bg-[#f4ece7]">
       <Header />
       <Tabs sections={sections} activeTab={activeTab} setActiveTab={setActiveTab} />
       <Footer />
