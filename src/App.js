@@ -1,4 +1,3 @@
-// App.js (corrected, but mostly unchanged; ensured consistency)
 import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 
@@ -218,10 +217,31 @@ function App() {
   ];
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 min-h-screen bg-[#f4ece7]">
-      <Header />
-      <Tabs sections={sections} activeTab={activeTab} setActiveTab={setActiveTab} />
-      <Footer />
+    <div className="min-h-screen bg-[#f4ece7] flex flex-col">
+      <style>
+        {`
+          .full-width-header {
+            width: 100%;
+            margin: 0;
+            padding-left: 0;
+            padding-right: 0;
+            padding-top: 0;
+          }
+          .full-width-footer {
+            width: 100%;
+            margin: 0;
+            padding-left: 0;
+            padding-right: 0;
+            padding-bottom: 0;
+            margin-top: auto;
+          }
+        `}
+      </style>
+      <Header className="full-width-header" />
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex-grow">
+        <Tabs sections={sections} activeTab={activeTab} setActiveTab={setActiveTab} />
+      </div>
+      <Footer className="full-width-footer" />
     </div>
   );
 }

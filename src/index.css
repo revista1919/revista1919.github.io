@@ -16,8 +16,9 @@ body {
   color: rgb(0, 0, 0);
 }
 
+/* Container sin restricciones de ancho ni padding */
 .container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
 }
