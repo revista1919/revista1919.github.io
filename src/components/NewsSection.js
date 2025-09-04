@@ -11,6 +11,13 @@ export default function NewsSection({ className }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState("");
   const [selectedNews, setSelectedNews] = useState(null);
+  const [visibleNews, setVisibleNews] = useState(6); // State for visible news items
+  const [nombre, setNombre] = useState(""); // Newsletter form state
+  const [correo, setCorreo] = useState("");
+  const [enviado, setEnviado] = useState(false);
+
+  const scriptURL =
+    "https://script.google.com/macros/s/AKfycbzyyR93tD85nPprIKAR_IDoWYBSAnlFwVes09rJgOM3KQsByg_MgzafWDK1BcFhfVJHew/exec";
 
   useEffect(() => {
     const fetchNews = async () => {
@@ -61,11 +68,28 @@ export default function NewsSection({ className }) {
     fetchNews();
   }, []);
 
+  // Newsletter form submission
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const formData = new URLSearchParams();
+    formData.append('nombre', nombre);
+    formData.append('correo', correo);
+
+    fetch(scriptURL, { method: "POST", body: formData })
+      .then((r) => r.text())
+      .then(() => {
+        setEnviado(true);
+        setNombre('');
+        setCorreo('');
+      })
+      .catch((err) => alert("Error al enviar: " + err));
+  };
+
   // ---- Utilidades de fecha ----
   function formatDate(raw) {
     if (!raw) return "Sin fecha";
     const d = new Date(raw);
-    if (isNaN(d)) return raw; 
+    if (isNaN(d)) return raw;
     try {
       return d.toLocaleString("es-CL", {
         timeZone: "America/Santiago",
@@ -98,7 +122,7 @@ export default function NewsSection({ className }) {
 
   // ---- Parser completo ----
   function decodeBody(body) {
-    if (!body) return <p className="text-[#7a5c4f]">Sin contenido disponible.</p>;
+    if (!body) return <p className="text-[#000000]">Sin contenido disponible.</p>;
     const paragraphs = String(body).split("===");
 
     return paragraphs.map((p, idx) => (
@@ -117,8 +141,8 @@ export default function NewsSection({ className }) {
     const linkPattern = /(.+?)\((https?:\/\/[^\s)]+)\)/g;
     text = text.replace(linkPattern, (_, anchorText, url) => {
       const words = anchorText.trim().split(" ");
-      const normalText = words.slice(0, -1).join(" "); 
-      const clickableText = words[words.length - 1]; 
+      const normalText = words.slice(0, -1).join(" ");
+      const clickableText = words[words.length - 1];
       const id = placeholders.length;
       placeholders.push({ type: "anchor", normalText, clickableText, url });
       return TOK(id);
@@ -257,26 +281,63 @@ export default function NewsSection({ className }) {
     n.titulo?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (loading) return <p className="text-center text-[#7a5c4f]">Cargando noticias...</p>;
+  const loadMoreNews = () => setVisibleNews((prev) => prev + 6);
+
+  if (loading) return <p className="text-center text-[#000000]">Cargando noticias...</p>;
   if (error) return <p className="text-center text-red-500">{error}</p>;
 
   return (
     <div className={`space-y-6 bg-[#f4ece7] p-6 rounded-lg shadow-md ${className || ""}`}>
       <h3 className="text-2xl font-semibold text-[#5a3e36]">Noticias</h3>
 
+      {/* Newsletter Form */}
+      <div className="bg-[#f5f0e6] p-4 rounded-lg shadow-md max-w-lg mx-auto">
+        <p className="text-center text-[#000000] mb-4">
+          Si quieres que te lleguen las noticias, suscríbete gratis a la newsletter
+        </p>
+        {!enviado ? (
+          <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row justify-center items-center gap-2">
+            <input
+              type="text"
+              placeholder="Tu nombre"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              required
+              className="p-2 rounded border border-gray-400 w-full sm:w-auto flex-1 text-[#000000]"
+            />
+            <input
+              type="email"
+              placeholder="Tu correo"
+              value={correo}
+              onChange={(e) => setCorreo(e.target.value)}
+              required
+              className="p-2 rounded border border-gray-400 w-full sm:w-auto flex-1 text-[#000000]"
+            />
+            <button
+              type="submit"
+              className="bg-[#800020] text-white px-4 py-2 rounded hover:bg-[#5a0015] transition-colors"
+            >
+              Suscribirse
+            </button>
+          </form>
+        ) : (
+          <p className="text-green-700 font-semibold text-center mt-4">¡Gracias por suscribirte!</p>
+        )}
+      </div>
+
       <input
         type="text"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
-        className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#5a3e36] bg-white text-[#5a3e36]"
+        className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#5a3e36] bg-white text-[#000000]"
         placeholder="Buscar noticias..."
       />
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {filteredNews.length === 0 ? (
-          <p className="text-center text-[#7a5c4f] col-span-full">No se encontraron noticias.</p>
+          <p className="text-center text-[#000000] col-span-full">No se encontraron noticias.</p>
         ) : (
-          filteredNews.map((item, idx) => (
+          filteredNews.slice(0, visibleNews).map((item, idx) => (
             <motion.div
               key={idx}
               whileHover={{ scale: 1.02 }}
@@ -298,7 +359,7 @@ export default function NewsSection({ className }) {
               <p className="text-sm text-gray-500 mb-3">{item.fecha}</p>
 
               <div
-                className="text-[#7a5c4f] text-sm"
+                className="text-[#000000] text-sm"
                 style={{
                   display: "-webkit-box",
                   WebkitLineClamp: 3,
@@ -312,6 +373,18 @@ export default function NewsSection({ className }) {
           ))
         )}
       </div>
+
+      {/* Show More Button */}
+      {!loading && filteredNews.length > visibleNews && (
+        <div className="text-center mt-6">
+          <button
+            className="bg-[#5a3e36] text-white px-4 py-2 rounded-md hover:bg-[#7a5c4f] focus:outline-none focus:ring-2 focus:ring-[#5a3e36] text-sm sm:text-base"
+            onClick={loadMoreNews}
+          >
+            Mostrar más
+          </button>
+        </div>
+      )}
 
       {/* Modal */}
       <AnimatePresence>
@@ -332,7 +405,7 @@ export default function NewsSection({ className }) {
             >
               <h4 className="text-2xl font-bold text-[#5a3e36] mb-4">{selectedNews.titulo}</h4>
               <p className="text-sm text-gray-500 mb-6">{selectedNews.fecha}</p>
-              <div className="text-[#7a5c4f]">{decodeBody(selectedNews.cuerpo)}</div>
+              <div className="text-[#000000]">{decodeBody(selectedNews.cuerpo)}</div>
               <button
                 onClick={() => setSelectedNews(null)}
                 className="mt-6 px-4 py-2 bg-[#5a3e36] text-white rounded-lg hover:bg-[#5a3e36]/80 transition"
