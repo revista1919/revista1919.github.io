@@ -66,7 +66,7 @@ module.exports = (env, argv) => {
           },
         },
         {
-          test: /\.pdf$/i, // Para manejar PDFs de artículos
+          test: /\.pdf$/i,
           type: 'asset/resource',
           generator: {
             filename: 'Articles/[name][ext]',
@@ -92,9 +92,14 @@ module.exports = (env, argv) => {
           { 
             from: 'public/Articles', 
             to: 'Articles',
-            noErrorOnMissing: true, // 👈 evita errores si no existe o está vacía
+            noErrorOnMissing: true, // Evita errores si no existe
           },
-          { from: 'sitemap.xml', to: '.' },
+          // No copiamos sitemap.xml ni robots.txt porque generate-all.js los genera en dist/
+          { 
+            from: 'dist/articles', 
+            to: 'articles',
+            noErrorOnMissing: true, // Copia los HTML generados si no se generan directamente en dist/
+          },
         ],
       }),
     ],
