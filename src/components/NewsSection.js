@@ -130,7 +130,19 @@ export default function NewsSection({ className }) {
     if (!body) return <p className="text-[#000000]">Sin contenido disponible.</p>;
     let fullBody = body;
     if (truncate && body.length > 2000) {
-      fullBody = body.slice(0, 2000) + '...';
+      // Find the last paragraph boundary (===) before or around 2000 characters
+      const paragraphs = String(body).split("===");
+      let charCount = 0;
+      let truncatedParagraphs = [];
+      for (let i = 0; i < paragraphs.length; i++) {
+        charCount += paragraphs[i].length + 3; // Include length of "==="
+        if (charCount <= 2000) {
+          truncatedParagraphs.push(paragraphs[i]);
+        } else {
+          break;
+        }
+      }
+      fullBody = truncatedParagraphs.join("===") + (truncatedParagraphs.length < paragraphs.length ? "..." : "");
     }
     const paragraphs = String(fullBody)
       .split("===")
@@ -191,7 +203,7 @@ export default function NewsSection({ className }) {
     const TOK = (i) => `__TOK${i}__`;
 
     // Handle prefix (size,align)
-    let align = "";
+    let align = "left";
     let size = "normal";
     if (text.startsWith('(')) {
       const endIdx = text.indexOf(')');
@@ -207,10 +219,10 @@ export default function NewsSection({ className }) {
     }
 
     // Image pattern: [img:URL,width,height,align]
-    const imgPattern = /\[img:([^\]]*?)(?:,(\d*(?:px|%)?))?(?:,(\d*(?:px|%)?))?(?:,(left|center|right|justify))?\]/gi;
+    const imgPattern = /\[img:([^\]]*?)(?:,(\d*(?:px|%)?|auto))?(?:,(\d*(?:px|%)?|auto))?(?:,(left|center|right|justify))?\]/gi;
     text = text.replace(imgPattern, (_, url, width = "auto", height = "auto", imgAlign = "left") => {
-      if (width !== "auto" && !width.match(/%|px$/)) width += 'px';
-      if (height !== "auto" && !height.match(/%|px$/)) height += 'px';
+      if (width !== "auto" && width && !width.match(/%|px$/)) width += 'px';
+      if (height !== "auto" && height && !height.match(/%|px$/)) height += 'px';
       const id = placeholders.length;
       placeholders.push({ type: "image", url: normalizeUrl(url), width, height, align: imgAlign });
       return TOK(id);
@@ -251,8 +263,17 @@ export default function NewsSection({ className }) {
     else if (size === 'big') fontSizeStyle = '1.5em';
     else fontSizeStyle = 'inherit';
 
+    // Apply alignment to the container
+    const alignStyle = {
+      textAlign: align,
+      fontSize: fontSizeStyle,
+      width: '100%',
+      display: 'block',
+      margin: align === 'center' ? '0 auto' : '0',
+    };
+
     return (
-      <div style={{ textAlign: align || "left", fontSize: fontSizeStyle, width: '100%' }}>
+      <div style={alignStyle}>
         {styledContent}
       </div>
     );
@@ -307,19 +328,21 @@ export default function NewsSection({ className }) {
           let imgStyle = {
             width: ph.width !== 'auto' ? ph.width : '100%',
             height: ph.height !== 'auto' ? ph.height : 'auto',
-            display: "block",
-            marginLeft: ph.align === "left" ? "0" : ph.align === "center" ? "auto" : "auto",
-            marginRight: ph.align === "right" ? "0" : ph.align === "center" ? "auto" : "auto",
-            float: ph.align === "left" || ph.align === "right" ? ph.align : "none",
-            maxWidth: "100%",
+            display: 'block',
+            marginLeft: ph.align === 'center' ? 'auto' : '0',
+            marginRight: ph.align === 'center' ? 'auto' : '0',
+            float: ph.align === 'left' || ph.align === 'right' ? ph.align : 'none',
+            maxWidth: '100%',
+            marginTop: '8px',
+            marginBottom: '8px',
           };
-          if (ph.align === "justify") {
+          if (ph.align === 'justify') {
             imgStyle = {
               ...imgStyle,
-              width: "100%",
-              marginLeft: "0",
-              marginRight: "0",
-              float: "none",
+              width: '100%',
+              marginLeft: '0',
+              marginRight: '0',
+              float: 'none',
             };
           }
           out.push(
@@ -327,7 +350,7 @@ export default function NewsSection({ className }) {
               key={key++}
               src={normalizeUrl(ph.url)}
               alt="Imagen de la noticia"
-              className="max-w-full h-auto rounded-md my-2"
+              className="max-w-full h-auto rounded-md"
               style={imgStyle}
               onError={(e) => {
                 e.currentTarget.onerror = null;
@@ -550,7 +573,7 @@ export default function NewsSection({ className }) {
                   overflow: "hidden",
                 }}
               >
-                {decodeBody(item.cuerpo)}
+                {decodeBody(item.cuerpo, true)}
               </div>
             </motion.div>
           ))
