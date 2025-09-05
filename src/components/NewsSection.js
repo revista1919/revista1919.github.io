@@ -11,11 +11,10 @@ export default function NewsSection({ className }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState("");
   const [selectedNews, setSelectedNews] = useState(null);
-  const [visibleNews, setVisibleNews] = useState(6); // State for visible news items
-  const [nombre, setNombre] = useState(""); // Newsletter form state
+  const [visibleNews, setVisibleNews] = useState(6);
+  const [nombre, setNombre] = useState("");
   const [correo, setCorreo] = useState("");
   const [enviado, setEnviado] = useState(false);
-
   const scriptURL =
     "https://script.google.com/macros/s/AKfycbzyyR93tD85nPprIKAR_IDoWYBSAnlFwVes09rJgOM3KQsByg_MgzafWDK1BcFhfVJHew/exec";
 
@@ -25,7 +24,6 @@ export default function NewsSection({ className }) {
         const response = await fetch(NEWS_CSV, { cache: "no-store" });
         if (!response.ok) throw new Error("Error al cargar el archivo CSV");
         const csvText = await response.text();
-
         Papa.parse(csvText, {
           header: true,
           skipEmptyLines: true,
@@ -37,7 +35,6 @@ export default function NewsSection({ className }) {
               setLoading(false);
               return;
             }
-
             const validNews = data
               .filter(
                 (item) =>
@@ -49,7 +46,6 @@ export default function NewsSection({ className }) {
                 cuerpo: String(item["Contenido de la noticia"] ?? ""),
                 fecha: formatDate(String(item["Fecha"] ?? "")),
               }));
-
             setNews(validNews);
             setLoading(false);
           },
@@ -68,213 +64,294 @@ export default function NewsSection({ className }) {
     fetchNews();
   }, []);
 
-  // Newsletter form submission
   const handleSubmit = (e) => {
     e.preventDefault();
     const formData = new URLSearchParams();
-    formData.append('nombre', nombre);
-    formData.append('correo', correo);
-
+    formData.append("nombre", nombre);
+    formData.append("correo", correo);
     fetch(scriptURL, { method: "POST", body: formData })
       .then((r) => r.text())
       .then(() => {
         setEnviado(true);
-        setNombre('');
-        setCorreo('');
+        setNombre("");
+        setCorreo("");
       })
       .catch((err) => alert("Error al enviar: " + err));
   };
 
-  // ---- Utilidades de fecha ----
   function formatDate(raw) {
     if (!raw) return "Sin fecha";
-    const d = new Date(raw);
-    if (isNaN(d)) return raw;
-    try {
-      return d.toLocaleString("es-CL", {
-        timeZone: "America/Santiago",
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch {
-      return raw;
+    let parsedDate = new Date(raw);
+    if (isNaN(parsedDate.getTime())) {
+      const datePattern = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/;
+      const match = raw.match(datePattern);
+      if (match) {
+        const [, day, month, year] = match;
+        parsedDate = new Date(`${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`);
+      }
     }
+    if (!isNaN(parsedDate.getTime())) {
+      try {
+        return parsedDate.toLocaleString("es-CL", {
+          timeZone: "America/Santiago",
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      } catch {
+        return raw;
+      }
+    }
+    return raw;
   }
 
-  // ---- Detección de imágenes y normalización de URL ----
   function isLikelyImageUrl(url) {
     if (!url) return false;
     const u = url.toLowerCase();
     return (
       /\.(png|jpe?g|gif|webp|bmp|svg)(\?.*)?$/.test(u) ||
-      /googleusercontent|gstatic|ggpht|google\.(com|cl).*\/(img|images|url)/.test(u)
+      /googleusercontent|gstatic|ggpht|google\.(com|cl).*\/(img|images|url)/.test(u) ||
+      /^data:image\/[a-zA-Z+]+;base64,/.test(u)
     );
   }
 
   function normalizeUrl(u) {
     let url = (u || "").trim();
-    if (/^https?:[^/]/i.test(url)) url = url.replace(/^https?:/i, (m) => m + "//");
+    if (/^https?:[^/]/i.test(url)) {
+      url = url.replace(/^https?:/i, (m) => m + "//");
+    }
     return url;
   }
 
-  // ---- Parser completo ----
   function decodeBody(body) {
     if (!body) return <p className="text-[#000000]">Sin contenido disponible.</p>;
-    const paragraphs = String(body).split("===");
-
+    const paragraphs = String(body)
+      .split("===")
+      .filter((p) => p.trim() !== "");
     return paragraphs.map((p, idx) => (
-      <p key={idx} className="mb-4 leading-relaxed break-words">
+      <div key={idx} className="mb-4 leading-relaxed break-words" style={{ clear: "both" }}>
         {renderParagraph(p)}
-      </p>
+      </div>
     ));
   }
 
   function renderParagraph(p) {
-    let text = p;
+    let text = p.trim();
     const placeholders = [];
     const TOK = (i) => `__TOK${i}__`;
 
-    // Detectar texto(link)
-    const linkPattern = /(.+?)\((https?:\/\/[^\s)]+)\)/g;
-    text = text.replace(linkPattern, (_, anchorText, url) => {
-      const words = anchorText.trim().split(" ");
-      const normalText = words.slice(0, -1).join(" ");
-      const clickableText = words[words.length - 1];
+    // Handle escaping
+    text = text.replace(/\\([*/_$~])/g, (_, char) => `<<ESC_${char.charCodeAt(0)}>>`);
+
+    // Handle alignment and size
+    let align = "";
+    let size = "";
+    text = text.replace(/\[align:([^\]]*)\]/gi, (_, a) => {
+      align = a;
+      return "";
+    });
+    text = text.replace(/\[size:([^\]]*)\]/gi, (_, s) => {
+      size = s;
+      return "";
+    });
+
+    // Image pattern: [img:URL,width,height,align]
+    const imgPattern = /\[img:([^\]]*?)(?:,(\d*(?:px|%)?))?(?:,(\d*(?:px|%)?))?(?:,(left|center|right))?\]/gi;
+    text = text.replace(imgPattern, (_, url, width = "auto", height = "auto", imgAlign = "left") => {
       const id = placeholders.length;
-      placeholders.push({ type: "anchor", normalText, clickableText, url });
+      placeholders.push({ type: "image", url: normalizeUrl(url), width, height, align: imgAlign });
       return TOK(id);
     });
 
-    // URLs sueltas
-    const urlPattern = /https?:\/\/[^\s)]+/g;
+    // Link pattern: word(URL)
+    const linkPattern = /\b(\w+)\((https?:\/\/[^\s)]+)\)/gi;
+    text = text.replace(linkPattern, (_, word, url) => {
+      const id = placeholders.length;
+      placeholders.push({ type: "link", word, url });
+      return TOK(id);
+    });
+
+    // Standalone URLs
+    const urlPattern = /(?:https?:\/\/[^\s)]+|^data:image\/[a-zA-Z+]+;base64,[^\s)]+)/gi;
     text = text.replace(urlPattern, (u) => {
+      if (placeholders.some((ph) => ph.url === u)) return u;
       const id = placeholders.length;
-      placeholders.push({
-        type: isLikelyImageUrl(u) ? "image" : "url",
-        url: u,
-      });
+      placeholders.push({ type: isLikelyImageUrl(u) ? "image" : "url", url: u });
       return TOK(id);
     });
 
-    return renderWithStylesAndTokens(text, placeholders);
-  }
+    // Revert escaped characters
+    text = text.replace(/<<ESC_(\d+)>>/g, (_, code) => String.fromCharCode(Number(code)));
 
-  function renderWithStylesAndTokens(text, placeholders) {
+    // Process styles
     const parts = text.split(/(__TOK\d+__)/g);
     const out = [];
     let buf = "";
     let bold = false;
     let italic = false;
+    let underline = false;
+    let strike = false;
     let key = 0;
-
-    function flush() {
-      if (!buf) return;
-      out.push(...renderOnlyStyles(buf, bold, italic, key));
-      key += 1;
-      buf = "";
-    }
 
     for (const part of parts) {
       if (/^__TOK\d+__$/.test(part)) {
-        flush();
-        const idx = Number(part.replace(/__TOK(\d+)__/, "$1"));
+        if (buf) {
+          out.push(
+            <span
+              key={key++}
+              style={{
+                fontWeight: bold ? "bold" : "normal",
+                fontStyle: italic ? "italic" : "normal",
+                textDecoration: `${underline ? "underline" : ""} ${strike ? "line-through" : ""}`.trim(),
+              }}
+            >
+              {buf}
+            </span>
+          );
+          buf = "";
+        }
+        const idx = Number(part.match(/\d+/)[0]);
         const ph = placeholders[idx];
         if (!ph) continue;
-
-        if (ph.type === "anchor") {
-          const url = normalizeUrl(ph.url);
-          const normalNodes = renderOnlyStyles(ph.normalText);
-          const clickableNode = (
+        if (ph.type === "link") {
+          out.push(
             <a
-              href={url}
+              key={key++}
+              href={normalizeUrl(ph.url)}
               target="_blank"
               rel="noopener noreferrer"
               className="text-blue-600 hover:underline"
             >
-              {renderOnlyStyles(ph.clickableText)}
+              {ph.word}
             </a>
           );
-          out.push(...normalNodes, " ", clickableNode);
         } else if (ph.type === "image") {
-          const url = normalizeUrl(ph.url);
           out.push(
             <img
-              src={url}
+              key={key++}
+              src={normalizeUrl(ph.url)}
               alt="Imagen de la noticia"
               className="max-w-full h-auto rounded-md my-2"
+              style={{
+                width: ph.width,
+                height: ph.height,
+                display: "block",
+                marginLeft: ph.align === "left" ? "0" : ph.align === "center" ? "auto" : "auto",
+                marginRight: ph.align === "right" ? "0" : ph.align === "center" ? "auto" : "auto",
+                float: ph.align === "left" || ph.align === "right" ? ph.align : "none",
+              }}
               onError={(e) => {
                 e.currentTarget.onerror = null;
-                e.currentTarget.src =
-                  "https://via.placeholder.com/800x450?text=Imagen+no+disponible";
+                e.currentTarget.src = "https://via.placeholder.com/800x450?text=Imagen+no+disponible";
               }}
-              key={key++}
             />
           );
-        } else {
-          const url = normalizeUrl(ph.url);
+        } else if (ph.type === "url") {
           out.push(
             <a
-              href={url}
+              key={key++}
+              href={normalizeUrl(ph.url)}
               target="_blank"
               rel="noopener noreferrer"
               className="text-blue-600 hover:underline"
-              key={key++}
             >
-              {url}
+              {ph.url}
             </a>
           );
         }
         continue;
       }
-
-      // Parse * y /
-      for (let i = 0; i < part.length; i++) {
-        const ch = part[i];
+      for (const ch of part) {
         if (ch === "*") {
-          flush();
+          if (buf) {
+            out.push(
+              <span
+                key={key++}
+                style={{
+                  fontWeight: bold ? "bold" : "normal",
+                  fontStyle: italic ? "italic" : "normal",
+                  textDecoration: `${underline ? "underline" : ""} ${strike ? "line-through" : ""}`.trim(),
+                }}
+              >
+                {buf}
+              </span>
+            );
+            buf = "";
+          }
           bold = !bold;
         } else if (ch === "/") {
-          flush();
+          if (buf) {
+            out.push(
+              <span
+                key={key++}
+                style={{
+                  fontWeight: bold ? "bold" : "normal",
+                  fontStyle: italic ? "italic" : "normal",
+                  textDecoration: `${underline ? "underline" : ""} ${strike ? "line-through" : ""}`.trim(),
+                }}
+              >
+                {buf}
+              </span>
+            );
+            buf = "";
+          }
           italic = !italic;
+        } else if (ch === "$") {
+          if (buf) {
+            out.push(
+              <span
+                key={key++}
+                style={{
+                  fontWeight: bold ? "bold" : "normal",
+                  fontStyle: italic ? "italic" : "normal",
+                  textDecoration: `${underline ? "underline" : ""} ${strike ? "line-through" : ""}`.trim(),
+                }}
+              >
+                {buf}
+              </span>
+            );
+            buf = "";
+          }
+          underline = !underline;
+        } else if (ch === "~") {
+          if (buf) {
+            out.push(
+              <span
+                key={key++}
+                style={{
+                  fontWeight: bold ? "bold" : "normal",
+                  fontStyle: italic ? "italic" : "normal",
+                  textDecoration: `${underline ? "underline" : ""} ${strike ? "line-through" : ""}`.trim(),
+                }}
+              >
+                {buf}
+              </span>
+            );
+            buf = "";
+          }
+          strike = !strike;
         } else {
           buf += ch;
         }
       }
     }
-    flush();
-    return out;
-  }
-
-  function renderOnlyStyles(text, bold = false, italic = false) {
-    const out = [];
-    let buf = "";
-    let key = 0;
-
-    function push(str) {
-      if (!str) return;
-      if (bold && italic) out.push(<strong key={key++}><em>{str}</em></strong>);
-      else if (bold) out.push(<strong key={key++}>{str}</strong>);
-      else if (italic) out.push(<em key={key++}>{str}</em>);
-      else out.push(<span key={key++}>{str}</span>);
+    if (buf) {
+      out.push(
+        <span
+          key={key++}
+          style={{
+            fontWeight: bold ? "bold" : "normal",
+            fontStyle: italic ? "italic" : "normal",
+            textDecoration: `${underline ? "underline" : ""} ${strike ? "line-through" : ""}`.trim(),
+          }}
+        >
+          {buf}
+        </span>
+      );
     }
-
-    for (let i = 0; i < text.length; i++) {
-      const ch = text[i];
-      if (ch === "*") {
-        push(buf);
-        buf = "";
-        bold = !bold;
-      } else if (ch === "/") {
-        push(buf);
-        buf = "";
-        italic = !italic;
-      } else buf += ch;
-    }
-    push(buf);
-    return out;
+    return <span style={{ textAlign: align || "left", fontSize: size || "inherit" }}>{out}</span>;
   }
 
   const filteredNews = news.filter((n) =>
@@ -289,21 +366,25 @@ export default function NewsSection({ className }) {
   return (
     <div className={`space-y-6 bg-[#f4ece7] p-6 rounded-lg shadow-md ${className || ""}`}>
       <h3 className="text-2xl font-semibold text-[#5a3e36]">Noticias</h3>
-
-      {/* Newsletter Form */}
-      <div className="bg-[#f5f0e6] p-4 rounded-lg shadow-md max-w-lg mx-auto">
-        <p className="text-center text-[#000000] mb-4">
-          Si quieres que te lleguen las noticias, suscríbete gratis a la newsletter
+      <div className="bg-gradient-to-br from-[#f9f6f2] to-[#f1e7df] p-6 rounded-2xl shadow-lg max-w-2xl mx-auto border border-[#e2d8cf]">
+        <h4 className="text-xl font-semibold text-[#5a3e36] text-center mb-3">
+          Suscríbete a nuestra Newsletter
+        </h4>
+        <p className="text-center text-[#3e3e3e] mb-6 text-sm">
+          Recibe directamente en tu correo las últimas noticias y artículos académicos.
         </p>
         {!enviado ? (
-          <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row justify-center items-center gap-2">
+          <form
+            onSubmit={handleSubmit}
+            className="flex flex-col sm:flex-row justify-center items-center gap-3"
+          >
             <input
               type="text"
               placeholder="Tu nombre"
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
               required
-              className="p-2 rounded border border-gray-400 w-full sm:w-auto flex-1 text-[#000000]"
+              className="px-4 py-2 rounded-lg border border-gray-300 w-full sm:flex-1 text-[#000000] shadow-sm focus:outline-none focus:ring-2 focus:ring-[#800020] transition"
             />
             <input
               type="email"
@@ -311,20 +392,21 @@ export default function NewsSection({ className }) {
               value={correo}
               onChange={(e) => setCorreo(e.target.value)}
               required
-              className="p-2 rounded border border-gray-400 w-full sm:w-auto flex-1 text-[#000000]"
+              className="px-4 py-2 rounded-lg border border-gray-300 w-full sm:flex-1 text-[#000000] shadow-sm focus:outline-none focus:ring-2 focus:ring-[#800020] transition"
             />
             <button
               type="submit"
-              className="bg-[#800020] text-white px-4 py-2 rounded hover:bg-[#5a0015] transition-colors"
+              className="bg-[#800020] text-white px-6 py-2 rounded-lg font-medium shadow-md hover:bg-[#5a0015] transition-colors duration-200"
             >
               Suscribirse
             </button>
           </form>
         ) : (
-          <p className="text-green-700 font-semibold text-center mt-4">¡Gracias por suscribirte!</p>
+          <p className="text-green-700 font-semibold text-center mt-4">
+            ¡Gracias por suscribirte!
+          </p>
         )}
       </div>
-
       <input
         type="text"
         value={searchTerm}
@@ -332,20 +414,21 @@ export default function NewsSection({ className }) {
         className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#5a3e36] bg-white text-[#000000]"
         placeholder="Buscar noticias..."
       />
-
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {filteredNews.length === 0 ? (
-          <p className="text-center text-[#000000] col-span-full">No se encontraron noticias.</p>
+          <p className="text-center text-[#000000] col-span-full">
+            No se encontraron noticias.
+          </p>
         ) : (
           filteredNews.slice(0, visibleNews).map((item, idx) => (
             <motion.div
               key={idx}
-              whileHover={{ scale: 1.02 }}
-              className="bg-white p-4 rounded-2xl shadow-md cursor-pointer flex flex-col"
+              whileHover={{ scale: 1.015 }}
+              className="bg-white p-5 rounded-2xl shadow-lg cursor-pointer flex flex-col border border-gray-100 hover:shadow-xl transition"
               onClick={() => setSelectedNews(item)}
             >
               <h4
-                className="text-lg font-semibold text-[#5a3e36] mb-2"
+                className="text-lg font-semibold text-[#5a3e36] mb-2 leading-snug"
                 style={{
                   display: "-webkit-box",
                   WebkitLineClamp: 2,
@@ -355,11 +438,9 @@ export default function NewsSection({ className }) {
               >
                 {item.titulo}
               </h4>
-
-              <p className="text-sm text-gray-500 mb-3">{item.fecha}</p>
-
+              <p className="text-sm text-gray-500 mb-3 italic">{item.fecha}</p>
               <div
-                className="text-[#000000] text-sm"
+                className="text-[#000000] text-sm leading-relaxed"
                 style={{
                   display: "-webkit-box",
                   WebkitLineClamp: 3,
@@ -373,8 +454,6 @@ export default function NewsSection({ className }) {
           ))
         )}
       </div>
-
-      {/* Show More Button */}
       {!loading && filteredNews.length > visibleNews && (
         <div className="text-center mt-6">
           <button
@@ -385,8 +464,6 @@ export default function NewsSection({ className }) {
           </button>
         </div>
       )}
-
-      {/* Modal */}
       <AnimatePresence>
         {selectedNews && (
           <motion.div
@@ -397,21 +474,25 @@ export default function NewsSection({ className }) {
             onClick={() => setSelectedNews(null)}
           >
             <motion.div
-              className="bg-white rounded-2xl shadow-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6"
+              className="bg-white rounded-2xl shadow-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6 flex flex-col"
               initial={{ scale: 0.92 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0.92 }}
               onClick={(e) => e.stopPropagation()}
             >
-              <h4 className="text-2xl font-bold text-[#5a3e36] mb-4">{selectedNews.titulo}</h4>
+              <h4 className="text-2xl font-bold text-[#5a3e36] mb-4">
+                {selectedNews.titulo}
+              </h4>
               <p className="text-sm text-gray-500 mb-6">{selectedNews.fecha}</p>
-              <div className="text-[#000000]">{decodeBody(selectedNews.cuerpo)}</div>
-              <button
-                onClick={() => setSelectedNews(null)}
-                className="mt-6 px-4 py-2 bg-[#5a3e36] text-white rounded-lg hover:bg-[#5a3e36]/80 transition"
-              >
-                Cerrar
-              </button>
+              <div className="text-[#000000] flex-1">{decodeBody(selectedNews.cuerpo)}</div>
+              <div className="mt-6 text-center">
+                <button
+                  onClick={() => setSelectedNews(null)}
+                  className="px-4 py-2 bg-[#5a3e36] text-white rounded-lg hover:bg-[#5a3e36]/80 transition"
+                >
+                  Cerrar
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}
