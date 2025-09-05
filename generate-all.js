@@ -4,9 +4,10 @@ const fetch = require('node-fetch').default;
 const Papa = require('papaparse');
 
 const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p32EM6-0VYy18AdREQwXdpeet1WHTA4H2-W2FX7HKe1HPSyApWadUw9sKHdVYQXL5tP6yDRs/pub?output=csv';
-const outputJson = './articles.json';
-const outputHtmlDir = path.join(__dirname, 'articles');
-const sitemapPath = path.join(__dirname, 'sitemap.xml');
+const outputJson = path.join(__dirname, 'dist', 'articles.json'); // Guardar JSON en dist/
+const outputHtmlDir = path.join(__dirname, 'dist', 'articles'); // HTMLs en dist/articles/
+const sitemapPath = path.join(__dirname, 'dist', 'sitemap.xml'); // sitemap.xml en dist/
+const robotsPath = path.join(__dirname, 'dist', 'robots.txt'); // robots.txt en dist/
 const domain = 'https://www.revistacienciasestudiantes.com'; // Cambia si tu dominio es diferente
 
 // ---------- Función robusta para parsear fechas ----------
@@ -34,11 +35,11 @@ function formatAuthorForCitation(author) {
     const nombre = parts.join(' ');
     return `${apellido}, ${nombre}`;
   }
-  return author; // Si no se puede invertir, deja como está
+  return author;
 }
 
 // ---------- Crear carpeta HTML si no existe ----------
-if (!fs.existsSync(outputHtmlDir)) fs.mkdirSync(outputHtmlDir);
+if (!fs.existsSync(outputHtmlDir)) fs.mkdirSync(outputHtmlDir, { recursive: true });
 
 // ---------- Flujo principal ----------
 (async () => {
@@ -52,7 +53,7 @@ if (!fs.existsSync(outputHtmlDir)) fs.mkdirSync(outputHtmlDir);
       titulo: row['Título'] || 'Sin título',
       autores: row['Autor(es)'] || 'Autor desconocido',
       resumen: row['Resumen'] || 'Resumen no disponible',
-      pdf: `${domain}/Articles/Articulo${row['Número de artículo']}.pdf`, // Generamos URL absoluta
+      pdf: `${domain}/Articles/Articulo${row['Número de artículo']}.pdf`,
       fecha: parseDateFlexible(row['Fecha']),
       volumen: row['Volumen'] || '',
       numero: row['Número'] || '',
@@ -84,7 +85,7 @@ if (!fs.existsSync(outputHtmlDir)) fs.mkdirSync(outputHtmlDir);
   ${authorMetaTags}
   <meta name="citation_publication_date" content="${article.fecha}">
   <meta name="citation_journal_title" content="Revista Nacional de las Ciencias para Estudiantes">
-  <meta name="citation_issn" content="1234-5678"> <!-- Cambia por tu ISSN real si lo tienes -->
+  <meta name="citation_issn" content="1234-5678"> <!-- Cambia por tu ISSN real -->
   <meta name="citation_volume" content="${article.volumen}">
   <meta name="citation_issue" content="${article.numero}">
   <meta name="citation_firstpage" content="${article.primeraPagina}">
@@ -226,6 +227,36 @@ ${articles.map(article => `
 
     fs.writeFileSync(sitemapPath, sitemapContent);
     console.log(`Generado sitemap: ${sitemapPath}`);
+
+    // ---------- Generar robots.txt ----------
+    const robotsContent = `
+User-agent: Googlebot
+Allow: /articles/
+Allow: /Articles/
+Allow: /index.css
+Disallow: /search
+Disallow: /login
+Disallow: /admin
+Disallow: /submit
+Disallow: /cart
+Disallow: /api/
+
+User-agent: *
+Allow: /articles/
+Allow: /Articles/
+Allow: /index.css
+Disallow: /search
+Disallow: /login
+Disallow: /admin
+Disallow: /submit
+Disallow: /cart
+Disallow: /api/
+
+Sitemap: ${domain}/sitemap.xml
+    `;
+
+    fs.writeFileSync(robotsPath, robotsContent);
+    console.log(`Generado robots.txt: ${robotsPath}`);
 
   } catch (err) {
     console.error('❌ Error:', err);
