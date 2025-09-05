@@ -1,0 +1,23 @@
+User-agent: Googlebot
+Allow: /articles/
+Allow: /Articles/
+Allow: /index.css
+Disallow: /search
+Disallow: /login
+Disallow: /admin
+Disallow: /submit
+Disallow: /cart
+Disallow: /api/
+
+User-agent: *
+Allow: /articles/
+Allow: /Articles/
+Allow: /index.css
+Disallow: /search
+Disallow: /login
+Disallow: /admin
+Disallow: /submit
+Disallow: /cart
+Disallow: /api/
+
+Sitemap: https://www.revistacienciasestudiantes.com/sitemap.xml

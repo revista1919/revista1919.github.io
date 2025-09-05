@@ -73,7 +73,8 @@ function App() {
       const matchesSearch =
         article['Título']?.toLowerCase().includes(lowerTerm) ||
         article['Autor(es)']?.toLowerCase().includes(lowerTerm) ||
-        article['Resumen']?.toLowerCase().includes(lowerTerm);
+        article['Resumen']?.toLowerCase().includes(lowerTerm) ||
+        article['Palabras clave']?.toLowerCase().includes(lowerTerm);
       const matchesArea = area === '' || (article['Área temática'] || '').toLowerCase() === area.toLowerCase();
       return matchesSearch && matchesArea;
     });
