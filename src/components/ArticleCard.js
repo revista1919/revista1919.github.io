@@ -46,6 +46,8 @@ function ArticleCard({ article }) {
     ? `https://www.revistacienciasestudiantes.com/Articles/Articulo${article['Número de artículo']}.pdf`
     : null;
 
+  const pages = `${article['Primera página'] || ''}-${article['Última página'] || ''}`.trim() || ''; // Para mostrar páginas en citas
+
   // Cargar autores desde CSV
   useEffect(() => {
     setIsLoading(true);
@@ -80,14 +82,13 @@ function ArticleCard({ article }) {
     setIsLoading(false);
   };
 
-  // Citas con JSX (para cursivas y links)
+  // Citas con JSX (para cursivas y links), manejando autores separados por ';'
   const getChicagoCitation = () => {
-    const authors = article['Autor(es)'] || 'Autor desconocido';
+    const authors = article['Autor(es)']?.split(';').map(a => a.trim()).join('; ') || 'Autor desconocido';
     const title = article['Título'] || 'Sin título';
     const volume = article['Volumen'] || '';
     const number = article['Número'] || '';
     const year = getYear(article['Fecha']);
-    const pages = article['Páginas'] || '';
 
     return (
       <>
@@ -102,12 +103,11 @@ function ArticleCard({ article }) {
   };
 
   const getApaCitation = () => {
-    const authors = article['Autor(es)'] || 'Autor desconocido';
+    const authors = article['Autor(es)']?.split(';').map(a => a.trim()).join('; ') || 'Autor desconocido';
     const title = article['Título'] || 'Sin título';
     const volume = article['Volumen'] || '';
     const number = article['Número'] || '';
     const year = getYear(article['Fecha']);
-    const pages = article['Páginas'] || '';
 
     return (
       <>
@@ -122,12 +122,11 @@ function ArticleCard({ article }) {
   };
 
   const getMlaCitation = () => {
-    const authors = article['Autor(es)'] || 'Autor desconocido';
+    const authors = article['Autor(es)']?.split(';').map(a => a.trim()).join('; ') || 'Autor desconocido';
     const title = article['Título'] || 'Sin título';
     const volume = article['Volumen'] || '';
     const number = article['Número'] || '';
     const year = getYear(article['Fecha']);
-    const pages = article['Páginas'] || '';
 
     return (
       <>
@@ -149,14 +148,14 @@ function ArticleCard({ article }) {
 
       <p className="text-gray-600 text-sm sm:text-base mb-1">
         <strong>Autor(es): </strong>
-        {article['Autor(es)']?.split(',').map((a, idx, arr) => (
+        {article['Autor(es)']?.split(';').map((a, idx, arr) => (
           <span
             key={idx}
             className="cursor-pointer hover:text-blue-500 underline"
             onClick={() => handleAuthorClick(a.trim())}
           >
             {a.trim()}
-            {idx < arr.length - 1 ? ', ' : ''}
+            {idx < arr.length - 1 ? '; ' : ''}
           </span>
         ))}
       </p>
@@ -236,33 +235,33 @@ function ArticleCard({ article }) {
         </div>
       )}
 
-{isAuthorModalOpen && selectedAuthor && (
-  <div className="fixed inset-0 flex items-center justify-center z-50">
-    {/* Fondo oscuro */}
-    <div
-      className="absolute inset-0 bg-black bg-opacity-40"
-      onClick={() => setIsAuthorModalOpen(false)}
-    ></div>
+      {isAuthorModalOpen && selectedAuthor && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          {/* Fondo oscuro */}
+          <div
+            className="absolute inset-0 bg-black bg-opacity-40"
+            onClick={() => setIsAuthorModalOpen(false)}
+          ></div>
 
-    {/* Contenedor del modal */}
-    <div className="bg-white p-4 sm:p-6 rounded-lg max-w-sm w-full max-h-[80vh] overflow-y-auto shadow-xl z-50">
-      <div className="flex justify-between items-center mb-3">
-        <h3 className="text-lg font-bold">{selectedAuthor.Nombre || 'Autor desconocido'}</h3>
-        <button
-          className="text-gray-500 hover:text-gray-700 text-xl"
-          onClick={() => setIsAuthorModalOpen(false)}
-        >
-          ×
-        </button>
-      </div>
+          {/* Contenedor del modal */}
+          <div className="bg-white p-4 sm:p-6 rounded-lg max-w-sm w-full max-h-[80vh] overflow-y-auto shadow-xl z-50">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-lg font-bold">{selectedAuthor.Nombre || 'Autor desconocido'}</h3>
+              <button
+                className="text-gray-500 hover:text-gray-700 text-xl"
+                onClick={() => setIsAuthorModalOpen(false)}
+              >
+                ×
+              </button>
+            </div>
 
-      <div className="text-gray-700 text-sm sm:text-base space-y-2">
-        <p><strong>Descripción:</strong> {selectedAuthor.Descripción || 'No disponible'}</p>
-        <p><strong>Áreas de interés:</strong> {selectedAuthor['Áreas de interés'] || 'No especificadas'}</p>
-      </div>
-    </div>
-  </div>
-)}
+            <div className="text-gray-700 text-sm sm:text-base space-y-2">
+              <p><strong>Descripción:</strong> {selectedAuthor.Descripción || 'No disponible'}</p>
+              <p><strong>Áreas de interés:</strong> {selectedAuthor['Áreas de interés'] || 'No especificadas'}</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
