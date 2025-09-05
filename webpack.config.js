@@ -2,6 +2,7 @@ const path = require('path');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
+const WebpackShellPluginNext = require('webpack-shell-plugin-next');
 
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
@@ -94,13 +95,14 @@ module.exports = (env, argv) => {
             to: 'Articles',
             noErrorOnMissing: true, // Evita errores si no existe
           },
-          // No copiamos sitemap.xml ni robots.txt porque generate-all.js los genera en dist/
-          { 
-            from: 'dist/articles', 
-            to: 'articles',
-            noErrorOnMissing: true, // Copia los HTML generados si no se generan directamente en dist/
-          },
         ],
+      }),
+      new WebpackShellPluginNext({
+        onBuildStart: {
+          scripts: ['node generate-all.js'],
+          blocking: true, // Espera a que termine generate-all.js antes de continuar
+          parallel: false,
+        },
       }),
     ],
     devtool: isProduction ? 'source-map' : 'eval-source-map',
