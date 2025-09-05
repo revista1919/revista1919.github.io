@@ -11,6 +11,7 @@ export default function NewsSection({ className }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState("");
   const [selectedNews, setSelectedNews] = useState(null);
+  const [showFullContent, setShowFullContent] = useState(false);
   const [visibleNews, setVisibleNews] = useState(6);
   const [nombre, setNombre] = useState("");
   const [correo, setCorreo] = useState("");
@@ -125,16 +126,63 @@ export default function NewsSection({ className }) {
     return url;
   }
 
-  function decodeBody(body) {
+  function decodeBody(body, truncate = false) {
     if (!body) return <p className="text-[#000000]">Sin contenido disponible.</p>;
-    const paragraphs = String(body)
+    let fullBody = body;
+    if (truncate && body.length > 2000) {
+      fullBody = body.slice(0, 2000) + '...';
+    }
+    const paragraphs = String(fullBody)
       .split("===")
       .filter((p) => p.trim() !== "");
-    return paragraphs.map((p, idx) => (
-      <div key={idx} className="mb-4 leading-relaxed break-words" style={{ clear: "both" }}>
-        {renderParagraph(p)}
-      </div>
-    ));
+    const content = [];
+    let i = 0;
+    while (i < paragraphs.length) {
+      let p = paragraphs[i].trim();
+      if (p.startsWith('- ')) {
+        const items = [];
+        while (i < paragraphs.length && paragraphs[i].trim().startsWith('- ')) {
+          const itemText = paragraphs[i].trim().slice(2);
+          items.push(renderParagraph(itemText));
+          i++;
+        }
+        content.push(
+          <ul key={content.length} className="mb-4 list-disc pl-6">
+            {items.map((item, j) => (
+              <li key={j}>{item}</li>
+            ))}
+          </ul>
+        );
+        continue;
+      } else if (/^\d+\.\s/.test(p)) {
+        const items = [];
+        while (i < paragraphs.length && /^\d+\.\s/.test(paragraphs[i].trim())) {
+          const itemText = paragraphs[i].trim().replace(/^\d+\.\s/, '');
+          items.push(renderParagraph(itemText));
+          i++;
+        }
+        content.push(
+          <ol key={content.length} className="mb-4 list-decimal pl-6">
+            {items.map((item, j) => (
+              <li key={j}>{item}</li>
+            ))}
+          </ol>
+        );
+        continue;
+      } else {
+        content.push(
+          <div
+            key={content.length}
+            className="mb-4 leading-relaxed break-words"
+            style={{ clear: "both" }}
+          >
+            {renderParagraph(p)}
+          </div>
+        );
+        i++;
+      }
+    }
+    return content;
   }
 
   function renderParagraph(p) {
@@ -142,31 +190,34 @@ export default function NewsSection({ className }) {
     const placeholders = [];
     const TOK = (i) => `__TOK${i}__`;
 
-    // Handle escaping
-    text = text.replace(/\\([*/_$~])/g, (_, char) => `<<ESC_${char.charCodeAt(0)}>>`);
-
-    // Handle alignment and size
+    // Handle prefix (size,align)
     let align = "";
-    let size = "";
-    text = text.replace(/\[align:([^\]]*)\]/gi, (_, a) => {
-      align = a;
-      return "";
-    });
-    text = text.replace(/\[size:([^\]]*)\]/gi, (_, s) => {
-      size = s;
-      return "";
-    });
+    let size = "normal";
+    if (text.startsWith('(')) {
+      const endIdx = text.indexOf(')');
+      if (endIdx !== -1) {
+        const paramStr = text.slice(1, endIdx);
+        const params = paramStr.split(',').map(p => p.trim());
+        params.forEach(p => {
+          if (['small', 'big', 'normal'].includes(p)) size = p;
+          if (['left', 'center', 'right', 'justify'].includes(p)) align = p;
+        });
+        text = text.slice(endIdx + 1).trim();
+      }
+    }
 
     // Image pattern: [img:URL,width,height,align]
-    const imgPattern = /\[img:([^\]]*?)(?:,(\d*(?:px|%)?))?(?:,(\d*(?:px|%)?))?(?:,(left|center|right))?\]/gi;
+    const imgPattern = /\[img:([^\]]*?)(?:,(\d*(?:px|%)?))?(?:,(\d*(?:px|%)?))?(?:,(left|center|right|justify))?\]/gi;
     text = text.replace(imgPattern, (_, url, width = "auto", height = "auto", imgAlign = "left") => {
+      if (width !== "auto" && !width.match(/%|px$/)) width += 'px';
+      if (height !== "auto" && !height.match(/%|px$/)) height += 'px';
       const id = placeholders.length;
       placeholders.push({ type: "image", url: normalizeUrl(url), width, height, align: imgAlign });
       return TOK(id);
     });
 
     // Link pattern: word(URL)
-    const linkPattern = /\b(\w+)\((https?:\/\/[^\s)]+)\)/gi;
+    const linkPattern = /\b([^\s(]+)\((https?:\/\/[^\s)]+)\)/gi;
     text = text.replace(linkPattern, (_, word, url) => {
       const id = placeholders.length;
       placeholders.push({ type: "link", word, url });
@@ -182,10 +233,35 @@ export default function NewsSection({ className }) {
       return TOK(id);
     });
 
+    // Handle inline sizes [size:xx]content[/size]
+    text = text.replace(/\[size:([^\]]+)\](.*?)\[\/size\]/gs, (_, sz, content) => {
+      const id = placeholders.length;
+      placeholders.push({ type: "size", size: sz, content });
+      return TOK(id);
+    });
+
     // Revert escaped characters
     text = text.replace(/<<ESC_(\d+)>>/g, (_, code) => String.fromCharCode(Number(code)));
 
     // Process styles
+    const styledContent = renderStyledText(text, placeholders);
+
+    let fontSizeStyle;
+    if (size === 'small') fontSizeStyle = '0.75em';
+    else if (size === 'big') fontSizeStyle = '1.5em';
+    else fontSizeStyle = 'inherit';
+
+    return (
+      <div style={{ textAlign: align || "left", fontSize: fontSizeStyle, width: '100%' }}>
+        {styledContent}
+      </div>
+    );
+  }
+
+  function renderStyledText(text, placeholders) {
+    // Handle escaping
+    text = text.replace(/\\([*/_$~])/g, (_, char) => `<<ESC_${char.charCodeAt(0)}>>`);
+
     const parts = text.split(/(__TOK\d+__)/g);
     const out = [];
     let buf = "";
@@ -228,20 +304,31 @@ export default function NewsSection({ className }) {
             </a>
           );
         } else if (ph.type === "image") {
+          let imgStyle = {
+            width: ph.width !== 'auto' ? ph.width : '100%',
+            height: ph.height !== 'auto' ? ph.height : 'auto',
+            display: "block",
+            marginLeft: ph.align === "left" ? "0" : ph.align === "center" ? "auto" : "auto",
+            marginRight: ph.align === "right" ? "0" : ph.align === "center" ? "auto" : "auto",
+            float: ph.align === "left" || ph.align === "right" ? ph.align : "none",
+            maxWidth: "100%",
+          };
+          if (ph.align === "justify") {
+            imgStyle = {
+              ...imgStyle,
+              width: "100%",
+              marginLeft: "0",
+              marginRight: "0",
+              float: "none",
+            };
+          }
           out.push(
             <img
               key={key++}
               src={normalizeUrl(ph.url)}
               alt="Imagen de la noticia"
               className="max-w-full h-auto rounded-md my-2"
-              style={{
-                width: ph.width,
-                height: ph.height,
-                display: "block",
-                marginLeft: ph.align === "left" ? "0" : ph.align === "center" ? "auto" : "auto",
-                marginRight: ph.align === "right" ? "0" : ph.align === "center" ? "auto" : "auto",
-                float: ph.align === "left" || ph.align === "right" ? ph.align : "none",
-              }}
+              style={imgStyle}
               onError={(e) => {
                 e.currentTarget.onerror = null;
                 e.currentTarget.src = "https://via.placeholder.com/800x450?text=Imagen+no+disponible";
@@ -259,6 +346,16 @@ export default function NewsSection({ className }) {
             >
               {ph.url}
             </a>
+          );
+        } else if (ph.type === "size") {
+          let fontSizeStyle;
+          if (ph.size === 'small') fontSizeStyle = '0.75em';
+          else if (ph.size === 'big') fontSizeStyle = '1.5em';
+          else fontSizeStyle = 'inherit';
+          out.push(
+            <span key={key++} style={{ fontSize: fontSizeStyle }}>
+              {renderStyledText(ph.content, placeholders)}
+            </span>
           );
         }
         continue;
@@ -351,7 +448,7 @@ export default function NewsSection({ className }) {
         </span>
       );
     }
-    return <span style={{ textAlign: align || "left", fontSize: size || "inherit" }}>{out}</span>;
+    return out;
   }
 
   const filteredNews = news.filter((n) =>
@@ -359,6 +456,11 @@ export default function NewsSection({ className }) {
   );
 
   const loadMoreNews = () => setVisibleNews((prev) => prev + 6);
+
+  const openNews = (item) => {
+    setSelectedNews(item);
+    setShowFullContent(false);
+  };
 
   if (loading) return <p className="text-center text-[#000000]">Cargando noticias...</p>;
   if (error) return <p className="text-center text-red-500">{error}</p>;
@@ -425,7 +527,7 @@ export default function NewsSection({ className }) {
               key={idx}
               whileHover={{ scale: 1.015 }}
               className="bg-white p-5 rounded-2xl shadow-lg cursor-pointer flex flex-col border border-gray-100 hover:shadow-xl transition"
-              onClick={() => setSelectedNews(item)}
+              onClick={() => openNews(item)}
             >
               <h4
                 className="text-lg font-semibold text-[#5a3e36] mb-2 leading-snug"
@@ -460,7 +562,7 @@ export default function NewsSection({ className }) {
             className="bg-[#5a3e36] text-white px-4 py-2 rounded-md hover:bg-[#7a5c4f] focus:outline-none focus:ring-2 focus:ring-[#5a3e36] text-sm sm:text-base"
             onClick={loadMoreNews}
           >
-            Mostrar más
+            Ver más
           </button>
         </div>
       )}
@@ -474,25 +576,33 @@ export default function NewsSection({ className }) {
             onClick={() => setSelectedNews(null)}
           >
             <motion.div
-              className="bg-white rounded-2xl shadow-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6 flex flex-col"
+              className="bg-white rounded-2xl shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6 flex flex-col relative"
               initial={{ scale: 0.92 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0.92 }}
               onClick={(e) => e.stopPropagation()}
             >
+              <button
+                onClick={() => setSelectedNews(null)}
+                className="absolute top-2 right-2 text-gray-500 hover:text-[#5a3e36] text-lg font-bold"
+              >
+                ✕
+              </button>
               <h4 className="text-2xl font-bold text-[#5a3e36] mb-4">
                 {selectedNews.titulo}
               </h4>
               <p className="text-sm text-gray-500 mb-6">{selectedNews.fecha}</p>
-              <div className="text-[#000000] flex-1">{decodeBody(selectedNews.cuerpo)}</div>
-              <div className="mt-6 text-center">
-                <button
-                  onClick={() => setSelectedNews(null)}
-                  className="px-4 py-2 bg-[#5a3e36] text-white rounded-lg hover:bg-[#5a3e36]/80 transition"
-                >
-                  Cerrar
-                </button>
+              <div className="text-[#000000] flex-1">
+                {decodeBody(selectedNews.cuerpo, !showFullContent && selectedNews.cuerpo.length > 2000)}
               </div>
+              {!showFullContent && selectedNews.cuerpo.length > 2000 && (
+                <button
+                  onClick={() => setShowFullContent(true)}
+                  className="text-[#5a3e36] text-sm mt-2 self-end hover:underline"
+                >
+                  Leer más...
+                </button>
+              )}
             </motion.div>
           </motion.div>
         )}
