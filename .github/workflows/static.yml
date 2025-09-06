@@ -1,3 +1,4 @@
+
 name: Deploy to GitHub Pages
 
 on:
@@ -6,7 +7,6 @@ on:
   pull_request:
     branches: [ main ]
 
-# Permisos necesarios para escribir en la rama gh-pages
 permissions:
   contents: read
   pages: write
@@ -42,18 +42,28 @@ jobs:
       # 4. Construye el proyecto React
       - name: Build project
         run: npm run build
+        env:
+          NODE_ENV: production
 
-      # 5. Configura GitHub Pages
+      # 5. Verifica los archivos generados
+      - name: List dist contents
+        run: |
+          ls -R dist
+          cat dist/robots.txt
+          cat dist/sitemap.xml
+
+      # 6. Configura GitHub Pages
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      # 6. Sube la carpeta dist como artefacto
+      # 7. Sube la carpeta dist como artefacto
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
 
-      # 7. Despliega a GitHub Pages
+      # 8. Despliega a GitHub Pages
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
