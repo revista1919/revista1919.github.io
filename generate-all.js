@@ -4,13 +4,12 @@ const fetch = require('node-fetch').default;
 const Papa = require('papaparse');
 
 const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p32EM6-0VYy18AdREQwXdpeet1WHTA4H2-W2FX7HKe1HPSyApWadUw9sKHdVYQXL5tP6yDRs/pub?output=csv';
-const outputJson = path.join(__dirname, 'dist', 'articles.json'); // Guardar JSON en dist/
-const outputHtmlDir = path.join(__dirname, 'dist', 'articles'); // HTMLs en dist/articles/
-const sitemapPath = path.join(__dirname, 'dist', 'sitemap.xml'); // sitemap.xml en dist/
-const robotsPath = path.join(__dirname, 'dist', 'robots.txt'); // robots.txt en dist/
-const domain = 'https://www.revistacienciasestudiantes.com'; // Cambia si tu dominio es diferente
+const outputJson = path.join(__dirname, 'dist', 'articles.json');
+const outputHtmlDir = path.join(__dirname, 'dist', 'articles');
+const sitemapPath = path.join(__dirname, 'dist', 'sitemap.xml');
+const robotsPath = path.join(__dirname, 'dist', 'robots.txt');
+const domain = 'https://www.revistacienciasestudiantes.com'; // Cambia a 'https://revista1919.github.io' si pruebas localmente
 
-// ---------- Función robusta para parsear fechas ----------
 function parseDateFlexible(dateStr) {
   if (!dateStr) return '';
   let date = new Date(dateStr);
@@ -27,21 +26,18 @@ function parseDateFlexible(dateStr) {
   return dateStr;
 }
 
-// ---------- Invertir "Nombre Apellido" a "Apellido, Nombre" para citation_author ----------
 function formatAuthorForCitation(author) {
   const parts = author.trim().split(' ');
   if (parts.length >= 2) {
-    const apellido = parts.pop(); // Última palabra como apellido
+    const apellido = parts.pop();
     const nombre = parts.join(' ');
     return `${apellido}, ${nombre}`;
   }
   return author;
 }
 
-// ---------- Crear carpeta HTML si no existe ----------
 if (!fs.existsSync(outputHtmlDir)) fs.mkdirSync(outputHtmlDir, { recursive: true });
 
-// ---------- Flujo principal ----------
 (async () => {
   try {
     const res = await fetch(csvUrl);
@@ -66,11 +62,9 @@ if (!fs.existsSync(outputHtmlDir)) fs.mkdirSync(outputHtmlDir, { recursive: true
         : []
     }));
 
-    // ---------- Guardar JSON ----------
-    fs.writeFileSync(outputJson, JSON.stringify(articles, null, 2));
+    fs.writeFileSync(outputJson, JSON.stringify(articles, null, 2), 'utf8');
     console.log(`✅ Archivo generado: ${outputJson} (${articles.length} artículos)`);
 
-    // ---------- Generar HTML por artículo ----------
     articles.forEach(article => {
       const authorsList = article.autores.split(';').map(a => formatAuthorForCitation(a));
       const authorMetaTags = authorsList.map(author => `<meta name="citation_author" content="${author}">`).join('\n');
@@ -85,7 +79,7 @@ if (!fs.existsSync(outputHtmlDir)) fs.mkdirSync(outputHtmlDir, { recursive: true
   ${authorMetaTags}
   <meta name="citation_publication_date" content="${article.fecha}">
   <meta name="citation_journal_title" content="Revista Nacional de las Ciencias para Estudiantes">
-  <meta name="citation_issn" content="1234-5678"> <!-- Cambia por tu ISSN real -->
+  <meta name="citation_issn" content="1234-5678">
   <meta name="citation_volume" content="${article.volumen}">
   <meta name="citation_issue" content="${article.numero}">
   <meta name="citation_firstpage" content="${article.primeraPagina}">
@@ -127,14 +121,13 @@ if (!fs.existsSync(outputHtmlDir)) fs.mkdirSync(outputHtmlDir, { recursive: true
   </footer>
 </body>
 </html>
-      `;
+      `.trim();
 
       const filePath = path.join(outputHtmlDir, `articulo${article.numeroArticulo}.html`);
-      fs.writeFileSync(filePath, htmlContent);
+      fs.writeFileSync(filePath, htmlContent, 'utf8');
       console.log(`Generado HTML: ${filePath}`);
     });
 
-    // ---------- Generar index.html para navegación por año ----------
     const articlesByYear = articles.reduce((acc, article) => {
       const year = new Date(article.fecha).getFullYear() || 'Sin fecha';
       if (!acc[year]) acc[year] = [];
@@ -156,10 +149,7 @@ if (!fs.existsSync(outputHtmlDir)) fs.mkdirSync(outputHtmlDir, { recursive: true
     <p>Accede a los artículos por año de publicación. Cada enlace lleva a la página del artículo con resumen y PDF.</p>
   </header>
   <main>
-`;
-
-    Object.keys(articlesByYear).sort().reverse().forEach(year => {
-      indexContent += `
+${Object.keys(articlesByYear).sort().reverse().map(year => `
     <section>
       <h2>Año ${year}</h2>
       <ul>
@@ -170,10 +160,7 @@ if (!fs.existsSync(outputHtmlDir)) fs.mkdirSync(outputHtmlDir, { recursive: true
         `).join('')}
       </ul>
     </section>
-`;
-    });
-
-    indexContent += `
+`).join('')}
   </main>
   <footer>
     <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes</p>
@@ -181,20 +168,13 @@ if (!fs.existsSync(outputHtmlDir)) fs.mkdirSync(outputHtmlDir, { recursive: true
   </footer>
 </body>
 </html>
-    `;
+    `.trim();
 
     const indexPath = path.join(outputHtmlDir, 'index.html');
-    fs.writeFileSync(indexPath, indexContent);
+    fs.writeFileSync(indexPath, indexContent, 'utf8');
     console.log(`Generado índice HTML: ${indexPath}`);
 
-    // ---------- Generar sitemap.xml ----------
-    const sitemapContent = `
-<?xml version="1.0" encoding="UTF-8"?>
-<urlset
-      xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-      xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
-            http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+    const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
 <!-- Created for Revista Nacional de las Ciencias para Estudiantes -->
 <url>
   <loc>${domain}/</loc>
@@ -207,8 +187,7 @@ if (!fs.existsSync(outputHtmlDir)) fs.mkdirSync(outputHtmlDir, { recursive: true
   <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.9</priority>
-</url>
-${articles.map(article => `
+</url>${articles.map(article => `
 <url>
   <loc>${domain}/articles/articulo${article.numeroArticulo}.html</loc>
   <lastmod>${article.fecha}</lastmod>
@@ -220,17 +199,13 @@ ${articles.map(article => `
   <lastmod>${article.fecha}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.8</priority>
-</url>
-`).join('')}
-</urlset>
-    `;
+</url>`).join('')}
+</urlset>`.replace(/^\s*\n/gm, '');
 
-    fs.writeFileSync(sitemapPath, sitemapContent);
+    fs.writeFileSync(sitemapPath, sitemapContent, 'utf8');
     console.log(`Generado sitemap: ${sitemapPath}`);
 
-    // ---------- Generar robots.txt ----------
-    const robotsContent = `
-User-agent: Googlebot
+    const robotsContent = `User-agent: Googlebot
 Allow: /articles/
 Allow: /Articles/
 Allow: /index.css
@@ -253,9 +228,9 @@ Disallow: /cart
 Disallow: /api/
 
 Sitemap: ${domain}/sitemap.xml
-    `;
+    `.trim();
 
-    fs.writeFileSync(robotsPath, robotsContent);
+    fs.writeFileSync(robotsPath, robotsContent, 'utf8');
     console.log(`Generado robots.txt: ${robotsPath}`);
 
   } catch (err) {
