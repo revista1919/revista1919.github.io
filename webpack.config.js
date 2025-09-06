@@ -1,3 +1,4 @@
+// webpack.config.js actualizado (agregar copy para team si hay assets locales, pero como son links, no es necesario; solo asegurar dist/team)
 const path = require('path');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
@@ -95,6 +96,7 @@ module.exports = (env, argv) => {
             to: 'Articles',
             noErrorOnMissing: true,
           },
+          // Si hay imágenes locales para team, agregar aquí; e.g., { from: 'public/team-images', to: 'team/images' }
         ],
       }),
       new WebpackShellPluginNext({

@@ -1,11 +1,15 @@
+// generate-all.js actualizado
 const fs = require('fs');
 const path = require('path');
 const fetch = require('node-fetch').default;
 const Papa = require('papaparse');
 
-const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p32EM6-0VYy18AdREQwXdpeet1WHTA4H2-W2FX7HKe1HPSyApWadUw9sKHdVYQXL5tP6yDRs/pub?output=csv';
+const articlesCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p32EM6-0VYy18AdREQwXdpeet1WHTA4H2-W2FX7HKe1HPSyApWadUw9sKHdVYQXL5tP6yDRs/pub?output=csv';
+const teamCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
+
 const outputJson = path.join(__dirname, 'dist', 'articles.json');
 const outputHtmlDir = path.join(__dirname, 'dist', 'articles');
+const teamOutputHtmlDir = path.join(__dirname, 'dist', 'team');
 const sitemapPath = path.join(__dirname, 'dist', 'sitemap.xml');
 const robotsPath = path.join(__dirname, 'dist', 'robots.txt');
 const domain = 'https://www.revistacienciasestudiantes.com'; // Cambia a 'https://revista1919.github.io' si pruebas localmente
@@ -36,16 +40,27 @@ function formatAuthorForCitation(author) {
   return author;
 }
 
+function generateSlug(name) {
+  if (!name) return '';
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Eliminar acentos
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '');
+}
+
 if (!fs.existsSync(outputHtmlDir)) fs.mkdirSync(outputHtmlDir, { recursive: true });
+if (!fs.existsSync(teamOutputHtmlDir)) fs.mkdirSync(teamOutputHtmlDir, { recursive: true });
 
 (async () => {
   try {
-    const res = await fetch(csvUrl);
-    if (!res.ok) throw new Error(`Error descargando CSV: ${res.statusText}`);
-    const csvData = await res.text();
-
-    const parsed = Papa.parse(csvData, { header: true, skipEmptyLines: true });
-    const articles = parsed.data.map(row => ({
+    // Procesar artículos (sin cambios)
+    const articlesRes = await fetch(articlesCsvUrl);
+    if (!articlesRes.ok) throw new Error(`Error descargando CSV de artículos: ${articlesRes.statusText}`);
+    const articlesCsvData = await articlesRes.text();
+    const articlesParsed = Papa.parse(articlesCsvData, { header: true, skipEmptyLines: true });
+    const articles = articlesParsed.data.map(row => ({
       titulo: row['Título'] || 'Sin título',
       autores: row['Autor(es)'] || 'Autor desconocido',
       resumen: row['Resumen'] || 'Resumen no disponible',
@@ -125,9 +140,10 @@ if (!fs.existsSync(outputHtmlDir)) fs.mkdirSync(outputHtmlDir, { recursive: true
 
       const filePath = path.join(outputHtmlDir, `articulo${article.numeroArticulo}.html`);
       fs.writeFileSync(filePath, htmlContent, 'utf8');
-      console.log(`Generado HTML: ${filePath}`);
+      console.log(`Generado HTML de artículo: ${filePath}`);
     });
 
+    // Generar índice de artículos (sin cambios)
     const articlesByYear = articles.reduce((acc, article) => {
       const year = new Date(article.fecha).getFullYear() || 'Sin fecha';
       if (!acc[year]) acc[year] = [];
@@ -172,8 +188,90 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
 
     const indexPath = path.join(outputHtmlDir, 'index.html');
     fs.writeFileSync(indexPath, indexContent, 'utf8');
-    console.log(`Generado índice HTML: ${indexPath}`);
+    console.log(`Generado índice HTML de artículos: ${indexPath}`);
 
+    // Procesar equipo
+    const teamRes = await fetch(teamCsvUrl);
+    if (!teamRes.ok) throw new Error(`Error descargando CSV de equipo: ${teamRes.statusText}`);
+    const teamCsvData = await teamRes.text();
+    const teamParsed = Papa.parse(teamCsvData, { header: true, skipEmptyLines: true });
+
+    // Filtrar miembros: excluir si único rol es "Autor"
+    const filteredMembers = teamParsed.data.filter((data) => {
+      const memberRoles = (data['Rol en la Revista'] || '')
+        .split(';')
+        .map((role) => role.trim())
+        .filter((role) => role);
+      return !(memberRoles.length === 1 && memberRoles[0] === 'Autor');
+    });
+
+    // Generar HTML para cada miembro
+    filteredMembers.forEach(member => {
+      const nombre = member['Nombre'] || 'Miembro desconocido';
+      const slug = generateSlug(nombre);
+      const roles = (member['Rol en la Revista'] || 'No especificado')
+        .split(';')
+        .map(r => r.trim())
+        .filter(r => r)
+        .join(', ') || 'No especificado';
+      const descripcion = member['Descripción'] || 'Información no disponible';
+      const areas = member['Áreas de interés'] || 'No especificadas';
+      const imagen = member['Imagen'] || ''; // Asumiendo que columna G se llama 'Imagen' en headers; ajusta si es diferente
+
+      const htmlContent = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="${descripcion.substring(0, 160)}...">
+  <meta name="keywords" content="${areas}, ${roles}, Revista Nacional de las Ciencias para Estudiantes">
+  <title>${nombre} - Equipo de la Revista Nacional de las Ciencias para Estudiantes</title>
+  <link rel="stylesheet" href="/index.css">
+  <style>
+    body { background-color: #f5f5f5; font-family: serif; color: #333; }
+    .profile-container { max-width: 800px; margin: 0 auto; padding: 2rem; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    .profile-header { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1rem; }
+    @media (min-width: 640px) { .profile-header { flex-direction: row; text-align: left; } }
+    .profile-img { width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 2px solid #5a3e36; }
+    .profile-info { flex: 1; }
+    .section { margin-top: 1.5rem; }
+    h1, h2 { color: #5a3e36; }
+    p { margin-bottom: 0.5rem; }
+  </style>
+</head>
+<body>
+  <div class="profile-container">
+    <div class="profile-header">
+      ${imagen ? `<img src="${imagen}" alt="Foto de ${nombre}" class="profile-img">` : ''}
+      <div class="profile-info">
+        <h1 class="text-3xl font-bold">${nombre}</h1>
+        <p class="text-lg font-semibold text-gray-700">${roles}</p>
+      </div>
+    </div>
+    <div class="section">
+      <h2 class="text-2xl font-semibold">Descripción</h2>
+      <p>${descripcion}</p>
+    </div>
+    <div class="section">
+      <h2 class="text-2xl font-semibold">Áreas de interés</h2>
+      <p>${areas}</p>
+    </div>
+    <footer class="mt-4 text-center">
+      <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes</p>
+      <a href="/" class="text-blue-600 hover:underline">Volver al inicio</a> | <a href="/team" class="text-blue-600 hover:underline">Volver al equipo</a>
+    </footer>
+  </div>
+</body>
+</html>
+      `.trim();
+
+      const filePath = path.join(teamOutputHtmlDir, `${slug}.html`);
+      fs.writeFileSync(filePath, htmlContent, 'utf8');
+      console.log(`Generado HTML de miembro: ${filePath}`);
+    });
+
+    // Generar sitemap
     const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
 <!-- Created for Revista Nacional de las Ciencias para Estudiantes -->
 <url>
@@ -199,15 +297,26 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
   <lastmod>${article.fecha}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.8</priority>
-</url>`).join('')}
+</url>`).join('')}${filteredMembers.map(member => {
+      const slug = generateSlug(member['Nombre']);
+      return `
+<url>
+  <loc>${domain}/team/${slug}.html</loc>
+  <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.7</priority>
+</url>`;
+    }).join('')}
 </urlset>`.replace(/^\s*\n/gm, '');
 
     fs.writeFileSync(sitemapPath, sitemapContent, 'utf8');
     console.log(`Generado sitemap: ${sitemapPath}`);
 
+    // Generar robots.txt
     const robotsContent = `User-agent: Googlebot
 Allow: /articles/
 Allow: /Articles/
+Allow: /team/
 Allow: /index.css
 Disallow: /search
 Disallow: /login
@@ -219,6 +328,7 @@ Disallow: /api/
 User-agent: *
 Allow: /articles/
 Allow: /Articles/
+Allow: /team/
 Allow: /index.css
 Disallow: /search
 Disallow: /login
