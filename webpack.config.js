@@ -93,14 +93,14 @@ module.exports = (env, argv) => {
           { 
             from: 'public/Articles', 
             to: 'Articles',
-            noErrorOnMissing: true, // Evita errores si no existe
+            noErrorOnMissing: true,
           },
         ],
       }),
       new WebpackShellPluginNext({
-        onBuildStart: {
+        onBuildEnd: {
           scripts: ['node generate-all.js'],
-          blocking: true, // Espera a que termine generate-all.js antes de continuar
+          blocking: true,
           parallel: false,
         },
       }),
