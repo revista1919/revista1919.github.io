@@ -1,4 +1,3 @@
-// generate-all.js actualizado
 const fs = require('fs');
 const path = require('path');
 const fetch = require('node-fetch').default;
@@ -12,7 +11,7 @@ const outputHtmlDir = path.join(__dirname, 'dist', 'articles');
 const teamOutputHtmlDir = path.join(__dirname, 'dist', 'team');
 const sitemapPath = path.join(__dirname, 'dist', 'sitemap.xml');
 const robotsPath = path.join(__dirname, 'dist', 'robots.txt');
-const domain = 'https://www.revistacienciasestudiantes.com'; // Cambia a 'https://revista1919.github.io' si pruebas localmente
+const domain = 'https://www.revistacienciasestudiantes.com';
 
 function parseDateFlexible(dateStr) {
   if (!dateStr) return '';
@@ -45,9 +44,22 @@ function generateSlug(name) {
   return name
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Eliminar acentos
+    .replace(/[\u0300-\u036f]/g, '')
     .replace(/\s+/g, '-')
     .replace(/[^a-z0-9-]/g, '');
+}
+
+function isBase64(str) {
+  if (!str) return false;
+  const base64Regex = /^data:image\/(png|jpe?g|gif);base64,/;
+  return base64Regex.test(str);
+}
+
+function getImageSrc(image) {
+  if (!image) return '';
+  if (isBase64(image)) return image; // Base64 ya está listo
+  if (image.startsWith('http')) return image; // URL externa
+  return ''; // Si no es válido, no mostrar
 }
 
 if (!fs.existsSync(outputHtmlDir)) fs.mkdirSync(outputHtmlDir, { recursive: true });
@@ -216,7 +228,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
         .join(', ') || 'No especificado';
       const descripcion = member['Descripción'] || 'Información no disponible';
       const areas = member['Áreas de interés'] || 'No especificadas';
-      const imagen = member['Imagen'] || ''; // Asumiendo que columna G se llama 'Imagen' en headers; ajusta si es diferente
+      const imagen = getImageSrc(member['Imagen'] || ''); // Asumiendo que columna G se llama 'Imagen'
 
       const htmlContent = `
 <!DOCTYPE html>
@@ -226,40 +238,46 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="${descripcion.substring(0, 160)}...">
   <meta name="keywords" content="${areas}, ${roles}, Revista Nacional de las Ciencias para Estudiantes">
+  <meta name="author" content="${nombre}">
   <title>${nombre} - Equipo de la Revista Nacional de las Ciencias para Estudiantes</title>
   <link rel="stylesheet" href="/index.css">
   <style>
-    body { background-color: #f5f5f5; font-family: serif; color: #333; }
-    .profile-container { max-width: 800px; margin: 0 auto; padding: 2rem; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    .profile-header { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1rem; }
-    @media (min-width: 640px) { .profile-header { flex-direction: row; text-align: left; } }
+    body { background-color: #f5f5f5; font-family: 'Georgia', serif; color: #333; }
+    .profile-container { max-width: 800px; margin: 2rem auto; padding: 1.5rem; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 8px; }
+    .profile-header { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1rem; margin-bottom: 1.5rem; }
+    @media (min-width: 640px) { .profile-header { flex-direction: row; text-align: left; align-items: flex-start; } }
     .profile-img { width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 2px solid #5a3e36; }
+    .profile-img-fallback { width: 150px; height: 150px; border-radius: 50%; background: #e0e0e0; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: #666; border: 2px solid #5a3e36; }
     .profile-info { flex: 1; }
     .section { margin-top: 1.5rem; }
-    h1, h2 { color: #5a3e36; }
-    p { margin-bottom: 0.5rem; }
+    h1 { color: #5a3e36; font-size: 2rem; margin-bottom: 0.5rem; }
+    h2 { color: #5a3e36; font-size: 1.5rem; margin-bottom: 0.75rem; }
+    p { margin-bottom: 0.5rem; line-height: 1.6; }
+    footer { margin-top: 2rem; text-align: center; font-size: 0.9rem; }
+    a { color: #5a3e36; text-decoration: underline; }
+    a:hover { color: #7a5c4f; }
   </style>
 </head>
 <body>
   <div class="profile-container">
     <div class="profile-header">
-      ${imagen ? `<img src="${imagen}" alt="Foto de ${nombre}" class="profile-img">` : ''}
+      ${imagen ? `<img src="${imagen}" alt="Foto de ${nombre}" class="profile-img" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div class="profile-img-fallback">Sin Imagen</div>` : `<div.models class="profile-img-fallback">Sin Imagen</div>`}
       <div class="profile-info">
-        <h1 class="text-3xl font-bold">${nombre}</h1>
+        <h1>${nombre}</h1>
         <p class="text-lg font-semibold text-gray-700">${roles}</p>
       </div>
     </div>
     <div class="section">
-      <h2 class="text-2xl font-semibold">Descripción</h2>
+      <h2>Descripción</h2>
       <p>${descripcion}</p>
     </div>
     <div class="section">
-      <h2 class="text-2xl font-semibold">Áreas de interés</h2>
+      <h2>Áreas de interés</h2>
       <p>${areas}</p>
     </div>
-    <footer class="mt-4 text-center">
+    <footer>
       <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes</p>
-      <a href="/" class="text-blue-600 hover:underline">Volver al inicio</a> | <a href="/team" class="text-blue-600 hover:underline">Volver al equipo</a>
+      <a href="/">Volver al inicio</a> | <a href="/team">Volver al equipo</a>
     </footer>
   </div>
 </body>
