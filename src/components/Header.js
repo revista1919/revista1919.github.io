@@ -1,5 +1,6 @@
 import React from 'react';
 import logo from '../../public/logo.png';
+import { useTranslation } from 'react-i18next';
 
 function Header() {
   return React.createElement(

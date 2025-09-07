@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
+import { useTranslation } from 'react-i18next';
 
 function parseDateFlexible(dateStr) {
   if (!dateStr) return 'Fecha no disponible';
