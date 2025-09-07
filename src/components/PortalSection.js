@@ -1,8 +1,14 @@
-// PortalSection.js (added console logs, mostly unchanged but ensured editor access)
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Papa from 'papaparse';
 import NewsUploadSection from './NewsUploadSection';
+import ReactQuill, { Quill } from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
+import ImageResize from 'quill-image-resize-module-react';
+import { debounce } from 'lodash';
 import { useTranslation } from 'react-i18next';
+
+Quill.register('modules/imageResize', ImageResize);
+
 const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyJ9znuf_Pa8Hyh4BnsO1pTTduBsXC7kDD0pORWccMTBlckgt0I--NKG69aR_puTAZ5/exec';
 
@@ -17,6 +23,12 @@ export default function PortalSection({ user, onLogout }) {
   const [error, setError] = useState('');
   const [visibleAssignments, setVisibleAssignments] = useState(3);
   const [activeTab, setActiveTab] = useState('assignments');
+  const [showImageModal, setShowImageModal] = useState({});
+  const [isEditingImage, setIsEditingImage] = useState({});
+  const [imageData, setImageData] = useState({});
+  const [editingRange, setEditingRange] = useState({});
+  const feedbackQuillRefs = useRef({});
+  const reportQuillRefs = useRef({});
 
   const fetchAssignments = async () => {
     try {
@@ -99,11 +111,11 @@ export default function PortalSection({ user, onLogout }) {
       link,
       role,
       vote: voteValue || '',
-      feedback: feedbackText || '',
-      report: reportText || '',
+      feedback: encodeBody(feedbackText || ''),
+      report: encodeBody(reportText || ''),
     };
 
-    console.log('Sending assignment data:', data); // Debug log
+    console.log('Sending assignment data:', data);
 
     try {
       await fetch(SCRIPT_URL, {
@@ -114,7 +126,7 @@ export default function PortalSection({ user, onLogout }) {
         },
         body: JSON.stringify(data),
       });
-      console.log('Assignment request sent (no-cors, assuming success)'); // Debug log
+      console.log('Assignment request sent (no-cors, assuming success)');
       setSubmitStatus((prev) => ({ ...prev, [link]: 'Enviado exitosamente (CORS workaround applied)' }));
       await fetchAssignments();
     } catch (err) {
@@ -140,6 +152,381 @@ export default function PortalSection({ user, onLogout }) {
 
   const loadMoreAssignments = () => {
     setVisibleAssignments((prev) => prev + 3);
+  };
+
+  const debouncedSetFeedback = useCallback(
+    (link) => debounce((value) => {
+      setFeedback((prev) => ({ ...prev, [link]: value }));
+    }, 300),
+    []
+  );
+
+  const debouncedSetReport = useCallback(
+    (link) => debounce((value) => {
+      setReport((prev) => ({ ...prev, [link]: value }));
+    }, 300),
+    []
+  );
+
+  const modules = useMemo(() => ({
+    toolbar: [
+      ['bold', 'italic', 'underline', 'strike', 'blockquote'],
+      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+      ['link', 'image'],
+      [{ 'align': ['', 'center', 'right', 'justify'] }],
+      [{ 'size': ['small', false, 'large'] }],
+      ['clean']
+    ],
+    imageResize: {
+      parchment: Quill.import('parchment'),
+      modules: ['Resize', 'DisplaySize', 'Toolbar'],
+      handleStyles: {
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        border: 'none',
+        color: 'white',
+      },
+      displayStyles: {
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        border: 'none',
+        color: 'white',
+      },
+    },
+    keyboard: {
+      bindings: {
+        deleteImage: {
+          key: ['Delete', 'Backspace'],
+          handler: function(range) {
+            if (!range) {
+              setSubmitStatus((prev) => ({ ...prev, [this.quill.link]: 'No hay selección activa para eliminar' }));
+              return true;
+            }
+            const editor = this.quill;
+            const imageResize = editor.getModule('imageResize');
+            let isImage = false;
+            let deleteIndex = range.index;
+            let deleteLength = 1;
+            if (range.length === 0) {
+              const [leaf] = editor.getLeaf(range.index);
+              if (leaf && leaf.domNode && leaf.domNode.tagName === 'IMG') {
+                isImage = true;
+              } else {
+                if (this.key === 'Backspace') {
+                  const [prevLeaf] = editor.getLeaf(range.index - 1);
+                  if (prevLeaf && prevLeaf.domNode && prevLeaf.domNode.tagName === 'IMG') {
+                    isImage = true;
+                    deleteIndex = range.index - 1;
+                  }
+                } else if (this.key === 'Delete') {
+                  const [nextLeaf] = editor.getLeaf(range.index);
+                  if (nextLeaf && nextLeaf.domNode && nextLeaf.domNode.tagName === 'IMG') {
+                    isImage = true;
+                    deleteIndex = range.index;
+                  }
+                }
+              }
+            } else if (range.length === 1) {
+              const [leaf] = editor.getLeaf(range.index);
+              if (leaf && leaf.domNode && leaf.domNode.tagName === 'IMG') {
+                isImage = true;
+              }
+            }
+            if (isImage) {
+              try {
+                if (imageResize) {
+                  imageResize.hide();
+                }
+                editor.deleteText(deleteIndex, deleteLength, Quill.sources.USER);
+                return false;
+              } catch (err) {
+                console.error('Error deleting image:', err);
+                setSubmitStatus((prev) => ({ ...prev, [this.quill.link]: 'Error al eliminar la imagen' }));
+                return false;
+              }
+            }
+            return true;
+          },
+        },
+        enterAfterImage: {
+          key: 'Enter',
+          handler: function(range) {
+            if (!range) return true;
+            const editor = this.quill;
+            const [leaf] = editor.getLeaf(range.index);
+            if (leaf && leaf.domNode && leaf.domNode.tagName === 'IMG') {
+              try {
+                editor.insertText(range.index + 1, '\n', Quill.sources.USER);
+                editor.setSelection(range.index + 2, Quill.sources.SILENT);
+                return false;
+              } catch (err) {
+                console.error('Error inserting new line after image:', err);
+                setSubmitStatus((prev) => ({ ...prev, [this.quill.link]: 'Error al añadir texto después de la imagen' }));
+                return false;
+              }
+            }
+            return true;
+          },
+        },
+      },
+    },
+  }), []);
+
+  const formats = useMemo(() => [
+    'bold', 'italic', 'underline', 'strike', 'blockquote',
+    'list', 'bullet',
+    'link', 'image',
+    'align',
+    'size'
+  ], []);
+
+  const sanitizeInput = useCallback((input) => {
+    if (!input) return '';
+    return input.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+                .replace(/on\w+="[^"]*"/gi, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+  }, []);
+
+  const encodeBody = (html) => {
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const encodeNode = (node, parentAlign = '') => {
+        if (node.nodeType === 3) return node.textContent;
+        let children = Array.from(node.childNodes).map(n => encodeNode(n, getAlign(node) || parentAlign)).join('');
+        if (node.tagName === 'STRONG' || node.tagName === 'B') {
+          return '*' + children + '*';
+        } else if (node.tagName === 'EM' || node.tagName === 'I') {
+          return '/' + children + '/';
+        } else if (node.tagName === 'U') {
+          return '$' + children + '$';
+        } else if (node.tagName === 'S' || node.tagName === 'STRIKE') {
+          return '~' + children + '~';
+        } else if (node.tagName === 'A') {
+          return children + '(' + node.href + ')';
+        } else if (node.tagName === 'IMG') {
+          let width = node.getAttribute('width') || node.style.width || 'auto';
+          let height = node.getAttribute('height') || node.style.height || 'auto';
+          const align = getAlign(node) || parentAlign || 'left';
+          if (width !== 'auto' && !width.match(/%|px$/)) width += 'px';
+          if (height !== 'auto' && !height.match(/%|px$/)) height += 'px';
+          return `[img:${node.src},${width},${height},${align}]`;
+        } else if (node.tagName === 'SPAN') {
+          let size = '';
+          if (node.classList.contains('ql-size-small')) size = 'small';
+          else if (node.classList.contains('ql-size-large')) size = 'big';
+          if (size) {
+            return `[size:${size}]` + children + '[/size]';
+          }
+          return children;
+        } else if (node.tagName === 'P' || node.tagName === 'DIV') {
+          const align = getAlign(node);
+          let size = '';
+          let innerChildren = children;
+          if (node.childNodes.length === 1 && node.childNodes[0].tagName === 'SPAN' && node.childNodes[0].classList) {
+            const span = node.childNodes[0];
+            if (span.classList.contains('ql-size-small')) size = 'small';
+            else if (span.classList.contains('ql-size-large')) size = 'big';
+            if (size) {
+              innerChildren = Array.from(span.childNodes).map(n => encodeNode(n, align)).join('');
+            }
+          }
+          if (!size) size = 'normal';
+          let params = [];
+          if (size !== 'normal') params.push(size);
+          if (align) params.push(align);
+          let prefix = '';
+          if (params.length > 0) {
+            prefix = '(' + params.join(',') + ')';
+          }
+          return prefix + innerChildren + '===';
+        } else if (node.tagName === 'BR') {
+          return '===';
+        } else if (node.tagName === 'UL') {
+          const items = Array.from(node.childNodes)
+            .filter(n => n.tagName === 'LI')
+            .map(li => '- ' + encodeNode(li, parentAlign));
+          return items.join('===') + '===';
+        } else if (node.tagName === 'OL') {
+          let counter = 1;
+          const items = Array.from(node.childNodes)
+            .filter(n => n.tagName === 'LI')
+            .map(li => (counter++) + '. ' + encodeNode(li, parentAlign));
+          return items.join('===') + '===';
+        } else if (node.tagName === 'LI') {
+          return children;
+        }
+        return children;
+      };
+      let encoded = Array.from(doc.body.childNodes).map(n => encodeNode(n)).join('');
+      return sanitizeInput(encoded.replace(/===+/g, '==='));
+    } catch (err) {
+      console.error('Error encoding body:', err);
+      return '';
+    }
+  };
+
+  const getAlign = (node) => {
+    if (node.style && node.style.textAlign) return node.style.textAlign;
+    if (node.classList) {
+      if (node.classList.contains('ql-align-center')) return 'center';
+      if (node.classList.contains('ql-align-right')) return 'right';
+      if (node.classList.contains('ql-align-justify')) return 'justify';
+    }
+    return '';
+  };
+
+  const setupQuillEditor = (quillRef, link, type) => {
+    if (quillRef.current) {
+      const editor = quillRef.current.getEditor();
+      editor.root.setAttribute('spellcheck', 'true');
+      editor.root.setAttribute('lang', 'es');
+      editor.theme.tooltip.hide();
+
+      let attempts = 0;
+      const maxAttempts = 5;
+      const interval = 100;
+
+      const addButtons = () => {
+        const imageResize = editor.getModule('imageResize');
+        if (imageResize && imageResize.toolbar && typeof imageResize.toolbar.appendChild === 'function') {
+          const buttonContainer = document.createElement('span');
+          buttonContainer.className = 'ql-formats';
+          buttonContainer.innerHTML = `
+            <button type="button" title="Eliminar imagen" class="ql-delete-image">
+              <svg viewBox="0 0 18 18">
+                <line class="ql-stroke" x1="3" x2="15" y1="3" y2="15"></line>
+                <line class="ql-stroke" x1="3" x2="15" y1="15" y2="3"></line>
+              </svg>
+            </button>
+            <button type="button" title="Editar imagen" class="ql-edit-image">
+              <svg viewBox="0 0 18 18">
+                <polygon class="ql-fill ql-stroke" points="6 10 4 12 2 10 4 8"></polygon>
+                <path class="ql-stroke" d="M8.09,13.91A4.6,4.6,0,0,0,9,14,5,5,0,1,0,4,9"></path>
+              </svg>
+            </button>
+          `;
+          imageResize.toolbar.appendChild(buttonContainer);
+
+          buttonContainer.querySelector('.ql-delete-image').onclick = () => {
+            const range = editor.getSelection();
+            if (range) {
+              let isImage = false;
+              let deleteIndex = range.index;
+              let deleteLength = 1;
+              const [leaf] = editor.getLeaf(range.index);
+              if (leaf && leaf.domNode && leaf.domNode.tagName === 'IMG') {
+                isImage = true;
+              } else {
+                const [prevLeaf] = editor.getLeaf(range.index - 1);
+                if (prevLeaf && prevLeaf.domNode && prevLeaf.domNode.tagName === 'IMG') {
+                  isImage = true;
+                  deleteIndex = range.index - 1;
+                } else {
+                  const [nextLeaf] = editor.getLeaf(range.index);
+                  if (nextLeaf && nextLeaf.domNode && nextLeaf.domNode.tagName === 'IMG') {
+                    isImage = true;
+                    deleteIndex = range.index;
+                  }
+                }
+              }
+              if (isImage) {
+                try {
+                  editor.deleteText(deleteIndex, deleteLength, Quill.sources.USER);
+                  imageResize.hide();
+                } catch (err) {
+                  console.error('Error al eliminar imagen:', err);
+                  setSubmitStatus((prev) => ({ ...prev, [link]: 'Error al eliminar la imagen' }));
+                }
+              } else {
+                setSubmitStatus((prev) => ({ ...prev, [link]: 'Selecciona una imagen para eliminar' }));
+              }
+            } else {
+              setSubmitStatus((prev) => ({ ...prev, [link]: 'No hay selección activa para eliminar' }));
+            }
+          };
+
+          buttonContainer.querySelector('.ql-edit-image').onclick = () => {
+            const range = editor.getSelection();
+            if (range) {
+              const [leaf] = editor.getLeaf(range.index);
+              if (leaf && leaf.domNode && leaf.domNode.tagName === 'IMG') {
+                const img = leaf.domNode;
+                const formats = editor.getFormat(range.index, 1);
+                setImageData((prev) => ({
+                  ...prev,
+                  [link]: {
+                    url: img.src,
+                    width: img.style.width || img.width + 'px',
+                    height: img.style.height || img.height + 'px',
+                    align: formats.align || 'left'
+                  }
+                }));
+                setEditingRange((prev) => ({ ...prev, [link]: range }));
+                setIsEditingImage((prev) => ({ ...prev, [link]: true }));
+                setShowImageModal((prev) => ({ ...prev, [link]: true }));
+              } else {
+                setSubmitStatus((prev) => ({ ...prev, [link]: 'Selecciona una imagen para editar' }));
+              }
+            }
+          };
+        } else if (attempts < maxAttempts) {
+          attempts++;
+          setTimeout(addButtons, interval);
+        } else {
+          console.warn('No se pudo añadir los botones: imageResize.toolbar no está disponible');
+        }
+      };
+
+      addButtons();
+    }
+  };
+
+  const handleImageModalSubmit = (link) => {
+    const editor = (feedbackQuillRefs.current[link] || reportQuillRefs.current[link]).getEditor();
+    let { url, width, height, align } = imageData[link] || {};
+    if (!url) {
+      setSubmitStatus((prev) => ({ ...prev, [link]: 'La URL de la imagen es obligatoria.' }));
+      return;
+    }
+    if (width && width !== 'auto' && !width.match(/%|px$/)) width += 'px';
+    if (height && height !== 'auto' && !height.match(/%|px$/)) height += 'px';
+    if (isEditingImage[link]) {
+      if (editingRange[link]) {
+        editor.setSelection(editingRange[link].index, 1, 'silent');
+        const [leaf] = editor.getLeaf(editingRange[link].index);
+        if (leaf && leaf.domNode.tagName === 'IMG') {
+          if (width) leaf.domNode.style.width = width;
+          if (height) leaf.domNode.style.height = height;
+          editor.format('align', align, 'user');
+        }
+        editor.blur();
+      }
+    } else {
+      const range = editor.getSelection() || { index: editor.getLength() };
+      editor.insertText(range.index, '\n', 'user');
+      editor.insertEmbed(range.index + 1, 'image', url, 'user');
+      editor.setSelection(range.index + 2, 'silent');
+      const [leaf] = editor.getLeaf(range.index + 1);
+      if (leaf && leaf.domNode.tagName === 'IMG') {
+        if (width) leaf.domNode.style.width = width;
+        if (height) leaf.domNode.style.height = height;
+        editor.setSelection(range.index + 1, 1, 'silent');
+        editor.format('align', align, 'user');
+        editor.setSelection(range.index + 2, 'silent');
+      }
+    }
+    setShowImageModal((prev) => ({ ...prev, [link]: false }));
+    setIsEditingImage((prev) => ({ ...prev, [link]: false }));
+    setImageData((prev) => ({ ...prev, [link]: { url: '', width: '', height: '', align: 'left' } }));
+    setEditingRange((prev) => ({ ...prev, [link]: null }));
+  };
+
+  const handleImageDataChange = (link, e) => {
+    const { name, value } = e.target;
+    setImageData((prev) => ({
+      ...prev,
+      [link]: { ...prev[link], [name]: value }
+    }));
   };
 
   if (loading) {
@@ -326,23 +713,49 @@ export default function PortalSection({ user, onLogout }) {
                   <label className="block text-sm font-medium text-gray-700">
                     {assignment.role === 'Editor' ? 'Retroalimentación Final al Autor' : 'Retroalimentación al Autor'}
                   </label>
-                  <textarea
+                  <ReactQuill
+                    ref={(el) => (feedbackQuillRefs.current[assignment['Link Artículo']] = el)}
                     value={feedback[assignment['Link Artículo']] || ''}
-                    onChange={(e) => setFeedback((prev) => ({ ...prev, [assignment['Link Artículo']]: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    rows="4"
+                    onChange={debouncedSetFeedback(assignment['Link Artículo'])}
+                    modules={modules}
+                    formats={formats}
                     placeholder={assignment.role === 'Editor' ? 'Redacta una retroalimentación final sensible, sintetizando las opiniones de los revisores y la tuya.' : 'Escribe tu retroalimentación aquí...'}
+                    className="border rounded-md text-gray-800 bg-white"
+                    onFocus={() => setupQuillEditor(feedbackQuillRefs.current[assignment['Link Artículo']], assignment['Link Artículo'], 'feedback')}
                   />
+                  <button
+                    onClick={() => {
+                      setIsEditingImage((prev) => ({ ...prev, [assignment['Link Artículo']]: false }));
+                      setImageData((prev) => ({ ...prev, [assignment['Link Artículo']]: { url: '', width: '', height: '', align: 'left' } }));
+                      setShowImageModal((prev) => ({ ...prev, [assignment['Link Artículo']]: true }));
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                  >
+                    Insertar Imagen Manualmente
+                  </button>
                 </div>
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">Informe al Editor</label>
-                  <textarea
+                  <ReactQuill
+                    ref={(el) => (reportQuillRefs.current[assignment['Link Artículo']] = el)}
                     value={report[assignment['Link Artículo']] || ''}
-                    onChange={(e) => setReport((prev) => ({ ...prev, [assignment['Link Artículo']]: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    rows="4"
+                    onChange={debouncedSetReport(assignment['Link Artículo'])}
+                    modules={modules}
+                    formats={formats}
                     placeholder="Escribe tu informe aquí..."
+                    className="border rounded-md text-gray-800 bg-white"
+                    onFocus={() => setupQuillEditor(reportQuillRefs.current[assignment['Link Artículo']], assignment['Link Artículo'], 'report')}
                   />
+                  <button
+                    onClick={() => {
+                      setIsEditingImage((prev) => ({ ...prev, [assignment['Link Artículo']]: false }));
+                      setImageData((prev) => ({ ...prev, [assignment['Link Artículo']]: { url: '', width: '', height: '', align: 'left' } }));
+                      setShowImageModal((prev) => ({ ...prev, [assignment['Link Artículo']]: true }));
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                  >
+                    Insertar Imagen Manualmente
+                  </button>
                 </div>
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">Voto</label>
@@ -371,6 +784,63 @@ export default function PortalSection({ user, onLogout }) {
                   <p className={`text-center text-sm ${submitStatus[assignment['Link Artículo']].includes('Error') ? 'text-red-500' : 'text-green-500'}`}>
                     {submitStatus[assignment['Link Artículo']]}
                   </p>
+                )}
+                {showImageModal[assignment['Link Artículo']] && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+                    <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+                      <h5 className="text-lg font-semibold mb-4">{isEditingImage[assignment['Link Artículo']] ? 'Editar Imagen' : 'Insertar Imagen'}</h5>
+                      <input
+                        type="text"
+                        name="url"
+                        value={imageData[assignment['Link Artículo']]?.url || ''}
+                        onChange={(e) => handleImageDataChange(assignment['Link Artículo'], e)}
+                        placeholder="URL de la imagen"
+                        className="w-full px-4 py-2 border rounded-md mb-2"
+                        disabled={isEditingImage[assignment['Link Artículo']]}
+                      />
+                      <input
+                        type="text"
+                        name="width"
+                        value={imageData[assignment['Link Artículo']]?.width || ''}
+                        onChange={(e) => handleImageDataChange(assignment['Link Artículo'], e)}
+                        placeholder="Ancho (ej: 300px o 50%)"
+                        className="w-full px-4 py-2 border rounded-md mb-2"
+                      />
+                      <input
+                        type="text"
+                        name="height"
+                        value={imageData[assignment['Link Artículo']]?.height || ''}
+                        onChange={(e) => handleImageDataChange(assignment['Link Artículo'], e)}
+                        placeholder="Alto (ej: 200px o auto)"
+                        className="w-full px-4 py-2 border rounded-md mb-2"
+                      />
+                      <select
+                        name="align"
+                        value={imageData[assignment['Link Artículo']]?.align || 'left'}
+                        onChange={(e) => handleImageDataChange(assignment['Link Artículo'], e)}
+                        className="w-full px-4 py-2 border rounded-md mb-4"
+                      >
+                        <option value="left">Izquierda</option>
+                        <option value="center">Centro</option>
+                        <option value="right">Derecha</option>
+                        <option value="justify">Justificado</option>
+                      </select>
+                      <div className="flex justify-end space-x-2">
+                        <button
+                          onClick={() => setShowImageModal((prev) => ({ ...prev, [assignment['Link Artículo']]: false }))}
+                          className="px-4 py-2 bg-gray-300 rounded-md"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          onClick={() => handleImageModalSubmit(assignment['Link Artículo'])}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-md"
+                        >
+                          {isEditingImage[assignment['Link Artículo']] ? 'Actualizar' : 'Insertar'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
             ))}
