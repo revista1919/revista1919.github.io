@@ -5,10 +5,10 @@ const Papa = require('papaparse');
 
 const articlesCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p32EM6-0VYy18AdREQwXdpeet1WHTA4H2-W2FX7HKe1HPSyApWadUw9sKHdVYQXL5tP6yDRs/pub?output=csv';
 const teamCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
-
 const outputJson = path.join(__dirname, 'dist', 'articles.json');
 const outputHtmlDir = path.join(__dirname, 'dist', 'articles');
 const teamOutputHtmlDir = path.join(__dirname, 'dist', 'team');
+const sectionsOutputDir = path.join(__dirname, 'dist', 'sections');
 const sitemapPath = path.join(__dirname, 'dist', 'sitemap.xml');
 const robotsPath = path.join(__dirname, 'dist', 'robots.txt');
 const domain = 'https://www.revistacienciasestudiantes.com';
@@ -17,7 +17,6 @@ function parseDateFlexible(dateStr) {
   if (!dateStr) return '';
   let date = new Date(dateStr);
   if (!isNaN(date)) return date.toISOString().split('T')[0];
-
   const parts = dateStr.split(/[\/.-]/);
   if (parts.length === 3) {
     let [day, month, year] = parts.map(p => p.padStart(2, '0'));
@@ -25,7 +24,6 @@ function parseDateFlexible(dateStr) {
     date = new Date(`${year}-${month}-${day}`);
     if (!isNaN(date)) return date.toISOString().split('T')[0];
   }
-
   return dateStr;
 }
 
@@ -64,6 +62,7 @@ function getImageSrc(image) {
 
 if (!fs.existsSync(outputHtmlDir)) fs.mkdirSync(outputHtmlDir, { recursive: true });
 if (!fs.existsSync(teamOutputHtmlDir)) fs.mkdirSync(teamOutputHtmlDir, { recursive: true });
+if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursive: true });
 
 (async () => {
   try {
@@ -89,14 +88,12 @@ if (!fs.existsSync(teamOutputHtmlDir)) fs.mkdirSync(teamOutputHtmlDir, { recursi
         ? row['Palabras clave'].split(/[;,]/).map(k => k.trim())
         : []
     }));
-
     fs.writeFileSync(outputJson, JSON.stringify(articles, null, 2), 'utf8');
     console.log(`✅ Archivo generado: ${outputJson} (${articles.length} artículos)`);
 
     articles.forEach(article => {
       const authorsList = article.autores.split(';').map(a => formatAuthorForCitation(a));
       const authorMetaTags = authorsList.map(author => `<meta name="citation_author" content="${author}">`).join('\n');
-
       const htmlContent = `
 <!DOCTYPE html>
 <html lang="es">
@@ -155,7 +152,6 @@ if (!fs.existsSync(teamOutputHtmlDir)) fs.mkdirSync(teamOutputHtmlDir, { recursi
 </body>
 </html>
       `.trim();
-
       const filePath = path.join(outputHtmlDir, `articulo${article.numeroArticulo}.html`);
       fs.writeFileSync(filePath, htmlContent, 'utf8');
       console.log(`Generado HTML de artículo: ${filePath}`);
@@ -168,7 +164,6 @@ if (!fs.existsSync(teamOutputHtmlDir)) fs.mkdirSync(teamOutputHtmlDir, { recursi
       acc[year].push(article);
       return acc;
     }, {});
-
     let indexContent = `
 <!DOCTYPE html>
 <html lang="es">
@@ -203,7 +198,6 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
 </body>
 </html>
     `.trim();
-
     const indexPath = path.join(outputHtmlDir, 'index.html');
     fs.writeFileSync(indexPath, indexContent, 'utf8');
     console.log(`Generado índice HTML de artículos: ${indexPath}`);
@@ -213,8 +207,6 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     if (!teamRes.ok) throw new Error(`Error descargando CSV de equipo: ${teamRes.statusText}`);
     const teamCsvData = await teamRes.text();
     const teamParsed = Papa.parse(teamCsvData, { header: true, skipEmptyLines: true });
-
-    // Filtrar miembros: excluir si único rol es "Autor"
     const filteredMembers = teamParsed.data.filter((data) => {
       const memberRoles = (data['Rol en la Revista'] || '')
         .split(';')
@@ -223,19 +215,19 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       return !(memberRoles.length === 1 && memberRoles[0] === 'Autor');
     });
 
-filteredMembers.forEach(member => {
-  const nombre = member['Nombre'] || 'Miembro desconocido';
-  const slug = generateSlug(nombre);
-  const roles = (member['Rol en la Revista'] || 'No especificado')
-    .split(';')
-    .map(r => r.trim())
-    .filter(r => r)
-    .join(', ') || 'No especificado';
-  const descripcion = member['Descripción'] || 'Información no disponible';
-  const areas = member['Áreas de interés'] || 'No especificadas';
-  const areasList = areas.split(';').map(a => a.trim()).filter(a => a);
-  const imagen = getImageSrc(member['Imagen'] || '');
-  const htmlContent = `
+    filteredMembers.forEach(member => {
+      const nombre = member['Nombre'] || 'Miembro desconocido';
+      const slug = generateSlug(nombre);
+      const roles = (member['Rol en la Revista'] || 'No especificado')
+        .split(';')
+        .map(r => r.trim())
+        .filter(r => r)
+        .join(', ') || 'No especificado';
+      const descripcion = member['Descripción'] || 'Información no disponible';
+      const areas = member['Áreas de interés'] || 'No especificadas';
+      const areasList = areas.split(';').map(a => a.trim()).filter(a => a);
+      const imagen = getImageSrc(member['Imagen'] || '');
+      const htmlContent = `
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -435,16 +427,60 @@ filteredMembers.forEach(member => {
 </body>
 </html>
       `.trim();
-  const filePath = path.join(teamOutputHtmlDir, `${slug}.html`);
-  fs.writeFileSync(filePath, htmlContent, 'utf8');
-  console.log(`Generado HTML de miembro: ${filePath}`);
-});
+      const filePath = path.join(teamOutputHtmlDir, `${slug}.html`);
+      fs.writeFileSync(filePath, htmlContent, 'utf8');
+      console.log(`Generado HTML de miembro: ${filePath}`);
+    });
+
+    // Generar páginas estáticas para las secciones de la SPA
+    const sections = [
+      { name: 'about', label: 'Acerca de', content: 'La Revista Nacional de las Ciencias para Estudiantes es una publicación dedicada a promover la investigación científica entre estudiantes.' },
+      { name: 'guidelines', label: 'Guías', content: 'Guías para autores y revisores de la Revista Nacional de las Ciencias para Estudiantes.' },
+      { name: 'faq', label: 'Preguntas Frecuentes', content: 'Preguntas frecuentes sobre la Revista Nacional de las Ciencias para Estudiantes.' },
+      { name: 'news', label: 'Noticias', content: 'Últimas noticias de la Revista Nacional de las Ciencias para Estudiantes.' },
+    ];
+
+    sections.forEach(section => {
+      const htmlContent = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="${section.label} - Revista Nacional de las Ciencias para Estudiantes">
+  <meta name="keywords" content="${section.label}, Revista Nacional de las Ciencias para Estudiantes">
+  <title>${section.label} - Revista Nacional de las Ciencias para Estudiantes</title>
+  <link rel="stylesheet" href="/index.css">
+</head>
+<body>
+  <header>
+    <h1>${section.label}</h1>
+  </header>
+  <main>
+    <section class="py-8 max-w-7xl mx-auto">
+      <p>${section.content}</p>
+      <p>Para más información, visita nuestra página principal.</p>
+    </section>
+  </main>
+  <footer>
+    <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes</p>
+    <a href="/">Volver al inicio</a>
+  </footer>
+</body>
+</html>
+      `.trim();
+      const filePath = path.join(sectionsOutputDir, `${section.name}.html`);
+      fs.writeFileSync(filePath, htmlContent, 'utf8');
+      console.log(`Generado HTML de sección: ${filePath}`);
+    });
+
     // Generar sitemap
-    const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+    const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
 <!-- Created for Revista Nacional de las Ciencias para Estudiantes -->
 <url>
   <loc>${domain}/</loc>
-  <lastmod>2025-08-30T03:01:32+00:00</lastmod>
+  <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
   <changefreq>weekly</changefreq>
   <priority>1.0</priority>
 </url>
@@ -453,7 +489,8 @@ filteredMembers.forEach(member => {
   <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.9</priority>
-</url>${articles.map(article => `
+</url>
+${articles.map(article => `
 <url>
   <loc>${domain}/articles/articulo${article.numeroArticulo}.html</loc>
   <lastmod>${article.fecha}</lastmod>
@@ -465,7 +502,8 @@ filteredMembers.forEach(member => {
   <lastmod>${article.fecha}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.8</priority>
-</url>`).join('')}${filteredMembers.map(member => {
+</url>`).join('')}
+${filteredMembers.map(member => {
       const slug = generateSlug(member['Nombre']);
       return `
 <url>
@@ -475,8 +513,14 @@ filteredMembers.forEach(member => {
   <priority>0.7</priority>
 </url>`;
     }).join('')}
+${sections.map(section => `
+<url>
+  <loc>${domain}/sections/${section.name}.html</loc>
+  <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.7</priority>
+</url>`).join('')}
 </urlset>`.replace(/^\s*\n/gm, '');
-
     fs.writeFileSync(sitemapPath, sitemapContent, 'utf8');
     console.log(`Generado sitemap: ${sitemapPath}`);
 
@@ -485,6 +529,7 @@ filteredMembers.forEach(member => {
 Allow: /articles/
 Allow: /Articles/
 Allow: /team/
+Allow: /sections/
 Allow: /index.css
 Disallow: /search
 Disallow: /login
@@ -492,11 +537,11 @@ Disallow: /admin
 Disallow: /submit
 Disallow: /cart
 Disallow: /api/
-
 User-agent: *
 Allow: /articles/
 Allow: /Articles/
 Allow: /team/
+Allow: /sections/
 Allow: /index.css
 Disallow: /search
 Disallow: /login
@@ -504,13 +549,10 @@ Disallow: /admin
 Disallow: /submit
 Disallow: /cart
 Disallow: /api/
-
 Sitemap: ${domain}/sitemap.xml
     `.trim();
-
     fs.writeFileSync(robotsPath, robotsContent, 'utf8');
     console.log(`Generado robots.txt: ${robotsPath}`);
-
   } catch (err) {
     console.error('❌ Error:', err);
   }
