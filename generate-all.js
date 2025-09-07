@@ -479,7 +479,7 @@ function getAdminContent(lang) {
   `.trim();
 }
 
-function formatDateNews(dateStr) {
+function formatDateNews(dateStr, lang) {
   if (!dateStr) return lang === 'es' ? 'Sin fecha' : 'No date';
   let date = new Date(dateStr);
   if (!isNaN(date)) return date.toLocaleString(lang === 'es' ? 'es-CL' : 'en-US', {
@@ -505,54 +505,6 @@ function formatDateNews(dateStr) {
     });
   }
   return dateStr;
-}
-
-function decodeBodyToHtml(body, truncate = false, lang) {
-  if (!body) return '<p class="text-[#000000]">No content available.</p>';
-  let fullBody = body;
-  if (truncate && body.length > 2000) {
-    const paragraphs = String(body).split("===");
-    let charCount = 0;
-    let truncatedParagraphs = [];
-    for (let i = 0; i < paragraphs.length; i++) {
-      charCount += paragraphs[i].length + 3;
-      if (charCount <= 2000) {
-        truncatedParagraphs.push(paragraphs[i]);
-      } else {
-        break;
-      }
-    }
-    fullBody = truncatedParagraphs.join("===") + (truncatedParagraphs.length < paragraphs.length ? "..." : "");
-  }
-  const paragraphs = String(fullBody).split("===").filter(p => p.trim() !== "");
-  let content = [];
-  let i = 0;
-  while (i < paragraphs.length) {
-    let p = paragraphs[i].trim();
-    if (/^ - /.test(p)) { // Note: changed from '- ' to ' - ' if space
-      const items = [];
-      while (i < paragraphs.length && paragraphs[i].trim().startsWith('- ')) {
-        const itemText = paragraphs[i].trim().slice(2);
-        items.push(renderParagraphToHtml(itemText));
-        i++;
-      }
-      content.push(`<ul class="mb-4 list-disc pl-6">${items.map(item => `<li>${item}</li>`).join('')}</ul>`);
-      continue;
-    } else if (/^\d+\.\s/.test(p)) {
-      const items = [];
-      while (i < paragraphs.length && /^\d+\.\s/.test(paragraphs[i].trim())) {
-        const itemText = paragraphs[i].trim().replace(/^\d+\.\s/, '');
-        items.push(renderParagraphToHtml(itemText));
-        i++;
-      }
-      content.push(`<ol class="mb-4 list-decimal pl-6">${items.map(item => `<li>${item}</li>`).join('')}</ol>`);
-      continue;
-    } else {
-      content.push(`<div class="mb-4 leading-relaxed break-words" style="clear: both;">${renderParagraphToHtml(p)}</div>`);
-      i++;
-    }
-  }
-  return content.join('');
 }
 
 function renderParagraphToHtml(p) {
@@ -617,6 +569,18 @@ function renderParagraphToHtml(p) {
   const alignStyle = `text-align: ${align}; ${fontSizeStyle} width: 100%; display: block; margin: ${align === 'center' ? '0 auto' : '0'};`;
 
   return `<div style="${alignStyle}">${styledContent}</div>`;
+}
+
+function isLikelyImageUrl(url) {
+  return /\.(png|jpe?g|gif|svg|webp)$/i.test(url) || url.startsWith('data:image/');
+}
+
+function normalizeUrl(u) {
+  let url = (u || "").trim();
+  if (/^https?:[^/]/i.test(url)) {
+    url = url.replace(/^https?:/i, (m) => m + "//");
+  }
+  return url;
 }
 
 function renderStyledTextToHtml(text, placeholders) {
@@ -730,14 +694,117 @@ function renderStyledTextToHtml(text, placeholders) {
   return out.join('');
 }
 
-function normalizeUrl(u) {
-  let url = (u || "").trim();
-  if (/^https?:[^/]/i.test(url)) {
-    url = url.replace(/^https?:/i, (m) => m + "//");
+function renderParagraphToHtml(p) {
+  let text = p.trim();
+  const placeholders = [];
+  const TOK = (i) => `__TOK${i}__`;
+
+  let align = "left";
+  let size = "normal";
+  if (text.startsWith('(')) {
+    const endIdx = text.indexOf(')');
+    if (endIdx !== -1) {
+      const paramStr = text.slice(1, endIdx);
+      const params = paramStr.split(',').map(p => p.trim());
+      params.forEach(p => {
+        if (['small', 'big', 'normal'].includes(p)) size = p;
+        if (['left', 'center', 'right', 'justify'].includes(p)) align = p;
+      });
+      text = text.slice(endIdx + 1).trim();
+    }
   }
-  return url;
+
+  const imgPattern = /\[img:([^\]]*?)(?:,(\d*(?:px|% )?|auto))?(?:,(\d*(?:px|% )?|auto))?(?:,(left|center|right|justify))?\]/gi;
+  text = text.replace(imgPattern, (_, url, width = "auto", height = "auto", imgAlign = "left") => {
+    if (width !== "auto" && width && !width.match(/%|px$/)) width += 'px';
+    if (height !== "auto" && height && !height.match(/%|px$/)) height += 'px';
+    const id = placeholders.length;
+    placeholders.push({ type: "image", url: normalizeUrl(url), width, height, align: imgAlign });
+    return TOK(id);
+  });
+
+  const linkPattern = /\b([^\s(]+)\((https?:\/\/[^\s)]+)\)/gi;
+  text = text.replace(linkPattern, (_, word, url) => {
+    const id = placeholders.length;
+    placeholders.push({ type: "link", word, url });
+    return TOK(id);
+  });
+
+  const urlPattern = /(?:https?:\/\/[^\s)]+|^data:image\/[a-zA-Z+]+;base64,[^\s)]+)/gi;
+  text = text.replace(urlPattern, (u) => {
+    if (placeholders.some(ph => ph.url === u)) return u;
+    const id = placeholders.length;
+    placeholders.push({ type: isLikelyImageUrl(u) ? "image" : "url", url: u });
+    return TOK(id);
+  });
+
+  text = text.replace(/\[size:([^\]]+)\](.*?)\[\/size\]/gs, (_, sz, content) => {
+    const id = placeholders.length;
+    placeholders.push({ type: "size", size: sz, content });
+    return TOK(id);
+  });
+
+  text = text.replace(/<<ESC_(\d+)>>/g, (_, code) => String.fromCharCode(Number(code)));
+
+  const styledContent = renderStyledTextToHtml(text, placeholders);
+
+  let fontSizeStyle = '';
+  if (size === 'small') fontSizeStyle = 'font-size: 0.75em;';
+  else if (size === 'big') fontSizeStyle = 'font-size: 1.5em;';
+  else fontSizeStyle = 'font-size: inherit;';
+
+  const alignStyle = `text-align: ${align}; ${fontSizeStyle} width: 100%; display: block; margin: ${align === 'center' ? '0 auto' : '0'};`;
+
+  return `<div style="${alignStyle}">${styledContent}</div>`;
 }
 
+function decodeBodyToHtml(body, truncate = false, lang) {
+  if (!body) return '<p class="text-[#000000]">No content available.</p>';
+  let fullBody = body;
+  if (truncate && body.length > 2000) {
+    const paragraphs = String(body).split("===");
+    let charCount = 0;
+    let truncatedParagraphs = [];
+    for (let i = 0; i < paragraphs.length; i++) {
+      charCount += paragraphs[i].length + 3;
+      if (charCount <= 2000) {
+        truncatedParagraphs.push(paragraphs[i]);
+      } else {
+        break;
+      }
+    }
+    fullBody = truncatedParagraphs.join("===") + (truncatedParagraphs.length < paragraphs.length ? "..." : "");
+  }
+  const paragraphs = String(fullBody).split("===").filter(p => p.trim() !== "");
+  let content = [];
+  let i = 0;
+  while (i < paragraphs.length) {
+    let p = paragraphs[i].trim();
+    if (/^ - /.test(p)) {
+      const items = [];
+      while (i < paragraphs.length && paragraphs[i].trim().startsWith('- ')) {
+        const itemText = paragraphs[i].trim().slice(2);
+        items.push(renderParagraphToHtml(itemText));
+        i++;
+      }
+      content.push(`<ul class="mb-4 list-disc pl-6">${items.map(item => `<li>${item}</li>`).join('')}</ul>`);
+      continue;
+    } else if (/^\d+\.\s/.test(p)) {
+      const items = [];
+      while (i < paragraphs.length && /^\d+\.\s/.test(paragraphs[i].trim())) {
+        const itemText = paragraphs[i].trim().replace(/^\d+\.\s/, '');
+        items.push(renderParagraphToHtml(itemText));
+        i++;
+      }
+      content.push(`<ol class="mb-4 list-decimal pl-6">${items.map(item => `<li>${item}</li>`).join('')}</ol>`);
+      continue;
+    } else {
+      content.push(`<div class="mb-4 leading-relaxed break-words" style="clear: both;">${renderParagraphToHtml(p)}</div>`);
+      i++;
+    }
+  }
+  return content.join('');
+}
 function getNewsContent(lang, newsData) {
   const heading = lang === 'es' ? 'Noticias' : 'News';
   const searchPlaceholder = lang === 'es' ? 'Buscar noticias...' : 'Search news...';
@@ -748,7 +815,7 @@ function getNewsContent(lang, newsData) {
   const newsGrid = newsData.map((item) => `
 <div class="bg-white p-5 rounded-2xl shadow-lg flex flex-col border border-gray-100 hover:shadow-xl transition">
   <h4 class="text-lg font-semibold text-[#5a3e36] mb-2 leading-snug">${item['Título'] || 'Sin título'}</h4>
-  <p class="text-sm text-gray-500 mb-3 italic">${formatDateNews(item['Fecha'])}</p>
+  <p class="text-sm text-gray-500 mb-3 italic">${formatDateNews(item['Fecha'], lang)}</p>
   <div class="text-[#000000] text-sm leading-relaxed">
     ${decodeBodyToHtml(item['Contenido de la noticia'], true, lang)}
   </div>
