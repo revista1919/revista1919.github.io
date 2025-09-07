@@ -233,6 +233,7 @@ filteredMembers.forEach(member => {
     .join(', ') || 'No especificado';
   const descripcion = member['Descripción'] || 'Información no disponible';
   const areas = member['Áreas de interés'] || 'No especificadas';
+  const areasList = areas.split(';').map(a => a.trim()).filter(a => a);
   const imagen = getImageSrc(member['Imagen'] || '');
   const htmlContent = `
 <!DOCTYPE html>
@@ -282,8 +283,10 @@ filteredMembers.forEach(member => {
       height: 180px;
       border-radius: 50%;
       object-fit: cover;
+      object-position: center;
       border: 3px solid #2b6cb0;
       transition: transform 0.3s ease;
+      display: block;
     }
     .profile-img:hover {
       transform: scale(1.05);
@@ -315,6 +318,26 @@ filteredMembers.forEach(member => {
     .section {
       margin-top: 2rem;
       text-align: justify;
+    }
+    .areas-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+    @media (min-width: 768px) {
+      .areas-tags {
+        justify-content: flex-start;
+      }
+    }
+    .area-tag {
+      background: #2d3748;
+      color: #ffffff;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      display: inline-block;
     }
     h1 {
       color: #2b6cb0;
@@ -376,6 +399,10 @@ filteredMembers.forEach(member => {
       h2 {
         font-size: 1.25rem;
       }
+      .area-tag {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.8rem;
+      }
     }
   </style>
 </head>
@@ -396,7 +423,9 @@ filteredMembers.forEach(member => {
     </div>
     <div class="section">
       <h2>Áreas de interés</h2>
-      <p>${areas}</p>
+      <div class="areas-tags">
+        ${areasList.length ? areasList.map(area => `<span class="area-tag">${area}</span>`).join('') : '<p>No especificadas</p>'}
+      </div>
     </div>
     <footer>
       <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes</p>
