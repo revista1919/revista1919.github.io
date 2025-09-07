@@ -223,20 +223,18 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       return !(memberRoles.length === 1 && memberRoles[0] === 'Autor');
     });
 
-    // Generar HTML para cada miembro
-    filteredMembers.forEach(member => {
-      const nombre = member['Nombre'] || 'Miembro desconocido';
-      const slug = generateSlug(nombre);
-      const roles = (member['Rol en la Revista'] || 'No especificado')
-        .split(';')
-        .map(r => r.trim())
-        .filter(r => r)
-        .join(', ') || 'No especificado';
-      const descripcion = member['Descripción'] || 'Información no disponible';
-      const areas = member['Áreas de interés'] || 'No especificadas';
-      const imagen = getImageSrc(member['Imagen'] || '');
-
-      const htmlContent = `
+filteredMembers.forEach(member => {
+  const nombre = member['Nombre'] || 'Miembro desconocido';
+  const slug = generateSlug(nombre);
+  const roles = (member['Rol en la Revista'] || 'No especificado')
+    .split(';')
+    .map(r => r.trim())
+    .filter(r => r)
+    .join(', ') || 'No especificado';
+  const descripcion = member['Descripción'] || 'Información no disponible';
+  const areas = member['Áreas de interés'] || 'No especificadas';
+  const imagen = getImageSrc(member['Imagen'] || '');
+  const htmlContent = `
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -286,7 +284,6 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       object-fit: cover;
       border: 3px solid #2b6cb0;
       transition: transform 0.3s ease;
-      display: block;
     }
     .profile-img:hover {
       transform: scale(1.05);
@@ -296,7 +293,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       height: 180px;
       border-radius: 50%;
       background: #e2e8f0;
-      display: none;
+      display: flex;
       align-items: center;
       justify-content: center;
       font-size: 1.2rem;
@@ -386,7 +383,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
   <div class="profile-container">
     <div class="profile-header">
       <div class="profile-img-container">
-        ${imagen ? `<img src="${imagen}" alt="Foto de ${nombre}" class="profile-img" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div class="profile-img-fallback">Sin Imagen</div>` : `<div class="profile-img-fallback" style="display: flex;">Sin Imagen</div>`}
+        ${imagen ? `<img src="${imagen}" alt="Foto de ${nombre}" class="profile-img">` : `<div class="profile-img-fallback">Sin Imagen</div>`}
       </div>
       <div class="profile-info">
         <h1>${nombre}</h1>
@@ -409,12 +406,10 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
 </body>
 </html>
       `.trim();
-
-      const filePath = path.join(teamOutputHtmlDir, `${slug}.html`);
-      fs.writeFileSync(filePath, htmlContent, 'utf8');
-      console.log(`Generado HTML de miembro: ${filePath}`);
-    });
-
+  const filePath = path.join(teamOutputHtmlDir, `${slug}.html`);
+  fs.writeFileSync(filePath, htmlContent, 'utf8');
+  console.log(`Generado HTML de miembro: ${filePath}`);
+});
     // Generar sitemap
     const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
 <!-- Created for Revista Nacional de las Ciencias para Estudiantes -->
