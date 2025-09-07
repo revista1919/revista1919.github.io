@@ -8,85 +8,193 @@
   <priority>1.0</priority>
 </url>
 <url>
-  <loc>https://www.revistacienciasestudiantes.com/articles/index.html</loc>
+  <loc>https://www.revistacienciasestudiantes.com/articles/es/index.html</loc>
   <lastmod>2025-09-07</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.9</priority>
 </url>
 <url>
-  <loc>https://www.revistacienciasestudiantes.com/team/javier-vergara.html</loc>
+  <loc>https://www.revistacienciasestudiantes.com/articles/en/index.html</loc>
+  <lastmod>2025-09-07</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.9</priority>
+</url>
+<url>
+  <loc>https://www.revistacienciasestudiantes.com/team/es/javier-vergara.html</loc>
   <lastmod>2025-09-07</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.7</priority>
 </url>
 <url>
-  <loc>https://www.revistacienciasestudiantes.com/team/renato-vergara.html</loc>
+  <loc>https://www.revistacienciasestudiantes.com/team/es/renato-vergara.html</loc>
   <lastmod>2025-09-07</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.7</priority>
 </url>
 <url>
-  <loc>https://www.revistacienciasestudiantes.com/team/francisco-correa.html</loc>
+  <loc>https://www.revistacienciasestudiantes.com/team/es/francisco-correa.html</loc>
   <lastmod>2025-09-07</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.7</priority>
 </url>
 <url>
-  <loc>https://www.revistacienciasestudiantes.com/team/santiago-soto.html</loc>
+  <loc>https://www.revistacienciasestudiantes.com/team/es/santiago-soto.html</loc>
   <lastmod>2025-09-07</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.7</priority>
 </url>
 <url>
-  <loc>https://www.revistacienciasestudiantes.com/team/marina-soto.html</loc>
+  <loc>https://www.revistacienciasestudiantes.com/team/es/marina-soto.html</loc>
   <lastmod>2025-09-07</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.7</priority>
 </url>
 <url>
-  <loc>https://www.revistacienciasestudiantes.com/team/emanuel-cereceda.html</loc>
+  <loc>https://www.revistacienciasestudiantes.com/team/es/emanuel-cereceda.html</loc>
   <lastmod>2025-09-07</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.7</priority>
 </url>
 <url>
-  <loc>https://www.revistacienciasestudiantes.com/team/juan-pablo-miralles.html</loc>
+  <loc>https://www.revistacienciasestudiantes.com/team/es/juan-pablo-miralles.html</loc>
   <lastmod>2025-09-07</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.7</priority>
 </url>
 <url>
-  <loc>https://www.revistacienciasestudiantes.com/team/joel-portugal.html</loc>
+  <loc>https://www.revistacienciasestudiantes.com/team/es/joel-portugal.html</loc>
   <lastmod>2025-09-07</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.7</priority>
 </url>
 <url>
-  <loc>https://www.revistacienciasestudiantes.com/team/carlos-gutierrez.html</loc>
+  <loc>https://www.revistacienciasestudiantes.com/team/es/carlos-gutierrez.html</loc>
   <lastmod>2025-09-07</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.7</priority>
 </url>
 <url>
-  <loc>https://www.revistacienciasestudiantes.com/sections/about.html</loc>
+  <loc>https://www.revistacienciasestudiantes.com/sections/es/about.html</loc>
   <lastmod>2025-09-07</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.7</priority>
 </url>
 <url>
-  <loc>https://www.revistacienciasestudiantes.com/sections/guidelines.html</loc>
+  <loc>https://www.revistacienciasestudiantes.com/sections/es/guidelines.html</loc>
   <lastmod>2025-09-07</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.7</priority>
 </url>
 <url>
-  <loc>https://www.revistacienciasestudiantes.com/sections/faq.html</loc>
+  <loc>https://www.revistacienciasestudiantes.com/sections/es/faq.html</loc>
   <lastmod>2025-09-07</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.7</priority>
 </url>
 <url>
-  <loc>https://www.revistacienciasestudiantes.com/sections/news.html</loc>
+  <loc>https://www.revistacienciasestudiantes.com/sections/es/submit.html</loc>
+  <lastmod>2025-09-07</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.7</priority>
+</url>
+<url>
+  <loc>https://www.revistacienciasestudiantes.com/sections/es/admin.html</loc>
+  <lastmod>2025-09-07</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.7</priority>
+</url>
+<url>
+  <loc>https://www.revistacienciasestudiantes.com/sections/es/news.html</loc>
+  <lastmod>2025-09-07</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.7</priority>
+</url>
+<url>
+  <loc>https://www.revistacienciasestudiantes.com/team/en/javier-vergara.html</loc>
+  <lastmod>2025-09-07</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.7</priority>
+</url>
+<url>
+  <loc>https://www.revistacienciasestudiantes.com/team/en/renato-vergara.html</loc>
+  <lastmod>2025-09-07</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.7</priority>
+</url>
+<url>
+  <loc>https://www.revistacienciasestudiantes.com/team/en/francisco-correa.html</loc>
+  <lastmod>2025-09-07</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.7</priority>
+</url>
+<url>
+  <loc>https://www.revistacienciasestudiantes.com/team/en/santiago-soto.html</loc>
+  <lastmod>2025-09-07</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.7</priority>
+</url>
+<url>
+  <loc>https://www.revistacienciasestudiantes.com/team/en/marina-soto.html</loc>
+  <lastmod>2025-09-07</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.7</priority>
+</url>
+<url>
+  <loc>https://www.revistacienciasestudiantes.com/team/en/emanuel-cereceda.html</loc>
+  <lastmod>2025-09-07</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.7</priority>
+</url>
+<url>
+  <loc>https://www.revistacienciasestudiantes.com/team/en/juan-pablo-miralles.html</loc>
+  <lastmod>2025-09-07</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.7</priority>
+</url>
+<url>
+  <loc>https://www.revistacienciasestudiantes.com/team/en/joel-portugal.html</loc>
+  <lastmod>2025-09-07</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.7</priority>
+</url>
+<url>
+  <loc>https://www.revistacienciasestudiantes.com/team/en/carlos-gutierrez.html</loc>
+  <lastmod>2025-09-07</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.7</priority>
+</url>
+<url>
+  <loc>https://www.revistacienciasestudiantes.com/sections/en/about.html</loc>
+  <lastmod>2025-09-07</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.7</priority>
+</url>
+<url>
+  <loc>https://www.revistacienciasestudiantes.com/sections/en/guidelines.html</loc>
+  <lastmod>2025-09-07</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.7</priority>
+</url>
+<url>
+  <loc>https://www.revistacienciasestudiantes.com/sections/en/faq.html</loc>
+  <lastmod>2025-09-07</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.7</priority>
+</url>
+<url>
+  <loc>https://www.revistacienciasestudiantes.com/sections/en/submit.html</loc>
+  <lastmod>2025-09-07</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.7</priority>
+</url>
+<url>
+  <loc>https://www.revistacienciasestudiantes.com/sections/en/admin.html</loc>
+  <lastmod>2025-09-07</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.7</priority>
+</url>
+<url>
+  <loc>https://www.revistacienciasestudiantes.com/sections/en/news.html</loc>
   <lastmod>2025-09-07</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.7</priority>
