@@ -1,5 +1,6 @@
 // components/NewsletterSection.js
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 function NewsletterSection() {
   const [nombre, setNombre] = useState('');

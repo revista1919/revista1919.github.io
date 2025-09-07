@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import logoIG from '/public/logoig.png';
 import logoYT from '/public/logoyt.png';
+import { useTranslation } from 'react-i18next';
 
 function Footer() {
   const [nombre, setNombre] = useState('');

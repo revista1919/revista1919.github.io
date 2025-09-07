@@ -1,4 +1,5 @@
 // TeamSection actualizado
+import { useTranslation } from 'react-i18next';
 import React, { useState, useEffect, useMemo } from 'react';
 import Papa from 'papaparse';
 

@@ -3,6 +3,7 @@ import ReactQuill, { Quill } from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import ImageResize from 'quill-image-resize-module-react';
 import { debounce } from 'lodash';
+import { useTranslation } from 'react-i18next';
 
 // Registrar el módulo de resize
 Quill.register('modules/imageResize', ImageResize);
