@@ -164,7 +164,7 @@ if (!fs.existsSync(teamOutputHtmlDir)) fs.mkdirSync(teamOutputHtmlDir, { recursi
     // Generar índice de artículos
     const articlesByYear = articles.reduce((acc, article) => {
       const year = new Date(article.fecha).getFullYear() || 'Sin fecha';
-      if (!acc[aggia]) acc[year] = [];
+      if (!acc[year]) acc[year] = [];
       acc[year].push(article);
       return acc;
     }, {});
@@ -262,7 +262,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       padding: 2rem;
       background: #ffffff;
       border-radius: 12px;
-      box-shadow: 0 4px 20px rgba( требованиям,0, 0, 0.08);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
       text-align: center;
     }
     .profile-header {
@@ -286,6 +286,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       object-fit: cover;
       border: 3px solid #2b6cb0;
       transition: transform 0.3s ease;
+      display: block;
     }
     .profile-img:hover {
       transform: scale(1.05);
@@ -295,7 +296,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       height: 180px;
       border-radius: 50%;
       background: #e2e8f0;
-      display: flex;
+      display: none;
       align-items: center;
       justify-content: center;
       font-size: 1.2rem;
@@ -384,7 +385,9 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
 <body>
   <div class="profile-container">
     <div class="profile-header">
-      ${imagen ? `<img src="${imagen}" alt="Foto de ${nombre}" class="profile-img" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div class="profile-img-fallback">Sin Imagen</div>` : `<div class="profile-img-fallback">Sin Imagen</div>`}
+      <div class="profile-img-container">
+        ${imagen ? `<img src="${imagen}" alt="Foto de ${nombre}" class="profile-img" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div class="profile-img-fallback">Sin Imagen</div>` : `<div class="profile-img-fallback" style="display: flex;">Sin Imagen</div>`}
+      </div>
       <div class="profile-info">
         <h1>${nombre}</h1>
         <p class="role">${roles}</p>
@@ -400,7 +403,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     </div>
     <footer>
       <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes</p>
-      <a href="/">Volver al inicio</a> | <a href="/team">Volver al equipo</a>
+      <a href="/">Volver al inicio</a>
     </footer>
   </div>
 </body>
