@@ -67,7 +67,7 @@ if (!fs.existsSync(teamOutputHtmlDir)) fs.mkdirSync(teamOutputHtmlDir, { recursi
 
 (async () => {
   try {
-    // Procesar artículos (sin cambios)
+    // Procesar artículos
     const articlesRes = await fetch(articlesCsvUrl);
     if (!articlesRes.ok) throw new Error(`Error descargando CSV de artículos: ${articlesRes.statusText}`);
     const articlesCsvData = await articlesRes.text();
@@ -76,6 +76,7 @@ if (!fs.existsSync(teamOutputHtmlDir)) fs.mkdirSync(teamOutputHtmlDir, { recursi
       titulo: row['Título'] || 'Sin título',
       autores: row['Autor(es)'] || 'Autor desconocido',
       resumen: row['Resumen'] || 'Resumen no disponible',
+      englishAbstract: row['Abstract'] || 'English abstract not available',
       pdf: `${domain}/Articles/Articulo${row['Número de artículo']}.pdf`,
       fecha: parseDateFlexible(row['Fecha']),
       volumen: row['Volumen'] || '',
@@ -114,6 +115,7 @@ if (!fs.existsSync(teamOutputHtmlDir)) fs.mkdirSync(teamOutputHtmlDir, { recursi
   <meta name="citation_pdf_url" content="${article.pdf}">
   <meta name="citation_abstract_html_url" content="${domain}/articles/articulo${article.numeroArticulo}.html">
   <meta name="citation_abstract" content="${article.resumen}">
+  <meta name="citation_abstract" xml:lang="en" content="${article.englishAbstract}">
   <meta name="citation_keywords" content="${article.palabras_clave.join('; ')}">
   <meta name="citation_language" content="es">
   <title>${article.titulo} - Revista Nacional de las Ciencias para Estudiantes</title>
@@ -130,6 +132,10 @@ if (!fs.existsSync(teamOutputHtmlDir)) fs.mkdirSync(teamOutputHtmlDir, { recursi
     <section>
       <h2>Resumen</h2>
       <p>${article.resumen}</p>
+    </section>
+    <section>
+      <h2>Abstract (English)</h2>
+      <p>${article.englishAbstract}</p>
     </section>
     <section>
       <h2>Descargar PDF</h2>
@@ -261,7 +267,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
 <body>
   <div class="profile-container">
     <div class="profile-header">
-      ${imagen ? `<img src="${imagen}" alt="Foto de ${nombre}" class="profile-img" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div class="profile-img-fallback">Sin Imagen</div>` : `<div.models class="profile-img-fallback">Sin Imagen</div>`}
+      ${imagen ? `<img src="${imagen}" alt="Foto de ${nombre}" class="profile-img" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div class="profile-img-fallback">Sin Imagen</div>` : `<div class="profile-img-fallback">Sin Imagen</div>`}
       <div class="profile-info">
         <h1>${nombre}</h1>
         <p class="text-lg font-semibold text-gray-700">${roles}</p>

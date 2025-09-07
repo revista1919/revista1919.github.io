@@ -5,40 +5,46 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Marina Soto es estudiante del colegio Madre de la Divina Providencia y alumna de la Academia de Talentos de la UC. Se interesa principalmente en las humanidades...">
   <meta name="keywords" content="Ciencias políticas; Finanzas; Economía política; Poesía latinoamericana; Literatura universal; Debate; Química nuclear, Revisor, Revista Nacional de las Ciencias para Estudiantes">
+  <meta name="author" content="Marina Soto">
   <title>Marina Soto - Equipo de la Revista Nacional de las Ciencias para Estudiantes</title>
   <link rel="stylesheet" href="/index.css">
   <style>
-    body { background-color: #f5f5f5; font-family: serif; color: #333; }
-    .profile-container { max-width: 800px; margin: 0 auto; padding: 2rem; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    .profile-header { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1rem; }
-    @media (min-width: 640px) { .profile-header { flex-direction: row; text-align: left; } }
+    body { background-color: #f5f5f5; font-family: 'Georgia', serif; color: #333; }
+    .profile-container { max-width: 800px; margin: 2rem auto; padding: 1.5rem; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 8px; }
+    .profile-header { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1rem; margin-bottom: 1.5rem; }
+    @media (min-width: 640px) { .profile-header { flex-direction: row; text-align: left; align-items: flex-start; } }
     .profile-img { width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 2px solid #5a3e36; }
+    .profile-img-fallback { width: 150px; height: 150px; border-radius: 50%; background: #e0e0e0; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: #666; border: 2px solid #5a3e36; }
     .profile-info { flex: 1; }
     .section { margin-top: 1.5rem; }
-    h1, h2 { color: #5a3e36; }
-    p { margin-bottom: 0.5rem; }
+    h1 { color: #5a3e36; font-size: 2rem; margin-bottom: 0.5rem; }
+    h2 { color: #5a3e36; font-size: 1.5rem; margin-bottom: 0.75rem; }
+    p { margin-bottom: 0.5rem; line-height: 1.6; }
+    footer { margin-top: 2rem; text-align: center; font-size: 0.9rem; }
+    a { color: #5a3e36; text-decoration: underline; }
+    a:hover { color: #7a5c4f; }
   </style>
 </head>
 <body>
   <div class="profile-container">
     <div class="profile-header">
-      
+      <div class="profile-img-fallback">Sin Imagen</div>
       <div class="profile-info">
-        <h1 class="text-3xl font-bold">Marina Soto</h1>
+        <h1>Marina Soto</h1>
         <p class="text-lg font-semibold text-gray-700">Revisor</p>
       </div>
     </div>
     <div class="section">
-      <h2 class="text-2xl font-semibold">Descripción</h2>
+      <h2>Descripción</h2>
       <p>Marina Soto es estudiante del colegio Madre de la Divina Providencia y alumna de la Academia de Talentos de la UC. Se interesa principalmente en las humanidades, con experiencia en debates —actualmente prepara uno competitivo organizado por la Universidad de Chile—, en poesía japonesa y latinoamericana, y en la elaboración de ensayos académicos y creativos. Complementa su formación con proyectos en artes visuales, como pintura al óleo y experimentación con recursos visuales. Domina, además de español, inglés (en preparación para la certificación C2) y estudia japonés como tercer idioma.</p>
     </div>
     <div class="section">
-      <h2 class="text-2xl font-semibold">Áreas de interés</h2>
+      <h2>Áreas de interés</h2>
       <p>Ciencias políticas; Finanzas; Economía política; Poesía latinoamericana; Literatura universal; Debate; Química nuclear</p>
     </div>
-    <footer class="mt-4 text-center">
+    <footer>
       <p>&copy; 2025 Revista Nacional de las Ciencias para Estudiantes</p>
-      <a href="/" class="text-blue-600 hover:underline">Volver al inicio</a> | <a href="/team" class="text-blue-600 hover:underline">Volver al equipo</a>
+      <a href="/">Volver al inicio</a> | <a href="/team">Volver al equipo</a>
     </footer>
   </div>
 </body>
