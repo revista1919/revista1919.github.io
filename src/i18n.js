@@ -1,57 +1,120 @@
-// src/i18n.js
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
+import LanguageDetector from 'i18next-browser-languagedetector';
 
-// Traducciones
 const resources = {
   es: {
     translation: {
-      header: {
-        title: 'Revista Nacional de las Ciencias para Estudiantes',
-      },
-      tabs: {
-        articles: 'Artículos',
-        submit: 'Enviar Artículo',
-        team: 'Nuestro Equipo',
-        admin: 'Administración',
-        about: 'Acerca de',
-        guidelines: 'Guías',
-        faq: 'Preguntas Frecuentes',
-        news: 'Noticias',
-        login: 'Login / Estado de Artículos',
-      },
-      // Agrega más traducciones según tus componentes
+      journalTitle: 'Revista Nacional de las Ciencias para Estudiantes',
+      journalSubtitle: 'Una revista por y para estudiantes',
+      whoWeAre: 'Quiénes Somos',
+      aboutDesc1: 'La Revista Nacional de las Ciencias para Estudiantes es una publicación interdisciplinaria revisada por pares, escrita, editada y curada por estudiantes y profesores, escolares y universitarios. Está abierta a todo el mundo, aunque fomenta especialmente la participación de chilenos. Su objetivo es fomentar el pensamiento crítico y la investigación científica entre jóvenes, mediante un sistema de publicación serio, accesible y riguroso.',
+      aboutDesc2: 'No está asociada a ninguna institución, programa ni colegio en particular. Es una iniciativa independiente, abierta a todos los estudiantes. No hay ningún costo, es completamente gratuita y opera gracias al compromiso de nuestros colaboradores.',
+      joinTeam: 'Únete a nuestro equipo',
+      joinDesc: 'Forma parte de la Revista Nacional de las Ciencias para Estudiantes. Contribuye con tu talento a la divulgación científica y apoya a estudiantes en su camino hacia la investigación. Selecciona un rol para conocer sus funciones o postula a los cargos disponibles.',
+      postular: 'Postular',
+      cargoPostulable: 'Cargo postulable',
+      cargoDefinido: 'Cargo definido',
+      faq: 'Preguntas Frecuentes',
+      faqWhoPublish: '¿Quién puede publicar? Cualquier estudiante escolar o universitario del mundo.',
+      faqAI: '¿Se puede usar IA para ayudarme a escribir? No. Será rechazado automáticamente.',
+      faqResponseTime: '¿Cuánto se demoran en responder? Entre 1 y 3 semanas, dependiendo del volumen de solicitudes.',
+      faqReview: '¿Cómo se revisa un artículo? Revisión ciega, sin nombre del autor. Hay alumnos y profesores que revisarán tu artículo según tu área.',
+      faqFormat: '¿En qué formato envío el artículo? Word (.docx), estilo Chicago, 2.000–10.000 palabras.',
+      faqAdmin: '¿Cómo puedo postular como administrador? Desde la pestaña Postula como administrador.',
+      guidelines: 'Normas Editoriales',
+      guidelinesLength: 'Extensión: 1.000–10.000 palabras (tablas no cuentan como palabras)',
+      guidelinesFormat: 'Formato: Word (.docx), sin nombre del autor en el documento',
+      guidelinesOriginality: 'Originalidad: El artículo debe ser inédito, no publicado ni enviado a otro medio, y no puede usar IA para redactar',
+      guidelinesCitation: 'Citación: Exclusivamente estilo Chicago',
+      guidelinesLanguages: 'Aceptamos artículos en español y en inglés',
+      guidelinesElements: 'Elementos permitidos: Gráficas, ecuaciones, imágenes, tablas (fuera del conteo de palabras)',
+      guidelinesLearn: 'Para aprender a hacer un artículo científico, te recomendamos los siguientes videos:',
+      guidelinesResearch: 'Para investigar, te recomendamos los siguientes sitios:',
+      guidelinesGoogleScholar: 'Google Scholar',
+      guidelinesSciELO: 'SciELO',
+      guidelinesConsensus: 'Consensus',
+      guidelinesGoogleDesc: 'Buscador académico de Google con millones de artículos científicos.',
+      guidelinesSciELODesc: 'Biblioteca científica en línea de acceso abierto en español y portugués.',
+      guidelinesConsensusDesc: 'Plataforma impulsada por IA para encontrar y resumir artículos científicos.',
+      submitArticle: 'Enviar un Artículo',
+      submitImportant: 'Importante: No incluyas tu nombre directamente en el documento - solo en el formulario de abajo.',
+      news: 'Noticias',
+      searchNews: 'Buscar noticias...',
+      loadingNews: 'Cargando noticias...',
+      noNews: 'No se encontraron noticias.',
+      loadMoreNews: 'Ver más',
+      description: 'Descripción',
+      areasOfInterest: 'Áreas de interés',
+      noSpecified: 'No especificadas',
+      noImage: 'Sin Imagen',
+      backToHome: 'Volver al inicio',
+      // Agrega más traducciones según necesites para otros componentes
     },
   },
   en: {
     translation: {
-      header: {
-        title: 'The National Review of Student Sciences',
-      },
-      tabs: {
-        articles: 'Articles',
-        submit: 'Submit Article',
-        team: 'Our Team',
-        admin: 'Administration',
-        about: 'About',
-        guidelines: 'Guidelines',
-        faq: 'Frequently Asked Questions',
-        news: 'News',
-        login: 'Login / Article Status',
-      },
-      // Agrega más traducciones según tus componentes
+      journalTitle: 'The National Review of Sciences for Students',
+      journalSubtitle: 'A review by and for students',
+      whoWeAre: 'Who We Are',
+      aboutDesc1: 'The National Review of Sciences for Students is an interdisciplinary peer-reviewed publication, written, edited, and curated by students and teachers at school and university levels. It is open to everyone in the world, although it especially encourages participation from Chileans. Its objective is to foster critical thinking and scientific research among young people, through a serious, accessible, and rigorous publication system.',
+      aboutDesc2: 'It is not associated with any institution, program, or school in particular. It is an independent initiative, open to all students. There is no cost, it is completely free and operates thanks to the commitment of our collaborators.',
+      joinTeam: 'Join Our Team',
+      joinDesc: 'Become part of The National Review of Sciences for Students. Contribute with your talent to scientific dissemination and support students in their path to research. Select a role to learn about its functions or apply to the available positions.',
+      postular: 'Apply',
+      cargoPostulable: 'Postulable Position',
+      cargoDefinido: 'Defined Position',
+      faq: 'Frequently Asked Questions',
+      faqWhoPublish: 'Who can publish? Any school or university student in the world.',
+      faqAI: 'Can I use AI to help me write? No. It will be automatically rejected.',
+      faqResponseTime: 'How long does it take to respond? Between 1 and 3 weeks, depending on the volume of requests.',
+      faqReview: 'How is an article reviewed? Blind review, without the author\'s name. There are students and teachers who will review your article according to your area.',
+      faqFormat: 'In what format do I send the article? Word (.docx), Chicago style, 2,000–10,000 words.',
+      faqAdmin: 'How can I apply as an administrator? From the Apply as administrator tab.',
+      guidelines: 'Editorial Guidelines',
+      guidelinesLength: 'Length: 1,000–10,000 words (tables do not count as words)',
+      guidelinesFormat: 'Format: Word (.docx), without the author\'s name in the document',
+      guidelinesOriginality: 'Originality: The article must be unpublished, not published or sent to another medium, and cannot use AI for drafting',
+      guidelinesCitation: 'Citation: Exclusively Chicago style',
+      guidelinesLanguages: 'We accept articles in Spanish and English',
+      guidelinesElements: 'Allowed elements: Graphs, equations, images, tables (outside the word count)',
+      guidelinesLearn: 'To learn how to make a scientific article, we recommend the following videos:',
+      guidelinesResearch: 'For research, we recommend the following sites:',
+      guidelinesGoogleScholar: 'Google Scholar',
+      guidelinesSciELO: 'SciELO',
+      guidelinesConsensus: 'Consensus',
+      guidelinesGoogleDesc: 'Google\'s academic search engine with millions of scientific articles.',
+      guidelinesSciELODesc: 'Online scientific library with open access in Spanish and Portuguese.',
+      guidelinesConsensusDesc: 'AI-powered platform to find and summarize scientific articles.',
+      submitArticle: 'Submit an Article',
+      submitImportant: 'Important: Do not include your name directly in the document - only in the form below.',
+      news: 'News',
+      searchNews: 'Search news...',
+      loadingNews: 'Loading news...',
+      noNews: 'No news found.',
+      loadMoreNews: 'View more',
+      description: 'Description',
+      areasOfInterest: 'Areas of Interest',
+      noSpecified: 'Not specified',
+      noImage: 'No Image',
+      backToHome: 'Back to Home',
+      // Agrega más traducciones según necesites
     },
   },
 };
 
 i18n
   .use(initReactI18next)
+  .use(LanguageDetector)
   .init({
     resources,
-    lng: 'es', // Idioma predeterminado
     fallbackLng: 'es',
+    detection: {
+      order: ['path', 'localStorage', 'cookie', 'navigator'],
+      lookupFromPathIndex: 0,
+    },
     interpolation: {
-      escapeValue: false, // React ya escapa los valores
+      escapeValue: false,
     },
   });
 
