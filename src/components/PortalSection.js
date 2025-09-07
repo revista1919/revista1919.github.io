@@ -21,12 +21,13 @@ export default function PortalSection({ user, onLogout }) {
   const [tutorialVisible, setTutorialVisible] = useState({});
   const [submitStatus, setSubmitStatus] = useState({});
   const [error, setError] = useState('');
-  const [visibleAssignments, setVisibleAssignments] = useState(3);
   const [activeTab, setActiveTab] = useState('assignments');
   const [showImageModal, setShowImageModal] = useState({});
   const [isEditingImage, setIsEditingImage] = useState({});
   const [imageData, setImageData] = useState({});
   const [editingRange, setEditingRange] = useState({});
+  const [completedPanelOpen, setCompletedPanelOpen] = useState(false);
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState(null);
   const feedbackQuillRefs = useRef({});
   const reportQuillRefs = useRef({});
 
@@ -44,46 +45,58 @@ export default function PortalSection({ user, onLogout }) {
         complete: ({ data }) => {
           console.log('Parsed assignments data:', data);
           const isAuthor = data.some((row) => row['Autor'] === user.name);
+          let parsedAssignments = [];
           if (isAuthor) {
-            const authorAssignments = data
+            parsedAssignments = data
               .filter((row) => row['Autor'] === user.name)
-              .map((row) => ({
-                'Nombre Artículo': row['Nombre Artículo'] || 'Sin título',
-                Estado: row['Estado'],
-                role: 'Autor',
-                feedbackEditor: row['Feedback 3'] || 'Sin retroalimentación del editor aún.',
-              }));
-            setAssignments(authorAssignments);
+              .map((row) => {
+                const num = 3; // Editor feedback
+                return {
+                  id: row['Nombre Artículo'],
+                  'Nombre Artículo': row['Nombre Artículo'] || 'Sin título',
+                  Estado: row['Estado'],
+                  role: 'Autor',
+                  feedbackEditor: row['Feedback 3'] || 'Sin retroalimentación del editor aún.',
+                  isCompleted: !!row['Feedback 3'],
+                };
+              });
           } else {
-            const userAssignments = data
+            parsedAssignments = data
               .filter((row) => {
                 if (row['Revisor 1'] === user.name) return true;
                 if (row['Revisor 2'] === user.name) return true;
                 if (row['Editor'] === user.name) return true;
                 return false;
               })
-              .map((row) => ({
-                'Nombre Artículo': row['Nombre Artículo'] || 'Sin título',
-                'Link Artículo': row['Link Artículo'],
-                Estado: row['Estado'],
-                role: row['Revisor 1'] === user.name ? 'Revisor 1' : row['Revisor 2'] === user.name ? 'Revisor 2' : 'Editor',
-                feedback: row[`Feedback ${row['Revisor 1'] === user.name ? '1' : row['Revisor 2'] === user.name ? '2' : '3'}`] || '',
-                report: row[`Informe ${row['Revisor 1'] === user.name ? '1' : row['Revisor 2'] === user.name ? '2' : '3'}`] || '',
-                vote: row[`Voto ${row['Revisor 1'] === user.name ? '1' : row['Revisor 2'] === user.name ? '2' : '3'}`] || '',
-                feedback1: row['Feedback 1'] || 'Sin retroalimentación de Revisor 1.',
-                feedback2: row['Feedback 2'] || 'Sin retroalimentación de Revisor 2.',
-                informe1: row['Informe 1'] || 'Sin informe de Revisor 1.',
-                informe2: row['Informe 2'] || 'Sin informe de Revisor 2.',
-              }));
-            setAssignments(userAssignments);
-            userAssignments.forEach((assignment) => {
+              .map((row) => {
+                const role = row['Revisor 1'] === user.name ? 'Revisor 1' : row['Revisor 2'] === user.name ? 'Revisor 2' : 'Editor';
+                const num = role === 'Revisor 1' ? 1 : role === 'Revisor 2' ? 2 : 3;
+                return {
+                  id: row['Nombre Artículo'],
+                  'Nombre Artículo': row['Nombre Artículo'] || 'Sin título',
+                  'Link Artículo': row['Link Artículo'],
+                  Estado: row['Estado'],
+                  role,
+                  feedback: row[`Feedback ${num}`] || '',
+                  report: row[`Informe ${num}`] || '',
+                  vote: row[`Voto ${num}`] || '',
+                  feedback1: row['Feedback 1'] || 'Sin retroalimentación de Revisor 1.',
+                  feedback2: row['Feedback 2'] || 'Sin retroalimentación de Revisor 2.',
+                  informe1: row['Informe 1'] || 'Sin informe de Revisor 1.',
+                  informe2: row['Informe 2'] || 'Sin informe de Revisor 2.',
+                  isCompleted: !!row[`Feedback ${num}`] && !!row[`Informe ${num}`] && !!row[`Voto ${num}`],
+                };
+              });
+          }
+          setAssignments(parsedAssignments);
+          parsedAssignments.forEach((assignment) => {
+            if (!isAuthor) {
               setVote((prev) => ({ ...prev, [assignment['Link Artículo']]: assignment.vote }));
               setFeedback((prev) => ({ ...prev, [assignment['Link Artículo']]: assignment.feedback }));
               setReport((prev) => ({ ...prev, [assignment['Link Artículo']]: assignment.report }));
-            });
-          }
+            }
+          });
           setLoading(false);
-          setVisibleAssignments(3);
         },
         error: (err) => {
           console.error('Error al parsear CSV:', err);
@@ -101,6 +114,12 @@ export default function PortalSection({ user, onLogout }) {
   useEffect(() => {
     fetchAssignments();
   }, [user.name]);
+
+  const isAuthor = assignments.length > 0 && assignments[0].role === 'Autor';
+
+  const pendingAssignments = useMemo(() => assignments.filter((a) => !a.isCompleted), [assignments]);
+  const completedAssignments = useMemo(() => assignments.filter((a) => a.isCompleted), [assignments]);
+  const selectedAssignment = completedAssignments.find((a) => a.id === selectedAssignmentId);
 
   const handleVote = (link, value) => {
     setVote((prev) => ({ ...prev, [link]: value }));
@@ -148,10 +167,6 @@ export default function PortalSection({ user, onLogout }) {
       return 'Como Editor, tu responsabilidad es revisar las retroalimentaciones e informes de los revisores, integrarlas con tu propia evaluación, y redactar una retroalimentación final sensible y constructiva para el autor. Corrige directamente el texto si es necesario y decide el estado final del artículo. Usa el documento de Google Drive para ediciones.';
     }
     return '';
-  };
-
-  const loadMoreAssignments = () => {
-    setVisibleAssignments((prev) => prev + 3);
   };
 
   const debouncedSetFeedback = useCallback(
@@ -870,6 +885,245 @@ export default function PortalSection({ user, onLogout }) {
     }));
   };
 
+  const renderAssignment = (assignment, isPending) => {
+    const link = assignment['Link Artículo'];
+    const role = assignment.role;
+    const nombre = assignment['Nombre Artículo'];
+    const isAuth = role === 'Autor';
+
+    return (
+      <div key={assignment.id} className="bg-white p-6 rounded-lg shadow-md space-y-4">
+        <h4 className="text-lg font-semibold text-gray-800">{nombre}</h4>
+        {!isAuth && (
+          <div className="space-y-4">
+            <a
+              href={link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block bg-blue-600 text-white px-4 py-2 rounded-md shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            >
+              Abrir en Google Drive
+            </a>
+            <iframe
+              src={link.replace('/edit', '/preview')}
+              className="w-full h-[300px] sm:h-[500px] rounded-xl shadow border border-gray-200"
+              title="Vista previa del artículo"
+              sandbox="allow-same-origin allow-scripts"
+            ></iframe>
+          </div>
+        )}
+        <p className="text-gray-600">Estado: {assignment.Estado}</p>
+        {!isAuth && <p className="text-gray-600">Rol: {role}</p>}
+        {isAuth ? (
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">Retroalimentación del Editor</label>
+            <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+              {decodeBody(assignment.feedbackEditor)}
+            </div>
+          </div>
+        ) : (
+          <>
+            {role === 'Editor' && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">Retroalimentación de Revisor 1</label>
+                  <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+                    {decodeBody(assignment.feedback1)}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">Retroalimentación de Revisor 2</label>
+                  <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+                    {decodeBody(assignment.feedback2)}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">Informe de Revisor 1</label>
+                  <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+                    {decodeBody(assignment.informe1)}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">Informe de Revisor 2</label>
+                  <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+                    {decodeBody(assignment.informe2)}
+                  </div>
+                </div>
+              </div>
+            )}
+            {isPending ? (
+              <div className="space-y-4">
+                <button
+                  onClick={() => toggleTutorial(link)}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
+                >
+                  {tutorialVisible[link] ? 'Ocultar Tutorial' : 'Ver Tutorial'}
+                </button>
+                {tutorialVisible[link] && (
+                  <p className="text-gray-600 bg-gray-50 p-4 rounded-md border border-gray-200">{getTutorialText(role)}</p>
+                )}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    {role === 'Editor' ? 'Retroalimentación Final al Autor' : 'Retroalimentación al Autor'}
+                  </label>
+                  <ReactQuill
+                    ref={(el) => (feedbackQuillRefs.current[link] = el)}
+                    value={feedback[link] || ''}
+                    onChange={debouncedSetFeedback(link)}
+                    modules={modules}
+                    formats={formats}
+                    placeholder={role === 'Editor' ? 'Redacta una retroalimentación final sensible, sintetizando las opiniones de los revisores y la tuya.' : 'Escribe tu retroalimentación aquí...'}
+                    className="border rounded-md text-gray-800 bg-white"
+                    onFocus={() => setupQuillEditor(feedbackQuillRefs.current[link], link, 'feedback')}
+                  />
+                  <button
+                    onClick={() => {
+                      setIsEditingImage((prev) => ({ ...prev, [link]: false }));
+                      setImageData((prev) => ({ ...prev, [link]: { url: '', width: '', height: '', align: 'left' } }));
+                      setShowImageModal((prev) => ({ ...prev, [link]: true }));
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                  >
+                    Insertar Imagen Manualmente
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">Informe al Editor</label>
+                  <ReactQuill
+                    ref={(el) => (reportQuillRefs.current[link] = el)}
+                    value={report[link] || ''}
+                    onChange={debouncedSetReport(link)}
+                    modules={modules}
+                    formats={formats}
+                    placeholder="Escribe tu informe aquí..."
+                    className="border rounded-md text-gray-800 bg-white"
+                    onFocus={() => setupQuillEditor(reportQuillRefs.current[link], link, 'report')}
+                  />
+                  <button
+                    onClick={() => {
+                      setIsEditingImage((prev) => ({ ...prev, [link]: false }));
+                      setImageData((prev) => ({ ...prev, [link]: { url: '', width: '', height: '', align: 'left' } }));
+                      setShowImageModal((prev) => ({ ...prev, [link]: true }));
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                  >
+                    Insertar Imagen Manualmente
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">Voto</label>
+                  <div className="flex space-x-4">
+                    <button
+                      onClick={() => handleVote(link, 'si')}
+                      className={`px-4 py-2 rounded-md ${vote[link] === 'si' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-800'} focus:outline-none focus:ring-2 focus:ring-green-500`}
+                    >
+                      Sí
+                    </button>
+                    <button
+                      onClick={() => handleVote(link, 'no')}
+                      className={`px-4 py-2 rounded-md ${vote[link] === 'no' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-800'} focus:outline-none focus:ring-2 focus:ring-red-500`}
+                    >
+                      No
+                    </button>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleSubmit(link, role, feedback[link] || '', report[link] || '', vote[link] || '')}
+                  className="w-full px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  Enviar
+                </button>
+                {submitStatus[link] && (
+                  <p className={`text-center text-sm ${submitStatus[link].includes('Error') ? 'text-red-500' : 'text-green-500'}`}>
+                    {submitStatus[link]}
+                  </p>
+                )}
+                {showImageModal[link] && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+                    <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+                      <h5 className="text-lg font-semibold mb-4">{isEditingImage[link] ? 'Editar Imagen' : 'Insertar Imagen'}</h5>
+                      <input
+                        type="text"
+                        name="url"
+                        value={imageData[link]?.url || ''}
+                        onChange={(e) => handleImageDataChange(link, e)}
+                        placeholder="URL de la imagen"
+                        className="w-full px-4 py-2 border rounded-md mb-2"
+                        disabled={isEditingImage[link]}
+                      />
+                      <input
+                        type="text"
+                        name="width"
+                        value={imageData[link]?.width || ''}
+                        onChange={(e) => handleImageDataChange(link, e)}
+                        placeholder="Ancho (ej: 300px o 50%)"
+                        className="w-full px-4 py-2 border rounded-md mb-2"
+                      />
+                      <input
+                        type="text"
+                        name="height"
+                        value={imageData[link]?.height || ''}
+                        onChange={(e) => handleImageDataChange(link, e)}
+                        placeholder="Alto (ej: 200px o auto)"
+                        className="w-full px-4 py-2 border rounded-md mb-2"
+                      />
+                      <select
+                        name="align"
+                        value={imageData[link]?.align || 'left'}
+                        onChange={(e) => handleImageDataChange(link, e)}
+                        className="w-full px-4 py-2 border rounded-md mb-4"
+                      >
+                        <option value="left">Izquierda</option>
+                        <option value="center">Centro</option>
+                        <option value="right">Derecha</option>
+                        <option value="justify">Justificado</option>
+                      </select>
+                      <div className="flex justify-end space-x-2">
+                        <button
+                          onClick={() => setShowImageModal((prev) => ({ ...prev, [link]: false }))}
+                          className="px-4 py-2 bg-gray-300 rounded-md"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          onClick={() => handleImageModalSubmit(link)}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-md"
+                        >
+                          {isEditingImage[link] ? 'Actualizar' : 'Insertar'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    {role === 'Editor' ? 'Retroalimentación Final al Autor' : 'Retroalimentación al Autor'}
+                  </label>
+                  <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+                    {decodeBody(assignment.feedback)}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">Informe al Editor</label>
+                  <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+                    {decodeBody(assignment.report)}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">Voto</label>
+                  <p className="text-gray-600">{assignment.vote || 'Sin voto'}</p>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    );
+  };
+
   if (loading) {
     return <p className="text-center text-gray-600">Cargando asignaciones...</p>;
   }
@@ -912,59 +1166,27 @@ export default function PortalSection({ user, onLogout }) {
     );
   }
 
-  if (assignments[0].role === 'Autor') {
-    return (
-      <div className="space-y-8 max-w-7xl mx-auto px-4 sm:px-0">
-        <div className="text-center space-y-2">
-          <h3 className="text-xl font-medium text-gray-800">Bienvenido, {user.name}</h3>
-          <p className="text-gray-600">Rol: {user.role}</p>
-          <button
-            onClick={onLogout}
-            className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
-          >
-            Cerrar Sesión
-          </button>
-        </div>
-        <h3 className="text-lg font-semibold text-gray-800">Estado de tus Artículos</h3>
-        <div className="space-y-6">
-          {assignments.slice(0, visibleAssignments).map((assignment) => (
-            <div key={assignment['Nombre Artículo']} className="bg-white p-6 rounded-lg shadow-md space-y-4">
-              <h4 className="text-lg font-semibold text-gray-800">{assignment['Nombre Artículo']}</h4>
-              <p className="text-gray-600">Estado: {assignment['Estado']}</p>
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Retroalimentación del Editor</label>
-                <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-                  {decodeBody(assignment.feedbackEditor)}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-        {visibleAssignments < assignments.length && (
-          <div className="text-center">
-            <button
-              onClick={loadMoreAssignments}
-              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
-            >
-              Mostrar más
-            </button>
-          </div>
-        )}
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-8 max-w-7xl mx-auto px-4 sm:px-0">
+    <div className="space-y-8 max-w-7xl mx-auto px-4 sm:px-0 relative">
       <div className="text-center space-y-2">
         <h3 className="text-xl font-medium text-gray-800">Bienvenido, {user.name}</h3>
         <p className="text-gray-600">Rol: {user.role}</p>
-        <button
-          onClick={fetchAssignments}
-          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm mr-4"
-        >
-          Actualizar Asignaciones
-        </button>
+        {completedAssignments.length > 0 && (
+          <button
+            onClick={() => setCompletedPanelOpen(true)}
+            className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 text-sm mr-4"
+          >
+            Ver artículos revisados
+          </button>
+        )}
+        {!isAuthor && (
+          <button
+            onClick={fetchAssignments}
+            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm mr-4"
+          >
+            Actualizar Asignaciones
+          </button>
+        )}
         <button
           onClick={onLogout}
           className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
@@ -972,234 +1194,81 @@ export default function PortalSection({ user, onLogout }) {
           Cerrar Sesión
         </button>
       </div>
-      <div className="flex space-x-4">
-        <button
-          onClick={() => setActiveTab('assignments')}
-          className={`px-4 py-2 rounded-md ${activeTab === 'assignments' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}
-        >
-          Asignaciones
-        </button>
-        {user.role.includes('Editor') && (
+      {!isAuthor && (
+        <div className="flex space-x-4">
           <button
-            onClick={() => setActiveTab('news')}
-            className={`px-4 py-2 rounded-md ${activeTab === 'news' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}
+            onClick={() => setActiveTab('assignments')}
+            className={`px-4 py-2 rounded-md ${activeTab === 'assignments' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}
           >
-            Subir Noticia
+            Asignaciones
           </button>
-        )}
-      </div>
-      {activeTab === 'assignments' && (
+          {user.role.includes('Editor') && (
+            <button
+              onClick={() => setActiveTab('news')}
+              className={`px-4 py-2 rounded-md ${activeTab === 'news' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}
+            >
+              Subir Noticia
+            </button>
+          )}
+        </div>
+      )}
+      {(activeTab === 'assignments' || isAuthor) && (
         <div>
-          <h3 className="text-lg font-semibold text-gray-800">Tus Asignaciones</h3>
-          <div className="space-y-6">
-            {assignments.slice(0, visibleAssignments).map((assignment) => (
-              <div key={assignment['Link Artículo']} className="bg-white p-6 rounded-lg shadow-md space-y-4">
-                <h4 className="text-lg font-semibold text-gray-800">{assignment['Nombre Artículo']}</h4>
-                <div className="space-y-4">
-                  <a
-                    href={assignment['Link Artículo']}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-block bg-blue-600 text-white px-4 py-2 rounded-md shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  >
-                    Abrir en Google Drive
-                  </a>
-                  <iframe
-                    src={assignment['Link Artículo'].replace('/edit', '/preview')}
-                    className="w-full h-[300px] sm:h-[500px] rounded-xl shadow border border-gray-200"
-                    title="Vista previa del artículo"
-                    sandbox="allow-same-origin allow-scripts"
-                  ></iframe>
-                </div>
-                <p className="text-gray-600">Rol: {assignment.role}</p>
-                <p className="text-gray-600">Estado: {assignment['Estado']}</p>
-                {assignment.role === 'Editor' && (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-700">Retroalimentación de Revisor 1</label>
-                      <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-                        {decodeBody(assignment.feedback1)}
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-700">Retroalimentación de Revisor 2</label>
-                      <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-                        {decodeBody(assignment.feedback2)}
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-700">Informe de Revisor 1</label>
-                      <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-                        {decodeBody(assignment.informe1)}
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-700">Informe de Revisor 2</label>
-                      <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-                        {decodeBody(assignment.informe2)}
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <button
-                  onClick={() => toggleTutorial(assignment['Link Artículo'])}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
-                >
-                  {tutorialVisible[assignment['Link Artículo']] ? 'Ocultar Tutorial' : 'Ver Tutorial'}
-                </button>
-                {tutorialVisible[assignment['Link Artículo']] && (
-                  <p className="text-gray-600 bg-gray-50 p-4 rounded-md border border-gray-200">{getTutorialText(assignment.role)}</p>
-                )}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    {assignment.role === 'Editor' ? 'Retroalimentación Final al Autor' : 'Retroalimentación al Autor'}
-                  </label>
-                  <ReactQuill
-                    ref={(el) => (feedbackQuillRefs.current[assignment['Link Artículo']] = el)}
-                    value={feedback[assignment['Link Artículo']] || ''}
-                    onChange={debouncedSetFeedback(assignment['Link Artículo'])}
-                    modules={modules}
-                    formats={formats}
-                    placeholder={assignment.role === 'Editor' ? 'Redacta una retroalimentación final sensible, sintetizando las opiniones de los revisores y la tuya.' : 'Escribe tu retroalimentación aquí...'}
-                    className="border rounded-md text-gray-800 bg-white"
-                    onFocus={() => setupQuillEditor(feedbackQuillRefs.current[assignment['Link Artículo']], assignment['Link Artículo'], 'feedback')}
-                  />
-                  <button
-                    onClick={() => {
-                      setIsEditingImage((prev) => ({ ...prev, [assignment['Link Artículo']]: false }));
-                      setImageData((prev) => ({ ...prev, [assignment['Link Artículo']]: { url: '', width: '', height: '', align: 'left' } }));
-                      setShowImageModal((prev) => ({ ...prev, [assignment['Link Artículo']]: true }));
-                    }}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
-                  >
-                    Insertar Imagen Manualmente
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Informe al Editor</label>
-                  <ReactQuill
-                    ref={(el) => (reportQuillRefs.current[assignment['Link Artículo']] = el)}
-                    value={report[assignment['Link Artículo']] || ''}
-                    onChange={debouncedSetReport(assignment['Link Artículo'])}
-                    modules={modules}
-                    formats={formats}
-                    placeholder="Escribe tu informe aquí..."
-                    className="border rounded-md text-gray-800 bg-white"
-                    onFocus={() => setupQuillEditor(reportQuillRefs.current[assignment['Link Artículo']], assignment['Link Artículo'], 'report')}
-                  />
-                  <button
-                    onClick={() => {
-                      setIsEditingImage((prev) => ({ ...prev, [assignment['Link Artículo']]: false }));
-                      setImageData((prev) => ({ ...prev, [assignment['Link Artículo']]: { url: '', width: '', height: '', align: 'left' } }));
-                      setShowImageModal((prev) => ({ ...prev, [assignment['Link Artículo']]: true }));
-                    }}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
-                  >
-                    Insertar Imagen Manualmente
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Voto</label>
-                  <div className="flex space-x-4">
-                    <button
-                      onClick={() => handleVote(assignment['Link Artículo'], 'si')}
-                      className={`px-4 py-2 rounded-md ${vote[assignment['Link Artículo']] === 'si' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-800'} focus:outline-none focus:ring-2 focus:ring-green-500`}
-                    >
-                      Sí
-                    </button>
-                    <button
-                      onClick={() => handleVote(assignment['Link Artículo'], 'no')}
-                      className={`px-4 py-2 rounded-md ${vote[assignment['Link Artículo']] === 'no' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-800'} focus:outline-none focus:ring-2 focus:ring-red-500`}
-                    >
-                      No
-                    </button>
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleSubmit(assignment['Link Artículo'], assignment.role, feedback[assignment['Link Artículo']] || '', report[assignment['Link Artículo']] || '', vote[assignment['Link Artículo']] || '')}
-                  className="w-full px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  Enviar
-                </button>
-                {submitStatus[assignment['Link Artículo']] && (
-                  <p className={`text-center text-sm ${submitStatus[assignment['Link Artículo']].includes('Error') ? 'text-red-500' : 'text-green-500'}`}>
-                    {submitStatus[assignment['Link Artículo']]}
-                  </p>
-                )}
-                {showImageModal[assignment['Link Artículo']] && (
-                  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                    <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
-                      <h5 className="text-lg font-semibold mb-4">{isEditingImage[assignment['Link Artículo']] ? 'Editar Imagen' : 'Insertar Imagen'}</h5>
-                      <input
-                        type="text"
-                        name="url"
-                        value={imageData[assignment['Link Artículo']]?.url || ''}
-                        onChange={(e) => handleImageDataChange(assignment['Link Artículo'], e)}
-                        placeholder="URL de la imagen"
-                        className="w-full px-4 py-2 border rounded-md mb-2"
-                        disabled={isEditingImage[assignment['Link Artículo']]}
-                      />
-                      <input
-                        type="text"
-                        name="width"
-                        value={imageData[assignment['Link Artículo']]?.width || ''}
-                        onChange={(e) => handleImageDataChange(assignment['Link Artículo'], e)}
-                        placeholder="Ancho (ej: 300px o 50%)"
-                        className="w-full px-4 py-2 border rounded-md mb-2"
-                      />
-                      <input
-                        type="text"
-                        name="height"
-                        value={imageData[assignment['Link Artículo']]?.height || ''}
-                        onChange={(e) => handleImageDataChange(assignment['Link Artículo'], e)}
-                        placeholder="Alto (ej: 200px o auto)"
-                        className="w-full px-4 py-2 border rounded-md mb-2"
-                      />
-                      <select
-                        name="align"
-                        value={imageData[assignment['Link Artículo']]?.align || 'left'}
-                        onChange={(e) => handleImageDataChange(assignment['Link Artículo'], e)}
-                        className="w-full px-4 py-2 border rounded-md mb-4"
-                      >
-                        <option value="left">Izquierda</option>
-                        <option value="center">Centro</option>
-                        <option value="right">Derecha</option>
-                        <option value="justify">Justificado</option>
-                      </select>
-                      <div className="flex justify-end space-x-2">
-                        <button
-                          onClick={() => setShowImageModal((prev) => ({ ...prev, [assignment['Link Artículo']]: false }))}
-                          className="px-4 py-2 bg-gray-300 rounded-md"
-                        >
-                          Cancelar
-                        </button>
-                        <button
-                          onClick={() => handleImageModalSubmit(assignment['Link Artículo'])}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-md"
-                        >
-                          {isEditingImage[assignment['Link Artículo']] ? 'Actualizar' : 'Insertar'}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-          {visibleAssignments < assignments.length && (
-            <div className="text-center">
+          {selectedAssignment ? (
+            <div className="space-y-4">
               <button
-                onClick={loadMoreAssignments}
-                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
+                onClick={() => setSelectedAssignmentId(null)}
+                className="text-blue-600 flex items-center hover:underline"
               >
-                Mostrar más
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                </svg>
+                Volver a asignaciones pendientes
               </button>
+              {renderAssignment(selectedAssignment, false)}
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {pendingAssignments.length === 0 ? (
+                <p className="text-center text-gray-600">No tienes asignaciones pendientes.</p>
+              ) : (
+                pendingAssignments.map((assignment) => renderAssignment(assignment, true))
+              )}
             </div>
           )}
         </div>
       )}
-      {activeTab === 'news' && user.role.includes('Editor') && (
-        <NewsUploadSection />
+      {activeTab === 'news' && !isAuthor && user.role.includes('Editor') && <NewsUploadSection />}
+      {completedPanelOpen && (
+        <div
+          className={`fixed left-0 top-0 h-full w-full lg:w-80 bg-white shadow-2xl z-50 overflow-y-auto transform ${completedPanelOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out`}
+        >
+          <div className="p-4 flex justify-between items-center border-b">
+            <h4 className="text-lg font-semibold text-gray-800">Artículos Revisados</h4>
+            <button
+              onClick={() => setCompletedPanelOpen(false)}
+              className="text-gray-600 hover:text-gray-800 focus:outline-none"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="divide-y">
+            {completedAssignments.map((a) => (
+              <div
+                key={a.id}
+                className="p-4 cursor-pointer hover:bg-blue-50 transition-colors"
+                onClick={() => {
+                  setSelectedAssignmentId(a.id);
+                  setCompletedPanelOpen(false);
+                }}
+              >
+                <p className="text-gray-800 truncate">{a['Nombre Artículo']}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
