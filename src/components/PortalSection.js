@@ -375,6 +375,347 @@ export default function PortalSection({ user, onLogout }) {
     return '';
   };
 
+  const isLikelyImageUrl = (url) => {
+    if (!url) return false;
+    const u = url.toLowerCase();
+    return (
+      /\.(png|jpe?g|gif|webp|bmp|svg)(\?.*)?$/.test(u) ||
+      /googleusercontent|gstatic|ggpht|google\.(com|cl).*\/(img|images|url)/.test(u) ||
+      /^data:image\/[a-zA-Z+]+;base64,/.test(u)
+    );
+  };
+
+  const normalizeUrl = (u) => {
+    let url = (u || "").trim();
+    if (/^https?:[^/]/i.test(url)) {
+      url = url.replace(/^https?:/i, (m) => m + "//");
+    }
+    return url;
+  };
+
+  const decodeBody = (body) => {
+    if (!body) return <p className="text-gray-600">Sin contenido disponible.</p>;
+    const paragraphs = String(body)
+      .split("===")
+      .filter((p) => p.trim() !== "");
+    const content = [];
+    let i = 0;
+    while (i < paragraphs.length) {
+      let p = paragraphs[i].trim();
+      if (p.startsWith('- ')) {
+        const items = [];
+        while (i < paragraphs.length && paragraphs[i].trim().startsWith('- ')) {
+          const itemText = paragraphs[i].trim().slice(2);
+          items.push(renderParagraph(itemText));
+          i++;
+        }
+        content.push(
+          <ul key={content.length} className="mb-4 list-disc pl-6">
+            {items.map((item, j) => (
+              <li key={j}>{item}</li>
+            ))}
+          </ul>
+        );
+        continue;
+      } else if (/^\d+\.\s/.test(p)) {
+        const items = [];
+        while (i < paragraphs.length && /^\d+\.\s/.test(paragraphs[i].trim())) {
+          const itemText = paragraphs[i].trim().replace(/^\d+\.\s/, '');
+          items.push(renderParagraph(itemText));
+          i++;
+        }
+        content.push(
+          <ol key={content.length} className="mb-4 list-decimal pl-6">
+            {items.map((item, j) => (
+              <li key={j}>{item}</li>
+            ))}
+          </ol>
+        );
+        continue;
+      } else {
+        content.push(
+          <div
+            key={content.length}
+            className="mb-4 leading-relaxed break-words"
+            style={{ clear: "both" }}
+          >
+            {renderParagraph(p)}
+          </div>
+        );
+        i++;
+      }
+    }
+    return content;
+  };
+
+  const renderParagraph = (p) => {
+    let text = p.trim();
+    const placeholders = [];
+    const TOK = (i) => `__TOK${i}__`;
+
+    let align = "left";
+    let size = "normal";
+    if (text.startsWith('(')) {
+      const endIdx = text.indexOf(')');
+      if (endIdx !== -1) {
+        const paramStr = text.slice(1, endIdx);
+        const params = paramStr.split(',').map(p => p.trim());
+        params.forEach(p => {
+          if (['small', 'big', 'normal'].includes(p)) size = p;
+          if (['left', 'center', 'right', 'justify'].includes(p)) align = p;
+        });
+        text = text.slice(endIdx + 1).trim();
+      }
+    }
+
+    const imgPattern = /\[img:([^\]]*?)(?:,(\d*(?:px|%)?|auto))?(?:,(\d*(?:px|%)?|auto))?(?:,(left|center|right|justify))?\]/gi;
+    text = text.replace(imgPattern, (_, url, width = "auto", height = "auto", imgAlign = "left") => {
+      if (width !== "auto" && width && !width.match(/%|px$/)) width += 'px';
+      if (height !== "auto" && height && !height.match(/%|px$/)) height += 'px';
+      const id = placeholders.length;
+      placeholders.push({ type: "image", url: normalizeUrl(url), width, height, align: imgAlign });
+      return TOK(id);
+    });
+
+    const linkPattern = /\b([^\s(]+)\((https?:\/\/[^\s)]+)\)/gi;
+    text = text.replace(linkPattern, (_, word, url) => {
+      const id = placeholders.length;
+      placeholders.push({ type: "link", word, url });
+      return TOK(id);
+    });
+
+    const urlPattern = /(?:https?:\/\/[^\s)]+|^data:image\/[a-zA-Z+]+;base64,[^\s)]+)/gi;
+    text = text.replace(urlPattern, (u) => {
+      if (placeholders.some((ph) => ph.url === u)) return u;
+      const id = placeholders.length;
+      placeholders.push({ type: isLikelyImageUrl(u) ? "image" : "url", url: u });
+      return TOK(id);
+    });
+
+    text = text.replace(/\[size:([^\]]+)\](.*?)\[\/size\]/gs, (_, sz, content) => {
+      const id = placeholders.length;
+      placeholders.push({ type: "size", size: sz, content });
+      return TOK(id);
+    });
+
+    text = text.replace(/<<ESC_(\d+)>>/g, (_, code) => String.fromCharCode(Number(code)));
+
+    const styledContent = renderStyledText(text, placeholders);
+
+    let fontSizeStyle;
+    if (size === 'small') fontSizeStyle = '0.75em';
+    else if (size === 'big') fontSizeStyle = '1.5em';
+    else fontSizeStyle = 'inherit';
+
+    const alignStyle = {
+      textAlign: align,
+      fontSize: fontSizeStyle,
+      width: '100%',
+      display: 'block',
+      margin: align === 'center' ? '0 auto' : '0',
+    };
+
+    return (
+      <div style={alignStyle}>
+        {styledContent}
+      </div>
+    );
+  };
+
+  const renderStyledText = (text, placeholders) => {
+    text = text.replace(/\\([*/_$~])/g, (_, char) => `<<ESC_${char.charCodeAt(0)}>>`);
+
+    const parts = text.split(/(__TOK\d+__)/g);
+    const out = [];
+    let buf = "";
+    let bold = false;
+    let italic = false;
+    let underline = false;
+    let strike = false;
+    let key = 0;
+
+    for (const part of parts) {
+      if (/^__TOK\d+__$/.test(part)) {
+        if (buf) {
+          out.push(
+            <span
+              key={key++}
+              style={{
+                fontWeight: bold ? "bold" : "normal",
+                fontStyle: italic ? "italic" : "normal",
+                textDecoration: `${underline ? "underline" : ""} ${strike ? "line-through" : ""}`.trim(),
+              }}
+            >
+              {buf}
+            </span>
+          );
+          buf = "";
+        }
+        const idx = Number(part.match(/\d+/)[0]);
+        const ph = placeholders[idx];
+        if (!ph) continue;
+        if (ph.type === "link") {
+          out.push(
+            <a
+              key={key++}
+              href={normalizeUrl(ph.url)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline"
+            >
+              {ph.word}
+            </a>
+          );
+        } else if (ph.type === "image") {
+          let imgStyle = {
+            width: ph.width !== 'auto' ? ph.width : '100%',
+            height: ph.height !== 'auto' ? ph.height : 'auto',
+            display: 'block',
+            marginLeft: ph.align === 'center' ? 'auto' : '0',
+            marginRight: ph.align === 'center' ? 'auto' : '0',
+            float: ph.align === 'left' || ph.align === 'right' ? ph.align : 'none',
+            maxWidth: '100%',
+            marginTop: '8px',
+            marginBottom: '8px',
+          };
+          if (ph.align === 'justify') {
+            imgStyle = {
+              ...imgStyle,
+              width: '100%',
+              marginLeft: '0',
+              marginRight: '0',
+              float: 'none',
+            };
+          }
+          out.push(
+            <img
+              key={key++}
+              src={normalizeUrl(ph.url)}
+              alt="Imagen"
+              className="max-w-full h-auto rounded-md"
+              style={imgStyle}
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = "https://via.placeholder.com/800x450?text=Imagen+no-disponible";
+              }}
+            />
+          );
+        } else if (ph.type === "url") {
+          out.push(
+            <a
+              key={key++}
+              href={normalizeUrl(ph.url)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline"
+            >
+              {ph.url}
+            </a>
+          );
+        } else if (ph.type === "size") {
+          let fontSizeStyle;
+          if (ph.size === 'small') fontSizeStyle = '0.75em';
+          else if (ph.size === 'big') fontSizeStyle = '1.5em';
+          else fontSizeStyle = 'inherit';
+          out.push(
+            <span key={key++} style={{ fontSize: fontSizeStyle }}>
+              {renderStyledText(ph.content, placeholders)}
+            </span>
+          );
+        }
+        continue;
+      }
+      for (const ch of part) {
+        if (ch === "*") {
+          if (buf) {
+            out.push(
+              <span
+                key={key++}
+                style={{
+                  fontWeight: bold ? "bold" : "normal",
+                  fontStyle: italic ? "italic" : "normal",
+                  textDecoration: `${underline ? "underline" : ""} ${strike ? "line-through" : ""}`.trim(),
+                }}
+              >
+                {buf}
+              </span>
+            );
+            buf = "";
+          }
+          bold = !bold;
+        } else if (ch === "/") {
+          if (buf) {
+            out.push(
+              <span
+                key={key++}
+                style={{
+                  fontWeight: bold ? "bold" : "normal",
+                  fontStyle: italic ? "italic" : "normal",
+                  textDecoration: `${underline ? "underline" : ""} ${strike ? "line-through" : ""}`.trim(),
+                }}
+              >
+                {buf}
+              </span>
+            );
+            buf = "";
+          }
+          italic = !italic;
+        } else if (ch === "$") {
+          if (buf) {
+            out.push(
+              <span
+                key={key++}
+                style={{
+                  fontWeight: bold ? "bold" : "normal",
+                  fontStyle: italic ? "italic" : "normal",
+                  textDecoration: `${underline ? "underline" : ""} ${strike ? "line-through" : ""}`.trim(),
+                }}
+              >
+                {buf}
+              </span>
+            );
+            buf = "";
+          }
+          underline = !underline;
+        } else if (ch === "~") {
+          if (buf) {
+            out.push(
+              <span
+                key={key++}
+                style={{
+                  fontWeight: bold ? "bold" : "normal",
+                  fontStyle: italic ? "italic" : "normal",
+                  textDecoration: `${underline ? "underline" : ""} ${strike ? "line-through" : ""}`.trim(),
+                }}
+              >
+                {buf}
+              </span>
+            );
+            buf = "";
+          }
+          strike = !strike;
+        } else {
+          buf += ch;
+        }
+      }
+    }
+    if (buf) {
+      out.push(
+        <span
+          key={key++}
+          style={{
+            fontWeight: bold ? "bold" : "normal",
+            fontStyle: italic ? "italic" : "normal",
+            textDecoration: `${underline ? "underline" : ""} ${strike ? "line-through" : ""}`.trim(),
+          }}
+        >
+          {buf}
+        </span>
+      );
+    }
+    return out;
+  };
+
   const setupQuillEditor = (quillRef, link, type) => {
     if (quillRef.current) {
       const editor = quillRef.current.getEditor();
@@ -593,7 +934,7 @@ export default function PortalSection({ user, onLogout }) {
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">Retroalimentación del Editor</label>
                 <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-                  <p className="text-gray-600">{assignment.feedbackEditor}</p>
+                  {decodeBody(assignment.feedbackEditor)}
                 </div>
               </div>
             </div>
@@ -677,25 +1018,25 @@ export default function PortalSection({ user, onLogout }) {
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-gray-700">Retroalimentación de Revisor 1</label>
                       <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-                        <p className="text-gray-600">{assignment.feedback1}</p>
+                        {decodeBody(assignment.feedback1)}
                       </div>
                     </div>
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-gray-700">Retroalimentación de Revisor 2</label>
                       <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-                        <p className="text-gray-600">{assignment.feedback2}</p>
+                        {decodeBody(assignment.feedback2)}
                       </div>
                     </div>
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-gray-700">Informe de Revisor 1</label>
                       <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-                        <p className="text-gray-600">{assignment.informe1}</p>
+                        {decodeBody(assignment.informe1)}
                       </div>
                     </div>
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-gray-700">Informe de Revisor 2</label>
                       <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-                        <p className="text-gray-600">{assignment.informe2}</p>
+                        {decodeBody(assignment.informe2)}
                       </div>
                     </div>
                   </div>
