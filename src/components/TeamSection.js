@@ -161,7 +161,7 @@ function TeamSection({ setActiveTab }) {
       React.createElement(
         'p',
         { className: 'text-gray-600 text-sm sm:text-lg mb-4 sm:mb-6' },
-        'Nuestro equipo está en constante crecimiento, y tú puedes be parte de él. Si compartes nuestra pasión por la ciencia y la educación, te invitamos a unirte. Envía tu candidatura a través de la pestaña ',
+        'Nuestro equipo está en constante crecimiento, y tú puedes ser parte de él. Si compartes nuestra pasión por la ciencia y la educación, te invitamos a unirte. Envía tu candidatura a través de la pestaña ',
         React.createElement(
           'span',
           {
@@ -177,4 +177,4 @@ function TeamSection({ setActiveTab }) {
   );
 }
 
-export default TeamSection;node generate
+export default TeamSection;
