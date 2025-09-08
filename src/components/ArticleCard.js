@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import Papa from 'papaparse';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 function parseDateFlexible(dateStr) {
@@ -17,7 +16,7 @@ function parseDateFlexible(dateStr) {
 }
 
 function getYear(dateStr) {
-  if (!dateStr) return 's.f.'; // sin fecha
+  if (!dateStr) return 's.f.';
   let date = new Date(dateStr);
   if (!isNaN(date)) return date.getFullYear();
   const parts = dateStr.split(/[\/.-]/);
@@ -30,70 +29,33 @@ function getYear(dateStr) {
   return dateStr;
 }
 
-function ArticleCard({ article }) {
-  // Depuración: Imprimir el objeto article recibido
-  console.log('Objeto article recibido:', article);
+function generateSlug(name) {
+  if (!name) return '';
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '');
+}
 
+function ArticleCard({ article }) {
   const [showCitations, setShowCitations] = useState(false);
   const [showFullAbstract, setShowFullAbstract] = useState(false);
   const [showEnglishAbstract, setShowEnglishAbstract] = useState(false);
-  const [isAuthorModalOpen, setIsAuthorModalOpen] = useState(false);
-  const [authorsData, setAuthorsData] = useState([]);
-  const [selectedAuthor, setSelectedAuthor] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [csvError, setCsvError] = useState(null);
 
   const journal = 'Revista Nacional de las Ciencias para Estudiantes';
-  const csvUrl =
-    'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
-
-  const pdfUrl = article?.['Número de artículo']
-    ? `https://www.revistacienciasestudiantes.com/Articles/Articulo${article['Número de artículo']}.pdf`
+  const pdfUrl = article?.numeroArticulo
+    ? `https://www.revistacienciasestudiantes.com/Articles/Articulo${article.numeroArticulo}.pdf`
     : null;
+  const pages = `${article?.primeraPagina || ''}-${article?.ultimaPagina || ''}`.trim() || '';
 
-  const pages = `${article?.['Primera página'] || ''}-${article?.['Última página'] || ''}`.trim() || '';
-
-  // Cargar autores desde CSV
-  useEffect(() => {
-    setIsLoading(true);
-    setCsvError(null);
-    Papa.parse(csvUrl, {
-      download: true,
-      header: true,
-      skipEmptyLines: true,
-      complete: (result) => {
-        setAuthorsData(result.data || []);
-        setIsLoading(false);
-      },
-      error: () => {
-        setCsvError('No se pudo cargar la información de los autores.');
-        setAuthorsData([]);
-        setIsLoading(false);
-      },
-    });
-  }, []);
-
-  const handleAuthorClick = (authorName) => {
-    if (!authorName) return;
-    setIsLoading(true);
-    const author =
-      authorsData.find((data) => data['Nombre'] === authorName) || {
-        Nombre: authorName,
-        Descripción: 'Información no disponible',
-        'Áreas de interés': 'No especificadas',
-      };
-    setSelectedAuthor(author);
-    setIsAuthorModalOpen(true);
-    setIsLoading(false);
-  };
-
-  // Citas con JSX
   const getChicagoCitation = () => {
-    const authors = article?.['Autor(es)']?.split(';').map(a => a.trim()).join('; ') || 'Autor desconocido';
-    const title = article?.['Título'] || 'Sin título';
-    const volume = article?.['Volumen'] || '';
-    const number = article?.['Número'] || '';
-    const year = getYear(article?.['Fecha']);
+    const authors = article?.autores?.split(';').map(a => a.trim()).join('; ') || 'Autor desconocido';
+    const title = article?.titulo || 'Sin título';
+    const volume = article?.volumen || '';
+    const number = article?.numero || '';
+    const year = getYear(article?.fecha);
 
     return (
       <>
@@ -108,11 +70,11 @@ function ArticleCard({ article }) {
   };
 
   const getApaCitation = () => {
-    const authors = article?.['Autor(es)']?.split(';').map(a => a.trim()).join('; ') || 'Autor desconocido';
-    const title = article?.['Título'] || 'Sin título';
-    const volume = article?.['Volumen'] || '';
-    const number = article?.['Número'] || '';
-    const year = getYear(article?.['Fecha']);
+    const authors = article?.autores?.split(';').map(a => a.trim()).join('; ') || 'Autor desconocido';
+    const title = article?.titulo || 'Sin título';
+    const volume = article?.volumen || '';
+    const number = article?.numero || '';
+    const year = getYear(article?.fecha);
 
     return (
       <>
@@ -127,11 +89,11 @@ function ArticleCard({ article }) {
   };
 
   const getMlaCitation = () => {
-    const authors = article?.['Autor(es)']?.split(';').map(a => a.trim()).join('; ') || 'Autor desconocido';
-    const title = article?.['Título'] || 'Sin título';
-    const volume = article?.['Volumen'] || '';
-    const number = article?.['Número'] || '';
-    const year = getYear(article?.['Fecha']);
+    const authors = article?.autores?.split(';').map(a => a.trim()).join('; ') || 'Autor desconocido';
+    const title = article?.titulo || 'Sin título';
+    const volume = article?.volumen || '';
+    const number = article?.numero || '';
+    const year = getYear(article?.fecha);
 
     return (
       <>
@@ -145,7 +107,6 @@ function ArticleCard({ article }) {
     );
   };
 
-  // Verificar si el artículo está vacío o no definido
   if (!article || Object.keys(article).length === 0) {
     return (
       <div className="article-card bg-white p-4 sm:p-6 rounded-lg shadow-md">
@@ -157,21 +118,21 @@ function ArticleCard({ article }) {
   return (
     <div className="article-card bg-white p-4 sm:p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
       <h2 className="text-lg sm:text-xl font-semibold mb-2 cursor-pointer hover:text-blue-600">
-        {article['Título'] || 'Sin título'}
+        {article.titulo || 'Sin título'}
       </h2>
 
       <p className="text-gray-600 text-sm sm:text-base mb-1">
         <strong>Autor(es): </strong>
-        {article['Autor(es)'] ? (
-          article['Autor(es)'].split(';').map((a, idx, arr) => (
-            <span
+        {article.autores ? (
+          article.autores.split(';').map((a, idx, arr) => (
+            <a
               key={idx}
+              href={`/team/${generateSlug(a.trim())}.html`}
               className="cursor-pointer hover:text-blue-500 underline"
-              onClick={() => handleAuthorClick(a.trim())}
             >
               {a.trim()}
               {idx < arr.length - 1 ? '; ' : ''}
-            </span>
+            </a>
           ))
         ) : (
           'Autor desconocido'
@@ -179,35 +140,31 @@ function ArticleCard({ article }) {
       </p>
 
       <p className="text-gray-600 text-sm sm:text-base mb-1">
-        <strong>Fecha:</strong> {parseDateFlexible(article['Fecha'])}
+        <strong>Fecha:</strong> {parseDateFlexible(article.fecha)}
       </p>
       <p className="text-gray-600 text-sm sm:text-base mb-2">
-        <strong>Área:</strong> {article['Área temática'] || 'No especificada'}
+        <strong>Área:</strong> {article.area || 'No especificada'}
       </p>
 
-      {article['Palabras clave'] && (
+      {article.palabras_clave && (
         <div className="flex flex-wrap gap-2 mb-2">
-          {article['Palabras clave']
-            .split(/[;,]/)
-            .map((k) => k.trim())
-            .filter(Boolean)
-            .map((kw, idx) => (
-              <span
-                key={idx}
-                className="bg-gray-200 text-gray-800 text-xs sm:text-sm px-2 py-1 rounded-full"
-              >
-                {kw}
-              </span>
-            ))}
+          {article.palabras_clave.map((kw, idx) => (
+            <span
+              key={idx}
+              className="bg-gray-200 text-gray-800 text-xs sm:text-sm px-2 py-1 rounded-full"
+            >
+              {kw}
+            </span>
+          ))}
         </div>
       )}
 
       <p className="text-gray-700 text-sm sm:text-base mb-2">
         <strong>Resumen: </strong>
-        {article['Resumen'] ? (
+        {article.resumen ? (
           <>
-            {showFullAbstract ? article['Resumen'] : `${article['Resumen'].slice(0, 100)}...`}
-            {article['Resumen'].length > 100 && (
+            {showFullAbstract ? article.resumen : `${article.resumen.slice(0, 100)}...`}
+            {article.resumen.length > 100 && (
               <button
                 className="ml-2 text-blue-500 hover:underline text-xs sm:text-sm"
                 onClick={() => setShowFullAbstract(!showFullAbstract)}
@@ -230,12 +187,11 @@ function ArticleCard({ article }) {
         </button>
         {showEnglishAbstract && (
           <p className="text-gray-700 text-sm sm:text-base mt-2">
-            {article['Abstract'] || 'Abstract no disponible'}
+            {article.englishAbstract || 'Abstract no disponible'}
           </p>
         )}
       </div>
 
-      {/* Botones */}
       <div className="flex gap-3 mb-3">
         {pdfUrl && (
           <>
@@ -258,7 +214,6 @@ function ArticleCard({ article }) {
         )}
       </div>
 
-      {/* Citas */}
       <button
         className="text-brown-800 hover:text-brown-700 text-sm sm:text-base mb-2 focus:outline-none focus:ring-2 focus:ring-brown-800"
         onClick={() => setShowCitations(!showCitations)}
@@ -270,30 +225,6 @@ function ArticleCard({ article }) {
           <p><strong>Chicago:</strong> {getChicagoCitation()}</p>
           <p><strong>APA:</strong> {getApaCitation()}</p>
           <p><strong>MLA:</strong> {getMlaCitation()}</p>
-        </div>
-      )}
-
-      {isAuthorModalOpen && selectedAuthor && (
-        <div className="fixed inset-0 flex items-center justify-center z-50">
-          <div
-            className="absolute inset-0 bg-black bg-opacity-40"
-            onClick={() => setIsAuthorModalOpen(false)}
-          ></div>
-          <div className="bg-white p-4 sm:p-6 rounded-lg max-w-sm w-full max-h-[80vh] overflow-y-auto shadow-xl z-50">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="text-lg font-bold">{selectedAuthor.Nombre || 'Autor desconocido'}</h3>
-              <button
-                className="text-gray-500 hover:text-gray-700 text-xl"
-                onClick={() => setIsAuthorModalOpen(false)}
-              >
-                ×
-              </button>
-            </div>
-            <div className="text-gray-700 text-sm sm:text-base space-y-2">
-              <p><strong>Descripción:</strong> {selectedAuthor.Descripción || 'No disponible'}</p>
-              <p><strong>Áreas de interés:</strong> {selectedAuthor['Áreas de interés'] || 'No especificadas'}</p>
-            </div>
-          </div>
         </div>
       )}
     </div>

@@ -91,8 +91,17 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
     fs.writeFileSync(outputJson, JSON.stringify(articles, null, 2), 'utf8');
     console.log(`✅ Archivo generado: ${outputJson} (${articles.length} artículos)`);
 
+    // Extraer todos los autores únicos de los artículos
+    const allAuthorsSet = new Set();
     articles.forEach(article => {
-      const authorsList = article.autores.split(';').map(a => formatAuthorForCitation(a));
+      if (article.autores) {
+        article.autores.split(';').map(a => a.trim()).filter(a => a).forEach(author => allAuthorsSet.add(author));
+      }
+    });
+    const allAuthors = Array.from(allAuthorsSet);
+
+    articles.forEach(article => {
+      const authorsList = article.autores.split(';').map(a => a.trim()).map(a => formatAuthorForCitation(a));
       const authorMetaTags = authorsList.map(author => `<meta name="citation_author" content="${author}">`).join('\n');
       const htmlContent = `
 <!DOCTYPE html>
@@ -121,7 +130,12 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
 <body>
   <header>
     <h1>${article.titulo}</h1>
-    <h3>${article.autores}</h3>
+    <h3>
+      ${article.autores.split(';').map(a => {
+        const slug = generateSlug(a.trim());
+        return `<a href="/team/${slug}.html" class="author-link">${a.trim()}</a>`;
+      }).join('; ')}
+    </h3>
     <p><strong>Fecha de publicación:</strong> ${article.fecha}</p>
     <p><strong>Área temática:</strong> ${article.area}</p>
   </header>
@@ -207,36 +221,43 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     if (!teamRes.ok) throw new Error(`Error descargando CSV de equipo: ${teamRes.statusText}`);
     const teamCsvData = await teamRes.text();
     const teamParsed = Papa.parse(teamCsvData, { header: true, skipEmptyLines: true });
-    const filteredMembers = teamParsed.data.filter((data) => {
-      const memberRoles = (data['Rol en la Revista'] || '')
-        .split(';')
-        .map((role) => role.trim())
-        .filter((role) => role);
-      return !(memberRoles.length === 1 && memberRoles[0] === 'Autor');
+    const teamMembers = teamParsed.data;
+
+    // Crear un mapa de información de autores desde el CSV de equipo
+    const authorInfoMap = new Map();
+    teamMembers.forEach(member => {
+      const nombre = member['Nombre'] || 'Miembro desconocido';
+      authorInfoMap.set(nombre, {
+        nombre,
+        roles: (member['Rol en la Revista'] || 'No especificado').split(';').map(r => r.trim()).filter(r => r),
+        descripcion: member['Descripción'] || 'Información no disponible',
+        areas: member['Áreas de interés'] || 'No especificadas',
+        imagen: getImageSrc(member['Imagen'] || '')
+      });
     });
 
-    filteredMembers.forEach(member => {
-      const nombre = member['Nombre'] || 'Miembro desconocido';
-      const slug = generateSlug(nombre);
-      const roles = (member['Rol en la Revista'] || 'No especificado')
-        .split(';')
-        .map(r => r.trim())
-        .filter(r => r)
-        .join(', ') || 'No especificado';
-      const descripcion = member['Descripción'] || 'Información no disponible';
-      const areas = member['Áreas de interés'] || 'No especificadas';
-      const areasList = areas.split(';').map(a => a.trim()).filter(a => a);
-      const imagen = getImageSrc(member['Imagen'] || '');
+    // Generar páginas para todos los autores
+    allAuthors.forEach(author => {
+      const info = authorInfoMap.get(author) || {
+        nombre: author,
+        roles: ['Autor'],
+        descripcion: 'Información no disponible',
+        areas: 'No especificadas',
+        imagen: ''
+      };
+      const slug = generateSlug(info.nombre);
+      const roles = info.roles.join(', ');
+      const areasList = info.areas.split(';').map(a => a.trim()).filter(a => a);
       const htmlContent = `
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="${descripcion.substring(0, 160)}...">
-  <meta name="keywords" content="${areas}, ${roles}, Revista Nacional de las Ciencias para Estudiantes">
-  <meta name="author" content="${nombre}">
-  <title>${nombre} - Equipo de la Revista Nacional de las Ciencias para Estudiantes</title>
+  <meta name="description" content="${info.descripcion.substring(0, 160)}...">
+  <meta name="keywords" content="${info.areas}, ${roles}, Revista Nacional de las Ciencias para Estudiantes">
+  <meta name="author" content="${info.nombre}">
+  <title>${info.nombre} - Revista Nacional de las Ciencias para Estudiantes</title>
   <link rel="stylesheet" href="/index.css">
   <style>
     body {
@@ -402,16 +423,16 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
   <div class="profile-container">
     <div class="profile-header">
       <div class="profile-img-container">
-        ${imagen ? `<img src="${imagen}" alt="Foto de ${nombre}" class="profile-img">` : `<div class="profile-img-fallback">Sin Imagen</div>`}
+        ${info.imagen ? `<img src="${info.imagen}" alt="Foto de ${info.nombre}" class="profile-img">` : `<div class="profile-img-fallback">Sin Imagen</div>`}
       </div>
       <div class="profile-info">
-        <h1>${nombre}</h1>
+        <h1>${info.nombre}</h1>
         <p class="role">${roles}</p>
       </div>
     </div>
     <div class="section">
       <h2>Descripción</h2>
-      <p>${descripcion}</p>
+      <p>${info.descripcion}</p>
     </div>
     <div class="section">
       <h2>Áreas de interés</h2>
@@ -429,8 +450,53 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       `.trim();
       const filePath = path.join(teamOutputHtmlDir, `${slug}.html`);
       fs.writeFileSync(filePath, htmlContent, 'utf8');
-      console.log(`Generado HTML de miembro: ${filePath}`);
+      console.log(`Generado HTML de autor: ${filePath}`);
     });
+
+    // Filtrar miembros del equipo para la sección "Nuestro Equipo"
+    const filteredMembers = teamMembers.filter((data) => {
+      const memberRoles = (data['Rol en la Revista'] || '')
+        .split(';')
+        .map((role) => role.trim())
+        .filter((role) => role);
+      return !(memberRoles.length === 1 && memberRoles[0] === 'Autor');
+    });
+
+    // Generar página de índice del equipo
+    const teamIndexContent = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Nuestro Equipo - Revista Nacional de las Ciencias para Estudiantes</title>
+  <link rel="stylesheet" href="/index.css">
+</head>
+<body>
+  <header>
+    <h1>Nuestro Equipo</h1>
+    <p>Conoce a los miembros del equipo de la Revista Nacional de las Ciencias para Estudiantes.</p>
+  </header>
+  <main>
+    <section>
+      <ul>
+        ${filteredMembers.map(member => {
+          const nombre = member['Nombre'] || 'Miembro desconocido';
+          const slug = generateSlug(nombre);
+          return `<li><a href="/team/${slug}.html">${nombre}</a> - ${member['Rol en la Revista'] || 'No especificado'}</li>`;
+        }).join('')}
+      </ul>
+    </section>
+  </main>
+  <footer>
+    <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes</p>
+    <a href="/">Volver al inicio</a>
+  </footer>
+</body>
+</html>
+    `.trim();
+    const teamIndexPath = path.join(teamOutputHtmlDir, 'index.html');
+    fs.writeFileSync(teamIndexPath, teamIndexContent, 'utf8');
+    console.log(`Generado índice HTML del equipo: ${teamIndexPath}`);
 
     // Generar páginas estáticas para las secciones de la SPA
     const sections = [
@@ -490,6 +556,12 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
   <changefreq>monthly</changefreq>
   <priority>0.9</priority>
 </url>
+<url>
+  <loc>${domain}/team/index.html</loc>
+  <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.8</priority>
+</url>
 ${articles.map(article => `
 <url>
   <loc>${domain}/articles/articulo${article.numeroArticulo}.html</loc>
@@ -503,8 +575,8 @@ ${articles.map(article => `
   <changefreq>monthly</changefreq>
   <priority>0.8</priority>
 </url>`).join('')}
-${filteredMembers.map(member => {
-      const slug = generateSlug(member['Nombre']);
+${allAuthors.map(author => {
+      const slug = generateSlug(author);
       return `
 <url>
   <loc>${domain}/team/${slug}.html</loc>
