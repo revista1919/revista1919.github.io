@@ -11,6 +11,8 @@ Quill.register('modules/imageResize', ImageResize);
 
 const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyJ9znuf_Pa8Hyh4BnsO1pTTduBsXC7kDD0pORWccMTBlckgt0I--NKG69aR_puTAZ5/exec';
+const SOCIAL_ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSCEOtMwYPu0_kn1hmQi0qT6FZq6HRF09WtuDSqOxBNgMor_FyRRtc6_YVKHQQhWJCy-mIa2zwP6uAU/pub?output=csv';
+const SOCIAL_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyBPAmCgzxKrqY1uePHDGxQ--PlLxOpBSabFGdrdOXscTZNOIO7htucgDf6saRXYw97/exec'; // Reemplaza con la URL de tu script desplegado (ver instrucciones al final)
 
 export default function PortalSection({ user, onLogout }) {
   const [assignments, setAssignments] = useState([]);
@@ -30,6 +32,19 @@ export default function PortalSection({ user, onLogout }) {
   const [selectedAssignmentId, setSelectedAssignmentId] = useState(null);
   const feedbackQuillRefs = useRef({});
   const reportQuillRefs = useRef({});
+  // Nuevos estados para tareas
+  const [tasks, setTasks] = useState([]);
+  const [taskComments, setTaskComments] = useState({});
+  const [submitStatusTask, setSubmitStatusTask] = useState({});
+  const [showImageModalTask, setShowImageModalTask] = useState({});
+  const [isEditingImageTask, setIsEditingImageTask] = useState({});
+  const [imageDataTask, setImageDataTask] = useState({});
+  const [editingRangeTask, setEditingRangeTask] = useState({});
+  const taskQuillRefs = useRef({});
+  const [newTaskType, setNewTaskType] = useState('Redes sociales');
+  const [newTaskText, setNewTaskText] = useState('');
+  const [taskError, setTaskError] = useState('');
+  const [taskLoading, setTaskLoading] = useState(true);
 
   const fetchAssignments = async () => {
     try {
@@ -111,9 +126,45 @@ export default function PortalSection({ user, onLogout }) {
     }
   };
 
+  const fetchSocialTasks = async () => {
+    setTaskLoading(true);
+    setTaskError('');
+    try {
+      const response = await fetch(SOCIAL_ASSIGNMENTS_CSV, { cache: 'no-store' });
+      if (!response.ok) throw new Error('Error al cargar el archivo CSV de tareas');
+      const csvText = await response.text();
+      Papa.parse(csvText, {
+        header: true,
+        skipEmptyLines: true,
+        delimiter: ',',
+        transform: (value) => value.trim(),
+        complete: ({ data }) => {
+          const parsedTasks = data.map((row, index) => ({
+            id: index + 2, // Número de fila en la hoja de cálculo (1 para header, +1)
+            socialTask: row['Redes sociales'] || '',
+            socialCompleted: (row['Cumplido 1'] || '').toLowerCase() === 'sí',
+            socialComment: row['Comentario 1'] || '',
+            webTask: row['Desarrollo Web'] || '',
+            webCompleted: (row['Cumplido 2'] || '').toLowerCase() === 'sí',
+            webComment: row['Comentario 2'] || '',
+          })).filter(t => t.socialTask || t.webTask);
+          setTasks(parsedTasks);
+          setTaskLoading(false);
+        },
+      });
+    } catch (err) {
+      console.error('Error al cargar tareas:', err);
+      setTaskError('Error al cargar tareas');
+      setTaskLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchAssignments();
-  }, [user.name]);
+    if (['Encargado de Redes Sociales', 'Responsable de Desarrollo Web', 'Director General'].includes(user.role)) {
+      fetchSocialTasks();
+    }
+  }, [user.name, user.role]);
 
   const isAuthor = assignments.length > 0 && assignments[0].role === 'Autor';
 
@@ -154,6 +205,62 @@ export default function PortalSection({ user, onLogout }) {
     }
   };
 
+  const handleSubmitTask = async (id, type, comment) => {
+    const data = {
+      row: id,
+      type,
+      completed: 'sí',
+      comment: encodeBody(comment || ''),
+    };
+
+    console.log('Sending task data:', data);
+
+    try {
+      await fetch(SOCIAL_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      setSubmitStatusTask((prev) => ({ ...prev, [id]: 'Enviado exitosamente' }));
+      await fetchSocialTasks();
+    } catch (err) {
+      console.error('Error al enviar tarea:', err);
+      setSubmitStatusTask((prev) => ({ ...prev, [id]: 'Error al enviar: ' + err.message }));
+    }
+  };
+
+  const handleAddTask = async () => {
+    if (!newTaskText.trim()) {
+      setTaskError('La descripción de la tarea es requerida');
+      return;
+    }
+    const data = {
+      action: 'add',
+      column: newTaskType,
+      task: newTaskText.trim(),
+    };
+
+    try {
+      await fetch(SOCIAL_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      setNewTaskText('');
+      setTaskError('');
+      await fetchSocialTasks();
+    } catch (err) {
+      console.error('Error al agregar tarea:', err);
+      setTaskError('Error al agregar tarea');
+    }
+  };
+
   const toggleTutorial = (link) => {
     setTutorialVisible((prev) => ({ ...prev, [link]: !prev[link] }));
   };
@@ -164,7 +271,7 @@ export default function PortalSection({ user, onLogout }) {
     } else if (role === "Revisor 2") {
       return 'Como Revisor 2, enfócate en el contenido sustantivo: verifica la precisión de las fuentes, la seriedad y originalidad del tema, la relevancia de los argumentos, y la contribución al campo de estudio. Evalúa si el artículo es innovador y bien fundamentado. Deja comentarios en el documento de Google Drive. Debes dejar tu retroalimentación al autor en la casilla correspondiente. Además debes dejar un informe resumido explicando tu observaciones para guiar al editor. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.===';
     } else if (role === "Editor") {
-      return `Como Editor, tu responsabilidad es revisar las retroalimentaciones e informes de los revisores, integrarlas con tu propia evaluación, y redactar una retroalimentación final sensible y constructiva para el autor. Corrige directamente el texto si es necesario y decide el estado final del artículo. Usa el documento de Google Drive para ediciones. Debes dejar una retroalimentación al autor sintetizando las que dejaron los revisores. Tu deber es que el mensaje sea acertado y sensible, sin desmotivar al autor. Para esto debes usar la técnica del "sándwich". Si no sabes qué es, entra aquí(https://www.santanderopenacademy.com/es/blog/tecnica-sandwich.html). Luego deja tu informe con los cambios realizados, deben ser precisos y académicos. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.===`;
+      return `Como Editor, tu responsabilidad es revisar las retroalimentaciones e informes de los revisores, integrarlas con tu propia evaluación, y redactar una retroalimentación final sensible y constructiva para el autor. Corrige directamente el texto si es necesario y decide el estado final del artículo. Usa el documento de Google Drive para ediciones. Debes dejar una retroalimentación al autor sintetizando las que dejaron los revisores. Tu deber es que el mensaje sea acertado y sensible, sin desmotivar al autor. Para esto debes usar la técnica del "sándwich". Si no sabes qué es, entra aqu[](https://www.santanderopenacademy.com/es/blog/tecnica-sandwich.html). Luego deja tu informe con los cambios realizados, deben ser precisos y académicos. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.===`;
     }
     return "";
   };
@@ -188,6 +295,13 @@ export default function PortalSection({ user, onLogout }) {
   const debouncedSetReport = useCallback(
     (link) => debounce((value) => {
       setReport((prev) => ({ ...prev, [link]: value }));
+    }, 300),
+    []
+  );
+
+  const debouncedSetTaskComment = useCallback(
+    (id) => debounce((value) => {
+      setTaskComments((prev) => ({ ...prev, [id]: value }));
     }, 300),
     []
   );
@@ -221,7 +335,7 @@ export default function PortalSection({ user, onLogout }) {
           key: ['Delete', 'Backspace'],
           handler: function(range) {
             if (!range) {
-              setSubmitStatus((prev) => ({ ...prev, [this.quill.link]: 'No hay selección activa para eliminar' }));
+              setSubmitStatus((prev) => ({ ...prev, [this.quill.root.dataset.key]: 'No hay selección activa para eliminar' }));
               return true;
             }
             const editor = this.quill;
@@ -263,7 +377,7 @@ export default function PortalSection({ user, onLogout }) {
                 return false;
               } catch (err) {
                 console.error('Error deleting image:', err);
-                setSubmitStatus((prev) => ({ ...prev, [this.quill.link]: 'Error al eliminar la imagen' }));
+                setSubmitStatus((prev) => ({ ...prev, [this.quill.root.dataset.key]: 'Error al eliminar la imagen' }));
                 return false;
               }
             }
@@ -283,7 +397,7 @@ export default function PortalSection({ user, onLogout }) {
                 return false;
               } catch (err) {
                 console.error('Error inserting new line after image:', err);
-                setSubmitStatus((prev) => ({ ...prev, [this.quill.link]: 'Error al añadir texto después de la imagen' }));
+                setSubmitStatus((prev) => ({ ...prev, [this.quill.root.dataset.key]: 'Error al añadir texto después de la imagen' }));
                 return false;
               }
             }
@@ -740,11 +854,12 @@ export default function PortalSection({ user, onLogout }) {
     return out;
   };
 
-  const setupQuillEditor = (quillRef, link, type) => {
+  const setupQuillEditor = (quillRef, key, quillType) => {
     if (quillRef.current) {
       const editor = quillRef.current.getEditor();
       editor.root.setAttribute('spellcheck', 'true');
       editor.root.setAttribute('lang', 'es');
+      editor.root.dataset.key = key; // Para acceder en bindings
       editor.theme.tooltip.hide();
 
       let attempts = 0;
@@ -800,13 +915,25 @@ export default function PortalSection({ user, onLogout }) {
                   imageResize.hide();
                 } catch (err) {
                   console.error('Error al eliminar imagen:', err);
-                  setSubmitStatus((prev) => ({ ...prev, [link]: 'Error al eliminar la imagen' }));
+                  if (quillType === 'task') {
+                    setSubmitStatusTask((prev) => ({ ...prev, [key]: 'Error al eliminar la imagen' }));
+                  } else {
+                    setSubmitStatus((prev) => ({ ...prev, [key]: 'Error al eliminar la imagen' }));
+                  }
                 }
               } else {
-                setSubmitStatus((prev) => ({ ...prev, [link]: 'Selecciona una imagen para eliminar' }));
+                if (quillType === 'task') {
+                  setSubmitStatusTask((prev) => ({ ...prev, [key]: 'Selecciona una imagen para eliminar' }));
+                } else {
+                  setSubmitStatus((prev) => ({ ...prev, [key]: 'Selecciona una imagen para eliminar' }));
+                }
               }
             } else {
-              setSubmitStatus((prev) => ({ ...prev, [link]: 'No hay selección activa para eliminar' }));
+              if (quillType === 'task') {
+                setSubmitStatusTask((prev) => ({ ...prev, [key]: 'No hay selección activa para eliminar' }));
+              } else {
+                setSubmitStatus((prev) => ({ ...prev, [key]: 'No hay selección activa para eliminar' }));
+              }
             }
           };
 
@@ -817,20 +944,39 @@ export default function PortalSection({ user, onLogout }) {
               if (leaf && leaf.domNode && leaf.domNode.tagName === 'IMG') {
                 const img = leaf.domNode;
                 const formats = editor.getFormat(range.index, 1);
-                setImageData((prev) => ({
-                  ...prev,
-                  [link]: {
-                    url: img.src,
-                    width: img.style.width || img.width + 'px',
-                    height: img.style.height || img.height + 'px',
-                    align: formats.align || 'left'
-                  }
-                }));
-                setEditingRange((prev) => ({ ...prev, [link]: range }));
-                setIsEditingImage((prev) => ({ ...prev, [link]: true }));
-                setShowImageModal((prev) => ({ ...prev, [link]: true }));
+                if (quillType === 'task') {
+                  setImageDataTask((prev) => ({
+                    ...prev,
+                    [key]: {
+                      url: img.src,
+                      width: img.style.width || img.width + 'px',
+                      height: img.style.height || img.height + 'px',
+                      align: formats.align || 'left'
+                    }
+                  }));
+                  setEditingRangeTask((prev) => ({ ...prev, [key]: range }));
+                  setIsEditingImageTask((prev) => ({ ...prev, [key]: true }));
+                  setShowImageModalTask((prev) => ({ ...prev, [key]: true }));
+                } else {
+                  setImageData((prev) => ({
+                    ...prev,
+                    [key]: {
+                      url: img.src,
+                      width: img.style.width || img.width + 'px',
+                      height: img.style.height || img.height + 'px',
+                      align: formats.align || 'left'
+                    }
+                  }));
+                  setEditingRange((prev) => ({ ...prev, [key]: range }));
+                  setIsEditingImage((prev) => ({ ...prev, [key]: true }));
+                  setShowImageModal((prev) => ({ ...prev, [key]: true }));
+                }
               } else {
-                setSubmitStatus((prev) => ({ ...prev, [link]: 'Selecciona una imagen para editar' }));
+                if (quillType === 'task') {
+                  setSubmitStatusTask((prev) => ({ ...prev, [key]: 'Selecciona una imagen para editar' }));
+                } else {
+                  setSubmitStatus((prev) => ({ ...prev, [key]: 'Selecciona una imagen para editar' }));
+                }
               }
             }
           };
@@ -846,19 +992,19 @@ export default function PortalSection({ user, onLogout }) {
     }
   };
 
-  const handleImageModalSubmit = (link) => {
-    const editor = (feedbackQuillRefs.current[link] || reportQuillRefs.current[link]).getEditor();
-    let { url, width, height, align } = imageData[link] || {};
+  const handleImageModalSubmit = (key) => {
+    const editor = (feedbackQuillRefs.current[key] || reportQuillRefs.current[key]).getEditor();
+    let { url, width, height, align } = imageData[key] || {};
     if (!url) {
-      setSubmitStatus((prev) => ({ ...prev, [link]: 'La URL de la imagen es obligatoria.' }));
+      setSubmitStatus((prev) => ({ ...prev, [key]: 'La URL de la imagen es obligatoria.' }));
       return;
     }
     if (width && width !== 'auto' && !width.match(/%|px$/)) width += 'px';
     if (height && height !== 'auto' && !height.match(/%|px$/)) height += 'px';
-    if (isEditingImage[link]) {
-      if (editingRange[link]) {
-        editor.setSelection(editingRange[link].index, 1, 'silent');
-        const [leaf] = editor.getLeaf(editingRange[link].index);
+    if (isEditingImage[key]) {
+      if (editingRange[key]) {
+        editor.setSelection(editingRange[key].index, 1, 'silent');
+        const [leaf] = editor.getLeaf(editingRange[key].index);
         if (leaf && leaf.domNode.tagName === 'IMG') {
           if (width) leaf.domNode.style.width = width;
           if (height) leaf.domNode.style.height = height;
@@ -880,17 +1026,65 @@ export default function PortalSection({ user, onLogout }) {
         editor.setSelection(range.index + 2, 'silent');
       }
     }
-    setShowImageModal((prev) => ({ ...prev, [link]: false }));
-    setIsEditingImage((prev) => ({ ...prev, [link]: false }));
-    setImageData((prev) => ({ ...prev, [link]: { url: '', width: '', height: '', align: 'left' } }));
-    setEditingRange((prev) => ({ ...prev, [link]: null }));
+    setShowImageModal((prev) => ({ ...prev, [key]: false }));
+    setIsEditingImage((prev) => ({ ...prev, [key]: false }));
+    setImageData((prev) => ({ ...prev, [key]: { url: '', width: '', height: '', align: 'left' } }));
+    setEditingRange((prev) => ({ ...prev, [key]: null }));
   };
 
-  const handleImageDataChange = (link, e) => {
+  const handleImageModalSubmitTask = (key) => {
+    const editor = taskQuillRefs.current[key].getEditor();
+    let { url, width, height, align } = imageDataTask[key] || {};
+    if (!url) {
+      setSubmitStatusTask((prev) => ({ ...prev, [key]: 'La URL de la imagen es obligatoria.' }));
+      return;
+    }
+    if (width && width !== 'auto' && !width.match(/%|px$/)) width += 'px';
+    if (height && height !== 'auto' && !height.match(/%|px$/)) height += 'px';
+    if (isEditingImageTask[key]) {
+      if (editingRangeTask[key]) {
+        editor.setSelection(editingRangeTask[key].index, 1, 'silent');
+        const [leaf] = editor.getLeaf(editingRangeTask[key].index);
+        if (leaf && leaf.domNode.tagName === 'IMG') {
+          if (width) leaf.domNode.style.width = width;
+          if (height) leaf.domNode.style.height = height;
+          editor.format('align', align, 'user');
+        }
+        editor.blur();
+      }
+    } else {
+      const range = editor.getSelection() || { index: editor.getLength() };
+      editor.insertText(range.index, '\n', 'user');
+      editor.insertEmbed(range.index + 1, 'image', url, 'user');
+      editor.setSelection(range.index + 2, 'silent');
+      const [leaf] = editor.getLeaf(range.index + 1);
+      if (leaf && leaf.domNode.tagName === 'IMG') {
+        if (width) leaf.domNode.style.width = width;
+        if (height) leaf.domNode.style.height = height;
+        editor.setSelection(range.index + 1, 1, 'silent');
+        editor.format('align', align, 'user');
+        editor.setSelection(range.index + 2, 'silent');
+      }
+    }
+    setShowImageModalTask((prev) => ({ ...prev, [key]: false }));
+    setIsEditingImageTask((prev) => ({ ...prev, [key]: false }));
+    setImageDataTask((prev) => ({ ...prev, [key]: { url: '', width: '', height: '', align: 'left' } }));
+    setEditingRangeTask((prev) => ({ ...prev, [key]: null }));
+  };
+
+  const handleImageDataChange = (key, e) => {
     const { name, value } = e.target;
     setImageData((prev) => ({
       ...prev,
-      [link]: { ...prev[link], [name]: value }
+      [key]: { ...prev[key], [name]: value }
+    }));
+  };
+
+  const handleImageDataChangeTask = (key, e) => {
+    const { name, value } = e.target;
+    setImageDataTask((prev) => ({
+      ...prev,
+      [key]: { ...prev[key], [name]: value }
     }));
   };
 
@@ -1131,6 +1325,120 @@ export default function PortalSection({ user, onLogout }) {
     );
   };
 
+  const renderTask = (t, type, isPending) => {
+    const taskTitle = type === 'social' ? t.socialTask : t.webTask;
+    const comment = type === 'social' ? t.socialComment : t.webComment;
+    const id = t.id;
+
+    return (
+      <div key={id} className="bg-white p-6 rounded-lg shadow-md space-y-4">
+        <h4 className="text-lg font-semibold text-gray-800">{taskTitle}</h4>
+        {isPending ? (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">Comentario</label>
+              <ReactQuill
+                ref={(el) => (taskQuillRefs.current[id] = el)}
+                value={taskComments[id] || ''}
+                onChange={debouncedSetTaskComment(id)}
+                modules={modules}
+                formats={formats}
+                placeholder="Escribe tu comentario aquí (puedes usar imágenes, cursivas con /, etc.)"
+                className="border rounded-md text-gray-800 bg-white"
+                onFocus={() => setupQuillEditor(taskQuillRefs.current[id], id, 'task')}
+              />
+              <button
+                onClick={() => {
+                  setIsEditingImageTask((prev) => ({ ...prev, [id]: false }));
+                  setImageDataTask((prev) => ({ ...prev, [id]: { url: '', width: '', height: '', align: 'left' } }));
+                  setShowImageModalTask((prev) => ({ ...prev, [id]: true }));
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+              >
+                Insertar Imagen Manualmente
+              </button>
+            </div>
+            <button
+              onClick={() => handleSubmitTask(id, type, taskComments[id] || '')}
+              className="w-full px-4 py-2 text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              Marcar como Cumplido
+            </button>
+            {submitStatusTask[id] && (
+              <p className={`text-center text-sm ${submitStatusTask[id].includes('Error') ? 'text-red-500' : 'text-green-500'}`}>
+                {submitStatusTask[id]}
+              </p>
+            )}
+            {showImageModalTask[id] && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+                <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+                  <h5 className="text-lg font-semibold mb-4">{isEditingImageTask[id] ? 'Editar Imagen' : 'Insertar Imagen'}</h5>
+                  <input
+                    type="text"
+                    name="url"
+                    value={imageDataTask[id]?.url || ''}
+                    onChange={(e) => handleImageDataChangeTask(id, e)}
+                    placeholder="URL de la imagen"
+                    className="w-full px-4 py-2 border rounded-md mb-2"
+                    disabled={isEditingImageTask[id]}
+                  />
+                  <input
+                    type="text"
+                    name="width"
+                    value={imageDataTask[id]?.width || ''}
+                    onChange={(e) => handleImageDataChangeTask(id, e)}
+                    placeholder="Ancho (ej: 300px o 50%)"
+                    className="w-full px-4 py-2 border rounded-md mb-2"
+                  />
+                  <input
+                    type="text"
+                    name="height"
+                    value={imageDataTask[id]?.height || ''}
+                    onChange={(e) => handleImageDataChangeTask(id, e)}
+                    placeholder="Alto (ej: 200px o auto)"
+                    className="w-full px-4 py-2 border rounded-md mb-2"
+                  />
+                  <select
+                    name="align"
+                    value={imageDataTask[id]?.align || 'left'}
+                    onChange={(e) => handleImageDataChangeTask(id, e)}
+                    className="w-full px-4 py-2 border rounded-md mb-4"
+                  >
+                    <option value="left">Izquierda</option>
+                    <option value="center">Centro</option>
+                    <option value="right">Derecha</option>
+                    <option value="justify">Justificado</option>
+                  </select>
+                  <div className="flex justify-end space-x-2">
+                    <button
+                      onClick={() => setShowImageModalTask((prev) => ({ ...prev, [id]: false }))}
+                      className="px-4 py-2 bg-gray-300 rounded-md"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={() => handleImageModalSubmitTask(id)}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md"
+                    >
+                      {isEditingImageTask[id] ? 'Actualizar' : 'Insertar'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">Comentario</label>
+            <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+              {decodeBody(comment)}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   if (loading) {
     return <p className="text-center text-gray-600">Cargando asignaciones...</p>;
   }
@@ -1217,6 +1525,22 @@ export default function PortalSection({ user, onLogout }) {
               Subir Noticia
             </button>
           )}
+          {(user.role === 'Encargado de Redes Sociales' || user.role === 'Responsable de Desarrollo Web') && (
+            <button
+              onClick={() => setActiveTab('tasks')}
+              className={`px-4 py-2 rounded-md ${activeTab === 'tasks' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}
+            >
+              Mis Tareas
+            </button>
+          )}
+          {user.role === 'Director General' && (
+            <button
+              onClick={() => setActiveTab('manageTasks')}
+              className={`px-4 py-2 rounded-md ${activeTab === 'manageTasks' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}
+            >
+              Gestionar Tareas
+            </button>
+          )}
         </div>
       )}
       {(activeTab === 'assignments' || isAuthor) && (
@@ -1246,6 +1570,152 @@ export default function PortalSection({ user, onLogout }) {
         </div>
       )}
       {activeTab === 'news' && !isAuthor && user.role.includes('Editor') && <NewsUploadSection />}
+      {activeTab === 'tasks' && (
+        <div>
+          {taskLoading ? (
+            <p className="text-center text-gray-600">Cargando tareas...</p>
+          ) : taskError ? (
+            <p className="text-center text-red-500">{taskError}</p>
+          ) : (
+            <div className="space-y-8">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Tareas Pendientes</h3>
+                <div className="space-y-6">
+                  {(() => {
+                    let pending = [];
+                    if (user.role === 'Encargado de Redes Sociales') {
+                      pending = tasks.filter((t) => t.socialTask && !t.socialCompleted);
+                    } else if (user.role === 'Responsable de Desarrollo Web') {
+                      pending = tasks.filter((t) => t.webTask && !t.webCompleted);
+                    }
+                    return pending.length === 0 ? (
+                      <p className="text-center text-gray-600">No tienes tareas pendientes.</p>
+                    ) : (
+                      pending.map((t) => renderTask(t, user.role === 'Encargado de Redes Sociales' ? 'social' : 'web', true))
+                    );
+                  })()}
+                </div>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Tareas Archivadas (Completadas)</h3>
+                <div className="space-y-6">
+                  {(() => {
+                    let completed = [];
+                    if (user.role === 'Encargado de Redes Sociales') {
+                      completed = tasks.filter((t) => t.socialTask && t.socialCompleted);
+                    } else if (user.role === 'Responsable de Desarrollo Web') {
+                      completed = tasks.filter((t) => t.webTask && t.webCompleted);
+                    }
+                    return completed.length === 0 ? (
+                      <p className="text-center text-gray-600">No tienes tareas completadas.</p>
+                    ) : (
+                      completed.map((t) => renderTask(t, user.role === 'Encargado de Redes Sociales' ? 'social' : 'web', false))
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      {activeTab === 'manageTasks' && (
+        <div>
+          {taskLoading ? (
+            <p className="text-center text-gray-600">Cargando tareas...</p>
+          ) : taskError ? (
+            <p className="text-center text-red-500">{taskError}</p>
+          ) : (
+            <div className="space-y-8">
+              <div className="bg-white p-6 rounded-lg shadow-md space-y-4">
+                <h3 className="text-lg font-semibold text-gray-800">Agregar Nueva Tarea</h3>
+                <select
+                  value={newTaskType}
+                  onChange={(e) => setNewTaskType(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="Redes sociales">Redes Sociales</option>
+                  <option value="Desarrollo Web">Desarrollo Web</option>
+                </select>
+                <textarea
+                  value={newTaskText}
+                  onChange={(e) => setNewTaskText(e.target.value)}
+                  placeholder="Descripción de la tarea"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md h-24 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  onClick={handleAddTask}
+                  className="w-full px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  Agregar Tarea
+                </button>
+                {taskError && <p className="text-red-500 text-sm text-center">{taskError}</p>}
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Tareas Pendientes - Redes Sociales</h3>
+                <div className="space-y-4">
+                  {tasks.filter((t) => t.socialTask && !t.socialCompleted).length === 0 ? (
+                    <p className="text-gray-600">Ninguna pendiente.</p>
+                  ) : (
+                    tasks.filter((t) => t.socialTask && !t.socialCompleted).map((t) => (
+                      <div key={t.id} className="bg-white p-4 rounded-lg shadow-md">
+                        <p className="text-gray-800">{t.socialTask}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Tareas Completadas - Redes Sociales</h3>
+                <div className="space-y-4">
+                  {tasks.filter((t) => t.socialTask && t.socialCompleted).length === 0 ? (
+                    <p className="text-gray-600">Ninguna completada.</p>
+                  ) : (
+                    tasks.filter((t) => t.socialTask && t.socialCompleted).map((t) => (
+                      <div key={t.id} className="bg-white p-4 rounded-lg shadow-md space-y-2">
+                        <p className="font-medium text-gray-800">{t.socialTask}</p>
+                        <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+                          {decodeBody(t.socialComment)}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Tareas Pendientes - Desarrollo Web</h3>
+                <div className="space-y-4">
+                  {tasks.filter((t) => t.webTask && !t.webCompleted).length === 0 ? (
+                    <p className="text-gray-600">Ninguna pendiente.</p>
+                  ) : (
+                    tasks.filter((t) => t.webTask && !t.webCompleted).map((t) => (
+                      <div key={t.id} className="bg-white p-4 rounded-lg shadow-md">
+                        <p className="text-gray-800">{t.webTask}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Tareas Completadas - Desarrollo Web</h3>
+                <div className="space-y-4">
+                  {tasks.filter((t) => t.webTask && t.webCompleted).length === 0 ? (
+                    <p className="text-gray-600">Ninguna completada.</p>
+                  ) : (
+                    tasks.filter((t) => t.webTask && t.webCompleted).map((t) => (
+                      <div key={t.id} className="bg-white p-4 rounded-lg shadow-md space-y-2">
+                        <p className="font-medium text-gray-800">{t.webTask}</p>
+                        <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+                          {decodeBody(t.webComment)}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       {completedPanelOpen && (
         <div
           className={`fixed left-0 top-0 h-full w-full lg:w-80 bg-white shadow-2xl z-50 overflow-y-auto transform ${completedPanelOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out`}
