@@ -1,4 +1,3 @@
-// TeamSection actualizado
 import { useTranslation } from 'react-i18next';
 import React, { useState, useEffect, useMemo } from 'react';
 import Papa from 'papaparse';
@@ -70,7 +69,7 @@ function TeamSection({ setActiveTab }) {
     return name
       .toLowerCase()
       .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Eliminar acentos
+      .replace(/[\u0300-\u036f]/g, '')
       .replace(/\s+/g, '-')
       .replace(/[^a-z0-9-]/g, '');
   };
@@ -162,7 +161,7 @@ function TeamSection({ setActiveTab }) {
       React.createElement(
         'p',
         { className: 'text-gray-600 text-sm sm:text-lg mb-4 sm:mb-6' },
-        'Nuestro equipo está en constante crecimiento, y tú puedes ser parte de él. Si compartes nuestra pasión por la ciencia y la educación, te invitamos a unirte. Envía tu candidatura a través de la pestaña ',
+        'Nuestro equipo está en constante crecimiento, y tú puedes be parte de él. Si compartes nuestra pasión por la ciencia y la educación, te invitamos a unirte. Envía tu candidatura a través de la pestaña ',
         React.createElement(
           'span',
           {
@@ -178,4 +177,4 @@ function TeamSection({ setActiveTab }) {
   );
 }
 
-export default TeamSection;
+export default TeamSection;node generate
