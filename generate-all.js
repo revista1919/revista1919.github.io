@@ -629,3 +629,4 @@ Sitemap: ${domain}/sitemap.xml
     console.error('❌ Error:', err);
   }
 })();
+
