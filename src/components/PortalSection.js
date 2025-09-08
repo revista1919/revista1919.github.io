@@ -159,16 +159,24 @@ export default function PortalSection({ user, onLogout }) {
   };
 
   const getTutorialText = (role) => {
-  if (role === 'Revisor 1') {
-    return 'Como Revisor 1, tu rol es revisar aspectos técnicos como gramática, ortografía, citación de fuentes, detección de contenido generado por IA, coherencia lógica y estructura general del artículo. Deja comentarios detallados en el documento de Google Drive para sugerir mejoras. Asegúrate de que el lenguaje sea claro y académico. Debes dejar tu retroalimentación al autor en la casilla correspondiente. Además debes dejar un informe resumido explicando tu observaciones para guiar al editor. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.';
-  } else if (role === 'Revisor 2') {
-    return 'Como Revisor 2, enfócate en el contenido sustantivo: verifica la precisión de las fuentes, la seriedad y originalidad del tema, la relevancia de los argumentos, y la contribución al campo de estudio. Evalúa si el artículo es innovador y bien fundamentado. Deja comentarios en el documento de Google Drive. Debes dejar tu retroalimentación al autor en la casilla correspondiente. Además debes dejar un informe resumido explicando tu observaciones para guiar al editor. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.';
-  } else if (role === 'Editor') {
-    return 'Como Editor, tu responsabilidad es revisar las retroalimentaciones e informes de los revisores, integrarlas con tu propia evaluación, y redactar una retroalimentación final sensible y constructiva para el autor. Corrige directamente el texto si es necesario y decide el estado final del artículo. Usa el documento de Google Drive para ediciones. Debes dejar una retroalimentación al autor sintetizando las que dejaron los revisores. Tu deber es que el mensaje sea acertado y sensible, sin desmotivar al autor. Para esto debes usar la técnica del "sandwich". Si no sabes qué es, entra <a href="https://www.santanderopenacademy.com/es/blog/tecnica-sandwich.html" target="_blank">aquí</a>. Luego deja tu informe con los cambios realizados, deben ser precisos y académicos. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.';
-  }
-  return '';
-};
+    if (role === "Revisor 1") {
+      return 'Como Revisor 1, tu rol es revisar aspectos técnicos como gramática, ortografía, citación de fuentes, detección de contenido generado por IA, coherencia lógica y estructura general del artículo. Deja comentarios detallados en el documento de Google Drive para sugerir mejoras. Asegúrate de que el lenguaje sea claro y académico. Debes dejar tu retroalimentación al autor en la casilla correspondiente. Además debes dejar un informe resumido explicando tu observaciones para guiar al editor. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.===';
+    } else if (role === "Revisor 2") {
+      return 'Como Revisor 2, enfócate en el contenido sustantivo: verifica la precisión de las fuentes, la seriedad y originalidad del tema, la relevancia de los argumentos, y la contribución al campo de estudio. Evalúa si el artículo es innovador y bien fundamentado. Deja comentarios en el documento de Google Drive. Debes dejar tu retroalimentación al autor en la casilla correspondiente. Además debes dejar un informe resumido explicando tu observaciones para guiar al editor. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.===';
+    } else if (role === "Editor") {
+      return `Como Editor, tu responsabilidad es revisar las retroalimentaciones e informes de los revisores, integrarlas con tu propia evaluación, y redactar una retroalimentación final sensible y constructiva para el autor. Corrige directamente el texto si es necesario y decide el estado final del artículo. Usa el documento de Google Drive para ediciones. Debes dejar una retroalimentación al autor sintetizando las que dejaron los revisores. Tu deber es que el mensaje sea acertado y sensible, sin desmotivar al autor. Para esto debes usar la técnica del "sándwich". Si no sabes qué es, entra aquí(https://www.santanderopenacademy.com/es/blog/tecnica-sandwich.html). Luego deja tu informe con los cambios realizados, deben ser precisos y académicos. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.===`;
+    }
+    return "";
+  };
 
+  const Tutorial = ({ role }) => {
+    const tutorialText = getTutorialText(role);
+    return (
+      <div className="text-gray-800 bg-gray-50 p-4 rounded-md border border-gray-200 leading-relaxed">
+        {decodeBody(tutorialText)}
+      </div>
+    );
+  };
 
   const debouncedSetFeedback = useCallback(
     (link) => debounce((value) => {
@@ -577,7 +585,7 @@ export default function PortalSection({ user, onLogout }) {
               href={normalizeUrl(ph.url)}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 hover:underline"
+              className="text-blue-600 hover:underline hover:text-blue-800 transition-colors duration-200"
             >
               {ph.word}
             </a>
@@ -623,7 +631,7 @@ export default function PortalSection({ user, onLogout }) {
               href={normalizeUrl(ph.url)}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 hover:underline"
+              className="text-blue-600 hover:underline hover:text-blue-800 transition-colors duration-200"
             >
               {ph.url}
             </a>
@@ -960,9 +968,7 @@ export default function PortalSection({ user, onLogout }) {
                 >
                   {tutorialVisible[link] ? 'Ocultar Tutorial' : 'Ver Tutorial'}
                 </button>
-                {tutorialVisible[link] && (
-                  <p className="text-gray-600 bg-gray-50 p-4 rounded-md border border-gray-200">{getTutorialText(role)}</p>
-                )}
+                {tutorialVisible[link] && <Tutorial role={role} />}
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">
                     {role === 'Editor' ? 'Retroalimentación Final al Autor' : 'Retroalimentación al Autor'}
