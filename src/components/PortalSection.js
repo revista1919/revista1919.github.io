@@ -12,7 +12,8 @@ Quill.register('modules/imageResize', ImageResize);
 const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyJ9znuf_Pa8Hyh4BnsO1pTTduBsXC7kDD0pORWccMTBlckgt0I--NKG69aR_puTAZ5/exec';
 const SOCIAL_ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSCEOtMwYPu0_kn1hmQi0qT6FZq6HRF09WtuDSqOxBNgMor_FyRRtc6_YVKHQQhWJCy-mIa2zwP6uAU/pub?output=csv';
-const SOCIAL_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyBPAmCgzxKrqY1uePHDGxQ--PlLxOpBSabFGdrdOXscTZNOIO7htucgDf6saRXYw97/exec'; // Reemplaza con la URL de tu script desplegado (ver instrucciones al final)
+const SOCIAL_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyBPAmCgzxKrqY1uePHDGxQ--PlLxOpBSabFGdrdOXscTZNOIO7htucgDf6saRXYw97/exec'; // Reemplaza con la URL de tu script desplegado
+const USER_ROLES_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 
 export default function PortalSection({ user, onLogout }) {
   const [assignments, setAssignments] = useState([]);
@@ -45,6 +46,33 @@ export default function PortalSection({ user, onLogout }) {
   const [newTaskText, setNewTaskText] = useState('');
   const [taskError, setTaskError] = useState('');
   const [taskLoading, setTaskLoading] = useState(true);
+  const [userRoles, setUserRoles] = useState([]);
+
+  const fetchUserRoles = async () => {
+    try {
+      const response = await fetch(USER_ROLES_CSV, { cache: 'no-store' });
+      if (!response.ok) throw new Error('Error al cargar el archivo CSV de roles');
+      const csvText = await response.text();
+      Papa.parse(csvText, {
+        header: true,
+        skipEmptyLines: true,
+        delimiter: ',',
+        transform: (value) => value.trim(),
+        complete: ({ data }) => {
+          const userRow = data.find((row) => row['Nombre'] === user.name);
+          if (userRow && userRow['Rol en la Revista']) {
+            const roles = userRow['Rol en la Revista'].split(';').map(r => r.trim());
+            setUserRoles(roles);
+          } else {
+            setUserRoles(user.role.split(';').map(r => r.trim())); // Fallback to prop role
+          }
+        },
+      });
+    } catch (err) {
+      console.error('Error al cargar roles:', err);
+      setUserRoles(user.role.split(';').map(r => r.trim())); // Fallback
+    }
+  };
 
   const fetchAssignments = async () => {
     try {
@@ -160,11 +188,15 @@ export default function PortalSection({ user, onLogout }) {
   };
 
   useEffect(() => {
+    fetchUserRoles();
     fetchAssignments();
-    if (['Encargado de Redes Sociales', 'Responsable de Desarrollo Web', 'Director General'].includes(user.role)) {
+  }, [user.name]);
+
+  useEffect(() => {
+    if (userRoles.some(role => ['Encargado de Redes Sociales', 'Responsable de Desarrollo Web', 'Director General'].includes(role))) {
       fetchSocialTasks();
     }
-  }, [user.name, user.role]);
+  }, [userRoles]);
 
   const isAuthor = assignments.length > 0 && assignments[0].role === 'Autor';
 
@@ -1439,6 +1471,11 @@ export default function PortalSection({ user, onLogout }) {
     );
   };
 
+  const hasSocialRole = userRoles.includes('Encargado de Redes Sociales');
+  const hasWebRole = userRoles.includes('Responsable de Desarrollo Web');
+  const hasDirectorRole = userRoles.includes('Director General');
+  const hasTaskRole = hasSocialRole || hasWebRole;
+
   if (loading) {
     return <p className="text-center text-gray-600">Cargando asignaciones...</p>;
   }
@@ -1447,7 +1484,7 @@ export default function PortalSection({ user, onLogout }) {
     return (
       <div className="text-center space-y-4 bg-gray-50 p-6 rounded-lg shadow-sm">
         <h3 className="text-xl font-medium text-gray-800">Bienvenido, {user.name}</h3>
-        <p className="text-gray-600">Rol: {user.role}</p>
+        <p className="text-gray-600">Roles: {userRoles.join(', ')}</p>
         <p className="text-red-500">{error}</p>
         <button
           onClick={fetchAssignments}
@@ -1469,7 +1506,7 @@ export default function PortalSection({ user, onLogout }) {
     return (
       <div className="text-center space-y-4 bg-gray-50 p-6 rounded-lg shadow-sm">
         <h3 className="text-xl font-medium text-gray-800">Bienvenido, {user.name}</h3>
-        <p className="text-gray-600">Rol: {user.role}</p>
+        <p className="text-gray-600">Roles: {userRoles.join(', ')}</p>
         <p className="text-gray-600">No tienes asignaciones actualmente.</p>
         <button
           onClick={onLogout}
@@ -1485,7 +1522,7 @@ export default function PortalSection({ user, onLogout }) {
     <div className="space-y-8 max-w-7xl mx-auto px-4 sm:px-0 relative">
       <div className="text-center space-y-2">
         <h3 className="text-xl font-medium text-gray-800">Bienvenido, {user.name}</h3>
-        <p className="text-gray-600">Rol: {user.role}</p>
+        <p className="text-gray-600">Roles: {userRoles.join(', ')}</p>
         {completedAssignments.length > 0 && (
           <button
             onClick={() => setCompletedPanelOpen(true)}
@@ -1517,7 +1554,7 @@ export default function PortalSection({ user, onLogout }) {
           >
             Asignaciones
           </button>
-          {user.role.includes('Editor') && (
+          {userRoles.includes('Editor') && (
             <button
               onClick={() => setActiveTab('news')}
               className={`px-4 py-2 rounded-md ${activeTab === 'news' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}
@@ -1525,7 +1562,7 @@ export default function PortalSection({ user, onLogout }) {
               Subir Noticia
             </button>
           )}
-          {(user.role === 'Encargado de Redes Sociales' || user.role === 'Responsable de Desarrollo Web') && (
+          {hasTaskRole && (
             <button
               onClick={() => setActiveTab('tasks')}
               className={`px-4 py-2 rounded-md ${activeTab === 'tasks' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}
@@ -1533,7 +1570,7 @@ export default function PortalSection({ user, onLogout }) {
               Mis Tareas
             </button>
           )}
-          {user.role === 'Director General' && (
+          {hasDirectorRole && (
             <button
               onClick={() => setActiveTab('manageTasks')}
               className={`px-4 py-2 rounded-md ${activeTab === 'manageTasks' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}
@@ -1569,7 +1606,7 @@ export default function PortalSection({ user, onLogout }) {
           )}
         </div>
       )}
-      {activeTab === 'news' && !isAuthor && user.role.includes('Editor') && <NewsUploadSection />}
+      {activeTab === 'news' && !isAuthor && userRoles.includes('Editor') && <NewsUploadSection />}
       {activeTab === 'tasks' && (
         <div>
           {taskLoading ? (
@@ -1583,15 +1620,16 @@ export default function PortalSection({ user, onLogout }) {
                 <div className="space-y-6">
                   {(() => {
                     let pending = [];
-                    if (user.role === 'Encargado de Redes Sociales') {
-                      pending = tasks.filter((t) => t.socialTask && !t.socialCompleted);
-                    } else if (user.role === 'Responsable de Desarrollo Web') {
-                      pending = tasks.filter((t) => t.webTask && !t.webCompleted);
+                    if (hasSocialRole) {
+                      pending = [...pending, ...tasks.filter((t) => t.socialTask && !t.socialCompleted)];
+                    }
+                    if (hasWebRole) {
+                      pending = [...pending, ...tasks.filter((t) => t.webTask && !t.webCompleted)];
                     }
                     return pending.length === 0 ? (
                       <p className="text-center text-gray-600">No tienes tareas pendientes.</p>
                     ) : (
-                      pending.map((t) => renderTask(t, user.role === 'Encargado de Redes Sociales' ? 'social' : 'web', true))
+                      pending.map((t) => renderTask(t, t.socialTask ? 'social' : 'web', true))
                     );
                   })()}
                 </div>
@@ -1601,15 +1639,16 @@ export default function PortalSection({ user, onLogout }) {
                 <div className="space-y-6">
                   {(() => {
                     let completed = [];
-                    if (user.role === 'Encargado de Redes Sociales') {
-                      completed = tasks.filter((t) => t.socialTask && t.socialCompleted);
-                    } else if (user.role === 'Responsable de Desarrollo Web') {
-                      completed = tasks.filter((t) => t.webTask && t.webCompleted);
+                    if (hasSocialRole) {
+                      completed = [...completed, ...tasks.filter((t) => t.socialTask && t.socialCompleted)];
+                    }
+                    if (hasWebRole) {
+                      completed = [...completed, ...tasks.filter((t) => t.webTask && t.webCompleted)];
                     }
                     return completed.length === 0 ? (
                       <p className="text-center text-gray-600">No tienes tareas completadas.</p>
                     ) : (
-                      completed.map((t) => renderTask(t, user.role === 'Encargado de Redes Sociales' ? 'social' : 'web', false))
+                      completed.map((t) => renderTask(t, t.socialTask ? 'social' : 'web', false))
                     );
                   })()}
                 </div>
