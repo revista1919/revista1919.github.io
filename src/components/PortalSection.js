@@ -71,7 +71,7 @@ const criteria = {
       key: 'rigor',
       name: 'Rigor en el uso de fuentes',
       levels: {
-        0: { level: '0 = Insuficiente ❌', desc: 'Sin fuentes o poco confiables.' },
+        0: { label: '0 = Insuficiente ❌', desc: 'Sin fuentes o poco confiables.' },
         1: { label: '1 = Adecuado ⚖️', desc: 'Pocas fuentes, algunas dudosas.' },
         2: { label: '2 = Excelente ✅', desc: 'Fuentes variadas, confiables y bien usadas.' }
       }
