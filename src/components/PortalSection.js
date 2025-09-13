@@ -1,42 +1,157 @@
- import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-   import Papa from 'papaparse';
-   import NewsUploadSection from './NewsUploadSection';
-   import ReactQuill, { Quill } from 'react-quill';
-   import 'react-quill/dist/quill.snow.css';
-   import ImageResize from 'quill-image-resize-module-react';
-   import { debounce } from 'lodash';
-   import { useTranslation } from 'react-i18next';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import Papa from 'papaparse';
+import NewsUploadSection from './NewsUploadSection';
+import ReactQuill, { Quill } from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
+import ImageResize from 'quill-image-resize-module-react';
+import { debounce } from 'lodash';
+import { useTranslation } from 'react-i18next';
 
-   Quill.register('modules/imageResize', ImageResize);
+Quill.register('modules/imageResize', ImageResize);
 
-   const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=0&single=true&output=csv';
-   const RUBRIC_CSV_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub';
-   const RUBRIC_SHEET1_CSV = `${RUBRIC_CSV_BASE}?gid=0&single=true&output=csv`; // Revisor 1
-   const RUBRIC_SHEET2_CSV = `${RUBRIC_CSV_BASE}?gid=1438370398&single=true&output=csv`; // Revisor 2
-   const RUBRIC_SHEET3_CSV = `${RUBRIC_CSV_BASE}?gid=1972050001&single=true&output=csv`; // Editor
-   const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwfqkILujerrCJ1tR15WbIl7CgRYFNaQJs9ubLH9SqsEQbo0OcKrtEtFKbrUKwzF6cY/exec'; // Reemplaza con la URL del GAS que crearás
+const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyJ9znuf_Pa8Hyh4BnsO1pTTduBsXC7kDD0pORWccMTBlckgt0I--NKG69aR_puTAZ5/exec';
+// Reemplaza con la URL de tu nuevo Google Apps Script para rúbricas
+const RUBRIC_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbybtAyN5s_fzN-KIjm_rfMQftZncsxbRZWfwLvpnYcalNYINZPs_Sz2wDibYWsld7CN/exec'; // Crea un nuevo script como se describe abajo
 
-   const CRITERIA = {
-     'Revisor 1': [
-       { id: 'Gramática y ortografía', label: 'Gramática y ortografía', desc: 'Muchos errores graves, difícil de leer. / Algunos errores, comprensible. / Muy pocos errores, texto limpio.' },
-       { id: 'Claridad y coherencia', label: 'Claridad y coherencia', desc: 'Confuso, incoherente. / A veces confuso pero entendible. / Claro, preciso y coherente.' },
-       { id: 'Estructura y organización', label: 'Estructura y organización', desc: 'Desordenado, sin partes claras. / Con partes presentes pero débiles. / Introducción, desarrollo y conclusión bien diferenciados.' },
-       { id: 'Citación y referencias', label: 'Citación y referencias', desc: 'Sin fuentes o mal citadas. / Fuentes presentes pero con errores. / Fuentes confiables y bien citadas.' },
-     ],
-     'Revisor 2': [
-       { id: 'Relevancia del tema', label: 'Relevancia del tema', desc: 'Tema irrelevante o fuera de contexto. / Tema válido pero superficial. / Tema pertinente y atractivo.' },
-       { id: 'Rigor en el uso de fuentes', label: 'Rigor en el uso de fuentes', desc: 'Sin fuentes o poco confiables. / Pocas fuentes, algunas dudosas. / Fuentes variadas, confiables y bien usadas.' },
-       { id: 'Originalidad y creatividad', label: 'Originalidad y creatividad', desc: 'Repite información sin análisis. / Combina ideas sin mucha elaboración. / Aporta ideas propias y reflexiones originales.' },
-       { id: 'Calidad de los argumentos', label: 'Calidad de los argumentos', desc: 'Confusos, sin pruebas o incoherentes. / Claros pero débiles. / Sólidos, bien fundamentados y convincentes.' },
-     ],
-     'Editor': [
-       { id: 'Grado de modificaciones', label: 'Grado de modificaciones', desc: 'Requirió demasiadas correcciones, casi reescribir. / Necesitó varias correcciones, pero manejables. / Solo ajustes menores.' },
-       { id: 'Calidad final del texto', label: 'Calidad final del texto', desc: 'Aún con cambios, sigue débil o poco claro. / Texto aceptable, aunque mejorable. / Texto sólido, claro y publicable.' },
-       { id: 'Aporte global del ensayo', label: 'Aporte global del ensayo', desc: 'Poca relevancia o repetitivo. / Interesante, aunque no destaca. / Muy valioso, innovador o inspirador.' },
-       { id: 'Potencial motivador', label: 'Potencial motivador (opcional)', desc: 'No motiva ni aporta al espíritu de la revista. / Puede motivar a algunos estudiantes. / Inspira, invita a reflexionar y dialogar.' },
-       { id: 'Decisión final', label: 'Decisión final', desc: 'Rechazar. / Aceptar con cambios mayores. / Aceptar (con o sin cambios menores).', isDecision: true },
-     ],
-   };
+const RUBRIC_CSV1 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=0&single=true&output=csv';
+const RUBRIC_CSV2 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=1438370398&single=true&output=csv';
+const RUBRIC_CSV3 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=1972050001&single=true&output=csv';
+
+const criteria = {
+  'Revisor 1': [
+    {
+      key: 'gramatica',
+      name: 'Gramática y ortografía',
+      levels: {
+        0: { label: '0 = Insuficiente ❌', desc: 'Muchos errores graves, difícil de leer.' },
+        1: { label: '1 = Adecuado ⚖️', desc: 'Algunos errores, comprensible.' },
+        2: { label: '2 = Excelente ✅', desc: 'Muy pocos errores, texto limpio.' }
+      }
+    },
+    {
+      key: 'claridad',
+      name: 'Claridad y coherencia',
+      levels: {
+        0: { label: '0 = Insuficiente ❌', desc: 'Confuso, incoherente.' },
+        1: { label: '1 = Adecuado ⚖️', desc: 'A veces confuso pero entendible.' },
+        2: { label: '2 = Excelente ✅', desc: 'Claro, preciso y coherente.' }
+      }
+    },
+    {
+      key: 'estructura',
+      name: 'Estructura y organización',
+      levels: {
+        0: { label: '0 = Insuficiente ❌', desc: 'Desordenado, sin partes claras.' },
+        1: { label: '1 = Adecuado ⚖️', desc: 'Con partes presentes pero débiles.' },
+        2: { label: '2 = Excelente ✅', desc: 'Introducción, desarrollo y conclusión bien diferenciados.' }
+      }
+    },
+    {
+      key: 'citacion',
+      name: 'Citación y referencias',
+      levels: {
+        0: { label: '0 = Insuficiente ❌', desc: 'Sin fuentes o mal citadas.' },
+        1: { label: '1 = Adecuado ⚖️', desc: 'Fuentes presentes pero con errores.' },
+        2: { label: '2 = Excelente ✅', desc: 'Fuentes confiables y bien citadas.' }
+      }
+    }
+  ],
+  'Revisor 2': [
+    {
+      key: 'relevancia',
+      name: 'Relevancia del tema',
+      levels: {
+        0: { label: '0 = Insuficiente ❌', desc: 'Tema irrelevante o fuera de contexto.' },
+        1: { label: '1 = Adecuado ⚖️', desc: 'Tema válido pero superficial.' },
+        2: { label: '2 = Excelente ✅', desc: 'Tema pertinente y atractivo.' }
+      }
+    },
+    {
+      key: 'rigor',
+      name: 'Rigor en el uso de fuentes',
+      levels: {
+        0: { level: '0 = Insuficiente ❌', desc: 'Sin fuentes o poco confiables.' },
+        1: { label: '1 = Adecuado ⚖️', desc: 'Pocas fuentes, algunas dudosas.' },
+        2: { label: '2 = Excelente ✅', desc: 'Fuentes variadas, confiables y bien usadas.' }
+      }
+    },
+    {
+      key: 'originalidad',
+      name: 'Originalidad y creatividad',
+      levels: {
+        0: { label: '0 = Insuficiente ❌', desc: 'Repite información sin análisis.' },
+        1: { label: '1 = Adecuado ⚖️', desc: 'Combina ideas sin mucha elaboración.' },
+        2: { label: '2 = Excelente ✅', desc: 'Aporta ideas propias y reflexiones originales.' }
+      }
+    },
+    {
+      key: 'argumentos',
+      name: 'Calidad de los argumentos',
+      levels: {
+        0: { label: '0 = Insuficiente ❌', desc: 'Confusos, sin pruebas o incoherentes.' },
+        1: { label: '1 = Adecuado ⚖️', desc: 'Claros pero débiles.' },
+        2: { label: '2 = Excelente ✅', desc: 'Sólidos, bien fundamentados y convincentes.' }
+      }
+    }
+  ],
+  'Editor': [
+    {
+      key: 'modificaciones',
+      name: 'Grado de modificaciones',
+      levels: {
+        0: { label: '0 = Insuficiente ❌', desc: 'Requirió demasiadas correcciones, casi reescribir.' },
+        1: { label: '1 = Adecuado ⚖️', desc: 'Necesitó varias correcciones, pero manejables.' },
+        2: { label: '2 = Excelente ✅', desc: 'Solo ajustes menores.' }
+      }
+    },
+    {
+      key: 'calidad',
+      name: 'Calidad final del texto',
+      levels: {
+        0: { label: '0 = Insuficiente ❌', desc: 'Aún con cambios, sigue débil o poco claro.' },
+        1: { label: '1 = Adecuado ⚖️', desc: 'Texto aceptable, aunque mejorable.' },
+        2: { label: '2 = Excelente ✅', desc: 'Texto sólido, claro y publicable.' }
+      }
+    },
+    {
+      key: 'aporte',
+      name: 'Aporte global del ensayo',
+      levels: {
+        0: { label: '0 = Insuficiente ❌', desc: 'Poca relevancia o repetitivo.' },
+        1: { label: '1 = Adecuado ⚖️', desc: 'Interesante, aunque no destaca.' },
+        2: { label: '2 = Excelente ✅', desc: 'Muy valioso, innovador o inspirador.' }
+      }
+    },
+    {
+      key: 'potencial',
+      name: 'Potencial motivador',
+      levels: {
+        0: { label: '0 = Insuficiente ❌', desc: 'No motiva ni aporta al espíritu de la revista.' },
+        1: { label: '1 = Adecuado ⚖️', desc: 'Puede motivar a algunos estudiantes.' },
+        2: { label: '2 = Excelente ✅', desc: 'Inspira, invita a reflexionar y dialogar.' }
+      }
+    },
+    {
+      key: 'decision',
+      name: 'Decisión final',
+      levels: {
+        0: { label: '0 = Rechazar', desc: 'Rechazar.' },
+        1: { label: '1 = Aceptar con cambios mayores', desc: 'Aceptar con cambios mayores.' },
+        2: { label: '2 = Aceptar (con o sin cambios menores)', desc: 'Aceptar (con o sin cambios menores).' }
+      }
+    }
+  ]
+};
+
+const getDecisionText = (percent) => {
+  if (percent >= 85) return 'Aceptar sin cambios.';
+  if (percent >= 70) return 'Aceptar con cambios menores.';
+  if (percent >= 50) return 'Revisión mayor antes de publicar.';
+  return 'Rechazar.';
+};
+
+const getTotal = (scores, crits) => crits.reduce((sum, c) => sum + (scores[c.key] || 0), 0);
 
 export default function PortalSection({ user, onLogout }) {
   const [assignments, setAssignments] = useState([]);
@@ -44,6 +159,7 @@ export default function PortalSection({ user, onLogout }) {
   const [feedback, setFeedback] = useState({});
   const [report, setReport] = useState({});
   const [vote, setVote] = useState({});
+  const [rubricScores, setRubricScores] = useState({});
   const [tutorialVisible, setTutorialVisible] = useState({});
   const [submitStatus, setSubmitStatus] = useState({});
   const [error, setError] = useState('');
@@ -54,146 +170,170 @@ export default function PortalSection({ user, onLogout }) {
   const [editingRange, setEditingRange] = useState({});
   const [completedPanelOpen, setCompletedPanelOpen] = useState(false);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState(null);
-  const [rubricScores, setRubricScores] = useState({ rev1: {}, rev2: {}, editor: {} });
-  const [localRubric, setLocalRubric] = useState({});
   const feedbackQuillRefs = useRef({});
   const reportQuillRefs = useRef({});
 
-  const roleMap = { 'Revisor 1': 'rev1', 'Revisor 2': 'rev2', 'Editor': 'editor' };
-
-  const getMaxScore = (role) => role === 'Editor' ? 10 : 8;
-
-  const fetchAssignments = async () => {
+  const fetchRubrics = async () => {
     try {
-      const response = await fetch(ASSIGNMENTS_CSV, { cache: 'no-store' });
-      if (!response.ok) throw new Error('Error al cargar el archivo CSV');
-      const csvText = await response.text();
-      return new Promise((resolve, reject) => {
-        Papa.parse(csvText, {
-          header: true,
-          skipEmptyLines: true,
-          delimiter: ',',
-          transform: (value) => value.trim(),
-          complete: ({ data }) => {
-            console.log('Parsed assignments data:', data);
-            const isAuthor = data.some((row) => row['Autor'] === user.name);
-            let parsedAssignments = [];
-            if (isAuthor) {
-              parsedAssignments = data
-                .filter((row) => row['Autor'] === user.name)
-                .map((row) => {
-                  const num = 3; // Editor feedback
-                  return {
-                    id: row['Nombre Artículo'],
-                    'Nombre Artículo': row['Nombre Artículo'] || 'Sin título',
-                    Estado: row['Estado'],
-                    role: 'Autor',
-                    feedbackEditor: row['Feedback 3'] || 'Sin retroalimentación del editor aún.',
-                    isCompleted: !!row['Feedback 3'],
-                  };
-                });
-            } else {
-              parsedAssignments = data
-                .filter((row) => {
-                  if (row['Revisor 1'] === user.name) return true;
-                  if (row['Revisor 2'] === user.name) return true;
-                  if (row['Editor'] === user.name) return true;
-                  return false;
-                })
-                .map((row) => {
-                  const role = row['Revisor 1'] === user.name ? 'Revisor 1' : row['Revisor 2'] === user.name ? 'Revisor 2' : 'Editor';
-                  const num = role === 'Revisor 1' ? 1 : role === 'Revisor 2' ? 2 : 3;
-                  return {
-                    id: row['Nombre Artículo'],
-                    'Nombre Artículo': row['Nombre Artículo'] || 'Sin título',
-                    'Link Artículo': row['Link Artículo'],
-                    Estado: row['Estado'],
-                    role,
-                    feedback: row[`Feedback ${num}`] || '',
-                    report: row[`Informe ${num}`] || '',
-                    vote: row[`Voto ${num}`] || '',
-                    feedback1: row['Feedback 1'] || 'Sin retroalimentación de Revisor 1.',
-                    feedback2: row['Feedback 2'] || 'Sin retroalimentación de Revisor 2.',
-                    informe1: row['Informe 1'] || 'Sin informe de Revisor 1.',
-                    informe2: row['Informe 2'] || 'Sin informe de Revisor 2.',
-                    isCompleted: !!row[`Feedback ${num}`] && !!row[`Informe ${num}`] && !!row[`Voto ${num}`],
-                  };
-                });
-            }
-            setAssignments(parsedAssignments);
-            parsedAssignments.forEach((assignment) => {
-              if (!isAuthor) {
-                setVote((prev) => ({ ...prev, [assignment['Link Artículo']]: assignment.vote }));
-                setFeedback((prev) => ({ ...prev, [assignment['Link Artículo']]: assignment.feedback }));
-                setReport((prev) => ({ ...prev, [assignment['Link Artículo']]: assignment.report }));
-              }
-            });
-            resolve();
-          },
-          error: (err) => {
-            console.error('Error al parsear CSV:', err);
-            reject(new Error('Error al cargar asignaciones'));
-          },
-        });
+      const [csv1Text, csv2Text, csv3Text] = await Promise.all([
+        fetch(RUBRIC_CSV1, { cache: 'no-store' }).then(r => r.text()),
+        fetch(RUBRIC_CSV2, { cache: 'no-store' }).then(r => r.text()),
+        fetch(RUBRIC_CSV3, { cache: 'no-store' }).then(r => r.text())
+      ]);
+
+      const parseData = (csvText) => Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
+
+      const data1 = parseData(csv1Text);
+      const scoresMap1 = {};
+      data1.forEach(row => {
+        const name = row['Nombre del Artículo']?.trim();
+        if (name) {
+          scoresMap1[name] = {
+            gramatica: parseInt(row['Gramática y ortografía']) || 0,
+            claridad: parseInt(row['Claridad y coherencia']) || 0,
+            estructura: parseInt(row['Estructura y organización']) || 0,
+            citacion: parseInt(row['Citación y referencias']) || 0
+          };
+        }
       });
+
+      const data2 = parseData(csv2Text);
+      const scoresMap2 = {};
+      data2.forEach(row => {
+        const name = row['Nombre del Artículo']?.trim();
+        if (name) {
+          scoresMap2[name] = {
+            relevancia: parseInt(row['Relevancia del tema']) || 0,
+            rigor: parseInt(row['Rigor en el uso de fuentes']) || 0,
+            originalidad: parseInt(row['Originalidad y creatividad']) || 0,
+            argumentos: parseInt(row['Calidad de los argumentos']) || 0
+          };
+        }
+      });
+
+      const data3 = parseData(csv3Text);
+      const scoresMap3 = {};
+      data3.forEach(row => {
+        const name = row['Nombre del Artículo']?.trim();
+        if (name) {
+          scoresMap3[name] = {
+            modificaciones: parseInt(row['Grado de modificaciones']) || 0,
+            calidad: parseInt(row['Calidad final del texto']) || 0,
+            aporte: parseInt(row['Aporte global del ensayo']) || 0,
+            potencial: parseInt(row['Potencial motivador']) || 0,
+            decision: parseInt(row['Decisión final']) || 0 // Asume columna agregada en la hoja
+          };
+        }
+      });
+
+      return { scoresMap1, scoresMap2, scoresMap3 };
     } catch (err) {
-      console.error('Error al cargar asignaciones:', err);
-      throw new Error('Error al conectar con el servidor');
+      console.error('Error fetching rubrics:', err);
+      return { scoresMap1: {}, scoresMap2: {}, scoresMap3: {} };
     }
   };
 
-  const fetchRubrics = async () => {
+  const fetchAssignments = async () => {
     try {
-      const [sheet1Res, sheet2Res, sheet3Res] = await Promise.all([
-        fetch(RUBRIC_SHEET1_CSV, { cache: 'no-store' }),
-        fetch(RUBRIC_SHEET2_CSV, { cache: 'no-store' }),
-        fetch(RUBRIC_SHEET3_CSV, { cache: 'no-store' }),
+      setLoading(true);
+      const [assignmentsResponse, rubrics] = await Promise.all([
+        fetch(ASSIGNMENTS_CSV, { cache: 'no-store' }),
+        fetchRubrics()
       ]);
-      if (!sheet1Res.ok || !sheet2Res.ok || !sheet3Res.ok) throw new Error('Error al cargar hojas de rúbrica');
-      const [sheet1Text, sheet2Text, sheet3Text] = await Promise.all([
-        sheet1Res.text(),
-        sheet2Res.text(),
-        sheet3Res.text(),
-      ]);
-      const parseRubricSheet = (text, criteria) => {
-        const data = Papa.parse(text, { header: true, skipEmptyLines: true }).data;
-        const scores = {};
-        data.forEach((row) => {
-          const articleName = row['Nombre del Artículo']?.trim();
-          if (articleName) {
-            scores[articleName] = { total: 0 };
-            criteria.forEach((c) => {
-              const score = parseInt(row[c.id]) || 0;
-              scores[articleName][c.id] = score;
-              scores[articleName].total += score;
-            });
+      if (!assignmentsResponse.ok) throw new Error('Error al cargar el archivo CSV');
+      const csvText = await assignmentsResponse.text();
+      Papa.parse(csvText, {
+        header: true,
+        skipEmptyLines: true,
+        delimiter: ',',
+        transform: (value) => value.trim(),
+        complete: ({ data }) => {
+          console.log('Parsed assignments data:', data);
+          const isAuthor = data.some((row) => row['Autor'] === user.name);
+          let parsedAssignments = [];
+          if (isAuthor) {
+            parsedAssignments = data
+              .filter((row) => row['Autor'] === user.name)
+              .map((row) => {
+                const num = 3; // Editor feedback
+                return {
+                  id: row['Nombre Artículo'],
+                  'Nombre Artículo': row['Nombre Artículo'] || 'Sin título',
+                  Estado: row['Estado'],
+                  role: 'Autor',
+                  feedbackEditor: row['Feedback 3'] || 'Sin retroalimentación del editor aún.',
+                  isCompleted: !!row['Feedback 3'],
+                };
+              });
+          } else {
+            parsedAssignments = data
+              .filter((row) => {
+                if (row['Revisor 1'] === user.name) return true;
+                if (row['Revisor 2'] === user.name) return true;
+                if (row['Editor'] === user.name) return true;
+                return false;
+              })
+              .map((row) => {
+                const role = row['Revisor 1'] === user.name ? 'Revisor 1' : row['Revisor 2'] === user.name ? 'Revisor 2' : 'Editor';
+                const num = role === 'Revisor 1' ? 1 : role === 'Revisor 2' ? 2 : 3;
+                const assignment = {
+                  id: row['Nombre Artículo'],
+                  'Nombre Artículo': row['Nombre Artículo'] || 'Sin título',
+                  'Link Artículo': row['Link Artículo'],
+                  Estado: row['Estado'],
+                  role,
+                  feedback: row[`Feedback ${num}`] || '',
+                  report: row[`Informe ${num}`] || '',
+                  vote: row[`Voto ${num}`] || '',
+                  feedback1: row['Feedback 1'] || 'Sin retroalimentación de Revisor 1.',
+                  feedback2: row['Feedback 2'] || 'Sin retroalimentación de Revisor 2.',
+                  informe1: row['Informe 1'] || 'Sin informe de Revisor 1.',
+                  informe2: row['Informe 2'] || 'Sin informe de Revisor 2.',
+                  isCompleted: !!row[`Feedback ${num}`] && !!row[`Informe ${num}`] && !!row[`Voto ${num}`],
+                };
+
+                // Agregar scores de rúbricas
+                const name = assignment.id;
+                if (role === 'Revisor 1') {
+                  assignment.scores = rubrics.scoresMap1[name] || { gramatica: 0, claridad: 0, estructura: 0, citacion: 0 };
+                } else if (role === 'Revisor 2') {
+                  assignment.scores = rubrics.scoresMap2[name] || { relevancia: 0, rigor: 0, originalidad: 0, argumentos: 0 };
+                } else { // Editor
+                  assignment.rev1Scores = rubrics.scoresMap1[name] || { gramatica: 0, claridad: 0, estructura: 0, citacion: 0 };
+                  assignment.rev2Scores = rubrics.scoresMap2[name] || { relevancia: 0, rigor: 0, originalidad: 0, argumentos: 0 };
+                  assignment.scores = rubrics.scoresMap3[name] || { modificaciones: 0, calidad: 0, aporte: 0, potencial: 0, decision: 0 };
+                }
+
+                return assignment;
+              });
           }
-        });
-        return scores;
-      };
-      const rev1Scores = parseRubricSheet(sheet1Text, CRITERIA['Revisor 1']);
-      const rev2Scores = parseRubricSheet(sheet2Text, CRITERIA['Revisor 2']);
-      const editorScores = parseRubricSheet(sheet3Text, CRITERIA['Editor']);
-      setRubricScores({ rev1: rev1Scores, rev2: rev2Scores, editor: editorScores });
+          setAssignments(parsedAssignments);
+          parsedAssignments.forEach((assignment) => {
+            if (!isAuthor) {
+              const link = assignment['Link Artículo'];
+              setVote((prev) => ({ ...prev, [link]: assignment.vote }));
+              setFeedback((prev) => ({ ...prev, [link]: assignment.feedback }));
+              setReport((prev) => ({ ...prev, [link]: assignment.report }));
+              setRubricScores((prev) => ({ ...prev, [link]: assignment.scores }));
+            }
+          });
+          setLoading(false);
+        },
+        error: (err) => {
+          console.error('Error al parsear CSV:', err);
+          setError('Error al cargar asignaciones');
+          setLoading(false);
+        },
+      });
     } catch (err) {
-      console.error('Error al cargar rúbricas:', err);
-      // No throw, continue without rubric scores
+      console.error('Error al cargar asignaciones:', err);
+      setError('Error al conectar con el servidor');
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        await fetchAssignments();
-        await fetchRubrics();
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadData();
+    fetchAssignments();
   }, [user.name]);
 
   const isAuthor = assignments.length > 0 && assignments[0].role === 'Autor';
@@ -206,50 +346,33 @@ export default function PortalSection({ user, onLogout }) {
     setVote((prev) => ({ ...prev, [link]: value }));
   };
 
-  const handleRubricChange = useCallback((link, criterionId, score) => {
-    setLocalRubric((prev) => {
-      const current = prev[link] || {};
-      const newScores = { ...current, [criterionId]: score };
-      const criteria = CRITERIA[assignments.find(a => a['Link Artículo'] === link)?.role || 'Revisor 1'];
-      const total = criteria.reduce((sum, c) => sum + (newScores[c.id] || 0), 0);
-      return { ...prev, [link]: { ...newScores, total } };
-    });
-  }, [assignments]);
-
-  const getRubricScoresForAssignment = (assignment) => {
-    const roleKey = roleMap[assignment.role];
-    return rubricScores[roleKey]?.[assignment.id] || {};
-  };
-
-  const getRevScoresForEditor = (articleName) => ({
-    rev1: rubricScores.rev1[articleName] || { total: 0 },
-    rev2: rubricScores.rev2[articleName] || { total: 0 },
-  });
-
-  const getDecisionRecommendation = (rev1Total, rev2Total) => {
-    const avg = ((rev1Total + rev2Total) / 16) * 100;
-    if (avg >= 85) return 'Aceptar sin cambios';
-    if (avg >= 70) return 'Aceptar con cambios menores';
-    if (avg >= 50) return 'Revisión mayor antes de publicar';
-    return 'Rechazar';
+  const handleRubricChange = (link, key, value) => {
+    setRubricScores((prev) => ({
+      ...prev,
+      [link]: { ...prev[link], [key]: value }
+    }));
   };
 
   const handleSubmit = async (link, role, feedbackText, reportText, voteValue) => {
-    const articleName = assignments.find(a => a['Link Artículo'] === link)?.id;
-    const rubricData = localRubric[link] || getRubricScoresForAssignment(assignments.find(a => a['Link Artículo'] === link));
     const data = {
       link,
       role,
       vote: voteValue || '',
       feedback: encodeBody(feedbackText || ''),
       report: encodeBody(reportText || ''),
-      articleName,
-      rubric: JSON.stringify(rubricData),
+    };
+
+    const rubricData = {
+      articleName: assignments.find(a => a['Link Artículo'] === link)['Nombre Artículo'],
+      role,
+      rubric: rubricScores[link] || {}
     };
 
     console.log('Sending assignment data:', data);
+    console.log('Sending rubric data:', rubricData);
 
     try {
+      // Enviar feedback/report/vote al script original
       await fetch(SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
@@ -258,12 +381,18 @@ export default function PortalSection({ user, onLogout }) {
         },
         body: JSON.stringify(data),
       });
-      console.log('Assignment request sent (no-cors, assuming success)');
-      setSubmitStatus((prev) => ({ ...prev, [link]: 'Enviado exitosamente (CORS workaround applied)' }));
-      // Clear local rubric after submit
-      setLocalRubric((prev) => { const newPrev = { ...prev }; delete newPrev[link]; return newPrev; });
+      // Enviar rúbrica al nuevo script
+      await fetch(RUBRIC_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(rubricData),
+      });
+      console.log('Data sent successfully');
+      setSubmitStatus((prev) => ({ ...prev, [link]: 'Enviado exitosamente' }));
       await fetchAssignments();
-      await fetchRubrics();
     } catch (err) {
       console.error('Error al enviar datos:', err);
       setSubmitStatus((prev) => ({ ...prev, [link]: 'Error al enviar: ' + err.message }));
@@ -276,11 +405,11 @@ export default function PortalSection({ user, onLogout }) {
 
   const getTutorialText = (role) => {
     if (role === "Revisor 1") {
-      return 'Como Revisor 1, tu rol es revisar aspectos técnicos como gramática, ortografía, citación de fuentes, detección de contenido generado por IA, coherencia lógica y estructura general del artículo. Deja comentarios detallados en el documento de Google Drive para sugerir mejoras. Asegúrate de que el lenguaje sea claro y académico. Debes dejar tu retroalimentación al autor en la casilla correspondiente. Además debes dejar un informe resumido explicando tu observaciones para guiar al editor. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas. Además, completa la rúbrica de evaluación para Forma, estilo y técnica (máx. 8 pts).===';
+      return 'Como Revisor 1, tu rol es revisar aspectos técnicos como gramática, ortografía, citación de fuentes, detección de contenido generado por IA, coherencia lógica y estructura general del artículo. Deja comentarios detallados en el documento de Google Drive para sugerir mejoras. Asegúrate de que el lenguaje sea claro y académico. Debes dejar tu retroalimentación al autor en la casilla correspondiente. Además debes dejar un informe resumido explicando tu observaciones para guiar al editor. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.===';
     } else if (role === "Revisor 2") {
-      return 'Como Revisor 2, enfócate en el contenido sustantivo: verifica la precisión de las fuentes, la seriedad y originalidad del tema, la relevancia de los argumentos, y la contribución al campo de estudio. Evalúa si el artículo es innovador y bien fundamentado. Deja comentarios en el documento de Google Drive. Debes dejar tu retroalimentación al autor en la casilla correspondiente. Además debes dejar un informe resumido explicando tu observaciones para guiar al editor. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas. Además, completa la rúbrica de evaluación para Contenido y originalidad (máx. 8 pts).===';
+      return 'Como Revisor 2, enfócate en el contenido sustantivo: verifica la precisión de las fuentes, la seriedad y originalidad del tema, la relevancia de los argumentos, y la contribución al campo de estudio. Evalúa si el artículo es innovador y bien fundamentado. Deja comentarios en el documento de Google Drive. Debes dejar tu retroalimentación al autor en la casilla correspondiente. Además debes dejar un informe resumido explicando tu observaciones para guiar al editor. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.===';
     } else if (role === "Editor") {
-      return `Como Editor, tu responsabilidad es revisar las retroalimentaciones e informes de los revisores, integrarlas con tu propia evaluación, y redactar una retroalimentación final sensible y constructiva para el autor. Corrige directamente el texto si es necesario y decide el estado final del artículo. Usa el documento de Google Drive para ediciones. Debes dejar una retroalimentación al autor sintetizando las que dejaron los revisores. Tu deber es que el mensaje sea acertado y sensible, sin desmotivar al autor. Para esto debes usar la técnica del "sándwich". Si no sabes qué es, entra aquí[](https://www.santanderopenacademy.com/es/blog/tecnica-sandwich.html). Luego deja tu informe con los cambios realizados, deben ser precisos y académicos. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas. Además, completa la rúbrica de Síntesis y decisión final (máx. 10 pts), considerando los puntajes de los revisores.===`;
+      return `Como Editor, tu responsabilidad es revisar las retroalimentaciones e informes de los revisores, integrarlas con tu propia evaluación, y redactar una retroalimentación final sensible y constructiva para el autor. Corrige directamente el texto si es necesario y decide el estado final del artículo. Usa el documento de Google Drive para ediciones. Debes dejar una retroalimentación al autor sintetizando las que dejaron los revisores. Tu deber es que el mensaje sea acertado y sensible, sin desmotivar al autor. Para esto debes usar la técnica del "sándwich". Si no sabes qué es, entra aqu[](https://www.santanderopenacademy.com/es/blog/tecnica-sandwich.html). Luego deja tu informe con los cambios realizados, deben ser precisos y académicos. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.===`;
     }
     return "";
   };
@@ -294,107 +423,43 @@ export default function PortalSection({ user, onLogout }) {
     );
   };
 
-  const RubricForm = ({ role, link, scores, onChange }) => {
-    const criteria = CRITERIA[role];
-    const total = scores.total || criteria.reduce((sum, c) => sum + (scores[c.id] || 0), 0);
-    const max = getMaxScore(role);
-
-    const getScoreClass = (current, target) => {
-      if (current === target) {
-        return target === 0 ? 'bg-red-500 text-white' : target === 1 ? 'bg-yellow-500 text-white' : 'bg-green-500 text-white';
-      }
-      return 'bg-gray-100 text-gray-700 hover:bg-gray-200';
-    };
+  const RubricViewer = ({ roleKey, scores, onChange, readOnly = false }) => {
+    const crits = criteria[roleKey];
+    if (!crits) return null;
+    const total = getTotal(scores, crits);
+    const max = crits.length * 2;
+    const roleDisplay = roleKey === 'Revisor 1' ? 'Revisor 1 (Forma, estilo y técnica)' : roleKey === 'Revisor 2' ? 'Revisor 2 (Contenido y originalidad)' : 'Editor (Síntesis y decisión final)';
 
     return (
-      <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700">Rúbrica de Evaluación</label>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse border border-gray-300">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="border border-gray-300 p-2 text-left">Criterio</th>
-                <th className="border border-gray-300 p-2 text-center">0 ❌</th>
-                <th className="border border-gray-300 p-2 text-center">1 ⚖️</th>
-                <th className="border border-gray-300 p-2 text-center">2 ✅</th>
-              </tr>
-            </thead>
-            <tbody>
-              {criteria.map((c) => (
-                <tr key={c.id} className="hover:bg-gray-50">
-                  <td className="border border-gray-300 p-2">
-                    <div className="font-medium text-sm">{c.label}</div>
-                    <div className="mt-1 space-y-1 text-xs">
-                      {c.desc.split('/').map((level, i) => (
-                        <div
-                          key={i}
-                          className={`p-1 rounded ${
-                            i === 0 ? 'bg-red-50 text-red-700' : i === 1 ? 'bg-yellow-50 text-yellow-700' : 'bg-green-50 text-green-700'
-                          }`}
-                        >
-                          {level.trim()}
-                        </div>
-                      ))}
-                    </div>
-                  </td>
-                  {[0, 1, 2].map((s) => (
-                    <td key={s} className="border border-gray-300 p-1">
-                      <button
-                        onClick={() => onChange(link, c.id, s)}
-                        className={`w-full px-2 py-1 rounded text-xs font-medium ${getScoreClass(scores[c.id], s)}`}
-                      >
-                        {s} {s === 0 ? '❌' : s === 1 ? '⚖️' : '✅'}
-                      </button>
-                    </td>
-                  ))}
-                </tr>
+      <div className="bg-white p-4 rounded-lg shadow-md mb-6">
+        <h5 className="font-semibold mb-4 text-gray-800 border-b pb-2">{roleDisplay} - Total: {total} / {max}</h5>
+        {crits.map((c) => (
+          <div key={c.key} className="mb-4 p-3 bg-gray-50 rounded-md">
+            <h6 className="font-medium mb-2 text-gray-700">{c.name}</h6>
+            <div className="flex space-x-1 mb-2">
+              {Object.entries(c.levels).map(([val, info]) => (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => !readOnly && onChange && onChange(c.key, parseInt(val))}
+                  className={`flex-1 py-2 px-3 rounded text-xs font-medium transition-colors ${
+                    scores[c.key] == val
+                      ? 'bg-blue-500 text-white shadow-md'
+                      : readOnly
+                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                  disabled={readOnly}
+                >
+                  {info.label.split(' = ')[1]}
+                </button>
               ))}
-              <tr className="bg-blue-50">
-                <td className="border border-gray-300 p-2 font-semibold">Total</td>
-                <td colSpan={3} className="border border-gray-300 p-2 text-right font-semibold text-lg">
-                  {total} / {max}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  };
-
-  const RevScoresDisplay = ({ revScores, role }) => (
-    <div className="space-y-4">
-      <h6 className="font-semibold text-gray-800">{role}: {revScores.total}/8</h6>
-      <table className="w-full border-collapse border border-gray-300 text-sm">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="border p-1">Criterio</th>
-            <th className="border p-1">Puntaje</th>
-          </tr>
-        </thead>
-        <tbody>
-          {CRITERIA[role === 'rev1' ? 'Revisor 1' : 'Revisor 2'].map((c) => (
-            <tr key={c.id} className="hover:bg-gray-50">
-              <td className="border p-1 font-medium">{c.label}</td>
-              <td className="border p-1 text-center font-semibold text-lg px-2">
-                {revScores[c.id] || 0} {revScores[c.id] === 0 ? '❌' : revScores[c.id] === 1 ? '⚖️' : '✅'}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-
-  const RubricSummary = ({ role, scores }) => {
-    const total = scores.total || 0;
-    const max = getMaxScore(role);
-    return (
-      <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700">Resumen Rúbrica</label>
-        <div className="bg-gray-50 p-3 rounded-md border">
-          <p className="text-sm font-semibold">Total: {total} / {max}</p>
-        </div>
+            </div>
+            <p className={`text-xs italic ${readOnly ? 'text-gray-500' : 'text-blue-600'}`}>
+              {c.levels[scores[c.key] || 0].desc}
+            </p>
+          </div>
+        ))}
       </div>
     );
   };
@@ -1120,10 +1185,69 @@ export default function PortalSection({ user, onLogout }) {
     const role = assignment.role;
     const nombre = assignment['Nombre Artículo'];
     const isAuth = role === 'Autor';
-    const articleName = assignment.id;
-    const currentScores = localRubric[link] || getRubricScoresForAssignment(assignment);
-    const revScores = role === 'Editor' ? getRevScoresForEditor(articleName) : null;
-    const recommendation = role === 'Editor' && revScores ? getDecisionRecommendation(revScores.rev1.total, revScores.rev2.total) : null;
+
+    const handleRenderRubric = () => {
+      if (isAuth) return null;
+      if (isPending) {
+        if (role === 'Editor') {
+          const rev1Total = getTotal(assignment.rev1Scores, criteria['Revisor 1']);
+          const rev2Total = getTotal(assignment.rev2Scores, criteria['Revisor 2']);
+          const revPercent = ((rev1Total + rev2Total) / 16) * 100;
+          const editorTotal = getTotal(rubricScores[link] || {}, criteria['Editor']);
+          const overallTotal = rev1Total + rev2Total + editorTotal;
+          const overallPercent = (overallTotal / 26) * 100;
+          return (
+            <div className="space-y-4">
+              <RubricViewer roleKey="Revisor 1" scores={assignment.rev1Scores} readOnly />
+              <RubricViewer roleKey="Revisor 2" scores={assignment.rev2Scores} readOnly />
+              <div className="p-4 bg-yellow-50 rounded-md">
+                <p className="font-medium">Implicación de revisores: {revPercent.toFixed(1)}% - {getDecisionText(revPercent)}</p>
+              </div>
+              <RubricViewer
+                roleKey="Editor"
+                scores={rubricScores[link] || {}}
+                onChange={(key, val) => handleRubricChange(link, key, val)}
+              />
+              <div className="p-4 bg-green-50 rounded-md">
+                <p className="font-medium">Decisión general sugerida: {overallPercent.toFixed(1)}% - {getDecisionText(overallPercent)}</p>
+              </div>
+            </div>
+          );
+        } else {
+          return (
+            <RubricViewer
+              roleKey={role}
+              scores={rubricScores[link] || {}}
+              onChange={(key, val) => handleRubricChange(link, key, val)}
+            />
+          );
+        }
+      } else {
+        if (role === 'Editor') {
+          const rev1Total = getTotal(assignment.rev1Scores, criteria['Revisor 1']);
+          const rev2Total = getTotal(assignment.rev2Scores, criteria['Revisor 2']);
+          const revPercent = ((rev1Total + rev2Total) / 16) * 100;
+          const editorTotal = getTotal(assignment.scores, criteria['Editor']);
+          const overallTotal = rev1Total + rev2Total + editorTotal;
+          const overallPercent = (overallTotal / 26) * 100;
+          return (
+            <div className="space-y-4">
+              <RubricViewer roleKey="Revisor 1" scores={assignment.rev1Scores} readOnly />
+              <RubricViewer roleKey="Revisor 2" scores={assignment.rev2Scores} readOnly />
+              <div className="p-4 bg-yellow-50 rounded-md">
+                <p className="font-medium">Implicación de revisores: {revPercent.toFixed(1)}% - {getDecisionText(revPercent)}</p>
+              </div>
+              <RubricViewer roleKey="Editor" scores={assignment.scores} readOnly />
+              <div className="p-4 bg-green-50 rounded-md">
+                <p className="font-medium">Decisión general: {overallPercent.toFixed(1)}% - {getDecisionText(overallPercent)}</p>
+              </div>
+            </div>
+          );
+        } else {
+          return <RubricViewer roleKey={role} scores={assignment.scores} readOnly />;
+        }
+      }
+    };
 
     return (
       <div key={assignment.id} className="bg-white p-6 rounded-lg shadow-md space-y-4">
@@ -1185,6 +1309,7 @@ export default function PortalSection({ user, onLogout }) {
                 </div>
               </div>
             )}
+            {handleRenderRubric()}
             {isPending ? (
               <div className="space-y-4">
                 <button
@@ -1194,22 +1319,6 @@ export default function PortalSection({ user, onLogout }) {
                   {tutorialVisible[link] ? 'Ocultar Tutorial' : 'Ver Tutorial'}
                 </button>
                 {tutorialVisible[link] && <Tutorial role={role} />}
-                {role === 'Editor' && revScores && (
-                  <div className="grid md:grid-cols-2 gap-4 p-4 bg-blue-50 rounded-md">
-                    <RevScoresDisplay revScores={revScores.rev1} role="rev1" />
-                    <RevScoresDisplay revScores={revScores.rev2} role="rev2" />
-                    <div className="md:col-span-2 p-3 bg-white rounded-md border">
-                      <p className="font-semibold">Promedio de revisores: {((revScores.rev1.total + revScores.rev2.total) / 16 * 100).toFixed(0)}%</p>
-                      <p className="text-sm text-gray-600">Recomendación: <span className="font-medium">{recommendation}</span></p>
-                    </div>
-                  </div>
-                )}
-                <RubricForm
-                  role={role}
-                  link={link}
-                  scores={currentScores}
-                  onChange={handleRubricChange}
-                />
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">
                     {role === 'Editor' ? 'Retroalimentación Final al Autor' : 'Retroalimentación al Autor'}
@@ -1346,7 +1455,6 @@ export default function PortalSection({ user, onLogout }) {
               </div>
             ) : (
               <div className="space-y-4">
-                <RubricSummary role={role} scores={getRubricScoresForAssignment(assignment)} />
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">
                     {role === 'Editor' ? 'Retroalimentación Final al Autor' : 'Retroalimentación al Autor'}
@@ -1384,21 +1492,7 @@ export default function PortalSection({ user, onLogout }) {
         <p className="text-gray-600">Rol: {user.role}</p>
         <p className="text-red-500">{error}</p>
         <button
-          onClick={() => {
-            setError('');
-            const loadData = async () => {
-              setLoading(true);
-              try {
-                await fetchAssignments();
-                await fetchRubrics();
-              } catch (err) {
-                setError(err.message);
-              } finally {
-                setLoading(false);
-              }
-            };
-            loadData();
-          }}
+          onClick={fetchAssignments}
           className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
         >
           Reintentar
@@ -1444,10 +1538,7 @@ export default function PortalSection({ user, onLogout }) {
         )}
         {!isAuthor && (
           <button
-            onClick={async () => {
-              await fetchAssignments();
-              await fetchRubrics();
-            }}
+            onClick={fetchAssignments}
             className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm mr-4"
           >
             Actualizar Asignaciones
