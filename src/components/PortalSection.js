@@ -11,8 +11,7 @@ Quill.register('modules/imageResize', ImageResize);
 
 const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyJ9znuf_Pa8Hyh4BnsO1pTTduBsXC7kDD0pORWccMTBlckgt0I--NKG69aR_puTAZ5/exec';
-// Reemplaza con la URL de tu nuevo Google Apps Script para rúbricas
-const RUBRIC_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbybtAyN5s_fzN-KIjm_rfMQftZncsxbRZWfwLvpnYcalNYINZPs_Sz2wDibYWsld7CN/exec'; // Crea un nuevo script como se describe abajo
+const RUBRIC_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzJV6h_x6z57jIuHhlf3z3HgnVytzx_Jaqrtuwdi9NdgNtW-t1ylOJGY2yDRBeb4fZL/exec';
 
 const RUBRIC_CSV1 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=0&single=true&output=csv';
 const RUBRIC_CSV2 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=1438370398&single=true&output=csv';
@@ -169,7 +168,8 @@ export default function PortalSection({ user, onLogout }) {
   const [imageData, setImageData] = useState({});
   const [editingRange, setEditingRange] = useState({});
   const [completedPanelOpen, setCompletedPanelOpen] = useState(false);
-  const [selectedAssignmentId, setSelectedAssignmentId] = useState(null);
+  const [selectedAssignment, setSelectedAssignment] = useState(null);
+  const [expandedFeedback, setExpandedFeedback] = useState({});
   const feedbackQuillRefs = useRef({});
   const reportQuillRefs = useRef({});
 
@@ -221,7 +221,7 @@ export default function PortalSection({ user, onLogout }) {
             calidad: parseInt(row['Calidad final del texto']) || 0,
             aporte: parseInt(row['Aporte global del ensayo']) || 0,
             potencial: parseInt(row['Potencial motivador']) || 0,
-            decision: parseInt(row['Decisión final']) || 0 // Asume columna agregada en la hoja
+            decision: parseInt(row['Decisión final']) || 0
           };
         }
       });
@@ -248,23 +248,19 @@ export default function PortalSection({ user, onLogout }) {
         delimiter: ',',
         transform: (value) => value.trim(),
         complete: ({ data }) => {
-          console.log('Parsed assignments data:', data);
           const isAuthor = data.some((row) => row['Autor'] === user.name);
           let parsedAssignments = [];
           if (isAuthor) {
             parsedAssignments = data
               .filter((row) => row['Autor'] === user.name)
-              .map((row) => {
-                const num = 3; // Editor feedback
-                return {
-                  id: row['Nombre Artículo'],
-                  'Nombre Artículo': row['Nombre Artículo'] || 'Sin título',
-                  Estado: row['Estado'],
-                  role: 'Autor',
-                  feedbackEditor: row['Feedback 3'] || 'Sin retroalimentación del editor aún.',
-                  isCompleted: !!row['Feedback 3'],
-                };
-              });
+              .map((row) => ({
+                id: row['Nombre Artículo'],
+                'Nombre Artículo': row['Nombre Artículo'] || 'Sin título',
+                Estado: row['Estado'],
+                role: 'Autor',
+                feedbackEditor: row['Feedback 3'] || 'Sin retroalimentación del editor aún.',
+                isCompleted: !!row['Feedback 3'],
+              }));
           } else {
             parsedAssignments = data
               .filter((row) => {
@@ -292,13 +288,12 @@ export default function PortalSection({ user, onLogout }) {
                   isCompleted: !!row[`Feedback ${num}`] && !!row[`Informe ${num}`] && !!row[`Voto ${num}`],
                 };
 
-                // Agregar scores de rúbricas
                 const name = assignment.id;
                 if (role === 'Revisor 1') {
                   assignment.scores = rubrics.scoresMap1[name] || { gramatica: 0, claridad: 0, estructura: 0, citacion: 0 };
                 } else if (role === 'Revisor 2') {
                   assignment.scores = rubrics.scoresMap2[name] || { relevancia: 0, rigor: 0, originalidad: 0, argumentos: 0 };
-                } else { // Editor
+                } else {
                   assignment.rev1Scores = rubrics.scoresMap1[name] || { gramatica: 0, claridad: 0, estructura: 0, citacion: 0 };
                   assignment.rev2Scores = rubrics.scoresMap2[name] || { relevancia: 0, rigor: 0, originalidad: 0, argumentos: 0 };
                   assignment.scores = rubrics.scoresMap3[name] || { modificaciones: 0, calidad: 0, aporte: 0, potencial: 0, decision: 0 };
@@ -340,7 +335,6 @@ export default function PortalSection({ user, onLogout }) {
 
   const pendingAssignments = useMemo(() => assignments.filter((a) => !a.isCompleted), [assignments]);
   const completedAssignments = useMemo(() => assignments.filter((a) => a.isCompleted), [assignments]);
-  const selectedAssignment = completedAssignments.find((a) => a.id === selectedAssignmentId);
 
   const handleVote = (link, value) => {
     setVote((prev) => ({ ...prev, [link]: value }));
@@ -368,11 +362,7 @@ export default function PortalSection({ user, onLogout }) {
       rubric: rubricScores[link] || {}
     };
 
-    console.log('Sending assignment data:', data);
-    console.log('Sending rubric data:', rubricData);
-
     try {
-      // Enviar feedback/report/vote al script original
       await fetch(SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
@@ -381,7 +371,6 @@ export default function PortalSection({ user, onLogout }) {
         },
         body: JSON.stringify(data),
       });
-      // Enviar rúbrica al nuevo script
       await fetch(RUBRIC_SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
@@ -390,7 +379,6 @@ export default function PortalSection({ user, onLogout }) {
         },
         body: JSON.stringify(rubricData),
       });
-      console.log('Data sent successfully');
       setSubmitStatus((prev) => ({ ...prev, [link]: 'Enviado exitosamente' }));
       await fetchAssignments();
     } catch (err) {
@@ -403,13 +391,20 @@ export default function PortalSection({ user, onLogout }) {
     setTutorialVisible((prev) => ({ ...prev, [link]: !prev[link] }));
   };
 
+  const toggleFeedback = (link, type) => {
+    setExpandedFeedback((prev) => ({
+      ...prev,
+      [link]: { ...prev[link], [type]: !prev[link]?.[type] }
+    }));
+  };
+
   const getTutorialText = (role) => {
     if (role === "Revisor 1") {
       return 'Como Revisor 1, tu rol es revisar aspectos técnicos como gramática, ortografía, citación de fuentes, detección de contenido generado por IA, coherencia lógica y estructura general del artículo. Deja comentarios detallados en el documento de Google Drive para sugerir mejoras. Asegúrate de que el lenguaje sea claro y académico. Debes dejar tu retroalimentación al autor en la casilla correspondiente. Además debes dejar un informe resumido explicando tu observaciones para guiar al editor. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.===';
     } else if (role === "Revisor 2") {
-      return 'Como Revisor 2, enfócate en el contenido sustantivo: verifica la precisión de las fuentes, la seriedad y originalidad del tema, la relevancia de los argumentos, y la contribución al campo de estudio. Evalúa si el artículo es innovador y bien fundamentado. Deja comentarios en el documento de Google Drive. Debes dejar tu retroalimentación al autor en la casilla correspondiente. Además debes dejar un informe resumido explicando tu observaciones para guiar al editor. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.===';
+      return 'Como Revisor 2, enfócate en el contenido sustantivo: verifica la precisión de las fuentes, la seriedad y originalidad del tema, la relevancia de los argumentos, y la contribución al campo de estudio. Evalúa si el artículo es innovador y bien fundamentado. Deja comentarios en el documento de Google Drive. Debes dejar tu retroalimentación al autor in la casilla correspondiente. Además debes dejar un informe resumido explicando tu observaciones para guiar al editor. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.===';
     } else if (role === "Editor") {
-      return `Como Editor, tu responsabilidad es revisar las retroalimentaciones e informes de los revisores, integrarlas con tu propia evaluación, y redactar una retroalimentación final sensible y constructiva para el autor. Corrige directamente el texto si es necesario y decide el estado final del artículo. Usa el documento de Google Drive para ediciones. Debes dejar una retroalimentación al autor sintetizando las que dejaron los revisores. Tu deber es que el mensaje sea acertado y sensible, sin desmotivar al autor. Para esto debes usar la técnica del "sándwich". Si no sabes qué es, entra aquí(https://www.santanderopenacademy.com/es/blog/tecnica-sandwich.html). Luego deja tu informe con los cambios realizados, deben ser precisos y académicos. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.===`;
+      return `Como Editor, tu responsabilidad es revisar las retroalimentaciones e informes de los revisores, integrarlas con tu propia evaluación, y redactar una retroalimentación final sensible y constructiva para el autor. Corrige directamente el texto si es necesario y decide el estado final del artículo. Usa el documento de Google Drive para ediciones. Debes dejar una retroalimentación al autor sintetizando las que dejaron los revisores. Tu deber es que el mensaje sea acertado y sensible, sin desmotivar al autor. Para esto debes usar la técnica del "sándwich". Si no sabes qué es, entra aqu[](https://www.santanderopenacademy.com/es/blog/tecnica-sandwich.html). Luego deja tu informe con los cambios realizados, deben ser precisos y académicos. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.===`;
     }
     return "";
   };
@@ -417,7 +412,7 @@ export default function PortalSection({ user, onLogout }) {
   const Tutorial = ({ role }) => {
     const tutorialText = getTutorialText(role);
     return (
-      <div className="text-gray-800 bg-gray-50 p-4 rounded-md border border-gray-200 leading-relaxed">
+      <div className="text-gray-800 bg-gray-50 p-4 rounded-md border border-gray-200 leading-relaxed break-words">
         {decodeBody(tutorialText)}
       </div>
     );
@@ -431,18 +426,18 @@ export default function PortalSection({ user, onLogout }) {
     const roleDisplay = roleKey === 'Revisor 1' ? 'Revisor 1 (Forma, estilo y técnica)' : roleKey === 'Revisor 2' ? 'Revisor 2 (Contenido y originalidad)' : 'Editor (Síntesis y decisión final)';
 
     return (
-      <div className="bg-white p-4 rounded-lg shadow-md mb-6">
-        <h5 className="font-semibold mb-4 text-gray-800 border-b pb-2">{roleDisplay} - Total: {total} / {max}</h5>
+      <div className="bg-white p-4 rounded-lg shadow-md mb-6 overflow-hidden">
+        <h5 className="font-semibold mb-4 text-gray-800 border-b pb-2 break-words">{roleDisplay} - Total: {total} / {max}</h5>
         {crits.map((c) => (
           <div key={c.key} className="mb-4 p-3 bg-gray-50 rounded-md">
-            <h6 className="font-medium mb-2 text-gray-700">{c.name}</h6>
+            <h6 className="font-medium mb-2 text-gray-700 break-words">{c.name}</h6>
             <div className="flex space-x-1 mb-2">
               {Object.entries(c.levels).map(([val, info]) => (
                 <button
                   key={val}
                   type="button"
                   onClick={() => !readOnly && onChange && onChange(c.key, parseInt(val))}
-                  className={`flex-1 py-2 px-3 rounded text-xs font-medium transition-colors ${
+                  className={`flex-1 py-2 px-3 rounded text-xs font-medium transition-colors break-words ${
                     scores[c.key] == val
                       ? 'bg-blue-500 text-white shadow-md'
                       : readOnly
@@ -455,7 +450,7 @@ export default function PortalSection({ user, onLogout }) {
                 </button>
               ))}
             </div>
-            <p className={`text-xs italic ${readOnly ? 'text-gray-500' : 'text-blue-600'}`}>
+            <p className={`text-xs italic ${readOnly ? 'text-gray-500' : 'text-blue-600'} break-words`}>
               {c.levels[scores[c.key] || 0].desc}
             </p>
           </div>
@@ -507,7 +502,7 @@ export default function PortalSection({ user, onLogout }) {
           key: ['Delete', 'Backspace'],
           handler: function(range) {
             if (!range) {
-              setSubmitStatus((prev) => ({ ...prev, [this.quill.link]: 'No hay selección activa para eliminar' }));
+              console.log('No hay selección activa para eliminar');
               return true;
             }
             const editor = this.quill;
@@ -549,7 +544,7 @@ export default function PortalSection({ user, onLogout }) {
                 return false;
               } catch (err) {
                 console.error('Error deleting image:', err);
-                setSubmitStatus((prev) => ({ ...prev, [this.quill.link]: 'Error al eliminar la imagen' }));
+                console.log('Error al eliminar la imagen');
                 return false;
               }
             }
@@ -569,7 +564,7 @@ export default function PortalSection({ user, onLogout }) {
                 return false;
               } catch (err) {
                 console.error('Error inserting new line after image:', err);
-                setSubmitStatus((prev) => ({ ...prev, [this.quill.link]: 'Error al añadir texto después de la imagen' }));
+                console.log('Error al añadir texto después de la imagen');
                 return false;
               }
             }
@@ -704,7 +699,7 @@ export default function PortalSection({ user, onLogout }) {
   };
 
   const decodeBody = (body) => {
-    if (!body) return <p className="text-gray-600">Sin contenido disponible.</p>;
+    if (!body) return <p className="text-gray-600 break-words">Sin contenido disponible.</p>;
     const paragraphs = String(body)
       .split("===")
       .filter((p) => p.trim() !== "");
@@ -722,7 +717,7 @@ export default function PortalSection({ user, onLogout }) {
         content.push(
           <ul key={content.length} className="mb-4 list-disc pl-6">
             {items.map((item, j) => (
-              <li key={j}>{item}</li>
+              <li key={j} className="break-words">{item}</li>
             ))}
           </ul>
         );
@@ -737,7 +732,7 @@ export default function PortalSection({ user, onLogout }) {
         content.push(
           <ol key={content.length} className="mb-4 list-decimal pl-6">
             {items.map((item, j) => (
-              <li key={j}>{item}</li>
+              <li key={j} className="break-words">{item}</li>
             ))}
           </ol>
         );
@@ -826,7 +821,7 @@ export default function PortalSection({ user, onLogout }) {
     };
 
     return (
-      <div style={alignStyle}>
+      <div style={alignStyle} className="break-words">
         {styledContent}
       </div>
     );
@@ -855,6 +850,7 @@ export default function PortalSection({ user, onLogout }) {
                 fontStyle: italic ? "italic" : "normal",
                 textDecoration: `${underline ? "underline" : ""} ${strike ? "line-through" : ""}`.trim(),
               }}
+              className="break-words"
             >
               {buf}
             </span>
@@ -871,7 +867,7 @@ export default function PortalSection({ user, onLogout }) {
               href={normalizeUrl(ph.url)}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 hover:underline hover:text-blue-800 transition-colors duration-200"
+              className="text-blue-600 hover:underline hover:text-blue-800 transition-colors duration-200 break-words"
             >
               {ph.word}
             </a>
@@ -917,7 +913,7 @@ export default function PortalSection({ user, onLogout }) {
               href={normalizeUrl(ph.url)}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 hover:underline hover:text-blue-800 transition-colors duration-200"
+              className="text-blue-600 hover:underline hover:text-blue-800 transition-colors duration-200 break-words"
             >
               {ph.url}
             </a>
@@ -928,7 +924,7 @@ export default function PortalSection({ user, onLogout }) {
           else if (ph.size === 'big') fontSizeStyle = '1.5em';
           else fontSizeStyle = 'inherit';
           out.push(
-            <span key={key++} style={{ fontSize: fontSizeStyle }}>
+            <span key={key++} style={{ fontSize: fontSizeStyle }} className="break-words">
               {renderStyledText(ph.content, placeholders)}
             </span>
           );
@@ -946,6 +942,7 @@ export default function PortalSection({ user, onLogout }) {
                   fontStyle: italic ? "italic" : "normal",
                   textDecoration: `${underline ? "underline" : ""} ${strike ? "line-through" : ""}`.trim(),
                 }}
+                className="break-words"
               >
                 {buf}
               </span>
@@ -963,6 +960,7 @@ export default function PortalSection({ user, onLogout }) {
                   fontStyle: italic ? "italic" : "normal",
                   textDecoration: `${underline ? "underline" : ""} ${strike ? "line-through" : ""}`.trim(),
                 }}
+                className="break-words"
               >
                 {buf}
               </span>
@@ -980,6 +978,7 @@ export default function PortalSection({ user, onLogout }) {
                   fontStyle: italic ? "italic" : "normal",
                   textDecoration: `${underline ? "underline" : ""} ${strike ? "line-through" : ""}`.trim(),
                 }}
+                className="break-words"
               >
                 {buf}
               </span>
@@ -997,6 +996,7 @@ export default function PortalSection({ user, onLogout }) {
                   fontStyle: italic ? "italic" : "normal",
                   textDecoration: `${underline ? "underline" : ""} ${strike ? "line-through" : ""}`.trim(),
                 }}
+                className="break-words"
               >
                 {buf}
               </span>
@@ -1018,6 +1018,7 @@ export default function PortalSection({ user, onLogout }) {
             fontStyle: italic ? "italic" : "normal",
             textDecoration: `${underline ? "underline" : ""} ${strike ? "line-through" : ""}`.trim(),
           }}
+          className="break-words"
         >
           {buf}
         </span>
@@ -1133,7 +1134,9 @@ export default function PortalSection({ user, onLogout }) {
   };
 
   const handleImageModalSubmit = (link) => {
-    const editor = (feedbackQuillRefs.current[link] || reportQuillRefs.current[link]).getEditor();
+    const quillRef = feedbackQuillRefs.current[link] || reportQuillRefs.current[link];
+    if (!quillRef) return;
+    const editor = quillRef.getEditor();
     let { url, width, height, align } = imageData[link] || {};
     if (!url) {
       setSubmitStatus((prev) => ({ ...prev, [link]: 'La URL de la imagen es obligatoria.' }));
@@ -1180,10 +1183,44 @@ export default function PortalSection({ user, onLogout }) {
     }));
   };
 
-  const renderAssignment = (assignment, isPending) => {
+  const AssignmentCard = ({ assignment, onClick }) => {
+    const role = assignment.role;
+    const nombre = assignment['Nombre Artículo'];
+    const total = role !== 'Editor' ? getTotal(assignment.scores || {}, criteria[role] || []) : getTotal(assignment.scores || {}, criteria['Editor'] || []);
+    const max = (criteria[role] || criteria['Editor'] || []).length * 2;
+    const percent = total / max * 100;
+    const statusColor = assignment.isCompleted ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
+
+    return (
+      <div
+        className="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 cursor-pointer border border-gray-200 h-full flex flex-col justify-between"
+        onClick={onClick}
+      >
+        <div>
+          <h4 className="text-xl font-bold text-gray-800 mb-2 break-words">{nombre}</h4>
+          <p className="text-sm text-gray-600 mb-3 break-words">Rol: {role}</p>
+          <div className="flex items-center justify-between mb-4">
+            <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor}`}>
+              {assignment.isCompleted ? 'Completado' : 'Pendiente'}
+            </span>
+            <span className="text-sm font-medium text-gray-700">{percent.toFixed(0)}% Puntaje</span>
+          </div>
+          <p className="text-gray-500 text-sm break-words">{assignment.Estado || 'Sin estado'}</p>
+        </div>
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <button className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors text-sm font-medium">
+            Ver Detalles
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderFullAssignment = (assignment) => {
     const link = assignment['Link Artículo'];
     const role = assignment.role;
     const nombre = assignment['Nombre Artículo'];
+    const isPending = !assignment.isCompleted;
     const isAuth = role === 'Autor';
 
     const handleRenderRubric = () => {
@@ -1198,10 +1235,38 @@ export default function PortalSection({ user, onLogout }) {
           const overallPercent = (overallTotal / 26) * 100;
           return (
             <div className="space-y-4">
-              <RubricViewer roleKey="Revisor 1" scores={assignment.rev1Scores} readOnly />
-              <RubricViewer roleKey="Revisor 2" scores={assignment.rev2Scores} readOnly />
+              <div className="flex items-center justify-between">
+                <h5 className="text-lg font-semibold text-gray-800">Rúbrica de Revisor 1</h5>
+                <button
+                  onClick={() => toggleFeedback(link, 'rubric1')}
+                  className="text-blue-600 hover:underline text-sm flex items-center"
+                >
+                  {expandedFeedback[link]?.rubric1 ? 'Ocultar' : 'Mostrar'}
+                  <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
+              {expandedFeedback[link]?.rubric1 && (
+                <RubricViewer roleKey="Revisor 1" scores={assignment.rev1Scores} readOnly />
+              )}
+              <div className="flex items-center justify-between">
+                <h5 className="text-lg font-semibold text-gray-800">Rúbrica de Revisor 2</h5>
+                <button
+                  onClick={() => toggleFeedback(link, 'rubric2')}
+                  className="text-blue-600 hover:underline text-sm flex items-center"
+                >
+                  {expandedFeedback[link]?.rubric2 ? 'Ocultar' : 'Mostrar'}
+                  <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
+              {expandedFeedback[link]?.rubric2 && (
+                <RubricViewer roleKey="Revisor 2" scores={assignment.rev2Scores} readOnly />
+              )}
               <div className="p-4 bg-yellow-50 rounded-md">
-                <p className="font-medium">Implicación de revisores: {revPercent.toFixed(1)}% - {getDecisionText(revPercent)}</p>
+                <p className="font-medium break-words">Implicación de revisores: {revPercent.toFixed(1)}% - {getDecisionText(revPercent)}</p>
               </div>
               <RubricViewer
                 roleKey="Editor"
@@ -1209,7 +1274,7 @@ export default function PortalSection({ user, onLogout }) {
                 onChange={(key, val) => handleRubricChange(link, key, val)}
               />
               <div className="p-4 bg-green-50 rounded-md">
-                <p className="font-medium">Decisión general sugerida: {overallPercent.toFixed(1)}% - {getDecisionText(overallPercent)}</p>
+                <p className="font-medium break-words">Decisión general sugerida: {overallPercent.toFixed(1)}% - {getDecisionText(overallPercent)}</p>
               </div>
             </div>
           );
@@ -1232,14 +1297,42 @@ export default function PortalSection({ user, onLogout }) {
           const overallPercent = (overallTotal / 26) * 100;
           return (
             <div className="space-y-4">
-              <RubricViewer roleKey="Revisor 1" scores={assignment.rev1Scores} readOnly />
-              <RubricViewer roleKey="Revisor 2" scores={assignment.rev2Scores} readOnly />
+              <div className="flex items-center justify-between">
+                <h5 className="text-lg font-semibold text-gray-800">Rúbrica de Revisor 1</h5>
+                <button
+                  onClick={() => toggleFeedback(link, 'rubric1')}
+                  className="text-blue-600 hover:underline text-sm flex items-center"
+                >
+                  {expandedFeedback[link]?.rubric1 ? 'Ocultar' : 'Mostrar'}
+                  <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
+              {expandedFeedback[link]?.rubric1 && (
+                <RubricViewer roleKey="Revisor 1" scores={assignment.rev1Scores} readOnly />
+              )}
+              <div className="flex items-center justify-between">
+                <h5 className="text-lg font-semibold text-gray-800">Rúbrica de Revisor 2</h5>
+                <button
+                  onClick={() => toggleFeedback(link, 'rubric2')}
+                  className="text-blue-600 hover:underline text-sm flex items-center"
+                >
+                  {expandedFeedback[link]?.rubric2 ? 'Ocultar' : 'Mostrar'}
+                  <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
+              {expandedFeedback[link]?.rubric2 && (
+                <RubricViewer roleKey="Revisor 2" scores={assignment.rev2Scores} readOnly />
+              )}
               <div className="p-4 bg-yellow-50 rounded-md">
-                <p className="font-medium">Implicación de revisores: {revPercent.toFixed(1)}% - {getDecisionText(revPercent)}</p>
+                <p className="font-medium break-words">Implicación de revisores: {revPercent.toFixed(1)}% - {getDecisionText(revPercent)}</p>
               </div>
               <RubricViewer roleKey="Editor" scores={assignment.scores} readOnly />
               <div className="p-4 bg-green-50 rounded-md">
-                <p className="font-medium">Decisión general: {overallPercent.toFixed(1)}% - {getDecisionText(overallPercent)}</p>
+                <p className="font-medium break-words">Decisión general: {overallPercent.toFixed(1)}% - {getDecisionText(overallPercent)}</p>
               </div>
             </div>
           );
@@ -1250,383 +1343,380 @@ export default function PortalSection({ user, onLogout }) {
     };
 
     return (
-      <div key={assignment.id} className="bg-white p-6 rounded-lg shadow-md space-y-4">
-        <h4 className="text-lg font-semibold text-gray-800">{nombre}</h4>
+      <div className="bg-white p-6 rounded-lg shadow-md space-y-6 w-full">
+        <div className="flex justify-between items-start">
+          <div>
+            <h4 className="text-2xl font-bold text-gray-800 mb-2 break-words">{nombre}</h4>
+            <p className="text-gray-600 break-words">Rol: {role} | Estado: {assignment.Estado}</p>
+          </div>
+          <button
+            onClick={() => setSelectedAssignment(null)}
+            className="text-blue-600 hover:underline flex items-center text-sm"
+          >
+            <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            Volver a lista
+          </button>
+        </div>
         {!isAuth && (
-          <div className="space-y-4">
-            <a
-              href={link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block bg-blue-600 text-white px-4 py-2 rounded-md shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-            >
-              Abrir en Google Drive
-            </a>
-            <iframe
-              src={link.replace('/edit', '/preview')}
-              className="w-full h-[300px] sm:h-[500px] rounded-xl shadow border border-gray-200"
-              title="Vista previa del artículo"
-              sandbox="allow-same-origin allow-scripts"
-            ></iframe>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="lg:col-span-1 space-y-6">
+              <div className="space-y-2">
+                <a
+                  href={link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block bg-blue-600 text-white px-4 py-2 rounded-md shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm mb-2"
+                >
+                  Abrir en Google Drive
+                </a>
+                <iframe
+                  src={link ? link.replace('/edit', '/preview') : ''}
+                  className="w-full h-[350px] lg:h-[500px] rounded-xl shadow border border-gray-200"
+                  title="Vista previa del artículo"
+                  sandbox="allow-same-origin allow-scripts"
+                ></iframe>
+              </div>
+              {handleRenderRubric()}
+            </div>
+            <div className="lg:col-span-1 space-y-6">
+              {role === 'Editor' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-medium text-gray-700 break-words">Retroalimentación de Revisor 1</label>
+                    <button
+                      onClick={() => toggleFeedback(link, 'feedback1')}
+                      className="text-blue-600 hover:underline text-sm flex items-center"
+                    >
+                      {expandedFeedback[link]?.feedback1 ? 'Ocultar' : 'Mostrar'}
+                      <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.feedback1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
+                  {expandedFeedback[link]?.feedback1 && (
+                    <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
+                      {decodeBody(assignment.feedback1)}
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-medium text-gray-700 break-words">Retroalimentación de Revisor 2</label>
+                    <button
+                      onClick={() => toggleFeedback(link, 'feedback2')}
+                      className="text-blue-600 hover:underline text-sm flex items-center"
+                    >
+                      {expandedFeedback[link]?.feedback2 ? 'Ocultar' : 'Mostrar'}
+                      <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.feedback2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
+                  {expandedFeedback[link]?.feedback2 && (
+                    <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
+                      {decodeBody(assignment.feedback2)}
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-medium text-gray-700 break-words">Informe de Revisor 1</label>
+                    <button
+                      onClick={() => toggleFeedback(link, 'informe1')}
+                      className="text-blue-600 hover:underline text-sm flex items-center"
+                    >
+                      {expandedFeedback[link]?.informe1 ? 'Ocultar' : 'Mostrar'}
+                      <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.informe1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
+                  {expandedFeedback[link]?.informe1 && (
+                    <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
+                      {decodeBody(assignment.informe1)}
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-medium text-gray-700 break-words">Informe de Revisor 2</label>
+                    <button
+                      onClick={() => toggleFeedback(link, 'informe2')}
+                      className="text-blue-600 hover:underline text-sm flex items-center"
+                    >
+                      {expandedFeedback[link]?.informe2 ? 'Ocultar' : 'Mostrar'}
+                      <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.informe2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
+                  {expandedFeedback[link]?.informe2 && (
+                    <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
+                      {decodeBody(assignment.informe2)}
+                    </div>
+                  )}
+                </div>
+              )}
+              {isPending ? (
+                <div className="space-y-6">
+                  <button
+                    onClick={() => toggleTutorial(link)}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
+                  >
+                    {tutorialVisible[link] ? 'Ocultar Tutorial' : 'Ver Tutorial'}
+                  </button>
+                  {tutorialVisible[link] && <Tutorial role={role} />}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700 break-words">
+                      {role === 'Editor' ? 'Retroalimentación Final al Autor' : 'Retroalimentación al Autor'}
+                    </label>
+                    <ReactQuill
+                      ref={(el) => (feedbackQuillRefs.current[link] = el)}
+                      value={feedback[link] || ''}
+                      onChange={debouncedSetFeedback(link)}
+                      modules={modules}
+                      formats={formats}
+                      placeholder={role === 'Editor' ? 'Redacta una retroalimentación final sensible, sintetizando las opiniones de los revisores y la tuya.' : 'Escribe tu retroalimentación aquí...'}
+                      className="border rounded-md text-gray-800 bg-white h-48"
+                      onFocus={() => setupQuillEditor(feedbackQuillRefs.current[link], link, 'feedback')}
+                    />
+                    <button
+                      onClick={() => {
+                        setIsEditingImage((prev) => ({ ...prev, [link]: false }));
+                        setImageData((prev) => ({ ...prev, [link]: { url: '', width: '', height: '', align: 'left' } }));
+                        setShowImageModal((prev) => ({ ...prev, [link]: true }));
+                      }}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                    >
+                      Insertar Imagen Manualmente
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700 break-words">Informe al Editor</label>
+                    <ReactQuill
+                      ref={(el) => (reportQuillRefs.current[link] = el)}
+                      value={report[link] || ''}
+                      onChange={debouncedSetReport(link)}
+                      modules={modules}
+                      formats={formats}
+                      placeholder="Escribe tu informe aquí..."
+                      className="border rounded-md text-gray-800 bg-white h-48"
+                      onFocus={() => setupQuillEditor(reportQuillRefs.current[link], link, 'report')}
+                    />
+                    <button
+                      onClick={() => {
+                        setIsEditingImage((prev) => ({ ...prev, [link]: false }));
+                        setImageData((prev) => ({ ...prev, [link]: { url: '', width: '', height: '', align: 'left' } }));
+                        setShowImageModal((prev) => ({ ...prev, [link]: true }));
+                      }}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                    >
+                      Insertar Imagen Manualmente
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700 break-words">Voto</label>
+                    <div className="flex space-x-4">
+                      <button
+                        onClick={() => handleVote(link, 'si')}
+                        className={`px-4 py-2 rounded-md ${vote[link] === 'si' ? 'bg-green-600                         text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} transition-colors text-sm`}
+                      >
+                        Sí
+                      </button>
+                      <button
+                        onClick={() => handleVote(link, 'no')}
+                        className={`px-4 py-2 rounded-md ${vote[link] === 'no' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} transition-colors text-sm`}
+                      >
+                        No
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleSubmit(link, role, feedback[link], report[link], vote[link])}
+                    disabled={!vote[link] || !feedback[link] || !report[link]}
+                    className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
+                  >
+                    Enviar Revisión
+                  </button>
+                  {submitStatus[link] && (
+                    <p className={`text-sm mt-2 ${submitStatus[link].includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
+                      {submitStatus[link]}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <button
+                    onClick={() => toggleTutorial(link)}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
+                  >
+                    {tutorialVisible[link] ? 'Ocultar Tutorial' : 'Ver Tutorial'}
+                  </button>
+                  {tutorialVisible[link] && <Tutorial role={role} />}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700 break-words">Retroalimentación Enviada</label>
+                    <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
+                      {decodeBody(feedback[link] || 'Sin retroalimentación.')}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700 break-words">Informe Enviado</label>
+                    <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
+                      {decodeBody(report[link] || 'Sin informe.')}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700 break-words">Voto Enviado</label>
+                    <p className="text-sm text-gray-600">{vote[link] ? vote[link].charAt(0).toUpperCase() + vote[link].slice(1) : 'No enviado'}</p>
+                  </div>
+                </div>
+              )}
+              {showImageModal[link] && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                  <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+                    <h4 className="text-lg font-semibold mb-4">{isEditingImage[link] ? 'Editar Imagen' : 'Insertar Imagen'}</h4>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">URL de la Imagen</label>
+                        <input
+                          type="text"
+                          name="url"
+                          value={imageData[link]?.url || ''}
+                          onChange={(e) => handleImageDataChange(link, e)}
+                          className="mt-1 block w-full border rounded-md p-2 text-sm"
+                          placeholder="https://example.com/image.jpg"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Ancho (px o %)</label>
+                        <input
+                          type="text"
+                          name="width"
+                          value={imageData[link]?.width || ''}
+                          onChange={(e) => handleImageDataChange(link, e)}
+                          className="mt-1 block w-full border rounded-md p-2 text-sm"
+                          placeholder="auto o 300px"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Alto (px o %)</label>
+                        <input
+                          type="text"
+                          name="height"
+                          value={imageData[link]?.height || ''}
+                          onChange={(e) => handleImageDataChange(link, e)}
+                          className="mt-1 block w-full border rounded-md p-2 text-sm"
+                          placeholder="auto o 200px"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Alineación</label>
+                        <select
+                          name="align"
+                          value={imageData[link]?.align || 'left'}
+                          onChange={(e) => handleImageDataChange(link, e)}
+                          className="mt-1 block w-full border rounded-md p-2 text-sm"
+                        >
+                          <option value="left">Izquierda</option>
+                          <option value="center">Centro</option>
+                          <option value="right">Derecha</option>
+                          <option value="justify">Justificado</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="mt-6 flex justify-end space-x-2">
+                      <button
+                        onClick={() => setShowImageModal((prev) => ({ ...prev, [link]: false }))}
+                        className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 text-sm"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        onClick={() => handleImageModalSubmit(link)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                      >
+                        {isEditingImage[link] ? 'Actualizar' : 'Insertar'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
-        <p className="text-gray-600">Estado: {assignment.Estado}</p>
-        {!isAuth && <p className="text-gray-600">Rol: {role}</p>}
-        {isAuth ? (
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">Retroalimentación del Editor</label>
-            <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+        {isAuth && (
+          <div className="space-y-6">
+            <h5 className="text-lg font-semibold text-gray-800">Retroalimentación del Editor</h5>
+            <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
               {decodeBody(assignment.feedbackEditor)}
             </div>
           </div>
-        ) : (
-          <>
-            {role === 'Editor' && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Retroalimentación de Revisor 1</label>
-                  <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-                    {decodeBody(assignment.feedback1)}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Retroalimentación de Revisor 2</label>
-                  <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-                    {decodeBody(assignment.feedback2)}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Informe de Revisor 1</label>
-                  <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-                    {decodeBody(assignment.informe1)}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Informe de Revisor 2</label>
-                  <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-                    {decodeBody(assignment.informe2)}
-                  </div>
-                </div>
-              </div>
-            )}
-            {handleRenderRubric()}
-            {isPending ? (
-              <div className="space-y-4">
-                <button
-                  onClick={() => toggleTutorial(link)}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
-                >
-                  {tutorialVisible[link] ? 'Ocultar Tutorial' : 'Ver Tutorial'}
-                </button>
-                {tutorialVisible[link] && <Tutorial role={role} />}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    {role === 'Editor' ? 'Retroalimentación Final al Autor' : 'Retroalimentación al Autor'}
-                  </label>
-                  <ReactQuill
-                    ref={(el) => (feedbackQuillRefs.current[link] = el)}
-                    value={feedback[link] || ''}
-                    onChange={debouncedSetFeedback(link)}
-                    modules={modules}
-                    formats={formats}
-                    placeholder={role === 'Editor' ? 'Redacta una retroalimentación final sensible, sintetizando las opiniones de los revisores y la tuya.' : 'Escribe tu retroalimentación aquí...'}
-                    className="border rounded-md text-gray-800 bg-white"
-                    onFocus={() => setupQuillEditor(feedbackQuillRefs.current[link], link, 'feedback')}
-                  />
-                  <button
-                    onClick={() => {
-                      setIsEditingImage((prev) => ({ ...prev, [link]: false }));
-                      setImageData((prev) => ({ ...prev, [link]: { url: '', width: '', height: '', align: 'left' } }));
-                      setShowImageModal((prev) => ({ ...prev, [link]: true }));
-                    }}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
-                  >
-                    Insertar Imagen Manualmente
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Informe al Editor</label>
-                  <ReactQuill
-                    ref={(el) => (reportQuillRefs.current[link] = el)}
-                    value={report[link] || ''}
-                    onChange={debouncedSetReport(link)}
-                    modules={modules}
-                    formats={formats}
-                    placeholder="Escribe tu informe aquí..."
-                    className="border rounded-md text-gray-800 bg-white"
-                    onFocus={() => setupQuillEditor(reportQuillRefs.current[link], link, 'report')}
-                  />
-                  <button
-                    onClick={() => {
-                      setIsEditingImage((prev) => ({ ...prev, [link]: false }));
-                      setImageData((prev) => ({ ...prev, [link]: { url: '', width: '', height: '', align: 'left' } }));
-                      setShowImageModal((prev) => ({ ...prev, [link]: true }));
-                    }}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
-                  >
-                    Insertar Imagen Manualmente
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Voto</label>
-                  <div className="flex space-x-4">
-                    <button
-                      onClick={() => handleVote(link, 'si')}
-                      className={`px-4 py-2 rounded-md ${vote[link] === 'si' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-800'} focus:outline-none focus:ring-2 focus:ring-green-500`}
-                    >
-                      Sí
-                    </button>
-                    <button
-                      onClick={() => handleVote(link, 'no')}
-                      className={`px-4 py-2 rounded-md ${vote[link] === 'no' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-800'} focus:outline-none focus:ring-2 focus:ring-red-500`}
-                    >
-                      No
-                    </button>
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleSubmit(link, role, feedback[link] || '', report[link] || '', vote[link] || '')}
-                  className="w-full px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  Enviar
-                </button>
-                {submitStatus[link] && (
-                  <p className={`text-center text-sm ${submitStatus[link].includes('Error') ? 'text-red-500' : 'text-green-500'}`}>
-                    {submitStatus[link]}
-                  </p>
-                )}
-                {showImageModal[link] && (
-                  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                    <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
-                      <h5 className="text-lg font-semibold mb-4">{isEditingImage[link] ? 'Editar Imagen' : 'Insertar Imagen'}</h5>
-                      <input
-                        type="text"
-                        name="url"
-                        value={imageData[link]?.url || ''}
-                        onChange={(e) => handleImageDataChange(link, e)}
-                        placeholder="URL de la imagen"
-                        className="w-full px-4 py-2 border rounded-md mb-2"
-                        disabled={isEditingImage[link]}
-                      />
-                      <input
-                        type="text"
-                        name="width"
-                        value={imageData[link]?.width || ''}
-                        onChange={(e) => handleImageDataChange(link, e)}
-                        placeholder="Ancho (ej: 300px o 50%)"
-                        className="w-full px-4 py-2 border rounded-md mb-2"
-                      />
-                      <input
-                        type="text"
-                        name="height"
-                        value={imageData[link]?.height || ''}
-                        onChange={(e) => handleImageDataChange(link, e)}
-                        placeholder="Alto (ej: 200px o auto)"
-                        className="w-full px-4 py-2 border rounded-md mb-2"
-                      />
-                      <select
-                        name="align"
-                        value={imageData[link]?.align || 'left'}
-                        onChange={(e) => handleImageDataChange(link, e)}
-                        className="w-full px-4 py-2 border rounded-md mb-4"
-                      >
-                        <option value="left">Izquierda</option>
-                        <option value="center">Centro</option>
-                        <option value="right">Derecha</option>
-                        <option value="justify">Justificado</option>
-                      </select>
-                      <div className="flex justify-end space-x-2">
-                        <button
-                          onClick={() => setShowImageModal((prev) => ({ ...prev, [link]: false }))}
-                          className="px-4 py-2 bg-gray-300 rounded-md"
-                        >
-                          Cancelar
-                        </button>
-                        <button
-                          onClick={() => handleImageModalSubmit(link)}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-md"
-                        >
-                          {isEditingImage[link] ? 'Actualizar' : 'Insertar'}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    {role === 'Editor' ? 'Retroalimentación Final al Autor' : 'Retroalimentación al Autor'}
-                  </label>
-                  <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-                    {decodeBody(assignment.feedback)}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Informe al Editor</label>
-                  <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-                    {decodeBody(assignment.report)}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Voto</label>
-                  <p className="text-gray-600">{assignment.vote || 'Sin voto'}</p>
-                </div>
-              </div>
-            )}
-          </>
         )}
       </div>
     );
   };
 
-  if (loading) {
-    return <p className="text-center text-gray-600">Cargando asignaciones...</p>;
-  }
-
-  if (error) {
-    return (
-      <div className="text-center space-y-4 bg-gray-50 p-6 rounded-lg shadow-sm">
-        <h3 className="text-xl font-medium text-gray-800">Bienvenido, {user.name}</h3>
-        <p className="text-gray-600">Rol: {user.role}</p>
-        <p className="text-red-500">{error}</p>
-        <button
-          onClick={fetchAssignments}
-          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
-        >
-          Reintentar
-        </button>
-        <button
-          onClick={onLogout}
-          className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
-        >
-          Cerrar Sesión
-        </button>
-      </div>
-    );
-  }
-
-  if (assignments.length === 0) {
-    return (
-      <div className="text-center space-y-4 bg-gray-50 p-6 rounded-lg shadow-sm">
-        <h3 className="text-xl font-medium text-gray-800">Bienvenido, {user.name}</h3>
-        <p className="text-gray-600">Rol: {user.role}</p>
-        <p className="text-gray-600">No tienes asignaciones actualmente.</p>
-        <button
-          onClick={onLogout}
-          className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
-        >
-          Cerrar Sesión
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-8 max-w-7xl mx-auto px-4 sm:px-0 relative">
-      <div className="text-center space-y-2">
-        <h3 className="text-xl font-medium text-gray-800">Bienvenido, {user.name}</h3>
-        <p className="text-gray-600">Rol: {user.role}</p>
-        {completedAssignments.length > 0 && (
-          <button
-            onClick={() => setCompletedPanelOpen(true)}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 text-sm mr-4"
-          >
-            Ver artículos revisados
-          </button>
+    <div className="min-h-screen bg-gray-100 p-4 md:p-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
+            {isAuthor ? 'Mis Artículos' : 'Panel de Revisión'}
+          </h2>
+          <div className="flex items-center space-x-4">
+            <span className="text-gray-600">Bienvenido, {user.name}</span>
+            <button
+              onClick={onLogout}
+              className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm"
+            >
+              Cerrar Sesión
+            </button>
+          </div>
+        </div>
+        {error && (
+          <div className="bg-red-100 text-red-700 p-4 rounded-md mb-6">
+            {error}
+          </div>
         )}
         {!isAuthor && (
-          <button
-            onClick={fetchAssignments}
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm mr-4"
-          >
-            Actualizar Asignaciones
-          </button>
+          <div className="mb-6">
+            <NewsUploadSection />
+          </div>
         )}
-        <button
-          onClick={onLogout}
-          className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
-        >
-          Cerrar Sesión
-        </button>
-      </div>
-      {!isAuthor && (
-        <div className="flex space-x-4">
-          <button
-            onClick={() => setActiveTab('assignments')}
-            className={`px-4 py-2 rounded-md ${activeTab === 'assignments' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}
-          >
-            Asignaciones
-          </button>
-          {user.role.includes('Editor') && (
+        <div className="mb-6">
+          <div className="flex space-x-4 border-b">
             <button
-              onClick={() => setActiveTab('news')}
-              className={`px-4 py-2 rounded-md ${activeTab === 'news' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}
+              onClick={() => setActiveTab('assignments')}
+              className={`pb-2 px-4 text-sm font-medium ${activeTab === 'assignments' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}
             >
-              Subir Noticia
+              Asignaciones Pendientes ({pendingAssignments.length})
             </button>
-          )}
-        </div>
-      )}
-      {(activeTab === 'assignments' || isAuthor) && (
-        <div>
-          {selectedAssignment ? (
-            <div className="space-y-4">
-              <button
-                onClick={() => setSelectedAssignmentId(null)}
-                className="text-blue-600 flex items-center hover:underline"
-              >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-                </svg>
-                Volver a asignaciones pendientes
-              </button>
-              {renderAssignment(selectedAssignment, false)}
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {pendingAssignments.length === 0 ? (
-                <p className="text-center text-gray-600">No tienes asignaciones pendientes.</p>
-              ) : (
-                pendingAssignments.map((assignment) => renderAssignment(assignment, true))
-              )}
-            </div>
-          )}
-        </div>
-      )}
-      {activeTab === 'news' && !isAuthor && user.role.includes('Editor') && <NewsUploadSection />}
-      {completedPanelOpen && (
-        <div
-          className={`fixed left-0 top-0 h-full w-full lg:w-80 bg-white shadow-2xl z-50 overflow-y-auto transform ${completedPanelOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out`}
-        >
-          <div className="p-4 flex justify-between items-center border-b">
-            <h4 className="text-lg font-semibold text-gray-800">Artículos Revisados</h4>
             <button
-              onClick={() => setCompletedPanelOpen(false)}
-              className="text-gray-600 hover:text-gray-800 focus:outline-none"
+              onClick={() => setActiveTab('completed')}
+              className={`pb-2 px-4 text-sm font-medium ${activeTab === 'completed' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              Asignaciones Completadas ({completedAssignments.length})
             </button>
           </div>
-          <div className="divide-y">
-            {completedAssignments.map((a) => (
-              <div
-                key={a.id}
-                className="p-4 cursor-pointer hover:bg-blue-50 transition-colors"
-                onClick={() => {
-                  setSelectedAssignmentId(a.id);
-                  setCompletedPanelOpen(false);
-                }}
-              >
-                <p className="text-gray-800 truncate">{a['Nombre Artículo']}</p>
-              </div>
+        </div>
+        {loading ? (
+          <div className="text-center text-gray-600">Cargando asignaciones...</div>
+        ) : selectedAssignment ? (
+          renderFullAssignment(selectedAssignment)
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {(activeTab === 'assignments' ? pendingAssignments : completedAssignments).map((assignment) => (
+              <AssignmentCard
+                key={assignment.id}
+                assignment={assignment}
+                onClick={() => setSelectedAssignment(assignment)}
+              />
             ))}
           </div>
-        </div>
-      )}
+        )}
+        {pendingAssignments.length === 0 && activeTab === 'assignments' && !loading && !selectedAssignment && (
+          <div className="text-center text-gray-600">No hay asignaciones pendientes.</div>
+        )}
+        {completedAssignments.length === 0 && activeTab === 'completed' && !loading && !selectedAssignment && (
+          <div className="text-center text-gray-600">No hay asignaciones completadas.</div>
+        )}
+      </div>
     </div>
   );
 }

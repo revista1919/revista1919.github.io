@@ -210,13 +210,17 @@ function App() {
       name: 'login',
       label: 'Login / Estado de Artículos',
       component: (
-        <div className="py-8 max-w-lg mx-auto">
-          <h2 className="text-2xl font-semibold text-center text-[#5a3e36] mb-4">
-            Interfaz para Autores y Revisores
-          </h2>
-          <p className="text-center text-[#7a5c4f] mb-6">
-            Esta sección es solo para autores y revisores/autores con permisos especiales.
-          </p>
+        <div className={`py-8 ${user ? 'w-full' : 'max-w-lg mx-auto'}`}>
+          {!user && (
+            <>
+              <h2 className="text-2xl font-semibold text-center text-[#5a3e36] mb-4">
+                Interfaz para Autores y Revisores
+              </h2>
+              <p className="text-center text-[#7a5c4f] mb-6">
+                Esta sección es solo para autores y revisores/autores con permisos especiales.
+              </p>
+            </>
+          )}
           {user ? (
             <PortalSection user={user} onLogout={handleLogout} />
           ) : (
@@ -230,7 +234,7 @@ function App() {
   return (
     <div className="min-h-screen bg-[#f4ece7] flex flex-col">
       <Header className="w-full m-0 p-0" />
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex-grow">
+      <div className={`container ${user && activeTab === 'login' ? 'max-w-full px-0' : 'mx-auto px-4 sm:px-6 lg:px-8'} flex-grow`}>
         <Tabs sections={sections} activeTab={activeTab} setActiveTab={setActiveTab} />
       </div>
       <Footer className="w-full m-0 p-0 mt-auto" />

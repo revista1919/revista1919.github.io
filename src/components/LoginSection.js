@@ -98,7 +98,7 @@ export default function LoginSection({ onLogin }) {
   };
 
   return (
-    <div className="flex items-center justify-center py-8 px-4 sm:px-0">
+    <div className="flex items-center justify-center py-8 px-2 sm:px-0">
       <div className="w-full max-w-sm p-6 sm:p-8 space-y-6 bg-white rounded-lg shadow-lg">
         <h3 className="text-xl sm:text-2xl font-semibold text-center text-gray-800">Iniciar Sesión</h3>
         <div className="space-y-4">
