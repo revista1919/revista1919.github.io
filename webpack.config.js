@@ -91,6 +91,7 @@ module.exports = (env, argv) => {
       new CopyWebpackPlugin({
         patterns: [
           { from: 'public/logo.png', to: '.' },
+          { from: 'public/site.webmanifest', to: 'manifest.json' },
           { 
             from: 'public/Articles', 
             to: 'Articles',

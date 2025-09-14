@@ -1,6 +1,7 @@
 {
   "name": "Revista Nacional de las Ciencias para Estudiantes",
-  "short_name": "Revista Nacional",
+  "name_en": "The National Review of Sciences for Students",
+  "short_name": "Revista Ciencias",
   "icons": [
     {
       "src": "/logo.png",
