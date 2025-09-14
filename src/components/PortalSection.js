@@ -11,7 +11,7 @@ Quill.register('modules/imageResize', ImageResize);
 
 const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyJ9znuf_Pa8Hyh4BnsO1pTTduBsXC7kDD0pORWccMTBlckgt0I--NKG69aR_puTAZ5/exec';
-const RUBRIC_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzJV6h_x6z57jIuHhlf3z3HgnVytzx_Jaqrtuwdi9NdgNtW-t1ylOJGY2yDRBeb4fZL/exec';
+const RUBRIC_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxcoFa8VWaN09avZslVt06m2EwQp7pc7wXG0xIzmTjTQCvzTStEkorPftsRkmr6Epo-/exec';
 
 const RUBRIC_CSV1 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=0&single=true&output=csv';
 const RUBRIC_CSV2 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=1438370398&single=true&output=csv';
