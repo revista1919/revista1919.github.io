@@ -153,6 +153,32 @@ const getDecisionText = (percent) => {
 
 const getTotal = (scores, crits) => crits.reduce((sum, c) => sum + (scores[c.key] || 0), 0);
 
+const base64EncodeUnicode = (str) => {
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(str);
+  let binary = '';
+  bytes.forEach(b => binary += String.fromCharCode(b));
+  return btoa(binary);
+};
+
+const base64DecodeUnicode = (str) => {
+  const binary = atob(str);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  const decoder = new TextDecoder();
+  return decoder.decode(bytes);
+};
+
+const sanitizeInput = (input) => {
+  if (!input) return '';
+  return input.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+              .replace(/on\w+="[^"]*"/gi, '')
+              .replace(/\s+/g, ' ')
+              .trim();
+};
+
 export default function PortalSection({ user, onLogout }) {
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -481,11 +507,11 @@ export default function PortalSection({ user, onLogout }) {
 
   const getTutorialText = (role) => {
     if (role === "Revisor 1") {
-      return 'Como Revisor 1, tu rol es revisar aspectos técnicos como gramática, ortografía, citación de fuentes, detección de contenido generado por IA, coherencia lógica y estructura general del artículo. Deja comentarios detallados en el documento de Google Drive para sugerir mejoras. Asegúrate de que el lenguaje sea claro y académico. Debes dejar tu retroalimentación al autor en la casilla correspondiente. Además debes dejar un informe resumido explicando tu observaciones para guiar al editor. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.===';
+      return 'Como Revisor 1, tu rol es revisar aspectos técnicos como gramática, ortografía, citación de fuentes, detección de contenido generado por IA, coherencia lógica y estructura general del artículo. Deja comentarios detallados en el documento de Google Drive para sugerir mejoras. Asegúrate de que el lenguaje sea claro y académico. Debes dejar tu retroalimentación al autor en la casilla correspondiente. Además debes dejar un informe resumido explicando tu observaciones para guiar al editor. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.';
     } else if (role === "Revisor 2") {
-      return 'Como Revisor 2, enfócate en el contenido sustantivo: verifica la precisión de las fuentes, la seriedad y originalidad del tema, la relevancia de los argumentos, y la contribución al campo de estudio. Evalúa si el artículo es innovador y bien fundamentado. Deja comentarios en el documento de Google Drive. Debes dejar tu retroalimentación al autor in la casilla correspondiente. Además debes dejar un informe resumido explicando tu observaciones para guiar al editor. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.===';
+      return 'Como Revisor 2, enfócate en el contenido sustantivo: verifica la precisión de las fuentes, la seriedad y originalidad del tema, la relevancia de los argumentos, y la contribución al campo de estudio. Evalúa si el artículo es innovador y bien fundamentado. Deja comentarios en el documento de Google Drive. Debes dejar tu retroalimentación al autor in la casilla correspondiente. Además debes dejar un informe resumido explicando tu observaciones para guiar al editor. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.';
     } else if (role === "Editor") {
-      return `Como Editor, tu responsabilidad es revisar las retroalimentaciones e informes de los revisores, integrarlas con tu propia evaluación, y redactar una retroalimentación final sensible y constructiva para el autor. Corrige directamente el texto si es necesario y decide el estado final del artículo. Usa el documento de Google Drive para ediciones. Debes dejar una retroalimentación al autor sintetizando las que dejaron los revisores. Tu deber es que el mensaje sea acertado y sensible, sin desmotivar al autor. Para esto debes usar la técnica del "sándwich". Si no sabes qué es, entra aqu . Luego deja tu informe con los cambios realizados, deben ser precisos y académicos. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.===`;
+      return `Como Editor, tu responsabilidad es revisar las retroalimentaciones e informes de los revisores, integrarlas con tu propia evaluación, y redactar una retroalimentación final sensible y constructiva para el autor. Corrige directamente el texto si es necesario y decide el estado final del artículo. Usa el documento de Google Drive para ediciones. Debes dejar una retroalimentación al autor sintetizando las que dejaron los revisores. Tu deber es que el mensaje sea acertado y sensible, sin desmotivar al autor. Para esto debes usar la técnica del "sándwich". Si no sabes qué es, entra aqu . Luego deja tu informe con los cambios realizados, deben ser precisos y académicos. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.`;
     }
     return "";
   };
@@ -494,7 +520,7 @@ export default function PortalSection({ user, onLogout }) {
     const tutorialText = getTutorialText(role);
     return (
       <div className="text-gray-800 bg-gray-50 p-4 rounded-md border border-gray-200 leading-relaxed break-words">
-        {decodeBody(tutorialText)}
+        <p className="mb-4">{tutorialText}</p>
       </div>
     );
   };
@@ -664,448 +690,19 @@ export default function PortalSection({ user, onLogout }) {
     'size'
   ], []);
 
-  const sanitizeInput = useCallback((input) => {
-    if (!input) return '';
-    return input.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-                .replace(/on\w+="[^"]*"/gi, '')
-                .replace(/\s+/g, ' ')
-                .trim();
-  }, []);
-
   const encodeBody = (html) => {
+    return base64EncodeUnicode(sanitizeInput(html));
+  };
+
+  const decodeBody = (encoded) => {
+    if (!encoded) return <p className="text-gray-600 break-words">Sin contenido disponible.</p>;
     try {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'text/html');
-      const encodeNode = (node, parentAlign = '') => {
-        if (node.nodeType === 3) return node.textContent;
-        let children = Array.from(node.childNodes).map(n => encodeNode(n, getAlign(node) || parentAlign)).join('');
-        if (node.tagName === 'STRONG' || node.tagName === 'B') {
-          return '*' + children + '*';
-        } else if (node.tagName === 'EM' || node.tagName === 'I') {
-          return '/' + children + '/';
-        } else if (node.tagName === 'U') {
-          return '$' + children + '$';
-        } else if (node.tagName === 'S' || node.tagName === 'STRIKE') {
-          return '~' + children + '~';
-        } else if (node.tagName === 'A') {
-          return children + '(' + node.href + ')';
-        } else if (node.tagName === 'IMG') {
-          let width = node.getAttribute('width') || node.style.width || 'auto';
-          let height = node.getAttribute('height') || node.style.height || 'auto';
-          const align = getAlign(node) || parentAlign || 'left';
-          if (width !== 'auto' && !width.match(/%|px$/)) width += 'px';
-          if (height !== 'auto' && !height.match(/%|px$/)) height += 'px';
-          return `[img:${node.src},${width},${height},${align}]`;
-        } else if (node.tagName === 'SPAN') {
-          let size = '';
-          if (node.classList.contains('ql-size-small')) size = 'small';
-          else if (node.classList.contains('ql-size-large')) size = 'big';
-          if (size) {
-            return `[size:${size}]` + children + '[/size]';
-          }
-          return children;
-        } else if (node.tagName === 'P' || node.tagName === 'DIV') {
-          const align = getAlign(node);
-          let size = '';
-          let innerChildren = children;
-          if (node.childNodes.length === 1 && node.childNodes[0].tagName === 'SPAN' && node.childNodes[0].classList) {
-            const span = node.childNodes[0];
-            if (span.classList.contains('ql-size-small')) size = 'small';
-            else if (span.classList.contains('ql-size-large')) size = 'big';
-            if (size) {
-              innerChildren = Array.from(span.childNodes).map(n => encodeNode(n, align)).join('');
-            }
-          }
-          if (!size) size = 'normal';
-          let params = [];
-          if (size !== 'normal') params.push(size);
-          if (align) params.push(align);
-          let prefix = '';
-          if (params.length > 0) {
-            prefix = '(' + params.join(',') + ')';
-          }
-          return prefix + innerChildren + '===';
-        } else if (node.tagName === 'BR') {
-          return '===';
-        } else if (node.tagName === 'UL') {
-          const items = Array.from(node.childNodes)
-            .filter(n => n.tagName === 'LI')
-            .map(li => '- ' + encodeNode(li, parentAlign));
-          return items.join('===') + '===';
-        } else if (node.tagName === 'OL') {
-          let counter = 1;
-          const items = Array.from(node.childNodes)
-            .filter(n => n.tagName === 'LI')
-            .map(li => (counter++) + '. ' + encodeNode(li, parentAlign));
-          return items.join('===') + '===';
-        } else if (node.tagName === 'LI') {
-          return children;
-        }
-        return children;
-      };
-      let encoded = Array.from(doc.body.childNodes).map(n => encodeNode(n)).join('');
-      return sanitizeInput(encoded.replace(/===+/g, '==='));
+      const html = base64DecodeUnicode(encoded);
+      return <div className="ql-editor break-words leading-relaxed" dangerouslySetInnerHTML={{ __html: html }} />;
     } catch (err) {
-      console.error('Error encoding body:', err);
-      return '';
+      console.error('Error decoding body:', err);
+      return <p className="text-gray-600 break-words">Error al decodificar contenido.</p>;
     }
-  };
-
-  const getAlign = (node) => {
-    if (node.style && node.style.textAlign) return node.style.textAlign;
-    if (node.classList) {
-      if (node.classList.contains('ql-align-center')) return 'center';
-      if (node.classList.contains('ql-align-right')) return 'right';
-      if (node.classList.contains('ql-align-justify')) return 'justify';
-    }
-    return '';
-  };
-
-  const isLikelyImageUrl = (url) => {
-    if (!url) return false;
-    const u = url.toLowerCase();
-    return (
-      /\.(png|jpe?g|gif|webp|bmp|svg)(\?.*)?$/.test(u) ||
-      /googleusercontent|gstatic|ggpht|google\.(com|cl).*\/(img|images|url)/.test(u) ||
-      /^data:image\/[a-zA-Z+]+;base64,/.test(u)
-    );
-  };
-
-  const normalizeUrl = (u) => {
-    let url = (u || "").trim();
-    if (/^https?:[^/]/i.test(url)) {
-      url = url.replace(/^https?:/i, (m) => m + "//");
-    }
-    return url;
-  };
-
-  const decodeBody = (body) => {
-    if (!body) return <p className="text-gray-600 break-words">Sin contenido disponible.</p>;
-    const paragraphs = String(body)
-      .split("===")
-      .filter((p) => p.trim() !== "");
-    const content = [];
-    let i = 0;
-    while (i < paragraphs.length) {
-      let p = paragraphs[i].trim();
-      if (p.startsWith('- ')) {
-        const items = [];
-        while (i < paragraphs.length && paragraphs[i].trim().startsWith('- ')) {
-          const itemText = paragraphs[i].trim().slice(2);
-          items.push(renderParagraph(itemText));
-          i++;
-        }
-        content.push(
-          <ul key={content.length} className="mb-4 list-disc pl-6">
-            {items.map((item, j) => (
-              <li key={j} className="break-words">{item}</li>
-            ))}
-          </ul>
-        );
-        continue;
-      } else if (/^\d+\.\s/.test(p)) {
-        const items = [];
-        while (i < paragraphs.length && /^\d+\.\s/.test(paragraphs[i].trim())) {
-          const itemText = paragraphs[i].trim().replace(/^\d+\.\s/, '');
-          items.push(renderParagraph(itemText));
-          i++;
-        }
-        content.push(
-          <ol key={content.length} className="mb-4 list-decimal pl-6">
-            {items.map((item, j) => (
-              <li key={j} className="break-words">{item}</li>
-            ))}
-          </ol>
-        );
-        continue;
-      } else {
-        content.push(
-          <div
-            key={content.length}
-            className="mb-4 leading-relaxed break-words"
-            style={{ clear: "both" }}
-          >
-            {renderParagraph(p)}
-          </div>
-        );
-        i++;
-      }
-    }
-    return content;
-  };
-
-  const renderParagraph = (p) => {
-    let text = p.trim();
-    const placeholders = [];
-    const TOK = (i) => `__TOK${i}__`;
-
-    let align = "left";
-    let size = "normal";
-    if (text.startsWith('(')) {
-      const endIdx = text.indexOf(')');
-      if (endIdx !== -1) {
-        const paramStr = text.slice(1, endIdx);
-        const params = paramStr.split(',').map(p => p.trim());
-        params.forEach(p => {
-          if (['small', 'big', 'normal'].includes(p)) size = p;
-          if (['left', 'center', 'right', 'justify'].includes(p)) align = p;
-        });
-        text = text.slice(endIdx + 1).trim();
-      }
-    }
-
-    const imgPattern = /\[img:([^\]]*?)(?:,(\d*(?:px|%)?|auto))?(?:,(\d*(?:px|%)?|auto))?(?:,(left|center|right|justify))?\]/gi;
-    text = text.replace(imgPattern, (_, url, width = "auto", height = "auto", imgAlign = "left") => {
-      if (width !== "auto" && width && !width.match(/%|px$/)) width += 'px';
-      if (height !== "auto" && height && !height.match(/%|px$/)) height += 'px';
-      const id = placeholders.length;
-      placeholders.push({ type: "image", url: normalizeUrl(url), width, height, align: imgAlign });
-      return TOK(id);
-    });
-
-    const linkPattern = /\b([^\s(]+)\((https?:\/\/[^\s)]+)\)/gi;
-    text = text.replace(linkPattern, (_, word, url) => {
-      const id = placeholders.length;
-      placeholders.push({ type: "link", word, url });
-      return TOK(id);
-    });
-
-    const urlPattern = /(?:https?:\/\/[^\s)]+|^data:image\/[a-zA-Z+]+;base64,[^\s)]+)/gi;
-    text = text.replace(urlPattern, (u) => {
-      if (placeholders.some((ph) => ph.url === u)) return u;
-      const id = placeholders.length;
-      placeholders.push({ type: isLikelyImageUrl(u) ? "image" : "url", url: u });
-      return TOK(id);
-    });
-
-    text = text.replace(/\[size:([^\]]+)\](.*?)\[\/size\]/gs, (_, sz, content) => {
-      const id = placeholders.length;
-      placeholders.push({ type: "size", size: sz, content });
-      return TOK(id);
-    });
-
-    text = text.replace(/<<ESC_(\d+)>>/g, (_, code) => String.fromCharCode(Number(code)));
-
-    const styledContent = renderStyledText(text, placeholders);
-
-    let fontSizeStyle;
-    if (size === 'small') fontSizeStyle = '0.75em';
-    else if (size === 'big') fontSizeStyle = '1.5em';
-    else fontSizeStyle = 'inherit';
-
-    const alignStyle = {
-      textAlign: align,
-      fontSize: fontSizeStyle,
-      width: '100%',
-      display: 'block',
-      margin: align === 'center' ? '0 auto' : '0',
-    };
-
-    return (
-      <div style={alignStyle} className="break-words">
-        {styledContent}
-      </div>
-    );
-  };
-
-  const renderStyledText = (text, placeholders) => {
-    text = text.replace(/\\([*/_$~])/g, (_, char) => `<<ESC_${char.charCodeAt(0)}>>`);
-
-    const parts = text.split(/(__TOK\d+__)/g);
-    const out = [];
-    let buf = "";
-    let bold = false;
-    let italic = false;
-    let underline = false;
-    let strike = false;
-    let key = 0;
-
-    for (const part of parts) {
-      if (/^__TOK\d+__$/.test(part)) {
-        if (buf) {
-          out.push(
-            <span
-              key={key++}
-              style={{
-                fontWeight: bold ? "bold" : "normal",
-                fontStyle: italic ? "italic" : "normal",
-                textDecoration: `${underline ? "underline" : ""} ${strike ? "line-through" : ""}`.trim(),
-              }}
-              className="break-words"
-            >
-              {buf}
-            </span>
-          );
-          buf = "";
-        }
-        const idx = Number(part.match(/\d+/)[0]);
-        const ph = placeholders[idx];
-        if (!ph) continue;
-        if (ph.type === "link") {
-          out.push(
-            <a
-              key={key++}
-              href={normalizeUrl(ph.url)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:underline hover:text-blue-800 transition-colors duration-200 break-words"
-            >
-              {ph.word}
-            </a>
-          );
-        } else if (ph.type === "image") {
-          let imgStyle = {
-            width: ph.width !== 'auto' ? ph.width : '100%',
-            height: ph.height !== 'auto' ? ph.height : 'auto',
-            display: 'block',
-            marginLeft: ph.align === 'center' ? 'auto' : '0',
-            marginRight: ph.align === 'center' ? 'auto' : '0',
-            float: ph.align === 'left' || ph.align === 'right' ? ph.align : 'none',
-            maxWidth: '100%',
-            marginTop: '8px',
-            marginBottom: '8px',
-          };
-          if (ph.align === 'justify') {
-            imgStyle = {
-              ...imgStyle,
-              width: '100%',
-              marginLeft: '0',
-              marginRight: '0',
-              float: 'none',
-            };
-          }
-          out.push(
-            <img
-              key={key++}
-              src={normalizeUrl(ph.url)}
-              alt="Imagen"
-              className="max-w-full h-auto rounded-md"
-              style={imgStyle}
-              onError={(e) => {
-                e.currentTarget.onerror = null;
-                e.currentTarget.src = "https://via.placeholder.com/800x450?text=Imagen+no-disponible";
-              }}
-            />
-          );
-        } else if (ph.type === "url") {
-          out.push(
-            <a
-              key={key++}
-              href={normalizeUrl(ph.url)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:underline hover:text-blue-800 transition-colors duration-200 break-words"
-            >
-              {ph.url}
-            </a>
-          );
-        } else if (ph.type === "size") {
-          let fontSizeStyle;
-          if (ph.size === 'small') fontSizeStyle = '0.75em';
-          else if (ph.size === 'big') fontSizeStyle = '1.5em';
-          else fontSizeStyle = 'inherit';
-          out.push(
-            <span key={key++} style={{ fontSize: fontSizeStyle }} className="break-words">
-              {renderStyledText(ph.content, placeholders)}
-            </span>
-          );
-        }
-        continue;
-      }
-      for (const ch of part) {
-        if (ch === "*") {
-          if (buf) {
-            out.push(
-              <span
-                key={key++}
-                style={{
-                  fontWeight: bold ? "bold" : "normal",
-                  fontStyle: italic ? "italic" : "normal",
-                  textDecoration: `${underline ? "underline" : ""} ${strike ? "line-through" : ""}`.trim(),
-                }}
-                className="break-words"
-              >
-                {buf}
-              </span>
-            );
-            buf = "";
-          }
-          bold = !bold;
-        } else if (ch === "/") {
-          if (buf) {
-            out.push(
-              <span
-                key={key++}
-                style={{
-                  fontWeight: bold ? "bold" : "normal",
-                  fontStyle: italic ? "italic" : "normal",
-                  textDecoration: `${underline ? "underline" : ""} ${strike ? "line-through" : ""}`.trim(),
-                }}
-                className="break-words"
-              >
-                {buf}
-              </span>
-            );
-            buf = "";
-          }
-          italic = !italic;
-        } else if (ch === "$") {
-          if (buf) {
-            out.push(
-              <span
-                key={key++}
-                style={{
-                  fontWeight: bold ? "bold" : "normal",
-                  fontStyle: italic ? "italic" : "normal",
-                  textDecoration: `${underline ? "underline" : ""} ${strike ? "line-through" : ""}`.trim(),
-                }}
-                className="break-words"
-              >
-                {buf}
-              </span>
-            );
-            buf = "";
-          }
-          underline = !underline;
-        } else if (ch === "~") {
-          if (buf) {
-            out.push(
-              <span
-                key={key++}
-                style={{
-                  fontWeight: bold ? "bold" : "normal",
-                  fontStyle: italic ? "italic" : "normal",
-                  textDecoration: `${underline ? "underline" : ""} ${strike ? "line-through" : ""}`.trim(),
-                }}
-                className="break-words"
-              >
-                {buf}
-              </span>
-            );
-            buf = "";
-          }
-          strike = !strike;
-        } else {
-          buf += ch;
-        }
-      }
-    }
-    if (buf) {
-      out.push(
-        <span
-          key={key++}
-          style={{
-            fontWeight: bold ? "bold" : "normal",
-            fontStyle: italic ? "italic" : "normal",
-            textDecoration: `${underline ? "underline" : ""} ${strike ? "line-through" : ""}`.trim(),
-          }}
-          className="break-words"
-        >
-          {buf}
-        </span>
-      );
-    }
-    return out;
   };
 
   const setupQuillEditor = (quillRef, link, type) => {

@@ -8,7 +8,23 @@ import { useTranslation } from 'react-i18next';
 // Registrar el módulo de resize
 Quill.register('modules/imageResize', ImageResize);
 
-const NEWS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyHXyWeEJ6QXZCdIR-g33G_dN60mgjkHxRVxppbCBephMH1jTwBnsUN5qicYHku5ll2rw/exec';
+const NEWS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw0vKZ29s76YFPM3Rm57qkVL6P3ia9kTbXy0ob2VNl08dQvVT7fsMMFLfbUbd_0W87qVQ/exec';
+
+const base64EncodeUnicode = (str) => {
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(str);
+  let binary = '';
+  bytes.forEach(b => binary += String.fromCharCode(b));
+  return btoa(binary);
+};
+
+const sanitizeInput = (input) => {
+  if (!input) return '';
+  return input.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+              .replace(/on\w+="[^"]*"/gi, '')
+              .replace(/\s+/g, ' ')
+              .trim();
+};
 
 export default function NewsUploadSection() {
   const [title, setTitle] = useState('');
@@ -47,7 +63,7 @@ export default function NewsUploadSection() {
     const editor = quillRef.current.getEditor();
     let attempts = 0;
     const maxAttempts = 5;
-    const interval = 100; // 100ms entre intentos
+    const interval = 100;
 
     const addButtons = () => {
       const imageResize = editor.getModule('imageResize');
@@ -70,7 +86,6 @@ export default function NewsUploadSection() {
         `;
         imageResize.toolbar.appendChild(buttonContainer);
 
-        // Botón eliminar
         buttonContainer.querySelector('.ql-delete-image').onclick = () => {
           const range = editor.getSelection();
           if (range) {
@@ -109,7 +124,6 @@ export default function NewsUploadSection() {
           }
         };
 
-        // Botón editar
         buttonContainer.querySelector('.ql-edit-image').onclick = () => {
           const range = editor.getSelection();
           if (range) {
@@ -136,14 +150,12 @@ export default function NewsUploadSection() {
         setTimeout(addButtons, interval);
       } else {
         console.warn('No se pudo añadir los botones: imageResize.toolbar no está disponible');
-        // Removida la advertencia setMessage
       }
     };
 
     addButtons();
   }, []);
 
-  // Memorizar modules y formats
   const modules = useMemo(() => ({
     toolbar: [
       ['bold', 'italic', 'underline', 'strike', 'blockquote'],
@@ -254,98 +266,43 @@ export default function NewsUploadSection() {
     'size'
   ], []);
 
-  const sanitizeInput = useCallback((input) => {
-    if (!input) return '';
-    return input.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-                .replace(/on\w+="[^"]*"/gi, '')
-                .replace(/\s+/g, ' ')
-                .trim();
-  }, []);
-
-  const getAlign = (node) => {
-    if (node.style && node.style.textAlign) return node.style.textAlign;
-    if (node.classList) {
-      if (node.classList.contains('ql-align-center')) return 'center';
-      if (node.classList.contains('ql-align-right')) return 'right';
-      if (node.classList.contains('ql-align-justify')) return 'justify';
-    }
-    return '';
-  };
-
   const encodeBody = (html) => {
     try {
+      // Parse the HTML to ensure images have proper alignment styles for wrapping
       const parser = new DOMParser();
       const doc = parser.parseFromString(html, 'text/html');
-      const encodeNode = (node, parentAlign = '') => {
-        if (node.nodeType === 3) return node.textContent;
-        let children = Array.from(node.childNodes).map(n => encodeNode(n, getAlign(node) || parentAlign)).join('');
-        if (node.tagName === 'STRONG' || node.tagName === 'B') {
-          return '*' + children + '*';
-        } else if (node.tagName === 'EM' || node.tagName === 'I') {
-          return '/' + children + '/';
-        } else if (node.tagName === 'U') {
-          return '$' + children + '$';
-        } else if (node.tagName === 'S' || node.tagName === 'STRIKE') {
-          return '~' + children + '~';
-        } else if (node.tagName === 'A') {
-          return children + '(' + node.href + ')';
-        } else if (node.tagName === 'IMG') {
-          let width = node.getAttribute('width') || node.style.width || 'auto';
-          let height = node.getAttribute('height') || node.style.height || 'auto';
-          const align = getAlign(node) || parentAlign || 'left';
-          if (width !== 'auto' && !width.match(/%|px$/)) width += 'px';
-          if (height !== 'auto' && !height.match(/%|px$/)) height += 'px';
-          return `[img:${node.src},${width},${height},${align}]`;
-        } else if (node.tagName === 'SPAN') {
-          let size = '';
-          if (node.classList.contains('ql-size-small')) size = 'small';
-          else if (node.classList.contains('ql-size-large')) size = 'big';
-          if (size) {
-            return `[size:${size}]` + children + '[/size]';
-          }
-          return children;
-        } else if (node.tagName === 'P' || node.tagName === 'DIV') {
-          const align = getAlign(node);
-          let size = '';
-          let innerChildren = children;
-          // Detectar si el párrafo tiene un span con size para todo el contenido
-          if (node.childNodes.length === 1 && node.childNodes[0].tagName === 'SPAN' && node.childNodes[0].classList) {
-            const span = node.childNodes[0];
-            if (span.classList.contains('ql-size-small')) size = 'small';
-            else if (span.classList.contains('ql-size-large')) size = 'big';
-            if (size) {
-              innerChildren = Array.from(span.childNodes).map(n => encodeNode(n, align)).join('');
-            }
-          }
-          if (!size) size = 'normal';
-          let params = [];
-          if (size !== 'normal') params.push(size);
-          if (align) params.push(align);
-          let prefix = '';
-          if (params.length > 0) {
-            prefix = '(' + params.join(',') + ')';
-          }
-          return prefix + innerChildren + '===';
-        } else if (node.tagName === 'BR') {
-          return '===';
-        } else if (node.tagName === 'UL') {
-          const items = Array.from(node.childNodes)
-            .filter(n => n.tagName === 'LI')
-            .map(li => '- ' + encodeNode(li, parentAlign));
-          return items.join('===') + '===';
-        } else if (node.tagName === 'OL') {
-          let counter = 1;
-          const items = Array.from(node.childNodes)
-            .filter(n => n.tagName === 'LI')
-            .map(li => (counter++) + '. ' + encodeNode(li, parentAlign));
-          return items.join('===') + '===';
-        } else if (node.tagName === 'LI') {
-          return children;
+      const images = doc.querySelectorAll('img');
+      images.forEach(img => {
+        const parent = img.parentElement;
+        const align = parent.style.textAlign || editor.getFormat(editor.getIndex(img))?.align || 'left';
+        let style = 'max-width:100%;height:auto;border-radius:4px;margin:8px 0;';
+        let parentStyle = '';
+        switch (align) {
+          case 'center':
+            style += 'display:block;margin-left:auto;margin-right:auto;';
+            break;
+          case 'right':
+            style += 'float:right;margin-left:8px;margin-right:0;';
+            parentStyle = 'overflow:hidden;';
+            break;
+          case 'justify':
+            style += 'width:100%;display:block;margin-left:0;margin-right:0;';
+            break;
+          case 'left':
+          default:
+            style += 'float:left;margin-right:8px;margin-left:0;';
+            parentStyle = 'overflow:hidden;';
+            break;
         }
-        return children;
-      };
-      let encoded = Array.from(doc.body.childNodes).map(n => encodeNode(n)).join('');
-      return sanitizeInput(encoded.replace(/===+/g, '==='));
+        // Preserve width and height if set
+        if (img.style.width) style += `width:${img.style.width};`;
+        if (img.style.height) style += `height:${img.style.height};`;
+        img.setAttribute('style', style);
+        if (parentStyle) parent.setAttribute('style', parentStyle);
+      });
+      // Serialize back to HTML and encode
+      const cleanedHtml = sanitizeInput(doc.body.innerHTML);
+      return base64EncodeUnicode(cleanedHtml);
     } catch (err) {
       console.error('Error encoding body:', err);
       return '';
@@ -419,7 +376,6 @@ export default function NewsUploadSection() {
     if (width && width !== 'auto' && !width.match(/%|px$/)) width += 'px';
     if (height && height !== 'auto' && !height.match(/%|px$/)) height += 'px';
     if (isEditingImage) {
-      // Editar imagen existente
       if (editingRange) {
         editor.setSelection(editingRange.index, 1, 'silent');
         const [leaf] = editor.getLeaf(editingRange.index);
@@ -431,7 +387,6 @@ export default function NewsUploadSection() {
         editor.blur();
       }
     } else {
-      // Insertar nueva imagen
       const range = editor.getSelection() || { index: editor.getLength() };
       editor.insertText(range.index, '\n', 'user');
       editor.insertEmbed(range.index + 1, 'image', url, 'user');
@@ -492,7 +447,7 @@ export default function NewsUploadSection() {
         Nota: El corrector ortográfico del navegador está activo (en español). Revisa sugerencias en rojo.
       </p>
       <p className="text-sm text-gray-500">
-        Usa URLs de imágenes de Google (copia la URL directamente). No subas desde tu computadora. Haz clic y arrastra para redimensionar imágenes, usa los botones de alineación (izquierda, centro, derecha, justificado), selecciona tamaño de fuente (pequeño, normal, grande), o usa el botón de eliminar (X) o editar en la barra de la imagen. Para subrayar texto, selecciona el texto y usa el botón de subrayado o escribe $texto$. Para añadir texto debajo de una imagen, haz clic después de la imagen y presiona Enter para crear un nuevo párrafo. Usa Supr/Backspace para eliminar imágenes si el botón no está disponible.
+        Usa URLs de imágenes de Google (copia la URL directamente). No subas desde tu computadora. Haz clic y arrastra para redimensionar imágenes, usa los botones de alineación (izquierda, centro, derecha, justificado) para que las imágenes floten con el texto o se centren. Selecciona tamaño de fuente (pequeño, normal, grande), o usa el botón de eliminar (X) o editar en la barra de la imagen. Para subrayar texto, selecciona el texto y usa el botón de subrayado o escribe $texto$. Para añadir texto debajo de una imagen flotante, el texto fluirá naturalmente alrededor; usa Enter para nuevo párrafo si necesitas separar.
       </p>
       <button
         onClick={handleSubmit}
@@ -554,10 +509,10 @@ export default function NewsUploadSection() {
               onChange={handleImageDataChange}
               className="w-full px-4 py-2 border rounded-md mb-4"
             >
-              <option value="left">Izquierda</option>
-              <option value="center">Centro</option>
-              <option value="right">Derecha</option>
-              <option value="justify">Justificado</option>
+              <option value="left">Izquierda (flota a la izquierda del texto)</option>
+              <option value="center">Centro (en el medio, sin flotar)</option>
+              <option value="right">Derecha (flota a la derecha del texto)</option>
+              <option value="justify">Justificado (ancho completo, sin flotar)</option>
             </select>
             <div className="flex justify-end space-x-2">
               <button

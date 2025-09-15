@@ -6,6 +6,21 @@ import { useTranslation } from 'react-i18next';
 const NEWS_CSV =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vQKnN8qMJcBN8im9Q61o-qElx1jQp5NdS80_B-FakCHrPLXHlQ_FXZWT0o5GVVHAM26l9sjLxsTCNO8/pub?output=csv";
 
+const base64DecodeUnicode = (str) => {
+  try {
+    const binary = atob(str);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    const decoder = new TextDecoder();
+    return decoder.decode(bytes);
+  } catch (err) {
+    console.error('Error decoding Base64:', err);
+    return '';
+  }
+};
+
 export default function NewsSection({ className }) {
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -109,370 +124,48 @@ export default function NewsSection({ className }) {
     return raw;
   }
 
-  function isLikelyImageUrl(url) {
-    if (!url) return false;
-    const u = url.toLowerCase();
-    return (
-      /\.(png|jpe?g|gif|webp|bmp|svg)(\?.*)?$/.test(u) ||
-      /googleusercontent|gstatic|ggpht|google\.(com|cl).*\/(img|images|url)/.test(u) ||
-      /^data:image\/[a-zA-Z+]+;base64,/.test(u)
-    );
-  }
-
-  function normalizeUrl(u) {
-    let url = (u || "").trim();
-    if (/^https?:[^/]/i.test(url)) {
-      url = url.replace(/^https?:/i, (m) => m + "//");
+  function truncateHTML(html, maxLength = 200) {
+    // Simple HTML truncation: split by paragraphs, take first few, truncate last
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    const paragraphs = Array.from(tempDiv.querySelectorAll('p, div, h1, h2, h3, ul, ol, img'));
+    let truncated = '';
+    let charCount = 0;
+    for (let elem of paragraphs) {
+      const elemText = elem.outerHTML;
+      if (charCount + elemText.length > maxLength) {
+        // Truncate the last element
+        const textContent = elem.textContent || '';
+        if (textContent.length > 0) {
+          const remaining = maxLength - charCount;
+          truncated += elem.outerHTML.substring(0, elem.outerHTML.length - (textContent.length - remaining)) + '...';
+        }
+        break;
+      }
+      truncated += elemText;
+      charCount += elemText.length;
     }
-    return url;
+    return truncated;
   }
 
   function decodeBody(body, truncate = false) {
     if (!body) return <p className="text-[#000000]">Sin contenido disponible.</p>;
-    let fullBody = body;
-    if (truncate && body.length > 2000) {
-      // Find the last paragraph boundary (===) before or around 2000 characters
-      const paragraphs = String(body).split("===");
-      let charCount = 0;
-      let truncatedParagraphs = [];
-      for (let i = 0; i < paragraphs.length; i++) {
-        charCount += paragraphs[i].length + 3; // Include length of "==="
-        if (charCount <= 2000) {
-          truncatedParagraphs.push(paragraphs[i]);
-        } else {
-          break;
-        }
+    try {
+      let html = base64DecodeUnicode(body);
+      if (truncate) {
+        html = truncateHTML(html, 200); // Short preview for cards
       }
-      fullBody = truncatedParagraphs.join("===") + (truncatedParagraphs.length < paragraphs.length ? "..." : "");
-    }
-    const paragraphs = String(fullBody)
-      .split("===")
-      .filter((p) => p.trim() !== "");
-    const content = [];
-    let i = 0;
-    while (i < paragraphs.length) {
-      let p = paragraphs[i].trim();
-      if (p.startsWith('- ')) {
-        const items = [];
-        while (i < paragraphs.length && paragraphs[i].trim().startsWith('- ')) {
-          const itemText = paragraphs[i].trim().slice(2);
-          items.push(renderParagraph(itemText));
-          i++;
-        }
-        content.push(
-          <ul key={content.length} className="mb-4 list-disc pl-6">
-            {items.map((item, j) => (
-              <li key={j}>{item}</li>
-            ))}
-          </ul>
-        );
-        continue;
-      } else if (/^\d+\.\s/.test(p)) {
-        const items = [];
-        while (i < paragraphs.length && /^\d+\.\s/.test(paragraphs[i].trim())) {
-          const itemText = paragraphs[i].trim().replace(/^\d+\.\s/, '');
-          items.push(renderParagraph(itemText));
-          i++;
-        }
-        content.push(
-          <ol key={content.length} className="mb-4 list-decimal pl-6">
-            {items.map((item, j) => (
-              <li key={j}>{item}</li>
-            ))}
-          </ol>
-        );
-        continue;
-      } else {
-        content.push(
-          <div
-            key={content.length}
-            className="mb-4 leading-relaxed break-words"
-            style={{ clear: "both" }}
-          >
-            {renderParagraph(p)}
-          </div>
-        );
-        i++;
-      }
-    }
-    return content;
-  }
-
-  function renderParagraph(p) {
-    let text = p.trim();
-    const placeholders = [];
-    const TOK = (i) => `__TOK${i}__`;
-
-    // Handle prefix (size,align)
-    let align = "left";
-    let size = "normal";
-    if (text.startsWith('(')) {
-      const endIdx = text.indexOf(')');
-      if (endIdx !== -1) {
-        const paramStr = text.slice(1, endIdx);
-        const params = paramStr.split(',').map(p => p.trim());
-        params.forEach(p => {
-          if (['small', 'big', 'normal'].includes(p)) size = p;
-          if (['left', 'center', 'right', 'justify'].includes(p)) align = p;
-        });
-        text = text.slice(endIdx + 1).trim();
-      }
-    }
-
-    // Image pattern: [img:URL,width,height,align]
-    const imgPattern = /\[img:([^\]]*?)(?:,(\d*(?:px|%)?|auto))?(?:,(\d*(?:px|%)?|auto))?(?:,(left|center|right|justify))?\]/gi;
-    text = text.replace(imgPattern, (_, url, width = "auto", height = "auto", imgAlign = "left") => {
-      if (width !== "auto" && width && !width.match(/%|px$/)) width += 'px';
-      if (height !== "auto" && height && !height.match(/%|px$/)) height += 'px';
-      const id = placeholders.length;
-      placeholders.push({ type: "image", url: normalizeUrl(url), width, height, align: imgAlign });
-      return TOK(id);
-    });
-
-    // Link pattern: word(URL)
-    const linkPattern = /\b([^\s(]+)\((https?:\/\/[^\s)]+)\)/gi;
-    text = text.replace(linkPattern, (_, word, url) => {
-      const id = placeholders.length;
-      placeholders.push({ type: "link", word, url });
-      return TOK(id);
-    });
-
-    // Standalone URLs
-    const urlPattern = /(?:https?:\/\/[^\s)]+|^data:image\/[a-zA-Z+]+;base64,[^\s)]+)/gi;
-    text = text.replace(urlPattern, (u) => {
-      if (placeholders.some((ph) => ph.url === u)) return u;
-      const id = placeholders.length;
-      placeholders.push({ type: isLikelyImageUrl(u) ? "image" : "url", url: u });
-      return TOK(id);
-    });
-
-    // Handle inline sizes [size:xx]content[/size]
-    text = text.replace(/\[size:([^\]]+)\](.*?)\[\/size\]/gs, (_, sz, content) => {
-      const id = placeholders.length;
-      placeholders.push({ type: "size", size: sz, content });
-      return TOK(id);
-    });
-
-    // Revert escaped characters
-    text = text.replace(/<<ESC_(\d+)>>/g, (_, code) => String.fromCharCode(Number(code)));
-
-    // Process styles
-    const styledContent = renderStyledText(text, placeholders);
-
-    let fontSizeStyle;
-    if (size === 'small') fontSizeStyle = '0.75em';
-    else if (size === 'big') fontSizeStyle = '1.5em';
-    else fontSizeStyle = 'inherit';
-
-    // Apply alignment to the container
-    const alignStyle = {
-      textAlign: align,
-      fontSize: fontSizeStyle,
-      width: '100%',
-      display: 'block',
-      margin: align === 'center' ? '0 auto' : '0',
-    };
-
-    return (
-      <div style={alignStyle}>
-        {styledContent}
-      </div>
-    );
-  }
-
-  function renderStyledText(text, placeholders) {
-    // Handle escaping
-    text = text.replace(/\\([*/_$~])/g, (_, char) => `<<ESC_${char.charCodeAt(0)}>>`);
-
-    const parts = text.split(/(__TOK\d+__)/g);
-    const out = [];
-    let buf = "";
-    let bold = false;
-    let italic = false;
-    let underline = false;
-    let strike = false;
-    let key = 0;
-
-    for (const part of parts) {
-      if (/^__TOK\d+__$/.test(part)) {
-        if (buf) {
-          out.push(
-            <span
-              key={key++}
-              style={{
-                fontWeight: bold ? "bold" : "normal",
-                fontStyle: italic ? "italic" : "normal",
-                textDecoration: `${underline ? "underline" : ""} ${strike ? "line-through" : ""}`.trim(),
-              }}
-            >
-              {buf}
-            </span>
-          );
-          buf = "";
-        }
-        const idx = Number(part.match(/\d+/)[0]);
-        const ph = placeholders[idx];
-        if (!ph) continue;
-        if (ph.type === "link") {
-          out.push(
-            <a
-              key={key++}
-              href={normalizeUrl(ph.url)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:underline"
-            >
-              {ph.word}
-            </a>
-          );
-        } else if (ph.type === "image") {
-          let imgStyle = {
-            width: ph.width !== 'auto' ? ph.width : '100%',
-            height: ph.height !== 'auto' ? ph.height : 'auto',
-            display: 'block',
-            marginLeft: ph.align === 'center' ? 'auto' : '0',
-            marginRight: ph.align === 'center' ? 'auto' : '0',
-            float: ph.align === 'left' || ph.align === 'right' ? ph.align : 'none',
-            maxWidth: '100%',
-            marginTop: '8px',
-            marginBottom: '8px',
-          };
-          if (ph.align === 'justify') {
-            imgStyle = {
-              ...imgStyle,
-              width: '100%',
-              marginLeft: '0',
-              marginRight: '0',
-              float: 'none',
-            };
-          }
-          out.push(
-            <img
-              key={key++}
-              src={normalizeUrl(ph.url)}
-              alt="Imagen de la noticia"
-              className="max-w-full h-auto rounded-md"
-              style={imgStyle}
-              onError={(e) => {
-                e.currentTarget.onerror = null;
-                e.currentTarget.src = "https://via.placeholder.com/800x450?text=Imagen+no+disponible";
-              }}
-            />
-          );
-        } else if (ph.type === "url") {
-          out.push(
-            <a
-              key={key++}
-              href={normalizeUrl(ph.url)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:underline"
-            >
-              {ph.url}
-            </a>
-          );
-        } else if (ph.type === "size") {
-          let fontSizeStyle;
-          if (ph.size === 'small') fontSizeStyle = '0.75em';
-          else if (ph.size === 'big') fontSizeStyle = '1.5em';
-          else fontSizeStyle = 'inherit';
-          out.push(
-            <span key={key++} style={{ fontSize: fontSizeStyle }}>
-              {renderStyledText(ph.content, placeholders)}
-            </span>
-          );
-        }
-        continue;
-      }
-      for (const ch of part) {
-        if (ch === "*") {
-          if (buf) {
-            out.push(
-              <span
-                key={key++}
-                style={{
-                  fontWeight: bold ? "bold" : "normal",
-                  fontStyle: italic ? "italic" : "normal",
-                  textDecoration: `${underline ? "underline" : ""} ${strike ? "line-through" : ""}`.trim(),
-                }}
-              >
-                {buf}
-              </span>
-            );
-            buf = "";
-          }
-          bold = !bold;
-        } else if (ch === "/") {
-          if (buf) {
-            out.push(
-              <span
-                key={key++}
-                style={{
-                  fontWeight: bold ? "bold" : "normal",
-                  fontStyle: italic ? "italic" : "normal",
-                  textDecoration: `${underline ? "underline" : ""} ${strike ? "line-through" : ""}`.trim(),
-                }}
-              >
-                {buf}
-              </span>
-            );
-            buf = "";
-          }
-          italic = !italic;
-        } else if (ch === "$") {
-          if (buf) {
-            out.push(
-              <span
-                key={key++}
-                style={{
-                  fontWeight: bold ? "bold" : "normal",
-                  fontStyle: italic ? "italic" : "normal",
-                  textDecoration: `${underline ? "underline" : ""} ${strike ? "line-through" : ""}`.trim(),
-                }}
-              >
-                {buf}
-              </span>
-            );
-            buf = "";
-          }
-          underline = !underline;
-        } else if (ch === "~") {
-          if (buf) {
-            out.push(
-              <span
-                key={key++}
-                style={{
-                  fontWeight: bold ? "bold" : "normal",
-                  fontStyle: italic ? "italic" : "normal",
-                  textDecoration: `${underline ? "underline" : ""} ${strike ? "line-through" : ""}`.trim(),
-                }}
-              >
-                {buf}
-              </span>
-            );
-            buf = "";
-          }
-          strike = !strike;
-        } else {
-          buf += ch;
-        }
-      }
-    }
-    if (buf) {
-      out.push(
-        <span
-          key={key++}
-          style={{
-            fontWeight: bold ? "bold" : "normal",
-            fontStyle: italic ? "italic" : "normal",
-            textDecoration: `${underline ? "underline" : ""} ${strike ? "line-through" : ""}`.trim(),
-          }}
-        >
-          {buf}
-        </span>
+      return (
+        <div
+          className="ql-editor break-words leading-relaxed text-[#000000] overflow-hidden"
+          style={{ lineHeight: '1.6', marginBottom: '10px' }}
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
       );
+    } catch (err) {
+      console.error('Error decoding body:', err);
+      return <p className="text-[#000000]">Error al decodificar contenido.</p>;
     }
-    return out;
   }
 
   const filteredNews = news.filter((n) =>
@@ -566,7 +259,7 @@ export default function NewsSection({ className }) {
               </h4>
               <p className="text-sm text-gray-500 mb-3 italic">{item.fecha}</p>
               <div
-                className="text-[#000000] text-sm leading-relaxed"
+                className="text-[#000000] text-sm leading-relaxed overflow-hidden"
                 style={{
                   display: "-webkit-box",
                   WebkitLineClamp: 3,
@@ -617,16 +310,8 @@ export default function NewsSection({ className }) {
               </h4>
               <p className="text-sm text-gray-500 mb-6">{selectedNews.fecha}</p>
               <div className="text-[#000000] flex-1">
-                {decodeBody(selectedNews.cuerpo, !showFullContent && selectedNews.cuerpo.length > 2000)}
+                {decodeBody(selectedNews.cuerpo, false)}
               </div>
-              {!showFullContent && selectedNews.cuerpo.length > 2000 && (
-                <button
-                  onClick={() => setShowFullContent(true)}
-                  className="text-[#5a3e36] text-sm mt-2 self-end hover:underline"
-                >
-                  Leer más...
-                </button>
-              )}
             </motion.div>
           </motion.div>
         )}
