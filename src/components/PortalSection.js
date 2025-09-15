@@ -11,7 +11,7 @@ Quill.register('modules/imageResize', ImageResize);
 
 const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyJ9znuf_Pa8Hyh4BnsO1pTTduBsXC7kDD0pORWccMTBlckgt0I--NKG69aR_puTAZ5/exec';
-const RUBRIC_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxcoFa8VWaN09avZslVt06m2EwQp7pc7wXG0xIzmTjTQCvzTStEkorPftsRkmr6Epo-/exec';
+const RUBRIC_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzehxU_O7GkzfiCqCsSdnFwvA_Mhtfr_vSZjqVsBo3yx8ZEpr9Qur4NHPI09tyH1AZe/exec';
 
 const RUBRIC_CSV1 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=0&single=true&output=csv';
 const RUBRIC_CSV2 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=1438370398&single=true&output=csv';
@@ -161,6 +161,7 @@ export default function PortalSection({ user, onLogout }) {
   const [rubricScores, setRubricScores] = useState({});
   const [tutorialVisible, setTutorialVisible] = useState({});
   const [submitStatus, setSubmitStatus] = useState({});
+  const [rubricStatus, setRubricStatus] = useState({});
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('assignments');
   const [showImageModal, setShowImageModal] = useState({});
@@ -347,43 +348,122 @@ export default function PortalSection({ user, onLogout }) {
     }));
   };
 
+  const getRequiredKeys = (role) => {
+    switch (role) {
+      case 'Revisor 1': return ['gramatica', 'claridad', 'estructura', 'citacion'];
+      case 'Revisor 2': return ['relevancia', 'rigor', 'originalidad', 'argumentos'];
+      case 'Editor': return ['modificaciones', 'calidad', 'aporte', 'potencial', 'decision'];
+      default: return [];
+    }
+  };
+
+  const isRubricComplete = (link, role) => {
+    const rubric = rubricScores[link] || {};
+    const required = getRequiredKeys(role);
+    return required.every(key => rubric[key] !== undefined && rubric[key] !== null);
+  };
+
+  const handleSubmitRubric = async (link, role) => {
+    const articleName = assignments.find(a => a['Link Artículo'] === link)['Nombre Artículo'];
+    const rubric = rubricScores[link] || {};
+
+    // Validar rúbrica
+    const requiredKeys = getRequiredKeys(role);
+    const missingKeys = requiredKeys.filter(key => rubric[key] === undefined || rubric[key] === null || isNaN(rubric[key]));
+    if (missingKeys.length > 0) {
+      setRubricStatus((prev) => ({ ...prev, [link]: `Error: Rúbrica incompleta. Faltan o inválidos: ${missingKeys.join(', ')}` }));
+      return;
+    }
+
+    const rubricData = {
+      articleName: articleName.trim(),
+      role,
+      rubric
+    };
+
+    console.log('Enviando rúbrica:', rubricData); // Debug log
+
+    try {
+      let success = false;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          const response = await fetch(RUBRIC_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(rubricData),
+          });
+          success = true;
+          break;
+        } catch (err) {
+          console.warn(`Intento ${attempt} fallido para rúbrica:`, err);
+          if (attempt < 3) {
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+          }
+        }
+      }
+
+      if (success) {
+        setRubricStatus((prev) => ({ ...prev, [link]: 'Rúbrica enviada exitosamente' }));
+        console.log('Rúbrica enviada con éxito');
+        await fetchAssignments(); // Refrescar para ver cambios
+      } else {
+        setRubricStatus((prev) => ({ ...prev, [link]: 'Error al enviar rúbrica después de 3 intentos' }));
+      }
+    } catch (err) {
+      console.error('Error general al enviar rúbrica:', err);
+      setRubricStatus((prev) => ({ ...prev, [link]: `Error: ${err.message}` }));
+    }
+  };
+
   const handleSubmit = async (link, role, feedbackText, reportText, voteValue) => {
-    const data = {
+    const encodedFeedback = encodeBody(feedbackText || '');
+    const encodedReport = encodeBody(reportText || '');
+
+    const mainData = {
       link,
       role,
       vote: voteValue || '',
-      feedback: encodeBody(feedbackText || ''),
-      report: encodeBody(reportText || ''),
+      feedback: encodedFeedback,
+      report: encodedReport,
     };
 
-    const rubricData = {
-      articleName: assignments.find(a => a['Link Artículo'] === link)['Nombre Artículo'],
-      role,
-      rubric: rubricScores[link] || {}
-    };
+    console.log('Enviando datos principales:', mainData); // Debug log
 
     try {
-      await fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-      await fetch(RUBRIC_SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(rubricData),
-      });
-      setSubmitStatus((prev) => ({ ...prev, [link]: 'Enviado exitosamente' }));
-      await fetchAssignments();
+      let mainSuccess = false;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          const response = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(mainData),
+          });
+          mainSuccess = true;
+          break;
+        } catch (err) {
+          console.warn(`Intento ${attempt} fallido para datos principales:`, err);
+          if (attempt < 3) {
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+          }
+        }
+      }
+
+      if (mainSuccess) {
+        setSubmitStatus((prev) => ({ ...prev, [link]: 'Datos principales enviados exitosamente' }));
+        console.log('Datos principales enviados con éxito');
+        await fetchAssignments();
+      } else {
+        setSubmitStatus((prev) => ({ ...prev, [link]: 'Error al enviar datos principales después de 3 intentos' }));
+      }
     } catch (err) {
-      console.error('Error al enviar datos:', err);
-      setSubmitStatus((prev) => ({ ...prev, [link]: 'Error al enviar: ' + err.message }));
+      console.error('Error general al enviar datos principales:', err);
+      setSubmitStatus((prev) => ({ ...prev, [link]: `Error: ${err.message}` }));
     }
   };
 
@@ -404,7 +484,7 @@ export default function PortalSection({ user, onLogout }) {
     } else if (role === "Revisor 2") {
       return 'Como Revisor 2, enfócate en el contenido sustantivo: verifica la precisión de las fuentes, la seriedad y originalidad del tema, la relevancia de los argumentos, y la contribución al campo de estudio. Evalúa si el artículo es innovador y bien fundamentado. Deja comentarios en el documento de Google Drive. Debes dejar tu retroalimentación al autor in la casilla correspondiente. Además debes dejar un informe resumido explicando tu observaciones para guiar al editor. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.===';
     } else if (role === "Editor") {
-      return `Como Editor, tu responsabilidad es revisar las retroalimentaciones e informes de los revisores, integrarlas con tu propia evaluación, y redactar una retroalimentación final sensible y constructiva para el autor. Corrige directamente el texto si es necesario y decide el estado final del artículo. Usa el documento de Google Drive para ediciones. Debes dejar una retroalimentación al autor sintetizando las que dejaron los revisores. Tu deber es que el mensaje sea acertado y sensible, sin desmotivar al autor. Para esto debes usar la técnica del "sándwich". Si no sabes qué es, entra aqu[](https://www.santanderopenacademy.com/es/blog/tecnica-sandwich.html). Luego deja tu informe con los cambios realizados, deben ser precisos y académicos. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.===`;
+      return `Como Editor, tu responsabilidad es revisar las retroalimentaciones e informes de los revisores, integrarlas con tu propia evaluación, y redactar una retroalimentación final sensible y constructiva para el autor. Corrige directamente el texto si es necesario y decide el estado final del artículo. Usa el documento de Google Drive para ediciones. Debes dejar una retroalimentación al autor sintetizando las que dejaron los revisores. Tu deber es que el mensaje sea acertado y sensible, sin desmotivar al autor. Para esto debes usar la técnica del "sándwich". Si no sabes qué es, entra aqu . Luego deja tu informe con los cambios realizados, deben ser precisos y académicos. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.===`;
     }
     return "";
   };
@@ -1515,7 +1595,7 @@ export default function PortalSection({ user, onLogout }) {
                     <div className="flex space-x-4">
                       <button
                         onClick={() => handleVote(link, 'si')}
-                        className={`px-4 py-2 rounded-md ${vote[link] === 'si' ? 'bg-green-600                         text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} transition-colors text-sm`}
+                        className={`px-4 py-2 rounded-md ${vote[link] === 'si' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} transition-colors text-sm`}
                       >
                         Sí
                       </button>
@@ -1527,12 +1607,26 @@ export default function PortalSection({ user, onLogout }) {
                       </button>
                     </div>
                   </div>
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => handleSubmitRubric(link, role)}
+                      disabled={!isRubricComplete(link, role)}
+                      className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
+                    >
+                      Enviar Rúbrica
+                    </button>
+                    {rubricStatus[link] && (
+                      <p className={`text-sm mt-2 ${rubricStatus[link].includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
+                        {rubricStatus[link]}
+                      </p>
+                    )}
+                  </div>
                   <button
                     onClick={() => handleSubmit(link, role, feedback[link], report[link], vote[link])}
                     disabled={!vote[link] || !feedback[link] || !report[link]}
                     className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
                   >
-                    Enviar Revisión
+                    Enviar Revisión (Feedback, Informe, Voto)
                   </button>
                   {submitStatus[link] && (
                     <p className={`text-sm mt-2 ${submitStatus[link].includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
