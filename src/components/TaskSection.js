@@ -1,0 +1,376 @@
+
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import Papa from 'papaparse';
+import ReactQuill, { Quill } from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
+import ImageResize from 'quill-image-resize-module-react';
+import { debounce } from 'lodash';
+
+Quill.register('modules/imageResize', ImageResize);
+
+const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
+const TASKS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSCEOtMwYPu0_kn1hmQi0qT6FZq6HRF09WtuDSqOxBNgMor_FyRRtc6_YVKHQQhWJCy-mIa2zwP6uAU/pub?output=csv';
+const TASK_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzWEhEA78AJqSRG31_qdolghacGXRtQ8c-m2M5qqB-gorkF5lln570uaF5sASlf3jK6/exec';
+
+const AREAS = {
+  RRSS: 'Redes Sociales',
+  WEB: 'Desarrollo Web'
+};
+
+const getAreaColumns = (area) => {
+  if (area === AREAS.RRSS) {
+    return { taskCol: 0, nameCol: 1, completedCol: 2, commentCol: 3 };
+  } else {
+    return { taskCol: 4, nameCol: 5, completedCol: 6, commentCol: 7 };
+  }
+};
+
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000;
+const REQUEST_TIMEOUT = 10000; // 10 seconds
+
+export default function TaskSection({ user }) {
+  const [users, setUsers] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('pending');
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [selectedArea, setSelectedArea] = useState(AREAS.RRSS);
+  const [selectedAssignee, setSelectedAssignee] = useState('');
+  const [taskContent, setTaskContent] = useState('');
+  const [commentContent, setCommentContent] = useState({});
+  const [submitStatus, setSubmitStatus] = useState({});
+  const [error, setError] = useState('');
+  const [selectedTask, setSelectedTask] = useState(null);
+
+  const fetchWithRetry = async (url, options, retries = MAX_RETRIES) => {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+      const response = await fetch(url, {
+        ...options,
+        mode: 'no-cors', // Use no-cors to bypass CORS restrictions
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      // In no-cors mode, we cannot access response.status or body
+      // Assume success if no network error occurs
+      return { success: true };
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        throw new Error('Request timed out');
+      }
+      if (retries > 0) {
+        console.warn(`Retry ${MAX_RETRIES - retries + 1}/${MAX_RETRIES}: ${err.message}`);
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+        return fetchWithRetry(url, options, retries - 1);
+      }
+      throw new Error(`Fetch failed after ${MAX_RETRIES} retries: ${err.message}`);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch(USERS_CSV, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`Failed to fetch users: ${response.status}`);
+      const csvText = await response.text();
+      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
+      setUsers(parsed);
+    } catch (err) {
+      console.error('Error fetching users:', err);
+      setError('Error al cargar usuarios: ' + err.message);
+    }
+  };
+
+  const fetchTasks = async () => {
+    try {
+      const response = await fetch(TASKS_CSV, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`Failed to fetch tasks: ${response.status}`);
+      const csvText = await response.text();
+      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data.map((row, index) => ({
+        ...row,
+        rowIndex: index
+      }));
+      setTasks(parsed);
+    } catch (err) {
+      console.error('Error fetching tasks:', err);
+      setError('Error al cargar tareas: ' + err.message);
+    }
+  };
+
+  useEffect(() => {
+    Promise.all([fetchUsers(), fetchTasks()]).then(() => setLoading(false)).catch(err => {
+      console.error('Error in initial fetch:', err);
+      setError('Error al inicializar: ' + err.message);
+    });
+  }, []);
+
+  const currentUser = users.find(u => u.Nombre === user.name);
+  const userRoles = currentUser ? currentUser['Rol en la Revista']?.split(';').map(r => r.trim()) : [];
+  const isDirector = userRoles.includes('Director General');
+  const isRrss = userRoles.includes('Encargado de Redes Sociales');
+  const isWeb = userRoles.includes('Responsable de Desarrollo Web');
+  const isAssignee = (isRrss || isWeb) && !isDirector; // Exclude Director from being an assignee
+
+  const rrssUsers = users.filter(u => u['Rol en la Revista']?.includes('Encargado de Redes Sociales'));
+  const webUsers = users.filter(u => u['Rol en la Revista']?.includes('Responsable de Desarrollo Web'));
+
+  const filteredTasks = useMemo(() => {
+    return tasks.reduce((areaTasks, task, index) => {
+      if (!isDirector && !isAssignee) return areaTasks;
+      if (isRrss || isDirector) {
+        const taskText = task['Redes sociales'];
+        const assignedName = task.Nombre || '';
+        const completed = task['Cumplido 1'] === 'si';
+        if (taskText && (!assignedName || assignedName === user.name || isDirector)) {
+          areaTasks.push({ ...task, area: AREAS.RRSS, taskText, assignedName, completed, comment: task['Comentario 1'], rowIndex: index });
+        }
+      }
+      if (isWeb || isDirector) {
+        const taskText = task['Desarrollo Web'];
+        const assignedName = task['Nombre.1'] || '';
+        const completed = task['Cumplido 2'] === 'si';
+        if (taskText && (!assignedName || assignedName === user.name || isDirector)) {
+          areaTasks.push({ ...task, area: AREAS.WEB, taskText, assignedName, completed, comment: task['Comentario 2'], rowIndex: index });
+        }
+      }
+      return areaTasks;
+    }, []);
+  }, [tasks, user.name, isDirector, isRrss, isWeb]);
+
+  const pendingTasks = useMemo(() => filteredTasks.filter(t => !t.completed), [filteredTasks]);
+  const completedTasks = useMemo(() => filteredTasks.filter(t => t.completed), [filteredTasks]);
+
+  const encodeBody = (html) => {
+    if (!html) return '';
+    try {
+      const sanitized = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+      return btoa(unescape(encodeURIComponent(sanitized)));
+    } catch (err) {
+      console.error('Error encoding body:', err);
+      return '';
+    }
+  };
+
+  const decodeBody = (body) => {
+    if (!body) return <p>Sin contenido.</p>;
+    try {
+      const decoded = decodeURIComponent(escape(atob(body)));
+      return <div dangerouslySetInnerHTML={{ __html: decoded }} />;
+    } catch (err) {
+      console.error('Error decoding body:', err);
+      return <p>Error al mostrar contenido.</p>;
+    }
+  };
+
+  const handleAssignTask = async () => {
+    if (!taskContent.trim()) {
+      setSubmitStatus({ assign: 'La tarea no puede estar vacía' });
+      return;
+    }
+    setSubmitStatus({ assign: 'Enviando...' });
+    const encodedTask = encodeBody(taskContent);
+    const data = {
+      action: 'assign',
+      area: selectedArea,
+      task: encodedTask,
+      assignedTo: selectedAssignee || ''
+    };
+
+    try {
+      await fetchWithRetry(TASK_SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      setSubmitStatus({ assign: 'Tarea asignada (sin confirmación del servidor)' });
+      setShowAssignModal(false);
+      setTaskContent('');
+      await fetchTasks();
+    } catch (err) {
+      console.error('Error assigning task:', err);
+      setSubmitStatus({ assign: `Error al asignar tarea: ${err.message} (sin confirmación del servidor)` });
+    }
+  };
+
+  const handleCompleteTask = async (task) => {
+    const comment = commentContent[task.rowIndex] || '';
+    if (!comment.trim()) {
+      setSubmitStatus({ complete: 'El comentario no puede estar vacío' });
+      return;
+    }
+    setSubmitStatus({ complete: 'Enviando...' });
+    const encodedComment = encodeBody(comment);
+    const data = {
+      action: 'complete',
+      area: task.area,
+      row: task.rowIndex + 2,
+      comment: encodedComment
+    };
+
+    try {
+      await fetchWithRetry(TASK_SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      setSubmitStatus({ complete: 'Tarea completada (sin confirmación del servidor)' });
+      setCommentContent(prev => ({ ...prev, [task.rowIndex]: '' }));
+      await fetchTasks();
+      setSelectedTask(null);
+    } catch (err) {
+      console.error('Error completing task:', err);
+      setSubmitStatus({ complete: `Error al completar tarea: ${err.message} (sin confirmación del servidor)` });
+    }
+  };
+
+  const handleCommentChange = useCallback(
+    debounce((rowIndex, value) => {
+      setCommentContent(prev => ({ ...prev, [rowIndex]: value }));
+    }, 300),
+    []
+  );
+
+  const modules = useMemo(() => ({
+    toolbar: [
+      ['bold', 'italic', 'underline', 'strike', 'blockquote'],
+      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+      ['link', 'image'],
+      [{ 'align': ['', 'center', 'right', 'justify'] }],
+      [{ 'size': ['small', false, 'large'] }],
+      ['clean']
+    ],
+    imageResize: {
+      parchment: Quill.import('parchment'),
+      modules: ['Resize', 'DisplaySize', 'Toolbar'],
+    },
+  }), []);
+
+  const formats = ['bold', 'italic', 'underline', 'strike', 'blockquote', 'list', 'bullet', 'link', 'image', 'align', 'size'];
+
+  // Determine if the user can complete a task
+  const canCompleteTask = (task) => {
+    if (isDirector) return false; // Director General cannot complete tasks, regardless of other roles
+    if (!isAssignee) return false; // Must have RRSS or Web role (and not be Director)
+    return task.assignedName === user.name || task.assignedName === ''; // Assigned to user or "Todos"
+  };
+
+  if (loading) return <div className="text-center p-4">Cargando tareas...</div>;
+  if (error) return <div className="text-red-600 text-center p-4">{error}</div>;
+  if (!isDirector && !isAssignee) return null;
+
+  return (
+    <div className="min-h-screen bg-gray-100 p-4">
+      <div className="max-w-7xl mx-auto">
+        <h2 className="text-2xl font-bold mb-4">{isDirector ? 'Gestión de Tareas' : 'Mis Tareas'}</h2>
+        {isDirector && (
+          <button
+            onClick={() => setShowAssignModal(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded mb-4 hover:bg-blue-700 transition"
+          >
+            Asignar Nueva Tarea
+          </button>
+        )}
+        <div className="flex space-x-4 border-b mb-4">
+          <button
+            onClick={() => setActiveTab('pending')}
+            className={`pb-2 px-4 ${activeTab === 'pending' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
+          >
+            Pendientes ({pendingTasks.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('completed')}
+            className={`pb-2 px-4 ${activeTab === 'completed' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
+          >
+            Completadas ({completedTasks.length})
+          </button>
+        </div>
+        <div className="grid gap-6">
+          {(activeTab === 'pending' ? pendingTasks : completedTasks).map((task, index) => (
+            <div key={`${task.area}-${task.rowIndex}`} className="bg-white p-6 rounded-lg shadow">
+              <h3 className="font-bold text-lg">{task.area} - {task.assignedName || 'Todos'}</h3>
+              <div className="mt-2">{decodeBody(task.taskText)}</div>
+              {task.completed && <div className="mt-2 text-green-600">Completado: {decodeBody(task.comment)}</div>}
+              {!task.completed && canCompleteTask(task) && (
+                <div className="mt-4">
+                  <ReactQuill
+                    value={commentContent[task.rowIndex] || ''}
+                    onChange={(value) => handleCommentChange(task.rowIndex, value)}
+                    modules={modules}
+                    formats={formats}
+                    placeholder="Comentario sobre lo realizado..."
+                    className="h-32 mb-4"
+                  />
+                  <button
+                    onClick={() => handleCompleteTask(task)}
+                    className="mt-2 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition"
+                  >
+                    Marcar Completado
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        {showAssignModal && isDirector && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded max-w-2xl w-full max-h-screen overflow-y-auto">
+              <h3 className="font-bold text-lg mb-4">Asignar Tarea</h3>
+              <select
+                value={selectedArea}
+                onChange={e => setSelectedArea(e.target.value)}
+                className="w-full p-2 border rounded mb-4"
+              >
+                <option value={AREAS.RRSS}>{AREAS.RRSS}</option>
+                <option value={AREAS.WEB}>{AREAS.WEB}</option>
+              </select>
+              <select
+                value={selectedAssignee}
+                onChange={e => setSelectedAssignee(e.target.value)}
+                className="w-full p-2 border rounded mb-4"
+              >
+                <option value="">Todos</option>
+                {(selectedArea === AREAS.RRSS ? rrssUsers : webUsers).map(u => (
+                  <option key={u.Nombre} value={u.Nombre}>{u.Nombre}</option>
+                ))}
+              </select>
+              <ReactQuill
+                value={taskContent}
+                onChange={setTaskContent}
+                modules={modules}
+                formats={formats}
+                placeholder="Describe la tarea..."
+                className="h-48 mb-4"
+              />
+              <div className="flex justify-end space-x-2">
+                <button
+                  onClick={() => setShowAssignModal(false)}
+                  className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleAssignTask}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                >
+                  Asignar
+                </button>
+              </div>
+              {submitStatus.assign && (
+                <p className={`mt-2 ${submitStatus.assign.includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
+                  {submitStatus.assign}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+        {submitStatus.complete && (
+          <p className={`mt-4 ${submitStatus.complete.includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
+            {submitStatus.complete}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
