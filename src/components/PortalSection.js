@@ -1,14 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Papa from 'papaparse';
-import NewsUploadSection from './NewsUploadSection';
-import ReactQuill, { Quill } from 'react-quill';
+import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import ImageResize from 'quill-image-resize-module-react';
 import { debounce } from 'lodash';
+import NewsUploadSection from './NewsUploadSection';
 import TaskSection from './TaskSection';
 import { useTranslation } from 'react-i18next';
-
-Quill.register('modules/imageResize', ImageResize);
 
 const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyJ9znuf_Pa8Hyh4BnsO1pTTduBsXC7kDD0pORWccMTBlckgt0I--NKG69aR_puTAZ5/exec';
@@ -179,6 +176,25 @@ const sanitizeInput = (input) => {
               .trim();
 };
 
+class ErrorBoundary extends React.Component {
+  state = { hasError: false };
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('ErrorBoundary caught:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <div className="text-red-600 text-center p-4">Ocurrió un error. Por favor, recarga la página.</div>;
+    }
+    return this.props.children;
+  }
+}
+
 export default function PortalSection({ user, onLogout }) {
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -261,15 +277,29 @@ export default function PortalSection({ user, onLogout }) {
     }
   };
 
+  const fetchWithRetry = async (url, retries = 3, timeout = 10000) => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
+        const response = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+        clearTimeout(timeoutId);
+        if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+        return response.text();
+      } catch (err) {
+        if (i === retries - 1) throw err;
+        await new Promise((resolve) => setTimeout(resolve, 1000 * (i + 1)));
+      }
+    }
+  };
+
   const fetchAssignments = async () => {
     try {
       setLoading(true);
-      const [assignmentsResponse, rubrics] = await Promise.all([
-        fetch(ASSIGNMENTS_CSV, { cache: 'no-store' }),
+      const [csvText, rubrics] = await Promise.all([
+        fetchWithRetry(ASSIGNMENTS_CSV),
         fetchRubrics()
       ]);
-      if (!assignmentsResponse.ok) throw new Error('Error al cargar el archivo CSV');
-      const csvText = await assignmentsResponse.text();
       Papa.parse(csvText, {
         header: true,
         skipEmptyLines: true,
@@ -356,8 +386,13 @@ export default function PortalSection({ user, onLogout }) {
   };
 
   useEffect(() => {
+    if (!user || !user.name) {
+      setError('Usuario no definido');
+      setLoading(false);
+      return;
+    }
     fetchAssignments();
-  }, [user.name]);
+  }, [user?.name]);
 
   const isAuthor = assignments.length > 0 && assignments[0].role === 'Autor';
 
@@ -394,7 +429,6 @@ export default function PortalSection({ user, onLogout }) {
     const articleName = assignments.find(a => a['Link Artículo'] === link)['Nombre Artículo'];
     const rubric = rubricScores[link] || {};
 
-    // Validar rúbrica
     const requiredKeys = getRequiredKeys(role);
     const missingKeys = requiredKeys.filter(key => rubric[key] === undefined || rubric[key] === null || isNaN(rubric[key]));
     if (missingKeys.length > 0) {
@@ -407,8 +441,6 @@ export default function PortalSection({ user, onLogout }) {
       role,
       rubric
     };
-
-    console.log('Enviando rúbrica:', rubricData); // Debug log
 
     try {
       let success = false;
@@ -434,8 +466,7 @@ export default function PortalSection({ user, onLogout }) {
 
       if (success) {
         setRubricStatus((prev) => ({ ...prev, [link]: 'Rúbrica enviada exitosamente' }));
-        console.log('Rúbrica enviada con éxito');
-        await fetchAssignments(); // Refrescar para ver cambios
+        await fetchAssignments();
       } else {
         setRubricStatus((prev) => ({ ...prev, [link]: 'Error al enviar rúbrica después de 3 intentos' }));
       }
@@ -456,8 +487,6 @@ export default function PortalSection({ user, onLogout }) {
       feedback: encodedFeedback,
       report: encodedReport,
     };
-
-    console.log('Enviando datos principales:', mainData); // Debug log
 
     try {
       let mainSuccess = false;
@@ -483,7 +512,6 @@ export default function PortalSection({ user, onLogout }) {
 
       if (mainSuccess) {
         setSubmitStatus((prev) => ({ ...prev, [link]: 'Datos principales enviados exitosamente' }));
-        console.log('Datos principales enviados con éxito');
         await fetchAssignments();
       } else {
         setSubmitStatus((prev) => ({ ...prev, [link]: 'Error al enviar datos principales después de 3 intentos' }));
@@ -581,17 +609,26 @@ export default function PortalSection({ user, onLogout }) {
   );
 
   const modules = useMemo(() => ({
-    toolbar: [
-      ['bold', 'italic', 'underline', 'strike', 'blockquote'],
-      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-      ['link', 'image'],
-      [{ 'align': ['', 'center', 'right', 'justify'] }],
-      [{ 'size': ['small', false, 'large'] }],
-      ['clean']
-    ],
+    toolbar: {
+      container: [
+        ['bold', 'italic', 'underline', 'strike', 'blockquote'],
+        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+        ['link', 'image', 'custom-image'],
+        [{ 'align': ['', 'center', 'right', 'justify'] }],
+        [{ 'size': ['small', false, 'large'] }],
+        ['clean']
+      ],
+      handlers: {
+        'custom-image': (value, link) => {
+          setIsEditingImage((prev) => ({ ...prev, [link]: false }));
+          setImageData((prev) => ({ ...prev, [link]: { url: '', width: '', height: '', align: 'left' } }));
+          setShowImageModal((prev) => ({ ...prev, [link]: true }));
+        }
+      }
+    },
     imageResize: {
-      parchment: Quill.import('parchment'),
-      modules: ['Resize', 'DisplaySize', 'Toolbar'],
+      parchment: ReactQuill.Quill.import('parchment'),
+      modules: ['Resize', 'DisplaySize'],
       handleStyles: {
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
         border: 'none',
@@ -647,11 +684,11 @@ export default function PortalSection({ user, onLogout }) {
                 if (imageResize) {
                   imageResize.hide();
                 }
-                editor.deleteText(deleteIndex, deleteLength, Quill.sources.USER);
+                editor.deleteText(deleteIndex, deleteLength, ReactQuill.Quill.sources.USER);
                 return false;
               } catch (err) {
                 console.error('Error deleting image:', err);
-                console.log('Error al eliminar la imagen');
+                setSubmitStatus((prev) => ({ ...prev, [link]: 'Error al eliminar la imagen' }));
                 return false;
               }
             }
@@ -666,12 +703,12 @@ export default function PortalSection({ user, onLogout }) {
             const [leaf] = editor.getLeaf(range.index);
             if (leaf && leaf.domNode && leaf.domNode.tagName === 'IMG') {
               try {
-                editor.insertText(range.index + 1, '\n', Quill.sources.USER);
-                editor.setSelection(range.index + 2, Quill.sources.SILENT);
+                editor.insertText(range.index + 1, '\n', ReactQuill.Quill.sources.USER);
+                editor.setSelection(range.index + 2, ReactQuill.Quill.sources.SILENT);
                 return false;
               } catch (err) {
                 console.error('Error inserting new line after image:', err);
-                console.log('Error al añadir texto después de la imagen');
+                setSubmitStatus((prev) => ({ ...prev, [link]: 'Error al añadir texto después de la imagen' }));
                 return false;
               }
             }
@@ -681,6 +718,35 @@ export default function PortalSection({ user, onLogout }) {
       },
     },
   }), []);
+
+  useEffect(() => {
+    const setupCustomButton = (quillRef, link, type) => {
+      if (quillRef.current) {
+        const editor = quillRef.current.getEditor();
+        const toolbar = editor.getModule('toolbar');
+        toolbar.addHandler('custom-image', () => {
+          setIsEditingImage((prev) => ({ ...prev, [link]: false }));
+          setImageData((prev) => ({ ...prev, [link]: { url: '', width: '', height: '', align: 'left' } }));
+          setShowImageModal((prev) => ({ ...prev, [link]: true }));
+        });
+        const button = document.createElement('button');
+        button.className = 'ql-custom-image';
+        button.innerHTML = '<svg viewBox="0 0 18 18"><rect class="ql-stroke" x="3" y="4" width="12" height="10" rx="2" ry="2"></rect></svg>';
+        button.title = 'Insertar Imagen Manualmente';
+        const toolbarElement = document.querySelector(`#${type}-${link} .ql-toolbar`);
+        if (toolbarElement && !toolbarElement.querySelector('.ql-custom-image')) {
+          toolbarElement.appendChild(button);
+        }
+      }
+    };
+
+    Object.keys(feedbackQuillRefs.current).forEach(link => {
+      setupCustomButton(feedbackQuillRefs.current[link], link, 'feedback');
+    });
+    Object.keys(reportQuillRefs.current).forEach(link => {
+      setupCustomButton(reportQuillRefs.current[link], link, 'report');
+    });
+  }, [feedbackQuillRefs.current, reportQuillRefs.current]);
 
   const formats = useMemo(() => [
     'bold', 'italic', 'underline', 'strike', 'blockquote',
@@ -702,112 +768,6 @@ export default function PortalSection({ user, onLogout }) {
     } catch (err) {
       console.error('Error decoding body:', err);
       return <p className="text-gray-600 break-words">Error al decodificar contenido.</p>;
-    }
-  };
-
-  const setupQuillEditor = (quillRef, link, type) => {
-    if (quillRef.current) {
-      const editor = quillRef.current.getEditor();
-      editor.root.setAttribute('spellcheck', 'true');
-      editor.root.setAttribute('lang', 'es');
-      editor.theme.tooltip.hide();
-
-      let attempts = 0;
-      const maxAttempts = 5;
-      const interval = 100;
-
-      const addButtons = () => {
-        const imageResize = editor.getModule('imageResize');
-        if (imageResize && imageResize.toolbar && typeof imageResize.toolbar.appendChild === 'function') {
-          const buttonContainer = document.createElement('span');
-          buttonContainer.className = 'ql-formats';
-          buttonContainer.innerHTML = `
-            <button type="button" title="Eliminar imagen" class="ql-delete-image">
-              <svg viewBox="0 0 18 18">
-                <line class="ql-stroke" x1="3" x2="15" y1="3" y2="15"></line>
-                <line class="ql-stroke" x1="3" x2="15" y1="15" y2="3"></line>
-              </svg>
-            </button>
-            <button type="button" title="Editar imagen" class="ql-edit-image">
-              <svg viewBox="0 0 18 18">
-                <polygon class="ql-fill ql-stroke" points="6 10 4 12 2 10 4 8"></polygon>
-                <path class="ql-stroke" d="M8.09,13.91A4.6,4.6,0,0,0,9,14,5,5,0,1,0,4,9"></path>
-              </svg>
-            </button>
-          `;
-          imageResize.toolbar.appendChild(buttonContainer);
-
-          buttonContainer.querySelector('.ql-delete-image').onclick = () => {
-            const range = editor.getSelection();
-            if (range) {
-              let isImage = false;
-              let deleteIndex = range.index;
-              let deleteLength = 1;
-              const [leaf] = editor.getLeaf(range.index);
-              if (leaf && leaf.domNode && leaf.domNode.tagName === 'IMG') {
-                isImage = true;
-              } else {
-                const [prevLeaf] = editor.getLeaf(range.index - 1);
-                if (prevLeaf && prevLeaf.domNode && prevLeaf.domNode.tagName === 'IMG') {
-                  isImage = true;
-                  deleteIndex = range.index - 1;
-                } else {
-                  const [nextLeaf] = editor.getLeaf(range.index);
-                  if (nextLeaf && nextLeaf.domNode && nextLeaf.domNode.tagName === 'IMG') {
-                    isImage = true;
-                    deleteIndex = range.index;
-                  }
-                }
-              }
-              if (isImage) {
-                try {
-                  editor.deleteText(deleteIndex, deleteLength, Quill.sources.USER);
-                  imageResize.hide();
-                } catch (err) {
-                  console.error('Error al eliminar imagen:', err);
-                  setSubmitStatus((prev) => ({ ...prev, [link]: 'Error al eliminar la imagen' }));
-                }
-              } else {
-                setSubmitStatus((prev) => ({ ...prev, [link]: 'Selecciona una imagen para eliminar' }));
-              }
-            } else {
-              setSubmitStatus((prev) => ({ ...prev, [link]: 'No hay selección activa para eliminar' }));
-            }
-          };
-
-          buttonContainer.querySelector('.ql-edit-image').onclick = () => {
-            const range = editor.getSelection();
-            if (range) {
-              const [leaf] = editor.getLeaf(range.index);
-              if (leaf && leaf.domNode && leaf.domNode.tagName === 'IMG') {
-                const img = leaf.domNode;
-                const formats = editor.getFormat(range.index, 1);
-                setImageData((prev) => ({
-                  ...prev,
-                  [link]: {
-                    url: img.src,
-                    width: img.style.width || img.width + 'px',
-                    height: img.style.height || img.height + 'px',
-                    align: formats.align || 'left'
-                  }
-                }));
-                setEditingRange((prev) => ({ ...prev, [link]: range }));
-                setIsEditingImage((prev) => ({ ...prev, [link]: true }));
-                setShowImageModal((prev) => ({ ...prev, [link]: true }));
-              } else {
-                setSubmitStatus((prev) => ({ ...prev, [link]: 'Selecciona una imagen para editar' }));
-              }
-            }
-          };
-        } else if (attempts < maxAttempts) {
-          attempts++;
-          setTimeout(addButtons, interval);
-        } else {
-          console.warn('No se pudo añadir los botones: imageResize.toolbar no está disponible');
-        }
-      };
-
-      addButtons();
     }
   };
 
@@ -1152,18 +1112,8 @@ export default function PortalSection({ user, onLogout }) {
                       formats={formats}
                       placeholder={role === 'Editor' ? 'Redacta una retroalimentación final sensible, sintetizando las opiniones de los revisores y la tuya.' : 'Escribe tu retroalimentación aquí...'}
                       className="border rounded-md text-gray-800 bg-white h-48"
-                      onFocus={() => setupQuillEditor(feedbackQuillRefs.current[link], link, 'feedback')}
+                      id={`feedback-${link}`}
                     />
-                    <button
-                      onClick={() => {
-                        setIsEditingImage((prev) => ({ ...prev, [link]: false }));
-                        setImageData((prev) => ({ ...prev, [link]: { url: '', width: '', height: '', align: 'left' } }));
-                        setShowImageModal((prev) => ({ ...prev, [link]: true }));
-                      }}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
-                    >
-                      Insertar Imagen Manualmente
-                    </button>
                   </div>
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-gray-700 break-words">Informe al Editor</label>
@@ -1175,18 +1125,8 @@ export default function PortalSection({ user, onLogout }) {
                       formats={formats}
                       placeholder="Escribe tu informe aquí..."
                       className="border rounded-md text-gray-800 bg-white h-48"
-                      onFocus={() => setupQuillEditor(reportQuillRefs.current[link], link, 'report')}
+                      id={`report-${link}`}
                     />
-                    <button
-                      onClick={() => {
-                        setIsEditingImage((prev) => ({ ...prev, [link]: false }));
-                        setImageData((prev) => ({ ...prev, [link]: { url: '', width: '', height: '', align: 'left' } }));
-                        setShowImageModal((prev) => ({ ...prev, [link]: true }));
-                      }}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
-                    >
-                      Insertar Imagen Manualmente
-                    </button>
                   </div>
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-gray-700 break-words">Voto</label>
@@ -1352,7 +1292,7 @@ export default function PortalSection({ user, onLogout }) {
             {isAuthor ? 'Mis Artículos' : 'Panel de Revisión'}
           </h2>
           <div className="flex items-center space-x-4">
-            <span className="text-gray-600">Bienvenido, {user.name}</span>
+            <span className="text-gray-600">Bienvenido, {user?.name || 'Usuario'}</span>
             <button
               onClick={onLogout}
               className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm"
@@ -1387,7 +1327,9 @@ export default function PortalSection({ user, onLogout }) {
             </button>
           </div>
         </div>
-        {!isAuthor && <TaskSection user={user} />}
+        <ErrorBoundary>
+          {!isAuthor && <TaskSection user={user} />}
+        </ErrorBoundary>
         {loading ? (
           <div className="text-center text-gray-600">Cargando asignaciones...</div>
         ) : selectedAssignment ? (

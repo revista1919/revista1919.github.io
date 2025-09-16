@@ -388,7 +388,7 @@ export default function TaskSection({ user }) {
             {submitStatus.assign && (
               <p
                 className={`mt-2 text-sm ${
-                  submitStatus.assign.includes('Error') ? 'text-red-600' : 'text-green-600'
+                  submitStatus.assign?.includes('Error') ? 'text-red-600' : 'text-green-600'
                 }`}
               >
                 {submitStatus.assign}
@@ -400,7 +400,7 @@ export default function TaskSection({ user }) {
       {submitStatus.complete && (
         <p
           className={`mt-4 text-sm ${
-            submitStatus.complete.includes('Error') ? 'text-red-600' : 'text-green-600'
+            submitStatus.complete?.includes('Error') ? 'text-red-600' : 'text-green-600'
           }`}
         >
           {submitStatus.complete}
