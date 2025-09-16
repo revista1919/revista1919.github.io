@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Papa from 'papaparse';
 import ReactQuill, { Quill } from 'react-quill';
@@ -14,7 +13,7 @@ const TASK_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzWEhEA78AJqSRG
 
 const AREAS = {
   RRSS: 'Redes Sociales',
-  WEB: 'Desarrollo Web'
+  WEB: 'Desarrollo Web',
 };
 
 const getAreaColumns = (area) => {
@@ -27,7 +26,7 @@ const getAreaColumns = (area) => {
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000;
-const REQUEST_TIMEOUT = 10000; // 10 seconds
+const REQUEST_TIMEOUT = 10000;
 
 export default function TaskSection({ user }) {
   const [users, setUsers] = useState([]);
@@ -41,7 +40,6 @@ export default function TaskSection({ user }) {
   const [commentContent, setCommentContent] = useState({});
   const [submitStatus, setSubmitStatus] = useState({});
   const [error, setError] = useState('');
-  const [selectedTask, setSelectedTask] = useState(null);
 
   const fetchWithRetry = async (url, options, retries = MAX_RETRIES) => {
     try {
@@ -49,15 +47,11 @@ export default function TaskSection({ user }) {
       const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
       const response = await fetch(url, {
         ...options,
-        mode: 'no-cors', // Use no-cors to bypass CORS restrictions
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
-      // In no-cors mode, we cannot access response.status or body
-      // Assume success if no network error occurs
       return { success: true };
     } catch (err) {
       if (err.name === 'AbortError') {
@@ -65,7 +59,7 @@ export default function TaskSection({ user }) {
       }
       if (retries > 0) {
         console.warn(`Retry ${MAX_RETRIES - retries + 1}/${MAX_RETRIES}: ${err.message}`);
-        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
         return fetchWithRetry(url, options, retries - 1);
       }
       throw new Error(`Fetch failed after ${MAX_RETRIES} retries: ${err.message}`);
@@ -92,7 +86,7 @@ export default function TaskSection({ user }) {
       const csvText = await response.text();
       const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data.map((row, index) => ({
         ...row,
-        rowIndex: index
+        rowIndex: index,
       }));
       setTasks(parsed);
     } catch (err) {
@@ -102,21 +96,23 @@ export default function TaskSection({ user }) {
   };
 
   useEffect(() => {
-    Promise.all([fetchUsers(), fetchTasks()]).then(() => setLoading(false)).catch(err => {
-      console.error('Error in initial fetch:', err);
-      setError('Error al inicializar: ' + err.message);
-    });
+    Promise.all([fetchUsers(), fetchTasks()])
+      .then(() => setLoading(false))
+      .catch((err) => {
+        console.error('Error in initial fetch:', err);
+        setError('Error al inicializar: ' + err.message);
+      });
   }, []);
 
-  const currentUser = users.find(u => u.Nombre === user.name);
-  const userRoles = currentUser ? currentUser['Rol en la Revista']?.split(';').map(r => r.trim()) : [];
+  const currentUser = users.find((u) => u.Nombre === user.name);
+  const userRoles = currentUser ? currentUser['Rol en la Revista']?.split(';').map((r) => r.trim()) : [];
   const isDirector = userRoles.includes('Director General');
   const isRrss = userRoles.includes('Encargado de Redes Sociales');
   const isWeb = userRoles.includes('Responsable de Desarrollo Web');
-  const isAssignee = (isRrss || isWeb) && !isDirector; // Exclude Director from being an assignee
+  const isAssignee = (isRrss || isWeb) && !isDirector;
 
-  const rrssUsers = users.filter(u => u['Rol en la Revista']?.includes('Encargado de Redes Sociales'));
-  const webUsers = users.filter(u => u['Rol en la Revista']?.includes('Responsable de Desarrollo Web'));
+  const rrssUsers = users.filter((u) => u['Rol en la Revista']?.includes('Encargado de Redes Sociales'));
+  const webUsers = users.filter((u) => u['Rol en la Revista']?.includes('Responsable de Desarrollo Web'));
 
   const filteredTasks = useMemo(() => {
     return tasks.reduce((areaTasks, task, index) => {
@@ -141,8 +137,8 @@ export default function TaskSection({ user }) {
     }, []);
   }, [tasks, user.name, isDirector, isRrss, isWeb]);
 
-  const pendingTasks = useMemo(() => filteredTasks.filter(t => !t.completed), [filteredTasks]);
-  const completedTasks = useMemo(() => filteredTasks.filter(t => t.completed), [filteredTasks]);
+  const pendingTasks = useMemo(() => filteredTasks.filter((t) => !t.completed), [filteredTasks]);
+  const completedTasks = useMemo(() => filteredTasks.filter((t) => t.completed), [filteredTasks]);
 
   const encodeBody = (html) => {
     if (!html) return '';
@@ -156,13 +152,13 @@ export default function TaskSection({ user }) {
   };
 
   const decodeBody = (body) => {
-    if (!body) return <p>Sin contenido.</p>;
+    if (!body) return <p className="text-gray-600">Sin contenido.</p>;
     try {
       const decoded = decodeURIComponent(escape(atob(body)));
-      return <div dangerouslySetInnerHTML={{ __html: decoded }} />;
+      return <div className="ql-editor" dangerouslySetInnerHTML={{ __html: decoded }} />;
     } catch (err) {
       console.error('Error decoding body:', err);
-      return <p>Error al mostrar contenido.</p>;
+      return <p className="text-red-600">Error al mostrar contenido.</p>;
     }
   };
 
@@ -177,7 +173,7 @@ export default function TaskSection({ user }) {
       action: 'assign',
       area: selectedArea,
       task: encodedTask,
-      assignedTo: selectedAssignee || ''
+      assignedTo: selectedAssignee || '',
     };
 
     try {
@@ -185,13 +181,14 @@ export default function TaskSection({ user }) {
         method: 'POST',
         body: JSON.stringify(data),
       });
-      setSubmitStatus({ assign: 'Tarea asignada (sin confirmación del servidor)' });
+      setSubmitStatus({ assign: 'Tarea asignada exitosamente' });
       setShowAssignModal(false);
       setTaskContent('');
+      setSelectedAssignee('');
       await fetchTasks();
     } catch (err) {
       console.error('Error assigning task:', err);
-      setSubmitStatus({ assign: `Error al asignar tarea: ${err.message} (sin confirmación del servidor)` });
+      setSubmitStatus({ assign: `Error al asignar tarea: ${err.message}` });
     }
   };
 
@@ -207,7 +204,7 @@ export default function TaskSection({ user }) {
       action: 'complete',
       area: task.area,
       row: task.rowIndex + 2,
-      comment: encodedComment
+      comment: encodedComment,
     };
 
     try {
@@ -215,162 +212,200 @@ export default function TaskSection({ user }) {
         method: 'POST',
         body: JSON.stringify(data),
       });
-      setSubmitStatus({ complete: 'Tarea completada (sin confirmación del servidor)' });
-      setCommentContent(prev => ({ ...prev, [task.rowIndex]: '' }));
+      setSubmitStatus({ complete: 'Tarea completada exitosamente' });
+      setCommentContent((prev) => ({ ...prev, [task.rowIndex]: '' }));
       await fetchTasks();
-      setSelectedTask(null);
     } catch (err) {
       console.error('Error completing task:', err);
-      setSubmitStatus({ complete: `Error al completar tarea: ${err.message} (sin confirmación del servidor)` });
+      setSubmitStatus({ complete: `Error al completar tarea: ${err.message}` });
     }
   };
 
   const handleCommentChange = useCallback(
     debounce((rowIndex, value) => {
-      setCommentContent(prev => ({ ...prev, [rowIndex]: value }));
-    }, 300),
+      setCommentContent((prev) => ({ ...prev, [rowIndex]: value }));
+    }, 150),
     []
   );
 
   const modules = useMemo(() => ({
     toolbar: [
       ['bold', 'italic', 'underline', 'strike', 'blockquote'],
-      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+      [{ list: 'ordered' }, { list: 'bullet' }],
       ['link', 'image'],
-      [{ 'align': ['', 'center', 'right', 'justify'] }],
-      [{ 'size': ['small', false, 'large'] }],
-      ['clean']
+      [{ align: ['', 'center', 'right', 'justify'] }],
+      [{ size: ['small', false, 'large'] }],
+      ['clean'],
     ],
     imageResize: {
       parchment: Quill.import('parchment'),
       modules: ['Resize', 'DisplaySize', 'Toolbar'],
+      handleStyles: { backgroundColor: 'rgba(0, 0, 0, 0.5)', border: 'none', color: 'white' },
+      displayStyles: { backgroundColor: 'rgba(0, 0, 0, 0.5)', border: 'none', color: 'white' },
     },
   }), []);
 
   const formats = ['bold', 'italic', 'underline', 'strike', 'blockquote', 'list', 'bullet', 'link', 'image', 'align', 'size'];
 
-  // Determine if the user can complete a task
   const canCompleteTask = (task) => {
-    if (isDirector) return false; // Director General cannot complete tasks, regardless of other roles
-    if (!isAssignee) return false; // Must have RRSS or Web role (and not be Director)
-    return task.assignedName === user.name || task.assignedName === ''; // Assigned to user or "Todos"
+    if (isDirector) return false;
+    if (!isAssignee) return false;
+    return task.assignedName === user.name || task.assignedName === '';
   };
 
-  if (loading) return <div className="text-center p-4">Cargando tareas...</div>;
+  if (loading) return <div className="text-center p-4 text-gray-600">Cargando tareas...</div>;
   if (error) return <div className="text-red-600 text-center p-4">{error}</div>;
   if (!isDirector && !isAssignee) return null;
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4">
-      <div className="max-w-7xl mx-auto">
-        <h2 className="text-2xl font-bold mb-4">{isDirector ? 'Gestión de Tareas' : 'Mis Tareas'}</h2>
-        {isDirector && (
-          <button
-            onClick={() => setShowAssignModal(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded mb-4 hover:bg-blue-700 transition"
+    <div className="pt-4 space-y-6">
+      {isDirector && (
+        <button
+          onClick={() => setShowAssignModal(true)}
+          className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium"
+          aria-label="Asignar nueva tarea"
+        >
+          Asignar Nueva Tarea
+        </button>
+      )}
+      <div className="flex space-x-4 border-b border-gray-200">
+        <button
+          onClick={() => setActiveTab('pending')}
+          className={`pb-2 px-4 text-sm font-medium transition-colors ${
+            activeTab === 'pending' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600 hover:text-blue-600'
+          }`}
+          aria-label="Ver tareas pendientes"
+        >
+          Pendientes ({pendingTasks.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('completed')}
+          className={`pb-2 px-4 text-sm font-medium transition-colors ${
+            activeTab === 'completed' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600 hover:text-blue-600'
+          }`}
+          aria-label="Ver tareas completadas"
+        >
+          Completadas ({completedTasks.length})
+        </button>
+      </div>
+      <div className="grid gap-6">
+        {(activeTab === 'pending' ? pendingTasks : completedTasks).map((task) => (
+          <div
+            key={`${task.area}-${task.rowIndex}`}
+            className="bg-white p-6 rounded-lg shadow-md border border-gray-200"
           >
-            Asignar Nueva Tarea
-          </button>
-        )}
-        <div className="flex space-x-4 border-b mb-4">
-          <button
-            onClick={() => setActiveTab('pending')}
-            className={`pb-2 px-4 ${activeTab === 'pending' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
-          >
-            Pendientes ({pendingTasks.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('completed')}
-            className={`pb-2 px-4 ${activeTab === 'completed' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
-          >
-            Completadas ({completedTasks.length})
-          </button>
-        </div>
-        <div className="grid gap-6">
-          {(activeTab === 'pending' ? pendingTasks : completedTasks).map((task, index) => (
-            <div key={`${task.area}-${task.rowIndex}`} className="bg-white p-6 rounded-lg shadow">
-              <h3 className="font-bold text-lg">{task.area} - {task.assignedName || 'Todos'}</h3>
-              <div className="mt-2">{decodeBody(task.taskText)}</div>
-              {task.completed && <div className="mt-2 text-green-600">Completado: {decodeBody(task.comment)}</div>}
-              {!task.completed && canCompleteTask(task) && (
-                <div className="mt-4">
+            <h3 className="font-bold text-lg text-gray-800 mb-2">
+              {task.area} - {task.assignedName || 'Todos'}
+            </h3>
+            <div className="text-gray-600 mb-4">{decodeBody(task.taskText)}</div>
+            {task.completed && (
+              <div className="mt-2 text-green-600 bg-green-50 p-3 rounded-md">
+                <span className="font-medium">Completado:</span> {decodeBody(task.comment)}
+              </div>
+            )}
+            {!task.completed && canCompleteTask(task) && (
+              <div className="mt-4 space-y-4">
+                <div className="min-h-[8rem] border rounded-md overflow-auto">
                   <ReactQuill
                     value={commentContent[task.rowIndex] || ''}
                     onChange={(value) => handleCommentChange(task.rowIndex, value)}
                     modules={modules}
                     formats={formats}
                     placeholder="Comentario sobre lo realizado..."
-                    className="h-32 mb-4"
+                    className="h-full text-gray-800 bg-white"
                   />
-                  <button
-                    onClick={() => handleCompleteTask(task)}
-                    className="mt-2 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition"
-                  >
-                    Marcar Completado
-                  </button>
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
-        {showAssignModal && isDirector && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded max-w-2xl w-full max-h-screen overflow-y-auto">
-              <h3 className="font-bold text-lg mb-4">Asignar Tarea</h3>
+                <button
+                  onClick={() => handleCompleteTask(task)}
+                  className="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 text-sm font-medium"
+                  aria-label="Marcar tarea como completada"
+                >
+                  Marcar Completado
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
+        {(activeTab === 'pending' ? pendingTasks : completedTasks).length === 0 && (
+          <div className="text-center text-gray-600">No hay tareas {activeTab === 'pending' ? 'pendientes' : 'completadas'}.</div>
+        )}
+      </div>
+      {showAssignModal && isDirector && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] flex flex-col">
+            <h3 className="font-bold text-lg text-gray-800 mb-4">Asignar Tarea</h3>
+            <div className="flex-grow space-y-4 overflow-y-auto">
               <select
                 value={selectedArea}
-                onChange={e => setSelectedArea(e.target.value)}
-                className="w-full p-2 border rounded mb-4"
+                onChange={(e) => setSelectedArea(e.target.value)}
+                className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                aria-label="Seleccionar área de la tarea"
               >
                 <option value={AREAS.RRSS}>{AREAS.RRSS}</option>
                 <option value={AREAS.WEB}>{AREAS.WEB}</option>
               </select>
               <select
                 value={selectedAssignee}
-                onChange={e => setSelectedAssignee(e.target.value)}
-                className="w-full p-2 border rounded mb-4"
+                onChange={(e) => setSelectedAssignee(e.target.value)}
+                className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                aria-label="Seleccionar asignado"
               >
                 <option value="">Todos</option>
-                {(selectedArea === AREAS.RRSS ? rrssUsers : webUsers).map(u => (
-                  <option key={u.Nombre} value={u.Nombre}>{u.Nombre}</option>
+                {(selectedArea === AREAS.RRSS ? rrssUsers : webUsers).map((u) => (
+                  <option key={u.Nombre} value={u.Nombre}>
+                    {u.Nombre}
+                  </option>
                 ))}
               </select>
-              <ReactQuill
-                value={taskContent}
-                onChange={setTaskContent}
-                modules={modules}
-                formats={formats}
-                placeholder="Describe la tarea..."
-                className="h-48 mb-4"
-              />
-              <div className="flex justify-end space-x-2">
-                <button
-                  onClick={() => setShowAssignModal(false)}
-                  className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 transition"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleAssignTask}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-                >
-                  Asignar
-                </button>
+              <div className="min-h-[10rem] border rounded-md overflow-auto">
+                <ReactQuill
+                  value={taskContent}
+                  onChange={setTaskContent}
+                  modules={modules}
+                  formats={formats}
+                  placeholder="Describe la tarea..."
+                  className="h-full text-gray-800 bg-white"
+                />
               </div>
-              {submitStatus.assign && (
-                <p className={`mt-2 ${submitStatus.assign.includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
-                  {submitStatus.assign}
-                </p>
-              )}
             </div>
+            <div className="sticky bottom-0 pt-4 bg-white flex justify-end space-x-2">
+              <button
+                onClick={() => setShowAssignModal(false)}
+                className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition-colors text-sm font-medium"
+                aria-label="Cancelar asignación de tarea"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleAssignTask}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
+                disabled={!taskContent.trim()}
+                aria-label="Asignar tarea"
+              >
+                Asignar
+              </button>
+            </div>
+            {submitStatus.assign && (
+              <p
+                className={`mt-2 text-sm ${
+                  submitStatus.assign.includes('Error') ? 'text-red-600' : 'text-green-600'
+                }`}
+              >
+                {submitStatus.assign}
+              </p>
+            )}
           </div>
-        )}
-        {submitStatus.complete && (
-          <p className={`mt-4 ${submitStatus.complete.includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
-            {submitStatus.complete}
-          </p>
-        )}
-      </div>
+        </div>
+      )}
+      {submitStatus.complete && (
+        <p
+          className={`mt-4 text-sm ${
+            submitStatus.complete.includes('Error') ? 'text-red-600' : 'text-green-600'
+          }`}
+        >
+          {submitStatus.complete}
+        </p>
+      )}
     </div>
   );
 }

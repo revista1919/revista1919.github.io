@@ -413,15 +413,17 @@ export default function NewsUploadSection() {
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-md space-y-4 max-w-2xl mx-auto">
-      <h4 className="text-lg font-semibold text-[#5a3e36]">Subir Nueva Noticia</h4>
-      <input
-        type="text"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#5a3e36] text-[#5a3e36] placeholder-gray-400"
-        placeholder="Título de la noticia"
-        disabled={isLoading}
-      />
+  <h4 className="text-lg font-semibold text-[#5a3e36]">Subir Nueva Noticia</h4>
+  <input
+    type="text"
+    value={title}
+    onChange={(e) => setTitle(e.target.value)}
+    className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#5a3e36] text-[#5a3e36] placeholder-gray-400"
+    placeholder="Título de la noticia"
+    disabled={isLoading}
+  />
+  <div className="flex flex-col space-y-4">
+    <div className="min-h-[16rem] border rounded-md overflow-auto">
       <ReactQuill
         ref={quillRef}
         value={body || ''}
@@ -429,9 +431,11 @@ export default function NewsUploadSection() {
         modules={modules}
         formats={formats}
         placeholder="Cuerpo de la noticia"
-        className="border rounded-md text-[#5a3e36] bg-white"
+        className="h-full text-[#5a3e36] bg-white"
         readOnly={isLoading}
       />
+    </div>
+    <div className="flex flex-col space-y-2">
       <button
         onClick={() => {
           setIsEditingImage(false);
@@ -443,12 +447,6 @@ export default function NewsUploadSection() {
       >
         Insertar Imagen Manualmente
       </button>
-      <p className="text-sm text-gray-500">
-        Nota: El corrector ortográfico del navegador está activo (en español). Revisa sugerencias en rojo.
-      </p>
-      <p className="text-sm text-gray-500">
-        Usa URLs de imágenes de Google (copia la URL directamente). No subas desde tu computadora. Haz clic y arrastra para redimensionar imágenes, usa los botones de alineación (izquierda, centro, derecha, justificado) para que las imágenes floten con el texto o se centren. Selecciona tamaño de fuente (pequeño, normal, grande), o usa el botón de eliminar (X) o editar en la barra de la imagen. Para subrayar texto, selecciona el texto y usa el botón de subrayado o escribe $texto$. Para añadir texto debajo de una imagen flotante, el texto fluirá naturalmente alrededor; usa Enter para nuevo párrafo si necesitas separar.
-      </p>
       <button
         onClick={handleSubmit}
         disabled={isLoading || errorCount >= 5}
@@ -460,20 +458,26 @@ export default function NewsUploadSection() {
       >
         {isLoading ? 'Enviando...' : 'Enviar Noticia'}
       </button>
-      {message && (
-        <p
-          className={`text-center text-sm ${
-            message.includes('Error') || message.includes('Advertencia') ? 'text-red-500' : 'text-green-500'
-          }`}
-        >
-          {message}
-        </p>
-      )}
-      {errorCount >= 5 && (
-        <p className="text-center text-sm text-red-500">
-          Demasiados intentos fallidos. Por favor, intenta de nuevo más tarde.
-        </p>
-      )}
+    </div>
+  </div>
+  <p className="text-sm text-gray-500">
+    Nota: El corrector ortográfico del navegador está activo (en español). Revisa sugerencias en rojo.
+  </p>
+  {message && (
+    <p
+      className={`text-center text-sm ${
+        message.includes('Error') || message.includes('Advertencia') ? 'text-red-500' : 'text-green-500'
+      }`}
+    >
+      {message}
+    </p>
+  )}
+  {errorCount >= 5 && (
+    <p className="text-center text-sm text-red-500">
+      Demasiados intentos fallidos. Por favor, intenta de nuevo más tarde.
+    </p>
+  )}
+
       {showImageModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">

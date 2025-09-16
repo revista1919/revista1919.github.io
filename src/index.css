@@ -15,7 +15,27 @@ body {
   background-color: #edf0f3;
   color: rgb(0, 0, 0);
 }
+/* Ensure Quill editor doesn't overflow */
+.ql-container {
+  overflow: auto;
+  max-height: 100%;
+}
 
+/* Fix button positioning */
+.sticky-buttons {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  padding-top: 1rem;
+  background: inherit;
+}
+
+/* Improve editor appearance */
+.ql-editor {
+  min-height: 100px;
+  max-height: 200px;
+  overflow-y: auto;
+}
 /* Container sin restricciones de ancho ni padding */
 .container {
   width: 100%;
