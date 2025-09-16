@@ -5,10 +5,11 @@ import 'react-quill/dist/quill.snow.css';
 import { debounce } from 'lodash';
 import NewsUploadSection from './NewsUploadSection';
 import TaskSection from './TaskSection';
+import AssignSection from './AssignSection'; // Added import
 import { useTranslation } from 'react-i18next';
 
 const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyJ9znuf_Pa8Hyh4BnsO1pTTduBsXC7kDD0pORWccMTBlckgt0I--NKG69aR_puTAZ5/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwrW8Nu1wpvM8pJmGHLxuR0NAbXhQEnhRRABe5W0B5LPhHT5jIJS-8DO8t_T4AYJv6j/exec';
 const RUBRIC_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzehxU_O7GkzfiCqCsSdnFwvA_Mhtfr_vSZjqVsBo3yx8ZEpr9Qur4NHPI09tyH1AZe/exec';
 
 const RUBRIC_CSV1 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=0&single=true&output=csv';
@@ -395,6 +396,7 @@ export default function PortalSection({ user, onLogout }) {
   }, [user?.name]);
 
   const isAuthor = assignments.length > 0 && assignments[0].role === 'Autor';
+  const isChief = user?.roles && user.roles.split(';').map(r => r.trim()).includes('Editor en Jefe');
 
   const pendingAssignments = useMemo(() => assignments.filter((a) => !a.isCompleted), [assignments]);
   const completedAssignments = useMemo(() => assignments.filter((a) => a.isCompleted), [assignments]);
@@ -477,8 +479,8 @@ export default function PortalSection({ user, onLogout }) {
   };
 
   const handleSubmit = async (link, role, feedbackText, reportText, voteValue) => {
-    const encodedFeedback = encodeBody(feedbackText || '');
-    const encodedReport = encodeBody(reportText || '');
+    const encodedFeedback = base64EncodeUnicode(sanitizeInput(feedbackText || ''));
+    const encodedReport = base64EncodeUnicode(sanitizeInput(reportText || ''));
 
     const mainData = {
       link,
@@ -1325,10 +1327,19 @@ export default function PortalSection({ user, onLogout }) {
             >
               Asignaciones Completadas ({completedAssignments.length})
             </button>
+            {isChief && (
+              <button
+                onClick={() => setActiveTab('asignar')}
+                className={`pb-2 px-4 text-sm font-medium ${activeTab === 'asignar' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}
+              >
+                Asignar Artículos
+              </button>
+            )}
           </div>
         </div>
         <ErrorBoundary>
           {!isAuthor && <TaskSection user={user} />}
+          {isChief && activeTab === 'asignar' && <AssignSection user={user} />}
         </ErrorBoundary>
         {loading ? (
           <div className="text-center text-gray-600">Cargando asignaciones...</div>
