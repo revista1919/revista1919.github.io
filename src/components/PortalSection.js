@@ -9,7 +9,7 @@ import AssignSection from './AssignSection'; // Added import
 import { useTranslation } from 'react-i18next';
 
 const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwrW8Nu1wpvM8pJmGHLxuR0NAbXhQEnhRRABe5W0B5LPhHT5jIJS-8DO8t_T4AYJv6j/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbymwq35Ts7DmJn-LDgDJa74cUzg0DD1h5fNEJrIe6YPl7_5dB8xygM-ZwFyCE5apKz9/exec';
 const RUBRIC_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzehxU_O7GkzfiCqCsSdnFwvA_Mhtfr_vSZjqVsBo3yx8ZEpr9Qur4NHPI09tyH1AZe/exec';
 
 const RUBRIC_CSV1 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=0&single=true&output=csv';
