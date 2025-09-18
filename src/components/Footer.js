@@ -64,7 +64,37 @@ function Footer() {
             alt="YouTube"
             className="h-8 w-8 sm:h-6 sm:w-6 object-contain mb-1"
           />
-          <span className="underline">Revista Nacional de las Ciencias</span>
+          <span className="underline block truncate">Revista Nacional de las Ciencias</span>
+        </a>
+
+        {/* TikTok */}
+        <a
+          href="https://www.tiktok.com/@revistacienciaestudiante?_t=ZM-8zn7utyYgfV&_r=1&fbclid=PAb21jcAM4geVleHRuA2FlbQIxMQABp6FwcLtLWxDXe4_8tmRePn2jurMVJ1_Lua30PwJL6IWE6Ft0S7IlkH94WljP_aem_GiF6Itr22HQ5B2y8qYSzGQ"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex flex-col items-center text-black hover:text-gray-800 text-center max-w-[200px]"
+        >
+          <img
+            src="https://i.postimg.cc/zGShz56s/d800ce127021655e50667df1734a2a7e.png"
+            alt="TikTok"
+            className="h-8 w-8 sm:h-6 sm:w-6 object-contain mb-1"
+          />
+          <span className="underline block truncate">@revistacienciaestudiante</span>
+        </a>
+
+        {/* Spotify */}
+        <a
+          href="https://open.spotify.com/show/6amsgUkNXgUTD219XpuqOe?si=LPzCNpusQjSLGBq_pPrVTw"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex flex-col items-center text-green-500 hover:text-green-600 text-center max-w-[200px]"
+        >
+          <img
+            src="https://i.postimg.cc/XvBgkXvT/spotify-logo-1.png"
+            alt="Spotify"
+            className="h-8 w-8 sm:h-6 sm:w-6 object-contain mb-1"
+          />
+          <span className="underline block truncate">Podcast</span>
         </a>
       </div>
 

@@ -1,32 +1,160 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Papa from 'papaparse';
-import ReactQuill, { Quill } from 'react-quill';
+import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import ImageResize from 'quill-image-resize-module-react';
 import { debounce } from 'lodash';
+import NewsUploadSection from './NewsUploadSection';
+import TaskSection from './TaskSection';
+import AssignSection from './AssignSection';
+import { useTranslation } from 'react-i18next';
 
-Quill.register('modules/imageResize', ImageResize);
+const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbymwq35Ts7DmJn-LDgDJa74cUzg0DD1h5fNEJrIe6YPl7_5dB8xygM-ZwFyCE5apKz9/exec';
+const RUBRIC_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzehxU_O7GkzfiCqCsSdnFwvA_Mhtfr_vSZjqVsBo3yx8ZEpr9Qur4NHPI09tyH1AZe/exec';
 
-const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
-const TASKS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSCEOtMwYPu0_kn1hmQi0qT6FZq6HRF09WtuDSqOxBNgMor_FyRRtc6_YVKHQQhWJCy-mIa2zwP6uAU/pub?output=csv';
-const TASK_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxMo7aV_vz_3mOCUWKpcqnWmassUdApD_KfAHROTdgd_MDDiaXikgVV0OZ5qVYmhZgd/exec';
+const RUBRIC_CSV1 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=0&single=true&output=csv';
+const RUBRIC_CSV2 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=1438370398&single=true&output=csv';
+const RUBRIC_CSV3 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=1972050001&single=true&output=csv';
 
-const AREAS = {
-  RRSS: 'Redes Sociales',
-  WEB: 'Desarrollo Web',
+const ARTICULOS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p32EM6-0VYy18AdREQwXdpeet1WHTA4H2-W2FX7HKe1HPSyApWadUw9sKHdVYQXL5tP6yDRs/pub?output=csv';
+const ARTICULOS_GAS_URL = (typeof process !== 'undefined' && process.env.REACT_APP_ARTICULOS_SCRIPT_URL) 
+  ? process.env.REACT_APP_ARTICULOS_SCRIPT_URL 
+  : 'https://script.google.com/macros/s/YOUR_DEPLOYED_ID/exec';
+
+const criteria = {
+  'Revisor 1': [
+    {
+      key: 'gramatica',
+      name: 'Gramática y ortografía',
+      levels: {
+        0: { label: '0 = Insuficiente ❌', desc: 'Muchos errores graves, difícil de leer.' },
+        1: { label: '1 = Adecuado ⚖️', desc: 'Algunos errores, comprensible.' },
+        2: { label: '2 = Excelente ✅', desc: 'Muy pocos errores, texto limpio.' }
+      }
+    },
+    {
+      key: 'claridad',
+      name: 'Claridad y coherencia',
+      levels: {
+        0: { label: '0 = Insuficiente ❌', desc: 'Confuso, incoherente.' },
+        1: { label: '1 = Adecuado ⚖️', desc: 'A veces confuso pero entendible.' },
+        2: { label: '2 = Excelente ✅', desc: 'Claro, preciso y coherente.' }
+      }
+    },
+    {
+      key: 'estructura',
+      name: 'Estructura y organización',
+      levels: {
+        0: { label: '0 = Insuficiente ❌', desc: 'Desordenado, sin partes claras.' },
+        1: { label: '1 = Adecuado ⚖️', desc: 'Con partes presentes pero débiles.' },
+        2: { label: '2 = Excelente ✅', desc: 'Introducción, desarrollo y conclusión bien diferenciados.' }
+      }
+    },
+    {
+      key: 'citacion',
+      name: 'Citación y referencias',
+      levels: {
+        0: { label: '0 = Insuficiente ❌', desc: 'Sin fuentes o mal citadas.' },
+        1: { label: '1 = Adecuado ⚖️', desc: 'Fuentes presentes pero con errores.' },
+        2: { label: '2 = Excelente ✅', desc: 'Fuentes confiables y bien citadas.' }
+      }
+    }
+  ],
+  'Revisor 2': [
+    {
+      key: 'relevancia',
+      name: 'Relevancia del tema',
+      levels: {
+        0: { label: '0 = Insuficiente ❌', desc: 'Tema irrelevante o fuera de contexto.' },
+        1: { label: '1 = Adecuado ⚖️', desc: 'Tema válido pero superficial.' },
+        2: { label: '2 = Excelente ✅', desc: 'Tema pertinente y atractivo.' }
+      }
+    },
+    {
+      key: 'rigor',
+      name: 'Rigor en el uso de fuentes',
+      levels: {
+        0: { label: '0 = Insuficiente ❌', desc: 'Sin fuentes o poco confiables.' },
+        1: { label: '1 = Adecuado ⚖️', desc: 'Pocas fuentes, algunas dudosas.' },
+        2: { label: '2 = Excelente ✅', desc: 'Fuentes variadas, confiables y bien usadas.' }
+      }
+    },
+    {
+      key: 'originalidad',
+      name: 'Originalidad y creatividad',
+      levels: {
+        0: { label: '0 = Insuficiente ❌', desc: 'Repite información sin análisis.' },
+        1: { label: '1 = Adecuado ⚖️', desc: 'Combina ideas sin mucha elaboración.' },
+        2: { label: '2 = Excelente ✅', desc: 'Aporta ideas propias y reflexiones originales.' }
+      }
+    },
+    {
+      key: 'argumentos',
+      name: 'Calidad de los argumentos',
+      levels: {
+        0: { label: '0 = Insuficiente ❌', desc: 'Confusos, sin pruebas o incoherentes.' },
+        1: { label: '1 = Adecuado ⚖️', desc: 'Claros pero débiles.' },
+        2: { label: '2 = Excelente ✅', desc: 'Sólidos, bien fundamentados y convincentes.' }
+      }
+    }
+  ],
+  'Editor': [
+    {
+      key: 'modificaciones',
+      name: 'Grado de modificaciones',
+      levels: {
+        0: { label: '0 = Insuficiente ❌', desc: 'Requirió demasiadas correcciones, casi reescribir.' },
+        1: { label: '1 = Adecuado ⚖️', desc: 'Necesitó varias correcciones, pero manejables.' },
+        2: { label: '2 = Excelente ✅', desc: 'Solo ajustes menores.' }
+      }
+    },
+    {
+      key: 'calidad',
+      name: 'Calidad final del texto',
+      levels: {
+        0: { label: '0 = Insuficiente ❌', desc: 'Aún con cambios, sigue débil o poco claro.' },
+        1: { label: '1 = Adecuado ⚖️', desc: 'Texto aceptable, aunque mejorable.' },
+        2: { label: '2 = Excelente ✅', desc: 'Texto sólido, claro y publicable.' }
+      }
+    },
+    {
+      key: 'aporte',
+      name: 'Aporte global del ensayo',
+      levels: {
+        0: { label: '0 = Insuficiente ❌', desc: 'Poca relevancia o repetitivo.' },
+        1: { label: '1 = Adecuado ⚖️', desc: 'Interesante, aunque no destaca.' },
+        2: { label: '2 = Excelente ✅', desc: 'Muy valioso, innovador o inspirador.' }
+      }
+    },
+    {
+      key: 'potencial',
+      name: 'Potencial motivador',
+      levels: {
+        0: { label: '0 = Insuficiente ❌', desc: 'No motiva ni aporta al espíritu de la revista.' },
+        1: { label: '1 = Adecuado ⚖️', desc: 'Puede motivar a algunos estudiantes.' },
+        2: { label: '2 = Excelente ✅', desc: 'Inspira, invita a reflexionar y dialogar.' }
+      }
+    },
+    {
+      key: 'decision',
+      name: 'Decisión final',
+      levels: {
+        0: { label: '0 = Rechazar', desc: 'Rechazar.' },
+        1: { label: '1 = Aceptar con cambios mayores', desc: 'Aceptar con cambios mayores.' },
+        2: { label: '2 = Aceptar (con o sin cambios menores)', desc: 'Aceptar (con o sin cambios menores).' }
+      }
+    }
+  ]
 };
 
-const getAreaColumns = (area) => {
-  if (area === AREAS.RRSS) {
-    return { taskCol: 0, nameCol: 1, completedCol: 2, commentCol: 3 };
-  } else {
-    return { taskCol: 4, nameCol: 5, completedCol: 6, commentCol: 7 };
-  }
+const getDecisionText = (percent) => {
+  if (percent >= 85) return 'Aceptar sin cambios.';
+  if (percent >= 70) return 'Aceptar con cambios menores.';
+  if (percent >= 50) return 'Revisión mayor antes de publicar.';
+  return 'Rechazar.';
 };
 
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000;
-const REQUEST_TIMEOUT = 10000;
+const getTotal = (scores, crits) => crits.reduce((sum, c) => sum + (scores[c.key] || 0), 0);
 
 const base64EncodeUnicode = (str) => {
   const encoder = new TextEncoder();
@@ -36,6 +164,23 @@ const base64EncodeUnicode = (str) => {
   return btoa(binary);
 };
 
+const base64DecodeUnicode = (str) => {
+  const binary = atob(str);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  const decoder = new TextDecoder();
+  return decoder.decode(bytes);
+};
+
+const toBase64 = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.readAsDataURL(file);
+  reader.onload = () => resolve(reader.result.split(',')[1]);
+  reader.onerror = error => reject(error);
+});
+
 const sanitizeInput = (input) => {
   if (!input) return '';
   return input.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
@@ -44,585 +189,1544 @@ const sanitizeInput = (input) => {
               .trim();
 };
 
-export default function TaskSection({ user }) {
-  const [users, setUsers] = useState([]);
-  const [tasks, setTasks] = useState([]);
+class ErrorBoundary extends React.Component {
+  state = { hasError: false };
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('ErrorBoundary caught:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <div className="text-red-600 text-center p-4">Ocurrió un error. Por favor, recarga la página.</div>;
+    }
+    return this.props.children;
+  }
+}
+
+export default function PortalSection({ user, onLogout }) {
+  const isChief = user?.roles && user.roles.split(';').map(r => r.trim()).includes('Editor en Jefe');
+  const isDirector = user?.roles && user.roles.split(';').map(r => r.trim()).includes('Director General');
+
+  const [activeTab, setActiveTab] = useState(
+    isDirector ? 'asignar' : isChief ? 'asignar' : 'assignments'
+  );
+
+  const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('pending');
-  const [showAssignModal, setShowAssignModal] = useState(false);
-  const [selectedArea, setSelectedArea] = useState(AREAS.RRSS);
-  const [selectedAssignee, setSelectedAssignee] = useState('');
-  const [taskContent, setTaskContent] = useState('');
-  const [commentContent, setCommentContent] = useState({});
+  const [feedback, setFeedback] = useState({});
+  const [report, setReport] = useState({});
+  const [vote, setVote] = useState({});
+  const [rubricScores, setRubricScores] = useState({});
+  const [tutorialVisible, setTutorialVisible] = useState({});
   const [submitStatus, setSubmitStatus] = useState({});
+  const [rubricStatus, setRubricStatus] = useState({});
   const [error, setError] = useState('');
+  const [showImageModal, setShowImageModal] = useState({});
+  const [isEditingImage, setIsEditingImage] = useState({});
+  const [imageData, setImageData] = useState({});
+  const [editingRange, setEditingRange] = useState({});
+  const [selectedAssignment, setSelectedAssignment] = useState(null);
+  const [expandedFeedback, setExpandedFeedback] = useState({});
+  const feedbackQuillRefs = useRef({});
+  const reportQuillRefs = useRef({});
 
-  // Referencias para los editores de Quill
-  const taskEditorRef = useRef(null);
-  const commentEditorsRef = useRef({});
+  // Director states
+  const [articles, setArticles] = useState([]);
+  const [directorLoading, setDirectorLoading] = useState(true);
+  const [expanded, setExpanded] = useState({});
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingArticle, setEditingArticle] = useState(null);
+  const [directorFormData, setDirectorFormData] = useState({
+    titulo: '',
+    autores: '',
+    resumen: '',
+    abstract: '',
+    fecha: '',
+    volumen: '',
+    numero: '',
+    primeraPagina: '',
+    ultimaPagina: '',
+    areaTematica: '',
+    palabrasClave: '',
+    pdfFile: null
+  });
+  const [directorStatus, setDirectorStatus] = useState('');
 
-  const fetchWithRetry = async (url, options, retries = MAX_RETRIES) => {
+  const fetchRubrics = async () => {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
-      const response = await fetch(url, {
-        ...options,
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
+      const [csv1Text, csv2Text, csv3Text] = await Promise.all([
+        fetch(RUBRIC_CSV1, { cache: 'no-store' }).then(r => r.text()),
+        fetch(RUBRIC_CSV2, { cache: 'no-store' }).then(r => r.text()),
+        fetch(RUBRIC_CSV3, { cache: 'no-store' }).then(r => r.text())
+      ]);
+
+      const parseData = (csvText) => Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
+
+      const data1 = parseData(csv1Text);
+      const scoresMap1 = {};
+      data1.forEach(row => {
+        const name = row['Nombre del Artículo']?.trim();
+        if (name) {
+          scoresMap1[name] = {
+            gramatica: parseInt(row['Gramática y ortografía']) || 0,
+            claridad: parseInt(row['Claridad y coherencia']) || 0,
+            estructura: parseInt(row['Estructura y organización']) || 0,
+            citacion: parseInt(row['Citación y referencias']) || 0
+          };
+        }
       });
-      clearTimeout(timeoutId);
-      return { success: true };
+
+      const data2 = parseData(csv2Text);
+      const scoresMap2 = {};
+      data2.forEach(row => {
+        const name = row['Nombre del Artículo']?.trim();
+        if (name) {
+          scoresMap2[name] = {
+            relevancia: parseInt(row['Relevancia del tema']) || 0,
+            rigor: parseInt(row['Rigor en el uso de fuentes']) || 0,
+            originalidad: parseInt(row['Originalidad y creatividad']) || 0,
+            argumentos: parseInt(row['Calidad de los argumentos']) || 0
+          };
+        }
+      });
+
+      const data3 = parseData(csv3Text);
+      const scoresMap3 = {};
+      data3.forEach(row => {
+        const name = row['Nombre del Artículo']?.trim();
+        if (name) {
+          scoresMap3[name] = {
+            modificaciones: parseInt(row['Grado de modificaciones']) || 0,
+            calidad: parseInt(row['Calidad final del texto']) || 0,
+            aporte: parseInt(row['Aporte global del ensayo']) || 0,
+            potencial: parseInt(row['Potencial motivador']) || 0,
+            decision: parseInt(row['Decisión final']) || 0
+          };
+        }
+      });
+
+      return { scoresMap1, scoresMap2, scoresMap3 };
     } catch (err) {
-      if (err.name === 'AbortError') {
-        throw new Error('Request timed out');
-      }
-      if (retries > 0) {
-        console.warn(`Retry ${MAX_RETRIES - retries + 1}/${MAX_RETRIES}: ${err.message}`);
-        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
-        return fetchWithRetry(url, options, retries - 1);
-      }
-      throw new Error(`Fetch failed after ${MAX_RETRIES} retries: ${err.message}`);
+      console.error('Error fetching rubrics:', err);
+      return { scoresMap1: {}, scoresMap2: {}, scoresMap3: {} };
     }
   };
 
-  const fetchUsers = async () => {
+  const fetchWithRetry = async (url, retries = 3, timeout = 10000) => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
+        const response = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+        clearTimeout(timeoutId);
+        if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+        return response.text();
+      } catch (err) {
+        if (i === retries - 1) throw err;
+        await new Promise((resolve) => setTimeout(resolve, 1000 * (i + 1)));
+      }
+    }
+  };
+
+  const fetchAssignments = async () => {
     try {
-      const response = await fetch(USERS_CSV, { cache: 'no-store' });
-      if (!response.ok) throw new Error(`Failed to fetch users: ${response.status}`);
+      setLoading(true);
+      const [csvText, rubrics] = await Promise.all([
+        fetchWithRetry(ASSIGNMENTS_CSV),
+        fetchRubrics()
+      ]);
+      Papa.parse(csvText, {
+        header: true,
+        skipEmptyLines: true,
+        delimiter: ',',
+        transform: (value) => value.trim(),
+        complete: ({ data }) => {
+          const isAuthor = data.some((row) => row['Autor'] === user.name);
+          let parsedAssignments = [];
+          if (isAuthor) {
+            parsedAssignments = data
+              .filter((row) => row['Autor'] === user.name)
+              .map((row) => ({
+                id: row['Nombre Artículo'],
+                'Nombre Artículo': row['Nombre Artículo'] || 'Sin título',
+                Estado: row['Estado'],
+                role: 'Autor',
+                feedbackEditor: row['Feedback 3'] || 'Sin retroalimentación del editor aún.',
+                isCompleted: !!row['Feedback 3'],
+              }));
+          } else {
+            parsedAssignments = data
+              .filter((row) => {
+                if (row['Revisor 1'] === user.name) return true;
+                if (row['Revisor 2'] === user.name) return true;
+                if (row['Editor'] === user.name) return true;
+                return false;
+              })
+              .map((row) => {
+                const role = row['Revisor 1'] === user.name ? 'Revisor 1' : row['Revisor 2'] === user.name ? 'Revisor 2' : 'Editor';
+                const num = role === 'Revisor 1' ? 1 : role === 'Revisor 2' ? 2 : 3;
+                const assignment = {
+                  id: row['Nombre Artículo'],
+                  'Nombre Artículo': row['Nombre Artículo'] || 'Sin título',
+                  'Link Artículo': row['Link Artículo'],
+                  Estado: row['Estado'],
+                  role,
+                  feedback: row[`Feedback ${num}`] || '',
+                  report: row[`Informe ${num}`] || '',
+                  vote: row[`Voto ${num}`] || '',
+                  feedback1: row['Feedback 1'] || 'Sin retroalimentación de Revisor 1.',
+                  feedback2: row['Feedback 2'] || 'Sin retroalimentación de Revisor 2.',
+                  informe1: row['Informe 1'] || 'Sin informe de Revisor 1.',
+                  informe2: row['Informe 2'] || 'Sin informe de Revisor 2.',
+                  isCompleted: !!row[`Feedback ${num}`] && !!row[`Informe ${num}`] && !!row[`Voto ${num}`],
+                };
+
+                const name = assignment.id;
+                if (role === 'Revisor 1') {
+                  assignment.scores = rubrics.scoresMap1[name] || { gramatica: 0, claridad: 0, estructura: 0, citacion: 0 };
+                } else if (role === 'Revisor 2') {
+                  assignment.scores = rubrics.scoresMap2[name] || { relevancia: 0, rigor: 0, originalidad: 0, argumentos: 0 };
+                } else {
+                  assignment.rev1Scores = rubrics.scoresMap1[name] || { gramatica: 0, claridad: 0, estructura: 0, citacion: 0 };
+                  assignment.rev2Scores = rubrics.scoresMap2[name] || { relevancia: 0, rigor: 0, originalidad: 0, argumentos: 0 };
+                  assignment.scores = rubrics.scoresMap3[name] || { modificaciones: 0, calidad: 0, aporte: 0, potencial: 0, decision: 0 };
+                }
+
+                return assignment;
+              });
+          }
+          setAssignments(parsedAssignments);
+          parsedAssignments.forEach((assignment) => {
+            if (!isAuthor) {
+              const link = assignment['Link Artículo'];
+              setVote((prev) => ({ ...prev, [link]: assignment.vote }));
+              setFeedback((prev) => ({ ...prev, [link]: assignment.feedback }));
+              setReport((prev) => ({ ...prev, [link]: assignment.report }));
+              setRubricScores((prev) => ({ ...prev, [link]: assignment.scores }));
+            }
+          });
+          setLoading(false);
+        },
+        error: (err) => {
+          console.error('Error al parsear CSV:', err);
+          setError('Error al cargar asignaciones');
+          setLoading(false);
+        },
+      });
+    } catch (err) {
+      console.error('Error al cargar asignaciones:', err);
+      setError('Error al conectar con el servidor');
+      setLoading(false);
+    }
+  };
+
+  // Director functions
+  const fetchArticles = async () => {
+    try {
+      setDirectorLoading(true);
+      const response = await fetch(ARTICULOS_CSV_URL, { cache: 'no-store' });
       const csvText = await response.text();
       const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
-      setUsers(parsed);
-    } catch (err) {
-      console.error('Error fetching users:', err);
-      setError('Error al cargar usuarios: ' + err.message);
-    }
-  };
-
-  const fetchTasks = async () => {
-    try {
-      const response = await fetch(TASKS_CSV, { cache: 'no-store' });
-      if (!response.ok) throw new Error(`Failed to fetch tasks: ${response.status}`);
-      const csvText = await response.text();
-      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data.map((row, index) => ({
+      setArticles(parsed.map(row => ({
         ...row,
-        rowIndex: index,
-      }));
-      setTasks(parsed);
+        areas: row['Área temática'] ? row['Área temática'].split(';').map(a => a.trim()).filter(Boolean) : [],
+        keywords: row['Palabras clave'] ? row['Palabras clave'].split(';').map(k => k.trim()).filter(Boolean) : []
+      })));
+      setDirectorStatus('');
     } catch (err) {
-      console.error('Error fetching tasks:', err);
-      setError('Error al cargar tareas: ' + err.message);
+      console.error('Error fetching articles:', err);
+      setDirectorStatus('Error al cargar artículos');
+    } finally {
+      setDirectorLoading(false);
     }
+  };
+
+  const handleDirectorInputChange = (e) => {
+    const { name, value } = e.target;
+    setDirectorFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleDirectorFileChange = (e) => {
+    setDirectorFormData(prev => ({ ...prev, pdfFile: e.target.files[0] }));
+  };
+
+  const resetDirectorForm = () => {
+    setDirectorFormData({
+      titulo: '',
+      autores: '',
+      resumen: '',
+      abstract: '',
+      fecha: '',
+      volumen: '',
+      numero: '',
+      primeraPagina: '',
+      ultimaPagina: '',
+      areaTematica: '',
+      palabrasClave: '',
+      pdfFile: null
+    });
+  };
+
+  const handleDirectorSubmit = async (action = 'add') => {
+    if (!directorFormData.titulo || !directorFormData.autores || (action === 'add' && !directorFormData.pdfFile)) {
+      setDirectorStatus('Campos obligatorios faltantes');
+      return;
+    }
+    try {
+      setDirectorStatus('Procesando...');
+      let pdfBase64 = '';
+      if (directorFormData.pdfFile) {
+        pdfBase64 = await toBase64(directorFormData.pdfFile);
+      }
+      const data = {
+        action,
+        article: {
+          titulo: directorFormData.titulo,
+          autores: directorFormData.autores,
+          resumen: directorFormData.resumen,
+          abstract: directorFormData.abstract,
+          fecha: directorFormData.fecha,
+          volumen: directorFormData.volumen,
+          numero: action === 'add' ? '' : directorFormData.numero,
+          primeraPagina: directorFormData.primeraPagina,
+          ultimaPagina: directorFormData.ultimaPagina,
+          areaTematica: directorFormData.areaTematica,
+          palabrasClave: directorFormData.palabrasClave
+        },
+        pdfBase64,
+        ...(action === 'edit' && { numero: editingArticle.numeroArticulo })
+      };
+      const response = await fetch(ARTICULOS_GAS_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      setDirectorStatus('Operación completada exitosamente');
+      fetchArticles();
+      closeDirectorModals();
+    } catch (err) {
+      console.error('Error submitting:', err);
+      setDirectorStatus('Error en la operación');
+    }
+  };
+
+  const handleDirectorEdit = (article) => {
+    setEditingArticle(article);
+    setDirectorFormData({
+      titulo: article['Título'] || '',
+      autores: article['Autor(es)'] || '',
+      resumen: article['Resumen'] || '',
+      abstract: article['Abstract'] || '',
+      fecha: article['Fecha'] || '',
+      volumen: article['Volumen'] || '',
+      numero: article['Número de artículo'] || '',
+      primeraPagina: article['Primera página'] || '',
+      ultimaPagina: article['Última página'] || '',
+      areaTematica: article['Área temática'] || '',
+      palabrasClave: article['Palabras clave'] || '',
+      pdfFile: null
+    });
+    setShowEditModal(true);
+  };
+
+  const handleDirectorDelete = async (numero) => {
+    if (!confirm(`¿Eliminar artículo ${numero}? Esto renumerará los siguientes automáticamente.`)) return;
+    try {
+      setDirectorStatus('Eliminando...');
+      const data = { action: 'delete', numero: parseInt(numero) };
+      await fetch(ARTICULOS_GAS_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      setDirectorStatus('Artículo eliminado y renumerado');
+      fetchArticles();
+    } catch (err) {
+      console.error('Error deleting:', err);
+      setDirectorStatus('Error al eliminar');
+    }
+  };
+
+  const handleRebuild = async () => {
+    try {
+      setDirectorStatus('Iniciando actualización...');
+      const data = { action: 'rebuild' };
+      await fetch(ARTICULOS_GAS_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      setDirectorStatus('Actualización de página iniciada');
+    } catch (err) {
+      console.error('Error rebuilding:', err);
+      setDirectorStatus('Error al actualizar página');
+    }
+  };
+
+  const closeDirectorModals = () => {
+    setShowAddModal(false);
+    setShowEditModal(false);
+    setEditingArticle(null);
+    resetDirectorForm();
+  };
+
+  const toggleDirectorExpand = (numero) => {
+    setExpanded(prev => ({ ...prev, [numero]: !prev[numero] }));
   };
 
   useEffect(() => {
-    Promise.all([fetchUsers(), fetchTasks()])
-      .then(() => setLoading(false))
-      .catch((err) => {
-        console.error('Error in initial fetch:', err);
-        setError('Error al inicializar: ' + err.message);
-      });
-  }, []);
+    if (isDirector) {
+      fetchArticles();
+    }
+  }, [isDirector]);
 
-  // Configurar referencias de editores
   useEffect(() => {
-    if (taskEditorRef.current) {
-      taskEditorRef.current.root.setAttribute('spellcheck', 'true');
-      taskEditorRef.current.root.setAttribute('lang', 'es');
+    if (!user || !user.name) {
+      setError('Usuario no definido');
+      setLoading(false);
+      return;
     }
-    
-    // Configurar editores de comentarios
-    Object.values(commentEditorsRef.current).forEach(editor => {
-      if (editor) {
-        editor.root.setAttribute('spellcheck', 'true');
-        editor.root.setAttribute('lang', 'es');
-      }
-    });
-  }, []);
+    fetchAssignments();
+  }, [user?.name]);
 
-  const currentUser = users.find((u) => u.Nombre === user.name);
-  const userRoles = currentUser ? currentUser['Rol en la Revista']?.split(';').map((r) => r.trim()) : [];
-  const isDirector = userRoles.includes('Director General');
-  const isRrss = userRoles.includes('Encargado de Redes Sociales');
-  const isWeb = userRoles.includes('Responsable de Desarrollo Web');
-  const isAssignee = (isRrss || isWeb) && !isDirector;
+  const isAuthor = assignments.length > 0 && assignments[0].role === 'Autor';
+  const pendingAssignments = useMemo(() => assignments.filter((a) => !a.isCompleted), [assignments]);
+  const completedAssignments = useMemo(() => assignments.filter((a) => a.isCompleted), [assignments]);
 
-  const rrssUsers = users.filter((u) => u['Rol en la Revista']?.includes('Encargado de Redes Sociales'));
-  const webUsers = users.filter((u) => u['Rol en la Revista']?.includes('Responsable de Desarrollo Web'));
+  const handleVote = (link, value) => {
+    setVote((prev) => ({ ...prev, [link]: value }));
+  };
 
-  const filteredTasks = useMemo(() => {
-    return tasks.reduce((areaTasks, task, index) => {
-      if (!isDirector && !isAssignee) return areaTasks;
-      if (isRrss || isDirector) {
-        const taskText = task['Redes sociales'];
-        const assignedName = task.Nombre || '';
-        const completed = task['Cumplido 1'] === 'si';
-        if (taskText && (!assignedName || assignedName === user.name || isDirector)) {
-          areaTasks.push({ ...task, area: AREAS.RRSS, taskText, assignedName, completed, comment: task['Comentario 1'], rowIndex: index });
-        }
-      }
-      if (isWeb || isDirector) {
-        const taskText = task['Desarrollo Web'];
-        const assignedName = task['Nombre.1'] || '';
-        const completed = task['Cumplido 2'] === 'si';
-        if (taskText && (!assignedName || assignedName === user.name || isDirector)) {
-          areaTasks.push({ ...task, area: AREAS.WEB, taskText, assignedName, completed, comment: task['Comentario 2'], rowIndex: index });
-        }
-      }
-      return areaTasks;
-    }, []);
-  }, [tasks, user.name, isDirector, isRrss, isWeb]);
+  const handleRubricChange = (link, key, value) => {
+    setRubricScores((prev) => ({
+      ...prev,
+      [link]: { ...prev[link], [key]: value }
+    }));
+  };
 
-  const pendingTasks = useMemo(() => filteredTasks.filter((t) => !t.completed), [filteredTasks]);
-  const completedTasks = useMemo(() => filteredTasks.filter((t) => t.completed), [filteredTasks]);
-
-  const encodeBody = (html) => {
-    try {
-      if (!html || html.trim() === '') return '';
-      
-      // Limpiar y procesar el HTML directamente
-      let cleanedHtml = html;
-      
-      // Sanitizar primero
-      cleanedHtml = sanitizeInput(cleanedHtml);
-      
-      // Si hay imágenes, procesarlas
-      if (cleanedHtml.includes('<img')) {
-        // Obtener el HTML real del editor si está disponible
-        let currentHtml = cleanedHtml;
-        
-        // Para el editor de tareas
-        if (taskEditorRef.current) {
-          try {
-            currentHtml = taskEditorRef.current.root.innerHTML;
-          } catch (e) {
-            console.warn('No se pudo obtener HTML del editor de tareas:', e);
-          }
-        }
-        
-        // Para editores de comentarios
-        const commentEditor = commentEditorsRef.current[html]; // Usar un identificador único
-        if (commentEditor) {
-          try {
-            currentHtml = commentEditor.root.innerHTML;
-          } catch (e) {
-            console.warn('No se pudo obtener HTML del editor de comentarios:', e);
-          }
-        }
-        
-        // Procesar imágenes para asegurar estilos correctos
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = currentHtml;
-        const images = tempDiv.querySelectorAll('img');
-        
-        images.forEach((img, index) => {
-          const parent = img.parentElement;
-          // Obtener alineación si es posible
-          let align = 'left';
-          
-          // Intentar obtener alineación del editor correspondiente
-          const editor = taskEditorRef.current || commentEditor;
-          if (editor) {
-            try {
-              const imgIndex = editor.getIndex(img);
-              const formats = editor.getFormat(imgIndex);
-              align = formats.align || 'left';
-            } catch (e) {
-              console.warn(`No se pudo obtener formato para imagen ${index}:`, e);
-            }
-          }
-          
-          let style = 'max-width:100%;height:auto;border-radius:4px;margin:8px 0;display:block;';
-          
-          switch (align) {
-            case 'center':
-              style += 'margin-left:auto;margin-right:auto;';
-              break;
-            case 'right':
-              style += 'float:right;margin-left:8px;margin-right:0;';
-              if (parent) parent.style.overflow = 'hidden';
-              break;
-            case 'justify':
-              style += 'width:100%;margin-left:0;margin-right:0;';
-              break;
-            case 'left':
-            default:
-              style += 'float:left;margin-right:8px;margin-left:0;';
-              if (parent) parent.style.overflow = 'hidden';
-              break;
-          }
-          
-          // Preservar dimensiones si están establecidas
-          if (img.style.width) style += `width:${img.style.width};`;
-          if (img.style.height) style += `height:${img.style.height};`;
-          
-          img.setAttribute('style', style);
-          img.setAttribute('loading', 'lazy'); // Buena práctica
-          img.setAttribute('alt', 'Imagen de la tarea'); // Accesibilidad
-        });
-        
-        // Obtener el HTML procesado
-        cleanedHtml = tempDiv.innerHTML;
-      }
-      
-      // Codificar en base64
-      const encoder = new TextEncoder();
-      const bytes = encoder.encode(cleanedHtml);
-      let binary = '';
-      bytes.forEach(b => binary += String.fromCharCode(b));
-      return btoa(binary);
-      
-    } catch (err) {
-      console.error('Error encoding body:', err);
-      // Fallback: intentar codificar el HTML original sin procesar
-      try {
-        const encoder = new TextEncoder();
-        const bytes = encoder.encode(html);
-        let binary = '';
-        bytes.forEach(b => binary += String.fromCharCode(b));
-        return btoa(binary);
-      } catch (fallbackErr) {
-        console.error('Error en fallback encoding:', fallbackErr);
-        return base64EncodeUnicode(html); // Último recurso
-      }
+  const getRequiredKeys = (role) => {
+    switch (role) {
+      case 'Revisor 1': return ['gramatica', 'claridad', 'estructura', 'citacion'];
+      case 'Revisor 2': return ['relevancia', 'rigor', 'originalidad', 'argumentos'];
+      case 'Editor': return ['modificaciones', 'calidad', 'aporte', 'potencial', 'decision'];
+      default: return [];
     }
   };
 
-  const decodeBody = (body) => {
-    if (!body) return <p className="text-gray-600">Sin contenido.</p>;
-    try {
-      const decoded = decodeURIComponent(escape(atob(body)));
-      return <div className="ql-editor" dangerouslySetInnerHTML={{ __html: decoded }} />;
-    } catch (err) {
-      console.error('Error decoding body:', err);
-      return <p className="text-red-600">Error al mostrar contenido.</p>;
-    }
+  const isRubricComplete = (link, role) => {
+    const rubric = rubricScores[link] || {};
+    const required = getRequiredKeys(role);
+    return required.every(key => rubric[key] !== undefined && rubric[key] !== null);
   };
 
-  const handleAssignTask = async () => {
-    if (!taskContent.trim()) {
-      setSubmitStatus({ assign: 'La tarea no puede estar vacía' });
+  const handleSubmitRubric = async (link, role) => {
+    const articleName = assignments.find(a => a['Link Artículo'] === link)['Nombre Artículo'];
+    const rubric = rubricScores[link] || {};
+
+    const requiredKeys = getRequiredKeys(role);
+    const missingKeys = requiredKeys.filter(key => rubric[key] === undefined || rubric[key] === null || isNaN(rubric[key]));
+    if (missingKeys.length > 0) {
+      setRubricStatus((prev) => ({ ...prev, [link]: `Error: Rúbrica incompleta. Faltan o inválidos: ${missingKeys.join(', ')}` }));
       return;
     }
-    
-    setSubmitStatus({ assign: 'Enviando...' });
-    
-    console.log('Task HTML original:', taskContent); // Debug
-    
-    const encodedTask = encodeBody(taskContent);
-    console.log('Encoded task length:', encodedTask.length); // Debug
-    console.log('Encoded task preview:', encodedTask.substring(0, 100)); // Debug
-    
-    if (!encodedTask) {
-      setSubmitStatus({ assign: 'Error: No se pudo procesar el contenido de la tarea' });
-      return;
-    }
-    
-    const data = {
-      action: 'assign',
-      area: selectedArea,
-      task: encodedTask,
-      assignedTo: selectedAssignee || '',
+
+    const rubricData = {
+      articleName: articleName.trim(),
+      role,
+      rubric
     };
 
-    console.log('Datos finales a enviar:', {
-      area: data.area,
-      taskLength: data.task.length,
-      hasImages: taskContent.includes('<img'),
-      assignedTo: data.assignedTo
-    });
-
     try {
-      await fetchWithRetry(TASK_SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
-      setSubmitStatus({ assign: '¡Tarea asignada exitosamente! 🎉' });
-      setShowAssignModal(false);
-      setTaskContent('');
-      setSelectedAssignee('');
-      await fetchTasks();
+      let success = false;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          const response = await fetch(RUBRIC_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(rubricData),
+          });
+          success = true;
+          break;
+        } catch (err) {
+          console.warn(`Intento ${attempt} fallido para rúbrica:`, err);
+          if (attempt < 3) {
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+          }
+        }
+      }
+
+      if (success) {
+        setRubricStatus((prev) => ({ ...prev, [link]: 'Rúbrica enviada exitosamente' }));
+        await fetchAssignments();
+      } else {
+        setRubricStatus((prev) => ({ ...prev, [link]: 'Error al enviar rúbrica después de 3 intentos' }));
+      }
     } catch (err) {
-      console.error('Error assigning task:', err);
-      setSubmitStatus({ assign: `Error al asignar tarea: ${err.message}` });
+      console.error('Error general al enviar rúbrica:', err);
+      setRubricStatus((prev) => ({ ...prev, [link]: `Error: ${err.message}` }));
     }
   };
 
-  const handleCompleteTask = async (task) => {
-    const comment = commentContent[task.rowIndex] || '';
-    if (!comment.trim()) {
-      setSubmitStatus({ complete: 'El comentario no puede estar vacío' });
-      return;
-    }
-    
-    setSubmitStatus({ complete: 'Enviando...' });
-    
-    console.log(`Comment HTML original for task ${task.rowIndex}:`, comment); // Debug
-    
-    const encodedComment = encodeBody(comment);
-    console.log(`Encoded comment length for task ${task.rowIndex}:`, encodedComment.length); // Debug
-    
-    if (!encodedComment) {
-      setSubmitStatus({ complete: 'Error: No se pudo procesar el comentario' });
-      return;
-    }
-    
-    const data = {
-      action: 'complete',
-      area: task.area,
-      row: task.rowIndex + 2,
-      comment: encodedComment,
+  const handleSubmit = async (link, role, feedbackText, reportText, voteValue) => {
+    const encodedFeedback = base64EncodeUnicode(sanitizeInput(feedbackText || ''));
+    const encodedReport = base64EncodeUnicode(sanitizeInput(reportText || ''));
+
+    const mainData = {
+      link,
+      role,
+      vote: voteValue || '',
+      feedback: encodedFeedback,
+      report: encodedReport,
     };
 
-    console.log('Datos finales para completar tarea:', {
-      area: data.area,
-      row: data.row,
-      commentLength: data.comment.length,
-      hasImages: comment.includes('<img')
-    });
-
     try {
-      await fetchWithRetry(TASK_SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
-      setSubmitStatus({ complete: '¡Tarea completada exitosamente! 🎉' });
-      setCommentContent((prev) => ({ ...prev, [task.rowIndex]: '' }));
-      await fetchTasks();
+      let mainSuccess = false;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          const response = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(mainData),
+          });
+          mainSuccess = true;
+          break;
+        } catch (err) {
+          console.warn(`Intento ${attempt} fallido para datos principales:`, err);
+          if (attempt < 3) {
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+          }
+        }
+      }
+
+      if (mainSuccess) {
+        setSubmitStatus((prev) => ({ ...prev, [link]: 'Datos principales enviados exitosamente' }));
+        await fetchAssignments();
+      } else {
+        setSubmitStatus((prev) => ({ ...prev, [link]: 'Error al enviar datos principales después de 3 intentos' }));
+      }
     } catch (err) {
-      console.error('Error completing task:', err);
-      setSubmitStatus({ complete: `Error al completar tarea: ${err.message}` });
+      console.error('Error general al enviar datos principales:', err);
+      setSubmitStatus((prev) => ({ ...prev, [link]: `Error: ${err.message}` }));
     }
   };
 
-  const handleCommentChange = useCallback(
-    debounce((rowIndex, value) => {
-      setCommentContent((prev) => ({ ...prev, [rowIndex]: value }));
-    }, 150),
+  const toggleTutorial = (link) => {
+    setTutorialVisible((prev) => ({ ...prev, [link]: !prev[link] }));
+  };
+
+  const toggleFeedback = (link, type) => {
+    setExpandedFeedback((prev) => ({
+      ...prev,
+      [link]: { ...prev[link], [type]: !prev[link]?.[type] }
+    }));
+  };
+
+  const getTutorialText = (role) => {
+    if (role === "Revisor 1") {
+      return 'Como Revisor 1, tu rol es revisar aspectos técnicos como gramática, ortografía, citación de fuentes, detección de contenido generado por IA, coherencia lógica y estructura general del artículo. Deja comentarios detallados en el documento de Google Drive para sugerir mejoras. Asegúrate de que el lenguaje sea claro y académico. Debes dejar tu retroalimentación al autor en la casilla correspondiente. Además debes dejar un informe resumido explicando tu observaciones para guiar al editor. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.';
+    } else if (role === "Revisor 2") {
+      return 'Como Revisor 2, enfócate en el contenido sustantivo: verifica la precisión de las fuentes, la seriedad y originalidad del tema, la relevancia de los argumentos, y la contribución al campo de estudio. Evalúa si el artículo es innovador y bien fundamentado. Deja comentarios en el documento de Google Drive. Debes dejar tu retroalimentación al autor in la casilla correspondiente. Además debes dejar un informe resumido explicando tu observaciones para guiar al editor. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.';
+    } else if (role === "Editor") {
+      return `Como Editor, tu responsabilidad es revisar las retroalimentaciones e informes de los revisores, integrarlas con tu propia evaluación, y redactar una retroalimentación final sensible y constructiva para el autor. Corrige directamente el texto si es necesario y decide el estado final del artículo. Usa el documento de Google Drive para ediciones. Debes dejar una retroalimentación al autor sintetizando las que dejaron los revisores. Tu deber es que el mensaje sea acertado y sensible, sin desmotivar al autor. Para esto debes usar la técnica del "sándwich". Si no sabes qué es, entra aqu . Luego deja tu informe con los cambios realizados, deben ser precisos y académicos. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.`;
+    }
+    return "";
+  };
+
+  const Tutorial = ({ role }) => {
+    const tutorialText = getTutorialText(role);
+    return (
+      <div className="text-gray-800 bg-gray-50 p-4 rounded-md border border-gray-200 leading-relaxed break-words">
+        <p className="mb-4">{tutorialText}</p>
+      </div>
+    );
+  };
+
+  const RubricViewer = ({ roleKey, scores, onChange, readOnly = false }) => {
+    const crits = criteria[roleKey];
+    if (!crits) return null;
+    const total = getTotal(scores, crits);
+    const max = crits.length * 2;
+    const roleDisplay = roleKey === 'Revisor 1' ? 'Revisor 1 (Forma, estilo y técnica)' : roleKey === 'Revisor 2' ? 'Revisor 2 (Contenido y originalidad)' : 'Editor (Síntesis y decisión final)';
+
+    return (
+      <div className="bg-white p-4 rounded-lg shadow-md mb-6 overflow-hidden">
+        <h5 className="font-semibold mb-4 text-gray-800 border-b pb-2 break-words">{roleDisplay} - Total: {total} / {max}</h5>
+        {crits.map((c) => (
+          <div key={c.key} className="mb-4 p-3 bg-gray-50 rounded-md">
+            <h6 className="font-medium mb-2 text-gray-700 break-words">{c.name}</h6>
+            <div className="flex space-x-1 mb-2">
+              {Object.entries(c.levels).map(([val, info]) => (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => !readOnly && onChange && onChange(c.key, parseInt(val))}
+                  className={`flex-1 py-2 px-3 rounded text-xs font-medium transition-colors break-words ${
+                    scores[c.key] == val
+                      ? 'bg-blue-500 text-white shadow-md'
+                      : readOnly
+                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                  disabled={readOnly}
+                >
+                  {info.label.split(' = ')[1]}
+                </button>
+              ))}
+            </div>
+            <p className={`text-xs italic ${readOnly ? 'text-gray-500' : 'text-blue-600'} break-words`}>
+              {c.levels[scores[c.key] || 0].desc}
+            </p>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const debouncedSetFeedback = useCallback(
+    (link) => debounce((value) => {
+      setFeedback((prev) => ({ ...prev, [link]: value }));
+    }, 300),
+    []
+  );
+
+  const debouncedSetReport = useCallback(
+    (link) => debounce((value) => {
+      setReport((prev) => ({ ...prev, [link]: value }));
+    }, 300),
     []
   );
 
   const modules = useMemo(() => ({
-    toolbar: [
-      ['bold', 'italic', 'underline', 'strike', 'blockquote'],
-      [{ list: 'ordered' }, { list: 'bullet' }],
-      ['link', 'image'],
-      [{ align: ['', 'center', 'right', 'justify'] }],
-      [{ size: ['small', false, 'large'] }],
-      ['clean'],
-    ],
+    toolbar: {
+      container: [
+        ['bold', 'italic', 'underline', 'strike', 'blockquote'],
+        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+        ['link', 'image', 'custom-image'],
+        [{ 'align': ['', 'center', 'right', 'justify'] }],
+        [{ 'size': ['small', false, 'large'] }],
+        ['clean']
+      ],
+      handlers: {
+        'custom-image': (value, link) => {
+          setIsEditingImage((prev) => ({ ...prev, [link]: false }));
+          setImageData((prev) => ({ ...prev, [link]: { url: '', width: '', height: '', align: 'left' } }));
+          setShowImageModal((prev) => ({ ...prev, [link]: true }));
+        }
+      }
+    },
     imageResize: {
-      parchment: Quill.import('parchment'),
-      modules: ['Resize', 'DisplaySize', 'Toolbar'],
-      handleStyles: { backgroundColor: 'rgba(0, 0, 0, 0.5)', border: 'none', color: 'white' },
-      displayStyles: { backgroundColor: 'rgba(0, 0, 0, 0.5)', border: 'none', color: 'white' },
+      parchment: ReactQuill.Quill.import('parchment'),
+      modules: ['Resize', 'DisplaySize'],
+      handleStyles: {
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        border: 'none',
+        color: 'white',
+      },
+      displayStyles: {
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        border: 'none',
+        color: 'white',
+      },
+    },
+    keyboard: {
+      bindings: {
+        deleteImage: {
+          key: ['Delete', 'Backspace'],
+          handler: function(range) {
+            if (!range) {
+              console.log('No hay selección activa para eliminar');
+              return true;
+            }
+            const editor = this.quill;
+            const imageResize = editor.getModule('imageResize');
+            let isImage = false;
+            let deleteIndex = range.index;
+            let deleteLength = 1;
+            if (range.length === 0) {
+              const [leaf] = editor.getLeaf(range.index);
+              if (leaf && leaf.domNode && leaf.domNode.tagName === 'IMG') {
+                isImage = true;
+              } else {
+                if (this.key === 'Backspace') {
+                  const [prevLeaf] = editor.getLeaf(range.index - 1);
+                  if (prevLeaf && prevLeaf.domNode && prevLeaf.domNode.tagName === 'IMG') {
+                    isImage = true;
+                    deleteIndex = range.index - 1;
+                  }
+                } else if (this.key === 'Delete') {
+                  const [nextLeaf] = editor.getLeaf(range.index);
+                  if (nextLeaf && nextLeaf.domNode && nextLeaf.domNode.tagName === 'IMG') {
+                    isImage = true;
+                    deleteIndex = range.index;
+                  }
+                }
+              }
+            } else if (range.length === 1) {
+              const [leaf] = editor.getLeaf(range.index);
+              if (leaf && leaf.domNode && leaf.domNode.tagName === 'IMG') {
+                isImage = true;
+              }
+            }
+            if (isImage) {
+              try {
+                if (imageResize) {
+                  imageResize.hide();
+                }
+                editor.deleteText(deleteIndex, deleteLength, ReactQuill.Quill.sources.USER);
+                return false;
+              } catch (err) {
+                console.error('Error deleting image:', err);
+                setSubmitStatus((prev) => ({ ...prev, [link]: 'Error al eliminar la imagen' }));
+                return false;
+              }
+            }
+            return true;
+          },
+        },
+        enterAfterImage: {
+          key: 'Enter',
+          handler: function(range) {
+            if (!range) return true;
+            const editor = this.quill;
+            const [leaf] = editor.getLeaf(range.index);
+            if (leaf && leaf.domNode && leaf.domNode.tagName === 'IMG') {
+              try {
+                editor.insertText(range.index + 1, '\n', ReactQuill.Quill.sources.USER);
+                editor.setSelection(range.index + 2, ReactQuill.Quill.sources.SILENT);
+                return false;
+              } catch (err) {
+                console.error('Error inserting new line after image:', err);
+                setSubmitStatus((prev) => ({ ...prev, [link]: 'Error al añadir texto después de la imagen' }));
+                return false;
+              }
+            }
+            return true;
+          },
+        },
+      },
     },
   }), []);
 
-  const formats = ['bold', 'italic', 'underline', 'strike', 'blockquote', 'list', 'bullet', 'link', 'image', 'align', 'size'];
+  useEffect(() => {
+    const setupCustomButton = (quillRef, link, type) => {
+      if (quillRef.current) {
+        const editor = quillRef.current.getEditor();
+        const toolbar = editor.getModule('toolbar');
+        toolbar.addHandler('custom-image', () => {
+          setIsEditingImage((prev) => ({ ...prev, [link]: false }));
+          setImageData((prev) => ({ ...prev, [link]: { url: '', width: '', height: '', align: 'left' } }));
+          setShowImageModal((prev) => ({ ...prev, [link]: true }));
+        });
+        const button = document.createElement('button');
+        button.className = 'ql-custom-image';
+        button.innerHTML = '<svg viewBox="0 0 18 18"><rect class="ql-stroke" x="3" y="4" width="12" height="10" rx="2" ry="2"></rect></svg>';
+        button.title = 'Insertar Imagen Manualmente';
+        const toolbarElement = document.querySelector(`#${type}-${link} .ql-toolbar`);
+        if (toolbarElement && !toolbarElement.querySelector('.ql-custom-image')) {
+          toolbarElement.appendChild(button);
+        }
+      }
+    };
 
-  const canCompleteTask = (task) => {
-    if (isDirector) return false;
-    if (!isAssignee) return false;
-    return task.assignedName === user.name || task.assignedName === '';
+    Object.keys(feedbackQuillRefs.current).forEach(link => {
+      setupCustomButton(feedbackQuillRefs.current[link], link, 'feedback');
+    });
+    Object.keys(reportQuillRefs.current).forEach(link => {
+      setupCustomButton(reportQuillRefs.current[link], link, 'report');
+    });
+  }, [feedbackQuillRefs.current, reportQuillRefs.current]);
+
+  const formats = useMemo(() => [
+    'bold', 'italic', 'underline', 'strike', 'blockquote',
+    'list', 'bullet',
+    'link', 'image',
+    'align',
+    'size'
+  ], []);
+
+  const encodeBody = (html) => {
+    return base64EncodeUnicode(sanitizeInput(html));
   };
 
-  // Renderizar Quill para tareas con referencia
-  const TaskQuillEditor = ({ value, onChange, placeholder, className }) => {
-    const quillRef = useRef(null);
-    
-    useEffect(() => {
-      if (quillRef.current) {
-        taskEditorRef.current = quillRef.current.getEditor();
+  const decodeBody = (encoded) => {
+    if (!encoded) return <p className="text-gray-600 break-words">Sin contenido disponible.</p>;
+    try {
+      const html = base64DecodeUnicode(encoded);
+      return <div className="ql-editor break-words leading-relaxed" dangerouslySetInnerHTML={{ __html: html }} />;
+    } catch (err) {
+      console.error('Error decoding body:', err);
+      return <p className="text-gray-600 break-words">Error al decodificar contenido.</p>;
+    }
+  };
+
+  const handleImageModalSubmit = (link) => {
+    const quillRef = feedbackQuillRefs.current[link] || reportQuillRefs.current[link];
+    if (!quillRef) return;
+    const editor = quillRef.getEditor();
+    let { url, width, height, align } = imageData[link] || {};
+    if (!url) {
+      setSubmitStatus((prev) => ({ ...prev, [link]: 'La URL de la imagen es obligatoria.' }));
+      return;
+    }
+    if (width && width !== 'auto' && !width.match(/%|px$/)) width += 'px';
+    if (height && height !== 'auto' && !height.match(/%|px$/)) height += 'px';
+    if (isEditingImage[link]) {
+      if (editingRange[link]) {
+        editor.setSelection(editingRange[link].index, 1, 'silent');
+        const [leaf] = editor.getLeaf(editingRange[link].index);
+        if (leaf && leaf.domNode.tagName === 'IMG') {
+          if (width) leaf.domNode.style.width = width;
+          if (height) leaf.domNode.style.height = height;
+          editor.format('align', align, 'user');
+        }
+        editor.blur();
       }
-    }, []);
-    
+    } else {
+      const range = editor.getSelection() || { index: editor.getLength() };
+      editor.insertText(range.index, '\n', 'user');
+      editor.insertEmbed(range.index + 1, 'image', url, 'user');
+      editor.setSelection(range.index + 2, 'silent');
+      const [leaf] = editor.getLeaf(range.index + 1);
+      if (leaf && leaf.domNode.tagName === 'IMG') {
+        if (width) leaf.domNode.style.width = width;
+        if (height) leaf.domNode.style.height = height;
+        editor.setSelection(range.index + 1, 1, 'silent');
+        editor.format('align', align, 'user');
+        editor.setSelection(range.index + 2, 'silent');
+      }
+    }
+    setShowImageModal((prev) => ({ ...prev, [link]: false }));
+    setIsEditingImage((prev) => ({ ...prev, [link]: false }));
+    setImageData((prev) => ({ ...prev, [link]: { url: '', width: '', height: '', align: 'left' } }));
+    setEditingRange((prev) => ({ ...prev, [link]: null }));
+  };
+
+  const handleImageDataChange = (link, e) => {
+    const { name, value } = e.target;
+    setImageData((prev) => ({
+      ...prev,
+      [link]: { ...prev[link], [name]: value }
+    }));
+  };
+
+  const AssignmentCard = ({ assignment, onClick }) => {
+    const role = assignment.role;
+    const nombre = assignment['Nombre Artículo'];
+    const total = role !== 'Editor' ? getTotal(assignment.scores || {}, criteria[role] || []) : getTotal(assignment.scores || {}, criteria['Editor'] || []);
+    const max = (criteria[role] || criteria['Editor'] || []).length * 2;
+    const percent = total / max * 100;
+    const statusColor = assignment.isCompleted ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
+
     return (
-      <ReactQuill
-        ref={quillRef}
-        value={value}
-        onChange={onChange}
-        modules={modules}
-        formats={formats}
-        placeholder={placeholder}
-        className={className}
-      />
+      <div
+        className="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 cursor-pointer border border-gray-200 h-full flex flex-col justify-between"
+        onClick={onClick}
+      >
+        <div>
+          <h4 className="text-xl font-bold text-gray-800 mb-2 break-words">{nombre}</h4>
+          <p className="text-sm text-gray-600 mb-3 break-words">Rol: {role}</p>
+          <div className="flex items-center justify-between mb-4">
+            <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor}`}>
+              {assignment.isCompleted ? 'Completado' : 'Pendiente'}
+            </span>
+            <span className="text-sm font-medium text-gray-700">{percent.toFixed(0)}% Puntaje</span>
+          </div>
+          <p className="text-gray-500 text-sm break-words">{assignment.Estado || 'Sin estado'}</p>
+        </div>
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <button className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors text-sm font-medium">
+            Ver Detalles
+          </button>
+        </div>
+      </div>
     );
   };
 
-  // Renderizar Quill para comentarios con referencia
-  const CommentQuillEditor = ({ value, onChange, rowIndex, placeholder, className }) => {
-    const quillRef = useRef(null);
-    
-    useEffect(() => {
-      if (quillRef.current) {
-        commentEditorsRef.current[rowIndex] = quillRef.current.getEditor();
+  const renderFullAssignment = (assignment) => {
+    const link = assignment['Link Artículo'];
+    const role = assignment.role;
+    const nombre = assignment['Nombre Artículo'];
+    const isPending = !assignment.isCompleted;
+    const isAuth = role === 'Autor';
+
+    const handleRenderRubric = () => {
+      if (isAuth) return null;
+      if (isPending) {
+        if (role === 'Editor') {
+          const rev1Total = getTotal(assignment.rev1Scores, criteria['Revisor 1']);
+          const rev2Total = getTotal(assignment.rev2Scores, criteria['Revisor 2']);
+          const revPercent = ((rev1Total + rev2Total) / 16) * 100;
+          const editorTotal = getTotal(rubricScores[link] || {}, criteria['Editor']);
+          const overallTotal = rev1Total + rev2Total + editorTotal;
+          const overallPercent = (overallTotal / 26) * 100;
+          return (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h5 className="text-lg font-semibold text-gray-800">Rúbrica de Revisor 1</h5>
+                <button
+                  onClick={() => toggleFeedback(link, 'rubric1')}
+                  className="text-blue-600 hover:underline text-sm flex items-center"
+                >
+                  {expandedFeedback[link]?.rubric1 ? 'Ocultar' : 'Mostrar'}
+                  <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
+              {expandedFeedback[link]?.rubric1 && (
+                <RubricViewer roleKey="Revisor 1" scores={assignment.rev1Scores} readOnly />
+              )}
+              <div className="flex items-center justify-between">
+                <h5 className="text-lg font-semibold text-gray-800">Rúbrica de Revisor 2</h5>
+                <button
+                  onClick={() => toggleFeedback(link, 'rubric2')}
+                  className="text-blue-600 hover:underline text-sm flex items-center"
+                >
+                  {expandedFeedback[link]?.rubric2 ? 'Ocultar' : 'Mostrar'}
+                  <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
+              {expandedFeedback[link]?.rubric2 && (
+                <RubricViewer roleKey="Revisor 2" scores={assignment.rev2Scores} readOnly />
+              )}
+              <div className="p-4 bg-yellow-50 rounded-md">
+                <p className="font-medium break-words">Implicación de revisores: {revPercent.toFixed(1)}% - {getDecisionText(revPercent)}</p>
+              </div>
+              <RubricViewer
+                roleKey="Editor"
+                scores={rubricScores[link] || {}}
+                onChange={(key, val) => handleRubricChange(link, key, val)}
+              />
+              <div className="p-4 bg-green-50 rounded-md">
+                <p className="font-medium break-words">Decisión general sugerida: {overallPercent.toFixed(1)}% - {getDecisionText(overallPercent)}</p>
+              </div>
+            </div>
+          );
+        } else {
+          return (
+            <RubricViewer
+              roleKey={role}
+              scores={rubricScores[link] || {}}
+              onChange={(key, val) => handleRubricChange(link, key, val)}
+            />
+          );
+        }
+      } else {
+        if (role === 'Editor') {
+          const rev1Total = getTotal(assignment.rev1Scores, criteria['Revisor 1']);
+          const rev2Total = getTotal(assignment.rev2Scores, criteria['Revisor 2']);
+          const revPercent = ((rev1Total + rev2Total) / 16) * 100;
+          const editorTotal = getTotal(assignment.scores, criteria['Editor']);
+          const overallTotal = rev1Total + rev2Total + editorTotal;
+          const overallPercent = (overallTotal / 26) * 100;
+          return (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h5 className="text-lg font-semibold text-gray-800">Rúbrica de Revisor 1</h5>
+                <button
+                  onClick={() => toggleFeedback(link, 'rubric1')}
+                  className="text-blue-600 hover:underline text-sm flex items-center"
+                >
+                  {expandedFeedback[link]?.rubric1 ? 'Ocultar' : 'Mostrar'}
+                  <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
+              {expandedFeedback[link]?.rubric1 && (
+                <RubricViewer roleKey="Revisor 1" scores={assignment.rev1Scores} readOnly />
+              )}
+              <div className="flex items-center justify-between">
+                <h5 className="text-lg font-semibold text-gray-800">Rúbrica de Revisor 2</h5>
+                <button
+                  onClick={() => toggleFeedback(link, 'rubric2')}
+                  className="text-blue-600 hover:underline text-sm flex items-center"
+                >
+                  {expandedFeedback[link]?.rubric2 ? 'Ocultar' : 'Mostrar'}
+                  <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
+              {expandedFeedback[link]?.rubric2 && (
+                <RubricViewer roleKey="Revisor 2" scores={assignment.rev2Scores} readOnly />
+              )}
+              <div className="p-4 bg-yellow-50 rounded-md">
+                <p className="font-medium break-words">Implicación de revisores: {revPercent.toFixed(1)}% - {getDecisionText(revPercent)}</p>
+              </div>
+              <RubricViewer roleKey="Editor" scores={assignment.scores} readOnly />
+              <div className="p-4 bg-green-50 rounded-md">
+                <p className="font-medium break-words">Decisión general: {overallPercent.toFixed(1)}% - {getDecisionText(overallPercent)}</p>
+              </div>
+            </div>
+          );
+        } else {
+          return <RubricViewer roleKey={role} scores={assignment.scores} readOnly />;
+        }
       }
-    }, [rowIndex]);
-    
+    };
+
     return (
-      <ReactQuill
-        ref={quillRef}
-        value={value}
-        onChange={(value) => onChange(rowIndex, value)}
-        modules={modules}
-        formats={formats}
-        placeholder={placeholder}
-        className={className}
-      />
+      <div className="bg-white p-6 rounded-lg shadow-md space-y-6 w-full">
+        <div className="flex justify-between items-start">
+          <div>
+            <h4 className="text-2xl font-bold text-gray-800 mb-2 break-words">{nombre}</h4>
+            <p className="text-gray-600 break-words">Rol: {role} | Estado: {assignment.Estado}</p>
+          </div>
+          <button
+            onClick={() => setSelectedAssignment(null)}
+            className="text-blue-600 hover:underline flex items-center text-sm"
+          >
+            <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            Volver a lista
+          </button>
+        </div>
+        {!isAuth && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="lg:col-span-1 space-y-6">
+              <div className="space-y-2">
+                <a
+                  href={link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block bg-blue-600 text-white px-4 py-2 rounded-md shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm mb-2"
+                >
+                  Abrir en Google Drive
+                </a>
+                <iframe
+                  src={link ? link.replace('/edit', '/preview') : ''}
+                  className="w-full h-[350px] lg:h-[500px] rounded-xl shadow border border-gray-200"
+                  title="Vista previa del artículo"
+                  sandbox="allow-same-origin allow-scripts"
+                ></iframe>
+              </div>
+              {handleRenderRubric()}
+            </div>
+            <div className="lg:col-span-1 space-y-6">
+              {role === 'Editor' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-medium text-gray-700 break-words">Retroalimentación de Revisor 1</label>
+                    <button
+                      onClick={() => toggleFeedback(link, 'feedback1')}
+                      className="text-blue-600 hover:underline text-sm flex items-center"
+                    >
+                      {expandedFeedback[link]?.feedback1 ? 'Ocultar' : 'Mostrar'}
+                      <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.feedback1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
+                  {expandedFeedback[link]?.feedback1 && (
+                    <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
+                      {decodeBody(assignment.feedback1)}
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-medium text-gray-700 break-words">Retroalimentación de Revisor 2</label>
+                    <button
+                      onClick={() => toggleFeedback(link, 'feedback2')}
+                      className="text-blue-600 hover:underline text-sm flex items-center"
+                    >
+                      {expandedFeedback[link]?.feedback2 ? 'Ocultar' : 'Mostrar'}
+                      <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.feedback2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
+                  {expandedFeedback[link]?.feedback2 && (
+                    <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
+                      {decodeBody(assignment.feedback2)}
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-medium text-gray-700 break-words">Informe de Revisor 1</label>
+                    <button
+                      onClick={() => toggleFeedback(link, 'informe1')}
+                      className="text-blue-600 hover:underline text-sm flex items-center"
+                    >
+                      {expandedFeedback[link]?.informe1 ? 'Ocultar' : 'Mostrar'}
+                      <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.informe1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
+                  {expandedFeedback[link]?.informe1 && (
+                    <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
+                      {decodeBody(assignment.informe1)}
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-medium text-gray-700 break-words">Informe de Revisor 2</label>
+                    <button
+                      onClick={() => toggleFeedback(link, 'informe2')}
+                      className="text-blue-600 hover:underline text-sm flex items-center"
+                    >
+                      {expandedFeedback[link]?.informe2 ? 'Ocultar' : 'Mostrar'}
+                      <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.informe2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
+                  {expandedFeedback[link]?.informe2 && (
+                    <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
+                      {decodeBody(assignment.informe2)}
+                    </div>
+                  )}
+                </div>
+              )}
+              {isPending ? (
+                <div className="space-y-6">
+                  <button
+                    onClick={() => toggleTutorial(link)}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
+                  >
+                    {tutorialVisible[link] ? 'Ocultar Tutorial' : 'Ver Tutorial'}
+                  </button>
+                  {tutorialVisible[link] && <Tutorial role={role} />}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700 break-words">
+                      {role === 'Editor' ? 'Retroalimentación Final al Autor' : 'Retroalimentación al Autor'}
+                    </label>
+                    <ReactQuill
+                      ref={(el) => (feedbackQuillRefs.current[link] = el)}
+                      value={feedback[link] || ''}
+                      onChange={debouncedSetFeedback(link)}
+                      modules={modules}
+                      formats={formats}
+                      placeholder={role === 'Editor' ? 'Redacta una retroalimentación final sensible, sintetizando las opiniones de los revisores y la tuya.' : 'Escribe tu retroalimentación aquí...'}
+                      className="border rounded-md text-gray-800 bg-white h-48"
+                      id={`feedback-${link}`}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700 break-words">Informe al Editor</label>
+                    <ReactQuill
+                      ref={(el) => (reportQuillRefs.current[link] = el)}
+                      value={report[link] || ''}
+                      onChange={debouncedSetReport(link)}
+                      modules={modules}
+                      formats={formats}
+                      placeholder="Escribe tu informe aquí..."
+                      className="border rounded-md text-gray-800 bg-white h-48"
+                      id={`report-${link}`}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700 break-words">Voto</label>
+                    <div className="flex space-x-4">
+                      <button
+                        onClick={() => handleVote(link, 'si')}
+                        className={`px-4 py-2 rounded-md ${vote[link] === 'si' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} transition-colors text-sm`}
+                      >
+                        Sí
+                      </button>
+                      <button
+                        onClick={() => handleVote(link, 'no')}
+                        className={`px-4 py-2 rounded-md ${vote[link] === 'no' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} transition-colors text-sm`}
+                      >
+                        No
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => handleSubmitRubric(link, role)}
+                      disabled={!isRubricComplete(link, role)}
+                      className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
+                    >
+                      Enviar Rúbrica
+                    </button>
+                    {rubricStatus[link] && (
+                      <p className={`text-sm mt-2 ${rubricStatus[link].includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
+                        {rubricStatus[link]}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => handleSubmit(link, role, feedback[link], report[link], vote[link])}
+                    disabled={!vote[link] || !feedback[link] || !report[link]}
+                    className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
+                  >
+                    Enviar Revisión (Feedback, Informe, Voto)
+                  </button>
+                  {submitStatus[link] && (
+                    <p className={`text-sm mt-2 ${submitStatus[link].includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
+                      {submitStatus[link]}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <button
+                    onClick={() => toggleTutorial(link)}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
+                  >
+                    {tutorialVisible[link] ? 'Ocultar Tutorial' : 'Ver Tutorial'}
+                  </button>
+                  {tutorialVisible[link] && <Tutorial role={role} />}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700 break-words">Retroalimentación Enviada</label>
+                    <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
+                      {decodeBody(feedback[link] || 'Sin retroalimentación.')}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700 break-words">Informe Enviado</label>
+                    <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
+                      {decodeBody(report[link] || 'Sin informe.')}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700 break-words">Voto Enviado</label>
+                    <p className="text-sm text-gray-600">{vote[link] ? vote[link].charAt(0).toUpperCase() + vote[link].slice(1) : 'No enviado'}</p>
+                  </div>
+                </div>
+              )}
+              {showImageModal[link] && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                  <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+                    <h4 className="text-lg font-semibold mb-4">{isEditingImage[link] ? 'Editar Imagen' : 'Insertar Imagen'}</h4>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">URL de la Imagen</label>
+                        <input
+                          type="text"
+                          name="url"
+                          value={imageData[link]?.url || ''}
+                          onChange={(e) => handleImageDataChange(link, e)}
+                          className="mt-1 block w-full border rounded-md p-2 text-sm"
+                          placeholder="https://example.com/image.jpg"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Ancho (px o %)</label>
+                        <input
+                          type="text"
+                          name="width"
+                          value={imageData[link]?.width || ''}
+                          onChange={(e) => handleImageDataChange(link, e)}
+                          className="mt-1 block w-full border rounded-md p-2 text-sm"
+                          placeholder="auto o 300px"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Alto (px o %)</label>
+                        <input
+                          type="text"
+                          name="height"
+                          value={imageData[link]?.height || ''}
+                          onChange={(e) => handleImageDataChange(link, e)}
+                          className="mt-1 block w-full border rounded-md p-2 text-sm"
+                          placeholder="auto o 200px"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Alineación</label>
+                        <select
+                          name="align"
+                          value={imageData[link]?.align || 'left'}
+                          onChange={(e) => handleImageDataChange(link, e)}
+                          className="mt-1 block w-full border rounded-md p-2 text-sm"
+                        >
+                          <option value="left">Izquierda</option>
+                          <option value="center">Centro</option>
+                          <option value="right">Derecha</option>
+                          <option value="justify">Justificado</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="mt-6 flex justify-end space-x-2">
+                      <button
+                        onClick={() => setShowImageModal((prev) => ({ ...prev, [link]: false }))}
+                        className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 text-sm"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        onClick={() => handleImageModalSubmit(link)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                      >
+                        {isEditingImage[link] ? 'Actualizar' : 'Insertar'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        {isAuth && (
+          <div className="space-y-6">
+            <h5 className="text-lg font-semibold text-gray-800">Retroalimentación del Editor</h5>
+            <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
+              {decodeBody(assignment.feedbackEditor)}
+            </div>
+          </div>
+        )}
+      </div>
     );
   };
-
-  if (loading) return <div className="text-center p-4 text-gray-600">Cargando tareas...</div>;
-  if (error) return <div className="text-red-600 text-center p-4">{error}</div>;
-  if (!isDirector && !isAssignee) return null;
 
   return (
-    <div className="pt-4 space-y-6">
-      {isDirector && (
-        <button
-          onClick={() => setShowAssignModal(true)}
-          className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium"
-          aria-label="Asignar nueva tarea"
-        >
-          Asignar Nueva Tarea
-        </button>
-      )}
-      <div className="flex space-x-4 border-b border-gray-200">
-        <button
-          onClick={() => setActiveTab('pending')}
-          className={`pb-2 px-4 text-sm font-medium transition-colors ${
-            activeTab === 'pending' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600 hover:text-blue-600'
-          }`}
-          aria-label="Ver tareas pendientes"
-        >
-          Pendientes ({pendingTasks.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('completed')}
-          className={`pb-2 px-4 text-sm font-medium transition-colors ${
-            activeTab === 'completed' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600 hover:text-blue-600'
-          }`}
-          aria-label="Ver tareas completadas"
-        >
-          Completadas ({completedTasks.length})
-        </button>
-      </div>
-      <div className="grid gap-6">
-        {(activeTab === 'pending' ? pendingTasks : completedTasks).map((task) => (
-          <div
-            key={`${task.area}-${task.rowIndex}`}
-            className="bg-white p-6 rounded-lg shadow-md border border-gray-200"
-          >
-            <h3 className="font-bold text-lg text-gray-800 mb-2">
-              {task.area} - {task.assignedName || 'Todos'}
-            </h3>
-            <div className="text-gray-600 mb-4">{decodeBody(task.taskText)}</div>
-            {task.completed && (
-              <div className="mt-2 text-green-600 bg-green-50 p-3 rounded-md">
-                <span className="font-medium">Completado:</span> {decodeBody(task.comment)}
-              </div>
+    <div className="min-h-screen bg-gray-100 p-4 md:p-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
+            {isAuthor ? 'Mis Artículos' : 
+             isDirector ? 'Panel del Director General' : 
+             'Panel de Revisión'}
+          </h2>
+          <div className="flex items-center space-x-4">
+            {isDirector && (
+              <button
+                onClick={handleRebuild}
+                className="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 transition-colors font-medium flex items-center space-x-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>Actualizar Página</span>
+              </button>
             )}
-            {!task.completed && canCompleteTask(task) && (
-              <div className="mt-4 space-y-4">
-                <div className="min-h-[8rem] border rounded-md overflow-auto">
-                  <CommentQuillEditor
-                    value={commentContent[task.rowIndex] || ''}
-                    onChange={handleCommentChange}
-                    rowIndex={task.rowIndex}
-                    placeholder="Comentario sobre lo realizado..."
-                    className="h-full text-gray-800 bg-white"
-                  />
-                </div>
-                <button
-                  onClick={() => handleCompleteTask(task)}
-                  className="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 text-sm font-medium"
-                  aria-label="Marcar tarea como completada"
-                >
-                  Marcar Completado
-                </button>
+            <span className="text-gray-600">Bienvenido, {user?.name || 'Usuario'}</span>
+            <button
+              onClick={onLogout}
+              className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm"
+            >
+              Cerrar Sesión
+            </button>
+          </div>
+        </div>
+        
+        {error && (
+          <div className="bg-red-100 text-red-700 p-4 rounded-md mb-6">
+            {error}
+          </div>
+        )}
+        
+        {isDirector && directorStatus && (
+          <div className={`p-4 rounded-md mb-6 ${directorStatus.includes('Error') || directorStatus.includes('elimin') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+            {directorStatus}
+          </div>
+        )}
+
+        {isDirector && (
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold text-gray-800">Artículos Archivados</h3>
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium flex items-center space-x-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                <span>Agregar Artículo</span>
+              </button>
+            </div>
+            {directorLoading ? (
+              <div className="text-center p-4">Cargando artículos...</div>
+            ) : (
+              <div className="space-y-4">
+                {articles.map((article, index) => (
+                  <div key={index} className="border border-gray-200 rounded-md overflow-hidden">
+                    <div
+                      className="p-4 cursor-pointer bg-gray-50 hover:bg-gray-100 flex justify-between items-center"
+                      onClick={() => toggleDirectorExpand(article['Número de artículo'])}
+                    >
+                      <div>
+                        <h4 className="font-medium text-gray-800">{article['Título']}</h4>
+                        <p className="text-sm text-gray-600">{article['Autor(es)']}</p>
+                      </div>
+                      <svg className={`w-5 h-5 transform transition-transform ${expanded[article['Número de artículo']] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                    {expanded[article['Número de artículo']] && (
+                      <div className="p-4 bg-white space-y-2 text-sm">
+                        <p><strong>Resumen:</strong> {article['Resumen']}</p>
+                        <p><strong>Abstract:</strong> {article['Abstract']}</p>
+                        <p><strong>Fecha:</strong> {article['Fecha']}</p>
+                        <p><strong>Volumen/Número:</strong> {article['Volumen']}/{article['Número']}</p>
+                        <p><strong>Páginas:</strong> {article['Primera página']}-{article['Última página']}</p>
+                        <p><strong>Áreas:</strong> {article.areas.join(', ')}</p>
+                        <p><strong>Palabras clave:</strong> {article.keywords.join(', ')}</p>
+                        <a
+                          href={`https://www.revistacienciasestudiantes.com/Articles/Articulo${article['Número de artículo']}.pdf`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline"
+                        >
+                          Descargar PDF
+                        </a>
+                        <div className="flex space-x-2 mt-4">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDirectorEdit(article);
+                            }}
+                            className="bg-yellow-600 text-white px-3 py-1 rounded text-xs hover:bg-yellow-700"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDirectorDelete(article['Número de artículo']);
+                            }}
+                            className="bg-red-600 text-white px-3 py-1 rounded text-xs hover:bg-red-700"
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </div>
-        ))}
-        {(activeTab === 'pending' ? pendingTasks : completedTasks).length === 0 && (
-          <div className="text-center text-gray-600">No hay tareas {activeTab === 'pending' ? 'pendientes' : 'completadas'}.</div>
         )}
-      </div>
-      {showAssignModal && isDirector && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] flex flex-col">
-            <h3 className="font-bold text-lg text-gray-800 mb-4">Asignar Tarea</h3>
-            <div className="flex-grow space-y-4 overflow-y-auto">
-              <select
-                value={selectedArea}
-                onChange={(e) => setSelectedArea(e.target.value)}
-                className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                aria-label="Seleccionar área de la tarea"
-              >
-                <option value={AREAS.RRSS}>{AREAS.RRSS}</option>
-                <option value={AREAS.WEB}>{AREAS.WEB}</option>
-              </select>
-              <select
-                value={selectedAssignee}
-                onChange={(e) => setSelectedAssignee(e.target.value)}
-                className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                aria-label="Seleccionar asignado"
-              >
-                <option value="">Todos</option>
-                {(selectedArea === AREAS.RRSS ? rrssUsers : webUsers).map((u) => (
-                  <option key={u.Nombre} value={u.Nombre}>
-                    {u.Nombre}
-                  </option>
-                ))}
-              </select>
-              <div className="min-h-[10rem] border rounded-md overflow-auto">
-                <TaskQuillEditor
-                  value={taskContent}
-                  onChange={setTaskContent}
-                  placeholder="Describe la tarea..."
-                  className="h-full text-gray-800 bg-white"
-                />
-              </div>
-            </div>
-            <div className="sticky bottom-0 pt-4 bg-white flex justify-end space-x-2">
+        
+        {!isAuthor && (
+          <div className="mb-6">
+            <NewsUploadSection />
+          </div>
+        )}
+        
+        <div className="mb-6">
+          <div className="flex space-x-4 border-b">
+            {!isDirector && (
               <button
-                onClick={() => setShowAssignModal(false)}
-                className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition-colors text-sm font-medium"
-                aria-label="Cancelar asignación de tarea"
+                onClick={() => setActiveTab('assignments')}
+                className={`pb-2 px-4 text-sm font-medium ${activeTab === 'assignments' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}
               >
-                Cancelar
+                Asignaciones Pendientes ({pendingAssignments.length})
               </button>
+            )}
+            {!isDirector && (
               <button
-                onClick={handleAssignTask}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
-                disabled={!taskContent.trim()}
-                aria-label="Asignar tarea"
+                onClick={() => setActiveTab('completed')}
+                className={`pb-2 px-4 text-sm font-medium ${activeTab === 'completed' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}
               >
-                Asignar
+                Asignaciones Completadas ({completedAssignments.length})
               </button>
-            </div>
-            {submitStatus.assign && (
-              <p
-                className={`mt-2 text-sm ${
-                  submitStatus.assign?.includes('Error') ? 'text-red-600' : 'text-green-600'
-                }`}
+            )}
+            {(isChief || isDirector) && (
+              <button
+                onClick={() => setActiveTab('asignar')}
+                className={`pb-2 px-4 text-sm font-medium ${activeTab === 'asignar' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}
               >
-                {submitStatus.assign}
-              </p>
+                Asignar Artículos
+              </button>
             )}
           </div>
         </div>
-      )}
-      {submitStatus.complete && (
-        <p
-          className={`mt-4 text-sm ${
-            submitStatus.complete?.includes('Error') ? 'text-red-600' : 'text-green-600'
-          }`}
-        >
-          {submitStatus.complete}
-        </p>
-      )}
+        
+        <ErrorBoundary>
+          {!isAuthor && <TaskSection user={user} />}
+          {activeTab === 'asignar' && <AssignSection user={user} />}
+        </ErrorBoundary>
+        
+        {!isDirector && (activeTab === 'assignments' || activeTab === 'completed') && (
+          <>
+            {loading ? (
+              <div className="text-center text-gray-600">Cargando asignaciones...</div>
+            ) : selectedAssignment ? (
+              renderFullAssignment(selectedAssignment)
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {(activeTab === 'assignments' ? pendingAssignments : completedAssignments).map((assignment) => (
+                  <AssignmentCard
+                    key={assignment.id}
+                    assignment={assignment}
+                    onClick={() => setSelectedAssignment(assignment)}
+                  />
+                ))}
+              </div>
+            )}
+            
+            {pendingAssignments.length === 0 && activeTab === 'assignments' && !loading && !selectedAssignment && (
+              <div className="text-center text-gray-600">No hay asignaciones pendientes.</div>
+            )}
+            {completedAssignments.length === 0 && activeTab === 'completed' && !loading && !selectedAssignment && (
+              <div className="text-center text-gray-600">No hay asignaciones completadas.</div>
+            )}
+          </>
+        )}
+
+        {isDirector && showAddModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-screen overflow-y-auto">
+              <h3 className="text-xl font-semibold mb-4">Agregar Artículo</h3>
+              <div className="space-y-4">
+                <input name="titulo" placeholder="Título" value={directorFormData.titulo} onChange={handleDirectorInputChange} className="w-full border rounded-md p-2" required />
+                <input name="autores" placeholder="Autor(es) (separados por ;)" value={directorFormData.autores} onChange={handleDirectorInputChange} className="w-full border rounded-md p-2" required />
+                <textarea name="resumen" placeholder="Resumen" value={directorFormData.resumen} onChange={handleDirectorInputChange} className="w-full border rounded-md p-2 h-20" />
+                <textarea name="abstract" placeholder="Abstract" value={directorFormData.abstract} onChange={handleDirectorInputChange} className="w-full border rounded-md p-2 h-20" />
+                <input name="fecha" type="date" value={directorFormData.fecha} onChange={handleDirectorInputChange} className="w-full border rounded-md p-2" />
+                <input name="volumen" placeholder="Volumen" value={directorFormData.volumen} onChange={handleDirectorInputChange} className="w-full border rounded-md p-2" />
+                <input name="numero" placeholder="Número (auto)" value={directorFormData.numero} onChange={handleDirectorInputChange} className="w-full border rounded-md p-2" disabled />
+                <input name="primeraPagina" placeholder="Primera página" value={directorFormData.primeraPagina} onChange={handleDirectorInputChange} className="w-full border rounded-md p-2" />
+                <input name="ultimaPagina" placeholder="Última página" value={directorFormData.ultimaPagina} onChange={handleDirectorInputChange} className="w-full border rounded-md p-2" />
+                <input name="areaTematica" placeholder="Área temática (separados por ;)" value={directorFormData.areaTematica} onChange={handleDirectorInputChange} className="w-full border rounded-md p-2" />
+                <input name="palabrasClave" placeholder="Palabras clave (separados por ;)" value={directorFormData.palabrasClave} onChange={handleDirectorInputChange} className="w-full border rounded-md p-2" />
+                <input type="file" accept=".pdf" onChange={handleDirectorFileChange} className="w-full" required />
+              </div>
+              <div className="flex justify-end space-x-2 mt-6">
+                <button onClick={closeDirectorModals} className="px-4 py-2 bg-gray-300 rounded-md">Cancelar</button>
+                <button onClick={() => handleDirectorSubmit('add')} className="px-4 py-2 bg-blue-600 text-white rounded-md">Agregar</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isDirector && showEditModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-screen overflow-y-auto">
+              <h3 className="text-xl font-semibold mb-4">Editar Artículo</h3>
+              <div className="space-y-4">
+                <input name="titulo" placeholder="Título" value={directorFormData.titulo} onChange={handleDirectorInputChange} className="w-full border rounded-md p-2" required />
+                <input name="autores" placeholder="Autor(es) (separados por ;)" value={directorFormData.autores} onChange={handleDirectorInputChange} className="w-full border rounded-md p-2" required />
+                <textarea name="resumen" placeholder="Resumen" value={directorFormData.resumen} onChange={handleDirectorInputChange} className="w-full border rounded-md p-2 h-20" />
+                <textarea name="abstract" placeholder="Abstract" value={directorFormData.abstract} onChange={handleDirectorInputChange} className="w-full border rounded-md p-2 h-20" />
+                <input name="fecha" type="date" value={directorFormData.fecha} onChange={handleDirectorInputChange} className="w-full border rounded-md p-2" />
+                <input name="volumen" placeholder="Volumen" value={directorFormData.volumen} onChange={handleDirectorInputChange} className="w-full border rounded-md p-2" />
+                <input name="numero" placeholder="Número" value={directorFormData.numero} onChange={handleDirectorInputChange} className="w-full border rounded-md p-2" disabled />
+                <input name="primeraPagina" placeholder="Primera página" value={directorFormData.primeraPagina} onChange={handleDirectorInputChange} className="w-full border rounded-md p-2" />
+                <input name="ultimaPagina" placeholder="Última página" value={directorFormData.ultimaPagina} onChange={handleDirectorInputChange} className="w-full border rounded-md p-2" />
+                <input name="areaTematica" placeholder="Área temática (separados por ;)" value={directorFormData.areaTematica} onChange={handleDirectorInputChange} className="w-full border rounded-md p-2" />
+                <input name="palabrasClave" placeholder="Palabras clave (separados por ;)" value={directorFormData.palabrasClave} onChange={handleDirectorInputChange} className="w-full border rounded-md p-2" />
+                <input type="file" accept=".pdf" onChange={handleDirectorFileChange} className="w-full" />
+              </div>
+              <div className="flex justify-end space-x-2 mt-6">
+                <button onClick={closeDirectorModals} className="px-4 py-2 bg-gray-300 rounded-md">Cancelar</button>
+                <button onClick={() => handleDirectorSubmit('edit')} className="px-4 py-2 bg-blue-600 text-white rounded-md">Actualizar</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

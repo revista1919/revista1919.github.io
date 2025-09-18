@@ -1,32 +1,31 @@
-
+# .github/workflows/deploy.yml (actualizado con env para el secret)
 name: Deploy to GitHub Pages
-
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-
+  repository_dispatch:
+    types: [rebuild]
 permissions:
   contents: read
   pages: write
   id-token: write
-
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       # 1. Clona el repositorio
       - name: Checkout code
         uses: actions/checkout@v4
-
       # 2. Configura Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
       # 3. Instala dependencias con caché
       - name: Cache node modules
         uses: actions/cache@v4
@@ -35,35 +34,29 @@ jobs:
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
-
       - name: Install dependencies
         run: npm install
-
-      # 4. Construye el proyecto React
+      # 4. Construye el proyecto React (con env desde secrets)
       - name: Build project
         run: npm run build
         env:
           NODE_ENV: production
-
+          REACT_APP_ARTICULOS_SCRIPT_URL: ${{ secrets.ARTICULOS_SCRIPT }}  # Inyecta el secret aquí
       # 5. Verifica los archivos generados
       - name: List dist contents
         run: |
           ls -R dist
           cat dist/robots.txt
           cat dist/sitemap.xml
-
       # 6. Configura GitHub Pages
       - name: Setup Pages
         uses: actions/configure-pages@v5
-
       # 7. Sube la carpeta dist como artefacto
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
-
       # 8. Despliega a GitHub Pages
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
