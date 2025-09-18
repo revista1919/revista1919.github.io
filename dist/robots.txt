@@ -1,6 +1,7 @@
 User-agent: Googlebot
 Allow: /articles/
 Allow: /Articles/
+Allow: /news/
 Allow: /team/
 Allow: /sections/
 Allow: /index.css
@@ -13,6 +14,7 @@ Disallow: /api/
 User-agent: *
 Allow: /articles/
 Allow: /Articles/
+Allow: /news/
 Allow: /team/
 Allow: /sections/
 Allow: /index.css

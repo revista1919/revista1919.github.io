@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Papa from "papaparse";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useTranslation } from 'react-i18next';
 
 const NEWS_CSV =
@@ -21,13 +21,21 @@ const base64DecodeUnicode = (str) => {
   }
 };
 
+function generateSlug(name) {
+  if (!name) return '';
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '');
+}
+
 export default function NewsSection({ className }) {
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState("");
-  const [selectedNews, setSelectedNews] = useState(null);
-  const [showFullContent, setShowFullContent] = useState(false);
   const [visibleNews, setVisibleNews] = useState(6);
   const [nombre, setNombre] = useState("");
   const [correo, setCorreo] = useState("");
@@ -175,8 +183,8 @@ export default function NewsSection({ className }) {
   const loadMoreNews = () => setVisibleNews((prev) => prev + 6);
 
   const openNews = (item) => {
-    setSelectedNews(item);
-    setShowFullContent(false);
+    const slug = generateSlug(`${item.titulo} ${item.fecha}`);
+    window.location.href = `/news/${slug}.html`;
   };
 
   if (loading) return <p className="text-center text-[#000000]">Cargando noticias...</p>;
@@ -283,39 +291,6 @@ export default function NewsSection({ className }) {
           </button>
         </div>
       )}
-      <AnimatePresence>
-        {selectedNews && (
-          <motion.div
-            className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setSelectedNews(null)}
-          >
-            <motion.div
-              className="bg-white rounded-2xl shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6 flex flex-col relative"
-              initial={{ scale: 0.92 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.92 }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={() => setSelectedNews(null)}
-                className="absolute top-2 right-2 text-gray-500 hover:text-[#5a3e36] text-lg font-bold"
-              >
-                ✕
-              </button>
-              <h4 className="text-2xl font-bold text-[#5a3e36] mb-4">
-                {selectedNews.titulo}
-              </h4>
-              <p className="text-sm text-gray-500 mb-6">{selectedNews.fecha}</p>
-              <div className="text-[#000000] flex-1">
-                {decodeBody(selectedNews.cuerpo, false)}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

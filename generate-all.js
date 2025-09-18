@@ -5,8 +5,10 @@ const Papa = require('papaparse');
 
 const articlesCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p32EM6-0VYy18AdREQwXdpeet1WHTA4H2-W2FX7HKe1HPSyApWadUw9sKHdVYQXL5tP6yDRs/pub?output=csv';
 const teamCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
+const newsCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKnN8qMJcBN8im9Q61o-qElx1jQp5NdS80_B-FakCHrPLXHlQ_FXZWT0o5GVVHAM26l9sjLxsTCNO8/pub?output=csv';
 const outputJson = path.join(__dirname, 'dist', 'articles.json');
 const outputHtmlDir = path.join(__dirname, 'dist', 'articles');
+const newsOutputHtmlDir = path.join(__dirname, 'dist', 'news');
 const teamOutputHtmlDir = path.join(__dirname, 'dist', 'team');
 const sectionsOutputDir = path.join(__dirname, 'dist', 'sections');
 const sitemapPath = path.join(__dirname, 'dist', 'sitemap.xml');
@@ -60,7 +62,23 @@ function getImageSrc(image) {
   return '';
 }
 
+const base64DecodeUnicode = (str) => {
+  try {
+    const binary = atob(str);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    const decoder = new TextDecoder();
+    return decoder.decode(bytes);
+  } catch (err) {
+    console.error('Error decoding Base64:', err);
+    return '';
+  }
+};
+
 if (!fs.existsSync(outputHtmlDir)) fs.mkdirSync(outputHtmlDir, { recursive: true });
+if (!fs.existsSync(newsOutputHtmlDir)) fs.mkdirSync(newsOutputHtmlDir, { recursive: true });
 if (!fs.existsSync(teamOutputHtmlDir)) fs.mkdirSync(teamOutputHtmlDir, { recursive: true });
 if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursive: true });
 
@@ -202,6 +220,212 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     fs.writeFileSync(indexPath, indexContent, 'utf8');
     console.log(`Generado índice HTML de artículos: ${indexPath}`);
 
+    // Procesar noticias
+    const newsRes = await fetch(newsCsvUrl);
+    if (!newsRes.ok) throw new Error(`Error descargando CSV de noticias: ${newsRes.statusText}`);
+    const newsCsvData = await newsRes.text();
+    const newsParsed = Papa.parse(newsCsvData, { header: true, skipEmptyLines: true });
+    const newsItems = newsParsed.data
+      .filter(
+        (row) =>
+          (row["Título"] || "").trim() !== "" &&
+          (row["Contenido de la noticia"] || "").trim() !== ""
+      )
+      .map((row) => ({
+        titulo: String(row["Título"] ?? ""),
+        cuerpo: base64DecodeUnicode(String(row["Contenido de la noticia"] ?? "")),
+        fecha: parseDateFlexible(String(row["Fecha"] ?? "")),
+      }));
+
+    newsItems.forEach((newsItem) => {
+      const slug = generateSlug(`${newsItem.titulo} ${newsItem.fecha}`);
+      const htmlContent = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="${newsItem.titulo.substring(0, 160)}...">
+  <meta name="keywords" content="noticias, revista ciencias estudiantes, ${newsItem.titulo.replace(/[^a-zA-Z0-9]/g, ' ').substring(0, 100)}">
+  <title>${newsItem.titulo} - Noticias - Revista Nacional de las Ciencias para Estudiantes</title>
+  <link rel="stylesheet" href="/index.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #f4ece7 0%, #e8d9c6 100%);
+      font-family: 'Merriweather', 'Georgia', serif;
+      color: #2d3748;
+      margin: 0;
+      padding: 0;
+      line-height: 1.7;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      backdrop-filter: blur(10px);
+    }
+    .logo {
+      width: 120px;
+      height: auto;
+      margin-bottom: 1rem;
+      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+    }
+    h1 {
+      color: #5a3e36;
+      font-size: 2.5rem;
+      margin: 0 0 1rem 0;
+      font-weight: 700;
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.05);
+    }
+    .date {
+      color: #8b6f47;
+      font-size: 1.1rem;
+      font-style: italic;
+      margin: 0;
+    }
+    main {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 2.5rem;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+      backdrop-filter: blur(10px);
+    }
+    .content {
+      font-size: 1.1rem;
+      color: #2d3748;
+      line-height: 1.8;
+    }
+    .content p {
+      margin-bottom: 1.5rem;
+      text-align: justify;
+    }
+    .content h2, .content h3 {
+      color: #5a3e36;
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+      font-weight: 600;
+    }
+    .content img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      margin: 1rem 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    .content ul, .content ol {
+      margin: 1rem 0;
+      padding-left: 2rem;
+    }
+    .content li {
+      margin-bottom: 0.5rem;
+    }
+    footer {
+      text-align: center;
+      margin-top: 3rem;
+      padding: 2rem;
+      color: #8b6f47;
+      font-size: 0.95rem;
+    }
+    a {
+      color: #800020;
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.3s ease;
+    }
+    a:hover {
+      color: #5a0015;
+      text-decoration: underline;
+    }
+    @media (max-width: 768px) {
+      .container {
+        padding: 1rem;
+      }
+      h1 {
+        font-size: 2rem;
+      }
+      main {
+        padding: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <img src="/logo.png" alt="Logo de la Revista Nacional de las Ciencias para Estudiantes" class="logo">
+      <h1>${newsItem.titulo}</h1>
+      <p class="date">Publicado el ${newsItem.fecha}</p>
+    </header>
+    <main>
+      <div class="content ql-editor">
+        ${newsItem.cuerpo}
+      </div>
+    </main>
+    <footer>
+      <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes</p>
+      <a href="/sections/news.html">Volver a Noticias</a> | <a href="/">Volver al inicio</a>
+    </footer>
+  </div>
+</body>
+</html>`;
+      const filePath = path.join(newsOutputHtmlDir, `${slug}.html`);
+      fs.writeFileSync(filePath, htmlContent, 'utf8');
+      console.log(`Generado HTML de noticia: ${filePath}`);
+    });
+
+    // Generar índice de noticias
+    const newsByYear = newsItems.reduce((acc, item) => {
+      const year = new Date(item.fecha).getFullYear() || 'Sin fecha';
+      if (!acc[year]) acc[year] = [];
+      acc[year].push(item);
+      return acc;
+    }, {});
+    let newsIndexContent = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Índice de Noticias - Revista Nacional de las Ciencias para Estudiantes</title>
+  <link rel="stylesheet" href="/index.css">
+</head>
+<body>
+  <header>
+    <h1>Índice de Noticias por Año</h1>
+    <p>Accede a las noticias por año de publicación.</p>
+  </header>
+  <main>
+${Object.keys(newsByYear).sort().reverse().map(year => `
+    <section>
+      <h2>Año ${year}</h2>
+      <ul>
+        ${newsByYear[year].map(item => {
+          const slug = generateSlug(item.titulo + ' ' + item.fecha);
+          return `
+          <li>
+            <a href="/news/${slug}.html">${item.titulo}</a> (${item.fecha})
+          </li>
+        `;
+        }).join('')}
+      </ul>
+    </section>
+`).join('')}
+  </main>
+  <footer>
+    <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes</p>
+    <a href="/">Volver al inicio</a>
+  </footer>
+</body>
+</html>`;
+    const newsIndexPath = path.join(newsOutputHtmlDir, 'index.html');
+    fs.writeFileSync(newsIndexPath, newsIndexContent, 'utf8');
+    console.log(`Generado índice HTML de noticias: ${newsIndexPath}`);
+
     // Procesar equipo (generar HTML para TODOS los miembros)
     const teamRes = await fetch(teamCsvUrl);
     if (!teamRes.ok) throw new Error(`Error descargando CSV de equipo: ${teamRes.statusText}`);
@@ -221,8 +445,8 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       const areas = member['Áreas de interés'] || 'No especificadas';
       const areasList = areas.split(';').map(a => a.trim()).filter(a => a);
       const imagen = getImageSrc(member['Imagen'] || '');
-      const htmlContent = `
-<!DOCTYPE html>
+      const areasTagsHtml = areasList.length ? areasList.map(area => `<span class="area-tag">${area}</span>`).join('') : '<p>No especificadas</p>';
+      const htmlContent = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -410,7 +634,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     <div class="section">
       <h2>Áreas de interés</h2>
       <div class="areas-tags">
-        ${areasList.length ? areasList.map(area => `<span class="area-tag">${area}</span>`).join('') : '<p>No especificadas</p>'}
+        ${areasTagsHtml}
       </div>
     </div>
     <footer>
@@ -419,8 +643,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     </footer>
   </div>
 </body>
-</html>
-      `.trim();
+</html>`;
       const filePath = path.join(teamOutputHtmlDir, `${slug}.html`);
       fs.writeFileSync(filePath, htmlContent, 'utf8');
       console.log(`Generado HTML de miembro: ${filePath}`);
@@ -435,8 +658,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     ];
 
     sections.forEach(section => {
-      const htmlContent = `
-<!DOCTYPE html>
+      const htmlContent = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -461,14 +683,13 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     <a href="/">Volver al inicio</a>
   </footer>
 </body>
-</html>
-      `.trim();
+</html>`;
       const filePath = path.join(sectionsOutputDir, `${section.name}.html`);
       fs.writeFileSync(filePath, htmlContent, 'utf8');
       console.log(`Generado HTML de sección: ${filePath}`);
     });
 
-    // Generar sitemap (incluir TODOS los miembros)
+    // Generar sitemap (incluir TODOS los miembros y noticias)
     const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
 <!-- Created for Revista Nacional de las Ciencias para Estudiantes -->
@@ -497,6 +718,22 @@ ${articles.map(article => `
   <changefreq>monthly</changefreq>
   <priority>0.8</priority>
 </url>`).join('')}
+<url>
+  <loc>${domain}/news/index.html</loc>
+  <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.9</priority>
+</url>
+${newsItems.map(item => {
+      const slug = generateSlug(item.titulo + ' ' + item.fecha);
+      return `
+<url>
+  <loc>${domain}/news/${slug}.html</loc>
+  <lastmod>${item.fecha}</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.8</priority>
+</url>`;
+    }).join('')}
 ${allMembers.map(member => {
       const slug = generateSlug(member['Nombre']);
       return `
@@ -522,6 +759,7 @@ ${sections.map(section => `
     const robotsContent = `User-agent: Googlebot
 Allow: /articles/
 Allow: /Articles/
+Allow: /news/
 Allow: /team/
 Allow: /sections/
 Allow: /index.css
@@ -534,6 +772,7 @@ Disallow: /api/
 User-agent: *
 Allow: /articles/
 Allow: /Articles/
+Allow: /news/
 Allow: /team/
 Allow: /sections/
 Allow: /index.css
@@ -547,6 +786,7 @@ Sitemap: ${domain}/sitemap.xml
     `.trim();
     fs.writeFileSync(robotsPath, robotsContent, 'utf8');
     console.log(`Generado robots.txt: ${robotsPath}`);
+
   } catch (err) {
     console.error('❌ Error:', err);
   }
