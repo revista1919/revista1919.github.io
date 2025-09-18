@@ -4,7 +4,7 @@ import Papa from 'papaparse';
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 const INCOMING_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJx5loBW2UoEAhkdkkjad7VQxtjBJKtZT8ZIBMd0NGdAZH7Z2hKNczn1OrTHZRrBzI5_mQRHzxYxHS/pub?gid=1161174444&single=true&output=csv';
 const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwReIbgZ-BlSFGftmRCimCPRHn1Few1dgMGdK7y7taC8nydi8-9pEzNTlRWqBXpbhMC/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby2B1OUt3TMqaed6Vz-iamUPn4gHhKXG2RRxiy8Nt6u69Cg-2kSze2XQ-NywX5QrNfy/exec';
 
 const sanitizeInput = (input) => input ? input.trim().toLowerCase().replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') : '';
 
@@ -20,28 +20,40 @@ export default function AssignSection({ user, onClose }) {
   const [editingData, setEditingData] = useState(null);
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const [submitStatus, setSubmitStatus] = useState({});
+  const [isSending, setIsSending] = useState({}); // New state for loading indicators
+  const [emailPreview, setEmailPreview] = useState(null); // New state for email preview
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
+        console.log("📡 Iniciando fetch de CSVs...");
+
         const [usersText, incomingText, assignmentsText] = await Promise.all([
           fetch(USERS_CSV, { cache: 'no-store' }).then(r => r.text()),
           fetch(INCOMING_CSV, { cache: 'no-store' }).then(r => r.text()),
           fetch(ASSIGNMENTS_CSV, { cache: 'no-store' }).then(r => r.text()),
         ]);
 
+        console.log("✅ CSVs descargados");
+
         const parsedUsers = Papa.parse(usersText, { header: true, skipEmptyLines: true }).data.filter(u => u.Nombre && u.Nombre.trim());
+        console.log("👥 Usuarios parseados:", parsedUsers);
+
         const filteredUsers = parsedUsers.filter(u => {
           const roles = (u['Rol en la Revista'] || '').split(';').map(r => r.trim()).filter(Boolean);
-          return roles.some(r => r === 'Revisor' || r === 'Editor de Sección');
+          return roles.some(r => r === 'Revisor' || r === 'Editor de Sección' || r === 'Editor en Jefe');
         });
         setUsers(filteredUsers);
+        console.log("✅ Usuarios filtrados (revisores + editores + editores en jefe):", filteredUsers);
 
-        const revs = filteredUsers.filter(u => (u['Rol en la Revista'] || '').split(';').map(r => r.trim()).includes('Revisor'));
-        const eds = filteredUsers.filter(u => (u['Rol en la Revista'] || '').split(';').map(r => r.trim()).includes('Editor de Sección'));
+        const revs = filteredUsers.filter(u => (u['Rol en la Revista'] || '').includes('Revisor'));
+        const eds = filteredUsers.filter(u => (u['Rol en la Revista'] || '').includes('Editor de Sección'));
+        const chiefs = filteredUsers.filter(u => (u['Rol en la Revista'] || '').includes('Editor en Jefe'));
         setReviewers(revs);
-        setSectionEditors(eds);
+        setSectionEditors([...eds, ...chiefs]);
+        console.log("👤 Revisores:", revs);
+        console.log("📂 Editores (incluyendo en jefe):", [...eds, ...chiefs]);
 
         const parsedIncoming = Papa.parse(incomingText, { header: true, skipEmptyLines: true }).data.filter(i => 
           i['Nombre (primer nombre y primer apellido)'] && 
@@ -50,12 +62,10 @@ export default function AssignSection({ user, onClose }) {
           i['Título de su artículo'].trim()
         );
         setIncoming(parsedIncoming);
+        console.log("📝 Artículos entrantes:", parsedIncoming);
 
         const parsedAssignments = Papa.parse(assignmentsText, { header: true, skipEmptyLines: true }).data.filter(a => 
-          a['Nombre Artículo'] && 
-          a['Nombre Artículo'].trim() && 
-          a.Autor && 
-          a.Autor.trim()
+          a['Nombre Artículo'] && a['Nombre Artículo'].trim() && a.Autor && a.Autor.trim()
         );
         const isCompleted = (assign) => {
           return !!(assign['Feedback 1'] && assign['Informe 1'] && assign['Feedback 2'] && assign['Informe 2'] && assign['Feedback 3'] && assign['Informe 3']);
@@ -63,12 +73,9 @@ export default function AssignSection({ user, onClose }) {
         const pendingAssignments = parsedAssignments.filter(a => !isCompleted(a));
         setAssignments(pendingAssignments);
 
-        console.log('Parsed incoming:', parsedIncoming);
-        console.log('Parsed assignments (pending only):', pendingAssignments);
-        console.log('Incoming keys:', parsedIncoming[0] ? Object.keys(parsedIncoming[0]) : []);
-        console.log('Assignments keys:', parsedAssignments[0] ? Object.keys(parsedAssignments[0]) : []);
+        console.log("📂 Asignaciones pendientes:", pendingAssignments);
       } catch (err) {
-        console.error('Error fetching data:', err);
+        console.error('❌ Error fetching data:', err);
       } finally {
         setLoading(false);
       }
@@ -125,55 +132,113 @@ export default function AssignSection({ user, onClose }) {
       autor: data.Autor,
     };
     const articleKey = data['Nombre Artículo'] || data.Autor;
+
+    console.log("📤 Enviando datos al script:", body);
+    setIsSending({ ...isSending, [articleKey]: true });
+
     try {
       const response = await fetch(SCRIPT_URL, {
         method: 'POST',
+        mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      const result = await response.text();
-      if (result.startsWith('Error')) {
-        throw new Error(result);
-      }
-      setSubmitStatus({ ...submitStatus, [articleKey]: 'Éxito: ' + (isUpdate ? 'Actualizado' : 'Asignado') });
+
+      console.log("📨 Fetch enviado, response (no-cors, no se puede leer):", response);
+      setSubmitStatus({ ...submitStatus, [articleKey]: 'Cambiado... espere unos momentos para ver el cambio, por favor reinicie la página.' });
       setEditingId(null);
       setEditingData(null);
-      setTimeout(() => window.location.reload(), 1000);
     } catch (err) {
-      setSubmitStatus({ ...submitStatus, [articleKey]: 'Error al ' + (isUpdate ? 'actualizar' : 'asignar') + ': ' + err.message });
+      setSubmitStatus({ ...submitStatus, [articleKey]: '❌ Error: ' + err.message });
       console.error('Error submitting:', err);
+    } finally {
+      setIsSending({ ...isSending, [articleKey]: false });
     }
   };
 
-  const handleContact = async (email, name, title, role) => {
+  const handleContact = async (email, name, title, role, articleKey) => {
+    console.log("📧 Sending reminder request for:", { email, name, title, role, articleKey });
+
     if (!email || !name || !title || !role) {
-      console.error('Missing email, name, title, or role:', { email, name, title, role });
-      setSubmitStatus({ ...submitStatus, [name || 'contact']: 'Error: Correo, nombre, título o rol no disponible' });
+      console.error("Missing email, name, title, or role:", { email, name, title, role });
+      setSubmitStatus({ ...submitStatus, [articleKey]: `Error: Faltan datos para enviar el recordatorio.` });
       return;
     }
+
+    setIsSending({ ...isSending, [articleKey]: true });
+
     const body = {
       action: 'sendReminder',
       email,
       name,
       title,
       role,
-      senderName: user.name,
+      senderName: user?.Nombre || 'Equipo Editorial',
     };
+
+    console.log("📤 Enviando datos al script:", body);
+
     try {
       const response = await fetch(SCRIPT_URL, {
         method: 'POST',
+        mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      const result = await response.text();
-      if (result.startsWith('Error')) {
-        throw new Error(result);
-      }
-      setSubmitStatus({ ...submitStatus, [name]: 'Éxito: Recordatorio enviado a ' + name });
+
+      console.log("📨 Fetch enviado (no-cors, no se puede leer la respuesta):", response);
+      setSubmitStatus({ ...submitStatus, [articleKey]: 'Recordatorio enviado.' });
+
+      // Generate email preview content (matching sendReminderEmail in Google Apps Script)
+      const articleLink = assignments.find(a => sanitizeInput(a['Nombre Artículo']) === sanitizeInput(title))?.['Link Artículo'] || '';
+      const htmlBody = `
+        <div style="font-family: 'Georgia', serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f1e9; border: 2px solid #8b5a2b; border-radius: 10px; color: #3c2f2f;">
+          <div style="background-color: #8b5a2b; padding: 15px; border-radius: 8px 8px 0 0; text-align: center;">
+            <h2 style="color: #f8f1e9; margin: 0;">Recordatorio de Revisión</h2>
+          </div>
+          <div style="padding: 20px;">
+            <p>Estimado/a ${name},</p>
+            <p>Le escribimos para recordarle amablemente que tiene pendiente la revisión del artículo <strong>${title}</strong> como <strong>${role}</strong> en la <strong>Revista Nacional de las Ciencias para Estudiantes</strong>.</p>
+            <p><strong>Enlace al artículo:</strong> <a href="${articleLink}" style="color: #6b4e31; text-decoration: none; font-weight: bold;">Abrir en Google Drive</a></p>
+            <p><strong>Instrucciones:</strong></p>
+            <ul style="list-style-type: disc; margin-left: 20px; color: #3c2f2f;">
+              <li>Accede al artículo mediante el enlace proporcionado.</li>
+              <li>Inicia sesión en <a href="https://www.revistacienciasestudiantes.com/" style="color: #6b4e31; text-decoration: none;">nuestro portal</a> para revisar las instrucciones detalladas y dejar tu informe, retroalimentación y voto.</li>
+              <li>Por favor, completa tu revisión lo antes posible, ya que el plazo está próximo a vencer.</li>
+            </ul>
+            <p>Si necesita alguna extensión o apoyo, contáctenos respondiendo a este correo.</p>
+            <p>Gracias por su valiosa contribución a nuestra revista.</p>
+            <p>Atentamente,<br>${user?.Nombre || 'Equipo Editorial'}<br>Editor en Jefe<br>Revista Nacional de las Ciencias para Estudiantes</p>
+          </div>
+          <div style="background-color: #e6d8c6; padding: 10px; border-radius: 0 0 8px 8px; text-align: center;">
+            <p style="font-size: 12px; color: #6b4e31; margin: 0;">Le pedimos amablemente que responda cuanto antes este correo si le es posible.</p>
+          </div>
+        </div>
+      `;
+      setEmailPreview({ to: email, subject: 'Recordatorio: Plazos de Revisión - Revista Nacional de las Ciencias para Estudiantes', htmlBody });
     } catch (err) {
-      setSubmitStatus({ ...submitStatus, [name]: 'Error al enviar recordatorio: ' + err.message });
-      console.error('Error sending reminder:', err);
+      console.error("Error enviando recordatorio:", err);
+      setSubmitStatus({ ...submitStatus, [articleKey]: `Error: ${err.message}` });
+    } finally {
+      setIsSending({ ...isSending, [articleKey]: false });
     }
+  };
+
+  const handleContactEditor = (art) => {
+    console.log("Clicking Contactar Editor for:", art.assignment.Editor);
+    const editor = sectionEditors.find(e => e.Nombre === art.assignment.Editor);
+    if (!editor) {
+      console.error("Editor not found:", art.assignment.Editor);
+      setSubmitStatus({ ...submitStatus, [art['Título de su artículo']]: `Error: Editor (${art.assignment.Editor}) no encontrado.` });
+      return;
+    }
+    handleContact(
+      editor?.Correo || editor?.['Correo electrónico'],
+      art.assignment.Editor,
+      art['Título de su artículo'],
+      'Editor',
+      art['Título de su artículo']
+    );
   };
 
   const getUniqueId = (groupAuthor, artTitle) => {
@@ -240,10 +305,17 @@ export default function AssignSection({ user, onClose }) {
               <strong>Intereses:</strong> {selectedUser['Áreas de interés']?.split(';').map(i => i.trim()).join(', ') || 'N/A'}
             </p>
             <button
-              onClick={() => handleContact(selectedUser.Correo, selectedUser.Nombre, 'General', (selectedUser['Rol en la Revista'] || '').includes('Revisor') ? 'Revisor' : 'Editor')}
+              onClick={() => handleContact(
+                selectedUser.Correo || selectedUser['Correo electrónico'],
+                selectedUser.Nombre,
+                'General',
+                (selectedUser['Rol en la Revista'] || '').includes('Revisor') ? 'Revisor' : 'Editor',
+                selectedUser.Nombre
+              )}
               className="w-full bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 text-sm"
+              disabled={isSending[selectedUser.Nombre]}
             >
-              Contactar por Email (Recordatorio Sensible)
+              {isSending[selectedUser.Nombre] ? 'Enviando correo...' : 'Contactar por Email (Recordatorio Sensible)'}
             </button>
             {submitStatus[selectedUser.Nombre] && (
               <span className={`text-sm mt-2 block ${submitStatus[selectedUser.Nombre].includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
@@ -348,41 +420,86 @@ export default function AssignSection({ user, onClose }) {
                           <button
                             onClick={handleEditOrAssignClick}
                             className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+                            disabled={isSending[articleKey]}
                           >
-                            {isAssigned ? 'Editar' : 'Asignar'}
+                            {isSending[articleKey] ? 'Cambiando...' : (isAssigned ? 'Editar' : 'Asignar')}
                           </button>
                           {isAssigned && art.assignment['Revisor 1'] && (
                             <button
                               onClick={() => {
+                                console.log("Clicking Contactar R1 for:", art.assignment['Revisor 1']);
                                 const reviewer = reviewers.find(r => r.Nombre === art.assignment['Revisor 1']);
-                                handleContact(reviewer?.Correo, art.assignment['Revisor 1'], art['Título de su artículo'], 'Revisor 1');
+                                if (!reviewer) {
+                                  console.error("Reviewer not found:", art.assignment['Revisor 1']);
+                                  setSubmitStatus({ ...submitStatus, [articleKey]: `Error: Revisor 1 (${art.assignment['Revisor 1']}) no encontrado.` });
+                                  return;
+                                }
+                                handleContact(
+                                  reviewer?.Correo || reviewer?.['Correo electrónico'],
+                                  art.assignment['Revisor 1'],
+                                  art['Título de su artículo'],
+                                  'Revisor 1',
+                                  articleKey
+                                );
                               }}
                               className="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700"
+                              disabled={isSending[articleKey]}
                             >
-                              Contactar R1
+                              {isSending[articleKey] ? 'Enviando correo...' : 'Contactar R1'}
                             </button>
                           )}
                           {isAssigned && art.assignment['Revisor 2'] && (
                             <button
                               onClick={() => {
+                                console.log("Clicking Contactar R2 for:", art.assignment['Revisor 2']);
                                 const reviewer = reviewers.find(r => r.Nombre === art.assignment['Revisor 2']);
-                                handleContact(reviewer?.Correo, art.assignment['Revisor 2'], art['Título de su artículo'], 'Revisor 2');
+                                if (!reviewer) {
+                                  console.error("Reviewer not found:", art.assignment['Revisor 2']);
+                                  setSubmitStatus({ ...submitStatus, [articleKey]: `Error: Revisor 2 (${art.assignment['Revisor 2']}) no encontrado.` });
+                                  return;
+                                }
+                                handleContact(
+                                  reviewer?.Correo || reviewer?.['Correo electrónico'],
+                                  art.assignment['Revisor 2'],
+                                  art['Título de su artículo'],
+                                  'Revisor 2',
+                                  articleKey
+                                );
                               }}
                               className="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700"
+                              disabled={isSending[articleKey]}
                             >
-                              Contactar R2
+                              {isSending[articleKey] ? 'Enviando correo...' : 'Contactar R2'}
                             </button>
                           )}
                           {isAssigned && art.assignment.Editor && (
                             <button
                               onClick={() => {
+                                console.log("Clicking Contactar Editor for:", art.assignment.Editor);
                                 const editor = sectionEditors.find(e => e.Nombre === art.assignment.Editor);
-                                handleContact(editor?.Correo, art.assignment.Editor, art['Título de su artículo'], 'Editor');
+                                if (!editor) {
+                                  console.error("Editor not found:", art.assignment.Editor);
+                                  setSubmitStatus({ ...submitStatus, [articleKey]: `Error: Editor (${art.assignment.Editor}) no encontrado.` });
+                                  return;
+                                }
+                                handleContact(
+                                  editor?.Correo || editor?.['Correo electrónico'],
+                                  art.assignment.Editor,
+                                  art['Título de su artículo'],
+                                  'Editor',
+                                  articleKey
+                                );
                               }}
                               className="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700"
+                              disabled={isSending[articleKey]}
                             >
-                              Contactar Editor
+                              {isSending[articleKey] ? 'Enviando correo...' : 'Contactar Editor'}
                             </button>
+                          )}
+                          {submitStatus[articleKey] && (
+                            <span className={`text-sm mt-2 block ${submitStatus[articleKey].includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
+                              {submitStatus[articleKey]}
+                            </span>
                           )}
                         </div>
                         {isEditingThis && (
@@ -428,10 +545,10 @@ export default function AssignSection({ user, onClose }) {
                             <div className="flex space-x-2">
                               <button
                                 onClick={handleConfirm}
-                                disabled={!editingData.data.nombre || !editingData.data.link || !editingData.data.r1 || !editingData.data.r2 || !editingData.data.editor}
+                                disabled={!editingData.data.nombre || !editingData.data.link || !editingData.data.r1 || !editingData.data.r2 || !editingData.data.editor || isSending[articleKey]}
                                 className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:bg-gray-400 text-sm"
                               >
-                                {editingData.isUpdate ? 'Actualizar' : 'Asignar'}
+                                {isSending[articleKey] ? 'Cambiando...' : (editingData.isUpdate ? 'Actualizar' : 'Asignar')}
                               </button>
                               <button
                                 onClick={handleCancel}
@@ -471,6 +588,31 @@ export default function AssignSection({ user, onClose }) {
               className="mt-4 w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
             >
               Entendido
+            </button>
+          </div>
+        </div>
+      )}
+
+      {emailPreview && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-start mb-4">
+              <h5 className="font-bold text-lg">Previsualización del Correo Enviado</h5>
+              <button onClick={() => setEmailPreview(null)} className="text-gray-500 hover:text-gray-700">×</button>
+            </div>
+            <div className="mb-4">
+              <p className="text-sm"><strong>Para:</strong> {emailPreview.to}</p>
+              <p className="text-sm"><strong>Asunto:</strong> {emailPreview.subject}</p>
+            </div>
+            <div
+              className="border p-4 rounded bg-gray-50"
+              dangerouslySetInnerHTML={{ __html: emailPreview.htmlBody }}
+            />
+            <button
+              onClick={() => setEmailPreview(null)}
+              className="mt-4 w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+            >
+              Cerrar
             </button>
           </div>
         </div>

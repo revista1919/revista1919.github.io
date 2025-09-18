@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 import DirectorPanel from './DirectorPanel';
 
 const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwReIbgZ-BlSFGftmRCimCPRHn1Few1dgMGdK7y7taC8nydi8-9pEzNTlRWqBXpbhMC/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby2B1OUt3TMqaed6Vz-iamUPn4gHhKXG2RRxiy8Nt6u69Cg-2kSze2XQ-NywX5QrNfy/exec';
 const RUBRIC_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzehxU_O7GkzfiCqCsSdnFwvA_Mhtfr_vSZjqVsBo3yx8ZEpr9Qur4NHPI09tyH1AZe/exec';
 
 const RUBRIC_CSV1 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=0&single=true&output=csv';
@@ -215,7 +215,8 @@ export default function PortalSection({ user, onLogout }) {
   const [editingRange, setEditingRange] = useState({});
   const [selectedAssignment, setSelectedAssignment] = useState(null);
   const [expandedFeedback, setExpandedFeedback] = useState({});
-  const [isDirectorPanelExpanded, setIsDirectorPanelExpanded] = useState(false); // Nuevo estado para el panel colapsable
+const [isDirectorPanelExpanded, setIsDirectorPanelExpanded] = useState(false); // Estado para el panel colapsable del Director
+  const [isChiefEditorPanelExpanded, setIsChiefEditorPanelExpanded] = useState(false); // Estado para el panel colapsable del Editor en Jefe
   const feedbackQuillRefs = useRef({});
   const reportQuillRefs = useRef({});
 
@@ -398,14 +399,24 @@ export default function PortalSection({ user, onLogout }) {
   }, [user?.name]);
 
   const isAuthor = assignments.length > 0 && assignments[0].role === 'Autor';
-  const isChief = user?.roles && user.roles.split(';').map(r => r.trim()).includes('Editor en Jefe');
+  const isChief = user?.role && user.role.split(';').map(r => r.trim()).includes('Editor en Jefe');
  const isDirector = user?.role && user.role.split(';').map(r => r.trim()).includes('Director General');
   console.log('User data:', user);
-console.log('User roles:', user?.roles);
+console.log('User roles:', user?.role);
 console.log('isDirector:', isDirector);
-  const pendingAssignments = useMemo(() => assignments.filter((a) => !a.isCompleted), [assignments]);
-  const completedAssignments = useMemo(() => assignments.filter((a) => a.isCompleted), [assignments]);
-
+console.log('isChief:', isChief);
+  const pendingAssignments = useMemo(() => 
+    isAuthor 
+      ? assignments.filter((a) => !a.feedbackEditor || !['Aceptado', 'Rechazado'].includes(a.Estado))
+      : assignments.filter((a) => !a.isCompleted), 
+    [assignments, isAuthor]
+  );
+  const completedAssignments = useMemo(() => 
+    isAuthor 
+      ? assignments.filter((a) => a.feedbackEditor && ['Aceptado', 'Rechazado'].includes(a.Estado))
+      : assignments.filter((a) => a.isCompleted), 
+    [assignments, isAuthor]
+  );
   const handleVote = (link, value) => {
     setVote((prev) => ({ ...prev, [link]: value }));
   };
@@ -828,468 +839,505 @@ console.log('isDirector:', isDirector);
     }));
   };
 
-  const AssignmentCard = ({ assignment, onClick }) => {
-    const role = assignment.role;
-    const nombre = assignment['Nombre Artículo'];
-    const total = role !== 'Editor' ? getTotal(assignment.scores || {}, criteria[role] || []) : getTotal(assignment.scores || {}, criteria['Editor'] || []);
-    const max = (criteria[role] || criteria['Editor'] || []).length * 2;
-    const percent = total / max * 100;
-    const statusColor = assignment.isCompleted ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
+const AssignmentCard = ({ assignment, onClick }) => {
+  const role = assignment.role;
+  const nombre = assignment['Nombre Artículo'];
+  const isAuthorCard = role === 'Autor';
 
-    return (
-      <div
-        className="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 cursor-pointer border border-gray-200 h-full flex flex-col justify-between"
-        onClick={onClick}
-      >
-        <div>
-          <h4 className="text-xl font-bold text-gray-800 mb-2 break-words">{nombre}</h4>
-          <p className="text-sm text-gray-600 mb-3 break-words">Rol: {role}</p>
-          <div className="flex items-center justify-between mb-4">
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor}`}>
-              {assignment.isCompleted ? 'Completado' : 'Pendiente'}
+  const statusColor = isAuthorCard
+    ? (assignment.feedbackEditor && ['Aceptado', 'Rechazado'].includes(assignment.Estado)
+      ? 'bg-green-100 text-green-800'
+      : 'bg-yellow-100 text-yellow-800')
+    : (assignment.isCompleted ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800');
+
+  // Calcular porcentaje solo si no es autor
+  let percent = 0;
+  if (!isAuthorCard) {
+    const total = role !== 'Editor'
+      ? getTotal(assignment.scores || {}, criteria[role] || [])
+      : getTotal(assignment.scores || {}, criteria['Editor'] || []);
+    const max = (criteria[role] || criteria['Editor'] || []).length * 2;
+    percent = max > 0 ? (total / max) * 100 : 0;
+  }
+
+  return (
+    <div
+      className="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 cursor-pointer border border-gray-200 h-full flex flex-col justify-between"
+      onClick={onClick}
+    >
+      <div>
+        <h4 className="text-xl font-bold text-gray-800 mb-2 break-words">{nombre}</h4>
+        <p className="text-sm text-gray-600 mb-3 break-words">Rol: {role}</p>
+        <div className="flex items-center justify-between mb-4">
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor}`}>
+            {isAuthorCard
+              ? (assignment.feedbackEditor && ['Aceptado', 'Rechazado'].includes(assignment.Estado)
+                ? 'Archivado'
+                : 'En Revisión')
+              : (assignment.isCompleted ? 'Completado' : 'Pendiente')}
+          </span>
+          {!isAuthorCard && (
+            <span className="text-sm font-medium text-gray-700">
+              {percent.toFixed(0)}% Puntaje
             </span>
-            <span className="text-sm font-medium text-gray-700">{percent.toFixed(0)}% Puntaje</span>
-          </div>
-          <p className="text-gray-500 text-sm break-words">{assignment.Estado || 'Sin estado'}</p>
+          )}
         </div>
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <button className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors text-sm font-medium">
-            Ver Detalles
-          </button>
-        </div>
+        <p className="text-gray-500 text-sm break-words">{assignment.Estado || 'Sin estado'}</p>
       </div>
-    );
-  };
+      <div className="mt-4 pt-4 border-t border-gray-200">
+        <button className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors text-sm font-medium">
+          Ver Detalles
+        </button>
+      </div>
+    </div>
+  );
+};
+
 
   const renderFullAssignment = (assignment) => {
-    const link = assignment['Link Artículo'];
-    const role = assignment.role;
-    const nombre = assignment['Nombre Artículo'];
-    const isPending = !assignment.isCompleted;
-    const isAuth = role === 'Autor';
+  const link = assignment['Link Artículo'];
+  const role = assignment.role;
+  const nombre = assignment['Nombre Artículo'];
+  const isPending = isAuthor ? (!assignment.feedbackEditor || !['Aceptado', 'Rechazado'].includes(assignment.Estado)) : !assignment.isCompleted;
+  const isAuth = role === 'Autor';
 
-    const handleRenderRubric = () => {
-      if (isAuth) return null;
-      if (isPending) {
-        if (role === 'Editor') {
-          const rev1Total = getTotal(assignment.rev1Scores, criteria['Revisor 1']);
-          const rev2Total = getTotal(assignment.rev2Scores, criteria['Revisor 2']);
-          const revPercent = ((rev1Total + rev2Total) / 16) * 100;
-          const editorTotal = getTotal(rubricScores[link] || {}, criteria['Editor']);
-          const overallTotal = rev1Total + rev2Total + editorTotal;
-          const overallPercent = (overallTotal / 26) * 100;
-          return (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h5 className="text-lg font-semibold text-gray-800">Rúbrica de Revisor 1</h5>
-                <button
-                  onClick={() => toggleFeedback(link, 'rubric1')}
-                  className="text-blue-600 hover:underline text-sm flex items-center"
-                >
-                  {expandedFeedback[link]?.rubric1 ? 'Ocultar' : 'Mostrar'}
-                  <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-              </div>
-              {expandedFeedback[link]?.rubric1 && (
-                <RubricViewer roleKey="Revisor 1" scores={assignment.rev1Scores} readOnly />
-              )}
-              <div className="flex items-center justify-between">
-                <h5 className="text-lg font-semibold text-gray-800">Rúbrica de Revisor 2</h5>
-                <button
-                  onClick={() => toggleFeedback(link, 'rubric2')}
-                  className="text-blue-600 hover:underline text-sm flex items-center"
-                >
-                  {expandedFeedback[link]?.rubric2 ? 'Ocultar' : 'Mostrar'}
-                  <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-              </div>
-              {expandedFeedback[link]?.rubric2 && (
-                <RubricViewer roleKey="Revisor 2" scores={assignment.rev2Scores} readOnly />
-              )}
-              <div className="p-4 bg-yellow-50 rounded-md">
-                <p className="font-medium break-words">Implicación de revisores: {revPercent.toFixed(1)}% - {getDecisionText(revPercent)}</p>
-              </div>
-              <RubricViewer
-                roleKey="Editor"
-                scores={rubricScores[link] || {}}
-                onChange={(key, val) => handleRubricChange(link, key, val)}
-              />
-              <div className="p-4 bg-green-50 rounded-md">
-                <p className="font-medium break-words">Decisión general sugerida: {overallPercent.toFixed(1)}% - {getDecisionText(overallPercent)}</p>
-              </div>
+  const handleRenderRubric = () => {
+    if (isAuth) return null;
+    if (isPending) {
+      if (role === 'Editor') {
+        const rev1Total = getTotal(assignment.rev1Scores, criteria['Revisor 1']);
+        const rev2Total = getTotal(assignment.rev2Scores, criteria['Revisor 2']);
+        const revPercent = ((rev1Total + rev2Total) / 16) * 100;
+        const editorTotal = getTotal(rubricScores[link] || {}, criteria['Editor']);
+        const overallTotal = rev1Total + rev2Total + editorTotal;
+        const overallPercent = (overallTotal / 26) * 100;
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h5 className="text-lg font-semibold text-gray-800">Rúbrica de Revisor 1</h5>
+              <button
+                onClick={() => toggleFeedback(link, 'rubric1')}
+                className="text-blue-600 hover:underline text-sm flex items-center"
+              >
+                {expandedFeedback[link]?.rubric1 ? 'Ocultar' : 'Mostrar'}
+                <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
             </div>
-          );
-        } else {
-          return (
+            {expandedFeedback[link]?.rubric1 && (
+              <RubricViewer roleKey="Revisor 1" scores={assignment.rev1Scores} readOnly />
+            )}
+            <div className="flex items-center justify-between">
+              <h5 className="text-lg font-semibold text-gray-800">Rúbrica de Revisor 2</h5>
+              <button
+                onClick={() => toggleFeedback(link, 'rubric2')}
+                className="text-blue-600 hover:underline text-sm flex items-center"
+              >
+                {expandedFeedback[link]?.rubric2 ? 'Ocultar' : 'Mostrar'}
+                <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
+            {expandedFeedback[link]?.rubric2 && (
+              <RubricViewer roleKey="Revisor 2" scores={assignment.rev2Scores} readOnly />
+            )}
+            <div className="p-4 bg-yellow-50 rounded-md">
+              <p className="font-medium break-words">Implicación de revisores: {revPercent.toFixed(1)}% - {getDecisionText(revPercent)}</p>
+            </div>
             <RubricViewer
-              roleKey={role}
+              roleKey="Editor"
               scores={rubricScores[link] || {}}
               onChange={(key, val) => handleRubricChange(link, key, val)}
             />
-          );
-        }
-      } else {
-        if (role === 'Editor') {
-          const rev1Total = getTotal(assignment.rev1Scores, criteria['Revisor 1']);
-          const rev2Total = getTotal(assignment.rev2Scores, criteria['Revisor 2']);
-          const revPercent = ((rev1Total + rev2Total) / 16) * 100;
-          const editorTotal = getTotal(assignment.scores, criteria['Editor']);
-          const overallTotal = rev1Total + rev2Total + editorTotal;
-          const overallPercent = (overallTotal / 26) * 100;
-          return (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h5 className="text-lg font-semibold text-gray-800">Rúbrica de Revisor 1</h5>
-                <button
-                  onClick={() => toggleFeedback(link, 'rubric1')}
-                  className="text-blue-600 hover:underline text-sm flex items-center"
-                >
-                  {expandedFeedback[link]?.rubric1 ? 'Ocultar' : 'Mostrar'}
-                  <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-              </div>
-              {expandedFeedback[link]?.rubric1 && (
-                <RubricViewer roleKey="Revisor 1" scores={assignment.rev1Scores} readOnly />
-              )}
-              <div className="flex items-center justify-between">
-                <h5 className="text-lg font-semibold text-gray-800">Rúbrica de Revisor 2</h5>
-                <button
-                  onClick={() => toggleFeedback(link, 'rubric2')}
-                  className="text-blue-600 hover:underline text-sm flex items-center"
-                >
-                  {expandedFeedback[link]?.rubric2 ? 'Ocultar' : 'Mostrar'}
-                  <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-              </div>
-              {expandedFeedback[link]?.rubric2 && (
-                <RubricViewer roleKey="Revisor 2" scores={assignment.rev2Scores} readOnly />
-              )}
-              <div className="p-4 bg-yellow-50 rounded-md">
-                <p className="font-medium break-words">Implicación de revisores: {revPercent.toFixed(1)}% - {getDecisionText(revPercent)}</p>
-              </div>
-              <RubricViewer roleKey="Editor" scores={assignment.scores} readOnly />
-              <div className="p-4 bg-green-50 rounded-md">
-                <p className="font-medium break-words">Decisión general: {overallPercent.toFixed(1)}% - {getDecisionText(overallPercent)}</p>
-              </div>
+            <div className="p-4 bg-green-50 rounded-md">
+              <p className="font-medium break-words">Decisión general sugerida: {overallPercent.toFixed(1)}% - {getDecisionText(overallPercent)}</p>
             </div>
-          );
-        } else {
-          return <RubricViewer roleKey={role} scores={assignment.scores} readOnly />;
-        }
-      }
-    };
-
-    return (
-      <div className="bg-white p-6 rounded-lg shadow-md space-y-6 w-full">
-        <div className="flex justify-between items-start">
-          <div>
-            <h4 className="text-2xl font-bold text-gray-800 mb-2 break-words">{nombre}</h4>
-            <p className="text-gray-600 break-words">Rol: {role} | Estado: {assignment.Estado}</p>
           </div>
-          <button
-            onClick={() => setSelectedAssignment(null)}
-            className="text-blue-600 hover:underline flex items-center text-sm"
-          >
-            <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-            </svg>
-            Volver a lista
-          </button>
-        </div>
-        {!isAuth && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="lg:col-span-1 space-y-6">
-              <div className="space-y-2">
-                <a
-                  href={link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block bg-blue-600 text-white px-4 py-2 rounded-md shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm mb-2"
-                >
-                  Abrir en Google Drive
-                </a>
-                <iframe
-                  src={link ? link.replace('/edit', '/preview') : ''}
-                  className="w-full h-[350px] lg:h-[500px] rounded-xl shadow border border-gray-200"
-                  title="Vista previa del artículo"
-                  sandbox="allow-same-origin allow-scripts"
-                ></iframe>
-              </div>
-              {handleRenderRubric()}
+        );
+      } else {
+        return (
+          <RubricViewer
+            roleKey={role}
+            scores={rubricScores[link] || {}}
+            onChange={(key, val) => handleRubricChange(link, key, val)}
+          />
+        );
+      }
+    } else {
+      if (role === 'Editor') {
+        const rev1Total = getTotal(assignment.rev1Scores, criteria['Revisor 1']);
+        const rev2Total = getTotal(assignment.rev2Scores, criteria['Revisor 2']);
+        const revPercent = ((rev1Total + rev2Total) / 16) * 100;
+        const editorTotal = getTotal(assignment.scores, criteria['Editor']);
+        const overallTotal = rev1Total + rev2Total + editorTotal;
+        const overallPercent = (overallTotal / 26) * 100;
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h5 className="text-lg font-semibold text-gray-800">Rúbrica de Revisor 1</h5>
+              <button
+                onClick={() => toggleFeedback(link, 'rubric1')}
+                className="text-blue-600 hover:underline text-sm flex items-center"
+              >
+                {expandedFeedback[link]?.rubric1 ? 'Ocultar' : 'Mostrar'}
+                <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
             </div>
-            <div className="lg:col-span-1 space-y-6">
-              {role === 'Editor' && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-sm font-medium text-gray-700 break-words">Retroalimentación de Revisor 1</label>
-                    <button
-                      onClick={() => toggleFeedback(link, 'feedback1')}
-                      className="text-blue-600 hover:underline text-sm flex items-center"
-                    >
-                      {expandedFeedback[link]?.feedback1 ? 'Ocultar' : 'Mostrar'}
-                      <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.feedback1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                  </div>
-                  {expandedFeedback[link]?.feedback1 && (
-                    <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
-                      {decodeBody(assignment.feedback1)}
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between">
-                    <label className="block text-sm font-medium text-gray-700 break-words">Retroalimentación de Revisor 2</label>
-                    <button
-                      onClick={() => toggleFeedback(link, 'feedback2')}
-                      className="text-blue-600 hover:underline text-sm flex items-center"
-                    >
-                      {expandedFeedback[link]?.feedback2 ? 'Ocultar' : 'Mostrar'}
-                      <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.feedback2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                  </div>
-                  {expandedFeedback[link]?.feedback2 && (
-                    <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
-                      {decodeBody(assignment.feedback2)}
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between">
-                    <label className="block text-sm font-medium text-gray-700 break-words">Informe de Revisor 1</label>
-                    <button
-                      onClick={() => toggleFeedback(link, 'informe1')}
-                      className="text-blue-600 hover:underline text-sm flex items-center"
-                    >
-                      {expandedFeedback[link]?.informe1 ? 'Ocultar' : 'Mostrar'}
-                      <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.informe1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                  </div>
-                  {expandedFeedback[link]?.informe1 && (
-                    <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
-                      {decodeBody(assignment.informe1)}
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between">
-                    <label className="block text-sm font-medium text-gray-700 break-words">Informe de Revisor 2</label>
-                    <button
-                      onClick={() => toggleFeedback(link, 'informe2')}
-                      className="text-blue-600 hover:underline text-sm flex items-center"
-                    >
-                      {expandedFeedback[link]?.informe2 ? 'Ocultar' : 'Mostrar'}
-                      <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.informe2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                  </div>
-                  {expandedFeedback[link]?.informe2 && (
-                    <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
-                      {decodeBody(assignment.informe2)}
-                    </div>
-                  )}
+            {expandedFeedback[link]?.rubric1 && (
+              <RubricViewer roleKey="Revisor 1" scores={assignment.rev1Scores} readOnly />
+            )}
+            <div className="flex items-center justify-between">
+              <h5 className="text-lg font-semibold text-gray-800">Rúbrica de Revisor 2</h5>
+              <button
+                onClick={() => toggleFeedback(link, 'rubric2')}
+                className="text-blue-600 hover:underline text-sm flex items-center"
+              >
+                {expandedFeedback[link]?.rubric2 ? 'Ocultar' : 'Mostrar'}
+                <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
+            {expandedFeedback[link]?.rubric2 && (
+              <RubricViewer roleKey="Revisor 2" scores={assignment.rev2Scores} readOnly />
+            )}
+            <div className="p-4 bg-yellow-50 rounded-md">
+              <p className="font-medium break-words">Implicación de revisores: {revPercent.toFixed(1)}% - {getDecisionText(revPercent)}</p>
+            </div>
+            <RubricViewer roleKey="Editor" scores={assignment.scores} readOnly />
+            <div className="p-4 bg-green-50 rounded-md">
+              <p className="font-medium break-words">Decisión general: {overallPercent.toFixed(1)}% - {getDecisionText(overallPercent)}</p>
+            </div>
+          </div>
+        );
+      } else {
+        return <RubricViewer roleKey={role} scores={assignment.scores} readOnly />;
+      }
+    }
+  };
+
+  return (
+    <div className="bg-white p-6 rounded-lg shadow-md space-y-6 w-full">
+      <div className="flex justify-between items-start">
+        <div>
+          <h4 className="text-2xl font-bold text-gray-800 mb-2 break-words">{nombre}</h4>
+          <p className="text-gray-600 break-words">Rol: {role} | Estado: {assignment.Estado || 'Sin estado'}</p>
+        </div>
+        <button
+          onClick={() => setSelectedAssignment(null)}
+          className="text-blue-600 hover:underline flex items-center text-sm"
+        >
+          <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          Volver a lista
+        </button>
+      </div>
+
+      {isAuth ? (
+  <div className="space-y-6">
+    {assignment.feedbackEditor && ['Aceptado', 'Rechazado'].includes(assignment.Estado) ? (
+      <>
+        <div className="p-4 bg-green-50 rounded-md border-l-4 border-green-400">
+          <h5 className="text-lg font-semibold text-green-800 mb-2">Estado Final: {assignment.Estado}</h5>
+        </div>
+        <h5 className="text-lg font-semibold text-gray-800">Retroalimentación del Editor</h5>
+        <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto leading-relaxed">
+          {decodeBody(assignment.feedbackEditor)}
+        </div>
+      </>
+    ) : (
+      <div className="p-6 bg-yellow-50 rounded-md border-l-4 border-yellow-400 text-center">
+        <h5 className="text-xl font-semibold text-yellow-800 mb-2">Artículo en Revisión</h5>
+        <p className="text-yellow-700 text-lg">Su artículo "{assignment['Nombre Artículo']}" está actualmente bajo revisión por los evaluadores y el editor.</p>
+        <p className="text-yellow-600 mt-2">Recibirá una notificación con la decisión final y retroalimentación una vez completado el proceso.</p>
+      </div>
+    )}
+  </div>
+) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="lg:col-span-1 space-y-6">
+            <div className="space-y-2">
+              <a
+                href={link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block bg-blue-600 text-white px-4 py-2 rounded-md shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm mb-2"
+              >
+                Abrir en Google Drive
+              </a>
+              <iframe
+                src={link ? link.replace('/edit', '/preview') : ''}
+                className="w-full h-[350px] lg:h-[500px] rounded-xl shadow border border-gray-200"
+                title="Vista previa del artículo"
+                sandbox="allow-same-origin allow-scripts"
+              />
+            </div>
+            {handleRenderRubric()}
+          </div>
+          <div className="lg:col-span-1 space-y-6">
+            {role === 'Editor' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <label className="block text-sm font-medium text-gray-700 break-words">Retroalimentación de Revisor 1</label>
+                  <button
+                    onClick={() => toggleFeedback(link, 'feedback1')}
+                    className="text-blue-600 hover:underline text-sm flex items-center"
+                  >
+                    {expandedFeedback[link]?.feedback1 ? 'Ocultar' : 'Mostrar'}
+                    <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.feedback1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
                 </div>
-              )}
-              {isPending ? (
-                <div className="space-y-6">
+                {expandedFeedback[link]?.feedback1 && (
+                  <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
+                    {decodeBody(assignment.feedback1)}
+                  </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <label className="block text-sm font-medium text-gray-700 break-words">Retroalimentación de Revisor 2</label>
                   <button
-                    onClick={() => toggleTutorial(link)}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
+                    onClick={() => toggleFeedback(link, 'feedback2')}
+                    className="text-blue-600 hover:underline text-sm flex items-center"
                   >
-                    {tutorialVisible[link] ? 'Ocultar Tutorial' : 'Ver Tutorial'}
+                    {expandedFeedback[link]?.feedback2 ? 'Ocultar' : 'Mostrar'}
+                    <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.feedback2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                    </svg>
                   </button>
-                  {tutorialVisible[link] && <Tutorial role={role} />}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700 break-words">
-                      {role === 'Editor' ? 'Retroalimentación Final al Autor' : 'Retroalimentación al Autor'}
-                    </label>
-                    <ReactQuill
-                      ref={(el) => (feedbackQuillRefs.current[link] = el)}
-                      value={feedback[link] || ''}
-                      onChange={debouncedSetFeedback(link)}
-                      modules={modules}
-                      formats={formats}
-                      placeholder={role === 'Editor' ? 'Redacta una retroalimentación final sensible, sintetizando las opiniones de los revisores y la tuya.' : 'Escribe tu retroalimentación aquí...'}
-                      className="border rounded-md text-gray-800 bg-white h-48"
-                      id={`feedback-${link}`}
-                    />
+                </div>
+                {expandedFeedback[link]?.feedback2 && (
+                  <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
+                    {decodeBody(assignment.feedback2)}
                   </div>
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700 break-words">Informe al Editor</label>
-                    <ReactQuill
-                      ref={(el) => (reportQuillRefs.current[link] = el)}
-                      value={report[link] || ''}
-                      onChange={debouncedSetReport(link)}
-                      modules={modules}
-                      formats={formats}
-                      placeholder="Escribe tu informe aquí..."
-                      className="border rounded-md text-gray-800 bg-white h-48"
-                      id={`report-${link}`}
-                    />
+                )}
+                <div className="flex items-center justify-between">
+                  <label className="block text-sm font-medium text-gray-700 break-words">Informe de Revisor 1</label>
+                  <button
+                    onClick={() => toggleFeedback(link, 'informe1')}
+                    className="text-blue-600 hover:underline text-sm flex items-center"
+                  >
+                    {expandedFeedback[link]?.informe1 ? 'Ocultar' : 'Mostrar'}
+                    <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.informe1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                </div>
+                {expandedFeedback[link]?.informe1 && (
+                  <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
+                    {decodeBody(assignment.informe1)}
                   </div>
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700 break-words">Voto</label>
-                    <div className="flex space-x-4">
-                      <button
-                        onClick={() => handleVote(link, 'si')}
-                        className={`px-4 py-2 rounded-md ${vote[link] === 'si' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} transition-colors text-sm`}
-                      >
-                        Sí
-                      </button>
-                      <button
-                        onClick={() => handleVote(link, 'no')}
-                        className={`px-4 py-2 rounded-md ${vote[link] === 'no' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} transition-colors text-sm`}
-                      >
-                        No
-                      </button>
-                    </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <label className="block text-sm font-medium text-gray-700 break-words">Informe de Revisor 2</label>
+                  <button
+                    onClick={() => toggleFeedback(link, 'informe2')}
+                    className="text-blue-600 hover:underline text-sm flex items-center"
+                  >
+                    {expandedFeedback[link]?.informe2 ? 'Ocultar' : 'Mostrar'}
+                    <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.informe2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                </div>
+                {expandedFeedback[link]?.informe2 && (
+                  <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
+                    {decodeBody(assignment.informe2)}
                   </div>
-                  <div className="space-y-2">
+                )}
+              </div>
+            )}
+
+            {isPending ? (
+              <div className="space-y-6">
+                <button
+                  onClick={() => toggleTutorial(link)}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
+                >
+                  {tutorialVisible[link] ? 'Ocultar Tutorial' : 'Ver Tutorial'}
+                </button>
+                {tutorialVisible[link] && <Tutorial role={role} />}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 break-words">
+                    {role === 'Editor' ? 'Retroalimentación Final al Autor' : 'Retroalimentación al Autor'}
+                  </label>
+                  <ReactQuill
+                    ref={(el) => (feedbackQuillRefs.current[link] = el)}
+                    value={feedback[link] || ''}
+                    onChange={debouncedSetFeedback(link)}
+                    modules={modules}
+                    formats={formats}
+                    placeholder={role === 'Editor' ? 'Redacta una retroalimentación final sensible, sintetizando las opiniones de los revisores y la tuya.' : 'Escribe tu retroalimentación aquí...'}
+                    className="border rounded-md text-gray-800 bg-white h-48"
+                    id={`feedback-${link}`}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 break-words">Informe al Editor</label>
+                  <ReactQuill
+                    ref={(el) => (reportQuillRefs.current[link] = el)}
+                    value={report[link] || ''}
+                    onChange={debouncedSetReport(link)}
+                    modules={modules}
+                    formats={formats}
+                    placeholder="Escribe tu informe aquí..."
+                    className="border rounded-md text-gray-800 bg-white h-48"
+                    id={`report-${link}`}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 break-words">Voto</label>
+                  <div className="flex space-x-4">
                     <button
-                      onClick={() => handleSubmitRubric(link, role)}
-                      disabled={!isRubricComplete(link, role)}
-                      className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
+                      onClick={() => handleVote(link, 'si')}
+                      className={`px-4 py-2 rounded-md ${vote[link] === 'si' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} transition-colors text-sm`}
                     >
-                      Enviar Rúbrica
+                      Sí
                     </button>
-                    {rubricStatus[link] && (
-                      <p className={`text-sm mt-2 ${rubricStatus[link].includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
-                        {rubricStatus[link]}
-                      </p>
-                    )}
+                    <button
+                      onClick={() => handleVote(link, 'no')}
+                      className={`px-4 py-2 rounded-md ${vote[link] === 'no' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} transition-colors text-sm`}
+                    >
+                      No
+                    </button>
                   </div>
+                </div>
+                <div className="space-y-2">
                   <button
-                    onClick={() => handleSubmit(link, role, feedback[link], report[link], vote[link])}
-                    disabled={!vote[link] || !feedback[link] || !report[link]}
-                    className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
+                    onClick={() => handleSubmitRubric(link, role)}
+                    disabled={!isRubricComplete(link, role)}
+                    className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
                   >
-                    Enviar Revisión (Feedback, Informe, Voto)
+                    Enviar Rúbrica
                   </button>
-                  {submitStatus[link] && (
-                    <p className={`text-sm mt-2 ${submitStatus[link].includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
-                      {submitStatus[link]}
+                  {rubricStatus[link] && (
+                    <p className={`text-sm mt-2 ${rubricStatus[link].includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
+                      {rubricStatus[link]}
                     </p>
                   )}
                 </div>
-              ) : (
-                <div className="space-y-6">
-                  <button
-                    onClick={() => toggleTutorial(link)}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
-                  >
-                    {tutorialVisible[link] ? 'Ocultar Tutorial' : 'Ver Tutorial'}
-                  </button>
-                  {tutorialVisible[link] && <Tutorial role={role} />}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700 break-words">Retroalimentación Enviada</label>
-                    <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
-                      {decodeBody(feedback[link] || 'Sin retroalimentación.')}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700 break-words">Informe Enviado</label>
-                    <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
-                      {decodeBody(report[link] || 'Sin informe.')}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700 break-words">Voto Enviado</label>
-                    <p className="text-sm text-gray-600">{vote[link] ? vote[link].charAt(0).toUpperCase() + vote[link].slice(1) : 'No enviado'}</p>
-                  </div>
-                </div>
-              )}
-              {showImageModal[link] && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                  <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
-                    <h4 className="text-lg font-semibold mb-4">{isEditingImage[link] ? 'Editar Imagen' : 'Insertar Imagen'}</h4>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">URL de la Imagen</label>
-                        <input
-                          type="text"
-                          name="url"
-                          value={imageData[link]?.url || ''}
-                          onChange={(e) => handleImageDataChange(link, e)}
-                          className="mt-1 block w-full border rounded-md p-2 text-sm"
-                          placeholder="https://example.com/image.jpg"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Ancho (px o %)</label>
-                        <input
-                          type="text"
-                          name="width"
-                          value={imageData[link]?.width || ''}
-                          onChange={(e) => handleImageDataChange(link, e)}
-                          className="mt-1 block w-full border rounded-md p-2 text-sm"
-                          placeholder="auto o 300px"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Alto (px o %)</label>
-                        <input
-                          type="text"
-                          name="height"
-                          value={imageData[link]?.height || ''}
-                          onChange={(e) => handleImageDataChange(link, e)}
-                          className="mt-1 block w-full border rounded-md p-2 text-sm"
-                          placeholder="auto o 200px"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Alineación</label>
-                        <select
-                          name="align"
-                          value={imageData[link]?.align || 'left'}
-                          onChange={(e) => handleImageDataChange(link, e)}
-                          className="mt-1 block w-full border rounded-md p-2 text-sm"
-                        >
-                          <option value="left">Izquierda</option>
-                          <option value="center">Centro</option>
-                          <option value="right">Derecha</option>
-                          <option value="justify">Justificado</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div className="mt-6 flex justify-end space-x-2">
-                      <button
-                        onClick={() => setShowImageModal((prev) => ({ ...prev, [link]: false }))}
-                        className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 text-sm"
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        onClick={() => handleImageModalSubmit(link)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
-                      >
-                        {isEditingImage[link] ? 'Actualizar' : 'Insertar'}
-                      </button>
-                    </div>
+                <button
+                  onClick={() => handleSubmit(link, role, feedback[link], report[link], vote[link])}
+                  disabled={!vote[link] || !feedback[link] || !report[link]}
+                  className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
+                >
+                  Enviar Revisión (Feedback, Informe, Voto)
+                </button>
+                {submitStatus[link] && (
+                  <p className={`text-sm mt-2 ${submitStatus[link].includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
+                    {submitStatus[link]}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <button
+                  onClick={() => toggleTutorial(link)}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
+                >
+                  {tutorialVisible[link] ? 'Ocultar Tutorial' : 'Ver Tutorial'}
+                </button>
+                {tutorialVisible[link] && <Tutorial role={role} />}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 break-words">Retroalimentación Enviada</label>
+                  <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
+                    {decodeBody(feedback[link] || 'Sin retroalimentación.')}
                   </div>
                 </div>
-              )}
-            </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 break-words">Informe Enviado</label>
+                  <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
+                    {decodeBody(report[link] || 'Sin informe.')}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 break-words">Voto Enviado</label>
+                  <p className="text-sm text-gray-600">{vote[link] ? vote[link].charAt(0).toUpperCase() + vote[link].slice(1) : 'No enviado'}</p>
+                </div>
+              </div>
+            )}
+
+            {showImageModal[link] && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+                  <h4 className="text-lg font-semibold mb-4">{isEditingImage[link] ? 'Editar Imagen' : 'Insertar Imagen'}</h4>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">URL de la Imagen</label>
+                      <input
+                        type="text"
+                        name="url"
+                        value={imageData[link]?.url || ''}
+                        onChange={(e) => handleImageDataChange(link, e)}
+                        className="mt-1 block w-full border rounded-md p-2 text-sm"
+                        placeholder="https://example.com/image.jpg"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Ancho (px o %)</label>
+                      <input
+                        type="text"
+                        name="width"
+                        value={imageData[link]?.width || ''}
+                        onChange={(e) => handleImageDataChange(link, e)}
+                        className="mt-1 block w-full border rounded-md p-2 text-sm"
+                        placeholder="auto o 300px"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Alto (px o %)</label>
+                      <input
+                        type="text"
+                        name="height"
+                        value={imageData[link]?.height || ''}
+                        onChange={(e) => handleImageDataChange(link, e)}
+                        className="mt-1 block w-full border rounded-md p-2 text-sm"
+                        placeholder="auto o 200px"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Alineación</label>
+                      <select
+                        name="align"
+                        value={imageData[link]?.align || 'left'}
+                        onChange={(e) => handleImageDataChange(link, e)}
+                        className="mt-1 block w-full border rounded-md p-2 text-sm"
+                      >
+                        <option value="left">Izquierda</option>
+                        <option value="center">Centro</option>
+                        <option value="right">Derecha</option>
+                        <option value="justify">Justificado</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="mt-6 flex justify-end space-x-2">
+                    <button
+                      onClick={() => setShowImageModal((prev) => ({ ...prev, [link]: false }))}
+                      className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 text-sm"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={() => handleImageModalSubmit(link)}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                    >
+                      {isEditingImage[link] ? 'Actualizar' : 'Insertar'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-        )}
-        {isAuth && (
-          <div className="space-y-6">
-            <h5 className="text-lg font-semibold text-gray-800">Retroalimentación del Editor</h5>
-            <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
-              {decodeBody(assignment.feedbackEditor)}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
+        </div>
+      )}
+    </div>
+  );
+};
 
   // Director-specific functions for buttons
   const handleAddArticleClick = () => {
@@ -1328,8 +1376,8 @@ console.log('isDirector:', isDirector);
           </div>
         )}
         
-        {/* News Upload Section for non-authors, Director, or Chief Editor */}
-        {(!isAuthor || isDirector || isChief) && (
+     {/* News Upload Section only for Director General */}
+        {isDirector && (
           <div className="mb-6">
             <NewsUploadSection />
           </div>
@@ -1339,7 +1387,7 @@ console.log('isDirector:', isDirector);
         {isDirector && (
           <div className="mb-6 bg-white rounded-lg shadow-md p-4">
             <div className="flex justify-between items-center">
-              <h3 className="text-xl font-semibold text-gray-800">Panel del Director</h3>
+              <h3 className="text-xl font-semibold text-gray-800">Panel del Director General</h3>
               <button
                 onClick={() => setIsDirectorPanelExpanded(!isDirectorPanelExpanded)}
                 className="bg-gray-200 text-gray-800 px-3 py-1 rounded-md hover:bg-gray-300 text-sm flex items-center space-x-2"
@@ -1381,37 +1429,50 @@ console.log('isDirector:', isDirector);
             {isDirectorPanelExpanded && (
               <div className="mt-4 space-y-6">
                 <DirectorPanel user={user} />
-                <AssignSection user={user} />
                 <TaskSection user={user} />
               </div>
             )}
           </div>
         )}
+        {/* Chief Editor Panel */}
+        {isChief && (
+          <div className="mb-6 bg-white rounded-lg shadow-md p-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xl font-semibold text-gray-800">Panel del Editor en Jefe</h3>
+              <button
+                onClick={() => setIsChiefEditorPanelExpanded(!isChiefEditorPanelExpanded)}
+                className="bg-gray-200 text-gray-800 px-3 py-1 rounded-md hover:bg-gray-300 text-sm flex items-center space-x-2"
+              >
+                <span>{isChiefEditorPanelExpanded ? 'Minimizar' : 'Expandir'}</span>
+                <svg className={`w-4 h-4 transform ${isChiefEditorPanelExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
+            {isChiefEditorPanelExpanded && (
+              <div className="mt-4 space-y-6">
+                <AssignSection user={user} />
+              </div>
+            )}
+          </div>
+        )}
         
-        {/* Assignments and Tabs for all users with assignments, Chief Editor, or Director */}
-        {(pendingAssignments.length > 0 || completedAssignments.length > 0 || isChief || isDirector) && (
+        {/* Assignments and Tabs for all users with assignments */}
+        {(pendingAssignments.length > 0 || completedAssignments.length > 0) && (
           <div className="mb-6">
             <div className="flex space-x-4 border-b">
               <button
                 onClick={() => setActiveTab('assignments')}
                 className={`pb-2 px-4 text-sm font-medium ${activeTab === 'assignments' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}
               >
-                Asignaciones Pendientes ({pendingAssignments.length})
+                {isAuthor ? 'Artículos en Revisión' : 'Asignaciones Pendientes'} ({pendingAssignments.length})
               </button>
               <button
                 onClick={() => setActiveTab('completed')}
                 className={`pb-2 px-4 text-sm font-medium ${activeTab === 'completed' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}
               >
-                Asignaciones Completadas ({completedAssignments.length})
+                {isAuthor ? 'Artículos Archivados' : 'Asignaciones Completadas'} ({completedAssignments.length})
               </button>
-              {(isChief || isDirector) && (
-                <button
-                  onClick={() => setActiveTab('asignar')}
-                  className={`pb-2 px-4 text-sm font-medium ${activeTab === 'asignar' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}
-                >
-                  Asignar Artículos
-                </button>
-              )}
             </div>
           </div>
         )}
@@ -1427,25 +1488,6 @@ console.log('isDirector:', isDirector);
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {(activeTab === 'assignments' ? pendingAssignments : completedAssignments).map((assignment) => (
-                    <AssignmentCard
-                      key={assignment.id}
-                      assignment={assignment}
-                      onClick={() => setSelectedAssignment(assignment)}
-                    />
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-          {isAuthor && !isDirector && !isChief && (
-            <>
-              {loading ? (
-                <div className="text-center text-gray-600">Cargando asignaciones...</div>
-              ) : selectedAssignment ? (
-                renderFullAssignment(selectedAssignment)
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {assignments.map((assignment) => (
                     <AssignmentCard
                       key={assignment.id}
                       assignment={assignment}
