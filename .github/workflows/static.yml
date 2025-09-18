@@ -1,5 +1,5 @@
-# .github/workflows/deploy.yml (actualizado con env para el secret)
-name: Deploy to GitHub Pages
+# .github/workflows/deploy.yml
+name: Deploy and Manage Articles
 on:
   push:
     branches: [ main ]
@@ -8,9 +8,10 @@ on:
   repository_dispatch:
     types: [rebuild]
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -18,15 +19,14 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      # 1. Clona el repositorio
       - name: Checkout code
         uses: actions/checkout@v4
-      # 2. Configura Node.js
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      # 3. Instala dependencias con caché
+
       - name: Cache node modules
         uses: actions/cache@v4
         with:
@@ -34,29 +34,51 @@ jobs:
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
+
       - name: Install dependencies
         run: npm install
-      # 4. Construye el proyecto React (con env desde secrets)
+
+      # DEBUG: Verificar que los secrets llegan
+      - name: Debug secrets (solo en PR o debug)
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "ARTICULOS_SCRIPT length: ${#ARTICULOS_SCRIPT}"
+          echo "MY_GITHUB_TOKEN length: ${#MY_GITHUB_TOKEN}"
+        env:
+          ARTICULOS_SCRIPT: ${{ secrets.ARTICULOS_SCRIPT }}
+          MY_GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
+
       - name: Build project
-        run: npm run build
+        run: |
+          echo "Building with env vars..."
+          echo "REACT_APP_ARTICULOS_SCRIPT_URL=${{ secrets.ARTICULOS_SCRIPT }}" >> .env
+          echo "REACT_APP_GH_TOKEN=${{ secrets.MY_GITHUB_TOKEN }}" >> .env
+          cat .env
+          npm run build
         env:
           NODE_ENV: production
-          REACT_APP_ARTICULOS_SCRIPT_URL: ${{ secrets.ARTICULOS_SCRIPT }}  # Inyecta el secret aquí
-      # 5. Verifica los archivos generados
+          # Los secrets están disponibles aquí, pero para debug los echo
+
+      - name: Verify build output (debug)
+        run: |
+          echo "Checking if token is in bundle..."
+          grep -r "REACT_APP_GH_TOKEN" dist/ || echo "Token not visible in bundle (normal)"
+          ls -la dist/
+
       - name: List dist contents
         run: |
           ls -R dist
-          cat dist/robots.txt
-          cat dist/sitemap.xml
-      # 6. Configura GitHub Pages
+          cat dist/robots.txt || echo "No robots.txt"
+          cat dist/sitemap.xml || echo "No sitemap.xml"
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
-      # 7. Sube la carpeta dist como artefacto
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
-      # 8. Despliega a GitHub Pages
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
