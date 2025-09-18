@@ -23,12 +23,19 @@ const base64DecodeUnicode = (str) => {
 
 function generateSlug(name) {
   if (!name) return '';
-  return name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '');
+  // Convert to lowercase
+  name = name.toLowerCase();
+  // Normalize accents
+  name = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  // Replace spaces with hyphens
+  name = name.replace(/\s+/g, '-');
+  // Remove non-alphanumeric except hyphens
+  name = name.replace(/[^a-z0-9-]/g, '');
+  // Remove multiple hyphens
+  name = name.replace(/-+/g, '-');
+  // Trim hyphens
+  name = name.replace(/^-+|-+$/g, '');
+  return name;
 }
 
 export default function NewsSection({ className }) {
@@ -70,6 +77,7 @@ export default function NewsSection({ className }) {
                 titulo: String(item["Título"] ?? ""),
                 cuerpo: String(item["Contenido de la noticia"] ?? ""),
                 fecha: formatDate(String(item["Fecha"] ?? "")),
+                fechaIso: parseDateIso(String(item["Fecha"] ?? "")),
               }));
             setNews(validNews);
             setLoading(false);
@@ -103,6 +111,23 @@ export default function NewsSection({ className }) {
       })
       .catch((err) => alert("Error al enviar: " + err));
   };
+
+  function parseDateIso(raw) {
+    if (!raw) return '';
+    let parsedDate = new Date(raw);
+    if (isNaN(parsedDate.getTime())) {
+      const datePattern = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/;
+      const match = raw.match(datePattern);
+      if (match) {
+        const [, day, month, year] = match;
+        parsedDate = new Date(`${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`);
+      }
+    }
+    if (!isNaN(parsedDate.getTime())) {
+      return parsedDate.toISOString().split('T')[0];
+    }
+    return '';
+  }
 
   function formatDate(raw) {
     if (!raw) return "Sin fecha";
@@ -183,7 +208,7 @@ export default function NewsSection({ className }) {
   const loadMoreNews = () => setVisibleNews((prev) => prev + 6);
 
   const openNews = (item) => {
-    const slug = generateSlug(`${item.titulo} ${item.fecha}`);
+    const slug = generateSlug(`${item.titulo} ${item.fechaIso}`);
     window.location.href = `/news/${slug}.html`;
   };
 
