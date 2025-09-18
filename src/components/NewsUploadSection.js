@@ -4,12 +4,9 @@ import 'react-quill/dist/quill.snow.css';
 import ImageResize from 'quill-image-resize-module-react';
 import { debounce } from 'lodash';
 import { useTranslation } from 'react-i18next';
-
 // Registrar el módulo de resize
 Quill.register('modules/imageResize', ImageResize);
-
 const NEWS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyTbnLD0651YAUbanSZd-PNKnfYbCYeimDAZWkhRgEAoR4ewT9hjIw_F2HdQC6TcXK2Ug/exec';
-
 const base64EncodeUnicode = (str) => {
   const encoder = new TextEncoder();
   const bytes = encoder.encode(str);
@@ -17,7 +14,6 @@ const base64EncodeUnicode = (str) => {
   bytes.forEach(b => binary += String.fromCharCode(b));
   return btoa(binary);
 };
-
 const sanitizeInput = (input) => {
   if (!input) return '';
   return input.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
@@ -25,7 +21,6 @@ const sanitizeInput = (input) => {
               .replace(/\s+/g, ' ')
               .trim();
 };
-
 export default function NewsUploadSection() {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -33,11 +28,11 @@ export default function NewsUploadSection() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorCount, setErrorCount] = useState(0);
   const quillRef = useRef(null);
+  const editorRef = useRef(null);
   const [showImageModal, setShowImageModal] = useState(false);
   const [isEditingImage, setIsEditingImage] = useState(false);
   const [imageData, setImageData] = useState({ url: '', width: '', height: '', align: 'left' });
   const [editingRange, setEditingRange] = useState(null);
-
   // Debounce para el onChange
   const debouncedSetBody = useCallback(
     debounce((value) => {
@@ -45,26 +40,23 @@ export default function NewsUploadSection() {
     }, 300),
     []
   );
-
   // Configurar editor: corrector ortográfico y limpieza inicial
   useEffect(() => {
     if (quillRef.current) {
       const editor = quillRef.current.getEditor();
+      editorRef.current = editor;
       editor.root.setAttribute('spellcheck', 'true');
       editor.root.setAttribute('lang', 'es');
       editor.theme.tooltip.hide();
     }
   }, []);
-
   // Añadir botón de eliminar y editar personalizado con reintentos
   useEffect(() => {
     if (!quillRef.current) return;
-
     const editor = quillRef.current.getEditor();
     let attempts = 0;
     const maxAttempts = 5;
     const interval = 100;
-
     const addButtons = () => {
       const imageResize = editor.getModule('imageResize');
       if (imageResize && imageResize.toolbar && typeof imageResize.toolbar.appendChild === 'function') {
@@ -85,7 +77,6 @@ export default function NewsUploadSection() {
           </button>
         `;
         imageResize.toolbar.appendChild(buttonContainer);
-
         buttonContainer.querySelector('.ql-delete-image').onclick = () => {
           const range = editor.getSelection();
           if (range) {
@@ -123,7 +114,6 @@ export default function NewsUploadSection() {
             setMessage('No hay selección activa para eliminar');
           }
         };
-
         buttonContainer.querySelector('.ql-edit-image').onclick = () => {
           const range = editor.getSelection();
           if (range) {
@@ -152,10 +142,8 @@ export default function NewsUploadSection() {
         console.warn('No se pudo añadir los botones: imageResize.toolbar no está disponible');
       }
     };
-
     addButtons();
   }, []);
-
   const modules = useMemo(() => ({
     toolbar: [
       ['bold', 'italic', 'underline', 'strike', 'blockquote'],
@@ -257,7 +245,6 @@ export default function NewsUploadSection() {
       },
     },
   }), []);
-
   const formats = useMemo(() => [
     'bold', 'italic', 'underline', 'strike', 'blockquote',
     'list', 'bullet',
@@ -265,50 +252,102 @@ export default function NewsUploadSection() {
     'align',
     'size'
   ], []);
-
   const encodeBody = (html) => {
     try {
-      // Parse the HTML to ensure images have proper alignment styles for wrapping
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'text/html');
-      const images = doc.querySelectorAll('img');
-      images.forEach(img => {
-        const parent = img.parentElement;
-        const align = parent.style.textAlign || editor.getFormat(editor.getIndex(img))?.align || 'left';
-        let style = 'max-width:100%;height:auto;border-radius:4px;margin:8px 0;';
-        let parentStyle = '';
-        switch (align) {
-          case 'center':
-            style += 'display:block;margin-left:auto;margin-right:auto;';
-            break;
-          case 'right':
-            style += 'float:right;margin-left:8px;margin-right:0;';
-            parentStyle = 'overflow:hidden;';
-            break;
-          case 'justify':
-            style += 'width:100%;display:block;margin-left:0;margin-right:0;';
-            break;
-          case 'left':
-          default:
-            style += 'float:left;margin-right:8px;margin-left:0;';
-            parentStyle = 'overflow:hidden;';
-            break;
+      if (!html || html.trim() === '') return '';
+      
+      // Limpiar y procesar el HTML directamente sin DOMParser
+      let cleanedHtml = html;
+      
+      // Sanitizar primero
+      cleanedHtml = sanitizeInput(cleanedHtml);
+      
+      // Si hay imágenes, procesarlas
+      if (cleanedHtml.includes('<img')) {
+        // Obtener el HTML real del editor si está disponible
+        let currentHtml = cleanedHtml;
+        if (editorRef.current) {
+          try {
+            currentHtml = editorRef.current.root.innerHTML;
+          } catch (e) {
+            console.warn('No se pudo obtener HTML del editor:', e);
+          }
         }
-        // Preserve width and height if set
-        if (img.style.width) style += `width:${img.style.width};`;
-        if (img.style.height) style += `height:${img.style.height};`;
-        img.setAttribute('style', style);
-        if (parentStyle) parent.setAttribute('style', parentStyle);
-      });
-      // Serialize back to HTML and encode
-      const cleanedHtml = sanitizeInput(doc.body.innerHTML);
-      return base64EncodeUnicode(cleanedHtml);
+        
+        // Procesar imágenes para asegurar estilos correctos
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = currentHtml;
+        const images = tempDiv.querySelectorAll('img');
+        
+        images.forEach((img, index) => {
+          const parent = img.parentElement;
+          // Obtener alineación desde Quill si es posible
+          let align = 'left';
+          if (editorRef.current) {
+            try {
+              const imgIndex = editorRef.current.getIndex(img);
+              const formats = editorRef.current.getFormat(imgIndex);
+              align = formats.align || 'left';
+            } catch (e) {
+              console.warn(`No se pudo obtener formato para imagen ${index}:`, e);
+            }
+          }
+          
+          let style = 'max-width:100%;height:auto;border-radius:4px;margin:8px 0;display:block;';
+          
+          switch (align) {
+            case 'center':
+              style += 'margin-left:auto;margin-right:auto;';
+              break;
+            case 'right':
+              style += 'float:right;margin-left:8px;margin-right:0;';
+              if (parent) parent.style.overflow = 'hidden';
+              break;
+            case 'justify':
+              style += 'width:100%;margin-left:0;margin-right:0;';
+              break;
+            case 'left':
+            default:
+              style += 'float:left;margin-right:8px;margin-left:0;';
+              if (parent) parent.style.overflow = 'hidden';
+              break;
+          }
+          
+          // Preservar dimensiones si están establecidas
+          if (img.style.width) style += `width:${img.style.width};`;
+          if (img.style.height) style += `height:${img.style.height};`;
+          
+          img.setAttribute('style', style);
+          img.setAttribute('loading', 'lazy'); // Buena práctica
+          img.setAttribute('alt', 'Imagen de la noticia'); // Accesibilidad
+        });
+        
+        // Obtener el HTML procesado
+        cleanedHtml = tempDiv.innerHTML;
+      }
+      
+      // Codificar en base64
+      const encoder = new TextEncoder();
+      const bytes = encoder.encode(cleanedHtml);
+      let binary = '';
+      bytes.forEach(b => binary += String.fromCharCode(b));
+      return btoa(binary);
+      
     } catch (err) {
       console.error('Error encoding body:', err);
-      return '';
+      // Fallback: intentar codificar el HTML original sin procesar
+      try {
+        const encoder = new TextEncoder();
+        const bytes = encoder.encode(html);
+        let binary = '';
+        bytes.forEach(b => binary += String.fromCharCode(b));
+        return btoa(binary);
+      } catch (fallbackErr) {
+        console.error('Error en fallback encoding:', fallbackErr);
+        return base64EncodeUnicode(html); // Último recurso
+      }
     }
   };
-
   const validateInputs = () => {
     if (!title.trim()) {
       return 'El título es obligatorio.';
@@ -318,26 +357,45 @@ export default function NewsUploadSection() {
     }
     return null;
   };
-
   const handleSubmit = async () => {
     const validationError = validateInputs();
     if (validationError) {
       setMessage(validationError);
       return;
     }
+    
     setIsLoading(true);
     setMessage('');
+    
+    console.log('HTML original:', body); // Debug
+    
     const encodedBody = encodeBody(body);
+    console.log('Encoded body length:', encodedBody.length); // Debug
+    console.log('Encoded body preview:', encodedBody.substring(0, 100)); // Debug
+    
+    if (!encodedBody) {
+      setMessage('Error: No se pudo procesar el contenido');
+      setIsLoading(false);
+      return;
+    }
+    
     const data = {
       title: sanitizeInput(title.trim()),
       body: encodedBody,
     };
-    console.log('Sending data:', data);
+    
+    console.log('Datos finales a enviar:', {
+      title: data.title.substring(0, 50) + '...',
+      bodyLength: data.body.length,
+      hasImages: body.includes('<img')
+    });
+    
     const maxRetries = 3;
     let attempt = 0;
+    
     while (attempt < maxRetries) {
       try {
-        await fetch(NEWS_SCRIPT_URL, {
+        const response = await fetch(NEWS_SCRIPT_URL, {
           method: 'POST',
           mode: 'no-cors',
           headers: {
@@ -345,27 +403,33 @@ export default function NewsUploadSection() {
           },
           body: JSON.stringify(data),
         });
-        console.log(`Attempt ${attempt + 1}: Request sent (assuming success)`);
-        setMessage('Noticia enviada exitosamente');
+        
+        console.log(`Attempt ${attempt + 1}: Request sent successfully`);
+        setMessage('¡Noticia enviada exitosamente! 🎉');
         setTitle('');
         setBody('');
         setErrorCount(0);
         setIsLoading(false);
         return;
+        
       } catch (err) {
         attempt++;
         console.error(`Attempt ${attempt} failed:`, err);
+        
         if (attempt === maxRetries) {
-          setMessage(`Error al enviar la noticia tras ${maxRetries} intentos: ${err.message}`);
+          setMessage(`Error al enviar la noticia tras ${maxRetries} intentos. Verifica tu conexión.`);
           setErrorCount((prev) => prev + 1);
           setIsLoading(false);
           return;
         }
-        await new Promise((resolve) => setTimeout(resolve, 1000 * Math.pow(2, attempt)));
+        
+        // Esperar antes del siguiente intento (backoff exponencial)
+        await new Promise((resolve) => 
+          setTimeout(resolve, 1000 * Math.pow(2, attempt))
+        );
       }
     }
   };
-
   const handleImageModalSubmit = () => {
     const editor = quillRef.current.getEditor();
     let { url, width, height, align } = imageData;
@@ -405,79 +469,85 @@ export default function NewsUploadSection() {
     setImageData({ url: '', width: '', height: '', align: 'left' });
     setEditingRange(null);
   };
-
   const handleImageDataChange = (e) => {
     const { name, value } = e.target;
     setImageData((prev) => ({ ...prev, [name]: value }));
   };
-
+  // Opcional: Agregar un useEffect para limpiar el editor cuando se envía
+  useEffect(() => {
+    if (message.includes('exitosa') && quillRef.current) {
+      const editor = quillRef.current.getEditor();
+      if (editor) {
+        editor.setText(''); // Limpiar el editor
+      }
+    }
+  }, [message]);
   return (
     <div className="bg-white p-6 rounded-lg shadow-md space-y-4 max-w-2xl mx-auto">
-  <h4 className="text-lg font-semibold text-[#5a3e36]">Subir Nueva Noticia</h4>
-  <input
-    type="text"
-    value={title}
-    onChange={(e) => setTitle(e.target.value)}
-    className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#5a3e36] text-[#5a3e36] placeholder-gray-400"
-    placeholder="Título de la noticia"
-    disabled={isLoading}
-  />
-  <div className="flex flex-col space-y-4">
-    <div className="min-h-[16rem] border rounded-md overflow-auto">
-      <ReactQuill
-        ref={quillRef}
-        value={body || ''}
-        onChange={debouncedSetBody}
-        modules={modules}
-        formats={formats}
-        placeholder="Cuerpo de la noticia"
-        className="h-full text-[#5a3e36] bg-white"
-        readOnly={isLoading}
-      />
-    </div>
-    <div className="flex flex-col space-y-2">
-      <button
-        onClick={() => {
-          setIsEditingImage(false);
-          setImageData({ url: '', width: '', height: '', align: 'left' });
-          setShowImageModal(true);
-        }}
-        className="px-4 py-2 bg-[#5a3e36] text-white rounded-md hover:bg-[#7a5c4f]"
+      <h4 className="text-lg font-semibold text-[#5a3e36]">Subir Nueva Noticia</h4>
+      <input
+        type="text"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#5a3e36] text-[#5a3e36] placeholder-gray-400"
+        placeholder="Título de la noticia"
         disabled={isLoading}
-      >
-        Insertar Imagen Manualmente
-      </button>
-      <button
-        onClick={handleSubmit}
-        disabled={isLoading || errorCount >= 5}
-        className={`w-full px-4 py-2 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-[#5a3e36] transition-colors ${
-          isLoading || errorCount >= 5
-            ? 'bg-gray-400 cursor-not-allowed'
-            : 'bg-[#5a3e36] hover:bg-[#7a5c4f]'
-        }`}
-      >
-        {isLoading ? 'Enviando...' : 'Enviar Noticia'}
-      </button>
-    </div>
-  </div>
-  <p className="text-sm text-gray-500">
-    Nota: El corrector ortográfico del navegador está activo (en español). Revisa sugerencias en rojo.
-  </p>
-  {message && (
-    <p
-      className={`text-center text-sm ${
-        message.includes('Error') || message.includes('Advertencia') ? 'text-red-500' : 'text-green-500'
-      }`}
-    >
-      {message}
-    </p>
-  )}
-  {errorCount >= 5 && (
-    <p className="text-center text-sm text-red-500">
-      Demasiados intentos fallidos. Por favor, intenta de nuevo más tarde.
-    </p>
-  )}
-
+      />
+      <div className="flex flex-col space-y-4">
+        <div className="min-h-[16rem] border rounded-md overflow-auto">
+          <ReactQuill
+            ref={quillRef}
+            value={body || ''}
+            onChange={debouncedSetBody}
+            modules={modules}
+            formats={formats}
+            placeholder="Cuerpo de la noticia"
+            className="h-full text-[#5a3e36] bg-white"
+            readOnly={isLoading}
+          />
+        </div>
+        <div className="flex flex-col space-y-2">
+          <button
+            onClick={() => {
+              setIsEditingImage(false);
+              setImageData({ url: '', width: '', height: '', align: 'left' });
+              setShowImageModal(true);
+            }}
+            className="px-4 py-2 bg-[#5a3e36] text-white rounded-md hover:bg-[#7a5c4f]"
+            disabled={isLoading}
+          >
+            Insertar Imagen Manualmente
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={isLoading || errorCount >= 5}
+            className={`w-full px-4 py-2 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-[#5a3e36] transition-colors ${
+              isLoading || errorCount >= 5
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-[#5a3e36] hover:bg-[#7a5c4f]'
+            }`}
+          >
+            {isLoading ? 'Enviando...' : 'Enviar Noticia'}
+          </button>
+        </div>
+      </div>
+      <p className="text-sm text-gray-500">
+        Nota: El corrector ortográfico del navegador está activo (en español). Revisa sugerencias en rojo.
+      </p>
+      {message && (
+        <p
+          className={`text-center text-sm ${
+            message.includes('Error') || message.includes('Advertencia') ? 'text-red-500' : 'text-green-500'
+          }`}
+        >
+          {message}
+        </p>
+      )}
+      {errorCount >= 5 && (
+        <p className="text-center text-sm text-red-500">
+          Demasiados intentos fallidos. Por favor, intenta de nuevo más tarde.
+        </p>
+      )}
       {showImageModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
