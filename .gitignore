@@ -1,0 +1,65 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+yarn-error.log
+
+# NEVER COMMIT CHROMIUM
+**/.local-chromium/
+**/puppeteer/.local-chromium/
+**/minimalcss/node_modules/puppeteer/
+**/chrome-linux/
+**/linux-686378/
+**/chrome*
+
+# Build outputs
+dist/
+build/
+
+# Generated content (regenerado por scripts)
+dist/articles/
+dist/news/
+dist/team/
+dist/sections/
+dist/sitemap.xml
+dist/robots.txt
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS generated
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*.sublime-*
+
+# Runtime
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage
+coverage/
+.nyc_output
+
+# Temp
+tmp/
+temp/
