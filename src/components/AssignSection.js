@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Papa from 'papaparse';
 
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 const INCOMING_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJx5loBW2UoEAhkdkkjad7VQxtjBJKtZT8ZIBMd0NGdAZH7Z2hKNczn1OrTHZRrBzI5_mQRHzxYxHS/pub?gid=1161174444&single=true&output=csv';
 const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyJ9znuf_Pa8Hyh4BnsO1pTTduBsXC7kDD0pORWccMTBlckgt0I--NKG69aR_puTAZ5/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwReIbgZ-BlSFGftmRCimCPRHn1Few1dgMGdK7y7taC8nydi8-9pEzNTlRWqBXpbhMC/exec';
 
-const sanitizeInput = (input) => input ? input.trim().replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') : '';
+const sanitizeInput = (input) => input ? input.trim().toLowerCase().replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') : '';
 
 export default function AssignSection({ user, onClose }) {
   const [users, setUsers] = useState([]);
@@ -16,8 +16,8 @@ export default function AssignSection({ user, onClose }) {
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [editingIncoming, setEditingIncoming] = useState(null);
-  const [editingAssignment, setEditingAssignment] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [editingData, setEditingData] = useState(null);
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const [submitStatus, setSubmitStatus] = useState({});
 
@@ -43,12 +43,30 @@ export default function AssignSection({ user, onClose }) {
         setReviewers(revs);
         setSectionEditors(eds);
 
-        const parsedIncoming = Papa.parse(incomingText, { header: true, skipEmptyLines: true }).data.filter(i => i['Nombre (primer nombre y primer apellido)'] && i['Nombre (primer nombre y primer apellido)'].trim());
+        const parsedIncoming = Papa.parse(incomingText, { header: true, skipEmptyLines: true }).data.filter(i => 
+          i['Nombre (primer nombre y primer apellido)'] && 
+          i['Título de su artículo'] && 
+          i['Nombre (primer nombre y primer apellido)'].trim() && 
+          i['Título de su artículo'].trim()
+        );
         setIncoming(parsedIncoming);
 
-        const parsedAssignments = Papa.parse(assignmentsText, { header: true, skipEmptyLines: true }).data.filter(a => a['Nombre Artículo'] && a['Nombre Artículo'].trim());
-        const pendingAssignments = parsedAssignments.filter(a => !a.Estado || a.Estado.trim() !== 'Aceptado');
+        const parsedAssignments = Papa.parse(assignmentsText, { header: true, skipEmptyLines: true }).data.filter(a => 
+          a['Nombre Artículo'] && 
+          a['Nombre Artículo'].trim() && 
+          a.Autor && 
+          a.Autor.trim()
+        );
+        const isCompleted = (assign) => {
+          return !!(assign['Feedback 1'] && assign['Informe 1'] && assign['Feedback 2'] && assign['Informe 2'] && assign['Feedback 3'] && assign['Informe 3']);
+        };
+        const pendingAssignments = parsedAssignments.filter(a => !isCompleted(a));
         setAssignments(pendingAssignments);
+
+        console.log('Parsed incoming:', parsedIncoming);
+        console.log('Parsed assignments (pending only):', pendingAssignments);
+        console.log('Incoming keys:', parsedIncoming[0] ? Object.keys(parsedIncoming[0]) : []);
+        console.log('Assignments keys:', parsedAssignments[0] ? Object.keys(parsedAssignments[0]) : []);
       } catch (err) {
         console.error('Error fetching data:', err);
       } finally {
@@ -59,46 +77,115 @@ export default function AssignSection({ user, onClose }) {
     fetchData();
   }, []);
 
-  const pendingToAssign = incoming.filter(i => 
-    !assignments.some(a => (a.Autor || '').trim() === (i['Nombre (primer nombre y primer apellido)'] || '').trim())
-  );
-
   const isCompleted = (assign) => {
     return !!(assign['Feedback 1'] && assign['Informe 1'] && assign['Feedback 2'] && assign['Informe 2'] && assign['Feedback 3'] && assign['Informe 3']);
   };
 
+  const groupedIncoming = useMemo(() => {
+    const groupMap = {};
+    incoming.forEach(art => {
+      const authorSanitized = sanitizeInput(art['Nombre (primer nombre y primer apellido)'] || '');
+      const titleSanitized = sanitizeInput(art['Título de su artículo'] || '');
+      if (!groupMap[authorSanitized]) {
+        groupMap[authorSanitized] = [];
+      }
+      let matchingAssign = assignments.find(a => {
+        const aTitleSanitized = sanitizeInput(a['Nombre Artículo'] || '');
+        const aAuthorSanitized = sanitizeInput(a.Autor || '');
+        const exactMatch = aTitleSanitized === titleSanitized && aAuthorSanitized === authorSanitized;
+        const fuzzyTitleMatch = !exactMatch && (
+          aTitleSanitized.includes(titleSanitized) || 
+          titleSanitized.includes(aTitleSanitized)
+        );
+        return exactMatch || (fuzzyTitleMatch && aAuthorSanitized === authorSanitized);
+      });
+      groupMap[authorSanitized].push({ ...art, assignment: matchingAssign });
+    });
+    return Object.entries(groupMap).map(([sanitizedAuthor, articles]) => ({
+      authorName: articles[0]['Nombre (primer nombre y primer apellido)'],
+      authorEmail: articles[0]['Correo electrónico'],
+      authorInstitution: articles[0]['Establecimiento educacional'],
+      articles,
+    }));
+  }, [incoming, assignments]);
+
+  const totalPending = groupedIncoming.reduce((sum, group) => {
+    return sum + group.articles.filter(art => !(art.assignment && isCompleted(art.assignment))).length;
+  }, 0);
+
   const handleAssignOrUpdate = async (data, isUpdate = false) => {
-    const action = isUpdate ? 'update' : 'add';
-    const body = { action, ...data };
+    const action = isUpdate ? 'update' : 'assign';
+    const body = {
+      action,
+      title: data['Nombre Artículo'],
+      link: data['Link Artículo'],
+      rev1: data['Revisor 1'],
+      rev2: data['Revisor 2'],
+      editor: data.Editor,
+      autor: data.Autor,
+    };
+    const articleKey = data['Nombre Artículo'] || data.Autor;
     try {
       const response = await fetch(SCRIPT_URL, {
         method: 'POST',
-        mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      setSubmitStatus({ ...submitStatus, [data['Nombre Artículo'] || data.autor]: 'Éxito: ' + (isUpdate ? 'Actualizado' : 'Asignado') });
+      const result = await response.text();
+      if (result.startsWith('Error')) {
+        throw new Error(result);
+      }
+      setSubmitStatus({ ...submitStatus, [articleKey]: 'Éxito: ' + (isUpdate ? 'Actualizado' : 'Asignado') });
+      setEditingId(null);
+      setEditingData(null);
       setTimeout(() => window.location.reload(), 1000);
     } catch (err) {
-      setSubmitStatus({ ...submitStatus, [data['Nombre Artículo'] || data.autor]: 'Error al ' + (isUpdate ? 'actualizar' : 'asignar') });
-      console.error(err);
+      setSubmitStatus({ ...submitStatus, [articleKey]: 'Error al ' + (isUpdate ? 'actualizar' : 'asignar') + ': ' + err.message });
+      console.error('Error submitting:', err);
     }
   };
 
-  const handleContact = (email, name) => {
-    const subject = encodeURIComponent('Recordatorio profesional: Plazos de revisión en la revista');
-    const body = encodeURIComponent(
-      `Estimado/a ${name},\n\nEspero que este mensaje te encuentre bien. Te escribo en relación con la revisión del artículo asignado en nuestra revista. Notamos que el plazo se acerca y queríamos recordarte amablemente la importancia de tu contribución para mantener el flujo editorial.\n\nSi necesitas alguna extensión o apoyo, no dudes en responder. Apreciamos enormemente tu dedicación.\n\nSaludos cordiales,\n${user.name}\nEditor en Jefe`
-    );
-    window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+  const handleContact = async (email, name, title, role) => {
+    if (!email || !name || !title || !role) {
+      console.error('Missing email, name, title, or role:', { email, name, title, role });
+      setSubmitStatus({ ...submitStatus, [name || 'contact']: 'Error: Correo, nombre, título o rol no disponible' });
+      return;
+    }
+    const body = {
+      action: 'sendReminder',
+      email,
+      name,
+      title,
+      role,
+      senderName: user.name,
+    };
+    try {
+      const response = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const result = await response.text();
+      if (result.startsWith('Error')) {
+        throw new Error(result);
+      }
+      setSubmitStatus({ ...submitStatus, [name]: 'Éxito: Recordatorio enviado a ' + name });
+    } catch (err) {
+      setSubmitStatus({ ...submitStatus, [name]: 'Error al enviar recordatorio: ' + err.message });
+      console.error('Error sending reminder:', err);
+    }
+  };
+
+  const getUniqueId = (groupAuthor, artTitle) => {
+    return `${sanitizeInput(groupAuthor)}-${sanitizeInput(artTitle || 'unnamed')}`;
   };
 
   const tutorialSteps = [
     '1. Explora la lista de colaboradores haciendo clic en sus perfiles para ver descripciones, intereses y contactarlos si no cumplen plazos (usa el botón "Contactar" para un email profesional).',
-    '2. En "Artículos Pendientes de Asignar", ingresa el nombre del artículo, prepara y pega el link de Google Drive, selecciona Revisor 1, Revisor 2 (de la lista de revisores) y Editor de Sección, luego haz clic en "Asignar".',
-    '3. En "Asignaciones Actuales", haz clic en "Editar" para reasignar si un colaborador no responde (contacta primero de forma sensible). Los artículos completos (con feedbacks e informes) se ocultan automáticamente.',
-    '4. Usa los filtros por área si lo deseas (opcional). El panel es responsive para móvil y desktop.',
-    '5. Para archivar completados, el script en la hoja maneja la actualización de "Estado" a "Aceptado" vía no-cors en envíos.',
+    '2. En "Artículos por Autor", los artículos se agrupan por autor usando el "Título de su artículo". Se muestran solo los pendientes (sin todas las retroalimentaciones/informes).',
+    '3. Haz clic en "Asignar" para artículos sin asignación o "Editar" para actualizar. Completa los campos (título, link, revisores, editor) y confirma.',
+    '4. Usa los botones de contacto para enviar recordatorios institucionales por correo desde el servidor.',
+    '5. El panel es responsive. Los artículos con todas las retroalimentaciones se ocultan automáticamente, independientemente del "Estado".',
   ];
 
   if (loading) return <div className="text-center p-4 text-gray-600">Cargando gestión de asignaciones...</div>;
@@ -153,226 +240,219 @@ export default function AssignSection({ user, onClose }) {
               <strong>Intereses:</strong> {selectedUser['Áreas de interés']?.split(';').map(i => i.trim()).join(', ') || 'N/A'}
             </p>
             <button
-              onClick={() => handleContact(selectedUser.Correo, selectedUser.Nombre)}
+              onClick={() => handleContact(selectedUser.Correo, selectedUser.Nombre, 'General', (selectedUser['Rol en la Revista'] || '').includes('Revisor') ? 'Revisor' : 'Editor')}
               className="w-full bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 text-sm"
             >
               Contactar por Email (Recordatorio Sensible)
             </button>
+            {submitStatus[selectedUser.Nombre] && (
+              <span className={`text-sm mt-2 block ${submitStatus[selectedUser.Nombre].includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
+                {submitStatus[selectedUser.Nombre]}
+              </span>
+            )}
           </div>
         </div>
       )}
 
       <section>
-        <h4 className="text-lg font-semibold mb-4">Artículos Pendientes de Asignar ({pendingToAssign.length})</h4>
-        <div className="space-y-4">
-          {pendingToAssign.map((art, idx) => {
-            const tempData = editingIncoming === idx ? editingIncoming : {
-              nombre: '',
-              link: art['Inserta aquí tu artículo en formato Word. Debe tener de 2.000 a 10.000 palabras.'] || '',
-              r1: '',
-              r2: '',
-              editor: '',
-            };
-            return (
-              <div key={idx} className="bg-gray-50 p-4 rounded-lg border">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <h5 className="font-medium">{art['Nombre (primer nombre y primer apellido)']}</h5>
-                    <p className="text-sm text-gray-600">{art['Correo electrónico']}</p>
-                    <p className="text-sm text-gray-600">{art['Establecimiento educacional']}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm"><strong>Área:</strong> {art['Área del artículo (e.g.: economía)']}</p>
-                    <p className="text-sm"><strong>Resumen:</strong> {sanitizeInput(art['Abstract o resumen (150-300 palabras)']).substring(0, 150)}...</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <input
-                    placeholder="Nombre del Artículo"
-                    value={tempData.nombre}
-                    onChange={(e) => setEditingIncoming(idx === editingIncoming ? { ...tempData, nombre: e.target.value } : { nombre: e.target.value, ...tempData })}
-                    className="border p-2 rounded-md text-sm"
-                  />
-                  <input
-                    placeholder="Link de Google Drive (preparado por ti)"
-                    value={tempData.link}
-                    onChange={(e) => setEditingIncoming(idx === editingIncoming ? { ...tempData, link: e.target.value } : { link: e.target.value, ...tempData })}
-                    className="border p-2 rounded-md text-sm"
-                  />
-                  <select
-                    value={tempData.r1}
-                    onChange={(e) => setEditingIncoming(idx === editingIncoming ? { ...tempData, r1: e.target.value } : { r1: e.target.value, ...tempData })}
-                    className="border p-2 rounded-md text-sm"
-                  >
-                    <option value="">Seleccionar Revisor 1</option>
-                    {reviewers.map((r) => <option key={r.Nombre} value={r.Nombre}>{r.Nombre}</option>)}
-                  </select>
-                  <select
-                    value={tempData.r2}
-                    onChange={(e) => setEditingIncoming(idx === editingIncoming ? { ...tempData, r2: e.target.value } : { r2: e.target.value, ...tempData })}
-                    className="border p-2 rounded-md text-sm"
-                  >
-                    <option value="">Seleccionar Revisor 2</option>
-                    {reviewers.map((r) => <option key={r.Nombre} value={r.Nombre}>{r.Nombre}</option>)}
-                  </select>
-                  <select
-                    value={tempData.editor}
-                    onChange={(e) => setEditingIncoming(idx === editingIncoming ? { ...tempData, editor: e.target.value } : { editor: e.target.value, ...tempData })}
-                    className="border p-2 rounded-md text-sm"
-                  >
-                    <option value="">Seleccionar Editor</option>
-                    {sectionEditors.map((e) => <option key={e.Nombre} value={e.Nombre}>{e.Nombre}</option>)}
-                  </select>
-                  <div className="sm:col-span-2 flex space-x-2">
-                    <button
-                      onClick={() => handleAssignOrUpdate({
-                        'Nombre Artículo': tempData.nombre,
-                        'Link Artículo': tempData.link,
-                        'Revisor 1': tempData.r1,
-                        'Revisor 2': tempData.r2,
-                        Editor: tempData.editor,
-                        Autor: art['Nombre (primer nombre y primer apellido)'],
-                        Estado: '', 
-                      })}
-                      disabled={!tempData.nombre || !tempData.link || !tempData.r1 || !tempData.r2 || !tempData.editor}
-                      className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:bg-gray-400 text-sm"
-                    >
-                      Asignar
-                    </button>
-                    {submitStatus[art['Nombre (primer nombre y primer apellido)']] && (
-                      <span className={`text-sm ${submitStatus[art['Nombre (primer nombre y primer apellido)']].includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
-                        {submitStatus[art['Nombre (primer nombre y primer apellido)']]}
-                      </span>
-                    )}
-                  </div>
-                </div>
+        <h4 className="text-lg font-semibold mb-4">Artículos por Autor ({totalPending})</h4>
+        <div className="space-y-6">
+          {groupedIncoming.map((group) => (
+            <div key={group.authorName} className="bg-gray-50 p-4 rounded-lg border">
+              <div className="mb-4 p-3 bg-white rounded border">
+                <h5 className="font-medium text-lg">{group.authorName}</h5>
+                <p className="text-sm text-gray-600">Correo: {group.authorEmail}</p>
+                <p className="text-sm text-gray-600">Institución: {group.authorInstitution}</p>
               </div>
-            );
-          })}
-        </div>
-      </section>
+              <div className="space-y-4">
+                {group.articles
+                  .filter(art => !(art.assignment && isCompleted(art.assignment)))
+                  .map((art) => {
+                    const uniqueId = getUniqueId(group.authorName, art['Título de su artículo']);
+                    const isAssigned = !!art.assignment;
+                    const isEditingThis = editingId === uniqueId;
+                    const currentR1 = isAssigned ? art.assignment['Revisor 1'] || 'No asignado' : 'No asignado';
+                    const currentR2 = isAssigned ? art.assignment['Revisor 2'] || 'No asignado' : 'No asignado';
+                    const currentEditor = isAssigned ? art.assignment.Editor || 'No asignado' : 'No asignado';
+                    const statusBadge = isAssigned ? 'Asignado (en revisión)' : 'Pendiente de asignar';
+                    const badgeClass = isAssigned ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800';
 
-      <section>
-        <h4 className="text-lg font-semibold mb-4">Asignaciones Actuales ({assignments.length})</h4>
-        <div className="space-y-4 overflow-x-auto">
-          {assignments.map((assign, idx) => {
-            const tempData = editingAssignment === assign['Nombre Artículo'] ? editingAssignment : {
-              nombre: assign['Nombre Artículo'] || '',
-              link: assign['Link Artículo'] || '',
-              r1: assign['Revisor 1'] || '',
-              r2: assign['Revisor 2'] || '',
-              editor: assign['Editor'] || '',
-            };
-            return (
-              <div key={idx} className="bg-gray-50 p-4 rounded-lg border flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div className="flex-1">
-                  <h5 className="font-medium">{assign['Nombre Artículo'] || 'Sin nombre'}</h5>
-                  <p className="text-sm text-gray-600">Autor: {assign.Autor}</p>
-                  <p className="text-sm">Revisor 1: {assign['Revisor 1']}</p>
-                  <p className="text-sm">Revisor 2: {assign['Revisor 2']}</p>
-                  <p className="text-sm">Editor: {assign.Editor}</p>
-                  <span className={`inline-block px-2 py-1 text-xs rounded-full ${isCompleted(assign) ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                    {isCompleted(assign) ? 'Completado (oculto pronto)' : 'Pendiente'}
-                  </span>
-                </div>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => setEditingAssignment(assign['Nombre Artículo'])}
-                    className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
-                  >
-                    Editar
-                  </button>
-                  {assign['Revisor 1'] && (
-                    <button
-                      onClick={() => handleContact(reviewers.find(r => r.Nombre === assign['Revisor 1'])?.Correo, assign['Revisor 1'])}
-                      className="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700"
-                    >
-                      Contactar R1
-                    </button>
-                  )}
-                  {assign['Revisor 2'] && (
-                    <button
-                      onClick={() => handleContact(reviewers.find(r => r.Nombre === assign['Revisor 2'])?.Correo, assign['Revisor 2'])}
-                      className="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700"
-                    >
-                      Contactar R2
-                    </button>
-                  )}
-                  {assign.Editor && (
-                    <button
-                      onClick={() => handleContact(sectionEditors.find(e => e.Nombre === assign.Editor)?.Correo, assign.Editor)}
-                      className="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700"
-                    >
-                      Contactar Editor
-                    </button>
-                  )}
-                </div>
-                {editingAssignment === assign['Nombre Artículo'] && (
-                  <div className="mt-4 p-4 bg-white rounded border w-full">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                      <input
-                        placeholder="Nombre del Artículo"
-                        value={tempData.nombre}
-                        onChange={(e) => setEditingAssignment({ ...tempData, nombre: e.target.value })}
-                        className="border p-2 rounded-md text-sm"
-                      />
-                      <input
-                        placeholder="Link de Google Drive"
-                        value={tempData.link}
-                        onChange={(e) => setEditingAssignment({ ...tempData, link: e.target.value })}
-                        className="border p-2 rounded-md text-sm"
-                      />
-                      <select
-                        value={tempData.r1}
-                        onChange={(e) => setEditingAssignment({ ...tempData, r1: e.target.value })}
-                        className="border p-2 rounded-md text-sm"
-                      >
-                        <option value="">Revisor 1</option>
-                        {reviewers.map((r) => <option key={r.Nombre} value={r.Nombre}>{r.Nombre}</option>)}
-                      </select>
-                      <select
-                        value={tempData.r2}
-                        onChange={(e) => setEditingAssignment({ ...tempData, r2: e.target.value })}
-                        className="border p-2 rounded-md text-sm"
-                      >
-                        <option value="">Revisor 2</option>
-                        {reviewers.map((r) => <option key={r.Nombre} value={r.Nombre}>{r.Nombre}</option>)}
-                      </select>
-                      <select
-                        value={tempData.editor}
-                        onChange={(e) => setEditingAssignment({ ...tempData, editor: e.target.value })}
-                        className="border p-2 rounded-md text-sm"
-                      >
-                        <option value="">Editor</option>
-                        {sectionEditors.map((e) => <option key={e.Nombre} value={e.Nombre}>{e.Nombre}</option>)}
-                      </select>
-                    </div>
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => handleAssignOrUpdate({
-                          'Nombre Artículo': tempData.nombre,
-                          'Link Artículo': tempData.link,
-                          'Revisor 1': tempData.r1,
-                          'Revisor 2': tempData.r2,
-                          Editor: tempData.editor,
-                          Autor: assign.Autor,
-                        }, true)}
-                        className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 text-sm"
-                      >
-                        Actualizar
-                      </button>
-                      <button
-                        onClick={() => setEditingAssignment(null)}
-                        className="bg-gray-500 text-white py-2 px-4 rounded-md hover:bg-gray-600 text-sm"
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  </div>
-                )}
+                    const handleEditOrAssignClick = () => {
+                      const defData = {
+                        nombre: isAssigned ? art.assignment['Nombre Artículo'] || art['Título de su artículo'] || '' : art['Título de su artículo'] || '',
+                        link: isAssigned ? art.assignment['Link Artículo'] || art['Inserta aquí tu artículo en formato Word. Debe tener de 2.000 a 10.000 palabras.'] || '' : art['Inserta aquí tu artículo en formato Word. Debe tener de 2.000 a 10.000 palabras.'] || '',
+                        r1: isAssigned ? art.assignment['Revisor 1'] || '' : '',
+                        r2: isAssigned ? art.assignment['Revisor 2'] || '' : '',
+                        editor: isAssigned ? art.assignment.Editor || '' : '',
+                      };
+                      setEditingData({
+                        id: uniqueId,
+                        data: defData,
+                        isUpdate: isAssigned,
+                        author: group.authorName,
+                        area: art['Área del artículo (e.g.: economía)'],
+                      });
+                      setEditingId(uniqueId);
+                    };
+
+                    const handleCancel = () => {
+                      setEditingId(null);
+                      setEditingData(null);
+                    };
+
+                    const handleConfirm = () => {
+                      const { data, isUpdate, author, area } = editingData;
+                      handleAssignOrUpdate(
+                        {
+                          'Nombre Artículo': data.nombre,
+                          'Link Artículo': data.link,
+                          'Revisor 1': data.r1,
+                          'Revisor 2': data.r2,
+                          Editor: data.editor,
+                          Autor: author,
+                          'Área del artículo': area,
+                        },
+                        isUpdate
+                      );
+                    };
+
+                    const updateField = (field, value) => {
+                      setEditingData(prev => ({
+                        ...prev,
+                        data: { ...prev.data, [field]: value }
+                      }));
+                    };
+
+                    const articleKey = art['Título de su artículo'] || uniqueId;
+
+                    return (
+                      <div key={uniqueId} className="bg-white p-4 rounded-lg border mb-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                          <div>
+                            <h6 className="font-medium">{art['Título de su artículo'] || 'Sin título'}</h6>
+                            <p className="text-sm text-gray-600"><strong>Área:</strong> {art['Área del artículo (e.g.: economía)']}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm"><strong>Resumen:</strong> {sanitizeInput(art['Abstract o resumen (150-300 palabras)']).substring(0, 150)}...</p>
+                          </div>
+                        </div>
+                        <div className="mb-4 space-y-1 text-sm">
+                          <p><strong>Revisor 1:</strong> {currentR1}</p>
+                          <p><strong>Revisor 2:</strong> {currentR2}</p>
+                          <p><strong>Editor:</strong> {currentEditor}</p>
+                          <span className={`inline-block px-2 py-1 text-xs rounded-full ${badgeClass}`}>
+                            {statusBadge}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          <button
+                            onClick={handleEditOrAssignClick}
+                            className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+                          >
+                            {isAssigned ? 'Editar' : 'Asignar'}
+                          </button>
+                          {isAssigned && art.assignment['Revisor 1'] && (
+                            <button
+                              onClick={() => {
+                                const reviewer = reviewers.find(r => r.Nombre === art.assignment['Revisor 1']);
+                                handleContact(reviewer?.Correo, art.assignment['Revisor 1'], art['Título de su artículo'], 'Revisor 1');
+                              }}
+                              className="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700"
+                            >
+                              Contactar R1
+                            </button>
+                          )}
+                          {isAssigned && art.assignment['Revisor 2'] && (
+                            <button
+                              onClick={() => {
+                                const reviewer = reviewers.find(r => r.Nombre === art.assignment['Revisor 2']);
+                                handleContact(reviewer?.Correo, art.assignment['Revisor 2'], art['Título de su artículo'], 'Revisor 2');
+                              }}
+                              className="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700"
+                            >
+                              Contactar R2
+                            </button>
+                          )}
+                          {isAssigned && art.assignment.Editor && (
+                            <button
+                              onClick={() => {
+                                const editor = sectionEditors.find(e => e.Nombre === art.assignment.Editor);
+                                handleContact(editor?.Correo, art.assignment.Editor, art['Título de su artículo'], 'Editor');
+                              }}
+                              className="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700"
+                            >
+                              Contactar Editor
+                            </button>
+                          )}
+                        </div>
+                        {isEditingThis && (
+                          <div className="p-4 bg-gray-100 rounded border">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                              <input
+                                placeholder="Nombre del Artículo"
+                                value={editingData.data.nombre}
+                                onChange={(e) => updateField('nombre', e.target.value)}
+                                className="border p-2 rounded-md text-sm"
+                              />
+                              <input
+                                placeholder="Link de Google Drive"
+                                value={editingData.data.link}
+                                onChange={(e) => updateField('link', e.target.value)}
+                                className="border p-2 rounded-md text-sm"
+                              />
+                              <select
+                                value={editingData.data.r1}
+                                onChange={(e) => updateField('r1', e.target.value)}
+                                className="border p-2 rounded-md text-sm"
+                              >
+                                <option value="">Seleccionar Revisor 1</option>
+                                {reviewers.map((r) => <option key={r.Nombre} value={r.Nombre}>{r.Nombre}</option>)}
+                              </select>
+                              <select
+                                value={editingData.data.r2}
+                                onChange={(e) => updateField('r2', e.target.value)}
+                                className="border p-2 rounded-md text-sm"
+                              >
+                                <option value="">Seleccionar Revisor 2</option>
+                                {reviewers.map((r) => <option key={r.Nombre} value={r.Nombre}>{r.Nombre}</option>)}
+                              </select>
+                              <select
+                                value={editingData.data.editor}
+                                onChange={(e) => updateField('editor', e.target.value)}
+                                className="border p-2 rounded-md text-sm"
+                              >
+                                <option value="">Seleccionar Editor</option>
+                                {sectionEditors.map((e) => <option key={e.Nombre} value={e.Nombre}>{e.Nombre}</option>)}
+                              </select>
+                            </div>
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={handleConfirm}
+                                disabled={!editingData.data.nombre || !editingData.data.link || !editingData.data.r1 || !editingData.data.r2 || !editingData.data.editor}
+                                className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:bg-gray-400 text-sm"
+                              >
+                                {editingData.isUpdate ? 'Actualizar' : 'Asignar'}
+                              </button>
+                              <button
+                                onClick={handleCancel}
+                                className="bg-gray-500 text-white py-2 px-4 rounded-md hover:bg-gray-600 text-sm"
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                            {submitStatus[articleKey] && (
+                              <span className={`text-sm mt-2 block ${submitStatus[articleKey].includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
+                                {submitStatus[articleKey]}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       </section>
 
