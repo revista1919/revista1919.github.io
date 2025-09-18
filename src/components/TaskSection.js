@@ -9,7 +9,7 @@ Quill.register('modules/imageResize', ImageResize);
 
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 const TASKS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSCEOtMwYPu0_kn1hmQi0qT6FZq6HRF09WtuDSqOxBNgMor_FyRRtc6_YVKHQQhWJCy-mIa2zwP6uAU/pub?output=csv';
-const TASK_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzWEhEA78AJqSRG31_qdolghacGXRtQ8c-m2M5qqB-gorkF5lln570uaF5sASlf3jK6/exec';
+const TASK_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxMo7aV_vz_3mOCUWKpcqnWmassUdApD_KfAHROTdgd_MDDiaXikgVV0OZ5qVYmhZgd/exec';
 
 const AREAS = {
   RRSS: 'Redes Sociales',

@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 // Registrar el módulo de resize
 Quill.register('modules/imageResize', ImageResize);
 
-const NEWS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw0vKZ29s76YFPM3Rm57qkVL6P3ia9kTbXy0ob2VNl08dQvVT7fsMMFLfbUbd_0W87qVQ/exec';
+const NEWS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyTbnLD0651YAUbanSZd-PNKnfYbCYeimDAZWkhRgEAoR4ewT9hjIw_F2HdQC6TcXK2Ug/exec';
 
 const base64EncodeUnicode = (str) => {
   const encoder = new TextEncoder();
