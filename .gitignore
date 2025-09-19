@@ -33,6 +33,11 @@ yarn-debug.log*
 .env
 .env.local
 .env.*.local
+# ← AGREGADO: Firebase local config
+.firebase/
+.firebaserc
+firebase-debug.log
+firebase-debug.*.log
 
 # OS generated
 .DS_Store
