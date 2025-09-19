@@ -1,5 +1,5 @@
-# .github/workflows/deploy.yml
 name: Deploy and Manage Articles
+
 on:
   push:
     branches: [ main ]
@@ -7,6 +7,7 @@ on:
     branches: [ main ]
   repository_dispatch:
     types: [rebuild]
+
 permissions:
   contents: write
   pages: write
@@ -38,9 +39,7 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      # DEBUG: Verificar que los secrets llegan
-      - name: Debug secrets (solo en PR o debug)
-        if: github.event_name == 'pull_request'
+      - name: Debug secrets
         run: |
           echo "ARTICULOS_SCRIPT length: ${#ARTICULOS_SCRIPT}"
           echo "MY_GITHUB_TOKEN length: ${#MY_GITHUB_TOKEN}"
@@ -48,27 +47,27 @@ jobs:
           ARTICULOS_SCRIPT: ${{ secrets.ARTICULOS_SCRIPT }}
           MY_GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
 
-     - name: Build project
-  run: |
-    echo "Building with env vars..."
-    echo "REACT_APP_ARTICULOS_SCRIPT_URL=${{ secrets.ARTICULOS_SCRIPT }}" > .env
-    echo "REACT_APP_GH_TOKEN=${{ secrets.MY_GITHUB_TOKEN }}" >> .env
-    cat .env
-    npm run build
-  env:
-    NODE_ENV: production
-
-      - name: Verify build output (debug)
+      - name: Build project
         run: |
-          echo "Checking if token is in bundle..."
-          grep -r "REACT_APP_GH_TOKEN" dist/ || echo "Token not visible in bundle (normal)"
+          echo "Building with env vars..."
+          echo "REACT_APP_ARTICULOS_SCRIPT_URL=${{ secrets.ARTICULOS_SCRIPT }}" > .env
+          echo "REACT_APP_GH_TOKEN=${{ secrets.MY_GITHUB_TOKEN }}" >> .env
+          cat .env
+          npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Verify build output
+        run: |
+          echo "Listing dist directory contents:"
           ls -la dist/
-
-      - name: List dist contents
-        run: |
-          ls -R dist
-          cat dist/robots.txt || echo "No robots.txt"
-          cat dist/sitemap.xml || echo "No sitemap.xml"
+          echo "Checking robots.txt:"
+          cat dist/robots.txt || echo "No robots.txt found"
+          echo "Checking sitemap.xml:"
+          cat dist/sitemap.xml || echo "No sitemap.xml found"
+          echo "Checking for environment variables in bundle:"
+          grep -r "REACT_APP_ARTICULOS_SCRIPT_URL" dist/ || echo "REACT_APP_ARTICULOS_SCRIPT_URL not found in bundle"
+          grep -r "REACT_APP_GH_TOKEN" dist/ || echo "REACT_APP_GH_TOKEN not found in bundle (expected for security)"
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
