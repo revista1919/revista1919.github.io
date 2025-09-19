@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
+    "@react-oauth/google": "^0.12.2",
     "buffer": "^6.0.3",
     "date-fns": "^4.1.0",
     "firebase": "^12.3.0",

@@ -49,5 +49,5 @@ export {
   updateEmail,
   updatePassword
 };
-
+export { GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult } from 'firebase/auth';
 export default app;
