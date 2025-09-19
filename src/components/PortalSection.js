@@ -1400,21 +1400,33 @@ if (!user || !user.name || !user.role) {
       
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
-            {isAuthor && !isDirector && !isChief ? 'Mis Artículos' : 
-             isDirector ? 'Panel del Director General' : 
-             isChief ? 'Panel del Editor en Jefe' : 'Panel de Revisión'}
-          </h2>
-          <div className="flex items-center space-x-4">
-            <span className="text-gray-600">Bienvenido, {user?.name || 'Usuario'}</span>
-            <button
-              onClick={onLogout}
-              className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm"
-            >
-              Cerrar Sesión
-            </button>
-          </div>
-        </div>
+  <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
+    {isAuthor && !isDirector && !isChief ? 'Mis Artículos' :
+     isDirector ? 'Panel del Director General' :
+     isChief ? 'Panel del Editor en Jefe' : 'Panel de Revisión'}
+  </h2>
+  <div className="flex items-center space-x-4">
+    {user?.image ? (
+      <img
+        src={user.image}
+        alt={`${user?.name || 'Usuario'}'s profile`}
+        className="w-10 h-10 rounded-full object-cover border-2 border-gray-300"
+        onError={(e) => (e.target.style.display = 'none')} // Hide on error
+      />
+    ) : (
+      <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
+        <span className="text-gray-600 text-sm">{user?.name?.charAt(0) || 'U'}</span>
+      </div>
+    )}
+    <span className="text-gray-600">Bienvenido, {user?.name || 'Usuario'}</span>
+    <button
+      onClick={onLogout}
+      className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm"
+    >
+      Cerrar Sesión
+    </button>
+  </div>
+</div>
         
         {error && (
           <div className="bg-red-100 text-red-700 p-4 rounded-md mb-6">
