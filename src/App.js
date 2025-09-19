@@ -4,7 +4,7 @@ import { auth } from './firebase';
 import {
   onAuthStateChanged,
   setPersistence,
-  browserLocalPersistence, // <- cambiado aquí
+  browserLocalPersistence,
   signOut,
 } from 'firebase/auth';
 import Header from './components/Header';
@@ -31,13 +31,13 @@ function App() {
   const [areas, setAreas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [visibleArticles, setVisibleArticles] = useState(6);
-  const [activeTab, setActiveTab] = useState('articles');
+  const [activeTab, setActiveTab] = useState('articles'); // Inicializa la pestaña por defecto en 'articles'
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
 
   // Persistencia y estado de autenticación
   useEffect(() => {
-    setPersistence(auth, browserLocalPersistence) // <--- persistencia local
+    setPersistence(auth, browserLocalPersistence)
       .then(() => {
         const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
           if (firebaseUser) {
@@ -48,10 +48,11 @@ function App() {
               role: 'Usuario',
             };
             setUser(userData);
+            setActiveTab('login'); // Redirige al usuario al portal si está autenticado
             console.log('Usuario autenticado:', userData);
           } else {
             setUser(null);
-            setActiveTab('login');
+            // Ya no es necesario llamar a setActiveTab('login'); aquí.
             console.log('No hay usuario autenticado');
           }
           setAuthLoading(false);
