@@ -21,7 +21,7 @@ const toBase64 = (file) =>
 const uploadPDFToGitHub = async (base64Content, fileName, message, sha = null) => {
   if (!GH_TOKEN) throw new Error('GitHub token no disponible');
   
-  const path = `Articles/${fileName}`;
+  const path = `public/Articles/${fileName}`;
   const url = `${GH_API_BASE}/${path}`;
   const payload = {
     message,
@@ -50,7 +50,7 @@ const uploadPDFToGitHub = async (base64Content, fileName, message, sha = null) =
 const deletePDFFromGitHub = async (fileName, message) => {
   if (!GH_TOKEN) throw new Error('GitHub token no disponible');
   
-  const path = `Articles/${fileName}`;
+  const path = `public/Articles/${fileName}`;
   const url = `${GH_API_BASE}/${path}`;
   
   const getRes = await fetch(url, {
@@ -168,7 +168,7 @@ export default function DirectorPanel({ user }) {
         ...row,
         areas: (row['Área temática'] || '').split(';').map((a) => a.trim()).filter(Boolean),
         keywords: (row['Palabras clave'] || '').split(';').map((k) => k.trim()).filter(Boolean),
-        pdfUrl: row['URL_PDF'] || `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/Articles/Articulo${row['Número de artículo']}.pdf`,
+        pdfUrl: row['URL_PDF'] || `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/public/Articles/Articulo${row['Número de artículo']}.pdf`,
       }));
       
       setArticles(enrichedArticles);
@@ -327,7 +327,7 @@ console.log('🆕 Calculated articleNumber:', articleNumber, 'from nums:', nums)
         const message = `${action === 'add' ? 'Add' : 'Update'} PDF for article ${articleNumber}`;
         
         await uploadPDFToGitHub(base64, fileName, message);
-        pdfUrl = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/Articles/${fileName}`;
+        pdfUrl = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/public/Articles/${fileName}`;
         await updatePDFUrlInSheet(articleNumber, pdfUrl);
         
         console.log('✅ PDF uploaded:', pdfUrl);

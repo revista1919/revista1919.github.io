@@ -1,1 +1,20 @@
-[]
+[
+  {
+    "titulo": "Esta es una prueba",
+    "autores": "Pascal Cea",
+    "resumen": "Holaaa",
+    "englishAbstract": "Hellooo",
+    "pdf": "https://www.revistacienciasestudiantes.com/Articles/Articulo1.pdf",
+    "fecha": "2025-09-19",
+    "volumen": "1",
+    "numero": "1",
+    "primeraPagina": "1",
+    "ultimaPagina": "20",
+    "area": "Tierra; Fuego",
+    "numeroArticulo": "1",
+    "palabras_clave": [
+      "World",
+      "Fire"
+    ]
+  }
+]
