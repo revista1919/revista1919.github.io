@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 import { auth } from './firebase';
-import { onAuthStateChanged, setPersistence, browserSessionPersistence } from 'firebase/auth';
-
+import { onAuthStateChanged, setPersistence, browserSessionPersistence, signOut } from 'firebase/auth';
 import Header from './components/Header';
 import SearchAndFilters from './components/SearchAndFilters';
 import ArticleCard from './components/ArticleCard';
@@ -17,7 +16,6 @@ import Footer from './components/Footer';
 import LoginSection from './components/LoginSection';
 import PortalSection from './components/PortalSection';
 import NewsSection from './components/NewsSection';
-
 import './index.css';
 
 function App() {
@@ -41,18 +39,19 @@ function App() {
             const userData = {
               uid: firebaseUser.uid,
               email: firebaseUser.email,
-              name: firebaseUser.displayName || firebaseUser.email,
-              role: 'Usuario', // Ajusta según la lógica de roles desde tu fuente de datos
+              name: firebaseUser.displayName || firebaseUser.email, // Fallback to email if no displayName
+              role: 'Usuario', // Adjust role logic as needed
             };
             setUser(userData);
             console.log('Usuario autenticado:', userData);
           } else {
             setUser(null);
+            setActiveTab('login'); // Reset to login tab on logout
             console.log('No hay usuario autenticado');
           }
           setAuthLoading(false);
         });
-        return unsubscribe;
+        return () => unsubscribe();
       })
       .catch((error) => {
         console.error('Error al configurar persistencia:', error);
@@ -142,10 +141,15 @@ function App() {
   };
 
   // Handle logout
-  const handleLogout = () => {
-    setUser(null);
-    setActiveTab('login');
-    console.log('Logout ejecutado en App.jsx');
+  const handleLogout = async () => {
+    try {
+      await signOut(auth); // Sign out from Firebase
+      setUser(null); // Clear user state
+      setActiveTab('login'); // Switch to login tab
+      console.log('Logout ejecutado en App.jsx');
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+    }
   };
 
   // Define sections for tabs
@@ -257,7 +261,7 @@ function App() {
           {user ? (
             <PortalSection user={user} onLogout={handleLogout} />
           ) : (
-            <LoginSection onLogin={handleLogin} />
+            <LoginSection onLogin={handleLogin} onLogout={handleLogout} />
           )}
         </div>
       ),
