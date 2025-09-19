@@ -23,6 +23,8 @@ import PortalSection from './components/PortalSection';
 import NewsSection from './components/NewsSection';
 import './index.css';
 
+const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
+
 function App() {
   const [articles, setArticles] = useState([]);
   const [filteredArticles, setFilteredArticles] = useState([]);
@@ -31,28 +33,84 @@ function App() {
   const [areas, setAreas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [visibleArticles, setVisibleArticles] = useState(6);
-  const [activeTab, setActiveTab] = useState('articles'); // Inicializa la pestaña por defecto en 'articles'
+  const [activeTab, setActiveTab] = useState('articles');
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+
+  // Fetch user data from CSV
+  const fetchUserData = async (email) => {
+    try {
+      const response = await fetch(USERS_CSV, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`Error al cargar CSV: ${response.status}`);
+      const csvText = await response.text();
+      const { data } = Papa.parse(csvText, {
+        header: true,
+        skipEmptyLines: true,
+        delimiter: ',',
+        transform: (value) => value?.toString().trim(),
+      });
+      const csvUser = data.find(
+        (u) =>
+          u.Correo?.toLowerCase() === email.toLowerCase() ||
+          u['E-mail']?.toLowerCase() === email.toLowerCase()
+      );
+      return {
+        name: csvUser?.Nombre || email,
+        role: csvUser?.['Rol en la Revista'] || 'Usuario',
+        image: csvUser?.Imagen || '',
+      };
+    } catch (err) {
+      console.error('Error fetching user CSV:', err);
+      return { name: email, role: 'Usuario', image: '' };
+    }
+  };
 
   // Persistencia y estado de autenticación
   useEffect(() => {
     setPersistence(auth, browserLocalPersistence)
       .then(() => {
-        const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
           if (firebaseUser) {
-            const userData = {
-              uid: firebaseUser.uid,
-              email: firebaseUser.email,
-              name: firebaseUser.displayName || firebaseUser.email,
-              role: 'Usuario',
-            };
+            // Check local storage first
+            const storedUser = JSON.parse(localStorage.getItem('userData'));
+            let userData;
+            if (
+              storedUser &&
+              storedUser.uid === firebaseUser.uid &&
+              storedUser.email === firebaseUser.email
+            ) {
+              userData = storedUser;
+            } else {
+              // Fetch user data from CSV
+              const csvData = await fetchUserData(firebaseUser.email);
+              userData = {
+                uid: firebaseUser.uid,
+                email: firebaseUser.email,
+                name: csvData.name,
+                role: csvData.role,
+                image: csvData.image,
+              };
+              localStorage.setItem('userData', JSON.stringify(userData));
+            }
             setUser(userData);
-            setActiveTab('login'); // Redirige al usuario al portal si está autenticado
+            // Set active tab based on role
+            const roles = userData.role.split(';').map((r) => r.trim());
+            setActiveTab(
+              roles.includes('Director General') ||
+              roles.includes('Editor en Jefe') ||
+              roles.includes('Revisor 1') ||
+              roles.includes('Revisor 2') ||
+              roles.includes('Editor') ||
+              roles.includes('Encargado de Redes Sociales') ||
+              roles.includes('Responsable de Desarrollo Web')
+                ? 'login'
+                : 'login'
+            );
             console.log('Usuario autenticado:', userData);
           } else {
             setUser(null);
-            // Ya no es necesario llamar a setActiveTab('login'); aquí.
+            localStorage.removeItem('userData');
+            setActiveTab('articles');
             console.log('No hay usuario autenticado');
           }
           setAuthLoading(false);
@@ -141,9 +199,28 @@ function App() {
   const showLessArticles = () => setVisibleArticles(6);
 
   // Login manual
-  const handleLogin = (userData) => {
-    setUser(userData);
-    setActiveTab('login');
+  const handleLogin = async (userData) => {
+    const csvData = await fetchUserData(userData.email);
+    const updatedUserData = {
+      ...userData,
+      name: csvData.name,
+      image: csvData.image,
+    };
+    setUser(updatedUserData);
+    localStorage.setItem('userData', JSON.stringify(updatedUserData));
+    // Set active tab based on role
+    const roles = updatedUserData.role.split(';').map((r) => r.trim());
+    setActiveTab(
+      roles.includes('Director General') ||
+      roles.includes('Editor en Jefe') ||
+      roles.includes('Revisor 1') ||
+      roles.includes('Revisor 2') ||
+      roles.includes('Editor') ||
+      roles.includes('Encargado de Redes Sociales') ||
+      roles.includes('Responsable de Desarrollo Web')
+        ? 'login'
+        : 'login'
+    );
   };
 
   // Logout manual
@@ -151,7 +228,8 @@ function App() {
     try {
       await signOut(auth);
       setUser(null);
-      setActiveTab('login');
+      localStorage.removeItem('userData');
+      setActiveTab('articles');
       console.log('Logout ejecutado en App.jsx');
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
