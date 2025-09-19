@@ -271,19 +271,21 @@ export default function LoginSection({ onLogin }) {
   };
 
   // ← NUEVO: Handle logout
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      setMessage('Sesión cerrada correctamente');
-      setCurrentUser(null);
-      setEmail('');
-      setPassword('');
-      setIsLogin(true);
-    } catch (error) {
-      setMessage('Error al cerrar sesión');
-    }
-  };
-
+ const handleLogout = async () => {
+  try {
+    await signOut(auth);
+    setMessage('Sesión cerrada correctamente');
+    setCurrentUser(null);
+    setEmail('');
+    setPassword('');
+    setIsLogin(true);
+    // Notificar al componente padre que el usuario ha cerrado sesión
+    if (onLogout) onLogout();
+  } catch (error) {
+    console.error('Error al cerrar sesión:', error);
+    setMessage('Error al cerrar sesión');
+  }
+};
   // ← NUEVO: Handle submit
   const handleSubmit = () => {
     if (isLogin) {

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
+import { auth } from './firebase'; // Asegúrate de importar auth desde tu archivo firebase.js
+import { onAuthStateChanged, setPersistence, browserSessionPersistence } from 'firebase/auth';
 
 import Header from './components/Header';
 import SearchAndFilters from './components/SearchAndFilters';
@@ -28,6 +30,34 @@ function App() {
   const [visibleArticles, setVisibleArticles] = useState(6);
   const [activeTab, setActiveTab] = useState('articles');
   const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  // Configurar persistencia de sesión y observar estado de autenticación
+  useEffect(() => {
+    setPersistence(auth, browserSessionPersistence)
+      .then(() => {
+        const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+          if (firebaseUser) {
+            // Buscar datos adicionales del usuario (esto puede variar según tu lógica)
+            const userData = {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              name: firebaseUser.displayName || firebaseUser.email,
+              role: 'Usuario', // Ajusta según la lógica de roles desde el CSV
+            };
+            setUser(userData);
+          } else {
+            setUser(null);
+          }
+          setAuthLoading(false);
+        });
+        return unsubscribe;
+      })
+      .catch((error) => {
+        console.error('Error al configurar persistencia:', error);
+        setAuthLoading(false);
+      });
+  }, []);
 
   // Fetch articles from CSV
   useEffect(() => {
@@ -105,131 +135,20 @@ function App() {
   const showLessArticles = () => setVisibleArticles(6);
 
   // Handle login
-  const handleLogin = (user) => {
-    setUser(user);
+  const handleLogin = (userData) => {
+    setUser(userData);
     setActiveTab('login');
   };
 
-  const handleLogout = () => setUser(null);
+  // Handle logout
+  const handleLogout = () => {
+    setUser(null);
+    setActiveTab('login'); // Redirigir a la pestaña de login tras cerrar sesión
+  };
 
-  // Define sections for tabs
-  const sections = [
-    {
-      name: 'articles',
-      label: 'Artículos',
-      component: (
-        <div className="py-8 max-w-7xl mx-auto">
-          <SearchAndFilters
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            selectedArea={selectedArea}
-            setSelectedArea={setSelectedArea}
-            areas={areas}
-            onSearch={handleSearch}
-            clearFilters={clearFilters}
-          />
-
-          <div className="articles grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mt-6">
-            {loading ? (
-              <p className="text-center text-sm sm:text-base text-gray-600 col-span-full">
-                Cargando...
-              </p>
-            ) : filteredArticles.length === 0 ? (
-              <p className="text-center text-sm sm:text-base text-gray-600 col-span-full">
-                No se encontraron artículos
-              </p>
-            ) : (
-              filteredArticles.slice(0, visibleArticles).map((article) => (
-                <ArticleCard key={article['Título']} article={article} />
-              ))
-            )}
-          </div>
-
-          {!loading && filteredArticles.length > visibleArticles && (
-            <div className="text-center mt-6">
-              <button
-                className="bg-[#5a3e36] text-white px-4 py-2 rounded-md hover:bg-[#7a5c4f] focus:outline-none focus:ring-2 focus:ring-[#5a3e36] text-sm sm:text-base"
-                onClick={loadMoreArticles}
-              >
-                Cargar más
-              </button>
-            </div>
-          )}
-
-          {!loading && visibleArticles > 6 && (
-            <button
-              className="fixed bottom-4 right-4 bg-[#5a3e36] text-white px-4 py-2 rounded-md hover:bg-[#7a5c4f] focus:outline-none focus:ring-2 focus:ring-[#5a3e36] z-10 text-sm sm:text-base"
-              onClick={showLessArticles}
-            >
-              Mostrar menos
-            </button>
-          )}
-        </div>
-      ),
-    },
-    {
-      name: 'submit',
-      label: 'Enviar Artículo',
-      component: <SubmitSection className="py-8 max-w-7xl mx-auto" />,
-    },
-    {
-      name: 'team',
-      label: 'Nuestro Equipo',
-      component: <TeamSection setActiveTab={setActiveTab} className="py-8 max-w-7xl mx-auto" />,
-    },
-    {
-      name: 'admin',
-      label: 'Administración',
-      component: (
-        <div className="py-8 max-w-7xl mx-auto">
-          <AdminSection />
-        </div>
-      ),
-    },
-    {
-      name: 'about',
-      label: 'Acerca de',
-      component: <AboutSection className="py-8 max-w-7xl mx-auto" />,
-    },
-    {
-      name: 'guidelines',
-      label: 'Guías',
-      component: <GuidelinesSection className="py-8 max-w-7xl mx-auto" />,
-    },
-    {
-      name: 'faq',
-      label: 'Preguntas Frecuentes',
-      component: <FAQSection className="py-8 max-w-7xl mx-auto" />,
-    },
-    {
-      name: 'news',
-      label: 'Noticias',
-      component: <NewsSection className="py-8 max-w-7xl mx-auto" />,
-    },
-    {
-      name: 'login',
-      label: 'Login / Estado de Artículos',
-      component: (
-        <div className={`py-8 ${user ? 'w-full' : 'max-w-lg mx-auto'}`}>
-          {!user && (
-            <>
-              <h2 className="text-2xl font-semibold text-center text-[#5a3e36] mb-4">
-                Interfaz para Autores y Revisores
-              </h2>
-              <p className="text-center text-[#7a5c4f] mb-6">
-                Esta sección es solo para autores y revisores/autores con permisos especiales.
-              </p>
-            </>
-          )}
-          {user ? (
-            <PortalSection user={user} onLogout={handleLogout} />
-          ) : (
-            <LoginSection onLogin={handleLogin} />
-          )}
-        </div>
-      ),
-    },
-  ];
+  if (authLoading) {
+    return <div className="text-center text-gray-600">Cargando autenticación...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-[#f4ece7] flex flex-col">

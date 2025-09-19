@@ -220,7 +220,29 @@ export default function PortalSection({ user, onLogout }) {
   const feedbackQuillRefs = useRef({});
   const reportQuillRefs = useRef({});
 
-
+useEffect(() => {
+  if (!user) {
+    console.log('Usuario nulo, limpiando estados de PortalSection');
+    setAssignments([]);
+    setFeedback({});
+    setReport({});
+    setVote({});
+    setRubricScores({});
+    setTutorialVisible({});
+    setSubmitStatus({});
+    setRubricStatus({});
+    setError('');
+    setActiveTab('assignments');
+    setShowImageModal({});
+    setIsEditingImage({});
+    setImageData({});
+    setEditingRange({});
+    setSelectedAssignment(null);
+    setExpandedFeedback({});
+    setIsDirectorPanelExpanded(false);
+    setIsChiefEditorPanelExpanded(false);
+  }
+}, [user]);
   const fetchRubrics = async () => {
     try {
       const [csv1Text, csv2Text, csv3Text] = await Promise.all([
@@ -390,13 +412,15 @@ export default function PortalSection({ user, onLogout }) {
   };
 
   useEffect(() => {
-    if (!user || !user.name) {
-      setError('Usuario no definido');
-      setLoading(false);
-      return;
-    }
-    fetchAssignments();
-  }, [user?.name]);
+  if (!user || !user.name || !user.role) {
+    console.log('Error en fetchAssignments: usuario inválido', { user });
+    setError('Usuario no definido o información incompleta');
+    setLoading(false);
+    return;
+  }
+  console.log('Cargando asignaciones para usuario:', { uid: user.uid, name: user.name, role: user.role });
+  fetchAssignments();
+}, [user]);
 
   const isAuthor = assignments.length > 0 && assignments[0].role === 'Autor';
   const isChief = user?.role && user.role.split(';').map(r => r.trim()).includes('Editor en Jefe');
@@ -1351,9 +1375,29 @@ const AssignmentCard = ({ assignment, onClick }) => {
     // This function will be passed to DirectorPanel to trigger the rebuild action
     // We don't need to implement it here as it's handled in DirectorPanel
   };
-
+if (!user || !user.name || !user.role) {
+  console.log('Usuario inválido:', user);
+  return (
+    <div className="min-h-screen bg-gray-100 p-4 md:p-8 flex items-center justify-center">
+      <div className="text-center text-gray-600 bg-white p-6 rounded-lg shadow-md">
+        <p className="text-lg mb-4">Error: Información del usuario incompleta. Por favor, inicia sesión nuevamente.</p>
+        <button
+  onClick={() => {
+    console.log('Botón Cerrar Sesión clickeado en PortalSection');
+    onLogout();
+  }}
+  className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm"
+>
+  Cerrar Sesión
+</button>
+      </div>
+    </div>
+  );
+}
    return (
+    
     <div className="min-h-screen bg-gray-100 p-4 md:p-8">
+      
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
