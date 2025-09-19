@@ -2,31 +2,43 @@
 import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 
-const ARTICULOS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p32EM6-0VYy18AdREQwXdpeet1WHTA4H2-W2FX7HKe1HPSyApWadUw9sKHdVYQXL5tP6yDRs/pub?output=csv';
-// DEBUG: Para desarrollo local, usa tu URL real aquí
-const ARTICULOS_GAS_URL = (typeof process !== 'undefined' && process.env.REACT_APP_ARTICULOS_SCRIPT_URL) 
-  ? process.env.REACT_APP_ARTICULOS_SCRIPT_URL 
-  : 'https://script.google.com/macros/s/YOUR_DEPLOYED_ID/exec'; // ← REEMPLAZA ESTA URL
-
-// DEBUG: Verificar token
-const GH_TOKEN = (typeof process !== 'undefined' && process.env.REACT_APP_GH_TOKEN) 
-  ? process.env.REACT_APP_GH_TOKEN 
-  : (typeof window !== 'undefined' && window.localStorage.getItem('DEV_GH_TOKEN')) // Para dev local
-  || null;
-
-console.log('🔍 DirectorPanel Debug:', {
-  GAS_URL: ARTICULOS_GAS_URL,
-  HAS_TOKEN: !!GH_TOKEN,
-  TOKEN_LENGTH: GH_TOKEN ? GH_TOKEN.length : 0,
-  ENV_VARS: {
-    hasGasUrl: !!process.env.REACT_APP_ARTICULOS_SCRIPT_URL,
-    hasGhToken: !!process.env.REACT_APP_GH_TOKEN
+// ✅ Patrones para acceder a env vars en React (tanto build como runtime)
+const getEnvVar = (key, fallback = null) => {
+  // Vite (import.meta.env)
+  if (typeof import.meta !== 'undefined' && import.meta.env) {
+    return import.meta.env[key] || fallback;
   }
-});
+  // Create React App / Webpack (process.env en build time)
+  if (typeof process !== 'undefined' && process.env) {
+    return process.env[key] || fallback;
+  }
+  // Fallback para desarrollo local
+  return window?.envVars?.[key] || fallback;
+};
+
+// URLs con fallbacks
+const ARTICULOS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p32EM6-0VYy18AdREQwXdpeet1WHTA4H2-W2FX7HKe1HPSyApWadUw9sKHdVYQXL5tP6yDRs/pub?output=csv';
+const ARTICULOS_GAS_URL = getEnvVar('REACT_APP_ARTICULOS_SCRIPT_URL', 
+  'https://script.google.com/macros/s/YOUR_DEPLOYED_ID/exec' // ← REEMPLAZA CON TU URL REAL
+);
+const GH_TOKEN = getEnvVar('REACT_APP_GH_TOKEN', null);
 
 const GH_API_BASE = 'https://api.github.com/repos/revista1919/revista1919.github.io/contents';
 const REPO_OWNER = 'revista1919';
 const REPO_NAME = 'revista1919.github.io';
+
+// Debug logging (solo en desarrollo)
+if (process.env.NODE_ENV === 'development') {
+  console.log('🔍 DirectorPanel Debug:', {
+    GAS_URL: ARTICULOS_GAS_URL,
+    HAS_TOKEN: !!GH_TOKEN,
+    TOKEN_LENGTH: GH_TOKEN ? `${GH_TOKEN.length} chars` : 'No token',
+    ENV_VARS: {
+      hasGasUrl: !!getEnvVar('REACT_APP_ARTICULOS_SCRIPT_URL'),
+      hasGhToken: !!getEnvVar('REACT_APP_GH_TOKEN')
+    }
+  });
+}
 
 const toBase64 = (file) => new Promise((resolve, reject) => {
   const reader = new FileReader();
@@ -250,6 +262,11 @@ export default function DirectorPanel({ user }) {
   };
 
   const updatePDFUrlInSheet = async (numero, pdfUrl) => {
+    if (!ARTICULOS_GAS_URL || ARTICULOS_GAS_URL.includes('YOUR_DEPLOYED_ID')) {
+      console.warn('⚠️ Cannot update PDF URL - GAS not configured');
+      return;
+    }
+    
     console.log('📝 Updating PDF URL in sheet:', numero, pdfUrl);
     const data = {
       action: 'update_pdf_url',
@@ -272,7 +289,7 @@ export default function DirectorPanel({ user }) {
     }
 
     if (!ARTICULOS_GAS_URL || ARTICULOS_GAS_URL.includes('YOUR_DEPLOYED_ID')) {
-      setStatus('❌ Error: Configura la URL del Google Apps Script en REACT_APP_ARTICULOS_SCRIPT_URL');
+      setStatus('❌ Error: Configura la URL del Google Apps Script');
       return;
     }
 
@@ -303,7 +320,7 @@ export default function DirectorPanel({ user }) {
         ...(action === 'edit' && { numero: editingArticle['Número de artículo'] })
       };
 
-      console.log('📄 Submitting to GAS:', { url: ARTICULOS_GAS_URL, action, dataKeys: Object.keys(data) });
+      console.log('📄 Submitting to GAS:', { url: ARTICULOS_GAS_URL, action });
       const sheetResponse = await fetch(ARTICULOS_GAS_URL, {
         method: 'POST',
         mode: 'no-cors',
@@ -311,19 +328,14 @@ export default function DirectorPanel({ user }) {
         body: JSON.stringify(data)
       });
 
-      // For add, we need to refresh to get the actual article number
+      // For add, wait and refresh to get the actual number
       if (action === 'add') {
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for sync
-        await fetchArticles(); // Refresh to get new article number
-        // Find the newly added article (last one)
-        const newArticles = await fetchArticles(); // Wait, this returns undefined
-        // Better: refetch after delay
-        setTimeout(async () => {
-          await fetchArticles();
-          const latestArticle = articles[articles.length - 1];
-          articleNumber = latestArticle ? latestArticle['Número de artículo'] : articles.length;
-          console.log('🆕 New article number:', articleNumber);
-        }, 1500);
+        console.log('⏳ Waiting for sheet sync...');
+        await new Promise(resolve => setTimeout(resolve, 1500)); // Wait for GAS sync
+        await fetchArticles();
+        // Use optimistic numbering for PDF upload
+        articleNumber = articles.length + 1;
+        console.log('🆕 Using optimistic article number:', articleNumber);
       } else {
         articleNumber = editingArticle['Número de artículo'];
       }
@@ -337,22 +349,20 @@ export default function DirectorPanel({ user }) {
         
         console.log('📄 Converting PDF to base64...');
         const base64 = await toBase64(formData.pdfFile);
-        console.log('📄 Base64 ready, size:', base64.length);
+        console.log('📄 Base64 ready, size:', Math.round(base64.length / 1024), 'KB');
         
-        // Use optimistic numbering for add
-        const optimisticNumber = action === 'add' ? (articles.length + 1) : articleNumber;
-        const fileName = `Articulo${optimisticNumber}.pdf`;
-        const message = action === 'add' ? `Add PDF for article ${optimisticNumber}` : `Update PDF for article ${articleNumber}`;
+        const fileName = `Articulo${articleNumber}.pdf`;
+        const message = action === 'add' ? `Add PDF for article ${articleNumber}` : `Update PDF for article ${articleNumber}`;
         
         await uploadPDFToGitHub(base64, fileName, message);
         pdfUrl = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/Articles/${fileName}`;
-        await updatePDFUrlInSheet(optimisticNumber, pdfUrl);
+        await updatePDFUrlInSheet(articleNumber, pdfUrl);
         
         console.log('✅ PDF uploaded:', pdfUrl);
       }
 
       setStatus(`✅ Operación completada${pdfUrl ? ` - PDF: ${pdfUrl}` : ' - Sin PDF'}`);
-      setTimeout(() => fetchArticles(), 2000); // Final refresh
+      setTimeout(fetchArticles, 2000); // Final refresh
       closeModals();
     } catch (err) {
       console.error('💥 Error submitting:', err);
@@ -402,8 +412,8 @@ export default function DirectorPanel({ user }) {
         // Delete original PDF
         await deletePDFFromGitHub(`Articulo${numero}.pdf`, `Delete PDF for article ${numero}`);
         
-        // Renumber subsequent PDFs (this is complex, might need sheet refresh first)
-        console.log('🔄 Would renumber PDFs >', numero, '- implement after sheet refresh');
+        // For now, just log - full renumbering is complex
+        console.log('🔄 PDFs >', numero, 'would need renumbering - implement after sheet refresh');
       } else {
         console.warn('⚠️ No token - PDFs need manual cleanup');
       }
@@ -444,10 +454,13 @@ export default function DirectorPanel({ user }) {
   return (
     <div className="min-h-screen bg-gray-100 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Debug info - remove in production */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="bg-yellow-100 p-2 mb-4 text-xs rounded">
-            <strong>DEBUG:</strong> GAS: {ARTICULOS_GAS_URL.slice(0, 50)}... | Token: {GH_TOKEN ? '✓' : '✗'}
+        {/* Debug info - only in development */}
+        {process.env?.NODE_ENV === 'development' && (
+          <div className="bg-yellow-100 p-2 mb-4 text-xs rounded border border-yellow-300">
+            <strong>🔧 DEBUG MODE:</strong><br />
+            GAS URL: {ARTICULOS_GAS_URL?.slice(0, 40)}...{ARTICULOS_GAS_URL?.includes('YOUR_DEPLOYED_ID') ? ' [NEEDS CONFIG]' : ''}<br />
+            GitHub Token: {GH_TOKEN ? `✓ (${GH_TOKEN.length} chars)` : '✗ [MISSING]'}<br />
+            <small>Recarga la página después de configurar secrets en GitHub</small>
           </div>
         )}
         
@@ -461,6 +474,7 @@ export default function DirectorPanel({ user }) {
                 ? 'bg-green-600 text-white hover:bg-green-700' 
                 : 'bg-gray-400 text-gray-700 cursor-not-allowed'
             }`}
+            title={!GH_TOKEN ? 'Requiere token GitHub' : 'Actualizar sitio web'}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -490,6 +504,7 @@ export default function DirectorPanel({ user }) {
                   ? 'bg-blue-600 text-white hover:bg-blue-700' 
                   : 'bg-gray-400 text-gray-700 cursor-not-allowed'
               }`}
+              title={!ARTICULOS_GAS_URL || ARTICULOS_GAS_URL.includes('YOUR_DEPLOYED_ID') ? 'Requiere URL de Google Apps Script' : 'Agregar nuevo artículo'}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -499,72 +514,105 @@ export default function DirectorPanel({ user }) {
           </div>
 
           {articles.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">No hay artículos. ¡Agrega el primero!</div>
+            <div className="text-center py-8 text-gray-500">
+              <p>No hay artículos disponibles.</p>
+              {(!ARTICULOS_GAS_URL || ARTICULOS_GAS_URL.includes('YOUR_DEPLOYED_ID')) && (
+                <p className="text-red-600 mt-2">
+                  <strong>⚠️ Configura primero la URL del Google Apps Script</strong>
+                </p>
+              )}
+            </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-96 overflow-y-auto">
               {articles.map((article, index) => (
-                <div key={index} className="border border-gray-200 rounded-md overflow-hidden">
+                <div key={index} className="border border-gray-200 rounded-md overflow-hidden hover:shadow-md transition-shadow">
                   <div
                     className="p-4 cursor-pointer bg-gray-50 hover:bg-gray-100 flex justify-between items-center"
                     onClick={() => toggleExpand(article['Número de artículo'])}
                   >
-                    <div className="flex-1">
-                      <h4 className="font-medium text-gray-800 truncate">{article['Título']}</h4>
-                      <p className="text-sm text-gray-600 truncate">{article['Autor(es)']}</p>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-gray-800 truncate" title={article['Título']}>
+                        {article['Título']}
+                      </h4>
+                      <p className="text-sm text-gray-600 truncate" title={article['Autor(es)']}>
+                        {article['Autor(es)']}
+                      </p>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                    <div className="flex items-center space-x-2 ml-4">
+                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">
                         #{article['Número de artículo']}
                       </span>
-                      <svg className={`w-5 h-5 transform transition-transform ${expanded[article['Número de artículo']] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className={`w-5 h-5 transform transition-transform duration-200 ${expanded[article['Número de artículo']] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
                     </div>
                   </div>
                   
                   {expanded[article['Número de artículo']] && (
-                    <div className="p-4 bg-white space-y-2 text-sm">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        <p><strong>Resumen:</strong> {article['Resumen']?.substring(0, 100)}...</p>
-                        <p><strong>Abstract:</strong> {article['Abstract']?.substring(0, 100)}...</p>
-                        <p><strong>Fecha:</strong> {article['Fecha']}</p>
-                        <p><strong>Vol/Nº:</strong> {article['Volumen']}/{article['Número']}</p>
-                        <p><strong>Páginas:</strong> {article['Primera página']}-{article['Última página']}</p>
-                      </div>
-                      <div className="flex flex-wrap gap-2 text-xs">
-                        <span className="bg-gray-100 px-2 py-1 rounded">Áreas: {article.areas.join(', ')}</span>
-                        <span className="bg-gray-100 px-2 py-1 rounded">Palabras: {article.keywords.slice(0, 3).join(', ')}{article.keywords.length > 3 ? '...' : ''}</span>
+                    <div className="p-4 bg-white space-y-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p><strong>Resumen:</strong></p>
+                          <p className="text-gray-600 mt-1">{article['Resumen'] || 'No disponible'}</p>
+                        </div>
+                        <div>
+                          <p><strong>Abstract:</strong></p>
+                          <p className="text-gray-600 mt-1">{article['Abstract'] || 'No disponible'}</p>
+                        </div>
+                        <div>
+                          <p><strong>Fecha:</strong> {article['Fecha'] || 'N/A'}</p>
+                          <p><strong>Vol/Nº:</strong> {article['Volumen'] || 'N/A'}/{article['Número'] || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <p><strong>Páginas:</strong> {article['Primera página']}-{article['Última página']}</p>
+                        </div>
                       </div>
                       
-                      <div className="pt-2 border-t">
+                      <div className="flex flex-wrap gap-2 pt-2">
+                        <span className="bg-gray-100 text-xs px-2 py-1 rounded">
+                          Áreas: {article.areas.length > 0 ? article.areas.join(', ') : 'No definidas'}
+                        </span>
+                        <span className="bg-gray-100 text-xs px-2 py-1 rounded">
+                          Palabras clave: {article.keywords.length > 0 ? article.keywords.slice(0, 3).join(', ') + (article.keywords.length > 3 ? '...' : '') : 'Ninguna'}
+                        </span>
+                      </div>
+                      
+                      <div className="pt-3 border-t border-gray-100">
                         <a
                           href={article.pdfUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className={`inline-flex items-center px-3 py-1 rounded text-sm ${
+                          className={`inline-flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                             article.pdfUrl && !article.pdfUrl.includes('YOUR_DEPLOYED_ID')
                               ? 'bg-blue-600 text-white hover:bg-blue-700' 
                               : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                           }`}
+                          title={article.pdfUrl || 'PDF no disponible'}
                         >
-                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                           </svg>
                           {article.pdfUrl ? 'Descargar PDF' : 'PDF no disponible'}
                         </a>
                       </div>
                       
-                      <div className="flex space-x-2 mt-3">
+                      <div className="flex space-x-2 mt-4 pt-2">
                         <button
                           onClick={(e) => { e.stopPropagation(); handleEdit(article); }}
-                          className="bg-yellow-600 text-white px-3 py-1 rounded text-xs hover:bg-yellow-700"
+                          className="bg-yellow-600 text-white px-3 py-1 rounded text-xs hover:bg-yellow-700 transition-colors flex items-center"
                         >
+                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
                           Editar
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDelete(article['Número de artículo']); }}
-                          className="bg-red-600 text-white px-3 py-1 rounded text-xs hover:bg-red-700"
+                          className="bg-red-600 text-white px-3 py-1 rounded text-xs hover:bg-red-700 transition-colors flex items-center"
                         >
+                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
                           Eliminar
                         </button>
                       </div>
@@ -575,35 +623,162 @@ export default function DirectorPanel({ user }) {
             </div>
           )}
 
-          {/* Modals - same as before but with better validation */}
+          {/* Modal Agregar */}
           {showAddModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-screen overflow-y-auto">
+              <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl">
                 <h3 className="text-xl font-semibold mb-4">Agregar Artículo</h3>
                 <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); handleSubmit('add'); }}>
-                  <input name="titulo" placeholder="Título *" value={formData.titulo} onChange={handleInputChange} className="w-full border rounded-md p-2" required />
-                  <input name="autores" placeholder="Autor(es) * (separados por ;)" value={formData.autores} onChange={handleInputChange} className="w-full border rounded-md p-2" required />
-                  <textarea name="resumen" placeholder="Resumen" value={formData.resumen} onChange={handleInputChange} className="w-full border rounded-md p-2 h-20" />
-                  <textarea name="abstract" placeholder="Abstract" value={formData.abstract} onChange={handleInputChange} className="w-full border rounded-md p-2 h-20" />
-                  <input name="fecha" type="date" value={formData.fecha} onChange={handleInputChange} className="w-full border rounded-md p-2" />
-                  <input name="volumen" placeholder="Volumen" value={formData.volumen} onChange={handleInputChange} className="w-full border rounded-md p-2" />
-                  <input name="numero" placeholder="Número (manual, e.g., fascículo)" value={formData.numero} onChange={handleInputChange} className="w-full border rounded-md p-2" />
-                  <input name="primeraPagina" placeholder="Primera página" value={formData.primeraPagina} onChange={handleInputChange} className="w-full border rounded-md p-2" />
-                  <input name="ultimaPagina" placeholder="Última página" value={formData.ultimaPagina} onChange={handleInputChange} className="w-full border rounded-md p-2" />
-                  <input name="areaTematica" placeholder="Área temática (separados por ;)" value={formData.areaTematica} onChange={handleInputChange} className="w-full border rounded-md p-2" />
-                  <input name="palabrasClave" placeholder="Palabras clave (separados por ;)" value={formData.palabrasClave} onChange={handleInputChange} className="w-full border rounded-md p-2" />
-                  <input type="file" accept=".pdf" onChange={handleFileChange} className="w-full file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                  <div>
+                    <input 
+                      name="titulo" 
+                      placeholder="Título *" 
+                      value={formData.titulo} 
+                      onChange={handleInputChange} 
+                      className="w-full border border-gray-300 rounded-md p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                      required 
+                    />
+                  </div>
+                  <div>
+                    <input 
+                      name="autores" 
+                      placeholder="Autor(es) * (ej: Juan Pérez; María García)" 
+                      value={formData.autores} 
+                      onChange={handleInputChange} 
+                      className="w-full border border-gray-300 rounded-md p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                      required 
+                    />
+                  </div>
+                  <div>
+                    <textarea 
+                      name="resumen" 
+                      placeholder="Resumen" 
+                      value={formData.resumen} 
+                      onChange={handleInputChange} 
+                      className="w-full border border-gray-300 rounded-md p-3 h-20 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none" 
+                    />
+                  </div>
+                  <div>
+                    <textarea 
+                      name="abstract" 
+                      placeholder="Abstract (English)" 
+                      value={formData.abstract} 
+                      onChange={handleInputChange} 
+                      className="w-full border border-gray-300 rounded-md p-3 h-20 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none" 
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <input 
+                      name="fecha" 
+                      type="date" 
+                      value={formData.fecha} 
+                      onChange={handleInputChange} 
+                      className="w-full border border-gray-300 rounded-md p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                    />
+                    <input 
+                      name="volumen" 
+                      placeholder="Volumen" 
+                      value={formData.volumen} 
+                      onChange={handleInputChange} 
+                      className="w-full border border-gray-300 rounded-md p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <input 
+                      name="numero" 
+                      placeholder="Nº (fascículo)" 
+                      value={formData.numero} 
+                      onChange={handleInputChange} 
+                      className="w-full border border-gray-300 rounded-md p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                    />
+                    <input 
+                      name="primeraPagina" 
+                      placeholder="Pág. inicio" 
+                      value={formData.primeraPagina} 
+                      onChange={handleInputChange} 
+                      className="w-full border border-gray-300 rounded-md p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                    />
+                  </div>
+                  <input 
+                    name="ultimaPagina" 
+                    placeholder="Pág. final" 
+                    value={formData.ultimaPagina} 
+                    onChange={handleInputChange} 
+                    className="w-full border border-gray-300 rounded-md p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                  />
+                  <input 
+                    name="areaTematica" 
+                    placeholder="Área temática (separar con ;)" 
+                    value={formData.areaTematica} 
+                    onChange={handleInputChange} 
+                    className="w-full border border-gray-300 rounded-md p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                  />
+                  <input 
+                    name="palabrasClave" 
+                    placeholder="Palabras clave (separar con ;)" 
+                    value={formData.palabrasClave} 
+                    onChange={handleInputChange} 
+                    className="w-full border border-gray-300 rounded-md p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                  />
+                  <div>
+                    <input 
+                      type="file" 
+                      accept=".pdf" 
+                      onChange={handleFileChange} 
+                      className="w-full file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" 
+                    />
+                    <p className="text-xs text-gray-500 mt-1">El PDF se subirá automáticamente a GitHub</p>
+                  </div>
                   
-                  <div className="flex justify-end space-x-2 pt-4">
-                    <button type="button" onClick={closeModals} className="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400">Cancelar</button>
-                    <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Agregar Artículo</button>
+                  <div className="flex justify-end space-x-2 pt-4 border-t">
+                    <button 
+                      type="button" 
+                      onClick={closeModals} 
+                      className="px-6 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button 
+                      type="submit" 
+                      disabled={!formData.titulo || !formData.autores}
+                      className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Agregar Artículo
+                    </button>
                   </div>
                 </form>
               </div>
             </div>
           )}
 
-          {/* Edit modal similar - omitted for brevity */}
+          {/* Modal Editar - similar structure, omitted for brevity */}
+          {showEditModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl">
+                <h3 className="text-xl font-semibold mb-4">Editar Artículo</h3>
+                <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); handleSubmit('edit'); }}>
+                  {/* Same form fields as Add, but pre-populated with editingArticle data */}
+                  <input name="titulo" placeholder="Título *" value={formData.titulo} onChange={handleInputChange} className="w-full border border-gray-300 rounded-md p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
+                  <input name="autores" placeholder="Autor(es) * (separados por ;)" value={formData.autores} onChange={handleInputChange} className="w-full border border-gray-300 rounded-md p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
+                  <textarea name="resumen" placeholder="Resumen" value={formData.resumen} onChange={handleInputChange} className="w-full border border-gray-300 rounded-md p-3 h-20 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none" />
+                  <textarea name="abstract" placeholder="Abstract" value={formData.abstract} onChange={handleInputChange} className="w-full border border-gray-300 rounded-md p-3 h-20 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none" />
+                  <input name="fecha" type="date" value={formData.fecha} onChange={handleInputChange} className="w-full border border-gray-300 rounded-md p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                  <input name="volumen" placeholder="Volumen" value={formData.volumen} onChange={handleInputChange} className="w-full border border-gray-300 rounded-md p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                  <input name="numero" placeholder="Número (manual)" value={formData.numero} onChange={handleInputChange} className="w-full border border-gray-300 rounded-md p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                  <input name="primeraPagina" placeholder="Primera página" value={formData.primeraPagina} onChange={handleInputChange} className="w-full border border-gray-300 rounded-md p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                  <input name="ultimaPagina" placeholder="Última página" value={formData.ultimaPagina} onChange={handleInputChange} className="w-full border border-gray-300 rounded-md p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                  <input name="areaTematica" placeholder="Área temática (separados por ;)" value={formData.areaTematica} onChange={handleInputChange} className="w-full border border-gray-300 rounded-md p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                  <input name="palabrasClave" placeholder="Palabras clave (separados por ;)" value={formData.palabrasClave} onChange={handleInputChange} className="w-full border border-gray-300 rounded-md p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                  <input type="file" accept=".pdf" onChange={handleFileChange} className="w-full file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                  
+                  <div className="flex justify-end space-x-2 pt-4 border-t">
+                    <button type="button" onClick={closeModals} className="px-6 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors">Cancelar</button>
+                    <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">Actualizar Artículo</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
