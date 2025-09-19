@@ -2,23 +2,12 @@ import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 
 // ✅ Variables de entorno inyectadas por Webpack DefinePlugin
-// Estas variables son reemplazadas en tiempo de build por Webpack
 const ARTICULOS_GAS_URL = process.env.REACT_APP_ARTICULOS_SCRIPT_URL || '';
 const GH_TOKEN = process.env.REACT_APP_GH_TOKEN || '';
 const ARTICULOS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p32EM6-0VYy18AdREQwXdpeet1WHTA4H2-W2FX7HKe1HPSyApWadUw9sKHdVYQXL5tP6yDRs/pub?output=csv';
 const GH_API_BASE = 'https://api.github.com/repos/revista1919/revista1919.github.io/contents';
 const REPO_OWNER = 'revista1919';
 const REPO_NAME = 'revista1919.github.io';
-
-// ✅ Debug logging al cargar el componente
-useEffect(() => {
-  console.log('🔍 DirectorPanel Config:', {
-    GAS_URL: ARTICULOS_GAS_URL ? `${ARTICULOS_GAS_URL.slice(0, 40)}...` : 'MISSING',
-    HAS_TOKEN: !!GH_TOKEN,
-    TOKEN_LENGTH: GH_TOKEN ? `${GH_TOKEN.length} chars` : '0',
-    READY: !!(ARTICULOS_GAS_URL && GH_TOKEN),
-  });
-}, []);
 
 const toBase64 = (file) =>
   new Promise((resolve, reject) => {
@@ -64,7 +53,6 @@ const deletePDFFromGitHub = async (fileName, message) => {
   const path = `Articles/${fileName}`;
   const url = `${GH_API_BASE}/${path}`;
   
-  // Get file info first
   const getRes = await fetch(url, {
     headers: {
       Authorization: `token ${GH_TOKEN}`,
@@ -138,6 +126,16 @@ export default function DirectorPanel({ user }) {
   });
   const [status, setStatus] = useState('');
   const [uploading, setUploading] = useState(false);
+
+  // ✅ Debug logging movido dentro del componente
+  useEffect(() => {
+    console.log('🔍 DirectorPanel Config:', {
+      GAS_URL: ARTICULOS_GAS_URL ? `${ARTICULOS_GAS_URL.slice(0, 40)}...` : 'MISSING',
+      HAS_TOKEN: !!GH_TOKEN,
+      TOKEN_LENGTH: GH_TOKEN ? `${GH_TOKEN.length} chars` : '0',
+      READY: !!(ARTICULOS_GAS_URL && GH_TOKEN),
+    });
+  }, []);
 
   useEffect(() => {
     fetchArticles();
