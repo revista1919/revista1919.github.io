@@ -1,18 +1,9 @@
-// DirectorPanel.js
 import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 
-// ✅ Solo secrets reales, sin fallbacks
+// ✅ Simplificado: Solo process.env para Webpack
 const getEnvVar = (key, defaultValue = '') => {
-  // Vite
-  if (typeof import.meta !== 'undefined' && import.meta.env?.[key]) {
-    return import.meta.env[key];
-  }
-  // Create React App / Webpack
-  if (typeof process !== 'undefined' && process.env?.[key]) {
-    return process.env[key];
-  }
-  return defaultValue;
+  return process.env[key] || defaultValue;
 };
 
 // URLs SOLO desde secrets (sin placeholders)
@@ -24,12 +15,16 @@ const GH_API_BASE = 'https://api.github.com/repos/revista1919/revista1919.github
 const REPO_OWNER = 'revista1919';
 const REPO_NAME = 'revista1919.github.io';
 
-// Debug logging
+// ✅ Debug logging mejorado
 console.log('🔍 DirectorPanel Config:', {
   GAS_URL: ARTICULOS_GAS_URL ? `${ARTICULOS_GAS_URL.slice(0, 40)}...` : 'MISSING',
   HAS_TOKEN: !!GH_TOKEN,
   TOKEN_LENGTH: GH_TOKEN ? `${GH_TOKEN.length} chars` : 0,
-  READY: !!(ARTICULOS_GAS_URL && GH_TOKEN)
+  READY: !!(ARTICULOS_GAS_URL && GH_TOKEN),
+  RAW_ENV: {
+    PROCESS_ARTICULOS: process.env?.REACT_APP_ARTICULOS_SCRIPT_URL ? 'PRESENT' : 'MISSING',
+    PROCESS_TOKEN: process.env?.REACT_APP_GH_TOKEN ? 'PRESENT' : 'MISSING'
+  }
 });
 
 const toBase64 = (file) => new Promise((resolve, reject) => {
@@ -827,7 +822,6 @@ export default function DirectorPanel({ user }) {
                       Editar Artículo #{editingArticle['Número de artículo']}
                     </h3>
                     <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); handleSubmit('edit'); }}>
-                      {/* Same form fields as add modal, but pre-populated */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Título *</label>
                         <input
@@ -839,8 +833,121 @@ export default function DirectorPanel({ user }) {
                         />
                       </div>
                       
-                      {/* ... rest of the form fields same as add modal ... */}
-                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Autor(es) * (separar con ;)</label>
+                        <input
+                          name="autores"
+                          value={formData.autores}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          required
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+                          <input
+                            name="fecha"
+                            type="date"
+                            value={formData.fecha}
+                            onChange={handleInputChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Volumen</label>
+                          <input
+                            name="volumen"
+                            value={formData.volumen}
+                            onChange={handleInputChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Número (fascículo)</label>
+                          <input
+                            name="numero"
+                            value={formData.numero}
+                            onChange={handleInputChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Páginas</label>
+                          <input
+                            name="primeraPagina"
+                            placeholder="Inicio"
+                            value={formData.primeraPagina}
+                            onChange={handleInputChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          />
+                          <input
+                            name="ultimaPagina"
+                            placeholder="Final"
+                            value={formData.ultimaPagina}
+                            onChange={handleInputChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 mt-1"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Área temática (separar con ;)</label>
+                        <input
+                          name="areaTematica"
+                          value={formData.areaTematica}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Palabras clave (separar con ;)</label>
+                        <input
+                          name="palabrasClave"
+                          value={formData.palabrasClave}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Resumen</label>
+                        <textarea
+                          name="resumen"
+                          value={formData.resumen}
+                          onChange={handleInputChange}
+                          rows="3"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 resize-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Abstract (English)</label>
+                        <textarea
+                          name="abstract"
+                          value={formData.abstract}
+                          onChange={handleInputChange}
+                          rows="3"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 resize-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Archivo PDF</label>
+                        <input
+                          type="file"
+                          accept=".pdf"
+                          onChange={handleFileChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                        />
+                        <p className="mt-1 text-xs text-gray-500">El PDF se subirá automáticamente a GitHub</p>
+                      </div>
+
                       <div className="pt-4 border-t border-gray-200 flex justify-end space-x-3">
                         <button
                           type="button"

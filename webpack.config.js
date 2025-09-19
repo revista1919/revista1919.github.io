@@ -1,21 +1,27 @@
-// webpack.config.js actualizado
 const path = require('path');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const WebpackShellPluginNext = require('webpack-shell-plugin-next');
-const webpack = require('webpack'); // ✅ Agregar webpack para DefinePlugin
+const webpack = require('webpack');
+
+// ✅ Cargar .env explícitamente al inicio
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
 
+  // ✅ Debug: Imprimir variables de entorno durante el build
+  console.log('🔍 Webpack Environment Variables:', {
+    REACT_APP_ARTICULOS_SCRIPT_URL: process.env.REACT_APP_ARTICULOS_SCRIPT_URL ? `${process.env.REACT_APP_ARTICULOS_SCRIPT_URL.slice(0, 40)}...` : 'MISSING',
+    REACT_APP_GH_TOKEN: process.env.REACT_APP_GH_TOKEN ? 'PRESENT' : 'MISSING'
+  });
+
   // ✅ Inyectar variables de entorno en el bundle
   const defineEnvVars = {
     'process.env.NODE_ENV': JSON.stringify(isProduction ? 'production' : 'development'),
-    // ✅ CRÍTICO: Estas se reemplazan en build time con los valores reales
     'process.env.REACT_APP_ARTICULOS_SCRIPT_URL': JSON.stringify(process.env.REACT_APP_ARTICULOS_SCRIPT_URL || ''),
     'process.env.REACT_APP_GH_TOKEN': JSON.stringify(process.env.REACT_APP_GH_TOKEN || ''),
-    // Para debug (opcional)
     'process.env.DEBUG': JSON.stringify(!isProduction),
   };
 
@@ -121,11 +127,9 @@ module.exports = (env, argv) => {
             to: 'Articles',
             noErrorOnMissing: true,
           },
-          // Si hay imágenes locales para team, agregar aquí
-          // { from: 'public/team-images', to: 'team/images', noErrorOnMissing: true },
         ],
       }),
-      // ✅ DefinePlugin - INCRÍBLEMENTE IMPORTANTE
+      // ✅ DefinePlugin - CRÍTICO para inyectar las variables en el bundle
       new webpack.DefinePlugin(defineEnvVars),
       new WebpackShellPluginNext({
         onBuildEnd: {

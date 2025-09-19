@@ -48,16 +48,15 @@ jobs:
           ARTICULOS_SCRIPT: ${{ secrets.ARTICULOS_SCRIPT }}
           MY_GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
 
-      - name: Build project
-        run: |
-          echo "Building with env vars..."
-          echo "REACT_APP_ARTICULOS_SCRIPT_URL=${{ secrets.ARTICULOS_SCRIPT }}" >> .env
-          echo "REACT_APP_GH_TOKEN=${{ secrets.MY_GITHUB_TOKEN }}" >> .env
-          cat .env
-          npm run build
-        env:
-          NODE_ENV: production
-          # Los secrets están disponibles aquí, pero para debug los echo
+     - name: Build project
+  run: |
+    echo "Building with env vars..."
+    echo "REACT_APP_ARTICULOS_SCRIPT_URL=${{ secrets.ARTICULOS_SCRIPT }}" > .env
+    echo "REACT_APP_GH_TOKEN=${{ secrets.MY_GITHUB_TOKEN }}" >> .env
+    cat .env
+    npm run build
+  env:
+    NODE_ENV: production
 
       - name: Verify build output (debug)
         run: |
