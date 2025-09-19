@@ -5,13 +5,13 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 const WebpackShellPluginNext = require('webpack-shell-plugin-next');
 const webpack = require('webpack');
 
-// ✅ Cargar .env explícitamente al inicio
+// ✅ Cargar .env explícitamente
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
 
-  // ✅ Debug: Imprimir variables de entorno durante el build
+  // ✅ Debug: Imprimir variables de entorno
   console.log('🔍 Webpack Environment Variables:', {
     REACT_APP_ARTICULOS_SCRIPT_URL: process.env.REACT_APP_ARTICULOS_SCRIPT_URL ? `${process.env.REACT_APP_ARTICULOS_SCRIPT_URL.slice(0, 40)}...` : 'MISSING',
     REACT_APP_GH_TOKEN: process.env.REACT_APP_GH_TOKEN ? 'PRESENT' : 'MISSING'
@@ -48,11 +48,6 @@ module.exports = (env, argv) => {
       onListening: (devServer) => {
         const port = devServer.server.address().port;
         console.log(`Server corriendo en puerto ${port}`);
-      },
-      // ✅ Para desarrollo local, cargar variables desde .env.local si existe
-      env: isProduction ? {} : {
-        'REACT_APP_ARTICULOS_SCRIPT_URL': process.env.REACT_APP_ARTICULOS_SCRIPT_URL,
-        'REACT_APP_GH_TOKEN': process.env.REACT_APP_GH_TOKEN,
       },
     },
     module: {
@@ -129,7 +124,6 @@ module.exports = (env, argv) => {
           },
         ],
       }),
-      // ✅ DefinePlugin - CRÍTICO para inyectar las variables en el bundle
       new webpack.DefinePlugin(defineEnvVars),
       new WebpackShellPluginNext({
         onBuildEnd: {
@@ -138,7 +132,6 @@ module.exports = (env, argv) => {
           parallel: false,
         },
       }),
-      // ✅ Plugin para debug en desarrollo (opcional)
       ...(isProduction ? [] : [
         new webpack.BannerPlugin({
           banner: `/* Built on ${new Date().toISOString()} - Environment: ${process.env.NODE_ENV} */`,
@@ -153,10 +146,9 @@ module.exports = (env, argv) => {
     },
     performance: {
       hints: isProduction ? 'warning' : false,
-      maxAssetSize: 500000, // 500KB - para tus imágenes grandes
-      maxEntrypointSize: 1000000, // 1MB - para el bundle principal
+      maxAssetSize: 500000, // 500KB
+      maxEntrypointSize: 1000000, // 1MB
     },
-    // ✅ Optimizaciones adicionales
     optimization: {
       minimize: isProduction,
       splitChunks: {
@@ -171,11 +163,5 @@ module.exports = (env, argv) => {
         },
       },
     },
-    // ✅ Variables de entorno para el dev server
-    ...(isProduction ? {} : {
-      environment: {
-        arrowFunction: false, // Para compatibilidad con IE si es necesario
-      },
-    }),
   };
 };
