@@ -1,12 +1,23 @@
-// webpack.config.js actualizado (agregar copy para team si hay assets locales, pero como son links, no es necesario; solo asegurar dist/team)
+// webpack.config.js actualizado
 const path = require('path');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const WebpackShellPluginNext = require('webpack-shell-plugin-next');
+const webpack = require('webpack'); // ✅ Agregar webpack para DefinePlugin
 
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
+
+  // ✅ Inyectar variables de entorno en el bundle
+  const defineEnvVars = {
+    'process.env.NODE_ENV': JSON.stringify(isProduction ? 'production' : 'development'),
+    // ✅ CRÍTICO: Estas se reemplazan en build time con los valores reales
+    'process.env.REACT_APP_ARTICULOS_SCRIPT_URL': JSON.stringify(process.env.REACT_APP_ARTICULOS_SCRIPT_URL || ''),
+    'process.env.REACT_APP_GH_TOKEN': JSON.stringify(process.env.REACT_APP_GH_TOKEN || ''),
+    // Para debug (opcional)
+    'process.env.DEBUG': JSON.stringify(!isProduction),
+  };
 
   return {
     entry: './src/index.js',
@@ -31,6 +42,11 @@ module.exports = (env, argv) => {
       onListening: (devServer) => {
         const port = devServer.server.address().port;
         console.log(`Server corriendo en puerto ${port}`);
+      },
+      // ✅ Para desarrollo local, cargar variables desde .env.local si existe
+      env: isProduction ? {} : {
+        'REACT_APP_ARTICULOS_SCRIPT_URL': process.env.REACT_APP_ARTICULOS_SCRIPT_URL,
+        'REACT_APP_GH_TOKEN': process.env.REACT_APP_GH_TOKEN,
       },
     },
     module: {
@@ -85,6 +101,14 @@ module.exports = (env, argv) => {
           ? {
               removeComments: true,
               collapseWhitespace: true,
+              removeRedundantAttributes: true,
+              useShortDoctype: true,
+              removeEmptyAttributes: true,
+              removeStyleLinkTypeAttributes: true,
+              keepClosingSlash: true,
+              minifyJS: true,
+              minifyCSS: true,
+              minifyURLs: true,
             }
           : false,
       }),
@@ -97,9 +121,12 @@ module.exports = (env, argv) => {
             to: 'Articles',
             noErrorOnMissing: true,
           },
-          // Si hay imágenes locales para team, agregar aquí; e.g., { from: 'public/team-images', to: 'team/images' }
+          // Si hay imágenes locales para team, agregar aquí
+          // { from: 'public/team-images', to: 'team/images', noErrorOnMissing: true },
         ],
       }),
+      // ✅ DefinePlugin - INCRÍBLEMENTE IMPORTANTE
+      new webpack.DefinePlugin(defineEnvVars),
       new WebpackShellPluginNext({
         onBuildEnd: {
           scripts: ['node generate-all.js'],
@@ -107,13 +134,44 @@ module.exports = (env, argv) => {
           parallel: false,
         },
       }),
+      // ✅ Plugin para debug en desarrollo (opcional)
+      ...(isProduction ? [] : [
+        new webpack.BannerPlugin({
+          banner: `/* Built on ${new Date().toISOString()} - Environment: ${process.env.NODE_ENV} */`,
+          raw: true,
+          include: 'all',
+        })
+      ]),
     ],
     devtool: isProduction ? 'source-map' : 'eval-source-map',
     resolve: {
-      extensions: ['.js'],
+      extensions: ['.js', '.jsx'],
     },
     performance: {
       hints: isProduction ? 'warning' : false,
+      maxAssetSize: 500000, // 500KB - para tus imágenes grandes
+      maxEntrypointSize: 1000000, // 1MB - para el bundle principal
     },
+    // ✅ Optimizaciones adicionales
+    optimization: {
+      minimize: isProduction,
+      splitChunks: {
+        chunks: 'all',
+        cacheGroups: {
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'vendors',
+            chunks: 'all',
+            priority: 10,
+          },
+        },
+      },
+    },
+    // ✅ Variables de entorno para el dev server
+    ...(isProduction ? {} : {
+      environment: {
+        arrowFunction: false, // Para compatibilidad con IE si es necesario
+      },
+    }),
   };
 };
