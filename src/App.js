@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 import { auth } from './firebase';
-import { onAuthStateChanged, setPersistence, browserSessionPersistence, signOut } from 'firebase/auth';
+import {
+  onAuthStateChanged,
+  setPersistence,
+  browserLocalPersistence, // <- cambiado aquí
+  signOut,
+} from 'firebase/auth';
 import Header from './components/Header';
 import SearchAndFilters from './components/SearchAndFilters';
 import ArticleCard from './components/ArticleCard';
@@ -30,23 +35,23 @@ function App() {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
 
-  // Configurar persistencia de sesión y observar estado de autenticación
+  // Persistencia y estado de autenticación
   useEffect(() => {
-    setPersistence(auth, browserSessionPersistence)
+    setPersistence(auth, browserLocalPersistence) // <--- persistencia local
       .then(() => {
         const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
           if (firebaseUser) {
             const userData = {
               uid: firebaseUser.uid,
               email: firebaseUser.email,
-              name: firebaseUser.displayName || firebaseUser.email, // Fallback to email if no displayName
-              role: 'Usuario', // Adjust role logic as needed
+              name: firebaseUser.displayName || firebaseUser.email,
+              role: 'Usuario',
             };
             setUser(userData);
             console.log('Usuario autenticado:', userData);
           } else {
             setUser(null);
-            setActiveTab('login'); // Reset to login tab on logout
+            setActiveTab('login');
             console.log('No hay usuario autenticado');
           }
           setAuthLoading(false);
@@ -59,7 +64,7 @@ function App() {
       });
   }, []);
 
-  // Fetch articles from CSV
+  // Fetch de artículos CSV
   useEffect(() => {
     const fetchArticles = async () => {
       try {
@@ -101,7 +106,7 @@ function App() {
     fetchArticles();
   }, []);
 
-  // Handle search and filters
+  // Búsqueda y filtros
   const handleSearch = (term, area) => {
     setSearchTerm(term);
     setSelectedArea(area);
@@ -134,25 +139,25 @@ function App() {
   const loadMoreArticles = () => setVisibleArticles((prev) => prev + 6);
   const showLessArticles = () => setVisibleArticles(6);
 
-  // Handle login
+  // Login manual
   const handleLogin = (userData) => {
     setUser(userData);
     setActiveTab('login');
   };
 
-  // Handle logout
+  // Logout manual
   const handleLogout = async () => {
     try {
-      await signOut(auth); // Sign out from Firebase
-      setUser(null); // Clear user state
-      setActiveTab('login'); // Switch to login tab
+      await signOut(auth);
+      setUser(null);
+      setActiveTab('login');
       console.log('Logout ejecutado en App.jsx');
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
     }
   };
 
-  // Define sections for tabs
+  // Secciones de tabs
   const sections = [
     {
       name: 'articles',
@@ -275,7 +280,13 @@ function App() {
   return (
     <div className="min-h-screen bg-[#f4ece7] flex flex-col">
       <Header className="w-full m-0 p-0" />
-      <div className={`container ${user && activeTab === 'login' ? 'max-w-full px-0' : 'mx-auto px-4 sm:px-6 lg:px-8'} flex-grow`}>
+      <div
+        className={`container ${
+          user && activeTab === 'login'
+            ? 'max-w-full px-0'
+            : 'mx-auto px-4 sm:px-6 lg:px-8'
+        } flex-grow`}
+      >
         <Tabs sections={sections} activeTab={activeTab} setActiveTab={setActiveTab} />
       </div>
       <Footer className="w-full m-0 p-0 mt-auto" />
