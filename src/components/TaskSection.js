@@ -3,19 +3,17 @@ import Papa from 'papaparse';
 import ReactQuill, { Quill } from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import ImageResize from 'quill-image-resize-module-react';
+import ImageCompress from 'quill-image-compress';
 import { debounce } from 'lodash';
-
 Quill.register('modules/imageResize', ImageResize);
-
+Quill.register('modules/imageCompress', ImageCompress);
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 const TASKS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSCEOtMwYPu0_kn1hmQi0qT6FZq6HRF09WtuDSqOxBNgMor_FyRRtc6_YVKHQQhWJCy-mIa2zwP6uAU/pub?output=csv';
 const TASK_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxMo7aV_vz_3mOCUWKpcqnWmassUdApD_KfAHROTdgd_MDDiaXikgVV0OZ5qVYmhZgd/exec';
-
 const AREAS = {
   RRSS: 'Redes Sociales',
   WEB: 'Desarrollo Web',
 };
-
 const getAreaColumns = (area) => {
   if (area === AREAS.RRSS) {
     return { taskCol: 0, nameCol: 1, completedCol: 2, commentCol: 3 };
@@ -23,11 +21,9 @@ const getAreaColumns = (area) => {
     return { taskCol: 4, nameCol: 5, completedCol: 6, commentCol: 7 };
   }
 };
-
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000;
-const REQUEST_TIMEOUT = 10000;
-
+const REQUEST_TIMEOUT = 15000; // Increased timeout for larger payloads
 const base64EncodeUnicode = (str) => {
   const encoder = new TextEncoder();
   const bytes = encoder.encode(str);
@@ -35,17 +31,6 @@ const base64EncodeUnicode = (str) => {
   bytes.forEach(b => binary += String.fromCharCode(b));
   return btoa(binary);
 };
-
-const base64DecodeUnicode = (str) => {
-  const binary = atob(str);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  const decoder = new TextDecoder();
-  return decoder.decode(bytes);
-};
-
 const sanitizeInput = (input) => {
   if (!input) return '';
   return input.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
@@ -53,7 +38,6 @@ const sanitizeInput = (input) => {
               .replace(/\s+/g, ' ')
               .trim();
 };
-
 export default function TaskSection({ user }) {
   const [users, setUsers] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -66,11 +50,28 @@ export default function TaskSection({ user }) {
   const [commentContent, setCommentContent] = useState({});
   const [submitStatus, setSubmitStatus] = useState({});
   const [error, setError] = useState('');
-
   // Referencias para los editores de Quill
   const taskEditorRef = useRef(null);
   const commentEditorsRef = useRef({});
-
+  useEffect(() => {
+    // Añadir estilo para tooltip de Quill (para links e imágenes) y contenedores
+    const style = document.createElement('style');
+    style.innerHTML = `
+      .ql-tooltip {
+        z-index: 10000 !important;
+        position: fixed !important;
+        overflow: visible !important;
+      }
+      .ql-container {
+        overflow: visible !important;
+      }
+      .ql-editor {
+        min-height: 100%;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => style.remove();
+  }, []);
   const fetchWithRetry = async (url, options, retries = MAX_RETRIES) => {
     try {
       const controller = new AbortController();
@@ -95,7 +96,6 @@ export default function TaskSection({ user }) {
       throw new Error(`Fetch failed after ${MAX_RETRIES} retries: ${err.message}`);
     }
   };
-
   const fetchUsers = async () => {
     try {
       const response = await fetch(USERS_CSV, { cache: 'no-store' });
@@ -108,7 +108,6 @@ export default function TaskSection({ user }) {
       setError('Error al cargar usuarios: ' + err.message);
     }
   };
-
   const fetchTasks = async () => {
     try {
       const response = await fetch(TASKS_CSV, { cache: 'no-store' });
@@ -124,7 +123,6 @@ export default function TaskSection({ user }) {
       setError('Error al cargar tareas: ' + err.message);
     }
   };
-
   useEffect(() => {
     Promise.all([fetchUsers(), fetchTasks()])
       .then(() => setLoading(false))
@@ -133,14 +131,13 @@ export default function TaskSection({ user }) {
         setError('Error al inicializar: ' + err.message);
       });
   }, []);
-
   // Configurar referencias de editores
   useEffect(() => {
     if (taskEditorRef.current) {
       taskEditorRef.current.root.setAttribute('spellcheck', 'true');
       taskEditorRef.current.root.setAttribute('lang', 'es');
     }
-    
+   
     // Configurar editores de comentarios
     Object.values(commentEditorsRef.current).forEach(editor => {
       if (editor) {
@@ -149,17 +146,14 @@ export default function TaskSection({ user }) {
       }
     });
   }, []);
-
   const currentUser = users.find((u) => u.Nombre === user.name);
   const userRoles = currentUser ? currentUser['Rol en la Revista']?.split(';').map((r) => r.trim()) : [];
   const isDirector = userRoles.includes('Director General');
   const isRrss = userRoles.includes('Encargado de Redes Sociales');
   const isWeb = userRoles.includes('Responsable de Desarrollo Web');
   const isAssignee = (isRrss || isWeb) && !isDirector;
-
   const rrssUsers = users.filter((u) => u['Rol en la Revista']?.includes('Encargado de Redes Sociales'));
   const webUsers = users.filter((u) => u['Rol en la Revista']?.includes('Responsable de Desarrollo Web'));
-
   const filteredTasks = useMemo(() => {
     return tasks.reduce((areaTasks, task, index) => {
       if (!isDirector && !isAssignee) return areaTasks;
@@ -182,48 +176,175 @@ export default function TaskSection({ user }) {
       return areaTasks;
     }, []);
   }, [tasks, user.name, isDirector, isRrss, isWeb]);
-
   const pendingTasks = useMemo(() => filteredTasks.filter((t) => !t.completed), [filteredTasks]);
   const completedTasks = useMemo(() => filteredTasks.filter((t) => t.completed), [filteredTasks]);
-
   const encodeBody = (html) => {
-    const cleaned = sanitizeInput(html);
-    return base64EncodeUnicode(cleaned);
-  };
-
-  const decodeBody = (encoded) => {
-    if (!encoded) return <p className="text-gray-600 break-words">Sin contenido.</p>;
     try {
-      const html = base64DecodeUnicode(encoded);
-      return <div className="prose prose-sm max-w-none break-words leading-relaxed" dangerouslySetInnerHTML={{ __html: html }} />;
+      if (!html || html.trim() === '') return '';
+     
+      // Limpiar y procesar el HTML directamente
+      let cleanedHtml = html;
+     
+      // Sanitizar primero
+      cleanedHtml = sanitizeInput(cleanedHtml);
+     
+      // Si hay imágenes, procesarlas
+      if (cleanedHtml.includes('<img')) {
+        // Obtener el HTML real del editor si está disponible
+        let currentHtml = cleanedHtml;
+       
+        // Para el editor de tareas
+        if (taskEditorRef.current) {
+          try {
+            currentHtml = taskEditorRef.current.root.innerHTML;
+          } catch (e) {
+            console.warn('No se pudo obtener HTML del editor de tareas:', e);
+          }
+        }
+       
+        // Para editores de comentarios
+        Object.keys(commentEditorsRef.current).forEach(key => {
+          const editor = commentEditorsRef.current[key];
+          if (editor && html === commentContent[key]) { // Match by content to identify
+            try {
+              currentHtml = editor.root.innerHTML;
+            } catch (e) {
+              console.warn('No se pudo obtener HTML del editor de comentarios:', e);
+            }
+          }
+        });
+       
+        // Procesar imágenes para asegurar estilos correctos
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = currentHtml;
+        const images = tempDiv.querySelectorAll('img');
+       
+        images.forEach((img, index) => {
+          const parent = img.parentElement;
+          // Obtener alineación si es posible
+          let align = 'left';
+         
+          // Intentar obtener alineación del editor correspondiente
+          let editor = taskEditorRef.current;
+          if (!editor) {
+            Object.values(commentEditorsRef.current).forEach(comEditor => {
+              if (comEditor && comEditor.root.contains(img)) {
+                editor = comEditor;
+              }
+            });
+          }
+          if (editor) {
+            try {
+              const bounds = img.getBoundingClientRect();
+              const index = editor.getBounds(bounds); // Approximate
+              const formats = editor.getFormat(index);
+              align = formats.align || 'left';
+            } catch (e) {
+              console.warn(`No se pudo obtener formato para imagen ${index}:`, e);
+            }
+          }
+         
+          let style = 'max-width:100%;height:auto;border-radius:4px;margin:8px 0;display:block;';
+         
+          switch (align) {
+            case 'center':
+              style += 'margin-left:auto;margin-right:auto;';
+              break;
+            case 'right':
+              style += 'float:right;margin-left:8px;margin-right:0;';
+              if (parent) parent.style.overflow = 'hidden';
+              break;
+            case 'justify':
+              style += 'width:100%;margin-left:0;margin-right:0;';
+              break;
+            case 'left':
+            default:
+              style += 'float:left;margin-right:8px;margin-left:0;';
+              if (parent) parent.style.overflow = 'hidden';
+              break;
+          }
+         
+          // Preservar dimensiones si están establecidas
+          if (img.style.width) style += `width:${img.style.width};`;
+          if (img.style.height) style += `height:${img.style.height};`;
+         
+          img.setAttribute('style', style);
+          img.setAttribute('loading', 'lazy'); // Buena práctica
+          img.setAttribute('alt', 'Imagen de la tarea'); // Accesibilidad
+        });
+       
+        // Obtener el HTML procesado
+        cleanedHtml = tempDiv.innerHTML;
+      }
+     
+      // Codificar en base64
+      const encoder = new TextEncoder();
+      const bytes = encoder.encode(cleanedHtml);
+      let binary = '';
+      bytes.forEach(b => binary += String.fromCharCode(b));
+      return btoa(binary);
+     
     } catch (err) {
-      console.error('Error decoding body:', err);
-      return <p className="text-red-600 break-words">Error al decodificar contenido.</p>;
+      console.error('Error encoding body:', err);
+      // Fallback: intentar codificar el HTML original sin procesar
+      try {
+        const encoder = new TextEncoder();
+        const bytes = encoder.encode(html);
+        let binary = '';
+        bytes.forEach(b => binary += String.fromCharCode(b));
+        return btoa(binary);
+      } catch (fallbackErr) {
+        console.error('Error en fallback encoding:', fallbackErr);
+        return '';
+      }
     }
   };
-
+  const decodeBody = (body) => {
+    if (!body) return <p className="text-gray-600">Sin contenido.</p>;
+    try {
+      const decoded = decodeURIComponent(escape(atob(body)));
+      return <div className="ql-editor" dangerouslySetInnerHTML={{ __html: decoded }} />;
+    } catch (err) {
+      console.error('Error decoding body:', err);
+      return <p className="text-red-600">Error al mostrar contenido.</p>;
+    }
+  };
   const handleAssignTask = async () => {
     if (!taskContent.trim()) {
       setSubmitStatus({ assign: 'La tarea no puede estar vacía' });
       return;
     }
-    
+   
     setSubmitStatus({ assign: 'Enviando...' });
-    
+   
+    console.log('Task HTML original:', taskContent); // Debug
+   
     const encodedTask = encodeBody(taskContent);
-    
+    console.log('Encoded task length:', encodedTask.length); // Debug
+    console.log('Encoded task preview:', encodedTask.substring(0, 100)); // Debug
+   
     if (!encodedTask) {
       setSubmitStatus({ assign: 'Error: No se pudo procesar el contenido de la tarea' });
       return;
     }
-    
+   
+    if (encodedTask.length > 50000) { // Approximate char limit for Sheets cell
+      setSubmitStatus({ assign: 'Error: El contenido es demasiado grande. Reduce el tamaño de las imágenes o usa menos.' });
+      return;
+    }
+   
     const data = {
       action: 'assign',
       area: selectedArea,
       task: encodedTask,
       assignedTo: selectedAssignee || '',
     };
-
+    console.log('Datos finales a enviar:', {
+      area: data.area,
+      taskLength: data.task.length,
+      hasImages: taskContent.includes('<img'),
+      assignedTo: data.assignedTo
+    });
     try {
       await fetchWithRetry(TASK_SCRIPT_URL, {
         method: 'POST',
@@ -239,30 +360,42 @@ export default function TaskSection({ user }) {
       setSubmitStatus({ assign: `Error al asignar tarea: ${err.message}` });
     }
   };
-
   const handleCompleteTask = async (task) => {
     const comment = commentContent[task.rowIndex] || '';
     if (!comment.trim()) {
       setSubmitStatus({ complete: 'El comentario no puede estar vacío' });
       return;
     }
-    
+   
     setSubmitStatus({ complete: 'Enviando...' });
-    
+   
+    console.log(`Comment HTML original for task ${task.rowIndex}:`, comment); // Debug
+   
     const encodedComment = encodeBody(comment);
-    
+    console.log(`Encoded comment length for task ${task.rowIndex}:`, encodedComment.length); // Debug
+   
     if (!encodedComment) {
       setSubmitStatus({ complete: 'Error: No se pudo procesar el comentario' });
       return;
     }
-    
+   
+    if (encodedComment.length > 50000) {
+      setSubmitStatus({ complete: 'Error: El comentario es demasiado grande. Reduce el tamaño de las imágenes o usa menos.' });
+      return;
+    }
+   
     const data = {
       action: 'complete',
       area: task.area,
       row: task.rowIndex + 2,
       comment: encodedComment,
     };
-
+    console.log('Datos finales para completar tarea:', {
+      area: data.area,
+      row: data.row,
+      commentLength: data.comment.length,
+      hasImages: comment.includes('<img')
+    });
     try {
       await fetchWithRetry(TASK_SCRIPT_URL, {
         method: 'POST',
@@ -276,14 +409,18 @@ export default function TaskSection({ user }) {
       setSubmitStatus({ complete: `Error al completar tarea: ${err.message}` });
     }
   };
-
-  const handleCommentChange = useCallback(
+  const debouncedHandleCommentChange = useCallback(
     debounce((rowIndex, value) => {
       setCommentContent((prev) => ({ ...prev, [rowIndex]: value }));
     }, 300),
     []
   );
-
+  const debouncedSetTaskContent = useCallback(
+    debounce((value) => {
+      setTaskContent(value);
+    }, 300),
+    []
+  );
   const modules = useMemo(() => ({
     toolbar: [
       ['bold', 'italic', 'underline', 'strike', 'blockquote'],
@@ -299,26 +436,30 @@ export default function TaskSection({ user }) {
       handleStyles: { backgroundColor: 'rgba(0, 0, 0, 0.5)', border: 'none', color: 'white' },
       displayStyles: { backgroundColor: 'rgba(0, 0, 0, 0.5)', border: 'none', color: 'white' },
     },
+    imageCompress: {
+      quality: 0.7, // default
+      maxWidth: 1024, // default
+      maxHeight: 1024, // default
+      imageType: 'image/jpeg', // default
+      debug: true, // default
+    },
   }), []);
-
   const formats = ['bold', 'italic', 'underline', 'strike', 'blockquote', 'list', 'bullet', 'link', 'image', 'align', 'size'];
-
   const canCompleteTask = (task) => {
     if (isDirector) return false;
     if (!isAssignee) return false;
     return task.assignedName === user.name || task.assignedName === '';
   };
-
   // Renderizar Quill para tareas con referencia
   const TaskQuillEditor = ({ value, onChange, placeholder, className }) => {
     const quillRef = useRef(null);
-    
+   
     useEffect(() => {
       if (quillRef.current) {
         taskEditorRef.current = quillRef.current.getEditor();
       }
     }, []);
-    
+   
     return (
       <ReactQuill
         ref={quillRef}
@@ -328,21 +469,19 @@ export default function TaskSection({ user }) {
         formats={formats}
         placeholder={placeholder}
         className={className}
-        theme="snow"
       />
     );
   };
-
   // Renderizar Quill para comentarios con referencia
   const CommentQuillEditor = ({ value, onChange, rowIndex, placeholder, className }) => {
     const quillRef = useRef(null);
-    
+   
     useEffect(() => {
       if (quillRef.current) {
         commentEditorsRef.current[rowIndex] = quillRef.current.getEditor();
       }
     }, [rowIndex]);
-    
+   
     return (
       <ReactQuill
         ref={quillRef}
@@ -352,15 +491,12 @@ export default function TaskSection({ user }) {
         formats={formats}
         placeholder={placeholder}
         className={className}
-        theme="snow"
       />
     );
   };
-
   if (loading) return <div className="text-center p-4 text-gray-600">Cargando tareas...</div>;
   if (error) return <div className="text-red-600 text-center p-4">{error}</div>;
   if (!isDirector && !isAssignee) return null;
-
   return (
     <div className="pt-4 space-y-6">
       {isDirector && (
@@ -409,10 +545,10 @@ export default function TaskSection({ user }) {
             )}
             {!task.completed && canCompleteTask(task) && (
               <div className="mt-4 space-y-4">
-                <div className="h-32 border rounded-md">
+                <div className="min-h-[8rem] border rounded-md overflow-visible">
                   <CommentQuillEditor
                     value={commentContent[task.rowIndex] || ''}
-                    onChange={handleCommentChange}
+                    onChange={debouncedHandleCommentChange}
                     rowIndex={task.rowIndex}
                     placeholder="Comentario sobre lo realizado..."
                     className="h-full text-gray-800 bg-white"
@@ -460,10 +596,10 @@ export default function TaskSection({ user }) {
                   </option>
                 ))}
               </select>
-              <div className="h-40 border rounded-md">
+              <div className="min-h-[10rem] border rounded-md overflow-visible">
                 <TaskQuillEditor
                   value={taskContent}
-                  onChange={setTaskContent}
+                  onChange={debouncedSetTaskContent}
                   placeholder="Describe la tarea..."
                   className="h-full text-gray-800 bg-white"
                 />
