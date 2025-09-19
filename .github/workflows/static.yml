@@ -41,6 +41,7 @@ jobs:
 
       - name: Debug secrets
         run: |
+          echo "🔍 Debug secrets:"
           echo "ARTICULOS_SCRIPT length: ${#ARTICULOS_SCRIPT}"
           echo "MY_GITHUB_TOKEN length: ${#MY_GITHUB_TOKEN}"
           echo "USERS_CSV length: ${#USERS_CSV}"
@@ -54,31 +55,55 @@ jobs:
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
 
       - name: Build project
-  run: |
-    echo "Building with env vars..."
-    # ← CAMBIADO: Crear .env.local
-    echo "REACT_APP_ARTICULOS_SCRIPT_URL=${{ secrets.ARTICULOS_SCRIPT }}" > .env.local
-    echo "REACT_APP_GH_TOKEN=${{ secrets.MY_GITHUB_TOKEN }}" >> .env.local
-    echo "REACT_APP_USERS_CSV=${{ secrets.USERS_CSV }}" >> .env.local
-    echo "REACT_APP_FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }}" >> .env.local
-    echo "REACT_APP_FIREBASE_AUTH_DOMAIN=usuarios-rnce.firebaseapp.com" >> .env.local
-    echo "REACT_APP_FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}" >> .env.local
-    echo "REACT_APP_FIREBASE_STORAGE_BUCKET=usuarios-rnce.firebasestorage.app" >> .env.local
-    echo "REACT_APP_FIREBASE_MESSAGING_SENDER_ID=688242139131" >> .env.local
-    echo "REACT_APP_FIREBASE_APP_ID=1:688242139131:web:3a98663545e73110c3f55e" >> .env.local
-    echo "REACT_APP_FIREBASE_MEASUREMENT_ID=G-K90MKB7BDP" >> .env.local
-    cat .env.local
-    npm run build
-  env:
-    NODE_ENV: production
+        run: |
+          echo "🔨 Building with env vars..."
+          # ← CORREGIDO: Crear .env.local con todas las variables
+          echo "REACT_APP_ARTICULOS_SCRIPT_URL=${{ secrets.ARTICULOS_SCRIPT }}" > .env.local
+          echo "REACT_APP_GH_TOKEN=${{ secrets.MY_GITHUB_TOKEN }}" >> .env.local
+          echo "REACT_APP_USERS_CSV=${{ secrets.USERS_CSV }}" >> .env.local
+          echo "REACT_APP_FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }}" >> .env.local
+          echo "REACT_APP_FIREBASE_AUTH_DOMAIN=usuarios-rnce.firebaseapp.com" >> .env.local
+          echo "REACT_APP_FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}" >> .env.local
+          echo "REACT_APP_FIREBASE_STORAGE_BUCKET=usuarios-rnce.firebasestorage.app" >> .env.local
+          echo "REACT_APP_FIREBASE_MESSAGING_SENDER_ID=688242139131" >> .env.local
+          echo "REACT_APP_FIREBASE_APP_ID=1:688242139131:web:3a98663545e73110c3f55e" >> .env.local
+          echo "REACT_APP_FIREBASE_MEASUREMENT_ID=G-K90MKB7BDP" >> .env.local
+          echo "NODE_ENV=production" >> .env.local
+          echo "DEBUG=false" >> .env.local
+          
+          echo "📝 .env.local creado:"
+          cat .env.local
+          
+          echo "🚀 Ejecutando build..."
+          npm run build
+        env:
+          NODE_ENV: production
 
       - name: Verify build output
         run: |
-          echo "Listing dist directory contents:"
+          echo "📁 Listing dist directory contents:"
           ls -la dist/
-          echo "Checking for Firebase config in bundle:"
-          grep -r "REACT_APP_FIREBASE_API_KEY" dist/ || echo "Firebase API key inyectada correctamente"
-          grep -r "usuarios-rnce" dist/ || echo "Firebase project ID encontrado"
+          
+          echo "🔍 Checking for Firebase config in bundle:"
+          if grep -r "REACT_APP_FIREBASE_API_KEY" dist/; then
+            echo "✅ Firebase API key encontrada en bundle"
+          else
+            echo "⚠️ REACT_APP_FIREBASE_API_KEY no encontrada en bundle"
+          fi
+          
+          echo "🔍 Checking for project ID:"
+          if grep -r "usuarios-rnce" dist/; then
+            echo "✅ Firebase project ID encontrado"
+          else
+            echo "⚠️ usuarios-rnce no encontrado en bundle"
+          fi
+          
+          echo "🔍 Checking for CSV URL:"
+          if grep -r "REACT_APP_USERS_CSV" dist/; then
+            echo "✅ CSV URL encontrada en bundle"
+          else
+            echo "⚠️ REACT_APP_USERS_CSV no encontrada en bundle"
+          fi
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
