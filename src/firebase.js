@@ -1,6 +1,5 @@
-// src/firebase.js
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
+import { initializeApp } from 'firebase/app';
+import { getAnalytics, isSupported } from 'firebase/analytics';
 import { 
   getAuth, 
   createUserWithEmailAndPassword, 
@@ -9,10 +8,15 @@ import {
   onAuthStateChanged,
   signOut,
   updateEmail,
-  updatePassword
-} from "firebase/auth";
+  updatePassword,
+  fetchSignInMethodsForEmail,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult
+} from 'firebase/auth';
 
-// ← USAR VARIABLES INYECTADAS POR WEBPACK (no process.env directo)
+// Configuración de Firebase (usa variables de entorno o valores por defecto)
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY || "AIzaSyArr3LE_hQLZG0L5m9JND2OWVL8elnSyWk",
   authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || "usuarios-rnce.firebaseapp.com",
@@ -23,7 +27,7 @@ const firebaseConfig = {
   measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID || "G-K90MKB7BDP"
 };
 
-// ← DEBUG: Solo en desarrollo
+// Debug: Log de configuración
 if (process.env.NODE_ENV === 'development') {
   console.log('🔥 Firebase Config:', {
     apiKey: firebaseConfig.apiKey ? 'CONFIGURED' : 'MISSING',
@@ -34,10 +38,27 @@ if (process.env.NODE_ENV === 'development') {
 
 // Inicializar Firebase
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+
+// Inicializar Analytics solo si está soportado
+let analytics = null;
+isSupported().then((supported) => {
+  if (supported) {
+    analytics = getAnalytics(app);
+    console.log('🔍 Analytics inicializado');
+  } else {
+    console.log('🔍 Analytics no soportado en este entorno');
+  }
+}).catch((err) => {
+  console.error('Error inicializando Analytics:', err);
+});
 
 // Inicializar Auth
 export const auth = getAuth(app);
+
+// Debug: Verificar auth
+if (process.env.NODE_ENV === 'development') {
+  console.log('🔥 Auth inicializado:', !!auth);
+}
 
 // Exportar funciones
 export { 
@@ -47,7 +68,12 @@ export {
   onAuthStateChanged,
   signOut,
   updateEmail,
-  updatePassword
+  updatePassword,
+  fetchSignInMethodsForEmail,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult
 };
-export { GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult } from 'firebase/auth';
+
 export default app;
