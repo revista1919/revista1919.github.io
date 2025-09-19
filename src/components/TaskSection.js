@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Papa from 'papaparse';
 import ReactQuill, { Quill } from 'react-quill';
@@ -37,38 +36,22 @@ const base64EncodeUnicode = (str) => {
   return btoa(binary);
 };
 
+const base64DecodeUnicode = (str) => {
+  const binary = atob(str);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  const decoder = new TextDecoder();
+  return decoder.decode(bytes);
+};
+
 const sanitizeInput = (input) => {
   if (!input) return '';
   return input.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-              .replace(/on\w+="[^"]*"/gi, '');
-};
-
-const fetchWithRetry = async (url, options, retries = MAX_RETRIES) => {
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
-    const response = await fetch(url, {
-      ...options,
-      headers: { 'Content-Type': 'application/json' },
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => 'Unknown error');
-      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-    }
-    return { success: true, response };
-  } catch (err) {
-    if (err.name === 'AbortError') {
-      throw new Error('Request timed out');
-    }
-    if (retries > 0) {
-      console.warn(`Retry ${MAX_RETRIES - retries + 1}/${MAX_RETRIES}: ${err.message}`);
-      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
-      return fetchWithRetry(url, options, retries - 1);
-    }
-    throw new Error(`Fetch failed after ${MAX_RETRIES} retries: ${err.message}`);
-  }
+              .replace(/on\w+="[^"]*"/gi, '')
+              .replace(/\s+/g, ' ')
+              .trim();
 };
 
 export default function TaskSection({ user }) {
@@ -88,18 +71,30 @@ export default function TaskSection({ user }) {
   const taskEditorRef = useRef(null);
   const commentEditorsRef = useRef({});
 
-  useEffect(() => {
-    // Añadir estilo para tooltip de Quill (para links e imágenes)
-    const style = document.createElement('style');
-    style.innerHTML = `
-      .ql-tooltip {
-        z-index: 10000 !important;
-        position: fixed !important;
+  const fetchWithRetry = async (url, options, retries = MAX_RETRIES) => {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+      const response = await fetch(url, {
+        ...options,
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      return { success: true };
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        throw new Error('Request timed out');
       }
-    `;
-    document.head.appendChild(style);
-    return () => style.remove();
-  }, []);
+      if (retries > 0) {
+        console.warn(`Retry ${MAX_RETRIES - retries + 1}/${MAX_RETRIES}: ${err.message}`);
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
+        return fetchWithRetry(url, options, retries - 1);
+      }
+      throw new Error(`Fetch failed after ${MAX_RETRIES} retries: ${err.message}`);
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -142,13 +137,15 @@ export default function TaskSection({ user }) {
   // Configurar referencias de editores
   useEffect(() => {
     if (taskEditorRef.current) {
-      taskEditorRef.current.root.setAttribute('spellcheck', 'false');
+      taskEditorRef.current.root.setAttribute('spellcheck', 'true');
+      taskEditorRef.current.root.setAttribute('lang', 'es');
     }
     
     // Configurar editores de comentarios
     Object.values(commentEditorsRef.current).forEach(editor => {
       if (editor) {
-        editor.root.setAttribute('spellcheck', 'false');
+        editor.root.setAttribute('spellcheck', 'true');
+        editor.root.setAttribute('lang', 'es');
       }
     });
   }, []);
@@ -189,97 +186,19 @@ export default function TaskSection({ user }) {
   const pendingTasks = useMemo(() => filteredTasks.filter((t) => !t.completed), [filteredTasks]);
   const completedTasks = useMemo(() => filteredTasks.filter((t) => t.completed), [filteredTasks]);
 
-  const encodeBody = (html, editor = null) => {
-    try {
-      if (!html || html.trim() === '') return '';
-      
-      // Limpiar y procesar el HTML directamente
-      let cleanedHtml = sanitizeInput(html);
-      
-      // Si hay imágenes, procesarlas
-      if (cleanedHtml.includes('<img')) {
-        // Obtener el HTML real del editor si está disponible
-        let currentHtml = cleanedHtml;
-        
-        if (editor) {
-          try {
-            currentHtml = editor.root.innerHTML;
-          } catch (e) {
-            console.warn('No se pudo obtener HTML del editor:', e);
-          }
-        }
-        
-        // Procesar imágenes para asegurar estilos correctos
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = currentHtml;
-        const images = tempDiv.querySelectorAll('img');
-        
-        images.forEach((img) => {
-          const parent = img.parentElement;
-          let align = 'left';
-          
-          if (parent) {
-            if (parent.classList.contains('ql-align-center')) align = 'center';
-            else if (parent.classList.contains('ql-align-right')) align = 'right';
-            else if (parent.classList.contains('ql-align-justify')) align = 'justify';
-          }
-          
-          let style = 'max-width:100%;height:auto;border-radius:4px;margin:8px 0;display:block;';
-          
-          switch (align) {
-            case 'center':
-              style += 'margin-left:auto;margin-right:auto;';
-              break;
-            case 'right':
-              style += 'float:right;margin-left:8px;margin-right:0;';
-              if (parent) parent.setAttribute('style', (parent.getAttribute('style') || '') + 'overflow:hidden;');
-              break;
-            case 'justify':
-              style += 'width:100%;margin-left:0;margin-right:0;';
-              break;
-            case 'left':
-            default:
-              style += 'float:left;margin-right:8px;margin-left:0;';
-              if (parent) parent.setAttribute('style', (parent.getAttribute('style') || '') + 'overflow:hidden;');
-              break;
-          }
-          
-          // Preservar dimensiones si están establecidas
-          if (img.style.width) style += `width:${img.style.width};`;
-          if (img.style.height) style += `height:${img.style.height};`;
-          
-          img.setAttribute('style', style);
-          img.setAttribute('loading', 'lazy');
-          img.setAttribute('alt', 'Imagen de la tarea');
-        });
-        
-        // Obtener el HTML procesado
-        cleanedHtml = tempDiv.innerHTML;
-      }
-      
-      // Codificar en base64
-      return base64EncodeUnicode(cleanedHtml);
-      
-    } catch (err) {
-      console.error('Error encoding body:', err);
-      // Fallback: codificar el HTML original sin procesar
-      try {
-        return base64EncodeUnicode(html);
-      } catch (fallbackErr) {
-        console.error('Error en fallback encoding:', fallbackErr);
-        return '';
-      }
-    }
+  const encodeBody = (html) => {
+    const cleaned = sanitizeInput(html);
+    return base64EncodeUnicode(cleaned);
   };
 
-  const decodeBody = (body) => {
-    if (!body) return <p className="text-gray-600">Sin contenido.</p>;
+  const decodeBody = (encoded) => {
+    if (!encoded) return <p className="text-gray-600 break-words">Sin contenido.</p>;
     try {
-      const decoded = decodeURIComponent(escape(atob(body)));
-      return <div className="ql-editor" dangerouslySetInnerHTML={{ __html: decoded }} />;
+      const html = base64DecodeUnicode(encoded);
+      return <div className="prose prose-sm max-w-none break-words leading-relaxed" dangerouslySetInnerHTML={{ __html: html }} />;
     } catch (err) {
       console.error('Error decoding body:', err);
-      return <p className="text-red-600">Error al mostrar contenido.</p>;
+      return <p className="text-red-600 break-words">Error al decodificar contenido.</p>;
     }
   };
 
@@ -291,12 +210,7 @@ export default function TaskSection({ user }) {
     
     setSubmitStatus({ assign: 'Enviando...' });
     
-    console.log('Task HTML original:', taskContent); // Debug
-    
-    const editor = taskEditorRef.current;
-    const encodedTask = encodeBody(taskContent, editor);
-    console.log('Encoded task length:', encodedTask.length); // Debug
-    console.log('Encoded task preview:', encodedTask.substring(0, 100)); // Debug
+    const encodedTask = encodeBody(taskContent);
     
     if (!encodedTask) {
       setSubmitStatus({ assign: 'Error: No se pudo procesar el contenido de la tarea' });
@@ -309,13 +223,6 @@ export default function TaskSection({ user }) {
       task: encodedTask,
       assignedTo: selectedAssignee || '',
     };
-
-    console.log('Datos finales a enviar:', {
-      area: data.area,
-      taskLength: data.task.length,
-      hasImages: taskContent.includes('<img'),
-      assignedTo: data.assignedTo
-    });
 
     try {
       await fetchWithRetry(TASK_SCRIPT_URL, {
@@ -342,11 +249,7 @@ export default function TaskSection({ user }) {
     
     setSubmitStatus({ complete: 'Enviando...' });
     
-    console.log(`Comment HTML original for task ${task.rowIndex}:`, comment); // Debug
-    
-    const editor = commentEditorsRef.current[task.rowIndex];
-    const encodedComment = encodeBody(comment, editor);
-    console.log(`Encoded comment length for task ${task.rowIndex}:`, encodedComment.length); // Debug
+    const encodedComment = encodeBody(comment);
     
     if (!encodedComment) {
       setSubmitStatus({ complete: 'Error: No se pudo procesar el comentario' });
@@ -359,13 +262,6 @@ export default function TaskSection({ user }) {
       row: task.rowIndex + 2,
       comment: encodedComment,
     };
-
-    console.log('Datos finales para completar tarea:', {
-      area: data.area,
-      row: data.row,
-      commentLength: data.comment.length,
-      hasImages: comment.includes('<img')
-    });
 
     try {
       await fetchWithRetry(TASK_SCRIPT_URL, {
@@ -381,9 +277,12 @@ export default function TaskSection({ user }) {
     }
   };
 
-  const handleCommentChange = useCallback((rowIndex, value) => {
-    setCommentContent((prev) => ({ ...prev, [rowIndex]: value }));
-  }, []);
+  const handleCommentChange = useCallback(
+    debounce((rowIndex, value) => {
+      setCommentContent((prev) => ({ ...prev, [rowIndex]: value }));
+    }, 300),
+    []
+  );
 
   const modules = useMemo(() => ({
     toolbar: [
@@ -411,7 +310,7 @@ export default function TaskSection({ user }) {
   };
 
   // Renderizar Quill para tareas con referencia
-  const TaskQuillEditor = React.memo(({ value, onChange, placeholder, className }) => {
+  const TaskQuillEditor = ({ value, onChange, placeholder, className }) => {
     const quillRef = useRef(null);
     
     useEffect(() => {
@@ -429,12 +328,13 @@ export default function TaskSection({ user }) {
         formats={formats}
         placeholder={placeholder}
         className={className}
+        theme="snow"
       />
     );
-  });
+  };
 
   // Renderizar Quill para comentarios con referencia
-  const CommentQuillEditor = React.memo(({ value, onChange, rowIndex, placeholder, className }) => {
+  const CommentQuillEditor = ({ value, onChange, rowIndex, placeholder, className }) => {
     const quillRef = useRef(null);
     
     useEffect(() => {
@@ -452,9 +352,10 @@ export default function TaskSection({ user }) {
         formats={formats}
         placeholder={placeholder}
         className={className}
+        theme="snow"
       />
     );
-  });
+  };
 
   if (loading) return <div className="text-center p-4 text-gray-600">Cargando tareas...</div>;
   if (error) return <div className="text-red-600 text-center p-4">{error}</div>;
@@ -508,13 +409,13 @@ export default function TaskSection({ user }) {
             )}
             {!task.completed && canCompleteTask(task) && (
               <div className="mt-4 space-y-4">
-                <div className="min-h-[8rem] border rounded-md overflow-visible">
+                <div className="h-32 border rounded-md">
                   <CommentQuillEditor
                     value={commentContent[task.rowIndex] || ''}
                     onChange={handleCommentChange}
                     rowIndex={task.rowIndex}
                     placeholder="Comentario sobre lo realizado..."
-                    className="text-gray-800 bg-white"
+                    className="h-full text-gray-800 bg-white"
                   />
                 </div>
                 <button
@@ -536,7 +437,7 @@ export default function TaskSection({ user }) {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] flex flex-col">
             <h3 className="font-bold text-lg text-gray-800 mb-4">Asignar Tarea</h3>
-            <div className="flex-grow space-y-4 overflow-y-auto pb-4">
+            <div className="flex-grow space-y-4 overflow-y-auto">
               <select
                 value={selectedArea}
                 onChange={(e) => setSelectedArea(e.target.value)}
@@ -559,16 +460,16 @@ export default function TaskSection({ user }) {
                   </option>
                 ))}
               </select>
-              <div className="min-h-[10rem] border rounded-md overflow-visible">
+              <div className="h-40 border rounded-md">
                 <TaskQuillEditor
                   value={taskContent}
                   onChange={setTaskContent}
                   placeholder="Describe la tarea..."
-                  className="text-gray-800 bg-white"
+                  className="h-full text-gray-800 bg-white"
                 />
               </div>
             </div>
-            <div className="sticky bottom-0 pt-4 bg-white flex justify-end space-x-2 z-0">
+            <div className="sticky bottom-0 pt-4 bg-white flex justify-end space-x-2">
               <button
                 onClick={() => setShowAssignModal(false)}
                 className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition-colors text-sm font-medium"
