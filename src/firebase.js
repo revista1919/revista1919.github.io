@@ -12,7 +12,7 @@ import {
   updatePassword
 } from "firebase/auth";
 
-// ← USAR VARIABLES DE ENTORNO
+// ← USAR VARIABLES INYECTADAS POR WEBPACK (no process.env directo)
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY || "AIzaSyArr3LE_hQLZG0L5m9JND2OWVL8elnSyWk",
   authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || "usuarios-rnce.firebaseapp.com",
@@ -23,7 +23,7 @@ const firebaseConfig = {
   measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID || "G-K90MKB7BDP"
 };
 
-// ← DEBUG: Verificar config en desarrollo
+// ← DEBUG: Solo en desarrollo
 if (process.env.NODE_ENV === 'development') {
   console.log('🔥 Firebase Config:', {
     apiKey: firebaseConfig.apiKey ? 'CONFIGURED' : 'MISSING',
@@ -39,9 +39,9 @@ const analytics = getAnalytics(app);
 // Inicializar Auth
 export const auth = getAuth(app);
 
-// Exportar funciones para LoginSection
-export {
-  createUserWithEmailAndPassword,
+// Exportar funciones
+export { 
+  createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
   onAuthStateChanged,
@@ -50,5 +50,4 @@ export {
   updatePassword
 };
 
-// Exportar app para otros servicios
 export default app;

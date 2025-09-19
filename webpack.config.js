@@ -5,21 +5,26 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 const WebpackShellPluginNext = require('webpack-shell-plugin-next');
 const webpack = require('webpack');
 
-// ✅ Cargar .env explícitamente
-// Cargar .env.local primero, luego .env
-require('dotenv').config({ path: path.resolve(__dirname, '.env.local') });
+// ✅ Cargar .env.local primero, luego .env
+const dotenvConfig = require('dotenv').config({ path: path.resolve(__dirname, '.env.local') });
+if (dotenvConfig.error) {
+  console.warn('⚠️ .env.local no encontrado, usando .env');
+}
 require('dotenv').config({ path: path.resolve(__dirname, '.env'), override: true });
+
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
 
-  // ✅ Debug: Imprimir variables de entorno (sin exponer sensibles)
+  // ✅ Debug: Imprimir variables de entorno
   console.log('🔍 Webpack Environment Variables:', {
-    REACT_APP_ARTICULOS_SCRIPT_URL: process.env.REACT_APP_ARTICULOS_SCRIPT_URL ? `${process.env.REACT_APP_ARTICULOS_SCRIPT_URL.slice(0, 40)}...` : 'MISSING',
-    REACT_APP_GH_TOKEN: process.env.REACT_APP_GH_TOKEN ? 'PRESENT' : 'MISSING',
-    REACT_APP_USERS_CSV: process.env.REACT_APP_USERS_CSV ? `${process.env.REACT_APP_USERS_CSV.slice(0, 40)}...` : 'MISSING',
-    REACT_APP_FIREBASE_API_KEY: process.env.REACT_APP_FIREBASE_API_KEY ? 'PRESENT' : 'MISSING', // ← NUEVO: Firebase
-    NODE_ENV: process.env.NODE_ENV || 'development',
-    DEBUG: process.env.DEBUG || false,
+    'REACT_APP_FIREBASE_API_KEY': process.env.REACT_APP_FIREBASE_API_KEY ? 'PRESENT' : 'MISSING',
+    'REACT_APP_FIREBASE_PROJECT_ID': process.env.REACT_APP_FIREBASE_PROJECT_ID || 'MISSING',
+    'REACT_APP_USERS_CSV': process.env.REACT_APP_USERS_CSV ? `${process.env.REACT_APP_USERS_CSV.slice(0, 40)}...` : 'MISSING',
+    'REACT_APP_ARTICULOS_SCRIPT_URL': process.env.REACT_APP_ARTICULOS_SCRIPT_URL ? `${process.env.REACT_APP_ARTICULOS_SCRIPT_URL.slice(0, 40)}...` : 'MISSING',
+    'REACT_APP_GH_TOKEN': process.env.REACT_APP_GH_TOKEN ? 'PRESENT' : 'MISSING',
+    'NODE_ENV': process.env.NODE_ENV || 'development',
+    'DEBUG': process.env.DEBUG || false,
+    '.env.local loaded': dotenvConfig.parsed ? Object.keys(dotenvConfig.parsed).length : 0,
   });
 
   // ✅ Inyectar variables de entorno en el bundle
@@ -28,14 +33,14 @@ module.exports = (env, argv) => {
     'process.env.REACT_APP_ARTICULOS_SCRIPT_URL': JSON.stringify(process.env.REACT_APP_ARTICULOS_SCRIPT_URL || ''),
     'process.env.REACT_APP_GH_TOKEN': JSON.stringify(process.env.REACT_APP_GH_TOKEN || ''),
     'process.env.REACT_APP_USERS_CSV': JSON.stringify(process.env.REACT_APP_USERS_CSV || ''),
-    // ← NUEVO: Variables de Firebase (solo las necesarias)
     'process.env.REACT_APP_FIREBASE_API_KEY': JSON.stringify(process.env.REACT_APP_FIREBASE_API_KEY || ''),
-    'process.env.REACT_APP_FIREBASE_AUTH_DOMAIN': JSON.stringify(process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || ''),
-    'process.env.REACT_APP_FIREBASE_PROJECT_ID': JSON.stringify(process.env.REACT_APP_FIREBASE_PROJECT_ID || ''),
-    'process.env.REACT_APP_FIREBASE_STORAGE_BUCKET': JSON.stringify(process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || ''),
-    'process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID': JSON.stringify(process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID || ''),
-    'process.env.REACT_APP_FIREBASE_APP_ID': JSON.stringify(process.env.REACT_APP_FIREBASE_APP_ID || ''),
-    'process.env.DEBUG': JSON.stringify(!isProduction),
+    'process.env.REACT_APP_FIREBASE_AUTH_DOMAIN': JSON.stringify(process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || 'usuarios-rnce.firebaseapp.com'),
+    'process.env.REACT_APP_FIREBASE_PROJECT_ID': JSON.stringify(process.env.REACT_APP_FIREBASE_PROJECT_ID || 'usuarios-rnce'),
+    'process.env.REACT_APP_FIREBASE_STORAGE_BUCKET': JSON.stringify(process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || 'usuarios-rnce.firebasestorage.app'),
+    'process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID': JSON.stringify(process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID || '688242139131'),
+    'process.env.REACT_APP_FIREBASE_APP_ID': JSON.stringify(process.env.REACT_APP_FIREBASE_APP_ID || '1:688242139131:web:3a98663545e73110c3f55e'),
+    'process.env.REACT_APP_FIREBASE_MEASUREMENT_ID': JSON.stringify(process.env.REACT_APP_FIREBASE_MEASUREMENT_ID || 'G-K90MKB7BDP'),
+    'process.env.DEBUG': JSON.stringify(process.env.DEBUG === 'true' || process.env.DEBUG === true),
   };
 
   return {
@@ -59,24 +64,22 @@ module.exports = (env, argv) => {
       host: '0.0.0.0',
       historyApiFallback: true,
       headers: {
-        'Access-Control-Allow-Origin': '*', // ← ÚTIL para desarrollo con Firebase
+        'Access-Control-Allow-Origin': '*',
       },
       onListening: (devServer) => {
         const port = devServer.server.address().port;
         console.log(`🚀 Server corriendo en http://localhost:${port}`);
-        console.log(`📱 Acceso desde móvil: http://${require('os').networkInterfaces().en0?.[0]?.address || 'localhost'}:${port}`);
       },
     },
     module: {
       rules: [
         {
           test: /\.js$/i,
-          exclude: /node_modules\/(?!firebase)/, // ← MEJORADO: Excluir Firebase de Babel
+          exclude: /node_modules\/(?!firebase)/,
           use: {
             loader: 'babel-loader',
             options: {
               presets: ['@babel/preset-env', '@babel/preset-react'],
-              // ← NUEVO: Cache para builds más rápidos
               cacheDirectory: true,
             },
           },
@@ -121,19 +124,10 @@ module.exports = (env, argv) => {
             filename: 'Articles/[name][ext]',
           },
         },
-        // ← NUEVO: Manejo de archivos JSON (para firebase config si lo necesitas)
-        {
-          test: /\.json$/i,
-          type: 'json',
-          parser: {
-            json5: true,
-          },
-        },
       ],
     },
     plugins: [
       new CleanWebpackPlugin({
-        // ← MEJORADO: Limpiar solo archivos específicos
         cleanOnceBeforeBuildPatterns: ['**/*', '!**/firebase.json', '!**/.firebaserc'],
       }),
       new HtmlWebpackPlugin({
@@ -153,6 +147,7 @@ module.exports = (env, argv) => {
               minifyURLs: true,
             }
           : false,
+        // ← ELIMINADO: Meta tag problemático que causaba el error
       }),
       new CopyWebpackPlugin({
         patterns: [
@@ -163,7 +158,6 @@ module.exports = (env, argv) => {
             to: 'Articles',
             noErrorOnMissing: true,
           },
-          // ← NUEVO: Copiar firebase config si existe
           {
             from: 'firebase.json',
             to: 'firebase.json',
@@ -184,7 +178,6 @@ module.exports = (env, argv) => {
           parallel: false,
         },
       }),
-      // ← NUEVO: Plugin para Firebase (opcional)
       ...(isProduction ? [
         new webpack.BannerPlugin({
           banner: `/* Revista 1919 - Built ${new Date().toISOString()} | Firebase Auth Enabled */`,
@@ -193,26 +186,34 @@ module.exports = (env, argv) => {
         })
       ] : [
         new webpack.BannerPlugin({
-          banner: `/* Revista 1919 - Development Build ${new Date().toISOString()} | Firebase Auth: ${process.env.REACT_APP_FIREBASE_API_KEY ? 'ENABLED' : 'DISABLED'} */`,
+          banner: `/* Revista 1919 - Development Build ${new Date().toISOString()} | Firebase Auth: ENABLED */`,
           raw: true,
           include: 'all',
         })
       ]),
     ],
-    devtool: isProduction ? 'source-map' : 'eval-cheap-module-source-map', // ← MEJORADO: Source maps
+    devtool: isProduction ? 'source-map' : 'eval-cheap-module-source-map',
     resolve: {
-      extensions: ['.js', '.jsx', '.json'], // ← AGREGADO: .json
+      extensions: ['.js', '.jsx', '.json'],
       fallback: {
-        // ← NUEVO: Fallback para Node.js modules (para Firebase)
+        // ← CRÍTICO: Polyfills para Firebase v12
         "fs": false,
         "path": false,
         "crypto": false,
+        "process": require.resolve("process/browser"),
+        "util": false,
+        "stream": false,
+        "buffer": require.resolve("buffer/"),
+        "url": false,
+        "assert": false,
+        "string_decoder": false,
+        "zlib": false,
       },
     },
     performance: {
       hints: isProduction ? 'warning' : false,
-      maxAssetSize: 500000, // 500KB
-      maxEntrypointSize: 1000000, // 1MB
+      maxAssetSize: 500000,
+      maxEntrypointSize: 1000000,
     },
     optimization: {
       minimize: isProduction,
@@ -220,13 +221,13 @@ module.exports = (env, argv) => {
         chunks: 'all',
         cacheGroups: {
           vendor: {
-            test: /[\\/]node_modules[\\/](?!firebase)/, // ← MEJORADO: Excluir Firebase del vendor bundle
+            test: /[\\/]node_modules[\\/](?!firebase)/,
             name: 'vendors',
             chunks: 'all',
             priority: 10,
             enforce: true,
           },
-          firebase: { // ← NUEVO: Bundle separado para Firebase
+          firebase: {
             test: /[\\/]node_modules[\\/]firebase[\\/]/,
             name: 'firebase',
             chunks: 'all',
@@ -235,12 +236,10 @@ module.exports = (env, argv) => {
           },
         },
       },
-      // ← NUEVO: Cache para desarrollo
       runtimeChunk: isProduction ? {
         name: 'runtime'
       } : undefined,
     },
-    // ← NUEVO: Cache para builds más rápidos
     cache: {
       type: 'filesystem',
       buildDependencies: {
