@@ -382,12 +382,14 @@ console.log('🆕 Calculated articleNumber:', articleNumber, 'from nums:', nums)
       setStatus('Eliminando...');
       
       // Delete from sheet
-      const data = { action: 'delete', numero: parseInt(numero) };
-      await fetch(ARTICULOS_GAS_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
+const data = { action: 'delete', numero: parseInt(numero) };
+await fetch(ARTICULOS_GAS_URL, {
+  method: 'POST',
+  mode: 'no-cors',
+  redirect: 'follow',
+  headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+  body: JSON.stringify(data),
+});
       
       // Delete PDF if exists
       if (GH_TOKEN) {
