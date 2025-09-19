@@ -4,93 +4,14 @@ import ReactQuill, { Quill } from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import ImageResize from 'quill-image-resize-module-react';
 import { debounce } from 'lodash';
-
 Quill.register('modules/imageResize', ImageResize);
-
-// Función de compresión de imágenes
-const compressImage = (file, maxWidth = 800, quality = 0.6) => {
-  return new Promise((resolve) => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const img = new Image();
-    
-    img.onload = () => {
-      let { width, height } = img;
-      
-      // Calcular nuevas dimensiones manteniendo ratio
-      if (width > height) {
-        if (width > maxWidth) {
-          height = (height * maxWidth) / width;
-          width = maxWidth;
-        }
-      } else {
-        if (height > maxWidth) {
-          width = (width * maxWidth) / height;
-          height = maxWidth;
-        }
-      }
-      
-      canvas.width = width;
-      canvas.height = height;
-      
-      // Limpiar canvas
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      // Dibujar imagen comprimida
-      ctx.drawImage(img, 0, 0, width, height);
-      
-      // Convertir a base64 con calidad reducida
-      canvas.toBlob(
-        (blob) => {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            resolve(reader.result);
-          };
-          reader.readAsDataURL(blob);
-        },
-        'image/jpeg',
-        quality
-      );
-    };
-    
-    img.src = file;
-  });
-};
-
-// Hook personalizado para compresión de imágenes
-const useImageCompression = () => {
-  const compress = useCallback(async (base64Data) => {
-    try {
-      // Extraer el blob de la data URL
-      const [, data] = base64Data.split(',');
-      const byteString = atob(data);
-      const byteArray = new Uint8Array(byteString.length);
-      for (let i = 0; i < byteString.length; i++) {
-        byteArray[i] = byteString.charCodeAt(i);
-      }
-      const blob = new Blob([byteArray], { type: 'image/jpeg' });
-      
-      // Comprimir
-      const compressed = await compressImage(blob, 600, 0.5);
-      return compressed;
-    } catch (error) {
-      console.warn('Error comprimiendo imagen:', error);
-      return base64Data; // Fallback al original
-    }
-  }, []);
-  
-  return { compress };
-};
-
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 const TASKS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSCEOtMwYPu0_kn1hmQi0qT6FZq6HRF09WtuDSqOxBNgMor_FyRRtc6_YVKHQQhWJCy-mIa2zwP6uAU/pub?output=csv';
 const TASK_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxMo7aV_vz_3mOCUWKpcqnWmassUdApD_KfAHROTdgd_MDDiaXikgVV0OZ5qVYmhZgd/exec';
-
 const AREAS = {
   RRSS: 'Redes Sociales',
   WEB: 'Desarrollo Web',
 };
-
 const getAreaColumns = (area) => {
   if (area === AREAS.RRSS) {
     return { taskCol: 0, nameCol: 1, completedCol: 2, commentCol: 3 };
@@ -98,12 +19,9 @@ const getAreaColumns = (area) => {
     return { taskCol: 4, nameCol: 5, completedCol: 6, commentCol: 7 };
   }
 };
-
 const MAX_RETRIES = 3;
-const RETRY_DELAY = 2000; // Aumentado para dar más tiempo
-const REQUEST_TIMEOUT = 30000; // Aumentado significativamente
-const MAX_PAYLOAD_SIZE = 50000; // Límite estricto para Google Sheets
-
+const RETRY_DELAY = 1000;
+const REQUEST_TIMEOUT = 15000;
 const base64EncodeUnicode = (str) => {
   const encoder = new TextEncoder();
   const bytes = encoder.encode(str);
@@ -111,16 +29,13 @@ const base64EncodeUnicode = (str) => {
   bytes.forEach(b => binary += String.fromCharCode(b));
   return btoa(binary);
 };
-
 const sanitizeInput = (input) => {
   if (!input) return '';
   return input.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
               .replace(/on\w+="[^"]*"/gi, '')
-              .replace(/<[^>]*javascript:.*?>/gi, '')
               .replace(/\s+/g, ' ')
               .trim();
 };
-
 export default function TaskSection({ user }) {
   const [users, setUsers] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -133,16 +48,11 @@ export default function TaskSection({ user }) {
   const [commentContent, setCommentContent] = useState({});
   const [submitStatus, setSubmitStatus] = useState({});
   const [error, setError] = useState('');
-  const [isCompressing, setIsCompressing] = useState({});
-  
   // Referencias para los editores de Quill
   const taskEditorRef = useRef(null);
   const commentEditorsRef = useRef({});
-  
-  const { compress } = useImageCompression();
-
   useEffect(() => {
-    // Estilos CSS mejorados para Quill
+    // Añadir estilos CSS críticos para solucionar problemas de Quill
     const style = document.createElement('style');
     style.innerHTML = `
       /* Fix para tooltips de Quill */
@@ -157,7 +67,6 @@ export default function TaskSection({ user }) {
         padding: 5px !important;
         border-radius: 4px !important;
         overflow: visible !important;
-        max-width: 300px !important;
       }
       
       /* Fix para contenedores de Quill */
@@ -165,7 +74,6 @@ export default function TaskSection({ user }) {
         overflow: visible !important;
         position: relative !important;
         font-family: inherit !important;
-        z-index: 1 !important;
       }
       
       .ql-editor {
@@ -176,8 +84,6 @@ export default function TaskSection({ user }) {
         outline: none !important;
         white-space: pre-wrap !important;
         overflow-y: auto !important;
-        position: relative !important;
-        z-index: 1 !important;
       }
       
       /* Fix para modales */
@@ -192,7 +98,6 @@ export default function TaskSection({ user }) {
         top: 0 !important;
         background: white !important;
         border-bottom: 1px solid #ddd !important;
-        z-index: 10003 !important;
       }
       
       /* Fix para input de links */
@@ -205,87 +110,45 @@ export default function TaskSection({ user }) {
         outline: none !important;
       }
       
-      /* Fix para imágenes - MUY IMPORTANTE */
+      /* Fix para imágenes */
       .ql-editor img {
         max-width: 100% !important;
         height: auto !important;
         border-radius: 4px !important;
         display: block !important;
         margin: 8px auto !important;
-        max-height: 400px !important;
-        box-sizing: border-box !important;
-      }
-      
-      /* Advertencia visual para imágenes grandes */
-      .ql-editor img[data-large="true"] {
-        border: 2px solid #ef4444 !important;
-        position: relative;
-      }
-      
-      .ql-editor img[data-large="true"]:after {
-        content: "⚠️ Imagen grande - se comprimirá";
-        position: absolute;
-        top: -25px;
-        left: 0;
-        background: #ef4444;
-        color: white;
-        padding: 2px 6px;
-        border-radius: 3px;
-        font-size: 10px;
       }
       
       /* Fix para modales pequeños */
       .modal-content .ql-container {
         max-height: 300px !important;
       }
-      
-      /* Loading state para compresión */
-      .image-compressing {
-        position: relative;
-        opacity: 0.7;
-      }
-      
-      .image-compressing::after {
-        content: "🗜️ Comprimidiendo...";
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: rgba(0,0,0,0.7);
-        color: white;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 12px;
-        z-index: 10;
-      }
     `;
     document.head.appendChild(style);
     return () => style.remove();
   }, []);
-
   const fetchWithRetry = async (url, options, retries = MAX_RETRIES) => {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
-      
-      // Headers SIN duplicados - solo lo esencial
-      const headers = new Headers();
-      headers.append('Content-Type', 'application/json');
-      
       const response = await fetch(url, {
         ...options,
-        mode: 'no-cors', // MANTENIDO no-cors para el script
-        headers,
+        mode: 'no-cors',
+        headers: { 
+          'Content-Type': 'application/json',
+          // Headers adicionales para mejor compatibilidad
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache'
+        },
         signal: controller.signal,
-        keepalive: true,
-        // Remover credentials para evitar conflictos
+        // Configurar keepalive para mejor manejo de conexiones
+        keepalive: true
       });
-      
       clearTimeout(timeoutId);
       return { success: true };
     } catch (err) {
       if (err.name === 'AbortError') {
-        throw new Error('Request timed out - payload muy grande');
+        throw new Error('Request timed out');
       }
       if (retries > 0) {
         console.warn(`Retry ${MAX_RETRIES - retries + 1}/${MAX_RETRIES}: ${err.message}`);
@@ -295,12 +158,11 @@ export default function TaskSection({ user }) {
       throw new Error(`Fetch failed after ${MAX_RETRIES} retries: ${err.message}`);
     }
   };
-
   const fetchUsers = async () => {
     try {
       const response = await fetch(USERS_CSV, { 
         cache: 'no-store',
-        mode: 'cors'
+        mode: 'cors' // Cambiar a cors para CSV público
       });
       if (!response.ok) throw new Error(`Failed to fetch users: ${response.status}`);
       const csvText = await response.text();
@@ -311,12 +173,11 @@ export default function TaskSection({ user }) {
       setError('Error al cargar usuarios: ' + err.message);
     }
   };
-
   const fetchTasks = async () => {
     try {
       const response = await fetch(TASKS_CSV, { 
         cache: 'no-store',
-        mode: 'cors'
+        mode: 'cors' // Cambiar a cors para CSV público
       });
       if (!response.ok) throw new Error(`Failed to fetch tasks: ${response.status}`);
       const csvText = await response.text();
@@ -330,7 +191,6 @@ export default function TaskSection({ user }) {
       setError('Error al cargar tareas: ' + err.message);
     }
   };
-
   useEffect(() => {
     Promise.all([fetchUsers(), fetchTasks()])
       .then(() => setLoading(false))
@@ -339,14 +199,14 @@ export default function TaskSection({ user }) {
         setError('Error al inicializar: ' + err.message);
       });
   }, []);
-
-  // Configurar referencias de editores
+  // Configurar referencias de editores con mejor manejo
   useEffect(() => {
     const setupEditor = (editor, spellcheck = true) => {
       if (editor && editor.root) {
         editor.root.setAttribute('spellcheck', spellcheck ? 'true' : 'false');
         editor.root.setAttribute('lang', 'es');
         editor.root.setAttribute('contenteditable', 'true');
+        // Prevenir problemas de focus
         editor.root.addEventListener('focus', () => {
           editor.root.classList.add('ql-focused');
         });
@@ -365,8 +225,7 @@ export default function TaskSection({ user }) {
         setupEditor(editor);
       }
     });
-  }, [commentContent]);
-
+  }, [commentContent]); // Re-run cuando cambien los comentarios
   const currentUser = users.find((u) => u.Nombre === user.name);
   const userRoles = currentUser ? currentUser['Rol en la Revista']?.split(';').map((r) => r.trim()) : [];
   const isDirector = userRoles.includes('Director General');
@@ -375,7 +234,6 @@ export default function TaskSection({ user }) {
   const isAssignee = (isRrss || isWeb) && !isDirector;
   const rrssUsers = users.filter((u) => u['Rol en la Revista']?.includes('Encargado de Redes Sociales'));
   const webUsers = users.filter((u) => u['Rol en la Revista']?.includes('Responsable de Desarrollo Web'));
-
   const filteredTasks = useMemo(() => {
     return tasks.reduce((areaTasks, task, index) => {
       if (!isDirector && !isAssignee) return areaTasks;
@@ -398,157 +256,125 @@ export default function TaskSection({ user }) {
       return areaTasks;
     }, []);
   }, [tasks, user.name, isDirector, isRrss, isWeb]);
-
   const pendingTasks = useMemo(() => filteredTasks.filter((t) => !t.completed), [filteredTasks]);
   const completedTasks = useMemo(() => filteredTasks.filter((t) => t.completed), [filteredTasks]);
-
-  // Función de compresión agresiva de imágenes
-  const optimizeImages = useCallback(async (html, editorRef = null) => {
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
-    const images = tempDiv.querySelectorAll('img');
-    
-    if (images.length === 0) return html;
-    
-    console.log(`🔄 Procesando ${images.length} imagen(es)...`);
-    
-    // Procesar imágenes en paralelo pero con límite para no saturar
-    const imagePromises = Array.from(images).map(async (img, index) => {
-      try {
-        if (img.src.startsWith('data:image')) {
-          const originalSize = img.src.length;
-          console.log(`📸 Imagen ${index + 1}: ${Math.round(originalSize / 1024)}KB`);
-          
-          // Marcar como en proceso
-          img.classList.add('image-compressing');
-          
-          // Comprimir imagen
-          const compressedSrc = await compress(img.src);
-          const compressedSize = compressedSrc.length;
-          const reduction = ((originalSize - compressedSize) / originalSize * 100).toFixed(1);
-          
-          console.log(`✅ Imagen ${index + 1}: ${Math.round(compressedSize / 1024)}KB (${reduction}% menor)`);
-          
-          // Actualizar src
-          img.src = compressedSrc;
-          img.removeAttribute('data-large');
-          img.classList.remove('image-compressing');
-          
-          // Establecer dimensiones fijas para mejor rendimiento
-          img.style.maxWidth = '100%';
-          img.style.height = 'auto';
-          img.style.width = 'auto';
-          img.setAttribute('loading', 'lazy');
-          img.setAttribute('alt', `Imagen ${index + 1}`);
-          
-          return true;
-        }
-        return false;
-      } catch (error) {
-        console.warn(`⚠️ Error comprimiendo imagen ${index + 1}:`, error);
-        img.classList.remove('image-compressing');
-        // Marcar como grande para advertencia visual
-        img.setAttribute('data-large', 'true');
-        return false;
-      }
-    });
-    
-    await Promise.all(imagePromises);
-    return tempDiv.innerHTML;
-  }, [compress]);
-
-  // Encoding ultra-optimizado
-  const encodeBody = useCallback(async (html, editorRef = null, isComment = false) => {
+  const encodeBody = useCallback((html, editorRef = null) => {
     try {
       if (!html || html.trim() === '') return '';
-      
-      console.log(`📝 ${isComment ? 'Comentario' : 'Tarea'} original: ${html.length} chars`);
-      
-      let cleanedHtml = sanitizeInput(html);
-      
-      // OPTIMIZACIÓN 1: Comprimir imágenes SIEMPRE
+     
+      // Limpiar y procesar el HTML directamente
+      let cleanedHtml = html;
+     
+      // Sanitizar primero
+      cleanedHtml = sanitizeInput(cleanedHtml);
+     
+      // Si hay imágenes, procesarlas con mejor manejo
       if (cleanedHtml.includes('<img')) {
-        setIsCompressing(prev => ({ ...prev, [isComment ? 'comment' : 'task']: true }));
-        cleanedHtml = await optimizeImages(cleanedHtml, editorRef);
-        setIsCompressing(prev => ({ ...prev, [isComment ? 'comment' : 'task']: false }));
-      }
-      
-      console.log(`📦 Después de compresión: ${cleanedHtml.length} chars`);
-      
-      // OPTIMIZACIÓN 2: Validación estricta de tamaño
-      if (cleanedHtml.length > MAX_PAYLOAD_SIZE) {
-        console.warn(`🚨 Contenido excede límite (${MAX_PAYLOAD_SIZE} chars). Truncando...`);
-        
-        // Crear versión de texto plano como fallback
+        // Crear un clon del contenido para procesar
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = cleanedHtml;
+        const images = tempDiv.querySelectorAll('img');
         
-        // Extraer texto principal
-        let textContent = tempDiv.textContent || tempDiv.innerText || '';
-        
-        // Si aún es muy grande, truncar inteligentemente
-        if (textContent.length > MAX_PAYLOAD_SIZE * 0.8) {
-          textContent = textContent.substring(0, MAX_PAYLOAD_SIZE * 0.7) + 
-                       '\n\n⚠️ [CONTENIDO TRUNCADO - Demasiado grande para Google Sheets]';
-          cleanedHtml = `<p>${textContent.replace(/\n/g, '<br>')}</p>`;
-          console.log(`✂️ Texto truncado a: ${cleanedHtml.length} chars`);
-        } else {
-          // Mantener HTML pero remover imágenes grandes
-          const images = tempDiv.querySelectorAll('img');
-          images.forEach(img => {
-            if (img.src.length > 10000) { // Imágenes muy grandes
-              img.remove();
-              console.log('🗑️ Removida imagen muy grande');
+        if (images.length > 0) {
+          console.log(`Procesando ${images.length} imagenes...`);
+          
+          images.forEach((img, index) => {
+            try {
+              // Comprimir dimensiones si es muy grande
+              let imgWidth = img.naturalWidth || img.width;
+              let imgHeight = img.naturalHeight || img.height;
+              
+              // Limitar tamaño máximo para Google Sheets
+              const maxDimension = 800;
+              if (imgWidth > maxDimension || imgHeight > maxDimension) {
+                const ratio = Math.min(maxDimension / imgWidth, maxDimension / imgHeight);
+                imgWidth = Math.floor(imgWidth * ratio);
+                imgHeight = Math.floor(imgHeight * ratio);
+              }
+              
+              // Estilos optimizados para Google Sheets
+              let style = `max-width:100%;height:auto;border-radius:4px;display:block;margin:8px auto;width:${imgWidth}px;height:${imgHeight}px;`;
+              
+              // Asegurar que las imágenes sean responsive
+              style += 'max-width:100% !important;box-sizing:border-box !important;';
+              
+              img.setAttribute('style', style);
+              img.setAttribute('loading', 'lazy');
+              img.setAttribute('alt', `Imagen ${index + 1} de la tarea`);
+              
+              // Optimizar src si es data URL
+              if (img.src.startsWith('data:image')) {
+                console.log(`Optimizando imagen ${index + 1}...`);
+                // Para data URLs muy grandes, podríamos necesitar compresión
+                // pero por ahora solo mantenemos el original
+              }
+            } catch (imgError) {
+              console.warn(`Error procesando imagen ${index}:`, imgError);
             }
           });
-          cleanedHtml = tempDiv.innerHTML;
+        }
+        
+        cleanedHtml = tempDiv.innerHTML;
+      }
+     
+      // Verificar tamaño antes de codificar
+      if (cleanedHtml.length > 45000) {
+        console.warn('Contenido muy grande, truncando...');
+        // Truncar inteligentemente
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = cleanedHtml;
+        const allText = tempDiv.textContent || tempDiv.innerText || '';
+        if (allText.length > 40000) {
+          // Mantener las primeras 20000 chars y agregar aviso
+          const truncated = allText.substring(0, 20000) + '\n\n... (contenido truncado por límite de tamaño)';
+          cleanedHtml = `<p>${truncated.replace(/\n/g, '<br>')}</p>`;
         }
       }
-      
-      // OPTIMIZACIÓN 3: Encoding eficiente
+     
+      // Codificar en base64 con mejor manejo de errores
       const encoder = new TextEncoder();
       const bytes = encoder.encode(cleanedHtml);
       let binary = '';
       for (let i = 0; i < bytes.length; i++) {
         binary += String.fromCharCode(bytes[i]);
       }
-      
       const encoded = btoa(binary);
-      console.log(`✅ ${isComment ? 'Comentario' : 'Tarea'} codificado: ${encoded.length} chars (límite: ${MAX_PAYLOAD_SIZE})`);
       
+      console.log(`Contenido codificado: ${encoded.length} caracteres`);
       return encoded;
-      
+     
     } catch (err) {
-      console.error('❌ Error encoding body:', err);
-      
-      // FALLBACK ULTRA-ROBUSTO
+      console.error('Error encoding body:', err);
+      // Fallback más robusto
       try {
-        // Intentar encoding simple
-        const simpleText = html.replace(/<[^>]*>/g, ' ').substring(0, MAX_PAYLOAD_SIZE * 0.5);
-        const encoded = base64EncodeUnicode(simpleText);
-        console.log(`🔄 Fallback encoding: ${encoded.length} chars`);
-        return encoded;
+        // Intentar con encodeURIComponent primero
+        const uriEncoded = encodeURIComponent(html);
+        const base64 = btoa(uriEncoded);
+        return base64;
       } catch (fallbackErr) {
-        console.error('❌ Fallback encoding failed:', fallbackErr);
-        return ''; // Último recurso
+        console.error('Error en fallback encoding:', fallbackErr);
+        // Último recurso: codificar como texto plano
+        return base64EncodeUnicode(html.substring(0, 20000)); // Limitar tamaño
       }
     }
-  }, [optimizeImages]);
-
+  }, []);
   const decodeBody = useCallback((body) => {
     if (!body) return <p className="text-gray-600">Sin contenido.</p>;
     try {
+      // Mejorar el decoding
       let decoded;
       try {
         decoded = decodeURIComponent(escape(atob(body)));
       } catch (e1) {
+        // Fallback para diferentes encodings
         try {
           decoded = atob(body);
         } catch (e2) {
-          decoded = body;
+          decoded = body; // Último recurso
         }
       }
       
+      // Sanitizar el HTML decodificado
       const sanitized = decoded.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
                               .replace(/on\w+="[^"]*"/gi, '');
       
@@ -565,31 +391,26 @@ export default function TaskSection({ user }) {
       );
     } catch (err) {
       console.error('Error decoding body:', err);
-      return <p className="text-red-600">Error al mostrar contenido</p>;
+      return <p className="text-red-600">Error al mostrar contenido: {err.message}</p>;
     }
   }, []);
-
   const handleAssignTask = async () => {
     if (!taskContent.trim()) {
       setSubmitStatus({ assign: 'La tarea no puede estar vacía' });
       return;
     }
    
-    setSubmitStatus({ assign: '🗜️ Comprimiendo imágenes...' });
+    setSubmitStatus({ assign: 'Enviando...' });
    
-    const encodedTask = await encodeBody(taskContent, taskEditorRef, false);
+    console.log('Task HTML original:', taskContent.substring(0, 200));
+   
+    const encodedTask = encodeBody(taskContent, taskEditorRef);
+    console.log('Encoded task length:', encodedTask.length);
    
     if (!encodedTask || encodedTask.length === 0) {
-      setSubmitStatus({ assign: '❌ Error: No se pudo procesar el contenido' });
+      setSubmitStatus({ assign: 'Error: No se pudo procesar el contenido de la tarea' });
       return;
     }
-   
-    if (encodedTask.length > MAX_PAYLOAD_SIZE) {
-      setSubmitStatus({ assign: `❌ Error: Contenido muy grande (${Math.round(encodedTask.length/1024)}KB). Máximo: ${Math.round(MAX_PAYLOAD_SIZE/1024)}KB` });
-      return;
-    }
-   
-    setSubmitStatus({ assign: '📤 Enviando a Google Sheets...' });
    
     const data = {
       action: 'assign',
@@ -598,30 +419,34 @@ export default function TaskSection({ user }) {
       assignedTo: selectedAssignee || '',
     };
     
-    console.log('📊 Datos finales:', {
+    console.log('Datos finales a enviar:', {
       area: data.area,
-      size: `${Math.round(data.task.length/1024)}KB`,
+      taskLength: data.task.length,
       hasImages: taskContent.includes('<img'),
       assignedTo: data.assignedTo
     });
     
     try {
-      await fetchWithRetry(TASK_SCRIPT_URL, {
+      const result = await fetchWithRetry(TASK_SCRIPT_URL, {
         method: 'POST',
         body: JSON.stringify(data),
+        // Configurar mejor el body para no-cors
+        credentials: 'omit'
       });
       
-      setSubmitStatus({ assign: '✅ ¡Tarea asignada exitosamente! 🎉' });
+      console.log('Resultado del envío:', result);
+      
+      setSubmitStatus({ assign: '¡Tarea asignada exitosamente! 🎉' });
       setShowAssignModal(false);
       setTaskContent('');
       setSelectedAssignee('');
-      setTimeout(() => fetchTasks(), 1500);
+      // Refetch con delay para asegurar que se guarde
+      setTimeout(() => fetchTasks(), 1000);
     } catch (err) {
-      console.error('❌ Error assigning task:', err);
-      setSubmitStatus({ assign: `❌ Error al asignar: ${err.message}` });
+      console.error('Error assigning task:', err);
+      setSubmitStatus({ assign: `Error al asignar tarea: ${err.message}` });
     }
   };
-
   const handleCompleteTask = async (task) => {
     const comment = commentContent[task.rowIndex] || '';
     if (!comment.trim()) {
@@ -629,29 +454,18 @@ export default function TaskSection({ user }) {
       return;
     }
    
-    setSubmitStatus({ complete: '🗜️ Comprimiendo imágenes...' });
-    setIsCompressing(prev => ({ ...prev, [task.rowIndex]: true }));
+    setSubmitStatus({ complete: 'Enviando...' });
    
-    console.log(`💬 Comentario original (${task.rowIndex}): ${comment.length} chars`);
+    console.log(`Comment HTML original for task ${task.rowIndex}:`, comment.substring(0, 200));
    
     const commentEditor = commentEditorsRef.current[task.rowIndex];
-    const encodedComment = await encodeBody(comment, commentEditor, true);
-   
-    setIsCompressing(prev => ({ ...prev, [task.rowIndex]: false }));
-   
-    console.log(`💾 Comentario codificado (${task.rowIndex}): ${encodedComment.length} chars`);
+    const encodedComment = encodeBody(comment, commentEditor);
+    console.log(`Encoded comment length for task ${task.rowIndex}:`, encodedComment.length);
    
     if (!encodedComment || encodedComment.length === 0) {
-      setSubmitStatus({ complete: '❌ Error: No se pudo procesar el comentario' });
+      setSubmitStatus({ complete: 'Error: No se pudo procesar el comentario' });
       return;
     }
-   
-    if (encodedComment.length > MAX_PAYLOAD_SIZE) {
-      setSubmitStatus({ complete: `❌ Error: Comentario muy grande (${Math.round(encodedComment.length/1024)}KB). Máximo: ${Math.round(MAX_PAYLOAD_SIZE/1024)}KB` });
-      return;
-    }
-   
-    setSubmitStatus({ complete: '📤 Enviando a Google Sheets...' });
    
     const data = {
       action: 'complete',
@@ -660,105 +474,77 @@ export default function TaskSection({ user }) {
       comment: encodedComment,
     };
     
-    console.log('📊 Datos para completar:', {
+    console.log('Datos finales para completar tarea:', {
       area: data.area,
       row: data.row,
-      size: `${Math.round(data.comment.length/1024)}KB`,
+      commentLength: data.comment.length,
       hasImages: comment.includes('<img')
     });
     
     try {
-      await fetchWithRetry(TASK_SCRIPT_URL, {
+      const result = await fetchWithRetry(TASK_SCRIPT_URL, {
         method: 'POST',
         body: JSON.stringify(data),
+        credentials: 'omit'
       });
       
-      setSubmitStatus({ complete: '✅ ¡Tarea completada exitosamente! 🎉' });
+      console.log('Resultado del completado:', result);
+      
+      setSubmitStatus({ complete: '¡Tarea completada exitosamente! 🎉' });
       setCommentContent((prev) => ({ ...prev, [task.rowIndex]: '' }));
-      setTimeout(() => fetchTasks(), 1500);
+      // Refetch con delay
+      setTimeout(() => fetchTasks(), 1000);
     } catch (err) {
-      console.error('❌ Error completing task:', err);
-      setSubmitStatus({ complete: `❌ Error al completar: ${err.message}` });
+      console.error('Error completing task:', err);
+      setSubmitStatus({ complete: `Error al completar tarea: ${err.message}` });
     }
   };
-
-  // Funciones debounced
+  // Funciones debounced mejoradas
   const debouncedHandleCommentChange = useCallback(
     debounce((rowIndex, value) => {
+      console.log(`Comment change for row ${rowIndex}:`, value.substring(0, 100));
       setCommentContent((prev) => ({ ...prev, [rowIndex]: value }));
-    }, 500),
+    }, 500), // Aumentar delay para mejor performance
     []
   );
   
   const debouncedSetTaskContent = useCallback(
     debounce((value) => {
+      console.log('Task content change:', value.substring(0, 100));
       setTaskContent(value);
     }, 500),
     []
   );
-
-  // Módulos de Quill
+  
+  // Módulos de Quill optimizados
   const modules = useMemo(() => ({
     toolbar: {
       container: [
-        ['bold', 'italic', 'underline', 'strike'],
+        ['bold', 'italic', 'underline', 'strike', 'blockquote'],
         [{ 'list': 'ordered'}, { 'list': 'bullet' }],
         ['link', 'image'],
-        [{ 'align': [] }],
+        [{ 'align': ['', 'center', 'right', 'justify'] }],
         [{ 'size': ['small', false, 'large'] }],
         ['clean']
       ],
       handlers: {
-        'image': function() {
-          const input = document.createElement('input');
-          input.setAttribute('type', 'file');
-          input.setAttribute('accept', 'image/*');
-          input.click();
-          
-          input.onchange = async () => {
-            const file = input.files[0];
-            if (file && file.size > 1024 * 1024 * 2) { // > 2MB
-              alert('⚠️ La imagen es muy grande. Se comprimirá automáticamente, pero intenta usar imágenes más pequeñas.');
+        // Handler personalizado para links
+        'link': function(value) {
+          if (value) {
+            const href = prompt('Enter the URL:');
+            if (href) {
+              const range = this.quill.getSelection();
+              this.quill.format('link', href, 'user');
             }
-            
-            if (file) {
-              setIsCompressing(prev => ({ ...prev, uploading: true }));
-              
-              try {
-                // Comprimir antes de insertar
-                const reader = new FileReader();
-                reader.onload = async (e) => {
-                  const compressedData = await compress(e.target.result);
-                  const range = this.quill.getSelection();
-                  
-                  // Insertar imagen comprimida
-                  this.quill.insertEmbed(range.index, 'image', compressedData);
-                  
-                  // Mover cursor después de la imagen
-                  this.quill.setSelection(range.index + 1);
-                };
-                reader.readAsDataURL(file);
-              } catch (error) {
-                console.error('Error comprimiendo imagen al insertar:', error);
-                // Fallback: insertar original
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                  const range = this.quill.getSelection();
-                  this.quill.insertEmbed(range.index, 'image', e.target.result);
-                  this.quill.setSelection(range.index + 1);
-                };
-                reader.readAsDataURL(file);
-              } finally {
-                setIsCompressing(prev => ({ ...prev, uploading: false }));
-              }
-            }
-          };
+          } else {
+            this.quill.format('link', false);
+          }
         }
       }
     },
     imageResize: {
       parchment: Quill.import('parchment'),
-      modules: ['Resize', 'DisplaySize'],
+      modules: ['Resize', 'DisplaySize', 'Toolbar'],
       handleStyles: { 
         backgroundColor: 'rgba(0, 0, 0, 0.5)', 
         border: 'none', 
@@ -770,24 +556,40 @@ export default function TaskSection({ user }) {
         border: 'none', 
         color: 'white' 
       },
+      // Limitar tamaño máximo de imágenes
+      onImageResize: (img, height, width) => {
+        if (width > 800) {
+          const ratio = 800 / width;
+          height = Math.round(height * ratio);
+          width = 800;
+        }
+        if (height > 800) {
+          const ratio = 800 / height;
+          width = Math.round(width * ratio);
+          height = 800;
+        }
+        return { height, width };
+      }
     },
     clipboard: {
       matchVisual: false,
     }
-  }), [compress]);
-
+  }), []);
+  
   const formats = [
-    'bold', 'italic', 'underline', 'strike',
-    'list', 'bullet', 'link', 'image', 'align', 'size'
+    'header', 'font', 'size',
+    'bold', 'italic', 'underline', 'strike', 'blockquote',
+    'list', 'bullet', 'indent',
+    'link', 'image', 'color', 'background', 'align'
   ];
-
+  
   const canCompleteTask = (task) => {
     if (isDirector) return false;
     if (!isAssignee) return false;
     return task.assignedName === user.name || task.assignedName === '';
   };
-
-  // Componentes Quill
+  
+  // Componente Quill para tareas con mejores props
   const TaskQuillEditor = React.forwardRef(({ value, onChange, placeholder, className }, ref) => {
     const quillRef = useRef(null);
     const containerRef = useRef(null);
@@ -798,6 +600,33 @@ export default function TaskSection({ user }) {
         taskEditorRef.current = quillRef.current.getEditor();
       }
     }, [ref]);
+   
+    // Fix para problemas de focus y typing
+    useEffect(() => {
+      const handleKeyDown = (e) => {
+        // Prevenir comportamientos no deseados
+        if (e.key === 'Enter' && e.shiftKey) {
+          e.preventDefault();
+        }
+      };
+      
+      const editorRoot = containerRef.current?.querySelector('.ql-editor');
+      if (editorRoot) {
+        editorRoot.addEventListener('keydown', handleKeyDown);
+        editorRoot.addEventListener('input', () => {
+          // Force focus maintenance
+          if (document.activeElement !== editorRoot) {
+            editorRoot.focus();
+          }
+        });
+      }
+      
+      return () => {
+        if (editorRoot) {
+          editorRoot.removeEventListener('keydown', handleKeyDown);
+        }
+      };
+    }, []);
    
     return (
       <div ref={containerRef} className="w-full h-full relative">
@@ -810,25 +639,19 @@ export default function TaskSection({ user }) {
           placeholder={placeholder}
           className={`w-full h-full ${className || ''}`}
           theme="snow"
-          bounds={'.modal-content'}
+          bounds={'.modal-content'} // Para modales
           preserveWhitespace={true}
+          // Props adicionales para mejor UX
           readOnly={false}
           tabIndex={0}
         />
-        {isCompressing.task && (
-          <div className="absolute inset-0 bg-blue-50 bg-opacity-75 flex items-center justify-center rounded-md z-10">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-              <p className="text-sm text-blue-600">Comprimidiendo imágenes...</p>
-            </div>
-          </div>
-        )}
       </div>
     );
   });
-
+  
   TaskQuillEditor.displayName = 'TaskQuillEditor';
-
+  
+  // Componente Quill para comentarios
   const CommentQuillEditor = React.forwardRef(({ value, onChange, rowIndex, placeholder, className }, ref) => {
     const quillRef = useRef(null);
     const containerRef = useRef(null);
@@ -841,12 +664,34 @@ export default function TaskSection({ user }) {
       }
     }, [rowIndex, ref]);
    
+    // Fix para problemas de focus
+    useEffect(() => {
+      const handleFocus = () => {
+        const editorRoot = containerRef.current?.querySelector('.ql-editor');
+        if (editorRoot) {
+          editorRoot.focus();
+        }
+      };
+      
+      const container = containerRef.current;
+      if (container) {
+        container.addEventListener('click', handleFocus);
+      }
+      
+      return () => {
+        if (container) {
+          container.removeEventListener('click', handleFocus);
+        }
+      };
+    }, []);
+   
     return (
       <div ref={containerRef} className="w-full h-full relative">
         <ReactQuill
           ref={quillRef}
           value={value}
           onChange={(content, delta, source, editor) => {
+            // Mejorar el handling de cambios
             if (source === 'user') {
               onChange(rowIndex, content, delta, source, editor);
             }
@@ -856,33 +701,17 @@ export default function TaskSection({ user }) {
           placeholder={placeholder}
           className={`w-full h-full ${className || ''}`}
           theme="snow"
-          bounds={document.body}
+          bounds={document.body} // Usar body para evitar conflictos
           preserveWhitespace={true}
           readOnly={false}
           tabIndex={0}
         />
-        {isCompressing[rowIndex] && (
-          <div className="absolute inset-0 bg-green-50 bg-opacity-75 flex items-center justify-center rounded-md z-10">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-2"></div>
-              <p className="text-sm text-green-600">Comprimidiendo imágenes...</p>
-            </div>
-          </div>
-        )}
-        {isCompressing.uploading && (
-          <div className="absolute inset-0 bg-yellow-50 bg-opacity-75 flex items-center justify-center rounded-md z-10">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-600 mx-auto mb-2"></div>
-              <p className="text-sm text-yellow-600">Subiendo imagen...</p>
-            </div>
-          </div>
-        )}
       </div>
     );
   });
-
+  
   CommentQuillEditor.displayName = 'CommentQuillEditor';
-
+  
   if (loading) return <div className="text-center p-4 text-gray-600">Cargando tareas...</div>;
   if (error) return <div className="text-red-600 text-center p-4">{error}</div>;
   if (!isDirector && !isAssignee) return null;
@@ -942,25 +771,24 @@ export default function TaskSection({ user }) {
             
             {!task.completed && canCompleteTask(task) && (
               <div className="mt-4 space-y-4">
-                <div className="min-h-[8rem] border rounded-md overflow-hidden relative" style={{ minHeight: '200px' }}>
+                <div className="min-h-[8rem] border rounded-md overflow-hidden relative">
                   <CommentQuillEditor
                     value={commentContent[task.rowIndex] || ''}
-                    onChange={(rowIndex, content) => debouncedHandleCommentChange(rowIndex, content)}
+                    onChange={(rowIndex, content, delta, source, editor) => {
+                      debouncedHandleCommentChange(rowIndex, content);
+                    }}
                     rowIndex={task.rowIndex}
-                    placeholder="Comentario sobre lo realizado... (imágenes se comprimirán automáticamente)"
-                    className="h-full text-gray-800 bg-white"
+                    placeholder="Comentario sobre lo realizado... (puedes agregar imágenes)"
+                    className="h-[200px] text-gray-800 bg-white"
                   />
-                </div>
-                <div className="text-xs text-gray-500 text-center">
-                  📸 Las imágenes se comprimen automáticamente para optimizar el guardado
                 </div>
                 <button
                   onClick={() => handleCompleteTask(task)}
                   className="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 text-sm font-medium disabled:opacity-50"
-                  disabled={!commentContent[task.rowIndex]?.trim() || isCompressing[task.rowIndex]}
+                  disabled={!commentContent[task.rowIndex]?.trim()}
                   aria-label="Marcar tarea como completada"
                 >
-                  {isCompressing[task.rowIndex] ? '🗜️ Procesando...' : '✅ Marcar Completado'}
+                  Marcar Completado
                 </button>
               </div>
             )}
@@ -974,21 +802,24 @@ export default function TaskSection({ user }) {
         )}
       </div>
       
-      {/* Modal de asignación */}
+      {/* Modal de asignación mejorado */}
       {showAssignModal && isDirector && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col relative modal-content">
+            {/* Header del modal */}
             <div className="sticky top-0 bg-white border-b border-gray-200 p-4 z-10">
               <h3 className="font-bold text-lg text-gray-800 mb-2">Asignar Nueva Tarea</h3>
               <p className="text-sm text-gray-600">Describe la tarea y selecciona al responsable</p>
             </div>
             
+            {/* Contenido del modal */}
             <div className="flex-grow overflow-y-auto p-4 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <select
                   value={selectedArea}
                   onChange={(e) => setSelectedArea(e.target.value)}
                   className="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  aria-label="Seleccionar área de la tarea"
                 >
                   <option value={AREAS.RRSS}>{AREAS.RRSS}</option>
                   <option value={AREAS.WEB}>{AREAS.WEB}</option>
@@ -998,6 +829,7 @@ export default function TaskSection({ user }) {
                   value={selectedAssignee}
                   onChange={(e) => setSelectedAssignee(e.target.value)}
                   className="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  aria-label="Seleccionar asignado"
                 >
                   <option value="">Todos los {selectedArea === AREAS.RRSS ? 'RRSS' : 'Web'}</option>
                   {(selectedArea === AREAS.RRSS ? rrssUsers : webUsers).map((u) => (
@@ -1008,23 +840,23 @@ export default function TaskSection({ user }) {
                 </select>
               </div>
               
-              <div className="min-h-[12rem] border border-gray-300 rounded-md overflow-hidden" style={{ minHeight: '250px' }}>
+              <div className="min-h-[12rem] border border-gray-300 rounded-md overflow-hidden">
                 <TaskQuillEditor
                   value={taskContent}
                   onChange={debouncedSetTaskContent}
-                  placeholder="Describe la tarea detalladamente... (imágenes se comprimen automáticamente)"
-                  className="h-full"
+                  placeholder="Describe la tarea detalladamente... (puedes agregar imágenes y enlaces)"
+                  className="h-[250px]"
                   ref={taskEditorRef}
                 />
               </div>
               
-              <div className="text-xs text-gray-500 space-y-1">
-                <p>💡 <strong>Formato rico</strong>: Usa negritas, listas, enlaces</p>
-                <p>📸 <strong>Imágenes</strong>: Se comprimen automáticamente (máx. 600px, 50% calidad)</p>
-                <p>⚠️ <strong>Límite</strong>: {Math.round(MAX_PAYLOAD_SIZE/1024)}KB por tarea</p>
+              <div className="text-xs text-gray-500">
+                💡 Puedes usar <strong>formato rico</strong>, agregar <strong>imágenes</strong> y <strong>enlaces</strong>. 
+                El contenido se guardará automáticamente en Google Sheets.
               </div>
             </div>
             
+            {/* Footer del modal */}
             <div className="sticky bottom-0 pt-4 pb-4 px-4 bg-white border-t border-gray-200 flex justify-end space-x-3">
               <button
                 onClick={() => {
@@ -1033,22 +865,17 @@ export default function TaskSection({ user }) {
                   setSelectedAssignee('');
                 }}
                 className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition-colors text-sm font-medium"
+                aria-label="Cancelar asignación de tarea"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleAssignTask}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                disabled={!taskContent.trim() || isCompressing.task}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!taskContent.trim()}
+                aria-label="Asignar tarea"
               >
-                {isCompressing.task ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Procesando...
-                  </>
-                ) : (
-                  'Asignar Tarea'
-                )}
+                {submitStatus.assign === 'Enviando...' ? 'Enviando...' : 'Asignar Tarea'}
               </button>
             </div>
             
@@ -1056,9 +883,9 @@ export default function TaskSection({ user }) {
               <div className="px-4 pb-4">
                 <p
                   className={`text-sm ${
-                    submitStatus.assign.includes('Error') || submitStatus.assign.includes('❌')
+                    submitStatus.assign?.includes('Error') || submitStatus.assign?.includes('Error') 
                       ? 'text-red-600' 
-                      : submitStatus.assign.includes('exitosa') || submitStatus.assign.includes('✅')
+                      : submitStatus.assign?.includes('exitosa') 
                       ? 'text-green-600' 
                       : 'text-blue-600'
                   }`}
@@ -1072,11 +899,11 @@ export default function TaskSection({ user }) {
       )}
       
       {submitStatus.complete && (
-        <div className={`mt-4 p-3 rounded-md border ${
-          submitStatus.complete.includes('Error') || submitStatus.complete.includes('❌')
+        <div className="mt-4 p-3 rounded-md border ${
+          submitStatus.complete?.includes('Error') 
             ? 'border-red-300 bg-red-50 text-red-700' 
             : 'border-green-300 bg-green-50 text-green-700'
-        }`}>
+        }">
           <p className="text-sm">{submitStatus.complete}</p>
         </div>
       )}
