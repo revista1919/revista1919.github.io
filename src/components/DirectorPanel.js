@@ -220,18 +220,17 @@ export default function DirectorPanel({ user }) {
     
     try {
       const data = {
-        action: 'update_pdf_url',
-        numero: parseInt(numero),
-        pdfUrl,
-      };
-      
-      await fetch(ARTICULOS_GAS_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      
-      console.log('✅ PDF URL updated in sheet:', numero, pdfUrl);
+  action: 'update_pdf_url',
+  numero: parseInt(numero),
+  pdfUrl,
+};
+await fetch(ARTICULOS_GAS_URL, {
+  method: 'POST',
+  redirect: 'follow',
+  body: JSON.stringify(data),
+  headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+});
+console.log('✅ PDF URL updated in sheet:', numero, pdfUrl);
     } catch (err) {
       console.error('❌ Failed to update PDF URL:', err);
     }
@@ -252,14 +251,15 @@ export default function DirectorPanel({ user }) {
     
     const response = await fetch(ARTICULOS_GAS_URL, {
   method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
+  redirect: 'follow',  // Para manejar redirects de GAS
   body: JSON.stringify(data),
-  mode: 'no-cors',
+  headers: { 'Content-Type': 'text/plain;charset=utf-8' },
 });
 
-    if (response.status >= 400) {
-      throw new Error(`GAS error: ${response.status}`);
-    }
+  const resText = await response.text();
+if (resText.includes('error')) {
+  throw new Error(`GAS error: ${resText}`);
+}
 
     // Wait for sync
     await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -300,9 +300,13 @@ export default function DirectorPanel({ user }) {
       let articleNumber;
       if (action === 'add') {
         await submitToSheet('add', articleData);
+        await new Promise(resolve => setTimeout(resolve, 3000));  // Espera 3 segundos para propagación
         // Get the new article number after refresh
         await fetchArticles();
-        articleNumber = Math.max(...articles.map((a) => parseInt(a['Número de artículo'] || 0))) || articles.length + 1;
+        const nums = articles.map(a => parseInt(a['Número de artículo'] || '0', 10)).filter(n => !isNaN(n) && isFinite(n));
+const maxNum = nums.length > 0 ? Math.max(...nums) : 0;
+articleNumber = maxNum + 1;
+console.log('🆕 Calculated articleNumber:', articleNumber, 'from nums:', nums);
         console.log('🆕 New article number:', articleNumber);
       } else {
         articleNumber = editingArticle['Número de artículo'];
@@ -334,6 +338,10 @@ export default function DirectorPanel({ user }) {
 
       closeModals();
       await fetchArticles();
+      if (GH_TOKEN) {
+  await triggerRebuild();
+  setStatus(`${status} y rebuild iniciado.`);
+}
       
     } catch (err) {
       console.error('💥 Submit error:', err);
