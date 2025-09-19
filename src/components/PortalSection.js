@@ -215,7 +215,7 @@ export default function PortalSection({ user, onLogout }) {
   const [editingRange, setEditingRange] = useState({});
   const [selectedAssignment, setSelectedAssignment] = useState(null);
   const [expandedFeedback, setExpandedFeedback] = useState({});
-const [isDirectorPanelExpanded, setIsDirectorPanelExpanded] = useState(false); // Estado para el panel colapsable del Director
+  const [isDirectorPanelExpanded, setIsDirectorPanelExpanded] = useState(false); // Estado para el panel colapsable del Director
   const [isChiefEditorPanelExpanded, setIsChiefEditorPanelExpanded] = useState(false); // Estado para el panel colapsable del Editor en Jefe
   const feedbackQuillRefs = useRef({});
   const reportQuillRefs = useRef({});
@@ -400,11 +400,13 @@ const [isDirectorPanelExpanded, setIsDirectorPanelExpanded] = useState(false); /
 
   const isAuthor = assignments.length > 0 && assignments[0].role === 'Autor';
   const isChief = user?.role && user.role.split(';').map(r => r.trim()).includes('Editor en Jefe');
- const isDirector = user?.role && user.role.split(';').map(r => r.trim()).includes('Director General');
+  const isDirector = user?.role && user.role.split(';').map(r => r.trim()).includes('Director General');
+  const isRrss = user?.role && user.role.split(';').map(r => r.trim()).includes('Encargado de Redes Sociales');
+  const isWebDev = user?.role && user.role.split(';').map(r => r.trim()).includes('Responsable de Desarrollo Web');
   console.log('User data:', user);
-console.log('User roles:', user?.role);
-console.log('isDirector:', isDirector);
-console.log('isChief:', isChief);
+  console.log('User roles:', user?.role);
+  console.log('isDirector:', isDirector);
+  console.log('isChief:', isChief);
   const pendingAssignments = useMemo(() => 
     isAuthor 
       ? assignments.filter((a) => !a.feedbackEditor || !['Aceptado', 'Rechazado'].includes(a.Estado))
@@ -1454,6 +1456,16 @@ const AssignmentCard = ({ assignment, onClick }) => {
                 <AssignSection user={user} />
               </div>
             )}
+          </div>
+        )}
+        
+        {/* Task Section for Encargado de Redes Sociales and Responsable de Desarrollo Web */}
+        {(isRrss || isWebDev) && !isDirector && !isChief && (
+          <div className="mb-6 bg-white rounded-lg shadow-md p-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xl font-semibold text-gray-800">Mis Tareas en {isRrss ? 'Redes Sociales' : 'Desarrollo Web'}</h3>
+            </div>
+            <TaskSection user={user} />
           </div>
         )}
         

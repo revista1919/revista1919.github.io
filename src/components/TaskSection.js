@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Papa from 'papaparse';
 import ReactQuill, { Quill } from 'react-quill';
@@ -60,6 +61,19 @@ export default function TaskSection({ user }) {
   // Referencias para los editores de Quill
   const taskEditorRef = useRef(null);
   const commentEditorsRef = useRef({});
+
+  useEffect(() => {
+    // Añadir estilo para tooltip de Quill (para links e imágenes)
+    const style = document.createElement('style');
+    style.innerHTML = `
+      .ql-tooltip {
+        z-index: 9999 !important;
+        position: fixed !important;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => style.remove();
+  }, []);
 
   const fetchWithRetry = async (url, options, retries = MAX_RETRIES) => {
     try {
@@ -395,12 +409,9 @@ export default function TaskSection({ user }) {
     }
   };
 
-  const handleCommentChange = useCallback(
-    debounce((rowIndex, value) => {
-      setCommentContent((prev) => ({ ...prev, [rowIndex]: value }));
-    }, 150),
-    []
-  );
+  const handleCommentChange = (rowIndex, value) => {
+    setCommentContent((prev) => ({ ...prev, [rowIndex]: value }));
+  };
 
   const modules = useMemo(() => ({
     toolbar: [
