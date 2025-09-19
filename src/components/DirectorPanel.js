@@ -251,10 +251,11 @@ export default function DirectorPanel({ user }) {
     console.log(`📄 Submitting to GAS: ${action}`, { hasNumero: !!numero });
     
     const response = await fetch(ARTICULOS_GAS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(data),
+  mode: 'no-cors',
+});
 
     if (response.status >= 400) {
       throw new Error(`GAS error: ${response.status}`);
