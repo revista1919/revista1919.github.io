@@ -153,13 +153,6 @@ module.exports = (env, argv) => {
               minifyURLs: true,
             }
           : false,
-        // ← NUEVO: Agregar meta tags para Firebase
-        meta: isProduction ? {
-          'firebase-config': JSON.stringify({
-            projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
-            apiKey: process.env.REACT_APP_FIREBASE_API_KEY ? 'CONFIGURED' : 'MISSING'
-          })
-        } : {},
       }),
       new CopyWebpackPlugin({
         patterns: [
