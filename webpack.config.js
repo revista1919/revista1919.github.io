@@ -6,8 +6,9 @@ const WebpackShellPluginNext = require('webpack-shell-plugin-next');
 const webpack = require('webpack');
 
 // ✅ Cargar .env explícitamente
-require('dotenv').config({ path: path.resolve(__dirname, '.env.local') || path.resolve(__dirname, '.env') });
-
+// Cargar .env.local primero, luego .env
+require('dotenv').config({ path: path.resolve(__dirname, '.env.local') });
+require('dotenv').config({ path: path.resolve(__dirname, '.env'), override: true });
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
 
