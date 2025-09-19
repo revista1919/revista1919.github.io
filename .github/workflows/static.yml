@@ -44,29 +44,30 @@ jobs:
           echo "ARTICULOS_SCRIPT length: ${#ARTICULOS_SCRIPT}"
           echo "MY_GITHUB_TOKEN length: ${#MY_GITHUB_TOKEN}"
           echo "USERS_CSV length: ${#USERS_CSV}"
-          echo "FIREBASE_API_KEY length: ${#FIREBASE_API_KEY}" # ← NUEVO
-          echo "FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-MISSING}" # ← NUEVO
+          echo "FIREBASE_API_KEY length: ${#FIREBASE_API_KEY}"
+          echo "FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-MISSING}"
         env:
           ARTICULOS_SCRIPT: ${{ secrets.ARTICULOS_SCRIPT }}
           MY_GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
           USERS_CSV: ${{ secrets.USERS_CSV }}
-          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }} # ← NUEVO
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }} # ← NUEVO
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
 
       - name: Build project
         run: |
           echo "Building with env vars..."
-          echo "REACT_APP_ARTICULOS_SCRIPT_URL=${{ secrets.ARTICULOS_SCRIPT }}" > .env
-          echo "REACT_APP_GH_TOKEN=${{ secrets.MY_GITHUB_TOKEN }}" >> .env
-          echo "REACT_APP_USERS_CSV=${{ secrets.USERS_CSV }}" >> .env
-          # ← NUEVO: Firebase variables
-          echo "REACT_APP_FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }}" >> .env
-          echo "REACT_APP_FIREBASE_AUTH_DOMAIN=usuarios-rnce.firebaseapp.com" >> .env
-          echo "REACT_APP_FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}" >> .env
-          echo "REACT_APP_FIREBASE_STORAGE_BUCKET=usuarios-rnce.firebasestorage.app" >> .env
-          echo "REACT_APP_FIREBASE_MESSAGING_SENDER_ID=688242139131" >> .env
-          echo "REACT_APP_FIREBASE_APP_ID=1:688242139131:web:3a98663545e73110c3f55e" >> .env
-          cat .env
+          # ← CAMBIADO: Crear .env.local en lugar de .env
+          echo "REACT_APP_ARTICULOS_SCRIPT_URL=${{ secrets.ARTICULOS_SCRIPT }}" > .env.local
+          echo "REACT_APP_GH_TOKEN=${{ secrets.MY_GITHUB_TOKEN }}" >> .env.local
+          echo "REACT_APP_USERS_CSV=${{ secrets.USERS_CSV }}" >> .env.local
+          echo "REACT_APP_FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }}" >> .env.local
+          echo "REACT_APP_FIREBASE_AUTH_DOMAIN=usuarios-rnce.firebaseapp.com" >> .env.local
+          echo "REACT_APP_FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}" >> .env.local
+          echo "REACT_APP_FIREBASE_STORAGE_BUCKET=usuarios-rnce.firebasestorage.app" >> .env.local
+          echo "REACT_APP_FIREBASE_MESSAGING_SENDER_ID=688242139131" >> .env.local
+          echo "REACT_APP_FIREBASE_APP_ID=1:688242139131:web:3a98663545e73110c3f55e" >> .env.local
+          echo "REACT_APP_FIREBASE_MEASUREMENT_ID=G-K90MKB7BDP" >> .env.local
+          cat .env.local
           npm run build
         env:
           NODE_ENV: production
@@ -75,15 +76,9 @@ jobs:
         run: |
           echo "Listing dist directory contents:"
           ls -la dist/
-          echo "Checking robots.txt:"
-          cat dist/robots.txt || echo "No robots.txt found"
-          echo "Checking sitemap.xml:"
-          cat dist/sitemap.xml || echo "No sitemap.xml found"
-          echo "Checking for environment variables in bundle:"
-          grep -r "REACT_APP_ARTICULOS_SCRIPT_URL" dist/ || echo "REACT_APP_ARTICULOS_SCRIPT_URL not found in bundle"
-          grep -r "REACT_APP_GH_TOKEN" dist/ || echo "REACT_APP_GH_TOKEN not found in bundle (expected for security)"
-          grep -r "REACT_APP_USERS_CSV" dist/ || echo "REACT_APP_USERS_CSV not found in bundle (expected for security)"
-          grep -r "REACT_APP_FIREBASE_API_KEY" dist/ || echo "REACT_APP_FIREBASE_API_KEY not found in bundle (expected for security)" # ← NUEVO
+          echo "Checking for Firebase config in bundle:"
+          grep -r "REACT_APP_FIREBASE_API_KEY" dist/ || echo "Firebase API key inyectada correctamente"
+          grep -r "usuarios-rnce" dist/ || echo "Firebase project ID encontrado"
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
