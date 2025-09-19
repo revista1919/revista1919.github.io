@@ -3,7 +3,7 @@ import Papa from 'papaparse';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'; // Asumiendo Heroicons, instala si necesario
 import { useTranslation } from 'react-i18next';
 
-const USERS_CSV = process.env.REACT_APP_USERS_CSV || '';
+const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 
 export default function LoginSection({ onLogin }) {
   const [email, setEmail] = useState('');
