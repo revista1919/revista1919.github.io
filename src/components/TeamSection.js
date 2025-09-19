@@ -9,7 +9,7 @@ function TeamSection({ setActiveTab }) {
   const [csvError, setCsvError] = useState(null);
 
   const csvUrl =
-    'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
+    process.env.REACT_APP_USERS_CSV || '';
 
   // Cargar datos del CSV
   useEffect(() => {

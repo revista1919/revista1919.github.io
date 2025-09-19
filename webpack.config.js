@@ -14,7 +14,8 @@ module.exports = (env, argv) => {
   // ✅ Debug: Imprimir variables de entorno
   console.log('🔍 Webpack Environment Variables:', {
     REACT_APP_ARTICULOS_SCRIPT_URL: process.env.REACT_APP_ARTICULOS_SCRIPT_URL ? `${process.env.REACT_APP_ARTICULOS_SCRIPT_URL.slice(0, 40)}...` : 'MISSING',
-    REACT_APP_GH_TOKEN: process.env.REACT_APP_GH_TOKEN ? 'PRESENT' : 'MISSING'
+    REACT_APP_GH_TOKEN: process.env.REACT_APP_GH_TOKEN ? 'PRESENT' : 'MISSING',
+    REACT_APP_USERS_CSV: process.env.REACT_APP_USERS_CSV ? `${process.env.REACT_APP_USERS_CSV.slice(0, 40)}...` : 'MISSING', // Added USERS_CSV
   });
 
   // ✅ Inyectar variables de entorno en el bundle
@@ -22,6 +23,7 @@ module.exports = (env, argv) => {
     'process.env.NODE_ENV': JSON.stringify(isProduction ? 'production' : 'development'),
     'process.env.REACT_APP_ARTICULOS_SCRIPT_URL': JSON.stringify(process.env.REACT_APP_ARTICULOS_SCRIPT_URL || ''),
     'process.env.REACT_APP_GH_TOKEN': JSON.stringify(process.env.REACT_APP_GH_TOKEN || ''),
+    'process.env.REACT_APP_USERS_CSV': JSON.stringify(process.env.REACT_APP_USERS_CSV || ''), // Added USERS_CSV
     'process.env.DEBUG': JSON.stringify(!isProduction),
   };
 
