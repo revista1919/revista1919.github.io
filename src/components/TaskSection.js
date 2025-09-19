@@ -133,7 +133,7 @@ export default function TaskSection({ user }) {
       const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
       const response = await fetch(url, {
         ...options,
-        mode: 'no-cors',
+        mode: 'cors',
         headers: { 
           'Content-Type': 'application/json',
           // Headers adicionales para mejor compatibilidad
@@ -145,7 +145,10 @@ export default function TaskSection({ user }) {
         keepalive: true
       });
       clearTimeout(timeoutId);
-      return { success: true };
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response;
     } catch (err) {
       if (err.name === 'AbortError') {
         throw new Error('Request timed out');
@@ -258,6 +261,42 @@ export default function TaskSection({ user }) {
   }, [tasks, user.name, isDirector, isRrss, isWeb]);
   const pendingTasks = useMemo(() => filteredTasks.filter((t) => !t.completed), [filteredTasks]);
   const completedTasks = useMemo(() => filteredTasks.filter((t) => t.completed), [filteredTasks]);
+  const uploadImage = async (file) => {
+    try {
+      const reader = new FileReader();
+      return new Promise((resolve, reject) => {
+        reader.onload = async (e) => {
+          const base64 = e.target.result.split(',')[1];
+          const mime = file.type;
+          const name = file.name;
+          try {
+            const response = await fetchWithRetry(TASK_SCRIPT_URL, {
+              method: 'POST',
+              body: JSON.stringify({
+                action: 'upload_image',
+                data: base64,
+                mime: mime,
+                name: name
+              }),
+            });
+            const data = await response.json();
+            if (data.url) {
+              resolve(data.url);
+            } else {
+              reject(new Error('No URL returned'));
+            }
+          } catch (err) {
+            reject(err);
+          }
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    } catch (err) {
+      console.error('Error uploading image:', err);
+      return null;
+    }
+  };
   const encodeBody = useCallback((html, editorRef = null) => {
     try {
       if (!html || html.trim() === '') return '';
@@ -280,20 +319,8 @@ export default function TaskSection({ user }) {
           
           images.forEach((img, index) => {
             try {
-              // Comprimir dimensiones si es muy grande
-              let imgWidth = img.naturalWidth || img.width;
-              let imgHeight = img.naturalHeight || img.height;
-              
-              // Limitar tamaño máximo para Google Sheets
-              const maxDimension = 800;
-              if (imgWidth > maxDimension || imgHeight > maxDimension) {
-                const ratio = Math.min(maxDimension / imgWidth, maxDimension / imgHeight);
-                imgWidth = Math.floor(imgWidth * ratio);
-                imgHeight = Math.floor(imgHeight * ratio);
-              }
-              
               // Estilos optimizados para Google Sheets
-              let style = `max-width:100%;height:auto;border-radius:4px;display:block;margin:8px auto;width:${imgWidth}px;height:${imgHeight}px;`;
+              let style = `max-width:100%;height:auto;border-radius:4px;display:block;margin:8px auto;`;
               
               // Asegurar que las imágenes sean responsive
               style += 'max-width:100% !important;box-sizing:border-box !important;';
@@ -301,13 +328,6 @@ export default function TaskSection({ user }) {
               img.setAttribute('style', style);
               img.setAttribute('loading', 'lazy');
               img.setAttribute('alt', `Imagen ${index + 1} de la tarea`);
-              
-              // Optimizar src si es data URL
-              if (img.src.startsWith('data:image')) {
-                console.log(`Optimizando imagen ${index + 1}...`);
-                // Para data URLs muy grandes, podríamos necesitar compresión
-                // pero por ahora solo mantenemos el original
-              }
             } catch (imgError) {
               console.warn(`Error procesando imagen ${index}:`, imgError);
             }
@@ -315,20 +335,6 @@ export default function TaskSection({ user }) {
         }
         
         cleanedHtml = tempDiv.innerHTML;
-      }
-     
-      // Verificar tamaño antes de codificar
-      if (cleanedHtml.length > 45000) {
-        console.warn('Contenido muy grande, truncando...');
-        // Truncar inteligentemente
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = cleanedHtml;
-        const allText = tempDiv.textContent || tempDiv.innerText || '';
-        if (allText.length > 40000) {
-          // Mantener las primeras 20000 chars y agregar aviso
-          const truncated = allText.substring(0, 20000) + '\n\n... (contenido truncado por límite de tamaño)';
-          cleanedHtml = `<p>${truncated.replace(/\n/g, '<br>')}</p>`;
-        }
       }
      
       // Codificar en base64 con mejor manejo de errores
@@ -354,7 +360,7 @@ export default function TaskSection({ user }) {
       } catch (fallbackErr) {
         console.error('Error en fallback encoding:', fallbackErr);
         // Último recurso: codificar como texto plano
-        return base64EncodeUnicode(html.substring(0, 20000)); // Limitar tamaño
+        return base64EncodeUnicode(html); 
       }
     }
   }, []);
@@ -427,14 +433,12 @@ export default function TaskSection({ user }) {
     });
     
     try {
-      const result = await fetchWithRetry(TASK_SCRIPT_URL, {
+      const response = await fetchWithRetry(TASK_SCRIPT_URL, {
         method: 'POST',
         body: JSON.stringify(data),
-        // Configurar mejor el body para no-cors
-        credentials: 'omit'
       });
       
-      console.log('Resultado del envío:', result);
+      console.log('Resultado del envío:', await response.json());
       
       setSubmitStatus({ assign: '¡Tarea asignada exitosamente! 🎉' });
       setShowAssignModal(false);
@@ -482,13 +486,12 @@ export default function TaskSection({ user }) {
     });
     
     try {
-      const result = await fetchWithRetry(TASK_SCRIPT_URL, {
+      const response = await fetchWithRetry(TASK_SCRIPT_URL, {
         method: 'POST',
         body: JSON.stringify(data),
-        credentials: 'omit'
       });
       
-      console.log('Resultado del completado:', result);
+      console.log('Resultado del completado:', await response.json());
       
       setSubmitStatus({ complete: '¡Tarea completada exitosamente! 🎉' });
       setCommentContent((prev) => ({ ...prev, [task.rowIndex]: '' }));
@@ -539,6 +542,24 @@ export default function TaskSection({ user }) {
           } else {
             this.quill.format('link', false);
           }
+        },
+        // Handler personalizado para imágenes (subida a servidor)
+        'image': function() {
+          const input = document.createElement('input');
+          input.setAttribute('type', 'file');
+          input.setAttribute('accept', 'image/*');
+          input.click();
+          input.onchange = async () => {
+            if (input.files && input.files[0]) {
+              const file = input.files[0];
+              const url = await uploadImage(file);
+              if (url) {
+                const range = this.quill.getSelection(true);
+                this.quill.insertEmbed(range.index, 'image', url, 'user');
+                this.quill.setSelection(range.index + 1, 'silent');
+              }
+            }
+          };
         }
       }
     },
@@ -753,7 +774,7 @@ export default function TaskSection({ user }) {
         {(activeTab === 'pending' ? pendingTasks : completedTasks).map((task) => (
           <div
             key={`${task.area}-${task.rowIndex}`}
-            className="bg-white p-6 rounded-lg shadow-md border border-gray-200"
+            className="bg-white p-4 sm:p-6 rounded-lg shadow-md border border-gray-200 w-full overflow-hidden box-border"
           >
             <h3 className="font-bold text-lg text-gray-800 mb-2">
               {task.area} - {task.assignedName || 'Todos'}
@@ -770,15 +791,15 @@ export default function TaskSection({ user }) {
             )}
             
             {!task.completed && canCompleteTask(task) && (
-              <div className="mt-4 space-y-4">
-                <div className="min-h-[8rem] border rounded-md overflow-hidden relative">
+              <div className="mt-4 space-y-4 w-full">
+                <div className="min-h-[8rem] border rounded-md overflow-hidden w-full">
                   <CommentQuillEditor
                     value={commentContent[task.rowIndex] || ''}
                     onChange={(rowIndex, content, delta, source, editor) => {
                       debouncedHandleCommentChange(rowIndex, content);
                     }}
                     rowIndex={task.rowIndex}
-                    placeholder="Comentario sobre lo realizado... (puedes agregar imágenes)"
+                    placeholder="Comentario sobre lo realizado... (para imágenes, usa el botón de imagen para evitar problemas de tamaño)"
                     className="h-[200px] text-gray-800 bg-white"
                   />
                 </div>
@@ -840,11 +861,11 @@ export default function TaskSection({ user }) {
                 </select>
               </div>
               
-              <div className="min-h-[12rem] border border-gray-300 rounded-md overflow-hidden">
+              <div className="min-h-[12rem] border border-gray-300 rounded-md overflow-hidden w-full">
                 <TaskQuillEditor
                   value={taskContent}
                   onChange={debouncedSetTaskContent}
-                  placeholder="Describe la tarea detalladamente... (puedes agregar imágenes y enlaces)"
+                  placeholder="Describe la tarea detalladamente... (para imágenes, usa el botón de imagen para evitar problemas de tamaño)"
                   className="h-[250px]"
                   ref={taskEditorRef}
                 />

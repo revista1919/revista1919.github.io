@@ -1,4 +1,3 @@
-// src/components/LoginSection.jsx (o donde lo tengas)
 import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
@@ -7,10 +6,11 @@ import {
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
+  fetchSignInMethodsForEmail,
   onAuthStateChanged,
   signOut 
-} from '../firebase'; // ← IMPORTANTE: Importar desde firebase.js
-import { auth } from '../firebase'; // ← Importar auth
+} from '../firebase';
+import { auth } from '../firebase';
 
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 
@@ -25,12 +25,10 @@ export default function LoginSection({ onLogin }) {
   const [errors, setErrors] = useState({ email: '', password: '' });
   const [currentUser, setCurrentUser] = useState(null);
 
-  // ← NUEVO: Observador de estado de autenticación
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
       if (user) {
-        // Usuario logueado - buscar datos en CSV para UX
         const csvUser = users.find(u => 
           u.Correo?.toLowerCase() === user.email.toLowerCase() ||
           u['E-mail']?.toLowerCase() === user.email.toLowerCase()
@@ -51,7 +49,6 @@ export default function LoginSection({ onLogin }) {
     return unsubscribe;
   }, [auth, onLogin, users]);
 
-  // ← MANTENIDO: Cargar CSV (solo para validar emails autorizados)
   useEffect(() => {
     const fetchUsers = async () => {
       setIsLoading(true);
@@ -65,7 +62,6 @@ export default function LoginSection({ onLogin }) {
           delimiter: ',',
           transform: (value) => value?.toString().trim(),
           complete: ({ data }) => {
-            // ← MEJORADO: Filtrar solo usuarios con email válido
             const validUsers = data.filter(user => 
               user.Correo && 
               typeof user.Correo === 'string' &&
@@ -91,14 +87,12 @@ export default function LoginSection({ onLogin }) {
     fetchUsers();
   }, []);
 
-  // ← MEJORADO: Validación con CSV
   const validateInputs = () => {
     let isValid = true;
     const newErrors = { email: '', password: '' };
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    // Validar email
     if (!email) {
       newErrors.email = 'Correo requerido';
       isValid = false;
@@ -106,7 +100,6 @@ export default function LoginSection({ onLogin }) {
       newErrors.email = 'Formato de correo inválido';
       isValid = false;
     } else {
-      // ← NUEVO: Validar contra CSV (solo para registro)
       if (!isLogin) {
         const userFromCSV = users.find(user => 
           user.Correo?.trim().toLowerCase() === normalizedEmail ||
@@ -119,7 +112,6 @@ export default function LoginSection({ onLogin }) {
       }
     }
 
-    // Validar password
     if (!password) {
       newErrors.password = 'Contraseña requerida';
       isValid = false;
@@ -132,7 +124,6 @@ export default function LoginSection({ onLogin }) {
     return isValid;
   };
 
-  // ← NUEVO: Handle registro (crear contraseña)
   const handleSignUp = async () => {
     if (!validateInputs()) return;
 
@@ -146,14 +137,12 @@ export default function LoginSection({ onLogin }) {
     );
 
     try {
-      // ← NUEVO: Crear usuario con Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
       const user = userCredential.user;
 
       console.log('✅ Usuario creado:', user.uid);
       setMessage(`✅ ¡Contraseña creada para ${userFromCSV?.Nombre || normalizedEmail}! Ahora inicia sesión.`);
       
-      // Limpiar formulario y cambiar a login
       setEmail('');
       setPassword('');
       setIsLogin(true);
@@ -186,7 +175,6 @@ export default function LoginSection({ onLogin }) {
     setIsLoading(false);
   };
 
-  // ← NUEVO: Handle login
   const handleLogin = async () => {
     if (!validateInputs()) return;
 
@@ -196,11 +184,9 @@ export default function LoginSection({ onLogin }) {
     const normalizedEmail = email.trim().toLowerCase();
 
     try {
-      // ← NUEVO: Login con Firebase Auth
       const userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
       const user = userCredential.user;
 
-      // ← MANTENIDO: Buscar datos adicionales en CSV para UX
       const csvUser = users.find(u => 
         u.Correo?.toLowerCase() === user.email.toLowerCase() ||
         u['E-mail']?.toLowerCase() === user.email.toLowerCase()
@@ -243,7 +229,6 @@ export default function LoginSection({ onLogin }) {
     setIsLoading(false);
   };
 
-  // ← NUEVO: Handle forgot password
   const handleForgotPassword = async () => {
     if (!email) {
       setMessage('Ingresa tu correo primero');
@@ -257,36 +242,66 @@ export default function LoginSection({ onLogin }) {
     );
 
     if (!userFromCSV) {
-      setMessage('Este correo no está autorizado');
+      setMessage('❌ Este correo no está autorizado en la lista');
       return;
     }
 
+    setIsLoading(true);
+    setMessage('');
+
     try {
+      const methods = await fetchSignInMethodsForEmail(auth, normalizedEmail);
+      if (methods.length === 0) {
+        setMessage('❌ No hay contraseña creada para este correo. Usa "Crear Contraseña" primero.');
+        return;
+      }
+      if (!methods.includes('password')) {
+        setMessage('❌ Esta cuenta usa otro método (ej. Google). Contacta al admin.');
+        return;
+      }
+
       await sendPasswordResetEmail(auth, normalizedEmail);
-      setMessage('✅ Revisa tu correo para restablecer la contraseña');
+      console.log('✅ Email de reset enviado para:', normalizedEmail);
+      setMessage('✅ Revisa tu correo (incluyendo spam/junk) para restablecer la contraseña. Puede tardar unos minutos.');
     } catch (error) {
-      console.error('Error forgot password:', error);
-      setMessage('❌ Error al enviar correo de recuperación');
+      console.error('Error en forgot password:', error.code, error.message);
+      let errorMessage = '❌ Error al enviar correo de recuperación';
+      
+      switch (error.code) {
+        case 'auth/invalid-email':
+          errorMessage = 'Formato de correo inválido';
+          break;
+        case 'auth/too-many-requests':
+          errorMessage = 'Demasiados intentos. Espera 10-15 minutos.';
+          break;
+        case 'auth/missing-email':
+          errorMessage = 'Falta el correo';
+          break;
+        default:
+          errorMessage += ` (${error.message})`;
+      }
+      
+      setMessage(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // ← NUEVO: Handle logout
- const handleLogout = async () => {
-  try {
-    await signOut(auth);
-    setMessage('Sesión cerrada correctamente');
-    setCurrentUser(null);
-    setEmail('');
-    setPassword('');
-    setIsLogin(true);
-    // Notificar al componente padre que el usuario ha cerrado sesión
-    if (onLogout) onLogout();
-  } catch (error) {
-    console.error('Error al cerrar sesión:', error);
-    setMessage('Error al cerrar sesión');
-  }
-};
-  // ← NUEVO: Handle submit
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      setMessage('Sesión cerrada correctamente');
+      setCurrentUser(null);
+      setEmail('');
+      setPassword('');
+      setIsLogin(true);
+      if (onLogin) onLogin(null);
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+      setMessage('Error al cerrar sesión');
+    }
+  };
+
   const handleSubmit = () => {
     if (isLogin) {
       handleLogin();
@@ -295,12 +310,10 @@ export default function LoginSection({ onLogin }) {
     }
   };
 
-  // ← NUEVO: Handle key press
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') handleSubmit();
   };
 
-  // ← NUEVO: Si hay usuario logueado, mostrar panel
   if (currentUser) {
     return (
       <div className="flex items-center justify-center py-8 px-2 sm:px-0">
@@ -323,7 +336,6 @@ export default function LoginSection({ onLogin }) {
     );
   }
 
-  // ← LOADING: Mientras carga CSV
   if (isLoading && users.length === 0) {
     return (
       <div className="flex items-center justify-center py-8 px-2 sm:px-0">
