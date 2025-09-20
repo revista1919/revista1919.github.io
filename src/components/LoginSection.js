@@ -5,7 +5,6 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
-  fetchSignInMethodsForEmail,
   onAuthStateChanged,
   signOut,
   auth
@@ -149,18 +148,8 @@ export default function LoginSection({ onLogin }) {
     const normalizedEmail = email.trim().toLowerCase();
 
     try {
-      // Verificar si ya existe una cuenta
-      const methods = await fetchSignInMethodsForEmail(auth, normalizedEmail);
-      if (methods.length > 0) {
-        setMessage('❌ Este correo ya está registrado. Usa Iniciar Sesión.');
-        setIsLoading(false);
-        return;
-      }
-
-      // Crear usuario con contraseña
       const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
       const user = userCredential.user;
-
       console.log('✅ Usuario creado:', user.uid);
       setMessage(`✅ ¡Contraseña creada para ${user.email}! Ahora inicia sesión.`);
 
@@ -169,9 +158,8 @@ export default function LoginSection({ onLogin }) {
       setPassword('');
       setIsLogin(true);
       setErrors({ email: '', password: '' });
-
     } catch (error) {
-      console.error('Error registro:', error);
+      console.error('Error registro:', error.code, error.message);
       let errorMessage = 'Error al crear contraseña';
 
       switch (error.code) {
@@ -205,15 +193,6 @@ export default function LoginSection({ onLogin }) {
     const normalizedEmail = email.trim().toLowerCase();
 
     try {
-      // Verificar que existe cuenta con contraseña
-      const methods = await fetchSignInMethodsForEmail(auth, normalizedEmail);
-      if (methods.length === 0) {
-        setMessage('❌ No hay cuenta creada para este correo. Crea tu contraseña primero.');
-        setIsLoading(false);
-        return;
-      }
-
-      // Iniciar sesión
       const userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
       const user = userCredential.user;
 
@@ -231,20 +210,15 @@ export default function LoginSection({ onLogin }) {
 
       setMessage(`✅ ¡Bienvenido, ${userData.name}!`);
       if (onLogin) onLogin(userData);
-
     } catch (error) {
-      console.error('Error login:', error);
+      console.error('Error login:', error.code, error.message);
       let errorMessage = 'Error al iniciar sesión';
 
       switch (error.code) {
         case 'auth/invalid-credential':
-          errorMessage = 'Correo o contraseña incorrectos. Verifica o usa "Olvidé mi contraseña".';
-          break;
-        case 'auth/user-not-found':
-          errorMessage = 'No hay contraseña creada para este correo. Créala primero.';
-          break;
         case 'auth/wrong-password':
-          errorMessage = 'Contraseña incorrecta';
+        case 'auth/user-not-found':
+          errorMessage = 'Correo o contraseña incorrectos. Verifica o usa "Olvidé mi contraseña".';
           break;
         case 'auth/invalid-email':
           errorMessage = 'Correo inválido';
@@ -253,7 +227,7 @@ export default function LoginSection({ onLogin }) {
           errorMessage = 'Demasiados intentos. Espera 10-15 minutos.';
           break;
         default:
-          errorMessage = error.message || 'Correo o contraseña incorrectos';
+          errorMessage = error.message || 'Error desconocido';
       }
 
       setMessage(`❌ ${errorMessage}`);
@@ -283,17 +257,9 @@ export default function LoginSection({ onLogin }) {
     setMessage('');
 
     try {
-      const methods = await fetchSignInMethodsForEmail(auth, normalizedEmail);
-      if (methods.length === 0) {
-        setMessage('❌ No hay cuenta registrada para este correo. Usa "Crear Contraseña" primero.');
-        setIsLoading(false);
-        return;
-      }
-
       await sendPasswordResetEmail(auth, normalizedEmail);
       console.log('✅ Email de reset enviado para:', normalizedEmail);
       setMessage('✅ Revisa tu correo (incluyendo spam/junk) para restablecer la contraseña. Puede tardar unos minutos.');
-      
     } catch (error) {
       console.error('Error en forgot password:', error.code, error.message);
       let errorMessage = '❌ Error al enviar correo de recuperación';
@@ -301,6 +267,9 @@ export default function LoginSection({ onLogin }) {
       switch (error.code) {
         case 'auth/invalid-email':
           errorMessage = 'Formato de correo inválido';
+          break;
+        case 'auth/user-not-found':
+          errorMessage = 'No hay cuenta registrada para este correo. Usa "Crear Contraseña" primero.';
           break;
         case 'auth/too-many-requests':
           errorMessage = 'Demasiados intentos. Espera 10-15 minutos.';
