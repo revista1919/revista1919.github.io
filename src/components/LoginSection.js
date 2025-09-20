@@ -46,7 +46,10 @@ export default function LoginSection({ onLogin, onLogout }) {
     const fetchUsers = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(USERS_CSV, { cache: 'no-store' });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+        const response = await fetch(USERS_CSV, { signal: controller.signal, cache: 'no-store' });
+        clearTimeout(timeoutId);
         if (!response.ok) throw new Error(`Error al cargar CSV: ${response.status}`);
         const csvText = await response.text();
         Papa.parse(csvText, {
@@ -115,10 +118,12 @@ export default function LoginSection({ onLogin, onLogout }) {
     }
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log('onAuthStateChanged in LoginSection:', user ? user.email : 'No user');
       if (user) {
         // Wait for CSV to be loaded
         if (users.length === 0 || emailKeys.length === 0) {
           console.warn('CSV no cargado aún, esperando para validar usuario');
+          setMessage('Cargando lista de usuarios...');
           return;
         }
 
@@ -132,12 +137,13 @@ export default function LoginSection({ onLogin, onLogout }) {
           try {
             await signOut(auth);
             console.log('Sesión cerrada para usuario no autorizado');
+            setCurrentUser(null);
             if (onLogin) onLogin(null);
             if (onLogout) onLogout();
           } catch (err) {
             console.error('Error al cerrar sesión:', err);
+            setMessage('❌ Error al cerrar sesión');
           }
-          setCurrentUser(null);
           return;
         }
         const userData = {
@@ -152,6 +158,7 @@ export default function LoginSection({ onLogin, onLogout }) {
         try {
           const methods = await fetchSignInMethodsForEmail(auth, user.email);
           setHasPassword(methods.includes('password'));
+          console.log('Sign-in methods:', methods);
           if (onLogin) onLogin(userData);
         } catch (err) {
           console.error('Error fetching sign-in methods:', err);
@@ -161,7 +168,6 @@ export default function LoginSection({ onLogin, onLogout }) {
         setMessage('');
         setHasPassword(false);
         if (onLogin) onLogin(null);
-        if (onLogout) onLogout();
       }
     });
     return () => unsubscribe();
