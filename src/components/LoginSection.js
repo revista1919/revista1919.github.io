@@ -149,7 +149,7 @@ export default function LoginSection({ onLogin }) {
       const methods = await fetchSignInMethodsForEmail(auth, normalizedEmail);
       if (methods.length > 0) {
         const provider = methods.includes('google.com') ? 'Google' : 'otro método';
-        setMessage(`❌ Este correo ya está registrado con ${provider}. Usa Iniciar Sesión o Google.`);
+        setMessage(`❌ Este correo ya está registrado con ${provider}. Usa Iniciar Sesión con ${provider} o contacta al admin para desvincular.`);
         setIsLoading(false);
         return;
       }
@@ -201,6 +201,13 @@ export default function LoginSection({ onLogin }) {
     const normalizedEmail = email.trim().toLowerCase();
 
     try {
+      const methods = await fetchSignInMethodsForEmail(auth, normalizedEmail);
+      if (!methods.includes('password')) {
+        setMessage(`❌ Este correo está registrado con ${methods.includes('google.com') ? 'Google' : 'otro método'}. Usa Iniciar con Google o contacta al admin.`);
+        setIsLoading(false);
+        return;
+      }
+
       const userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
       const user = userCredential.user;
 
@@ -254,19 +261,48 @@ export default function LoginSection({ onLogin }) {
     setMessage('');
 
     try {
+      const normalizedEmail = email.trim().toLowerCase();
+      // Si se ingresó un email, validarlo contra el CSV
+      if (email) {
+        const csvUser = users.find(u => 
+          u.Correo?.toLowerCase() === normalizedEmail ||
+          u['E-mail']?.toLowerCase() === normalizedEmail
+        );
+        if (!csvUser) {
+          setMessage('❌ Este correo no está autorizado. Usa un correo de la lista.');
+          setIsGoogleLoading(false);
+          return;
+        }
+        // Verificar si ya existe una cuenta con email/contraseña
+        const methods = await fetchSignInMethodsForEmail(auth, normalizedEmail);
+        if (methods.includes('password')) {
+          setMessage('❌ Este correo ya tiene una contraseña configurada. Usa Iniciar Sesión con contraseña.');
+          setIsGoogleLoading(false);
+          return;
+        }
+      }
+
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
-      const normalizedEmail = user.email.toLowerCase();
+      const userEmail = user.email.toLowerCase();
 
-      // Validate email against CSV
+      // Validar el email de Google contra el CSV
       const csvUser = users.find(u => 
-        u.Correo?.toLowerCase() === normalizedEmail ||
-        u['E-mail']?.toLowerCase() === normalizedEmail
+        u.Correo?.toLowerCase() === userEmail ||
+        u['E-mail']?.toLowerCase() === userEmail
       );
-
       if (!csvUser) {
         await signOut(auth);
         setMessage('❌ Este correo no está autorizado. Usa un correo de la lista.');
+        setIsGoogleLoading(false);
+        return;
+      }
+
+      // Verificar si el email ya tiene un método de email/contraseña
+      const methods = await fetchSignInMethodsForEmail(auth, userEmail);
+      if (methods.includes('password')) {
+        await signOut(auth);
+        setMessage('❌ Este correo ya tiene una contraseña configurada. Usa Iniciar Sesión con contraseña.');
         setIsGoogleLoading(false);
         return;
       }
@@ -283,7 +319,7 @@ export default function LoginSection({ onLogin }) {
           errorMessage = 'Popup cerrado. Intenta de nuevo.';
           break;
         case 'auth/account-exists-with-different-credential':
-          errorMessage = 'Cuenta existe con otro método. Usa email/password.';
+          errorMessage = 'Este correo ya tiene una contraseña configurada. Usa Iniciar Sesión con contraseña.';
           break;
         case 'auth/too-many-requests':
           errorMessage = 'Demasiados intentos. Espera un poco.';
