@@ -19,7 +19,7 @@ import {
 
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 
-export default function LoginSection({ onLogin }) {
+export default function LoginSection({ onLogin, onLogout }) {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -132,27 +132,27 @@ export default function LoginSection({ onLogin }) {
           try {
             await signOut(auth);
             console.log('Sesión cerrada para usuario no autorizado');
+            if (onLogin) onLogin(null);
+            if (onLogout) onLogout();
           } catch (err) {
             console.error('Error al cerrar sesión:', err);
           }
           setCurrentUser(null);
-          if (onLogin) onLogin(null);
           return;
         }
         const userData = {
           uid: user.uid,
           email: user.email,
           name: nameKeys.length > 0 ? csvUser[nameKeys[0]] || user.email : user.email,
-          role: roleKeys.length > 0 ? csvUser[roleKeys[0]] || 'Usuario' : 'Usuario'
+          role: roleKeys.length > 0 ? csvUser[roleKeys[0]] || 'Usuario' : 'Usuario',
+          image: csvUser.Imagen || ''
         };
         setCurrentUser(user);
         setMessage(`✅ ¡Bienvenido, ${userData.name}!`);
-        if (onLogin) onLogin(userData);
-
-        // Check authentication methods for password provider
         try {
           const methods = await fetchSignInMethodsForEmail(auth, user.email);
           setHasPassword(methods.includes('password'));
+          if (onLogin) onLogin(userData);
         } catch (err) {
           console.error('Error fetching sign-in methods:', err);
         }
@@ -161,10 +161,11 @@ export default function LoginSection({ onLogin }) {
         setMessage('');
         setHasPassword(false);
         if (onLogin) onLogin(null);
+        if (onLogout) onLogout();
       }
     });
     return () => unsubscribe();
-  }, [onLogin, users, emailKeys, nameKeys, roleKeys]);
+  }, [onLogin, onLogout, users, emailKeys, nameKeys, roleKeys]);
 
   // Validate email and password inputs
   const validateInputs = () => {
@@ -220,6 +221,7 @@ export default function LoginSection({ onLogin }) {
         await signOut(auth);
         setMessage('❌ El correo seleccionado en Google no coincide con el ingresado.');
         setIsGoogleLoading(false);
+        if (onLogout) onLogout();
         return;
       }
 
@@ -242,7 +244,6 @@ export default function LoginSection({ onLogin }) {
           errorMessage = error.message || 'Error desconocido';
       }
       setMessage(errorMessage);
-    } finally {
       setIsGoogleLoading(false);
     }
   };
@@ -284,11 +285,16 @@ export default function LoginSection({ onLogin }) {
         case 'auth/weak-password':
           errorMessage = 'Contraseña demasiado débil. Usa al menos 6 caracteres.';
           break;
+        case 'auth/invalid-email':
+          errorMessage = 'Formato de correo inválido';
+          break;
+        case 'auth/too-many-requests':
+          errorMessage = 'Demasiados intentos. Espera 10-15 minutos.';
+          break;
         default:
           errorMessage = error.message || 'Error desconocido';
       }
       setMessage(errorMessage);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -326,6 +332,9 @@ export default function LoginSection({ onLogin }) {
         case 'auth/user-not-found':
           errorMessage = 'No hay cuenta para este correo. Créala primero.';
           break;
+        case 'auth/invalid-email':
+          errorMessage = 'Correo inválido';
+          break;
         case 'auth/too-many-requests':
           errorMessage = 'Demasiados intentos. Espera 10-15 minutos.';
           break;
@@ -333,7 +342,6 @@ export default function LoginSection({ onLogin }) {
           errorMessage = error.message || 'Error desconocido';
       }
       setMessage(errorMessage);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -375,6 +383,9 @@ export default function LoginSection({ onLogin }) {
       console.error('Error forgot password:', error);
       let errorMessage = '❌ Error al enviar correo de recuperación';
       switch (error.code) {
+        case 'auth/invalid-email':
+          errorMessage = 'Formato de correo inválido';
+          break;
         case 'auth/too-many-requests':
           errorMessage = 'Demasiados intentos. Espera 10-15 minutos.';
           break;
@@ -382,7 +393,6 @@ export default function LoginSection({ onLogin }) {
           errorMessage = error.message || 'Error desconocido';
       }
       setMessage(errorMessage);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -450,26 +460,7 @@ export default function LoginSection({ onLogin }) {
           errorMessage = error.message || 'Error desconocido';
       }
       setMessage(errorMessage);
-    } finally {
       setIsLoading(false);
-    }
-  };
-
-  // Handle logout
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      setMessage('✅ Sesión cerrada correctamente');
-      setCurrentUser(null);
-      setEmail('');
-      setPassword('');
-      setIsLogin(true);
-      setIsChangingPassword(false);
-      setOldPassword('');
-      setNewPassword('');
-    } catch (error) {
-      console.error('Error al cerrar sesión:', error);
-      setMessage('❌ Error al cerrar sesión');
     }
   };
 
@@ -525,7 +516,9 @@ export default function LoginSection({ onLogin }) {
                 {hasPassword ? 'Cambiar Contraseña' : 'Agregar Contraseña'}
               </button>
               <button
-                onClick={handleLogout}
+                onClick={() => {
+                  if (onLogout) onLogout();
+                }}
                 className="w-full px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
               >
                 Cerrar Sesión
