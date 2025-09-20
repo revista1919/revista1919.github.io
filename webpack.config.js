@@ -6,17 +6,24 @@ const WebpackShellPluginNext = require('webpack-shell-plugin-next');
 const webpack = require('webpack');
 
 // ✅ Cargar variables de entorno
-const dotenvConfig = require('dotenv').config({ path: path.resolve(__dirname, '.env.local') });
-if (dotenvConfig.error) {
-  console.warn('⚠️ .env.local no encontrado, usando .env');
+let dotenvConfig;
+try {
+  dotenvConfig = require('dotenv').config({ path: path.resolve(__dirname, '.env.local') });
+  if (dotenvConfig.error) {
+    console.warn('⚠️ .env.local no encontrado, usando .env');
+  }
+} catch (error) {
+  console.warn('⚠️ Error cargando .env.local:', error.message);
 }
+
 require('dotenv').config({ path: path.resolve(__dirname, '.env'), override: true });
 
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
+  const isDebug = process.env.DEBUG === 'true';
 
   // ✅ Debug: Mostrar variables de entorno cargadas
-  if (process.env.DEBUG === 'true') {
+  if (isDebug) {
     console.log('🔍 Variables de entorno cargadas:', {
       'REACT_APP_FIREBASE_API_KEY': process.env.REACT_APP_FIREBASE_API_KEY ? '✓ PRESENTE' : '✗ FALTANTE',
       'REACT_APP_FIREBASE_PROJECT_ID': process.env.REACT_APP_FIREBASE_PROJECT_ID || '✗ FALTANTE',
@@ -45,11 +52,30 @@ module.exports = (env, argv) => {
     'process.env.REACT_APP_FIREBASE_MEASUREMENT_ID': JSON.stringify(process.env.REACT_APP_FIREBASE_MEASUREMENT_ID || 'G-K90MKB7BDP'),
     
     // Debug
-    'process.env.DEBUG': JSON.stringify(process.env.DEBUG === 'true' || process.env.DEBUG === true),
+    'process.env.DEBUG': JSON.stringify(isDebug),
+  };
+
+  // ✅ Polyfills más simples y robustos
+  const fallbackConfig = {
+    "fs": false,
+    "path": false,
+    "crypto": require.resolve('crypto-browserify'),
+    "stream": require.resolve('stream-browserify'),
+    "buffer": require.resolve("buffer/"),
+    "process": require.resolve("process/browser"),
+    "util": require.resolve("util/"),
+    "url": require.resolve("url/"),
+    "assert": require.resolve("assert/"),
+    "string_decoder": require.resolve("string_decoder"),
+    "zlib": require.resolve("browserify-zlib"),
+    "http": false,
+    "https": false,
+    "os": require.resolve("os-browserify/browser"),
+    "vm": require.resolve("vm-browserify"),
   };
 
   return {
-    // ✅ CAMBIADO: Usar main.js como entrada
+    // ✅ Entrada principal
     entry: './src/main.js',
     
     output: {
@@ -58,6 +84,7 @@ module.exports = (env, argv) => {
       chunkFilename: isProduction ? '[name].[contenthash:8].chunk.js' : '[name].chunk.js',
       publicPath: process.env.PUBLIC_URL || '/',
       clean: true,
+      assetModuleFilename: isProduction ? 'assets/[name].[hash:8][ext][query]' : 'assets/[name][ext][query]',
     },
     
     mode: isProduction ? 'production' : 'development',
@@ -79,12 +106,15 @@ module.exports = (env, argv) => {
           errors: true,
           warnings: false,
         },
+        logging: isDebug ? 'verbose' : 'info',
       },
       onListening: (devServer) => {
         const port = devServer.server.address().port;
         const url = `http://localhost:${port}`;
         console.log(`🚀 Server corriendo en: ${url}`);
-        console.log(`📱 En tu red: http://${require('os').hostname()}:${port}`);
+        if (isDebug) {
+          console.log(`📱 En tu red: http://${require('os').hostname()}:${port}`);
+        }
       },
     },
     
@@ -103,10 +133,17 @@ module.exports = (env, argv) => {
                   useBuiltIns: 'usage',
                   corejs: 3 
                 }],
-                '@babel/preset-react'
+                ['@babel/preset-react', { 
+                  runtime: 'automatic' 
+                }]
               ],
               plugins: [
                 isProduction ? [] : require.resolve('react-refresh/babel'),
+                // Optimizaciones para producción
+                ...(isProduction ? [
+                  require.resolve('@babel/plugin-transform-react-constant-elements'),
+                  require.resolve('@babel/plugin-transform-react-inline-elements'),
+                ] : []),
               ],
               cacheDirectory: true,
               cacheCompression: isProduction,
@@ -124,6 +161,7 @@ module.exports = (env, argv) => {
               options: {
                 importLoaders: 1,
                 sourceMap: !isProduction,
+                modules: false,
               },
             },
             {
@@ -173,7 +211,8 @@ module.exports = (env, argv) => {
       // Limpiar directorio de salida
       new CleanWebpackPlugin({
         cleanOnceBeforeBuildPatterns: ['**/*', '!**/firebase.json', '!**/.firebaserc'],
-        verbose: process.env.DEBUG === 'true',
+        verbose: isDebug,
+        dry: false,
       }),
       
       // Generar HTML
@@ -199,15 +238,14 @@ module.exports = (env, argv) => {
         meta: {
           charset: 'UTF-8',
           viewport: 'width=device-width, initial-scale=1.0',
+          'theme-color': '#f4ece7',
         },
       }),
       
       // Copiar archivos estáticos
       new CopyWebpackPlugin({
         patterns: [
-          { from: 'public/logo.png', to: 'assets/[name][ext]' },
-          { from: 'public/favicon.ico', to: '[name][ext]' },
-          { from: 'public/site.webmanifest', to: 'manifest.json' },
+          { from: 'public', to: '.', globOptions: { ignore: ['**/index.html'] } },
           { 
             from: 'public/Articles', 
             to: 'Articles',
@@ -229,7 +267,7 @@ module.exports = (env, argv) => {
       // Inyectar variables de entorno
       new webpack.DefinePlugin(defineEnvVars),
       
-      // Script post-build
+      // Script post-build solo en producción
       ...(isProduction ? [
         new WebpackShellPluginNext({
           onBuildEnd: {
@@ -247,14 +285,19 @@ Revista Nacional de las Ciencias para Estudiantes
 Built: ${new Date().toISOString()}
 Environment: ${isProduction ? 'Production' : 'Development'}
 Firebase: ${process.env.REACT_APP_FIREBASE_PROJECT_ID ? 'Enabled' : 'Disabled'}
+Bundle Size: Optimized for ${isProduction ? 'production' : 'development'}
 */`,
         raw: true,
         include: 'all',
+        footer: true,
       }),
       
       // Hot Module Replacement (desarrollo)
       ...(isProduction ? [] : [
         new webpack.HotModuleReplacementPlugin(),
+        new webpack.ProgressPlugin({
+          percentBy: 'entries',
+        }),
       ]),
     ],
     
@@ -265,30 +308,14 @@ Firebase: ${process.env.REACT_APP_FIREBASE_PROJECT_ID ? 'Enabled' : 'Disabled'}
       alias: {
         '@': path.resolve(__dirname, 'src'),
       },
-      fallback: {
-        // Polyfills para Firebase y otras librerías
-        "fs": false,
-        "path": false,
-        "crypto": require.resolve('crypto-browserify'),
-        "stream": require.resolve('stream-browserify'),
-        "buffer": require.resolve("buffer/"),
-        "process": require.resolve("process/browser"),
-        "util": require.resolve("util/"),
-        "url": require.resolve("url/"),
-        "assert": require.resolve("assert/"),
-        "string_decoder": require.resolve("string_decoder/"),
-        "zlib": require.resolve("browserify-zlib"),
-        "http": false,
-        "https": false,
-        "os": require.resolve("os-browserify/browser"),
-        "vm": require.resolve("vm-browserify"),
-      },
+      fallback: fallbackConfig,
     },
     
     performance: {
       hints: isProduction ? 'warning' : false,
       maxAssetSize: 500000,
       maxEntrypointSize: 1000000,
+      maxEntrypointSizeWarning: 1500000,
     },
     
     optimization: {
@@ -304,6 +331,7 @@ Firebase: ${process.env.REACT_APP_FIREBASE_PROJECT_ID ? 'Enabled' : 'Disabled'}
               chunks: 'all',
               priority: 20,
               enforce: true,
+              minChunks: 1,
             },
             firebase: {
               test: /[\\/]node_modules[\\/]firebase[\\/]/,
@@ -311,6 +339,7 @@ Firebase: ${process.env.REACT_APP_FIREBASE_PROJECT_ID ? 'Enabled' : 'Disabled'}
               chunks: 'all',
               priority: 10,
               enforce: true,
+              minChunks: 1,
             },
             default: {
               minChunks: 2,
@@ -323,6 +352,12 @@ Firebase: ${process.env.REACT_APP_FIREBASE_PROJECT_ID ? 'Enabled' : 'Disabled'}
           name: 'runtime',
         },
       }),
+      
+      // Optimizaciones adicionales para producción
+      ...(isProduction && {
+        concatenateModules: true,
+        sideEffects: true,
+      }),
     },
     
     cache: {
@@ -330,7 +365,7 @@ Firebase: ${process.env.REACT_APP_FIREBASE_PROJECT_ID ? 'Enabled' : 'Disabled'}
       buildDependencies: {
         config: [__filename],
       },
-      name: `webpack-${isProduction ? 'prod' : 'dev'}-cache`,
+      name: `webpack-${isProduction ? 'prod' : 'dev'}-cache-${Date.now()}`,
     },
     
     // Configuración específica para desarrollo
@@ -338,7 +373,11 @@ Firebase: ${process.env.REACT_APP_FIREBASE_PROJECT_ID ? 'Enabled' : 'Disabled'}
       watchOptions: {
         ignored: /node_modules/,
         poll: 1000,
+        aggregateTimeout: 300,
       },
     }),
+    
+    // Stats para mejor debugging
+    stats: isDebug ? 'verbose' : isProduction ? 'minimal' : 'normal',
   };
 };
