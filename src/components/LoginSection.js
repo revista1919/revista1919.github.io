@@ -9,6 +9,9 @@ import {
   onAuthStateChanged,
   signOut,
   signInWithPopup,
+  linkWithCredential,
+  EmailAuthProvider,
+  GoogleAuthProvider,
   auth,
   googleProvider
 } from '../firebase';
@@ -27,7 +30,6 @@ export default function LoginSection({ onLogin }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
-  // MANTENER EL USEEFFECT ORIGINAL (SIN authMethods)
   useEffect(() => {
     if (!auth) {
       console.error('Error: auth no está definido. Revisa firebase.js');
@@ -63,9 +65,8 @@ export default function LoginSection({ onLogin }) {
       }
     });
     return () => unsubscribe();
-  }, [onLogin, users]); // ← DEPENDENCIAS ORIGINALES, SIN authMethods
+  }, [onLogin, users]);
 
-  // CARGAR USUARIOS (SIN CAMBIOS)
   useEffect(() => {
     const fetchUsers = async () => {
       setIsLoading(true);
@@ -104,7 +105,6 @@ export default function LoginSection({ onLogin }) {
     fetchUsers();
   }, []);
 
-  // FUNCIÓN NUEVA: Verificar estado del email
   const checkEmailStatus = async (emailToCheck) => {
     if (!emailToCheck) return { hasPassword: false, hasGoogle: false };
     try {
@@ -156,7 +156,22 @@ export default function LoginSection({ onLogin }) {
     return isValid;
   };
 
-  // FUNCIÓN SIMPLIFICADA: Crear contraseña
+  const linkProviders = async (existingUser, newCredential, isGoogle = true) => {
+    try {
+      await linkWithCredential(existingUser, newCredential);
+      console.log('✅ Providers vinculados exitosamente');
+      return true;
+    } catch (linkError) {
+      console.error('Error al vincular:', linkError);
+      if (linkError.code === 'auth/provider-already-linked') {
+        setMessage('✅ Ya estaban vinculados. ¡Listo!');
+      } else {
+        setMessage(`❌ Error al vincular: ${linkError.message}. Contacta al admin.`);
+      }
+      return false;
+    }
+  };
+
   const handleSignUp = async () => {
     if (!validateInputs()) return;
 
@@ -167,60 +182,53 @@ export default function LoginSection({ onLogin }) {
     const emailStatus = await checkEmailStatus(normalizedEmail);
 
     try {
-      // CASO 1: Ya tiene cuenta con Google pero SIN contraseña
       if (emailStatus.hasGoogle && !emailStatus.hasPassword) {
-        setMessage('❌ Este correo ya está con Google. Usa "Iniciar Sesión" para agregar contraseña.');
+        setMessage('❌ Este email ya usa Google. Inicia con Google primero, luego crea contraseña aquí.');
         setIsLoading(false);
         return;
       }
 
-      // CASO 2: Ya tiene contraseña
       if (emailStatus.hasPassword) {
-        setMessage('✅ Ya tienes contraseña configurada. Cambia a "Iniciar Sesión".');
+        setMessage('✅ Ya tienes contraseña. Usa "Iniciar Sesión".');
         setIsLoading(false);
         return;
       }
 
-      // CASO 3: Sin cuenta - Crear nueva
       const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
-      const user = userCredential.user;
-
-      console.log('✅ Usuario creado con contraseña:', user.uid);
-      setMessage(`✅ ¡Contraseña creada para ${user.email}! Ahora inicia sesión.`);
-      
-      setEmail('');
-      setPassword('');
-      setIsLogin(true);
+      console.log('✅ Usuario creado con password');
+      setMessage(`✅ ¡Contraseña creada! Inicia sesión.`);
+      setEmail(''); 
+      setPassword(''); 
+      setIsLogin(true); 
       setErrors({ email: '', password: '' });
       
     } catch (error) {
-      console.error('Error registro:', error);
-      let errorMessage = 'Error al crear contraseña';
-      
-      switch (error.code) {
-        case 'auth/email-already-in-use':
-          errorMessage = 'Este correo ya está registrado con Google. Usa "Iniciar Sesión" primero.';
-          break;
-        case 'auth/weak-password':
-          errorMessage = 'La contraseña es demasiado débil';
-          break;
-        case 'auth/invalid-email':
-          errorMessage = 'Formato de correo inválido';
-          break;
-        case 'auth/too-many-requests':
-          errorMessage = 'Demasiados intentos. Intenta más tarde.';
-          break;
-        default:
-          errorMessage = error.message || 'Error desconocido';
+      if (error.code === 'auth/account-exists-with-different-credential') {
+        setMessage(`❌ Email ya registrado con Google. Inicia con Google primero, luego vincula contraseña aquí.`);
+      } else if (error.code === 'auth/email-already-in-use') {
+        setMessage('Este email ya existe. Inicia sesión o usa Google.');
+      } else {
+        let errorMessage = 'Error al crear contraseña';
+        switch (error.code) {
+          case 'auth/weak-password':
+            errorMessage = 'La contraseña es demasiado débil';
+            break;
+          case 'auth/invalid-email':
+            errorMessage = 'Formato de correo inválido';
+            break;
+          case 'auth/too-many-requests':
+            errorMessage = 'Demasiados intentos. Intenta más tarde.';
+            break;
+          default:
+            errorMessage = error.message || 'Error desconocido';
+        }
+        setMessage(`❌ ${errorMessage}`);
       }
-      
-      setMessage(`❌ ${errorMessage}`);
     }
     
     setIsLoading(false);
   };
 
-  // FUNCIÓN SIMPLIFICADA: Login con contraseña
   const handleLogin = async () => {
     if (!validateInputs()) return;
 
@@ -231,7 +239,6 @@ export default function LoginSection({ onLogin }) {
     const emailStatus = await checkEmailStatus(normalizedEmail);
 
     try {
-      // Verificar que tenga contraseña
       if (!emailStatus.hasPassword) {
         setMessage('❌ Este correo no tiene contraseña. Usa "Crear Contraseña" o Google.');
         setIsLoading(false);
@@ -286,7 +293,6 @@ export default function LoginSection({ onLogin }) {
     setIsLoading(false);
   };
 
-  // FUNCIÓN CORREGIDA: Google Sign-In (SIN ELIMINAR CONTRASEÑAS)
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     setMessage('');
@@ -294,7 +300,6 @@ export default function LoginSection({ onLogin }) {
     try {
       const normalizedEmail = email ? email.trim().toLowerCase() : null;
       
-      // Validar email si se proporcionó
       if (normalizedEmail) {
         const csvUser = users.find(u => 
           u.Correo?.toLowerCase() === normalizedEmail ||
@@ -307,12 +312,10 @@ export default function LoginSection({ onLogin }) {
         }
       }
 
-      // Intentar login con Google
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
       const userEmail = user.email.toLowerCase();
 
-      // Validar contra CSV
       const csvUser = users.find(u => 
         u.Correo?.toLowerCase() === userEmail ||
         u['E-mail']?.toLowerCase() === userEmail
@@ -325,14 +328,11 @@ export default function LoginSection({ onLogin }) {
         return;
       }
 
-      // Verificar si ya tiene contraseña (para mostrar mensaje apropiado)
       const emailStatus = await checkEmailStatus(userEmail);
       
       if (emailStatus.hasPassword) {
-        console.log('✅ Google vinculado a cuenta existente con contraseña');
-        setMessage(`✅ ¡Google agregado a tu cuenta ${csvUser.Nombre || userEmail}! Tu contraseña sigue activa.`);
+        setMessage(`✅ Google vinculado a tu cuenta ${csvUser.Nombre || userEmail}! Tu contraseña sigue activa.`);
       } else {
-        console.log('✅ Nueva cuenta con Google creada');
         setMessage(`✅ ¡Bienvenido con Google, ${csvUser.Nombre || userEmail}!`);
       }
 
@@ -348,10 +348,48 @@ export default function LoginSection({ onLogin }) {
     } catch (error) {
       console.error('Error Google login:', error);
       
-      // IMPORTANTE: No tratar account-exists-with-different-credential como error
       if (error.code === 'auth/account-exists-with-different-credential') {
-        setMessage('✅ ¡Cuenta vinculada exitosamente con Google! Ya puedes iniciar sesión.');
-        // El usuario ya está logueado, solo actualizar mensaje
+        const pendingEmail = error.email;
+        const pendingCred = GoogleAuthProvider.credentialFromError(error);
+        
+        try {
+          const methods = await fetchSignInMethodsForEmail(auth, pendingEmail);
+          
+          if (methods.includes('password')) {
+            if (!password) {
+              setMessage('❌ Para vincular Google, ingresa tu contraseña actual y presiona Iniciar Sesión primero.');
+              setIsGoogleLoading(false);
+              return;
+            }
+            
+            const existingCred = await signInWithEmailAndPassword(auth, pendingEmail, password);
+            const existingUser = existingCred.user;
+            
+            const linked = await linkProviders(existingUser, pendingCred);
+            
+            if (linked) {
+              setMessage('✅ ¡Google vinculado a tu cuenta! Ahora puedes usar ambos métodos.');
+              const csvUser = users.find(u => 
+                u.Correo?.toLowerCase() === pendingEmail ||
+                u['E-mail']?.toLowerCase() === pendingEmail
+              );
+              const userData = {
+                uid: existingUser.uid,
+                email: pendingEmail,
+                name: csvUser?.Nombre || pendingEmail,
+                role: csvUser?.['Rol en la Revista'] || 'Usuario'
+              };
+              if (onLogin) onLogin(userData);
+            }
+          } else {
+            setMessage('❌ Conflicto con otro método. Contacta al admin.');
+          }
+        } catch (linkError) {
+          console.error('Error en linking:', linkError);
+          setMessage(`❌ Error al vincular: ${linkError.message}. Prueba el setting en console.`);
+          await signOut(auth);
+        }
+        setIsGoogleLoading(false);
         return;
       }
       
@@ -380,7 +418,6 @@ export default function LoginSection({ onLogin }) {
     setIsGoogleLoading(false);
   };
 
-  // FUNCIÓN SIMPLIFICADA: Olvidé contraseña
   const handleForgotPassword = async () => {
     if (!email) {
       setMessage('Ingresa tu correo primero');
@@ -412,7 +449,7 @@ export default function LoginSection({ onLogin }) {
 
       await sendPasswordResetEmail(auth, normalizedEmail);
       console.log('✅ Email de reset enviado para:', normalizedEmail);
-      setMessage('✅ Revisa tu correo (incluyendo spam/junk) para restablecer la contraseña.');
+      setMessage('✅ Revisa tu correo (incluyendo spam/junk) para restablecer la contraseña. Puede tardar unos minutos.');
     } catch (error) {
       console.error('Error en forgot password:', error);
       let errorMessage = '❌ Error al enviar correo de recuperación';
@@ -464,7 +501,6 @@ export default function LoginSection({ onLogin }) {
     if (e.key === 'Enter') handleSubmit();
   };
 
-  // JSX ORIGINAL (SIN CAMBIOS COMPLEJOS)
   if (currentUser) {
     return (
       <div className="flex items-center justify-center py-8 px-2 sm:px-0">
@@ -511,9 +547,7 @@ export default function LoginSection({ onLogin }) {
         >
           {isLogin ? '¿Nuevo? Crea tu contraseña' : 'Ya tienes cuenta? Inicia sesión'}
         </button>
-        
         <div className="space-y-4">
-          {/* Botón Google (con tooltip explicativo) */}
           <button
             onClick={handleGoogleSignIn}
             disabled={isLoading || isGoogleLoading || users.length === 0}
@@ -539,13 +573,11 @@ export default function LoginSection({ onLogin }) {
               )}
             </span>
           </button>
-
           <div className="flex items-center">
             <div className="flex-grow border-t border-gray-300"></div>
             <span className="flex-shrink-0 px-2 text-xs text-gray-500">o</span>
             <div className="flex-grow border-t border-gray-300"></div>
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700">Correo</label>
             <input
@@ -561,7 +593,6 @@ export default function LoginSection({ onLogin }) {
             />
             {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
           </div>
-
           <div className="relative">
             <label className="block text-sm font-medium text-gray-700">
               {isLogin ? 'Contraseña' : 'Nueva Contraseña'}
@@ -587,7 +618,6 @@ export default function LoginSection({ onLogin }) {
             </button>
             {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password}</p>}
           </div>
-
           <button
             onClick={handleSubmit}
             disabled={isLoading || isGoogleLoading || users.length === 0}
@@ -604,7 +634,6 @@ export default function LoginSection({ onLogin }) {
               isLogin ? 'Iniciar Sesión' : 'Crear Contraseña'
             )}
           </button>
-
           {isLogin && (
             <button
               onClick={handleForgotPassword}
@@ -614,7 +643,6 @@ export default function LoginSection({ onLogin }) {
               ¿Olvidaste tu contraseña?
             </button>
           )}
-
           {message && (
             <p className={`text-center text-xs sm:text-sm ${
               message.includes('✅') || message.includes('Bienvenido') 
@@ -624,7 +652,6 @@ export default function LoginSection({ onLogin }) {
               {message}
             </p>
           )}
-
           {process.env.NODE_ENV === 'development' && (
             <p className="text-xs text-gray-500 text-center">
               {users.length} usuarios autorizados
