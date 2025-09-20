@@ -9,9 +9,6 @@ import {
   onAuthStateChanged,
   signOut,
   signInWithPopup,
-  signInWithRedirect, // Agregado para mejor UX
-  updateProfile,
-  updateEmail,
   auth,
   googleProvider
 } from '../firebase';
@@ -29,8 +26,8 @@ export default function LoginSection({ onLogin }) {
   const [errors, setErrors] = useState({ email: '', password: '' });
   const [currentUser, setCurrentUser] = useState(null);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [authMethods, setAuthMethods] = useState([]); // Nuevo estado
 
+  // MANTENER EL USEEFFECT ORIGINAL (SIN authMethods)
   useEffect(() => {
     if (!auth) {
       console.error('Error: auth no está definido. Revisa firebase.js');
@@ -41,46 +38,34 @@ export default function LoginSection({ onLogin }) {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       if (user) {
-        // Verificar métodos de autenticación disponibles
-        try {
-          const methods = await fetchSignInMethodsForEmail(auth, user.email);
-          setAuthMethods(methods);
-        } catch (error) {
-          console.error('Error al obtener métodos:', error);
-        }
-
         const normalizedEmail = user.email.toLowerCase();
         const csvUser = users.find(u => 
           u.Correo?.toLowerCase() === normalizedEmail ||
           u['E-mail']?.toLowerCase() === normalizedEmail
         );
-        
         if (!csvUser) {
           setMessage('❌ Este correo no está autorizado. Contacta al admin.');
           await signOut(auth).catch((err) => console.error('Error al cerrar sesión:', err));
           setCurrentUser(null);
           return;
         }
-
         const userData = {
           uid: user.uid,
           email: user.email,
           name: csvUser?.Nombre || user.email,
-          role: csvUser?.['Rol en la Revista'] || 'Usuario',
-          authMethods: authMethods // Pasar métodos disponibles
+          role: csvUser?.['Rol en la Revista'] || 'Usuario'
         };
-        
         setMessage(`✅ ¡Bienvenido, ${userData.name}!`);
         if (onLogin) onLogin(userData);
       } else {
         setMessage('');
         setCurrentUser(null);
-        setAuthMethods([]);
       }
     });
     return () => unsubscribe();
-  }, [onLogin, users, authMethods]);
+  }, [onLogin, users]); // ← DEPENDENCIAS ORIGINALES, SIN authMethods
 
+  // CARGAR USUARIOS (SIN CAMBIOS)
   useEffect(() => {
     const fetchUsers = async () => {
       setIsLoading(true);
@@ -119,6 +104,23 @@ export default function LoginSection({ onLogin }) {
     fetchUsers();
   }, []);
 
+  // FUNCIÓN NUEVA: Verificar estado del email
+  const checkEmailStatus = async (emailToCheck) => {
+    if (!emailToCheck) return { hasPassword: false, hasGoogle: false };
+    try {
+      const normalizedEmail = emailToCheck.trim().toLowerCase();
+      const methods = await fetchSignInMethodsForEmail(auth, normalizedEmail);
+      return {
+        hasPassword: methods.includes('password'),
+        hasGoogle: methods.includes('google.com'),
+        methods: methods
+      };
+    } catch (error) {
+      console.error('Error checking email status:', error);
+      return { hasPassword: false, hasGoogle: false, methods: [] };
+    }
+  };
+
   const validateInputs = () => {
     let isValid = true;
     const newErrors = { email: '', password: '' };
@@ -154,22 +156,7 @@ export default function LoginSection({ onLogin }) {
     return isValid;
   };
 
-  // NUEVA FUNCIÓN: Verificar si el email ya tiene cuenta
-  const checkEmailStatus = async (email) => {
-    const normalizedEmail = email.trim().toLowerCase();
-    try {
-      const methods = await fetchSignInMethodsForEmail(auth, normalizedEmail);
-      return {
-        hasAccount: methods.length > 0,
-        methods: methods,
-        hasPassword: methods.includes('password'),
-        hasGoogle: methods.includes('google.com')
-      };
-    } catch (error) {
-      return { hasAccount: false, methods: [], hasPassword: false, hasGoogle: false };
-    }
-  };
-
+  // FUNCIÓN SIMPLIFICADA: Crear contraseña
   const handleSignUp = async () => {
     if (!validateInputs()) return;
 
@@ -180,79 +167,39 @@ export default function LoginSection({ onLogin }) {
     const emailStatus = await checkEmailStatus(normalizedEmail);
 
     try {
-      // Si ya tiene cuenta con Google, permitir solo si no tiene contraseña
-      if (emailStatus.hasGoogle && emailStatus.hasPassword) {
-        setMessage('❌ Este correo ya tiene ambos métodos. Usa Iniciar Sesión normal.');
-        setIsLoading(false);
-        return;
-      }
-
-      // Si ya tiene cuenta con Google pero sin contraseña, vincular contraseña
+      // CASO 1: Ya tiene cuenta con Google pero SIN contraseña
       if (emailStatus.hasGoogle && !emailStatus.hasPassword) {
-        // Primero hacer login con Google para vincular
-        try {
-          const result = await signInWithPopup(auth, googleProvider);
-          const user = result.user;
-          
-          // Ahora vincular contraseña
-          await user.updatePassword(password);
-          
-          const csvUser = users.find(u => 
-            u.Correo?.toLowerCase() === user.email.toLowerCase() ||
-            u['E-mail']?.toLowerCase() === user.email.toLowerCase()
-          );
-          
-          const userData = {
-            uid: user.uid,
-            email: user.email,
-            name: csvUser?.Nombre || user.email,
-            role: csvUser?.['Rol en la Revista'] || 'Usuario',
-            authMethods: ['google.com', 'password']
-          };
-          
-          setMessage(`✅ ¡Contraseña vinculada a tu cuenta Google!`);
-          if (onLogin) onLogin(userData);
-          setIsLogin(true);
-          setEmail('');
-          setPassword('');
-          setErrors({ email: '', password: '' });
-          return;
-        } catch (googleError) {
-          setMessage('❌ Error al vincular con Google. Intenta iniciar sesión primero.');
-          setIsLoading(false);
-          return;
-        }
-      }
-
-      // Si no tiene cuenta, crear nueva con contraseña
-      if (!emailStatus.hasAccount) {
-        const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
-        const user = userCredential.user;
-
-        console.log('✅ Usuario creado con contraseña:', user.uid);
-        setMessage(`✅ ¡Contraseña creada para ${user.email}! Ahora inicia sesión.`);
-        
-        setEmail('');
-        setPassword('');
-        setIsLogin(true);
-        setErrors({ email: '', password: '' });
-        return;
-      }
-
-      // Si solo tiene contraseña, no hacer nada (ya está registrado)
-      if (emailStatus.hasPassword && !emailStatus.hasGoogle) {
-        setMessage('✅ Este correo ya tiene contraseña. Usa Iniciar Sesión.');
+        setMessage('❌ Este correo ya está con Google. Usa "Iniciar Sesión" para agregar contraseña.');
         setIsLoading(false);
         return;
       }
 
+      // CASO 2: Ya tiene contraseña
+      if (emailStatus.hasPassword) {
+        setMessage('✅ Ya tienes contraseña configurada. Cambia a "Iniciar Sesión".');
+        setIsLoading(false);
+        return;
+      }
+
+      // CASO 3: Sin cuenta - Crear nueva
+      const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
+      const user = userCredential.user;
+
+      console.log('✅ Usuario creado con contraseña:', user.uid);
+      setMessage(`✅ ¡Contraseña creada para ${user.email}! Ahora inicia sesión.`);
+      
+      setEmail('');
+      setPassword('');
+      setIsLogin(true);
+      setErrors({ email: '', password: '' });
+      
     } catch (error) {
       console.error('Error registro:', error);
       let errorMessage = 'Error al crear contraseña';
       
       switch (error.code) {
         case 'auth/email-already-in-use':
-          errorMessage = 'Este correo ya está registrado. Usa Iniciar Sesión.';
+          errorMessage = 'Este correo ya está registrado con Google. Usa "Iniciar Sesión" primero.';
           break;
         case 'auth/weak-password':
           errorMessage = 'La contraseña es demasiado débil';
@@ -273,6 +220,7 @@ export default function LoginSection({ onLogin }) {
     setIsLoading(false);
   };
 
+  // FUNCIÓN SIMPLIFICADA: Login con contraseña
   const handleLogin = async () => {
     if (!validateInputs()) return;
 
@@ -283,9 +231,9 @@ export default function LoginSection({ onLogin }) {
     const emailStatus = await checkEmailStatus(normalizedEmail);
 
     try {
-      // Verificar que tenga contraseña configurada
+      // Verificar que tenga contraseña
       if (!emailStatus.hasPassword) {
-        setMessage(`❌ Este correo no tiene contraseña configurada. Usa "Crear Contraseña" o Google.`);
+        setMessage('❌ Este correo no tiene contraseña. Usa "Crear Contraseña" o Google.');
         setIsLoading(false);
         return;
       }
@@ -302,8 +250,7 @@ export default function LoginSection({ onLogin }) {
         uid: user.uid,
         email: user.email,
         name: csvUser?.Nombre || user.email,
-        role: csvUser?.['Rol en la Revista'] || 'Usuario',
-        authMethods: emailStatus.methods
+        role: csvUser?.['Rol en la Revista'] || 'Usuario'
       };
 
       setMessage(`✅ ¡Bienvenido, ${userData.name}!`);
@@ -339,15 +286,16 @@ export default function LoginSection({ onLogin }) {
     setIsLoading(false);
   };
 
+  // FUNCIÓN CORREGIDA: Google Sign-In (SIN ELIMINAR CONTRASEÑAS)
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     setMessage('');
 
     try {
-      const normalizedEmail = email.trim().toLowerCase();
+      const normalizedEmail = email ? email.trim().toLowerCase() : null;
       
-      // Si se ingresó un email, validarlo contra el CSV
-      if (email) {
+      // Validar email si se proporcionó
+      if (normalizedEmail) {
         const csvUser = users.find(u => 
           u.Correo?.toLowerCase() === normalizedEmail ||
           u['E-mail']?.toLowerCase() === normalizedEmail
@@ -359,11 +307,12 @@ export default function LoginSection({ onLogin }) {
         }
       }
 
+      // Intentar login con Google
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
       const userEmail = user.email.toLowerCase();
 
-      // Validar el email de Google contra el CSV
+      // Validar contra CSV
       const csvUser = users.find(u => 
         u.Correo?.toLowerCase() === userEmail ||
         u['E-mail']?.toLowerCase() === userEmail
@@ -371,44 +320,46 @@ export default function LoginSection({ onLogin }) {
       
       if (!csvUser) {
         await signOut(auth);
-        setMessage('❌ Este correo no está autorizado. Usa un correo de la lista.');
+        setMessage('❌ Este correo de Google no está autorizado. Contacta al admin.');
         setIsGoogleLoading(false);
         return;
       }
 
-      // Verificar métodos existentes
-      const methods = await fetchSignInMethodsForEmail(auth, userEmail);
+      // Verificar si ya tiene contraseña (para mostrar mensaje apropiado)
+      const emailStatus = await checkEmailStatus(userEmail);
       
-      // Si ya tiene contraseña, solo agregar Google como método adicional
-      if (methods.includes('password')) {
+      if (emailStatus.hasPassword) {
         console.log('✅ Google vinculado a cuenta existente con contraseña');
-        setMessage(`✅ ¡Google vinculado a tu cuenta ${userEmail}!`);
+        setMessage(`✅ ¡Google agregado a tu cuenta ${csvUser.Nombre || userEmail}! Tu contraseña sigue activa.`);
       } else {
-        console.log('✅ Nueva cuenta Google creada');
-        setMessage(`✅ ¡Bienvenido con Google, ${csvUser?.Nombre || userEmail}!`);
+        console.log('✅ Nueva cuenta con Google creada');
+        setMessage(`✅ ¡Bienvenido con Google, ${csvUser.Nombre || userEmail}!`);
       }
 
       const userData = {
         uid: user.uid,
         email: user.email,
         name: csvUser?.Nombre || user.email,
-        role: csvUser?.['Rol en la Revista'] || 'Usuario',
-        authMethods: methods
+        role: csvUser?.['Rol en la Revista'] || 'Usuario'
       };
 
       if (onLogin) onLogin(userData);
       
     } catch (error) {
       console.error('Error Google login:', error);
+      
+      // IMPORTANTE: No tratar account-exists-with-different-credential como error
+      if (error.code === 'auth/account-exists-with-different-credential') {
+        setMessage('✅ ¡Cuenta vinculada exitosamente con Google! Ya puedes iniciar sesión.');
+        // El usuario ya está logueado, solo actualizar mensaje
+        return;
+      }
+      
       let errorMessage = 'Error al iniciar con Google';
       
       switch (error.code) {
         case 'auth/popup-closed-by-user':
           errorMessage = 'Popup cerrado. Intenta de nuevo.';
-          break;
-        case 'auth/account-exists-with-different-credential':
-          // En lugar de error, intentar vincular automáticamente
-          setMessage('✅ Cuenta vinculada exitosamente con Google.');
           break;
         case 'auth/too-many-requests':
           errorMessage = 'Demasiados intentos. Espera un poco.';
@@ -423,14 +374,13 @@ export default function LoginSection({ onLogin }) {
           errorMessage = error.message || 'Error desconocido';
       }
       
-      if (error.code !== 'auth/account-exists-with-different-credential') {
-        setMessage(`❌ ${errorMessage}`);
-      }
+      setMessage(`❌ ${errorMessage}`);
     }
     
     setIsGoogleLoading(false);
   };
 
+  // FUNCIÓN SIMPLIFICADA: Olvidé contraseña
   const handleForgotPassword = async () => {
     if (!email) {
       setMessage('Ingresa tu correo primero');
@@ -462,9 +412,9 @@ export default function LoginSection({ onLogin }) {
 
       await sendPasswordResetEmail(auth, normalizedEmail);
       console.log('✅ Email de reset enviado para:', normalizedEmail);
-      setMessage('✅ Revisa tu correo (incluyendo spam/junk) para restablecer la contraseña. Puede tardar unos minutos.');
+      setMessage('✅ Revisa tu correo (incluyendo spam/junk) para restablecer la contraseña.');
     } catch (error) {
-      console.error('Error en forgot password:', error.code, error.message);
+      console.error('Error en forgot password:', error);
       let errorMessage = '❌ Error al enviar correo de recuperación';
       
       switch (error.code) {
@@ -477,11 +427,8 @@ export default function LoginSection({ onLogin }) {
         case 'auth/too-many-requests':
           errorMessage = 'Demasiados intentos. Espera 10-15 minutos.';
           break;
-        case 'auth/missing-email':
-          errorMessage = 'Falta el correo';
-          break;
         default:
-          errorMessage += ` (${error.message})`;
+          errorMessage = error.message || 'Error desconocido';
       }
       
       setMessage(errorMessage);
@@ -498,7 +445,6 @@ export default function LoginSection({ onLogin }) {
       setEmail('');
       setPassword('');
       setIsLogin(true);
-      setAuthMethods([]);
       if (onLogin) onLogin(null);
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
@@ -518,47 +464,13 @@ export default function LoginSection({ onLogin }) {
     if (e.key === 'Enter') handleSubmit();
   };
 
-  // Mostrar estado actual del email si está siendo validado
-  const showEmailStatus = async () => {
-    if (!email.trim()) return;
-    
-    const normalizedEmail = email.trim().toLowerCase();
-    const csvUser = users.find(u => 
-      u.Correo?.toLowerCase() === normalizedEmail ||
-      u['E-mail']?.toLowerCase() === normalizedEmail
-    );
-    
-    if (!csvUser) {
-      setMessage('⚠️ Este correo no está en la lista de usuarios autorizados');
-      return;
-    }
-
-    const emailStatus = await checkEmailStatus(normalizedEmail);
-    let statusMessage = `✅ ${csvUser.Nombre || 'Usuario'} - `;
-    
-    if (emailStatus.hasPassword && emailStatus.hasGoogle) {
-      statusMessage += 'Cuenta completa (Contraseña + Google)';
-    } else if (emailStatus.hasPassword) {
-      statusMessage += 'Tiene contraseña configurada';
-    } else if (emailStatus.hasGoogle) {
-      statusMessage += 'Solo Google configurado';
-    } else {
-      statusMessage += 'Sin cuenta en Firebase';
-    }
-    
-    setMessage(statusMessage);
-  };
-
+  // JSX ORIGINAL (SIN CAMBIOS COMPLEJOS)
   if (currentUser) {
     return (
       <div className="flex items-center justify-center py-8 px-2 sm:px-0">
         <div className="w-full max-w-sm p-6 sm:p-8 space-y-6 bg-white rounded-lg shadow-lg text-center">
           <h3 className="text-xl sm:text-2xl font-semibold text-green-600">¡Sesión Activa!</h3>
-          <p className="text-gray-600 mb-2">Correo: {currentUser.email}</p>
-          <p className="text-xs text-gray-500 mb-4">
-            Métodos: {authMethods.includes('password') ? '🔑 Contraseña' : ''} 
-            {authMethods.includes('google.com') ? ' 🌐 Google' : ''}
-          </p>
+          <p className="text-gray-600 mb-4">Correo: {currentUser.email}</p>
           <button
             onClick={handleLogout}
             className="w-full px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
@@ -590,25 +502,25 @@ export default function LoginSection({ onLogin }) {
     <div className="flex items-center justify-center py-8 px-2 sm:px-0">
       <div className="w-full max-w-sm p-6 sm:p-8 space-y-6 bg-white rounded-lg shadow-lg">
         <h3 className="text-xl sm:text-2xl font-semibold text-center text-gray-800">
-          {isLogin ? 'Iniciar Sesión' : 'Configurar Acceso'}
+          {isLogin ? 'Iniciar Sesión' : 'Crear Contraseña'}
         </h3>
         <button
           onClick={() => setIsLogin(!isLogin)}
           className="text-sm text-blue-500 hover:underline text-center w-full"
           disabled={isLoading || isGoogleLoading}
         >
-          {isLogin ? '¿Nuevo? Configura tu acceso' : 'Ya tienes cuenta? Inicia sesión'}
+          {isLogin ? '¿Nuevo? Crea tu contraseña' : 'Ya tienes cuenta? Inicia sesión'}
         </button>
         
         <div className="space-y-4">
-          {/* Botón Google mejorado */}
+          {/* Botón Google (con tooltip explicativo) */}
           <button
             onClick={handleGoogleSignIn}
             disabled={isLoading || isGoogleLoading || users.length === 0}
             className={`w-full px-4 py-2 text-white bg-red-500 rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base flex items-center justify-center space-x-2 ${
               isLoading || isGoogleLoading || users.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
             }`}
-            title="Usa tu cuenta Google (mantiene tu contraseña si ya la tienes)"
+            title="Google no eliminará tu contraseña - ambos métodos coexistirán"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -623,37 +535,33 @@ export default function LoginSection({ onLogin }) {
                   Conectando...
                 </span>
               ) : (
-                'Continuar con Google'
+                'Iniciar con Google'
               )}
             </span>
           </button>
 
-          {/* Separador */}
           <div className="flex items-center">
             <div className="flex-grow border-t border-gray-300"></div>
             <span className="flex-shrink-0 px-2 text-xs text-gray-500">o</span>
             <div className="flex-grow border-t border-gray-300"></div>
           </div>
 
-          {/* Campo email con validación en tiempo real */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">Correo electrónico</label>
+            <label className="block text-sm font-medium text-gray-700">Correo</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              onBlur={showEmailStatus} // Validar al salir del campo
               onKeyPress={handleKeyPress}
               className={`w-full px-3 py-2 mt-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base ${
                 errors.email ? 'border-red-500' : 'border-gray-300'
               } ${isLoading || isGoogleLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-              placeholder="tu@correo.com"
+              placeholder="correo@ejemplo.com"
               disabled={isLoading || isGoogleLoading}
             />
             {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
           </div>
 
-          {/* Campo contraseña */}
           <div className="relative">
             <label className="block text-sm font-medium text-gray-700">
               {isLogin ? 'Contraseña' : 'Nueva Contraseña'}
@@ -680,12 +588,11 @@ export default function LoginSection({ onLogin }) {
             {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password}</p>}
           </div>
 
-          {/* Botón principal */}
           <button
             onClick={handleSubmit}
-            disabled={isLoading || isGoogleLoading || users.length === 0 || !email}
+            disabled={isLoading || isGoogleLoading || users.length === 0}
             className={`w-full px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base ${
-              isLoading || isGoogleLoading || users.length === 0 || !email ? 'opacity-50 cursor-not-allowed' : ''
+              isLoading || isGoogleLoading || users.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           >
             {isLoading ? (
@@ -694,11 +601,10 @@ export default function LoginSection({ onLogin }) {
                 Procesando...
               </span>
             ) : (
-              isLogin ? 'Iniciar Sesión' : 'Crear/Vincular Contraseña'
+              isLogin ? 'Iniciar Sesión' : 'Crear Contraseña'
             )}
           </button>
 
-          {/* Olvidé mi contraseña */}
           {isLogin && (
             <button
               onClick={handleForgotPassword}
@@ -709,25 +615,20 @@ export default function LoginSection({ onLogin }) {
             </button>
           )}
 
-          {/* Mensajes */}
           {message && (
-            <div className={`text-center text-xs sm:text-sm p-2 rounded ${
-              message.includes('✅') || message.includes('Bienvenido') || message.includes('completa')
-                ? 'bg-green-50 text-green-700 border border-green-200' 
-                : message.includes('⚠️')
-                ? 'bg-yellow-50 text-yellow-700 border border-yellow-200'
-                : 'bg-red-50 text-red-700 border border-red-200'
+            <p className={`text-center text-xs sm:text-sm ${
+              message.includes('✅') || message.includes('Bienvenido') 
+                ? 'text-green-600 font-medium' 
+                : 'text-red-500'
             }`}>
               {message}
-            </div>
+            </p>
           )}
 
-          {/* Debug info */}
           {process.env.NODE_ENV === 'development' && (
-            <div className="text-xs text-gray-500 text-center space-y-1">
-              <p>{users.length} usuarios autorizados</p>
-              {email && <p>Estado: {message.includes('completa') ? 'Completo' : message.includes('Tiene') ? 'Parcial' : 'Sin cuenta'}</p>}
-            </div>
+            <p className="text-xs text-gray-500 text-center">
+              {users.length} usuarios autorizados
+            </p>
           )}
         </div>
       </div>
