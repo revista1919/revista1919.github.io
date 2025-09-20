@@ -43,7 +43,7 @@ export default function LoginSection({ onLogin }) {
         );
         if (!csvUser) {
           setMessage('❌ Este correo no está autorizado. Contacta al admin.');
-          signOut(auth);
+          signOut(auth).catch((err) => console.error('Error al cerrar sesión:', err));
           return;
         }
         const userData = {
@@ -150,6 +150,14 @@ export default function LoginSection({ onLogin }) {
     );
 
     try {
+      // Verificar si el email ya está registrado con otro proveedor
+      const methods = await fetchSignInMethodsForEmail(auth, normalizedEmail);
+      if (methods.length > 0) {
+        setMessage(`❌ Este correo ya está registrado con ${methods.includes('google.com') ? 'Google' : 'otro método'}. Usa Iniciar Sesión o Google.`);
+        setIsLoading(false);
+        return;
+      }
+
       const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
       const user = userCredential.user;
 
@@ -167,7 +175,7 @@ export default function LoginSection({ onLogin }) {
       
       switch (error.code) {
         case 'auth/email-already-in-use':
-          errorMessage = 'Ya existe una contraseña para este correo. Inicia sesión.';
+          errorMessage = 'Este correo ya está registrado. Usa Iniciar Sesión o Google.';
           break;
         case 'auth/weak-password':
           errorMessage = 'La contraseña es demasiado débil';
@@ -220,6 +228,9 @@ export default function LoginSection({ onLogin }) {
       let errorMessage = 'Error al iniciar sesión';
       
       switch (error.code) {
+        case 'auth/invalid-credential':
+          errorMessage = 'Correo o contraseña incorrectos. Verifica o usa "Olvidé mi contraseña".';
+          break;
         case 'auth/user-not-found':
           errorMessage = 'No hay contraseña creada para este correo. Créala primero.';
           break;
@@ -230,7 +241,7 @@ export default function LoginSection({ onLogin }) {
           errorMessage = 'Correo inválido';
           break;
         case 'auth/too-many-requests':
-          errorMessage = 'Demasiados intentos. Intenta más tarde.';
+          errorMessage = 'Demasiados intentos. Espera 10-15 minutos.';
           break;
         default:
           errorMessage = error.message || 'Correo o contraseña incorrectos';
@@ -247,8 +258,35 @@ export default function LoginSection({ onLogin }) {
     setMessage('');
 
     try {
+      // Si hay un email ingresado, validarlo contra el CSV primero
+      if (email) {
+        const normalizedEmail = email.trim().toLowerCase();
+        const csvUser = users.find(user => 
+          user.Correo?.trim().toLowerCase() === normalizedEmail ||
+          user['E-mail']?.trim().toLowerCase() === normalizedEmail
+        );
+        if (!csvUser) {
+          setMessage('❌ Este correo no está autorizado. Usa un correo de la lista.');
+          setIsGoogleLoading(false);
+          return;
+        }
+      }
+
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
+
+      // Validar el email de Google contra el CSV
+      const csvUser = users.find(u => 
+        u.Correo?.toLowerCase() === user.email.toLowerCase() ||
+        u['E-mail']?.toLowerCase() === user.email.toLowerCase()
+      );
+
+      if (!csvUser) {
+        await signOut(auth); // Cerrar sesión inmediatamente si no está autorizado
+        setMessage('❌ Este correo no está autorizado. Usa un correo de la lista.');
+        setIsGoogleLoading(false);
+        return;
+      }
 
       console.log('✅ Google login exitoso:', user.email);
       setMessage('✅ ¡Login con Google exitoso! Validando acceso...');
@@ -269,6 +307,9 @@ export default function LoginSection({ onLogin }) {
           break;
         case 'auth/invalid-credential':
           errorMessage = 'Credencial de Google inválida. Intenta de nuevo.';
+          break;
+        case 'auth/unauthorized-domain':
+          errorMessage = 'Dominio no autorizado. Contacta al admin.';
           break;
         default:
           errorMessage = error.message || 'Error desconocido';
@@ -307,7 +348,7 @@ export default function LoginSection({ onLogin }) {
         return;
       }
       if (!methods.includes('password')) {
-        setMessage('❌ Esta cuenta usa otro método (ej. Google). Contacta al admin.');
+        setMessage(`❌ Este correo está registrado con ${methods.includes('google.com') ? 'Google' : 'otro método'}. Usa Iniciar con Google o contacta al admin.`);
         return;
       }
 
