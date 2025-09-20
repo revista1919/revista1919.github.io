@@ -1,3 +1,4 @@
+
 import { initializeApp } from 'firebase/app';
 import { getAnalytics, isSupported } from 'firebase/analytics';
 import { 
@@ -16,7 +17,7 @@ import {
   getRedirectResult
 } from 'firebase/auth';
 
-// Configuración de Firebase (usa variables de entorno o valores por defecto)
+// Configuración de Firebase
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY || "AIzaSyArr3LE_hQLZG0L5m9JND2OWVL8elnSyWk",
   authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || "usuarios-rnce.firebaseapp.com",
@@ -55,9 +56,13 @@ isSupported().then((supported) => {
 // Inicializar Auth
 export const auth = getAuth(app);
 
+// Inicializar Google Provider
+export const googleProvider = new GoogleAuthProvider();
+
 // Debug: Verificar auth
 if (process.env.NODE_ENV === 'development') {
   console.log('🔥 Auth inicializado:', !!auth);
+  console.log('🔐 Google Provider inicializado:', !!googleProvider);
 }
 
 // Exportar funciones
