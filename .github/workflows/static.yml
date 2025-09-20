@@ -22,22 +22,43 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '18'  # ← CAMBIADO: De 20 a 18 para estabilidad
+          cache: 'npm'
 
       - name: Cache node modules
         uses: actions/cache@v4
         with:
-          path: ~/.npm
+          path: |
+            ~/.npm
+            node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
 
-      - name: Install dependencies
-        run: npm install
+      # ← NUEVO: Limpieza agresiva antes de instalar
+      - name: Clean install dependencies
+        run: |
+          echo "🧹 Limpieza agresiva de dependencias..."
+          rm -rf node_modules
+          rm -f package-lock.json
+          npm cache clean --force
+          
+          echo "📦 Instalación limpia con legacy peer deps..."
+          npm ci --legacy-peer-deps
+          
+          echo "🔧 Fixing vulnerabilities..."
+          npm audit fix --force
+          
+          echo "🔍 Verificando webpack..."
+          npm ls webpack enhanced-resolve
+        env:
+          NODE_ENV: production
 
       - name: Debug secrets
         run: |
@@ -54,28 +75,45 @@ jobs:
           FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
 
-      - name: Build project
+      - name: Create .env.local
         run: |
           echo "🔨 Building with env vars..."
-          # ← CORREGIDO: Crear .env.local con todas las variables
-          echo "REACT_APP_ARTICULOS_SCRIPT_URL=${{ secrets.ARTICULOS_SCRIPT }}" > .env.local
-          echo "REACT_APP_GH_TOKEN=${{ secrets.MY_GITHUB_TOKEN }}" >> .env.local
-          echo "REACT_APP_USERS_CSV=${{ secrets.USERS_CSV }}" >> .env.local
-          echo "REACT_APP_FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }}" >> .env.local
-          echo "REACT_APP_FIREBASE_AUTH_DOMAIN=usuarios-rnce.firebaseapp.com" >> .env.local
-          echo "REACT_APP_FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}" >> .env.local
-          echo "REACT_APP_FIREBASE_STORAGE_BUCKET=usuarios-rnce.firebasestorage.app" >> .env.local
-          echo "REACT_APP_FIREBASE_MESSAGING_SENDER_ID=688242139131" >> .env.local
-          echo "REACT_APP_FIREBASE_APP_ID=1:688242139131:web:3a98663545e73110c3f55e" >> .env.local
-          echo "REACT_APP_FIREBASE_MEASUREMENT_ID=G-K90MKB7BDP" >> .env.local
-          echo "NODE_ENV=production" >> .env.local
-          echo "DEBUG=false" >> .env.local
+          # ← MEJORADO: Crear .env.local con todas las variables necesarias
+          cat > .env.local << EOF
+          REACT_APP_ARTICULOS_SCRIPT_URL=${{ secrets.ARTICULOS_SCRIPT }}
+          REACT_APP_GH_TOKEN=${{ secrets.MY_GITHUB_TOKEN }}
+          REACT_APP_USERS_CSV=${{ secrets.USERS_CSV }}
+          REACT_APP_FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }}
+          REACT_APP_FIREBASE_AUTH_DOMAIN=usuarios-rnce.firebaseapp.com
+          REACT_APP_FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}
+          REACT_APP_FIREBASE_STORAGE_BUCKET=usuarios-rnce.firebasestorage.app
+          REACT_APP_FIREBASE_MESSAGING_SENDER_ID=688242139131
+          REACT_APP_FIREBASE_APP_ID=1:688242139131:web:3a98663545e73110c3f55e
+          REACT_APP_FIREBASE_MEASUREMENT_ID=G-K90MKB7BDP
+          NODE_ENV=production
+          DEBUG=false
+          EOF
           
           echo "📝 .env.local creado:"
           cat .env.local
           
-          echo "🚀 Ejecutando build..."
-          npm run build
+          echo "🔍 Verificando variables críticas:"
+          if [ -n "${{ secrets.ARTICULOS_SCRIPT }}" ]; then
+            echo "✅ ARTICULOS_SCRIPT presente"
+          else
+            echo "⚠️ ARTICULOS_SCRIPT vacío"
+          fi
+          
+          if [ -n "${{ secrets.FIREBASE_API_KEY }}" ]; then
+            echo "✅ FIREBASE_API_KEY presente"
+          else
+            echo "⚠️ FIREBASE_API_KEY vacío (modo offline)"
+          fi
+
+      - name: Build project
+        run: |
+          echo "🚀 Ejecutando build con debug..."
+          npm run build:debug
         env:
           NODE_ENV: production
 
@@ -84,25 +122,39 @@ jobs:
           echo "📁 Listing dist directory contents:"
           ls -la dist/
           
+          echo "📦 Checking bundle files:"
+          find dist/ -name "*.js" -exec ls -lh {} \;
+          
           echo "🔍 Checking for Firebase config in bundle:"
-          if grep -r "REACT_APP_FIREBASE_API_KEY" dist/; then
-            echo "✅ Firebase API key encontrada en bundle"
+          if grep -r "REACT_APP_FIREBASE_API_KEY" dist/ 2>/dev/null; then
+            echo "✅ Firebase API key referencia encontrada en bundle"
           else
-            echo "⚠️ REACT_APP_FIREBASE_API_KEY no encontrada en bundle"
+            echo "⚠️ REACT_APP_FIREBASE_API_KEY no encontrada en bundle (normal si está vacío)"
           fi
           
           echo "🔍 Checking for project ID:"
-          if grep -r "usuarios-rnce" dist/; then
+          if grep -r "usuarios-rnce" dist/ 2>/dev/null; then
             echo "✅ Firebase project ID encontrado"
           else
             echo "⚠️ usuarios-rnce no encontrado en bundle"
           fi
           
           echo "🔍 Checking for CSV URL:"
-          if grep -r "REACT_APP_USERS_CSV" dist/; then
-            echo "✅ CSV URL encontrada en bundle"
+          if grep -r "script.google.com" dist/ 2>/dev/null; then
+            echo "✅ Google Script URL encontrada en bundle"
           else
-            echo "⚠️ REACT_APP_USERS_CSV no encontrada en bundle"
+            echo "⚠️ Google Script URL no encontrada en bundle"
+          fi
+          
+          echo "📏 Bundle size check:"
+          if [ -f "dist/bundle.js" ]; then
+            size=\$(du -h dist/bundle.js | cut -f1)
+            echo "📦 bundle.js size: \$size"
+          fi
+          
+          if [ -d "dist/assets" ]; then
+            echo "📁 Assets directory exists:"
+            ls -la dist/assets/
           fi
 
       - name: Setup Pages
@@ -116,3 +168,13 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      # ← NUEVO: Notificación de éxito/fallo
+      - name: Notify build result
+        if: always()
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            echo "🚀 Build completado: ${{ job.status }}"
+            echo "📊 Job status: ${{ job.status }}"
+            echo "💡 URL de deploy: ${{ steps.deployment.outputs.page_url }}"
+          fi

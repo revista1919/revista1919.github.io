@@ -5,7 +5,7 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 const WebpackShellPluginNext = require('webpack-shell-plugin-next');
 const webpack = require('webpack');
 
-// ✅ Cargar .env.local primero, luego .env
+// Cargar .env.local primero, luego .env
 const dotenvConfig = require('dotenv').config({ path: path.resolve(__dirname, '.env.local') });
 if (dotenvConfig.error) {
   console.warn('⚠️ .env.local no encontrado, usando .env');
@@ -15,7 +15,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '.env'), override: true
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
 
-  // ✅ Debug: Imprimir variables de entorno
+  // Debug: Imprimir variables de entorno
   console.log('🔍 Webpack Environment Variables:', {
     'REACT_APP_FIREBASE_API_KEY': process.env.REACT_APP_FIREBASE_API_KEY ? 'PRESENT' : 'MISSING',
     'REACT_APP_FIREBASE_PROJECT_ID': process.env.REACT_APP_FIREBASE_PROJECT_ID || 'MISSING',
@@ -24,10 +24,9 @@ module.exports = (env, argv) => {
     'REACT_APP_GH_TOKEN': process.env.REACT_APP_GH_TOKEN ? 'PRESENT' : 'MISSING',
     'NODE_ENV': process.env.NODE_ENV || 'development',
     'DEBUG': process.env.DEBUG || false,
-    '.env.local loaded': dotenvConfig.parsed ? Object.keys(dotenvConfig.parsed).length : 0,
   });
 
-  // ✅ Inyectar variables de entorno en el bundle
+  // Inyectar variables de entorno en el bundle
   const defineEnvVars = {
     'process.env.NODE_ENV': JSON.stringify(isProduction ? 'production' : 'development'),
     'process.env.REACT_APP_ARTICULOS_SCRIPT_URL': JSON.stringify(process.env.REACT_APP_ARTICULOS_SCRIPT_URL || ''),
@@ -44,7 +43,7 @@ module.exports = (env, argv) => {
   };
 
   return {
-    entry: './src/index.js',
+    entry: './src/index.js', // ← VUELVE A index.js como estaba originalmente
     output: {
       path: path.resolve(__dirname, 'dist'),
       filename: isProduction ? '[name].[contenthash].js' : 'bundle.js',
@@ -65,10 +64,6 @@ module.exports = (env, argv) => {
       historyApiFallback: true,
       headers: {
         'Access-Control-Allow-Origin': '*',
-      },
-      onListening: (devServer) => {
-        const port = devServer.server.address().port;
-        console.log(`🚀 Server corriendo en http://localhost:${port}`);
       },
     },
     module: {
@@ -147,7 +142,6 @@ module.exports = (env, argv) => {
               minifyURLs: true,
             }
           : false,
-        // ← ELIMINADO: Meta tag problemático que causaba el error
       }),
       new CopyWebpackPlugin({
         patterns: [
@@ -171,14 +165,14 @@ module.exports = (env, argv) => {
         ],
       }),
       new webpack.DefinePlugin(defineEnvVars),
-      new WebpackShellPluginNext({
-        onBuildEnd: {
-          scripts: ['node generate-all.js'],
-          blocking: true,
-          parallel: false,
-        },
-      }),
       ...(isProduction ? [
+        new WebpackShellPluginNext({
+          onBuildEnd: {
+            scripts: ['node generate-all.js'],
+            blocking: true,
+            parallel: false,
+          },
+        }),
         new webpack.BannerPlugin({
           banner: `/* Revista 1919 - Built ${new Date().toISOString()} | Firebase Auth Enabled */`,
           raw: true,
@@ -196,7 +190,6 @@ module.exports = (env, argv) => {
     resolve: {
       extensions: ['.js', '.jsx', '.json'],
       fallback: {
-        // ← CRÍTICO: Polyfills para Firebase v12
         "fs": false,
         "path": false,
         "crypto": false,
@@ -217,28 +210,6 @@ module.exports = (env, argv) => {
     },
     optimization: {
       minimize: isProduction,
-      splitChunks: {
-        chunks: 'all',
-        cacheGroups: {
-          vendor: {
-            test: /[\\/]node_modules[\\/](?!firebase)/,
-            name: 'vendors',
-            chunks: 'all',
-            priority: 10,
-            enforce: true,
-          },
-          firebase: {
-            test: /[\\/]node_modules[\\/]firebase[\\/]/,
-            name: 'firebase',
-            chunks: 'all',
-            priority: 20,
-            enforce: true,
-          },
-        },
-      },
-      runtimeChunk: isProduction ? {
-        name: 'runtime'
-      } : undefined,
     },
     cache: {
       type: 'filesystem',
