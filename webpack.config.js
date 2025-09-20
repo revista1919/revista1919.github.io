@@ -55,7 +55,7 @@ module.exports = (env, argv) => {
     'process.env.DEBUG': JSON.stringify(isDebug),
   };
 
-  // ✅ Polyfills más simples y robustos
+  // ✅ Polyfills - Solo los que están garantizados
   const fallbackConfig = {
     "fs": false,
     "path": false,
@@ -120,7 +120,7 @@ module.exports = (env, argv) => {
     
     module: {
       rules: [
-        // JavaScript y JSX
+        // JavaScript y JSX - SIMPLIFICADO
         {
           test: /\.(js|jsx)$/i,
           exclude: /node_modules\/(?!(@react-oauth\/google|firebase))/,
@@ -129,22 +129,13 @@ module.exports = (env, argv) => {
             options: {
               presets: [
                 ['@babel/preset-env', { 
-                  targets: '> 0.25%, not dead', 
-                  useBuiltIns: 'usage',
-                  corejs: 3 
+                  targets: '> 0.25%, not dead' 
                 }],
                 ['@babel/preset-react', { 
                   runtime: 'automatic' 
                 }]
               ],
-              plugins: [
-                isProduction ? [] : require.resolve('react-refresh/babel'),
-                // Optimizaciones para producción
-                ...(isProduction ? [
-                  require.resolve('@babel/plugin-transform-react-constant-elements'),
-                  require.resolve('@babel/plugin-transform-react-inline-elements'),
-                ] : []),
-              ],
+              // ✅ ELIMINADOS: Plugins problemáticos
               cacheDirectory: true,
               cacheCompression: isProduction,
             },
@@ -285,19 +276,14 @@ Revista Nacional de las Ciencias para Estudiantes
 Built: ${new Date().toISOString()}
 Environment: ${isProduction ? 'Production' : 'Development'}
 Firebase: ${process.env.REACT_APP_FIREBASE_PROJECT_ID ? 'Enabled' : 'Disabled'}
-Bundle Size: Optimized for ${isProduction ? 'production' : 'development'}
 */`,
         raw: true,
         include: 'all',
-        footer: true,
       }),
       
       // Hot Module Replacement (desarrollo)
       ...(isProduction ? [] : [
         new webpack.HotModuleReplacementPlugin(),
-        new webpack.ProgressPlugin({
-          percentBy: 'entries',
-        }),
       ]),
     ],
     
@@ -306,7 +292,7 @@ Bundle Size: Optimized for ${isProduction ? 'production' : 'development'}
     resolve: {
       extensions: ['.js', '.jsx', '.json'],
       alias: {
-        '@': path.resolve(__dirname, 'src'),
+        '@': path.resolve(__dirname, 'src/'),
       },
       fallback: fallbackConfig,
     },
@@ -315,7 +301,6 @@ Bundle Size: Optimized for ${isProduction ? 'production' : 'development'}
       hints: isProduction ? 'warning' : false,
       maxAssetSize: 500000,
       maxEntrypointSize: 1000000,
-      maxEntrypointSizeWarning: 1500000,
     },
     
     optimization: {
@@ -331,7 +316,6 @@ Bundle Size: Optimized for ${isProduction ? 'production' : 'development'}
               chunks: 'all',
               priority: 20,
               enforce: true,
-              minChunks: 1,
             },
             firebase: {
               test: /[\\/]node_modules[\\/]firebase[\\/]/,
@@ -339,24 +323,12 @@ Bundle Size: Optimized for ${isProduction ? 'production' : 'development'}
               chunks: 'all',
               priority: 10,
               enforce: true,
-              minChunks: 1,
-            },
-            default: {
-              minChunks: 2,
-              priority: -20,
-              reuseExistingChunk: true,
             },
           },
         },
         runtimeChunk: {
           name: 'runtime',
         },
-      }),
-      
-      // Optimizaciones adicionales para producción
-      ...(isProduction && {
-        concatenateModules: true,
-        sideEffects: true,
       }),
     },
     
@@ -365,19 +337,8 @@ Bundle Size: Optimized for ${isProduction ? 'production' : 'development'}
       buildDependencies: {
         config: [__filename],
       },
-      name: `webpack-${isProduction ? 'prod' : 'dev'}-cache-${Date.now()}`,
     },
     
-    // Configuración específica para desarrollo
-    ...(isProduction ? {} : {
-      watchOptions: {
-        ignored: /node_modules/,
-        poll: 1000,
-        aggregateTimeout: 300,
-      },
-    }),
-    
-    // Stats para mejor debugging
     stats: isDebug ? 'verbose' : isProduction ? 'minimal' : 'normal',
   };
 };
