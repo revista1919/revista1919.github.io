@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import Papa from 'papaparse';
 import { auth } from './firebase';
 import {
@@ -24,10 +23,9 @@ import PortalSection from './components/PortalSection';
 import NewsSection from './components/NewsSection';
 import './index.css';
 
-const USERS_CSV = process.env.REACT_APP_USERS_CSV || 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
+const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 
 function App() {
-  const { t } = useTranslation();
   const [articles, setArticles] = useState([]);
   const [filteredArticles, setFilteredArticles] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -42,173 +40,109 @@ function App() {
   // Fetch user data from CSV
   const fetchUserData = async (email) => {
     try {
-      console.log('🔍 Buscando datos de usuario en CSV:', email);
-      const response = await fetch(USERS_CSV, { 
-        cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache',
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Error al cargar CSV: ${response.status} ${response.statusText}`);
-      }
-      
+      const response = await fetch(USERS_CSV, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`Error al cargar CSV: ${response.status}`);
       const csvText = await response.text();
-      const { data, errors } = Papa.parse(csvText, {
+      const { data } = Papa.parse(csvText, {
         header: true,
         skipEmptyLines: true,
         delimiter: ',',
         transform: (value) => value?.toString().trim(),
       });
-
-      if (errors.length > 0) {
-        console.warn('⚠️ Errores al parsear CSV de usuarios:', errors);
-      }
-
       const csvUser = data.find(
         (u) =>
           u.Correo?.toLowerCase() === email.toLowerCase() ||
           u['E-mail']?.toLowerCase() === email.toLowerCase()
       );
-
-      const userData = {
-        name: csvUser?.Nombre || csvUser?.['Nombre completo'] || email,
-        role: csvUser?.['Rol en la Revista'] || csvUser?.Rol || 'Usuario',
-        image: csvUser?.Imagen || csvUser?.['URL de imagen'] || '',
+      return {
+        name: csvUser?.Nombre || email,
+        role: csvUser?.['Rol en la Revista'] || 'Usuario',
+        image: csvUser?.Imagen || '',
       };
-
-      console.log('✅ Datos de usuario encontrados:', userData);
-      return userData;
     } catch (err) {
-      console.error('❌ Error fetching user CSV:', err);
+      console.error('Error fetching user CSV:', err);
       return { name: email, role: 'Usuario', image: '' };
     }
   };
 
   // Persistencia y estado de autenticación
   useEffect(() => {
-    const setupAuth = async () => {
-      try {
-        await setPersistence(auth, browserLocalPersistence);
-        console.log('🔐 Persistencia de autenticación configurada');
-      } catch (error) {
-        console.warn('⚠️ No se pudo configurar persistencia:', error);
-      }
-
-      const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-        console.log('🔍 onAuthStateChanged fired:', firebaseUser ? firebaseUser.email : 'No user');
-        
-        if (firebaseUser) {
-          try {
-            const storedUser = localStorage.getItem('userData');
+    setPersistence(auth, browserLocalPersistence)
+      .then(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+          console.log('onAuthStateChanged fired:', firebaseUser ? firebaseUser.email : 'No user');
+          if (firebaseUser) {
+            const storedUser = JSON.parse(localStorage.getItem('userData'));
             let userData;
-            
-            if (storedUser) {
-              try {
-                const parsedStored = JSON.parse(storedUser);
-                if (
-                  parsedStored &&
-                  parsedStored.uid === firebaseUser.uid &&
-                  parsedStored.email === firebaseUser.email
-                ) {
-                  userData = parsedStored;
-                  console.log('✅ Usuario encontrado en localStorage');
-                }
-              } catch (parseError) {
-                console.warn('⚠️ Error parseando localStorage:', parseError);
-              }
-            }
-
-            if (!userData) {
-              console.log('🔍 Buscando datos en CSV...');
+            if (
+              storedUser &&
+              storedUser.uid === firebaseUser.uid &&
+              storedUser.email === firebaseUser.email
+            ) {
+              userData = storedUser;
+            } else {
               const csvData = await fetchUserData(firebaseUser.email);
               userData = {
                 uid: firebaseUser.uid,
                 email: firebaseUser.email,
-                ...csvData,
+                name: csvData.name,
+                role: csvData.role,
+                image: csvData.image,
               };
               localStorage.setItem('userData', JSON.stringify(userData));
-              console.log('💾 Usuario guardado en localStorage');
             }
-
             setUser(userData);
-            console.log('✅ Usuario autenticado:', userData);
-          } catch (error) {
-            console.error('❌ Error procesando usuario:', error);
-            setUser({
-              uid: firebaseUser.uid,
-              email: firebaseUser.email,
-              name: firebaseUser.email,
-              role: 'Usuario',
-              image: '',
-            });
+            console.log('Usuario autenticado:', userData);
+          } else {
+            setUser(null);
+            localStorage.removeItem('userData');
+            console.log('No hay usuario autenticado');
           }
-        } else {
-          setUser(null);
-          localStorage.removeItem('userData');
-          console.log('👋 No hay usuario autenticado');
-        }
-        
+          setAuthLoading(false);
+        });
+        return () => unsubscribe();
+      })
+      .catch((error) => {
+        console.error('Error al configurar persistencia:', error);
         setAuthLoading(false);
       });
-
-      return () => {
-        unsubscribe();
-        console.log('🧹 Cleanup de auth listener');
-      };
-    };
-
-    setupAuth().catch((error) => {
-      console.error('❌ Error al configurar autenticación:', error);
-      setAuthLoading(false);
-    });
   }, []);
 
   // Fetch de artículos CSV
   useEffect(() => {
     const fetchArticles = async () => {
       try {
-        const ARTICLES_CSV = process.env.REACT_APP_ARTICULOS_SCRIPT_URL || 
-          'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p32EM6-0VYy18AdREQwXdpeet1WHTA4H2-W2FX7HKe1HPSyApWadUw9sKHdVYQXL5tP6yDRs/pub?output=csv';
-        
-        console.log('📄 Fetching artículos desde:', ARTICLES_CSV);
-        
-        const response = await fetch(ARTICLES_CSV, { 
-          cache: 'no-store',
-          headers: {
-            'Cache-Control': 'no-cache',
-          }
-        });
+        const response = await fetch(
+          'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p32EM6-0VYy18AdREQwXdpeet1WHTA4H2-W2FX7HKe1HPSyApWadUw9sKHdVYQXL5tP6yDRs/pub?output=csv',
+          { cache: 'no-store' }
+        );
 
         if (!response.ok) {
-          throw new Error(`Error al cargar el archivo CSV: ${response.status} ${response.statusText}`);
+          throw new Error(`Error al cargar el archivo CSV: ${response.status}`);
         }
 
         const csvText = await response.text();
-        const { data, errors } = Papa.parse(csvText, {
+        Papa.parse(csvText, {
           header: true,
           skipEmptyLines: true,
           delimiter: ',',
-          transform: (value) => value?.toString().trim(),
-          dynamicTyping: false,
+          transform: (value) => value.trim(),
+          complete: ({ data }) => {
+            setArticles(data);
+            setFilteredArticles(data);
+
+            const uniqueAreas = [...new Set(data.map((a) => a['Área temática']))].filter(Boolean);
+            setAreas(uniqueAreas);
+
+            setLoading(false);
+          },
+          error: (error) => {
+            console.error('Error parsing CSV:', error);
+            setLoading(false);
+          },
         });
-
-        if (errors.length > 0) {
-          console.warn('⚠️ Errores al parsear CSV de artículos:', errors);
-        }
-
-        console.log(`✅ ${data.length} artículos cargados`);
-        setArticles(data);
-        setFilteredArticles(data);
-
-        const uniqueAreas = [...new Set(data.map((a) => a['Área temática']).filter(Boolean))];
-        setAreas(uniqueAreas);
-        console.log(`📂 ${uniqueAreas.length} áreas únicas encontradas:`, uniqueAreas);
-
-        setLoading(false);
       } catch (error) {
-        console.error('❌ Error fetching CSV:', error);
+        console.error('Error fetching CSV:', error);
         setLoading(false);
       }
     };
@@ -224,22 +158,19 @@ function App() {
     const lowerTerm = term.toLowerCase();
     const filtered = articles.filter((article) => {
       const matchesSearch =
-        !term ||
         article['Título']?.toLowerCase().includes(lowerTerm) ||
         article['Autor(es)']?.toLowerCase().includes(lowerTerm) ||
         article['Resumen']?.toLowerCase().includes(lowerTerm) ||
-        article['Palabras clave']?.toLowerCase().includes(lowerTerm) ||
-        article['Abstract']?.toLowerCase().includes(lowerTerm);
+        article['Palabras clave']?.toLowerCase().includes(lowerTerm);
 
       const matchesArea =
-        !area || (article['Área temática'] || '').toLowerCase() === area.toLowerCase();
+        area === '' || (article['Área temática'] || '').toLowerCase() === area.toLowerCase();
 
       return matchesSearch && matchesArea;
     });
 
     setFilteredArticles(filtered);
     setVisibleArticles(6);
-    console.log(`🔍 Búsqueda: "${term}" en área "${area}", ${filtered.length} resultados`);
   };
 
   const clearFilters = () => {
@@ -247,44 +178,36 @@ function App() {
     setSelectedArea('');
     setFilteredArticles(articles);
     setVisibleArticles(6);
-    console.log('🧹 Filtros limpiados');
   };
 
-  const loadMoreArticles = () => {
-    setVisibleArticles((prev) => prev + 6);
-    console.log('➕ Cargando más artículos');
-  };
-
-  const showLessArticles = () => {
-    setVisibleArticles(6);
-    console.log('⬇️ Mostrar menos artículos');
-  };
+  const loadMoreArticles = () => setVisibleArticles((prev) => prev + 6);
+  const showLessArticles = () => setVisibleArticles(6);
 
   // Login manual
   const handleLogin = async (userData) => {
-    console.log('🔐 handleLogin called with:', userData);
-    
-    if (!userData || !userData.email) {
+    console.log('handleLogin called with:', userData);
+    if (!userData) {
       setUser(null);
       localStorage.removeItem('userData');
-      console.log('❌ No hay datos de usuario válidos en handleLogin');
+      console.log('No hay usuario autenticado en handleLogin');
       return;
     }
 
     try {
       const csvData = await fetchUserData(userData.email);
       const updatedUserData = {
-        uid: userData.uid || `manual_${Date.now()}`,
+        uid: userData.uid,
         email: userData.email,
-        ...csvData,
+        name: csvData.name,
+        role: csvData.role,
+        image: csvData.image,
       };
-      
       setUser(updatedUserData);
       localStorage.setItem('userData', JSON.stringify(updatedUserData));
-      setActiveTab('login');
-      console.log('✅ Usuario autenticado manualmente:', updatedUserData);
+      setActiveTab('login'); // Ensure login tab stays active
+      console.log('Usuario autenticado en handleLogin:', updatedUserData);
     } catch (error) {
-      console.error('❌ Error en handleLogin:', error);
+      console.error('Error en handleLogin:', error);
       setUser(null);
       localStorage.removeItem('userData');
     }
@@ -296,22 +219,17 @@ function App() {
       await signOut(auth);
       setUser(null);
       localStorage.removeItem('userData');
-      setActiveTab('articles');
-      console.log('👋 Logout ejecutado correctamente');
+      console.log('Logout ejecutado en App.jsx');
     } catch (error) {
-      console.error('❌ Error al cerrar sesión:', error);
-      // Forzar logout local
-      setUser(null);
-      localStorage.removeItem('userData');
-      setActiveTab('articles');
+      console.error('Error al cerrar sesión:', error);
     }
   };
 
-  // Secciones de tabs con traducciones
+  // Secciones de tabs
   const sections = [
     {
       name: 'articles',
-      label: t('articles'),
+      label: 'Artículos',
       component: (
         <div className="py-8 max-w-7xl mx-auto">
           <SearchAndFilters
@@ -325,44 +243,35 @@ function App() {
           />
           <div className="articles grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mt-6">
             {loading ? (
-              <div className="col-span-full flex justify-center items-center py-8">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#5a3e36] mx-auto mb-2"></div>
-                  <p className="text-sm sm:text-base text-gray-600">{t('loading')}</p>
-                </div>
-              </div>
+              <p className="text-center text-sm sm:text-base text-gray-600 col-span-full">
+                Cargando...
+              </p>
             ) : filteredArticles.length === 0 ? (
-              <div className="col-span-full text-center py-8">
-                <p className="text-sm sm:text-base text-gray-600">{t('noArticlesFound')}</p>
-                <button
-                  onClick={clearFilters}
-                  className="mt-2 bg-[#5a3e36] text-white px-4 py-2 rounded-md hover:bg-[#7a5c4f] text-sm"
-                >
-                  {t('clearFilters')}
-                </button>
-              </div>
+              <p className="text-center text-sm sm:text-base text-gray-600 col-span-full">
+                No se encontraron artículos
+              </p>
             ) : (
               filteredArticles.slice(0, visibleArticles).map((article) => (
-                <ArticleCard key={`${article['Título']}-${article['Autor(es)']}`} article={article} />
+                <ArticleCard key={article['Título']} article={article} />
               ))
             )}
           </div>
           {!loading && filteredArticles.length > visibleArticles && (
             <div className="text-center mt-6">
               <button
-                className="bg-[#5a3e36] text-white px-4 py-2 rounded-md hover:bg-[#7a5c4f] focus:outline-none focus:ring-2 focus:ring-[#5a3e36] text-sm sm:text-base transition-colors"
+                className="bg-[#5a3e36] text-white px-4 py-2 rounded-md hover:bg-[#7a5c4f] focus:outline-none focus:ring-2 focus:ring-[#5a3e36] text-sm sm:text-base"
                 onClick={loadMoreArticles}
               >
-                {t('loadMore')}
+                Cargar más
               </button>
             </div>
           )}
           {!loading && visibleArticles > 6 && (
             <button
-              className="fixed bottom-4 right-4 bg-[#5a3e36] text-white px-4 py-2 rounded-md hover:bg-[#7a5c4f] focus:outline-none focus:ring-2 focus:ring-[#5a3e36] z-10 text-sm sm:text-base shadow-lg transition-colors"
+              className="fixed bottom-4 right-4 bg-[#5a3e36] text-white px-4 py-2 rounded-md hover:bg-[#7a5c4f] focus:outline-none focus:ring-2 focus:ring-[#5a3e36] z-10 text-sm sm:text-base"
               onClick={showLessArticles}
             >
-              {t('showLess')}
+              Mostrar menos
             </button>
           )}
         </div>
@@ -370,58 +279,57 @@ function App() {
     },
     {
       name: 'submit',
-      label: t('submit'),
+      label: 'Enviar Artículo',
       component: <SubmitSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'team',
-      label: t('team'),
+      label: 'Nuestro Equipo',
       component: <TeamSection setActiveTab={setActiveTab} className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'admin',
-      label: user?.role === 'Administrador' ? t('admin') : null,
-      component: user?.role === 'Administrador' ? (
+      label: 'Administración',
+      component: (
         <div className="py-8 max-w-7xl mx-auto">
-          <AdminSection user={user} />
+          <AdminSection />
         </div>
-      ) : null,
-      hidden: user?.role !== 'Administrador',
+      ),
     },
     {
       name: 'about',
-      label: t('about'),
+      label: 'Acerca de',
       component: <AboutSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'guidelines',
-      label: t('guidelines'),
+      label: 'Guías',
       component: <GuidelinesSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'faq',
-      label: t('faq'),
+      label: 'Preguntas Frecuentes',
       component: <FAQSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'news',
-      label: t('news'),
+      label: 'Noticias',
       component: <NewsSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'login',
-      label: t('login'),
+      label: 'Login / Estado de Artículos',
       component: (
         <div className={`py-8 ${user ? 'w-full' : 'max-w-lg mx-auto'}`}>
           {!user && (
-            <div className="text-center mb-6">
-              <h2 className="text-2xl font-semibold text-[#5a3e36] mb-4">
-                {t('authorPortal')}
+            <>
+              <h2 className="text-2xl font-semibold text-center text-[#5a3e36] mb-4">
+                Interfaz para Autores y Revisores
               </h2>
-              <p className="text-[#7a5c4f] mb-6 max-w-md mx-auto">
-                {t('authorPortalDescription') || 'Esta sección es solo para autores y revisores/autores con permisos especiales.'}
+              <p className="text-center text-[#7a5c4f] mb-6">
+                Esta sección es solo para autores y revisores/autores con permisos especiales.
               </p>
-            </div>
+            </>
           )}
           {user ? (
             <PortalSection user={user} onLogout={handleLogout} />
@@ -431,43 +339,24 @@ function App() {
         </div>
       ),
     },
-  ].filter(section => section.component !== null); // Filtrar secciones ocultas
+  ];
 
   if (authLoading) {
-    return (
-      <div className="min-h-screen bg-[#f4ece7] flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#5a3e36] mx-auto mb-4"></div>
-          <p className="text-gray-600">{t('loadingAuthentication')}</p>
-        </div>
-      </div>
-    );
+    return <div className="text-center text-gray-600">Cargando autenticación...</div>;
   }
 
   return (
     <div className="min-h-screen bg-[#f4ece7] flex flex-col">
-      <Header 
-        user={user} 
-        onLogout={handleLogout}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        className="w-full m-0 p-0" 
-      />
-      <main className="flex-grow">
-        <div
-          className={`container ${
-            user && activeTab === 'login'
-              ? 'max-w-full px-0'
-              : 'mx-auto px-4 sm:px-6 lg:px-8'
-          }`}
-        >
-          <Tabs 
-            sections={sections} 
-            activeTab={activeTab} 
-            setActiveTab={setActiveTab} 
-          />
-        </div>
-      </main>
+      <Header className="w-full m-0 p-0" />
+      <div
+        className={`container ${
+          user && activeTab === 'login'
+            ? 'max-w-full px-0'
+            : 'mx-auto px-4 sm:px-6 lg:px-8'
+        } flex-grow`}
+      >
+        <Tabs sections={sections} activeTab={activeTab} setActiveTab={setActiveTab} />
+      </div>
       <Footer className="w-full m-0 p-0 mt-auto" />
     </div>
   );
