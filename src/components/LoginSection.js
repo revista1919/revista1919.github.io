@@ -115,8 +115,13 @@ export default function LoginSection({ onLogin }) {
     }
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setCurrentUser(user);
       if (user) {
+        // Wait for CSV to be loaded
+        if (users.length === 0 || emailKeys.length === 0) {
+          console.warn('CSV no cargado aún, esperando para validar usuario');
+          return;
+        }
+
         const normalizedEmail = user.email.toLowerCase();
         const csvUser = users.find(u => 
           emailKeys.some(key => u[key]?.toLowerCase() === normalizedEmail)
@@ -130,6 +135,7 @@ export default function LoginSection({ onLogin }) {
           } catch (err) {
             console.error('Error al cerrar sesión:', err);
           }
+          setCurrentUser(null);
           if (onLogin) onLogin(null);
           return;
         }
@@ -139,6 +145,7 @@ export default function LoginSection({ onLogin }) {
           name: nameKeys.length > 0 ? csvUser[nameKeys[0]] || user.email : user.email,
           role: roleKeys.length > 0 ? csvUser[roleKeys[0]] || 'Usuario' : 'Usuario'
         };
+        setCurrentUser(user);
         setMessage(`✅ ¡Bienvenido, ${userData.name}!`);
         if (onLogin) onLogin(userData);
 
@@ -150,28 +157,16 @@ export default function LoginSection({ onLogin }) {
           console.error('Error fetching sign-in methods:', err);
         }
       } else {
+        setCurrentUser(null);
         setMessage('');
         setHasPassword(false);
         if (onLogin) onLogin(null);
       }
     });
-    return unsubscribe;
+    return () => unsubscribe();
   }, [onLogin, users, emailKeys, nameKeys, roleKeys]);
 
-  // Additional check to force sign out if unauthorized
-  useEffect(() => {
-    if (currentUser && users.length > 0 && emailKeys.length > 0) {
-      const normalizedEmail = currentUser.email.toLowerCase();
-      const csvUser = users.find(u => 
-        emailKeys.some(key => u[key]?.toLowerCase() === normalizedEmail)
-      );
-      if (!csvUser) {
-        signOut(auth).catch(err => console.error('Error en chequeo adicional de sign out:', err));
-        setMessage('❌ Acceso no autorizado detectado. Cerrando sesión.');
-      }
-    }
-  }, [currentUser, users, emailKeys]);
-
+  // Validate email and password inputs
   const validateInputs = () => {
     let isValid = true;
     const newErrors = { email: '', password: '' };
@@ -206,8 +201,12 @@ export default function LoginSection({ onLogin }) {
     return isValid;
   };
 
+  // Handle Google Sign-In with strict validation
   const handleGoogleSignIn = async () => {
-    if (!validateInputs()) return;
+    if (!validateInputs()) {
+      setMessage('❌ Ingresa un correo autorizado antes de usar Google.');
+      return;
+    }
 
     setIsGoogleLoading(true);
     setMessage('');
@@ -219,12 +218,13 @@ export default function LoginSection({ onLogin }) {
 
       if (user.email.toLowerCase() !== normalizedEmail) {
         await signOut(auth);
-        setMessage('❌ El correo de Google no coincide con el ingresado. Intenta con el correcto.');
+        setMessage('❌ El correo seleccionado en Google no coincide con el ingresado.');
+        setIsGoogleLoading(false);
         return;
       }
 
-      // Validation happens in onAuthStateChanged
-      console.log('✅ Google login iniciado:', user.email);
+      console.log('✅ Google login exitoso:', user.email);
+      // Validation handled in onAuthStateChanged
     } catch (error) {
       console.error('Error Google login:', error);
       let errorMessage = '❌ Error al iniciar con Google';
@@ -238,12 +238,6 @@ export default function LoginSection({ onLogin }) {
         case 'auth/too-many-requests':
           errorMessage = 'Demasiados intentos. Espera un poco.';
           break;
-        case 'auth/invalid-credential':
-          errorMessage = 'Credencial de Google inválida. Intenta de nuevo.';
-          break;
-        case 'auth/unauthorized-domain':
-          errorMessage = 'Dominio no autorizado. Contacta al admin.';
-          break;
         default:
           errorMessage = error.message || 'Error desconocido';
       }
@@ -253,6 +247,7 @@ export default function LoginSection({ onLogin }) {
     }
   };
 
+  // Handle password creation
   const handleSignUp = async () => {
     if (!validateInputs()) return;
 
@@ -264,13 +259,12 @@ export default function LoginSection({ onLogin }) {
     try {
       const methods = await fetchSignInMethodsForEmail(auth, normalizedEmail);
       if (methods.length > 0) {
-        let msg = '❌ Este correo ya está registrado. ';
-        if (methods.includes('google.com')) {
-          msg += 'Inicia con Google y agrega una contraseña desde el panel si lo deseas.';
-        } else {
-          msg += 'Usa Iniciar Sesión.';
-        }
-        setMessage(msg);
+        setMessage(
+          methods.includes('google.com')
+            ? '❌ Este correo está registrado con Google. Usa Iniciar con Google o agrega una contraseña desde el panel.'
+            : '❌ Este correo ya está registrado. Usa Iniciar Sesión.'
+        );
+        setIsLoading(false);
         return;
       }
 
@@ -290,12 +284,6 @@ export default function LoginSection({ onLogin }) {
         case 'auth/weak-password':
           errorMessage = 'Contraseña demasiado débil. Usa al menos 6 caracteres.';
           break;
-        case 'auth/invalid-email':
-          errorMessage = 'Formato de correo inválido';
-          break;
-        case 'auth/too-many-requests':
-          errorMessage = 'Demasiados intentos. Espera 10-15 minutos.';
-          break;
         default:
           errorMessage = error.message || 'Error desconocido';
       }
@@ -305,6 +293,7 @@ export default function LoginSection({ onLogin }) {
     }
   };
 
+  // Handle login
   const handleLogin = async () => {
     if (!validateInputs()) return;
 
@@ -316,16 +305,16 @@ export default function LoginSection({ onLogin }) {
     try {
       const methods = await fetchSignInMethodsForEmail(auth, normalizedEmail);
       if (methods.length === 0) {
-        setMessage('❌ No hay cuenta para este correo. Crea una contraseña primero.');
+        setMessage('❌ No hay cuenta registrada con este correo. Crea una contraseña primero.');
         return;
       }
       if (!methods.includes('password')) {
-        setMessage('❌ Este correo usa Google. Inicia con Google.');
+        setMessage('❌ Este correo está registrado con Google. Usa Iniciar con Google.');
         return;
       }
 
       await signInWithEmailAndPassword(auth, normalizedEmail, password);
-      // Success handled in onAuthStateChanged
+      console.log('✅ Login exitoso');
     } catch (error) {
       console.error('Error login:', error);
       let errorMessage = '❌ Error al iniciar sesión';
@@ -336,9 +325,6 @@ export default function LoginSection({ onLogin }) {
           break;
         case 'auth/user-not-found':
           errorMessage = 'No hay cuenta para este correo. Créala primero.';
-          break;
-        case 'auth/invalid-email':
-          errorMessage = 'Correo inválido';
           break;
         case 'auth/too-many-requests':
           errorMessage = 'Demasiados intentos. Espera 10-15 minutos.';
@@ -352,6 +338,7 @@ export default function LoginSection({ onLogin }) {
     }
   };
 
+  // Handle password reset
   const handleForgotPassword = async () => {
     if (!email) {
       setMessage('❌ Ingresa tu correo primero');
@@ -374,23 +361,20 @@ export default function LoginSection({ onLogin }) {
     try {
       const methods = await fetchSignInMethodsForEmail(auth, normalizedEmail);
       if (methods.length === 0) {
-        setMessage('❌ No hay cuenta para este correo. Crea una contraseña primero.');
+        setMessage('❌ No hay cuenta registrada con este correo. Crea una contraseña primero.');
         return;
       }
       if (!methods.includes('password')) {
-        setMessage('❌ Este correo usa Google. No necesita contraseña, o agrégala desde el panel después de iniciar con Google.');
+        setMessage('❌ Este correo usa Google. Inicia con Google para agregar una contraseña.');
         return;
       }
 
       await sendPasswordResetEmail(auth, normalizedEmail);
-      setMessage('✅ Revisa tu correo (incluyendo spam) para restablecer la contraseña. Puede tardar unos minutos.');
+      setMessage('✅ Revisa tu correo (incluyendo spam) para restablecer la contraseña.');
     } catch (error) {
       console.error('Error forgot password:', error);
       let errorMessage = '❌ Error al enviar correo de recuperación';
       switch (error.code) {
-        case 'auth/invalid-email':
-          errorMessage = 'Formato de correo inválido';
-          break;
         case 'auth/too-many-requests':
           errorMessage = 'Demasiados intentos. Espera 10-15 minutos.';
           break;
@@ -403,32 +387,14 @@ export default function LoginSection({ onLogin }) {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      setMessage('✅ Sesión cerrada correctamente');
-      setCurrentUser(null);
-      setEmail('');
-      setPassword('');
-      setIsLogin(true);
-      setIsChangingPassword(false);
-      setOldPassword('');
-      setNewPassword('');
-    } catch (error) {
-      console.error('Error al cerrar sesión:', error);
-      setMessage('❌ Error al cerrar sesión');
-    }
-  };
-
+  // Handle password change/add for logged-in users
   const validatePasswordChange = () => {
     let isValid = true;
     const newErrors = { old: '', new: '' };
 
-    if (hasPassword) {
-      if (!oldPassword) {
-        newErrors.old = 'Contraseña actual requerida';
-        isValid = false;
-      }
+    if (hasPassword && !oldPassword) {
+      newErrors.old = 'Contraseña actual requerida';
+      isValid = false;
     }
 
     if (!newPassword) {
@@ -450,19 +416,16 @@ export default function LoginSection({ onLogin }) {
     setMessage('');
 
     try {
-      let credential;
       if (hasPassword) {
-        // Reauthenticate and update password
-        credential = EmailAuthProvider.credential(currentUser.email, oldPassword);
+        const credential = EmailAuthProvider.credential(currentUser.email, oldPassword);
         await reauthenticateWithCredential(currentUser, credential);
         await updatePassword(currentUser, newPassword);
         setMessage('✅ Contraseña cambiada exitosamente');
       } else {
-        // Link password to existing account (e.g., Google)
-        credential = EmailAuthProvider.credential(currentUser.email, newPassword);
+        const credential = EmailAuthProvider.credential(currentUser.email, newPassword);
         await linkWithCredential(currentUser, credential);
         setHasPassword(true);
-        setMessage('✅ Contraseña agregada exitosamente. Ahora puedes iniciar con email/contraseña.');
+        setMessage('✅ Contraseña agregada exitosamente. Ahora puedes usar email/contraseña.');
       }
       setIsChangingPassword(false);
       setOldPassword('');
@@ -478,10 +441,7 @@ export default function LoginSection({ onLogin }) {
           errorMessage = 'Nueva contraseña demasiado débil';
           break;
         case 'auth/requires-recent-login':
-          errorMessage = 'Sesión expirada. Cierra sesión e inicia de nuevo para cambiar la contraseña.';
-          break;
-        case 'auth/credential-already-in-use':
-          errorMessage = 'Esta contraseña ya está en uso o hay un conflicto.';
+          errorMessage = 'Sesión expirada. Cierra sesión e inicia de nuevo.';
           break;
         case 'auth/too-many-requests':
           errorMessage = 'Demasiados intentos. Espera 10-15 minutos.';
@@ -492,6 +452,24 @@ export default function LoginSection({ onLogin }) {
       setMessage(errorMessage);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      setMessage('✅ Sesión cerrada correctamente');
+      setCurrentUser(null);
+      setEmail('');
+      setPassword('');
+      setIsLogin(true);
+      setIsChangingPassword(false);
+      setOldPassword('');
+      setNewPassword('');
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+      setMessage('❌ Error al cerrar sesión');
     }
   };
 
