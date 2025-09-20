@@ -70,8 +70,8 @@ function App() {
     setPersistence(auth, browserLocalPersistence)
       .then(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+          console.log('onAuthStateChanged fired:', firebaseUser ? firebaseUser.email : 'No user');
           if (firebaseUser) {
-            // Check local storage first
             const storedUser = JSON.parse(localStorage.getItem('userData'));
             let userData;
             if (
@@ -81,7 +81,6 @@ function App() {
             ) {
               userData = storedUser;
             } else {
-              // Fetch user data from CSV
               const csvData = await fetchUserData(firebaseUser.email);
               userData = {
                 uid: firebaseUser.uid,
@@ -93,24 +92,10 @@ function App() {
               localStorage.setItem('userData', JSON.stringify(userData));
             }
             setUser(userData);
-            // Set active tab based on role
-            const roles = userData.role.split(';').map((r) => r.trim());
-            setActiveTab(
-              roles.includes('Director General') ||
-              roles.includes('Editor en Jefe') ||
-              roles.includes('Revisor 1') ||
-              roles.includes('Revisor 2') ||
-              roles.includes('Editor') ||
-              roles.includes('Encargado de Redes Sociales') ||
-              roles.includes('Responsable de Desarrollo Web')
-                ? 'login'
-                : 'login'
-            );
             console.log('Usuario autenticado:', userData);
           } else {
             setUser(null);
             localStorage.removeItem('userData');
-            setActiveTab('articles');
             console.log('No hay usuario autenticado');
           }
           setAuthLoading(false);
@@ -200,10 +185,10 @@ function App() {
 
   // Login manual
   const handleLogin = async (userData) => {
+    console.log('handleLogin called with:', userData);
     if (!userData) {
       setUser(null);
       localStorage.removeItem('userData');
-      setActiveTab('articles');
       console.log('No hay usuario autenticado en handleLogin');
       return;
     }
@@ -219,25 +204,12 @@ function App() {
       };
       setUser(updatedUserData);
       localStorage.setItem('userData', JSON.stringify(updatedUserData));
-      // Set active tab based on role
-      const roles = updatedUserData.role.split(';').map((r) => r.trim());
-      setActiveTab(
-        roles.includes('Director General') ||
-        roles.includes('Editor en Jefe') ||
-        roles.includes('Revisor 1') ||
-        roles.includes('Revisor 2') ||
-        roles.includes('Editor') ||
-        roles.includes('Encargado de Redes Sociales') ||
-        roles.includes('Responsable de Desarrollo Web')
-          ? 'login'
-          : 'login'
-      );
+      setActiveTab('login'); // Ensure login tab stays active
       console.log('Usuario autenticado en handleLogin:', updatedUserData);
     } catch (error) {
       console.error('Error en handleLogin:', error);
       setUser(null);
       localStorage.removeItem('userData');
-      setActiveTab('articles');
     }
   };
 
@@ -247,7 +219,6 @@ function App() {
       await signOut(auth);
       setUser(null);
       localStorage.removeItem('userData');
-      setActiveTab('articles');
       console.log('Logout ejecutado en App.jsx');
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
