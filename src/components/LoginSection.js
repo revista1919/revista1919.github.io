@@ -8,8 +8,7 @@ import {
   fetchSignInMethodsForEmail,
   onAuthStateChanged,
   signOut,
-  auth,
-  sendEmailVerification
+  auth
 } from '../firebase';
 
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
@@ -48,17 +47,13 @@ export default function LoginSection({ onLogin }) {
           return;
         }
 
-        // Si no ha verificado el email, avisar
-        if (!user.emailVerified) {
-          setMessage('⚠️ Verifica tu email (revisa spam) para mayor seguridad.');
-        }
-
         const userData = {
           uid: user.uid,
           email: user.email,
           name: csvUser?.Nombre || user.email,
           role: csvUser?.['Rol en la Revista'] || 'Usuario'
         };
+
         setMessage(`✅ ¡Bienvenido, ${userData.name}!`);
         if (onLogin) onLogin(userData);
       } else {
@@ -115,6 +110,7 @@ export default function LoginSection({ onLogin }) {
     const newErrors = { email: '', password: '' };
     const normalizedEmail = email.trim().toLowerCase();
 
+    // Validar email
     if (!email) {
       newErrors.email = 'Correo requerido';
       isValid = false;
@@ -132,6 +128,7 @@ export default function LoginSection({ onLogin }) {
       }
     }
 
+    // Validar contraseña
     if (!password) {
       newErrors.password = 'Contraseña requerida';
       isValid = false;
@@ -152,22 +149,20 @@ export default function LoginSection({ onLogin }) {
     const normalizedEmail = email.trim().toLowerCase();
 
     try {
+      // Verificar si ya existe una cuenta
       const methods = await fetchSignInMethodsForEmail(auth, normalizedEmail);
       if (methods.length > 0) {
-        setMessage('❌ Este correo ya está registrado. Usa Iniciar Sesión o contacta al admin.');
+        setMessage('❌ Este correo ya está registrado. Usa Iniciar Sesión.');
         setIsLoading(false);
         return;
       }
 
+      // Crear usuario con contraseña
       const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
       const user = userCredential.user;
 
-      // Enviar email de verificación
-      await sendEmailVerification(user);
-      console.log('✅ Email de verificación enviado para:', user.email);
       console.log('✅ Usuario creado:', user.uid);
-
-      setMessage(`✅ ¡Contraseña creada para ${user.email}! Verifica tu email (revisa spam) y luego inicia sesión.`);
+      setMessage(`✅ ¡Contraseña creada para ${user.email}! Ahora inicia sesión.`);
 
       // Limpiar formulario
       setEmail('');
@@ -210,13 +205,15 @@ export default function LoginSection({ onLogin }) {
     const normalizedEmail = email.trim().toLowerCase();
 
     try {
+      // Verificar que existe cuenta con contraseña
       const methods = await fetchSignInMethodsForEmail(auth, normalizedEmail);
-      if (!methods.includes('password')) {
-        setMessage('❌ No hay contraseña configurada para este correo. Crea una primera.');
+      if (methods.length === 0) {
+        setMessage('❌ No hay cuenta creada para este correo. Crea tu contraseña primero.');
         setIsLoading(false);
         return;
       }
 
+      // Iniciar sesión
       const userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
       const user = userCredential.user;
 
@@ -289,17 +286,14 @@ export default function LoginSection({ onLogin }) {
       const methods = await fetchSignInMethodsForEmail(auth, normalizedEmail);
       if (methods.length === 0) {
         setMessage('❌ No hay cuenta registrada para este correo. Usa "Crear Contraseña" primero.');
-        return;
-      }
-      if (!methods.includes('password')) {
-        setMessage('❌ Este correo no tiene contraseña configurada. Crea una primera.');
+        setIsLoading(false);
         return;
       }
 
       await sendPasswordResetEmail(auth, normalizedEmail);
       console.log('✅ Email de reset enviado para:', normalizedEmail);
       setMessage('✅ Revisa tu correo (incluyendo spam/junk) para restablecer la contraseña. Puede tardar unos minutos.');
-
+      
     } catch (error) {
       console.error('Error en forgot password:', error.code, error.message);
       let errorMessage = '❌ Error al enviar correo de recuperación';
@@ -351,7 +345,7 @@ export default function LoginSection({ onLogin }) {
     if (e.key === 'Enter') handleSubmit();
   };
 
-  // Si hay usuario logueado, mostrar pantalla de sesión activa
+  // Pantalla de usuario logueado
   if (currentUser) {
     return (
       <div className="flex items-center justify-center py-8 px-2 sm:px-0">
@@ -374,7 +368,7 @@ export default function LoginSection({ onLogin }) {
     );
   }
 
-  // Si está cargando usuarios, mostrar spinner
+  // Pantalla de carga inicial
   if (isLoading && users.length === 0) {
     return (
       <div className="flex items-center justify-center py-8 px-2 sm:px-0">
@@ -386,13 +380,14 @@ export default function LoginSection({ onLogin }) {
     );
   }
 
+  // Formulario principal
   return (
     <div className="flex items-center justify-center py-8 px-2 sm:px-0">
       <div className="w-full max-w-sm p-6 sm:p-8 space-y-6 bg-white rounded-lg shadow-lg">
         <h3 className="text-xl sm:text-2xl font-semibold text-center text-gray-800">
           {isLogin ? 'Iniciar Sesión' : 'Crear Contraseña'}
         </h3>
-        
+
         <button
           onClick={() => setIsLogin(!isLogin)}
           className="text-sm text-blue-500 hover:underline text-center w-full"
