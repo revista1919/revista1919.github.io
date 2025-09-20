@@ -34,16 +34,18 @@ export default function LoginSection({ onLogin }) {
       return;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       if (user) {
+        const normalizedEmail = user.email.toLowerCase();
         const csvUser = users.find(u => 
-          u.Correo?.toLowerCase() === user.email.toLowerCase() ||
-          u['E-mail']?.toLowerCase() === user.email.toLowerCase()
+          u.Correo?.toLowerCase() === normalizedEmail ||
+          u['E-mail']?.toLowerCase() === normalizedEmail
         );
         if (!csvUser) {
           setMessage('❌ Este correo no está autorizado. Contacta al admin.');
-          signOut(auth).catch((err) => console.error('Error al cerrar sesión:', err));
+          await signOut(auth).catch((err) => console.error('Error al cerrar sesión:', err));
+          setCurrentUser(null);
           return;
         }
         const userData = {
@@ -59,7 +61,7 @@ export default function LoginSection({ onLogin }) {
         setCurrentUser(null);
       }
     });
-    return unsubscribe;
+    return () => unsubscribe();
   }, [onLogin, users]);
 
   useEffect(() => {
@@ -113,15 +115,13 @@ export default function LoginSection({ onLogin }) {
       newErrors.email = 'Formato de correo inválido';
       isValid = false;
     } else {
-      if (!isLogin) {
-        const userFromCSV = users.find(user => 
-          user.Correo?.trim().toLowerCase() === normalizedEmail ||
-          user['E-mail']?.trim().toLowerCase() === normalizedEmail
-        );
-        if (!userFromCSV) {
-          newErrors.email = 'Este correo no está autorizado para crear contraseña';
-          isValid = false;
-        }
+      const userFromCSV = users.find(user => 
+        user.Correo?.trim().toLowerCase() === normalizedEmail ||
+        user['E-mail']?.trim().toLowerCase() === normalizedEmail
+      );
+      if (!userFromCSV) {
+        newErrors.email = 'Este correo no está autorizado';
+        isValid = false;
       }
     }
 
@@ -144,16 +144,12 @@ export default function LoginSection({ onLogin }) {
     setMessage('');
 
     const normalizedEmail = email.trim().toLowerCase();
-    const userFromCSV = users.find(user => 
-      user.Correo?.trim().toLowerCase() === normalizedEmail ||
-      user['E-mail']?.trim().toLowerCase() === normalizedEmail
-    );
 
     try {
-      // Verificar si el email ya está registrado con otro proveedor
       const methods = await fetchSignInMethodsForEmail(auth, normalizedEmail);
       if (methods.length > 0) {
-        setMessage(`❌ Este correo ya está registrado con ${methods.includes('google.com') ? 'Google' : 'otro método'}. Usa Iniciar Sesión o Google.`);
+        const provider = methods.includes('google.com') ? 'Google' : 'otro método';
+        setMessage(`❌ Este correo ya está registrado con ${provider}. Usa Iniciar Sesión o Google.`);
         setIsLoading(false);
         return;
       }
@@ -162,7 +158,7 @@ export default function LoginSection({ onLogin }) {
       const user = userCredential.user;
 
       console.log('✅ Usuario creado:', user.uid);
-      setMessage(`✅ ¡Contraseña creada para ${userFromCSV?.Nombre || normalizedEmail}! Ahora inicia sesión.`);
+      setMessage(`✅ ¡Contraseña creada para ${user.email}! Ahora inicia sesión.`);
       
       setEmail('');
       setPassword('');
@@ -258,31 +254,18 @@ export default function LoginSection({ onLogin }) {
     setMessage('');
 
     try {
-      // Si hay un email ingresado, validarlo contra el CSV primero
-      if (email) {
-        const normalizedEmail = email.trim().toLowerCase();
-        const csvUser = users.find(user => 
-          user.Correo?.trim().toLowerCase() === normalizedEmail ||
-          user['E-mail']?.trim().toLowerCase() === normalizedEmail
-        );
-        if (!csvUser) {
-          setMessage('❌ Este correo no está autorizado. Usa un correo de la lista.');
-          setIsGoogleLoading(false);
-          return;
-        }
-      }
-
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
+      const normalizedEmail = user.email.toLowerCase();
 
-      // Validar el email de Google contra el CSV
+      // Validate email against CSV
       const csvUser = users.find(u => 
-        u.Correo?.toLowerCase() === user.email.toLowerCase() ||
-        u['E-mail']?.toLowerCase() === user.email.toLowerCase()
+        u.Correo?.toLowerCase() === normalizedEmail ||
+        u['E-mail']?.toLowerCase() === normalizedEmail
       );
 
       if (!csvUser) {
-        await signOut(auth); // Cerrar sesión inmediatamente si no está autorizado
+        await signOut(auth);
         setMessage('❌ Este correo no está autorizado. Usa un correo de la lista.');
         setIsGoogleLoading(false);
         return;
@@ -344,7 +327,7 @@ export default function LoginSection({ onLogin }) {
     try {
       const methods = await fetchSignInMethodsForEmail(auth, normalizedEmail);
       if (methods.length === 0) {
-        setMessage('❌ No hay contraseña creada para este correo. Usa "Crear Contraseña" primero.');
+        setMessage('❌ No hay cuenta registrada para este correo. Usa "Crear Contraseña" primero.');
         return;
       }
       if (!methods.includes('password')) {
@@ -453,32 +436,30 @@ export default function LoginSection({ onLogin }) {
           {isLogin ? '¿Nuevo? Crea tu contraseña' : 'Ya tienes cuenta? Inicia sesión'}
         </button>
         <div className="space-y-4">
-          {isLogin && (
-            <button
-              onClick={handleGoogleSignIn}
-              disabled={isLoading || isGoogleLoading || users.length === 0}
-              className={`w-full px-4 py-2 text-white bg-red-500 rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base flex items-center justify-center space-x-2 ${
-                isLoading || isGoogleLoading || users.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            >
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
-                <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.44 1 12.24s.43 3.69 1.18 5.17l2.66-2.32z" />
-                <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 3.2c.86-2.6 3.3-4.53 6.16-4.53z" />
-              </svg>
-              <span>
-                {isGoogleLoading ? (
-                  <span className="flex items-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Procesando...
-                  </span>
-                ) : (
-                  'Iniciar con Google'
-                )}
-              </span>
-            </button>
-          )}
+          <button
+            onClick={handleGoogleSignIn}
+            disabled={isLoading || isGoogleLoading || users.length === 0}
+            className={`w-full px-4 py-2 text-white bg-red-500 rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base flex items-center justify-center space-x-2 ${
+              isLoading || isGoogleLoading || users.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24">
+              <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+              <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+              <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.44 1 12.24s.43 3.69 1.18 5.17l2.66-2.32z" />
+              <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 3.2c.86-2.6 3.3-4.53 6.16-4.53z" />
+            </svg>
+            <span>
+              {isGoogleLoading ? (
+                <span className="flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Procesando...
+                </span>
+              ) : (
+                'Iniciar con Google'
+              )}
+            </span>
+          </button>
           <div>
             <label className="block text-sm font-medium text-gray-700">Correo</label>
             <input
