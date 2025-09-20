@@ -71,7 +71,6 @@ function App() {
       .then(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
           if (firebaseUser) {
-            // Check local storage first
             const storedUser = JSON.parse(localStorage.getItem('userData'));
             let userData;
             if (
@@ -81,7 +80,6 @@ function App() {
             ) {
               userData = storedUser;
             } else {
-              // Fetch user data from CSV
               const csvData = await fetchUserData(firebaseUser.email);
               userData = {
                 uid: firebaseUser.uid,
@@ -93,7 +91,6 @@ function App() {
               localStorage.setItem('userData', JSON.stringify(userData));
             }
             setUser(userData);
-            // Set active tab based on role
             const roles = userData.role.split(';').map((r) => r.trim());
             setActiveTab(
               roles.includes('Director General') ||
@@ -131,11 +128,9 @@ function App() {
           'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p32EM6-0VYy18AdREQwXdpeet1WHTA4H2-W2FX7HKe1HPSyApWadUw9sKHdVYQXL5tP6yDRs/pub?output=csv',
           { cache: 'no-store' }
         );
-
         if (!response.ok) {
           throw new Error(`Error al cargar el archivo CSV: ${response.status}`);
         }
-
         const csvText = await response.text();
         Papa.parse(csvText, {
           header: true,
@@ -145,10 +140,8 @@ function App() {
           complete: ({ data }) => {
             setArticles(data);
             setFilteredArticles(data);
-
             const uniqueAreas = [...new Set(data.map((a) => a['Área temática']))].filter(Boolean);
             setAreas(uniqueAreas);
-
             setLoading(false);
           },
           error: (error) => {
@@ -161,7 +154,6 @@ function App() {
         setLoading(false);
       }
     };
-
     fetchArticles();
   }, []);
 
@@ -169,7 +161,6 @@ function App() {
   const handleSearch = (term, area) => {
     setSearchTerm(term);
     setSelectedArea(area);
-
     const lowerTerm = term.toLowerCase();
     const filtered = articles.filter((article) => {
       const matchesSearch =
@@ -177,13 +168,10 @@ function App() {
         article['Autor(es)']?.toLowerCase().includes(lowerTerm) ||
         article['Resumen']?.toLowerCase().includes(lowerTerm) ||
         article['Palabras clave']?.toLowerCase().includes(lowerTerm);
-
       const matchesArea =
         area === '' || (article['Área temática'] || '').toLowerCase() === area.toLowerCase();
-
       return matchesSearch && matchesArea;
     });
-
     setFilteredArticles(filtered);
     setVisibleArticles(6);
   };
@@ -200,27 +188,42 @@ function App() {
 
   // Login manual
   const handleLogin = async (userData) => {
-    const csvData = await fetchUserData(userData.email);
-    const updatedUserData = {
-      ...userData,
-      name: csvData.name,
-      image: csvData.image,
-    };
-    setUser(updatedUserData);
-    localStorage.setItem('userData', JSON.stringify(updatedUserData));
-    // Set active tab based on role
-    const roles = updatedUserData.role.split(';').map((r) => r.trim());
-    setActiveTab(
-      roles.includes('Director General') ||
-      roles.includes('Editor en Jefe') ||
-      roles.includes('Revisor 1') ||
-      roles.includes('Revisor 2') ||
-      roles.includes('Editor') ||
-      roles.includes('Encargado de Redes Sociales') ||
-      roles.includes('Responsable de Desarrollo Web')
-        ? 'login'
-        : 'login'
-    );
+    if (!userData) {
+      setUser(null);
+      localStorage.removeItem('userData');
+      setActiveTab('articles');
+      console.log('No user data provided, setting to signed-out state');
+      return;
+    }
+    try {
+      const csvData = await fetchUserData(userData.email);
+      const updatedUserData = {
+        ...userData,
+        name: csvData.name,
+        role: csvData.role,
+        image: csvData.image,
+      };
+      setUser(updatedUserData);
+      localStorage.setItem('userData', JSON.stringify(updatedUserData));
+      const roles = updatedUserData.role.split(';').map((r) => r.trim());
+      setActiveTab(
+        roles.includes('Director General') ||
+        roles.includes('Editor en Jefe') ||
+        roles.includes('Revisor 1') ||
+        roles.includes('Revisor 2') ||
+        roles.includes('Editor') ||
+        roles.includes('Encargado de Redes Sociales') ||
+        roles.includes('Responsable de Desarrollo Web')
+          ? 'login'
+          : 'login'
+      );
+      console.log('Usuario autenticado en handleLogin:', updatedUserData);
+    } catch (error) {
+      console.error('Error fetching user data in handleLogin:', error);
+      setUser(null);
+      localStorage.removeItem('userData');
+      setActiveTab('articles');
+    }
   };
 
   // Logout manual
@@ -230,7 +233,7 @@ function App() {
       setUser(null);
       localStorage.removeItem('userData');
       setActiveTab('articles');
-      console.log('Logout ejecutado en App.jsx');
+      console.log('Logout ejecutado en App.js');
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
     }
