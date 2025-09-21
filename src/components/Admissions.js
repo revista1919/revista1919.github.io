@@ -1,53 +1,50 @@
-// Admissions.js
 import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 
 const APPLICATIONS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSNuBETm7TapO6dakKBbkxlYTZctAGGEp4SnOyGowCYXfD_lAXHta8_LX5EPjy0xXw5fpKp3MPcRduK/pub?gid=2123840957&single=true&output=csv';
-const TEAM_CSV_URL = 'https://docs.google.com/spreadsheets/d/1FIP4yMTNYtRYWiPwovWGPiWxQZ8wssko8u0-NkZOido/pub?gid=0&single=true&output=csv';
+const TEAM_CSV_URL = 'https://docs.google.com/spreadsheets/d/1FIP4yMTNYtRYWiPwovWGPiWxQZ8wssko8u0-NkZOido/export?format=csv';
 const TEAM_GAS_URL = process.env.REACT_APP_TEAM_SCRIPT_URL || '';
 const APPLICATIONS_GAS_URL = process.env.REACT_APP_APPLICATIONS_SCRIPT_URL || '';
 
 export default function Admissions() {
   const [applications, setApplications] = useState([]);
+  const [teamEmails, setTeamEmails] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [expandedApp, setExpandedApp] = useState(null);
   const [status, setStatus] = useState('');
   const [minimized, setMinimized] = useState(true);
   const [sending, setSending] = useState(false);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [formData, setFormData] = useState({});
-  const [teamEmails, setTeamEmails] = useState(new Set());
-  const [activeTab, setActiveTab] = useState('pending');
 
   useEffect(() => {
     if (!minimized) {
-      fetchData();
+      fetchApplications();
+      fetchTeamEmails();
     }
   }, [minimized]);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchTeamEmails = async () => {
     try {
-      const [appsRes, teamRes] = await Promise.all([
-        fetch(APPLICATIONS_CSV_URL, { cache: 'no-store' }),
-        fetch(TEAM_CSV_URL, { cache: 'no-store' })
-      ]);
-      if (!appsRes.ok) throw new Error('Failed to fetch applications');
-      if (!teamRes.ok) throw new Error('Failed to fetch team');
-      const appsText = await appsRes.text();
-      const teamText = await teamRes.text();
-      const parsedApps = Papa.parse(appsText, { header: true, skipEmptyLines: true }).data;
-      const parsedTeam = Papa.parse(teamText, { header: true, skipEmptyLines: true }).data;
-      const emails = new Set(parsedTeam.map(t => t.Correo?.trim().toLowerCase() || ''));
-      const enhancedApps = parsedApps.map(app => ({
-        ...app,
-        isArchived: emails.has(app['Correo electrónico']?.trim().toLowerCase() || '')
-      }));
-      setApplications(enhancedApps);
+      const response = await fetch(TEAM_CSV_URL, { cache: 'no-store' });
+      if (!response.ok) throw new Error('Failed to fetch team CSV');
+      const csvText = await response.text();
+      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
+      const emails = new Set(parsed.map(row => row.Correo?.trim().toLowerCase()).filter(email => email));
       setTeamEmails(emails);
     } catch (err) {
+      setStatus(`Error fetching team: ${err.message}`);
+    }
+  };
+
+  const fetchApplications = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(APPLICATIONS_CSV_URL, { cache: 'no-store' });
+      if (!response.ok) throw new Error('Failed to fetch applications');
+      const csvText = await response.text();
+      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
+      setApplications(parsed);
+    } catch (err) {
       setStatus(`Error: ${err.message}`);
-      console.error('Fetch error:', err);
     } finally {
       setLoading(false);
     }
@@ -114,7 +111,7 @@ export default function Admissions() {
         }),
       });
       setStatus('✅ Aceptado y solicitud enviada');
-      fetchData();
+      fetchTeamEmails(); // Refresh team emails to update archived status
     } catch (err) {
       setStatus(`❌ Error: ${err.message}`);
     } finally {
@@ -122,58 +119,136 @@ export default function Admissions() {
     }
   };
 
-  const openAddModal = (app) => {
-    setFormData({
-      name: app.Nombre,
-      email: app['Correo electrónico'],
-      role: app['Cargo al que desea postular'],
-      description: '',
-      areas: '',
-      image: ''
-    });
-    setShowAddModal(true);
+  const openTeamForm = (app) => {
+    const formWindow = window.open('', '_blank');
+    formWindow.document.write(`
+      <!DOCTYPE html>
+      <html lang="es">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Agregar Miembro al Equipo</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+          body { font-family: 'Georgia', serif; }
+          .container { max-width: 600px; }
+        </style>
+      </head>
+      <body class="bg-gray-100">
+        <div class="container mx-auto mt-8 p-6 bg-white rounded-lg shadow-lg">
+          <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Agregar Miembro al Equipo</h2>
+          <form id="teamForm" class="space-y-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Nombre</label>
+              <input
+                type="text"
+                value="${app.Nombre}"
+                readonly
+                class="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Correo</label>
+              <input
+                type="email"
+                value="${app['Correo electrónico']}"
+                readonly
+                class="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Rol en la Revista</label>
+              <input
+                type="text"
+                value="${app['Cargo al que desea postular']}"
+                readonly
+                class="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Descripción</label>
+              <textarea
+                name="description"
+                rows="4"
+                placeholder="Ejemplo: Francisca Pérez es estudiante de Segundo Medio en el Liceo Nacional de Maipú, con intereses en matemáticas y química..."
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                required
+              ></textarea>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Áreas de Interés</label>
+              <input
+                type="text"
+                name="interests"
+                placeholder="Ejemplo: Historia de las ideas, Física teórica, Divulgación científica"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                required
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Imagen (URL)</label>
+              <input
+                type="url"
+                name="image"
+                placeholder="Ingrese la URL de la imagen"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+              />
+              <p class="mt-2 text-sm text-gray-600">
+                Si no tienes una URL de imagen, 
+                <a href="https://postimages.org/es/" target="_blank" class="text-indigo-600 hover:underline">
+                  crea una aquí
+                </a>.
+              </p>
+            </div>
+            <div class="flex justify-end space-x-3">
+              <button
+                type="button"
+                onclick="window.close()"
+                class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-200 rounded-md hover:bg-gray-300"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
+              >
+                Guardar
+              </button>
+            </div>
+          </form>
+        </div>
+        <script>
+          document.getElementById('teamForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = {
+              action: 'add_team_member',
+              name: "${app.Nombre}",
+              role: "${app['Cargo al que desea postular']}",
+              email: "${app['Correo electrónico']}",
+              description: formData.get('description'),
+              interests: formData.get('interests'),
+              image: formData.get('image') || ''
+            };
+            try {
+              await fetch('${TEAM_GAS_URL}', {
+                method: 'POST',
+                mode: 'no-cors',
+                redirect: 'follow',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(data)
+              });
+              alert('Miembro agregado exitosamente');
+              window.close();
+            } catch (err) {
+              alert('Error al agregar miembro: ' + err.message);
+            }
+          });
+        </script>
+      </body>
+      </html>
+    `);
   };
-
-  const handleFormChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleAddSubmit = async () => {
-    if (!TEAM_GAS_URL) {
-      setStatus('❌ GAS URL no configurada');
-      return;
-    }
-    if (!confirm(`¿Agregar ${formData.name} al equipo?`)) return;
-    setSending(true);
-    try {
-      await fetch(TEAM_GAS_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        redirect: 'follow',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({
-          action: 'add_and_accept_team',
-          name: formData.name,
-          description: formData.description,
-          areas: formData.areas,
-          role: formData.role,
-          email: formData.email,
-          image: formData.image
-        }),
-      });
-      setStatus('✅ Agregado al equipo y correo enviado');
-      setShowAddModal(false);
-      fetchData();
-    } catch (err) {
-      setStatus(`❌ Error: ${err.message}`);
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const filteredApplications = applications.filter(app => 
-    activeTab === 'pending' ? !app.isArchived : app.isArchived
-  );
 
   return (
     <div className="mt-8 bg-white rounded-lg shadow-sm overflow-hidden">
@@ -192,195 +267,85 @@ export default function Admissions() {
         </svg>
       </div>
       {!minimized && (
-        <>
-          <div className="px-6 py-3 border-b border-gray-200 flex space-x-4">
-            <button
-              onClick={() => setActiveTab('pending')}
-              className={`px-4 py-2 text-sm font-medium rounded-md ${
-                activeTab === 'pending' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700'
-              }`}
-            >
-              Pendientes ({applications.filter(app => !app.isArchived).length})
-            </button>
-            <button
-              onClick={() => setActiveTab('archived')}
-              className={`px-4 py-2 text-sm font-medium rounded-md ${
-                activeTab === 'archived' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700'
-              }`}
-            >
-              Archivadas ({applications.filter(app => app.isArchived).length})
-            </button>
-          </div>
-          <div className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
-            {loading ? (
-              <div className="p-6 text-center text-gray-600">Cargando...</div>
-            ) : filteredApplications.length === 0 ? (
-              <div className="p-6 text-center text-gray-600">No hay postulaciones {activeTab === 'pending' ? 'pendientes' : 'archivadas'}</div>
-            ) : (
-              filteredApplications.map((app, index) => (
-                <div key={index} className={`hover:bg-gray-50 ${app.isArchived ? 'bg-gray-100' : ''}`}>
-                  <div
-                    className="px-6 py-4 cursor-pointer flex justify-between items-center"
-                    onClick={() => toggleExpandApp(index)}
-                  >
-                    <div className="flex-1">
-                      <h3 className="text-sm font-medium text-gray-900">
-                        {app.Nombre}
-                        {app.isArchived && <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Ya en el equipo</span>}
-                      </h3>
-                      <p className="text-sm text-gray-500">{app['Cargo al que desea postular']}</p>
-                    </div>
-                    <svg
-                      className={`w-4 h-4 text-gray-400 transition-transform ${expandedApp === index ? 'rotate-180' : ''}`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
+        <div className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
+          {loading ? (
+            <div className="p-6 text-center text-gray-600">Cargando...</div>
+          ) : applications.length === 0 ? (
+            <div className="p-6 text-center text-gray-600">No hay postulaciones</div>
+          ) : (
+            applications.map((app, index) => (
+              <div key={index} className="hover:bg-gray-50">
+                <div
+                  className="px-6 py-4 cursor-pointer flex justify-between items-center"
+                  onClick={() => toggleExpandApp(index)}
+                >
+                  <div className="flex-1">
+                    <h3 className="text-sm font-medium text-gray-900">{app.Nombre}</h3>
+                    <p className="text-sm text-gray-500">{app['Cargo al que desea postular']}</p>
+                    {teamEmails.has(app['Correo electrónico']?.trim().toLowerCase()) && (
+                      <span className="text-xs text-gray-400"> (Archivado)</span>
+                    )}
                   </div>
-                  {expandedApp === index && (
-                    <div className="px-6 pb-4 bg-gray-50">
-                      <div className="grid grid-cols-1 gap-4 text-sm">
-                        <div>
-                          <p className="text-gray-900 font-medium">Correo</p>
-                          <p className="text-gray-600">{app['Correo electrónico']}</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-900 font-medium">Establecimiento</p>
-                          <p className="text-gray-600">{app['Establecimiento educativo']}</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-900 font-medium">Teléfono</p>
-                          <p className="text-gray-600">{app['Número de teléfono']}</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-900 font-medium">Carta de Motivación</p>
-                          <p className="text-gray-600 whitespace-pre-wrap">{app['Breve carta de motivación (por qué desea este cargo) y listado de logros. 250-500 palabras.']}</p>
-                        </div>
+                  <svg
+                    className={`w-4 h-4 text-gray-400 transition-transform ${expandedApp === index ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+                {expandedApp === index && (
+                  <div className="px-6 pb-4 bg-gray-50">
+                    <div className="grid grid-cols-1 gap-4 text-sm">
+                      <div>
+                        <p className="text-gray-900 font-medium">Correo</p>
+                        <p className="text-gray-600">{app['Correo electrónico']}</p>
                       </div>
-                      <div className="mt-4 flex space-x-3">
-                        <button
-                          onClick={() => sendPreselection(app.Nombre)}
-                          disabled={sending || app.isArchived || !APPLICATIONS_GAS_URL}
-                          className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-100 rounded-md hover:bg-blue-200 disabled:opacity-50"
-                        >
-                          Enviar Preselección
-                        </button>
-                        <button
-                          onClick={() => acceptAndRequestData(app)}
-                          disabled={sending || app.isArchived || !TEAM_GAS_URL}
-                          className="px-4 py-2 text-sm font-medium text-green-600 bg-green-100 rounded-md hover:bg-green-200 disabled:opacity-50"
-                        >
-                          Aceptar y Solicitar Datos
-                        </button>
-                        <button
-                          onClick={() => openAddModal(app)}
-                          disabled={sending || app.isArchived || !TEAM_GAS_URL}
-                          className="px-4 py-2 text-sm font-medium text-purple-600 bg-purple-100 rounded-md hover:bg-purple-200 disabled:opacity-50"
-                        >
-                          Agregar al Equipo
-                        </button>
+                      <div>
+                        <p className="text-gray-900 font-medium">Establecimiento</p>
+                        <p className="text-gray-600">{app['Establecimiento educativo']}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-900 font-medium">Teléfono</p>
+                        <p className="text-gray-600">{app['Número de teléfono']}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-900 font-medium">Carta de Motivación</p>
+                        <p className="text-gray-600 whitespace-pre-wrap">{app['Breve carta de motivación (por qué desea este cargo) y listado de logros. 250-500 palabras.']}</p>
                       </div>
                     </div>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-        </>
-      )}
-      {status && <div className="p-4 text-center text-sm text-gray-600">{status}</div>}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-8 max-w-2xl w-full mx-4 overflow-y-auto max-h-[90vh]">
-            <h2 className="text-xl font-bold mb-4">Agregar al Equipo</h2>
-            <form className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Nombre</label>
-                <input 
-                  type="text" 
-                  name="name" 
-                  value={formData.name} 
-                  onChange={handleFormChange} 
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" 
-                />
+                    <div className="mt-4 flex space-x-3">
+                      <button
+                        onClick={() => sendPreselection(app.Nombre)}
+                        disabled={sending || !APPLICATIONS_GAS_URL || teamEmails.has(app['Correo electrónico']?.trim().toLowerCase())}
+                        className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-100 rounded-md hover:bg-blue-200 disabled:opacity-50"
+                      >
+                        Enviar Preselección
+                      </button>
+                      <button
+                        onClick={() => acceptAndRequestData(app)}
+                        disabled={sending || !TEAM_GAS_URL || teamEmails.has(app['Correo electrónico']?.trim().toLowerCase())}
+                        className="px-4 py-2 text-sm font-medium text-green-600 bg-green-100 rounded-md hover:bg-green-200 disabled:opacity-50"
+                      >
+                        Aceptar y Solicitar Datos
+                      </button>
+                      <button
+                        onClick={() => openTeamForm(app)}
+                        disabled={sending || !TEAM_GAS_URL}
+                        className="px-4 py-2 text-sm font-medium text-purple-600 bg-purple-100 rounded-md hover:bg-purple-200 disabled:opacity-50"
+                      >
+                        Agregar al Equipo
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Correo</label>
-                <input 
-                  type="email" 
-                  name="email" 
-                  value={formData.email} 
-                  readOnly 
-                  className="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm" 
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Rol en la Revista</label>
-                <input 
-                  type="text" 
-                  name="role" 
-                  value={formData.role} 
-                  onChange={handleFormChange} 
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" 
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Descripción</label>
-                <textarea 
-                  name="description" 
-                  value={formData.description} 
-                  onChange={handleFormChange} 
-                  rows={4} 
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" 
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Áreas de interés</label>
-                <input 
-                  type="text" 
-                  name="areas" 
-                  value={formData.areas} 
-                  onChange={handleFormChange} 
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" 
-                  placeholder="Separadas por comas, ej: Historia de las ideas, Física teórica"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Imagen (link)</label>
-                <input 
-                  type="url" 
-                  name="image" 
-                  value={formData.image} 
-                  onChange={handleFormChange} 
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" 
-                />
-                <p className="mt-2 text-sm text-gray-500">
-                  Si no tienes el link de la imagen, <a href="https://postimages.org/es/" target="_blank" className="text-blue-600 hover:underline">créalo aquí</a>
-                </p>
-              </div>
-              <div className="flex justify-end space-x-3">
-                <button 
-                  type="button" 
-                  onClick={() => setShowAddModal(false)} 
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-                >
-                  Cancelar
-                </button>
-                <button 
-                  type="button" 
-                  onClick={handleAddSubmit} 
-                  disabled={sending}
-                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50"
-                >
-                  Agregar
-                </button>
-              </div>
-            </form>
-          </div>
+            ))
+          )}
         </div>
       )}
+      {status && <div className="p-4 text-center text-sm text-gray-600">{status}</div>}
     </div>
   );
 }
