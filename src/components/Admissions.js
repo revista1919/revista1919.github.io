@@ -22,39 +22,25 @@ export default function Admissions() {
     fetchTeam();
   }, []);
 
-  const fetchTeam = async () => {
-    try {
-      const response = await fetch(TEAM_CSV_URL, { cache: 'no-store' });
-      if (!response.ok) throw new Error('Failed to fetch team CSV');
-      const csvText = await response.text();
-      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
-      const validMembers = parsed.filter(row => row.Correo?.trim());
-      setTeamMembers(validMembers);
-      const emails = new Set(validMembers.map(row => row.Correo?.trim().toLowerCase()));
-      setTeamEmails(emails);
-    } catch (err) {
-      setStatus(`Error fetching team: ${err.message}`);
-    }
-  };
-
-  const fetchApplications = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(APPLICATIONS_CSV_URL, { cache: 'no-store' });
-      if (!response.ok) throw new Error('Failed to fetch applications');
-      const csvText = await response.text();
-      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
-      const validApplications = parsed.filter(
-        app => app.Nombre?.trim() && app['Correo electrónico']?.trim()
-      );
-      setApplications(validApplications);
-    } catch (err) {
-      setStatus(`Error: ${err.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+const fetchTeam = async () => {
+  try {
+    const response = await fetch(TEAM_CSV_URL, { cache: 'no-store' });
+    if (!response.ok) throw new Error('Failed to fetch team CSV');
+    const csvText = await response.text();
+    const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
+    const validMembers = parsed.filter(row => row.Correo?.trim() || row['Correo']?.trim()); // Soporte para variaciones
+    setTeamMembers(validMembers);
+    
+    // DEBUG: Log temporal para ver headers y datos reales
+    console.log('Headers detectados:', Object.keys(validMembers[0] || {}));
+    console.log('Primeros miembros (con roles):', validMembers.slice(0, 3).map(m => ({ nombre: m.Nombre, rol: m['Rol en la Revista'] || m.Rol })));
+    
+    const emails = new Set(validMembers.map(row => (row.Correo || row['Correo electrónico'])?.trim().toLowerCase()));
+    setTeamEmails(emails);
+  } catch (err) {
+    setStatus(`Error fetching team: ${err.message}`);
+  }
+};
   const toggleMinimized = () => setMinimized(!minimized);
 
   const toggleExpandApp = (id) => {
@@ -377,22 +363,24 @@ export default function Admissions() {
   );
 
   const teamMembersFiltered = useMemo(
-    () =>
-      teamMembers.filter(member => {
-        const roles = member.Rol?.split(';').map(r => r.trim().toLowerCase()) || [];
-        return roles.length > 1 || (roles.length === 1 && roles[0] !== 'autor');
-      }),
-    [teamMembers]
-  );
+  () =>
+    teamMembers.filter(member => {
+      const rolValue = member['Rol en la Revista'] || member.Rol; // Busca en ambos posibles headers
+      const roles = rolValue ? rolValue.split(';').map(r => r.trim().toLowerCase()) : [];
+      return roles.length > 1 || (roles.length === 1 && roles[0] !== 'autor');
+    }),
+  [teamMembers]
+);
 
-  const authorMembers = useMemo(
-    () =>
-      teamMembers.filter(member => {
-        const roles = member.Rol?.split(';').map(r => r.trim().toLowerCase()) || [];
-        return roles.length === 1 && roles[0] === 'autor';
-      }),
-    [teamMembers]
-  );
+const authorMembers = useMemo(
+  () =>
+    teamMembers.filter(member => {
+      const rolValue = member['Rol en la Revista'] || member.Rol; // Busca en ambos
+      const roles = rolValue ? rolValue.split(';').map(r => r.trim().toLowerCase()) : [];
+      return roles.length === 1 && roles[0] === 'autor';
+    }),
+  [teamMembers]
+);
 
   return (
     <div className="container">
