@@ -8,6 +8,7 @@ const APPLICATIONS_GAS_URL = process.env.REACT_APP_APPLICATIONS_SCRIPT_URL || ''
 
 export default function Admissions() {
   const [applications, setApplications] = useState([]);
+  const [teamMembers, setTeamMembers] = useState([]);
   const [teamEmails, setTeamEmails] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [expandedApp, setExpandedApp] = useState(null);
@@ -19,17 +20,19 @@ export default function Admissions() {
   useEffect(() => {
     if (!minimized) {
       fetchApplications();
-      fetchTeamEmails();
+      fetchTeam();
     }
   }, [minimized]);
 
-  const fetchTeamEmails = async () => {
+  const fetchTeam = async () => {
     try {
       const response = await fetch(TEAM_CSV_URL, { cache: 'no-store' });
       if (!response.ok) throw new Error('Failed to fetch team CSV');
       const csvText = await response.text();
       const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
-      const emails = new Set(parsed.map(row => row.Correo?.trim().toLowerCase()).filter(email => email));
+      const validMembers = parsed.filter(row => row.Correo?.trim());
+      setTeamMembers(validMembers);
+      const emails = new Set(validMembers.map(row => row.Correo?.trim().toLowerCase()));
       setTeamEmails(emails);
     } catch (err) {
       setStatus(`Error fetching team: ${err.message}`);
@@ -56,8 +59,8 @@ export default function Admissions() {
 
   const toggleMinimized = () => setMinimized(!minimized);
 
-  const toggleExpandApp = (index) => {
-    setExpandedApp(expandedApp === index ? null : index);
+  const toggleExpandApp = (id) => {
+    setExpandedApp(expandedApp === id ? null : id);
   };
 
   const sendPreselection = async (name) => {
@@ -83,8 +86,6 @@ export default function Admissions() {
     }
   };
 
-  const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
   const acceptAndRequestData = async (app) => {
     if (!TEAM_GAS_URL) {
       setStatus('❌ GAS URL no configurada');
@@ -93,35 +94,20 @@ export default function Admissions() {
     if (!confirm(`¿Aceptar a ${app.Nombre} y solicitar datos?`)) return;
     setSending(true);
     try {
-      setStatus('⏳ Agregando miembro al equipo...');
       await fetch(TEAM_GAS_URL, {
         method: 'POST',
         mode: 'no-cors',
         redirect: 'follow',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
-          action: 'add_team_member',
+          action: 'add_and_send_team_acceptance',
           name: app.Nombre,
           role: app['Cargo al que desea postular'],
           email: app['Correo electrónico'],
         }),
       });
-      setStatus('⏳ Esperando 5 segundos para que se actualice la hoja...');
-      await delay(5000); // 5-second delay
-      setStatus('⏳ Enviando solicitud de datos...');
-      await fetch(TEAM_GAS_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        redirect: 'follow',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({
-          action: 'solicitar_datos',
-          type: 'team',
-          name: app.Nombre,
-        }),
-      });
       setStatus('✅ Aceptado y solicitud enviada');
-      fetchTeamEmails();
+      fetchTeam();
     } catch (err) {
       setStatus(`❌ Error: ${err.message}`);
     } finally {
@@ -130,6 +116,17 @@ export default function Admissions() {
   };
 
   const openTeamForm = (app) => {
+    openEditForm({
+      Nombre: app.Nombre,
+      'Correo electrónico': app['Correo electrónico'],
+      'Cargo al que desea postular': app['Cargo al que desea postular'],
+      Descripción: '',
+      'Áreas de interés': '',
+      Imagen: '',
+    });
+  };
+
+  const openEditForm = (member = {}) => {
     const formWindow = window.open('', '_blank');
     formWindow.document.write(`
       <!DOCTYPE html>
@@ -137,7 +134,7 @@ export default function Admissions() {
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Agregar Miembro al Equipo</title>
+        <title>${member.Correo ? 'Editar' : 'Agregar'} Miembro al Equipo</title>
         <style>
           body {
             font-family: 'Inter', sans-serif;
@@ -189,10 +186,6 @@ export default function Admissions() {
             outline: none;
             border-color: #3b82f6;
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-          }
-          input[readonly] {
-            background: #e5e7eb;
-            cursor: not-allowed;
           }
           textarea {
             resize: vertical;
@@ -246,19 +239,19 @@ export default function Admissions() {
       </head>
       <body>
         <div class="container">
-          <h2>Agregar Miembro al Equipo</h2>
+          <h2>${member.Correo ? 'Editar' : 'Agregar'} Miembro al Equipo</h2>
           <form id="teamForm" class="space-y-6">
             <div class="form-group">
               <label>Nombre</label>
-              <input type="text" value="${app.Nombre}" readonly />
+              <input type="text" name="name" value="${member.Nombre || ''}" required />
             </div>
             <div class="form-group">
               <label>Correo</label>
-              <input type="email" value="${app['Correo electrónico']}" readonly />
+              <input type="email" name="email" value="${member.Correo || member['Correo electrónico'] || ''}" required />
             </div>
             <div class="form-group">
               <label>Rol en la Revista</label>
-              <input type="text" value="${app['Cargo al que desea postular']}" readonly />
+              <input type="text" name="role" value="${member.Rol || member['Cargo al que desea postular'] || ''}" required />
             </div>
             <div class="form-group">
               <label>Descripción</label>
@@ -266,7 +259,7 @@ export default function Admissions() {
                 name="description"
                 placeholder="Ejemplo: Francisca Pérez es estudiante de Segundo Medio en el Liceo Nacional de Maipú, con intereses en matemáticas y química..."
                 required
-              ></textarea>
+              >${member['Descripción'] || ''}</textarea>
             </div>
             <div class="form-group">
               <label>Áreas de Interés</label>
@@ -275,7 +268,7 @@ export default function Admissions() {
                 name="interests"
                 placeholder="Ejemplo: Historia de las ideas, Física teórica, Divulgación científica"
                 required
-              />
+              value="${member['Áreas de interés'] || ''}" />
             </div>
             <div class="form-group">
               <label>Imagen (URL)</label>
@@ -283,6 +276,7 @@ export default function Admissions() {
                 type="url"
                 name="image"
                 placeholder="Ingrese la URL de la imagen"
+                value="${member.Imagen || ''}"
               />
               <p class="help-text">
                 Si no tienes una URL de imagen, 
@@ -302,14 +296,15 @@ export default function Admissions() {
             e.preventDefault();
             const formData = new FormData(e.target);
             const data = {
-              action: 'add_team_member',
-              name: "${app.Nombre}",
-              role: "${app['Cargo al que desea postular']}",
-              email: "${app['Correo electrónico']}",
+              name: formData.get('name'),
+              role: formData.get('role'),
+              email: formData.get('email'),
               description: formData.get('description'),
               interests: formData.get('interests'),
               image: formData.get('image') || ''
             };
+            const action = '${member.Correo || member['Correo electrónico'] ? 'update_team_member' : 'add_team_member'}';
+            data.action = action;
             try {
               await fetch('${TEAM_GAS_URL}', {
                 method: 'POST',
@@ -318,10 +313,10 @@ export default function Admissions() {
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify(data)
               });
-              alert('Miembro agregado exitosamente');
+              alert('Miembro ' + (action === 'update_team_member' ? 'actualizado' : 'agregado') + ' exitosamente');
               window.close();
             } catch (err) {
-              alert('Error al agregar miembro: ' + err.message);
+              alert('Error al ' + (action === 'update_team_member' ? 'actualizar' : 'agregar') + ' miembro: ' + err.message);
             }
           });
         </script>
@@ -383,6 +378,12 @@ export default function Admissions() {
               >
                 Archivados ({archivedApplications.length})
               </button>
+              <button
+                className={`tab ${activeTab === 'team' ? 'tab-active' : ''}`}
+                onClick={() => setActiveTab('team')}
+              >
+                Equipo ({teamMembers.length})
+              </button>
             </div>
             <div className="content">
               {loading ? (
@@ -390,6 +391,78 @@ export default function Admissions() {
                   <div className="spinner"></div>
                   <span>Cargando...</span>
                 </div>
+              ) : activeTab === 'team' ? (
+                <>
+                  <div className="p-4">
+                    <button
+                      onClick={() => openEditForm()}
+                      className="action-button action-add mb-4"
+                    >
+                      Agregar Nuevo Miembro
+                    </button>
+                  </div>
+                  {teamMembers.length === 0 ? (
+                    <div className="empty">No hay miembros en el equipo</div>
+                  ) : (
+                    teamMembers.map((member, index) => (
+                      <div key={index} className="application">
+                        <div className="application-header" onClick={() => toggleExpandApp(`team-${index}`)}>
+                          <div className="flex items-center space-x-3">
+                            {member.Imagen && (
+                              <img
+                                src={member.Imagen}
+                                alt={member.Nombre}
+                                className="w-10 h-10 rounded-full object-cover"
+                              />
+                            )}
+                            <div className="application-info">
+                              <h3 className="application-name">{member.Nombre}</h3>
+                              <p className="application-role">{member.Rol}</p>
+                            </div>
+                          </div>
+                          <svg
+                            className={`application-icon ${expandedApp === `team-${index}` ? 'rotate-180' : ''}`}
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                        {expandedApp === `team-${index}` && (
+                          <div className="application-details">
+                            <div className="details-grid">
+                              <div>
+                                <p className="details-label">Correo</p>
+                                <p className="details-value">{member.Correo}</p>
+                              </div>
+                              <div>
+                                <p className="details-label">Descripción</p>
+                                <p className="details-value">{member['Descripción']}</p>
+                              </div>
+                              <div>
+                                <p className="details-label">Áreas de Interés</p>
+                                <p className="details-value">{member['Áreas de interés']}</p>
+                              </div>
+                              <div>
+                                <p className="details-label">Imagen</p>
+                                <p className="details-value">{member.Imagen}</p>
+                              </div>
+                            </div>
+                            <div className="actions mt-4">
+                              <button
+                                onClick={() => openEditForm(member)}
+                                className="action-button action-edit"
+                              >
+                                Editar
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </>
               ) : (activeTab === 'pending' ? pendingApplications : archivedApplications).length === 0 ? (
                 <div className="empty">No hay postulaciones</div>
               ) : (
@@ -465,7 +538,8 @@ export default function Admissions() {
 
       <style>{`
         .container {
-          max-width: 900px;
+          width: 100%;
+          max-width: 1200px;
           margin: 32px auto;
           font-family: 'Inter', sans-serif;
         }
@@ -502,6 +576,7 @@ export default function Admissions() {
           display: flex;
           border-bottom: 1px solid #e5e7eb;
           background: #f9fafb;
+          overflow-x: auto;
         }
         .tab {
           padding: 16px 24px;
@@ -510,6 +585,7 @@ export default function Admissions() {
           color: #6b7280;
           transition: color 0.3s, border-color 0.3s;
           border-bottom: 2px solid transparent;
+          white-space: nowrap;
         }
         .tab-active {
           color: #3b82f6;
@@ -519,7 +595,7 @@ export default function Admissions() {
           color: #3b82f6;
         }
         .content {
-          max-height: 500px;
+          max-height: 600px;
           overflow-y: auto;
         }
         .loading {
@@ -582,7 +658,7 @@ export default function Admissions() {
         }
         .details-grid {
           display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
           gap: 16px;
         }
         .details-label {
@@ -599,6 +675,7 @@ export default function Admissions() {
           display: flex;
           gap: 12px;
           margin-top: 16px;
+          flex-wrap: wrap;
         }
         .action-button {
           padding: 8px 16px;
@@ -633,6 +710,13 @@ export default function Admissions() {
         }
         .action-add:hover {
           background: #ddd6fe;
+        }
+        .action-edit {
+          background: #fef3c7;
+          color: #92400e;
+        }
+        .action-edit:hover {
+          background: #fde68a;
         }
         .action-button:hover {
           transform: translateY(-1px);
