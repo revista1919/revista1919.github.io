@@ -14,6 +14,7 @@ export default function Admissions() {
   const [status, setStatus] = useState('');
   const [minimized, setMinimized] = useState(true);
   const [sending, setSending] = useState(false);
+  const [activeTab, setActiveTab] = useState('pending');
 
   useEffect(() => {
     if (!minimized) {
@@ -111,7 +112,7 @@ export default function Admissions() {
         }),
       });
       setStatus('✅ Aceptado y solicitud enviada');
-      fetchTeamEmails(); // Refresh team emails to update archived status
+      fetchTeamEmails();
     } catch (err) {
       setStatus(`❌ Error: ${err.message}`);
     } finally {
@@ -250,6 +251,13 @@ export default function Admissions() {
     `);
   };
 
+  const pendingApplications = applications.filter(
+    app => !teamEmails.has(app['Correo electrónico']?.trim().toLowerCase())
+  );
+  const archivedApplications = applications.filter(
+    app => teamEmails.has(app['Correo electrónico']?.trim().toLowerCase())
+  );
+
   return (
     <div className="mt-8 bg-white rounded-lg shadow-sm overflow-hidden">
       <div 
@@ -267,82 +275,95 @@ export default function Admissions() {
         </svg>
       </div>
       {!minimized && (
-        <div className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
-          {loading ? (
-            <div className="p-6 text-center text-gray-600">Cargando...</div>
-          ) : applications.length === 0 ? (
-            <div className="p-6 text-center text-gray-600">No hay postulaciones</div>
-          ) : (
-            applications.map((app, index) => (
-              <div key={index} className="hover:bg-gray-50">
-                <div
-                  className="px-6 py-4 cursor-pointer flex justify-between items-center"
-                  onClick={() => toggleExpandApp(index)}
-                >
-                  <div className="flex-1">
-                    <h3 className="text-sm font-medium text-gray-900">{app.Nombre}</h3>
-                    <p className="text-sm text-gray-500">{app['Cargo al que desea postular']}</p>
-                    {teamEmails.has(app['Correo electrónico']?.trim().toLowerCase()) && (
-                      <span className="text-xs text-gray-400"> (Archivado)</span>
-                    )}
-                  </div>
-                  <svg
-                    className={`w-4 h-4 text-gray-400 transition-transform ${expandedApp === index ? 'rotate-180' : ''}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+        <div>
+          <div className="flex border-b">
+            <button
+              className={`px-6 py-3 text-sm font-medium ${activeTab === 'pending' ? 'border-b-2 border-indigo-600 text-indigo-600' : 'text-gray-600'}`}
+              onClick={() => setActiveTab('pending')}
+            >
+              Pendientes ({pendingApplications.length})
+            </button>
+            <button
+              className={`px-6 py-3 text-sm font-medium ${activeTab === 'archived' ? 'border-b-2 border-indigo-600 text-indigo-600' : 'text-gray-600'}`}
+              onClick={() => setActiveTab('archived')}
+            >
+              Archivados ({archivedApplications.length})
+            </button>
+          </div>
+          <div className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
+            {loading ? (
+              <div className="p-6 text-center text-gray-600">Cargando...</div>
+            ) : (activeTab === 'pending' ? pendingApplications : archivedApplications).length === 0 ? (
+              <div className="p-6 text-center text-gray-600">No hay postulaciones</div>
+            ) : (
+              (activeTab === 'pending' ? pendingApplications : archivedApplications).map((app, index) => (
+                <div key={index} className="hover:bg-gray-50">
+                  <div
+                    className="px-6 py-4 cursor-pointer flex justify-between items-center"
+                    onClick={() => toggleExpandApp(index)}
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-                {expandedApp === index && (
-                  <div className="px-6 pb-4 bg-gray-50">
-                    <div className="grid grid-cols-1 gap-4 text-sm">
-                      <div>
-                        <p className="text-gray-900 font-medium">Correo</p>
-                        <p className="text-gray-600">{app['Correo electrónico']}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-900 font-medium">Establecimiento</p>
-                        <p className="text-gray-600">{app['Establecimiento educativo']}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-900 font-medium">Teléfono</p>
-                        <p className="text-gray-600">{app['Número de teléfono']}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-900 font-medium">Carta de Motivación</p>
-                        <p className="text-gray-600 whitespace-pre-wrap">{app['Breve carta de motivación (por qué desea este cargo) y listado de logros. 250-500 palabras.']}</p>
-                      </div>
+                    <div className="flex-1">
+                      <h3 className="text-sm font-medium text-gray-900">{app.Nombre}</h3>
+                      <p className="text-sm text-gray-500">{app['Cargo al que desea postular']}</p>
                     </div>
-                    <div className="mt-4 flex space-x-3">
-                      <button
-                        onClick={() => sendPreselection(app.Nombre)}
-                        disabled={sending || !APPLICATIONS_GAS_URL || teamEmails.has(app['Correo electrónico']?.trim().toLowerCase())}
-                        className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-100 rounded-md hover:bg-blue-200 disabled:opacity-50"
-                      >
-                        Enviar Preselección
-                      </button>
-                      <button
-                        onClick={() => acceptAndRequestData(app)}
-                        disabled={sending || !TEAM_GAS_URL || teamEmails.has(app['Correo electrónico']?.trim().toLowerCase())}
-                        className="px-4 py-2 text-sm font-medium text-green-600 bg-green-100 rounded-md hover:bg-green-200 disabled:opacity-50"
-                      >
-                        Aceptar y Solicitar Datos
-                      </button>
-                      <button
-                        onClick={() => openTeamForm(app)}
-                        disabled={sending || !TEAM_GAS_URL}
-                        className="px-4 py-2 text-sm font-medium text-purple-600 bg-purple-100 rounded-md hover:bg-purple-200 disabled:opacity-50"
-                      >
-                        Agregar al Equipo
-                      </button>
-                    </div>
+                    <svg
+                      className={`w-4 h-4 text-gray-400 transition-transform ${expandedApp === index ? 'rotate-180' : ''}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
                   </div>
-                )}
-              </div>
-            ))
-          )}
+                  {expandedApp === index && (
+                    <div className="px-6 pb-4 bg-gray-50">
+                      <div className="grid grid-cols-1 gap-4 text-sm">
+                        <div>
+                          <p className="text-gray-900 font-medium">Correo</p>
+                          <p className="text-gray-600">{app['Correo electrónico']}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-900 font-medium">Establecimiento</p>
+                          <p className="text-gray-600">{app['Establecimiento educativo']}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-900 font-medium">Teléfono</p>
+                          <p className="text-gray-600">{app['Número de teléfono']}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-900 font-medium">Carta de Motivación</p>
+                          <p className="text-gray-600 whitespace-pre-wrap">{app['Breve carta de motivación (por qué desea este cargo) y listado de logros. 250-500 palabras.']}</p>
+                        </div>
+                      </div>
+                      <div className="mt-4 flex space-x-3">
+                        <button
+                          onClick={() => sendPreselection(app.Nombre)}
+                          disabled={sending || !APPLICATIONS_GAS_URL || activeTab === 'archived'}
+                          className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-100 rounded-md hover:bg-blue-200 disabled:opacity-50"
+                        >
+                          Enviar Preselección
+                        </button>
+                        <button
+                          onClick={() => acceptAndRequestData(app)}
+                          disabled={sending || !TEAM_GAS_URL || activeTab === 'archived'}
+                          className="px-4 py-2 text-sm font-medium text-green-600 bg-green-100 rounded-md hover:bg-green-200 disabled:opacity-50"
+                        >
+                          Aceptar y Solicitar Datos
+                        </button>
+                        <button
+                          onClick={() => openTeamForm(app)}
+                          disabled={sending || !TEAM_GAS_URL}
+                          className="px-4 py-2 text-sm font-medium text-purple-600 bg-purple-100 rounded-md hover:bg-purple-200 disabled:opacity-50"
+                        >
+                          Agregar al Equipo
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
         </div>
       )}
       {status && <div className="p-4 text-center text-sm text-gray-600">{status}</div>}
