@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
+import Admissions from './Admissions';
+import MailsTeam from './MailsTeam';
 
 // ✅ Variables de entorno inyectadas por Webpack DefinePlugin
 const ARTICULOS_GAS_URL = process.env.REACT_APP_ARTICULOS_SCRIPT_URL || '';
@@ -1064,6 +1066,10 @@ await fetch(ARTICULOS_GAS_URL, {
             )}
           </div>
         </div>
+
+        {/* Componentes adicionales */}
+        <MailsTeam />
+        <Admissions />
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+# Updated .github/workflows/deploy.yml
 name: Deploy and Manage Articles
 
 on:
@@ -43,12 +44,16 @@ jobs:
         run: |
           echo "🔍 Debug secrets:"
           echo "ARTICULOS_SCRIPT length: ${#ARTICULOS_SCRIPT}"
+          echo "TEAM_SCRIPT length: ${#TEAM_SCRIPT}"
+          echo "APPLICATIONS_SCRIPT length: ${#APPLICATIONS_SCRIPT}"
           echo "MY_GITHUB_TOKEN length: ${#MY_GITHUB_TOKEN}"
           echo "USERS_CSV length: ${#USERS_CSV}"
           echo "FIREBASE_API_KEY length: ${#FIREBASE_API_KEY}"
           echo "FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-MISSING}"
         env:
           ARTICULOS_SCRIPT: ${{ secrets.ARTICULOS_SCRIPT }}
+          TEAM_SCRIPT: ${{ secrets.TEAM_SCRIPT }}
+          APPLICATIONS_SCRIPT: ${{ secrets.APPLICATIONS_SCRIPT }}
           MY_GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
           USERS_CSV: ${{ secrets.USERS_CSV }}
           FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
@@ -59,6 +64,8 @@ jobs:
           echo "🔨 Building with env vars..."
           # ← CORREGIDO: Crear .env.local con todas las variables
           echo "REACT_APP_ARTICULOS_SCRIPT_URL=${{ secrets.ARTICULOS_SCRIPT }}" > .env.local
+          echo "REACT_APP_TEAM_SCRIPT_URL=${{ secrets.TEAM_SCRIPT }}" >> .env.local
+          echo "REACT_APP_APPLICATIONS_SCRIPT_URL=${{ secrets.APPLICATIONS_SCRIPT }}" >> .env.local
           echo "REACT_APP_GH_TOKEN=${{ secrets.MY_GITHUB_TOKEN }}" >> .env.local
           echo "REACT_APP_USERS_CSV=${{ secrets.USERS_CSV }}" >> .env.local
           echo "REACT_APP_FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }}" >> .env.local
@@ -116,3 +123,4 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
