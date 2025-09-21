@@ -69,38 +69,47 @@ export default function MailsTeam() {
     }
     setSending(true);
     try {
-      // Create formatted HTML email with signature
+      // Create formatted HTML email with CEO-style design
       const formattedBody = `
         <!DOCTYPE html>
         <html>
         <head>
           <style>
-            body { margin: 0; padding: 0; }
-            .container { font-family: 'Georgia', serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #F5F5EF; color: #4A3728; border: 1px solid #8B6F47; }
-            .header { background-color: #8B6F47; padding: 10px; text-align: center; }
-            .header h2 { color: #FFF; margin: 0; font-size: 20px; }
-            .content { padding: 20px; }
-            .content p { font-size: 14px; line-height: 1.6; margin: 10px 0; }
-            .content a { color: #6B4E31; text-decoration: underline; }
-            .signature { margin-top: 20px; }
-            .signature p { font-size: 14px; margin: 5px 0; }
-            .footer { background-color: #D9C7A5; padding: 10px; text-align: center; font-size: 12px; color: #4A3728; }
+            body { margin: 0; padding: 0; background-color: #f4f4f4; }
+            .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); overflow: hidden; }
+            .header { background: linear-gradient(135deg, #1e3a8a, #3b82f6); padding: 20px; text-align: center; }
+            .header h1 { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 24px; color: #ffffff; margin: 0; font-weight: 500; letter-spacing: 1px; }
+            .subheader { background-color: #f8fafc; padding: 10px 20px; border-bottom: 1px solid #e2e8f0; }
+            .subheader p { font-family: 'Georgia', serif; font-size: 14px; color: #475569; margin: 0; }
+            .content { font-family: 'Georgia', serif; padding: 30px; color: #1f2937; font-size: 16px; line-height: 1.7; }
+            .content p { margin: 10px 0; }
+            .content a { color: #2563eb; text-decoration: none; font-weight: 500; }
+            .content a:hover { text-decoration: underline; }
+            .signature { margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 15px; }
+            .signature p { font-family: 'Georgia', serif; font-size: 14px; color: #1f2937; margin: 5px 0; }
+            .signature .title { font-weight: bold; }
+            .footer { background-color: #1e3a8a; padding: 15px; text-align: center; }
+            .footer p { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 12px; color: #ffffff; margin: 0; opacity: 0.8; }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
-              <h2>${subject}</h2>
+              <h1>${subject}</h1>
+            </div>
+            <div class="subheader">
+              <p>Revista Nacional de las Ciencias para Estudiantes</p>
             </div>
             <div class="content">
               ${body}
               <div class="signature">
-                <p>Atte.,</p>
-                <p><strong>Director General</strong><br>${directorGeneral}</p>
+                <p>Atentamente,</p>
+                <p class="title">Director General</p>
+                <p>${directorGeneral}</p>
               </div>
             </div>
             <div class="footer">
-              Revista Nacional de las Ciencias para Estudiantes
+              <p>Revista Nacional de las Ciencias para Estudiantes | &copy; ${new Date().getFullYear()}</p>
             </div>
           </div>
         </body>
