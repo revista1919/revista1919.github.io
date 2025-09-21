@@ -18,11 +18,9 @@ export default function Admissions() {
   const [activeTab, setActiveTab] = useState('pending');
 
   useEffect(() => {
-    if (!minimized) {
-      fetchApplications();
-      fetchTeam();
-    }
-  }, [minimized]);
+    fetchApplications();
+    fetchTeam();
+  }, []);
 
   const fetchTeam = async () => {
     try {
@@ -115,15 +113,31 @@ export default function Admissions() {
     }
   };
 
-  const openTeamForm = (app) => {
-    openEditForm({
-      Nombre: app.Nombre,
-      'Correo electrónico': app['Correo electrónico'],
-      'Cargo al que desea postular': app['Cargo al que desea postular'],
-      Descripción: '',
-      'Áreas de interés': '',
-      Imagen: '',
-    });
+  const requestAuthorData = async (name) => {
+    if (!TEAM_GAS_URL) {
+      setStatus('❌ GAS URL no configurada');
+      return;
+    }
+    if (!confirm(`¿Solicitar datos a ${name}?`)) return;
+    setSending(true);
+    try {
+      await fetch(TEAM_GAS_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        redirect: 'follow',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'solicitar_datos',
+          type: 'author',
+          name,
+        }),
+      });
+      setStatus('✅ Solicitud de datos enviada');
+    } catch (err) {
+      setStatus(`❌ Error: ${err.message}`);
+    } finally {
+      setSending(false);
+    }
   };
 
   const openEditForm = (member = {}) => {
@@ -156,7 +170,7 @@ export default function Admissions() {
             backdrop-filter: blur(10px);
           }
           h2 {
-            font-size: 1.75rem;
+            font-size: 1.5rem;
             font-weight: 600;
             color: #1f2937;
             text-align: center;
@@ -235,6 +249,23 @@ export default function Admissions() {
             color: #6b7280;
             margin-top: 8px;
           }
+          @media (max-width: 640px) {
+            .container {
+              margin: 16px;
+              padding: 16px;
+            }
+            h2 {
+              font-size: 1.25rem;
+            }
+            input, textarea {
+              font-size: 0.8125rem;
+              padding: 10px;
+            }
+            button {
+              padding: 8px 16px;
+              font-size: 0.8125rem;
+            }
+          }
         </style>
       </head>
       <body>
@@ -268,21 +299,19 @@ export default function Admissions() {
                 name="interests"
                 placeholder="Ejemplo: Historia de las ideas, Física teórica, Divulgación científica"
                 required
-              value="${member['Áreas de interés'] || ''}" />
+                value="${member['Áreas de interés'] || ''}"
+              />
             </div>
             <div class="form-group">
               <label>Imagen (URL)</label>
               <input
                 type="url"
                 name="image"
-                placeholder="Ingrese la URL de la imagen"
+                placeholder="Ingrese la URL de la imagen (subida por el administrador)"
                 value="${member.Imagen || ''}"
               />
               <p class="help-text">
-                Si no tienes una URL de imagen, 
-                <a href="https://postimages.org/es/" target="_blank">
-                  crea una aquí
-                </a>.
+                Suba la imagen recibida por correo a <a href="https://postimages.org/es/" target="_blank">postimages.org</a> y pegue el enlace aquí.
               </p>
             </div>
             <div class="button-group">
@@ -347,6 +376,24 @@ export default function Admissions() {
     [applications, teamEmails]
   );
 
+  const teamMembersFiltered = useMemo(
+    () =>
+      teamMembers.filter(member => {
+        const roles = member.Rol?.split(';').map(r => r.trim().toLowerCase()) || [];
+        return roles.length > 1 || (roles.length === 1 && roles[0] !== 'autor');
+      }),
+    [teamMembers]
+  );
+
+  const authorMembers = useMemo(
+    () =>
+      teamMembers.filter(member => {
+        const roles = member.Rol?.split(';').map(r => r.trim().toLowerCase()) || [];
+        return roles.length === 1 && roles[0] === 'autor';
+      }),
+    [teamMembers]
+  );
+
   return (
     <div className="container">
       <div className="card">
@@ -382,7 +429,13 @@ export default function Admissions() {
                 className={`tab ${activeTab === 'team' ? 'tab-active' : ''}`}
                 onClick={() => setActiveTab('team')}
               >
-                Equipo ({teamMembers.length})
+                Equipo ({teamMembersFiltered.length})
+              </button>
+              <button
+                className={`tab ${activeTab === 'authors' ? 'tab-active' : ''}`}
+                onClick={() => setActiveTab('authors')}
+              >
+                Autores ({authorMembers.length})
               </button>
             </div>
             <div className="content">
@@ -391,7 +444,7 @@ export default function Admissions() {
                   <div className="spinner"></div>
                   <span>Cargando...</span>
                 </div>
-              ) : activeTab === 'team' ? (
+              ) : activeTab === 'team' || activeTab === 'authors' ? (
                 <>
                   <div className="p-4">
                     <button
@@ -401,12 +454,12 @@ export default function Admissions() {
                       Agregar Nuevo Miembro
                     </button>
                   </div>
-                  {teamMembers.length === 0 ? (
-                    <div className="empty">No hay miembros en el equipo</div>
+                  {(activeTab === 'team' ? teamMembersFiltered : authorMembers).length === 0 ? (
+                    <div className="empty">No hay {activeTab === 'team' ? 'miembros en el equipo' : 'autores'}</div>
                   ) : (
-                    teamMembers.map((member, index) => (
+                    (activeTab === 'team' ? teamMembersFiltered : authorMembers).map((member, index) => (
                       <div key={index} className="application">
-                        <div className="application-header" onClick={() => toggleExpandApp(`team-${index}`)}>
+                        <div className="application-header" onClick={() => toggleExpandApp(`${activeTab}-${index}`)}>
                           <div className="flex items-center space-x-3">
                             {member.Imagen && (
                               <img
@@ -421,7 +474,7 @@ export default function Admissions() {
                             </div>
                           </div>
                           <svg
-                            className={`application-icon ${expandedApp === `team-${index}` ? 'rotate-180' : ''}`}
+                            className={`application-icon ${expandedApp === `${activeTab}-${index}` ? 'rotate-180' : ''}`}
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -429,7 +482,7 @@ export default function Admissions() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                           </svg>
                         </div>
-                        {expandedApp === `team-${index}` && (
+                        {expandedApp === `${activeTab}-${index}` && (
                           <div className="application-details">
                             <div className="details-grid">
                               <div>
@@ -456,6 +509,15 @@ export default function Admissions() {
                               >
                                 Editar
                               </button>
+                              {activeTab === 'authors' && (
+                                <button
+                                  onClick={() => requestAuthorData(member.Nombre)}
+                                  disabled={sending || !TEAM_GAS_URL}
+                                  className="action-button action-request"
+                                >
+                                  Solicitar Datos
+                                </button>
+                              )}
                             </div>
                           </div>
                         )}
@@ -514,11 +576,18 @@ export default function Admissions() {
                             onClick={() => acceptAndRequestData(app)}
                             disabled={sending || !TEAM_GAS_URL || activeTab === 'archived'}
                             className="action-button action-accept"
-                          >
+                            >
                             Aceptar y Solicitar Datos
                           </button>
                           <button
-                            onClick={() => openTeamForm(app)}
+                            onClick={() => openEditForm({
+                              Nombre: app.Nombre,
+                              'Correo electrónico': app['Correo electrónico'],
+                              'Cargo al que desea postular': app['Cargo al que desea postular'],
+                              Descripción: '',
+                              'Áreas de interés': '',
+                              Imagen: '',
+                            })}
                             disabled={sending || !TEAM_GAS_URL}
                             className="action-button action-add"
                           >
@@ -539,8 +608,9 @@ export default function Admissions() {
       <style>{`
         .container {
           width: 100%;
-          max-width: 1200px;
-          margin: 32px auto;
+          max-width: 1400px;
+          margin: 16px auto;
+          padding: 0 16px;
           font-family: 'Inter', sans-serif;
         }
         .card {
@@ -554,7 +624,7 @@ export default function Admissions() {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 20px 24px;
+          padding: 16px 24px;
           background: linear-gradient(90deg, #3b82f6, #60a5fa);
           color: white;
           cursor: pointer;
@@ -577,9 +647,10 @@ export default function Admissions() {
           border-bottom: 1px solid #e5e7eb;
           background: #f9fafb;
           overflow-x: auto;
+          padding: 8px;
         }
         .tab {
-          padding: 16px 24px;
+          padding: 12px 20px;
           font-size: 0.875rem;
           font-weight: 500;
           color: #6b7280;
@@ -595,8 +666,9 @@ export default function Admissions() {
           color: #3b82f6;
         }
         .content {
-          max-height: 600px;
+          max-height: 70vh;
           overflow-y: auto;
+          padding: 16px;
         }
         .loading {
           display: flex;
@@ -632,7 +704,7 @@ export default function Admissions() {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 16px 24px;
+          padding: 12px 20px;
           cursor: pointer;
         }
         .application-info {
@@ -653,12 +725,12 @@ export default function Admissions() {
           transition: transform 0.3s;
         }
         .application-details {
-          padding: 16px 24px;
+          padding: 16px 20px;
           background: #f3f4f6;
         }
         .details-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
           gap: 16px;
         }
         .details-label {
@@ -718,6 +790,13 @@ export default function Admissions() {
         .action-edit:hover {
           background: #fde68a;
         }
+        .action-request {
+          background: #e0f2fe;
+          color: #075985;
+        }
+        .action-request:hover {
+          background: #bae6fd;
+        }
         .action-button:hover {
           transform: translateY(-1px);
         }
@@ -728,6 +807,41 @@ export default function Admissions() {
           color: #374151;
           background: #f3f4f6;
           border-top: 1px solid #e5e7eb;
+        }
+        @media (max-width: 640px) {
+          .container {
+            padding: 0 8px;
+            margin: 8px auto;
+          }
+          .header {
+            padding: 12px 16px;
+          }
+          .header-title {
+            font-size: 1.125rem;
+          }
+          .tabs {
+            padding: 4px;
+          }
+          .tab {
+            padding: 8px 12px;
+            font-size: 0.8125rem;
+          }
+          .content {
+            padding: 8px;
+          }
+          .application-header {
+            padding: 8px 12px;
+          }
+          .application-details {
+            padding: 8px 12px;
+          }
+          .details-grid {
+            grid-template-columns: 1fr;
+          }
+          .action-button {
+            padding: 6px 12px;
+            font-size: 0.8125rem;
+          }
         }
       `}</style>
     </div>
