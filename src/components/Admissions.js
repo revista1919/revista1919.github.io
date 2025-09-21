@@ -22,25 +22,47 @@ export default function Admissions() {
     fetchTeam();
   }, []);
 
-const fetchTeam = async () => {
-  try {
-    const response = await fetch(TEAM_CSV_URL, { cache: 'no-store' });
-    if (!response.ok) throw new Error('Failed to fetch team CSV');
-    const csvText = await response.text();
-    const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
-    const validMembers = parsed.filter(row => row.Correo?.trim() || row['Correo']?.trim()); // Soporte para variaciones
-    setTeamMembers(validMembers);
-    
-    // DEBUG: Log temporal para ver headers y datos reales
-    console.log('Headers detectados:', Object.keys(validMembers[0] || {}));
-    console.log('Primeros miembros (con roles):', validMembers.slice(0, 3).map(m => ({ nombre: m.Nombre, rol: m['Rol en la Revista'] || m.Rol })));
-    
-    const emails = new Set(validMembers.map(row => (row.Correo || row['Correo electrónico'])?.trim().toLowerCase()));
-    setTeamEmails(emails);
-  } catch (err) {
-    setStatus(`Error fetching team: ${err.message}`);
-  }
-};
+  const fetchTeam = async () => {
+    try {
+      const response = await fetch(TEAM_CSV_URL, { cache: 'no-store' });
+      if (!response.ok) throw new Error('Failed to fetch team CSV');
+      const csvText = await response.text();
+      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
+      const validMembers = parsed.filter(row => row.Correo?.trim() || row['Correo electrónico']?.trim());
+      setTeamMembers(validMembers);
+      
+      // DEBUG: Log para ver headers y datos reales
+      console.log('Headers detectados:', Object.keys(validMembers[0] || {}));
+      console.log('Primeros miembros (con roles):', validMembers.slice(0, 3).map(m => ({ 
+        nombre: m.Nombre, 
+        rol: m['Rol en la Revista'] || m.Rol || 'Sin rol' 
+      })));
+      
+      const emails = new Set(validMembers.map(row => (row.Correo || row['Correo electrónico'])?.trim().toLowerCase()));
+      setTeamEmails(emails);
+    } catch (err) {
+      setStatus(`Error fetching team: ${err.message}`);
+    }
+  };
+
+  const fetchApplications = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(APPLICATIONS_CSV_URL, { cache: 'no-store' });
+      if (!response.ok) throw new Error('Failed to fetch applications');
+      const csvText = await response.text();
+      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
+      const validApplications = parsed.filter(
+        app => app.Nombre?.trim() && app['Correo electrónico']?.trim()
+      );
+      setApplications(validApplications);
+    } catch (err) {
+      setStatus(`Error: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const toggleMinimized = () => setMinimized(!minimized);
 
   const toggleExpandApp = (id) => {
@@ -268,7 +290,7 @@ const fetchTeam = async () => {
             </div>
             <div class="form-group">
               <label>Rol en la Revista</label>
-              <input type="text" name="role" value="${member.Rol || member['Cargo al que desea postular'] || ''}" required />
+              <input type="text" name="role" value="${member['Rol en la Revista'] || member.Rol || member['Cargo al que desea postular'] || ''}" required />
             </div>
             <div class="form-group">
               <label>Descripción</label>
@@ -363,24 +385,24 @@ const fetchTeam = async () => {
   );
 
   const teamMembersFiltered = useMemo(
-  () =>
-    teamMembers.filter(member => {
-      const rolValue = member['Rol en la Revista'] || member.Rol; // Busca en ambos posibles headers
-      const roles = rolValue ? rolValue.split(';').map(r => r.trim().toLowerCase()) : [];
-      return roles.length > 1 || (roles.length === 1 && roles[0] !== 'autor');
-    }),
-  [teamMembers]
-);
+    () =>
+      teamMembers.filter(member => {
+        const rolValue = member['Rol en la Revista'] || member.Rol || ''; // Soporta ambos headers
+        const roles = rolValue ? rolValue.split(';').map(r => r.trim().toLowerCase()) : [];
+        return roles.length > 1 || (roles.length === 1 && roles[0] !== 'autor');
+      }),
+    [teamMembers]
+  );
 
-const authorMembers = useMemo(
-  () =>
-    teamMembers.filter(member => {
-      const rolValue = member['Rol en la Revista'] || member.Rol; // Busca en ambos
-      const roles = rolValue ? rolValue.split(';').map(r => r.trim().toLowerCase()) : [];
-      return roles.length === 1 && roles[0] === 'autor';
-    }),
-  [teamMembers]
-);
+  const authorMembers = useMemo(
+    () =>
+      teamMembers.filter(member => {
+        const rolValue = member['Rol en la Revista'] || member.Rol || ''; // Soporta ambos
+        const roles = rolValue ? rolValue.split(';').map(r => r.trim().toLowerCase()) : [];
+        return roles.length === 1 && roles[0] === 'autor';
+      }),
+    [teamMembers]
+  );
 
   return (
     <div className="container">
@@ -458,7 +480,7 @@ const authorMembers = useMemo(
                             )}
                             <div className="application-info">
                               <h3 className="application-name">{member.Nombre}</h3>
-                              <p className="application-role">{member.Rol}</p>
+                              <p className="application-role">{member['Rol en la Revista'] || member.Rol || 'Sin rol'}</p>
                             </div>
                           </div>
                           <svg
@@ -475,19 +497,19 @@ const authorMembers = useMemo(
                             <div className="details-grid">
                               <div>
                                 <p className="details-label">Correo</p>
-                                <p className="details-value">{member.Correo}</p>
+                                <p className="details-value">{member.Correo || member['Correo electrónico']}</p>
                               </div>
                               <div>
                                 <p className="details-label">Descripción</p>
-                                <p className="details-value">{member['Descripción']}</p>
+                                <p className="details-value">{member['Descripción'] || ''}</p>
                               </div>
                               <div>
                                 <p className="details-label">Áreas de Interés</p>
-                                <p className="details-value">{member['Áreas de interés']}</p>
+                                <p className="details-value">{member['Áreas de interés'] || ''}</p>
                               </div>
                               <div>
                                 <p className="details-label">Imagen</p>
-                                <p className="details-value">{member.Imagen}</p>
+                                <p className="details-value">{member.Imagen || ''}</p>
                               </div>
                             </div>
                             <div className="actions mt-4">
@@ -564,7 +586,7 @@ const authorMembers = useMemo(
                             onClick={() => acceptAndRequestData(app)}
                             disabled={sending || !TEAM_GAS_URL || activeTab === 'archived'}
                             className="action-button action-accept"
-                            >
+                          >
                             Aceptar y Solicitar Datos
                           </button>
                           <button
