@@ -8,6 +8,7 @@ const TEAM_GAS_URL = process.env.REACT_APP_TEAM_SCRIPT_URL || '';
 
 export default function MailsTeam() {
   const [team, setTeam] = useState([]);
+  const [directorGeneral, setDirectorGeneral] = useState('');
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [subject, setSubject] = useState('');
@@ -33,7 +34,11 @@ export default function MailsTeam() {
         const roles = member['Rol en la Revista'].split(';').map(role => role.trim());
         return roles.some(role => ['Revisor', 'Editor de Sección', 'Editor en Jefe'].includes(role));
       });
+      const director = parsed.find(member => 
+        member['Rol en la Revista']?.split(';').map(role => role.trim()).includes('Director General')
+      );
       setTeam(filteredTeam);
+      setDirectorGeneral(director ? director.Nombre : 'Director General');
       setSelected(filteredTeam.map(member => member.Correo));
     } catch (err) {
       setStatus(`Error: ${err.message}`);
@@ -64,7 +69,38 @@ export default function MailsTeam() {
     }
     setSending(true);
     try {
-      const base64Body = btoa(unescape(encodeURIComponent(body)));
+      // Create formatted HTML email with signature
+      const formattedBody = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; color: #333; line-height: 1.6; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { border-bottom: 2px solid #4f46e5; padding-bottom: 10px; margin-bottom: 20px; }
+            .header h1 { color: #4f46e5; font-size: 24px; margin: 0; }
+            .content { font-size: 16px; }
+            .signature { margin-top: 30px; border-top: 1px solid #ddd; padding-top: 10px; }
+            .signature p { margin: 5px 0; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>${subject}</h1>
+            </div>
+            <div class="content">
+              ${body}
+            </div>
+            <div class="signature">
+              <p>Atte.,</p>
+              <p><strong>Director General</strong><br>${directorGeneral}</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+      const base64Body = btoa(unescape(encodeURIComponent(formattedBody)));
       await fetch(TEAM_GAS_URL, {
         method: 'POST',
         mode: 'no-cors',
@@ -115,11 +151,11 @@ export default function MailsTeam() {
       {showModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50" onClick={closeModal}>
           <div 
-            className="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto" 
+            className="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] flex flex-col" 
             onClick={e => e.stopPropagation()}
           >
             <h3 className="text-lg font-medium text-gray-900 mb-4">Enviar Correo</h3>
-            <div className="space-y-4">
+            <div className="flex-1 space-y-4 overflow-y-auto">
               <div>
                 <div
                   onClick={toggleSelectAll}
@@ -188,10 +224,10 @@ export default function MailsTeam() {
                   ]
                 }}
                 theme="snow"
-                className="h-48"
+                className="h-40 mb-4"
               />
             </div>
-            <div className="flex justify-end space-x-3 pt-4 mt-4 border-t">
+            <div className="flex justify-end space-x-3 pt-4 border-t">
               <button
                 onClick={closeModal}
                 className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
@@ -206,7 +242,7 @@ export default function MailsTeam() {
                 {sending ? 'Enviando...' : 'Enviar'}
               </button>
             </div>
-            {status && <p className="text-sm text-gray-600 mt-2">{status}</p>}
+            {status && <p className="text-sm text-gray-600 mt-2 text-center">{status}</p>}
           </div>
         </div>
       )}
