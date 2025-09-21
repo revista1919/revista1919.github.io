@@ -1,4 +1,3 @@
-// MailsTeam.js
 import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 import ReactQuill from 'react-quill';
@@ -29,8 +28,14 @@ export default function MailsTeam() {
       if (!response.ok) throw new Error('Failed to fetch team');
       const csvText = await response.text();
       const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
-      setTeam(parsed.filter(member => member.Rol && (member.Rol.includes('Editor') || member.Rol.includes('Revisor'))));
-      setSelected(parsed.map(member => member.Correo));
+      // Filter members with roles Revisor, Editor de Sección, or Editor en Jefe
+      const filteredTeam = parsed.filter(member => {
+        if (!member['Rol en la Revista']) return false;
+        const roles = member['Rol en la Revista'].split(';').map(role => role.trim());
+        return roles.some(role => ['Revisor', 'Editor de Sección', 'Editor en Jefe'].includes(role));
+      });
+      setTeam(filteredTeam);
+      setSelected(filteredTeam.map(member => member.Correo));
     } catch (err) {
       setStatus(`Error: ${err.message}`);
     } finally {
@@ -40,7 +45,7 @@ export default function MailsTeam() {
 
   const toggleSelectAll = () => {
     setSelectAll(!selectAll);
-    setSelected(selectAll ? [] : team.map(member => member.Correo));
+    setSelected(!selectAll ? team.map(member => member.Correo) : []);
   };
 
   const toggleSelect = (email) => {
@@ -118,7 +123,7 @@ export default function MailsTeam() {
                 placeholder="Asunto"
                 value={subject}
                 onChange={e => setSubject(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md"
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
               <ReactQuill
                 value={body}
@@ -133,39 +138,67 @@ export default function MailsTeam() {
                   ]
                 }}
                 theme="snow"
+                className="h-48"
               />
-              <div>
-                <label className="flex items-center space-x-2">
-                  <input type="checkbox" checked={selectAll} onChange={toggleSelectAll} />
+              <div className="mt-12">
+                <label className="flex items-center space-x-2 text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={selectAll}
+                    onChange={toggleSelectAll}
+                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
+                  />
                   <span>Enviar a todos ({team.length})</span>
                 </label>
                 {!selectAll && (
-                  <div className="mt-2 max-h-48 overflow-y-auto border rounded-md p-2 space-y-2">
-                    {team.map((member, index) => (
-                      <div key={index} className="flex items-center space-x-3">
-                        <input
-                          type="checkbox"
-                          checked={selected.includes(member.Correo)}
-                          onChange={() => toggleSelect(member.Correo)}
-                        />
-                        {member.Imagen && <img src={member.Imagen} alt={member.Nombre} className="w-8 h-8 rounded-full" />}
-                        <span>{member.Nombre} ({member.Correo})</span>
-                      </div>
-                    ))}
+                  <div className="mt-2 max-h-48 overflow-y-auto border rounded-md p-3 bg-gray-50">
+                    {team.map((member, index) => {
+                      const roles = member['Rol en la Revista']?.split(';').map(role => role.trim()) || [];
+                      return (
+                        <div
+                          key={index}
+                          className="flex items-center space-x-3 py-2 border-b last:border-b-0 hover:bg-gray-100"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selected.includes(member.Correo)}
+                            onChange={() => toggleSelect(member.Correo)}
+                            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          {member.Imagen && (
+                            <img
+                              src={member.Imagen}
+                              alt={member.Nombre}
+                              className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                              onError={(e) => (e.target.src = 'https://via.placeholder.com/40')} // Fallback image
+                            />
+                          )}
+                          <div className="flex-1">
+                            <div className="text-sm font-medium text-gray-900">{member.Nombre}</div>
+                            <div className="text-xs text-gray-500">{roles.join(', ')}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
               <div className="flex justify-end space-x-3">
-                <button onClick={closeModal} className="px-4 py-2 border rounded-md">Cancelar</button>
+                <button
+                  onClick={closeModal}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
                 <button
                   onClick={sendEmail}
                   disabled={sending}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md disabled:opacity-50"
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
                 >
                   {sending ? 'Enviando...' : 'Enviar'}
                 </button>
               </div>
-              {status && <p className="text-sm text-gray-600">{status}</p>}
+              {status && <p className="text-sm text-gray-600 mt-2">{status}</p>}
             </div>
           </div>
         </div>
