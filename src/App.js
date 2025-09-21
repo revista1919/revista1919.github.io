@@ -289,7 +289,7 @@ function App() {
     },
     {
       name: 'admin',
-      label: 'Administración',
+      label: '¡Postula a algún cargo!',
       component: (
         <div className="py-8 max-w-7xl mx-auto">
           <AdminSection />
