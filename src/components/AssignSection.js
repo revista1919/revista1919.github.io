@@ -302,8 +302,11 @@ export default function AssignSection({ user, onClose }) {
             </div>
             <p className="text-gray-700 mb-4 leading-relaxed">{selectedUser.Descripción}</p>
             <p className="text-sm font-medium mb-4">
-              <strong>Intereses:</strong> {selectedUser['Áreas de interés']?.split(';').map(i => i.trim()).join(', ') || 'N/A'}
-            </p>
+  <strong>Intereses:</strong> {selectedUser['Áreas de interés']?.split(';').map(i => i.trim()).join(', ') || 'N/A'}
+</p>
+<p className="text-sm text-gray-600 mb-4">
+  <strong>Correo:</strong> {selectedUser.Correo || selectedUser['Correo electrónico'] || 'N/A'}
+</p>
             <button
               onClick={() => handleContact(
                 selectedUser.Correo || selectedUser['Correo electrónico'],
