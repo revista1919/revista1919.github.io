@@ -114,7 +114,10 @@ export default function MailsTeam() {
 
       {showModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50" onClick={closeModal}>
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl mx-4" onClick={e => e.stopPropagation()}>
+          <div 
+            className="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto" 
+            onClick={e => e.stopPropagation()}
+          >
             <h3 className="text-lg font-medium text-gray-900 mb-4">Enviar Correo</h3>
             <div className="space-y-4">
               <div>
@@ -187,23 +190,23 @@ export default function MailsTeam() {
                 theme="snow"
                 className="h-48"
               />
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  onClick={closeModal}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={sendEmail}
-                  disabled={sending}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
-                >
-                  {sending ? 'Enviando...' : 'Enviar'}
-                </button>
-              </div>
-              {status && <p className="text-sm text-gray-600 mt-2">{status}</p>}
             </div>
+            <div className="flex justify-end space-x-3 pt-4 mt-4 border-t">
+              <button
+                onClick={closeModal}
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={sendEmail}
+                disabled={sending}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {sending ? 'Enviando...' : 'Enviar'}
+              </button>
+            </div>
+            {status && <p className="text-sm text-gray-600 mt-2">{status}</p>}
           </div>
         </div>
       )}
