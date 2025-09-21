@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 
 const APPLICATIONS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSNuBETm7TapO6dakKBbkxlYTZctAGGEp4SnOyGowCYXfD_lAXHta8_LX5EPjy0xXw5fpKp3MPcRduK/pub?gid=2123840957&single=true&output=csv';
-const TEAM_CSV_URL = 'https://docs.google.com/spreadsheets/d/1FIP4yMTNYtRYWiPwovWGPiWxQZ8wssko8u0-NkZOido/export?format=csv';
+const TEAM_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 const TEAM_GAS_URL = process.env.REACT_APP_TEAM_SCRIPT_URL || '';
 const APPLICATIONS_GAS_URL = process.env.REACT_APP_APPLICATIONS_SCRIPT_URL || '';
 
