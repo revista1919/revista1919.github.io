@@ -1,33 +1,40 @@
-// Admissions.js
 import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
-const APPLICATIONS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSNuBETm7TapO6dakKBbkxlYTZctAGGEp4SnOyGowCYXfD_lAXHta8_LX5EPjy0xXw5fpKp3MPcRduK/pub?gid=2123840957&single=true&output=csv';
+const TEAM_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 const TEAM_GAS_URL = process.env.REACT_APP_TEAM_SCRIPT_URL || '';
-const APPLICATIONS_GAS_URL = process.env.REACT_APP_APPLICATIONS_SCRIPT_URL || '';
 
-export default function Admissions() {
-  const [applications, setApplications] = useState([]);
+export default function MailsTeam() {
+  const [team, setTeam] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [expandedApp, setExpandedApp] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [subject, setSubject] = useState('');
+  const [body, setBody] = useState('');
+  const [selectAll, setSelectAll] = useState(true);
+  const [selected, setSelected] = useState([]);
   const [status, setStatus] = useState('');
-  const [minimized, setMinimized] = useState(true);
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
-    if (!minimized) {
-      fetchApplications();
-    }
-  }, [minimized]);
+    fetchTeam();
+  }, []);
 
-  const fetchApplications = async () => {
+  const fetchTeam = async () => {
     try {
       setLoading(true);
-      const response = await fetch(APPLICATIONS_CSV_URL, { cache: 'no-store' });
-      if (!response.ok) throw new Error('Failed to fetch applications');
+      const response = await fetch(TEAM_CSV_URL, { cache: 'no-store' });
+      if (!response.ok) throw new Error('Failed to fetch team');
       const csvText = await response.text();
       const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
-      setApplications(parsed);
+      const filteredTeam = parsed.filter(member => {
+        if (!member['Rol en la Revista']) return false;
+        const roles = member['Rol en la Revista'].split(';').map(role => role.trim());
+        return roles.some(role => ['Revisor', 'Editor de Sección', 'Editor en Jefe'].includes(role));
+      });
+      setTeam(filteredTeam);
+      setSelected(filteredTeam.map(member => member.Correo));
     } catch (err) {
       setStatus(`Error: ${err.message}`);
     } finally {
@@ -35,69 +42,43 @@ export default function Admissions() {
     }
   };
 
-  const toggleMinimized = () => setMinimized(!minimized);
-
-  const toggleExpandApp = (index) => {
-    setExpandedApp(expandedApp === index ? null : index);
+  const toggleSelectAll = () => {
+    setSelectAll(!selectAll);
+    setSelected(!selectAll ? team.map(member => member.Correo) : []);
   };
 
-  const sendPreselection = async (name) => {
-    if (!APPLICATIONS_GAS_URL) {
-      setStatus('❌ GAS URL no configurada');
+  const toggleSelect = (email) => {
+    setSelected(prev => 
+      prev.includes(email) ? prev.filter(e => e !== email) : [...prev, email]
+    );
+  };
+
+  const sendEmail = async () => {
+    if (!subject.trim() || !body.trim() || selected.length === 0) {
+      setStatus('❌ Asunto, mensaje y destinatarios requeridos');
       return;
     }
-    if (!confirm(`¿Enviar correo de preselección a ${name}?`)) return;
-    setSending(true);
-    try {
-      await fetch(APPLICATIONS_GAS_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        redirect: 'follow',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'aceptar_postulante', name }),
-      });
-      setStatus('✅ Preselección enviada');
-    } catch (err) {
-      setStatus(`❌ Error: ${err.message}`);
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const acceptAndRequestData = async (app) => {
     if (!TEAM_GAS_URL) {
       setStatus('❌ GAS URL no configurada');
       return;
     }
-    if (!confirm(`¿Aceptar a ${app.Nombre} y solicitar datos?`)) return;
     setSending(true);
     try {
-      // Add to team
+      const base64Body = btoa(unescape(encodeURIComponent(body)));
       await fetch(TEAM_GAS_URL, {
         method: 'POST',
         mode: 'no-cors',
         redirect: 'follow',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
-          action: 'add_team_member',
-          name: app.Nombre,
-          role: app['Cargo al que desea postular'],
-          email: app['Correo electrónico'],
+          action: 'send_custom_email',
+          to: selected,
+          subject,
+          htmlBody: base64Body,
         }),
       });
-      // Send acceptance and request data
-      await fetch(TEAM_GAS_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        redirect: 'follow',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({
-          action: 'solicitar_datos',
-          type: 'team',
-          name: app.Nombre,
-        }),
-      });
-      setStatus('✅ Aceptado y solicitud enviada');
+      setStatus('✅ Correo enviado');
+      closeModal();
     } catch (err) {
       setStatus(`❌ Error: ${err.message}`);
     } finally {
@@ -105,92 +86,127 @@ export default function Admissions() {
     }
   };
 
+  const closeModal = () => {
+    setShowModal(false);
+    setSubject('');
+    setBody('');
+    setSelectAll(true);
+    setSelected(team.map(member => member.Correo));
+    setStatus('');
+  };
+
+  if (loading) return <div className="p-4 text-center">Cargando equipo...</div>;
+
   return (
-    <div className="mt-8 bg-white rounded-lg shadow-sm overflow-hidden">
-      <div 
-        className="px-6 py-5 border-b border-gray-200 flex justify-between items-center cursor-pointer"
-        onClick={toggleMinimized}
+    <div className="mt-8">
+      <button
+        onClick={() => setShowModal(true)}
+        disabled={!TEAM_GAS_URL}
+        className={`px-4 py-2 rounded-md font-medium flex items-center space-x-2 transition-colors ${
+          TEAM_GAS_URL ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+        }`}
       >
-        <h2 className="text-lg font-medium text-gray-900">Gestionar Postulaciones ({applications.length})</h2>
-        <svg
-          className={`w-4 h-4 text-gray-400 transition-transform ${minimized ? '' : 'rotate-180'}`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
         </svg>
-      </div>
-      {!minimized && (
-        <div className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
-          {loading ? (
-            <div className="p-6 text-center text-gray-600">Cargando...</div>
-          ) : applications.length === 0 ? (
-            <div className="p-6 text-center text-gray-600">No hay postulaciones</div>
-          ) : (
-            applications.map((app, index) => (
-              <div key={index} className="hover:bg-gray-50">
+        <span>Enviar Correo al Equipo</span>
+      </button>
+
+      {showModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50" onClick={closeModal}>
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl mx-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Enviar Correo</h3>
+            <div className="space-y-4">
+              <div>
                 <div
-                  className="px-6 py-4 cursor-pointer flex justify-between items-center"
-                  onClick={() => toggleExpandApp(index)}
+                  onClick={toggleSelectAll}
+                  className={`cursor-pointer px-4 py-2 border rounded-md flex items-center space-x-2 transition-colors ${
+                    selectAll ? 'bg-indigo-100 border-indigo-500' : 'bg-gray-100 border-gray-300'
+                  }`}
                 >
-                  <div className="flex-1">
-                    <h3 className="text-sm font-medium text-gray-900">{app.Nombre}</h3>
-                    <p className="text-sm text-gray-500">{app['Cargo al que desea postular']}</p>
-                  </div>
-                  <svg
-                    className={`w-4 h-4 text-gray-400 transition-transform ${expandedApp === index ? 'rotate-180' : ''}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
+                  <input
+                    type="checkbox"
+                    checked={selectAll}
+                    onChange={toggleSelectAll}
+                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span className="text-sm font-medium text-gray-900">Enviar a todos ({team.length})</span>
                 </div>
-                {expandedApp === index && (
-                  <div className="px-6 pb-4 bg-gray-50">
-                    <div className="grid grid-cols-1 gap-4 text-sm">
-                      <div>
-                        <p className="text-gray-900 font-medium">Correo</p>
-                        <p className="text-gray-600">{app['Correo electrónico']}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-900 font-medium">Establecimiento</p>
-                        <p className="text-gray-600">{app['Establecimiento educativo']}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-900 font-medium">Teléfono</p>
-                        <p className="text-gray-600">{app['Número de teléfono']}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-900 font-medium">Carta de Motivación</p>
-                        <p className="text-gray-600 whitespace-pre-wrap">{app['Breve carta de motivación (por qué desea este cargo) y listado de logros. 250-500 palabras.']}</p>
-                      </div>
-                    </div>
-                    <div className="mt-4 flex space-x-3">
-                      <button
-                        onClick={() => sendPreselection(app.Nombre)}
-                        disabled={sending || !APPLICATIONS_GAS_URL}
-                        className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-100 rounded-md hover:bg-blue-200 disabled:opacity-50"
-                      >
-                        Enviar Preselección
-                      </button>
-                      <button
-                        onClick={() => acceptAndRequestData(app)}
-                        disabled={sending || !TEAM_GAS_URL}
-                        className="px-4 py-2 text-sm font-medium text-green-600 bg-green-100 rounded-md hover:bg-green-200 disabled:opacity-50"
-                      >
-                        Aceptar y Solicitar Datos
-                      </button>
-                    </div>
+                {!selectAll && (
+                  <div className="mt-2 max-h-48 overflow-y-auto border rounded-md p-3 bg-gray-50">
+                    {team.map((member, index) => {
+                      const roles = member['Rol en la Revista']?.split(';').map(role => role.trim()) || [];
+                      return (
+                        <div
+                          key={index}
+                          className="flex items-center space-x-3 py-2 border-b last:border-b-0 hover:bg-gray-100"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selected.includes(member.Correo)}
+                            onChange={() => toggleSelect(member.Correo)}
+                            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          {member.Imagen && (
+                            <img
+                              src={member.Imagen}
+                              alt={member.Nombre}
+                              className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                              onError={(e) => (e.target.src = 'https://via.placeholder.com/40')}
+                            />
+                          )}
+                          <div className="flex-1">
+                            <div className="text-sm font-medium text-gray-900">{member.Nombre}</div>
+                            <div className="text-xs text-gray-500">{roles.join(', ')}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
-            ))
-          )}
+              <input
+                type="text"
+                placeholder="Asunto"
+                value={subject}
+                onChange={e => setSubject(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+              <ReactQuill
+                value={body}
+                onChange={setBody}
+                modules={{
+                  toolbar: [
+                    [{ header: [1, 2, false] }],
+                    ['bold', 'italic', 'underline', 'strike', 'blockquote'],
+                    [{ list: 'ordered' }, { list: 'bullet' }],
+                    ['link', 'image'],
+                    ['clean']
+                  ]
+                }}
+                theme="snow"
+                className="h-48"
+              />
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  onClick={closeModal}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={sendEmail}
+                  disabled={sending}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {sending ? 'Enviando...' : 'Enviar'}
+                </button>
+              </div>
+              {status && <p className="text-sm text-gray-600 mt-2">{status}</p>}
+            </div>
+          </div>
         </div>
       )}
-      {status && <div className="p-4 text-center text-sm text-gray-600">{status}</div>}
     </div>
   );
 }
