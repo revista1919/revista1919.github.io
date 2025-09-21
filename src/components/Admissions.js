@@ -43,7 +43,6 @@ export default function Admissions() {
       if (!response.ok) throw new Error('Failed to fetch applications');
       const csvText = await response.text();
       const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
-      // Filter out invalid applications
       const validApplications = parsed.filter(
         app => app.Nombre?.trim() && app['Correo electrónico']?.trim()
       );
@@ -84,6 +83,8 @@ export default function Admissions() {
     }
   };
 
+  const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
   const acceptAndRequestData = async (app) => {
     if (!TEAM_GAS_URL) {
       setStatus('❌ GAS URL no configurada');
@@ -92,6 +93,7 @@ export default function Admissions() {
     if (!confirm(`¿Aceptar a ${app.Nombre} y solicitar datos?`)) return;
     setSending(true);
     try {
+      setStatus('⏳ Agregando miembro al equipo...');
       await fetch(TEAM_GAS_URL, {
         method: 'POST',
         mode: 'no-cors',
@@ -104,6 +106,9 @@ export default function Admissions() {
           email: app['Correo electrónico'],
         }),
       });
+      setStatus('⏳ Esperando 5 segundos para que se actualice la hoja...');
+      await delay(5000); // 5-second delay
+      setStatus('⏳ Enviando solicitud de datos...');
       await fetch(TEAM_GAS_URL, {
         method: 'POST',
         mode: 'no-cors',
@@ -325,7 +330,6 @@ export default function Admissions() {
     `);
   };
 
-  // Memoize filtered applications to optimize performance
   const pendingApplications = useMemo(
     () =>
       applications.filter(
