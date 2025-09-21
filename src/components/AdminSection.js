@@ -28,17 +28,17 @@ function AdminSection() {
     },
     {
       name: 'Editor en Jefe',
-      description: 'Supervisa todos los contenidos y coordina al equipo editorial. Garantiza la calidad de los artículos.',
+      description: 'Supervisa todos los contenidos y coordina al equipo editorial. Garantiza la calidad de los artículos. Recibe, organiza y canaliza las postulaciones de artículos hacia los revisores.',
       isPostulable: true,
     },
     {
       name: 'Editor de Sección',
-      description: 'Revisa y edita textos de una sección específica (por ejemplo, Opinión, Cultura, Actualidad). Vota por publicar o no un trabajo',
+      description: 'Revisa y edita textos de una sección específica (por ejemplo, Opinión, Cultura, Actualidad). Vota por publicar o no un trabajo. Principalmente aplica las correcciones hechas por los revisores. Es el encargado de comunicarse con el autor para solicitar datos y entregar su retroalimentación',
       isPostulable: true,
     },
     {
       name: 'Revisor / Comité Editorial',
-      description: 'Corrige estilo, ortografía y coherencia de los artículos. Proporciona retroalimentación a los autores.',
+      description: 'Corrige estilo, ortografía y coherencia de los artículos. Además un revisor puede revisar fuentes, verificar calidad de las mismas y de los contenidos. Proporciona retroalimentación a los autores y vota si publicar o no un artículo.',
       isPostulable: true,
     },
     {
@@ -66,11 +66,7 @@ function AdminSection() {
       description: 'Interactúa con la comunidad, responde mensajes y fomenta la participación en las plataformas de la revista.',
       isPostulable: true,
     },
-    {
-      name: 'Encargado/a de Recepción de Artículos',
-      description: 'Recibe, organiza y canaliza las postulaciones de artículos hacia los revisores.',
-      isPostulable: true,
-    },
+    
     {
       name: 'Encargado/a de Nuevos Colaboradores',
       description: 'Orienta a nuevos postulantes a roles administrativos, revisores o editores.',
