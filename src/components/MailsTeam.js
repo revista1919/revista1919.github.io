@@ -75,26 +75,32 @@ export default function MailsTeam() {
         <html>
         <head>
           <style>
-            body { font-family: Arial, sans-serif; color: #333; line-height: 1.6; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { border-bottom: 2px solid #4f46e5; padding-bottom: 10px; margin-bottom: 20px; }
-            .header h1 { color: #4f46e5; font-size: 24px; margin: 0; }
-            .content { font-size: 16px; }
-            .signature { margin-top: 30px; border-top: 1px solid #ddd; padding-top: 10px; }
-            .signature p { margin: 5px 0; font-size: 14px; }
+            body { margin: 0; padding: 0; }
+            .container { font-family: 'Georgia', serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #F5F5EF; color: #4A3728; border: 1px solid #8B6F47; }
+            .header { background-color: #8B6F47; padding: 10px; text-align: center; }
+            .header h2 { color: #FFF; margin: 0; font-size: 20px; }
+            .content { padding: 20px; }
+            .content p { font-size: 14px; line-height: 1.6; margin: 10px 0; }
+            .content a { color: #6B4E31; text-decoration: underline; }
+            .signature { margin-top: 20px; }
+            .signature p { font-size: 14px; margin: 5px 0; }
+            .footer { background-color: #D9C7A5; padding: 10px; text-align: center; font-size: 12px; color: #4A3728; }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
-              <h1>${subject}</h1>
+              <h2>${subject}</h2>
             </div>
             <div class="content">
               ${body}
+              <div class="signature">
+                <p>Atte.,</p>
+                <p><strong>Director General</strong><br>${directorGeneral}</p>
+              </div>
             </div>
-            <div class="signature">
-              <p>Atte.,</p>
-              <p><strong>Director General</strong><br>${directorGeneral}</p>
+            <div class="footer">
+              Revista Nacional de las Ciencias para Estudiantes
             </div>
           </div>
         </body>

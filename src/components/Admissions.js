@@ -17,6 +17,7 @@ export default function Admissions() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [formData, setFormData] = useState({});
   const [teamEmails, setTeamEmails] = useState(new Set());
+  const [activeTab, setActiveTab] = useState('pending');
 
   useEffect(() => {
     if (!minimized) {
@@ -46,6 +47,7 @@ export default function Admissions() {
       setTeamEmails(emails);
     } catch (err) {
       setStatus(`Error: ${err.message}`);
+      console.error('Fetch error:', err);
     } finally {
       setLoading(false);
     }
@@ -88,7 +90,6 @@ export default function Admissions() {
     if (!confirm(`¿Aceptar a ${app.Nombre} y solicitar datos?`)) return;
     setSending(true);
     try {
-      // Add to team
       await fetch(TEAM_GAS_URL, {
         method: 'POST',
         mode: 'no-cors',
@@ -101,7 +102,6 @@ export default function Admissions() {
           email: app['Correo electrónico'],
         }),
       });
-      // Send acceptance and request data
       await fetch(TEAM_GAS_URL, {
         method: 'POST',
         mode: 'no-cors',
@@ -114,7 +114,7 @@ export default function Admissions() {
         }),
       });
       setStatus('✅ Aceptado y solicitud enviada');
-      fetchData(); // Refresh to update archived status
+      fetchData();
     } catch (err) {
       setStatus(`❌ Error: ${err.message}`);
     } finally {
@@ -163,13 +163,17 @@ export default function Admissions() {
       });
       setStatus('✅ Agregado al equipo y correo enviado');
       setShowAddModal(false);
-      fetchData(); // Refresh to update archived status
+      fetchData();
     } catch (err) {
       setStatus(`❌ Error: ${err.message}`);
     } finally {
       setSending(false);
     }
   };
+
+  const filteredApplications = applications.filter(app => 
+    activeTab === 'pending' ? !app.isArchived : app.isArchived
+  );
 
   return (
     <div className="mt-8 bg-white rounded-lg shadow-sm overflow-hidden">
@@ -188,83 +192,103 @@ export default function Admissions() {
         </svg>
       </div>
       {!minimized && (
-        <div className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
-          {loading ? (
-            <div className="p-6 text-center text-gray-600">Cargando...</div>
-          ) : applications.length === 0 ? (
-            <div className="p-6 text-center text-gray-600">No hay postulaciones</div>
-          ) : (
-            applications.map((app, index) => (
-              <div key={index} className={`hover:bg-gray-50 ${app.isArchived ? 'bg-gray-100' : ''}`}>
-                <div
-                  className="px-6 py-4 cursor-pointer flex justify-between items-center"
-                  onClick={() => toggleExpandApp(index)}
-                >
-                  <div className="flex-1">
-                    <h3 className="text-sm font-medium text-gray-900">
-                      {app.Nombre}
-                      {app.isArchived && <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Ya en el equipo</span>}
-                    </h3>
-                    <p className="text-sm text-gray-500">{app['Cargo al que desea postular']}</p>
-                  </div>
-                  <svg
-                    className={`w-4 h-4 text-gray-400 transition-transform ${expandedApp === index ? 'rotate-180' : ''}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+        <>
+          <div className="px-6 py-3 border-b border-gray-200 flex space-x-4">
+            <button
+              onClick={() => setActiveTab('pending')}
+              className={`px-4 py-2 text-sm font-medium rounded-md ${
+                activeTab === 'pending' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700'
+              }`}
+            >
+              Pendientes ({applications.filter(app => !app.isArchived).length})
+            </button>
+            <button
+              onClick={() => setActiveTab('archived')}
+              className={`px-4 py-2 text-sm font-medium rounded-md ${
+                activeTab === 'archived' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700'
+              }`}
+            >
+              Archivadas ({applications.filter(app => app.isArchived).length})
+            </button>
+          </div>
+          <div className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
+            {loading ? (
+              <div className="p-6 text-center text-gray-600">Cargando...</div>
+            ) : filteredApplications.length === 0 ? (
+              <div className="p-6 text-center text-gray-600">No hay postulaciones {activeTab === 'pending' ? 'pendientes' : 'archivadas'}</div>
+            ) : (
+              filteredApplications.map((app, index) => (
+                <div key={index} className={`hover:bg-gray-50 ${app.isArchived ? 'bg-gray-100' : ''}`}>
+                  <div
+                    className="px-6 py-4 cursor-pointer flex justify-between items-center"
+                    onClick={() => toggleExpandApp(index)}
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-                {expandedApp === index && (
-                  <div className="px-6 pb-4 bg-gray-50">
-                    <div className="grid grid-cols-1 gap-4 text-sm">
-                      <div>
-                        <p className="text-gray-900 font-medium">Correo</p>
-                        <p className="text-gray-600">{app['Correo electrónico']}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-900 font-medium">Establecimiento</p>
-                        <p className="text-gray-600">{app['Establecimiento educativo']}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-900 font-medium">Teléfono</p>
-                        <p className="text-gray-600">{app['Número de teléfono']}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-900 font-medium">Carta de Motivación</p>
-                        <p className="text-gray-600 whitespace-pre-wrap">{app['Breve carta de motivación (por qué desea este cargo) y listado de logros. 250-500 palabras.']}</p>
-                      </div>
+                    <div className="flex-1">
+                      <h3 className="text-sm font-medium text-gray-900">
+                        {app.Nombre}
+                        {app.isArchived && <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Ya en el equipo</span>}
+                      </h3>
+                      <p className="text-sm text-gray-500">{app['Cargo al que desea postular']}</p>
                     </div>
-                    <div className="mt-4 flex space-x-3">
-                      <button
-                        onClick={() => sendPreselection(app.Nombre)}
-                        disabled={sending || app.isArchived || !APPLICATIONS_GAS_URL}
-                        className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-100 rounded-md hover:bg-blue-200 disabled:opacity-50"
-                      >
-                        Enviar Preselección
-                      </button>
-                      <button
-                        onClick={() => acceptAndRequestData(app)}
-                        disabled={sending || app.isArchived || !TEAM_GAS_URL}
-                        className="px-4 py-2 text-sm font-medium text-green-600 bg-green-100 rounded-md hover:bg-green-200 disabled:opacity-50"
-                      >
-                        Aceptar y Solicitar Datos
-                      </button>
-                      <button
-                        onClick={() => openAddModal(app)}
-                        disabled={sending || app.isArchived || !TEAM_GAS_URL}
-                        className="px-4 py-2 text-sm font-medium text-purple-600 bg-purple-100 rounded-md hover:bg-purple-200 disabled:opacity-50"
-                      >
-                        Agregar al Equipo
-                      </button>
-                    </div>
+                    <svg
+                      className={`w-4 h-4 text-gray-400 transition-transform ${expandedApp === index ? 'rotate-180' : ''}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
                   </div>
-                )}
-              </div>
-            ))
-          )}
-        </div>
+                  {expandedApp === index && (
+                    <div className="px-6 pb-4 bg-gray-50">
+                      <div className="grid grid-cols-1 gap-4 text-sm">
+                        <div>
+                          <p className="text-gray-900 font-medium">Correo</p>
+                          <p className="text-gray-600">{app['Correo electrónico']}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-900 font-medium">Establecimiento</p>
+                          <p className="text-gray-600">{app['Establecimiento educativo']}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-900 font-medium">Teléfono</p>
+                          <p className="text-gray-600">{app['Número de teléfono']}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-900 font-medium">Carta de Motivación</p>
+                          <p className="text-gray-600 whitespace-pre-wrap">{app['Breve carta de motivación (por qué desea este cargo) y listado de logros. 250-500 palabras.']}</p>
+                        </div>
+                      </div>
+                      <div className="mt-4 flex space-x-3">
+                        <button
+                          onClick={() => sendPreselection(app.Nombre)}
+                          disabled={sending || app.isArchived || !APPLICATIONS_GAS_URL}
+                          className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-100 rounded-md hover:bg-blue-200 disabled:opacity-50"
+                        >
+                          Enviar Preselección
+                        </button>
+                        <button
+                          onClick={() => acceptAndRequestData(app)}
+                          disabled={sending || app.isArchived || !TEAM_GAS_URL}
+                          className="px-4 py-2 text-sm font-medium text-green-600 bg-green-100 rounded-md hover:bg-green-200 disabled:opacity-50"
+                        >
+                          Aceptar y Solicitar Datos
+                        </button>
+                        <button
+                          onClick={() => openAddModal(app)}
+                          disabled={sending || app.isArchived || !TEAM_GAS_URL}
+                          className="px-4 py-2 text-sm font-medium text-purple-600 bg-purple-100 rounded-md hover:bg-purple-200 disabled:opacity-50"
+                        >
+                          Agregar al Equipo
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </>
       )}
       {status && <div className="p-4 text-center text-sm text-gray-600">{status}</div>}
       {showAddModal && (
