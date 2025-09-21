@@ -28,7 +28,6 @@ export default function MailsTeam() {
       if (!response.ok) throw new Error('Failed to fetch team');
       const csvText = await response.text();
       const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
-      // Filter members with roles Revisor, Editor de Sección, or Editor en Jefe
       const filteredTeam = parsed.filter(member => {
         if (!member['Rol en la Revista']) return false;
         const roles = member['Rol en la Revista'].split(';').map(role => role.trim());
@@ -118,6 +117,54 @@ export default function MailsTeam() {
           <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl mx-4" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-medium text-gray-900 mb-4">Enviar Correo</h3>
             <div className="space-y-4">
+              <div>
+                <div
+                  onClick={toggleSelectAll}
+                  className={`cursor-pointer px-4 py-2 border rounded-md flex items-center space-x-2 transition-colors ${
+                    selectAll ? 'bg-indigo-100 border-indigo-500' : 'bg-gray-100 border-gray-300'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectAll}
+                    onChange={toggleSelectAll}
+                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span className="text-sm font-medium text-gray-900">Enviar a todos ({team.length})</span>
+                </div>
+                {!selectAll && (
+                  <div className="mt-2 max-h-48 overflow-y-auto border rounded-md p-3 bg-gray-50">
+                    {team.map((member, index) => {
+                      const roles = member['Rol en la Revista']?.split(';').map(role => role.trim()) || [];
+                      return (
+                        <div
+                          key={index}
+                          className="flex items-center space-x-3 py-2 border-b last:border-b-0 hover:bg-gray-100"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selected.includes(member.Correo)}
+                            onChange={() => toggleSelect(member.Correo)}
+                            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          {member.Imagen && (
+                            <img
+                              src={member.Imagen}
+                              alt={member.Nombre}
+                              className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                              onError={(e) => (e.target.src = 'https://via.placeholder.com/40')}
+                            />
+                          )}
+                          <div className="flex-1">
+                            <div className="text-sm font-medium text-gray-900">{member.Nombre}</div>
+                            <div className="text-xs text-gray-500">{roles.join(', ')}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
               <input
                 type="text"
                 placeholder="Asunto"
@@ -140,50 +187,7 @@ export default function MailsTeam() {
                 theme="snow"
                 className="h-48"
               />
-              <div className="mt-12">
-                <label className="flex items-center space-x-2 text-gray-700">
-                  <input
-                    type="checkbox"
-                    checked={selectAll}
-                    onChange={toggleSelectAll}
-                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
-                  />
-                  <span>Enviar a todos ({team.length})</span>
-                </label>
-                {!selectAll && (
-                  <div className="mt-2 max-h-48 overflow-y-auto border rounded-md p-3 bg-gray-50">
-                    {team.map((member, index) => {
-                      const roles = member['Rol en la Revista']?.split(';').map(role => role.trim()) || [];
-                      return (
-                        <div
-                          key={index}
-                          className="flex items-center space-x-3 py-2 border-b last:border-b-0 hover:bg-gray-100"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selected.includes(member.Correo)}
-                            onChange={() => toggleSelect(member.Correo)}
-                            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
-                          />
-                          {member.Imagen && (
-                            <img
-                              src={member.Imagen}
-                              alt={member.Nombre}
-                              className="w-10 h-10 rounded-full object-cover border border-gray-200"
-                              onError={(e) => (e.target.src = 'https://via.placeholder.com/40')} // Fallback image
-                            />
-                          )}
-                          <div className="flex-1">
-                            <div className="text-sm font-medium text-gray-900">{member.Nombre}</div>
-                            <div className="text-xs text-gray-500">{roles.join(', ')}</div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-              <div className="flex justify-end space-x-3">
+              <div className="flex justify-end space-x-3 pt-4">
                 <button
                   onClick={closeModal}
                   className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
