@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /en/
+Allow: /en/articles/
+Allow: /en/Articles/
+Allow: /en/news/
+Allow: /en/team/
+Allow: /en/sections/
+Allow: /globals.css
+Disallow: /en/search
+Disallow: /en/admin*
+Disallow: /en/api/
+
+Sitemap: https://www.revistacienciasestudiantes.com/en/sitemap.xml
+
+# Generated for National Review of Sciences for Students
+# 2025-09-21T21:44:54.717Z
