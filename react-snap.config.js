@@ -1,25 +1,30 @@
 const path = require('path');
 
 module.exports = {
-  // Carpeta de salida
   source: 'dist',
   
-  // Rutas para pre-renderizar (tus tabs)
+  // ✅ Añadir rutas en inglés para pre-renderizar
   routes: [
-    '/',           // Home con tab 'articles'
-    '/#news',      // Tab noticias
-    '/#about',     // Tab acerca de
-    '/#guidelines', // Tab guías
-    '/#faq',       // Tab FAQ
-    '/#team',      // Tab equipo
-    '/#submit',    // Tab enviar artículo
-    '/#login'      // Tab login
+    '/',
+    '/en',
+    '/#news',
+    '/#about',
+    '/#guidelines',
+    '/#faq',
+    '/#team',
+    '/#submit',
+    '/#login',
+    '/en/#news',
+    '/en/#about',
+    '/en/#guidelines',
+    '/en/#faq',
+    '/en/#team',
+    '/en/#submit',
+    '/en/#login'
   ],
   
-  // Usar Chromium del sistema
   puppeteerExecutablePath: '/usr/bin/chromium-browser',
   
-  // Args optimizados para pre-rendering
   puppeteerArgs: [
     '--no-sandbox',
     '--disable-setuid-sandbox',
@@ -47,11 +52,9 @@ module.exports = {
     '--mute-audio'
   ],
   
-  // Esperar carga completa (CSV, etc.)
   delay: 3000,
   waitForNavigation: 'networkidle0',
   
-  // Selectores para verificar contenido
   waitFor: [
     'body > div > div > div.container',
     '.articles',
@@ -60,7 +63,6 @@ module.exports = {
     { timeout: 5000 }
   ],
   
-  // HTML optimizado
   inlineCss: true,
   generateIndexHtml: false,
   
@@ -77,25 +79,18 @@ module.exports = {
     sortClasses: false
   },
   
-  // Evitar requests de terceros
   skipThirdPartyRequests: true,
   skipThirdPartyRequestsParallel: true,
   
-  // No crawling (usamos rutas específicas)
   crawl: false,
   
-  // Manejo de errores
   onError: (error, route) => {
     console.warn(`⚠️  Error en ${route}:`, error.message);
-    // No falla el build por errores individuales
   },
   
-  // Logging
   verbose: true,
   
-  // Para GitHub Pages
   publicPath: '/revista1919/',
   
-  // Timeout más alto para contenido dinámico
   timeout: 45000
 };
