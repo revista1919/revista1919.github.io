@@ -157,7 +157,7 @@ module.exports = (env, argv) => {
       new CopyWebpackPlugin({
         patterns: [
           { from: 'public/logo.png', to: '.' },
-          { from: 'public/LogoEN.png', to: '.' },
+          { from: 'public/logoEN.png', to: '.' },
           { from: 'public/site.webmanifest', to: 'manifest.json' },
           { 
             from: 'public/Articles', 
