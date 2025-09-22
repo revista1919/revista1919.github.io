@@ -20,6 +20,7 @@
     "deploy:firebase": "npm run build && firebase deploy --only hosting"
   },
   "dependencies": {
+    "@google/genai": "^1.20.0",
     "@google/generative-ai": "^0.24.1",
     "@heroicons/react": "^2.2.0",
     "@react-oauth/google": "^0.12.2",
@@ -81,7 +82,6 @@
   "config": {
     "puppeteer_skip_chromium_download": true
   },
-  
   "volta": {
     "node": "20.10.0"
   }
