@@ -1,4 +1,3 @@
-// Updated webpack.config.js
 const path = require('path');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
@@ -25,6 +24,7 @@ module.exports = (env, argv) => {
     'REACT_APP_TEAM_SCRIPT_URL': process.env.REACT_APP_TEAM_SCRIPT_URL ? `${process.env.REACT_APP_TEAM_SCRIPT_URL.slice(0, 40)}...` : 'MISSING',
     'REACT_APP_APPLICATIONS_SCRIPT_URL': process.env.REACT_APP_APPLICATIONS_SCRIPT_URL ? `${process.env.REACT_APP_APPLICATIONS_SCRIPT_URL.slice(0, 40)}...` : 'MISSING',
     'REACT_APP_GH_TOKEN': process.env.REACT_APP_GH_TOKEN ? 'PRESENT' : 'MISSING',
+    'REACT_APP_API_GEMINI': process.env.REACT_APP_API_GEMINI ? 'PRESENT' : 'MISSING',
     'NODE_ENV': process.env.NODE_ENV || 'development',
     'DEBUG': process.env.DEBUG || false,
     '.env.local loaded': dotenvConfig.parsed ? Object.keys(dotenvConfig.parsed).length : 0,
@@ -45,6 +45,7 @@ module.exports = (env, argv) => {
     'process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID': JSON.stringify(process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID || '688242139131'),
     'process.env.REACT_APP_FIREBASE_APP_ID': JSON.stringify(process.env.REACT_APP_FIREBASE_APP_ID || '1:688242139131:web:3a98663545e73110c3f55e'),
     'process.env.REACT_APP_FIREBASE_MEASUREMENT_ID': JSON.stringify(process.env.REACT_APP_FIREBASE_MEASUREMENT_ID || 'G-K90MKB7BDP'),
+    'process.env.REACT_APP_API_GEMINI': JSON.stringify(process.env.REACT_APP_API_GEMINI || ''),
     'process.env.DEBUG': JSON.stringify(process.env.DEBUG === 'true' || process.env.DEBUG === true),
   };
 
@@ -152,11 +153,11 @@ module.exports = (env, argv) => {
               minifyURLs: true,
             }
           : false,
-        // ← ELIMINADO: Meta tag problemático que causaba el error
       }),
       new CopyWebpackPlugin({
         patterns: [
           { from: 'public/logo.png', to: '.' },
+          { from: 'public/LogoEN.png', to: '.' },
           { from: 'public/site.webmanifest', to: 'manifest.json' },
           { 
             from: 'public/Articles', 
@@ -201,7 +202,6 @@ module.exports = (env, argv) => {
     resolve: {
       extensions: ['.js', '.jsx', '.json'],
       fallback: {
-        // ← CRÍTICO: Polyfills para Firebase v12
         "fs": false,
         "path": false,
         "crypto": false,

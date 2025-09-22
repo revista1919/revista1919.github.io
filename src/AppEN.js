@@ -7,26 +7,27 @@ import {
   browserLocalPersistence,
   signOut,
 } from 'firebase/auth';
-import Header from './components/Header'; // ← ARCHIVO ES
-import SearchAndFilters from './components/SearchAndFilters'; // ← ARCHIVO ES
-import ArticleCard from './components/ArticleCard'; // ← ARCHIVO ES
-import Tabs from './components/Tabs'; // ← ARCHIVO ES
-import SubmitSection from './components/SubmitSection'; // ← ARCHIVO ES
-import AdminSection from './components/AdminSection'; // ← ARCHIVO ES
-import AboutSection from './components/AboutSection'; // ← ARCHIVO ES
-import GuidelinesSection from './components/GuidelinesSection'; // ← ARCHIVO ES
-import FAQSection from './components/FAQSection'; // ← ARCHIVO ES
-import TeamSection from './components/TeamSection'; // ← ARCHIVO ES
-import Footer from './components/Footer'; // ← ARCHIVO ES
-import LoginSection from './components/LoginSection'; // ← ARCHIVO ES
-import PortalSection from './components/PortalSection'; // ← ARCHIVO ES
-import NewsSection from './components/NewsSection'; // ← ARCHIVO ES
+import { useLanguage } from './hooks/useLanguage'; // ← IMPORTADO AQUÍ
+import Header from './components/HeaderEN'; // ← ARCHIVO EN
+import SearchAndFilters from './components/SearchAndFiltersEN'; // ← ARCHIVO EN
+import ArticleCard from './components/ArticleCardEN'; // ← ARCHIVO EN
+import Tabs from './components/TabsEN'; // ← ARCHIVO EN
+import SubmitSection from './components/SubmitSectionEN'; // ← ARCHIVO EN
+import AdminSection from './components/AdminSectionEN'; // ← ARCHIVO EN
+import AboutSection from './components/AboutSectionEN'; // ← ARCHIVO EN
+import GuidelinesSection from './components/GuidelinesSectionEN'; // ← ARCHIVO EN
+import FAQSection from './components/FAQSectionEN'; // ← ARCHIVO EN
+import TeamSection from './components/TeamSectionEN'; // ← ARCHIVO EN
+import Footer from './components/FooterEN'; // ← ARCHIVO EN
+import LoginSection from './components/LoginSectionEN'; // ← ARCHIVO EN
+import PortalSection from './components/PortalSectionEN'; // ← ARCHIVO EN
+import NewsSection from './components/NewsSectionEN'; // ← ARCHIVO EN
 import './index.css';
-
 
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 
-function App() {
+function AppEN() {
+  const { cleanPath } = useLanguage(); // ← USADO AQUÍ
   const [articles, setArticles] = useState([]);
   const [filteredArticles, setFilteredArticles] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -42,7 +43,7 @@ function App() {
   const fetchUserData = async (email) => {
     try {
       const response = await fetch(USERS_CSV, { cache: 'no-store' });
-      if (!response.ok) throw new Error(`Error al cargar CSV: ${response.status}`);
+      if (!response.ok) throw new Error(`Error loading CSV: ${response.status}`);
       const csvText = await response.text();
       const { data } = Papa.parse(csvText, {
         header: true,
@@ -57,16 +58,16 @@ function App() {
       );
       return {
         name: csvUser?.Nombre || email,
-        role: csvUser?.['Rol en la Revista'] || 'Usuario',
+        role: csvUser?.['Rol en la Revista'] || 'User',
         image: csvUser?.Imagen || '',
       };
     } catch (err) {
       console.error('Error fetching user CSV:', err);
-      return { name: email, role: 'Usuario', image: '' };
+      return { name: email, role: 'User', image: '' };
     }
   };
 
-  // Persistencia y estado de autenticación
+  // Auth persistence and state
   useEffect(() => {
     setPersistence(auth, browserLocalPersistence)
       .then(() => {
@@ -93,23 +94,23 @@ function App() {
               localStorage.setItem('userData', JSON.stringify(userData));
             }
             setUser(userData);
-            console.log('Usuario autenticado:', userData);
+            console.log('User authenticated:', userData);
           } else {
             setUser(null);
             localStorage.removeItem('userData');
-            console.log('No hay usuario autenticado');
+            console.log('No user authenticated');
           }
           setAuthLoading(false);
         });
         return () => unsubscribe();
       })
       .catch((error) => {
-        console.error('Error al configurar persistencia:', error);
+        console.error('Error setting up persistence:', error);
         setAuthLoading(false);
       });
   }, []);
 
-  // Fetch de artículos CSV
+  // Fetch articles CSV
   useEffect(() => {
     const fetchArticles = async () => {
       try {
@@ -119,7 +120,7 @@ function App() {
         );
 
         if (!response.ok) {
-          throw new Error(`Error al cargar el archivo CSV: ${response.status}`);
+          throw new Error(`Error loading CSV file: ${response.status}`);
         }
 
         const csvText = await response.text();
@@ -151,7 +152,7 @@ function App() {
     fetchArticles();
   }, []);
 
-  // Búsqueda y filtros
+  // Search and filters
   const handleSearch = (term, area) => {
     setSearchTerm(term);
     setSelectedArea(area);
@@ -184,13 +185,13 @@ function App() {
   const loadMoreArticles = () => setVisibleArticles((prev) => prev + 6);
   const showLessArticles = () => setVisibleArticles(6);
 
-  // Login manual
+  // Manual login
   const handleLogin = async (userData) => {
     console.log('handleLogin called with:', userData);
     if (!userData) {
       setUser(null);
       localStorage.removeItem('userData');
-      console.log('No hay usuario autenticado en handleLogin');
+      console.log('No user authenticated in handleLogin');
       return;
     }
 
@@ -206,31 +207,31 @@ function App() {
       setUser(updatedUserData);
       localStorage.setItem('userData', JSON.stringify(updatedUserData));
       setActiveTab('login'); // Ensure login tab stays active
-      console.log('Usuario autenticado en handleLogin:', updatedUserData);
+      console.log('User authenticated in handleLogin:', updatedUserData);
     } catch (error) {
-      console.error('Error en handleLogin:', error);
+      console.error('Error in handleLogin:', error);
       setUser(null);
       localStorage.removeItem('userData');
     }
   };
 
-  // Logout manual
+  // Manual logout
   const handleLogout = async () => {
     try {
       await signOut(auth);
       setUser(null);
       localStorage.removeItem('userData');
-      console.log('Logout ejecutado en App.jsx');
+      console.log('Logout executed in AppEN.jsx');
     } catch (error) {
-      console.error('Error al cerrar sesión:', error);
+      console.error('Error signing out:', error);
     }
   };
 
-  // Secciones de tabs
+  // Tab sections
   const sections = [
     {
       name: 'articles',
-      label: 'Artículos',
+      label: 'Articles',
       component: (
         <div className="py-8 max-w-7xl mx-auto">
           <SearchAndFilters
@@ -245,11 +246,11 @@ function App() {
           <div className="articles grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mt-6">
             {loading ? (
               <p className="text-center text-sm sm:text-base text-gray-600 col-span-full">
-                Cargando...
+                Loading...
               </p>
             ) : filteredArticles.length === 0 ? (
               <p className="text-center text-sm sm:text-base text-gray-600 col-span-full">
-                No se encontraron artículos
+                No articles found
               </p>
             ) : (
               filteredArticles.slice(0, visibleArticles).map((article) => (
@@ -263,7 +264,7 @@ function App() {
                 className="bg-[#5a3e36] text-white px-4 py-2 rounded-md hover:bg-[#7a5c4f] focus:outline-none focus:ring-2 focus:ring-[#5a3e36] text-sm sm:text-base"
                 onClick={loadMoreArticles}
               >
-                Cargar más
+                Load More
               </button>
             </div>
           )}
@@ -272,7 +273,7 @@ function App() {
               className="fixed bottom-4 right-4 bg-[#5a3e36] text-white px-4 py-2 rounded-md hover:bg-[#7a5c4f] focus:outline-none focus:ring-2 focus:ring-[#5a3e36] z-10 text-sm sm:text-base"
               onClick={showLessArticles}
             >
-              Mostrar menos
+              Show Less
             </button>
           )}
         </div>
@@ -280,17 +281,17 @@ function App() {
     },
     {
       name: 'submit',
-      label: 'Enviar Artículo',
+      label: 'Submit Article',
       component: <SubmitSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'team',
-      label: 'Nuestro Equipo',
+      label: 'Our Team',
       component: <TeamSection setActiveTab={setActiveTab} className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'admin',
-      label: '¡Postula a algún cargo!',
+      label: 'Apply for a Position!',
       component: (
         <div className="py-8 max-w-7xl mx-auto">
           <AdminSection />
@@ -299,36 +300,36 @@ function App() {
     },
     {
       name: 'about',
-      label: 'Acerca de',
+      label: 'About',
       component: <AboutSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'guidelines',
-      label: 'Guías',
+      label: 'Guidelines',
       component: <GuidelinesSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'faq',
-      label: 'Preguntas Frecuentes',
+      label: 'Frequently Asked Questions',
       component: <FAQSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'news',
-      label: 'Noticias',
+      label: 'News',
       component: <NewsSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'login',
-      label: 'Login / Estado de Artículos',
+      label: 'Login / Article Status',
       component: (
         <div className={`py-8 ${user ? 'w-full' : 'max-w-lg mx-auto'}`}>
           {!user && (
             <>
               <h2 className="text-2xl font-semibold text-center text-[#5a3e36] mb-4">
-                Interfaz para Autores y Revisores
+                Interface for Authors and Reviewers
               </h2>
               <p className="text-center text-[#7a5c4f] mb-6">
-                Esta sección es solo para autores y revisores/autores con permisos especiales.
+                This section is only for authors and reviewers with special permissions.
               </p>
             </>
           )}
@@ -343,7 +344,7 @@ function App() {
   ];
 
   if (authLoading) {
-    return <div className="text-center text-gray-600">Cargando autenticación...</div>;
+    return <div className="text-center text-gray-600">Loading authentication...</div>;
   }
 
   return (
@@ -363,4 +364,4 @@ function App() {
   );
 }
 
-export default App;
+export default AppEN;

@@ -1,12 +1,12 @@
 import React from 'react';
-import logo from '../../public/logo.png';
+import logo from '../../public/logoEN.png';
 import { useLanguage } from '../hooks/useLanguage'; // Ajusta la ruta según tu estructura
 
-function Header() {
+function HeaderEN() {
   const { switchLanguage, language } = useLanguage();
 
   const handleLanguageToggle = () => {
-    switchLanguage(language === 'es' ? 'en' : 'es');
+    switchLanguage(language === 'en' ? 'es' : 'en');
   };
 
   return React.createElement(
@@ -23,13 +23,13 @@ function Header() {
         { className: 'flex flex-col items-center mb-3 sm:mb-0 sm:flex-row sm:items-center w-full lg:w-auto' },
         React.createElement('img', { 
           src: logo, 
-          alt: 'Revista Logo', 
+          alt: 'Journal Logo', 
           className: 'h-20 sm:h-24 lg:h-32 mb-2 sm:mb-0 sm:mr-5' 
         }),
         React.createElement(
           'h1', 
           { className: 'text-2xl sm:text-3xl lg:text-4xl font-bold italic font-serif text-center lg:text-left' }, 
-          'Revista Nacional de las Ciencias para Estudiantes'
+          'The National Review of Sciences for Students'
         )
       ),
       // Botón de idioma en la esquina superior derecha
@@ -43,9 +43,9 @@ function Header() {
             border: '1px solid rgba(255, 255, 255, 0.2)',
             backdropFilter: 'blur(10px)'
           },
-          title: `Cambiar a ${language === 'es' ? 'Inglés' : 'Español'}`
+          title: `Switch to ${language === 'en' ? 'Spanish' : 'English'}`
         },
-        language === 'es' ? 'EN' : 'ES'
+        language === 'en' ? 'ES' : 'EN'
       ),
       // Tagline debajo en pantallas pequeñas, al lado en grandes
       React.createElement(
@@ -53,10 +53,10 @@ function Header() {
         { 
           className: 'text-cream-100 text-xs sm:text-sm italic font-serif text-center mt-2 lg:mt-0 lg:ml-4 lg:text-left' 
         },
-        'Una revista por y para estudiantes'
+        'A journal by and for students'
       )
     )
   );
 }
 
-export default Header;
+export default HeaderEN;
