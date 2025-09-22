@@ -4,7 +4,7 @@ const fetch = require('node-fetch').default;
 const Papa = require('papaparse');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-const apiKey = process.env.API_GEMINI;
+const apiKey = process.env.REACT_APP_API_GEMINI;
 if (!apiKey) {
   console.error('❌ API_GEMINI no configurada. No se realizarán traducciones.');
   process.exit(1);
