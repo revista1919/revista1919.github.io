@@ -10,7 +10,7 @@ const Root = () => {
     <Router>
       <Routes>
         <Route path="/" element={<AppES />} />
-        <Route path="/en/*" element={<AppEN />} />
+        <Route path="/en*" element={<AppEN />} />
       </Routes>
     </Router>
   );

@@ -184,7 +184,7 @@
     (function() {
       // Detectar idioma desde la URL
       const path = window.location.pathname;
-      const isEnglish = path.startsWith('/en/');
+      const isEnglish = path.startsWith('/en');
       
       // Configurar atributos de idioma
       document.documentElement.lang = isEnglish ? 'en' : 'es';
