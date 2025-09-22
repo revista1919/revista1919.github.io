@@ -1,9 +1,8 @@
-
 const fs = require('fs');
 const path = require('path');
 const fetch = require('node-fetch').default;
 const Papa = require('papaparse');
-const { GoogleGenAI } = require('@google/genai');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const articlesCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p32EM6-0VYy18AdREQwXdpeet1WHTA4H2-W2FX7HKe1HPSyApWadUw9sKHdVYQXL5tP6yDRs/pub?output=csv';
 const teamCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
@@ -43,17 +42,11 @@ function formatAuthorForCitation(author) {
 
 function generateSlug(name) {
   if (!name) return '';
-  // Convert to lowercase
   name = name.toLowerCase();
-  // Normalize accents
   name = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  // Replace spaces with hyphens
   name = name.replace(/\s+/g, '-');
-  // Remove non-alphanumeric except hyphens
   name = name.replace(/[^a-z0-9-]/g, '');
-  // Remove multiple hyphens
   name = name.replace(/-+/g, '-');
-  // Trim hyphens
   name = name.replace(/^-+|-+$/g, '');
   return name;
 }
@@ -97,7 +90,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
     if (!apiKey) {
       throw new Error('REACT_APP_API_GEMINI environment variable is not set');
     }
-    const genAI = new GoogleGenAI({ apiKey });
+    const genAI = new GoogleGenerativeAI(apiKey);
 
     async function translateHtml(html, isIndex = false, sectionType = 'news') {
       let linkInstruction = '';
@@ -132,15 +125,13 @@ HTML code to analyze and translate:
 ${html}
       `;
 
-      const result = await genAI.models.generateContent({
-        model: 'gemini-1.5-flash',
-        contents: prompt
-      });
-      let text = result.text;
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+      const result = await model.generateContent(prompt);
+      let text = result.response.text();
       if (text.startsWith('```json')) {
-        text = text.slice(7, text.lastIndexOf('```')).trim();
+        text = text.slice(7, -3).trim();
       } else if (text.startsWith('```')) {
-        text = text.slice(3, text.lastIndexOf('```')).trim();
+        text = text.slice(3, -3).trim();
       }
       const parsed = JSON.parse(text);
       return parsed;
