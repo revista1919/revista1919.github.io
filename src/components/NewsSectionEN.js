@@ -69,27 +69,29 @@ export default function NewsSectionEN({ className }) {
                     (item["Contenido de la noticia"] || "").trim() !== ""
                 )
                 .map(async (item) => {
-                  const titulo = String(item["Título"] ?? "");
+                  const spanishTitle = String(item["Título"] ?? "");
                   const fecha = String(item["Fecha"] ?? "");
                   const fechaIso = parseDateIso(fecha);
-                  const slug = generateSlug(`${titulo} ${fechaIso}`);
+                  const slug = generateSlug(`${spanishTitle} ${fechaIso}`);
                   const htmlUrl = `${DOMAIN}/news/${slug}.EN.html`;
-                  let cuerpo = "";
+                  let title = spanishTitle; // Fallback to Spanish title
+                  let body = base64DecodeUnicode(String(item["Contenido de la noticia"] ?? "")); // Fallback to CSV content
                   try {
                     const htmlResponse = await fetch(htmlUrl);
                     if (!htmlResponse.ok) throw new Error(`Failed to fetch HTML: ${htmlUrl}`);
                     const htmlText = await htmlResponse.text();
                     const parser = new DOMParser();
                     const doc = parser.parseFromString(htmlText, "text/html");
+                    const titleElement = doc.querySelector("h1");
                     const contentDiv = doc.querySelector(".content.ql-editor");
-                    cuerpo = contentDiv ? contentDiv.innerHTML : base64DecodeUnicode(String(item["Contenido de la noticia"] ?? ""));
+                    title = titleElement ? titleElement.textContent : spanishTitle;
+                    body = contentDiv ? contentDiv.innerHTML : body;
                   } catch (err) {
                     console.error(`Error fetching HTML for ${slug}:`, err);
-                    cuerpo = base64DecodeUnicode(String(item["Contenido de la noticia"] ?? ""));
                   }
                   return {
-                    titulo,
-                    cuerpo,
+                    titulo: title,
+                    cuerpo: body,
                     fecha: formatDate(fecha),
                     fechaIso,
                     slug,
@@ -199,7 +201,7 @@ export default function NewsSectionEN({ className }) {
   function decodeBody(body, truncate = false) {
     if (!body) return <p className="text-[#000000]">No content available.</p>;
     try {
-      let html = body; // Body is already decoded or fetched HTML
+      let html = body; // Body is already fetched HTML
       if (truncate) {
         html = truncateHTML(html, 200);
       }

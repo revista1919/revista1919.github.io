@@ -10,32 +10,31 @@ function Footer() {
 
   const scriptURL = "https://script.google.com/macros/s/AKfycbzyyR93tD85nPprIKAR_IDoWYBSAnlFwVes09rJgOM3KQsByg_MgzafWDK1BcFhfVJHew/exec";
 
- const handleSubmit = (e) => {
-  e.preventDefault();
-  const formData = new URLSearchParams();
-  formData.append('nombre', nombre);
-  formData.append('correo', correo);
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const formData = new URLSearchParams();
+    formData.append('nombre', nombre);
+    formData.append('correo', correo);
 
-  fetch(scriptURL, {
-    method: "POST",
-    body: formData
-  })
-    .then(r => r.text())  // 🔹 Cambiado
-    .then(res => {
-      setEnviado(true);    // simple feedback
-      setNombre('');
-      setCorreo('');
+    fetch(scriptURL, {
+      method: "POST",
+      body: formData
     })
-    .catch(err => alert("Error al enviar: " + err));
-};
-
+      .then(r => r.text())
+      .then(res => {
+        setEnviado(true);
+        setNombre('');
+        setCorreo('');
+      })
+      .catch(err => alert("Error sending: " + err));
+  };
 
   return (
     <footer className="bg-gray-800 text-white p-4 sm:p-6 mt-6 text-center text-xs sm:text-sm">
       {/* Copyright */}
-      <p>© 2025 Revista Nacional de las Ciencias para Estudiantes. Todos los derechos reservados.</p>
+      <p>© 2025 National Review of Sciences for Students. All rights reserved.</p>
 
-      {/* Redes sociales */}
+      {/* Social Media */}
       <div className="flex flex-col sm:flex-row justify-center items-center gap-6 mt-4">
         {/* Instagram */}
         <a
@@ -64,7 +63,7 @@ function Footer() {
             alt="YouTube"
             className="h-8 w-8 sm:h-6 sm:w-6 object-contain mb-1"
           />
-          <span className="underline block truncate">Revista Nacional de las Ciencias</span>
+          <span className="underline block truncate">National Review of Sciences</span>
         </a>
 
         {/* TikTok */}
@@ -107,7 +106,7 @@ function Footer() {
           >
             <input
               type="text"
-              placeholder="Tu nombre"
+              placeholder="Your name"
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
               required
@@ -115,7 +114,7 @@ function Footer() {
             />
             <input
               type="email"
-              placeholder="Tu correo"
+              placeholder="Your email"
               value={correo}
               onChange={(e) => setCorreo(e.target.value)}
               required
@@ -125,11 +124,11 @@ function Footer() {
               type="submit"
               className="bg-yellow-500 text-gray-900 px-4 py-2 rounded hover:bg-yellow-400 transition-colors font-semibold"
             >
-              Suscribirse
+              Subscribe
             </button>
           </form>
         ) : (
-          <p className="text-green-400 font-semibold mt-2">¡Gracias por suscribirte!</p>
+          <p className="text-green-400 font-semibold mt-2">Thank you for subscribing!</p>
         )}
       </div>
     </footer>

@@ -1,6 +1,6 @@
 import React from 'react';
 import logo from '../../public/logoEN.png';
-import { useLanguage } from '../hooks/useLanguage'; // Ajusta la ruta según tu estructura
+import { useLanguage } from '../hooks/useLanguage';
 
 function HeaderEN() {
   const { switchLanguage, language } = useLanguage();
@@ -17,10 +17,10 @@ function HeaderEN() {
     },
     React.createElement(
       'div',
-      { className: 'container flex flex-col lg:flex-row lg:items-center lg:justify-between' },
+      { className: 'container flex flex-col items-center justify-between' },
       React.createElement(
         'div',
-        { className: 'flex flex-col items-center mb-3 sm:mb-0 sm:flex-row sm:items-center w-full lg:w-auto' },
+        { className: 'flex flex-col items-center mb-3 sm:mb-0 sm:flex-row sm:items-center' },
         React.createElement('img', { 
           src: logo, 
           alt: 'Journal Logo', 
@@ -28,11 +28,10 @@ function HeaderEN() {
         }),
         React.createElement(
           'h1', 
-          { className: 'text-2xl sm:text-3xl lg:text-4xl font-bold italic font-serif text-center lg:text-left' }, 
+          { className: 'text-2xl sm:text-3xl lg:text-4xl font-bold italic font-serif text-center' }, 
           'The National Review of Sciences for Students'
         )
       ),
-      // Botón de idioma más discreto, ubicado en la esquina superior derecha
       React.createElement(
         'button',
         {
@@ -46,12 +45,9 @@ function HeaderEN() {
         },
         language === 'en' ? 'ES' : 'EN'
       ),
-      // Tagline debajo en pantallas pequeñas, al lado en grandes
       React.createElement(
         'p',
-        { 
-          className: 'text-cream-100 text-xs sm:text-sm italic font-serif text-center mt-2 lg:mt-0 lg:ml-4 lg:text-left' 
-        },
+        { className: 'text-cream-100 text-xs sm:text-sm italic font-serif text-center sm:absolute sm:bottom-2 sm:right-4 sm:text-right' },
         'A journal by and for students'
       )
     )
