@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-# revista1919.github.io
-=======
 Revista Nacional de las Ciencias
 Una plataforma web para estudiantes escolares chilenos que fomenta la investigación científica.
 Requisitos
@@ -42,4 +39,4 @@ Diseño estilo biblioteca
 
 Licencia
 MIT License - ver LICENSE para detalles.
->>>>>>> 5275093f8006797c7c79c6071d4fa92a46616ed2
+# revista1919.github.io
