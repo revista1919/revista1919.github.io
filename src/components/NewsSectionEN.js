@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Papa from "papaparse";
 import { motion } from "framer-motion";
-import { useTranslation } from 'react-i18next';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const NEWS_CSV =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vQKnN8qMJcBN8im9Q61o-qElx1jQp5NdS80_B-FakCHrPLXHlQ_FXZWT0o5GVVHAM26l9sjLxsTCNO8/pub?output=csv";
@@ -16,19 +16,19 @@ const base64DecodeUnicode = (str) => {
     const decoder = new TextDecoder();
     return decoder.decode(bytes);
   } catch (err) {
-    console.error('Error decoding Base64:', err);
-    return '';
+    console.error("Error decoding Base64:", err);
+    return "";
   }
 };
 
 function generateSlug(name) {
-  if (!name) return '';
+  if (!name) return "";
   name = name.toLowerCase();
-  name = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  name = name.replace(/\s+/g, '-');
-  name = name.replace(/[^a-z0-9-]/g, '');
-  name = name.replace(/-+/g, '-');
-  name = name.replace(/^-+|-+$/g, '');
+  name = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  name = name.replace(/\s+/g, "-");
+  name = name.replace(/[^a-z0-9-]/g, "");
+  name = name.replace(/-+/g, "-");
+  name = name.replace(/^-+|-+$/g, "");
   return name;
 }
 
@@ -38,11 +38,26 @@ export default function NewsSectionEN({ className }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState("");
   const [visibleNews, setVisibleNews] = useState(6);
-  const [name, setName] = useState(""); // Changed from nombre
-  const [email, setEmail] = useState(""); // Changed from correo
-  const [submitted, setSubmitted] = useState(false); // Changed from enviado
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [submitted, setSubmitted] = useState(false);
   const scriptURL =
     "https://script.google.com/macros/s/AKfycbzyyR93tD85nPprIKAR_IDoWYBSAnlFwVes09rJgOM3KQsByg_MgzafWDK1BcFhfVJHew/exec";
+
+  const genAI = new GoogleGenerativeAI(process.env.REACT_APP_API_GEMINI);
+
+  const translateText = async (text) => {
+    try {
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const prompt = `Translate the following text from Spanish to English accurately, preserving the meaning and tone. Do not add extra information or modify the content beyond translation. This is a Journal, called The National Review of Sciences for Students:\n\n${text}`;
+      const result = await model.generateContent(prompt);
+      const translatedText = result.response.text();
+      return translatedText;
+    } catch (err) {
+      console.error("Error translating text:", err);
+      return text; // Fallback to original text if translation fails
+    }
+  };
 
   useEffect(() => {
     const fetchNews = async () => {
@@ -55,24 +70,30 @@ export default function NewsSectionEN({ className }) {
           skipEmptyLines: true,
           delimiter: ",",
           transform: (value) => (typeof value === "string" ? value.trim() : value),
-          complete: ({ data }) => {
+          complete: async ({ data }) => {
             if (!data || data.length === 0) {
               setError("CSV is empty or has invalid format");
               setLoading(false);
               return;
             }
-            const validNews = data
-              .filter(
-                (item) =>
-                  (item["Título"] || "").trim() !== "" &&
-                  (item["Contenido de la noticia"] || "").trim() !== ""
-              )
-              .map((item) => ({
-                titulo: String(item["Título"] ?? ""),
-                cuerpo: String(item["Contenido de la noticia"] ?? ""),
-                fecha: formatDate(String(item["Fecha"] ?? "")),
-                fechaIso: parseDateIso(String(item["Fecha"] ?? "")),
-              }));
+            const validNews = await Promise.all(
+              data
+                .filter(
+                  (item) =>
+                    (item["Título"] || "").trim() !== "" &&
+                    (item["Contenido de la noticia"] || "").trim() !== ""
+                )
+                .map(async (item) => {
+                  const translatedTitle = await translateText(String(item["Título"] ?? ""));
+                  const translatedBody = await translateText(String(item["Contenido de la noticia"] ?? ""));
+                  return {
+                    titulo: translatedTitle,
+                    cuerpo: translatedBody,
+                    fecha: formatDate(String(item["Fecha"] ?? "")),
+                    fechaIso: parseDateIso(String(item["Fecha"] ?? "")),
+                  };
+                })
+            );
             setNews(validNews);
             setLoading(false);
           },
@@ -94,8 +115,8 @@ export default function NewsSectionEN({ className }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     const formData = new URLSearchParams();
-    formData.append("name", name); // Changed from nombre
-    formData.append("email", email); // Changed from correo
+    formData.append("name", name);
+    formData.append("email", email);
     fetch(scriptURL, { method: "POST", body: formData })
       .then((r) => r.text())
       .then(() => {
@@ -107,7 +128,7 @@ export default function NewsSectionEN({ className }) {
   };
 
   function parseDateIso(raw) {
-    if (!raw) return '';
+    if (!raw) return "";
     let parsedDate = new Date(raw);
     if (isNaN(parsedDate.getTime())) {
       const datePattern = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/;
@@ -118,9 +139,9 @@ export default function NewsSectionEN({ className }) {
       }
     }
     if (!isNaN(parsedDate.getTime())) {
-      return parsedDate.toISOString().split('T')[0];
+      return parsedDate.toISOString().split("T")[0];
     }
-    return '';
+    return "";
   }
 
   function formatDate(raw) {
@@ -152,18 +173,18 @@ export default function NewsSectionEN({ className }) {
   }
 
   function truncateHTML(html, maxLength = 200) {
-    const tempDiv = document.createElement('div');
+    const tempDiv = document.createElement("div");
     tempDiv.innerHTML = html;
-    const paragraphs = Array.from(tempDiv.querySelectorAll('p, div, h1, h2, h3, ul, ol, img'));
-    let truncated = '';
+    const paragraphs = Array.from(tempDiv.querySelectorAll("p, div, h1, h2, h3, ul, ol, img"));
+    let truncated = "";
     let charCount = 0;
     for (let elem of paragraphs) {
       const elemText = elem.outerHTML;
       if (charCount + elemText.length > maxLength) {
-        const textContent = elem.textContent || '';
+        const textContent = elem.textContent || "";
         if (textContent.length > 0) {
           const remaining = maxLength - charCount;
-          truncated += elem.outerHTML.substring(0, elem.outerHTML.length - (textContent.length - remaining)) + '...';
+          truncated += elem.outerHTML.substring(0, elem.outerHTML.length - (textContent.length - remaining)) + "...";
         }
         break;
       }
@@ -183,12 +204,12 @@ export default function NewsSectionEN({ className }) {
       return (
         <div
           className="ql-editor break-words leading-relaxed text-[#000000] overflow-hidden"
-          style={{ lineHeight: '1.6', marginBottom: '10px' }}
+          style={{ lineHeight: "1.6", marginBottom: "10px" }}
           dangerouslySetInnerHTML={{ __html: html }}
         />
       );
     } catch (err) {
-      console.error('Error decoding body:', err);
+      console.error("Error decoding body:", err);
       return <p className="text-[#000000]">Error decoding content.</p>;
     }
   }
@@ -199,7 +220,6 @@ export default function NewsSectionEN({ className }) {
 
   const loadMoreNews = () => setVisibleNews((prev) => prev + 6);
 
-  // Changed to point to .EN.html files
   const openNews = (item) => {
     const slug = generateSlug(`${item.titulo} ${item.fechaIso}`);
     window.location.href = `/news/${slug}.EN.html`;
@@ -219,10 +239,7 @@ export default function NewsSectionEN({ className }) {
           Receive the latest news and academic articles directly in your email.
         </p>
         {!submitted ? (
-          <form
-            onSubmit={handleSubmit}
-            className="flex flex-col sm:flex-row justify-center items-center gap-3"
-          >
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-3">
             <input
               type="text"
               placeholder="Your name"
@@ -240,12 +257,12 @@ export default function NewsSectionEN({ className }) {
               className="px-4 py-2 rounded-lg border border-gray-300 w-full sm:flex-1 text-[#000000] shadow-sm focus:outline-none focus:ring-2 focus:ring-[#800020] transition"
             />
             <button
-              type="submit"
+              onClick={handleSubmit}
               className="bg-[#800020] text-white px-6 py-2 rounded-lg font-medium shadow-md hover:bg-[#5a0015] transition-colors duration-200"
             >
               Subscribe
             </button>
-          </form>
+          </div>
         ) : (
           <p className="text-green-700 font-semibold text-center mt-4">
             Thank you for subscribing!
