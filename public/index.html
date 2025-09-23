@@ -7,15 +7,15 @@
   
   <!-- Títulos y descripciones bilingües -->
   <title>The National Review of Sciences for Students | Revista Nacional de las Ciencias para Estudiantes</title>
-  <meta name="description" content="Global peer-reviewed journal for high school students in all scientific fields. Publish, learn, and share science worldwide. | Revista científica con revisión por pares para estudiantes de secundaria en todas las disciplinas científicas. Publica, aprende y difunde ciencia a nivel mundial.">
+  <meta name="description" content="Global peer-reviewed journal for students of all educational levels in all scientific fields. Publish, learn, and share science worldwide. | Revista científica con revisión por pares para estudiantes de todos los niveles educativos en todas las disciplinas científicas. Publica, aprende y difunde ciencia a nivel mundial.">
   
   <!-- Meta tags SEO bilingües -->
   <meta name="robots" content="index, follow">
-  <meta name="keywords" content="ciencia, estudiantes, revista académica, investigación estudiantil, peer review, sciences, students, academic journal, student research, high school science">
+  <meta name="keywords" content="ciencia, estudiantes, revista académica, investigación estudiantil, peer review, sciences, students, academic journal, student research, science education, educación científica">
   
   <!-- Open Graph bilingüe -->
   <meta property="og:title" content="The National Review of Sciences for Students | Revista Nacional de las Ciencias para Estudiantes">
-  <meta property="og:description" content="Student-led peer-reviewed science journal for high school students | Revista científica con revisión por pares dirigida por estudiantes de secundaria">
+  <meta property="og:description" content="Student-led peer-reviewed science journal for students of all educational levels | Revista científica con revisión por pares dirigida por estudiantes de todos los niveles educativos">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://www.revistacienciasestudiantes.com">
   <meta property="og:site_name" content="NRSS">
@@ -27,8 +27,8 @@
   
   <!-- Twitter Cards -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="The National Review of Sciences for Students">
-  <meta name="twitter:description" content="Global platform for student scientific research">
+  <meta name="twitter:title" content="The National Review of Sciences for Students | Revista Nacional de las Ciencias para Estudiantes">
+  <meta name="twitter:description" content="Global platform for student scientific research | Plataforma global para la investigación científica estudiantil">
   <meta name="twitter:image" content="https://www.revistacienciasestudiantes.com/logo.png">
   
   <!-- Canonical y alternate para SEO bilingüe -->
@@ -51,9 +51,9 @@
   {
     "@context": "https://schema.org",
     "@type": "Periodical",
-    "name": "The National Review of Sciences for Students",
-    "alternateName": "Revista Nacional de las Ciencias para Estudiantes",
-    "description": "A global peer-reviewed academic journal dedicated to student-led scientific research across all disciplines",
+    "name": "Revista Nacional de las Ciencias para Estudiantes",
+    "alternateName": "The National Review of Sciences for Students",
+    "description": "Revista académica global con revisión por pares dedicada a la investigación científica dirigida por estudiantes en todas las disciplinas. A global peer-reviewed academic journal dedicated to student-led scientific research across all disciplines.",
     "url": "https://www.revistacienciasestudiantes.com",
     "inLanguage": ["es", "en"],
     "issn": ["1234-5678"],
@@ -67,7 +67,7 @@
     },
     "audience": {
       "@type": "Audience",
-      "audienceType": ["High School Student", "Undergraduate Student"],
+      "audienceType": ["Students of all educational levels"],
       "geographicArea": "Global"
     }
   }
@@ -104,7 +104,16 @@
       clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; 
     }
     /* Loading state mejorado */
-    #root:empty::before {
+    .lang-es #root:empty::before {
+      content: "Cargando Revista Nacional de las Ciencias para Estudiantes...";
+      display: block;
+      text-align: center;
+      padding: 3rem 1rem;
+      color: #666;
+      font-family: 'Merriweather', serif;
+      font-size: 1.1rem;
+    }
+    .lang-en #root:empty::before {
       content: "Loading The National Review of Sciences for Students...";
       display: block;
       text-align: center;
@@ -151,18 +160,14 @@
       max-width: 300px;
     ">
       <img src="/logo.png" alt="NRSS Logo" style="width: 80px; height: auto; margin-bottom: 1rem;">
-      <h2 style="
+      <h2 class="loading-title" style="
         margin: 0 0 1rem 0; 
         color: #52262d; 
         font-family: 'Merriweather', serif; 
         font-size: 1.3rem; 
         font-weight: 700;
-      ">
-        The National Review of Sciences for Students
-      </h2>
-      <p style="margin: 0 0 1.5rem 0; color: #666; font-size: 0.9rem; line-height: 1.4;">
-        Loading scientific content for students worldwide...
-      </p>
+      "></h2>
+      <p class="loading-desc" style="margin: 0 0 1.5rem 0; color: #666; font-size: 0.9rem; line-height: 1.4;"></p>
       <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
         <div style="
           width: 24px; height: 24px; 
@@ -171,7 +176,7 @@
           border-top-color: transparent;
           animation: spin 1s ease-in-out infinite;
         "></div>
-        <span style="color: #999; font-size: 0.8rem;">Please wait</span>
+        <span class="loading-wait" style="color: #999; font-size: 0.8rem;"></span>
       </div>
     </div>
   </div>
@@ -195,6 +200,24 @@
       
       // Guardar preferencia de idioma
       localStorage.setItem('preferredLanguage', isEnglish ? 'en' : 'es');
+      
+      // Configurar textos de loading basados en idioma
+      const texts = {
+        es: {
+          title: 'Revista Nacional de las Ciencias para Estudiantes',
+          desc: 'Cargando contenido científico para estudiantes en todo el mundo...',
+          wait: 'Por favor espere'
+        },
+        en: {
+          title: 'The National Review of Sciences for Students',
+          desc: 'Loading scientific content for students worldwide...',
+          wait: 'Please wait'
+        }
+      };
+      const lang = isEnglish ? 'en' : 'es';
+      document.querySelector('.loading-title').textContent = texts[lang].title;
+      document.querySelector('.loading-desc').textContent = texts[lang].desc;
+      document.querySelector('.loading-wait').textContent = texts[lang].wait;
       
       // Ocultar loading después de un delay mínimo
       const hideLoading = () => {

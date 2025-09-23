@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import AppES from './App'; // ← Apunta a App.js (español)
 import AppEN from './AppEN'; // ← Apunta a AppEN.js (inglés)
 
@@ -10,7 +10,7 @@ const Root = () => {
     <Router>
       <Routes>
         <Route path="/" element={<AppES />} />
-        <Route path="/en*" element={<AppEN />} />
+        <Route path="/en/*" element={<AppEN />} />
       </Routes>
     </Router>
   );
