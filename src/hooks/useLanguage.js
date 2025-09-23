@@ -1,31 +1,33 @@
 // hooks/useLanguage.js
-import { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 export const useLanguage = () => {
-  const [language, setLanguage] = useState('es');
-  const [cleanPath, setCleanPath] = useState('/');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { pathname } = location;
 
-  useEffect(() => {
-    const path = window.location.pathname;
-    const isEnglish = path.startsWith('/en');
-    
-    setLanguage(isEnglish ? 'en' : 'es');
-    setCleanPath(isEnglish ? path.replace('/en', '') : path);
-  }, []);
-
-  const switchLanguage = (newLang) => {
-    const basePath = cleanPath === '/' ? '' : cleanPath;
-    const newPath = newLang === 'en' ? `/en${basePath}` : basePath;
-    
-    // Actualizar la URL
-    window.history.pushState({}, '', newPath);
-    
-    // Actualizar estado (esto causará re-render)
-    setLanguage(newLang);
-    
-    // Opcional: reload para cargar el componente correcto
-    window.location.href = newPath;
+  const getLanguageFromPath = () => {
+    if (pathname.startsWith('/en')) return 'en';
+    return 'es'; // Default: español (incluye /, /es, etc.)
   };
 
-  return { language, cleanPath, switchLanguage };
+  const cleanPath = () => {
+    const lang = getLanguageFromPath();
+    return pathname.replace(`/${lang}`, '');
+  };
+
+  const switchLanguage = (newLang) => {
+    const currentCleanPath = cleanPath();
+    const basePath = currentCleanPath === '/' ? '' : currentCleanPath;
+    const newPath = newLang === 'en' ? `/en${basePath}` : `/es${basePath}`; // Usa /es para consistencia
+    
+    // Navega usando el router (no pushState manual, y NO reload)
+    navigate(newPath, { replace: true }); // replace: true evita acumular historial
+  };
+
+  return {
+    language: getLanguageFromPath(),
+    cleanPath: cleanPath(),
+    switchLanguage,
+  };
 };

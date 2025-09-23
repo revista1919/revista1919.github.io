@@ -7,6 +7,7 @@ import {
   browserLocalPersistence,
   signOut,
 } from 'firebase/auth';
+import { useLanguage } from './hooks/useLanguage'; // ← AGREGADO
 import Header from './components/Header'; // ← ARCHIVO ES
 import SearchAndFilters from './components/SearchAndFilters'; // ← ARCHIVO ES
 import ArticleCard from './components/ArticleCard'; // ← ARCHIVO ES
@@ -23,10 +24,10 @@ import PortalSection from './components/PortalSection'; // ← ARCHIVO ES
 import NewsSection from './components/NewsSection'; // ← ARCHIVO ES
 import './index.css';
 
-
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 
 function App() {
+  const { cleanPath } = useLanguage(); // ← AGREGADO
   const [articles, setArticles] = useState([]);
   const [filteredArticles, setFilteredArticles] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');

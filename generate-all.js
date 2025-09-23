@@ -137,7 +137,7 @@ ${html}
       return parsed;
     }
 
-    // Procesar artículos
+    // Procesar artículos (sin cambios, no se traducen)
     const articlesRes = await fetch(articlesCsvUrl);
     if (!articlesRes.ok) throw new Error(`Error descargando CSV de artículos: ${articlesRes.statusText}`);
     const articlesCsvData = await articlesRes.text();
@@ -228,7 +228,7 @@ ${html}
       console.log(`Generado HTML de artículo: ${filePath}`);
     });
 
-    // Generar índice de artículos
+    // Generar índice de artículos (sin cambios)
     const articlesByYear = articles.reduce((acc, article) => {
       const year = new Date(article.fecha).getFullYear() || 'Sin fecha';
       if (!acc[year]) acc[year] = [];
@@ -273,7 +273,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     fs.writeFileSync(indexPath, indexContent, 'utf8');
     console.log(`Generado índice HTML de artículos: ${indexPath}`);
 
-    // Procesar noticias
+    // Procesar noticias: generar todos los archivos ES primero, recolectar para traducción paralela
     const newsRes = await fetch(newsCsvUrl);
     if (!newsRes.ok) throw new Error(`Error descargando CSV de noticias: ${newsRes.statusText}`);
     const newsCsvData = await newsRes.text();
@@ -290,7 +290,8 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
         fecha: parseDateFlexible(String(row["Fecha"] ?? "")),
       }));
 
-    for (const newsItem of newsItems) {
+    // Generar slugs y HTML ES para noticias individuales
+    const newsTasks = newsItems.map(newsItem => {
       const slug = generateSlug(`${newsItem.titulo} ${newsItem.fecha}`);
       const htmlContent = `<!DOCTYPE html>
 <html lang="es">
@@ -466,25 +467,14 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
 </body>
 </html>`;
 
-      const translation = await translateHtml(htmlContent, false, 'news');
-      const originalLang = translation.original_language;
-      let esContent, enContent;
-      if (originalLang === 'es') {
-        esContent = htmlContent;
-        enContent = translation.translated_html;
-      } else {
-        esContent = translation.translated_html;
-        enContent = htmlContent;
-      }
       const esPath = path.join(newsOutputHtmlDir, `${slug}.html`);
-      fs.writeFileSync(esPath, esContent, 'utf8');
+      fs.writeFileSync(esPath, htmlContent, 'utf8');
       console.log(`Generado HTML de noticia (ES): ${esPath}`);
-      const enPath = path.join(newsOutputHtmlDir, `${slug}.EN.html`);
-      fs.writeFileSync(enPath, enContent, 'utf8');
-      console.log(`Generado HTML de noticia (EN): ${enPath}`);
-    }
 
-    // Generar índice de noticias
+      return { slug, htmlContent, isIndex: false, sectionType: 'news' };
+    });
+
+    // Generar índice de noticias ES primero
     const newsByYear = newsItems.reduce((acc, item) => {
       const year = new Date(item.fecha).getFullYear() || 'Sin fecha';
       if (!acc[year]) acc[year] = [];
@@ -526,31 +516,40 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
   </footer>
 </body>
 </html>`;
-    const newsIndexTranslation = await translateHtml(newsIndexContent, true, 'news');
-    const newsIndexOriginalLang = newsIndexTranslation.original_language;
-    let newsIndexEsContent, newsIndexEnContent;
-    if (newsIndexOriginalLang === 'es') {
-      newsIndexEsContent = newsIndexContent;
-      newsIndexEnContent = newsIndexTranslation.translated_html;
-    } else {
-      newsIndexEsContent = newsIndexTranslation.translated_html;
-      newsIndexEnContent = newsIndexContent;
-    }
     const newsEsIndexPath = path.join(newsOutputHtmlDir, 'index.html');
-    fs.writeFileSync(newsEsIndexPath, newsIndexEsContent, 'utf8');
+    fs.writeFileSync(newsEsIndexPath, newsIndexContent, 'utf8');
     console.log(`Generado índice HTML de noticias (ES): ${newsEsIndexPath}`);
-    const newsEnIndexPath = path.join(newsOutputHtmlDir, 'index.EN.html');
-    fs.writeFileSync(newsEnIndexPath, newsIndexEnContent, 'utf8');
-    console.log(`Generado índice HTML de noticias (EN): ${newsEnIndexPath}`);
 
-    // Procesar equipo (generar HTML para TODOS los miembros)
+    // Agregar el índice a las tareas de noticias
+    newsTasks.push({ slug: 'index', htmlContent: newsIndexContent, isIndex: true, sectionType: 'news' });
+
+    // Traducir todas las noticias e índice en paralelo
+    const newsTranslationPromises = newsTasks.map(task => translateHtml(task.htmlContent, task.isIndex, task.sectionType));
+    const newsTranslations = await Promise.all(newsTranslationPromises);
+
+    // Escribir los archivos EN para noticias
+    newsTranslations.forEach((translation, index) => {
+      const task = newsTasks[index];
+      const originalLang = translation.original_language;
+      let enContent;
+      if (originalLang === 'es') {
+        enContent = translation.translated_html;
+      } else {
+        enContent = task.htmlContent; // Improbable, pero por seguridad
+      }
+      const enPath = path.join(newsOutputHtmlDir, `${task.slug}.EN.html`);
+      fs.writeFileSync(enPath, enContent, 'utf8');
+      console.log(`Generado HTML de noticia (EN): ${enPath}`);
+    });
+
+    // Procesar equipo: generar todos los archivos ES primero, recolectar para traducción paralela
     const teamRes = await fetch(teamCsvUrl);
     if (!teamRes.ok) throw new Error(`Error descargando CSV de equipo: ${teamRes.statusText}`);
     const teamCsvData = await teamRes.text();
     const teamParsed = Papa.parse(teamCsvData, { header: true, skipEmptyLines: true });
-    const allMembers = teamParsed.data; // No filtrar aquí, incluir todos los miembros
+    const allMembers = teamParsed.data;
 
-    for (const member of allMembers) {
+    const teamTasks = allMembers.map(member => {
       const nombre = member['Nombre'] || 'Miembro desconocido';
       const slug = generateSlug(nombre);
       const roles = (member['Rol en la Revista'] || 'No especificado')
@@ -761,25 +760,34 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
   </div>
 </body>
 </html>`;
-      const translation = await translateHtml(htmlContent, false, 'team');
+
+      const esPath = path.join(teamOutputHtmlDir, `${slug}.html`);
+      fs.writeFileSync(esPath, htmlContent, 'utf8');
+      console.log(`Generado HTML de miembro (ES): ${esPath}`);
+
+      return { slug, htmlContent, isIndex: false, sectionType: 'team' };
+    });
+
+    // Traducir todos los miembros del equipo en paralelo
+    const teamTranslationPromises = teamTasks.map(task => translateHtml(task.htmlContent, task.isIndex, task.sectionType));
+    const teamTranslations = await Promise.all(teamTranslationPromises);
+
+    // Escribir los archivos EN para equipo
+    teamTranslations.forEach((translation, index) => {
+      const task = teamTasks[index];
       const originalLang = translation.original_language;
-      let esContent, enContent;
+      let enContent;
       if (originalLang === 'es') {
-        esContent = htmlContent;
         enContent = translation.translated_html;
       } else {
-        esContent = translation.translated_html;
-        enContent = htmlContent;
+        enContent = task.htmlContent;
       }
-      const esPath = path.join(teamOutputHtmlDir, `${slug}.html`);
-      fs.writeFileSync(esPath, esContent, 'utf8');
-      console.log(`Generado HTML de miembro (ES): ${esPath}`);
-      const enPath = path.join(teamOutputHtmlDir, `${slug}.EN.html`);
+      const enPath = path.join(teamOutputHtmlDir, `${task.slug}.EN.html`);
       fs.writeFileSync(enPath, enContent, 'utf8');
       console.log(`Generado HTML de miembro (EN): ${enPath}`);
-    }
+    });
 
-    // Generar páginas estáticas para las secciones de la SPA
+    // Generar páginas estáticas para las secciones de la SPA (sin cambios, no se traducen)
     const sections = [
       { name: 'about', label: 'Acerca de', content: 'La Revista Nacional de Ciencias para Estudiantes es una publicación dedicada a promover la investigación científica entre estudiantes.' },
       { name: 'guidelines', label: 'Guías', content: 'Guías para autores y revisores de La Revista Nacional de Ciencias para Estudiantes.' },
@@ -819,7 +827,7 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
       console.log(`Generado HTML de sección: ${filePath}`);
     });
 
-    // Generar sitemap (incluir TODOS los miembros y noticias)
+    // Generar sitemap (sin cambios)
     const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
 <!-- Created for La Revista Nacional de Ciencias para Estudiantes -->
@@ -903,7 +911,7 @@ ${sections.map(section => `
     fs.writeFileSync(sitemapPath, sitemapContent, 'utf8');
     console.log(`Generado sitemap: ${sitemapPath}`);
 
-    // Generar robots.txt
+    // Generar robots.txt (sin cambios)
     const robotsContent = `User-agent: Googlebot
 Allow: /articles/
 Allow: /Articles/

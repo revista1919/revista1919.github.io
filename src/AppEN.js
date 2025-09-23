@@ -7,7 +7,7 @@ import {
   browserLocalPersistence,
   signOut,
 } from 'firebase/auth';
-import { useLanguage } from './hooks/useLanguage'; // ← IMPORTADO AQUÍ
+import { useLanguage } from './hooks/useLanguage'; // ← MANTENIDO
 import Header from './components/HeaderEN'; // ← ARCHIVO EN
 import SearchAndFilters from './components/SearchAndFiltersEN'; // ← ARCHIVO EN
 import ArticleCard from './components/ArticleCardEN'; // ← ARCHIVO EN
@@ -23,11 +23,12 @@ import LoginSection from './components/LoginSectionEN'; // ← ARCHIVO EN
 import PortalSection from './components/PortalSectionEN'; // ← ARCHIVO EN
 import NewsSection from './components/NewsSectionEN'; // ← ARCHIVO EN
 import './index.css';
+// import App from './App'; // ← ELIMINADO
 
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 
 function AppEN() {
-  const { cleanPath } = useLanguage(); // ← USADO AQUÍ
+  const { cleanPath } = useLanguage(); // ← MANTENIDO
   const [articles, setArticles] = useState([]);
   const [filteredArticles, setFilteredArticles] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
