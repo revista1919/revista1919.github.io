@@ -18,136 +18,136 @@ const RUBRIC_CSV2 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1Bhqyalgq
 const RUBRIC_CSV3 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=1972050001&single=true&output=csv';
 
 const criteria = {
-  'Revisor 1': [
+  'Reviewer 1': [
     {
       key: 'gramatica',
-      name: 'Gramática y ortografía',
+      name: 'Grammar and spelling',
       levels: {
-        0: { label: '0 = Insuficiente ❌', desc: 'Muchos errores graves, difícil de leer.' },
-        1: { label: '1 = Adecuado ⚖️', desc: 'Algunos errores, comprensible.' },
-        2: { label: '2 = Excelente ✅', desc: 'Muy pocos errores, texto limpio.' }
+        0: { label: '0 = Insufficient ❌', desc: 'Many serious errors, difficult to read.' },
+        1: { label: '1 = Adequate ⚖️', desc: 'Some errors, understandable.' },
+        2: { label: '2 = Excellent ✅', desc: 'Very few errors, clean text.' }
       }
     },
     {
       key: 'claridad',
-      name: 'Claridad y coherencia',
+      name: 'Clarity and coherence',
       levels: {
-        0: { label: '0 = Insuficiente ❌', desc: 'Confuso, incoherente.' },
-        1: { label: '1 = Adecuado ⚖️', desc: 'A veces confuso pero entendible.' },
-        2: { label: '2 = Excelente ✅', desc: 'Claro, preciso y coherente.' }
+        0: { label: '0 = Insufficient ❌', desc: 'Confusing, incoherent.' },
+        1: { label: '1 = Adequate ⚖️', desc: 'Sometimes confusing but understandable.' },
+        2: { label: '2 = Excellent ✅', desc: 'Clear, precise, and coherent.' }
       }
     },
     {
       key: 'estructura',
-      name: 'Estructura y organización',
+      name: 'Structure and organization',
       levels: {
-        0: { label: '0 = Insuficiente ❌', desc: 'Desordenado, sin partes claras.' },
-        1: { label: '1 = Adecuado ⚖️', desc: 'Con partes presentes pero débiles.' },
-        2: { label: '2 = Excelente ✅', desc: 'Introducción, desarrollo y conclusión bien diferenciados.' }
+        0: { label: '0 = Insufficient ❌', desc: 'Disorganized, without clear parts.' },
+        1: { label: '1 = Adequate ⚖️', desc: 'Parts are present but weak.' },
+        2: { label: '2 = Excellent ✅', desc: 'Well-differentiated introduction, development, and conclusion.' }
       }
     },
     {
       key: 'citacion',
-      name: 'Citación y referencias',
+      name: 'Citation and references',
       levels: {
-        0: { label: '0 = Insuficiente ❌', desc: 'Sin fuentes o mal citadas.' },
-        1: { label: '1 = Adecuado ⚖️', desc: 'Fuentes presentes pero con errores.' },
-        2: { label: '2 = Excelente ✅', desc: 'Fuentes confiables y bien citadas.' }
+        0: { label: '0 = Insufficient ❌', desc: 'No sources or poorly cited.' },
+        1: { label: '1 = Adequate ⚖️', desc: 'Sources present but with errors.' },
+        2: { label: '2 = Excellent ✅', desc: 'Reliable and well-cited sources.' }
       }
     }
   ],
-  'Revisor 2': [
+  'Reviewer 2': [
     {
       key: 'relevancia',
-      name: 'Relevancia del tema',
+      name: 'Topic relevance',
       levels: {
-        0: { label: '0 = Insuficiente ❌', desc: 'Tema irrelevante o fuera de contexto.' },
-        1: { label: '1 = Adecuado ⚖️', desc: 'Tema válido pero superficial.' },
-        2: { label: '2 = Excelente ✅', desc: 'Tema pertinente y atractivo.' }
+        0: { label: '0 = Insufficient ❌', desc: 'Irrelevant or out-of-context topic.' },
+        1: { label: '1 = Adequate ⚖️', desc: 'Valid but superficial topic.' },
+        2: { label: '2 = Excellent ✅', desc: 'Relevant and engaging topic.' }
       }
     },
     {
       key: 'rigor',
-      name: 'Rigor en el uso de fuentes',
+      name: 'Rigor in the use of sources',
       levels: {
-        0: { label: '0 = Insuficiente ❌', desc: 'Sin fuentes o poco confiables.' },
-        1: { label: '1 = Adecuado ⚖️', desc: 'Pocas fuentes, algunas dudosas.' },
-        2: { label: '2 = Excelente ✅', desc: 'Fuentes variadas, confiables y bien usadas.' }
+        0: { label: '0 = Insufficient ❌', desc: 'No sources or unreliable ones.' },
+        1: { label: '1 = Adequate ⚖️', desc: 'Few sources, some questionable.' },
+        2: { label: '2 = Excellent ✅', desc: 'Varied, reliable, and well-used sources.' }
       }
     },
     {
       key: 'originalidad',
-      name: 'Originalidad y creatividad',
+      name: 'Originality and creativity',
       levels: {
-        0: { label: '0 = Insuficiente ❌', desc: 'Repite información sin análisis.' },
-        1: { label: '1 = Adecuado ⚖️', desc: 'Combina ideas sin mucha elaboración.' },
-        2: { label: '2 = Excelente ✅', desc: 'Aporta ideas propias y reflexiones originales.' }
+        0: { label: '0 = Insufficient ❌', desc: 'Repeats information without analysis.' },
+        1: { label: '1 = Adequate ⚖️', desc: 'Combines ideas without much elaboration.' },
+        2: { label: '2 = Excellent ✅', desc: 'Provides own ideas and original reflections.' }
       }
     },
     {
       key: 'argumentos',
-      name: 'Calidad de los argumentos',
+      name: 'Quality of arguments',
       levels: {
-        0: { label: '0 = Insuficiente ❌', desc: 'Confusos, sin pruebas o incoherentes.' },
-        1: { label: '1 = Adecuado ⚖️', desc: 'Claros pero débiles.' },
-        2: { label: '2 = Excelente ✅', desc: 'Sólidos, bien fundamentados y convincentes.' }
+        0: { label: '0 = Insufficient ❌', desc: 'Confusing, without evidence, or incoherent.' },
+        1: { label: '1 = Adequate ⚖️', desc: 'Clear but weak.' },
+        2: { label: '2 = Excellent ✅', desc: 'Solid, well-founded, and convincing.' }
       }
     }
   ],
   'Editor': [
     {
       key: 'modificaciones',
-      name: 'Grado de modificaciones',
+      name: 'Degree of modifications',
       levels: {
-        0: { label: '0 = Insuficiente ❌', desc: 'Requirió demasiadas correcciones, casi reescribir.' },
-        1: { label: '1 = Adecuado ⚖️', desc: 'Necesitó varias correcciones, pero manejables.' },
-        2: { label: '2 = Excelente ✅', desc: 'Solo ajustes menores.' }
+        0: { label: '0 = Insufficient ❌', desc: 'Required too many corrections, almost a rewrite.' },
+        1: { label: '1 = Adequate ⚖️', desc: 'Needed several corrections, but they were manageable.' },
+        2: { label: '2 = Excellent ✅', desc: 'Only minor adjustments.' }
       }
     },
     {
       key: 'calidad',
-      name: 'Calidad final del texto',
+      name: 'Final quality of the text',
       levels: {
-        0: { label: '0 = Insuficiente ❌', desc: 'Aún con cambios, sigue débil o poco claro.' },
-        1: { label: '1 = Adecuado ⚖️', desc: 'Texto aceptable, aunque mejorable.' },
-        2: { label: '2 = Excelente ✅', desc: 'Texto sólido, claro y publicable.' }
+        0: { label: '0 = Insufficient ❌', desc: 'Even with changes, it remains weak or unclear.' },
+        1: { label: '1 = Adequate ⚖️', desc: 'Acceptable text, although it could be improved.' },
+        2: { label: '2 = Excellent ✅', desc: 'Solid, clear, and publishable text.' }
       }
     },
     {
       key: 'aporte',
-      name: 'Aporte global del ensayo',
+      name: 'Overall contribution of the essay',
       levels: {
-        0: { label: '0 = Insuficiente ❌', desc: 'Poca relevancia o repetitivo.' },
-        1: { label: '1 = Adecuado ⚖️', desc: 'Interesante, aunque no destaca.' },
-        2: { label: '2 = Excelente ✅', desc: 'Muy valioso, innovador o inspirador.' }
+        0: { label: '0 = Insufficient ❌', desc: 'Little relevance or repetitive.' },
+        1: { label: '1 = Adequate ⚖️', desc: 'Interesting, although not outstanding.' },
+        2: { label: '2 = Excellent ✅', desc: 'Very valuable, innovative, or inspiring.' }
       }
     },
     {
       key: 'potencial',
-      name: 'Potencial motivador',
+      name: 'Motivational potential',
       levels: {
-        0: { label: '0 = Insuficiente ❌', desc: 'No motiva ni aporta al espíritu de la revista.' },
-        1: { label: '1 = Adecuado ⚖️', desc: 'Puede motivar a algunos estudiantes.' },
-        2: { label: '2 = Excelente ✅', desc: 'Inspira, invita a reflexionar y dialogar.' }
+        0: { label: '0 = Insufficient ❌', desc: 'Does not motivate or contribute to the spirit of the journal.' },
+        1: { label: '1 = Adequate ⚖️', desc: 'May motivate some students.' },
+        2: { label: '2 = Excellent ✅', desc: 'Inspires, invites reflection and dialogue.' }
       }
     },
     {
       key: 'decision',
-      name: 'Decisión final',
+      name: 'Final decision',
       levels: {
-        0: { label: '0 = Rechazar', desc: 'Rechazar.' },
-        1: { label: '1 = Aceptar con cambios mayores', desc: 'Aceptar con cambios mayores.' },
-        2: { label: '2 = Aceptar (con o sin cambios menores)', desc: 'Aceptar (con o sin cambios menores).' }
+        0: { label: '0 = Reject', desc: 'Reject.' },
+        1: { label: '1 = Accept with major changes', desc: 'Accept with major changes.' },
+        2: { label: '2 = Accept (with or without minor changes)', desc: 'Accept (with or without minor changes).' }
       }
     }
   ]
 };
 
 const getDecisionText = (percent) => {
-  if (percent >= 85) return 'Aceptar sin cambios.';
-  if (percent >= 70) return 'Aceptar con cambios menores.';
-  if (percent >= 50) return 'Revisión mayor antes de publicar.';
-  return 'Rechazar.';
+  if (percent >= 85) return 'Accept without changes.';
+  if (percent >= 70) return 'Accept with minor changes.';
+  if (percent >= 50) return 'Major revision before publishing.';
+  return 'Reject.';
 };
 
 const getTotal = (scores, crits) => crits.reduce((sum, c) => sum + (scores[c.key] || 0), 0);
@@ -191,7 +191,7 @@ class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
-      return <div className="text-red-600 text-center p-4">Ocurrió un error. Por favor, recarga la página.</div>;
+      return <div className="text-red-600 text-center p-4">An error occurred. Please reload the page.</div>;
     }
     return this.props.children;
   }
@@ -215,14 +215,14 @@ export default function PortalSection({ user, onLogout }) {
   const [editingRange, setEditingRange] = useState({});
   const [selectedAssignment, setSelectedAssignment] = useState(null);
   const [expandedFeedback, setExpandedFeedback] = useState({});
-  const [isDirectorPanelExpanded, setIsDirectorPanelExpanded] = useState(false); // Estado para el panel colapsable del Director
-  const [isChiefEditorPanelExpanded, setIsChiefEditorPanelExpanded] = useState(false); // Estado para el panel colapsable del Editor en Jefe
+  const [isDirectorPanelExpanded, setIsDirectorPanelExpanded] = useState(false);
+  const [isChiefEditorPanelExpanded, setIsChiefEditorPanelExpanded] = useState(false);
   const feedbackQuillRefs = useRef({});
   const reportQuillRefs = useRef({});
 
 useEffect(() => {
   if (!user) {
-    console.log('Usuario nulo, limpiando estados de PortalSection');
+    console.log('Null user, clearing PortalSection states');
     setAssignments([]);
     setFeedback({});
     setReport({});
@@ -243,6 +243,7 @@ useEffect(() => {
     setIsChiefEditorPanelExpanded(false);
   }
 }, [user]);
+
   const fetchRubrics = async () => {
     try {
       const [csv1Text, csv2Text, csv3Text] = await Promise.all([
@@ -332,17 +333,17 @@ useEffect(() => {
         delimiter: ',',
         transform: (value) => value.trim(),
         complete: ({ data }) => {
-          const isAuthor = data.some((row) => row['Autor'] === user.name);
+          const isUserAuthor = data.some((row) => row['Autor'] === user.name);
           let parsedAssignments = [];
-          if (isAuthor) {
+          if (isUserAuthor) {
             parsedAssignments = data
               .filter((row) => row['Autor'] === user.name)
               .map((row) => ({
                 id: row['Nombre Artículo'],
-                'Nombre Artículo': row['Nombre Artículo'] || 'Sin título',
+                'Nombre Artículo': row['Nombre Artículo'] || 'Untitled',
                 Estado: row['Estado'],
-                role: 'Autor',
-                feedbackEditor: row['Feedback 3'] || 'Sin retroalimentación del editor aún.',
+                role: 'Author',
+                feedbackEditor: row['Feedback 3'] || 'No feedback from the editor yet.',
                 isCompleted: !!row['Feedback 3'],
               }));
           } else {
@@ -354,28 +355,28 @@ useEffect(() => {
                 return false;
               })
               .map((row) => {
-                const role = row['Revisor 1'] === user.name ? 'Revisor 1' : row['Revisor 2'] === user.name ? 'Revisor 2' : 'Editor';
-                const num = role === 'Revisor 1' ? 1 : role === 'Revisor 2' ? 2 : 3;
+                const role = row['Revisor 1'] === user.name ? 'Reviewer 1' : row['Revisor 2'] === user.name ? 'Reviewer 2' : 'Editor';
+                const num = role === 'Reviewer 1' ? 1 : role === 'Reviewer 2' ? 2 : 3;
                 const assignment = {
                   id: row['Nombre Artículo'],
-                  'Nombre Artículo': row['Nombre Artículo'] || 'Sin título',
+                  'Nombre Artículo': row['Nombre Artículo'] || 'Untitled',
                   'Link Artículo': row['Link Artículo'],
                   Estado: row['Estado'],
                   role,
                   feedback: row[`Feedback ${num}`] || '',
                   report: row[`Informe ${num}`] || '',
                   vote: row[`Voto ${num}`] || '',
-                  feedback1: row['Feedback 1'] || 'Sin retroalimentación de Revisor 1.',
-                  feedback2: row['Feedback 2'] || 'Sin retroalimentación de Revisor 2.',
-                  informe1: row['Informe 1'] || 'Sin informe de Revisor 1.',
-                  informe2: row['Informe 2'] || 'Sin informe de Revisor 2.',
+                  feedback1: row['Feedback 1'] || 'No feedback from Reviewer 1.',
+                  feedback2: row['Feedback 2'] || 'No feedback from Reviewer 2.',
+                  informe1: row['Informe 1'] || 'No report from Reviewer 1.',
+                  informe2: row['Informe 2'] || 'No report from Reviewer 2.',
                   isCompleted: !!row[`Feedback ${num}`] && !!row[`Informe ${num}`] && !!row[`Voto ${num}`],
                 };
 
                 const name = assignment.id;
-                if (role === 'Revisor 1') {
+                if (role === 'Reviewer 1') {
                   assignment.scores = rubrics.scoresMap1[name] || { gramatica: 0, claridad: 0, estructura: 0, citacion: 0 };
-                } else if (role === 'Revisor 2') {
+                } else if (role === 'Reviewer 2') {
                   assignment.scores = rubrics.scoresMap2[name] || { relevancia: 0, rigor: 0, originalidad: 0, argumentos: 0 };
                 } else {
                   assignment.rev1Scores = rubrics.scoresMap1[name] || { gramatica: 0, claridad: 0, estructura: 0, citacion: 0 };
@@ -388,7 +389,7 @@ useEffect(() => {
           }
           setAssignments(parsedAssignments);
           parsedAssignments.forEach((assignment) => {
-            if (!isAuthor) {
+            if (!isUserAuthor) {
               const link = assignment['Link Artículo'];
               setVote((prev) => ({ ...prev, [link]: assignment.vote }));
               setFeedback((prev) => ({ ...prev, [link]: assignment.feedback }));
@@ -399,50 +400,53 @@ useEffect(() => {
           setLoading(false);
         },
         error: (err) => {
-          console.error('Error al parsear CSV:', err);
-          setError('Error al cargar asignaciones');
+          console.error('Error parsing CSV:', err);
+          setError('Error loading assignments');
           setLoading(false);
         },
       });
     } catch (err) {
-      console.error('Error al cargar asignaciones:', err);
-      setError('Error al conectar con el servidor');
+      console.error('Error loading assignments:', err);
+      setError('Error connecting to the server');
       setLoading(false);
     }
   };
 
   useEffect(() => {
-  if (!user || !user.name || !user.role) {
-    console.log('Error en fetchAssignments: usuario inválido', { user });
-    setError('Usuario no definido o información incompleta');
-    setLoading(false);
-    return;
-  }
-  console.log('Cargando asignaciones para usuario:', { uid: user.uid, name: user.name, role: user.role });
-  fetchAssignments();
-}, [user]);
+    if (!user || !user.name || !user.role) {
+      console.log('Error in fetchAssignments: invalid user', { user });
+      setError('User not defined or incomplete information');
+      setLoading(false);
+      return;
+    }
+    console.log('Loading assignments for user:', { uid: user.uid, name: user.name, role: user.role });
+    fetchAssignments();
+  }, [user]);
 
-  const isAuthor = assignments.length > 0 && assignments[0].role === 'Autor';
-  const isChief = user?.role && user.role.split(';').map(r => r.trim()).includes('Editor en Jefe');
-  const isDirector = user?.role && user.role.split(';').map(r => r.trim()).includes('Director General');
-  const isRrss = user?.role && user.role.split(';').map(r => r.trim()).includes('Encargado de Redes Sociales');
-  const isWebDev = user?.role && user.role.split(';').map(r => r.trim()).includes('Responsable de Desarrollo Web');
+  const isAuthor = assignments.length > 0 && assignments[0].role === 'Author';
+  const isChief = user?.role && user.role.split(';').map(r => r.trim()).includes('Chief Editor');
+  const isDirector = user?.role && user.role.split(';').map(r => r.trim()).includes('General Director');
+  const isRrss = user?.role && user.role.split(';').map(r => r.trim()).includes('Social Media Manager');
+  const isWebDev = user?.role && user.role.split(';').map(r => r.trim()).includes('Web Development Manager');
   console.log('User data:', user);
   console.log('User roles:', user?.role);
   console.log('isDirector:', isDirector);
   console.log('isChief:', isChief);
+  
   const pendingAssignments = useMemo(() => 
     isAuthor 
-      ? assignments.filter((a) => !a.feedbackEditor || !['Aceptado', 'Rechazado'].includes(a.Estado))
+      ? assignments.filter((a) => !a.feedbackEditor || !['Accepted', 'Rejected'].includes(a.Estado))
       : assignments.filter((a) => !a.isCompleted), 
     [assignments, isAuthor]
   );
+  
   const completedAssignments = useMemo(() => 
     isAuthor 
-      ? assignments.filter((a) => a.feedbackEditor && ['Aceptado', 'Rechazado'].includes(a.Estado))
+      ? assignments.filter((a) => a.feedbackEditor && ['Accepted', 'Rejected'].includes(a.Estado))
       : assignments.filter((a) => a.isCompleted), 
     [assignments, isAuthor]
   );
+  
   const handleVote = (link, value) => {
     setVote((prev) => ({ ...prev, [link]: value }));
   };
@@ -456,8 +460,8 @@ useEffect(() => {
 
   const getRequiredKeys = (role) => {
     switch (role) {
-      case 'Revisor 1': return ['gramatica', 'claridad', 'estructura', 'citacion'];
-      case 'Revisor 2': return ['relevancia', 'rigor', 'originalidad', 'argumentos'];
+      case 'Reviewer 1': return ['gramatica', 'claridad', 'estructura', 'citacion'];
+      case 'Reviewer 2': return ['relevancia', 'rigor', 'originalidad', 'argumentos'];
       case 'Editor': return ['modificaciones', 'calidad', 'aporte', 'potencial', 'decision'];
       default: return [];
     }
@@ -476,7 +480,7 @@ useEffect(() => {
     const requiredKeys = getRequiredKeys(role);
     const missingKeys = requiredKeys.filter(key => rubric[key] === undefined || rubric[key] === null || isNaN(rubric[key]));
     if (missingKeys.length > 0) {
-      setRubricStatus((prev) => ({ ...prev, [link]: `Error: Rúbrica incompleta. Faltan o inválidos: ${missingKeys.join(', ')}` }));
+      setRubricStatus((prev) => ({ ...prev, [link]: `Error: Rubric incomplete. Missing or invalid: ${missingKeys.join(', ')}` }));
       return;
     }
 
@@ -501,7 +505,7 @@ useEffect(() => {
           success = true;
           break;
         } catch (err) {
-          console.warn(`Intento ${attempt} fallido para rúbrica:`, err);
+          console.warn(`Attempt ${attempt} failed for rubric:`, err);
           if (attempt < 3) {
             await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
           }
@@ -509,13 +513,13 @@ useEffect(() => {
       }
 
       if (success) {
-        setRubricStatus((prev) => ({ ...prev, [link]: 'Rúbrica enviada exitosamente' }));
+        setRubricStatus((prev) => ({ ...prev, [link]: 'Rubric sent successfully' }));
         await fetchAssignments();
       } else {
-        setRubricStatus((prev) => ({ ...prev, [link]: 'Error al enviar rúbrica después de 3 intentos' }));
+        setRubricStatus((prev) => ({ ...prev, [link]: 'Error sending rubric after 3 attempts' }));
       }
     } catch (err) {
-      console.error('Error general al enviar rúbrica:', err);
+      console.error('General error sending rubric:', err);
       setRubricStatus((prev) => ({ ...prev, [link]: `Error: ${err.message}` }));
     }
   };
@@ -547,7 +551,7 @@ useEffect(() => {
           mainSuccess = true;
           break;
         } catch (err) {
-          console.warn(`Intento ${attempt} fallido para datos principales:`, err);
+          console.warn(`Attempt ${attempt} failed for main data:`, err);
           if (attempt < 3) {
             await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
           }
@@ -555,13 +559,13 @@ useEffect(() => {
       }
 
       if (mainSuccess) {
-        setSubmitStatus((prev) => ({ ...prev, [link]: 'Datos principales enviados exitosamente' }));
+        setSubmitStatus((prev) => ({ ...prev, [link]: 'Main data sent successfully' }));
         await fetchAssignments();
       } else {
-        setSubmitStatus((prev) => ({ ...prev, [link]: 'Error al enviar datos principales después de 3 intentos' }));
+        setSubmitStatus((prev) => ({ ...prev, [link]: 'Error sending main data after 3 attempts' }));
       }
     } catch (err) {
-      console.error('Error general al enviar datos principales:', err);
+      console.error('General error sending main data:', err);
       setSubmitStatus((prev) => ({ ...prev, [link]: `Error: ${err.message}` }));
     }
   };
@@ -578,12 +582,12 @@ useEffect(() => {
   };
 
   const getTutorialText = (role) => {
-    if (role === "Revisor 1") {
-      return 'Como Revisor 1, tu rol es revisar aspectos técnicos como gramática, ortografía, citación de fuentes, detección de contenido generado por IA, coherencia lógica y estructura general del artículo. Deja comentarios detallados en el documento de Google Drive para sugerir mejoras. Asegúrate de que el lenguaje sea claro y académico. Debes dejar tu retroalimentación al autor en la casilla correspondiente. Además debes dejar un informe resumido explicando tu observaciones para guiar al editor. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.';
-    } else if (role === "Revisor 2") {
-      return 'Como Revisor 2, enfócate en el contenido sustantivo: verifica la precisión de las fuentes, la seriedad y originalidad del tema, la relevancia de los argumentos, y la contribución al campo de estudio. Evalúa si el artículo es innovador y bien fundamentado. Deja comentarios en el documento de Google Drive. Debes dejar tu retroalimentación al autor in la casilla correspondiente. Además debes dejar un informe resumido explicando tu observaciones para guiar al editor. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.';
+    if (role === "Reviewer 1") {
+      return 'As Reviewer 1, your role is to check technical aspects like grammar, spelling, source citation, detection of AI-generated content, logical coherence, and the overall structure of the article. Leave detailed comments in the Google Drive document to suggest improvements. Ensure the language is clear and academic. You must leave your feedback for the author in the corresponding box. You also need to leave a summary report explaining your observations to guide the editor. Finally, in the vote box, you must put "yes" if you approve the article, and "no" if you reject it.';
+    } else if (role === "Reviewer 2") {
+      return 'As Reviewer 2, focus on the substantive content: verify the accuracy of sources, the seriousness and originality of the topic, the relevance of the arguments, and the contribution to the field of study. Evaluate whether the article is innovative and well-founded. Leave comments in the Google Drive document. You must leave your feedback for the author in the corresponding box. You also need to leave a summary report explaining your observations to guide the editor. Finally, in the vote box, you must put "yes" if you approve the article, and "no" if you reject it.';
     } else if (role === "Editor") {
-      return `Como Editor, tu responsabilidad es revisar las retroalimentaciones e informes de los revisores, integrarlas con tu propia evaluación, y redactar una retroalimentación final sensible y constructiva para el autor. Corrige directamente el texto si es necesario y decide el estado final del artículo. Usa el documento de Google Drive para ediciones. Debes dejar una retroalimentación al autor sintetizando las que dejaron los revisores. Tu deber es que el mensaje sea acertado y sensible, sin desmotivar al autor. Para esto debes usar la técnica del "sándwich". Si no sabes qué es, entra aqu . Luego deja tu informe con los cambios realizados, deben ser precisos y académicos. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.`;
+      return `As the Editor, your responsibility is to review the feedback and reports from the reviewers, integrate them with your own evaluation, and write a final, sensitive, and constructive feedback for the author. Correct the text directly if necessary and decide the final status of the article. Use the Google Drive document for edits. You must leave feedback for the author synthesizing what the reviewers provided. Your duty is to ensure the message is accurate and sensitive, without discouraging the author. For this, you should use the "sandwich" technique. If you don't know what it is, you should look it up. Then, leave your report with the changes made; they must be precise and academic. Finally, in the vote box, you must put "yes" if you approve the article, and "no" if you reject it.`;
     }
     return "";
   };
@@ -602,7 +606,7 @@ useEffect(() => {
     if (!crits) return null;
     const total = getTotal(scores, crits);
     const max = crits.length * 2;
-    const roleDisplay = roleKey === 'Revisor 1' ? 'Revisor 1 (Forma, estilo y técnica)' : roleKey === 'Revisor 2' ? 'Revisor 2 (Contenido y originalidad)' : 'Editor (Síntesis y decisión final)';
+    const roleDisplay = roleKey === 'Reviewer 1' ? 'Reviewer 1 (Form, Style, and Technique)' : roleKey === 'Reviewer 2' ? 'Reviewer 2 (Content and Originality)' : 'Editor (Synthesis and Final Decision)';
 
     return (
       <div className="bg-white p-4 rounded-lg shadow-md mb-6 overflow-hidden">
@@ -690,7 +694,7 @@ useEffect(() => {
           key: ['Delete', 'Backspace'],
           handler: function(range) {
             if (!range) {
-              console.log('No hay selección activa para eliminar');
+              console.log('No active selection to delete');
               return true;
             }
             const editor = this.quill;
@@ -732,7 +736,7 @@ useEffect(() => {
                 return false;
               } catch (err) {
                 console.error('Error deleting image:', err);
-                setSubmitStatus((prev) => ({ ...prev, [link]: 'Error al eliminar la imagen' }));
+                setSubmitStatus((prev) => ({ ...prev, [link]: 'Error deleting the image' }));
                 return false;
               }
             }
@@ -752,7 +756,7 @@ useEffect(() => {
                 return false;
               } catch (err) {
                 console.error('Error inserting new line after image:', err);
-                setSubmitStatus((prev) => ({ ...prev, [link]: 'Error al añadir texto después de la imagen' }));
+                setSubmitStatus((prev) => ({ ...prev, [link]: 'Error adding text after the image' }));
                 return false;
               }
             }
