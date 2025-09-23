@@ -7,10 +7,10 @@ export const useLanguage = () => {
 
   useEffect(() => {
     const path = window.location.pathname;
-    const isEnglish = path.startsWith('/en/');
+    const isEnglish = path.startsWith('/en');
     
     setLanguage(isEnglish ? 'en' : 'es');
-    setCleanPath(isEnglish ? path.replace('/en/', '') : path);
+    setCleanPath(isEnglish ? path.replace('/en', '') : path);
   }, []);
 
   const switchLanguage = (newLang) => {

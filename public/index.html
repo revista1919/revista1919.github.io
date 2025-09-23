@@ -34,7 +34,7 @@
   <!-- Canonical y alternate para SEO bilingüe -->
   <link rel="canonical" href="https://www.revistacienciasestudiantes.com/">
   <link rel="alternate" hreflang="es" href="https://www.revistacienciasestudiantes.com/">
-  <link rel="alternate" hreflang="en" href="https://www.revistacienciasestudiantes.com/en/">
+  <link rel="alternate" hreflang="en" href="https://www.revistacienciasestudiantes.com/en">
   <link rel="alternate" hreflang="x-default" href="https://www.revistacienciasestudiantes.com/">
   
   <!-- Favicons -->
@@ -189,7 +189,7 @@
     (function() {
       // Detectar idioma desde la URL
       const path = window.location.pathname;
-      const isEnglish = path.startsWith('/en/');
+      const isEnglish = path.startsWith('/en');
       
       // Configurar atributos de idioma
       document.documentElement.lang = isEnglish ? 'en' : 'es';
