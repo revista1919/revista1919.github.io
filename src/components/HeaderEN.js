@@ -32,16 +32,15 @@ function HeaderEN() {
           'The National Review of Sciences for Students'
         )
       ),
-      // Botón de idioma en la esquina superior derecha
+      // Botón de idioma más discreto, ubicado en la esquina superior derecha
       React.createElement(
         'button',
         {
           onClick: handleLanguageToggle,
-          className: 'absolute top-2 right-2 sm:top-3 sm:right-3 lg:static lg:ml-4 px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all duration-200 hover:bg-white hover:bg-opacity-20 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-30',
+          className: 'absolute top-1 right-1 sm:top-2 sm:right-2 lg:top-2 lg:right-4 px-2 py-1 rounded-full text-xs font-medium transition-all duration-200 hover:bg-white hover:bg-opacity-10 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-20 z-10',
           style: { 
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            backdropFilter: 'blur(10px)'
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
           },
           title: `Switch to ${language === 'en' ? 'Spanish' : 'English'}`
         },

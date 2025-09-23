@@ -1,12 +1,23 @@
 import React, { useState, useEffect } from "react";
 import Papa from "papaparse";
 import { motion } from "framer-motion";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const NEWS_CSV =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vQKnN8qMJcBN8im9Q61o-qElx1jQp5NdS80_B-FakCHrPLXHlQ_FXZWT0o5GVVHAM26l9sjLxsTCNO8/pub?output=csv";
+const DOMAIN = "https://www.revistacienciasestudiantes.com";
 
-const base64DecodeUnicode = (str) => {
+function generateSlug(name) {
+  if (!name) return "";
+  name = name.toLowerCase();
+  name = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  name = name.replace(/\s+/g, "-");
+  name = name.replace(/[^a-z0-9-]/g, "");
+  name = name.replace(/-+/g, "-");
+  name = name.replace(/^-+|-+$/g, "");
+  return name;
+}
+
+function base64DecodeUnicode(str) {
   try {
     const binary = atob(str);
     const bytes = new Uint8Array(binary.length);
@@ -19,17 +30,6 @@ const base64DecodeUnicode = (str) => {
     console.error("Error decoding Base64:", err);
     return "";
   }
-};
-
-function generateSlug(name) {
-  if (!name) return "";
-  name = name.toLowerCase();
-  name = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  name = name.replace(/\s+/g, "-");
-  name = name.replace(/[^a-z0-9-]/g, "");
-  name = name.replace(/-+/g, "-");
-  name = name.replace(/^-+|-+$/g, "");
-  return name;
 }
 
 export default function NewsSectionEN({ className }) {
@@ -43,21 +43,6 @@ export default function NewsSectionEN({ className }) {
   const [submitted, setSubmitted] = useState(false);
   const scriptURL =
     "https://script.google.com/macros/s/AKfycbzyyR93tD85nPprIKAR_IDoWYBSAnlFwVes09rJgOM3KQsByg_MgzafWDK1BcFhfVJHew/exec";
-
-  const genAI = new GoogleGenerativeAI(process.env.REACT_APP_API_GEMINI);
-
-  const translateText = async (text) => {
-    try {
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      const prompt = `Translate the following text from Spanish to English accurately, preserving the meaning and tone. Do not add extra information or modify the content beyond translation. This is a Journal, called The National Review of Sciences for Students:\n\n${text}`;
-      const result = await model.generateContent(prompt);
-      const translatedText = result.response.text();
-      return translatedText;
-    } catch (err) {
-      console.error("Error translating text:", err);
-      return text; // Fallback to original text if translation fails
-    }
-  };
 
   useEffect(() => {
     const fetchNews = async () => {
@@ -84,13 +69,30 @@ export default function NewsSectionEN({ className }) {
                     (item["Contenido de la noticia"] || "").trim() !== ""
                 )
                 .map(async (item) => {
-                  const translatedTitle = await translateText(String(item["Título"] ?? ""));
-                  const translatedBody = await translateText(String(item["Contenido de la noticia"] ?? ""));
+                  const titulo = String(item["Título"] ?? "");
+                  const fecha = String(item["Fecha"] ?? "");
+                  const fechaIso = parseDateIso(fecha);
+                  const slug = generateSlug(`${titulo} ${fechaIso}`);
+                  const htmlUrl = `${DOMAIN}/news/${slug}.EN.html`;
+                  let cuerpo = "";
+                  try {
+                    const htmlResponse = await fetch(htmlUrl);
+                    if (!htmlResponse.ok) throw new Error(`Failed to fetch HTML: ${htmlUrl}`);
+                    const htmlText = await htmlResponse.text();
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(htmlText, "text/html");
+                    const contentDiv = doc.querySelector(".content.ql-editor");
+                    cuerpo = contentDiv ? contentDiv.innerHTML : base64DecodeUnicode(String(item["Contenido de la noticia"] ?? ""));
+                  } catch (err) {
+                    console.error(`Error fetching HTML for ${slug}:`, err);
+                    cuerpo = base64DecodeUnicode(String(item["Contenido de la noticia"] ?? ""));
+                  }
                   return {
-                    titulo: translatedTitle,
-                    cuerpo: translatedBody,
-                    fecha: formatDate(String(item["Fecha"] ?? "")),
-                    fechaIso: parseDateIso(String(item["Fecha"] ?? "")),
+                    titulo,
+                    cuerpo,
+                    fecha: formatDate(fecha),
+                    fechaIso,
+                    slug,
                   };
                 })
             );
@@ -197,7 +199,7 @@ export default function NewsSectionEN({ className }) {
   function decodeBody(body, truncate = false) {
     if (!body) return <p className="text-[#000000]">No content available.</p>;
     try {
-      let html = base64DecodeUnicode(body);
+      let html = body; // Body is already decoded or fetched HTML
       if (truncate) {
         html = truncateHTML(html, 200);
       }
@@ -221,8 +223,7 @@ export default function NewsSectionEN({ className }) {
   const loadMoreNews = () => setVisibleNews((prev) => prev + 6);
 
   const openNews = (item) => {
-    const slug = generateSlug(`${item.titulo} ${item.fechaIso}`);
-    window.location.href = `/news/${slug}.EN.html`;
+    window.location.href = `/news/${item.slug}.EN.html`;
   };
 
   if (loading) return <p className="text-center text-[#000000]">Loading news...</p>;
