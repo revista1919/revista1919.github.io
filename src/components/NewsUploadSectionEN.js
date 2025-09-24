@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 // Register the resize module
 Quill.register('modules/imageResize', ImageResize);
 
-const NEWS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyTbnLD0651YAUbanSZd-PNKnfYbCYeimDAZWkhRgEAoR4ewT9hjIw_F2HdQC6TcXK2Ug/exec';
+const NEWS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxLlge7jy7WPz5z6NQ0n4v6Q5-7V3y-U1RYall6k1NNlS6kzY1cgiS-iQSWWBVG-ZoCHg/exec';
 
 const base64EncodeUnicode = (str) => {
   const encoder = new TextEncoder();
@@ -26,7 +26,7 @@ const sanitizeInput = (input) => {
               .trim();
 };
 
-export default function NewsUploadSection() {
+export default function NewsUploadSectionEN() {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [message, setMessage] = useState('');
@@ -53,7 +53,7 @@ export default function NewsUploadSection() {
       const editor = quillRef.current.getEditor();
       editorRef.current = editor;
       editor.root.setAttribute('spellcheck', 'true');
-      editor.root.setAttribute('lang', 'es'); // Note: Language for spellcheck is still Spanish
+      editor.root.setAttribute('lang', 'en');
       editor.theme.tooltip.hide();
     }
   }, []);
@@ -384,6 +384,7 @@ export default function NewsUploadSection() {
     const data = {
       title: sanitizeInput(title.trim()),
       body: encodedBody,
+      language: 'en'
     };
     
     console.log('Final data to send:', {
@@ -477,19 +478,19 @@ export default function NewsUploadSection() {
     setImageData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Optional: Add a useEffect to clear the editor on successful submission
+  // Clear editor on successful submission
   useEffect(() => {
     if (message.includes('successfully') && quillRef.current) {
       const editor = quillRef.current.getEditor();
       if (editor) {
-        editor.setText(''); // Clear the editor
+        editor.setText('');
       }
     }
   }, [message]);
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-md space-y-4 max-w-2xl mx-auto">
-      <h4 className="text-lg font-semibold text-[#5a3e36]">Upload New News</h4>
+      <h4 className="text-lg font-semibold text-[#5a3e36]">Upload New News (English)</h4>
       <input
         type="text"
         value={title}
@@ -537,7 +538,7 @@ export default function NewsUploadSection() {
         </div>
       </div>
       <p className="text-sm text-gray-500">
-        Note: The browser's spell checker is active (set to Spanish). Check for red suggestions.
+        Note: The browser's spell checker is active (set to English). Check for red suggestions.
       </p>
       {message && (
         <p

@@ -6,7 +6,7 @@ import { debounce } from 'lodash';
 import { useTranslation } from 'react-i18next';
 // Registrar el módulo de resize
 Quill.register('modules/imageResize', ImageResize);
-const NEWS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyTbnLD0651YAUbanSZd-PNKnfYbCYeimDAZWkhRgEAoR4ewT9hjIw_F2HdQC6TcXK2Ug/exec';
+const NEWS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxLlge7jy7WPz5z6NQ0n4v6Q5-7V3y-U1RYall6k1NNlS6kzY1cgiS-iQSWWBVG-ZoCHg/exec';
 const base64EncodeUnicode = (str) => {
   const encoder = new TextEncoder();
   const bytes = encoder.encode(str);

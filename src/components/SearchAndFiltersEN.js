@@ -9,7 +9,7 @@ function SearchAndFilters({ searchTerm, setSearchTerm, selectedArea, setSelected
       type: 'text',
       value: searchTerm,
       onChange: (e) => setSearchTerm(e.target.value),
-      placeholder: 'Buscar artículos...',
+      placeholder: 'Search articles...',
       className: 'w-full p-2 sm:p-3 text-sm sm:text-base border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3 sm:mb-4',
     }),
     React.createElement(
@@ -19,7 +19,7 @@ function SearchAndFilters({ searchTerm, setSearchTerm, selectedArea, setSelected
         onChange: (e) => setSelectedArea(e.target.value),
         className: 'w-full p-2 sm:p-3 text-sm sm:text-base border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3 sm:mb-4',
       },
-      React.createElement('option', { value: '' }, 'Todas las áreas'),
+      React.createElement('option', { value: '' }, 'All areas'),
       ...areas.map(area =>
         React.createElement('option', { key: area, value: area }, area)
       )
@@ -30,11 +30,11 @@ function SearchAndFilters({ searchTerm, setSearchTerm, selectedArea, setSelected
       React.createElement('button', {
         onClick: () => onSearch(searchTerm, selectedArea),
         className: 'bg-blue-500 text-white p-2 sm:p-3 text-sm sm:text-base rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500',
-      }, 'Buscar'),
+      }, 'Search'),
       React.createElement('button', {
         onClick: clearFilters,
         className: 'bg-gray-500 text-white p-2 sm:p-3 text-sm sm:text-base rounded hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500',
-      }, 'Limpiar Filtros')
+      }, 'Clear Filters')
     )
   );
 }

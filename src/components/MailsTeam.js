@@ -17,10 +17,7 @@ export default function MailsTeam() {
   const [selected, setSelected] = useState([]);
   const [status, setStatus] = useState('');
   const [sending, setSending] = useState(false);
-
-  // 👇 NUEVO: estado para correos manuales
   const [manualEmail, setManualEmail] = useState('');
-  const [manualEmails, setManualEmails] = useState([]);
 
   useEffect(() => {
     fetchTeam();
@@ -53,7 +50,7 @@ export default function MailsTeam() {
 
   const toggleSelectAll = () => {
     setSelectAll(!selectAll);
-    setSelected(!selectAll ? team.map(member => member.Correo).concat(manualEmails) : []);
+    setSelected(!selectAll ? team.map(member => member.Correo) : manualEmail ? [manualEmail] : []);
   };
 
   const toggleSelect = (email) => {
@@ -62,27 +59,19 @@ export default function MailsTeam() {
     );
   };
 
-  // 👇 NUEVO: función para agregar correos manuales
   const addManualEmail = () => {
-    if (!manualEmail.trim()) return;
-    const email = manualEmail.trim().toLowerCase();
-
-    // Validación básica
-    const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    if (!valid) {
-      setStatus('❌ Correo inválido');
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!manualEmail.trim() || !emailRegex.test(manualEmail)) {
+      setStatus('❌ Ingrese un correo electrónico válido');
       return;
     }
-
-    if (manualEmails.includes(email) || selected.includes(email)) {
-      setStatus('⚠️ Este correo ya fue agregado');
+    if (selected.includes(manualEmail)) {
+      setStatus('❌ Correo ya añadido');
       return;
     }
-
-    setManualEmails(prev => [...prev, email]);
-    setSelected(prev => [...prev, email]);
+    setSelected(prev => [...prev, manualEmail]);
     setManualEmail('');
-    setStatus('');
+    setStatus('✅ Correo añadido manualmente');
   };
 
   const sendEmail = async () => {
@@ -100,18 +89,40 @@ export default function MailsTeam() {
         <!DOCTYPE html>
         <html>
         <head>
-          <style>/* estilos omitidos por brevedad */</style>
+          <style>
+            body { margin: 0; padding: 0; background-color: #f4f4f4; }
+            .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); overflow: hidden; }
+            .header { background: linear-gradient(135deg, #1e3a8a, #3b82f6); padding: 20px; text-align: center; }
+            .header h1 { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 24px; color: #ffffff; margin: 0; font-weight: 500; letter-spacing: 1px; }
+            .subheader { background-color: #f8fafc; padding: 10px 20px; border-bottom: 1px solid #e2e8f0; }
+            .subheader p { font-family: 'Georgia', serif; font-size: 14px; color: #475569; margin: 0; }
+            .content { font-family: 'Georgia', serif; padding: 30px; color: #1f2937; font-size: 16px; line-height: 1.7; }
+            .content p { margin: 10px 0; }
+            .content a { color: #2563eb; text-decoration: none; font-weight: 500; }
+            .content a:hover { text-decoration: underline; }
+            .signature { margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 15px; }
+            .signature p { font-family: 'Georgia', serif; font-size: 14px; color: #1f2937; margin: 5px 0; }
+            .signature .title { font-weight: bold; }
+            .footer { background-color: #1e3a8a; padding: 15px; text-align: center; }
+            .footer p { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 12px; color: #ffffff; margin: 0; opacity: 0.8; }
+          </style>
         </head>
         <body>
           <div class="container">
-            <div class="header"><h1>${subject}</h1></div>
-            <div class="subheader"><p>Revista Nacional de las Ciencias para Estudiantes</p></div>
+            <div class="header">
+              <h1>${subject}</h1>
+            </div>
+            <div class="subheader">
+              <p>Revista Nacional de las Ciencias para Estudiantes</p>
+            </div>
             <div class="content">
               ${body}
               <div class="signature">
                 <p>Atentamente,</p>
                 <p class="title">Director General</p>
                 <p>${directorGeneral}</p>
+                <p>Revista Nacional de las Ciencias para Estudiantes</p>
+                <p><a href="https://www.revistacienciasestudiantes.com/">www.revistacienciasestudiantes.com</a></p>
               </div>
             </div>
             <div class="footer">
@@ -149,7 +160,7 @@ export default function MailsTeam() {
     setBody('');
     setSelectAll(true);
     setSelected(team.map(member => member.Correo));
-    setManualEmails([]); // 👈 limpiar manuales al cerrar
+    setManualEmail('');
     setStatus('');
   };
 
@@ -178,36 +189,22 @@ export default function MailsTeam() {
           >
             <h3 className="text-lg font-medium text-gray-900 mb-4">Enviar Correo</h3>
             <div className="flex-1 space-y-4 overflow-y-auto">
-
-              {/* ✅ NUEVO: agregar correos manuales */}
-              <div className="flex space-x-2 items-center">
-                <input
-                  type="email"
-                  placeholder="Agregar correo manualmente"
-                  value={manualEmail}
-                  onChange={e => setManualEmail(e.target.value)}
-                  className="flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-                <button
-                  onClick={addManualEmail}
-                  className="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-                >
-                  Añadir
-                </button>
-              </div>
-
-              {manualEmails.length > 0 && (
-                <div className="mt-2 p-2 border rounded bg-gray-50">
-                  <p className="text-sm text-gray-600 mb-1">Correos añadidos:</p>
-                  <ul className="text-sm text-gray-800 space-y-1">
-                    {manualEmails.map((mail, idx) => (
-                      <li key={idx}>• {mail}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
               <div>
+                <div className="flex items-center space-x-3 mb-4">
+                  <input
+                    type="text"
+                    placeholder="Añadir correo manualmente"
+                    value={manualEmail}
+                    onChange={e => setManualEmail(e.target.value)}
+                    className="flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <button
+                    onClick={addManualEmail}
+                    className="px-3 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                  >
+                    Añadir
+                  </button>
+                </div>
                 <div
                   onClick={toggleSelectAll}
                   className={`cursor-pointer px-4 py-2 border rounded-md flex items-center space-x-2 transition-colors ${
@@ -220,7 +217,7 @@ export default function MailsTeam() {
                     onChange={toggleSelectAll}
                     className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
                   />
-                  <span className="text-sm font-medium text-gray-900">Enviar a todos ({team.length + manualEmails.length})</span>
+                  <span className="text-sm font-medium text-gray-900">Enviar a todos ({team.length})</span>
                 </div>
                 {!selectAll && (
                   <div className="mt-2 max-h-48 overflow-y-auto border rounded-md p-3 bg-gray-50">
@@ -252,29 +249,23 @@ export default function MailsTeam() {
                         </div>
                       );
                     })}
-
-                    {/* Mostrar también correos manuales individuales */}
-                    {manualEmails.map((mail, idx) => (
-                      <div
-                        key={`manual-${idx}`}
-                        className="flex items-center space-x-3 py-2 border-b last:border-b-0 hover:bg-gray-100"
-                      >
+                    {manualEmail && selected.includes(manualEmail) && (
+                      <div className="flex items-center space-x-3 py-2 border-b last:border-b-0 hover:bg-gray-100">
                         <input
                           type="checkbox"
-                          checked={selected.includes(mail)}
-                          onChange={() => toggleSelect(mail)}
+                          checked={selected.includes(manualEmail)}
+                          onChange={() => toggleSelect(manualEmail)}
                           className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
                         />
                         <div className="flex-1">
-                          <div className="text-sm font-medium text-gray-900">{mail}</div>
-                          <div className="text-xs text-gray-500">Correo añadido manualmente</div>
+                          <div className="text-sm font-medium text-gray-900">{manualEmail}</div>
+                          <div className="text-xs text-gray-500">Destinatario manual</div>
                         </div>
                       </div>
-                    ))}
+                    )}
                   </div>
                 )}
               </div>
-
               <input
                 type="text"
                 placeholder="Asunto"

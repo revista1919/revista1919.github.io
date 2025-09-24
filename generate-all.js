@@ -2,7 +2,6 @@ const fs = require('fs');
 const path = require('path');
 const fetch = require('node-fetch').default;
 const Papa = require('papaparse');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const articlesCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p32EM6-0VYy18AdREQwXdpeet1WHTA4H2-W2FX7HKe1HPSyApWadUw9sKHdVYQXL5tP6yDRs/pub?output=csv';
 const teamCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
@@ -86,57 +85,6 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
 
 (async () => {
   try {
-    const apiKey = process.env.REACT_APP_API_GEMINI;
-    if (!apiKey) {
-      throw new Error('REACT_APP_API_GEMINI environment variable is not set');
-    }
-    const genAI = new GoogleGenerativeAI(apiKey);
-
-    async function translateHtml(html, isIndex = false, sectionType = 'news') {
-      let linkInstruction = '';
-      if (isIndex) {
-        linkInstruction = `- For links to individual ${sectionType} pages in <a href> tags (e.g., "/${sectionType}/slug.html"), when the target language is English, append '.EN' before '.html' in the href (e.g., "/${sectionType}/slug.EN.html"). Do not change other links like "/" or "/sections/${sectionType}.html".`;
-      } else {
-        linkInstruction = `- If there are internal links to other ${sectionType} pages, adjust them similarly if the target is English.`;
-      }
-
-      const prompt = `
-You are a faithful translator for an academic journal. The journal's official English name is "The National Review of Sciences for Students". The official Spanish name is "La Revista Nacional de Ciencias para Estudiantes". It is an academic journal initiated in Chile that aspires to become a reference in the publication of primarily high school students at local and global levels.
-
-Task:
-1. Detect the primary language of the texts in the following HTML code: 'es' for Spanish or 'en' for English.
-2. Translate all translatable texts in the HTML to the opposite language (if original 'es' to English, if 'en' to Spanish).
-
-Rules:
-- Do not summarize, add, remove, or alter any content or meaning. Translate faithfully and accurately.
-- Preserve all HTML structure, tags, attributes, classes, styles, scripts, etc. exactly as is.
-- Only translate text nodes and attribute values that are user-facing (like alt, title, content in meta, placeholder, etc.).
-- Change the <html lang="..."> attribute to the target language ('es' or 'en').
-- Use the official journal name based on the target language.
-${linkInstruction}
-
-Output only the following JSON:
-{
-  "original_language": "es" | "en",
-  "translated_html": "the full translated HTML code"
-}
-
-HTML code to analyze and translate:
-${html}
-      `;
-
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-      const result = await model.generateContent(prompt);
-      let text = result.response.text();
-      if (text.startsWith('```json')) {
-        text = text.slice(7, -3).trim();
-      } else if (text.startsWith('```')) {
-        text = text.slice(3, -3).trim();
-      }
-      const parsed = JSON.parse(text);
-      return parsed;
-    }
-
     // Procesar artículos
     const articlesRes = await fetch(articlesCsvUrl);
     if (!articlesRes.ok) throw new Error(`Error descargando CSV de artículos: ${articlesRes.statusText}`);
@@ -273,6 +221,45 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     fs.writeFileSync(indexPath, indexContent, 'utf8');
     console.log(`Generado índice HTML de artículos: ${indexPath}`);
 
+    // Generar índice de artículos en inglés
+    let indexContentEn = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Index of Articles - The National Review of Sciences for Students</title>
+  <link rel="stylesheet" href="/index.css">
+</head>
+<body>
+  <header>
+    <h1>Index of Articles by Year</h1>
+    <p>Access articles by year of publication. Each link leads to the article page with abstract and PDF.</p>
+  </header>
+  <main>
+${Object.keys(articlesByYear).sort().reverse().map(year => `
+    <section>
+      <h2>Year ${year}</h2>
+      <ul>
+        ${articlesByYear[year].map(article => `
+          <li>
+            <a href="/articles/articulo${article.numeroArticulo}.html">${article.titulo}</a> - ${article.autores} (Vol. ${article.volumen}, No. ${article.numero})
+          </li>
+        `).join('')}
+      </ul>
+    </section>
+`).join('')}
+  </main>
+  <footer>
+    <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
+    <a href="/">Back to home</a>
+  </footer>
+</body>
+</html>
+    `.trim();
+    const indexPathEn = path.join(outputHtmlDir, 'index.EN.html');
+    fs.writeFileSync(indexPathEn, indexContentEn, 'utf8');
+    console.log(`Generado índice HTML de artículos (EN): ${indexPathEn}`);
+
     // Procesar noticias
     const newsRes = await fetch(newsCsvUrl);
     if (!newsRes.ok) throw new Error(`Error descargando CSV de noticias: ${newsRes.statusText}`);
@@ -288,11 +275,13 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
         titulo: String(row["Título"] ?? ""),
         cuerpo: base64DecodeUnicode(String(row["Contenido de la noticia"] ?? "")),
         fecha: parseDateFlexible(String(row["Fecha"] ?? "")),
+        title: String(row["Title"] ?? ""),
+        content: base64DecodeUnicode(String(row["Content of the news"] ?? "")),
       }));
 
     for (const newsItem of newsItems) {
       const slug = generateSlug(`${newsItem.titulo} ${newsItem.fecha}`);
-      const htmlContent = `<!DOCTYPE html>
+      const esContent = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -466,16 +455,179 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
 </body>
 </html>`;
 
-      const translation = await translateHtml(htmlContent, false, 'news');
-      const originalLang = translation.original_language;
-      let esContent, enContent;
-      if (originalLang === 'es') {
-        esContent = htmlContent;
-        enContent = translation.translated_html;
-      } else {
-        esContent = translation.translated_html;
-        enContent = htmlContent;
+      const enContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="${newsItem.title.substring(0, 160)}...">
+  <meta name="keywords" content="news, student science journal, ${newsItem.title.replace(/[^a-zA-Z0-9]/g, ' ').substring(0, 100)}">
+  <title>${newsItem.title} - News - The National Review of Sciences for Students</title>
+  <link rel="stylesheet" href="/index.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #f4ece7 0%, #e8d9c6 100%);
+      font-family: 'Merriweather', 'Georgia', serif;
+      color: #2d3748;
+      margin: 0;
+      padding: 0;
+      line-height: 1.7;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 1.5rem;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .logo {
+      width: 80px;
+      height: auto;
+      margin-bottom: 1rem;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+      transition: transform 0.3s ease;
+    }
+    .logo:hover {
+      transform: scale(1.05);
+    }
+    h1 {
+      color: #5a3e36;
+      font-size: 2rem;
+      margin: 0 0 0.5rem 0;
+      font-weight: 600;
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.05);
+      line-height: 1.3;
+    }
+    .date {
+      color: #8b6f47;
+      font-size: 0.95rem;
+      font-style: italic;
+      margin: 0;
+      letter-spacing: 0.5px;
+    }
+    main {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      margin-bottom: 2rem;
+    }
+    .content {
+      font-size: 1.05rem;
+      color: #2d3748;
+      line-height: 1.8;
+    }
+    .content p {
+      margin-bottom: 1.5rem;
+      text-align: justify;
+      hyphens: auto;
+    }
+    .content h2, .content h3 {
+      color: #5a3e36;
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+      font-weight: 600;
+      border-bottom: 2px solid #f4ece7;
+      padding-bottom: 0.5rem;
+    }
+    .content ol, .content ul {
+      margin: 1rem 0;
+      padding-left: 2rem;
+    }
+    .content li {
+      margin-bottom: 0.5rem;
+    }
+    .content strong {
+      color: #800020;
+    }
+    .content a {
+      color: #800020;
+      text-decoration: underline;
+      font-weight: 500;
+    }
+    .content a:hover {
+      color: #5a0015;
+    }
+    .content img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      margin: 1rem 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    footer {
+      text-align: center;
+      margin-top: 2rem;
+      padding: 1.5rem;
+      color: #8b6f47;
+      font-size: 0.9rem;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+    }
+    footer a {
+      color: #800020;
+      text-decoration: none;
+      font-weight: 500;
+      margin: 0 1rem;
+      transition: color 0.3s ease;
+    }
+    footer a:hover {
+      color: #5a0015;
+      text-decoration: underline;
+    }
+    @media (max-width: 768px) {
+      .container {
+        padding: 1rem;
       }
+      h1 {
+        font-size: 1.6rem;
+      }
+      main {
+        padding: 1.5rem;
+      }
+      .logo {
+        width: 60px;
+      }
+    }
+    .content {
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <a href="/">
+        <img src="/logo.png" alt="Logo of The National Review of Sciences for Students" class="logo">
+      </a>
+      <h1>${newsItem.title}</h1>
+      <p class="date">Published on ${newsItem.fecha}</p>
+    </header>
+    <main>
+      <div class="content ql-editor">
+        ${newsItem.content}
+      </div>
+    </main>
+    <footer>
+      <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
+      <a href="/sections/news.html">Back to News</a> | <a href="/">Back to home</a>
+    </footer>
+  </div>
+</body>
+</html>`;
+
       const esPath = path.join(newsOutputHtmlDir, `${slug}.html`);
       fs.writeFileSync(esPath, esContent, 'utf8');
       console.log(`Generado HTML de noticia (ES): ${esPath}`);
@@ -526,29 +678,56 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
   </footer>
 </body>
 </html>`;
-    const newsIndexTranslation = await translateHtml(newsIndexContent, true, 'news');
-    const newsIndexOriginalLang = newsIndexTranslation.original_language;
-    let newsIndexEsContent, newsIndexEnContent;
-    if (newsIndexOriginalLang === 'es') {
-      newsIndexEsContent = newsIndexContent;
-      newsIndexEnContent = newsIndexTranslation.translated_html;
-    } else {
-      newsIndexEsContent = newsIndexTranslation.translated_html;
-      newsIndexEnContent = newsIndexContent;
-    }
+
+    let newsIndexContentEn = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>News Index - The National Review of Sciences for Students</title>
+  <link rel="stylesheet" href="/index.css">
+</head>
+<body>
+  <header>
+    <h1>News Index by Year</h1>
+    <p>Access news by year of publication.</p>
+  </header>
+  <main>
+${Object.keys(newsByYear).sort().reverse().map(year => `
+    <section>
+      <h2>Year ${year}</h2>
+      <ul>
+        ${newsByYear[year].map(item => {
+          const slug = generateSlug(item.titulo + ' ' + item.fecha);
+          return `
+          <li>
+            <a href="/news/${slug}.EN.html">${item.title}</a> (${item.fecha})
+          </li>
+        `;
+        }).join('')}
+      </ul>
+    </section>
+`).join('')}
+  </main>
+  <footer>
+    <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
+    <a href="/">Back to home</a>
+  </footer>
+</body>
+</html>`;
+
     const newsEsIndexPath = path.join(newsOutputHtmlDir, 'index.html');
-    fs.writeFileSync(newsEsIndexPath, newsIndexEsContent, 'utf8');
+    fs.writeFileSync(newsEsIndexPath, newsIndexContent, 'utf8');
     console.log(`Generado índice HTML de noticias (ES): ${newsEsIndexPath}`);
     const newsEnIndexPath = path.join(newsOutputHtmlDir, 'index.EN.html');
-    fs.writeFileSync(newsEnIndexPath, newsIndexEnContent, 'utf8');
+    fs.writeFileSync(newsEnIndexPath, newsIndexContentEn, 'utf8');
     console.log(`Generado índice HTML de noticias (EN): ${newsEnIndexPath}`);
 
-    // Procesar equipo (generar HTML para TODOS los miembros)
+    // Procesar equipo
     const teamRes = await fetch(teamCsvUrl);
     if (!teamRes.ok) throw new Error(`Error descargando CSV de equipo: ${teamRes.statusText}`);
     const teamCsvData = await teamRes.text();
     const teamParsed = Papa.parse(teamCsvData, { header: true, skipEmptyLines: true });
-    const allMembers = teamParsed.data; // No filtrar aquí, incluir todos los miembros
+    const allMembers = teamParsed.data;
 
     for (const member of allMembers) {
       const nombre = member['Nombre'] || 'Miembro desconocido';
@@ -558,12 +737,21 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
         .map(r => r.trim())
         .filter(r => r)
         .join(', ') || 'No especificado';
+      const rolesEn = (member['Role in the Journal'] || 'Not specified')
+        .split(';')
+        .map(r => r.trim())
+        .filter(r => r)
+        .join(', ') || 'Not specified';
       const descripcion = member['Descripción'] || 'Información no disponible';
+      const description = member['Description'] || 'Information not available';
       const areas = member['Áreas de interés'] || 'No especificadas';
+      const areasEn = member['Areas of interest'] || 'Not specified';
       const areasList = areas.split(';').map(a => a.trim()).filter(a => a);
+      const areasListEn = areasEn.split(';').map(a => a.trim()).filter(a => a);
       const imagen = getImageSrc(member['Imagen'] || '');
       const areasTagsHtml = areasList.length ? areasList.map(area => `<span class="area-tag">${area}</span>`).join('') : '<p>No especificadas</p>';
-      const htmlContent = `<!DOCTYPE html>
+      const areasTagsHtmlEn = areasListEn.length ? areasListEn.map(area => `<span class="area-tag">${area}</span>`).join('') : '<p>Not specified</p>';
+      const esContent = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -761,16 +949,206 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
   </div>
 </body>
 </html>`;
-      const translation = await translateHtml(htmlContent, false, 'team');
-      const originalLang = translation.original_language;
-      let esContent, enContent;
-      if (originalLang === 'es') {
-        esContent = htmlContent;
-        enContent = translation.translated_html;
-      } else {
-        esContent = translation.translated_html;
-        enContent = htmlContent;
+
+      const enContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="${description.substring(0, 160)}...">
+  <meta name="keywords" content="${areasEn}, ${rolesEn}, The National Review of Sciences for Students">
+  <meta name="author" content="${nombre}">
+  <title>${nombre} - Team of The National Review of Sciences for Students</title>
+  <link rel="stylesheet" href="/index.css">
+  <style>
+    body {
+      background-color: #f8f9fa;
+      font-family: 'Merriweather', 'Georgia', serif;
+      color: #2d3748;
+      margin: 0;
+      padding: 0;
+      line-height: 1.6;
+    }
+    .profile-container {
+      max-width: 900px;
+      margin: 3rem auto;
+      padding: 2rem;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      text-align: center;
+    }
+    .profile-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    @media (min-width: 768px) {
+      .profile-header {
+        flex-direction: row;
+        align-items: flex-start;
+        text-align: left;
       }
+    }
+    .profile-img {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      object-fit: cover;
+      object-position: center;
+      border: 3px solid #2b6cb0;
+      transition: transform 0.3s ease;
+      display: block;
+    }
+    .profile-img:hover {
+      transform: scale(1.05);
+    }
+    .profile-img-fallback {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      color: #4a5568;
+      border: 3px solid #2b6cb0;
+    }
+    .profile-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    @media (min-width: 768px) {
+      .profile-info {
+        align-items: flex-start;
+      }
+    }
+    .section {
+      margin-top: 2rem;
+      text-align: justify;
+    }
+    .areas-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+    @media (min-width: 768px) {
+      .areas-tags {
+        justify-content: flex-start;
+      }
+    }
+    .area-tag {
+      background: #2d3748;
+      color: #ffffff;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      display: inline-block;
+    }
+    h1 {
+      color: #2b6cb0;
+      font-size: 2.25rem;
+      margin-bottom: 0.5rem;
+      font-weight: 700;
+    }
+    h2 {
+      color: #2d3748;
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      font-weight: 600;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 0.5rem;
+    }
+    .role {
+      font-size: 1.1rem;
+      color: #4a5568;
+      font-weight: 500;
+      background: #edf2f7;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      display: inline-block;
+    }
+    p {
+      margin-bottom: 1rem;
+      color: #4a5568;
+      font-size: 1rem;
+    }
+    footer {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #e2e8f0;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #718096;
+    }
+    a {
+      color: #2b6cb0;
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.3s ease;
+    }
+    a:hover {
+      color: #1a4971;
+      text-decoration: underline;
+    }
+    @media (max-width: 640px) {
+      .profile-container {
+        padding: 1.5rem;
+      }
+      .profile-img, .profile-img-fallback {
+        width: 150px;
+        height: 150px;
+      }
+      h1 {
+        font-size: 1.75rem;
+      }
+      h2 {
+        font-size: 1.25rem;
+      }
+      .area-tag {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="profile-container">
+    <div class="profile-header">
+      <div class="profile-img-container">
+        ${imagen ? `<img src="${imagen}" alt="Photo of ${nombre}" class="profile-img">` : `<div class="profile-img-fallback">No Image</div>`}
+      </div>
+      <div class="profile-info">
+        <h1>${nombre}</h1>
+        <p class="role">${rolesEn}</p>
+      </div>
+    </div>
+    <div class="section">
+      <h2>Description</h2>
+      <p>${description}</p>
+    </div>
+    <div class="section">
+      <h2>Areas of Interest</h2>
+      <div class="areas-tags">
+        ${areasTagsHtmlEn}
+      </div>
+    </div>
+    <footer>
+      <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
+      <a href="/">Back to home</a>
+    </footer>
+  </div>
+</body>
+</html>`;
+
       const esPath = path.join(teamOutputHtmlDir, `${slug}.html`);
       fs.writeFileSync(esPath, esContent, 'utf8');
       console.log(`Generado HTML de miembro (ES): ${esPath}`);
@@ -781,14 +1159,14 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
 
     // Generar páginas estáticas para las secciones de la SPA
     const sections = [
-      { name: 'about', label: 'Acerca de', content: 'La Revista Nacional de Ciencias para Estudiantes es una publicación dedicada a promover la investigación científica entre estudiantes.' },
-      { name: 'guidelines', label: 'Guías', content: 'Guías para autores y revisores de La Revista Nacional de Ciencias para Estudiantes.' },
-      { name: 'faq', label: 'Preguntas Frecuentes', content: 'Preguntas frecuentes sobre La Revista Nacional de Ciencias para Estudiantes.' },
-      { name: 'news', label: 'Noticias', content: 'Últimas noticias de La Revista Nacional de Ciencias para Estudiantes.' },
+      { name: 'about', label: 'Acerca de', labelEn: 'About', content: 'La Revista Nacional de Ciencias para Estudiantes es una publicación dedicada a promover la investigación científica entre estudiantes.', contentEn: 'The National Review of Sciences for Students is a publication dedicated to promoting scientific research among students.' },
+      { name: 'guidelines', label: 'Guías', labelEn: 'Guidelines', content: 'Guías para autores y revisores de La Revista Nacional de Ciencias para Estudiantes.', contentEn: 'Guidelines for authors and reviewers of The National Review of Sciences for Students.' },
+      { name: 'faq', label: 'Preguntas Frecuentes', labelEn: 'Frequently Asked Questions', content: 'Preguntas frecuentes sobre La Revista Nacional de Ciencias para Estudiantes.', contentEn: 'Frequently asked questions about The National Review of Sciences for Students.' },
+      { name: 'news', label: 'Noticias', labelEn: 'News', content: 'Últimas noticias de La Revista Nacional de Ciencias para Estudiantes.', contentEn: 'Latest news from The National Review of Sciences for Students.' },
     ];
 
     sections.forEach(section => {
-      const htmlContent = `<!DOCTYPE html>
+      const htmlContentEs = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -814,12 +1192,43 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
   </footer>
 </body>
 </html>`;
-      const filePath = path.join(sectionsOutputDir, `${section.name}.html`);
-      fs.writeFileSync(filePath, htmlContent, 'utf8');
-      console.log(`Generado HTML de sección: ${filePath}`);
+
+      const htmlContentEn = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="${section.labelEn} - The National Review of Sciences for Students">
+  <meta name="keywords" content="${section.labelEn}, The National Review of Sciences for Students">
+  <title>${section.labelEn} - The National Review of Sciences for Students</title>
+  <link rel="stylesheet" href="/index.css">
+</head>
+<body>
+  <header>
+    <h1>${section.labelEn}</h1>
+  </header>
+  <main>
+    <section class="py-8 max-w-7xl mx-auto">
+      <p>${section.contentEn}</p>
+      <p>For more information, visit our main page.</p>
+    </section>
+  </main>
+  <footer>
+    <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
+    <a href="/">Back to home</a>
+  </footer>
+</body>
+</html>`;
+
+      const filePathEs = path.join(sectionsOutputDir, `${section.name}.html`);
+      fs.writeFileSync(filePathEs, htmlContentEs, 'utf8');
+      console.log(`Generado HTML de sección (ES): ${filePathEs}`);
+      const filePathEn = path.join(sectionsOutputDir, `${section.name}.EN.html`);
+      fs.writeFileSync(filePathEn, htmlContentEn, 'utf8');
+      console.log(`Generado HTML de sección (EN): ${filePathEn}`);
     });
 
-    // Generar sitemap (incluir TODOS los miembros y noticias)
+    // Generar sitemap
     const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
 <!-- Created for La Revista Nacional de Ciencias para Estudiantes -->
@@ -831,6 +1240,12 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
 </url>
 <url>
   <loc>${domain}/articles/index.html</loc>
+  <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.9</priority>
+</url>
+<url>
+  <loc>${domain}/articles/index.EN.html</loc>
   <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.9</priority>
@@ -895,6 +1310,12 @@ ${allMembers.map(member => {
 ${sections.map(section => `
 <url>
   <loc>${domain}/sections/${section.name}.html</loc>
+  <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.7</priority>
+</url>
+<url>
+  <loc>${domain}/sections/${section.name}.EN.html</loc>
   <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.7</priority>
