@@ -276,7 +276,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
         cuerpo: base64DecodeUnicode(String(row["Contenido de la noticia"] ?? "")),
         fecha: parseDateFlexible(String(row["Fecha"] ?? "")),
         title: String(row["Title"] ?? ""),
-        content: base64DecodeUnicode(String(row["Content of the news"] ?? "")),
+        content: base64DecodeUnicode(String(row["Content of the new"] ?? "")),
       }));
 
     for (const newsItem of newsItems) {
