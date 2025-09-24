@@ -3,7 +3,7 @@ import Papa from 'papaparse';
 import Admissions from './AdmissionsEN';
 import MailsTeam from './MailsTeamEN';
 
-// ✅ Variables de entorno inyectadas por Webpack DefinePlugin
+// ✅ Environment variables injected by Webpack DefinePlugin
 const ARTICULOS_GAS_URL = process.env.REACT_APP_ARTICULOS_SCRIPT_URL || '';
 const GH_TOKEN = process.env.REACT_APP_GH_TOKEN || '';
 const ARTICULOS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p32EM6-0VYy18AdREQwXdpeet1WHTA4H2-W2FX7HKe1HPSyApWadUw9sKHdVYQXL5tP6yDRs/pub?output=csv';
@@ -21,7 +21,7 @@ const toBase64 = (file) =>
 
 // GitHub API Functions
 const uploadPDFToGitHub = async (base64Content, fileName, message, sha = null) => {
-  if (!GH_TOKEN) throw new Error('GitHub token no disponible');
+  if (!GH_TOKEN) throw new Error('GitHub token not available');
   
   const path = `public/Articles/${fileName}`;
   const url = `${GH_API_BASE}/${path}`;
@@ -50,7 +50,7 @@ const uploadPDFToGitHub = async (base64Content, fileName, message, sha = null) =
 };
 
 const deletePDFFromGitHub = async (fileName, message) => {
-  if (!GH_TOKEN) throw new Error('GitHub token no disponible');
+  if (!GH_TOKEN) throw new Error('GitHub token not available');
   
   const path = `public/Articles/${fileName}`;
   const url = `${GH_API_BASE}/${path}`;
@@ -86,7 +86,7 @@ const deletePDFFromGitHub = async (fileName, message) => {
 };
 
 const triggerRebuild = async () => {
-  if (!GH_TOKEN) throw new Error('GitHub token no disponible');
+  if (!GH_TOKEN) throw new Error('GitHub token not available');
   
   const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/dispatches`;
   const response = await fetch(url, {
@@ -129,7 +129,7 @@ export default function DirectorPanel({ user }) {
   const [status, setStatus] = useState('');
   const [uploading, setUploading] = useState(false);
 
-  // ✅ Debug logging movido dentro del componente
+  // ✅ Debug logging moved inside the component
   useEffect(() => {
     console.log('🔍 DirectorPanel Config:', {
       GAS_URL: ARTICULOS_GAS_URL ? `${ARTICULOS_GAS_URL.slice(0, 40)}...` : 'MISSING',
@@ -222,17 +222,17 @@ export default function DirectorPanel({ user }) {
     
     try {
       const data = {
-  action: 'update_pdf_url',
-  numero: parseInt(numero),
-  pdfUrl,
-};
-await fetch(ARTICULOS_GAS_URL, {
-  method: 'POST',
-  redirect: 'follow',
-  body: JSON.stringify(data),
-  headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-});
-console.log('✅ PDF URL updated in sheet:', numero, pdfUrl);
+        action: 'update_pdf_url',
+        numero: parseInt(numero),
+        pdfUrl,
+      };
+      await fetch(ARTICULOS_GAS_URL, {
+        method: 'POST',
+        redirect: 'follow',
+        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      });
+      console.log('✅ PDF URL updated in sheet:', numero, pdfUrl);
     } catch (err) {
       console.error('❌ Failed to update PDF URL:', err);
     }
@@ -240,7 +240,7 @@ console.log('✅ PDF URL updated in sheet:', numero, pdfUrl);
 
   const submitToSheet = async (action, articleData, numero = null) => {
     if (!ARTICULOS_GAS_URL) {
-      throw new Error('Google Apps Script URL no configurada');
+      throw new Error('Google Apps Script URL not configured');
     }
 
     const data = {
@@ -252,16 +252,16 @@ console.log('✅ PDF URL updated in sheet:', numero, pdfUrl);
     console.log(`📄 Submitting to GAS: ${action}`, { hasNumero: !!numero });
     
     const response = await fetch(ARTICULOS_GAS_URL, {
-  method: 'POST',
-  redirect: 'follow',  // Para manejar redirects de GAS
-  body: JSON.stringify(data),
-  headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-});
+      method: 'POST',
+      redirect: 'follow',
+      body: JSON.stringify(data),
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    });
 
-  const resText = await response.text();
-if (resText.includes('error')) {
-  throw new Error(`GAS error: ${resText}`);
-}
+    const resText = await response.text();
+    if (resText.includes('error')) {
+      throw new Error(`GAS error: ${resText}`);
+    }
 
     // Wait for sync
     await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -270,18 +270,18 @@ if (resText.includes('error')) {
 
   const handleSubmit = async (action = 'add') => {
     if (!formData.titulo.trim() || !formData.autores.trim()) {
-      setStatus('❌ Título y autor(es) son obligatorios');
+      setStatus('❌ Title and author(s) are required');
       return;
     }
 
     if (!ARTICULOS_GAS_URL) {
-      setStatus('❌ Google Apps Script no configurado');
+      setStatus('❌ Google Apps Script not configured');
       return;
     }
 
     setUploading(true);
     try {
-      setStatus('Procesando...');
+      setStatus('Processing...');
       console.log(`🚀 ${action === 'add' ? 'Adding' : 'Editing'} article...`);
       
       const articleData = {
@@ -302,13 +302,13 @@ if (resText.includes('error')) {
       let articleNumber;
       if (action === 'add') {
         await submitToSheet('add', articleData);
-        await new Promise(resolve => setTimeout(resolve, 3000));  // Espera 3 segundos para propagación
+        await new Promise(resolve => setTimeout(resolve, 3000));  // Wait 3 seconds for propagation
         // Get the new article number after refresh
         await fetchArticles();
         const nums = articles.map(a => parseInt(a['Número de artículo'] || '0', 10)).filter(n => !isNaN(n) && isFinite(n));
-const maxNum = nums.length > 0 ? Math.max(...nums) : 0;
-articleNumber = maxNum + 1;
-console.log('🆕 Calculated articleNumber:', articleNumber, 'from nums:', nums);
+        const maxNum = nums.length > 0 ? Math.max(...nums) : 0;
+        articleNumber = maxNum + 1;
+        console.log('🆕 Calculated articleNumber:', articleNumber, 'from nums:', nums);
         console.log('🆕 New article number:', articleNumber);
       } else {
         articleNumber = editingArticle['Número de artículo'];
@@ -319,11 +319,11 @@ console.log('🆕 Calculated articleNumber:', articleNumber, 'from nums:', nums)
       let pdfUrl = null;
       if (formData.pdfFile) {
         if (!GH_TOKEN) {
-          setStatus('✅ Metadata guardado. Sube PDF manualmente.');
+          setStatus('✅ Metadata saved. Upload PDF manually.');
           return;
         }
 
-        setStatus('Subiendo PDF...');
+        setStatus('Uploading PDF...');
         const base64 = await toBase64(formData.pdfFile);
         const fileName = `Articulo${articleNumber}.pdf`;
         const message = `${action === 'add' ? 'Add' : 'Update'} PDF for article ${articleNumber}`;
@@ -333,17 +333,17 @@ console.log('🆕 Calculated articleNumber:', articleNumber, 'from nums:', nums)
         await updatePDFUrlInSheet(articleNumber, pdfUrl);
         
         console.log('✅ PDF uploaded:', pdfUrl);
-        setStatus(`✅ ${action === 'add' ? 'Artículo agregado' : 'Artículo actualizado'} con PDF`);
+        setStatus(`✅ ${action === 'add' ? 'Article added' : 'Article updated'} with PDF`);
       } else {
-        setStatus(`✅ ${action === 'add' ? 'Artículo agregado' : 'Artículo actualizado'}`);
+        setStatus(`✅ ${action === 'add' ? 'Article added' : 'Article updated'}`);
       }
 
       closeModals();
       await fetchArticles();
       if (GH_TOKEN) {
-  await triggerRebuild();
-  setStatus(`${status} y rebuild iniciado.`);
-}
+        await triggerRebuild();
+        setStatus(`${status} and rebuild started.`);
+      }
       
     } catch (err) {
       console.error('💥 Submit error:', err);
@@ -373,32 +373,32 @@ console.log('🆕 Calculated articleNumber:', articleNumber, 'from nums:', nums)
   };
 
   const handleDelete = async (numero) => {
-    if (!confirm(`¿Eliminar artículo #${numero}?`)) return;
+    if (!confirm(`Delete article #${numero}?`)) return;
     
     if (!ARTICULOS_GAS_URL) {
-      setStatus('❌ Google Apps Script no configurado');
+      setStatus('❌ Google Apps Script not configured');
       return;
     }
 
     try {
-      setStatus('Eliminando...');
+      setStatus('Deleting...');
       
       // Delete from sheet
-const data = { action: 'delete', numero: parseInt(numero) };
-await fetch(ARTICULOS_GAS_URL, {
-  method: 'POST',
-  mode: 'no-cors',
-  redirect: 'follow',
-  headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-  body: JSON.stringify(data),
-});
+      const data = { action: 'delete', numero: parseInt(numero) };
+      await fetch(ARTICULOS_GAS_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        redirect: 'follow',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(data),
+      });
       
       // Delete PDF if exists
       if (GH_TOKEN) {
         await deletePDFFromGitHub(`Articulo${numero}.pdf`, `Delete PDF for article ${numero}`);
       }
       
-      setStatus('✅ Artículo eliminado');
+      setStatus('✅ Article deleted');
       await fetchArticles();
       
     } catch (err) {
@@ -409,14 +409,14 @@ await fetch(ARTICULOS_GAS_URL, {
 
   const handleRebuild = async () => {
     if (!GH_TOKEN) {
-      setStatus('❌ GitHub token no configurado');
+      setStatus('❌ GitHub token not configured');
       return;
     }
 
     try {
-      setStatus('Iniciando rebuild...');
+      setStatus('Starting rebuild...');
       await triggerRebuild();
-      setStatus('✅ Rebuild iniciado');
+      setStatus('✅ Rebuild started');
     } catch (err) {
       console.error('💥 Rebuild error:', err);
       setStatus(`❌ Error: ${err.message}`);
@@ -444,18 +444,18 @@ await fetch(ARTICULOS_GAS_URL, {
           </svg>
         </div>
         <div className="ml-3">
-          <h3 className="text-sm font-medium text-yellow-800">Configuración requerida</h3>
+          <h3 className="text-sm font-medium text-yellow-800">Configuration Required</h3>
           <div className="mt-2 text-sm text-yellow-700 space-y-1">
             <p>
               ✅ Google Apps Script:{' '}
               <span className={ARTICULOS_GAS_URL ? 'text-green-600' : 'text-red-600'}>
-                {ARTICULOS_GAS_URL ? 'Configurado' : 'Falta configurar'}
+                {ARTICULOS_GAS_URL ? 'Configured' : 'Not configured'}
               </span>
             </p>
             <p>
               ✅ GitHub Token:{' '}
               <span className={GH_TOKEN ? 'text-green-600' : 'text-red-600'}>
-                {GH_TOKEN ? 'Configurado' : 'Falta configurar'}
+                {GH_TOKEN ? 'Configured' : 'Not configured'}
               </span>
             </p>
           </div>
@@ -469,7 +469,7 @@ await fetch(ARTICULOS_GAS_URL, {
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando artículos...</p>
+          <p className="text-gray-600">Loading articles...</p>
         </div>
       </div>
     );
@@ -485,8 +485,8 @@ await fetch(ARTICULOS_GAS_URL, {
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Panel del Director</h1>
-              <p className="mt-2 text-sm text-gray-600">Gestiona artículos y contenido de la revista</p>
+              <h1 className="text-3xl font-bold text-gray-900">Director Dashboard</h1>
+              <p className="mt-2 text-sm text-gray-600">Manage articles and journal content</p>
             </div>
             <div className="flex space-x-3">
               <button
@@ -518,7 +518,7 @@ await fetch(ARTICULOS_GAS_URL, {
             className={`mb-6 p-4 rounded-lg ${
               status.includes('Error') || status.includes('❌')
                 ? 'bg-red-50 border border-red-200 text-red-800'
-                : status.includes('Subiendo') || status.includes('Procesando')
+                : status.includes('Uploading') || status.includes('Processing')
                 ? 'bg-blue-50 border border-blue-200 text-blue-800'
                 : 'bg-green-50 border border-green-200 text-green-800'
             }`}
@@ -532,7 +532,7 @@ await fetch(ARTICULOS_GAS_URL, {
           <div className="fixed top-4 right-4 bg-white rounded-lg shadow-lg p-4 z-50 border">
             <div className="flex items-center space-x-3">
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-              <span className="text-sm font-medium text-gray-900">Subiendo...</span>
+              <span className="text-sm font-medium text-gray-900">Uploading...</span>
             </div>
           </div>
         )}
@@ -541,7 +541,7 @@ await fetch(ARTICULOS_GAS_URL, {
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="px-6 py-5 border-b border-gray-200">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-2 sm:space-y-0">
-              <h2 className="text-lg font-medium text-gray-900">Artículos ({articles.length})</h2>
+              <h2 className="text-lg font-medium text-gray-900">Articles ({articles.length})</h2>
               <button
                 onClick={() => setShowAddModal(true)}
                 disabled={!ARTICULOS_GAS_URL}
@@ -554,7 +554,7 @@ await fetch(ARTICULOS_GAS_URL, {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-                <span>Agregar Artículo</span>
+                <span>Add Article</span>
               </button>
             </div>
           </div>
@@ -575,14 +575,14 @@ await fetch(ARTICULOS_GAS_URL, {
                     d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                   />
                 </svg>
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No hay artículos</h3>
-                <p className="mt-1 text-sm text-gray-500">Comienza agregando tu primer artículo.</p>
+                <h3 className="mt-2 text-sm font-medium text-gray-900">No Articles</h3>
+                <p className="mt-1 text-sm text-gray-500">Start by adding your first article.</p>
                 {ARTICULOS_GAS_URL && (
                   <button
                     onClick={() => setShowAddModal(true)}
                     className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
                   >
-                    Agregar primer artículo
+                    Add First Article
                   </button>
                 )}
               </div>
@@ -623,30 +623,30 @@ await fetch(ARTICULOS_GAS_URL, {
                       <div className="px-6 pb-4 bg-gray-50">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                           <div>
-                            <p className="text-gray-900 font-medium">Resumen</p>
-                            <p className="mt-1 text-gray-600">{article['Resumen'] || 'No disponible'}</p>
+                            <p className="text-gray-900 font-medium">Abstract (Spanish)</p>
+                            <p className="mt-1 text-gray-600">{article['Resumen'] || 'Not available'}</p>
                           </div>
                           <div>
-                            <p className="text-gray-900 font-medium">Abstract</p>
-                            <p className="mt-1 text-gray-600">{article['Abstract'] || 'No disponible'}</p>
+                            <p className="text-gray-900 font-medium">Abstract (English)</p>
+                            <p className="mt-1 text-gray-600">{article['Abstract'] || 'Not available'}</p>
                           </div>
                           <div className="md:col-span-2">
-                            <p className="text-gray-900 font-medium">Detalles</p>
+                            <p className="text-gray-900 font-medium">Details</p>
                             <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
                               <div>
-                                <p className="text-gray-500">Fecha</p>
+                                <p className="text-gray-500">Date</p>
                                 <p className="font-medium">{article['Fecha'] || 'N/A'}</p>
                               </div>
                               <div>
-                                <p className="text-gray-500">Vol/Nº</p>
+                                <p className="text-gray-500">Volume/Issue</p>
                                 <p className="font-medium">{`${article['Volumen'] || 'N/A'}/${article['Número'] || 'N/A'}`}</p>
                               </div>
                               <div>
-                                <p className="text-gray-500">Páginas</p>
+                                <p className="text-gray-500">Pages</p>
                                 <p className="font-medium">{`${article['Primera página'] || ''}-${article['Última página'] || ''}`}</p>
                               </div>
                               <div>
-                                <p className="text-gray-500">Áreas</p>
+                                <p className="text-gray-500">Thematic Areas</p>
                                 <p className="font-medium">{article.areas.length ? article.areas.join(', ') : 'N/A'}</p>
                               </div>
                             </div>
@@ -688,7 +688,7 @@ await fetch(ARTICULOS_GAS_URL, {
                                 }}
                                 className="px-3 py-2 text-sm font-medium text-yellow-600 bg-yellow-100 hover:bg-yellow-200 rounded-md transition-colors"
                               >
-                                Editar
+                                Edit
                               </button>
                               <button
                                 onClick={(e) => {
@@ -697,7 +697,7 @@ await fetch(ARTICULOS_GAS_URL, {
                                 }}
                                 className="px-3 py-2 text-sm font-medium text-red-600 bg-red-100 hover:bg-red-200 rounded-md transition-colors"
                               >
-                                Eliminar
+                                Delete
                               </button>
                             </div>
                           </div>
@@ -720,7 +720,7 @@ await fetch(ARTICULOS_GAS_URL, {
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="mt-3">
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">Agregar Nuevo Artículo</h3>
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">Add New Article</h3>
                     <form
                       className="space-y-4"
                       onSubmit={(e) => {
@@ -729,7 +729,7 @@ await fetch(ARTICULOS_GAS_URL, {
                       }}
                     >
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Título *</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
                         <input
                           name="titulo"
                           value={formData.titulo}
@@ -741,7 +741,7 @@ await fetch(ARTICULOS_GAS_URL, {
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Autor(es) * (separar con ;)
+                          Author(s) * (separate with ;)
                         </label>
                         <input
                           name="autores"
@@ -754,7 +754,7 @@ await fetch(ARTICULOS_GAS_URL, {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
                           <input
                             name="fecha"
                             type="date"
@@ -764,7 +764,7 @@ await fetch(ARTICULOS_GAS_URL, {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Volumen</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Volume</label>
                           <input
                             name="volumen"
                             value={formData.volumen}
@@ -776,9 +776,7 @@ await fetch(ARTICULOS_GAS_URL, {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Número (fascículo)
-                          </label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Issue</label>
                           <input
                             name="numero"
                             value={formData.numero}
@@ -787,17 +785,17 @@ await fetch(ARTICULOS_GAS_URL, {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Páginas</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Pages</label>
                           <input
                             name="primeraPagina"
-                            placeholder="Inicio"
+                            placeholder="Start"
                             value={formData.primeraPagina}
                             onChange={handleInputChange}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                           />
                           <input
                             name="ultimaPagina"
-                            placeholder="Final"
+                            placeholder="End"
                             value={formData.ultimaPagina}
                             onChange={handleInputChange}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 mt-1"
@@ -807,7 +805,7 @@ await fetch(ARTICULOS_GAS_URL, {
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Área temática (separar con ;)
+                          Thematic Area (separate with ;)
                         </label>
                         <input
                           name="areaTematica"
@@ -819,7 +817,7 @@ await fetch(ARTICULOS_GAS_URL, {
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Palabras clave (separar con ;)
+                          Keywords (separate with ;)
                         </label>
                         <input
                           name="palabrasClave"
@@ -830,7 +828,7 @@ await fetch(ARTICULOS_GAS_URL, {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Resumen</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Abstract (Spanish)</label>
                         <textarea
                           name="resumen"
                           value={formData.resumen}
@@ -841,9 +839,7 @@ await fetch(ARTICULOS_GAS_URL, {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Abstract (English)
-                        </label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Abstract (English)</label>
                         <textarea
                           name="abstract"
                           value={formData.abstract}
@@ -854,14 +850,14 @@ await fetch(ARTICULOS_GAS_URL, {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Archivo PDF</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">PDF File</label>
                         <input
                           type="file"
                           accept=".pdf"
                           onChange={handleFileChange}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                         />
-                        <p className="mt-1 text-xs text-gray-500">El PDF se subirá automáticamente a GitHub</p>
+                        <p className="mt-1 text-xs text-gray-500">The PDF will be automatically uploaded to GitHub</p>
                       </div>
 
                       <div className="pt-4 border-t border-gray-200 flex justify-end space-x-3">
@@ -870,14 +866,14 @@ await fetch(ARTICULOS_GAS_URL, {
                           onClick={closeModals}
                           className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                         >
-                          Cancelar
+                          Cancel
                         </button>
                         <button
                           type="submit"
                           disabled={!formData.titulo.trim() || !formData.autores.trim() || uploading}
                           className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {uploading ? 'Procesando...' : 'Agregar Artículo'}
+                          {uploading ? 'Processing...' : 'Add Article'}
                         </button>
                       </div>
                     </form>
@@ -898,7 +894,7 @@ await fetch(ARTICULOS_GAS_URL, {
                 >
                   <div className="mt-3">
                     <h3 className="text-lg font-medium text-gray-900 mb-4">
-                      Editar Artículo #{editingArticle['Número de artículo']}
+                      Edit Article #{editingArticle['Número de artículo']}
                     </h3>
                     <form
                       className="space-y-4"
@@ -908,7 +904,7 @@ await fetch(ARTICULOS_GAS_URL, {
                       }}
                     >
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Título *</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
                         <input
                           name="titulo"
                           value={formData.titulo}
@@ -920,7 +916,7 @@ await fetch(ARTICULOS_GAS_URL, {
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Autor(es) * (separar con ;)
+                          Author(s) * (separate with ;)
                         </label>
                         <input
                           name="autores"
@@ -933,7 +929,7 @@ await fetch(ARTICULOS_GAS_URL, {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
                           <input
                             name="fecha"
                             type="date"
@@ -943,7 +939,7 @@ await fetch(ARTICULOS_GAS_URL, {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Volumen</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Volume</label>
                           <input
                             name="volumen"
                             value={formData.volumen}
@@ -955,9 +951,7 @@ await fetch(ARTICULOS_GAS_URL, {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Número (fascículo)
-                          </label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Issue</label>
                           <input
                             name="numero"
                             value={formData.numero}
@@ -966,17 +960,17 @@ await fetch(ARTICULOS_GAS_URL, {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Páginas</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Pages</label>
                           <input
                             name="primeraPagina"
-                            placeholder="Inicio"
+                            placeholder="Start"
                             value={formData.primeraPagina}
                             onChange={handleInputChange}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                           />
                           <input
                             name="ultimaPagina"
-                            placeholder="Final"
+                            placeholder="End"
                             value={formData.ultimaPagina}
                             onChange={handleInputChange}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 mt-1"
@@ -986,7 +980,7 @@ await fetch(ARTICULOS_GAS_URL, {
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Área temática (separar con ;)
+                          Thematic Area (separate with ;)
                         </label>
                         <input
                           name="areaTematica"
@@ -998,7 +992,7 @@ await fetch(ARTICULOS_GAS_URL, {
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Palabras clave (separar con ;)
+                          Keywords (separate with ;)
                         </label>
                         <input
                           name="palabrasClave"
@@ -1009,7 +1003,7 @@ await fetch(ARTICULOS_GAS_URL, {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Resumen</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Abstract (Spanish)</label>
                         <textarea
                           name="resumen"
                           value={formData.resumen}
@@ -1020,9 +1014,7 @@ await fetch(ARTICULOS_GAS_URL, {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Abstract (English)
-                        </label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Abstract (English)</label>
                         <textarea
                           name="abstract"
                           value={formData.abstract}
@@ -1033,14 +1025,14 @@ await fetch(ARTICULOS_GAS_URL, {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Archivo PDF</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">PDF File</label>
                         <input
                           type="file"
                           accept=".pdf"
                           onChange={handleFileChange}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                         />
-                        <p className="mt-1 text-xs text-gray-500">El PDF se subirá automáticamente a GitHub</p>
+                        <p className="mt-1 text-xs text-gray-500">The PDF will be automatically uploaded to GitHub</p>
                       </div>
 
                       <div className="pt-4 border-t border-gray-200 flex justify-end space-x-3">
@@ -1049,14 +1041,14 @@ await fetch(ARTICULOS_GAS_URL, {
                           onClick={closeModals}
                           className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                         >
-                          Cancelar
+                          Cancel
                         </button>
                         <button
                           type="submit"
                           disabled={!formData.titulo.trim() || !formData.autores.trim() || uploading}
                           className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {uploading ? 'Actualizando...' : 'Actualizar Artículo'}
+                          {uploading ? 'Updating...' : 'Update Article'}
                         </button>
                       </div>
                     </form>
@@ -1067,7 +1059,7 @@ await fetch(ARTICULOS_GAS_URL, {
           </div>
         </div>
 
-        {/* Componentes adicionales */}
+        {/* Additional Components */}
         <MailsTeam />
         <Admissions />
       </div>
