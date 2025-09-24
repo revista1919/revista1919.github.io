@@ -610,7 +610,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
   <div class="container">
     <header>
       <a href="/">
-        <img src="/logo.png" alt="Logo of The National Review of Sciences for Students" class="logo">
+        <img src="/logoEN.png" alt="Logo of The National Review of Sciences for Students" class="logo">
       </a>
       <h1>${newsItem.title}</h1>
       <p class="date">Published on ${newsItem.fecha}</p>
