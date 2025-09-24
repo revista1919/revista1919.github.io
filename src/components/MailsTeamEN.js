@@ -17,9 +17,7 @@ export default function MailsTeam() {
   const [selected, setSelected] = useState([]);
   const [status, setStatus] = useState('');
   const [sending, setSending] = useState(false);
-
   const [manualEmail, setManualEmail] = useState('');
-  const [manualEmails, setManualEmails] = useState([]);
 
   useEffect(() => {
     fetchTeam();
@@ -52,7 +50,7 @@ export default function MailsTeam() {
 
   const toggleSelectAll = () => {
     setSelectAll(!selectAll);
-    setSelected(!selectAll ? team.map(member => member.Correo).concat(manualEmails) : []);
+    setSelected(!selectAll ? team.map(member => member.Correo) : manualEmail ? [manualEmail] : []);
   };
 
   const toggleSelect = (email) => {
@@ -62,29 +60,23 @@ export default function MailsTeam() {
   };
 
   const addManualEmail = () => {
-    if (!manualEmail.trim()) return;
-    const email = manualEmail.trim().toLowerCase();
-
-    const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    if (!valid) {
-      setStatus('❌ Invalid email');
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!manualEmail.trim() || !emailRegex.test(manualEmail)) {
+      setStatus('❌ Please enter a valid email address');
       return;
     }
-
-    if (manualEmails.includes(email) || selected.includes(email)) {
-      setStatus('⚠️ This email has already been added');
+    if (selected.includes(manualEmail)) {
+      setStatus('❌ Email already added');
       return;
     }
-
-    setManualEmails(prev => [...prev, email]);
-    setSelected(prev => [...prev, email]);
+    setSelected(prev => [...prev, manualEmail]);
     setManualEmail('');
-    setStatus('');
+    setStatus('✅ Email added manually');
   };
 
   const sendEmail = async () => {
     if (!subject.trim() || !body.trim() || selected.length === 0) {
-      setStatus('❌ Subject, message and recipients are required');
+      setStatus('❌ Subject, message, and recipients are required');
       return;
     }
     if (!TEAM_GAS_URL) {
@@ -97,22 +89,44 @@ export default function MailsTeam() {
         <!DOCTYPE html>
         <html>
         <head>
-          <style>/* styles omitted for brevity */</style>
+          <style>
+            body { margin: 0; padding: 0; background-color: #f4f4f4; }
+            .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); overflow: hidden; }
+            .header { background: linear-gradient(135deg, #1e3a8a, #3b82f6); padding: 20px; text-align: center; }
+            .header h1 { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 24px; color: #ffffff; margin: 0; font-weight: 500; letter-spacing: 1px; }
+            .subheader { background-color: #f8fafc; padding: 10px 20px; border-bottom: 1px solid #e2e8f0; }
+            .subheader p { font-family: 'Georgia', serif; font-size: 14px; color: #475569; margin: 0; }
+            .content { font-family: 'Georgia', serif; padding: 30px; color: #1f2937; font-size: 16px; line-height: 1.7; }
+            .content p { margin: 10px 0; }
+            .content a { color: #2563eb; text-decoration: none; font-weight: 500; }
+            .content a:hover { text-decoration: underline; }
+            .signature { margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 15px; }
+            .signature p { font-family: 'Georgia', serif; font-size: 14px; color: #1f2937; margin: 5px 0; }
+            .signature .title { font-weight: bold; }
+            .footer { background-color: #1e3a8a; padding: 15px; text-align: center; }
+            .footer p { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 12px; color: #ffffff; margin: 0; opacity: 0.8; }
+          </style>
         </head>
         <body>
           <div class="container">
-            <div class="header"><h1>${subject}</h1></div>
-            <div class="subheader"><p>National Student Science Journal</p></div>
+            <div class="header">
+              <h1>${subject}</h1>
+            </div>
+            <div class="subheader">
+              <p>The National Review of Sciences for Students</p>
+            </div>
             <div class="content">
               ${body}
               <div class="signature">
                 <p>Sincerely,</p>
                 <p class="title">General Director</p>
                 <p>${directorGeneral}</p>
+                <p>The National Review of Sciences for Students</p>
+                <p><a href="https://www.revistacienciasestudiantes.com/#/en">www.revistacienciasestudiantes.com</a></p>
               </div>
             </div>
             <div class="footer">
-              <p>National Student Science Journal | &copy; ${new Date().getFullYear()}</p>
+              <p>The National Review of Sciences for Students | &copy; ${new Date().getFullYear()}</p>
             </div>
           </div>
         </body>
@@ -146,7 +160,7 @@ export default function MailsTeam() {
     setBody('');
     setSelectAll(true);
     setSelected(team.map(member => member.Correo));
-    setManualEmails([]);
+    setManualEmail('');
     setStatus('');
   };
 
@@ -175,36 +189,22 @@ export default function MailsTeam() {
           >
             <h3 className="text-lg font-medium text-gray-900 mb-4">Send Email</h3>
             <div className="flex-1 space-y-4 overflow-y-auto">
-
-              {/* Manual emails */}
-              <div className="flex space-x-2 items-center">
-                <input
-                  type="email"
-                  placeholder="Add email manually"
-                  value={manualEmail}
-                  onChange={e => setManualEmail(e.target.value)}
-                  className="flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-                <button
-                  onClick={addManualEmail}
-                  className="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-                >
-                  Add
-                </button>
-              </div>
-
-              {manualEmails.length > 0 && (
-                <div className="mt-2 p-2 border rounded bg-gray-50">
-                  <p className="text-sm text-gray-600 mb-1">Added emails:</p>
-                  <ul className="text-sm text-gray-800 space-y-1">
-                    {manualEmails.map((mail, idx) => (
-                      <li key={idx}>• {mail}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
               <div>
+                <div className="flex items-center space-x-3 mb-4">
+                  <input
+                    type="text"
+                    placeholder="Add email manually"
+                    value={manualEmail}
+                    onChange={e => setManualEmail(e.target.value)}
+                    className="flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <button
+                    onClick={addManualEmail}
+                    className="px-3 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                  >
+                    Add
+                  </button>
+                </div>
                 <div
                   onClick={toggleSelectAll}
                   className={`cursor-pointer px-4 py-2 border rounded-md flex items-center space-x-2 transition-colors ${
@@ -217,7 +217,7 @@ export default function MailsTeam() {
                     onChange={toggleSelectAll}
                     className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
                   />
-                  <span className="text-sm font-medium text-gray-900">Send to all ({team.length + manualEmails.length})</span>
+                  <span className="text-sm font-medium text-gray-900">Send to all ({team.length})</span>
                 </div>
                 {!selectAll && (
                   <div className="mt-2 max-h-48 overflow-y-auto border rounded-md p-3 bg-gray-50">
@@ -249,28 +249,23 @@ export default function MailsTeam() {
                         </div>
                       );
                     })}
-
-                    {manualEmails.map((mail, idx) => (
-                      <div
-                        key={`manual-${idx}`}
-                        className="flex items-center space-x-3 py-2 border-b last:border-b-0 hover:bg-gray-100"
-                      >
+                    {manualEmail && selected.includes(manualEmail) && (
+                      <div className="flex items-center space-x-3 py-2 border-b last:border-b-0 hover:bg-gray-100">
                         <input
                           type="checkbox"
-                          checked={selected.includes(mail)}
-                          onChange={() => toggleSelect(mail)}
+                          checked={selected.includes(manualEmail)}
+                          onChange={() => toggleSelect(manualEmail)}
                           className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
                         />
                         <div className="flex-1">
-                          <div className="text-sm font-medium text-gray-900">{mail}</div>
-                          <div className="text-xs text-gray-500">Manually added email</div>
+                          <div className="text-sm font-medium text-gray-900">{manualEmail}</div>
+                          <div className="text-xs text-gray-500">Manual recipient</div>
                         </div>
                       </div>
-                    ))}
+                    )}
                   </div>
                 )}
               </div>
-
               <input
                 type="text"
                 placeholder="Subject"
