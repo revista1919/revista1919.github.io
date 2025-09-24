@@ -7,84 +7,83 @@ function AdminSection() {
 
   const roles = [
     {
-      name: 'Fundador',
-      description: 'Persona que inició el proyecto, definiendo su visión y objetivos iniciales. Supervisa la dirección estratégica de la revista.',
+      name: 'Founder',
+      description: 'Person who started the project, defining its vision and initial goals. Oversees the strategic direction of the journal.',
       isPostulable: false,
     },
     {
-      name: 'Co-Fundador',
-      description: 'Colaborador clave en la fundación del proyecto, apoya al Fundador en la toma de decisiones estratégicas.',
+      name: 'Co-Founder',
+      description: 'Key collaborator in the project’s foundation, supporting the Founder in strategic decision-making.',
       isPostulable: false,
     },
     {
-      name: 'Director General',
-      description: 'Encargado de la visión general, coordinación del equipo, relaciones externas y supervisión global de la revista.',
+      name: 'General Director',
+      description: 'Responsible for the overall vision, team coordination, external relations, and global oversight of the journal.',
       isPostulable: false,
     },
     {
-      name: 'Subdirector General',
-      description: 'Asiste al Director General en decisiones estratégicas y asume la dirección en su ausencia.',
+      name: 'Deputy General Director',
+      description: 'Assists the General Director in strategic decisions and assumes leadership in their absence.',
       isPostulable: false,
     },
     {
-      name: 'Editor en Jefe',
-      description: 'Supervisa todos los contenidos y coordina al equipo editorial. Garantiza la calidad de los artículos. Recibe, organiza y canaliza las postulaciones de artículos hacia los revisores.',
+      name: 'Editor-in-Chief',
+      description: 'Oversees all content and coordinates the editorial team. Ensures the quality of articles. Receives, organizes, and channels article submissions to reviewers.',
       isPostulable: true,
     },
     {
-      name: 'Editor de Sección',
-      description: 'Revisa y edita textos de una sección específica (por ejemplo, Opinión, Cultura, Actualidad). Vota por publicar o no un trabajo. Principalmente aplica las correcciones hechas por los revisores. Es el encargado de comunicarse con el autor para solicitar datos y entregar su retroalimentación',
+      name: 'Section Editor',
+      description: 'Reviews and edits texts for a specific section (e.g., Opinion, Culture, News). Votes on whether to publish a work. Primarily applies corrections made by reviewers. Communicates with authors to request information and provide feedback.',
       isPostulable: true,
     },
     {
-      name: 'Revisor / Comité Editorial',
-      description: 'Corrige estilo, ortografía y coherencia de los artículos. Además un revisor puede revisar fuentes, verificar calidad de las mismas y de los contenidos. Proporciona retroalimentación a los autores y vota si publicar o no un artículo.',
+      name: 'Reviewer / Editorial Committee',
+      description: 'Corrects style, spelling, and coherence of articles. Reviewers may also verify sources, assess their quality, and evaluate content. Provides feedback to authors and votes on whether to publish an article.',
       isPostulable: true,
     },
     {
-      name: 'Responsable de Desarrollo Web',
-      description: 'Administra el sitio web, corrige errores técnicos y implementa mejoras de diseño y funcionalidad.',
+      name: 'Web Development Manager',
+      description: 'Manages the website, fixes technical issues, and implements design and functionality improvements.',
       isPostulable: false,
     },
     {
-      name: 'Encargado de Soporte Técnico',
-      description: 'Resuelve problemas técnicos relacionados con la carga de contenidos, formularios y correos.',
+      name: 'Technical Support Manager',
+      description: 'Resolves technical issues related to content uploads, forms, and emails.',
       isPostulable: true,
     },
     {
-      name: 'Encargado/a de Redes Sociales',
-      description: 'Gestiona las redes sociales (Instagram, X, TikTok, etc.), publica contenido y promueve la revista.',
+      name: 'Social Media Manager',
+      description: 'Manages social media platforms (Instagram, X, TikTok, etc.), publishes content, and promotes the journal.',
       isPostulable: false,
     },
     {
-      name: 'Diseñador/a Gráfico/a',
-      description: 'Crea material visual como afiches, portadas y plantillas para redes sociales.',
+      name: 'Graphic Designer',
+      description: 'Creates visual materials such as posters, covers, and templates for social media.',
       isPostulable: true,
     },
     {
       name: 'Community Manager',
-      description: 'Interactúa con la comunidad, responde mensajes y fomenta la participación en las plataformas de la revista.',
-      isPostulable: true,
-    },
-    
-    {
-      name: 'Encargado/a de Nuevos Colaboradores',
-      description: 'Orienta a nuevos postulantes a roles administrativos, revisores o editores.',
+      description: 'Interacts with the community, responds to messages, and encourages participation on the journal’s platforms.',
       isPostulable: true,
     },
     {
-      name: 'Coordinador/a de Eventos o Convocatorias',
-      description: 'Organiza conversatorios, debates, concursos u otras actividades para promover la revista.',
+      name: 'New Collaborators Manager',
+      description: 'Guides new applicants for administrative, reviewer, or editor roles.',
       isPostulable: true,
     },
     {
-      name: 'Asesor/a Legal/Editorial',
-      description: 'Revisa términos legales, normas editoriales y derechos de autor para la revista (NO NECESARIO POR EL MOMENTO).',
+      name: 'Events or Calls Coordinator',
+      description: 'Organizes talks, debates, contests, or other activities to promote the journal.',
       isPostulable: true,
     },
     {
-      name: 'Responsable de Finanzas / Transparencia',
-      description: 'Gestiona donaciones o presupuestos, asegurando transparencia en las finanzas (NO NECESARIO POR EL MOMENTO).',
+      name: 'Editorial/Legal Advisor',
+      description: 'Reviews legal terms, editorial standards, and copyright matters for the journal (NOT NECESSARY AT THE MOMENT).',
+      isPostulable: true,
+    },
+    {
+      name: 'Finance/Transparency Manager',
+      description: 'Manages donations or budgets, ensuring transparency in finances (NOT NECESSARY AT THE MOMENT).',
       isPostulable: true,
     },
   ];
@@ -102,18 +101,18 @@ function AdminSection() {
   return React.createElement(
     'div',
     { className: 'admin-section bg-white p-3 sm:p-6 rounded-lg shadow-md mt-3 sm:mt-6' },
-    // Encabezado
+    // Header
     React.createElement(
       'h2',
       { className: 'text-lg sm:text-2xl font-semibold mb-3 sm:mb-4 text-gray-800 text-center' },
-      'Únete a nuestro equipo'
+      'Join our team'
     ),
     React.createElement(
       'p',
       { className: 'text-sm sm:text-base text-gray-600 mb-3 sm:mb-6 text-center max-w-2xl mx-auto' },
-      'Forma parte de la Revista Nacional de las Ciencias para Estudiantes. Contribuye con tu talento a la divulgación científica y apoya a estudiantes en su camino hacia la investigación. Selecciona un rol para conocer sus funciones o postula a los cargos disponibles.'
+      'Be part of the National Review of Sciences for Students. Contribute your talent to scientific dissemination and support students on their path to research. Select a role to learn about its functions or apply for available positions.'
     ),
-    // Lista de roles
+    // List of roles
     React.createElement(
       'div',
       { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 mb-3 sm:mb-8' },
@@ -133,14 +132,14 @@ function AdminSection() {
                 role.isPostulable ? 'text-green-600 cursor-pointer hover:underline' : 'text-gray-500'
               }`,
               onClick: role.isPostulable ? () => handleRoleClick(role) : null,
-              'aria-label': `Ver descripción del rol ${role.name}`,
+              'aria-label': `View description of the role ${role.name}`,
             },
             role.name
           ),
           React.createElement(
             'p',
             { className: 'text-xs sm:text-base text-gray-600' },
-            role.isPostulable ? 'Cargo postulable' : 'Cargo definido'
+            role.isPostulable ? 'Position open for applications' : 'Position defined'
           ),
           role.isPostulable &&
             React.createElement(
@@ -148,14 +147,14 @@ function AdminSection() {
               {
                 className: 'mt-2 bg-green-500 text-white px-3 py-2 rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm min-h-10 sm:text-base',
                 onClick: handlePostulateClick,
-                'aria-label': `Postular al rol ${role.name}`,
+                'aria-label': `Apply for the role ${role.name}`,
               },
-              'Postular'
+              'Apply'
             )
         )
       )
     ),
-    // Modal para descripción del rol
+    // Modal for role description
     isModalOpen &&
       React.createElement(
         'div',
@@ -176,7 +175,7 @@ function AdminSection() {
               {
                 className: 'text-gray-500 hover:text-gray-700 text-lg sm:text-xl focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full w-8 h-8 flex items-center justify-center',
                 onClick: () => setIsModalOpen(false),
-                'aria-label': 'Cerrar modal de descripción del rol',
+                'aria-label': 'Close role description modal',
               },
               '×'
             )
@@ -184,12 +183,12 @@ function AdminSection() {
           React.createElement(
             'div',
             { className: 'text-gray-700 text-sm sm:text-base' },
-            React.createElement('p', { className: 'font-semibold text-blue-600 mb-2' }, 'Descripción:'),
+            React.createElement('p', { className: 'font-semibold text-blue-600 mb-2' }, 'Description:'),
             React.createElement('p', { className: 'text-gray-600 mb-3 sm:mb-4' }, selectedRole.description),
             React.createElement(
               'p',
               { className: 'text-gray-600' },
-              selectedRole.isPostulable ? 'Este cargo está abierto a postulaciones.' : 'Este cargo está definido y no admite postulaciones.'
+              selectedRole.isPostulable ? 'This position is open for applications.' : 'This position is defined and does not accept applications.'
             ),
             selectedRole.isPostulable &&
               React.createElement(
@@ -197,9 +196,9 @@ function AdminSection() {
                 {
                   className: 'mt-3 sm:mt-4 bg-green-500 text-white px-3 sm:px-4 py-2 rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm min-h-10 sm:text-base',
                   onClick: handlePostulateClick,
-                  'aria-label': `Postular al rol ${selectedRole.name}`,
+                  'aria-label': `Apply for the role ${selectedRole.name}`,
                 },
-                'Postular ahora'
+                'Apply now'
               )
           )
         )

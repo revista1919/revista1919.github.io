@@ -31,7 +31,7 @@ function NewsletterSection() {
         Stay up to date with our latest articles
       </h2>
       <p className="mb-6 text-sm sm:text-base">
-        Subscribe to our newsletter and receive the latest articles and news from the National Science Magazine for Students.
+        Subscribe to our newsletter and receive the latest articles and news from the National Review of Sciences for Students.
       </p>
 
       {!sent ? (

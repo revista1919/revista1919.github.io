@@ -4,7 +4,6 @@ import Papa from 'papaparse';
 const APPLICATIONS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSNuBETm7TapO6dakKBbkxlYTZctAGGEp4SnOyGowCYXfD_lAXHta8_LX5EPjy0xXw5fpKp3MPcRduK/pub?gid=2123840957&single=true&output=csv';
 const TEAM_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 const TEAM_GAS_URL = process.env.REACT_APP_TEAM_SCRIPT_URL || '';
-const APPLICATIONS_GAS_URL = process.env.REACT_APP_APPLICATIONS_SCRIPT_URL || '';
 
 export default function Admissions() {
   const [applications, setApplications] = useState([]);
@@ -28,17 +27,16 @@ export default function Admissions() {
       if (!response.ok) throw new Error('Failed to fetch team CSV');
       const csvText = await response.text();
       const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
-      const validMembers = parsed.filter(row => row.Correo?.trim() || row['Correo electrónico']?.trim());
+      const validMembers = parsed.filter(row => row.Email?.trim());
       setTeamMembers(validMembers);
       
-      // DEBUG: Log para ver headers y datos reales
-      console.log('Headers detectados:', Object.keys(validMembers[0] || {}));
-      console.log('Primeros miembros (con roles):', validMembers.slice(0, 3).map(m => ({ 
-        nombre: m.Nombre, 
-        rol: m['Rol en la Revista'] || m.Rol || 'Sin rol' 
+      console.log('Detected headers:', Object.keys(validMembers[0] || {}));
+      console.log('First members (with roles):', validMembers.slice(0, 3).map(m => ({ 
+        name: m.Name, 
+        role: m['Role in the Journal'] || 'No role' 
       })));
       
-      const emails = new Set(validMembers.map(row => (row.Correo || row['Correo electrónico'])?.trim().toLowerCase()));
+      const emails = new Set(validMembers.map(row => row.Email?.trim().toLowerCase()));
       setTeamEmails(emails);
     } catch (err) {
       setStatus(`Error fetching team: ${err.message}`);
@@ -53,7 +51,7 @@ export default function Admissions() {
       const csvText = await response.text();
       const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
       const validApplications = parsed.filter(
-        app => app.Nombre?.trim() && app['Correo electrónico']?.trim()
+        app => app.Name?.trim() && app['Email Address']?.trim()
       );
       setApplications(validApplications);
     } catch (err) {
@@ -70,21 +68,21 @@ export default function Admissions() {
   };
 
   const sendPreselection = async (name) => {
-    if (!APPLICATIONS_GAS_URL) {
-      setStatus('❌ GAS URL no configurada');
+    if (!TEAM_GAS_URL) {
+      setStatus('❌ GAS URL not configured');
       return;
     }
-    if (!confirm(`¿Enviar correo de preselección a ${name}?`)) return;
+    if (!confirm(`Send preselection email to ${name}?`)) return;
     setSending(true);
     try {
-      await fetch(APPLICATIONS_GAS_URL, {
+      await fetch(TEAM_GAS_URL, {
         method: 'POST',
         mode: 'no-cors',
         redirect: 'follow',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'aceptar_postulante', name }),
+        body: JSON.stringify({ action: 'accept_applicant', name }),
       });
-      setStatus('✅ Preselección enviada');
+      setStatus('✅ Preselection sent');
     } catch (err) {
       setStatus(`❌ Error: ${err.message}`);
     } finally {
@@ -94,10 +92,10 @@ export default function Admissions() {
 
   const acceptAndRequestData = async (app) => {
     if (!TEAM_GAS_URL) {
-      setStatus('❌ GAS URL no configurada');
+      setStatus('❌ GAS URL not configured');
       return;
     }
-    if (!confirm(`¿Aceptar a ${app.Nombre} y solicitar datos?`)) return;
+    if (!confirm(`Accept ${app.Name} and request data?`)) return;
     setSending(true);
     try {
       await fetch(TEAM_GAS_URL, {
@@ -107,12 +105,16 @@ export default function Admissions() {
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
           action: 'add_and_send_team_acceptance',
-          name: app.Nombre,
-          role: app['Cargo al que desea postular'],
-          email: app['Correo electrónico'],
+          name: app.Name,
+          role: app['Position Applied For'],
+          email: app['Email Address'],
+          description: '',
+          interests: '',
+          image: '',
+          language: 'en'
         }),
       });
-      setStatus('✅ Aceptado y solicitud enviada');
+      setStatus('✅ Accepted and request sent');
       fetchTeam();
     } catch (err) {
       setStatus(`❌ Error: ${err.message}`);
@@ -123,10 +125,10 @@ export default function Admissions() {
 
   const requestAuthorData = async (name) => {
     if (!TEAM_GAS_URL) {
-      setStatus('❌ GAS URL no configurada');
+      setStatus('❌ GAS URL not configured');
       return;
     }
-    if (!confirm(`¿Solicitar datos a ${name}?`)) return;
+    if (!confirm(`Request data from ${name}?`)) return;
     setSending(true);
     try {
       await fetch(TEAM_GAS_URL, {
@@ -135,12 +137,13 @@ export default function Admissions() {
         redirect: 'follow',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
-          action: 'solicitar_datos',
+          action: 'request_data',
           type: 'author',
           name,
+          language: 'en'
         }),
       });
-      setStatus('✅ Solicitud de datos enviada');
+      setStatus('✅ Data request sent');
     } catch (err) {
       setStatus(`❌ Error: ${err.message}`);
     } finally {
@@ -152,11 +155,11 @@ export default function Admissions() {
     const formWindow = window.open('', '_blank');
     formWindow.document.write(`
       <!DOCTYPE html>
-      <html lang="es">
+      <html lang="en">
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>${member.Correo ? 'Editar' : 'Agregar'} Miembro al Equipo</title>
+        <title>${member.Email ? 'Edit' : 'Add'} Team Member</title>
         <style>
           body {
             font-family: 'Inter', sans-serif;
@@ -278,53 +281,53 @@ export default function Admissions() {
       </head>
       <body>
         <div class="container">
-          <h2>${member.Correo ? 'Editar' : 'Agregar'} Miembro al Equipo</h2>
+          <h2>${member.Email ? 'Edit' : 'Add'} Team Member</h2>
           <form id="teamForm" class="space-y-6">
             <div class="form-group">
-              <label>Nombre</label>
-              <input type="text" name="name" value="${member.Nombre || ''}" required />
+              <label>Name</label>
+              <input type="text" name="name" value="${member.Name || ''}" required />
             </div>
             <div class="form-group">
-              <label>Correo</label>
-              <input type="email" name="email" value="${member.Correo || member['Correo electrónico'] || ''}" required />
+              <label>Email</label>
+              <input type="email" name="email" value="${member.Email || ''}" required />
             </div>
             <div class="form-group">
-              <label>Rol en la Revista</label>
-              <input type="text" name="role" value="${member['Rol en la Revista'] || member.Rol || member['Cargo al que desea postular'] || ''}" required />
+              <label>Role in the Journal</label>
+              <input type="text" name="role" value="${member['Role in the journal'] || member['Position Applied For'] || ''}" required />
             </div>
             <div class="form-group">
-              <label>Descripción</label>
+              <label>Description</label>
               <textarea
                 name="description"
-                placeholder="Ejemplo: Francisca Pérez es estudiante de Segundo Medio en el Liceo Nacional de Maipú, con intereses en matemáticas y química..."
+                placeholder="Example: Francisca Pérez is a second-year high school student at Liceo Nacional de Maipú, with interests in mathematics and chemistry..."
                 required
-              >${member['Descripción'] || ''}</textarea>
+              >${member.Description || ''}</textarea>
             </div>
             <div class="form-group">
-              <label>Áreas de Interés</label>
+              <label>Areas of Interest</label>
               <input
                 type="text"
                 name="interests"
-                placeholder="Ejemplo: Historia de las ideas, Física teórica, Divulgación científica"
+                placeholder="Example: History of Ideas, Theoretical Physics, Scientific Outreach"
                 required
-                value="${member['Áreas de interés'] || ''}"
+                value="${member['Areas of Interest'] || ''}"
               />
             </div>
             <div class="form-group">
-              <label>Imagen (URL)</label>
+              <label>Image (URL)</label>
               <input
                 type="url"
                 name="image"
-                placeholder="Ingrese la URL de la imagen (subida por el administrador)"
-                value="${member.Imagen || ''}"
+                placeholder="Enter the image URL (uploaded by the administrator)"
+                value="${member.Image || ''}"
               />
               <p class="help-text">
-                Suba la imagen recibida por correo a <a href="https://postimages.org/es/" target="_blank">postimages.org</a> y pegue el enlace aquí.
+                Upload the image received via email to <a href="https://postimages.org/" target="_blank">postimages.org</a> and paste the link here.
               </p>
             </div>
             <div class="button-group">
-              <button type="button" onclick="window.close()">Cancelar</button>
-              <button type="submit">Guardar</button>
+              <button type="button" onclick="window.close()">Cancel</button>
+              <button type="submit">Save</button>
             </div>
           </form>
         </div>
@@ -333,15 +336,15 @@ export default function Admissions() {
             e.preventDefault();
             const formData = new FormData(e.target);
             const data = {
+              action: '${member.Email ? 'update_team_member' : 'add_team_member'}',
               name: formData.get('name'),
               role: formData.get('role'),
               email: formData.get('email'),
               description: formData.get('description'),
               interests: formData.get('interests'),
-              image: formData.get('image') || ''
+              image: formData.get('image') || '',
+              language: 'en'
             };
-            const action = '${member.Correo || member['Correo electrónico'] ? 'update_team_member' : 'add_team_member'}';
-            data.action = action;
             try {
               await fetch('${TEAM_GAS_URL}', {
                 method: 'POST',
@@ -350,10 +353,10 @@ export default function Admissions() {
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify(data)
               });
-              alert('Miembro ' + (action === 'update_team_member' ? 'actualizado' : 'agregado') + ' exitosamente');
+              alert('Member ' + (data.action === 'update_team_member' ? 'updated' : 'added') + ' successfully');
               window.close();
             } catch (err) {
-              alert('Error al ' + (action === 'update_team_member' ? 'actualizar' : 'agregar') + ' miembro: ' + err.message);
+              alert('Error ' + (data.action === 'update_team_member' ? 'updating' : 'adding') + ' member: ' + err.message);
             }
           });
         </script>
@@ -366,9 +369,9 @@ export default function Admissions() {
     () =>
       applications.filter(
         app =>
-          app.Nombre?.trim() &&
-          app['Correo electrónico']?.trim() &&
-          !teamEmails.has(app['Correo electrónico']?.trim().toLowerCase())
+          app.Name?.trim() &&
+          app['Email Address']?.trim() &&
+          !teamEmails.has(app['Email Address']?.trim().toLowerCase())
       ),
     [applications, teamEmails]
   );
@@ -377,9 +380,9 @@ export default function Admissions() {
     () =>
       applications.filter(
         app =>
-          app.Nombre?.trim() &&
-          app['Correo electrónico']?.trim() &&
-          teamEmails.has(app['Correo electrónico']?.trim().toLowerCase())
+          app.Name?.trim() &&
+          app['Email Address']?.trim() &&
+          teamEmails.has(app['Email Address']?.trim().toLowerCase())
       ),
     [applications, teamEmails]
   );
@@ -387,9 +390,9 @@ export default function Admissions() {
   const teamMembersFiltered = useMemo(
     () =>
       teamMembers.filter(member => {
-        const rolValue = member['Rol en la Revista'] || member.Rol || ''; // Soporta ambos headers
+        const rolValue = member['Role in the Journal'] || '';
         const roles = rolValue ? rolValue.split(';').map(r => r.trim().toLowerCase()) : [];
-        return roles.length > 1 || (roles.length === 1 && roles[0] !== 'autor');
+        return roles.length > 1 || (roles.length === 1 && roles[0] !== 'author');
       }),
     [teamMembers]
   );
@@ -397,9 +400,9 @@ export default function Admissions() {
   const authorMembers = useMemo(
     () =>
       teamMembers.filter(member => {
-        const rolValue = member['Rol en la Revista'] || member.Rol || ''; // Soporta ambos
+        const rolValue = member['Role in the Journal'] || '';
         const roles = rolValue ? rolValue.split(';').map(r => r.trim().toLowerCase()) : [];
-        return roles.length === 1 && roles[0] === 'autor';
+        return roles.length === 1 && roles[0] === 'author';
       }),
     [teamMembers]
   );
@@ -409,7 +412,7 @@ export default function Admissions() {
       <div className="card">
         <div className="header" onClick={toggleMinimized}>
           <h2 className="header-title">
-            Gestionar Postulaciones ({pendingApplications.length})
+            Manage Applications ({pendingApplications.length})
           </h2>
           <svg
             className={`header-icon ${minimized ? '' : 'rotate-180'}`}
@@ -427,32 +430,32 @@ export default function Admissions() {
                 className={`tab ${activeTab === 'pending' ? 'tab-active' : ''}`}
                 onClick={() => setActiveTab('pending')}
               >
-                Pendientes ({pendingApplications.length})
+                Pending ({pendingApplications.length})
               </button>
               <button
                 className={`tab ${activeTab === 'archived' ? 'tab-active' : ''}`}
                 onClick={() => setActiveTab('archived')}
               >
-                Archivados ({archivedApplications.length})
+                Archived ({archivedApplications.length})
               </button>
               <button
                 className={`tab ${activeTab === 'team' ? 'tab-active' : ''}`}
                 onClick={() => setActiveTab('team')}
               >
-                Equipo ({teamMembersFiltered.length})
+                Team ({teamMembersFiltered.length})
               </button>
               <button
                 className={`tab ${activeTab === 'authors' ? 'tab-active' : ''}`}
                 onClick={() => setActiveTab('authors')}
               >
-                Autores ({authorMembers.length})
+                Authors ({authorMembers.length})
               </button>
             </div>
             <div className="content">
               {loading ? (
                 <div className="loading">
                   <div className="spinner"></div>
-                  <span>Cargando...</span>
+                  <span>Loading...</span>
                 </div>
               ) : activeTab === 'team' || activeTab === 'authors' ? (
                 <>
@@ -461,26 +464,26 @@ export default function Admissions() {
                       onClick={() => openEditForm()}
                       className="action-button action-add mb-4"
                     >
-                      Agregar Nuevo Miembro
+                      Add New Member
                     </button>
                   </div>
                   {(activeTab === 'team' ? teamMembersFiltered : authorMembers).length === 0 ? (
-                    <div className="empty">No hay {activeTab === 'team' ? 'miembros en el equipo' : 'autores'}</div>
+                    <div className="empty">No {activeTab === 'team' ? 'team members' : 'authors'}</div>
                   ) : (
                     (activeTab === 'team' ? teamMembersFiltered : authorMembers).map((member, index) => (
                       <div key={index} className="application">
                         <div className="application-header" onClick={() => toggleExpandApp(`${activeTab}-${index}`)}>
                           <div className="flex items-center space-x-3">
-                            {member.Imagen && (
+                            {member.Image && (
                               <img
-                                src={member.Imagen}
-                                alt={member.Nombre}
+                                src={member.Image}
+                                alt={member.Name}
                                 className="w-10 h-10 rounded-full object-cover"
                               />
                             )}
                             <div className="application-info">
-                              <h3 className="application-name">{member.Nombre}</h3>
-                              <p className="application-role">{member['Rol en la Revista'] || member.Rol || 'Sin rol'}</p>
+                              <h3 className="application-name">{member.Name}</h3>
+                              <p className="application-role">{member['Role in the Journal'] || 'No role'}</p>
                             </div>
                           </div>
                           <svg
@@ -496,20 +499,20 @@ export default function Admissions() {
                           <div className="application-details">
                             <div className="details-grid">
                               <div>
-                                <p className="details-label">Correo</p>
-                                <p className="details-value">{member.Correo || member['Correo electrónico']}</p>
+                                <p className="details-label">Email</p>
+                                <p className="details-value">{member.Email}</p>
                               </div>
                               <div>
-                                <p className="details-label">Descripción</p>
-                                <p className="details-value">{member['Descripción'] || ''}</p>
+                                <p className="details-label">Description</p>
+                                <p className="details-value">{member.Description || ''}</p>
                               </div>
                               <div>
-                                <p className="details-label">Áreas de Interés</p>
-                                <p className="details-value">{member['Áreas de interés'] || ''}</p>
+                                <p className="details-label">Areas of Interest</p>
+                                <p className="details-value">{member['Areas of Interest'] || ''}</p>
                               </div>
                               <div>
-                                <p className="details-label">Imagen</p>
-                                <p className="details-value">{member.Imagen || ''}</p>
+                                <p className="details-label">Image</p>
+                                <p className="details-value">{member.Image || ''}</p>
                               </div>
                             </div>
                             <div className="actions mt-4">
@@ -517,15 +520,15 @@ export default function Admissions() {
                                 onClick={() => openEditForm(member)}
                                 className="action-button action-edit"
                               >
-                                Editar
+                                Edit
                               </button>
                               {activeTab === 'authors' && (
                                 <button
-                                  onClick={() => requestAuthorData(member.Nombre)}
+                                  onClick={() => requestAuthorData(member.Name)}
                                   disabled={sending || !TEAM_GAS_URL}
                                   className="action-button action-request"
                                 >
-                                  Solicitar Datos
+                                  Request Data
                                 </button>
                               )}
                             </div>
@@ -536,14 +539,14 @@ export default function Admissions() {
                   )}
                 </>
               ) : (activeTab === 'pending' ? pendingApplications : archivedApplications).length === 0 ? (
-                <div className="empty">No hay postulaciones</div>
+                <div className="empty">No applications</div>
               ) : (
                 (activeTab === 'pending' ? pendingApplications : archivedApplications).map((app, index) => (
                   <div key={index} className="application">
                     <div className="application-header" onClick={() => toggleExpandApp(index)}>
                       <div className="application-info">
-                        <h3 className="application-name">{app.Nombre}</h3>
-                        <p className="application-role">{app['Cargo al que desea postular']}</p>
+                        <h3 className="application-name">{app.Name}</h3>
+                        <p className="application-role">{app['Position Applied For']}</p>
                       </div>
                       <svg
                         className={`application-icon ${expandedApp === index ? 'rotate-180' : ''}`}
@@ -558,50 +561,50 @@ export default function Admissions() {
                       <div className="application-details">
                         <div className="details-grid">
                           <div>
-                            <p className="details-label">Correo</p>
-                            <p className="details-value">{app['Correo electrónico']}</p>
+                            <p className="details-label">Email</p>
+                            <p className="details-value">{app['Email Address']}</p>
                           </div>
                           <div>
-                            <p className="details-label">Establecimiento</p>
-                            <p className="details-value">{app['Establecimiento educativo']}</p>
+                            <p className="details-label">Educational Institution</p>
+                            <p className="details-value">{app['Educational Institution']}</p>
                           </div>
                           <div>
-                            <p className="details-label">Teléfono</p>
-                            <p className="details-value">{app['Número de teléfono']}</p>
+                            <p className="details-label">Phone Number</p>
+                            <p className="details-value">{app['Phone Number']}</p>
                           </div>
                           <div>
-                            <p className="details-label">Carta de Motivación</p>
-                            <p className="details-value">{app['Breve carta de motivación (por qué desea este cargo) y listado de logros. 250-500 palabras.']}</p>
+                            <p className="details-label">Motivation Letter</p>
+                            <p className="details-value">{app['Brief motivation letter (why you want this position) and list of achievements. 250-500 words.']}</p>
                           </div>
                         </div>
                         <div className="actions">
                           <button
-                            onClick={() => sendPreselection(app.Nombre)}
-                            disabled={sending || !APPLICATIONS_GAS_URL || activeTab === 'archived'}
+                            onClick={() => sendPreselection(app.Name)}
+                            disabled={sending || !TEAM_GAS_URL || activeTab === 'archived'}
                             className="action-button action-preselect"
                           >
-                            Enviar Preselección
+                            Send Preselection
                           </button>
                           <button
                             onClick={() => acceptAndRequestData(app)}
                             disabled={sending || !TEAM_GAS_URL || activeTab === 'archived'}
                             className="action-button action-accept"
                           >
-                            Aceptar y Solicitar Datos
+                            Accept and Request Data
                           </button>
                           <button
                             onClick={() => openEditForm({
-                              Nombre: app.Nombre,
-                              'Correo electrónico': app['Correo electrónico'],
-                              'Cargo al que desea postular': app['Cargo al que desea postular'],
-                              Descripción: '',
-                              'Áreas de interés': '',
-                              Imagen: '',
+                              Name: app.Name,
+                              Email: app['Email Address'],
+                              'Role in the Journal': app['Position Applied For'],
+                              Description: '',
+                              'Areas of Interest': '',
+                              Image: '',
                             })}
                             disabled={sending || !TEAM_GAS_URL}
                             className="action-button action-add"
                           >
-                            Agregar al Equipo
+                            Add to Team
                           </button>
                         </div>
                       </div>
