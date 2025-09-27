@@ -54,7 +54,6 @@ module.exports = (env, argv) => {
   return {
     entry: {
       main: './src/index.js',
-      // sw is not included as an entry point since it's typically registered separately
     },
     output: {
       path: path.resolve(__dirname, 'dist'),
@@ -86,7 +85,7 @@ module.exports = (env, argv) => {
       rules: [
         {
           test: /\.js$/i,
-          exclude: /node_modules\/(?!firebase)/,
+          exclude: [/node_modules\/(?!firebase)/, /public\/main\.js$/, /public\/sw\.js$/],
           use: {
             loader: 'babel-loader',
             options: {
@@ -97,7 +96,7 @@ module.exports = (env, argv) => {
         },
         {
           test: /\.jsx?$/i,
-          exclude: /node_modules/,
+          exclude: [/node_modules/, /public\/main\.js$/, /public\/sw\.js$/],
           use: {
             loader: 'babel-loader',
             options: {
