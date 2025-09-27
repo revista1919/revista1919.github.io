@@ -3,10 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <base href="/">
-
-  <!-- Hint for crawlers about JavaScript-driven content -->
-  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
 
   <!-- Títulos y descripciones bilingües -->
   <title>The National Review of Sciences for Students | Revista Nacional de las Ciencias para Estudiantes</title>
@@ -23,7 +19,7 @@
   <meta property="og:site_name" content="NRSS">
   <meta property="og:locale" content="es_ES">
   <meta property="og:locale:alternate" content="en_US">
-  <meta property="og:image" content="https://www.revistacienciasestudiantes.com/logo.png">
+  <meta property="og:image" content="/logo.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
 
@@ -31,7 +27,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="The National Review of Sciences for Students | Revista Nacional de las Ciencias para Estudiantes">
   <meta name="twitter:description" content="Global platform for student scientific research | Plataforma global para la investigación científica estudiantil">
-  <meta name="twitter:image" content="https://www.revistacienciasestudiantes.com/logo.png">
+  <meta name="twitter:image" content="/logo.png">
 
   <!-- Canonical y alternate para SEO bilingüe -->
   <link rel="canonical" href="https://www.revistacienciasestudiantes.com/">
@@ -48,306 +44,12 @@
   <!-- Theme color -->
   <meta name="theme-color" content="#52262d">
 
-  <!-- Structured Data para journal académico -->
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "Periodical",
-    "name": "Revista Nacional de las Ciencias para Estudiantes",
-    "alternateName": "The National Review of Sciences for Students",
-    "description": "Revista académica global con revisión por pares dedicada a la investigación científica dirigida por estudiantes en todas las disciplinas. A global peer-reviewed academic journal dedicated to student-led scientific research across all disciplines.",
-    "url": "https://www.revistacienciasestudiantes.com",
-    "inLanguage": ["es", "en"],
-    "issn": ["1234-5678"],
-    "publisher": {
-      "@type": "Organization",
-      "name": "The National Review of Sciences for Students",
-      "logo": {
-        "@type": "ImageObject",
-        "url": "https://www.revistacienciasestudiantes.com/logo.png"
-      }
-    },
-    "audience": {
-      "@type": "Audience",
-      "audienceType": ["Students of all educational levels"],
-      "geographicArea": "Global"
-    }
-  }
-  </script>
-
-  <!-- Preconnect para performance -->
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preconnect" href="https://docs.google.com">
-
-  <!-- Google Fonts -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Merriweather:wght@400;700&display=swap">
-
-  <!-- Preload recursos críticos -->
-  <link rel="preload" href="/index.css" as="style">
-  <link rel="preload" href="/js/main.js" as="script">
-
-  <!-- CSS crítico inline -->
-  <style>
-    *, *::before, *::after { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body { 
-      margin: 0; 
-      font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif; 
-      line-height: 1.6; 
-      color: #333; 
-      background: linear-gradient(135deg, #f4ece7 0%, #e8d9c6 100%);
-      min-height: 100vh;
-      overscroll-behavior: none;
-    }
-    h1, h2, h3, h4 { font-family: 'Merriweather', serif; }
-    .sr-only { 
-      position: absolute; width: 1px; height: 1px; 
-      padding: 0; margin: -1px; overflow: hidden; 
-      clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; 
-    }
-    /* Skeleton loading */
-    .skeleton { 
-      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-      background-size: 200% 100%;
-      animation: loading 1.5s infinite;
-    }
-    @keyframes loading {
-      0% { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
-    }
-    /* Loading screen styles */
-    #loading {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: linear-gradient(135deg, #f4ece7 0%, #e8d9c6 100%);
-      display: flex; align-items: center; justify-content: center;
-      z-index: 9999; transition: opacity 0.5s ease-out;
-    }
-    #loading .loading-container {
-      text-align: center;
-      background: rgba(255,255,255,0.95);
-      padding: 3rem;
-      border-radius: 16px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,0.2);
-      max-width: 400px;
-      position: relative;
-    }
-    #loading img {
-      width: 100px; height: auto; margin-bottom: 1.5rem;
-      display: block; margin-left: auto; margin-right: auto;
-    }
-    #loading .loading-title {
-      margin: 0 0 1rem 0; color: #52262d; font-family: 'Merriweather', serif; font-size: 1.5rem; font-weight: 700;
-    }
-    #loading .loading-desc {
-      margin: 0 0 1.5rem 0; color: #666; font-size: 1rem; line-height: 1.4;
-    }
-    .bot #loading { display: none; }
-    .bot #root.skeleton { background: none; animation: none; }
-  </style>
-
-  <!-- CSS principal -->
-  <link rel="stylesheet" href="/index.css">
-
-  <!-- PWA meta tags -->
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="NRSS">
 </head>
 <body>
-  <!-- Loading indicator (hidden for bots) -->
-  <div id="loading" role="status" aria-live="polite">
-    <div class="loading-container">
-      <img id="loading-logo" src="/logo.png" alt="NRSS Logo" aria-hidden="true">
-      <h2 class="loading-title"></h2>
-      <p class="loading-desc">Loading...</p>
-      <span class="sr-only">Loading...</span>
-    </div>
-  </div>
-
-  <!-- Contenedor principal con fallback mejorado para crawlers -->
-  <div id="root" class="skeleton">
-    <noscript>
-      <div style="text-align: center; padding: 2rem; max-width: 800px; margin: 0 auto;">
-        <h1 id="noscript-title">Revista Nacional de las Ciencias para Estudiantes</h1>
-        <p id="noscript-desc">Global peer-reviewed journal for students of all educational levels in all scientific fields. Publish, learn, and share science worldwide.</p>
-        <nav>
-          <ul style="list-style: none; padding: 0; display: flex; justify-content: center; gap: 1rem;">
-            <li><a href="/about">About Us</a></li>
-            <li><a href="/articles">Articles</a></li>
-            <li><a href="/submit">Submit Your Work</a></li>
-            <li><a href="/contact">Contact</a></li>
-          </ul>
-        </nav>
-        <p style="margin-top: 1rem;">Contact us at <a href="mailto:revistanacionalcienciae@gmail.com">revistanacionalcienciae@gmail.com</a>.</p>
-        <p style="font-style: italic;">Please enable JavaScript for the full experience.</p>
-      </div>
-    </noscript>
-  </div>
-
-  <!-- JavaScript para detección de idioma, logo, bots y loading -->
-  <script>
-    (function() {
-      // Detectar si es un bot
-      const isBot = /bot|googlebot|crawler|spider|robot|crawling/i.test(navigator.userAgent);
-      if (isBot) {
-        document.body.classList.add('bot');
-        document.getElementById('root').classList.remove('skeleton');
-        const loading = document.getElementById('loading');
-        if (loading) loading.remove();
-        // Configurar textos para noscript según idioma
-        const path = window.location.pathname;
-        const isEnglish = path.startsWith('/en') || window.location.href.includes('/#/en');
-        const noscriptTitle = document.getElementById('noscript-title');
-        const noscriptDesc = document.getElementById('noscript-desc');
-        if (isEnglish) {
-          noscriptTitle.textContent = 'The National Review of Sciences for Students';
-          noscriptDesc.textContent = 'Global peer-reviewed journal for students of all educational levels in all scientific fields. Publish, learn, and share science worldwide.';
-        }
-        window.prerenderReady = true;
-        document.documentElement.setAttribute('data-prerender-ready', 'true');
-        return;
-      }
-
-      // Detectar idioma desde la URL
-      const path = window.location.pathname;
-      const isEnglish = path.startsWith('/en') || window.location.href.includes('/#/en');
-      
-      // Configurar atributos de idioma
-      document.documentElement.lang = isEnglish ? 'en' : 'es';
-      document.documentElement.dir = 'ltr';
-      
-      // Añadir clases CSS para estilizado específico
-      document.body.classList.add(isEnglish ? 'lang-en' : 'lang-es');
-      
-      // Guardar preferencia de idioma
-      localStorage.setItem('preferredLanguage', isEnglish ? 'en' : 'es');
-      
-      // Configurar logo y preload según idioma
-      const logo = isEnglish ? '/logoEN.png' : '/logo.png';
-      document.getElementById('loading-logo').src = logo;
-      const preloadLink = document.createElement('link');
-      preloadLink.rel = 'preload';
-      preloadLink.href = logo;
-      preloadLink.as = 'image';
-      document.head.appendChild(preloadLink);
-      
-      // Configurar textos de loading basados en idioma
-      const texts = {
-        es: {
-          title: 'Revista Nacional de las Ciencias para Estudiantes',
-          desc: 'Cargando...'
-        },
-        en: {
-          title: 'The National Review of Sciences for Students',
-          desc: 'Loading...'
-        }
-      };
-      const lang = isEnglish ? 'en' : 'es';
-      document.querySelector('.loading-title').textContent = texts[lang].title;
-      document.querySelector('.loading-desc').textContent = texts[lang].desc;
-      
-      // Ocultar loading después de renderizado
-      const hideLoading = () => {
-        const loading = document.getElementById('loading');
-        if (loading) {
-          loading.style.opacity = '0';
-          setTimeout(() => {
-            loading.remove();
-            document.getElementById('root').classList.remove('skeleton');
-          }, 500);
-        }
-      };
-      
-      // Observar cambios en #root para detectar renderizado de React
-      const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-          if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-            console.log('React content detected, hiding loading screen');
-            setTimeout(hideLoading, 800);
-            observer.disconnect();
-          }
-        });
-      });
-      
-      observer.observe(document.getElementById('root'), {
-        childList: true,
-        subtree: true
-      });
-      
-      // Fallback: ocultar después de 2 segundos
-      setTimeout(() => {
-        console.log('Fallback timeout triggered');
-        hideLoading();
-      }, 2000);
-      
-      // Animaciones y estilos adicionales
-      const style = document.createElement('style');
-      style.textContent = `
-        .lang-en { --primary-font: 'Roboto', sans-serif; }
-        .lang-es { --primary-font: 'Roboto', sans-serif; }
-        #root.skeleton:not(.bot) {
-          min-height: 100vh;
-          background: #f0f0f0;
-        }
-        #root.skeleton:not(.bot)::before {
-          content: '';
-          display: block;
-          width: 100%;
-          height: 200px;
-          background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-          background-size: 200% 100%;
-          animation: loading 1.5s infinite;
-        }
-      `;
-      document.head.appendChild(style);
-      
-      // Cargar scripts de React de forma asíncrona con mejor manejo de errores
-      const scripts = [
-        { src: 'https://unpkg.com/react@18/umd/react.production.min.js', name: 'React' },
-        { src: 'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js', name: 'ReactDOM' },
-        { src: '/js/main.js', name: 'Main App' }
-      ];
-      scripts.forEach(({ src, name }) => {
-        const script = document.createElement('script');
-        script.src = src;
-        script.async = true;
-        script.onerror = () => {
-          console.error(`Failed to load ${name} from ${src}. Check file path or network.`);
-          // Mostrar mensaje de error en la UI
-          const root = document.getElementById('root');
-          root.innerHTML = `
-            <div style="text-align: center; padding: 2rem; color: #d32f2f;">
-              <h2>Error loading the application</h2>
-              <p>Unable to load ${name}. Please try refreshing the page or contact support.</p>
-              <p><a href="mailto:revistanacionalcienciae@gmail.com">Contact Support</a></p>
-            </div>
-          `;
-          hideLoading();
-        };
-        script.onload = () => console.log(`${name} loaded successfully`);
-        document.body.appendChild(script);
-      });
-      
-      // Marcar como listo para prerenderizado
-      window.prerenderReady = true;
-      document.documentElement.setAttribute('data-prerender-ready', 'true');
-    })();
-  </script>
-
-  <!-- Service Worker para PWA (comentar si no está listo) -->
-  <!--
-  <script>
-    if ('serviceWorker' in navigator && location.hostname !== 'localhost') {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(reg => console.log('SW registered'))
-          .catch(err => console.error('SW failed:', err));
-      });
-    }
-  </script>
-  -->
+  <div id="root"></div>
 </body>
 </html>

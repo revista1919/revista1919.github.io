@@ -1,12 +1,14 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { HashRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import AppES from './App';
 import AppEN from './AppEN';
 
 const Root = () => {
+  const basename = process.env.NODE_ENV === 'production' ? '/revista1919' : '/';
+
   return (
-    <Router>
+    <Router basename={basename}>
       <Routes>
         <Route path="/es/*" element={<AppES />} />
         <Route path="/en/*" element={<AppEN />} />

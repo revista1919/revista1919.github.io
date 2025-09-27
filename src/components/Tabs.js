@@ -20,7 +20,7 @@ function Tabs({ sections }) {
           </select>
         </div>
         {/* Desktop tabs */}
-        <div className="tabs-scroll-container hidden sm:block">
+        <div className="tabs-scroll-container hidden sm:flex"> {/* Changed to sm:flex for inline-flex behavior */}
           {sections.map((section) => (
             <NavLink
               key={section.name}
