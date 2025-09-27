@@ -31,7 +31,7 @@ module.exports = (env, argv) => {
     '.env.local loaded': dotenvConfig.parsed ? Object.keys(dotenvConfig.parsed).length : 0,
   });
 
-  // Inject environment variables into the bundle
+  // Inject environment variables
   const defineEnvVars = {
     'process.env.NODE_ENV': JSON.stringify(isProduction ? 'production' : 'development'),
     'process.env.REACT_APP_ARTICULOS_SCRIPT_URL': JSON.stringify(process.env.REACT_APP_ARTICULOS_SCRIPT_URL || ''),
@@ -58,7 +58,7 @@ module.exports = (env, argv) => {
     output: {
       path: path.resolve(__dirname, 'dist'),
       filename: isProduction ? '[name].[contenthash].js' : '[name].js',
-      publicPath: './',
+      publicPath: '/', // 👈 Usar BrowserRouter correctamente
       clean: true,
     },
     mode: isProduction ? 'production' : 'development',
@@ -84,19 +84,8 @@ module.exports = (env, argv) => {
     module: {
       rules: [
         {
-          test: /\.js$/i,
-          exclude: [/node_modules\/(?!firebase)/, /public\/sw\.js$/],
-          use: {
-            loader: 'babel-loader',
-            options: {
-              presets: ['@babel/preset-env', '@babel/preset-react'],
-              cacheDirectory: true,
-            },
-          },
-        },
-        {
           test: /\.jsx?$/i,
-          exclude: [/node_modules/, /public\/sw\.js$/],
+          exclude: [/node_modules\/(?!firebase)/, /public\/sw\.js$/],
           use: {
             loader: 'babel-loader',
             options: {
@@ -163,22 +152,12 @@ module.exports = (env, argv) => {
           { from: 'public/logo.png', to: '.' },
           { from: 'public/logoEN.png', to: '.' },
           { from: 'public/site.webmanifest', to: 'manifest.json' },
+          { from: 'public/404.html', to: '404.html', noErrorOnMissing: true },
+          { from: 'public/CNAME', to: 'CNAME', toType: 'file', noErrorOnMissing: true },
           { from: 'public/sw.js', to: 'sw.js', noErrorOnMissing: true },
-          { 
-            from: 'public/Articles', 
-            to: 'Articles',
-            noErrorOnMissing: true,
-          },
-          {
-            from: 'firebase.json',
-            to: 'firebase.json',
-            noErrorOnMissing: true,
-          },
-          {
-            from: '.firebaserc',
-            to: '.firebaserc',
-            noErrorOnMissing: true,
-          },
+          { from: 'public/Articles', to: 'Articles', noErrorOnMissing: true },
+          { from: 'firebase.json', to: 'firebase.json', noErrorOnMissing: true },
+          { from: '.firebaserc', to: '.firebaserc', noErrorOnMissing: true },
         ],
       }),
       new webpack.DefinePlugin(defineEnvVars),
@@ -246,9 +225,7 @@ module.exports = (env, argv) => {
           },
         },
       },
-      runtimeChunk: isProduction ? {
-        name: 'runtime'
-      } : undefined,
+      runtimeChunk: isProduction ? { name: 'runtime' } : undefined,
     },
     cache: {
       type: 'filesystem',

@@ -48,6 +48,24 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Merriweather:wght@400;700&display=swap">
+
+  <script>
+    (function(){
+      // Redirect for GitHub Pages 404
+      var redirect = sessionStorage.redirect;
+      delete sessionStorage.redirect;
+      if (redirect && redirect != location.href) {
+        history.replaceState(null, null, redirect);
+      }
+
+      // Redirect from old hash-based URLs
+      if (location.hash.startsWith('#/')) {
+        var newPath = location.hash.substring(2);
+        history.replaceState(null, null, '/' + newPath);
+      }
+    })();
+  </script>
+
 </head>
 <body>
   <div id="root"></div>
