@@ -34,6 +34,16 @@ function Footer() {
       {/* Copyright */}
       <p>© 2025 National Review of Sciences for Students. All rights reserved.</p>
 
+      {/* Contact Email */}
+      <p className="mt-2">
+        Contact us: <a
+          href="mailto:revistanacionalcienciae@gmail.com"
+          className="text-blue-400 hover:text-blue-500 underline font-semibold"
+        >
+          revistanacionalcienciae@gmail.com
+        </a>
+      </p>
+
       {/* Social Media */}
       <div className="flex flex-col sm:flex-row justify-center items-center gap-6 mt-4">
         {/* Instagram */}

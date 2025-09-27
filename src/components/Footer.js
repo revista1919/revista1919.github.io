@@ -10,30 +10,39 @@ function Footer() {
 
   const scriptURL = "https://script.google.com/macros/s/AKfycbzyyR93tD85nPprIKAR_IDoWYBSAnlFwVes09rJgOM3KQsByg_MgzafWDK1BcFhfVJHew/exec";
 
- const handleSubmit = (e) => {
-  e.preventDefault();
-  const formData = new URLSearchParams();
-  formData.append('nombre', nombre);
-  formData.append('correo', correo);
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const formData = new URLSearchParams();
+    formData.append('nombre', nombre);
+    formData.append('correo', correo);
 
-  fetch(scriptURL, {
-    method: "POST",
-    body: formData
-  })
-    .then(r => r.text())  // 🔹 Cambiado
-    .then(res => {
-      setEnviado(true);    // simple feedback
-      setNombre('');
-      setCorreo('');
+    fetch(scriptURL, {
+      method: "POST",
+      body: formData
     })
-    .catch(err => alert("Error al enviar: " + err));
-};
-
+      .then(r => r.text())
+      .then(res => {
+        setEnviado(true);
+        setNombre('');
+        setCorreo('');
+      })
+      .catch(err => alert("Error al enviar: " + err));
+  };
 
   return (
     <footer className="bg-gray-800 text-white p-4 sm:p-6 mt-6 text-center text-xs sm:text-sm">
       {/* Copyright */}
       <p>© 2025 Revista Nacional de las Ciencias para Estudiantes. Todos los derechos reservados.</p>
+
+      {/* Contact Email */}
+      <p className="mt-2">
+        Contáctanos: <a
+          href="mailto:revistanacionalcienciae@gmail.com"
+          className="text-blue-400 hover:text-blue-500 underline font-semibold"
+        >
+          revistanacionalcienciae@gmail.com
+        </a>
+      </p>
 
       {/* Redes sociales */}
       <div className="flex flex-col sm:flex-row justify-center items-center gap-6 mt-4">
