@@ -299,7 +299,7 @@ function App() {
     },
     {
       name: 'login',
-      label: 'Login / Estado de Artículos',
+      label: 'Login',
       path: '/es/login',
       component: (
         <div className={`py-8 ${user ? 'w-full' : 'max-w-lg mx-auto'}`}>

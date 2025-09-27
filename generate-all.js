@@ -3,9 +3,12 @@ const path = require('path');
 const fetch = require('node-fetch').default;
 const Papa = require('papaparse');
 
+// URLs de los CSVs
 const articlesCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p32EM6-0VYy18AdREQwXdpeet1WHTA4H2-W2FX7HKe1HPSyApWadUw9sKHdVYQXL5tP6yDRs/pub?output=csv';
 const teamCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 const newsCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKnN8qMJcBN8im9Q61o-qElx1jQp5NdS80_B-FakCHrPLXHlQ_FXZWT0o5GVVHAM26l9sjLxsTCNO8/pub?output=csv';
+
+// Rutas de salida
 const outputJson = path.join(__dirname, 'dist', 'articles.json');
 const outputHtmlDir = path.join(__dirname, 'dist', 'articles');
 const newsOutputHtmlDir = path.join(__dirname, 'dist', 'news');
@@ -15,6 +18,7 @@ const sitemapPath = path.join(__dirname, 'dist', 'sitemap.xml');
 const robotsPath = path.join(__dirname, 'dist', 'robots.txt');
 const domain = 'https://www.revistacienciasestudiantes.com';
 
+// --- Funciones de Ayuda ---
 function parseDateFlexible(dateStr) {
   if (!dateStr) return '';
   let date = new Date(dateStr);
@@ -41,13 +45,10 @@ function formatAuthorForCitation(author) {
 
 function generateSlug(name) {
   if (!name) return '';
-  name = name.toLowerCase();
-  name = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  name = name.replace(/\s+/g, '-');
-  name = name.replace(/[^a-z0-9-]/g, '');
-  name = name.replace(/-+/g, '-');
-  name = name.replace(/^-+|-+$/g, '');
-  return name;
+  return name.toString().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-').replace(/^-+|-+$/g, '');
 }
 
 function isBase64(str) {
@@ -78,6 +79,7 @@ const base64DecodeUnicode = (str) => {
   }
 };
 
+// Asegurarse de que los directorios existan
 if (!fs.existsSync(outputHtmlDir)) fs.mkdirSync(outputHtmlDir, { recursive: true });
 if (!fs.existsSync(newsOutputHtmlDir)) fs.mkdirSync(newsOutputHtmlDir, { recursive: true });
 if (!fs.existsSync(teamOutputHtmlDir)) fs.mkdirSync(teamOutputHtmlDir, { recursive: true });
@@ -85,7 +87,10 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
 
 (async () => {
   try {
-    // Procesar artículos
+    console.log('🔥 Empezando el proceso de generación de contenido...');
+
+    // --- 1. Procesar Artículos ---
+    console.log('📚 Procesando artículos...');
     const articlesRes = await fetch(articlesCsvUrl);
     if (!articlesRes.ok) throw new Error(`Error descargando CSV de artículos: ${articlesRes.statusText}`);
     const articlesCsvData = await articlesRes.text();
@@ -103,13 +108,12 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
       ultimaPagina: row['Última página'] || '',
       area: row['Área temática'] || '',
       numeroArticulo: row['Número de artículo'] || '',
-      palabras_clave: row['Palabras clave']
-        ? row['Palabras clave'].split(/[;,]/).map(k => k.trim())
-        : []
+      palabras_clave: row['Palabras clave'] ? row['Palabras clave'].split(/[;,]/).map(k => k.trim()) : []
     }));
     fs.writeFileSync(outputJson, JSON.stringify(articles, null, 2), 'utf8');
-    console.log(`✅ Archivo generado: ${outputJson} (${articles.length} artículos)`);
+    console.log(`✅ ${articles.length} artículos guardados en ${outputJson}`);
 
+    // Generar HTML para cada artículo
     articles.forEach(article => {
       const authorsList = article.autores.split(';').map(a => formatAuthorForCitation(a));
       const authorMetaTags = authorsList.map(author => `<meta name="citation_author" content="${author}">`).join('\n');
@@ -173,7 +177,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
       `.trim();
       const filePath = path.join(outputHtmlDir, `articulo${article.numeroArticulo}.html`);
       fs.writeFileSync(filePath, htmlContent, 'utf8');
-      console.log(`Generado HTML de artículo: ${filePath}`);
+      console.log(`✅ Generado HTML de artículo: ${filePath}`);
     });
 
     // Generar índice de artículos
@@ -219,7 +223,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     `.trim();
     const indexPath = path.join(outputHtmlDir, 'index.html');
     fs.writeFileSync(indexPath, indexContent, 'utf8');
-    console.log(`Generado índice HTML de artículos: ${indexPath}`);
+    console.log(`✅ Generado índice HTML de artículos: ${indexPath}`);
 
     // Generar índice de artículos en inglés
     let indexContentEn = `
@@ -258,30 +262,28 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     `.trim();
     const indexPathEn = path.join(outputHtmlDir, 'index.EN.html');
     fs.writeFileSync(indexPathEn, indexContentEn, 'utf8');
-    console.log(`Generado índice HTML de artículos (EN): ${indexPathEn}`);
+    console.log(`✅ Generado índice HTML de artículos (EN): ${indexPathEn}`);
 
-    // Procesar noticias
+    // --- 2. Procesar Noticias ---
+    console.log('📰 Procesando noticias...');
     const newsRes = await fetch(newsCsvUrl);
     if (!newsRes.ok) throw new Error(`Error descargando CSV de noticias: ${newsRes.statusText}`);
     const newsCsvData = await newsRes.text();
     const newsParsed = Papa.parse(newsCsvData, { header: true, skipEmptyLines: true });
     const newsItems = newsParsed.data
-      .filter(
-        (row) =>
-          (row["Título"] || "").trim() !== "" &&
-          (row["Contenido de la noticia"] || "").trim() !== ""
-      )
-      .map((row) => ({
-        titulo: String(row["Título"] ?? ""),
-        cuerpo: base64DecodeUnicode(String(row["Contenido de la noticia"] ?? "")),
-        fecha: parseDateFlexible(String(row["Fecha"] ?? "")),
-        title: String(row["Title"] ?? ""),
-        content: base64DecodeUnicode(String(row["Content of the new"] ?? "")),
+      .filter(row => (row['Título'] || '').trim() !== '' && (row['Contenido de la noticia'] || '').trim() !== '')
+      .map(row => ({
+        titulo: String(row['Título'] ?? ''),
+        cuerpo: base64DecodeUnicode(String(row['Contenido de la noticia'] ?? '')),
+        fecha: parseDateFlexible(String(row['Fecha'] ?? '')),
+        title: String(row['Title'] ?? ''),
+        content: base64DecodeUnicode(String(row['Content of the new'] ?? '')),
       }));
 
     for (const newsItem of newsItems) {
       const slug = generateSlug(`${newsItem.titulo} ${newsItem.fecha}`);
-      const esContent = `<!DOCTYPE html>
+      const esContent = `
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -426,7 +428,6 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
         width: 60px;
       }
     }
-    /* Mejoras de legibilidad */
     .content {
       text-rendering: optimizeLegibility;
       -webkit-font-smoothing: antialiased;
@@ -455,7 +456,8 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
 </body>
 </html>`;
 
-      const enContent = `<!DOCTYPE html>
+      const enContent = `
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -630,10 +632,10 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
 
       const esPath = path.join(newsOutputHtmlDir, `${slug}.html`);
       fs.writeFileSync(esPath, esContent, 'utf8');
-      console.log(`Generado HTML de noticia (ES): ${esPath}`);
+      console.log(`✅ Generado HTML de noticia (ES): ${esPath}`);
       const enPath = path.join(newsOutputHtmlDir, `${slug}.EN.html`);
       fs.writeFileSync(enPath, enContent, 'utf8');
-      console.log(`Generado HTML de noticia (EN): ${enPath}`);
+      console.log(`✅ Generado HTML de noticia (EN): ${enPath}`);
     }
 
     // Generar índice de noticias
@@ -643,7 +645,8 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       acc[year].push(item);
       return acc;
     }, {});
-    let newsIndexContent = `<!DOCTYPE html>
+    let newsIndexContent = `
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -679,7 +682,8 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
 </body>
 </html>`;
 
-    let newsIndexContentEn = `<!DOCTYPE html>
+    let newsIndexContentEn = `
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -717,17 +721,18 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
 
     const newsEsIndexPath = path.join(newsOutputHtmlDir, 'index.html');
     fs.writeFileSync(newsEsIndexPath, newsIndexContent, 'utf8');
-    console.log(`Generado índice HTML de noticias (ES): ${newsEsIndexPath}`);
+    console.log(`✅ Generado índice HTML de noticias (ES): ${newsEsIndexPath}`);
     const newsEnIndexPath = path.join(newsOutputHtmlDir, 'index.EN.html');
     fs.writeFileSync(newsEnIndexPath, newsIndexContentEn, 'utf8');
-    console.log(`Generado índice HTML de noticias (EN): ${newsEnIndexPath}`);
+    console.log(`✅ Generado índice HTML de noticias (EN): ${newsEnIndexPath}`);
 
-    // Procesar equipo
+    // --- 3. Procesar Equipo ---
+    console.log('👥 Procesando miembros del equipo...');
     const teamRes = await fetch(teamCsvUrl);
     if (!teamRes.ok) throw new Error(`Error descargando CSV de equipo: ${teamRes.statusText}`);
     const teamCsvData = await teamRes.text();
     const teamParsed = Papa.parse(teamCsvData, { header: true, skipEmptyLines: true });
-    const allMembers = teamParsed.data;
+    const allMembers = teamParsed.data.filter(row => (row['Nombre'] || '').trim() !== '');
 
     for (const member of allMembers) {
       const nombre = member['Nombre'] || 'Miembro desconocido';
@@ -751,7 +756,8 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
       const imagen = getImageSrc(member['Imagen'] || '');
       const areasTagsHtml = areasList.length ? areasList.map(area => `<span class="area-tag">${area}</span>`).join('') : '<p>No especificadas</p>';
       const areasTagsHtmlEn = areasListEn.length ? areasListEn.map(area => `<span class="area-tag">${area}</span>`).join('') : '<p>Not specified</p>';
-      const esContent = `<!DOCTYPE html>
+      const esContent = `
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -950,7 +956,8 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
 </body>
 </html>`;
 
-      const enContent = `<!DOCTYPE html>
+      const enContent = `
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1151,13 +1158,39 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
 
       const esPath = path.join(teamOutputHtmlDir, `${slug}.html`);
       fs.writeFileSync(esPath, esContent, 'utf8');
-      console.log(`Generado HTML de miembro (ES): ${esPath}`);
+      console.log(`✅ Generado HTML de miembro (ES): ${esPath}`);
       const enPath = path.join(teamOutputHtmlDir, `${slug}.EN.html`);
       fs.writeFileSync(enPath, enContent, 'utf8');
-      console.log(`Generado HTML de miembro (EN): ${enPath}`);
+      console.log(`✅ Generado HTML de miembro (EN): ${enPath}`);
     }
 
-    // Generar páginas estáticas para las secciones de la SPA
+    // --- 4. Pre-renderizar Rutas de la SPA ---
+    console.log('🚀 Pre-renderizando las rutas de la aplicación...');
+    const appShellPath = path.join(__dirname, 'dist', 'index.html');
+    let appShellContent = '';
+    if (fs.existsSync(appShellPath)) {
+      appShellContent = fs.readFileSync(appShellPath, 'utf8');
+    } else {
+      console.warn('⚠️ El archivo dist/index.html no se encontró. Se generarán páginas estáticas sin app-shell.');
+    }
+
+    const spaRoutes = [
+      '/es/about', '/es/guidelines', '/es/faq', '/es/contact', '/es/archive', '/es/team', '/es/news', '/es/login', '/es/admin',
+      '/en/about', '/en/guidelines', '/en/faq', '/en/contact', '/en/archive', '/en/team', '/en/news', '/en/login', '/en/admin'
+    ];
+
+    spaRoutes.forEach(route => {
+      const routePath = path.join(__dirname, 'dist', route);
+      if (!fs.existsSync(routePath)) {
+        fs.mkdirSync(routePath, { recursive: true });
+      }
+      const indexPath = path.join(routePath, 'index.html');
+      fs.writeFileSync(indexPath, appShellContent || '<html><body><h1>Placeholder for SPA route</h1></body></html>', 'utf8');
+      console.log(`✅ Generado HTML para ruta SPA: ${indexPath}`);
+    });
+
+    // --- 5. Generar Páginas Estáticas para Secciones ---
+    console.log('📄 Generando páginas estáticas para secciones...');
     const sections = [
       { name: 'about', label: 'Acerca de', labelEn: 'About', content: 'La Revista Nacional de Ciencias para Estudiantes es una publicación dedicada a promover la investigación científica entre estudiantes.', contentEn: 'The National Review of Sciences for Students is a publication dedicated to promoting scientific research among students.' },
       { name: 'guidelines', label: 'Guías', labelEn: 'Guidelines', content: 'Guías para autores y revisores de La Revista Nacional de Ciencias para Estudiantes.', contentEn: 'Guidelines for authors and reviewers of The National Review of Sciences for Students.' },
@@ -1166,7 +1199,8 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
     ];
 
     sections.forEach(section => {
-      const htmlContentEs = `<!DOCTYPE html>
+      const htmlContentEs = `
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -1193,7 +1227,8 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
 </body>
 </html>`;
 
-      const htmlContentEn = `<!DOCTYPE html>
+      const htmlContentEn = `
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1222,14 +1257,16 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
 
       const filePathEs = path.join(sectionsOutputDir, `${section.name}.html`);
       fs.writeFileSync(filePathEs, htmlContentEs, 'utf8');
-      console.log(`Generado HTML de sección (ES): ${filePathEs}`);
+      console.log(`✅ Generado HTML de sección (ES): ${filePathEs}`);
       const filePathEn = path.join(sectionsOutputDir, `${section.name}.EN.html`);
       fs.writeFileSync(filePathEn, htmlContentEn, 'utf8');
-      console.log(`Generado HTML de sección (EN): ${filePathEn}`);
+      console.log(`✅ Generado HTML de sección (EN): ${filePathEn}`);
     });
 
-    // Generar sitemap
-    const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
+    // --- 6. Generar Sitemap ---
+    console.log('🗺️ Generando sitemap.xml...');
+    const sitemapContent = `
+<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
 <!-- Created for La Revista Nacional de Ciencias para Estudiantes -->
 <url>
@@ -1320,12 +1357,21 @@ ${sections.map(section => `
   <changefreq>monthly</changefreq>
   <priority>0.7</priority>
 </url>`).join('')}
+${spaRoutes.map(route => `
+<url>
+  <loc>${domain}${route}/</loc>
+  <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.9</priority>
+</url>`).join('')}
 </urlset>`.replace(/^\s*\n/gm, '');
     fs.writeFileSync(sitemapPath, sitemapContent, 'utf8');
-    console.log(`Generado sitemap: ${sitemapPath}`);
+    console.log(`✅ Generado sitemap: ${sitemapPath}`);
 
-    // Generar robots.txt
-    const robotsContent = `User-agent: Googlebot
+    // --- 7. Generar robots.txt ---
+    console.log('🤖 Generando robots.txt...');
+    const robotsContent = `
+User-agent: Googlebot
 Allow: /articles/
 Allow: /Articles/
 Allow: /news/
@@ -1354,9 +1400,12 @@ Disallow: /api/
 Sitemap: ${domain}/sitemap.xml
     `.trim();
     fs.writeFileSync(robotsPath, robotsContent, 'utf8');
-    console.log(`Generado robots.txt: ${robotsPath}`);
+    console.log(`✅ Generado robots.txt: ${robotsPath}`);
+
+    console.log('🎉 ¡Proceso completado con éxito!');
 
   } catch (err) {
-    console.error('❌ Error:', err);
+    console.error('❌ Error durante la generación:', err);
+    process.exit(1);
   }
 })();

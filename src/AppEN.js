@@ -299,7 +299,7 @@ function AppEN() {
     },
     {
       name: 'login',
-      label: 'Login / Article Status',
+      label: 'Login',
       path: '/en/login',
       component: (
         <div className={`py-8 ${user ? 'w-full' : 'max-w-lg mx-auto'}`}>
