@@ -27,16 +27,16 @@ export default function Admissions() {
       if (!response.ok) throw new Error('Failed to fetch team CSV');
       const csvText = await response.text();
       const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
-      const validMembers = parsed.filter(row => row.Email?.trim());
+      const validMembers = parsed.filter(row => row.Correo?.trim());
       setTeamMembers(validMembers);
       
       console.log('Detected headers:', Object.keys(validMembers[0] || {}));
       console.log('First members (with roles):', validMembers.slice(0, 3).map(m => ({ 
-        name: m.Name, 
-        role: m['Role in the Journal'] || 'No role' 
+        name: m.Nombre, 
+        role: m['Role in the Journal'] || m['Rol en la Revista'] || 'No role' 
       })));
       
-      const emails = new Set(validMembers.map(row => row.Email?.trim().toLowerCase()));
+      const emails = new Set(validMembers.map(row => row.Correo?.trim().toLowerCase()));
       setTeamEmails(emails);
     } catch (err) {
       setStatus(`Error fetching team: ${err.message}`);
@@ -159,7 +159,7 @@ export default function Admissions() {
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>${member.Email ? 'Edit' : 'Add'} Team Member</title>
+        <title>${member.Correo ? 'Edit' : 'Add'} Team Member</title>
         <style>
           body {
             font-family: 'Inter', sans-serif;
@@ -281,19 +281,19 @@ export default function Admissions() {
       </head>
       <body>
         <div class="container">
-          <h2>${member.Email ? 'Edit' : 'Add'} Team Member</h2>
+          <h2>${member.Correo ? 'Edit' : 'Add'} Team Member</h2>
           <form id="teamForm" class="space-y-6">
             <div class="form-group">
               <label>Name</label>
-              <input type="text" name="name" value="${member.Name || ''}" required />
+              <input type="text" name="name" value="${member.Nombre || ''}" required />
             </div>
             <div class="form-group">
               <label>Email</label>
-              <input type="email" name="email" value="${member.Email || ''}" required />
+              <input type="email" name="email" value="${member.Correo || ''}" required />
             </div>
             <div class="form-group">
               <label>Role in the Journal</label>
-              <input type="text" name="role" value="${member['Role in the Journal'] || member['Position you wish to apply for'] || ''}" required />
+              <input type="text" name="role" value="${member['Role in the Journal'] || member['Rol en la Revista'] || member['Position you wish to apply for'] || ''}" required />
             </div>
             <div class="form-group">
               <label>Description</label>
@@ -301,7 +301,7 @@ export default function Admissions() {
                 name="description"
                 placeholder="Example: Francisca Pérez is a second-year high school student at Liceo Nacional de Maipú, with interests in mathematics and chemistry..."
                 required
-              >${member.Description || ''}</textarea>
+              >${member.Description || member.Descripción || ''}</textarea>
             </div>
             <div class="form-group">
               <label>Areas of Interest</label>
@@ -310,7 +310,7 @@ export default function Admissions() {
                 name="interests"
                 placeholder="Example: History of Ideas, Theoretical Physics, Scientific Outreach"
                 required
-                value="${member['Areas of Interest'] || ''}"
+                value="${member['Areas of interest'] || member['Áreas de interés'] || ''}"
               />
             </div>
             <div class="form-group">
@@ -319,7 +319,7 @@ export default function Admissions() {
                 type="url"
                 name="image"
                 placeholder="Enter the image URL (uploaded by the administrator)"
-                value="${member.Image || ''}"
+                value="${member.Imagen || ''}"
               />
               <p class="help-text">
                 Upload the image received via email to <a href="https://postimages.org/" target="_blank">postimages.org</a> and paste the link here.
@@ -343,7 +343,7 @@ export default function Admissions() {
             e.preventDefault();
             const formData = new FormData(e.target);
             const data = {
-              action: '${member.Email ? 'update_team_member' : 'add_team_member'}',
+              action: '${member.Correo ? 'update_team_member' : 'add_team_member'}',
               name: formData.get('name'),
               role: formData.get('role'),
               email: formData.get('email'),
@@ -397,7 +397,7 @@ export default function Admissions() {
   const teamMembersFiltered = useMemo(
     () =>
       teamMembers.filter(member => {
-        const rolValue = member['Role in the Journal'] || '';
+        const rolValue = member['Role in the Journal'] || member['Rol en la Revista'] || '';
         const roles = rolValue ? rolValue.split(';').map(r => r.trim().toLowerCase()) : [];
         return roles.length > 1 || (roles.length === 1 && roles[0] !== 'author');
       }),
@@ -407,7 +407,7 @@ export default function Admissions() {
   const authorMembers = useMemo(
     () =>
       teamMembers.filter(member => {
-        const rolValue = member['Role in the Journal'] || '';
+        const rolValue = member['Role in the Journal'] || member['Rol en la Revista'] || '';
         const roles = rolValue ? rolValue.split(';').map(r => r.trim().toLowerCase()) : [];
         return roles.length === 1 && roles[0] === 'author';
       }),
@@ -481,16 +481,16 @@ export default function Admissions() {
                       <div key={index} className="application">
                         <div className="application-header" onClick={() => toggleExpandApp(`${activeTab}-${index}`)}>
                           <div className="flex items-center space-x-3">
-                            {member.Image && (
+                            {member.Imagen && (
                               <img
-                                src={member.Image}
-                                alt={member.Name}
+                                src={member.Imagen}
+                                alt={member.Nombre}
                                 className="w-10 h-10 rounded-full object-cover"
                               />
                             )}
                             <div className="application-info">
-                              <h3 className="application-name">{member.Name}</h3>
-                              <p className="application-role">{member['Role in the Journal'] || 'No role'}</p>
+                              <h3 className="application-name">{member.Nombre}</h3>
+                              <p className="application-role">{member['Role in the Journal'] || member['Rol en la Revista'] || 'No role'}</p>
                             </div>
                           </div>
                           <svg
@@ -507,19 +507,19 @@ export default function Admissions() {
                             <div className="details-grid">
                               <div>
                                 <p className="details-label">Email</p>
-                                <p className="details-value">{member.Email}</p>
+                                <p className="details-value">{member.Correo}</p>
                               </div>
                               <div>
                                 <p className="details-label">Description</p>
-                                <p className="details-value">{member.Description || ''}</p>
+                                <p className="details-value">{member.Description || member.Descripción || ''}</p>
                               </div>
                               <div>
                                 <p className="details-label">Areas of Interest</p>
-                                <p className="details-value">{member['Areas of Interest'] || ''}</p>
+                                <p className="details-value">{member['Areas of interest'] || member['Áreas de interés'] || ''}</p>
                               </div>
                               <div>
                                 <p className="details-label">Image</p>
-                                <p className="details-value">{member.Image || ''}</p>
+                                <p className="details-value">{member.Imagen || ''}</p>
                               </div>
                             </div>
                             <div className="actions mt-4">
@@ -531,7 +531,7 @@ export default function Admissions() {
                               </button>
                               {activeTab === 'authors' && (
                                 <button
-                                  onClick={() => requestAuthorData(member.Name)}
+                                  onClick={() => requestAuthorData(member.Nombre)}
                                   disabled={sending || !TEAM_GAS_URL}
                                   className="action-button action-request"
                                 >
@@ -601,12 +601,12 @@ export default function Admissions() {
                           </button>
                           <button
                             onClick={() => openEditForm({
-                              Name: app['First Name and Last Name'],
-                              Email: app['Email Direction'],
+                              Nombre: app['First Name and Last Name'],
+                              Correo: app['Email Direction'],
                               'Role in the Journal': app['Position you wish to apply for'],
                               Description: '',
-                              'Areas of Interest': '',
-                              Image: '',
+                              'Areas of interest': '',
+                              Imagen: '',
                             })}
                             disabled={sending || !TEAM_GAS_URL}
                             className="action-button action-add"
