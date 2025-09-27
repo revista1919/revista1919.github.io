@@ -2,17 +2,17 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <base href="/">
-  
+
   <!-- Títulos y descripciones bilingües -->
   <title>The National Review of Sciences for Students | Revista Nacional de las Ciencias para Estudiantes</title>
   <meta name="description" content="Global peer-reviewed journal for students of all educational levels in all scientific fields. Publish, learn, and share science worldwide. | Revista científica con revisión por pares para estudiantes de todos los niveles educativos en todas las disciplinas científicas. Publica, aprende y difunde ciencia a nivel mundial.">
-  
+
   <!-- Meta tags SEO bilingües -->
   <meta name="robots" content="index, follow">
   <meta name="keywords" content="ciencia, estudiantes, revista académica, investigación estudiantil, peer review, sciences, students, academic journal, student research, science education, educación científica">
-  
+
   <!-- Open Graph bilingüe -->
   <meta property="og:title" content="The National Review of Sciences for Students | Revista Nacional de las Ciencias para Estudiantes">
   <meta property="og:description" content="Student-led peer-reviewed science journal for students of all educational levels | Revista científica con revisión por pares dirigida por estudiantes de todos los niveles educativos">
@@ -24,28 +24,28 @@
   <meta property="og:image" content="https://www.revistacienciasestudiantes.com/logo.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  
+
   <!-- Twitter Cards -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="The National Review of Sciences for Students | Revista Nacional de las Ciencias para Estudiantes">
   <meta name="twitter:description" content="Global platform for student scientific research | Plataforma global para la investigación científica estudiantil">
   <meta name="twitter:image" content="https://www.revistacienciasestudiantes.com/logo.png">
-  
+
   <!-- Canonical y alternate para SEO bilingüe -->
   <link rel="canonical" href="https://www.revistacienciasestudiantes.com/">
   <link rel="alternate" hreflang="es" href="https://www.revistacienciasestudiantes.com/">
   <link rel="alternate" hreflang="en" href="https://www.revistacienciasestudiantes.com/en">
   <link rel="alternate" hreflang="x-default" href="https://www.revistacienciasestudiantes.com/">
-  
+
   <!-- Favicons -->
   <link rel="icon" type="image/png" sizes="32x32" href="/logo.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/logo.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/logo.png">
   <link rel="manifest" href="/manifest.json">
-  
+
   <!-- Theme color -->
   <meta name="theme-color" content="#52262d">
-  
+
   <!-- Structured Data para journal académico -->
   <script type="application/ld+json">
   {
@@ -72,21 +72,21 @@
     }
   }
   </script>
-  
+
   <!-- Preconnect para performance -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="dns-prefetch" href="https://docs.google.com">
-  
+  <link rel="preconnect" href="https://docs.google.com">
+
   <!-- Google Fonts -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Merriweather:wght@400;700&display=swap">
-  
+
   <!-- Preload recursos críticos -->
   <link rel="preload" href="/logo.png" as="image">
   <link rel="preload" href="/logoEN.png" as="image">
   <link rel="preload" href="/index.css" as="style">
-  <link rel="preload" href="/bundle.js" as="script">
-  
+  <link rel="preload" href="/main.js" as="script">
+
   <!-- CSS crítico inline -->
   <style>
     *, *::before, *::after { box-sizing: border-box; }
@@ -122,37 +122,60 @@
       background: linear-gradient(135deg, #f4ece7 0%, #e8d9c6 100%);
       display: flex; align-items: center; justify-content: center;
       z-index: 9999; transition: opacity 0.5s ease-out;
+      animation: subtlePulse 4s ease-in-out infinite;
+    }
+    @keyframes subtlePulse {
+      0%, 100% { background: linear-gradient(135deg, #f4ece7 0%, #e8d9c6 100%); }
+      50% { background: linear-gradient(135deg, #e8d9c6 0%, #f4ece7 100%); }
     }
     #loading .loading-container {
-      text-align: center; 
-      background: rgba(255,255,255,0.95); 
-      padding: 2.5rem; 
-      border-radius: 16px; 
+      text-align: center;
+      background: rgba(255,255,255,0.95);
+      padding: 3rem;
+      border-radius: 16px;
       box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-      backdrop-filter: blur(10px); 
+      backdrop-filter: blur(10px);
       border: 1px solid rgba(255,255,255,0.2);
-      max-width: 320px;
-      width: 90%;
-      transform: translateY(0);
-      animation: fadeIn 0.5s ease-out;
+      max-width: 400px;
+      position: relative;
     }
     #loading img {
       width: 100px; height: auto; margin-bottom: 1.5rem;
       display: block; margin-left: auto; margin-right: auto;
     }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
+    #loading .loading-title {
+      margin: 0 0 1rem 0; color: #52262d; font-family: 'Merriweather', serif; font-size: 1.5rem; font-weight: 700;
+    }
+    #loading .loading-desc {
+      margin: 0 0 1.5rem 0; color: #666; font-size: 1rem; line-height: 1.4;
+      animation: typewriter 3s steps(40) infinite;
+      white-space: nowrap; overflow: hidden; border-right: 2px solid #666;
+    }
+    @keyframes typewriter {
+      0% { width: 0; }
+      50% { width: 100%; }
+      100% { width: 0; }
+    }
+    #loading .progress-bar {
+      width: 100%; height: 4px; background: #e0e0e0; border-radius: 2px; overflow: hidden;
+    }
+    #loading .progress-bar::after {
+      content: ''; display: block; width: 0; height: 100%; background: #52262d;
+      animation: progress 2s ease-in-out infinite;
+    }
+    @keyframes progress {
+      0% { width: 0; }
+      50% { width: 80%; }
+      100% { width: 0; }
     }
     @media (prefers-reduced-motion: reduce) {
-      #loading .loading-container { animation: none; }
-      div[style*="animation: spin"] { animation: none !important; }
+      #loading, #loading .loading-desc, #loading .progress-bar::after { animation: none !important; }
     }
   </style>
-  
+
   <!-- CSS principal -->
-  <link rel="stylesheet" href="/index.css" media="print" onload="this.media='all'">
-  
+  <link rel="stylesheet" href="/index.css">
+
   <!-- PWA meta tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -160,34 +183,20 @@
 </head>
 <body>
   <!-- Loading indicator mejorado -->
-  <div id="loading">
+  <div id="loading" role="status" aria-live="polite">
     <div class="loading-container">
-      <img id="loading-logo" src="/logo.png" alt="NRSS Logo">
-      <h2 class="loading-title" style="
-        margin: 0 0 1rem 0; 
-        color: #52262d; 
-        font-family: 'Merriweather', serif; 
-        font-size: 1.3rem; 
-        font-weight: 700;
-      "></h2>
-      <p class="loading-desc" style="margin: 0 0 1.5rem 0; color: #666; font-size: 0.9rem; line-height: 1.4;"></p>
-      <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-        <div style="
-          width: 24px; height: 24px; 
-          border: 2px solid #52262d; 
-          border-radius: 50%; 
-          border-top-color: transparent;
-          animation: spin 1s ease-in-out infinite;
-        "></div>
-        <span class="loading-wait" style="color: #999; font-size: 0.8rem;"></span>
-      </div>
+      <img id="loading-logo" src="/logo.png" alt="NRSS Logo" aria-hidden="true">
+      <h2 class="loading-title"></h2>
+      <p class="loading-desc"></p>
+      <div class="progress-bar"></div>
+      <span class="sr-only">Loading...</span>
     </div>
   </div>
-  
+
   <!-- Contenedor principal -->
-  <div id="root"></div>
-  
-  <!-- JavaScript para detección de idioma y optimizaciones -->
+  <div id="root" class="skeleton"></div>
+
+  <!-- JavaScript para detección de idioma, logo y loading -->
   <script>
     (function() {
       // Detectar idioma desde la URL
@@ -201,40 +210,41 @@
       // Añadir clases CSS para estilizado específico
       document.body.classList.add(isEnglish ? 'lang-en' : 'lang-es');
       
-      // Cambiar logo según idioma
-      const logoSrc = isEnglish ? '/logoEN.png' : '/logo.png';
-      document.getElementById('loading-logo').src = logoSrc;
+      // Guardar preferencia de idioma
+      localStorage.setItem('preferredLanguage', isEnglish ? 'en' : 'es');
+      
+      // Configurar logo según idioma
+      const logo = isEnglish ? '/logoEN.png' : '/logo.png';
+      document.getElementById('loading-logo').src = logo;
       
       // Configurar textos de loading basados en idioma
       const texts = {
         es: {
           title: 'Revista Nacional de las Ciencias para Estudiantes',
-          desc: 'Cargando contenido científico para estudiantes en todo el mundo...',
-          wait: 'Por favor espere'
+          desc: 'Cargando contenido científico para estudiantes en todo el mundo...'
         },
         en: {
           title: 'The National Review of Sciences for Students',
-          desc: 'Loading scientific content for students worldwide...',
-          wait: 'Please wait'
+          desc: 'Loading scientific content for students worldwide...'
         }
       };
       const lang = isEnglish ? 'en' : 'es';
       document.querySelector('.loading-title').textContent = texts[lang].title;
       document.querySelector('.loading-desc').textContent = texts[lang].desc;
-      document.querySelector('.loading-wait').textContent = texts[lang].wait;
       
-      // Optimización de prerenderizado
+      // Ocultar loading después de renderizado
       const hideLoading = () => {
         const loading = document.getElementById('loading');
         if (loading) {
           loading.style.opacity = '0';
           setTimeout(() => {
             loading.remove();
+            document.getElementById('root').classList.remove('skeleton');
           }, 500);
         }
       };
       
-      // Observar cambios en el DOM para detectar renderizado de React
+      // Observar cambios en #root para detectar renderizado de React
       const observer = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
           if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
@@ -252,81 +262,57 @@
       // Fallback: ocultar después de 5 segundos
       setTimeout(hideLoading, 5000);
       
-      // Animación del spinner y estilos adicionales
+      // Animaciones y estilos adicionales
       const style = document.createElement('style');
       style.textContent = `
         @keyframes spin {
           to { transform: rotate(360deg); }
         }
-        .lang-en, .lang-es { --primary-font: 'Roboto', sans-serif; }
-        /* Lazy-loaded images */
-        img[loading="lazy"] {
-          opacity: 0;
-          transition: opacity 0.3s ease-in;
+        .lang-en { --primary-font: 'Roboto', sans-serif; }
+        .lang-es { --primary-font: 'Roboto', sans-serif; }
+        /* Skeleton UI para contenido principal */
+        #root.skeleton {
+          min-height: 100vh;
+          background: #f0f0f0;
         }
-        img[loading="lazy"].loaded {
-          opacity: 1;
+        #root.skeleton::before {
+          content: '';
+          display: block;
+          width: 100%;
+          height: 200px;
+          background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+          background-size: 200% 100%;
+          animation: loading 1.5s infinite;
         }
       `;
       document.head.appendChild(style);
       
-      // Lazy loading para imágenes
-      document.addEventListener('DOMContentLoaded', () => {
-        const images = document.querySelectorAll('img[loading="lazy"]');
-        const observer = new IntersectionObserver((entries, observer) => {
-          entries.forEach(entry => {
-            if (entry.isIntersecting) {
-              const img = entry.target;
-              img.classList.add('loaded');
-              observer.unobserve(img);
-            }
-          });
-        }, { rootMargin: '200px' });
-        images.forEach(img => observer.observe(img));
+      // Cargar scripts de React de forma asíncrona
+      const scripts = [
+        'https://unpkg.com/react@18/umd/react.production.min.js',
+        'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js',
+        '/main.js'
+      ];
+      scripts.forEach(src => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = true;
+        document.body.appendChild(script);
       });
       
       // Marcar como listo para prerenderizado
       window.prerenderReady = true;
       document.documentElement.setAttribute('data-prerender-ready', 'true');
-      
-      // Optimización de performance
-      window.addEventListener('load', () => {
-        // Priorizar recursos críticos
-        const criticalScripts = document.createElement('link');
-        criticalScripts.rel = 'preload';
-        criticalScripts.href = '/bundle.js';
-        criticalScripts.as = 'script';
-        document.head.appendChild(criticalScripts);
-        
-        // Habilitar compresión de imágenes
-        document.querySelectorAll('img').forEach(img => {
-          if (!img.hasAttribute('loading')) {
-            img.setAttribute('loading', 'lazy');
-            img.setAttribute('decoding', 'async');
-          }
-        });
-      });
-      
-      // Soporte para tema oscuro
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
-      const applyTheme = () => {
-        if (prefersDark.matches) {
-          document.documentElement.setAttribute('data-theme', 'dark');
-          document.body.style.background = 'linear-gradient(135deg, #2c1e22 0%, #3e2f35 100%)';
-        }
-      };
-      applyTheme();
-      prefersDark.addEventListener('change', applyTheme);
     })();
   </script>
-  
+
   <!-- Service Worker para PWA -->
   <script>
     if ('serviceWorker' in navigator && location.hostname !== 'localhost') {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
-          .then(reg => console.log('Service Worker registered'))
-          .catch(err => console.log('Service Worker failed:', err));
+          .then(reg => console.log('SW registered'))
+          .catch(err => console.log('SW failed:', err));
       });
     }
   </script>
