@@ -7,28 +7,28 @@ import {
   browserLocalPersistence,
   signOut,
 } from 'firebase/auth';
-import { useLanguage } from './hooks/useLanguage'; // ← MANTENIDO
-import Header from './components/HeaderEN'; // ← ARCHIVO EN
-import SearchAndFilters from './components/SearchAndFiltersEN'; // ← ARCHIVO EN
-import ArticleCard from './components/ArticleCardEN'; // ← ARCHIVO EN
-import Tabs from './components/TabsEN'; // ← ARCHIVO EN
-import SubmitSection from './components/SubmitSectionEN'; // ← ARCHIVO EN
-import AdminSection from './components/AdminSectionEN'; // ← ARCHIVO EN
-import AboutSection from './components/AboutSectionEN'; // ← ARCHIVO EN
-import GuidelinesSection from './components/GuidelinesSectionEN'; // ← ARCHIVO EN
-import FAQSection from './components/FAQSectionEN'; // ← ARCHIVO EN
-import TeamSection from './components/TeamSectionEN'; // ← ARCHIVO EN
-import Footer from './components/FooterEN'; // ← ARCHIVO EN
-import LoginSection from './components/LoginSectionEN'; // ← ARCHIVO EN
-import PortalSection from './components/PortalSectionEN'; // ← ARCHIVO EN
-import NewsSection from './components/NewsSectionEN'; // ← ARCHIVO EN
+import { Routes, Route, useLocation } from 'react-router-dom';
+import { useLanguage } from './hooks/useLanguage';
+import Header from './components/HeaderEN';
+import SearchAndFilters from './components/SearchAndFiltersEN';
+import ArticleCard from './components/ArticleCardEN';
+import Tabs from './components/TabsEN';
+import SubmitSection from './components/SubmitSectionEN';
+import AdminSection from './components/AdminSectionEN';
+import AboutSection from './components/AboutSectionEN';
+import GuidelinesSection from './components/GuidelinesSectionEN';
+import FAQSection from './components/FAQSectionEN';
+import TeamSection from './components/TeamSectionEN';
+import Footer from './components/FooterEN';
+import LoginSection from './components/LoginSectionEN';
+import PortalSection from './components/PortalSectionEN';
+import NewsSection from './components/NewsSectionEN';
 import './index.css';
-// import App from './App'; // ← ELIMINADO
 
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 
 function AppEN() {
-  const { cleanPath } = useLanguage(); // ← MANTENIDO
+  const { cleanPath } = useLanguage();
   const [articles, setArticles] = useState([]);
   const [filteredArticles, setFilteredArticles] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -36,9 +36,9 @@ function AppEN() {
   const [areas, setAreas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [visibleArticles, setVisibleArticles] = useState(6);
-  const [activeTab, setActiveTab] = useState('articles');
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const location = useLocation();
 
   // Fetch user data from CSV
   const fetchUserData = async (email) => {
@@ -68,7 +68,7 @@ function AppEN() {
     }
   };
 
-  // Auth persistence and state
+  // Authentication persistence and state
   useEffect(() => {
     setPersistence(auth, browserLocalPersistence)
       .then(() => {
@@ -95,18 +95,18 @@ function AppEN() {
               localStorage.setItem('userData', JSON.stringify(userData));
             }
             setUser(userData);
-            console.log('User authenticated:', userData);
+            console.log('Authenticated user:', userData);
           } else {
             setUser(null);
             localStorage.removeItem('userData');
-            console.log('No user authenticated');
+            console.log('No authenticated user');
           }
           setAuthLoading(false);
         });
         return () => unsubscribe();
       })
       .catch((error) => {
-        console.error('Error setting up persistence:', error);
+        console.error('Error setting persistence:', error);
         setAuthLoading(false);
       });
   }, []);
@@ -186,36 +186,6 @@ function AppEN() {
   const loadMoreArticles = () => setVisibleArticles((prev) => prev + 6);
   const showLessArticles = () => setVisibleArticles(6);
 
-  // Manual login
-  const handleLogin = async (userData) => {
-    console.log('handleLogin called with:', userData);
-    if (!userData) {
-      setUser(null);
-      localStorage.removeItem('userData');
-      console.log('No user authenticated in handleLogin');
-      return;
-    }
-
-    try {
-      const csvData = await fetchUserData(userData.email);
-      const updatedUserData = {
-        uid: userData.uid,
-        email: userData.email,
-        name: csvData.name,
-        role: csvData.role,
-        image: csvData.image,
-      };
-      setUser(updatedUserData);
-      localStorage.setItem('userData', JSON.stringify(updatedUserData));
-      setActiveTab('login'); // Ensure login tab stays active
-      console.log('User authenticated in handleLogin:', updatedUserData);
-    } catch (error) {
-      console.error('Error in handleLogin:', error);
-      setUser(null);
-      localStorage.removeItem('userData');
-    }
-  };
-
   // Manual logout
   const handleLogout = async () => {
     try {
@@ -233,6 +203,7 @@ function AppEN() {
     {
       name: 'articles',
       label: 'Articles',
+      path: '/en/articles',
       component: (
         <div className="py-8 max-w-7xl mx-auto">
           <SearchAndFilters
@@ -283,16 +254,19 @@ function AppEN() {
     {
       name: 'submit',
       label: 'Submit Article',
+      path: '/en/submit',
       component: <SubmitSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'team',
       label: 'Our Team',
-      component: <TeamSection setActiveTab={setActiveTab} className="py-8 max-w-7xl mx-auto" />,
+      path: '/en/team',
+      component: <TeamSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'admin',
       label: 'Apply for a Position!',
+      path: '/en/admin',
       component: (
         <div className="py-8 max-w-7xl mx-auto">
           <AdminSection />
@@ -302,26 +276,31 @@ function AppEN() {
     {
       name: 'about',
       label: 'About',
+      path: '/en/about',
       component: <AboutSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'guidelines',
       label: 'Guidelines',
+      path: '/en/guidelines',
       component: <GuidelinesSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'faq',
-      label: 'Frequently Asked Questions',
+      label: 'FAQ',
+      path: '/en/faq',
       component: <FAQSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'news',
       label: 'News',
+      path: '/en/news',
       component: <NewsSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'login',
       label: 'Login / Article Status',
+      path: '/en/login',
       component: (
         <div className={`py-8 ${user ? 'w-full' : 'max-w-lg mx-auto'}`}>
           {!user && (
@@ -330,14 +309,14 @@ function AppEN() {
                 Interface for Authors and Reviewers
               </h2>
               <p className="text-center text-[#7a5c4f] mb-6">
-                This section is only for authors and reviewers with special permissions.
+                This section is for authors and reviewers/authors with special permissions only.
               </p>
             </>
           )}
           {user ? (
             <PortalSection user={user} onLogout={handleLogout} />
           ) : (
-            <LoginSection onLogin={handleLogin} onLogout={handleLogout} />
+            <LoginSection onLogout={handleLogout} />
           )}
         </div>
       ),
@@ -348,17 +327,25 @@ function AppEN() {
     return <div className="text-center text-gray-600">Loading authentication...</div>;
   }
 
+  const isLoginActive = location.pathname.includes('login');
+
   return (
     <div className="min-h-screen bg-[#f4ece7] flex flex-col">
       <Header className="w-full m-0 p-0" />
       <div
         className={`container ${
-          user && activeTab === 'login'
+          user && isLoginActive
             ? 'max-w-full px-0'
             : 'mx-auto px-4 sm:px-6 lg:px-8'
         } flex-grow`}
       >
-        <Tabs sections={sections} activeTab={activeTab} setActiveTab={setActiveTab} />
+        <Tabs sections={sections} />
+        <Routes>
+          {sections.map((section) => (
+            <Route key={section.name} path={section.path.substring(3)} element={section.component} />
+          ))}
+          <Route path="/" element={sections.find(s => s.name === 'articles').component} />
+        </Routes>
       </div>
       <Footer className="w-full m-0 p-0 mt-auto" />
     </div>

@@ -7,27 +7,28 @@ import {
   browserLocalPersistence,
   signOut,
 } from 'firebase/auth';
-import { useLanguage } from './hooks/useLanguage'; // ← AGREGADO
-import Header from './components/Header'; // ← ARCHIVO ES
-import SearchAndFilters from './components/SearchAndFilters'; // ← ARCHIVO ES
-import ArticleCard from './components/ArticleCard'; // ← ARCHIVO ES
-import Tabs from './components/Tabs'; // ← ARCHIVO ES
-import SubmitSection from './components/SubmitSection'; // ← ARCHIVO ES
-import AdminSection from './components/AdminSection'; // ← ARCHIVO ES
-import AboutSection from './components/AboutSection'; // ← ARCHIVO ES
-import GuidelinesSection from './components/GuidelinesSection'; // ← ARCHIVO ES
-import FAQSection from './components/FAQSection'; // ← ARCHIVO ES
-import TeamSection from './components/TeamSection'; // ← ARCHIVO ES
-import Footer from './components/Footer'; // ← ARCHIVO ES
-import LoginSection from './components/LoginSection'; // ← ARCHIVO ES
-import PortalSection from './components/PortalSection'; // ← ARCHIVO ES
-import NewsSection from './components/NewsSection'; // ← ARCHIVO ES
+import { Routes, Route, useLocation } from 'react-router-dom';
+import { useLanguage } from './hooks/useLanguage';
+import Header from './components/Header';
+import SearchAndFilters from './components/SearchAndFilters';
+import ArticleCard from './components/ArticleCard';
+import Tabs from './components/Tabs';
+import SubmitSection from './components/SubmitSection';
+import AdminSection from './components/AdminSection';
+import AboutSection from './components/AboutSection';
+import GuidelinesSection from './components/GuidelinesSection';
+import FAQSection from './components/FAQSection';
+import TeamSection from './components/TeamSection';
+import Footer from './components/Footer';
+import LoginSection from './components/LoginSection';
+import PortalSection from './components/PortalSection';
+import NewsSection from './components/NewsSection';
 import './index.css';
 
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 
 function App() {
-  const { cleanPath } = useLanguage(); // ← AGREGADO
+  const { cleanPath } = useLanguage();
   const [articles, setArticles] = useState([]);
   const [filteredArticles, setFilteredArticles] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -35,9 +36,9 @@ function App() {
   const [areas, setAreas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [visibleArticles, setVisibleArticles] = useState(6);
-  const [activeTab, setActiveTab] = useState('articles');
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const location = useLocation();
 
   // Fetch user data from CSV
   const fetchUserData = async (email) => {
@@ -185,36 +186,6 @@ function App() {
   const loadMoreArticles = () => setVisibleArticles((prev) => prev + 6);
   const showLessArticles = () => setVisibleArticles(6);
 
-  // Login manual
-  const handleLogin = async (userData) => {
-    console.log('handleLogin called with:', userData);
-    if (!userData) {
-      setUser(null);
-      localStorage.removeItem('userData');
-      console.log('No hay usuario autenticado en handleLogin');
-      return;
-    }
-
-    try {
-      const csvData = await fetchUserData(userData.email);
-      const updatedUserData = {
-        uid: userData.uid,
-        email: userData.email,
-        name: csvData.name,
-        role: csvData.role,
-        image: csvData.image,
-      };
-      setUser(updatedUserData);
-      localStorage.setItem('userData', JSON.stringify(updatedUserData));
-      setActiveTab('login'); // Ensure login tab stays active
-      console.log('Usuario autenticado en handleLogin:', updatedUserData);
-    } catch (error) {
-      console.error('Error en handleLogin:', error);
-      setUser(null);
-      localStorage.removeItem('userData');
-    }
-  };
-
   // Logout manual
   const handleLogout = async () => {
     try {
@@ -232,6 +203,7 @@ function App() {
     {
       name: 'articles',
       label: 'Artículos',
+      path: '/es/articles',
       component: (
         <div className="py-8 max-w-7xl mx-auto">
           <SearchAndFilters
@@ -282,16 +254,19 @@ function App() {
     {
       name: 'submit',
       label: 'Enviar Artículo',
+      path: '/es/submit',
       component: <SubmitSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'team',
       label: 'Nuestro Equipo',
-      component: <TeamSection setActiveTab={setActiveTab} className="py-8 max-w-7xl mx-auto" />,
+      path: '/es/team',
+      component: <TeamSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'admin',
       label: '¡Postula a algún cargo!',
+      path: '/es/admin',
       component: (
         <div className="py-8 max-w-7xl mx-auto">
           <AdminSection />
@@ -301,26 +276,31 @@ function App() {
     {
       name: 'about',
       label: 'Acerca de',
+      path: '/es/about',
       component: <AboutSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'guidelines',
       label: 'Guías',
+      path: '/es/guidelines',
       component: <GuidelinesSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'faq',
       label: 'Preguntas Frecuentes',
+      path: '/es/faq',
       component: <FAQSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'news',
       label: 'Noticias',
+      path: '/es/news',
       component: <NewsSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'login',
       label: 'Login / Estado de Artículos',
+      path: '/es/login',
       component: (
         <div className={`py-8 ${user ? 'w-full' : 'max-w-lg mx-auto'}`}>
           {!user && (
@@ -336,7 +316,7 @@ function App() {
           {user ? (
             <PortalSection user={user} onLogout={handleLogout} />
           ) : (
-            <LoginSection onLogin={handleLogin} onLogout={handleLogout} />
+            <LoginSection onLogout={handleLogout} />
           )}
         </div>
       ),
@@ -347,17 +327,25 @@ function App() {
     return <div className="text-center text-gray-600">Cargando autenticación...</div>;
   }
 
+  const isLoginActive = location.pathname.includes('login');
+
   return (
     <div className="min-h-screen bg-[#f4ece7] flex flex-col">
       <Header className="w-full m-0 p-0" />
       <div
         className={`container ${
-          user && activeTab === 'login'
+          user && isLoginActive
             ? 'max-w-full px-0'
             : 'mx-auto px-4 sm:px-6 lg:px-8'
         } flex-grow`}
       >
-        <Tabs sections={sections} activeTab={activeTab} setActiveTab={setActiveTab} />
+        <Tabs sections={sections} />
+        <Routes>
+          {sections.map((section) => (
+            <Route key={section.name} path={section.path.substring(3)} element={section.component} />
+          ))}
+          <Route path="/" element={sections.find(s => s.name === 'articles').component} />
+        </Routes>
       </div>
       <Footer className="w-full m-0 p-0 mt-auto" />
     </div>
