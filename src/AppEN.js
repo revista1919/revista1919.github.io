@@ -7,12 +7,12 @@ import {
   browserLocalPersistence,
   signOut,
 } from 'firebase/auth';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useLanguage } from './hooks/useLanguage';
 import Header from './components/HeaderEN';
 import SearchAndFilters from './components/SearchAndFiltersEN';
 import ArticleCard from './components/ArticleCardEN';
-import Tabs from './components/TabsEN';
+import Tabs from './components/Tabs';
 import SubmitSection from './components/SubmitSectionEN';
 import AdminSection from './components/AdminSectionEN';
 import AboutSection from './components/AboutSectionEN';
@@ -73,7 +73,6 @@ function AppEN() {
     setPersistence(auth, browserLocalPersistence)
       .then(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-          console.log('onAuthStateChanged fired:', firebaseUser ? firebaseUser.email : 'No user');
           if (firebaseUser) {
             const storedUser = JSON.parse(localStorage.getItem('userData'));
             let userData;
@@ -95,11 +94,9 @@ function AppEN() {
               localStorage.setItem('userData', JSON.stringify(userData));
             }
             setUser(userData);
-            console.log('Authenticated user:', userData);
           } else {
             setUser(null);
             localStorage.removeItem('userData');
-            console.log('No authenticated user');
           }
           setAuthLoading(false);
         });
@@ -119,11 +116,9 @@ function AppEN() {
           'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p32EM6-0VYy18AdREQwXdpeet1WHTA4H2-W2FX7HKe1HPSyApWadUw9sKHdVYQXL5tP6yDRs/pub?output=csv',
           { cache: 'no-store' }
         );
-
         if (!response.ok) {
           throw new Error(`Error loading CSV file: ${response.status}`);
         }
-
         const csvText = await response.text();
         Papa.parse(csvText, {
           header: true,
@@ -133,10 +128,8 @@ function AppEN() {
           complete: ({ data }) => {
             setArticles(data);
             setFilteredArticles(data);
-
             const uniqueAreas = [...new Set(data.map((a) => a['Área temática']))].filter(Boolean);
             setAreas(uniqueAreas);
-
             setLoading(false);
           },
           error: (error) => {
@@ -149,7 +142,6 @@ function AppEN() {
         setLoading(false);
       }
     };
-
     fetchArticles();
   }, []);
 
@@ -157,7 +149,6 @@ function AppEN() {
   const handleSearch = (term, area) => {
     setSearchTerm(term);
     setSelectedArea(area);
-
     const lowerTerm = term.toLowerCase();
     const filtered = articles.filter((article) => {
       const matchesSearch =
@@ -165,13 +156,10 @@ function AppEN() {
         article['Autor(es)']?.toLowerCase().includes(lowerTerm) ||
         article['Resumen']?.toLowerCase().includes(lowerTerm) ||
         article['Palabras clave']?.toLowerCase().includes(lowerTerm);
-
       const matchesArea =
         area === '' || (article['Área temática'] || '').toLowerCase() === area.toLowerCase();
-
       return matchesSearch && matchesArea;
     });
-
     setFilteredArticles(filtered);
     setVisibleArticles(6);
   };
@@ -192,7 +180,6 @@ function AppEN() {
       await signOut(auth);
       setUser(null);
       localStorage.removeItem('userData');
-      console.log('Logout executed in AppEN.jsx');
     } catch (error) {
       console.error('Error signing out:', error);
     }
@@ -267,11 +254,7 @@ function AppEN() {
       name: 'admin',
       label: 'Apply for a Position!',
       path: '/en/admin',
-      component: (
-        <div className="py-8 max-w-7xl mx-auto">
-          <AdminSection />
-        </div>
-      ),
+      component: <AdminSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'about',
@@ -342,9 +325,9 @@ function AppEN() {
         <Tabs sections={sections} />
         <Routes>
           {sections.map((section) => (
-            <Route key={section.name} path={section.path.substring(3)} element={section.component} />
+            <Route key={section.name} path={section.path} element={section.component} />
           ))}
-          <Route path="/" element={sections.find(s => s.name === 'articles').component} />
+          <Route path="/" element={<Navigate to="/en/articles" />} />
         </Routes>
       </div>
       <Footer className="w-full m-0 p-0 mt-auto" />
