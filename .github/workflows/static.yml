@@ -47,6 +47,7 @@ jobs:
           echo "APPLICATIONS_SCRIPT length: ${#APPLICATIONS_SCRIPT}"
           echo "MY_GITHUB_TOKEN length: ${#MY_GITHUB_TOKEN}"
           echo "USERS_CSV length: ${#USERS_CSV}"
+          echo "FORM_CSV length: ${#FORM_CSV}" # ← AÑADIDO: Debug FORM_CSV
           echo "FIREBASE_API_KEY length: ${#FIREBASE_API_KEY}"
           echo "API_GEMINI length: ${#API_GEMINI}"
           echo "FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-MISSING}"
@@ -56,6 +57,7 @@ jobs:
           APPLICATIONS_SCRIPT: ${{ secrets.APPLICATIONS_SCRIPT }}
           MY_GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
           USERS_CSV: ${{ secrets.USERS_CSV }}
+          FORM_CSV: ${{ secrets.FORM_CSV }} # ← AÑADIDO: FORM_CSV secret
           FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
           API_GEMINI: ${{ secrets.API_GEMINI }}
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
@@ -69,6 +71,7 @@ jobs:
           echo "REACT_APP_APPLICATIONS_SCRIPT_URL=${{ secrets.APPLICATIONS_SCRIPT }}" >> .env.local
           echo "REACT_APP_GH_TOKEN=${{ secrets.MY_GITHUB_TOKEN }}" >> .env.local
           echo "REACT_APP_USERS_CSV=${{ secrets.USERS_CSV }}" >> .env.local
+          echo "REACT_APP_FORM_CSV=${{ secrets.FORM_CSV }}" >> .env.local # ← AÑADIDO: FORM_CSV
           echo "REACT_APP_FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }}" >> .env.local
           echo "REACT_APP_API_GEMINI=${{ secrets.API_GEMINI }}" >> .env.local
           echo "REACT_APP_FIREBASE_AUTH_DOMAIN=usuarios-rnce.firebaseapp.com" >> .env.local
@@ -119,6 +122,13 @@ jobs:
             echo "✅ CSV URL encontrada en bundle"
           else
             echo "⚠️ REACT_APP_USERS_CSV no encontrada en bundle"
+          fi
+          
+          echo "🔍 Checking for FORM_CSV URL:" # ← AÑADIDO: Verificación de FORM_CSV
+          if grep -r "REACT_APP_FORM_CSV" dist/; then
+            echo "✅ FORM_CSV URL encontrada en bundle"
+          else
+            echo "⚠️ REACT_APP_FORM_CSV no encontrada en bundle"
           fi
 
       - name: Setup Pages

@@ -20,6 +20,7 @@ module.exports = (env, argv) => {
     'REACT_APP_FIREBASE_API_KEY': process.env.REACT_APP_FIREBASE_API_KEY ? 'PRESENT' : 'MISSING',
     'REACT_APP_FIREBASE_PROJECT_ID': process.env.REACT_APP_FIREBASE_PROJECT_ID || 'MISSING',
     'REACT_APP_USERS_CSV': process.env.REACT_APP_USERS_CSV ? `${process.env.REACT_APP_USERS_CSV.slice(0, 40)}...` : 'MISSING',
+    'REACT_APP_FORM_CSV': process.env.REACT_APP_FORM_CSV ? `${process.env.REACT_APP_FORM_CSV.slice(0, 40)}...` : 'MISSING', // ← AÑADIDO: Debug FORM_CSV
     'REACT_APP_ARTICULOS_SCRIPT_URL': process.env.REACT_APP_ARTICULOS_SCRIPT_URL ? `${process.env.REACT_APP_ARTICULOS_SCRIPT_URL.slice(0, 40)}...` : 'MISSING',
     'REACT_APP_TEAM_SCRIPT_URL': process.env.REACT_APP_TEAM_SCRIPT_URL ? `${process.env.REACT_APP_TEAM_SCRIPT_URL.slice(0, 40)}...` : 'MISSING',
     'REACT_APP_APPLICATIONS_SCRIPT_URL': process.env.REACT_APP_APPLICATIONS_SCRIPT_URL ? `${process.env.REACT_APP_APPLICATIONS_SCRIPT_URL.slice(0, 40)}...` : 'MISSING',
@@ -38,6 +39,7 @@ module.exports = (env, argv) => {
     'process.env.REACT_APP_APPLICATIONS_SCRIPT_URL': JSON.stringify(process.env.REACT_APP_APPLICATIONS_SCRIPT_URL || ''),
     'process.env.REACT_APP_GH_TOKEN': JSON.stringify(process.env.REACT_APP_GH_TOKEN || ''),
     'process.env.REACT_APP_USERS_CSV': JSON.stringify(process.env.REACT_APP_USERS_CSV || ''),
+    'process.env.REACT_APP_FORM_CSV': JSON.stringify(process.env.REACT_APP_FORM_CSV || ''), // ← AÑADIDO: Inyectar FORM_CSV
     'process.env.REACT_APP_FIREBASE_API_KEY': JSON.stringify(process.env.REACT_APP_FIREBASE_API_KEY || ''),
     'process.env.REACT_APP_FIREBASE_AUTH_DOMAIN': JSON.stringify(process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || 'usuarios-rnce.firebaseapp.com'),
     'process.env.REACT_APP_FIREBASE_PROJECT_ID': JSON.stringify(process.env.REACT_APP_FIREBASE_PROJECT_ID || 'usuarios-rnce'),
