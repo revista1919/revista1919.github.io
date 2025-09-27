@@ -5,7 +5,7 @@ import AppES from './App';
 import AppEN from './AppEN';
 
 const Root = () => {
-  const basename = process.env.NODE_ENV === 'production' ? '/revista1919' : '/';
+  const basename = process.env.NODE_ENV === 'production' ? '/revistacienciasestudiantes' : '/';
 
   return (
     <Router basename={basename}>
