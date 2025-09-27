@@ -122,11 +122,6 @@
       background: linear-gradient(135deg, #f4ece7 0%, #e8d9c6 100%);
       display: flex; align-items: center; justify-content: center;
       z-index: 9999; transition: opacity 0.5s ease-out;
-      animation: subtlePulse 4s ease-in-out infinite;
-    }
-    @keyframes subtlePulse {
-      0%, 100% { background: linear-gradient(135deg, #f4ece7 0%, #e8d9c6 100%); }
-      50% { background: linear-gradient(135deg, #e8d9c6 0%, #f4ece7 100%); }
     }
     #loading .loading-container {
       text-align: center;
@@ -148,31 +143,9 @@
     }
     #loading .loading-desc {
       margin: 0 0 1.5rem 0; color: #666; font-size: 1rem; line-height: 1.4;
-      animation: typewriter 3s steps(40) infinite;
-      white-space: nowrap; overflow: hidden; border-right: 2px solid #666;
     }
-    @keyframes typewriter {
-      0% { width: 0; }
-      50% { width: 100%; }
-      100% { width: 0; }
-    }
-    #loading .progress-bar {
-      width: 100%; height: 4px; background: #e0e0e0; border-radius: 2px; overflow: hidden;
-    }
-    #loading .progress-bar::after {
-      content: ''; display: block; width: 0; height: 100%; background: #52262d;
-      animation: progress 2s ease-in-out infinite;
-    }
-    @keyframes progress {
-      0% { width: 0; }
-      50% { width: 80%; }
-      100% { width: 0; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      #loading, #loading .loading-desc, #loading .progress-bar::after { animation: none !important; }
-    }
-    /* Hide loading screen for bots */
     .bot #loading { display: none; }
+    .bot #root.skeleton { background: none; animation: none; }
   </style>
 
   <!-- CSS principal -->
@@ -189,20 +162,27 @@
     <div class="loading-container">
       <img id="loading-logo" src="/logo.png" alt="NRSS Logo" aria-hidden="true">
       <h2 class="loading-title"></h2>
-      <p class="loading-desc"></p>
-      <div class="progress-bar"></div>
+      <p class="loading-desc">Loading...</p>
       <span class="sr-only">Loading...</span>
     </div>
   </div>
 
-  <!-- Contenedor principal con fallback para crawlers -->
+  <!-- Contenedor principal con fallback mejorado para crawlers -->
   <div id="root" class="skeleton">
     <noscript>
-      <div style="text-align: center; padding: 2rem;">
-        <h1>Revista Nacional de las Ciencias para Estudiantes</h1>
-        <p>Global peer-reviewed journal for students of all educational levels in all scientific fields. Publish, learn, and share science worldwide.</p>
-        <p>Por favor, habilite JavaScript para disfrutar de la experiencia completa del sitio.</p>
-        <a href="mailto:revistanacionalcienciae@gmail.com">Contáctenos</a>
+      <div style="text-align: center; padding: 2rem; max-width: 800px; margin: 0 auto;">
+        <h1 id="noscript-title">Revista Nacional de las Ciencias para Estudiantes</h1>
+        <p id="noscript-desc">Global peer-reviewed journal for students of all educational levels in all scientific fields. Publish, learn, and share science worldwide.</p>
+        <nav>
+          <ul style="list-style: none; padding: 0; display: flex; justify-content: center; gap: 1rem;">
+            <li><a href="/about">About Us</a></li>
+            <li><a href="/articles">Articles</a></li>
+            <li><a href="/submit">Submit Your Work</a></li>
+            <li><a href="/contact">Contact</a></li>
+          </ul>
+        </nav>
+        <p style="margin-top: 1rem;">Contact us at <a href="mailto:revistanacionalcienciae@gmail.com">revistanacionalcienciae@gmail.com</a>.</p>
+        <p style="font-style: italic;">Please enable JavaScript for the full experience.</p>
       </div>
     </noscript>
   </div>
@@ -217,6 +197,15 @@
         document.getElementById('root').classList.remove('skeleton');
         const loading = document.getElementById('loading');
         if (loading) loading.remove();
+        // Configurar textos para noscript según idioma
+        const path = window.location.pathname;
+        const isEnglish = path.startsWith('/en') || window.location.href.includes('/#/en');
+        const noscriptTitle = document.getElementById('noscript-title');
+        const noscriptDesc = document.getElementById('noscript-desc');
+        if (isEnglish) {
+          noscriptTitle.textContent = 'The National Review of Sciences for Students';
+          noscriptDesc.textContent = 'Global peer-reviewed journal for students of all educational levels in all scientific fields. Publish, learn, and share science worldwide.';
+        }
         window.prerenderReady = true;
         document.documentElement.setAttribute('data-prerender-ready', 'true');
         return;
@@ -249,11 +238,11 @@
       const texts = {
         es: {
           title: 'Revista Nacional de las Ciencias para Estudiantes',
-          desc: 'Cargando contenido científico para estudiantes en todo el mundo...'
+          desc: 'Cargando...'
         },
         en: {
           title: 'The National Review of Sciences for Students',
-          desc: 'Loading scientific content for students worldwide...'
+          desc: 'Loading...'
         }
       };
       const lang = isEnglish ? 'en' : 'es';
@@ -276,6 +265,7 @@
       const observer = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
           if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+            console.log('React content detected, hiding loading screen');
             setTimeout(hideLoading, 800);
             observer.disconnect();
           }
@@ -287,22 +277,22 @@
         subtree: true
       });
       
-      // Fallback: ocultar después de 3 segundos
-      setTimeout(hideLoading, 3000);
+      // Fallback: ocultar después de 2 segundos
+      setTimeout(() => {
+        console.log('Fallback timeout triggered');
+        hideLoading();
+      }, 2000);
       
       // Animaciones y estilos adicionales
       const style = document.createElement('style');
       style.textContent = `
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
         .lang-en { --primary-font: 'Roboto', sans-serif; }
         .lang-es { --primary-font: 'Roboto', sans-serif; }
-        #root.skeleton {
+        #root.skeleton:not(.bot) {
           min-height: 100vh;
           background: #f0f0f0;
         }
-        #root.skeleton::before {
+        #root.skeleton:not(.bot)::before {
           content: '';
           display: block;
           width: 100%;
@@ -314,17 +304,30 @@
       `;
       document.head.appendChild(style);
       
-      // Cargar scripts de React de forma asíncrona
+      // Cargar scripts de React de forma asíncrona con mejor manejo de errores
       const scripts = [
-        'https://unpkg.com/react@18/umd/react.production.min.js',
-        'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js',
-        '/js/main.js'
+        { src: 'https://unpkg.com/react@18/umd/react.production.min.js', name: 'React' },
+        { src: 'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js', name: 'ReactDOM' },
+        { src: '/js/main.js', name: 'Main App' }
       ];
-      scripts.forEach(src => {
+      scripts.forEach(({ src, name }) => {
         const script = document.createElement('script');
         script.src = src;
         script.async = true;
-        script.onerror = () => console.error(`Failed to load script: ${src}`);
+        script.onerror = () => {
+          console.error(`Failed to load ${name} from ${src}. Check file path or network.`);
+          // Mostrar mensaje de error en la UI
+          const root = document.getElementById('root');
+          root.innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: #d32f2f;">
+              <h2>Error loading the application</h2>
+              <p>Unable to load ${name}. Please try refreshing the page or contact support.</p>
+              <p><a href="mailto:revistanacionalcienciae@gmail.com">Contact Support</a></p>
+            </div>
+          `;
+          hideLoading();
+        };
+        script.onload = () => console.log(`${name} loaded successfully`);
         document.body.appendChild(script);
       });
       
