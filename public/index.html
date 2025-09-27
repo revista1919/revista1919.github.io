@@ -85,7 +85,6 @@
   <link rel="preload" href="/logo.png" as="image">
   <link rel="preload" href="/logoEN.png" as="image">
   <link rel="preload" href="/index.css" as="style">
-  <link rel="preload" href="/main.js" as="script">
 
   <!-- CSS crítico inline -->
   <style>
@@ -286,19 +285,6 @@
         }
       `;
       document.head.appendChild(style);
-      
-      // Cargar scripts de React de forma asíncrona
-      const scripts = [
-        'https://unpkg.com/react@18/umd/react.production.min.js',
-        'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js',
-        '/main.js'
-      ];
-      scripts.forEach(src => {
-        const script = document.createElement('script');
-        script.src = src;
-        script.async = true;
-        document.body.appendChild(script);
-      });
       
       // Marcar como listo para prerenderizado
       window.prerenderReady = true;

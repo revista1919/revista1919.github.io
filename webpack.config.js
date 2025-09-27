@@ -85,7 +85,7 @@ module.exports = (env, argv) => {
       rules: [
         {
           test: /\.js$/i,
-          exclude: [/node_modules\/(?!firebase)/, /public\/main\.js$/, /public\/sw\.js$/],
+          exclude: [/node_modules\/(?!firebase)/, /public\/sw\.js$/],
           use: {
             loader: 'babel-loader',
             options: {
@@ -96,7 +96,7 @@ module.exports = (env, argv) => {
         },
         {
           test: /\.jsx?$/i,
-          exclude: [/node_modules/, /public\/main\.js$/, /public\/sw\.js$/],
+          exclude: [/node_modules/, /public\/sw\.js$/],
           use: {
             loader: 'babel-loader',
             options: {
@@ -163,7 +163,6 @@ module.exports = (env, argv) => {
           { from: 'public/logo.png', to: '.' },
           { from: 'public/logoEN.png', to: '.' },
           { from: 'public/site.webmanifest', to: 'manifest.json' },
-          { from: 'public/main.js', to: 'main.js', noErrorOnMissing: true },
           { from: 'public/sw.js', to: 'sw.js', noErrorOnMissing: true },
           { 
             from: 'public/Articles', 
