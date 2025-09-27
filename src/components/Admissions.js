@@ -857,4 +857,4 @@ export default function Admissions() {
       `}</style>
     </div>
   );
-}
+}it 
