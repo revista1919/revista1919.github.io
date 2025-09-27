@@ -19,9 +19,9 @@ body {
 /* Tabs container */
 .tabs-container {
   width: 100%;
-  max-width: 80rem; /* Wider max-width for better space utilization */
+  max-width: 80rem;
   margin: 0 auto;
-  padding: 0 1rem; /* Add padding for breathing room */
+  padding: 0 1.5rem; /* Increased padding for better edge spacing */
 }
 
 /* Tabs navigation */
@@ -34,25 +34,27 @@ body {
 /* Tabs scroll container */
 .tabs-scroll-container {
   display: flex;
-  flex-wrap: nowrap; /* Prevent wrapping for a cleaner look */
-  justify-content: center; /* Center tabs */
-  gap: 0.75rem; /* Consistent spacing between tabs */
-  padding: 0.5rem 1rem;
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1.5rem; /* Added left/right padding to prevent clipping */
   max-width: 100%;
-  overflow-x: auto; /* Enable horizontal scrolling for small screens */
+  overflow-x: auto;
+  scroll-padding: 1.5rem; /* Ensure first tab is fully visible when scrolling */
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on mobile */
 }
 
 /* Tab item */
 .tab-item {
-  padding: 0.75rem 1.5rem; /* Slightly larger padding for comfort */
+  padding: 0.75rem 1.5rem;
   font-size: 1rem;
   font-weight: 500;
   color: #5a3e36;
   background-color: #e6d9c6;
-  border-radius: 0.5rem; /* Softer, modern border-radius */
+  border-radius: 0.5rem;
   transition: all 0.3s ease;
   text-decoration: none;
-  white-space: nowrap; /* Prevent text wrapping */
+  white-space: nowrap;
 }
 
 .tab-item.active {
@@ -68,7 +70,7 @@ body {
 
 .tab-item:focus {
   outline: none;
-  ring: 2px solid #8b6f47;
+  box-shadow: 0 0 0 2px #8b6f47;
 }
 
 /* Mobile dropdown */
@@ -85,7 +87,7 @@ body {
 
 .mobile-tabs:focus {
   outline: none;
-  ring: 2px solid #8b6f47;
+  box-shadow: 0 0 0 2px #8b6f47;
 }
 
 /* Sticky buttons */

@@ -292,167 +292,22 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
   <meta name="keywords" content="noticias, revista ciencias estudiantes, ${newsItem.titulo.replace(/[^a-zA-Z0-9]/g, ' ').substring(0, 100)}">
   <title>${newsItem.titulo} - Noticias - La Revista Nacional de Ciencias para Estudiantes</title>
   <link rel="stylesheet" href="/index.css">
-  <style>
-    body {
-      background: linear-gradient(135deg, #f4ece7 0%, #e8d9c6 100%);
-      font-family: 'Merriweather', 'Georgia', serif;
-      color: #2d3748;
-      margin: 0;
-      padding: 0;
-      line-height: 1.7;
-    }
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 2rem;
-    }
-    header {
-      text-align: center;
-      margin-bottom: 3rem;
-      background: rgba(255, 255, 255, 0.9);
-      padding: 1.5rem;
-      border-radius: 16px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    .logo {
-      width: 80px;
-      height: auto;
-      margin-bottom: 1rem;
-      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
-      transition: transform 0.3s ease;
-    }
-    .logo:hover {
-      transform: scale(1.05);
-    }
-    h1 {
-      color: #5a3e36;
-      font-size: 2rem;
-      margin: 0 0 0.5rem 0;
-      font-weight: 600;
-      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.05);
-      line-height: 1.3;
-    }
-    .date {
-      color: #8b6f47;
-      font-size: 0.95rem;
-      font-style: italic;
-      margin: 0;
-      letter-spacing: 0.5px;
-    }
-    main {
-      background: rgba(255, 255, 255, 0.95);
-      padding: 2rem;
-      border-radius: 16px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      margin-bottom: 2rem;
-    }
-    .content {
-      font-size: 1.05rem;
-      color: #2d3748;
-      line-height: 1.8;
-    }
-    .content p {
-      margin-bottom: 1.5rem;
-      text-align: justify;
-      hyphens: auto;
-    }
-    .content h2, .content h3 {
-      color: #5a3e36;
-      margin-top: 2rem;
-      margin-bottom: 1rem;
-      font-weight: 600;
-      border-bottom: 2px solid #f4ece7;
-      padding-bottom: 0.5rem;
-    }
-    .content ol, .content ul {
-      margin: 1rem 0;
-      padding-left: 2rem;
-    }
-    .content li {
-      margin-bottom: 0.5rem;
-    }
-    .content strong {
-      color: #800020;
-    }
-    .content a {
-      color: #800020;
-      text-decoration: underline;
-      font-weight: 500;
-    }
-    .content a:hover {
-      color: #5a0015;
-    }
-    .content img {
-      max-width: 100%;
-      height: auto;
-      border-radius: 8px;
-      margin: 1rem 0;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-    footer {
-      text-align: center;
-      margin-top: 2rem;
-      padding: 1.5rem;
-      color: #8b6f47;
-      font-size: 0.9rem;
-      background: rgba(255, 255, 255, 0.7);
-      border-radius: 12px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
-    }
-    footer a {
-      color: #800020;
-      text-decoration: none;
-      font-weight: 500;
-      margin: 0 1rem;
-      transition: color 0.3s ease;
-    }
-    footer a:hover {
-      color: #5a0015;
-      text-decoration: underline;
-    }
-    @media (max-width: 768px) {
-      .container {
-        padding: 1rem;
-      }
-      h1 {
-        font-size: 1.6rem;
-      }
-      main {
-        padding: 1.5rem;
-      }
-      .logo {
-        width: 60px;
-      }
-    }
-    .content {
-      text-rendering: optimizeLegibility;
-      -webkit-font-smoothing: antialiased;
-    }
-  </style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <a href="/">
-        <img src="/logo.png" alt="Logo de La Revista Nacional de Ciencias para Estudiantes" class="logo">
-      </a>
-      <h1>${newsItem.titulo}</h1>
-      <p class="date">Publicado el ${newsItem.fecha}</p>
-    </header>
-    <main>
-      <div class="content ql-editor">
-        ${newsItem.cuerpo}
-      </div>
-    </main>
-    <footer>
-      <p>&copy; ${new Date().getFullYear()} La Revista Nacional de Ciencias para Estudiantes</p>
-      <a href="/sections/news.html">Volver a Noticias</a> | <a href="/">Volver al inicio</a>
-    </footer>
-  </div>
+  <header>
+    <h1>${newsItem.titulo}</h1>
+    <p>Publicado el ${newsItem.fecha}</p>
+  </header>
+  <main>
+    <section>
+      <div class="content">${newsItem.cuerpo}</div>
+    </section>
+  </main>
+  <footer>
+    <p>&copy; ${new Date().getFullYear()} La Revista Nacional de Ciencias para Estudiantes</p>
+    <a href="/news/index.html">Volver a Noticias</a>
+    <a href="/">Volver al inicio</a>
+  </footer>
 </body>
 </html>`;
 
@@ -466,167 +321,22 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
   <meta name="keywords" content="news, student science journal, ${newsItem.title.replace(/[^a-zA-Z0-9]/g, ' ').substring(0, 100)}">
   <title>${newsItem.title} - News - The National Review of Sciences for Students</title>
   <link rel="stylesheet" href="/index.css">
-  <style>
-    body {
-      background: linear-gradient(135deg, #f4ece7 0%, #e8d9c6 100%);
-      font-family: 'Merriweather', 'Georgia', serif;
-      color: #2d3748;
-      margin: 0;
-      padding: 0;
-      line-height: 1.7;
-    }
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 2rem;
-    }
-    header {
-      text-align: center;
-      margin-bottom: 3rem;
-      background: rgba(255, 255, 255, 0.9);
-      padding: 1.5rem;
-      border-radius: 16px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    .logo {
-      width: 80px;
-      height: auto;
-      margin-bottom: 1rem;
-      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
-      transition: transform 0.3s ease;
-    }
-    .logo:hover {
-      transform: scale(1.05);
-    }
-    h1 {
-      color: #5a3e36;
-      font-size: 2rem;
-      margin: 0 0 0.5rem 0;
-      font-weight: 600;
-      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.05);
-      line-height: 1.3;
-    }
-    .date {
-      color: #8b6f47;
-      font-size: 0.95rem;
-      font-style: italic;
-      margin: 0;
-      letter-spacing: 0.5px;
-    }
-    main {
-      background: rgba(255, 255, 255, 0.95);
-      padding: 2rem;
-      border-radius: 16px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      margin-bottom: 2rem;
-    }
-    .content {
-      font-size: 1.05rem;
-      color: #2d3748;
-      line-height: 1.8;
-    }
-    .content p {
-      margin-bottom: 1.5rem;
-      text-align: justify;
-      hyphens: auto;
-    }
-    .content h2, .content h3 {
-      color: #5a3e36;
-      margin-top: 2rem;
-      margin-bottom: 1rem;
-      font-weight: 600;
-      border-bottom: 2px solid #f4ece7;
-      padding-bottom: 0.5rem;
-    }
-    .content ol, .content ul {
-      margin: 1rem 0;
-      padding-left: 2rem;
-    }
-    .content li {
-      margin-bottom: 0.5rem;
-    }
-    .content strong {
-      color: #800020;
-    }
-    .content a {
-      color: #800020;
-      text-decoration: underline;
-      font-weight: 500;
-    }
-    .content a:hover {
-      color: #5a0015;
-    }
-    .content img {
-      max-width: 100%;
-      height: auto;
-      border-radius: 8px;
-      margin: 1rem 0;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-    footer {
-      text-align: center;
-      margin-top: 2rem;
-      padding: 1.5rem;
-      color: #8b6f47;
-      font-size: 0.9rem;
-      background: rgba(255, 255, 255, 0.7);
-      border-radius: 12px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
-    }
-    footer a {
-      color: #800020;
-      text-decoration: none;
-      font-weight: 500;
-      margin: 0 1rem;
-      transition: color 0.3s ease;
-    }
-    footer a:hover {
-      color: #5a0015;
-      text-decoration: underline;
-    }
-    @media (max-width: 768px) {
-      .container {
-        padding: 1rem;
-      }
-      h1 {
-        font-size: 1.6rem;
-      }
-      main {
-        padding: 1.5rem;
-      }
-      .logo {
-        width: 60px;
-      }
-    }
-    .content {
-      text-rendering: optimizeLegibility;
-      -webkit-font-smoothing: antialiased;
-    }
-  </style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <a href="/">
-        <img src="/logoEN.png" alt="Logo of The National Review of Sciences for Students" class="logo">
-      </a>
-      <h1>${newsItem.title}</h1>
-      <p class="date">Published on ${newsItem.fecha}</p>
-    </header>
-    <main>
-      <div class="content ql-editor">
-        ${newsItem.content}
-      </div>
-    </main>
-    <footer>
-      <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
-      <a href="/sections/news.html">Back to News</a> | <a href="/">Back to home</a>
-    </footer>
-  </div>
+  <header>
+    <h1>${newsItem.title}</h1>
+    <p>Published on ${newsItem.fecha}</p>
+  </header>
+  <main>
+    <section>
+      <div class="content">${newsItem.content}</div>
+    </section>
+  </main>
+  <footer>
+    <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
+    <a href="/news/index.EN.html">Back to News</a>
+    <a href="/">Back to home</a>
+  </footer>
 </body>
 </html>`;
 
@@ -751,11 +461,11 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
       const description = member['Description'] || 'Information not available';
       const areas = member['Áreas de interés'] || 'No especificadas';
       const areasEn = member['Areas of interest'] || 'Not specified';
+      const imagen = getImageSrc(member['Imagen'] || '');
       const areasList = areas.split(';').map(a => a.trim()).filter(a => a);
       const areasListEn = areasEn.split(';').map(a => a.trim()).filter(a => a);
-      const imagen = getImageSrc(member['Imagen'] || '');
-      const areasTagsHtml = areasList.length ? areasList.map(area => `<span class="area-tag">${area}</span>`).join('') : '<p>No especificadas</p>';
-      const areasTagsHtmlEn = areasListEn.length ? areasListEn.map(area => `<span class="area-tag">${area}</span>`).join('') : '<p>Not specified</p>';
+      const areasTagsHtml = areasList.length ? areasList.map(area => `<span class="tag">${area}</span>`).join('') : '<p>No especificadas</p>';
+      const areasTagsHtmlEn = areasListEn.length ? areasListEn.map(area => `<span class="tag">${area}</span>`).join('') : '<p>Not specified</p>';
       const esContent = `
 <!DOCTYPE html>
 <html lang="es">
@@ -767,192 +477,25 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
   <meta name="author" content="${nombre}">
   <title>${nombre} - Equipo de La Revista Nacional de Ciencias para Estudiantes</title>
   <link rel="stylesheet" href="/index.css">
-  <style>
-    body {
-      background-color: #f8f9fa;
-      font-family: 'Merriweather', 'Georgia', serif;
-      color: #2d3748;
-      margin: 0;
-      padding: 0;
-      line-height: 1.6;
-    }
-    .profile-container {
-      max-width: 900px;
-      margin: 3rem auto;
-      padding: 2rem;
-      background: #ffffff;
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-      text-align: center;
-    }
-    .profile-header {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 1.5rem;
-      margin-bottom: 2rem;
-    }
-    @media (min-width: 768px) {
-      .profile-header {
-        flex-direction: row;
-        align-items: flex-start;
-        text-align: left;
-      }
-    }
-    .profile-img {
-      width: 180px;
-      height: 180px;
-      border-radius: 50%;
-      object-fit: cover;
-      object-position: center;
-      border: 3px solid #2b6cb0;
-      transition: transform 0.3s ease;
-      display: block;
-    }
-    .profile-img:hover {
-      transform: scale(1.05);
-    }
-    .profile-img-fallback {
-      width: 180px;
-      height: 180px;
-      border-radius: 50%;
-      background: #e2e8f0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.2rem;
-      color: #4a5568;
-      border: 3px solid #2b6cb0;
-    }
-    .profile-info {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    @media (min-width: 768px) {
-      .profile-info {
-        align-items: flex-start;
-      }
-    }
-    .section {
-      margin-top: 2rem;
-      text-align: justify;
-    }
-    .areas-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      justify-content: center;
-    }
-    @media (min-width: 768px) {
-      .areas-tags {
-        justify-content: flex-start;
-      }
-    }
-    .area-tag {
-      background: #2d3748;
-      color: #ffffff;
-      padding: 0.5rem 1rem;
-      border-radius: 20px;
-      font-size: 0.9rem;
-      font-weight: 500;
-      display: inline-block;
-    }
-    h1 {
-      color: #2b6cb0;
-      font-size: 2.25rem;
-      margin-bottom: 0.5rem;
-      font-weight: 700;
-    }
-    h2 {
-      color: #2d3748;
-      font-size: 1.5rem;
-      margin-bottom: 1rem;
-      font-weight: 600;
-      border-bottom: 2px solid #e2e8f0;
-      padding-bottom: 0.5rem;
-    }
-    .role {
-      font-size: 1.1rem;
-      color: #4a5568;
-      font-weight: 500;
-      background: #edf2f7;
-      padding: 0.5rem 1rem;
-      border-radius: 20px;
-      display: inline-block;
-    }
-    p {
-      margin-bottom: 1rem;
-      color: #4a5568;
-      font-size: 1rem;
-    }
-    footer {
-      margin-top: 3rem;
-      padding-top: 1.5rem;
-      border-top: 1px solid #e2e8f0;
-      text-align: center;
-      font-size: 0.9rem;
-      color: #718096;
-    }
-    a {
-      color: #2b6cb0;
-      text-decoration: none;
-      font-weight: 500;
-      transition: color 0.3s ease;
-    }
-    a:hover {
-      color: #1a4971;
-      text-decoration: underline;
-    }
-    @media (max-width: 640px) {
-      .profile-container {
-        padding: 1.5rem;
-      }
-      .profile-img, .profile-img-fallback {
-        width: 150px;
-        height: 150px;
-      }
-      h1 {
-        font-size: 1.75rem;
-      }
-      h2 {
-        font-size: 1.25rem;
-      }
-      .area-tag {
-        font-size: 0.8rem;
-        padding: 0.4rem 0.8rem;
-      }
-    }
-  </style>
 </head>
 <body>
-  <div class="profile-container">
-    <div class="profile-header">
-      <div class="profile-img-container">
-        ${imagen ? `<img src="${imagen}" alt="Foto de ${nombre}" class="profile-img">` : `<div class="profile-img-fallback">Sin Imagen</div>`}
-      </div>
-      <div class="profile-info">
-        <h1>${nombre}</h1>
-        <p class="role">${roles}</p>
-      </div>
-    </div>
-    <div class="section">
+  <header>
+    <h1>${nombre}</h1>
+    <p><strong>Rol:</strong> ${roles}</p>
+  </header>
+  <main>
+    <section>
+      ${imagen ? `<img src="${imagen}" alt="Foto de ${nombre}" class="member-img">` : `<p>Sin imagen disponible</p>`}
       <h2>Descripción</h2>
       <p>${descripcion}</p>
-    </div>
-    <div class="section">
       <h2>Áreas de interés</h2>
-      <div class="areas-tags">
-        ${areasTagsHtml}
-      </div>
-    </div>
-    <footer>
-      <p>&copy; ${new Date().getFullYear()} La Revista Nacional de Ciencias para Estudiantes</p>
-      <a href="/">Volver al inicio</a>
-    </footer>
-  </div>
+      <div class="areas-tags">${areasTagsHtml}</div>
+    </section>
+  </main>
+  <footer>
+    <p>&copy; ${new Date().getFullYear()} La Revista Nacional de Ciencias para Estudiantes</p>
+    <a href="/">Volver al inicio</a>
+  </footer>
 </body>
 </html>`;
 
@@ -967,192 +510,25 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
   <meta name="author" content="${nombre}">
   <title>${nombre} - Team of The National Review of Sciences for Students</title>
   <link rel="stylesheet" href="/index.css">
-  <style>
-    body {
-      background-color: #f8f9fa;
-      font-family: 'Merriweather', 'Georgia', serif;
-      color: #2d3748;
-      margin: 0;
-      padding: 0;
-      line-height: 1.6;
-    }
-    .profile-container {
-      max-width: 900px;
-      margin: 3rem auto;
-      padding: 2rem;
-      background: #ffffff;
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-      text-align: center;
-    }
-    .profile-header {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 1.5rem;
-      margin-bottom: 2rem;
-    }
-    @media (min-width: 768px) {
-      .profile-header {
-        flex-direction: row;
-        align-items: flex-start;
-        text-align: left;
-      }
-    }
-    .profile-img {
-      width: 180px;
-      height: 180px;
-      border-radius: 50%;
-      object-fit: cover;
-      object-position: center;
-      border: 3px solid #2b6cb0;
-      transition: transform 0.3s ease;
-      display: block;
-    }
-    .profile-img:hover {
-      transform: scale(1.05);
-    }
-    .profile-img-fallback {
-      width: 180px;
-      height: 180px;
-      border-radius: 50%;
-      background: #e2e8f0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.2rem;
-      color: #4a5568;
-      border: 3px solid #2b6cb0;
-    }
-    .profile-info {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    @media (min-width: 768px) {
-      .profile-info {
-        align-items: flex-start;
-      }
-    }
-    .section {
-      margin-top: 2rem;
-      text-align: justify;
-    }
-    .areas-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      justify-content: center;
-    }
-    @media (min-width: 768px) {
-      .areas-tags {
-        justify-content: flex-start;
-      }
-    }
-    .area-tag {
-      background: #2d3748;
-      color: #ffffff;
-      padding: 0.5rem 1rem;
-      border-radius: 20px;
-      font-size: 0.9rem;
-      font-weight: 500;
-      display: inline-block;
-    }
-    h1 {
-      color: #2b6cb0;
-      font-size: 2.25rem;
-      margin-bottom: 0.5rem;
-      font-weight: 700;
-    }
-    h2 {
-      color: #2d3748;
-      font-size: 1.5rem;
-      margin-bottom: 1rem;
-      font-weight: 600;
-      border-bottom: 2px solid #e2e8f0;
-      padding-bottom: 0.5rem;
-    }
-    .role {
-      font-size: 1.1rem;
-      color: #4a5568;
-      font-weight: 500;
-      background: #edf2f7;
-      padding: 0.5rem 1rem;
-      border-radius: 20px;
-      display: inline-block;
-    }
-    p {
-      margin-bottom: 1rem;
-      color: #4a5568;
-      font-size: 1rem;
-    }
-    footer {
-      margin-top: 3rem;
-      padding-top: 1.5rem;
-      border-top: 1px solid #e2e8f0;
-      text-align: center;
-      font-size: 0.9rem;
-      color: #718096;
-    }
-    a {
-      color: #2b6cb0;
-      text-decoration: none;
-      font-weight: 500;
-      transition: color 0.3s ease;
-    }
-    a:hover {
-      color: #1a4971;
-      text-decoration: underline;
-    }
-    @media (max-width: 640px) {
-      .profile-container {
-        padding: 1.5rem;
-      }
-      .profile-img, .profile-img-fallback {
-        width: 150px;
-        height: 150px;
-      }
-      h1 {
-        font-size: 1.75rem;
-      }
-      h2 {
-        font-size: 1.25rem;
-      }
-      .area-tag {
-        font-size: 0.8rem;
-        padding: 0.4rem 0.8rem;
-      }
-    }
-  </style>
 </head>
 <body>
-  <div class="profile-container">
-    <div class="profile-header">
-      <div class="profile-img-container">
-        ${imagen ? `<img src="${imagen}" alt="Photo of ${nombre}" class="profile-img">` : `<div class="profile-img-fallback">No Image</div>`}
-      </div>
-      <div class="profile-info">
-        <h1>${nombre}</h1>
-        <p class="role">${rolesEn}</p>
-      </div>
-    </div>
-    <div class="section">
+  <header>
+    <h1>${nombre}</h1>
+    <p><strong>Role:</strong> ${rolesEn}</p>
+  </header>
+  <main>
+    <section>
+      ${imagen ? `<img src="${imagen}" alt="Photo of ${nombre}" class="member-img">` : `<p>No image available</p>`}
       <h2>Description</h2>
       <p>${description}</p>
-    </div>
-    <div class="section">
       <h2>Areas of Interest</h2>
-      <div class="areas-tags">
-        ${areasTagsHtmlEn}
-      </div>
-    </div>
-    <footer>
-      <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
-      <a href="/">Back to home</a>
-    </footer>
-  </div>
+      <div class="areas-tags">${areasTagsHtmlEn}</div>
+    </section>
+  </main>
+  <footer>
+    <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
+    <a href="/">Back to home</a>
+  </footer>
 </body>
 </html>`;
 
@@ -1371,19 +747,6 @@ ${spaRoutes.map(route => `
     // --- 7. Generar robots.txt ---
     console.log('🤖 Generando robots.txt...');
     const robotsContent = `
-User-agent: Googlebot
-Allow: /articles/
-Allow: /Articles/
-Allow: /news/
-Allow: /team/
-Allow: /sections/
-Allow: /index.css
-Disallow: /search
-Disallow: /login
-Disallow: /admin
-Disallow: /submit
-Disallow: /cart
-Disallow: /api/
 User-agent: *
 Allow: /articles/
 Allow: /Articles/
