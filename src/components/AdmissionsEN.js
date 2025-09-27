@@ -51,7 +51,7 @@ export default function Admissions() {
       const csvText = await response.text();
       const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
       const validApplications = parsed.filter(
-        app => app.Name?.trim() && app['Email Address']?.trim()
+        app => app['First Name and Last Name']?.trim() && app['Email Direction']?.trim()
       );
       setApplications(validApplications);
     } catch (err) {
@@ -67,7 +67,7 @@ export default function Admissions() {
     setExpandedApp(expandedApp === id ? null : id);
   };
 
-  const sendPreselection = async (name) => {
+  const sendPreselection = async (name, language = 'en') => {
     if (!TEAM_GAS_URL) {
       setStatus('❌ GAS URL not configured');
       return;
@@ -80,7 +80,7 @@ export default function Admissions() {
         mode: 'no-cors',
         redirect: 'follow',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'accept_applicant', name }),
+        body: JSON.stringify({ action: 'accept_applicant', name, language }),
       });
       setStatus('✅ Preselection sent');
     } catch (err) {
@@ -95,7 +95,7 @@ export default function Admissions() {
       setStatus('❌ GAS URL not configured');
       return;
     }
-    if (!confirm(`Accept ${app.Name} and request data?`)) return;
+    if (!confirm(`Accept ${app['First Name and Last Name']} and request data?`)) return;
     setSending(true);
     try {
       await fetch(TEAM_GAS_URL, {
@@ -105,9 +105,9 @@ export default function Admissions() {
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
           action: 'add_and_send_team_acceptance',
-          name: app.Name,
-          role: app['Position Applied For'],
-          email: app['Email Address'],
+          name: app['First Name and Last Name'],
+          role: app['Position you wish to apply for'],
+          email: app['Email Direction'],
           description: '',
           interests: '',
           image: '',
@@ -293,7 +293,7 @@ export default function Admissions() {
             </div>
             <div class="form-group">
               <label>Role in the Journal</label>
-              <input type="text" name="role" value="${member['Role in the journal'] || member['Position Applied For'] || ''}" required />
+              <input type="text" name="role" value="${member['Role in the Journal'] || member['Position you wish to apply for'] || ''}" required />
             </div>
             <div class="form-group">
               <label>Description</label>
@@ -325,6 +325,13 @@ export default function Admissions() {
                 Upload the image received via email to <a href="https://postimages.org/" target="_blank">postimages.org</a> and paste the link here.
               </p>
             </div>
+            <div class="form-group">
+              <label>Language</label>
+              <select name="language">
+                <option value="en">English</option>
+                <option value="es">Español</option>
+              </select>
+            </div>
             <div class="button-group">
               <button type="button" onclick="window.close()">Cancel</button>
               <button type="submit">Save</button>
@@ -343,7 +350,7 @@ export default function Admissions() {
               description: formData.get('description'),
               interests: formData.get('interests'),
               image: formData.get('image') || '',
-              language: 'en'
+              language: formData.get('language')
             };
             try {
               await fetch('${TEAM_GAS_URL}', {
@@ -369,9 +376,9 @@ export default function Admissions() {
     () =>
       applications.filter(
         app =>
-          app.Name?.trim() &&
-          app['Email Address']?.trim() &&
-          !teamEmails.has(app['Email Address']?.trim().toLowerCase())
+          app['First Name and Last Name']?.trim() &&
+          app['Email Direction']?.trim() &&
+          !teamEmails.has(app['Email Direction']?.trim().toLowerCase())
       ),
     [applications, teamEmails]
   );
@@ -380,9 +387,9 @@ export default function Admissions() {
     () =>
       applications.filter(
         app =>
-          app.Name?.trim() &&
-          app['Email Address']?.trim() &&
-          teamEmails.has(app['Email Address']?.trim().toLowerCase())
+          app['First Name and Last Name']?.trim() &&
+          app['Email Direction']?.trim() &&
+          teamEmails.has(app['Email Direction']?.trim().toLowerCase())
       ),
     [applications, teamEmails]
   );
@@ -545,8 +552,8 @@ export default function Admissions() {
                   <div key={index} className="application">
                     <div className="application-header" onClick={() => toggleExpandApp(index)}>
                       <div className="application-info">
-                        <h3 className="application-name">{app.Name}</h3>
-                        <p className="application-role">{app['Position Applied For']}</p>
+                        <h3 className="application-name">{app['First Name and Last Name']}</h3>
+                        <p className="application-role">{app['Position you wish to apply for']}</p>
                       </div>
                       <svg
                         className={`application-icon ${expandedApp === index ? 'rotate-180' : ''}`}
@@ -562,24 +569,24 @@ export default function Admissions() {
                         <div className="details-grid">
                           <div>
                             <p className="details-label">Email</p>
-                            <p className="details-value">{app['Email Address']}</p>
+                            <p className="details-value">{app['Email Direction']}</p>
                           </div>
                           <div>
-                            <p className="details-label">Educational Institution</p>
-                            <p className="details-value">{app['Educational Institution']}</p>
+                            <p className="details-label">Educational Establishment</p>
+                            <p className="details-value">{app['Educational establishment']}</p>
                           </div>
                           <div>
                             <p className="details-label">Phone Number</p>
-                            <p className="details-value">{app['Phone Number']}</p>
+                            <p className="details-value">{app['Phone number']}</p>
                           </div>
                           <div>
-                            <p className="details-label">Motivation Letter</p>
-                            <p className="details-value">{app['Brief motivation letter (why you want this position) and list of achievements. 250-500 words.']}</p>
+                            <p className="details-label">Cover Letter</p>
+                            <p className="details-value">{app['Short cover letter (why you want this position) and list of achievements. 250-500 words.']}</p>
                           </div>
                         </div>
                         <div className="actions">
                           <button
-                            onClick={() => sendPreselection(app.Name)}
+                            onClick={() => sendPreselection(app['First Name and Last Name'], 'en')}
                             disabled={sending || !TEAM_GAS_URL || activeTab === 'archived'}
                             className="action-button action-preselect"
                           >
@@ -594,9 +601,9 @@ export default function Admissions() {
                           </button>
                           <button
                             onClick={() => openEditForm({
-                              Name: app.Name,
-                              Email: app['Email Address'],
-                              'Role in the Journal': app['Position Applied For'],
+                              Name: app['First Name and Last Name'],
+                              Email: app['Email Direction'],
+                              'Role in the Journal': app['Position you wish to apply for'],
                               Description: '',
                               'Areas of Interest': '',
                               Image: '',
