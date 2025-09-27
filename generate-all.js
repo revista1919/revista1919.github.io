@@ -3,12 +3,9 @@ const path = require('path');
 const fetch = require('node-fetch').default;
 const Papa = require('papaparse');
 
-// URLs de los CSVs
 const articlesCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p32EM6-0VYy18AdREQwXdpeet1WHTA4H2-W2FX7HKe1HPSyApWadUw9sKHdVYQXL5tP6yDRs/pub?output=csv';
 const teamCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 const newsCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKnN8qMJcBN8im9Q61o-qElx1jQp5NdS80_B-FakCHrPLXHlQ_FXZWT0o5GVVHAM26l9sjLxsTCNO8/pub?output=csv';
-
-// Rutas de salida
 const outputJson = path.join(__dirname, 'dist', 'articles.json');
 const outputHtmlDir = path.join(__dirname, 'dist', 'articles');
 const newsOutputHtmlDir = path.join(__dirname, 'dist', 'news');
@@ -18,7 +15,6 @@ const sitemapPath = path.join(__dirname, 'dist', 'sitemap.xml');
 const robotsPath = path.join(__dirname, 'dist', 'robots.txt');
 const domain = 'https://www.revistacienciasestudiantes.com';
 
-// --- Funciones de Ayuda ---
 function parseDateFlexible(dateStr) {
   if (!dateStr) return '';
   let date = new Date(dateStr);
@@ -45,10 +41,13 @@ function formatAuthorForCitation(author) {
 
 function generateSlug(name) {
   if (!name) return '';
-  return name.toString().toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
-    .replace(/-+/g, '-').replace(/^-+|-+$/g, '');
+  name = name.toLowerCase();
+  name = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  name = name.replace(/\s+/g, '-');
+  name = name.replace(/[^a-z0-9-]/g, '');
+  name = name.replace(/-+/g, '-');
+  name = name.replace(/^-+|-+$/g, '');
+  return name;
 }
 
 function isBase64(str) {
@@ -79,7 +78,6 @@ const base64DecodeUnicode = (str) => {
   }
 };
 
-// Asegurarse de que los directorios existan
 if (!fs.existsSync(outputHtmlDir)) fs.mkdirSync(outputHtmlDir, { recursive: true });
 if (!fs.existsSync(newsOutputHtmlDir)) fs.mkdirSync(newsOutputHtmlDir, { recursive: true });
 if (!fs.existsSync(teamOutputHtmlDir)) fs.mkdirSync(teamOutputHtmlDir, { recursive: true });
@@ -87,10 +85,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
 
 (async () => {
   try {
-    console.log('🔥 Empezando el proceso de generación de contenido...');
-
-    // --- 1. Procesar Artículos ---
-    console.log('📚 Procesando artículos...');
+    // Procesar artículos
     const articlesRes = await fetch(articlesCsvUrl);
     if (!articlesRes.ok) throw new Error(`Error descargando CSV de artículos: ${articlesRes.statusText}`);
     const articlesCsvData = await articlesRes.text();
@@ -108,12 +103,13 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
       ultimaPagina: row['Última página'] || '',
       area: row['Área temática'] || '',
       numeroArticulo: row['Número de artículo'] || '',
-      palabras_clave: row['Palabras clave'] ? row['Palabras clave'].split(/[;,]/).map(k => k.trim()) : []
+      palabras_clave: row['Palabras clave']
+        ? row['Palabras clave'].split(/[;,]/).map(k => k.trim())
+        : []
     }));
     fs.writeFileSync(outputJson, JSON.stringify(articles, null, 2), 'utf8');
-    console.log(`✅ ${articles.length} artículos guardados en ${outputJson}`);
+    console.log(`✅ Archivo generado: ${outputJson} (${articles.length} artículos)`);
 
-    // Generar HTML para cada artículo
     articles.forEach(article => {
       const authorsList = article.autores.split(';').map(a => formatAuthorForCitation(a));
       const authorMetaTags = authorsList.map(author => `<meta name="citation_author" content="${author}">`).join('\n');
@@ -177,7 +173,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
       `.trim();
       const filePath = path.join(outputHtmlDir, `articulo${article.numeroArticulo}.html`);
       fs.writeFileSync(filePath, htmlContent, 'utf8');
-      console.log(`✅ Generado HTML de artículo: ${filePath}`);
+      console.log(`Generado HTML de artículo: ${filePath}`);
     });
 
     // Generar índice de artículos
@@ -223,7 +219,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     `.trim();
     const indexPath = path.join(outputHtmlDir, 'index.html');
     fs.writeFileSync(indexPath, indexContent, 'utf8');
-    console.log(`✅ Generado índice HTML de artículos: ${indexPath}`);
+    console.log(`Generado índice HTML de artículos: ${indexPath}`);
 
     // Generar índice de artículos en inglés
     let indexContentEn = `
@@ -262,28 +258,30 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     `.trim();
     const indexPathEn = path.join(outputHtmlDir, 'index.EN.html');
     fs.writeFileSync(indexPathEn, indexContentEn, 'utf8');
-    console.log(`✅ Generado índice HTML de artículos (EN): ${indexPathEn}`);
+    console.log(`Generado índice HTML de artículos (EN): ${indexPathEn}`);
 
-    // --- 2. Procesar Noticias ---
-    console.log('📰 Procesando noticias...');
+    // Procesar noticias
     const newsRes = await fetch(newsCsvUrl);
     if (!newsRes.ok) throw new Error(`Error descargando CSV de noticias: ${newsRes.statusText}`);
     const newsCsvData = await newsRes.text();
     const newsParsed = Papa.parse(newsCsvData, { header: true, skipEmptyLines: true });
     const newsItems = newsParsed.data
-      .filter(row => (row['Título'] || '').trim() !== '' && (row['Contenido de la noticia'] || '').trim() !== '')
-      .map(row => ({
-        titulo: String(row['Título'] ?? ''),
-        cuerpo: base64DecodeUnicode(String(row['Contenido de la noticia'] ?? '')),
-        fecha: parseDateFlexible(String(row['Fecha'] ?? '')),
-        title: String(row['Title'] ?? ''),
-        content: base64DecodeUnicode(String(row['Content of the new'] ?? '')),
+      .filter(
+        (row) =>
+          (row["Título"] || "").trim() !== "" &&
+          (row["Contenido de la noticia"] || "").trim() !== ""
+      )
+      .map((row) => ({
+        titulo: String(row["Título"] ?? ""),
+        cuerpo: base64DecodeUnicode(String(row["Contenido de la noticia"] ?? "")),
+        fecha: parseDateFlexible(String(row["Fecha"] ?? "")),
+        title: String(row["Title"] ?? ""),
+        content: base64DecodeUnicode(String(row["Content of the new"] ?? "")),
       }));
 
     for (const newsItem of newsItems) {
       const slug = generateSlug(`${newsItem.titulo} ${newsItem.fecha}`);
-      const esContent = `
-<!DOCTYPE html>
+      const esContent = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -292,27 +290,172 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
   <meta name="keywords" content="noticias, revista ciencias estudiantes, ${newsItem.titulo.replace(/[^a-zA-Z0-9]/g, ' ').substring(0, 100)}">
   <title>${newsItem.titulo} - Noticias - La Revista Nacional de Ciencias para Estudiantes</title>
   <link rel="stylesheet" href="/index.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #f4ece7 0%, #e8d9c6 100%);
+      font-family: 'Merriweather', 'Georgia', serif;
+      color: #2d3748;
+      margin: 0;
+      padding: 0;
+      line-height: 1.7;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 1.5rem;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .logo {
+      width: 80px;
+      height: auto;
+      margin-bottom: 1rem;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+      transition: transform 0.3s ease;
+    }
+    .logo:hover {
+      transform: scale(1.05);
+    }
+    h1 {
+      color: #5a3e36;
+      font-size: 2rem;
+      margin: 0 0 0.5rem 0;
+      font-weight: 600;
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.05);
+      line-height: 1.3;
+    }
+    .date {
+      color: #8b6f47;
+      font-size: 0.95rem;
+      font-style: italic;
+      margin: 0;
+      letter-spacing: 0.5px;
+    }
+    main {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      margin-bottom: 2rem;
+    }
+    .content {
+      font-size: 1.05rem;
+      color: #2d3748;
+      line-height: 1.8;
+    }
+    .content p {
+      margin-bottom: 1.5rem;
+      text-align: justify;
+      hyphens: auto;
+    }
+    .content h2, .content h3 {
+      color: #5a3e36;
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+      font-weight: 600;
+      border-bottom: 2px solid #f4ece7;
+      padding-bottom: 0.5rem;
+    }
+    .content ol, .content ul {
+      margin: 1rem 0;
+      padding-left: 2rem;
+    }
+    .content li {
+      margin-bottom: 0.5rem;
+    }
+    .content strong {
+      color: #800020;
+    }
+    .content a {
+      color: #800020;
+      text-decoration: underline;
+      font-weight: 500;
+    }
+    .content a:hover {
+      color: #5a0015;
+    }
+    .content img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      margin: 1rem 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    footer {
+      text-align: center;
+      margin-top: 2rem;
+      padding: 1.5rem;
+      color: #8b6f47;
+      font-size: 0.9rem;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+    }
+    footer a {
+      color: #800020;
+      text-decoration: none;
+      font-weight: 500;
+      margin: 0 1rem;
+      transition: color 0.3s ease;
+    }
+    footer a:hover {
+      color: #5a0015;
+      text-decoration: underline;
+    }
+    @media (max-width: 768px) {
+      .container {
+        padding: 1rem;
+      }
+      h1 {
+        font-size: 1.6rem;
+      }
+      main {
+        padding: 1.5rem;
+      }
+      .logo {
+        width: 60px;
+      }
+    }
+    /* Mejoras de legibilidad */
+    .content {
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+    }
+  </style>
 </head>
 <body>
-  <header>
-    <h1>${newsItem.titulo}</h1>
-    <p>Publicado el ${newsItem.fecha}</p>
-  </header>
-  <main>
-    <section>
-      <div class="content">${newsItem.cuerpo}</div>
-    </section>
-  </main>
-  <footer>
-    <p>&copy; ${new Date().getFullYear()} La Revista Nacional de Ciencias para Estudiantes</p>
-    <a href="/news/index.html">Volver a Noticias</a>
-    <a href="/">Volver al inicio</a>
-  </footer>
+  <div class="container">
+    <header>
+      <a href="/">
+        <img src="/logo.png" alt="Logo de La Revista Nacional de Ciencias para Estudiantes" class="logo">
+      </a>
+      <h1>${newsItem.titulo}</h1>
+      <p class="date">Publicado el ${newsItem.fecha}</p>
+    </header>
+    <main>
+      <div class="content ql-editor">
+        ${newsItem.cuerpo}
+      </div>
+    </main>
+    <footer>
+      <p>&copy; ${new Date().getFullYear()} La Revista Nacional de Ciencias para Estudiantes</p>
+      <a href="/sections/news.html">Volver a Noticias</a> | <a href="/">Volver al inicio</a>
+    </footer>
+  </div>
 </body>
 </html>`;
 
-      const enContent = `
-<!DOCTYPE html>
+      const enContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -321,31 +464,176 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
   <meta name="keywords" content="news, student science journal, ${newsItem.title.replace(/[^a-zA-Z0-9]/g, ' ').substring(0, 100)}">
   <title>${newsItem.title} - News - The National Review of Sciences for Students</title>
   <link rel="stylesheet" href="/index.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #f4ece7 0%, #e8d9c6 100%);
+      font-family: 'Merriweather', 'Georgia', serif;
+      color: #2d3748;
+      margin: 0;
+      padding: 0;
+      line-height: 1.7;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 1.5rem;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .logo {
+      width: 80px;
+      height: auto;
+      margin-bottom: 1rem;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+      transition: transform 0.3s ease;
+    }
+    .logo:hover {
+      transform: scale(1.05);
+    }
+    h1 {
+      color: #5a3e36;
+      font-size: 2rem;
+      margin: 0 0 0.5rem 0;
+      font-weight: 600;
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.05);
+      line-height: 1.3;
+    }
+    .date {
+      color: #8b6f47;
+      font-size: 0.95rem;
+      font-style: italic;
+      margin: 0;
+      letter-spacing: 0.5px;
+    }
+    main {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      margin-bottom: 2rem;
+    }
+    .content {
+      font-size: 1.05rem;
+      color: #2d3748;
+      line-height: 1.8;
+    }
+    .content p {
+      margin-bottom: 1.5rem;
+      text-align: justify;
+      hyphens: auto;
+    }
+    .content h2, .content h3 {
+      color: #5a3e36;
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+      font-weight: 600;
+      border-bottom: 2px solid #f4ece7;
+      padding-bottom: 0.5rem;
+    }
+    .content ol, .content ul {
+      margin: 1rem 0;
+      padding-left: 2rem;
+    }
+    .content li {
+      margin-bottom: 0.5rem;
+    }
+    .content strong {
+      color: #800020;
+    }
+    .content a {
+      color: #800020;
+      text-decoration: underline;
+      font-weight: 500;
+    }
+    .content a:hover {
+      color: #5a0015;
+    }
+    .content img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      margin: 1rem 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    footer {
+      text-align: center;
+      margin-top: 2rem;
+      padding: 1.5rem;
+      color: #8b6f47;
+      font-size: 0.9rem;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+    }
+    footer a {
+      color: #800020;
+      text-decoration: none;
+      font-weight: 500;
+      margin: 0 1rem;
+      transition: color 0.3s ease;
+    }
+    footer a:hover {
+      color: #5a0015;
+      text-decoration: underline;
+    }
+    @media (max-width: 768px) {
+      .container {
+        padding: 1rem;
+      }
+      h1 {
+        font-size: 1.6rem;
+      }
+      main {
+        padding: 1.5rem;
+      }
+      .logo {
+        width: 60px;
+      }
+    }
+    .content {
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+    }
+  </style>
 </head>
 <body>
-  <header>
-    <h1>${newsItem.title}</h1>
-    <p>Published on ${newsItem.fecha}</p>
-  </header>
-  <main>
-    <section>
-      <div class="content">${newsItem.content}</div>
-    </section>
-  </main>
-  <footer>
-    <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
-    <a href="/news/index.EN.html">Back to News</a>
-    <a href="/">Back to home</a>
-  </footer>
+  <div class="container">
+    <header>
+      <a href="/">
+        <img src="/logoEN.png" alt="Logo of The National Review of Sciences for Students" class="logo">
+      </a>
+      <h1>${newsItem.title}</h1>
+      <p class="date">Published on ${newsItem.fecha}</p>
+    </header>
+    <main>
+      <div class="content ql-editor">
+        ${newsItem.content}
+      </div>
+    </main>
+    <footer>
+      <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
+      <a href="/sections/news.html">Back to News</a> | <a href="/">Back to home</a>
+    </footer>
+  </div>
 </body>
 </html>`;
 
       const esPath = path.join(newsOutputHtmlDir, `${slug}.html`);
       fs.writeFileSync(esPath, esContent, 'utf8');
-      console.log(`✅ Generado HTML de noticia (ES): ${esPath}`);
+      console.log(`Generado HTML de noticia (ES): ${esPath}`);
       const enPath = path.join(newsOutputHtmlDir, `${slug}.EN.html`);
       fs.writeFileSync(enPath, enContent, 'utf8');
-      console.log(`✅ Generado HTML de noticia (EN): ${enPath}`);
+      console.log(`Generado HTML de noticia (EN): ${enPath}`);
     }
 
     // Generar índice de noticias
@@ -355,8 +643,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       acc[year].push(item);
       return acc;
     }, {});
-    let newsIndexContent = `
-<!DOCTYPE html>
+    let newsIndexContent = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -392,8 +679,7 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
 </body>
 </html>`;
 
-    let newsIndexContentEn = `
-<!DOCTYPE html>
+    let newsIndexContentEn = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -431,13 +717,12 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
 
     const newsEsIndexPath = path.join(newsOutputHtmlDir, 'index.html');
     fs.writeFileSync(newsEsIndexPath, newsIndexContent, 'utf8');
-    console.log(`✅ Generado índice HTML de noticias (ES): ${newsEsIndexPath}`);
+    console.log(`Generado índice HTML de noticias (ES): ${newsEsIndexPath}`);
     const newsEnIndexPath = path.join(newsOutputHtmlDir, 'index.EN.html');
     fs.writeFileSync(newsEnIndexPath, newsIndexContentEn, 'utf8');
-    console.log(`✅ Generado índice HTML de noticias (EN): ${newsEnIndexPath}`);
+    console.log(`Generado índice HTML de noticias (EN): ${newsEnIndexPath}`);
 
-    // --- 3. Procesar Equipo ---
-    console.log('👥 Procesando miembros del equipo...');
+    // Procesar equipo
     const teamRes = await fetch(teamCsvUrl);
     if (!teamRes.ok) throw new Error(`Error descargando CSV de equipo: ${teamRes.statusText}`);
     const teamCsvData = await teamRes.text();
@@ -461,13 +746,12 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
       const description = member['Description'] || 'Information not available';
       const areas = member['Áreas de interés'] || 'No especificadas';
       const areasEn = member['Areas of interest'] || 'Not specified';
-      const imagen = getImageSrc(member['Imagen'] || '');
       const areasList = areas.split(';').map(a => a.trim()).filter(a => a);
       const areasListEn = areasEn.split(';').map(a => a.trim()).filter(a => a);
-      const areasTagsHtml = areasList.length ? areasList.map(area => `<span class="tag">${area}</span>`).join('') : '<p>No especificadas</p>';
-      const areasTagsHtmlEn = areasListEn.length ? areasListEn.map(area => `<span class="tag">${area}</span>`).join('') : '<p>Not specified</p>';
-      const esContent = `
-<!DOCTYPE html>
+      const imagen = getImageSrc(member['Imagen'] || '');
+      const areasTagsHtml = areasList.length ? areasList.map(area => `<span class="area-tag">${area}</span>`).join('') : '<p>No especificadas</p>';
+      const areasTagsHtmlEn = areasListEn.length ? areasListEn.map(area => `<span class="area-tag">${area}</span>`).join('') : '<p>Not specified</p>';
+      const esContent = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -477,30 +761,196 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
   <meta name="author" content="${nombre}">
   <title>${nombre} - Equipo de La Revista Nacional de Ciencias para Estudiantes</title>
   <link rel="stylesheet" href="/index.css">
+  <style>
+    body {
+      background-color: #f8f9fa;
+      font-family: 'Merriweather', 'Georgia', serif;
+      color: #2d3748;
+      margin: 0;
+      padding: 0;
+      line-height: 1.6;
+    }
+    .profile-container {
+      max-width: 900px;
+      margin: 3rem auto;
+      padding: 2rem;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      text-align: center;
+    }
+    .profile-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    @media (min-width: 768px) {
+      .profile-header {
+        flex-direction: row;
+        align-items: flex-start;
+        text-align: left;
+      }
+    }
+    .profile-img {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      object-fit: cover;
+      object-position: center;
+      border: 3px solid #2b6cb0;
+      transition: transform 0.3s ease;
+      display: block;
+    }
+    .profile-img:hover {
+      transform: scale(1.05);
+    }
+    .profile-img-fallback {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      color: #4a5568;
+      border: 3px solid #2b6cb0;
+    }
+    .profile-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    @media (min-width: 768px) {
+      .profile-info {
+        align-items: flex-start;
+      }
+    }
+    .section {
+      margin-top: 2rem;
+      text-align: justify;
+    }
+    .areas-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+    @media (min-width: 768px) {
+      .areas-tags {
+        justify-content: flex-start;
+      }
+    }
+    .area-tag {
+      background: #2d3748;
+      color: #ffffff;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      display: inline-block;
+    }
+    h1 {
+      color: #2b6cb0;
+      font-size: 2.25rem;
+      margin-bottom: 0.5rem;
+      font-weight: 700;
+    }
+    h2 {
+      color: #2d3748;
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      font-weight: 600;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 0.5rem;
+    }
+    .role {
+      font-size: 1.1rem;
+      color: #4a5568;
+      font-weight: 500;
+      background: #edf2f7;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      display: inline-block;
+    }
+    p {
+      margin-bottom: 1rem;
+      color: #4a5568;
+      font-size: 1rem;
+    }
+    footer {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #e2e8f0;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #718096;
+    }
+    a {
+      color: #2b6cb0;
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.3s ease;
+    }
+    a:hover {
+      color: #1a4971;
+      text-decoration: underline;
+    }
+    @media (max-width: 640px) {
+      .profile-container {
+        padding: 1.5rem;
+      }
+      .profile-img, .profile-img-fallback {
+        width: 150px;
+        height: 150px;
+      }
+      h1 {
+        font-size: 1.75rem;
+      }
+      h2 {
+        font-size: 1.25rem;
+      }
+      .area-tag {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.8rem;
+      }
+    }
+  </style>
 </head>
 <body>
-  <header>
-    <h1>${nombre}</h1>
-    <p><strong>Rol:</strong> ${roles}</p>
-  </header>
-  <main>
-    <section>
-      ${imagen ? `<img src="${imagen}" alt="Foto de ${nombre}" class="member-img">` : `<p>Sin imagen disponible</p>`}
+  <div class="profile-container">
+    <div class="profile-header">
+      <div class="profile-img-container">
+        ${imagen ? `<img src="${imagen}" alt="Foto de ${nombre}" class="profile-img">` : `<div class="profile-img-fallback">Sin Imagen</div>`}
+      </div>
+      <div class="profile-info">
+        <h1>${nombre}</h1>
+        <p class="role">${roles}</p>
+      </div>
+    </div>
+    <div class="section">
       <h2>Descripción</h2>
       <p>${descripcion}</p>
+    </div>
+    <div class="section">
       <h2>Áreas de interés</h2>
-      <div class="areas-tags">${areasTagsHtml}</div>
-    </section>
-  </main>
-  <footer>
-    <p>&copy; ${new Date().getFullYear()} La Revista Nacional de Ciencias para Estudiantes</p>
-    <a href="/">Volver al inicio</a>
-  </footer>
+      <div class="areas-tags">
+        ${areasTagsHtml}
+      </div>
+    </div>
+    <footer>
+      <p>&copy; ${new Date().getFullYear()} La Revista Nacional de Ciencias para Estudiantes</p>
+      <a href="/">Volver al inicio</a>
+    </footer>
+  </div>
 </body>
 </html>`;
 
-      const enContent = `
-<!DOCTYPE html>
+      const enContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -510,63 +960,204 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
   <meta name="author" content="${nombre}">
   <title>${nombre} - Team of The National Review of Sciences for Students</title>
   <link rel="stylesheet" href="/index.css">
+  <style>
+    body {
+      background-color: #f8f9fa;
+      font-family: 'Merriweather', 'Georgia', serif;
+      color: #2d3748;
+      margin: 0;
+      padding: 0;
+      line-height: 1.6;
+    }
+    .profile-container {
+      max-width: 900px;
+      margin: 3rem auto;
+      padding: 2rem;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      text-align: center;
+    }
+    .profile-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    @media (min-width: 768px) {
+      .profile-header {
+        flex-direction: row;
+        align-items: flex-start;
+        text-align: left;
+      }
+    }
+    .profile-img {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      object-fit: cover;
+      object-position: center;
+      border: 3px solid #2b6cb0;
+      transition: transform 0.3s ease;
+      display: block;
+    }
+    .profile-img:hover {
+      transform: scale(1.05);
+    }
+    .profile-img-fallback {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      color: #4a5568;
+      border: 3px solid #2b6cb0;
+    }
+    .profile-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    @media (min-width: 768px) {
+      .profile-info {
+        align-items: flex-start;
+      }
+    }
+    .section {
+      margin-top: 2rem;
+      text-align: justify;
+    }
+    .areas-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+    @media (min-width: 768px) {
+      .areas-tags {
+        justify-content: flex-start;
+      }
+    }
+    .area-tag {
+      background: #2d3748;
+      color: #ffffff;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      display: inline-block;
+    }
+    h1 {
+      color: #2b6cb0;
+      font-size: 2.25rem;
+      margin-bottom: 0.5rem;
+      font-weight: 700;
+    }
+    h2 {
+      color: #2d3748;
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      font-weight: 600;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 0.5rem;
+    }
+    .role {
+      font-size: 1.1rem;
+      color: #4a5568;
+      font-weight: 500;
+      background: #edf2f7;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      display: inline-block;
+    }
+    p {
+      margin-bottom: 1rem;
+      color: #4a5568;
+      font-size: 1rem;
+    }
+    footer {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #e2e8f0;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #718096;
+    }
+    a {
+      color: #2b6cb0;
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.3s ease;
+    }
+    a:hover {
+      color: #1a4971;
+      text-decoration: underline;
+    }
+    @media (max-width: 640px) {
+      .profile-container {
+        padding: 1.5rem;
+      }
+      .profile-img, .profile-img-fallback {
+        width: 150px;
+        height: 150px;
+      }
+      h1 {
+        font-size: 1.75rem;
+      }
+      h2 {
+        font-size: 1.25rem;
+      }
+      .area-tag {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.8rem;
+      }
+    }
+  </style>
 </head>
 <body>
-  <header>
-    <h1>${nombre}</h1>
-    <p><strong>Role:</strong> ${rolesEn}</p>
-  </header>
-  <main>
-    <section>
-      ${imagen ? `<img src="${imagen}" alt="Photo of ${nombre}" class="member-img">` : `<p>No image available</p>`}
+  <div class="profile-container">
+    <div class="profile-header">
+      <div class="profile-img-container">
+        ${imagen ? `<img src="${imagen}" alt="Photo of ${nombre}" class="profile-img">` : `<div class="profile-img-fallback">No Image</div>`}
+      </div>
+      <div class="profile-info">
+        <h1>${nombre}</h1>
+        <p class="role">${rolesEn}</p>
+      </div>
+    </div>
+    <div class="section">
       <h2>Description</h2>
       <p>${description}</p>
+    </div>
+    <div class="section">
       <h2>Areas of Interest</h2>
-      <div class="areas-tags">${areasTagsHtmlEn}</div>
-    </section>
-  </main>
-  <footer>
-    <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
-    <a href="/">Back to home</a>
-  </footer>
+      <div class="areas-tags">
+        ${areasTagsHtmlEn}
+      </div>
+    </div>
+    <footer>
+      <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
+      <a href="/">Back to home</a>
+    </footer>
+  </div>
 </body>
 </html>`;
 
       const esPath = path.join(teamOutputHtmlDir, `${slug}.html`);
       fs.writeFileSync(esPath, esContent, 'utf8');
-      console.log(`✅ Generado HTML de miembro (ES): ${esPath}`);
+      console.log(`Generado HTML de miembro (ES): ${esPath}`);
       const enPath = path.join(teamOutputHtmlDir, `${slug}.EN.html`);
       fs.writeFileSync(enPath, enContent, 'utf8');
-      console.log(`✅ Generado HTML de miembro (EN): ${enPath}`);
+      console.log(`Generado HTML de miembro (EN): ${enPath}`);
     }
 
-    // --- 4. Pre-renderizar Rutas de la SPA ---
-    console.log('🚀 Pre-renderizando las rutas de la aplicación...');
-    const appShellPath = path.join(__dirname, 'dist', 'index.html');
-    let appShellContent = '';
-    if (fs.existsSync(appShellPath)) {
-      appShellContent = fs.readFileSync(appShellPath, 'utf8');
-    } else {
-      console.warn('⚠️ El archivo dist/index.html no se encontró. Se generarán páginas estáticas sin app-shell.');
-    }
-
-    const spaRoutes = [
-      '/es/about', '/es/guidelines', '/es/faq', '/es/contact', '/es/archive', '/es/team', '/es/news', '/es/login', '/es/admin',
-      '/en/about', '/en/guidelines', '/en/faq', '/en/contact', '/en/archive', '/en/team', '/en/news', '/en/login', '/en/admin'
-    ];
-
-    spaRoutes.forEach(route => {
-      const routePath = path.join(__dirname, 'dist', route);
-      if (!fs.existsSync(routePath)) {
-        fs.mkdirSync(routePath, { recursive: true });
-      }
-      const indexPath = path.join(routePath, 'index.html');
-      fs.writeFileSync(indexPath, appShellContent || '<html><body><h1>Placeholder for SPA route</h1></body></html>', 'utf8');
-      console.log(`✅ Generado HTML para ruta SPA: ${indexPath}`);
-    });
-
-    // --- 5. Generar Páginas Estáticas para Secciones ---
-    console.log('📄 Generando páginas estáticas para secciones...');
+    // Generar páginas estáticas para las secciones de la SPA
     const sections = [
       { name: 'about', label: 'Acerca de', labelEn: 'About', content: 'La Revista Nacional de Ciencias para Estudiantes es una publicación dedicada a promover la investigación científica entre estudiantes.', contentEn: 'The National Review of Sciences for Students is a publication dedicated to promoting scientific research among students.' },
       { name: 'guidelines', label: 'Guías', labelEn: 'Guidelines', content: 'Guías para autores y revisores de La Revista Nacional de Ciencias para Estudiantes.', contentEn: 'Guidelines for authors and reviewers of The National Review of Sciences for Students.' },
@@ -575,8 +1166,7 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
     ];
 
     sections.forEach(section => {
-      const htmlContentEs = `
-<!DOCTYPE html>
+      const htmlContentEs = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -603,8 +1193,7 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
 </body>
 </html>`;
 
-      const htmlContentEn = `
-<!DOCTYPE html>
+      const htmlContentEn = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -633,16 +1222,37 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
 
       const filePathEs = path.join(sectionsOutputDir, `${section.name}.html`);
       fs.writeFileSync(filePathEs, htmlContentEs, 'utf8');
-      console.log(`✅ Generado HTML de sección (ES): ${filePathEs}`);
+      console.log(`Generado HTML de sección (ES): ${filePathEs}`);
       const filePathEn = path.join(sectionsOutputDir, `${section.name}.EN.html`);
       fs.writeFileSync(filePathEn, htmlContentEn, 'utf8');
-      console.log(`✅ Generado HTML de sección (EN): ${filePathEn}`);
+      console.log(`Generado HTML de sección (EN): ${filePathEn}`);
     });
 
-    // --- 6. Generar Sitemap ---
-    console.log('🗺️ Generando sitemap.xml...');
-    const sitemapContent = `
-<?xml version="1.0" encoding="UTF-8"?>
+    // Pre-renderizar rutas de la SPA
+    console.log('🚀 Pre-renderizando las rutas de la aplicación...');
+    const appShellPath = path.join(__dirname, 'dist', 'index.html');
+    if (!fs.existsSync(appShellPath)) {
+      throw new Error('El archivo principal dist/index.html no se encontró. Asegúrate de compilar la aplicación primero.');
+    }
+    const appShellContent = fs.readFileSync(appShellPath, 'utf8');
+
+    const spaRoutes = [
+      '/es/about', '/es/guidelines', '/es/faq', '/es/contact', '/es/archive', '/es/team', '/es/news', '/es/login', '/es/admin',
+      '/en/about', '/en/guidelines', '/en/faq', '/en/contact', '/en/archive', '/en/team', '/en/news', '/en/login', '/en/admin'
+    ];
+
+    spaRoutes.forEach(route => {
+      const routePath = path.join(__dirname, 'dist', route);
+      if (!fs.existsSync(routePath)) {
+        fs.mkdirSync(routePath, { recursive: true });
+      }
+      const indexPath = path.join(routePath, 'index.html');
+      fs.writeFileSync(indexPath, appShellContent, 'utf8');
+    });
+    console.log(`✅ ${spaRoutes.length} rutas de la aplicación pre-renderizadas.`);
+
+    // Generar sitemap
+    const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
 <!-- Created for La Revista Nacional de Ciencias para Estudiantes -->
 <url>
@@ -742,11 +1352,22 @@ ${spaRoutes.map(route => `
 </url>`).join('')}
 </urlset>`.replace(/^\s*\n/gm, '');
     fs.writeFileSync(sitemapPath, sitemapContent, 'utf8');
-    console.log(`✅ Generado sitemap: ${sitemapPath}`);
+    console.log(`Generado sitemap: ${sitemapPath}`);
 
-    // --- 7. Generar robots.txt ---
-    console.log('🤖 Generando robots.txt...');
-    const robotsContent = `
+    // Generar robots.txt
+    const robotsContent = `User-agent: Googlebot
+Allow: /articles/
+Allow: /Articles/
+Allow: /news/
+Allow: /team/
+Allow: /sections/
+Allow: /index.css
+Disallow: /search
+Disallow: /login
+Disallow: /admin
+Disallow: /submit
+Disallow: /cart
+Disallow: /api/
 User-agent: *
 Allow: /articles/
 Allow: /Articles/
@@ -763,12 +1384,12 @@ Disallow: /api/
 Sitemap: ${domain}/sitemap.xml
     `.trim();
     fs.writeFileSync(robotsPath, robotsContent, 'utf8');
-    console.log(`✅ Generado robots.txt: ${robotsPath}`);
+    console.log(`Generado robots.txt: ${robotsPath}`);
 
     console.log('🎉 ¡Proceso completado con éxito!');
 
   } catch (err) {
-    console.error('❌ Error durante la generación:', err);
+    console.error('❌ Error:', err);
     process.exit(1);
   }
 })();

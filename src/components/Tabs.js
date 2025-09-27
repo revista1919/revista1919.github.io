@@ -8,7 +8,7 @@ function Tabs({ sections }) {
         {/* Mobile dropdown */}
         <div className="sm:hidden px-4 py-2">
           <select
-            className="mobile-tabs"
+            className="mobile-dropdown"
             onChange={(e) => (window.location.href = e.target.value)}
             aria-label="Seleccionar pestaña"
           >
@@ -35,7 +35,7 @@ function Tabs({ sections }) {
           ))}
         </div>
       </nav>
-      <main className="flex-grow p-4">
+      <main>
         <Outlet />
       </main>
     </div>

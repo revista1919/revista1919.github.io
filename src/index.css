@@ -8,102 +8,112 @@ html, body, #root {
   margin: 0;
   padding: 0;
   min-height: 100vh;
-  box-sizing: border-box; /* Ensure padding/margins don't cause overflow */
 }
 
 body {
   font-family: 'Roboto', sans-serif;
-  background-color: #f5f6f5;
-  color: #1f2937;
-  overscroll-behavior-x: none; /* Prevent overscroll issues */
+  background-color: #f5f5f5; /* Softer background for modern look */
+  color: #333333;
 }
 
 /* Tabs container */
 .tabs-container {
   width: 100%;
-  max-width: 80rem;
+  max-width: 1200px; /* Constrain width for large screens */
   margin: 0 auto;
-  padding: 0 2rem; /* Increased padding for extra safety */
-  box-sizing: border-box;
-  overflow: visible; /* Ensure no clipping from parent */
+  padding: 0 1rem; /* Add horizontal padding for breathing room */
 }
 
 /* Tabs navigation */
 .tabs-nav {
-  background-color: #f8f1e9;
-  border-bottom: 2px solid #e6d9c6;
-  padding: 1rem 0;
-  position: relative; /* Ensure positioning context */
+  background-color: #ffffff; /* Clean white background */
+  border-bottom: 2px solid #e5e7eb; /* Subtle border */
+  padding: 0.75rem 0; /* Balanced vertical padding */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); /* Soft shadow for depth */
 }
 
 /* Tabs scroll container */
 .tabs-scroll-container {
   display: flex;
-  flex-wrap: nowrap;
-  justify-content: center;
-  gap: 0.75rem;
-  padding: 0.5rem 2rem; /* Extra padding to prevent clipping */
+  flex-wrap: nowrap; /* Prevent wrapping for cleaner desktop layout */
+  justify-content: center; /* Center tabs */
+  gap: 1.5rem; /* Increased gap for better spacing */
+  padding: 0.5rem 1rem; /* Consistent padding */
   max-width: 100%;
-  overflow-x: auto;
-  scroll-padding: 2rem; /* Ensure first tab is fully visible */
-  scroll-snap-type: x proximity; /* Snap to tabs for better UX */
-  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
-  -ms-overflow-style: none; /* Hide scrollbar in IE/Edge */
-  scrollbar-width: none; /* Hide scrollbar in Firefox */
+  overflow-x: auto; /* Enable horizontal scroll for overflow */
+  scrollbar-width: none; /* Hide scrollbar for cleaner look */
 }
 
-/* Hide scrollbar in Webkit browsers */
 .tabs-scroll-container::-webkit-scrollbar {
-  display: none;
+  display: none; /* Hide scrollbar in WebKit browsers */
 }
 
 /* Tab item */
 .tab-item {
-  padding: 0.75rem 1.5rem;
+  padding: 0.75rem 1.5rem; /* Larger padding for better click area */
   font-size: 1rem;
   font-weight: 500;
-  color: #5a3e36;
-  background-color: #e6d9c6;
-  border-radius: 0.5rem;
+  color: #4b4b4b; /* Darker text for contrast */
+  background-color: #f3f4f6; /* Neutral background */
+  border-radius: 0.5rem; /* Softer rounded corners */
   transition: all 0.3s ease;
   text-decoration: none;
-  white-space: nowrap;
-  scroll-snap-align: start; /* Snap to start of each tab */
-  flex-shrink: 0; /* Prevent tabs from shrinking */
-  margin-left: 0; /* Explicitly reset any inherited margins */
+  white-space: nowrap; /* Prevent text wrapping */
 }
 
 .tab-item.active {
-  background-color: #8b6f47;
+  background-color: #7f5539; /* Richer active color */
   color: #ffffff;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow for active state */
 }
 
 .tab-item:hover {
-  background-color: #d9c8a9;
-  color: #5a3e36;
+  background-color: #e5e7eb; /* Light hover effect */
+  color: #4b4b4b;
 }
 
 .tab-item:focus {
   outline: none;
-  box-shadow: 0 0 0 2px #8b6f47;
+  ring: 2px solid #7f5539; /* Tailwind ring utility equivalent */
 }
 
 /* Mobile dropdown */
-.mobile-tabs {
+.mobile-dropdown {
   width: 100%;
-  padding: 0.75rem;
+  padding: 0.5rem;
   font-size: 1rem;
   font-weight: 500;
-  background-color: #e6d9c6;
-  color: #5a3e36;
+  background-color: #f3f4f6;
+  color: #4b4b4b;
   border-radius: 0.5rem;
-  border: 1px solid #d9c8a9;
+  border: 1px solid #e5e7eb;
 }
 
-.mobile-tabs:focus {
+.mobile-dropdown:focus {
   outline: none;
-  box-shadow: 0 0 0 2px #8b6f47;
+  border-color: #7f5539;
+  box-shadow: 0 0 0 3px rgba(127, 85, 57, 0.2);
+}
+
+/* Main content */
+main {
+  flex-grow: 1;
+  padding: 1.5rem; /* Add padding for content */
+}
+
+/* Quill editor */
+.ql-container {
+  overflow: auto;
+  max-height: 100%;
+}
+
+.ql-editor {
+  min-height: 120px;
+  max-height: 240px;
+  overflow-y: auto;
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
 }
 
 /* Sticky buttons */
@@ -115,22 +125,9 @@ body {
   background: inherit;
 }
 
-/* Quill editor */
-.ql-container {
-  overflow: auto;
-  max-height: 100%;
-}
-
-.ql-editor {
-  min-height: 100px;
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-/* General container */
+/* Container */
 .container {
   width: 100%;
   margin: 0;
   padding: 0;
-  overflow: visible; /* Prevent clipping from container */
 }
