@@ -14,7 +14,7 @@ function Tabs({ sections }) {
         {/* Mobile view: Tap to show dropdown */}
         <div className="sm:hidden px-4 py-2">
           <button
-            className="w-full py-2 px-4 bg-gray-100 text-gray-700 rounded-lg font-medium text-base truncate text-center"
+            className="w-full py-2 px-4 bg-gray-100 text-gray-700 rounded-lg font-medium text-base truncate"
             onClick={toggleDropdown}
             aria-label="Seleccionar pestaña"
           >
@@ -27,7 +27,7 @@ function Tabs({ sections }) {
                   key={section.name}
                   to={section.path}
                   className={({ isActive }) =>
-                    `block w-full px-4 py-2 text-base font-medium text-gray-700 truncate text-center hover:bg-gray-100 ${isActive ? 'bg-brown-600 text-white' : ''}`
+                    `block w-full px-4 py-2 text-base font-medium text-gray-700 truncate hover:bg-gray-100 ${isActive ? 'bg-brown-600 text-white' : ''}`
                   }
                   onClick={() => setIsDropdownOpen(false)}
                   aria-label={`Ir a la pestaña ${section.label}`}
@@ -45,7 +45,7 @@ function Tabs({ sections }) {
               key={section.name}
               to={section.path}
               className={({ isActive }) =>
-                `flex-1 sm:flex-none min-w-[120px] max-w-[200px] px-4 py-2 text-base font-medium text-gray-700 bg-gray-100 rounded-lg transition-colors duration-300 truncate text-center hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-brown-600 ${isActive ? 'bg-brown-600 text-white shadow-md' : ''}`
+                `flex-1 sm:flex-none min-w-[120px] max-w-[200px] px-4 py-2 text-base font-medium text-gray-700 bg-gray-100 rounded-lg transition-colors duration-300 truncate hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-brown-600 ${isActive ? 'bg-brown-600 text-white shadow-md' : ''}`
               }
               aria-label={`Ir a la pestaña ${section.label}`}
             >
@@ -55,14 +55,6 @@ function Tabs({ sections }) {
         </div>
       </nav>
       <main className="p-6">
-        <Outlet />
-      </main>
-    </div>
-  );
-}
-
-export default Tabs;      </nav>
-      <main>
         <Outlet />
       </main>
     </div>
