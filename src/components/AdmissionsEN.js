@@ -4,6 +4,7 @@ import Papa from 'papaparse';
 const APPLICATIONS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSNuBETm7TapO6dakKBbkxlYTZctAGGEp4SnOyGowCYXfD_lAXHta8_LX5EPjy0xXw5fpKp3MPcRduK/pub?gid=2123840957&single=true&output=csv';
 const TEAM_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 const TEAM_GAS_URL = process.env.REACT_APP_TEAM_SCRIPT_URL || '';
+const APPLICATIONS_GAS_URL = process.env.REACT_APP_APPLICATIONS_SCRIPT_URL || '';
 
 export default function Admissions() {
   const [applications, setApplications] = useState([]);
@@ -67,29 +68,30 @@ export default function Admissions() {
     setExpandedApp(expandedApp === id ? null : id);
   };
 
-  const sendPreselection = async (name, language = 'en') => {
-    if (!TEAM_GAS_URL) {
-      setStatus('❌ GAS URL not configured');
-      return;
-    }
-    if (!confirm(`Send preselection email to ${name}?`)) return;
-    setSending(true);
-    try {
-      await fetch(TEAM_GAS_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        redirect: 'follow',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'accept_applicant', name, language }),
-      });
-      setStatus('✅ Preselection sent');
-    } catch (err) {
-      setStatus(`❌ Error: ${err.message}`);
-    } finally {
-      setSending(false);
-    }
-  };
-
+  const sendPreselection = async (name, app) => {
+  if (!APPLICATIONS_GAS_URL) {
+    setStatus('❌ GAS URL not configured');
+    return;
+  }
+  if (!confirm(`Send preselection email to ${name}?`)) return;
+  setSending(true);
+  try {
+    // Determine language from form data, default to 'en' if not available
+    const language = app['¿Que idioma hablas?/What language do you speak?']?.toLowerCase().includes('español') ? 'es' : 'en';
+    await fetch(APPLICATIONS_GAS_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'accept_applicant', name, language }),
+    });
+    setStatus('✅ Preselection sent');
+  } catch (err) {
+    setStatus(`❌ Error: ${err.message}`);
+  } finally {
+    setSending(false);
+  }
+};
   const acceptAndRequestData = async (app) => {
     if (!TEAM_GAS_URL) {
       setStatus('❌ GAS URL not configured');
@@ -586,12 +588,12 @@ export default function Admissions() {
                         </div>
                         <div className="actions">
                           <button
-                            onClick={() => sendPreselection(app['First Name and Last Name'], 'en')}
-                            disabled={sending || !TEAM_GAS_URL || activeTab === 'archived'}
-                            className="action-button action-preselect"
-                          >
-                            Send Preselection
-                          </button>
+  onClick={() => sendPreselection(app['First Name and Last Name'], app)}
+  disabled={sending || !APPLICATIONS_GAS_URL || activeTab === 'archived'}
+  className="action-button action-preselect"
+>
+  Send Preselection
+</button>
                           <button
                             onClick={() => acceptAndRequestData(app)}
                             disabled={sending || !TEAM_GAS_URL || activeTab === 'archived'}

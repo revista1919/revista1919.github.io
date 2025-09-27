@@ -69,7 +69,7 @@ export default function Admissions() {
     setExpandedApp(expandedApp === id ? null : id);
   };
 
-  const sendPreselection = async (name) => {
+  const sendPreselection = async (name, app) => {
     if (!APPLICATIONS_GAS_URL) {
       setStatus('❌ GAS URL no configurada');
       return;
@@ -77,12 +77,13 @@ export default function Admissions() {
     if (!confirm(`¿Enviar correo de preselección a ${name}?`)) return;
     setSending(true);
     try {
+      const language = app['¿Que idioma hablas?/What language do you speak?']?.toLowerCase().includes('english') ? 'en' : 'es';
       await fetch(APPLICATIONS_GAS_URL, {
         method: 'POST',
         mode: 'no-cors',
         redirect: 'follow',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'aceptar_postulante', name }),
+        body: JSON.stringify({ action: 'aceptar_postulante', name, language }),
       });
       setStatus('✅ Preselección enviada');
     } catch (err) {
@@ -576,7 +577,7 @@ export default function Admissions() {
                         </div>
                         <div className="actions">
                           <button
-                            onClick={() => sendPreselection(app.Nombre)}
+                            onClick={() => sendPreselection(app.Nombre, app)}
                             disabled={sending || !APPLICATIONS_GAS_URL || activeTab === 'archived'}
                             className="action-button action-preselect"
                           >
