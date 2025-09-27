@@ -58,7 +58,7 @@ module.exports = (env, argv) => {
     output: {
       path: path.resolve(__dirname, 'dist'),
       filename: isProduction ? '[name].[contenthash].js' : '[name].js',
-      publicPath: '/',
+      publicPath: './',
       clean: true,
     },
     mode: isProduction ? 'production' : 'development',
@@ -231,14 +231,14 @@ module.exports = (env, argv) => {
         chunks: 'all',
         cacheGroups: {
           vendor: {
-            test: /[\\/]node_modules[\\/](?!firebase)/,
+            test: '/[\\/]node_modules[\\/](?!firebase)/',
             name: 'vendors',
             chunks: 'all',
             priority: 10,
             enforce: true,
           },
           firebase: {
-            test: /[\\/]node_modules[\\/]firebase[\\/]/,
+            test: '/[\\/]node_modules[\\/]firebase[\\/]/ ',
             name: 'firebase',
             chunks: 'all',
             priority: 20,

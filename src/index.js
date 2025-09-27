@@ -1,17 +1,16 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
-import AppES from './App'; // ← Apunta a App.js (español)
-import AppEN from './AppEN'; // ← Apunta a AppEN.js (inglés)
+import AppES from './App';
+import AppEN from './AppEN';
 
-// Componente raíz que maneja el routing
 const Root = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<AppES />} />
-        <Route path="/es/*" element={<AppES />} /> {/* ← AGREGADO: explícito para /es */}
+        <Route path="/es/*" element={<AppES />} />
         <Route path="/en/*" element={<AppEN />} />
+        <Route path="/*" element={<AppES />} />
       </Routes>
     </Router>
   );
