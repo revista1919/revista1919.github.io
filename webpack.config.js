@@ -148,18 +148,21 @@ module.exports = (env, argv) => {
           : false,
       }),
       new CopyWebpackPlugin({
-        patterns: [
-          { from: 'public/logo.png', to: '.' },
-          { from: 'public/logoEN.png', to: '.' },
-          { from: 'public/site.webmanifest', to: 'manifest.json' },
-          { from: 'public/404.html', to: '404.html', noErrorOnMissing: true },
-          { from: 'public/CNAME', to: 'CNAME', toType: 'file', noErrorOnMissing: true },
-          { from: 'public/sw.js', to: 'sw.js', noErrorOnMissing: true },
-          { from: 'public/Articles', to: 'Articles', noErrorOnMissing: true },
-          { from: 'firebase.json', to: 'firebase.json', noErrorOnMissing: true },
-          { from: '.firebaserc', to: '.firebaserc', noErrorOnMissing: true },
-        ],
-      }),
+  patterns: [
+    { from: 'public/logo.png', to: '.' },
+    { from: 'public/logoEN.png', to: '.' },
+    { from: 'public/site.webmanifest', to: 'manifest.json' },
+    { from: 'public/404.html', to: '404.html', noErrorOnMissing: true },
+    { from: 'public/CNAME', to: 'CNAME', toType: 'file', noErrorOnMissing: true },
+    { from: 'public/sw.js', to: 'sw.js', noErrorOnMissing: true },
+    { from: 'public/Articles', to: 'Articles', noErrorOnMissing: true },
+    { from: 'firebase.json', to: 'firebase.json', noErrorOnMissing: true },
+    { from: '.firebaserc', to: '.firebaserc', noErrorOnMissing: true },
+    { from: 'public/policies.html', to: 'policies.html', noErrorOnMissing: true },
+    { from: 'public/policiesEN.html', to: 'policiesEN.html', noErrorOnMissing: true },
+  ],
+}),
+      
       new webpack.DefinePlugin(defineEnvVars),
       new WebpackShellPluginNext({
         onBuildEnd: {
