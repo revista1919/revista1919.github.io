@@ -160,6 +160,8 @@ module.exports = (env, argv) => {
     { from: '.firebaserc', to: '.firebaserc', noErrorOnMissing: true },
     { from: 'public/policies.html', to: 'policies.html', noErrorOnMissing: true },
     { from: 'public/policiesEN.html', to: 'policiesEN.html', noErrorOnMissing: true },
+    { from: 'public/policiesApp.html', to: 'policiesApp.html', noErrorOnMissing: true },
+    { from: 'public/policiesAppEN.html', to: 'policiesAppEN.html', noErrorOnMissing: true },
   ],
 }),
       
