@@ -28,7 +28,22 @@ function GuidelinesSection() {
         )
       ),
       React.createElement('li', { className: 'mb-2 sm:mb-3' }, 'Aceptamos artículos en español y en inglés'),
-      React.createElement('li', { className: 'mb-2 sm:mb-3' }, 'Elementos permitidos: Gráficas, ecuaciones, imágenes, tablas (fuera del conteo de palabras)')
+      React.createElement('li', { className: 'mb-2 sm:mb-3' }, 'Elementos permitidos: Gráficas, ecuaciones, imágenes, tablas (fuera del conteo de palabras)'),
+      React.createElement(
+        'li',
+        { className: 'mb-2 sm:mb-3' },
+        'Políticas de Envío de Artículos: Consulte las políticas completas ',
+        React.createElement(
+          'a',
+          {
+            href: 'https://www.revistacienciasestudiantes.com/policies.html',
+            target: '_blank',
+            rel: 'noopener noreferrer',
+            className: 'text-blue-500 hover:underline'
+          },
+          'aquí'
+        )
+      )
     ),
     React.createElement('h3', { className: 'text-lg sm:text-xl font-semibold mt-6 mb-3' }, 'Para aprender a hacer un artículo científico, te recomendamos los siguientes videos:'),
     React.createElement('div', { className: 'grid grid-cols-1 sm:grid-cols-2 gap-4' },
