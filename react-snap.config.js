@@ -90,7 +90,7 @@ module.exports = {
   
   verbose: true,
   
-  publicPath: '/revista1919/',
+  publicPath: '/www.revistacienciasestudiantes.com/',
   
   timeout: 45000
 };
