@@ -1237,8 +1237,8 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
     const appShellContent = fs.readFileSync(appShellPath, 'utf8');
 
     const spaRoutes = [
-      '/es/about', '/es/guidelines', '/es/faq', '/es/contact', '/es/archive', '/es/team', '/es/news', '/es/login', '/es/admin',
-      '/en/about', '/en/guidelines', '/en/faq', '/en/contact', '/en/archive', '/en/team', '/en/news', '/en/login', '/en/admin'
+      '/es/about', '/es/guidelines', '/es/faq', '/es/articles', '/es/submit', '/es/team', '/es/news', '/es/login', '/es/admin',
+      '/en/about', '/en/guidelines', '/en/faq', '/en/articles', '/en/submit', '/en/team', '/en/news', '/en/login', '/en/admin'
     ];
 
     spaRoutes.forEach(route => {
