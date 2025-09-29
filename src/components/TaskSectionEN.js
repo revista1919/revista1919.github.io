@@ -8,23 +8,23 @@ Quill.register('modules/imageResize', ImageResize);
 
 // For local CSV files, assume they are imported or embedded
 // Replace these with actual CSV content or file paths in your project
-const USERS_CSV = `Nombre,Rol en la Revista
-John Doe,Director General;Encargado de Redes Sociales
-Jane Smith,Responsable de Desarrollo Web
+const USERS_CSV = `Name,Role in the Magazine
+John Doe,General Director;Social Media Manager
+Jane Smith,Web Development Manager
 ...`; // Add your CSV content here
 
-const TASKS_CSV = `Redes sociales,Nombre,Cumplido 1,Comentario 1,Desarrollo Web,Nombre.1,Cumplido 2,Comentario 2
-Task 1,John Doe,si,Comment 1,Task 2,Jane Smith,no,Comment 2
+const TASKS_CSV = `Social Media,Name,Completed 1,Comment 1,Web Development,Name.1,Completed 2,Comment 2
+Task 1,John Doe,yes,Comment 1,Task 2,Jane Smith,no,Comment 2
 ...`; // Add your CSV content here
 
 const TASK_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxMo7aV_vz_3mOCUWKpcqnWmassUdApD_KfAHROTdgd_MDDiaXikgVV0OZ5qVYmhZgd/exec';
 const AREAS = {
-  RRSS: 'Redes Sociales',
-  WEB: 'Desarrollo Web',
+  SM: 'Social Media',
+  WD: 'Web Development',
 };
 
 const getAreaColumns = (area) => {
-  if (area === AREAS.RRSS) {
+  if (area === AREAS.SM) {
     return { taskCol: 0, nameCol: 1, completedCol: 2, commentCol: 3 };
   } else {
     return { taskCol: 4, nameCol: 5, completedCol: 6, commentCol: 7 };
@@ -58,7 +58,7 @@ export default function TaskSection({ user }) {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('pending');
   const [showAssignModal, setShowAssignModal] = useState(false);
-  const [selectedArea, setSelectedArea] = useState(AREAS.RRSS);
+  const [selectedArea, setSelectedArea] = useState(AREAS.SM);
   const [selectedAssignee, setSelectedAssignee] = useState('');
   const [taskContent, setTaskContent] = useState('');
   const [commentContent, setCommentContent] = useState({});
@@ -164,7 +164,7 @@ export default function TaskSection({ user }) {
       setUsers(parsed);
     } catch (err) {
       console.error('Error parsing users:', err);
-      setError('Error al cargar usuarios: ' + err.message);
+      setError('Error loading users: ' + err.message);
     }
   };
 
@@ -179,7 +179,7 @@ export default function TaskSection({ user }) {
       setTasks(parsed);
     } catch (err) {
       console.error('Error parsing tasks:', err);
-      setError('Error al cargar tareas: ' + err.message);
+      setError('Error loading tasks: ' + err.message);
     }
   };
 
@@ -188,7 +188,7 @@ export default function TaskSection({ user }) {
       .then(() => setLoading(false))
       .catch((err) => {
         console.error('Error in initial parse:', err);
-        setError('Error al inicializar: ' + err.message);
+        setError('Error initializing: ' + err.message);
       });
   }, []);
 
@@ -196,7 +196,7 @@ export default function TaskSection({ user }) {
     const setupEditor = (editor, spellcheck = true) => {
       if (editor && editor.root) {
         editor.root.setAttribute('spellcheck', spellcheck ? 'true' : 'false');
-        editor.root.setAttribute('lang', 'es');
+        editor.root.setAttribute('lang', 'en');
         editor.root.setAttribute('contenteditable', 'true');
         editor.root.addEventListener('focus', () => {
           editor.root.classList.add('ql-focused');
@@ -218,59 +218,59 @@ export default function TaskSection({ user }) {
     });
   }, [commentContent]);
 
-  const currentUser = users.find((u) => u.Nombre === user.name);
+  const currentUser = users.find((u) => u.Name === user.name);
   const userRoles = currentUser
-    ? currentUser['Rol en la Revista']?.split(';').map((r) => r.trim())
+    ? currentUser['Role in the Magazine']?.split(';').map((r) => r.trim())
     : [];
-  const isDirector = userRoles.includes('Director General');
-  const isRrss = userRoles.includes('Encargado de Redes Sociales');
-  const isWeb = userRoles.includes('Responsable de Desarrollo Web');
-  const isAssignee = (isRrss || isWeb) && !isDirector;
-  const rrssUsers = users.filter((u) =>
-    u['Rol en la Revista']?.includes('Encargado de Redes Sociales')
+  const isDirector = userRoles.includes('General Director');
+  const isSM = userRoles.includes('Social Media Manager');
+  const isWD = userRoles.includes('Web Development Manager');
+  const isAssignee = (isSM || isWD) && !isDirector;
+  const smUsers = users.filter((u) =>
+    u['Role in the Magazine']?.includes('Social Media Manager')
   );
-  const webUsers = users.filter((u) =>
-    u['Rol en la Revista']?.includes('Responsable de Desarrollo Web')
+  const wdUsers = users.filter((u) =>
+    u['Role in the Magazine']?.includes('Web Development Manager')
   );
 
   const filteredTasks = useMemo(() => {
     return tasks.reduce((areaTasks, task, index) => {
       if (!isDirector && !isAssignee) return areaTasks;
-      if (isRrss || isDirector) {
-        const taskText = task['Redes sociales'];
-        const assignedName = task.Nombre || '';
-        const completed = task['Cumplido 1'] === 'si';
+      if (isSM || isDirector) {
+        const taskText = task['Social Media'];
+        const assignedName = task.Name || '';
+        const completed = task['Completed 1'] === 'yes';
         if (taskText && (!assignedName || assignedName === user.name || isDirector)) {
           areaTasks.push({
             ...task,
-            area: AREAS.RRSS,
+            area: AREAS.SM,
             taskText,
             assignedName,
             completed,
-            comment: task['Comentario 1'],
+            comment: task['Comment 1'],
             rowIndex: index,
           });
         }
       }
-      if (isWeb || isDirector) {
-        const taskText = task['Desarrollo Web'];
-        const assignedName = task['Nombre.1'] || '';
-        const completed = task['Cumplido 2'] === 'si';
+      if (isWD || isDirector) {
+        const taskText = task['Web Development'];
+        const assignedName = task['Name.1'] || '';
+        const completed = task['Completed 2'] === 'yes';
         if (taskText && (!assignedName || assignedName === user.name || isDirector)) {
           areaTasks.push({
             ...task,
-            area: AREAS.WEB,
+            area: AREAS.WD,
             taskText,
             assignedName,
             completed,
-            comment: task['Comentario 2'],
+            comment: task['Comment 2'],
             rowIndex: index,
           });
         }
       }
       return areaTasks;
     }, []);
-  }, [tasks, user.name, isDirector, isRrss, isWeb]);
+  }, [tasks, user.name, isDirector, isSM, isWD]);
 
   const pendingTasks = useMemo(() => filteredTasks.filter((t) => !t.completed), [filteredTasks]);
   const completedTasks = useMemo(() => filteredTasks.filter((t) => t.completed), [filteredTasks]);
@@ -321,16 +321,16 @@ export default function TaskSection({ user }) {
           const images = tempDiv.querySelectorAll('img');
 
           if (images.length > 0) {
-            console.log(`Procesando ${images.length} imagenes...`);
+            console.log(`Processing ${images.length} images...`);
             images.forEach((img, index) => {
               try {
                 let style = `max-width:100%;height:auto;border-radius:4px;display:block;margin:8px auto;`;
                 style += 'max-width:100% !important;box-sizing:border-box !important;';
                 img.setAttribute('style', style);
                 img.setAttribute('loading', 'lazy');
-                img.setAttribute('alt', `Imagen ${index + 1} de la tarea`);
+                img.setAttribute('alt', `Image ${index + 1} of the task`);
               } catch (imgError) {
-                console.warn(`Error procesando imagen ${index}:`, imgError);
+                console.warn(`Error processing image ${index}:`, imgError);
               }
             });
             cleanedHtml = tempDiv.innerHTML;
@@ -338,7 +338,7 @@ export default function TaskSection({ user }) {
         }
 
         const encoded = base64EncodeUnicode(cleanedHtml);
-        console.log(`Contenido codificado: ${encoded.length} caracteres`);
+        console.log(`Encoded content: ${encoded.length} characters`);
         return encoded;
       } catch (err) {
         console.error('Error encoding body:', err);
@@ -346,7 +346,7 @@ export default function TaskSection({ user }) {
           const uriEncoded = encodeURIComponent(html);
           return btoa(uriEncoded);
         } catch (fallbackErr) {
-          console.error('Error en fallback encoding:', fallbackErr);
+          console.error('Error in fallback encoding:', fallbackErr);
           return base64EncodeUnicode(html);
         }
       }
@@ -355,7 +355,7 @@ export default function TaskSection({ user }) {
   );
 
   const decodeBody = useCallback((body) => {
-    if (!body) return <p className="text-gray-600">Sin contenido.</p>;
+    if (!body) return <p className="text-gray-600">No content.</p>;
     try {
       let decoded;
       try {
@@ -381,21 +381,21 @@ export default function TaskSection({ user }) {
       );
     } catch (err) {
       console.error('Error decoding body:', err);
-      return <p className="text-red-600">Error al mostrar contenido: {err.message}</p>;
+      return <p className="text-red-600">Error displaying content: {err.message}</p>;
     }
   }, []);
 
   const handleAssignTask = async () => {
     if (!taskContent.trim()) {
-      setSubmitStatus({ assign: 'La tarea no puede estar vacía' });
+      setSubmitStatus({ assign: 'The task cannot be empty' });
       return;
     }
 
-    setSubmitStatus({ assign: 'Enviando...' });
+    setSubmitStatus({ assign: 'Sending...' });
 
     const encodedTask = encodeBody(taskContent, taskEditorRef);
     if (!encodedTask || encodedTask.length === 0) {
-      setSubmitStatus({ assign: 'Error: No se pudo procesar el contenido de la tarea' });
+      setSubmitStatus({ assign: 'Error: Could not process the task content' });
       return;
     }
 
@@ -412,30 +412,30 @@ export default function TaskSection({ user }) {
         body: JSON.stringify(data),
       });
 
-      setSubmitStatus({ assign: '¡Tarea asignada exitosamente! 🎉' });
+      setSubmitStatus({ assign: 'Task assigned successfully! 🎉' });
       setShowAssignModal(false);
       setTaskContent('');
       setSelectedAssignee('');
       setTimeout(() => parseTasks(), 1000);
     } catch (err) {
       console.error('Error assigning task:', err);
-      setSubmitStatus({ assign: `Error al asignar tarea: ${err.message}` });
+      setSubmitStatus({ assign: `Error assigning task: ${err.message}` });
     }
   };
 
   const handleCompleteTask = async (task) => {
     const comment = commentContent[task.rowIndex] || '';
     if (!comment.trim()) {
-      setSubmitStatus({ complete: 'El comentario no puede estar vacío' });
+      setSubmitStatus({ complete: 'The comment cannot be empty' });
       return;
     }
 
-    setSubmitStatus({ complete: 'Enviando...' });
+    setSubmitStatus({ complete: 'Sending...' });
 
     const commentEditor = commentEditorsRef.current[task.rowIndex];
     const encodedComment = encodeBody(comment, commentEditor);
     if (!encodedComment || encodedComment.length === 0) {
-      setSubmitStatus({ complete: 'Error: No se pudo procesar el comentario' });
+      setSubmitStatus({ complete: 'Error: Could not process the comment' });
       return;
     }
 
@@ -452,12 +452,12 @@ export default function TaskSection({ user }) {
         body: JSON.stringify(data),
       });
 
-      setSubmitStatus({ complete: '¡Tarea completada exitosamente! 🎉' });
+      setSubmitStatus({ complete: 'Task completed successfully! 🎉' });
       setCommentContent((prev) => ({ ...prev, [task.rowIndex]: '' }));
       setTimeout(() => parseTasks(), 1000);
     } catch (err) {
       console.error('Error completing task:', err);
-      setSubmitStatus({ complete: `Error al completar tarea: ${err.message}` });
+      setSubmitStatus({ complete: `Error completing task: ${err.message}` });
     }
   };
 
@@ -696,7 +696,7 @@ export default function TaskSection({ user }) {
 
   CommentQuillEditor.displayName = 'CommentQuillEditor';
 
-  if (loading) return <div className="text-center p-4 text-gray-600">Cargando tareas...</div>;
+  if (loading) return <div className="text-center p-4 text-gray-600">Loading tasks...</div>;
   if (error) return <div className="text-red-600 text-center p-4">{error}</div>;
   if (!isDirector && !isAssignee) return null;
 
@@ -706,9 +706,9 @@ export default function TaskSection({ user }) {
         <button
           onClick={() => setShowAssignModal(true)}
           className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium"
-          aria-label="Asignar nueva tarea"
+          aria-label="Assign new task"
         >
-          Asignar Nueva Tarea
+          Assign New Task
         </button>
       )}
 
@@ -720,9 +720,9 @@ export default function TaskSection({ user }) {
               ? 'border-b-2 border-blue-600 text-blue-600'
               : 'text-gray-600 hover:text-blue-600'
           }`}
-          aria-label="Ver tareas pendientes"
+          aria-label="View pending tasks"
         >
-          Pendientes ({pendingTasks.length})
+          Pending ({pendingTasks.length})
         </button>
         <button
           onClick={() => setActiveTab('completed')}
@@ -731,9 +731,9 @@ export default function TaskSection({ user }) {
               ? 'border-b-2 border-blue-600 text-blue-600'
               : 'text-gray-600 hover:text-blue-600'
           }`}
-          aria-label="Ver tareas completadas"
+          aria-label="View completed tasks"
         >
-          Completadas ({completedTasks.length})
+          Completed ({completedTasks.length})
         </button>
       </div>
 
@@ -744,7 +744,7 @@ export default function TaskSection({ user }) {
             className="bg-white p-4 sm:p-6 rounded-lg shadow-md border border-gray-200 w-full overflow-hidden box-border"
           >
             <h3 className="font-bold text-lg text-gray-800 mb-2">
-              {task.area} - {task.assignedName || 'Todos'}
+              {task.area} - {task.assignedName || 'All'}
             </h3>
             <div className="text-gray-600 mb-4 prose max-w-none">
               {decodeBody(task.taskText)}
@@ -752,7 +752,7 @@ export default function TaskSection({ user }) {
 
             {task.completed && (
               <div className="mt-2 text-green-600 bg-green-50 p-3 rounded-md">
-                <span className="font-medium">Completado:</span>{' '}
+                <span className="font-medium">Completed:</span>{' '}
                 <div className="mt-2 prose max-w-none">{decodeBody(task.comment)}</div>
               </div>
             )}
@@ -766,7 +766,7 @@ export default function TaskSection({ user }) {
                       debouncedHandleCommentChange(rowIndex, content);
                     }}
                     rowIndex={task.rowIndex}
-                    placeholder="Comentario sobre lo realizado... (para imágenes, usa el botón de imagen para evitar problemas de tamaño)"
+                    placeholder="Comment on what was done... (for images, use the image button to avoid size issues)"
                     className="h-[200px] text-gray-800 bg-white"
                   />
                 </div>
@@ -774,9 +774,9 @@ export default function TaskSection({ user }) {
                   onClick={() => handleCompleteTask(task)}
                   className="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 text-sm font-medium disabled:opacity-50"
                   disabled={!commentContent[task.rowIndex]?.trim()}
-                  aria-label="Marcar tarea como completada"
+                  aria-label="Mark task as completed"
                 >
-                  Marcar Completado
+                  Mark Completed
                 </button>
               </div>
             )}
@@ -785,7 +785,7 @@ export default function TaskSection({ user }) {
 
         {(activeTab === 'pending' ? pendingTasks : completedTasks).length === 0 && (
           <div className="text-center text-gray-600 py-8">
-            No hay tareas {activeTab === 'pending' ? 'pendientes' : 'completadas'}.
+            No {activeTab === 'pending' ? 'pending' : 'completed'} tasks.
           </div>
         )}
       </div>
@@ -794,8 +794,8 @@ export default function TaskSection({ user }) {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col relative modal-content">
             <div className="sticky top-0 bg-white border-b border-gray-200 p-4 z-10">
-              <h3 className="font-bold text-lg text-gray-800 mb-2">Asignar Nueva Tarea</h3>
-              <p className="text-sm text-gray-600">Describe la tarea y selecciona al responsable</p>
+              <h3 className="font-bold text-lg text-gray-800 mb-2">Assign New Task</h3>
+              <p className="text-sm text-gray-600">Describe the task and select the assignee</p>
             </div>
 
             <div className="flex-grow overflow-y-auto p-4 space-y-4">
@@ -804,22 +804,22 @@ export default function TaskSection({ user }) {
                   value={selectedArea}
                   onChange={(e) => setSelectedArea(e.target.value)}
                   className="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                  aria-label="Seleccionar área de la tarea"
+                  aria-label="Select task area"
                 >
-                  <option value={AREAS.RRSS}>{AREAS.RRSS}</option>
-                  <option value={AREAS.WEB}>{AREAS.WEB}</option>
+                  <option value={AREAS.SM}>{AREAS.SM}</option>
+                  <option value={AREAS.WD}>{AREAS.WD}</option>
                 </select>
 
                 <select
                   value={selectedAssignee}
                   onChange={(e) => setSelectedAssignee(e.target.value)}
                   className="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                  aria-label="Seleccionar asignado"
+                  aria-label="Select assignee"
                 >
-                  <option value="">Todos los {selectedArea === AREAS.RRSS ? 'RRSS' : 'Web'}</option>
-                  {(selectedArea === AREAS.RRSS ? rrssUsers : webUsers).map((u) => (
-                    <option key={u.Nombre} value={u.Nombre}>
-                      {u.Nombre}
+                  <option value="">All {selectedArea === AREAS.SM ? 'SM' : 'WD'}</option>
+                  {(selectedArea === AREAS.SM ? smUsers : wdUsers).map((u) => (
+                    <option key={u.Name} value={u.Name}>
+                      {u.Name}
                     </option>
                   ))}
                 </select>
@@ -829,15 +829,15 @@ export default function TaskSection({ user }) {
                 <TaskQuillEditor
                   value={taskContent}
                   onChange={debouncedSetTaskContent}
-                  placeholder="Describe la tarea detalladamente... (para imágenes, usa el botón de imagen para evitar problemas de tamaño)"
+                  placeholder="Describe the task in detail... (for images, use the image button to avoid size issues)"
                   className="h-[250px]"
                   ref={taskEditorRef}
                 />
               </div>
 
               <div className="text-xs text-gray-500">
-                💡 Puedes usar <strong>formato rico</strong>, agregar <strong>imágenes</strong> y{' '}
-                <strong>enlaces</strong>. El contenido se guardará automáticamente en Google Sheets.
+                💡 You can use <strong>rich formatting</strong>, add <strong>images</strong> and{' '}
+                <strong>links</strong>. The content will be saved automatically in Google Sheets.
               </div>
             </div>
 
@@ -849,17 +849,17 @@ export default function TaskSection({ user }) {
                   setSelectedAssignee('');
                 }}
                 className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition-colors text-sm font-medium"
-                aria-label="Cancelar asignación de tarea"
+                aria-label="Cancel task assignment"
               >
-                Cancelar
+                Cancel
               </button>
               <button
                 onClick={handleAssignTask}
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={!taskContent.trim()}
-                aria-label="Asignar tarea"
+                aria-label="Assign task"
               >
-                {submitStatus.assign === 'Enviando...' ? 'Enviando...' : 'Asignar Tarea'}
+                {submitStatus.assign === 'Sending...' ? 'Sending...' : 'Assign Task'}
               </button>
             </div>
 
@@ -869,7 +869,7 @@ export default function TaskSection({ user }) {
                   className={`text-sm ${
                     submitStatus.assign?.includes('Error')
                       ? 'text-red-600'
-                      : submitStatus.assign?.includes('exitosa')
+                      : submitStatus.assign?.includes('success')
                       ? 'text-green-600'
                       : 'text-blue-600'
                   }`}
