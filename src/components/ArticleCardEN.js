@@ -211,7 +211,10 @@ function ArticleCardEN({ article }) {
     <strong className="font-medium">Area:</strong> Not specified
   </p>
 )}
-
+ 
+ <p className="text-sm text-gray-800">
+    <strong className="font-medium">Key Words:</strong> Not specified
+  </p>
 
           {article['Palabras clave'] && (
             <div className="flex flex-wrap gap-2">
@@ -229,6 +232,7 @@ function ArticleCardEN({ article }) {
                 ))}
             </div>
           )}
+          
 
           <p className="text-sm text-gray-800">
             <strong className="font-medium">Abstract: </strong>

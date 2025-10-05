@@ -188,7 +188,9 @@ function ArticleCard({ article }) {
     <strong className="font-medium">Área:</strong> No especificada
   </p>
 )}
-
+<p className="text-sm text-gray-800">
+    <strong className="font-medium">Palabras Clave:</strong> Not specified
+  </p>
 
           {article['Palabras clave'] && (
             <div className="flex flex-wrap gap-2">
