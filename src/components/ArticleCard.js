@@ -189,7 +189,7 @@ function ArticleCard({ article }) {
   </p>
 )}
 <p className="text-sm text-gray-800">
-    <strong className="font-medium">Palabras Clave:</strong> Not specified
+    <strong className="font-medium">Palabras Clave:</strong>
   </p>
 
           {article['Palabras clave'] && (

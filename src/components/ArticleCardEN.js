@@ -213,7 +213,7 @@ function ArticleCardEN({ article }) {
 )}
  
  <p className="text-sm text-gray-800">
-    <strong className="font-medium">Key Words:</strong> Not specified
+    <strong className="font-medium">Key Words:</strong>
   </p>
 
           {article['Palabras clave'] && (
