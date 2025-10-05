@@ -26,6 +26,7 @@ import NewsSection from './components/NewsSection';
 import './index.css';
 
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
+const isPrerendering = typeof navigator !== 'undefined' && navigator.userAgent.includes('ReactSnap');
 
 function App() {
   const { cleanPath } = useLanguage();
@@ -70,6 +71,11 @@ function App() {
 
   // Persistencia y estado de autenticación
   useEffect(() => {
+    if (isPrerendering) {
+      setAuthLoading(false);
+      return;
+    }
+
     setPersistence(auth, browserLocalPersistence)
       .then(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {

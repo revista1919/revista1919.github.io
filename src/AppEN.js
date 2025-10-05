@@ -39,6 +39,7 @@ function AppEN() {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const location = useLocation();
+  const isPrerendering = typeof navigator !== 'undefined' && navigator.userAgent.includes('ReactSnap');
 
   // Fetch user data from CSV
   const fetchUserData = async (email) => {
@@ -70,6 +71,10 @@ function AppEN() {
 
   // Authentication persistence and state
   useEffect(() => {
+    if (isPrerendering) {
+      setAuthLoading(false);
+      return;
+    }
     setPersistence(auth, browserLocalPersistence)
       .then(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
