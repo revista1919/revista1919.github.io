@@ -166,13 +166,13 @@ function App() {
       article['Resumen']?.toLowerCase().includes(lowerTerm) ||
       article['Palabras clave']?.toLowerCase().includes(lowerTerm);
 
-    // dividir las áreas temáticas por ";"
-    const articleAreas = (article['Área temática'] || '')
-      .split(';')
-      .map((a) => a.trim().toLowerCase());
-
     const matchesArea =
-      area === '' || articleAreas.includes(area.toLowerCase());
+      area === '' ||
+      (article['Área temática'] || '')
+        .toLowerCase()
+        .split(';')
+        .map((a) => a.trim())
+        .includes(area.toLowerCase());
 
     return matchesSearch && matchesArea;
   });
@@ -180,6 +180,16 @@ function App() {
   setFilteredArticles(filtered);
   setVisibleArticles(6);
 };
+
+const clearFilters = () => {
+  setSearchTerm('');
+  setSelectedArea('');
+  setFilteredArticles(articles);
+  setVisibleArticles(6);
+};
+
+const loadMoreArticles = () => setVisibleArticles((prev) => prev + 6);
+const showLessArticles = () => setVisibleArticles(6);
 
   // Logout manual
   const handleLogout = async () => {
