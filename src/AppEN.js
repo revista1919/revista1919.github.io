@@ -155,36 +155,32 @@ function AppEN() {
 
   // Search and filters
   const handleSearch = (term, area) => {
-    setSearchTerm(term);
-    setSelectedArea(area);
+  setSearchTerm(term);
+  setSelectedArea(area);
 
-    const lowerTerm = term.toLowerCase();
-    const filtered = articles.filter((article) => {
-      const matchesSearch =
-        article['Título']?.toLowerCase().includes(lowerTerm) ||
-        article['Autor(es)']?.toLowerCase().includes(lowerTerm) ||
-        article['Resumen']?.toLowerCase().includes(lowerTerm) ||
-        article['Palabras clave']?.toLowerCase().includes(lowerTerm);
+  const lowerTerm = term.toLowerCase();
+  const filtered = articles.filter((article) => {
+    const matchesSearch =
+      article['Título']?.toLowerCase().includes(lowerTerm) ||
+      article['Autor(es)']?.toLowerCase().includes(lowerTerm) ||
+      article['Resumen']?.toLowerCase().includes(lowerTerm) ||
+      article['Palabras clave']?.toLowerCase().includes(lowerTerm);
 
-      const matchesArea =
-        area === '' || (article['Área temática'] || '').toLowerCase() === area.toLowerCase();
+    // dividir las áreas temáticas por ";"
+    const articleAreas = (article['Área temática'] || '')
+      .split(';')
+      .map((a) => a.trim().toLowerCase());
 
-      return matchesSearch && matchesArea;
-    });
+    const matchesArea =
+      area === '' || articleAreas.includes(area.toLowerCase());
 
-    setFilteredArticles(filtered);
-    setVisibleArticles(6);
-  };
+    return matchesSearch && matchesArea;
+  });
 
-  const clearFilters = () => {
-    setSearchTerm('');
-    setSelectedArea('');
-    setFilteredArticles(articles);
-    setVisibleArticles(6);
-  };
+  setFilteredArticles(filtered);
+  setVisibleArticles(6);
+};
 
-  const loadMoreArticles = () => setVisibleArticles((prev) => prev + 6);
-  const showLessArticles = () => setVisibleArticles(6);
 
   // Manual logout
   const handleLogout = async () => {

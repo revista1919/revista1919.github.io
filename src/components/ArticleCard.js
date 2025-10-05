@@ -119,7 +119,7 @@ function ArticleCard({ article }) {
 
   return (
     <div
-      className={`py-4 px-4 sm:px-6 hover:bg-gray-50 transition-colors duration-200 cursor-pointer ${isExpanded ? 'bg-gray-50' : ''} border-b border-gray-200 last:border-b-0`}
+      className={`py-4 px-4 sm:px-6 hover:bg-gray-50 transition-colors duration-200 cursor-pointer border-b border-gray-200 last:border-b-0 ${isExpanded ? 'bg-gray-50' : ''}`}
       onClick={toggleExpand}
       role="button"
       tabIndex={0}
@@ -130,12 +130,12 @@ function ArticleCard({ article }) {
         {article['Título'] || 'Sin título'}
       </h2>
 
-      <p className="text-sm text-green-700 mb-2">
+      <p className="text-sm text-gray-700 mb-2">
         {article['Autor(es)'] ? (
           article['Autor(es)'].split(';').map((a, idx, arr) => (
             <React.Fragment key={idx}>
               <span
-                className="cursor-pointer hover:text-green-800 underline transition-colors"
+                className="cursor-pointer hover:text-blue-600 underline transition-colors"
                 onClick={(e) => { e.stopPropagation(); handleAuthorClick(a.trim()); }}
                 role="link"
                 tabIndex={0}
@@ -152,12 +152,8 @@ function ArticleCard({ article }) {
         )}
       </p>
 
-      <p className="text-xs text-gray-600 mb-2">
+      <p className="text-xs text-gray-500 italic">
         {journal} · {getYear(article['Fecha'])} {pages && `· pp. ${pages}`}
-      </p>
-
-      <p className="text-sm text-gray-800">
-        {article['Resumen'] ? `${article['Resumen'].slice(0, 200)}...` : 'Resumen no disponible'}
       </p>
 
       {isExpanded && (
@@ -187,7 +183,7 @@ function ArticleCard({ article }) {
           )}
 
           <p className="text-sm text-gray-800">
-            <strong className="font-medium">Resumen completo: </strong>
+            <strong className="font-medium">Resumen: </strong>
             {article['Resumen'] ? (
               <>
                 {showFullAbstract ? article['Resumen'] : `${article['Resumen'].slice(0, 200)}...`}
