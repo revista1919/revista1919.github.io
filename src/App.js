@@ -134,7 +134,13 @@ function App() {
             setArticles(data);
             setFilteredArticles(data);
 
-            const uniqueAreas = [...new Set(data.map((a) => a['Área temática']))].filter(Boolean);
+            const allAreas = data.flatMap((a) =>
+              (a['Área temática'] || '')
+                .split(';')
+                .map((area) => area.trim())
+                .filter(Boolean)
+            );
+            const uniqueAreas = [...new Set(allAreas)].sort(); // Ordenamos alfabéticamente para mejor UX
             setAreas(uniqueAreas);
 
             setLoading(false);
@@ -154,44 +160,42 @@ function App() {
   }, []);
 
   // Búsqueda y filtros
-// Búsqueda y filtros
-const handleSearch = (term, area) => {
-  setSearchTerm(term);
-  setSelectedArea(area);
+  const handleSearch = (term, area) => {
+    setSearchTerm(term);
+    setSelectedArea(area);
 
-  const lowerTerm = term.toLowerCase();
-  const filtered = articles.filter((article) => {
-    const matchesSearch =
-      article['Título']?.toLowerCase().includes(lowerTerm) ||
-      article['Autor(es)']?.toLowerCase().includes(lowerTerm) ||
-      article['Resumen']?.toLowerCase().includes(lowerTerm) ||
-      article['Palabras clave']?.toLowerCase().includes(lowerTerm);
+    const lowerTerm = term.toLowerCase();
+    const filtered = articles.filter((article) => {
+      const matchesSearch =
+        article['Título']?.toLowerCase().includes(lowerTerm) ||
+        article['Autor(es)']?.toLowerCase().includes(lowerTerm) ||
+        article['Resumen']?.toLowerCase().includes(lowerTerm) ||
+        article['Palabras clave']?.toLowerCase().includes(lowerTerm);
 
-    const matchesArea =
-      area === '' ||
-      (article['Área temática'] || '')
-        .toLowerCase()
-        .split(';')                // separa por ;
-        .map((a) => a.trim())      // limpia espacios en blanco
-        .some((a) => a === area.toLowerCase()); // busca coincidencia exacta
+      const matchesArea =
+        area === '' ||
+        (article['Área temática'] || '')
+          .toLowerCase()
+          .split(';')                // separa por ;
+          .map((a) => a.trim())      // limpia espacios en blanco
+          .some((a) => a.toLowerCase() === area.toLowerCase()); // busca coincidencia exacta, asegurando lowercase en ambos lados
 
-    return matchesSearch && matchesArea;
-  });
+      return matchesSearch && matchesArea;
+    });
 
-  setFilteredArticles(filtered);
-  setVisibleArticles(6);
-};
+    setFilteredArticles(filtered);
+    setVisibleArticles(6);
+  };
 
+  const clearFilters = () => {
+    setSearchTerm('');
+    setSelectedArea('');
+    setFilteredArticles(articles);
+    setVisibleArticles(6);
+  };
 
-const clearFilters = () => {
-  setSearchTerm('');
-  setSelectedArea('');
-  setFilteredArticles(articles);
-  setVisibleArticles(6);
-};
-
-const loadMoreArticles = () => setVisibleArticles((prev) => prev + 6);
-const showLessArticles = () => setVisibleArticles(6);
+  const loadMoreArticles = () => setVisibleArticles((prev) => prev + 6);
+  const showLessArticles = () => setVisibleArticles(6);
 
   // Logout manual
   const handleLogout = async () => {

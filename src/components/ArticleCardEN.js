@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
 
 function parseDateFlexible(dateStr) {
   if (!dateStr) return 'Date not available';
@@ -191,9 +190,28 @@ function ArticleCardEN({ article }) {
           <p className="text-sm text-gray-800">
             <strong className="font-medium">Date:</strong> {parseDateFlexible(article['Fecha'])}
           </p>
-          <p className="text-sm text-gray-800">
-            <strong className="font-medium">Area:</strong> {article['Área temática'] || 'Not specified'}
-          </p>
+          {article['Área temática'] ? (
+  <div className="text-sm text-gray-800">
+    <strong className="font-medium">Areas:</strong>
+    <div className="flex flex-wrap gap-2 mt-1">
+      {article['Área temática']
+        .split(';')
+        .map((area, idx) => (
+          <span
+            key={idx}
+            className="bg-yellow-100 text-yellow-800 text-xs font-medium px-3 py-1 rounded-full shadow-sm"
+          >
+            {area.trim()}
+          </span>
+        ))}
+    </div>
+  </div>
+) : (
+  <p className="text-sm text-gray-800">
+    <strong className="font-medium">Area:</strong> Not specified
+  </p>
+)}
+
 
           {article['Palabras clave'] && (
             <div className="flex flex-wrap gap-2">

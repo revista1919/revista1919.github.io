@@ -167,9 +167,28 @@ function ArticleCard({ article }) {
           <p className="text-sm text-gray-800">
             <strong className="font-medium">Fecha:</strong> {parseDateFlexible(article['Fecha'])}
           </p>
-          <p className="text-sm text-gray-800">
-            <strong className="font-medium">Área:</strong> {article['Área temática'] || 'No especificada'}
-          </p>
+          {article['Área temática'] ? (
+  <div className="text-sm text-gray-800">
+    <strong className="font-medium">Áreas:</strong>{' '}
+    <div className="flex flex-wrap gap-2 mt-1">
+      {article['Área temática']
+        .split(';')
+        .map((area, idx) => (
+          <span
+            key={idx}
+            className="bg-yellow-100 text-yellow-800 text-xs font-medium px-3 py-1 rounded-full shadow-sm"
+          >
+            {area.trim()}
+          </span>
+        ))}
+    </div>
+  </div>
+) : (
+  <p className="text-sm text-gray-800">
+    <strong className="font-medium">Área:</strong> No especificada
+  </p>
+)}
+
 
           {article['Palabras clave'] && (
             <div className="flex flex-wrap gap-2">

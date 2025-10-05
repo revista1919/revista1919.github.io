@@ -148,6 +148,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
       background-color: #f9f9f9;
       margin: 0;
       padding: 0;
+      box-sizing: border-box;
     }
     .container {
       max-width: 900px;
@@ -156,6 +157,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
       background: white;
       box-shadow: 0 0 20px rgba(0,0,0,0.05);
       border-radius: 8px;
+      box-sizing: border-box;
     }
     header {
       text-align: center;
@@ -209,12 +211,15 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
       border: 1px solid #ddd;
       border-radius: 4px;
       margin-top: 1rem;
+      box-sizing: border-box;
     }
     .buttons {
       display: flex;
       flex-wrap: wrap;
       gap: 1rem;
       margin-top: 1rem;
+      max-width: 100%;
+      box-sizing: border-box;
     }
     .button {
       padding: 0.7rem 1.5rem;
@@ -222,6 +227,9 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
       text-decoration: none;
       font-weight: bold;
       transition: background 0.3s;
+      flex: 1 1 100%;
+      text-align: center;
+      box-sizing: border-box;
     }
     .open-pdf {
       background: #3498db;
@@ -260,14 +268,16 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
         font-size: 1.5rem;
       }
       .pdf-preview {
-        height: 400px;
+        height: 60vh;
+        min-height: 300px;
       }
       .buttons {
         flex-direction: column;
+        gap: 0.5rem;
       }
       .button {
         width: 100%;
-        text-align: center;
+        max-width: 100%;
       }
     }
     @media (max-width: 480px) {
@@ -278,7 +288,8 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
         font-size: 1rem;
       }
       .pdf-preview {
-        height: 300px;
+        height: 50vh;
+        min-height: 250px;
       }
     }
   </style>
@@ -367,6 +378,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
       background-color: #f9f9f9;
       margin: 0;
       padding: 0;
+      box-sizing: border-box;
     }
     .container {
       max-width: 900px;
@@ -375,6 +387,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
       background: white;
       box-shadow: 0 0 20px rgba(0,0,0,0.05);
       border-radius: 8px;
+      box-sizing: border-box;
     }
     header {
       text-align: center;
@@ -428,12 +441,15 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
       border: 1px solid #ddd;
       border-radius: 4px;
       margin-top: 1rem;
+      box-sizing: border-box;
     }
     .buttons {
       display: flex;
       flex-wrap: wrap;
       gap: 1rem;
       margin-top: 1rem;
+      max-width: 100%;
+      box-sizing: border-box;
     }
     .button {
       padding: 0.7rem 1.5rem;
@@ -441,6 +457,9 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
       text-decoration: none;
       font-weight: bold;
       transition: background 0.3s;
+      flex: 1 1 100%;
+      text-align: center;
+      box-sizing: border-box;
     }
     .open-pdf {
       background: #3498db;
@@ -479,14 +498,16 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
         font-size: 1.5rem;
       }
       .pdf-preview {
-        height: 400px;
+        height: 60vh;
+        min-height: 300px;
       }
       .buttons {
         flex-direction: column;
+        gap: 0.5rem;
       }
       .button {
         width: 100%;
-        text-align: center;
+        max-width: 100%;
       }
     }
     @media (max-width: 480px) {
@@ -497,7 +518,8 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
         font-size: 1rem;
       }
       .pdf-preview {
-        height: 300px;
+        height: 50vh;
+        min-height: 250px;
       }
     }
   </style>
