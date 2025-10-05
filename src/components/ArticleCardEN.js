@@ -142,13 +142,14 @@ function ArticleCardEN({ article }) {
 
   return (
     <div
-      className={`py-4 px-4 sm:px-6 hover:bg-gray-50 transition-colors duration-200 cursor-pointer border-b border-gray-200 last:border-b-0 ${isExpanded ? 'bg-gray-50' : ''}`}
-      onClick={toggleExpand}
-      role="button"
-      tabIndex={0}
-      aria-expanded={isExpanded}
-      aria-label={`Expand article: ${article['Título'] || 'Untitled'}`}
-    >
+  className={`py-4 px-4 sm:px-6 bg-white hover:bg-gray-50 transition-colors duration-200 cursor-pointer border-b border-gray-200 last:border-b-0 ${isExpanded ? 'bg-gray-50' : ''}`}
+  onClick={toggleExpand}
+  role="button"
+  tabIndex={0}
+  aria-expanded={isExpanded}
+  aria-label={`Expand article: ${article['Título'] || 'Untitled'}`}
+>
+
       <h2 className="text-lg sm:text-xl font-semibold text-blue-700 hover:text-blue-800 transition-colors mb-2">
         {article['Título'] || 'Untitled'}
       </h2>

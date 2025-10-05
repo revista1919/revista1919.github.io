@@ -154,7 +154,8 @@ function AppEN() {
   }, []);
 
   // Search and filters
-  const handleSearch = (term, area) => {
+ // Búsqueda y filtros
+const handleSearch = (term, area) => {
   setSearchTerm(term);
   setSelectedArea(area);
 
@@ -170,9 +171,9 @@ function AppEN() {
       area === '' ||
       (article['Área temática'] || '')
         .toLowerCase()
-        .split(';')
-        .map((a) => a.trim())
-        .includes(area.toLowerCase());
+        .split(';')                // separa por ;
+        .map((a) => a.trim())      // limpia espacios en blanco
+        .some((a) => a === area.toLowerCase()); // busca coincidencia exacta
 
     return matchesSearch && matchesArea;
   });
@@ -180,6 +181,7 @@ function AppEN() {
   setFilteredArticles(filtered);
   setVisibleArticles(6);
 };
+
 
 const clearFilters = () => {
   setSearchTerm('');
