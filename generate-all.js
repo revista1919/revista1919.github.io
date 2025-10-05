@@ -110,10 +110,15 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
     fs.writeFileSync(outputJson, JSON.stringify(articles, null, 2), 'utf8');
     console.log(`✅ Archivo generado: ${outputJson} (${articles.length} artículos)`);
 
-    articles.forEach(article => {
+    const path = require('path');
+const fs = require('fs');
+
+articles.forEach(article => {
   const authorsList = article.autores.split(';').map(a => formatAuthorForCitation(a));
   const authorMetaTags = authorsList.map(author => `<meta name="citation_author" content="${author}">`).join('\n');
-  const htmlContent = `
+
+  // Spanish HTML
+  const htmlContentES = `
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -328,9 +333,229 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
 </body>
 </html>
   `.trim();
-  const filePath = path.join(outputHtmlDir, `articulo${article.numeroArticulo}.html`);
-  fs.writeFileSync(filePath, htmlContent, 'utf8');
-  console.log(`Generado HTML de artículo: ${filePath}`);
+  const filePathES = path.join(outputHtmlDir, `articulo${article.numeroArticulo}.html`);
+  fs.writeFileSync(filePathES, htmlContentES, 'utf8');
+  console.log(`Generado HTML de artículo en español: ${filePathES}`);
+
+  // English HTML
+  const htmlContentEN = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="citation_title" content="${article.titulo}">
+  ${authorMetaTags}
+  <meta name="citation_publication_date" content="${article.fecha}">
+  <meta name="citation_journal_title" content="The National Review of Sciences for Students">
+  <meta name="citation_issn" content="1234-5678">
+  <meta name="citation_volume" content="${article.volumen}">
+  <meta name="citation_issue" content="${article.numero}">
+  <meta name="citation_firstpage" content="${article.primeraPagina}">
+  <meta name="citation_lastpage" content="${article.ultimaPagina}">
+  <meta name="citation_pdf_url" content="${article.pdf}">
+  <meta name="citation_abstract_html_url" content="${domain}/articles/articulo${article.numeroArticulo}EN.html">
+  <meta name="citation_abstract" content="${article.englishAbstract}">
+  <meta name="citation_abstract" xml:lang="es" content="${article.resumen}">
+  <meta name="citation_keywords" content="${article.palabras_clave.join('; ')}">
+  <meta name="citation_language" content="en">
+  <meta name="description" content="${article.englishAbstract.substring(0, 160)}...">
+  <meta name="keywords" content="${article.palabras_clave.join(', ')}">
+  <title>${article.titulo} - The National Review of Sciences for Students</title>
+  <link rel="stylesheet" href="/index.css">
+  <style>
+    body {
+      font-family: 'Merriweather', serif;
+      line-height: 1.8;
+      color: #333;
+      background-color: #f9f9f9;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+      background: white;
+      box-shadow: 0 0 20px rgba(0,0,0,0.05);
+      border-radius: 8px;
+    }
+    header {
+      text-align: center;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 1rem;
+      margin-bottom: 2rem;
+    }
+    h1 {
+      font-size: 1.8rem;
+      color: #2c3e50;
+      margin-bottom: 0.5rem;
+    }
+    .authors {
+      font-size: 1.1rem;
+      color: #555;
+      margin-bottom: 1rem;
+    }
+    .meta {
+      font-size: 0.9rem;
+      color: #777;
+      margin-bottom: 0.5rem;
+    }
+    section {
+      margin-bottom: 2rem;
+    }
+    h2 {
+      font-size: 1.3rem;
+      color: #34495e;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    p {
+      text-align: justify;
+    }
+    .keywords {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .keyword {
+      background: #e8f4fd;
+      color: #2980b9;
+      padding: 0.3rem 0.8rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+    }
+    .pdf-preview {
+      width: 100%;
+      height: 600px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-top: 1rem;
+    }
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .button {
+      padding: 0.7rem 1.5rem;
+      border-radius: 4px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: background 0.3s;
+    }
+    .open-pdf {
+      background: #3498db;
+      color: white;
+    }
+    .open-pdf:hover {
+      background: #2980b9;
+    }
+    .download-pdf {
+      background: #27ae60;
+      color: white;
+    }
+    .download-pdf:hover {
+      background: #219a52;
+    }
+    .citations p {
+      background: #f8f8f8;
+      padding: 1rem;
+      border-left: 4px solid #ddd;
+      margin-bottom: 1rem;
+      font-size: 0.95rem;
+    }
+    footer {
+      text-align: center;
+      margin-top: 3rem;
+      padding-top: 1rem;
+      border-top: 1px solid #eee;
+      font-size: 0.85rem;
+      color: #777;
+    }
+    @media (max-width: 768px) {
+      .container {
+        padding: 1.5rem 1rem;
+      }
+      h1 {
+        font-size: 1.5rem;
+      }
+      .pdf-preview {
+        height: 400px;
+      }
+      .buttons {
+        flex-direction: column;
+      }
+      .button {
+        width: 100%;
+        text-align: center;
+      }
+    }
+    @media (max-width: 480px) {
+      h1 {
+        font-size: 1.3rem;
+      }
+      .authors {
+        font-size: 1rem;
+      }
+      .pdf-preview {
+        height: 300px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>${article.titulo}</h1>
+      <p class="authors">${article.autores}</p>
+      <p class="meta"><strong>Publication Date:</strong> ${article.fecha}</p>
+      <p class="meta"><strong>Volume:</strong> ${article.volumen}, <strong>Issue:</strong> ${article.numero}, <strong>Pages:</strong> ${article.primeraPagina}-${article.ultimaPagina}</p>
+      <p class="meta"><strong>Thematic Area:</strong> ${article.area}</p>
+    </header>
+    <main>
+      <section>
+        <h2>Keywords</h2>
+        <div class="keywords">
+          ${article.palabras_clave.map(kw => `<span class="keyword">${kw}</span>`).join('')}
+        </div>
+      </section>
+      <section>
+        <h2>Abstract</h2>
+        <p>${article.englishAbstract}</p>
+      </section>
+      <section>
+        <h2>Resumen (Spanish)</h2>
+        <p>${article.resumen}</p>
+      </section>
+      <section>
+        <h2>PDF Preview</h2>
+        <embed src="${article.pdf}" type="application/pdf" class="pdf-preview" />
+        <div class="buttons">
+          <a href="${article.pdf}" target="_blank" rel="noopener noreferrer" class="button open-pdf">Open PDF in New Tab</a>
+          <a href="${article.pdf}" download class="button download-pdf">Download PDF</a>
+        </div>
+      </section>
+      <section class="citations">
+        <h2>Citations</h2>
+        <p><strong>APA:</strong> ${article.autores}. (${new Date(article.fecha).getFullYear()}). ${article.titulo}. <em>The National Review of Sciences for Students</em>, ${article.volumen}(${article.numero}), ${article.primeraPagina}-${article.ultimaPagina}.</p>
+        <p><strong>MLA:</strong> ${article.autores}. "${article.titulo}." <em>The National Review of Sciences for Students</em>, vol. ${article.volumen}, no. ${article.numero}, ${new Date(article.fecha).getFullYear()}, pp. ${article.primeraPagina}-${article.ultimaPagina}.</p>
+        <p><strong>Chicago:</strong> ${article.autores}. "${article.titulo}." <em>The National Review of Sciences for Students</em> ${article.volumen}, no. ${article.numero} (${new Date(article.fecha).getFullYear()}): ${article.primeraPagina}-${article.ultimaPagina}.</p>
+      </section>
+    </main>
+    <footer>
+      <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
+      <a href="https://www.revistacienciasestudiantes.com/en/articles">Back to Home</a>
+    </footer>
+  </div>
+</body>
+</html>
+  `.trim();
+  const filePathEN = path.join(outputHtmlDir, `articulo${article.numeroArticulo}EN.html`);
+  fs.writeFileSync(filePathEN, htmlContentEN, 'utf8');
+  console.log(`Generado HTML de artículo en inglés: ${filePathEN}`);
 });
 
     // Generar índice de artículos

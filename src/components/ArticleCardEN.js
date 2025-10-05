@@ -42,14 +42,19 @@ function generateSlug(name) {
 function ArticleCardEN({ article }) {
   console.log('Article object received:', article);
 
+  const [isExpanded, setIsExpanded] = useState(false);
   const [showCitations, setShowCitations] = useState(false);
   const [showFullEnglishAbstract, setShowFullEnglishAbstract] = useState(false);
-  const [showFullSpanishAbstract, setShowFullSpanishAbstract] = useState(false);
   const [showSpanishAbstract, setShowSpanishAbstract] = useState(false);
+  const [showFullSpanishAbstract, setShowFullSpanishAbstract] = useState(false);
 
   const journal = 'The National Review of Sciences for Students';
   const pdfUrl = article?.['Número de artículo']
     ? `https://www.revistacienciasestudiantes.com/Articles/Articulo${article['Número de artículo']}.pdf`
+    : null;
+
+  const htmlUrl = article?.['Número de artículo']
+    ? `https://www.revistacienciasestudiantes.com/articles/articulo${article['Número de artículo']}EN.html`
     : null;
 
   const pages = `${article?.['Primera página'] || ''}-${article?.['Última página'] || ''}`.trim() || '';
@@ -118,181 +123,193 @@ function ArticleCardEN({ article }) {
     );
   };
 
+  const toggleExpand = (e) => {
+    // Prevent expansion if clicking on interactive elements
+    const tag = e.target.tagName.toLowerCase();
+    const isInteractive = ['a', 'button', 'span'].includes(tag) || e.target.closest('a, button, span');
+    if (!isInteractive) {
+      setIsExpanded(!isExpanded);
+    }
+  };
+
   if (!article || Object.keys(article).length === 0) {
     return (
-      <div className="article-card bg-white p-4 sm:p-6 rounded-lg shadow-md">
-        No data found for this article.
+      <div className="py-6 px-4 sm:px-6 border-b border-gray-200 last:border-b-0">
+        <p className="text-center text-gray-500 font-medium">No data found for this article.</p>
       </div>
     );
   }
 
   return (
-    <article className="article-card bg-white p-4 sm:p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-      {/* Article Title */}
-      <h2 className="text-lg sm:text-xl font-semibold mb-2 cursor-pointer hover:text-blue-600">
+    <div
+      className={`py-4 px-4 sm:px-6 hover:bg-gray-50 transition-colors duration-200 cursor-pointer border-b border-gray-200 last:border-b-0 ${isExpanded ? 'bg-gray-50' : ''}`}
+      onClick={toggleExpand}
+      role="button"
+      tabIndex={0}
+      aria-expanded={isExpanded}
+      aria-label={`Expand article: ${article['Título'] || 'Untitled'}`}
+    >
+      <h2 className="text-lg sm:text-xl font-semibold text-blue-700 hover:text-blue-800 transition-colors mb-2">
         {article['Título'] || 'Untitled'}
       </h2>
 
-      {/* Authors - Updated to English team pages */}
-      <p className="text-gray-600 text-sm sm:text-base mb-1">
-        <strong>Author(s): </strong>
+      <p className="text-sm text-gray-700 mb-2">
         {article['Autor(es)'] ? (
           article['Autor(es)'].split(';').map((a, idx, arr) => (
-            <span
-              key={idx}
-              className="cursor-pointer hover:text-blue-500 underline"
-              onClick={() => handleAuthorClick(a.trim())}
-            >
-              {a.trim()}
+            <React.Fragment key={idx}>
+              <span
+                className="cursor-pointer hover:text-blue-600 underline transition-colors"
+                onClick={(e) => { e.stopPropagation(); handleAuthorClick(a.trim()); }}
+                role="link"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleAuthorClick(a.trim()); }}
+                aria-label={`View profile of ${a.trim()}`}
+              >
+                {a.trim()}
+              </span>
               {idx < arr.length - 1 ? '; ' : ''}
-            </span>
+            </React.Fragment>
           ))
         ) : (
           'Unknown author'
         )}
       </p>
 
-      {/* Publication Details */}
-      <p className="text-gray-600 text-sm sm:text-base mb-1">
-        <strong>Date:</strong> {parseDateFlexible(article['Fecha'])}
-      </p>
-      <p className="text-gray-600 text-sm sm:text-base mb-2">
-        <strong>Area:</strong> {article['Área temática'] || 'Not specified'}
+      <p className="text-xs text-green-600">
+        {journal} · {getYear(article['Fecha'])} {pages && `· pp. ${pages}`}
       </p>
 
-      {/* Keywords */}
-      {article['Palabras clave'] && (
-        <div className="flex flex-wrap gap-2 mb-3">
-          {article['Palabras clave']
-            .split(/[;,]/)
-            .map((k) => k.trim())
-            .filter(Boolean)
-            .map((kw, idx) => (
-              <span
-                key={idx}
-                className="bg-gray-200 text-gray-800 text-xs sm:text-sm px-2 py-1 rounded-full"
-              >
-                {kw}
-              </span>
-            ))}
-        </div>
+      {!isExpanded && article['Abstract'] && (
+        <p className="text-sm text-gray-700 mt-2 line-clamp-3">
+          {article['Abstract']}
+        </p>
       )}
 
-      {/* ENGLISH ABSTRACT - First (expanded by default for journals) */}
-      {article['Abstract'] && (
-        <div className="mb-4">
-          <h3 className="text-sm font-medium text-gray-800 mb-2 uppercase tracking-wide">
-            Abstract
-          </h3>
-          <p className="text-gray-700 text-sm sm:text-base mb-2">
-            {showFullEnglishAbstract 
-              ? article['Abstract'] 
-              : `${article['Abstract'].slice(0, 150)}...`
-            }
-            {article['Abstract'].length > 150 && (
-              <button
-                className="ml-2 text-blue-500 hover:underline text-xs sm:text-sm"
-                onClick={() => setShowFullEnglishAbstract(!showFullEnglishAbstract)}
-              >
-                {showFullEnglishAbstract ? 'Read less' : 'Read more'}
-              </button>
+      {isExpanded && (
+        <div className="mt-4 space-y-4 animate-fade-in">
+          <p className="text-sm text-gray-800">
+            <strong className="font-medium">Date:</strong> {parseDateFlexible(article['Fecha'])}
+          </p>
+          <p className="text-sm text-gray-800">
+            <strong className="font-medium">Area:</strong> {article['Área temática'] || 'Not specified'}
+          </p>
+
+          {article['Palabras clave'] && (
+            <div className="flex flex-wrap gap-2">
+              {article['Palabras clave']
+                .split(/[;,]/)
+                .map((k) => k.trim())
+                .filter(Boolean)
+                .map((kw, idx) => (
+                  <span
+                    key={idx}
+                    className="bg-blue-100 text-blue-800 text-xs font-medium px-3 py-1 rounded-full shadow-sm"
+                  >
+                    {kw}
+                  </span>
+                ))}
+            </div>
+          )}
+
+          <p className="text-sm text-gray-800">
+            <strong className="font-medium">Abstract: </strong>
+            {article['Abstract'] ? (
+              <>
+                {showFullEnglishAbstract ? article['Abstract'] : `${article['Abstract'].slice(0, 200)}...`}
+                {article['Abstract'].length > 200 && (
+                  <button
+                    className="ml-2 text-blue-600 hover:text-blue-800 underline text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+                    onClick={(e) => { e.stopPropagation(); setShowFullEnglishAbstract(!showFullEnglishAbstract); }}
+                  >
+                    {showFullEnglishAbstract ? 'Read less' : 'Read more'}
+                  </button>
+                )}
+              </>
+            ) : (
+              'Abstract not available'
             )}
           </p>
+
+          <div>
+            <button
+              className="text-blue-600 hover:text-blue-800 underline text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+              onClick={(e) => { e.stopPropagation(); setShowSpanishAbstract(!showSpanishAbstract); }}
+            >
+              {showSpanishAbstract ? 'Hide Spanish abstract' : 'View Spanish abstract'}
+            </button>
+            {showSpanishAbstract && (
+              <p className="text-sm text-gray-800 mt-2 bg-white p-3 rounded-lg shadow-inner">
+                <strong className="font-medium">Resumen: </strong>
+                {article['Resumen'] ? (
+                  <>
+                    {showFullSpanishAbstract ? article['Resumen'] : `${article['Resumen'].slice(0, 200)}...`}
+                    {article['Resumen'].length > 200 && (
+                      <button
+                        className="ml-2 text-blue-600 hover:text-blue-800 underline text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+                        onClick={(e) => { e.stopPropagation(); setShowFullSpanishAbstract(!showFullSpanishAbstract); }}
+                      >
+                        {showFullSpanishAbstract ? 'Leer menos' : 'Leer más'}
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  'Resumen no disponible'
+                )}
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            {pdfUrl && (
+              <>
+                <a
+                  href={pdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm shadow"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Open PDF
+                </a>
+                <a
+                  href={pdfUrl}
+                  download
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm shadow"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Download PDF
+                </a>
+              </>
+            )}
+            {htmlUrl && (
+              <a
+                href={htmlUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm shadow"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Open full page
+              </a>
+            )}
+          </div>
+
+          <button
+            className="text-brown-800 hover:text-brown-900 underline text-sm focus:outline-none focus:ring-2 focus:ring-brown-500 rounded"
+            onClick={(e) => { e.stopPropagation(); setShowCitations(!showCitations); }}
+          >
+            {showCitations ? 'Hide citations' : 'How to cite this article'}
+          </button>
+          {showCitations && (
+            <div className="text-gray-800 text-sm space-y-4 bg-white p-4 rounded-lg shadow-inner break-words">
+              <p><strong className="font-medium">Chicago:</strong> {getChicagoCitation()}</p>
+              <p><strong className="font-medium">APA:</strong> {getApaCitation()}</p>
+              <p><strong className="font-medium">MLA:</strong> {getMlaCitation()}</p>
+            </div>
+          )}
         </div>
       )}
-
-      {/* SPANISH ABSTRACT - Second */}
-      <div className="mb-4">
-        <button
-          className="text-blue-500 hover:underline text-sm sm:text-base mb-2 focus:outline-none"
-          onClick={() => setShowSpanishAbstract(!showSpanishAbstract)}
-        >
-          {showSpanishAbstract ? 'Hide Spanish abstract' : 'View Spanish abstract'}
-        </button>
-        
-        {showSpanishAbstract && (
-          <>
-            <h3 className="text-sm font-medium text-gray-800 mb-2 uppercase tracking-wide mt-2">
-              Resumen
-            </h3>
-            <p className="text-gray-700 text-sm sm:text-base mb-2">
-              {article['Resumen'] ? (
-                <>
-                  {showFullSpanishAbstract 
-                    ? article['Resumen'] 
-                    : `${article['Resumen'].slice(0, 150)}...`
-                  }
-                  {article['Resumen'].length > 150 && (
-                    <button
-                      className="ml-2 text-blue-500 hover:underline text-xs sm:text-sm"
-                      onClick={() => setShowFullSpanishAbstract(!showFullSpanishAbstract)}
-                    >
-                      {showFullSpanishAbstract ? 'Leer menos' : 'Leer más'}
-                    </button>
-                  )}
-                </>
-              ) : (
-                'Resumen no disponible'
-              )}
-            </p>
-          </>
-        )}
-      </div>
-
-      {/* Article Actions */}
-      <div className="flex gap-3 mb-4">
-        {pdfUrl && (
-          <>
-            <a
-              href={pdfUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-              aria-label="View full article"
-            >
-              View Article
-            </a>
-            <a
-              href={pdfUrl}
-              download
-              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-              aria-label="Download PDF"
-            >
-              Download PDF
-            </a>
-          </>
-        )}
-      </div>
-
-      {/* Citation Toggle */}
-      <button
-        className="text-gray-700 hover:text-gray-900 text-sm sm:text-base mb-2 focus:outline-none focus:ring-2 focus:ring-gray-500"
-        onClick={() => setShowCitations(!showCitations)}
-        aria-expanded={showCitations}
-      >
-        {showCitations ? 'Hide citations' : 'How to cite this article'}
-      </button>
-
-      {/* Citation Styles */}
-      {showCitations && (
-        <div className="text-gray-700 text-sm sm:text-base space-y-3 pt-2 border-t border-gray-200">
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-1">Chicago:</h4>
-            <p className="text-sm">{getChicagoCitation()}</p>
-          </div>
-          
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-1">APA:</h4>
-            <p className="text-sm">{getApaCitation()}</p>
-          </div>
-          
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-1">MLA:</h4>
-            <p className="text-sm">{getMlaCitation()}</p>
-          </div>
-        </div>
-      )}
-    </article>
+    </div>
   );
 }
 

@@ -220,7 +220,7 @@ const showLessArticles = () => setVisibleArticles(6);
             onSearch={handleSearch}
             clearFilters={clearFilters}
           />
-          <div className="articles grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mt-6">
+          <div className="articles mt-6">
             {loading ? (
               <p className="text-center text-sm sm:text-base text-gray-600 col-span-full">
                 Cargando...

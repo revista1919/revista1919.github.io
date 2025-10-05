@@ -152,9 +152,15 @@ function ArticleCard({ article }) {
         )}
       </p>
 
-      <p className="text-xs text-gray-500 italic">
+      <p className="text-xs text-green-600">
         {journal} · {getYear(article['Fecha'])} {pages && `· pp. ${pages}`}
       </p>
+
+      {!isExpanded && article['Resumen'] && (
+        <p className="text-sm text-gray-700 mt-2 line-clamp-3">
+          {article['Resumen']}
+        </p>
+      )}
 
       {isExpanded && (
         <div className="mt-4 space-y-4 animate-fade-in">
