@@ -110,15 +110,12 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
     fs.writeFileSync(outputJson, JSON.stringify(articles, null, 2), 'utf8');
     console.log(`✅ Archivo generado: ${outputJson} (${articles.length} artículos)`);
 
-    const path = require('path');
-const fs = require('fs');
-
-articles.forEach(article => {
+    articles.forEach(article => {
   const authorsList = article.autores.split(';').map(a => formatAuthorForCitation(a));
   const authorMetaTags = authorsList.map(author => `<meta name="citation_author" content="${author}">`).join('\n');
 
-  // Spanish HTML
-  const htmlContentES = `
+  // Generar HTML en español
+  const htmlContentEs = `
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -333,12 +330,12 @@ articles.forEach(article => {
 </body>
 </html>
   `.trim();
-  const filePathES = path.join(outputHtmlDir, `articulo${article.numeroArticulo}.html`);
-  fs.writeFileSync(filePathES, htmlContentES, 'utf8');
-  console.log(`Generado HTML de artículo en español: ${filePathES}`);
+  const filePathEs = path.join(outputHtmlDir, `articulo${article.numeroArticulo}.html`);
+  fs.writeFileSync(filePathEs, htmlContentEs, 'utf8');
+  console.log(`Generado HTML de artículo en español: ${filePathEs}`);
 
-  // English HTML
-  const htmlContentEN = `
+  // Generar HTML en inglés
+  const htmlContentEn = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -354,13 +351,12 @@ articles.forEach(article => {
   <meta name="citation_firstpage" content="${article.primeraPagina}">
   <meta name="citation_lastpage" content="${article.ultimaPagina}">
   <meta name="citation_pdf_url" content="${article.pdf}">
-  <meta name="citation_abstract_html_url" content="${domain}/articles/articulo${article.numeroArticulo}EN.html">
+  <meta name="citation_abstract_html_url" content="${domain}/en/articles/articulo${article.numeroArticulo}EN.html">
   <meta name="citation_abstract" content="${article.englishAbstract}">
-  <meta name="citation_abstract" xml:lang="es" content="${article.resumen}">
-  <meta name="citation_keywords" content="${article.palabras_clave.join('; ')}">
+  <meta name="citation_keywords" content="${article.palabras_clave.map(kw => kw).join('; ')}">
   <meta name="citation_language" content="en">
   <meta name="description" content="${article.englishAbstract.substring(0, 160)}...">
-  <meta name="keywords" content="${article.palabras_clave.join(', ')}">
+  <meta name="keywords" content="${article.palabras_clave.map(kw => kw).join(', ')}">
   <title>${article.titulo} - The National Review of Sciences for Students</title>
   <link rel="stylesheet" href="/index.css">
   <style>
@@ -527,10 +523,6 @@ articles.forEach(article => {
         <p>${article.englishAbstract}</p>
       </section>
       <section>
-        <h2>Resumen (Spanish)</h2>
-        <p>${article.resumen}</p>
-      </section>
-      <section>
         <h2>PDF Preview</h2>
         <embed src="${article.pdf}" type="application/pdf" class="pdf-preview" />
         <div class="buttons">
@@ -553,9 +545,9 @@ articles.forEach(article => {
 </body>
 </html>
   `.trim();
-  const filePathEN = path.join(outputHtmlDir, `articulo${article.numeroArticulo}EN.html`);
-  fs.writeFileSync(filePathEN, htmlContentEN, 'utf8');
-  console.log(`Generado HTML de artículo en inglés: ${filePathEN}`);
+  const filePathEn = path.join(outputHtmlDir, `articulo${article.numeroArticulo}EN.html`);
+  fs.writeFileSync(filePathEn, htmlContentEn, 'utf8');
+  console.log(`Generado HTML de artículo en inglés: ${filePathEn}`);
 });
 
     // Generar índice de artículos
