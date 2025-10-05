@@ -1,3 +1,23 @@
+import React, { useState } from 'react';
+
+// Helper functions (assuming these are defined; if not, implement them)
+const getYear = (date) => {
+  if (!date) return 'Desconocido';
+  const parsedDate = new Date(date);
+  return isNaN(parsedDate) ? 'Desconocido' : parsedDate.getFullYear();
+};
+
+const parseDateFlexible = (date) => {
+  if (!date) return 'No disponible';
+  const parsedDate = new Date(date);
+  return isNaN(parsedDate) ? date : parsedDate.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+};
+
+const generateSlug = (name) => {
+  if (!name) return '';
+  return name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+};
+
 function ArticleCard({ article }) {
   console.log('Objeto article recibido:', article);
 
@@ -81,56 +101,70 @@ function ArticleCard({ article }) {
   };
 
   const toggleExpand = (e) => {
-    if (e.target.tagName !== 'A' && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'SPAN') {
+    // Prevent expansion if clicking on interactive elements
+    const tag = e.target.tagName.toLowerCase();
+    const isInteractive = ['a', 'button', 'span'].includes(tag) || e.target.closest('a, button, span');
+    if (!isInteractive) {
       setIsExpanded(!isExpanded);
     }
   };
 
   if (!article || Object.keys(article).length === 0) {
     return (
-      <div className="border-b border-gray-200 py-4">
-        No se encontraron datos para este artículo.
+      <div className="border-b border-gray-200 py-6 px-6 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
+        <p className="text-center text-gray-500 font-medium">No se encontraron datos para este artículo.</p>
       </div>
     );
   }
 
   return (
     <div
-      className={`border-b border-gray-200 py-4 px-4 sm:px-6 hover:bg-gray-50 transition-colors cursor-pointer ${isExpanded ? 'bg-gray-100' : ''}`}
+      className={`border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer overflow-hidden ${isExpanded ? 'bg-gray-50' : 'bg-white'}`}
       onClick={toggleExpand}
+      role="button"
+      tabIndex={0}
+      aria-expanded={isExpanded}
+      aria-label={`Expandir artículo: ${article['Título'] || 'Sin título'}`}
     >
-      <h2 className="text-base sm:text-lg font-medium text-blue-600 hover:underline mb-1">
-        {article['Título'] || 'Sin título'}
-      </h2>
+      <div className="p-4 sm:p-6">
+        <h2 className="text-lg sm:text-xl font-semibold text-blue-700 hover:text-blue-800 transition-colors mb-2">
+          {article['Título'] || 'Sin título'}
+        </h2>
 
-      <p className="text-sm text-gray-700 mb-1">
-        {article['Autor(es)'] ? (
-          article['Autor(es)'].split(';').map((a, idx, arr) => (
-            <span
-              key={idx}
-              className="cursor-pointer hover:text-blue-500 underline"
-              onClick={(e) => { e.stopPropagation(); handleAuthorClick(a.trim()); }}
-            >
-              {a.trim()}
-              {idx < arr.length - 1 ? '; ' : ''}
-            </span>
-          ))
-        ) : (
-          'Autor desconocido'
-        )}
-      </p>
+        <p className="text-sm text-gray-700 mb-2">
+          {article['Autor(es)'] ? (
+            article['Autor(es)'].split(';').map((a, idx, arr) => (
+              <React.Fragment key={idx}>
+                <span
+                  className="cursor-pointer hover:text-blue-600 underline transition-colors"
+                  onClick={(e) => { e.stopPropagation(); handleAuthorClick(a.trim()); }}
+                  role="link"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleAuthorClick(a.trim()); }}
+                  aria-label={`Ver perfil de ${a.trim()}`}
+                >
+                  {a.trim()}
+                </span>
+                {idx < arr.length - 1 ? '; ' : ''}
+              </React.Fragment>
+            ))
+          ) : (
+            'Autor desconocido'
+          )}
+        </p>
 
-      <p className="text-sm text-gray-500">
-        {journal} · {getYear(article['Fecha'])} · {pages && `pp. ${pages}`}
-      </p>
+        <p className="text-xs text-gray-500 italic">
+          {journal} · {getYear(article['Fecha'])} {pages && `· pp. ${pages}`}
+        </p>
+      </div>
 
       {isExpanded && (
-        <div className="mt-4 space-y-4 animate-fadeIn">
-          <p className="text-sm text-gray-700">
-            <strong>Fecha:</strong> {parseDateFlexible(article['Fecha'])}
+        <div className="p-4 sm:p-6 bg-gray-100 border-t border-gray-200 space-y-4 animate-fade-in">
+          <p className="text-sm text-gray-800">
+            <strong className="font-medium">Fecha:</strong> {parseDateFlexible(article['Fecha'])}
           </p>
-          <p className="text-sm text-gray-700">
-            <strong>Área:</strong> {article['Área temática'] || 'No especificada'}
+          <p className="text-sm text-gray-800">
+            <strong className="font-medium">Área:</strong> {article['Área temática'] || 'No especificada'}
           </p>
 
           {article['Palabras clave'] && (
@@ -142,7 +176,7 @@ function ArticleCard({ article }) {
                 .map((kw, idx) => (
                   <span
                     key={idx}
-                    className="bg-gray-200 text-gray-800 text-xs px-2 py-1 rounded-full"
+                    className="bg-blue-100 text-blue-800 text-xs font-medium px-3 py-1 rounded-full shadow-sm"
                   >
                     {kw}
                   </span>
@@ -150,14 +184,14 @@ function ArticleCard({ article }) {
             </div>
           )}
 
-          <p className="text-sm text-gray-700">
-            <strong>Resumen: </strong>
+          <p className="text-sm text-gray-800">
+            <strong className="font-medium">Resumen: </strong>
             {article['Resumen'] ? (
               <>
                 {showFullAbstract ? article['Resumen'] : `${article['Resumen'].slice(0, 200)}...`}
                 {article['Resumen'].length > 200 && (
                   <button
-                    className="ml-2 text-blue-500 hover:underline text-xs"
+                    className="ml-2 text-blue-600 hover:text-blue-800 underline text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
                     onClick={(e) => { e.stopPropagation(); setShowFullAbstract(!showFullAbstract); }}
                   >
                     {showFullAbstract ? 'Leer menos' : 'Leer más'}
@@ -171,13 +205,13 @@ function ArticleCard({ article }) {
 
           <div>
             <button
-              className="text-blue-500 hover:underline text-xs"
+              className="text-blue-600 hover:text-blue-800 underline text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
               onClick={(e) => { e.stopPropagation(); setShowEnglishAbstract(!showEnglishAbstract); }}
             >
               {showEnglishAbstract ? 'Ocultar abstract en inglés' : 'Ver abstract en inglés'}
             </button>
             {showEnglishAbstract && (
-              <p className="text-sm text-gray-700 mt-2">
+              <p className="text-sm text-gray-800 mt-2 bg-white p-3 rounded-lg shadow-inner">
                 {article['Abstract'] || 'Abstract no disponible'}
               </p>
             )}
@@ -190,7 +224,7 @@ function ArticleCard({ article }) {
                   href={pdfUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm shadow"
                   onClick={(e) => e.stopPropagation()}
                 >
                   Abrir PDF
@@ -198,7 +232,7 @@ function ArticleCard({ article }) {
                 <a
                   href={pdfUrl}
                   download
-                  className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs"
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm shadow"
                   onClick={(e) => e.stopPropagation()}
                 >
                   Descargar PDF
@@ -210,7 +244,7 @@ function ArticleCard({ article }) {
                 href={htmlUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 text-xs"
+                className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm shadow"
                 onClick={(e) => e.stopPropagation()}
               >
                 Abrir página completa
@@ -219,16 +253,16 @@ function ArticleCard({ article }) {
           </div>
 
           <button
-            className="text-brown-800 hover:text-brown-700 text-sm focus:outline-none"
+            className="text-brown-800 hover:text-brown-900 underline text-sm focus:outline-none focus:ring-2 focus:ring-brown-500 rounded"
             onClick={(e) => { e.stopPropagation(); setShowCitations(!showCitations); }}
           >
             {showCitations ? 'Ocultar citas' : 'Cómo citar este artículo'}
           </button>
           {showCitations && (
-            <div className="text-gray-700 text-sm space-y-3 break-words">
-              <p><strong>Chicago:</strong> {getChicagoCitation()}</p>
-              <p><strong>APA:</strong> {getApaCitation()}</p>
-              <p><strong>MLA:</strong> {getMlaCitation()}</p>
+            <div className="text-gray-800 text-sm space-y-4 bg-white p-4 rounded-lg shadow-inner break-words">
+              <p><strong className="font-medium">Chicago:</strong> {getChicagoCitation()}</p>
+              <p><strong className="font-medium">APA:</strong> {getApaCitation()}</p>
+              <p><strong className="font-medium">MLA:</strong> {getMlaCitation()}</p>
             </div>
           )}
         </div>
@@ -236,3 +270,5 @@ function ArticleCard({ article }) {
     </div>
   );
 }
+
+export default ArticleCard;
