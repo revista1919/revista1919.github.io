@@ -111,7 +111,7 @@ function ArticleCard({ article }) {
 
   if (!article || Object.keys(article).length === 0) {
     return (
-      <div className="border-b border-gray-200 py-6 px-6 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
+      <div className="py-6 px-4 sm:px-6 border-b border-gray-200 last:border-b-0">
         <p className="text-center text-gray-500 font-medium">No se encontraron datos para este artículo.</p>
       </div>
     );
@@ -119,47 +119,49 @@ function ArticleCard({ article }) {
 
   return (
     <div
-      className={`border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer overflow-hidden ${isExpanded ? 'bg-gray-50' : 'bg-white'}`}
+      className={`py-4 px-4 sm:px-6 hover:bg-gray-50 transition-colors duration-200 cursor-pointer ${isExpanded ? 'bg-gray-50' : ''} border-b border-gray-200 last:border-b-0`}
       onClick={toggleExpand}
       role="button"
       tabIndex={0}
       aria-expanded={isExpanded}
       aria-label={`Expandir artículo: ${article['Título'] || 'Sin título'}`}
     >
-      <div className="p-4 sm:p-6">
-        <h2 className="text-lg sm:text-xl font-semibold text-blue-700 hover:text-blue-800 transition-colors mb-2">
-          {article['Título'] || 'Sin título'}
-        </h2>
+      <h2 className="text-lg sm:text-xl font-semibold text-blue-700 hover:text-blue-800 transition-colors mb-2">
+        {article['Título'] || 'Sin título'}
+      </h2>
 
-        <p className="text-sm text-gray-700 mb-2">
-          {article['Autor(es)'] ? (
-            article['Autor(es)'].split(';').map((a, idx, arr) => (
-              <React.Fragment key={idx}>
-                <span
-                  className="cursor-pointer hover:text-blue-600 underline transition-colors"
-                  onClick={(e) => { e.stopPropagation(); handleAuthorClick(a.trim()); }}
-                  role="link"
-                  tabIndex={0}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleAuthorClick(a.trim()); }}
-                  aria-label={`Ver perfil de ${a.trim()}`}
-                >
-                  {a.trim()}
-                </span>
-                {idx < arr.length - 1 ? '; ' : ''}
-              </React.Fragment>
-            ))
-          ) : (
-            'Autor desconocido'
-          )}
-        </p>
+      <p className="text-sm text-green-700 mb-2">
+        {article['Autor(es)'] ? (
+          article['Autor(es)'].split(';').map((a, idx, arr) => (
+            <React.Fragment key={idx}>
+              <span
+                className="cursor-pointer hover:text-green-800 underline transition-colors"
+                onClick={(e) => { e.stopPropagation(); handleAuthorClick(a.trim()); }}
+                role="link"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleAuthorClick(a.trim()); }}
+                aria-label={`Ver perfil de ${a.trim()}`}
+              >
+                {a.trim()}
+              </span>
+              {idx < arr.length - 1 ? '; ' : ''}
+            </React.Fragment>
+          ))
+        ) : (
+          'Autor desconocido'
+        )}
+      </p>
 
-        <p className="text-xs text-gray-500 italic">
-          {journal} · {getYear(article['Fecha'])} {pages && `· pp. ${pages}`}
-        </p>
-      </div>
+      <p className="text-xs text-gray-600 mb-2">
+        {journal} · {getYear(article['Fecha'])} {pages && `· pp. ${pages}`}
+      </p>
+
+      <p className="text-sm text-gray-800">
+        {article['Resumen'] ? `${article['Resumen'].slice(0, 200)}...` : 'Resumen no disponible'}
+      </p>
 
       {isExpanded && (
-        <div className="p-4 sm:p-6 bg-gray-100 border-t border-gray-200 space-y-4 animate-fade-in">
+        <div className="mt-4 space-y-4 animate-fade-in">
           <p className="text-sm text-gray-800">
             <strong className="font-medium">Fecha:</strong> {parseDateFlexible(article['Fecha'])}
           </p>
@@ -185,7 +187,7 @@ function ArticleCard({ article }) {
           )}
 
           <p className="text-sm text-gray-800">
-            <strong className="font-medium">Resumen: </strong>
+            <strong className="font-medium">Resumen completo: </strong>
             {article['Resumen'] ? (
               <>
                 {showFullAbstract ? article['Resumen'] : `${article['Resumen'].slice(0, 200)}...`}
