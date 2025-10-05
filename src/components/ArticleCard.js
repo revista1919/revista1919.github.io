@@ -1,47 +1,7 @@
-import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-
-function parseDateFlexible(dateStr) {
-  if (!dateStr) return 'Fecha no disponible';
-  let date = new Date(dateStr);
-  if (!isNaN(date)) return date.toLocaleDateString();
-  const parts = dateStr.split(/[\/.-]/);
-  if (parts.length === 3) {
-    let [day, month, year] = parts.map((p) => p.padStart(2, '0'));
-    if (year.length === 2) year = '20' + year;
-    date = new Date(`${year}-${month}-${day}`);
-    if (!isNaN(date)) return date.toLocaleDateString();
-  }
-  return dateStr;
-}
-
-function getYear(dateStr) {
-  if (!dateStr) return 's.f.'; // sin fecha
-  let date = new Date(dateStr);
-  if (!isNaN(date)) return date.getFullYear();
-  const parts = dateStr.split(/[\/.-]/);
-  if (parts.length === 3) {
-    let [day, month, year] = parts.map((p) => p.padStart(2, '0'));
-    if (year.length === 2) year = '20' + year;
-    date = new Date(`${year}-${month}-${day}`);
-    if (!isNaN(date)) return date.getFullYear();
-  }
-  return dateStr;
-}
-
-function generateSlug(name) {
-  if (!name) return '';
-  return name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '');
-}
-
 function ArticleCard({ article }) {
   console.log('Objeto article recibido:', article);
 
+  const [isExpanded, setIsExpanded] = useState(false);
   const [showCitations, setShowCitations] = useState(false);
   const [showFullAbstract, setShowFullAbstract] = useState(false);
   const [showEnglishAbstract, setShowEnglishAbstract] = useState(false);
@@ -49,6 +9,10 @@ function ArticleCard({ article }) {
   const journal = 'Revista Nacional de las Ciencias para Estudiantes';
   const pdfUrl = article?.['Número de artículo']
     ? `https://www.revistacienciasestudiantes.com/Articles/Articulo${article['Número de artículo']}.pdf`
+    : null;
+
+  const htmlUrl = article?.['Número de artículo']
+    ? `https://www.revistacienciasestudiantes.com/articles/articulo${article['Número de artículo']}.html`
     : null;
 
   const pages = `${article?.['Primera página'] || ''}-${article?.['Última página'] || ''}`.trim() || '';
@@ -116,28 +80,36 @@ function ArticleCard({ article }) {
     );
   };
 
+  const toggleExpand = (e) => {
+    if (e.target.tagName !== 'A' && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'SPAN') {
+      setIsExpanded(!isExpanded);
+    }
+  };
+
   if (!article || Object.keys(article).length === 0) {
     return (
-      <div className="article-card bg-white p-4 sm:p-6 rounded-lg shadow-md">
+      <div className="border-b border-gray-200 py-4">
         No se encontraron datos para este artículo.
       </div>
     );
   }
 
   return (
-    <div className="article-card bg-white p-4 sm:p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-      <h2 className="text-lg sm:text-xl font-semibold mb-2 cursor-pointer hover:text-blue-600">
+    <div
+      className={`border-b border-gray-200 py-4 px-4 sm:px-6 hover:bg-gray-50 transition-colors cursor-pointer ${isExpanded ? 'bg-gray-100' : ''}`}
+      onClick={toggleExpand}
+    >
+      <h2 className="text-base sm:text-lg font-medium text-blue-600 hover:underline mb-1">
         {article['Título'] || 'Sin título'}
       </h2>
 
-      <p className="text-gray-600 text-sm sm:text-base mb-1">
-        <strong>Autor(es): </strong>
+      <p className="text-sm text-gray-700 mb-1">
         {article['Autor(es)'] ? (
           article['Autor(es)'].split(';').map((a, idx, arr) => (
             <span
               key={idx}
               className="cursor-pointer hover:text-blue-500 underline"
-              onClick={() => handleAuthorClick(a.trim())}
+              onClick={(e) => { e.stopPropagation(); handleAuthorClick(a.trim()); }}
             >
               {a.trim()}
               {idx < arr.length - 1 ? '; ' : ''}
@@ -148,100 +120,119 @@ function ArticleCard({ article }) {
         )}
       </p>
 
-      <p className="text-gray-600 text-sm sm:text-base mb-1">
-        <strong>Fecha:</strong> {parseDateFlexible(article['Fecha'])}
-      </p>
-      <p className="text-gray-600 text-sm sm:text-base mb-2">
-        <strong>Área:</strong> {article['Área temática'] || 'No especificada'}
+      <p className="text-sm text-gray-500">
+        {journal} · {getYear(article['Fecha'])} · {pages && `pp. ${pages}`}
       </p>
 
-      {article['Palabras clave'] && (
-        <div className="flex flex-wrap gap-2 mb-2">
-          {article['Palabras clave']
-            .split(/[;,]/)
-            .map((k) => k.trim())
-            .filter(Boolean)
-            .map((kw, idx) => (
-              <span
-                key={idx}
-                className="bg-gray-200 text-gray-800 text-xs sm:text-sm px-2 py-1 rounded-full"
-              >
-                {kw}
-              </span>
-            ))}
-        </div>
-      )}
-
-      <p className="text-gray-700 text-sm sm:text-base mb-2">
-        <strong>Resumen: </strong>
-        {article['Resumen'] ? (
-          <>
-            {showFullAbstract ? article['Resumen'] : `${article['Resumen'].slice(0, 100)}...`}
-            {article['Resumen'].length > 100 && (
-              <button
-                className="ml-2 text-blue-500 hover:underline text-xs sm:text-sm"
-                onClick={() => setShowFullAbstract(!showFullAbstract)}
-              >
-                {showFullAbstract ? 'Leer menos' : 'Leer más'}
-              </button>
-            )}
-          </>
-        ) : (
-          'Resumen no disponible'
-        )}
-      </p>
-
-      <div className="mt-2 mb-2">
-        <button
-          className="text-blue-500 hover:underline text-xs sm:text-sm"
-          onClick={() => setShowEnglishAbstract(!showEnglishAbstract)}
-        >
-          {showEnglishAbstract ? 'Ocultar abstract en inglés' : 'Ver abstract en inglés'}
-        </button>
-        {showEnglishAbstract && (
-          <p className="text-gray-700 text-sm sm:text-base mt-2">
-            {article['Abstract'] || 'Abstract no disponible'}
+      {isExpanded && (
+        <div className="mt-4 space-y-4 animate-fadeIn">
+          <p className="text-sm text-gray-700">
+            <strong>Fecha:</strong> {parseDateFlexible(article['Fecha'])}
           </p>
-        )}
-      </div>
+          <p className="text-sm text-gray-700">
+            <strong>Área:</strong> {article['Área temática'] || 'No especificada'}
+          </p>
 
-      <div className="flex gap-3 mb-3">
-        {pdfUrl && (
-          <>
-            <a
-              href={pdfUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs sm:text-sm"
-            >
-              Ver artículo
-            </a>
-            <a
-              href={pdfUrl}
-              download
-              className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs sm:text-sm"
-            >
-              Descargar PDF
-            </a>
-          </>
-        )}
-      </div>
+          {article['Palabras clave'] && (
+            <div className="flex flex-wrap gap-2">
+              {article['Palabras clave']
+                .split(/[;,]/)
+                .map((k) => k.trim())
+                .filter(Boolean)
+                .map((kw, idx) => (
+                  <span
+                    key={idx}
+                    className="bg-gray-200 text-gray-800 text-xs px-2 py-1 rounded-full"
+                  >
+                    {kw}
+                  </span>
+                ))}
+            </div>
+          )}
 
-      <button
-        className="text-brown-800 hover:text-brown-700 text-sm sm:text-base mb-2 focus:outline-none focus:ring-2 focus:ring-brown-800"
-        onClick={() => setShowCitations(!showCitations)}
-      >
-        {showCitations ? 'Ocultar citas' : 'Cómo citar este artículo'}
-      </button>
-      {showCitations && (
-        <div className="text-gray-700 text-sm sm:text-base space-y-3 break-words">
-          <p><strong>Chicago:</strong> {getChicagoCitation()}</p>
-          <p><strong>APA:</strong> {getApaCitation()}</p>
-          <p><strong>MLA:</strong> {getMlaCitation()}</p>
+          <p className="text-sm text-gray-700">
+            <strong>Resumen: </strong>
+            {article['Resumen'] ? (
+              <>
+                {showFullAbstract ? article['Resumen'] : `${article['Resumen'].slice(0, 200)}...`}
+                {article['Resumen'].length > 200 && (
+                  <button
+                    className="ml-2 text-blue-500 hover:underline text-xs"
+                    onClick={(e) => { e.stopPropagation(); setShowFullAbstract(!showFullAbstract); }}
+                  >
+                    {showFullAbstract ? 'Leer menos' : 'Leer más'}
+                  </button>
+                )}
+              </>
+            ) : (
+              'Resumen no disponible'
+            )}
+          </p>
+
+          <div>
+            <button
+              className="text-blue-500 hover:underline text-xs"
+              onClick={(e) => { e.stopPropagation(); setShowEnglishAbstract(!showEnglishAbstract); }}
+            >
+              {showEnglishAbstract ? 'Ocultar abstract en inglés' : 'Ver abstract en inglés'}
+            </button>
+            {showEnglishAbstract && (
+              <p className="text-sm text-gray-700 mt-2">
+                {article['Abstract'] || 'Abstract no disponible'}
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            {pdfUrl && (
+              <>
+                <a
+                  href={pdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Abrir PDF
+                </a>
+                <a
+                  href={pdfUrl}
+                  download
+                  className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Descargar PDF
+                </a>
+              </>
+            )}
+            {htmlUrl && (
+              <a
+                href={htmlUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 text-xs"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Abrir página completa
+              </a>
+            )}
+          </div>
+
+          <button
+            className="text-brown-800 hover:text-brown-700 text-sm focus:outline-none"
+            onClick={(e) => { e.stopPropagation(); setShowCitations(!showCitations); }}
+          >
+            {showCitations ? 'Ocultar citas' : 'Cómo citar este artículo'}
+          </button>
+          {showCitations && (
+            <div className="text-gray-700 text-sm space-y-3 break-words">
+              <p><strong>Chicago:</strong> {getChicagoCitation()}</p>
+              <p><strong>APA:</strong> {getApaCitation()}</p>
+              <p><strong>MLA:</strong> {getMlaCitation()}</p>
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
-
-export default ArticleCard;

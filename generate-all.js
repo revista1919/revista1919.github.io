@@ -111,9 +111,9 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
     console.log(`✅ Archivo generado: ${outputJson} (${articles.length} artículos)`);
 
     articles.forEach(article => {
-      const authorsList = article.autores.split(';').map(a => formatAuthorForCitation(a));
-      const authorMetaTags = authorsList.map(author => `<meta name="citation_author" content="${author}">`).join('\n');
-      const htmlContent = `
+  const authorsList = article.autores.split(';').map(a => formatAuthorForCitation(a));
+  const authorMetaTags = authorsList.map(author => `<meta name="citation_author" content="${author}">`).join('\n');
+  const htmlContent = `
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -134,47 +134,204 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
   <meta name="citation_abstract" xml:lang="en" content="${article.englishAbstract}">
   <meta name="citation_keywords" content="${article.palabras_clave.join('; ')}">
   <meta name="citation_language" content="es">
+  <meta name="description" content="${article.resumen.substring(0, 160)}...">
+  <meta name="keywords" content="${article.palabras_clave.join(', ')}">
   <title>${article.titulo} - La Revista Nacional de Ciencias para Estudiantes</title>
   <link rel="stylesheet" href="/index.css">
+  <style>
+    body {
+      font-family: 'Merriweather', serif;
+      line-height: 1.8;
+      color: #333;
+      background-color: #f9f9f9;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+      background: white;
+      box-shadow: 0 0 20px rgba(0,0,0,0.05);
+      border-radius: 8px;
+    }
+    header {
+      text-align: center;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 1rem;
+      margin-bottom: 2rem;
+    }
+    h1 {
+      font-size: 1.8rem;
+      color: #2c3e50;
+      margin-bottom: 0.5rem;
+    }
+    .authors {
+      font-size: 1.1rem;
+      color: #555;
+      margin-bottom: 1rem;
+    }
+    .meta {
+      font-size: 0.9rem;
+      color: #777;
+      margin-bottom: 0.5rem;
+    }
+    section {
+      margin-bottom: 2rem;
+    }
+    h2 {
+      font-size: 1.3rem;
+      color: #34495e;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    p {
+      text-align: justify;
+    }
+    .keywords {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .keyword {
+      background: #e8f4fd;
+      color: #2980b9;
+      padding: 0.3rem 0.8rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+    }
+    .pdf-preview {
+      width: 100%;
+      height: 600px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-top: 1rem;
+    }
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .button {
+      padding: 0.7rem 1.5rem;
+      border-radius: 4px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: background 0.3s;
+    }
+    .open-pdf {
+      background: #3498db;
+      color: white;
+    }
+    .open-pdf:hover {
+      background: #2980b9;
+    }
+    .download-pdf {
+      background: #27ae60;
+      color: white;
+    }
+    .download-pdf:hover {
+      background: #219a52;
+    }
+    .citations p {
+      background: #f8f8f8;
+      padding: 1rem;
+      border-left: 4px solid #ddd;
+      margin-bottom: 1rem;
+      font-size: 0.95rem;
+    }
+    footer {
+      text-align: center;
+      margin-top: 3rem;
+      padding-top: 1rem;
+      border-top: 1px solid #eee;
+      font-size: 0.85rem;
+      color: #777;
+    }
+    @media (max-width: 768px) {
+      .container {
+        padding: 1.5rem 1rem;
+      }
+      h1 {
+        font-size: 1.5rem;
+      }
+      .pdf-preview {
+        height: 400px;
+      }
+      .buttons {
+        flex-direction: column;
+      }
+      .button {
+        width: 100%;
+        text-align: center;
+      }
+    }
+    @media (max-width: 480px) {
+      h1 {
+        font-size: 1.3rem;
+      }
+      .authors {
+        font-size: 1rem;
+      }
+      .pdf-preview {
+        height: 300px;
+      }
+    }
+  </style>
 </head>
 <body>
-  <header>
-    <h1>${article.titulo}</h1>
-    <h3>${article.autores}</h3>
-    <p><strong>Fecha de publicación:</strong> ${article.fecha}</p>
-    <p><strong>Área temática:</strong> ${article.area}</p>
-  </header>
-  <main>
-    <section>
-      <h2>Resumen</h2>
-      <p>${article.resumen}</p>
-    </section>
-    <section>
-      <h2>Abstract (English)</h2>
-      <p>${article.englishAbstract}</p>
-    </section>
-    <section>
-      <h2>Descargar PDF</h2>
-      <a href="${article.pdf}" target="_blank" download>Descargar PDF</a>
-    </section>
-    <section>
-      <h2>Citas</h2>
-      <p><strong>APA:</strong> ${article.autores}. (${new Date(article.fecha).getFullYear()}). ${article.titulo}. <em>La Revista Nacional de Ciencias para Estudiantes</em>, ${article.volumen}(${article.numero}), ${article.primeraPagina}-${article.ultimaPagina}.</p>
-      <p><strong>MLA:</strong> ${article.autores}. "${article.titulo}." <em>La Revista Nacional de Ciencias para Estudiantes</em>, vol. ${article.volumen}, no. ${article.numero}, ${new Date(article.fecha).getFullYear()}, pp. ${article.primeraPagina}-${article.ultimaPagina}.</p>
-      <p><strong>Chicago:</strong> ${article.autores}. "${article.titulo}." <em>La Revista Nacional de Ciencias para Estudiantes</em> ${article.volumen}, no. ${article.numero} (${new Date(article.fecha).getFullYear()}): ${article.primeraPagina}-${article.ultimaPagina}.</p>
-    </section>
-  </main>
-  <footer>
-    <p>&copy; ${new Date().getFullYear()} La Revista Nacional de Ciencias para Estudiantes</p>
-    <a href="/">Volver al inicio</a>
-  </footer>
+  <div class="container">
+    <header>
+      <h1>${article.titulo}</h1>
+      <p class="authors">${article.autores}</p>
+      <p class="meta"><strong>Fecha de publicación:</strong> ${article.fecha}</p>
+      <p class="meta"><strong>Volumen:</strong> ${article.volumen}, <strong>Número:</strong> ${article.numero}, <strong>Páginas:</strong> ${article.primeraPagina}-${article.ultimaPagina}</p>
+      <p class="meta"><strong>Área temática:</strong> ${article.area}</p>
+    </header>
+    <main>
+      <section>
+        <h2>Palabras clave</h2>
+        <div class="keywords">
+          ${article.palabras_clave.map(kw => `<span class="keyword">${kw}</span>`).join('')}
+        </div>
+      </section>
+      <section>
+        <h2>Resumen</h2>
+        <p>${article.resumen}</p>
+      </section>
+      <section>
+        <h2>Abstract (English)</h2>
+        <p>${article.englishAbstract}</p>
+      </section>
+      <section>
+        <h2>Visualización del PDF</h2>
+        <embed src="${article.pdf}" type="application/pdf" class="pdf-preview" />
+        <div class="buttons">
+          <a href="${article.pdf}" target="_blank" rel="noopener noreferrer" class="button open-pdf">Abrir PDF en nueva pestaña</a>
+          <a href="${article.pdf}" download class="button download-pdf">Descargar PDF</a>
+        </div>
+      </section>
+      <section class="citations">
+        <h2>Citas</h2>
+        <p><strong>APA:</strong> ${article.autores}. (${new Date(article.fecha).getFullYear()}). ${article.titulo}. <em>La Revista Nacional de Ciencias para Estudiantes</em>, ${article.volumen}(${article.numero}), ${article.primeraPagina}-${article.ultimaPagina}.</p>
+        <p><strong>MLA:</strong> ${article.autores}. "${article.titulo}." <em>La Revista Nacional de Ciencias para Estudiantes</em>, vol. ${article.volumen}, no. ${article.numero}, ${new Date(article.fecha).getFullYear()}, pp. ${article.primeraPagina}-${article.ultimaPagina}.</p>
+        <p><strong>Chicago:</strong> ${article.autores}. "${article.titulo}." <em>La Revista Nacional de Ciencias para Estudiantes</em> ${article.volumen}, no. ${article.numero} (${new Date(article.fecha).getFullYear()}): ${article.primeraPagina}-${article.ultimaPagina}.</p>
+      </section>
+    </main>
+    <footer>
+      <p>&copy; ${new Date().getFullYear()} La Revista Nacional de Ciencias para Estudiantes</p>
+      <a href="/">Volver al inicio</a>
+    </footer>
+  </div>
 </body>
 </html>
-      `.trim();
-      const filePath = path.join(outputHtmlDir, `articulo${article.numeroArticulo}.html`);
-      fs.writeFileSync(filePath, htmlContent, 'utf8');
-      console.log(`Generado HTML de artículo: ${filePath}`);
-    });
+  `.trim();
+  const filePath = path.join(outputHtmlDir, `articulo${article.numeroArticulo}.html`);
+  fs.writeFileSync(filePath, htmlContent, 'utf8');
+  console.log(`Generado HTML de artículo: ${filePath}`);
+});
 
     // Generar índice de artículos
     const articlesByYear = articles.reduce((acc, article) => {
