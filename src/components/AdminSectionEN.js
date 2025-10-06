@@ -50,6 +50,12 @@ function AdminSection() {
       name: 'Technical Support Manager',
       description: 'Resolves technical issues related to content uploads, forms, and emails.',
       isPostulable: true,
+      
+    },
+    {
+      name: 'Article Assignment Manager',
+      description: 'Receives, organizes, and channels article submissions to reviewers and editors.',
+      isPostulable: true,
     },
     {
       name: 'Social Media Manager',

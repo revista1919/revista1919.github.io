@@ -28,9 +28,10 @@ function AdminSection() {
     },
     {
       name: 'Editor en Jefe',
-      description: 'Supervisa todos los contenidos y coordina al equipo editorial. Garantiza la calidad de los artículos. Recibe, organiza y canaliza las postulaciones de artículos hacia los revisores.',
+      description: 'Supervisa todos los contenidos y coordina al equipo editorial. Garantiza la calidad de los artículos.',
       isPostulable: true,
     },
+
     {
       name: 'Editor de Sección',
       description: 'Revisa y edita textos de una sección específica (por ejemplo, Opinión, Cultura, Actualidad). Vota por publicar o no un trabajo. Principalmente aplica las correcciones hechas por los revisores. Es el encargado de comunicarse con el autor para solicitar datos y entregar su retroalimentación',
@@ -51,6 +52,12 @@ function AdminSection() {
       description: 'Resuelve problemas técnicos relacionados con la carga de contenidos, formularios y correos.',
       isPostulable: true,
     },
+    {
+      name: 'Encargado de Asignación de Artículos',
+      description: 'Recibe, organiza y canaliza las postulaciones de artículos hacia los revisores y editores',
+      isPostulable: true,
+    },
+    
     {
       name: 'Encargado/a de Redes Sociales',
       description: 'Gestiona las redes sociales (Instagram, X, TikTok, etc.), publica contenido y promueve la revista.',
