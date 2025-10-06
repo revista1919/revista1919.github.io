@@ -142,16 +142,28 @@ export default function TeamSectionEN({ setActiveTab }) {
           {filteredMembers.map((member) => (
             <div
               key={member.nombre}
-              className="bg-gray-50 p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow"
+              className="bg-gray-50 p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow flex items-center space-x-4"
             >
-              <p
-                className="text-base sm:text-lg font-semibold text-blue-600 cursor-pointer hover:underline"
-                onClick={() => handleMemberClick(member.slug)}
-                aria-label={`View information about ${member.nombre}`}
-              >
-                {member.nombre}
-              </p>
-              <p className="text-gray-600 text-sm sm:text-base">{member.roles}</p>
+              {member["Imagen"] && (
+                <img
+                  src={member["Imagen"]}
+                  alt={`Photo of ${member.nombre}`}
+                  className="w-12 h-12 rounded-full object-cover"
+                  onError={(e) => {
+                    e.target.style.display = "none"; // Hide image if it fails to load
+                  }}
+                />
+              )}
+              <div>
+                <p
+                  className="text-base sm:text-lg font-semibold text-blue-600 cursor-pointer hover:underline"
+                  onClick={() => handleMemberClick(member.slug)}
+                  aria-label={`View information about ${member.nombre}`}
+                >
+                  {member.nombre}
+                </p>
+                <p className="text-gray-600 text-sm sm:text-base">{member.roles}</p>
+              </div>
             </div>
           ))}
         </div>
@@ -159,14 +171,14 @@ export default function TeamSectionEN({ setActiveTab }) {
       <div className="mt-8 sm:mt-12 text-center">
         <p className="text-gray-600 text-sm sm:text-lg mb-4 sm:mb-6">
           Our team is constantly growing, and you could be part of it. If you share our passion for science and education, we invite you to join us. Submit your application through the{" "}
-          <span
-            className="text-blue-600 hover:underline font-semibold cursor-pointer"
-            onClick={() => setActiveTab("admin")}
-            aria-label="Go to Administration tab to apply"
+          <a
+            className="text-blue-600 hover:underline font-semibold"
+            href="https://www.revistacienciasestudiantes.com/en/admin"
+            aria-label="Go to Apply for a position page to apply"
           >
-            Administration
-          </span>{" "}
-          tab.
+            Apply for a position!
+          </a>{" "}
+          page.
         </p>
       </div>
     </div>

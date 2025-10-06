@@ -86,26 +86,7 @@
     "node": "20.10.0"
   },
   "reactSnap": {
-    "include": [
-      "/es/articles",
-      "/es/submit",
-      "/es/team",
-      "/es/admin",
-      "/es/about",
-      "/es/guidelines",
-      "/es/faq",
-      "/es/news",
-      "/es/login",
-      "/en/articles",
-      "/en/submit",
-      "/en/team",
-      "/en/admin",
-      "/en/about",
-      "/en/guidelines",
-      "/en/faq",
-      "/en/news",
-      "/en/login"
-    ],
-    "inlineCss": true
+    "inlineCss": true,
+    "include": ["/es", "/en"]
   }
 }

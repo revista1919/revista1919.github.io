@@ -1,4 +1,3 @@
-import { useTranslation } from 'react-i18next';
 import React, { useState, useEffect, useMemo } from 'react';
 import Papa from 'papaparse';
 
@@ -135,21 +134,40 @@ function TeamSection({ setActiveTab }) {
               'div',
               {
                 key: member['Nombre'],
-                className: 'bg-gray-50 p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow',
+                className: 'bg-gray-50 p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow flex items-center space-x-4',
               },
+              // Imagen circular
+              member['Imagen']
+                ? React.createElement(
+                    'img',
+                    {
+                      src: member['Imagen'],
+                      alt: `Foto de ${member['Nombre']}`,
+                      className: 'w-12 h-12 rounded-full object-cover',
+                      onError: (e) => {
+                        e.target.style.display = 'none'; // Ocultar imagen si falla
+                      },
+                    }
+                  )
+                : null,
+              // Contenedor para nombre y rol
               React.createElement(
-                'p',
-                {
-                  className: 'text-base sm:text-lg font-semibold text-blue-600 cursor-pointer hover:underline',
-                  onClick: () => handleMemberClick(member['Nombre']),
-                  'aria-label': `Ver información de ${member['Nombre']}`,
-                },
-                member['Nombre']
-              ),
-              React.createElement(
-                'p',
-                { className: 'text-gray-600 text-sm sm:text-base' },
-                member['Rol en la Revista'] || 'No especificado'
+                'div',
+                null,
+                React.createElement(
+                  'p',
+                  {
+                    className: 'text-base sm:text-lg font-semibold text-blue-600 cursor-pointer hover:underline',
+                    onClick: () => handleMemberClick(member['Nombre']),
+                    'aria-label': `Ver información de ${member['Nombre']}`,
+                  },
+                  member['Nombre']
+                ),
+                React.createElement(
+                  'p',
+                  { className: 'text-gray-600 text-sm sm:text-base' },
+                  member['Rol en la Revista'] || 'No especificado'
+                )
               )
             )
           )
@@ -163,13 +181,13 @@ function TeamSection({ setActiveTab }) {
         { className: 'text-gray-600 text-sm sm:text-lg mb-4 sm:mb-6' },
         'Nuestro equipo está en constante crecimiento, y tú puedes ser parte de él. Si compartes nuestra pasión por la ciencia y la educación, te invitamos a unirte. Envía tu candidatura a través de la pestaña ',
         React.createElement(
-          'span',
+          'a',
           {
-            className: 'text-blue-600 hover:underline font-semibold cursor-pointer',
-            onClick: () => setActiveTab('admin'),
-            'aria-label': 'Ir a la pestaña de Administración para postular',
+            className: 'text-blue-600 hover:underline font-semibold',
+            href: 'https://www.revistacienciasestudiantes.com/es/admin',
+            'aria-label': 'Ir a la pestaña de Postula a algún cargo para postular',
           },
-          'Administración'
+          'Postula a algún cargo!'
         ),
         '.'
       )
