@@ -176,7 +176,7 @@ export default function TeamSectionEN({ setActiveTab }) {
             href="https://www.revistacienciasestudiantes.com/en/admin"
             aria-label="Go to Apply for a position page to apply"
           >
-            Apply for a position!
+            Apply for a Position!
           </a>{" "}
           page.
         </p>

@@ -187,7 +187,7 @@ function TeamSection({ setActiveTab }) {
             href: 'https://www.revistacienciasestudiantes.com/es/admin',
             'aria-label': 'Ir a la pestaña de Postula a algún cargo para postular',
           },
-          'Postula a algún cargo!'
+          '¡Postula a algún cargo!'
         ),
         '.'
       )
