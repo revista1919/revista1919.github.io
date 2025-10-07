@@ -52,17 +52,17 @@ export default function TeamSectionEN({ setActiveTab }) {
 
         // Separar datos especiales
         const advisors = mappedData.filter((data) => {
-          const roles = (data.roles || "").split(",").map((r) => r.trim());
+          const roles = (data.roles || "").split(";").map((r) => r.trim());
           return roles.includes("Academic Advisor");
         });
 
         const institutions = mappedData.filter((data) => {
-          const roles = (data.roles || "").split(",").map((r) => r.trim());
+          const roles = (data.roles || "").split(";").map((r) => r.trim());
           return roles.includes("Partner Institution");
         });
 
         const mainMembers = mappedData.filter((data) => {
-          const roles = (data.roles || "").split(",").map((r) => r.trim());
+          const roles = (data.roles || "").split(";").map((r) => r.trim());
           return !roles.includes("Academic Advisor") && !roles.includes("Partner Institution");
         });
 
@@ -86,7 +86,7 @@ export default function TeamSectionEN({ setActiveTab }) {
   const roles = useMemo(() => {
     const allRoles = mainData.flatMap((data) => {
       const rolesString = data.roles || "Not specified";
-      return rolesString.split(",").map((role) => role.trim()).filter((role) => role);
+      return rolesString.split(";").map((role) => role.trim()).filter((role) => role);
     });
     const uniqueRoles = [...new Set(allRoles)];
     return ["All", ...uniqueRoles.sort()];
@@ -98,7 +98,7 @@ export default function TeamSectionEN({ setActiveTab }) {
 
     return mainData.filter((data) => {
       const memberRoles = (data.roles || "Not specified")
-        .split(",")
+        .split(";")
         .map((role) => role.trim());
       return memberRoles.includes(selectedRole);
     });
