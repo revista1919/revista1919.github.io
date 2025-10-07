@@ -112,6 +112,14 @@ export default function TeamSectionEN({ setActiveTab }) {
     window.location.href = `/team/${memberSlug}.EN.html`;
   };
 
+  const formatRoles = (rolesString) => {
+    return (rolesString || "Not specified")
+      .split(";")
+      .map((role) => role.trim())
+      .filter((role) => role)
+      .join(", ");
+  };
+
   return (
     <div className="container mx-auto px-4 sm:px-6 py-8 bg-white">
       <h1 className="text-3xl sm:text-4xl font-bold text-gray-800 mb-4 sm:mb-6 text-center">
@@ -172,7 +180,7 @@ export default function TeamSectionEN({ setActiveTab }) {
                       >
                         {member.nombre}
                       </p>
-                      <p className="text-gray-600 text-sm sm:text-base">{member.roles}</p>
+                      <p className="text-gray-600 text-sm sm:text-base">{formatRoles(member.roles)}</p>
                     </div>
                   </div>
                 ))}
@@ -220,7 +228,7 @@ export default function TeamSectionEN({ setActiveTab }) {
                   >
                     {member.nombre}
                   </p>
-                  <p className="text-gray-600 text-sm sm:text-base">{member.roles}</p>
+                  <p className="text-gray-600 text-sm sm:text-base">{formatRoles(member.roles)}</p>
                 </div>
               </div>
             ))}
@@ -258,6 +266,7 @@ export default function TeamSectionEN({ setActiveTab }) {
                   >
                     {member.nombre}
                   </a>
+                  <p className="text-gray-600 text-sm sm:text-base">{formatRoles(member.roles)}</p>
                 </div>
               </div>
             ))}

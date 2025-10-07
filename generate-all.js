@@ -845,7 +845,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     </main>
     <footer>
       <p>&copy; ${new Date().getFullYear()} La Revista Nacional de Ciencias para Estudiantes</p>
-      <a href="/sections/news.html">Volver a Noticias</a> | <a href="/">Volver al inicio</a>
+      <a href="/news/index.html">Volver a Noticias</a> | <a href="/">Volver al inicio</a>
     </footer>
   </div>
 </body>
@@ -1018,7 +1018,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     </main>
     <footer>
       <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
-      <a href="/sections/news.html">Back to News</a> | <a href="/">Back to home</a>
+      <a href="/news/index.EN.html">Back to News</a> | <a href="/">Back to home</a>
     </footer>
   </div>
 </body>
@@ -1126,13 +1126,11 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
     const allMembers = teamParsed.data.filter(row => (row['Nombre'] || '').trim() !== '');
 
     for (const member of allMembers) {
+      const roles = (member['Rol en la Revista'] || '').split(';').map(r => r.trim());
+      if (roles.includes('Institución Colaboradora')) continue;
       const nombre = member['Nombre'] || 'Miembro desconocido';
       const slug = generateSlug(nombre);
-      const roles = (member['Rol en la Revista'] || 'No especificado')
-        .split(';')
-        .map(r => r.trim())
-        .filter(r => r)
-        .join(', ') || 'No especificado';
+      const rolesStr = roles.join(', ') || 'No especificado';
       const rolesEn = (member['Role in the Journal'] || 'Not specified')
         .split(';')
         .map(r => r.trim())
@@ -1153,7 +1151,7 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="${descripcion.substring(0, 160)}...">
-  <meta name="keywords" content="${areas}, ${roles}, La Revista Nacional de Ciencias para Estudiantes">
+  <meta name="keywords" content="${areas}, ${rolesStr}, La Revista Nacional de Ciencias para Estudiantes">
   <meta name="author" content="${nombre}">
   <title>${nombre} - Equipo de La Revista Nacional de Ciencias para Estudiantes</title>
   <link rel="stylesheet" href="/index.css">
@@ -1325,7 +1323,7 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
       </div>
       <div class="profile-info">
         <h1>${nombre}</h1>
-        <p class="role">${roles}</p>
+        <p class="role">${rolesStr}</p>
       </div>
     </div>
     <div class="section">
@@ -1553,77 +1551,6 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
       console.log(`Generado HTML de miembro (EN): ${enPath}`);
     }
 
-    // Generar páginas estáticas para las secciones de la SPA
-    const sections = [
-      { name: 'about', label: 'Acerca de', labelEn: 'About', content: 'La Revista Nacional de Ciencias para Estudiantes es una publicación dedicada a promover la investigación científica entre estudiantes.', contentEn: 'The National Review of Sciences for Students is a publication dedicated to promoting scientific research among students.' },
-      { name: 'guidelines', label: 'Guías', labelEn: 'Guidelines', content: 'Guías para autores y revisores de La Revista Nacional de Ciencias para Estudiantes.', contentEn: 'Guidelines for authors and reviewers of The National Review of Sciences for Students.' },
-      { name: 'faq', label: 'Preguntas Frecuentes', labelEn: 'Frequently Asked Questions', content: 'Preguntas frecuentes sobre La Revista Nacional de Ciencias para Estudiantes.', contentEn: 'Frequently asked questions about The National Review of Sciences for Students.' },
-      { name: 'news', label: 'Noticias', labelEn: 'News', content: 'Últimas noticias de La Revista Nacional de Ciencias para Estudiantes.', contentEn: 'Latest news from The National Review of Sciences for Students.' },
-    ];
-
-    sections.forEach(section => {
-      const htmlContentEs = `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="${section.label} - La Revista Nacional de Ciencias para Estudiantes">
-  <meta name="keywords" content="${section.label}, La Revista Nacional de Ciencias para Estudiantes">
-  <title>${section.label} - La Revista Nacional de Ciencias para Estudiantes</title>
-  <link rel="stylesheet" href="/index.css">
-</head>
-<body>
-  <header>
-    <h1>${section.label}</h1>
-  </header>
-  <main>
-    <section class="py-8 max-w-7xl mx-auto">
-      <p>${section.content}</p>
-      <p>Para más información, visita nuestra página principal.</p>
-    </section>
-  </main>
-  <footer>
-    <p>&copy; ${new Date().getFullYear()} La Revista Nacional de Ciencias para Estudiantes</p>
-    <a href="/">Volver al inicio</a>
-  </footer>
-</body>
-</html>`;
-
-      const htmlContentEn = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="${section.labelEn} - The National Review of Sciences for Students">
-  <meta name="keywords" content="${section.labelEn}, The National Review of Sciences for Students">
-  <title>${section.labelEn} - The National Review of Sciences for Students</title>
-  <link rel="stylesheet" href="/index.css">
-</head>
-<body>
-  <header>
-    <h1>${section.labelEn}</h1>
-  </header>
-  <main>
-    <section class="py-8 max-w-7xl mx-auto">
-      <p>${section.contentEn}</p>
-      <p>For more information, visit our main page.</p>
-    </section>
-  </main>
-  <footer>
-    <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
-    <a href="/">Back to home</a>
-  </footer>
-</body>
-</html>`;
-
-      const filePathEs = path.join(sectionsOutputDir, `${section.name}.html`);
-      fs.writeFileSync(filePathEs, htmlContentEs, 'utf8');
-      console.log(`Generado HTML de sección (ES): ${filePathEs}`);
-      const filePathEn = path.join(sectionsOutputDir, `${section.name}.EN.html`);
-      fs.writeFileSync(filePathEn, htmlContentEn, 'utf8');
-      console.log(`Generado HTML de sección (EN): ${filePathEn}`);
-    });
-
     // Pre-renderizar rutas de la SPA
     console.log('🚀 Pre-renderizando las rutas de la aplicación...');
     const appShellPath = path.join(__dirname, 'dist', 'index.html');
@@ -1711,6 +1638,8 @@ ${newsItems.map(item => {
 </url>`;
     }).join('')}
 ${allMembers.map(member => {
+      const roles = (member['Rol en la Revista'] || '').split(';').map(r => r.trim());
+      if (roles.includes('Institución Colaboradora')) return '';
       const slug = generateSlug(member['Nombre']);
       return `
 <url>
@@ -1726,19 +1655,6 @@ ${allMembers.map(member => {
   <priority>0.7</priority>
 </url>`;
     }).join('')}
-${sections.map(section => `
-<url>
-  <loc>${domain}/sections/${section.name}.html</loc>
-  <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
-  <changefreq>monthly</changefreq>
-  <priority>0.7</priority>
-</url>
-<url>
-  <loc>${domain}/sections/${section.name}.EN.html</loc>
-  <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
-  <changefreq>monthly</changefreq>
-  <priority>0.7</priority>
-</url>`).join('')}
 ${spaRoutes.map(route => `
 <url>
   <loc>${domain}${route}/</loc>
@@ -1751,26 +1667,8 @@ ${spaRoutes.map(route => `
     console.log(`Generado sitemap: ${sitemapPath}`);
 
     // Generar robots.txt
-    const robotsContent = `User-agent: Googlebot
-Allow: /articles/
-Allow: /Articles/
-Allow: /news/
-Allow: /team/
-Allow: /sections/
-Allow: /index.css
-Disallow: /search
-Disallow: /login
-Disallow: /admin
-Disallow: /submit
-Disallow: /cart
-Disallow: /api/
-User-agent: *
-Allow: /articles/
-Allow: /Articles/
-Allow: /news/
-Allow: /team/
-Allow: /sections/
-Allow: /index.css
+    const robotsContent = `User-agent: *
+Allow: /
 Disallow: /search
 Disallow: /login
 Disallow: /admin
