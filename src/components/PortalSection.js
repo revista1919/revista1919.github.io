@@ -598,7 +598,7 @@ useEffect(() => {
         exit={{ opacity: 0, height: 0 }}
         className="text-gray-800 bg-gray-50 p-4 rounded-md border border-gray-200 leading-relaxed break-words overflow-hidden"
       >
-        <p className="mb-4">{tutorialText}</p>
+        <div className="mb-4" dangerouslySetInnerHTML={{ __html: tutorialText }} />
       </motion.div>
     );
   };
