@@ -7,7 +7,7 @@ import {
   browserLocalPersistence,
   signOut,
 } from 'firebase/auth';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation, NavLink } from 'react-router-dom';
 import { useLanguage } from './hooks/useLanguage';
 import Header from './components/HeaderEN';
 import SearchAndFilters from './components/SearchAndFiltersEN';
@@ -24,8 +24,10 @@ import LoginSection from './components/LoginSectionEN';
 import PortalSection from './components/PortalSectionEN';
 import NewsSection from './components/NewsSectionEN';
 import './index.css';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
+const isPrerendering = typeof navigator !== 'undefined' && navigator.userAgent.includes('ReactSnap');
 
 function AppEN() {
   const { cleanPath } = useLanguage();
@@ -38,8 +40,8 @@ function AppEN() {
   const [visibleArticles, setVisibleArticles] = useState(6);
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
-  const isPrerendering = typeof navigator !== 'undefined' && navigator.userAgent.includes('ReactSnap');
 
   // Fetch user data from CSV
   const fetchUserData = async (email) => {
@@ -75,6 +77,7 @@ function AppEN() {
       setAuthLoading(false);
       return;
     }
+
     setPersistence(auth, browserLocalPersistence)
       .then(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -145,7 +148,7 @@ function AppEN() {
                 .map((area) => area.trim())
                 .filter(Boolean)
             );
-            const uniqueAreas = [...new Set(allAreas)].sort(); // Sort alphabetically for better UX
+            const uniqueAreas = [...new Set(allAreas)].sort();
             setAreas(uniqueAreas);
 
             setLoading(false);
@@ -181,9 +184,9 @@ function AppEN() {
         area === '' ||
         (article['Área temática'] || '')
           .toLowerCase()
-          .split(';') // Split by semicolon
-          .map((a) => a.trim()) // Trim whitespace
-          .some((a) => a.toLowerCase() === area.toLowerCase()); // Exact match, case-insensitive
+          .split(';')
+          .map((a) => a.trim())
+          .some((a) => a.toLowerCase() === area.toLowerCase());
 
       return matchesSearch && matchesArea;
     });
@@ -221,7 +224,12 @@ function AppEN() {
       label: 'Articles',
       path: '/en/articles',
       component: (
-        <div className="py-8 max-w-7xl mx-auto">
+        <motion.div 
+          className="py-8 max-w-7xl mx-auto"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
           <SearchAndFilters
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
@@ -238,11 +246,18 @@ function AppEN() {
               </p>
             ) : filteredArticles.length === 0 ? (
               <p className="text-center text-sm sm:text-base text-gray-600 col-span-full">
-                No articles found
+                We are currently in the review and collection period for articles. Submit yours via the form in the next tab.
               </p>
             ) : (
-              filteredArticles.slice(0, visibleArticles).map((article) => (
-                <ArticleCard key={article['Título']} article={article} />
+              filteredArticles.slice(0, visibleArticles).map((article, index) => (
+                <motion.div
+                  key={article['Título']}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1, duration: 0.3 }}
+                >
+                  <ArticleCard article={article} />
+                </motion.div>
               ))
             )}
           </div>
@@ -264,7 +279,7 @@ function AppEN() {
               Show Less
             </button>
           )}
-        </div>
+        </motion.div>
       ),
     },
     {
@@ -345,9 +360,15 @@ function AppEN() {
 
   const isLoginActive = location.pathname.includes('login');
 
+  const framerItem = (delay) => ({
+    initial: { opacity: 0, x: -20 },
+    animate: { opacity: 1, x: 0 },
+    transition: { delay: 0.1 * delay, duration: 0.3 }
+  });
+
   return (
     <div className="min-h-screen bg-[#f4ece7] flex flex-col">
-      <Header className="w-full m-0 p-0" />
+      <Header onOpenMenu={() => setIsMenuOpen(true)} />
       <div
         className={`container ${
           user && isLoginActive
@@ -363,6 +384,57 @@ function AppEN() {
           <Route path="/" element={sections.find(s => s.name === 'articles').component} />
         </Routes>
       </div>
+      <AnimatePresence>
+        {isMenuOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              onClick={() => setIsMenuOpen(false)}
+              className="fixed inset-0 bg-black bg-opacity-50 z-40"
+              aria-hidden="true"
+            />
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ duration: 0.3 }}
+              className="fixed top-0 left-0 h-full w-4/5 max-w-xs bg-white shadow-lg z-50 overflow-y-auto"
+            >
+              <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+                <span className="font-medium text-gray-700">Menu</span>
+                <button
+                  onClick={() => setIsMenuOpen(false)}
+                  className="text-gray-600 hover:text-gray-800 focus:outline-none"
+                  aria-label="Close menu"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div className="p-4">
+                {sections.map((section, index) => (
+                  <motion.div key={section.name} {...framerItem(index)}>
+                    <NavLink
+                      to={section.path}
+                      className={({ isActive }) =>
+                        `block py-3 px-4 text-base font-medium rounded-md transition-colors ${isActive ? 'bg-[#5a3e36] text-white' : 'text-gray-700 hover:bg-gray-100'}`
+                      }
+                      onClick={() => setIsMenuOpen(false)}
+                      aria-label={`Go to ${section.label}`}
+                    >
+                      {section.label}
+                    </NavLink>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
       <Footer className="w-full m-0 p-0 mt-auto" />
     </div>
   );
