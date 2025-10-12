@@ -46,7 +46,7 @@ function AppEN() {
   const fetchUserData = async (email) => {
     try {
       const response = await fetch(USERS_CSV, { cache: 'no-store' });
-      if (!response.ok) throw new Error(`Error al cargar CSV: ${response.status}`);
+      if (!response.ok) throw new Error(`Error loading CSV: ${response.status}`);
       const csvText = await response.text();
       const { data } = Papa.parse(csvText, {
         header: true,
@@ -61,12 +61,12 @@ function AppEN() {
       );
       return {
         name: csvUser?.Nombre || email,
-        role: csvUser?.['Rol en la Revista'] || 'Usuario',
+        role: csvUser?.['Rol en la Revista'] || 'User',
         image: csvUser?.Imagen || '',
       };
     } catch (err) {
       console.error('Error fetching user CSV:', err);
-      return { name: email, role: 'Usuario', image: '' };
+      return { name: email, role: 'User', image: '' };
     }
   };
 
@@ -109,7 +109,7 @@ function AppEN() {
         return () => unsubscribe();
       })
       .catch((error) => {
-        console.error('Error al configurar persistencia:', error);
+        console.error('Error setting persistence:', error);
         setAuthLoading(false);
       });
   }, []);
@@ -123,7 +123,7 @@ function AppEN() {
         );
 
         if (!response.ok) {
-          throw new Error(`Error al cargar el archivo CSV: ${response.status}`);
+          throw new Error(`Error loading CSV file: ${response.status}`);
         }
 
         const csvText = await response.text();
@@ -142,7 +142,7 @@ function AppEN() {
                 .map((area) => area.trim())
                 .filter(Boolean)
             );
-            const uniqueAreas = [...new Set(allAreas)].sort(); 
+            const uniqueAreas = [...new Set(allAreas)].sort();
             setAreas(uniqueAreas);
 
             setLoading(false);
@@ -177,9 +177,9 @@ function AppEN() {
         area === '' ||
         (article['Área temática'] || '')
           .toLowerCase()
-          .split(';')                
-          .map((a) => a.trim())      
-          .some((a) => a.toLowerCase() === area.toLowerCase()); 
+          .split(';')
+          .map((a) => a.trim())
+          .some((a) => a.toLowerCase() === area.toLowerCase());
 
       return matchesSearch && matchesArea;
     });
@@ -204,7 +204,7 @@ function AppEN() {
       setUser(null);
       localStorage.removeItem('userData');
     } catch (error) {
-      console.error('Error al cerrar sesión:', error);
+      console.error('Error signing out:', error);
     }
   };
 
@@ -212,7 +212,7 @@ function AppEN() {
     {
       name: 'articles',
       label: 'Articles',
-      path: '/articles',
+      path: '/en/articles',
       component: (
         <motion.div 
           className="py-8 max-w-7xl mx-auto"
@@ -275,19 +275,19 @@ function AppEN() {
     {
       name: 'submit',
       label: 'Submit Article',
-      path: '/submit',
+      path: '/en/submit',
       component: <SubmitSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'team',
       label: 'Our Team',
-      path: '/team',
+      path: '/en/team',
       component: <TeamSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'admin',
       label: 'Apply for a Position!',
-      path: '/admin',
+      path: '/en/admin',
       component: (
         <div className="py-8 max-w-7xl mx-auto">
           <AdminSection />
@@ -297,31 +297,31 @@ function AppEN() {
     {
       name: 'about',
       label: 'About',
-      path: '/about',
+      path: '/en/about',
       component: <AboutSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'guidelines',
       label: 'Guidelines',
-      path: '/guidelines',
+      path: '/en/guidelines',
       component: <GuidelinesSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'faq',
       label: 'FAQ',
-      path: '/faq',
+      path: '/en/faq',
       component: <FAQSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'news',
       label: 'News',
-      path: '/news',
+      path: '/en/news',
       component: <NewsSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'login',
       label: 'Login',
-      path: '/login',
+      path: '/en/login',
       component: (
         <div className={`py-8 ${user ? 'w-full' : 'max-w-lg mx-auto'}`}>
           {!user && (
@@ -369,7 +369,7 @@ function AppEN() {
         <Tabs sections={sections} />
         <Routes>
           {sections.map((section) => (
-            <Route key={section.name} path={section.path} element={section.component} />
+            <Route key={section.name} path={section.path.substring(3)} element={section.component} />
           ))}
           <Route path="/" element={sections.find(s => s.name === 'articles').component} />
         </Routes>
@@ -398,7 +398,7 @@ function AppEN() {
                 <button
                   onClick={() => setIsMenuOpen(false)}
                   className="text-gray-600 hover:text-gray-800 focus:outline-none"
-                  aria-label="Cerrar menú"
+                  aria-label="Close menu"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -414,7 +414,7 @@ function AppEN() {
                         `block py-3 px-4 text-base font-medium rounded-md transition-colors ${isActive ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`
                       }
                       onClick={() => setIsMenuOpen(false)}
-                      aria-label={`Ir a ${section.label}`}
+                      aria-label={`Go to ${section.label}`}
                     >
                       {section.label}
                     </NavLink>
