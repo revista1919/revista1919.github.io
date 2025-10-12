@@ -7,7 +7,7 @@ import {
   browserLocalPersistence,
   signOut,
 } from 'firebase/auth';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation, NavLink } from 'react-router-dom';
 import { useLanguage } from './hooks/useLanguage';
 import Header from './components/Header';
 import SearchAndFilters from './components/SearchAndFilters';
