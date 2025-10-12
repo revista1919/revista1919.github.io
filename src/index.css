@@ -16,83 +16,12 @@ body {
   color: #333333;
 }
 
-/* Tabs container */
-.tabs-container {
-  width: 100%;
-  max-width: 1200px; /* Constrain width for large screens */
-  margin: 0 auto;
-  padding: 0 1rem; /* Add horizontal padding for breathing room */
-}
-
-/* Tabs navigation */
-.tabs-nav {
+/* Navigation bar */
+nav {
   background-color: #ffffff; /* Clean white background */
   border-bottom: 2px solid #e5e7eb; /* Subtle border */
   padding: 0.75rem 0; /* Balanced vertical padding */
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); /* Soft shadow for depth */
-}
-
-/* Tabs scroll container */
-.tabs-scroll-container {
-  display: flex;
-  flex-wrap: nowrap; /* Prevent wrapping for cleaner desktop layout */
-  justify-content: center; /* Center tabs */
-  gap: 1.5rem; /* Increased gap for better spacing */
-  padding: 0.5rem 1rem; /* Consistent padding */
-  max-width: 100%;
-  overflow-x: auto; /* Enable horizontal scroll for overflow */
-  scrollbar-width: none; /* Hide scrollbar for cleaner look */
-}
-
-.tabs-scroll-container::-webkit-scrollbar {
-  display: none; /* Hide scrollbar in WebKit browsers */
-}
-
-/* Tab item */
-.tab-item {
-  padding: 0.75rem 1.5rem; /* Larger padding for better click area */
-  font-size: 1rem;
-  font-weight: 500;
-  color: #4b4b4b; /* Darker text for contrast */
-  background-color: #f3f4f6; /* Neutral background */
-  border-radius: 0.5rem; /* Softer rounded corners */
-  transition: all 0.3s ease;
-  text-decoration: none;
-  white-space: nowrap; /* Prevent text wrapping */
-}
-
-.tab-item.active {
-  background-color: #7f5539; /* Richer active color */
-  color: #ffffff;
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow for active state */
-}
-
-.tab-item:hover {
-  background-color: #e5e7eb; /* Light hover effect */
-  color: #4b4b4b;
-}
-
-.tab-item:focus {
-  outline: none;
-  ring: 2px solid #7f5539; /* Tailwind ring utility equivalent */
-}
-
-/* Mobile dropdown */
-.mobile-dropdown {
-  width: 100%;
-  padding: 0.5rem;
-  font-size: 1rem;
-  font-weight: 500;
-  background-color: #f3f4f6;
-  color: #4b4b4b;
-  border-radius: 0.5rem;
-  border: 1px solid #e5e7eb;
-}
-
-.mobile-dropdown:focus {
-  outline: none;
-  border-color: #7f5539;
-  box-shadow: 0 0 0 3px rgba(127, 85, 57, 0.2);
 }
 
 /* Main content */

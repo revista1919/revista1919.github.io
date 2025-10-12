@@ -24,6 +24,7 @@ import LoginSection from './components/LoginSection';
 import PortalSection from './components/PortalSection';
 import NewsSection from './components/NewsSection';
 import './index.css';
+import { motion } from 'framer-motion'; // Added for site-wide animations
 
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 const isPrerendering = typeof navigator !== 'undefined' && navigator.userAgent.includes('ReactSnap');
@@ -222,7 +223,12 @@ function App() {
       label: 'Artículos',
       path: '/es/articles',
       component: (
-        <div className="py-8 max-w-7xl mx-auto">
+        <motion.div 
+          className="py-8 max-w-7xl mx-auto"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
           <SearchAndFilters
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
@@ -242,8 +248,15 @@ function App() {
                 Actualmente estamos en periodo de revisión y recolección de artículos. Envíanos el tuyo a través del formulario en la siguiente pestaña.
               </p>
             ) : (
-              filteredArticles.slice(0, visibleArticles).map((article) => (
-                <ArticleCard key={article['Título']} article={article} />
+              filteredArticles.slice(0, visibleArticles).map((article, index) => (
+                <motion.div
+                  key={article['Título']}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1, duration: 0.3 }}
+                >
+                  <ArticleCard article={article} />
+                </motion.div>
               ))
             )}
           </div>
@@ -265,7 +278,7 @@ function App() {
               Mostrar menos
             </button>
           )}
-        </div>
+        </motion.div>
       ),
     },
     {
