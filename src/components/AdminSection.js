@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
+import { motion } from 'framer-motion';
 
 function AdminSection() {
   const [selectedRole, setSelectedRole] = useState(null);
@@ -32,7 +32,6 @@ function AdminSection() {
       description: 'Supervisa todos los contenidos y coordina al equipo editorial. Garantiza la calidad de los artículos.',
       isPostulable: true,
     },
-
     {
       name: 'Editor de Sección',
       description: 'Revisa y edita textos de una sección específica (por ejemplo, Opinión, Cultura, Actualidad). Vota por publicar o no un trabajo. Principalmente aplica las correcciones hechas por los revisores. Es el encargado de comunicarse con el autor para solicitar datos y entregar su retroalimentación',
@@ -58,7 +57,6 @@ function AdminSection() {
       description: 'Recibe, organiza y canaliza las postulaciones de artículos hacia los revisores y editores',
       isPostulable: true,
     },
-    
     {
       name: 'Encargado/a de Redes Sociales',
       description: 'Gestiona las redes sociales (Instagram, X, TikTok, etc.), publica contenido y promueve la revista.',
@@ -106,26 +104,41 @@ function AdminSection() {
     setIsModalOpen(false);
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 },
+  };
+
   return (
     <motion.div
-      className="admin-section bg-gray-50 p-6 rounded-xl shadow-lg mt-6"
-      initial={{ opacity: 0, y: 50 }}
+      className="admin-section bg-white p-6 rounded-xl shadow-lg mt-6"
+      initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
       <motion.h2
-        className="text-2xl font-bold mb-4 text-blue-800 text-center"
+        className="text-2xl font-bold mb-4 text-gray-800 text-center"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
+        transition={{ delay: 0.2, duration: 0.5 }}
       >
         Únete a nuestro equipo
       </motion.h2>
       <motion.p
-        className="text-base text-gray-700 mb-6 text-center max-w-2xl mx-auto"
+        className="text-base text-gray-600 mb-6 text-center max-w-2xl mx-auto"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.3 }}
+        transition={{ delay: 0.3, duration: 0.5 }}
       >
         Forma parte de la Revista Nacional de las Ciencias para Estudiantes. Contribuye con tu talento a la divulgación científica y apoya a estudiantes en su camino hacia la investigación. Selecciona un rol para conocer sus funciones o postula a los cargos disponibles. Puedes consultar las políticas de postulación en{' '}
         <a
@@ -133,6 +146,7 @@ function AdminSection() {
           className="text-blue-600 hover:underline"
           target="_blank"
           rel="noopener noreferrer"
+          aria-label="Ver políticas de postulación"
         >
           nuestras políticas de postulación
         </a>
@@ -140,25 +154,25 @@ function AdminSection() {
       </motion.p>
       <motion.div
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"
-        variants={{
-          hidden: { opacity: 0 },
-          show: { opacity: 1, transition: { staggerChildren: 0.1 } }
-        }}
+        variants={containerVariants}
         initial="hidden"
-        animate="show"
+        animate="visible"
       >
         {roles.map((role) => (
           <motion.div
             key={role.name}
-            className={`p-4 rounded-xl shadow-md transition-shadow ${role.isPostulable ? 'bg-green-50 hover:shadow-lg' : 'bg-gray-100 cursor-not-allowed'}`}
-            variants={{
-              hidden: { opacity: 0, scale: 0.95 },
-              show: { opacity: 1, scale: 1 }
-            }}
+            className={`p-4 rounded-xl shadow-md transition-shadow hover:shadow-lg ${
+              role.isPostulable ? 'bg-blue-50' : 'bg-gray-100 cursor-not-allowed'
+            }`}
+            variants={itemVariants}
+            whileHover={{ scale: 1.02 }}
           >
             <p
-              className={`text-lg font-bold ${role.isPostulable ? 'text-green-700 cursor-pointer hover:underline' : 'text-gray-500'}`}
+              className={`text-lg font-semibold ${
+                role.isPostulable ? 'text-blue-600 cursor-pointer hover:underline' : 'text-gray-500'
+              }`}
               onClick={role.isPostulable ? () => handleRoleClick(role) : null}
+              aria-label={`Ver descripción del rol ${role.name}`}
             >
               {role.name}
             </p>
@@ -167,8 +181,9 @@ function AdminSection() {
             </p>
             {role.isPostulable && (
               <button
-                className="mt-2 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+                className="mt-2 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                 onClick={handlePostulateClick}
+                aria-label={`Postular al rol ${role.name}`}
               >
                 Postular
               </button>
@@ -184,22 +199,37 @@ function AdminSection() {
           exit={{ opacity: 0 }}
         >
           <motion.div
-            className="bg-white p-6 rounded-xl max-w-lg max-h-[90vh] overflow-y-auto shadow-xl"
+            className="bg-white p-6 rounded-xl max-w-lg max-h-[90vh] overflow-y-auto mx-4 shadow-xl"
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
           >
-            {/* Contenido del modal similar, con animaciones si deseas */}
-            <h3 className="text-xl font-bold text-blue-800 mb-4">{selectedRole.name}</h3>
-            <p className="text-gray-700">{selectedRole.description}</p>
-            {selectedRole.isPostulable && (
-              <button className="mt-4 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700" onClick={handlePostulateClick}>
-                Postular ahora
+            <div className="flex justify-between items-center mb-4 border-b border-gray-200 pb-2">
+              <h3 className="text-xl font-bold text-gray-800">{selectedRole.name}</h3>
+              <button
+                className="text-gray-500 hover:text-gray-700 text-xl focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full w-8 h-8 flex items-center justify-center"
+                onClick={() => setIsModalOpen(false)}
+                aria-label="Cerrar modal de descripción del rol"
+              >
+                ×
               </button>
-            )}
-            <button className="text-gray-600 hover:text-gray-800" onClick={() => setIsModalOpen(false)}>
-              Cerrar
-            </button>
+            </div>
+            <div className="text-gray-700 text-base">
+              <p className="font-semibold text-blue-600 mb-2">Descripción:</p>
+              <p className="text-gray-600 mb-4">{selectedRole.description}</p>
+              <p className="text-gray-600">
+                {selectedRole.isPostulable ? 'Este cargo está abierto a postulaciones.' : 'Este cargo está definido y no admite postulaciones.'}
+              </p>
+              {selectedRole.isPostulable && (
+                <button
+                  className="mt-4 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+                  onClick={handlePostulateClick}
+                  aria-label={`Postular al rol ${selectedRole.name}`}
+                >
+                  Postular ahora
+                </button>
+              )}
+            </div>
           </motion.div>
         </motion.div>
       )}
