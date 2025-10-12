@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { motion } from 'framer-motion';
 
 function AdminSection() {
   const [selectedRole, setSelectedRole] = useState(null);
@@ -104,123 +105,136 @@ function AdminSection() {
     setIsModalOpen(false);
   };
 
-  return React.createElement(
-    'div',
-    { className: 'admin-section bg-white p-3 sm:p-6 rounded-lg shadow-md mt-3 sm:mt-6' },
-    // Header
-    React.createElement(
-      'h2',
-      { className: 'text-lg sm:text-2xl font-semibold mb-3 sm:mb-4 text-gray-800 text-center' },
-      'Join our team'
-    ),
-    React.createElement(
-      'p',
-      { className: 'text-sm sm:text-base text-gray-600 mb-3 sm:mb-6 text-center max-w-2xl mx-auto' },
-      'Be part of the National Review of Sciences for Students. Contribute your talent to scientific dissemination and support students on their path to research. Select a role to learn about its functions or apply for available positions. You can review the application policies at ',
-      React.createElement(
-        'a',
-        {
-          href: 'https://www.revistacienciasestudiantes.com/policiesAppEN.html',
-          className: 'text-blue-600 hover:underline',
-          target: '_blank',
-          rel: 'noopener noreferrer',
-          'aria-label': 'View application policies'
-        },
-        'our application policies'
-      ),
-      '.'
-    ),
-    // List of roles
-    React.createElement(
-      'div',
-      { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 mb-3 sm:mb-8' },
-      roles.map((role) =>
-        React.createElement(
-          'div',
-          {
-            key: role.name,
-            className: `p-3 sm:p-4 rounded-lg shadow-sm transition-shadow ${
-              role.isPostulable ? 'bg-green-50 hover:shadow-md' : 'bg-gray-100 cursor-not-allowed'
-            }`,
-          },
-          React.createElement(
-            'p',
-            {
-              className: `text-sm sm:text-lg font-semibold ${
-                role.isPostulable ? 'text-green-600 cursor-pointer hover:underline' : 'text-gray-500'
-              }`,
-              onClick: role.isPostulable ? () => handleRoleClick(role) : null,
-              'aria-label': `View description of the role ${role.name}`,
-            },
-            role.name
-          ),
-          React.createElement(
-            'p',
-            { className: 'text-xs sm:text-base text-gray-600' },
-            role.isPostulable ? 'Position open for applications' : 'Position defined'
-          ),
-          role.isPostulable &&
-            React.createElement(
-              'button',
-              {
-                className: 'mt-2 bg-green-500 text-white px-3 py-2 rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm min-h-10 sm:text-base',
-                onClick: handlePostulateClick,
-                'aria-label': `Apply for the role ${role.name}`,
-              },
-              'Apply'
-            )
-        )
-      )
-    ),
-    // Modal for role description
-    isModalOpen &&
-      React.createElement(
-        'div',
-        { className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50' },
-        React.createElement(
-          'div',
-          { className: 'bg-white p-3 sm:p-6 rounded-lg max-w-[90vw] sm:max-w-lg max-h-[90vh] overflow-y-auto mx-2 shadow-lg' },
-          React.createElement(
-            'div',
-            { className: 'flex justify-between items-center mb-2 sm:mb-4 border-b border-gray-200 pb-2' },
-            React.createElement(
-              'h3',
-              { className: 'text-sm sm:text-xl font-bold text-gray-800' },
-              selectedRole.name
-            ),
-            React.createElement(
-              'button',
-              {
-                className: 'text-gray-500 hover:text-gray-700 text-lg sm:text-xl focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full w-8 h-8 flex items-center justify-center',
-                onClick: () => setIsModalOpen(false),
-                'aria-label': 'Close role description modal',
-              },
-              '×'
-            )
-          ),
-          React.createElement(
-            'div',
-            { className: 'text-gray-700 text-sm sm:text-base' },
-            React.createElement('p', { className: 'font-semibold text-blue-600 mb-2' }, 'Description:'),
-            React.createElement('p', { className: 'text-gray-600 mb-3 sm:mb-4' }, selectedRole.description),
-            React.createElement(
-              'p',
-              { className: 'text-gray-600' },
-              selectedRole.isPostulable ? 'This position is open for applications.' : 'This position is defined and does not accept applications.'
-            ),
-            selectedRole.isPostulable &&
-              React.createElement(
-                'button',
-                {
-                  className: 'mt-3 sm:mt-4 bg-green-500 text-white px-3 sm:px-4 py-2 rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm min-h-10 sm:text-base',
-                  onClick: handlePostulateClick,
-                  'aria-label': `Apply for the role ${selectedRole.name}`,
-                },
-                'Apply now'
-              )
-          )
-        )
-      )
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 },
+  };
+
+  return (
+    <motion.div
+      className="admin-section bg-white p-6 rounded-xl shadow-lg mt-6"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      <motion.h2
+        className="text-2xl font-bold mb-4 text-gray-800 text-center"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2, duration: 0.5 }}
+      >
+        Join our team
+      </motion.h2>
+      <motion.p
+        className="text-base text-gray-600 mb-6 text-center max-w-2xl mx-auto"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3, duration: 0.5 }}
+      >
+        Be part of the National Review of Sciences for Students. Contribute your talent to scientific dissemination and support students on their path to research. Select a role to learn about its functions or apply for available positions. You can review the application policies at{' '}
+        <a
+          href="https://www.revistacienciasestudiantes.com/policiesAppEN.html"
+          className="text-blue-600 hover:underline"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="View application policies"
+        >
+          our application policies
+        </a>
+        .
+      </motion.p>
+      <motion.div
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        {roles.map((role) => (
+          <motion.div
+            key={role.name}
+            className={`p-4 rounded-xl shadow-md transition-shadow hover:shadow-lg ${
+              role.isPostulable ? 'bg-blue-50' : 'bg-gray-100 cursor-not-allowed'
+            }`}
+            variants={itemVariants}
+            whileHover={{ scale: 1.02 }}
+          >
+            <p
+              className={`text-lg font-semibold ${
+                role.isPostulable ? 'text-blue-600 cursor-pointer hover:underline' : 'text-gray-500'
+              }`}
+              onClick={role.isPostulable ? () => handleRoleClick(role) : null}
+              aria-label={`View description of the role ${role.name}`}
+            >
+              {role.name}
+            </p>
+            <p className="text-base text-gray-600">
+              {role.isPostulable ? 'Position open for applications' : 'Position defined'}
+            </p>
+            {role.isPostulable && (
+              <button
+                className="mt-2 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+                onClick={handlePostulateClick}
+                aria-label={`Apply for the role ${role.name}`}
+              >
+                Apply
+              </button>
+            )}
+          </motion.div>
+        ))}
+      </motion.div>
+      {isModalOpen && (
+        <motion.div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        >
+          <motion.div
+            className="bg-white p-6 rounded-xl max-w-lg max-h-[90vh] overflow-y-auto mx-4 shadow-xl"
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+          >
+            <div className="flex justify-between items-center mb-4 border-b border-gray-200 pb-2">
+              <h3 className="text-xl font-bold text-gray-800">{selectedRole.name}</h3>
+              <button
+                className="text-gray-500 hover:text-gray-700 text-xl focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full w-8 h-8 flex items-center justify-center"
+                onClick={() => setIsModalOpen(false)}
+                aria-label="Close role description modal"
+              >
+                ×
+              </button>
+            </div>
+            <div className="text-gray-700 text-base">
+              <p className="font-semibold text-blue-600 mb-2">Description:</p>
+              <p className="text-gray-600 mb-4">{selectedRole.description}</p>
+              <p className="text-gray-600">
+                {selectedRole.isPostulable ? 'This position is open for applications.' : 'This position is defined and does not accept applications.'}
+              </p>
+              {selectedRole.isPostulable && (
+                <button
+                  className="mt-4 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+                  onClick={handlePostulateClick}
+                  aria-label={`Apply for the role ${selectedRole.name}`}
+                >
+                  Apply now
+                </button>
+              )}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </motion.div>
   );
 }
 

@@ -27,8 +27,8 @@ function base64DecodeUnicode(str) {
     const decoder = new TextDecoder();
     return decoder.decode(bytes);
   } catch (err) {
-    console.error("Error decoding Base64:", err);
-    return "";
+    console.error('Error decoding Base64:', err);
+    return '';
   }
 }
 
@@ -199,22 +199,22 @@ export default function NewsSectionEN({ className }) {
   }
 
   function decodeBody(body, truncate = false) {
-    if (!body) return <p className="text-[#000000]">No content available.</p>;
+    if (!body) return <p className="text-gray-800">No content available.</p>;
     try {
-      let html = body; // Body is already fetched HTML
+      let html = body;
       if (truncate) {
         html = truncateHTML(html, 200);
       }
       return (
         <div
-          className="ql-editor break-words leading-relaxed text-[#000000] overflow-hidden"
+          className="ql-editor break-words leading-relaxed text-gray-800 overflow-hidden"
           style={{ lineHeight: "1.6", marginBottom: "10px" }}
           dangerouslySetInnerHTML={{ __html: html }}
         />
       );
     } catch (err) {
       console.error("Error decoding body:", err);
-      return <p className="text-[#000000]">Error decoding content.</p>;
+      return <p className="text-gray-800">Error decoding content.</p>;
     }
   }
 
@@ -228,28 +228,63 @@ export default function NewsSectionEN({ className }) {
     window.location.href = `/news/${item.slug}.EN.html`;
   };
 
-  if (loading) return <p className="text-center text-[#000000]">Loading news...</p>;
-  if (error) return <p className="text-center text-red-500">{error}</p>;
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 },
+  };
+
+  if (loading) return <p className="text-center text-gray-600">Loading news...</p>;
+  if (error) return <p className="text-center text-red-600">{error}</p>;
 
   return (
-    <div className={`space-y-6 bg-[#f4ece7] p-6 rounded-lg shadow-md ${className || ""}`}>
-      <h3 className="text-2xl font-semibold text-[#5a3e36]">News</h3>
-      <div className="bg-gradient-to-br from-[#f9f6f2] to-[#f1e7df] p-6 rounded-2xl shadow-lg max-w-2xl mx-auto border border-[#e2d8cf]">
-        <h4 className="text-xl font-semibold text-[#5a3e36] text-center mb-3">
+    <motion.div
+      className={`space-y-6 bg-white p-6 rounded-xl shadow-lg ${className || ""}`}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      <motion.h3
+        className="text-2xl font-bold text-gray-800"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2, duration: 0.5 }}
+      >
+        News
+      </motion.h3>
+      <motion.div
+        className="bg-gray-50 p-6 rounded-xl shadow-md max-w-2xl mx-auto border border-gray-200"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3, duration: 0.5 }}
+      >
+        <h4 className="text-xl font-bold text-gray-800 text-center mb-3">
           Subscribe to our Newsletter
         </h4>
-        <p className="text-center text-[#3e3e3e] mb-6 text-sm">
+        <p className="text-center text-gray-600 mb-6 text-base">
           Receive the latest news and academic articles directly in your email.
         </p>
         {!submitted ? (
-          <div className="flex flex-col sm:flex-row justify-center items-center gap-3">
+          <form
+            onSubmit={handleSubmit}
+            className="flex flex-col sm:flex-row justify-center items-center gap-3"
+          >
             <input
               type="text"
               placeholder="Your name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              className="px-4 py-2 rounded-lg border border-gray-300 w-full sm:flex-1 text-[#000000] shadow-sm focus:outline-none focus:ring-2 focus:ring-[#800020] transition"
+              className="px-4 py-2 rounded-lg border border-gray-300 w-full sm:flex-1 text-gray-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
             />
             <input
               type="email"
@@ -257,43 +292,49 @@ export default function NewsSectionEN({ className }) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="px-4 py-2 rounded-lg border border-gray-300 w-full sm:flex-1 text-[#000000] shadow-sm focus:outline-none focus:ring-2 focus:ring-[#800020] transition"
+              className="px-4 py-2 rounded-lg border border-gray-300 w-full sm:flex-1 text-gray-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
             />
             <button
-              onClick={handleSubmit}
-              className="bg-[#800020] text-white px-6 py-2 rounded-lg font-medium shadow-md hover:bg-[#5a0015] transition-colors duration-200"
+              type="submit"
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium shadow-md hover:bg-blue-700 transition-colors duration-200"
             >
               Subscribe
             </button>
-          </div>
+          </form>
         ) : (
-          <p className="text-green-700 font-semibold text-center mt-4">
+          <p className="text-green-600 font-semibold text-center mt-4">
             Thank you for subscribing!
           </p>
         )}
-      </div>
+      </motion.div>
       <input
         type="text"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
-        className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#5a3e36] bg-white text-[#000000]"
+        className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-800"
         placeholder="Search news..."
       />
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <motion.div
+        className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
         {filteredNews.length === 0 ? (
-          <p className="text-center text-[#000000] col-span-full">
+          <p className="text-center text-gray-600 col-span-full">
             No news found.
           </p>
         ) : (
           filteredNews.slice(0, visibleNews).map((item, idx) => (
             <motion.div
               key={idx}
-              whileHover={{ scale: 1.015 }}
-              className="bg-white p-5 rounded-2xl shadow-lg cursor-pointer flex flex-col border border-gray-100 hover:shadow-xl transition"
+              variants={itemVariants}
+              whileHover={{ scale: 1.02 }}
+              className="bg-gray-50 p-5 rounded-xl shadow-md cursor-pointer flex flex-col border border-gray-200 hover:shadow-lg transition"
               onClick={() => openNews(item)}
             >
               <h4
-                className="text-lg font-semibold text-[#5a3e36] mb-2 leading-snug"
+                className="text-lg font-bold text-blue-600 mb-2 leading-snug"
                 style={{
                   display: "-webkit-box",
                   WebkitLineClamp: 2,
@@ -305,7 +346,7 @@ export default function NewsSectionEN({ className }) {
               </h4>
               <p className="text-sm text-gray-500 mb-3 italic">{item.fecha}</p>
               <div
-                className="text-[#000000] text-sm leading-relaxed overflow-hidden"
+                className="text-gray-800 text-sm leading-relaxed overflow-hidden"
                 style={{
                   display: "-webkit-box",
                   WebkitLineClamp: 3,
@@ -318,17 +359,17 @@ export default function NewsSectionEN({ className }) {
             </motion.div>
           ))
         )}
-      </div>
+      </motion.div>
       {!loading && filteredNews.length > visibleNews && (
         <div className="text-center mt-6">
           <button
-            className="bg-[#5a3e36] text-white px-4 py-2 rounded-md hover:bg-[#7a5c4f] focus:outline-none focus:ring-2 focus:ring-[#5a3e36] text-sm sm:text-base"
+            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
             onClick={loadMoreNews}
           >
             View more
           </button>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
