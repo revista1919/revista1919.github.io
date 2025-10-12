@@ -43,11 +43,10 @@ function AppEN() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
 
-  // Fetch user data from CSV
   const fetchUserData = async (email) => {
     try {
       const response = await fetch(USERS_CSV, { cache: 'no-store' });
-      if (!response.ok) throw new Error(`Error loading CSV: ${response.status}`);
+      if (!response.ok) throw new Error(`Error al cargar CSV: ${response.status}`);
       const csvText = await response.text();
       const { data } = Papa.parse(csvText, {
         header: true,
@@ -62,16 +61,15 @@ function AppEN() {
       );
       return {
         name: csvUser?.Nombre || email,
-        role: csvUser?.['Rol en la Revista'] || 'User',
+        role: csvUser?.['Rol en la Revista'] || 'Usuario',
         image: csvUser?.Imagen || '',
       };
     } catch (err) {
       console.error('Error fetching user CSV:', err);
-      return { name: email, role: 'User', image: '' };
+      return { name: email, role: 'Usuario', image: '' };
     }
   };
 
-  // Authentication persistence and state
   useEffect(() => {
     if (isPrerendering) {
       setAuthLoading(false);
@@ -81,7 +79,6 @@ function AppEN() {
     setPersistence(auth, browserLocalPersistence)
       .then(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-          console.log('onAuthStateChanged fired:', firebaseUser ? firebaseUser.email : 'No user');
           if (firebaseUser) {
             const storedUser = JSON.parse(localStorage.getItem('userData'));
             let userData;
@@ -103,23 +100,20 @@ function AppEN() {
               localStorage.setItem('userData', JSON.stringify(userData));
             }
             setUser(userData);
-            console.log('Authenticated user:', userData);
           } else {
             setUser(null);
             localStorage.removeItem('userData');
-            console.log('No authenticated user');
           }
           setAuthLoading(false);
         });
         return () => unsubscribe();
       })
       .catch((error) => {
-        console.error('Error setting persistence:', error);
+        console.error('Error al configurar persistencia:', error);
         setAuthLoading(false);
       });
   }, []);
 
-  // Fetch articles CSV
   useEffect(() => {
     const fetchArticles = async () => {
       try {
@@ -129,7 +123,7 @@ function AppEN() {
         );
 
         if (!response.ok) {
-          throw new Error(`Error loading CSV file: ${response.status}`);
+          throw new Error(`Error al cargar el archivo CSV: ${response.status}`);
         }
 
         const csvText = await response.text();
@@ -148,7 +142,7 @@ function AppEN() {
                 .map((area) => area.trim())
                 .filter(Boolean)
             );
-            const uniqueAreas = [...new Set(allAreas)].sort();
+            const uniqueAreas = [...new Set(allAreas)].sort(); 
             setAreas(uniqueAreas);
 
             setLoading(false);
@@ -167,7 +161,6 @@ function AppEN() {
     fetchArticles();
   }, []);
 
-  // Search and filters
   const handleSearch = (term, area) => {
     setSearchTerm(term);
     setSelectedArea(area);
@@ -184,9 +177,9 @@ function AppEN() {
         area === '' ||
         (article['Área temática'] || '')
           .toLowerCase()
-          .split(';')
-          .map((a) => a.trim())
-          .some((a) => a.toLowerCase() === area.toLowerCase());
+          .split(';')                
+          .map((a) => a.trim())      
+          .some((a) => a.toLowerCase() === area.toLowerCase()); 
 
       return matchesSearch && matchesArea;
     });
@@ -205,24 +198,21 @@ function AppEN() {
   const loadMoreArticles = () => setVisibleArticles((prev) => prev + 6);
   const showLessArticles = () => setVisibleArticles(6);
 
-  // Manual logout
   const handleLogout = async () => {
     try {
       await signOut(auth);
       setUser(null);
       localStorage.removeItem('userData');
-      console.log('Logout executed in AppEN.jsx');
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error('Error al cerrar sesión:', error);
     }
   };
 
-  // Tab sections
   const sections = [
     {
       name: 'articles',
       label: 'Articles',
-      path: '/en/articles',
+      path: '/articles',
       component: (
         <motion.div 
           className="py-8 max-w-7xl mx-auto"
@@ -241,11 +231,11 @@ function AppEN() {
           />
           <div className="articles mt-6">
             {loading ? (
-              <p className="text-center text-sm sm:text-base text-gray-600 col-span-full">
+              <p className="text-center text-base text-gray-600 col-span-full">
                 Loading...
               </p>
             ) : filteredArticles.length === 0 ? (
-              <p className="text-center text-sm sm:text-base text-gray-600 col-span-full">
+              <p className="text-center text-base text-gray-600 col-span-full">
                 We are currently in the review and collection period for articles. Submit yours via the form in the next tab.
               </p>
             ) : (
@@ -264,7 +254,7 @@ function AppEN() {
           {!loading && filteredArticles.length > visibleArticles && (
             <div className="text-center mt-6">
               <button
-                className="bg-[#5a3e36] text-white px-4 py-2 rounded-md hover:bg-[#7a5c4f] focus:outline-none focus:ring-2 focus:ring-[#5a3e36] text-sm sm:text-base"
+                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                 onClick={loadMoreArticles}
               >
                 Load More
@@ -273,7 +263,7 @@ function AppEN() {
           )}
           {!loading && visibleArticles > 6 && (
             <button
-              className="fixed bottom-4 right-4 bg-[#5a3e36] text-white px-4 py-2 rounded-md hover:bg-[#7a5c4f] focus:outline-none focus:ring-2 focus:ring-[#5a3e36] z-10 text-sm sm:text-base"
+              className="fixed bottom-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 z-10 text-base"
               onClick={showLessArticles}
             >
               Show Less
@@ -285,19 +275,19 @@ function AppEN() {
     {
       name: 'submit',
       label: 'Submit Article',
-      path: '/en/submit',
+      path: '/submit',
       component: <SubmitSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'team',
       label: 'Our Team',
-      path: '/en/team',
+      path: '/team',
       component: <TeamSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'admin',
       label: 'Apply for a Position!',
-      path: '/en/admin',
+      path: '/admin',
       component: (
         <div className="py-8 max-w-7xl mx-auto">
           <AdminSection />
@@ -307,39 +297,39 @@ function AppEN() {
     {
       name: 'about',
       label: 'About',
-      path: '/en/about',
+      path: '/about',
       component: <AboutSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'guidelines',
       label: 'Guidelines',
-      path: '/en/guidelines',
+      path: '/guidelines',
       component: <GuidelinesSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'faq',
       label: 'FAQ',
-      path: '/en/faq',
+      path: '/faq',
       component: <FAQSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'news',
       label: 'News',
-      path: '/en/news',
+      path: '/news',
       component: <NewsSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'login',
       label: 'Login',
-      path: '/en/login',
+      path: '/login',
       component: (
         <div className={`py-8 ${user ? 'w-full' : 'max-w-lg mx-auto'}`}>
           {!user && (
             <>
-              <h2 className="text-2xl font-semibold text-center text-[#5a3e36] mb-4">
+              <h2 className="text-2xl font-bold text-center text-gray-800 mb-4">
                 Interface for Authors and Reviewers
               </h2>
-              <p className="text-center text-[#7a5c4f] mb-6">
+              <p className="text-center text-gray-600 mb-6">
                 This section is for authors and reviewers/authors with special permissions only.
               </p>
             </>
@@ -367,19 +357,19 @@ function AppEN() {
   });
 
   return (
-    <div className="min-h-screen bg-[#f4ece7] flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header onOpenMenu={() => setIsMenuOpen(true)} />
       <div
         className={`container ${
           user && isLoginActive
             ? 'max-w-full px-0'
-            : 'mx-auto px-4 sm:px-6 lg:px-8'
+            : 'mx-auto px-6 lg:px-8'
         } flex-grow`}
       >
         <Tabs sections={sections} />
         <Routes>
           {sections.map((section) => (
-            <Route key={section.name} path={section.path.substring(3)} element={section.component} />
+            <Route key={section.name} path={section.path} element={section.component} />
           ))}
           <Route path="/" element={sections.find(s => s.name === 'articles').component} />
         </Routes>
@@ -408,7 +398,7 @@ function AppEN() {
                 <button
                   onClick={() => setIsMenuOpen(false)}
                   className="text-gray-600 hover:text-gray-800 focus:outline-none"
-                  aria-label="Close menu"
+                  aria-label="Cerrar menú"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -421,10 +411,10 @@ function AppEN() {
                     <NavLink
                       to={section.path}
                       className={({ isActive }) =>
-                        `block py-3 px-4 text-base font-medium rounded-md transition-colors ${isActive ? 'bg-[#5a3e36] text-white' : 'text-gray-700 hover:bg-gray-100'}`
+                        `block py-3 px-4 text-base font-medium rounded-md transition-colors ${isActive ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`
                       }
                       onClick={() => setIsMenuOpen(false)}
-                      aria-label={`Go to ${section.label}`}
+                      aria-label={`Ir a ${section.label}`}
                     >
                       {section.label}
                     </NavLink>
