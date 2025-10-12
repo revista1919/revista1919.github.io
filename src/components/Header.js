@@ -19,18 +19,21 @@ function Header({ onOpenMenu }) {
       style={{ backgroundColor: '#52262dff' }}
     >
       <div className="container mx-auto flex items-center justify-between">
-        <div className="flex items-center">
-          <button
-            onClick={onOpenMenu}
-            className="flex items-center justify-center w-8 h-8 focus:outline-none mr-4"
-            aria-label="Abrir menú"
-          >
-            <div className="space-y-1">
-              <div className="w-5 h-0.5 bg-white rounded"></div>
-              <div className="w-5 h-0.5 bg-white rounded"></div>
-              <div className="w-5 h-0.5 bg-white rounded"></div>
-            </div>
-          </button>
+        {/* Hamburger Menu Button */}
+        <button
+          onClick={onOpenMenu}
+          className="absolute top-1 left-1 sm:static sm:mr-4 flex items-center justify-center w-8 h-8 focus:outline-none"
+          aria-label="Abrir menú"
+        >
+          <div className="space-y-1">
+            <div className="w-5 h-0.5 bg-white rounded"></div>
+            <div className="w-5 h-0.5 bg-white rounded"></div>
+            <div className="w-5 h-0.5 bg-white rounded"></div>
+          </div>
+        </button>
+
+        {/* Logo and Title Container */}
+        <div className="flex items-center justify-center sm:justify-start w-full sm:w-auto">
           <motion.img
             src={logo}
             alt="Revista Logo"
@@ -48,10 +51,12 @@ function Header({ onOpenMenu }) {
             Revista Nacional de las Ciencias para Estudiantes
           </motion.h1>
         </div>
+
+        {/* Language Toggle Button */}
         <button
           onClick={handleLanguageToggle}
-          className="px-2 py-1 rounded-full text-xs font-medium transition-all duration-200 hover:bg-white hover:bg-opacity-10 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-20 z-10"
-          style={{ 
+          className="absolute top-1 right-1 sm:top-2 sm:right-2 lg:top-2 lg:right-4 px-2 py-1 rounded-full text-xs font-medium transition-all duration-200 hover:bg-white hover:bg-opacity-10 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-20 z-10"
+          style={{
             backgroundColor: 'rgba(255, 255, 255, 0.05)',
             border: '1px solid rgba(255, 255, 255, 0.1)',
           }}
@@ -60,6 +65,8 @@ function Header({ onOpenMenu }) {
           {language === 'es' ? 'EN' : 'ES'}
         </button>
       </div>
+
+      {/* Subtitle */}
       <motion.p
         className="text-cream-100 text-xs sm:text-sm italic font-serif text-center sm:absolute sm:bottom-2 sm:right-4 sm:text-right"
         initial={{ y: 20, opacity: 0 }}
