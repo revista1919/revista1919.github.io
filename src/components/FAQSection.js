@@ -16,7 +16,7 @@ function FAQSection() {
       React.createElement('li', { className: 'mb-2 sm:mb-3' }, React.createElement('strong', null, '¿Cómo es el proceso editorial?'), ' Cuando nos envías tu artículo se le asignan revisores y un editor, este último se comunicará contigo cuando termine la revisión de tu artículo, para disutir cambios u otros temas.'),
       React.createElement('li', { className: 'mb-2 sm:mb-3' }, React.createElement('strong', null, '¿Qué pasará cuando mi artículo se publique?'), ' El artículo aparecerá en nuestra página web y será indexado en Google Académico. Estamos haciendo los procedimientos para conseguir nuestro ISSN. También es posible que te invitemos a nuestro podcast, además de difundirlo en nuestras Redes Sociales'),
       React.createElement('li', { className: 'mb-2 sm:mb-3' }, React.createElement('strong', null, '¿En qué formato envío el artículo?'), ' Word (.docx), estilo Chicago, 2.000–10.000 palabras.'),
-      React.createElement('li', { className: 'mb-2 sm:mb-3' }, React.createElement('strong', null, '¿Cómo puedo postular como administrador?'), ' Desde la pestaña Postula como administrador.')
+      React.createElement('li', { className: 'mb-2 sm:mb-3' }, React.createElement('strong', null, '¿Cómo puedo postular a algún cargo?'), ' Desde la pestaña "¡Postula a algún cargo!".')
     )
   );
 }
