@@ -23,17 +23,11 @@ const base64DecodeUnicode = (str) => {
 
 function generateSlug(name) {
   if (!name) return '';
-  // Convert to lowercase
   name = name.toLowerCase();
-  // Normalize accents
   name = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  // Replace spaces with hyphens
   name = name.replace(/\s+/g, '-');
-  // Remove non-alphanumeric except hyphens
   name = name.replace(/[^a-z0-9-]/g, '');
-  // Remove multiple hyphens
   name = name.replace(/-+/g, '-');
-  // Trim hyphens
   name = name.replace(/^-+|-+$/g, '');
   return name;
 }
@@ -158,7 +152,6 @@ export default function NewsSection({ className }) {
   }
 
   function truncateHTML(html, maxLength = 200) {
-    // Simple HTML truncation: split by paragraphs, take first few, truncate last
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = html;
     const paragraphs = Array.from(tempDiv.querySelectorAll('p, div, h1, h2, h3, ul, ol, img'));
@@ -167,7 +160,6 @@ export default function NewsSection({ className }) {
     for (let elem of paragraphs) {
       const elemText = elem.outerHTML;
       if (charCount + elemText.length > maxLength) {
-        // Truncate the last element
         const textContent = elem.textContent || '';
         if (textContent.length > 0) {
           const remaining = maxLength - charCount;
@@ -182,22 +174,22 @@ export default function NewsSection({ className }) {
   }
 
   function decodeBody(body, truncate = false) {
-    if (!body) return <p className="text-[#000000]">Sin contenido disponible.</p>;
+    if (!body) return <p className="text-gray-800">Sin contenido disponible.</p>;
     try {
       let html = base64DecodeUnicode(body);
       if (truncate) {
-        html = truncateHTML(html, 200); // Short preview for cards
+        html = truncateHTML(html, 200);
       }
       return (
         <div
-          className="ql-editor break-words leading-relaxed text-[#000000] overflow-hidden"
+          className="ql-editor break-words leading-relaxed text-gray-800 overflow-hidden"
           style={{ lineHeight: '1.6', marginBottom: '10px' }}
           dangerouslySetInnerHTML={{ __html: html }}
         />
       );
     } catch (err) {
       console.error('Error decoding body:', err);
-      return <p className="text-[#000000]">Error al decodificar contenido.</p>;
+      return <p className="text-gray-800">Error al decodificar contenido.</p>;
     }
   }
 
@@ -212,17 +204,49 @@ export default function NewsSection({ className }) {
     window.location.href = `/news/${slug}.html`;
   };
 
-  if (loading) return <p className="text-center text-[#000000]">Cargando noticias...</p>;
-  if (error) return <p className="text-center text-red-500">{error}</p>;
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 },
+  };
+
+  if (loading) return <p className="text-center text-gray-600">Cargando noticias...</p>;
+  if (error) return <p className="text-center text-red-600">{error}</p>;
 
   return (
-    <div className={`space-y-6 bg-[#f4ece7] p-6 rounded-lg shadow-md ${className || ""}`}>
-      <h3 className="text-2xl font-semibold text-[#5a3e36]">Noticias</h3>
-      <div className="bg-gradient-to-br from-[#f9f6f2] to-[#f1e7df] p-6 rounded-2xl shadow-lg max-w-2xl mx-auto border border-[#e2d8cf]">
-        <h4 className="text-xl font-semibold text-[#5a3e36] text-center mb-3">
+    <motion.div
+      className={`space-y-6 bg-white p-6 rounded-xl shadow-lg ${className || ""}`}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      <motion.h3
+        className="text-2xl font-bold text-gray-800"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2, duration: 0.5 }}
+      >
+        Noticias
+      </motion.h3>
+      <motion.div
+        className="bg-gray-50 p-6 rounded-xl shadow-md max-w-2xl mx-auto border border-gray-200"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3, duration: 0.5 }}
+      >
+        <h4 className="text-xl font-bold text-gray-800 text-center mb-3">
           Suscríbete a nuestra Newsletter
         </h4>
-        <p className="text-center text-[#3e3e3e] mb-6 text-sm">
+        <p className="text-center text-gray-600 mb-6 text-base">
           Recibe directamente en tu correo las últimas noticias y artículos académicos.
         </p>
         {!enviado ? (
@@ -236,7 +260,7 @@ export default function NewsSection({ className }) {
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
               required
-              className="px-4 py-2 rounded-lg border border-gray-300 w-full sm:flex-1 text-[#000000] shadow-sm focus:outline-none focus:ring-2 focus:ring-[#800020] transition"
+              className="px-4 py-2 rounded-lg border border-gray-300 w-full sm:flex-1 text-gray-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
             />
             <input
               type="email"
@@ -244,43 +268,49 @@ export default function NewsSection({ className }) {
               value={correo}
               onChange={(e) => setCorreo(e.target.value)}
               required
-              className="px-4 py-2 rounded-lg border border-gray-300 w-full sm:flex-1 text-[#000000] shadow-sm focus:outline-none focus:ring-2 focus:ring-[#800020] transition"
+              className="px-4 py-2 rounded-lg border border-gray-300 w-full sm:flex-1 text-gray-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
             />
             <button
               type="submit"
-              className="bg-[#800020] text-white px-6 py-2 rounded-lg font-medium shadow-md hover:bg-[#5a0015] transition-colors duration-200"
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium shadow-md hover:bg-blue-700 transition-colors duration-200"
             >
               Suscribirse
             </button>
           </form>
         ) : (
-          <p className="text-green-700 font-semibold text-center mt-4">
+          <p className="text-green-600 font-semibold text-center mt-4">
             ¡Gracias por suscribirte!
           </p>
         )}
-      </div>
+      </motion.div>
       <input
         type="text"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
-        className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#5a3e36] bg-white text-[#000000]"
+        className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-800"
         placeholder="Buscar noticias..."
       />
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <motion.div
+        className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
         {filteredNews.length === 0 ? (
-          <p className="text-center text-[#000000] col-span-full">
+          <p className="text-center text-gray-600 col-span-full">
             No se encontraron noticias.
           </p>
         ) : (
           filteredNews.slice(0, visibleNews).map((item, idx) => (
             <motion.div
               key={idx}
-              whileHover={{ scale: 1.015 }}
-              className="bg-white p-5 rounded-2xl shadow-lg cursor-pointer flex flex-col border border-gray-100 hover:shadow-xl transition"
+              variants={itemVariants}
+              whileHover={{ scale: 1.02 }}
+              className="bg-gray-50 p-5 rounded-xl shadow-md cursor-pointer flex flex-col border border-gray-200 hover:shadow-lg transition"
               onClick={() => openNews(item)}
             >
               <h4
-                className="text-lg font-semibold text-[#5a3e36] mb-2 leading-snug"
+                className="text-lg font-bold text-blue-600 mb-2 leading-snug"
                 style={{
                   display: "-webkit-box",
                   WebkitLineClamp: 2,
@@ -292,7 +322,7 @@ export default function NewsSection({ className }) {
               </h4>
               <p className="text-sm text-gray-500 mb-3 italic">{item.fecha}</p>
               <div
-                className="text-[#000000] text-sm leading-relaxed overflow-hidden"
+                className="text-gray-800 text-sm leading-relaxed overflow-hidden"
                 style={{
                   display: "-webkit-box",
                   WebkitLineClamp: 3,
@@ -305,17 +335,17 @@ export default function NewsSection({ className }) {
             </motion.div>
           ))
         )}
-      </div>
+      </motion.div>
       {!loading && filteredNews.length > visibleNews && (
         <div className="text-center mt-6">
           <button
-            className="bg-[#5a3e36] text-white px-4 py-2 rounded-md hover:bg-[#7a5c4f] focus:outline-none focus:ring-2 focus:ring-[#5a3e36] text-sm sm:text-base"
+            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
             onClick={loadMoreNews}
           >
             Ver más
           </button>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

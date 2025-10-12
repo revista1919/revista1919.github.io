@@ -1,23 +1,69 @@
 import React from 'react';
-
+import { motion } from 'framer-motion';
 
 function FAQSection() {
-  return React.createElement(
-    'div',
-    { className: 'faq-section bg-white p-4 sm:p-6 rounded-lg shadow-md mt-4 sm:mt-6' },
-    React.createElement('h2', { className: 'text-xl sm:text-2xl font-semibold mb-3 sm:mb-4' }, 'Preguntas Frecuentes'),
-    React.createElement(
-      'ul',
-      { className: 'list-disc pl-4 sm:pl-5 text-sm sm:text-base' },
-      React.createElement('li', { className: 'mb-2 sm:mb-3' }, React.createElement('strong', null, '¿Quién puede publicar?'), ' Cualquier estudiante escolar o universitario del mundo.'),
-      React.createElement('li', { className: 'mb-2 sm:mb-3' }, React.createElement('strong', null, '¿Se puede usar IA para ayudarme a escribir?'), ' No. Será rechazado automáticamente.'),
-      React.createElement('li', { className: 'mb-2 sm:mb-3' }, React.createElement('strong', null, '¿Cuánto se demoran en responder?'), ' Entre 1 y 3 semanas, dependiendo del volumen de solicitudes.'),
-      React.createElement('li', { className: 'mb-2 sm:mb-3' }, React.createElement('strong', null, '¿Cómo se revisa un artículo?'), ' Revisión doble ciego, sin nombre del autor. Hay alumnos y profesores que revisarán tu artículo según tu área.'),
-      React.createElement('li', { className: 'mb-2 sm:mb-3' }, React.createElement('strong', null, '¿Cómo es el proceso editorial?'), ' Cuando nos envías tu artículo se le asignan revisores y un editor, este último se comunicará contigo cuando termine la revisión de tu artículo, para disutir cambios u otros temas.'),
-      React.createElement('li', { className: 'mb-2 sm:mb-3' }, React.createElement('strong', null, '¿Qué pasará cuando mi artículo se publique?'), ' El artículo aparecerá en nuestra página web y será indexado en Google Académico. Estamos haciendo los procedimientos para conseguir nuestro ISSN. También es posible que te invitemos a nuestro podcast, además de difundirlo en nuestras Redes Sociales'),
-      React.createElement('li', { className: 'mb-2 sm:mb-3' }, React.createElement('strong', null, '¿En qué formato envío el artículo?'), ' Word (.docx), estilo Chicago, 2.000–10.000 palabras.'),
-      React.createElement('li', { className: 'mb-2 sm:mb-3' }, React.createElement('strong', null, '¿Cómo puedo postular a algún cargo?'), ' Desde la pestaña "¡Postula a algún cargo!".')
-    )
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 },
+  };
+
+  return (
+    <motion.div
+      className="faq-section bg-white p-6 rounded-xl shadow-lg mt-6"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      <motion.h2
+        className="text-2xl font-bold mb-4 text-gray-800"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2, duration: 0.5 }}
+      >
+        Preguntas Frecuentes
+      </motion.h2>
+      <motion.ul
+        className="list-disc pl-5 text-base"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <motion.li variants={itemVariants} className="mb-3">
+          <strong>¿Quién puede publicar?</strong> Cualquier estudiante escolar o universitario del mundo.
+        </motion.li>
+        <motion.li variants={itemVariants} className="mb-3">
+          <strong>¿Se puede usar IA para ayudarme a escribir?</strong> No. Será rechazado automáticamente.
+        </motion.li>
+        <motion.li variants={itemVariants} className="mb-3">
+          <strong>¿Cuánto se demoran en responder?</strong> Entre 1 y 3 semanas, dependiendo del volumen de solicitudes.
+        </motion.li>
+        <motion.li variants={itemVariants} className="mb-3">
+          <strong>¿Cómo se revisa un artículo?</strong> Revisión doble ciego, sin nombre del autor. Hay alumnos y profesores que revisarán tu artículo según tu área.
+        </motion.li>
+        <motion.li variants={itemVariants} className="mb-3">
+          <strong>¿Cómo es el proceso editorial?</strong> Cuando nos envías tu artículo se le asignan revisores y un editor, este último se comunicará contigo cuando termine la revisión de tu artículo, para disutir cambios u otros temas.
+        </motion.li>
+        <motion.li variants={itemVariants} className="mb-3">
+          <strong>¿Qué pasará cuando mi artículo se publique?</strong> El artículo aparecerá en nuestra página web y será indexado en Google Académico. Estamos haciendo los procedimientos para conseguir nuestro ISSN. También es posible que te invitemos a nuestro podcast, además de difundirlo en nuestras Redes Sociales
+        </motion.li>
+        <motion.li variants={itemVariants} className="mb-3">
+          <strong>¿En qué formato envío el artículo?</strong> Word (.docx), estilo Chicago, 2.000–10.000 palabras.
+        </motion.li>
+        <motion.li variants={itemVariants} className="mb-3">
+          <strong>¿Cómo puedo postular a algún cargo?</strong> Desde la pestaña "¡Postula a algún cargo!".
+        </motion.li>
+      </motion.ul>
+    </motion.div>
   );
 }
 
