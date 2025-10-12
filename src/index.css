@@ -16,14 +16,6 @@ body {
   color: #333333;
 }
 
-/* Navigation bar */
-nav {
-  background-color: #ffffff; /* Clean white background */
-  border-bottom: 2px solid #e5e7eb; /* Subtle border */
-  padding: 0.75rem 0; /* Balanced vertical padding */
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); /* Soft shadow for depth */
-}
-
 /* Main content */
 main {
   flex-grow: 1;

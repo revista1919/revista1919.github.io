@@ -24,7 +24,7 @@ import LoginSection from './components/LoginSection';
 import PortalSection from './components/PortalSection';
 import NewsSection from './components/NewsSection';
 import './index.css';
-import { motion } from 'framer-motion'; // Added for site-wide animations
+import { motion, AnimatePresence } from 'framer-motion';
 
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 const isPrerendering = typeof navigator !== 'undefined' && navigator.userAgent.includes('ReactSnap');
@@ -40,6 +40,7 @@ function App() {
   const [visibleArticles, setVisibleArticles] = useState(6);
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
 
   // Fetch user data from CSV
@@ -359,9 +360,15 @@ function App() {
 
   const isLoginActive = location.pathname.includes('login');
 
+  const framerItem = (delay) => ({
+    initial: { opacity: 0, x: -20 },
+    animate: { opacity: 1, x: 0 },
+    transition: { delay: 0.1 * delay, duration: 0.3 }
+  });
+
   return (
     <div className="min-h-screen bg-[#f4ece7] flex flex-col">
-      <Header className="w-full m-0 p-0" />
+      <Header onOpenMenu={() => setIsMenuOpen(true)} />
       <div
         className={`container ${
           user && isLoginActive
@@ -377,6 +384,57 @@ function App() {
           <Route path="/" element={sections.find(s => s.name === 'articles').component} />
         </Routes>
       </div>
+      <AnimatePresence>
+        {isMenuOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              onClick={() => setIsMenuOpen(false)}
+              className="fixed inset-0 bg-black bg-opacity-50 z-40"
+              aria-hidden="true"
+            />
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ duration: 0.3 }}
+              className="fixed top-0 left-0 h-full w-4/5 max-w-xs bg-white shadow-lg z-50 overflow-y-auto"
+            >
+              <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+                <span className="font-medium text-gray-700">Menú</span>
+                <button
+                  onClick={() => setIsMenuOpen(false)}
+                  className="text-gray-600 hover:text-gray-800 focus:outline-none"
+                  aria-label="Cerrar menú"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div className="p-4">
+                {sections.map((section, index) => (
+                  <motion.div key={section.name} {...framerItem(index)}>
+                    <NavLink
+                      to={section.path}
+                      className={({ isActive }) =>
+                        `block py-3 px-4 text-base font-medium rounded-md transition-colors ${isActive ? 'bg-[#5a3e36] text-white' : 'text-gray-700 hover:bg-gray-100'}`
+                      }
+                      onClick={() => setIsMenuOpen(false)}
+                      aria-label={`Ir a ${section.label}`}
+                    >
+                      {section.label}
+                    </NavLink>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
       <Footer className="w-full m-0 p-0 mt-auto" />
     </div>
   );
