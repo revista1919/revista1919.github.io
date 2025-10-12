@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 
 function AdminSection() {
@@ -105,123 +106,104 @@ function AdminSection() {
     setIsModalOpen(false);
   };
 
-  return React.createElement(
-    'div',
-    { className: 'admin-section bg-white p-3 sm:p-6 rounded-lg shadow-md mt-3 sm:mt-6' },
-    // Encabezado
-    React.createElement(
-      'h2',
-      { className: 'text-lg sm:text-2xl font-semibold mb-3 sm:mb-4 text-gray-800 text-center' },
-      'Únete a nuestro equipo'
-    ),
-    React.createElement(
-      'p',
-      { className: 'text-sm sm:text-base text-gray-600 mb-3 sm:mb-6 text-center max-w-2xl mx-auto' },
-      'Forma parte de la Revista Nacional de las Ciencias para Estudiantes. Contribuye con tu talento a la divulgación científica y apoya a estudiantes en su camino hacia la investigación. Selecciona un rol para conocer sus funciones o postula a los cargos disponibles. Puedes consultar las políticas de postulación en ',
-      React.createElement(
-        'a',
-        {
-          href: 'https://www.revistacienciasestudiantes.com/policiesApp.html',
-          className: 'text-blue-600 hover:underline',
-          target: '_blank',
-          rel: 'noopener noreferrer',
-          'aria-label': 'Ver políticas de postulación'
-        },
-        'nuestras políticas de postulación'
-      ),
-      '.'
-    ),
-    // Lista de roles
-    React.createElement(
-      'div',
-      { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 mb-3 sm:mb-8' },
-      roles.map((role) =>
-        React.createElement(
-          'div',
-          {
-            key: role.name,
-            className: `p-3 sm:p-4 rounded-lg shadow-sm transition-shadow ${
-              role.isPostulable ? 'bg-green-50 hover:shadow-md' : 'bg-gray-100 cursor-not-allowed'
-            }`,
-          },
-          React.createElement(
-            'p',
-            {
-              className: `text-sm sm:text-lg font-semibold ${
-                role.isPostulable ? 'text-green-600 cursor-pointer hover:underline' : 'text-gray-500'
-              }`,
-              onClick: role.isPostulable ? () => handleRoleClick(role) : null,
-              'aria-label': `Ver descripción del rol ${role.name}`,
-            },
-            role.name
-          ),
-          React.createElement(
-            'p',
-            { className: 'text-xs sm:text-base text-gray-600' },
-            role.isPostulable ? 'Cargo postulable' : 'Cargo definido'
-          ),
-          role.isPostulable &&
-            React.createElement(
-              'button',
-              {
-                className: 'mt-2 bg-green-500 text-white px-3 py-2 rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm min-h-10 sm:text-base',
-                onClick: handlePostulateClick,
-                'aria-label': `Postular al rol ${role.name}`,
-              },
-              'Postular'
-            )
-        )
-      )
-    ),
-    // Modal para descripción del rol
-    isModalOpen &&
-      React.createElement(
-        'div',
-        { className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50' },
-        React.createElement(
-          'div',
-          { className: 'bg-white p-3 sm:p-6 rounded-lg max-w-[90vw] sm:max-w-lg max-h-[90vh] overflow-y-auto mx-2 shadow-lg' },
-          React.createElement(
-            'div',
-            { className: 'flex justify-between items-center mb-2 sm:mb-4 border-b border-gray-200 pb-2' },
-            React.createElement(
-              'h3',
-              { className: 'text-sm sm:text-xl font-bold text-gray-800' },
-              selectedRole.name
-            ),
-            React.createElement(
-              'button',
-              {
-                className: 'text-gray-500 hover:text-gray-700 text-lg sm:text-xl focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full w-8 h-8 flex items-center justify-center',
-                onClick: () => setIsModalOpen(false),
-                'aria-label': 'Cerrar modal de descripción del rol',
-              },
-              '×'
-            )
-          ),
-          React.createElement(
-            'div',
-            { className: 'text-gray-700 text-sm sm:text-base' },
-            React.createElement('p', { className: 'font-semibold text-blue-600 mb-2' }, 'Descripción:'),
-            React.createElement('p', { className: 'text-gray-600 mb-3 sm:mb-4' }, selectedRole.description),
-            React.createElement(
-              'p',
-              { className: 'text-gray-600' },
-              selectedRole.isPostulable ? 'Este cargo está abierto a postulaciones.' : 'Este cargo está definido y no admite postulaciones.'
-            ),
-            selectedRole.isPostulable &&
-              React.createElement(
-                'button',
-                {
-                  className: 'mt-3 sm:mt-4 bg-green-500 text-white px-3 sm:px-4 py-2 rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm min-h-10 sm:text-base',
-                  onClick: handlePostulateClick,
-                  'aria-label': `Postular al rol ${selectedRole.name}`,
-                },
-                'Postular ahora'
-              )
-          )
-        )
-      )
+  return (
+    <motion.div
+      className="admin-section bg-gray-50 p-6 rounded-xl shadow-lg mt-6"
+      initial={{ opacity: 0, y: 50 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      <motion.h2
+        className="text-2xl font-bold mb-4 text-blue-800 text-center"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
+      >
+        Únete a nuestro equipo
+      </motion.h2>
+      <motion.p
+        className="text-base text-gray-700 mb-6 text-center max-w-2xl mx-auto"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3 }}
+      >
+        Forma parte de la Revista Nacional de las Ciencias para Estudiantes. Contribuye con tu talento a la divulgación científica y apoya a estudiantes en su camino hacia la investigación. Selecciona un rol para conocer sus funciones o postula a los cargos disponibles. Puedes consultar las políticas de postulación en{' '}
+        <a
+          href="https://www.revistacienciasestudiantes.com/policiesApp.html"
+          className="text-blue-600 hover:underline"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          nuestras políticas de postulación
+        </a>
+        .
+      </motion.p>
+      <motion.div
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"
+        variants={{
+          hidden: { opacity: 0 },
+          show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+        }}
+        initial="hidden"
+        animate="show"
+      >
+        {roles.map((role) => (
+          <motion.div
+            key={role.name}
+            className={`p-4 rounded-xl shadow-md transition-shadow ${role.isPostulable ? 'bg-green-50 hover:shadow-lg' : 'bg-gray-100 cursor-not-allowed'}`}
+            variants={{
+              hidden: { opacity: 0, scale: 0.95 },
+              show: { opacity: 1, scale: 1 }
+            }}
+          >
+            <p
+              className={`text-lg font-bold ${role.isPostulable ? 'text-green-700 cursor-pointer hover:underline' : 'text-gray-500'}`}
+              onClick={role.isPostulable ? () => handleRoleClick(role) : null}
+            >
+              {role.name}
+            </p>
+            <p className="text-base text-gray-600">
+              {role.isPostulable ? 'Cargo postulable' : 'Cargo definido'}
+            </p>
+            {role.isPostulable && (
+              <button
+                className="mt-2 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+                onClick={handlePostulateClick}
+              >
+                Postular
+              </button>
+            )}
+          </motion.div>
+        ))}
+      </motion.div>
+      {isModalOpen && (
+        <motion.div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        >
+          <motion.div
+            className="bg-white p-6 rounded-xl max-w-lg max-h-[90vh] overflow-y-auto shadow-xl"
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+          >
+            {/* Contenido del modal similar, con animaciones si deseas */}
+            <h3 className="text-xl font-bold text-blue-800 mb-4">{selectedRole.name}</h3>
+            <p className="text-gray-700">{selectedRole.description}</p>
+            {selectedRole.isPostulable && (
+              <button className="mt-4 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700" onClick={handlePostulateClick}>
+                Postular ahora
+              </button>
+            )}
+            <button className="text-gray-600 hover:text-gray-800" onClick={() => setIsModalOpen(false)}>
+              Cerrar
+            </button>
+          </motion.div>
+        </motion.div>
+      )}
+    </motion.div>
   );
 }
 
