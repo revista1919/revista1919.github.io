@@ -7,7 +7,7 @@ import {
   browserLocalPersistence,
   signOut,
 } from 'firebase/auth';
-import { Routes, Route, useLocation, NavLink, Navigate } from 'react-router-dom';
+import { Routes, Route, useLocation, NavLink } from 'react-router-dom';
 import { useLanguage } from './hooks/useLanguage';
 import Header from './components/Header';
 import SearchAndFilters from './components/SearchAndFilters';
@@ -212,7 +212,7 @@ function App() {
     {
       name: 'articles',
       label: 'Artículos',
-      path: '/es/articles',
+      path: '/articles',
       component: (
         <motion.div 
           className="py-8 max-w-7xl mx-auto"
@@ -275,19 +275,19 @@ function App() {
     {
       name: 'submit',
       label: 'Enviar Artículo',
-      path: '/es/submit',
+      path: '/submit',
       component: <SubmitSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'team',
       label: 'Nuestro Equipo',
-      path: '/es/team',
+      path: '/team',
       component: <TeamSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'admin',
       label: '¡Postula a algún cargo!',
-      path: '/es/admin',
+      path: '/admin',
       component: (
         <div className="py-8 max-w-7xl mx-auto">
           <AdminSection />
@@ -297,31 +297,31 @@ function App() {
     {
       name: 'about',
       label: 'Acerca de',
-      path: '/es/about',
+      path: '/about',
       component: <AboutSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'guidelines',
       label: 'Guías',
-      path: '/es/guidelines',
+      path: '/guidelines',
       component: <GuidelinesSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'faq',
       label: 'Preguntas Frecuentes',
-      path: '/es/faq',
+      path: '/faq',
       component: <FAQSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'news',
       label: 'Noticias',
-      path: '/es/news',
+      path: '/news',
       component: <NewsSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
       name: 'login',
       label: 'Login',
-      path: '/es/login',
+      path: '/login',
       component: (
         <div className={`py-8 ${user ? 'w-full' : 'max-w-lg mx-auto'}`}>
           {!user && (
@@ -371,8 +371,7 @@ function App() {
           {sections.map((section) => (
             <Route key={section.name} path={section.path} element={section.component} />
           ))}
-          <Route path="/es" element={sections.find(s => s.name === 'articles').component} />
-          <Route path="/" element={<Navigate to="/es" replace />} />
+          <Route path="/" element={sections.find(s => s.name === 'articles').component} />
         </Routes>
       </div>
       <AnimatePresence>
