@@ -41,10 +41,10 @@ function Footer() {
 
       <p className="mt-2">
         Contáctanos: <a
-          href="mailto:revistanacionalcienciae@gmail.com"
+          href="mailto:contact@revistacienciasestudiantes.com"
           className="text-blue-400 hover:text-blue-500 underline font-semibold"
         >
-          revistanacionalcienciae@gmail.com
+          contact@revistacienciasestudiantes.com
         </a>
       </p>
 
