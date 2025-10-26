@@ -27,15 +27,13 @@ function ArticleCard({ article }) {
   const [showEnglishAbstract, setShowEnglishAbstract] = useState(false);
 
   const journal = 'Revista Nacional de las Ciencias para Estudiantes';
-  const pdfUrl = article?.['Número de artículo']
-    ? `https://www.revistacienciasestudiantes.com/Articles/Articulo${article['Número de artículo']}.pdf`
+  const pdfUrl = article?.pdf || null;
+
+  const htmlUrl = article?.numeroArticulo
+    ? `https://www.revistacienciasestudiantes.com/articles/articulo${article.numeroArticulo}.html`
     : null;
 
-  const htmlUrl = article?.['Número de artículo']
-    ? `https://www.revistacienciasestudiantes.com/articles/articulo${article['Número de artículo']}.html`
-    : null;
-
-  const pages = `${article?.['Primera página'] || ''}-${article?.['Última página'] || ''}`.trim() || '';
+  const pages = `${article?.primeraPagina || ''}-${article?.ultimaPagina || ''}`.trim() || '';
 
   const handleAuthorClick = (authorName) => {
     if (!authorName) return;
@@ -44,11 +42,11 @@ function ArticleCard({ article }) {
   };
 
   const getChicagoCitation = () => {
-    const authors = article?.['Autor(es)']?.split(';').map(a => a.trim()).join('; ') || 'Autor desconocido';
-    const title = article?.['Título'] || 'Sin título';
-    const volume = article?.['Volumen'] || '';
-    const number = article?.['Número'] || '';
-    const year = getYear(article?.['Fecha']);
+    const authors = article?.autores?.split(';').map(a => a.trim()).join('; ') || 'Autor desconocido';
+    const title = article?.titulo || 'Sin título';
+    const volume = article?.volumen || '';
+    const number = article?.numero || '';
+    const year = getYear(article?.fecha);
 
     return (
       <>
@@ -63,11 +61,11 @@ function ArticleCard({ article }) {
   };
 
   const getApaCitation = () => {
-    const authors = article?.['Autor(es)']?.split(';').map(a => a.trim()).join('; ') || 'Autor desconocido';
-    const title = article?.['Título'] || 'Sin título';
-    const volume = article?.['Volumen'] || '';
-    const number = article?.['Número'] || '';
-    const year = getYear(article?.['Fecha']);
+    const authors = article?.autores?.split(';').map(a => a.trim()).join('; ') || 'Autor desconocido';
+    const title = article?.titulo || 'Sin título';
+    const volume = article?.volumen || '';
+    const number = article?.numero || '';
+    const year = getYear(article?.fecha);
 
     return (
       <>
@@ -82,11 +80,11 @@ function ArticleCard({ article }) {
   };
 
   const getMlaCitation = () => {
-    const authors = article?.['Autor(es)']?.split(';').map(a => a.trim()).join('; ') || 'Autor desconocido';
-    const title = article?.['Título'] || 'Sin título';
-    const volume = article?.['Volumen'] || '';
-    const number = article?.['Número'] || '';
-    const year = getYear(article?.['Fecha']);
+    const authors = article?.autores?.split(';').map(a => a.trim()).join('; ') || 'Autor desconocido';
+    const title = article?.titulo || 'Sin título';
+    const volume = article?.volumen || '';
+    const number = article?.numero || '';
+    const year = getYear(article?.fecha);
 
     return (
       <>
@@ -124,15 +122,15 @@ function ArticleCard({ article }) {
   role="button"
   tabIndex={0}
   aria-expanded={isExpanded}
-  aria-label={`Expandir artículo: ${article['Título'] || 'Sin título'}`}
+  aria-label={`Expandir artículo: ${article.titulo || 'Sin título'}`}
 >
       <h2 className="text-lg sm:text-xl font-semibold text-blue-700 hover:text-blue-800 transition-colors mb-2">
-        {article['Título'] || 'Sin título'}
+        {article.titulo || 'Sin título'}
       </h2>
 
       <p className="text-sm text-gray-700 mb-2">
-        {article['Autor(es)'] ? (
-          article['Autor(es)'].split(';').map((a, idx, arr) => (
+        {article.autores ? (
+          article.autores.split(';').map((a, idx, arr) => (
             <React.Fragment key={idx}>
               <span
                 className="cursor-pointer hover:text-blue-600 underline transition-colors"
@@ -153,25 +151,25 @@ function ArticleCard({ article }) {
       </p>
 
       <p className="text-xs text-green-600">
-        {journal} · {getYear(article['Fecha'])} {pages && `· pp. ${pages}`}
+        {journal} · {getYear(article.fecha)} {pages && `· pp. ${pages}`}
       </p>
 
-      {!isExpanded && article['Resumen'] && (
+      {!isExpanded && article.resumen && (
         <p className="text-sm text-gray-700 mt-2 line-clamp-3">
-          {article['Resumen']}
+          {article.resumen}
         </p>
       )}
 
       {isExpanded && (
         <div className="mt-4 space-y-4 animate-fade-in">
           <p className="text-sm text-gray-800">
-            <strong className="font-medium">Fecha:</strong> {parseDateFlexible(article['Fecha'])}
+            <strong className="font-medium">Fecha:</strong> {parseDateFlexible(article.fecha)}
           </p>
-          {article['Área temática'] ? (
+          {article.area ? (
   <div className="text-sm text-gray-800">
     <strong className="font-medium">Áreas:</strong>{' '}
     <div className="flex flex-wrap gap-2 mt-1">
-      {article['Área temática']
+      {article.area
         .split(';')
         .map((area, idx) => (
           <span
@@ -192,12 +190,9 @@ function ArticleCard({ article }) {
     <strong className="font-medium">Palabras Clave:</strong>
   </p>
 
-          {article['Palabras clave'] && (
+          {article.palabras_clave && article.palabras_clave.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {article['Palabras clave']
-                .split(/[;,]/)
-                .map((k) => k.trim())
-                .filter(Boolean)
+              {article.palabras_clave
                 .map((kw, idx) => (
                   <span
                     key={idx}
@@ -211,10 +206,10 @@ function ArticleCard({ article }) {
 
           <p className="text-sm text-gray-800">
             <strong className="font-medium">Resumen: </strong>
-            {article['Resumen'] ? (
+            {article.resumen ? (
               <>
-                {showFullAbstract ? article['Resumen'] : `${article['Resumen'].slice(0, 200)}...`}
-                {article['Resumen'].length > 200 && (
+                {showFullAbstract ? article.resumen : `${article.resumen.slice(0, 200)}...`}
+                {article.resumen.length > 200 && (
                   <button
                     className="ml-2 text-blue-600 hover:text-blue-800 underline text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
                     onClick={(e) => { e.stopPropagation(); setShowFullAbstract(!showFullAbstract); }}
@@ -237,7 +232,7 @@ function ArticleCard({ article }) {
             </button>
             {showEnglishAbstract && (
               <p className="text-sm text-gray-800 mt-2 bg-white p-3 rounded-lg shadow-inner">
-                {article['Abstract'] || 'Abstract no disponible'}
+                {article.englishAbstract || 'Abstract no disponible'}
               </p>
             )}
           </div>

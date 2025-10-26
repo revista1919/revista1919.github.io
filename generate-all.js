@@ -125,7 +125,6 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
   ${authorMetaTags}
   <meta name="citation_publication_date" content="${article.fecha}">
   <meta name="citation_journal_title" content="La Revista Nacional de Ciencias para Estudiantes">
-  <meta name="citation_issn" content="1234-5678">
   <meta name="citation_volume" content="${article.volumen}">
   <meta name="citation_issue" content="${article.numero}">
   <meta name="citation_firstpage" content="${article.primeraPagina}">
@@ -356,7 +355,6 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
   ${authorMetaTags}
   <meta name="citation_publication_date" content="${article.fecha}">
   <meta name="citation_journal_title" content="The National Review of Sciences for Students">
-  <meta name="citation_issn" content="1234-5678">
   <meta name="citation_volume" content="${article.volumen}">
   <meta name="citation_issue" content="${article.numero}">
   <meta name="citation_firstpage" content="${article.primeraPagina}">

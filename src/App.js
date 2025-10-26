@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import Papa from 'papaparse';
 import { auth } from './firebase';
 import {
   onAuthStateChanged,
@@ -27,6 +26,7 @@ import './index.css';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
+const ARTICLES_JSON = '/articles.json';
 const isPrerendering = typeof navigator !== 'undefined' && navigator.userAgent.includes('ReactSnap');
 
 function App() {
@@ -117,43 +117,28 @@ function App() {
   useEffect(() => {
     const fetchArticles = async () => {
       try {
-        const response = await fetch(
-          'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p32EM6-0VYy18AdREQwXdpeet1WHTA4H2-W2FX7HKe1HPSyApWadUw9sKHdVYQXL5tP6yDRs/pub?output=csv',
-          { cache: 'no-store' }
-        );
+        const response = await fetch(ARTICLES_JSON, { cache: 'no-store' });
 
         if (!response.ok) {
-          throw new Error(`Error al cargar el archivo CSV: ${response.status}`);
+          throw new Error(`Error al cargar el archivo JSON: ${response.status}`);
         }
 
-        const csvText = await response.text();
-        Papa.parse(csvText, {
-          header: true,
-          skipEmptyLines: true,
-          delimiter: ',',
-          transform: (value) => value.trim(),
-          complete: ({ data }) => {
-            setArticles(data);
-            setFilteredArticles(data);
+        const data = await response.json();
+        setArticles(data);
+        setFilteredArticles(data);
 
-            const allAreas = data.flatMap((a) =>
-              (a['Área temática'] || '')
-                .split(';')
-                .map((area) => area.trim())
-                .filter(Boolean)
-            );
-            const uniqueAreas = [...new Set(allAreas)].sort();
-            setAreas(uniqueAreas);
+        const allAreas = data.flatMap((a) =>
+          (a.area || '')
+            .split(';')
+            .map((area) => area.trim())
+            .filter(Boolean)
+        );
+        const uniqueAreas = [...new Set(allAreas)].sort();
+        setAreas(uniqueAreas);
 
-            setLoading(false);
-          },
-          error: (error) => {
-            console.error('Error parsing CSV:', error);
-            setLoading(false);
-          },
-        });
+        setLoading(false);
       } catch (error) {
-        console.error('Error fetching CSV:', error);
+        console.error('Error fetching JSON:', error);
         setLoading(false);
       }
     };
@@ -168,14 +153,14 @@ function App() {
     const lowerTerm = term.toLowerCase();
     const filtered = articles.filter((article) => {
       const matchesSearch =
-        article['Título']?.toLowerCase().includes(lowerTerm) ||
-        article['Autor(es)']?.toLowerCase().includes(lowerTerm) ||
-        article['Resumen']?.toLowerCase().includes(lowerTerm) ||
-        article['Palabras clave']?.toLowerCase().includes(lowerTerm);
+        article.titulo?.toLowerCase().includes(lowerTerm) ||
+        article.autores?.toLowerCase().includes(lowerTerm) ||
+        article.resumen?.toLowerCase().includes(lowerTerm) ||
+        article.palabras_clave?.join(', ')?.toLowerCase().includes(lowerTerm);
 
       const matchesArea =
         area === '' ||
-        (article['Área temática'] || '')
+        (article.area || '')
           .toLowerCase()
           .split(';')
           .map((a) => a.trim())
@@ -241,7 +226,7 @@ function App() {
             ) : (
               filteredArticles.slice(0, visibleArticles).map((article, index) => (
                 <motion.div
-                  key={article['Título']}
+                  key={article.titulo}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1, duration: 0.3 }}
