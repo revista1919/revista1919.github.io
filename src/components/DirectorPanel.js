@@ -124,6 +124,7 @@ export default function DirectorPanel({ user }) {
     ultimaPagina: '',
     areaTematica: '',
     palabrasClave: '',
+    keywords: '',
     pdfFile: null,
   });
   const [status, setStatus] = useState('');
@@ -170,6 +171,7 @@ export default function DirectorPanel({ user }) {
         ...row,
         areas: (row['Área temática'] || '').split(';').map((a) => a.trim()).filter(Boolean),
         keywords: (row['Palabras clave'] || '').split(';').map((k) => k.trim()).filter(Boolean),
+        keywords_english: (row['Keywords'] || '').split(';').map((k) => k.trim()).filter(Boolean),
         pdfUrl: row['URL_PDF'] || `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/public/Articles/Articulo${row['Número de artículo']}.pdf`,
       }));
       
@@ -210,6 +212,7 @@ export default function DirectorPanel({ user }) {
       ultimaPagina: '',
       areaTematica: '',
       palabrasClave: '',
+      keywords: '',
       pdfFile: null,
     });
   };
@@ -296,6 +299,7 @@ if (resText.includes('error')) {
         ultimaPagina: formData.ultimaPagina || '',
         areaTematica: formData.areaTematica || '',
         palabrasClave: formData.palabrasClave || '',
+        keywords: formData.keywords || '',
         urlPdf: '',
       };
 
@@ -367,6 +371,7 @@ console.log('🆕 Calculated articleNumber:', articleNumber, 'from nums:', nums)
       ultimaPagina: article['Última página'] || '',
       areaTematica: article['Área temática'] || '',
       palabrasClave: article['Palabras clave'] || '',
+      keywords: article['Keywords'] || '',
       pdfFile: null,
     });
     setShowEditModal(true);
@@ -828,6 +833,17 @@ await fetch(ARTICULOS_GAS_URL, {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-1">
+    Keywords (Inglés, separar con ;)
+  </label>
+  <input
+    name="keywords"
+    value={formData.keywords}
+    onChange={handleInputChange}
+    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+  />
+</div>
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Resumen</label>
@@ -1007,6 +1023,17 @@ await fetch(ARTICULOS_GAS_URL, {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-1">
+    Keywords (Inglés, separar con ;)
+  </label>
+  <input
+    name="keywords"
+    value={formData.keywords}
+    onChange={handleInputChange}
+    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+  />
+</div>
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Resumen</label>

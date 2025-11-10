@@ -211,12 +211,12 @@ function ArticleCardEN({ article }) {
 )}
  
  <p className="text-sm text-gray-800">
-    <strong className="font-medium">Key Words:</strong>
+    <strong className="font-medium">Keywords:</strong>
   </p>
 
-          {article.palabras_clave && article.palabras_clave.length > 0 && (
+          {article.keywords_english && article.keywords_english.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {article.palabras_clave
+              {article.keywords_english
                 .map((kw, idx) => (
                   <span
                     key={idx}

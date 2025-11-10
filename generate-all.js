@@ -105,6 +105,9 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
       numeroArticulo: row['Número de artículo'] || '',
       palabras_clave: row['Palabras clave']
         ? row['Palabras clave'].split(/[;,]/).map(k => k.trim())
+        : [],
+      keywords_english: row['Keywords']
+        ? row['Keywords'].split(';').map(k => k.trim())
         : []
     }));
     fs.writeFileSync(outputJson, JSON.stringify(articles, null, 2), 'utf8');
@@ -331,6 +334,11 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
         <p><strong>MLA:</strong> ${article.autores}. "${article.titulo}." <em>La Revista Nacional de Ciencias para Estudiantes</em>, vol. ${article.volumen}, no. ${article.numero}, ${new Date(article.fecha).getFullYear()}, pp. ${article.primeraPagina}-${article.ultimaPagina}.</p>
         <p><strong>Chicago:</strong> ${article.autores}. "${article.titulo}." <em>La Revista Nacional de Ciencias para Estudiantes</em> ${article.volumen}, no. ${article.numero} (${new Date(article.fecha).getFullYear()}): ${article.primeraPagina}-${article.ultimaPagina}.</p>
       </section>
+      <section class="license">
+        <h2>Licencia</h2>
+        <p>Este artículo se publica bajo licencia <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Atribución 4.0 Internacional (CC BY 4.0)</a>.</p>
+        <img src="https://mirrors.creativecommons.org/presskit/buttons/88x31/png/by.png" alt="CC BY 4.0" style="width:88px; height:31px;">
+      </section>
     </main>
     <footer>
       <p>&copy; ${new Date().getFullYear()} La Revista Nacional de Ciencias para Estudiantes</p>
@@ -362,10 +370,10 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
   <meta name="citation_pdf_url" content="${article.pdf}">
   <meta name="citation_abstract_html_url" content="${domain}/en/articles/articulo${article.numeroArticulo}EN.html">
   <meta name="citation_abstract" content="${article.englishAbstract}">
-  <meta name="citation_keywords" content="${article.palabras_clave.map(kw => kw).join('; ')}">
+  <meta name="citation_keywords" content="${article.keywords_english.join('; ')}">
   <meta name="citation_language" content="en">
   <meta name="description" content="${article.englishAbstract.substring(0, 160)}...">
-  <meta name="keywords" content="${article.palabras_clave.map(kw => kw).join(', ')}">
+  <meta name="keywords" content="${article.keywords_english.join(', ')}">
   <title>${article.titulo} - The National Review of Sciences for Students</title>
   <link rel="stylesheet" href="/index.css">
   <style>
@@ -535,7 +543,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
       <section>
         <h2>Keywords</h2>
         <div class="keywords">
-          ${article.palabras_clave.map(kw => `<span class="keyword">${kw}</span>`).join('')}
+          ${article.keywords_english.map(kw => `<span class="keyword">${kw}</span>`).join('')}
         </div>
       </section>
       <section>
@@ -555,6 +563,11 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
         <p><strong>APA:</strong> ${article.autores}. (${new Date(article.fecha).getFullYear()}). ${article.titulo}. <em>The National Review of Sciences for Students</em>, ${article.volumen}(${article.numero}), ${article.primeraPagina}-${article.ultimaPagina}.</p>
         <p><strong>MLA:</strong> ${article.autores}. "${article.titulo}." <em>The National Review of Sciences for Students</em>, vol. ${article.volumen}, no. ${article.numero}, ${new Date(article.fecha).getFullYear()}, pp. ${article.primeraPagina}-${article.ultimaPagina}.</p>
         <p><strong>Chicago:</strong> ${article.autores}. "${article.titulo}." <em>The National Review of Sciences for Students</em> ${article.volumen}, no. ${article.numero} (${new Date(article.fecha).getFullYear()}): ${article.primeraPagina}-${article.ultimaPagina}.</p>
+      </section>
+      <section class="license">
+        <h2>License</h2>
+        <p>This article is published under a <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International (CC BY 4.0)</a> license.</p>
+        <img src="https://mirrors.creativecommons.org/presskit/buttons/88x31/png/by.png" alt="CC BY 4.0" style="width:88px; height:31px;">
       </section>
     </main>
     <footer>
