@@ -1,51 +1,30 @@
 import React, { useState } from 'react';
 
-function parseDateFlexible(dateStr) {
-  if (!dateStr) return 'Date not available';
-  let date = new Date(dateStr);
-  if (!isNaN(date)) return date.toLocaleDateString();
-  const parts = dateStr.split(/[\/.-]/);
-  if (parts.length === 3) {
-    let [day, month, year] = parts.map((p) => p.padStart(2, '0'));
-    if (year.length === 2) year = '20' + year;
-    date = new Date(`${year}-${month}-${day}`);
-    if (!isNaN(date)) return date.toLocaleDateString();
-  }
-  return dateStr;
-}
+// Helper functions (assuming these are defined; if not, implement them)
+const getYear = (date) => {
+  if (!date) return 'n.d.';
+  const parsedDate = new Date(date);
+  return isNaN(parsedDate) ? 'n.d.' : parsedDate.getFullYear();
+};
 
-function getYear(dateStr) {
-  if (!dateStr) return 'n.d.'; // no date
-  let date = new Date(dateStr);
-  if (!isNaN(date)) return date.getFullYear();
-  const parts = dateStr.split(/[\/.-]/);
-  if (parts.length === 3) {
-    let [day, month, year] = parts.map((p) => p.padStart(2, '0'));
-    if (year.length === 2) year = '20' + year;
-    date = new Date(`${year}-${month}-${day}`);
-    if (!isNaN(date)) return date.getFullYear();
-  }
-  return dateStr;
-}
+const parseDateFlexible = (date) => {
+  if (!date) return 'Not available';
+  const parsedDate = new Date(date);
+  return isNaN(parsedDate) ? date : parsedDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+};
 
-function generateSlug(name) {
+const generateSlug = (name) => {
   if (!name) return '';
-  return name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '');
-}
+  return name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+};
 
 function ArticleCardEN({ article }) {
   console.log('Article object received:', article);
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [showCitations, setShowCitations] = useState(false);
-  const [showFullEnglishAbstract, setShowFullEnglishAbstract] = useState(false);
+  const [showFullAbstract, setShowFullAbstract] = useState(false);
   const [showSpanishAbstract, setShowSpanishAbstract] = useState(false);
-  const [showFullSpanishAbstract, setShowFullSpanishAbstract] = useState(false);
 
   const journal = 'The National Review of Sciences for Students';
   const pdfUrl = article?.pdf || null;
@@ -56,7 +35,6 @@ function ArticleCardEN({ article }) {
 
   const pages = `${article?.primeraPagina || ''}-${article?.ultimaPagina || ''}`.trim() || '';
 
-  // Updated to point to English team pages (.EN.html)
   const handleAuthorClick = (authorName) => {
     if (!authorName) return;
     const slug = generateSlug(authorName);
@@ -146,7 +124,6 @@ function ArticleCardEN({ article }) {
   aria-expanded={isExpanded}
   aria-label={`Expand article: ${article.titulo || 'Untitled'}`}
 >
-
       <h2 className="text-lg sm:text-xl font-semibold text-blue-700 hover:text-blue-800 transition-colors mb-2">
         {article.titulo || 'Untitled'}
       </h2>
@@ -186,11 +163,11 @@ function ArticleCardEN({ article }) {
       {isExpanded && (
         <div className="mt-4 space-y-4 animate-fade-in">
           <p className="text-sm text-gray-800">
-            <strong className="font-medium">Date:</strong> {parseDateFlexible(article.fecha)}
+            <strong className="font-medium">Publication Date:</strong> {parseDateFlexible(article.fecha)}
           </p>
           {article.area ? (
   <div className="text-sm text-gray-800">
-    <strong className="font-medium">Areas:</strong>
+    <strong className="font-medium">Thematic Area:</strong>{' '}
     <div className="flex flex-wrap gap-2 mt-1">
       {article.area
         .split(';')
@@ -206,11 +183,10 @@ function ArticleCardEN({ article }) {
   </div>
 ) : (
   <p className="text-sm text-gray-800">
-    <strong className="font-medium">Area:</strong> Not specified
+    <strong className="font-medium">Thematic Area:</strong> Not specified
   </p>
 )}
- 
- <p className="text-sm text-gray-800">
+<p className="text-sm text-gray-800">
     <strong className="font-medium">Keywords:</strong>
   </p>
 
@@ -227,19 +203,18 @@ function ArticleCardEN({ article }) {
                 ))}
             </div>
           )}
-          
 
           <p className="text-sm text-gray-800">
             <strong className="font-medium">Abstract: </strong>
             {article.englishAbstract ? (
               <>
-                {showFullEnglishAbstract ? article.englishAbstract : `${article.englishAbstract.slice(0, 200)}...`}
+                {showFullAbstract ? article.englishAbstract : `${article.englishAbstract.slice(0, 200)}...`}
                 {article.englishAbstract.length > 200 && (
                   <button
                     className="ml-2 text-blue-600 hover:text-blue-800 underline text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
-                    onClick={(e) => { e.stopPropagation(); setShowFullEnglishAbstract(!showFullEnglishAbstract); }}
+                    onClick={(e) => { e.stopPropagation(); setShowFullAbstract(!showFullAbstract); }}
                   >
-                    {showFullEnglishAbstract ? 'Read less' : 'Read more'}
+                    {showFullAbstract ? 'Read less' : 'Read more'}
                   </button>
                 )}
               </>
@@ -257,22 +232,7 @@ function ArticleCardEN({ article }) {
             </button>
             {showSpanishAbstract && (
               <p className="text-sm text-gray-800 mt-2 bg-white p-3 rounded-lg shadow-inner">
-                <strong className="font-medium">Resumen: </strong>
-                {article.resumen ? (
-                  <>
-                    {showFullSpanishAbstract ? article.resumen : `${article.resumen.slice(0, 200)}...`}
-                    {article.resumen.length > 200 && (
-                      <button
-                        className="ml-2 text-blue-600 hover:text-blue-800 underline text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
-                        onClick={(e) => { e.stopPropagation(); setShowFullSpanishAbstract(!showFullSpanishAbstract); }}
-                      >
-                        {showFullSpanishAbstract ? 'Leer menos' : 'Leer más'}
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  'Resumen no disponible'
-                )}
+                {article.resumen || 'Resumen no disponible'}
               </p>
             )}
           </div>
