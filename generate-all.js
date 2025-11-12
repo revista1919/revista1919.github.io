@@ -95,7 +95,6 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
       autores: row['Autor(es)'] || 'Autor desconocido',
       resumen: row['Resumen'] || 'Resumen no disponible',
       englishAbstract: row['Abstract'] || 'English abstract not available',
-      pdf: `${domain}/Articles/Articulo${row['Número de artículo']}.pdf`,
       fecha: parseDateFlexible(row['Fecha']),
       volumen: row['Volumen'] || '',
       numero: row['Número'] || '',
@@ -117,6 +116,10 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
   const authorsList = article.autores.split(';').map(a => formatAuthorForCitation(a));
   const authorMetaTags = authorsList.map(author => `<meta name="citation_author" content="${author}">`).join('\n');
 
+  const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
+  const pdfFileName = `Article-${articleSlug}.pdf`;
+  article.pdf = `${domain}/Articles/${pdfFileName}`;
+
   // Generar HTML en español
   const htmlContentEs = `
 <!DOCTYPE html>
@@ -133,7 +136,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
   <meta name="citation_firstpage" content="${article.primeraPagina}">
   <meta name="citation_lastpage" content="${article.ultimaPagina}">
   <meta name="citation_pdf_url" content="${article.pdf}">
-  <meta name="citation_abstract_html_url" content="${domain}/articles/articulo${article.numeroArticulo}.html">
+  <meta name="citation_abstract_html_url" content="${domain}/articles/article-${articleSlug}.html">
   <meta name="citation_abstract" content="${article.resumen}">
   <meta name="citation_abstract" xml:lang="en" content="${article.englishAbstract}">
   <meta name="citation_keywords" content="${article.palabras_clave.join('; ')}">
@@ -348,7 +351,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
 </body>
 </html>
   `.trim();
-  const filePathEs = path.join(outputHtmlDir, `articulo${article.numeroArticulo}.html`);
+  const filePathEs = path.join(outputHtmlDir, `article-${articleSlug}.html`);
   fs.writeFileSync(filePathEs, htmlContentEs, 'utf8');
   console.log(`Generado HTML de artículo en español: ${filePathEs}`);
 
@@ -368,7 +371,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
   <meta name="citation_firstpage" content="${article.primeraPagina}">
   <meta name="citation_lastpage" content="${article.ultimaPagina}">
   <meta name="citation_pdf_url" content="${article.pdf}">
-  <meta name="citation_abstract_html_url" content="${domain}/en/articles/articulo${article.numeroArticulo}EN.html">
+  <meta name="citation_abstract_html_url" content="${domain}/articles/article-${articleSlug}EN.html">
   <meta name="citation_abstract" content="${article.englishAbstract}">
   <meta name="citation_keywords" content="${article.keywords_english.join('; ')}">
   <meta name="citation_language" content="en">
@@ -578,7 +581,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
 </body>
 </html>
   `.trim();
-  const filePathEn = path.join(outputHtmlDir, `articulo${article.numeroArticulo}EN.html`);
+  const filePathEn = path.join(outputHtmlDir, `article-${articleSlug}EN.html`);
   fs.writeFileSync(filePathEn, htmlContentEn, 'utf8');
   console.log(`Generado HTML de artículo en inglés: ${filePathEn}`);
 });
@@ -608,11 +611,14 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     <section>
       <h2>Año ${year}</h2>
       <ul>
-        ${articlesByYear[year].map(article => `
+        ${articlesByYear[year].map(article => {
+          const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
+          return `
           <li>
-            <a href="/articles/articulo${article.numeroArticulo}.html">${article.titulo}</a> - ${article.autores} (Vol. ${article.volumen}, Núm. ${article.numero})
+            <a href="/articles/article-${articleSlug}.html">${article.titulo}</a> - ${article.autores} (Vol. ${article.volumen}, Núm. ${article.numero})
           </li>
-        `).join('')}
+        `;
+        }).join('')}
       </ul>
     </section>
 `).join('')}
@@ -647,11 +653,14 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     <section>
       <h2>Year ${year}</h2>
       <ul>
-        ${articlesByYear[year].map(article => `
+        ${articlesByYear[year].map(article => {
+          const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
+          return `
           <li>
-            <a href="/articles/articulo${article.numeroArticulo}.html">${article.titulo}</a> - ${article.autores} (Vol. ${article.volumen}, No. ${article.numero})
+            <a href="/articles/article-${articleSlug}EN.html">${article.titulo}</a> - ${article.autores} (Vol. ${article.volumen}, No. ${article.numero})
           </li>
-        `).join('')}
+        `;
+        }).join('')}
       </ul>
     </section>
 `).join('')}
@@ -1607,9 +1616,17 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
   <changefreq>monthly</changefreq>
   <priority>0.9</priority>
 </url>
-${articles.map(article => `
+${articles.map(article => {
+  const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
+  return `
 <url>
-  <loc>${domain}/articles/articulo${article.numeroArticulo}.html</loc>
+  <loc>${domain}/articles/article-${articleSlug}.html</loc>
+  <lastmod>${article.fecha}</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.8</priority>
+</url>
+<url>
+  <loc>${domain}/articles/article-${articleSlug}EN.html</loc>
   <lastmod>${article.fecha}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.8</priority>
@@ -1619,7 +1636,8 @@ ${articles.map(article => `
   <lastmod>${article.fecha}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.8</priority>
-</url>`).join('')}
+</url>`;
+}).join('')}
 <url>
   <loc>${domain}/news/index.html</loc>
   <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
