@@ -15,7 +15,7 @@ const parseDateFlexible = (date) => {
 
 const generateSlug = (name) => {
   if (!name) return '';
-  return name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+  return name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-').replace(/[^\w-]/g, '').replace(/-+/g, '-').replace(/^-+|-+$/g, '');
 };
 
 function ArticleCardEN({ article }) {
@@ -29,9 +29,9 @@ function ArticleCardEN({ article }) {
   const journal = 'The National Review of Sciences for Students';
   const pdfUrl = article?.pdf || null;
 
-  const htmlUrl = article?.['Número de artículo']
-    ? `https://www.revistacienciasestudiantes.com/articles/articulo${article['Número de artículo']}EN.html`
-    : null;
+  const articleSlug = `${generateSlug(article['Título'])}-${article['Número de artículo']}`;
+
+  const htmlUrl = `https://www.revistacienciasestudiantes.com/articles/article-${articleSlug}EN.html`;
 
   const pages = `${article?.['Primera página'] || ''}-${article?.['Última página'] || ''}`.trim() || '';
 
