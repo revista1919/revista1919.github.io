@@ -15,7 +15,7 @@ const parseDateFlexible = (date) => {
 
 const generateSlug = (name) => {
   if (!name) return '';
-  return name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+  return name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-').replace(/[^\w-]/g, '').replace(/-+/g, '-').replace(/^-+|-+$/g, '');
 };
 
 function ArticleCard({ article }) {
@@ -29,11 +29,11 @@ function ArticleCard({ article }) {
   const journal = 'Revista Nacional de las Ciencias para Estudiantes';
   const pdfUrl = article?.pdf || null;
 
-  const htmlUrl = article?.numeroArticulo
-    ? `https://www.revistacienciasestudiantes.com/articles/articulo${article.numeroArticulo}.html`
-    : null;
+  const articleSlug = `${generateSlug(article['Título'])}-${article['Número de artículo']}`;
 
-  const pages = `${article?.primeraPagina || ''}-${article?.ultimaPagina || ''}`.trim() || '';
+  const htmlUrl = `https://www.revistacienciasestudiantes.com/articles/article-${articleSlug}.html`;
+
+  const pages = `${article?.['Primera página'] || ''}-${article?.['Última página'] || ''}`.trim() || '';
 
   const handleAuthorClick = (authorName) => {
     if (!authorName) return;
@@ -42,11 +42,11 @@ function ArticleCard({ article }) {
   };
 
   const getChicagoCitation = () => {
-    const authors = article?.autores?.split(';').map(a => a.trim()).join('; ') || 'Autor desconocido';
-    const title = article?.titulo || 'Sin título';
-    const volume = article?.volumen || '';
-    const number = article?.numero || '';
-    const year = getYear(article?.fecha);
+    const authors = article?.['Autor(es)']?.split(';').map(a => a.trim()).join('; ') || 'Autor desconocido';
+    const title = article?.['Título'] || 'Sin título';
+    const volume = article?.['Volumen'] || '';
+    const number = article?.['Número'] || '';
+    const year = getYear(article?.['Fecha']);
 
     return (
       <>
@@ -61,11 +61,11 @@ function ArticleCard({ article }) {
   };
 
   const getApaCitation = () => {
-    const authors = article?.autores?.split(';').map(a => a.trim()).join('; ') || 'Autor desconocido';
-    const title = article?.titulo || 'Sin título';
-    const volume = article?.volumen || '';
-    const number = article?.numero || '';
-    const year = getYear(article?.fecha);
+    const authors = article?.['Autor(es)']?.split(';').map(a => a.trim()).join('; ') || 'Autor desconocido';
+    const title = article?.['Título'] || 'Sin título';
+    const volume = article?.['Volumen'] || '';
+    const number = article?.['Número'] || '';
+    const year = getYear(article?.['Fecha']);
 
     return (
       <>
@@ -80,11 +80,11 @@ function ArticleCard({ article }) {
   };
 
   const getMlaCitation = () => {
-    const authors = article?.autores?.split(';').map(a => a.trim()).join('; ') || 'Autor desconocido';
-    const title = article?.titulo || 'Sin título';
-    const volume = article?.volumen || '';
-    const number = article?.numero || '';
-    const year = getYear(article?.fecha);
+    const authors = article?.['Autor(es)']?.split(';').map(a => a.trim()).join('; ') || 'Autor desconocido';
+    const title = article?.['Título'] || 'Sin título';
+    const volume = article?.['Volumen'] || '';
+    const number = article?.['Número'] || '';
+    const year = getYear(article?.['Fecha']);
 
     return (
       <>
@@ -122,15 +122,15 @@ function ArticleCard({ article }) {
   role="button"
   tabIndex={0}
   aria-expanded={isExpanded}
-  aria-label={`Expandir artículo: ${article.titulo || 'Sin título'}`}
+  aria-label={`Expandir artículo: ${article['Título'] || 'Sin título'}`}
 >
       <h2 className="text-lg sm:text-xl font-semibold text-blue-700 hover:text-blue-800 transition-colors mb-2">
-        {article.titulo || 'Sin título'}
+        {article['Título'] || 'Sin título'}
       </h2>
 
       <p className="text-sm text-gray-700 mb-2">
-        {article.autores ? (
-          article.autores.split(';').map((a, idx, arr) => (
+        {article['Autor(es)'] ? (
+          article['Autor(es)'].split(';').map((a, idx, arr) => (
             <React.Fragment key={idx}>
               <span
                 className="cursor-pointer hover:text-blue-600 underline transition-colors"
@@ -151,25 +151,25 @@ function ArticleCard({ article }) {
       </p>
 
       <p className="text-xs text-green-600">
-        {journal} · {getYear(article.fecha)} {pages && `· pp. ${pages}`}
+        {journal} · {getYear(article['Fecha'])} {pages && `· pp. ${pages}`}
       </p>
 
-      {!isExpanded && article.resumen && (
+      {!isExpanded && article['Resumen'] && (
         <p className="text-sm text-gray-700 mt-2 line-clamp-3">
-          {article.resumen}
+          {article['Resumen']}
         </p>
       )}
 
       {isExpanded && (
         <div className="mt-4 space-y-4 animate-fade-in">
           <p className="text-sm text-gray-800">
-            <strong className="font-medium">Fecha:</strong> {parseDateFlexible(article.fecha)}
+            <strong className="font-medium">Fecha:</strong> {parseDateFlexible(article['Fecha'])}
           </p>
-          {article.area ? (
+          {article['Área temática'] ? (
   <div className="text-sm text-gray-800">
     <strong className="font-medium">Áreas:</strong>{' '}
     <div className="flex flex-wrap gap-2 mt-1">
-      {article.area
+      {article['Área temática']
         .split(';')
         .map((area, idx) => (
           <span
@@ -190,15 +190,16 @@ function ArticleCard({ article }) {
     <strong className="font-medium">Palabras Clave:</strong>
   </p>
 
-          {article.palabras_clave && article.palabras_clave.length > 0 && (
+          {article['Palabras clave'] && article['Palabras clave'].length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {article.palabras_clave
+              {article['Palabras clave']
+                .split(';')
                 .map((kw, idx) => (
                   <span
                     key={idx}
                     className="bg-blue-100 text-blue-800 text-xs font-medium px-3 py-1 rounded-full shadow-sm"
                   >
-                    {kw}
+                    {kw.trim()}
                   </span>
                 ))}
             </div>
@@ -206,10 +207,10 @@ function ArticleCard({ article }) {
 
           <p className="text-sm text-gray-800">
             <strong className="font-medium">Resumen: </strong>
-            {article.resumen ? (
+            {article['Resumen'] ? (
               <>
-                {showFullAbstract ? article.resumen : `${article.resumen.slice(0, 200)}...`}
-                {article.resumen.length > 200 && (
+                {showFullAbstract ? article['Resumen'] : `${article['Resumen'].slice(0, 200)}...`}
+                {article['Resumen'].length > 200 && (
                   <button
                     className="ml-2 text-blue-600 hover:text-blue-800 underline text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
                     onClick={(e) => { e.stopPropagation(); setShowFullAbstract(!showFullAbstract); }}
@@ -232,7 +233,7 @@ function ArticleCard({ article }) {
             </button>
             {showEnglishAbstract && (
               <p className="text-sm text-gray-800 mt-2 bg-white p-3 rounded-lg shadow-inner">
-                {article.englishAbstract || 'Abstract no disponible'}
+                {article['Abstract'] || 'Abstract no disponible'}
               </p>
             )}
           </div>
