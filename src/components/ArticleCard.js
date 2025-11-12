@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-// Helper functions (assuming these are defined; if not, implement them)
+// Helper functions
 const getYear = (date) => {
   if (!date) return 'Desconocido';
   const parsedDate = new Date(date);
@@ -13,14 +13,27 @@ const parseDateFlexible = (date) => {
   return isNaN(parsedDate) ? date : parsedDate.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
 };
 
+// Slug que conserva letras con tilde → las normaliza sin eliminarlas
 const generateSlug = (name) => {
   if (!name) return '';
-  return name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+
+  const normalized = name
+    .normalize('NFD') // Descompone acentos: á → a + ◌́
+    .replace(/[\u0300-\u036f]/g, '') // Elimina marcas diacríticas
+    .replace(/ñ/gi, 'n') // ñ → n
+    .replace(/Ñ/gi, 'N'); // Ñ → N
+
+  return normalized
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')           // Espacios → guión
+    .replace(/[^a-z0-9-]/g, '')     // Solo letras, números y guiones
+    .replace(/-+/g, '-')            // Evita guiones múltiples
+    .replace(/^-+|-+$/g, '');       // Quita guiones al inicio/final
 };
 
 function ArticleCard({ article }) {
   console.log('Objeto article recibido:', article);
-
   const [isExpanded, setIsExpanded] = useState(false);
   const [showCitations, setShowCitations] = useState(false);
   const [showFullAbstract, setShowFullAbstract] = useState(false);
@@ -28,11 +41,9 @@ function ArticleCard({ article }) {
 
   const journal = 'Revista Nacional de las Ciencias para Estudiantes';
   const pdfUrl = article?.pdf || null;
-
   const htmlUrl = article?.numeroArticulo
     ? `https://www.revistacienciasestudiantes.com/articles/article-${generateSlug(article.titulo)}-${article.numeroArticulo}.html`
     : null;
-
   const pages = `${article?.primeraPagina || ''}-${article?.ultimaPagina || ''}`.trim() || '';
 
   const handleAuthorClick = (authorName) => {
@@ -47,7 +58,6 @@ function ArticleCard({ article }) {
     const volume = article?.volumen || '';
     const number = article?.numero || '';
     const year = getYear(article?.fecha);
-
     return (
       <>
         {authors}. “{title}.” <em>{journal}</em> {volume}, no. {number} ({year}): {pages}.{' '}
@@ -66,7 +76,6 @@ function ArticleCard({ article }) {
     const volume = article?.volumen || '';
     const number = article?.numero || '';
     const year = getYear(article?.fecha);
-
     return (
       <>
         {authors} ({year}). {title}. <em>{journal}</em>, {volume}({number}), {pages}.{' '}
@@ -85,7 +94,6 @@ function ArticleCard({ article }) {
     const volume = article?.volumen || '';
     const number = article?.numero || '';
     const year = getYear(article?.fecha);
-
     return (
       <>
         {authors}. “{title}.” <em>{journal}</em>, vol. {volume}, no. {number}, {year}, pp. {pages}.{' '}
@@ -99,7 +107,6 @@ function ArticleCard({ article }) {
   };
 
   const toggleExpand = (e) => {
-    // Prevent expansion if clicking on interactive elements
     const tag = e.target.tagName.toLowerCase();
     const isInteractive = ['a', 'button', 'span'].includes(tag) || e.target.closest('a, button, span');
     if (!isInteractive) {
@@ -117,17 +124,16 @@ function ArticleCard({ article }) {
 
   return (
     <div
-  className={`py-4 px-4 sm:px-6 bg-white hover:bg-gray-50 transition-colors duration-200 cursor-pointer border-b border-gray-200 last:border-b-0 ${isExpanded ? 'bg-gray-50' : ''}`}
-  onClick={toggleExpand}
-  role="button"
-  tabIndex={0}
-  aria-expanded={isExpanded}
-  aria-label={`Expandir artículo: ${article.titulo || 'Sin título'}`}
->
+      className={`py-4 px-4 sm:px-6 bg-white hover:bg-gray-50 transition-colors duration-200 cursor-pointer border-b border-gray-200 last:border-b-0 ${isExpanded ? 'bg-gray-50' : ''}`}
+      onClick={toggleExpand}
+      role="button"
+      tabIndex={0}
+      aria-expanded={isExpanded}
+      aria-label={`Expandir artículo: ${article.titulo || 'Sin título'}`}
+    >
       <h2 className="text-lg sm:text-xl font-semibold text-blue-700 hover:text-blue-800 transition-colors mb-2">
         {article.titulo || 'Sin título'}
       </h2>
-
       <p className="text-sm text-gray-700 mb-2">
         {article.autores ? (
           article.autores.split(';').map((a, idx, arr) => (
@@ -149,7 +155,6 @@ function ArticleCard({ article }) {
           'Autor desconocido'
         )}
       </p>
-
       <p className="text-xs text-green-600">
         {journal} · {getYear(article.fecha)} {pages && `· pp. ${pages}`}
       </p>
@@ -165,42 +170,42 @@ function ArticleCard({ article }) {
           <p className="text-sm text-gray-800">
             <strong className="font-medium">Fecha:</strong> {parseDateFlexible(article.fecha)}
           </p>
-          {article.area ? (
-  <div className="text-sm text-gray-800">
-    <strong className="font-medium">Áreas:</strong>{' '}
-    <div className="flex flex-wrap gap-2 mt-1">
-      {article.area
-        .split(';')
-        .map((area, idx) => (
-          <span
-            key={idx}
-            className="bg-yellow-100 text-yellow-800 text-xs font-medium px-3 py-1 rounded-full shadow-sm"
-          >
-            {area.trim()}
-          </span>
-        ))}
-    </div>
-  </div>
-) : (
-  <p className="text-sm text-gray-800">
-    <strong className="font-medium">Área:</strong> No especificada
-  </p>
-)}
-<p className="text-sm text-gray-800">
-    <strong className="font-medium">Palabras Clave:</strong>
-  </p>
 
+          {article.area ? (
+            <div className="text-sm text-gray-800">
+              <strong className="font-medium">Áreas:</strong>{' '}
+              <div className="flex flex-wrap gap-2 mt-1">
+                {article.area
+                  .split(';')
+                  .map((area, idx) => (
+                    <span
+                      key={idx}
+                      className="bg-yellow-100 text-yellow-800 text-xs font-medium px-3 py-1 rounded-full shadow-sm"
+                    >
+                      {area.trim()}
+                    </span>
+                  ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-800">
+              <strong className="font-medium">Área:</strong> No especificada
+            </p>
+          )}
+
+          <p className="text-sm text-gray-800">
+            <strong className="font-medium">Palabras Clave:</strong>
+          </p>
           {article.palabras_clave && article.palabras_clave.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {article.palabras_clave
-                .map((kw, idx) => (
-                  <span
-                    key={idx}
-                    className="bg-blue-100 text-blue-800 text-xs font-medium px-3 py-1 rounded-full shadow-sm"
-                  >
-                    {kw}
-                  </span>
-                ))}
+              {article.palabras_clave.map((kw, idx) => (
+                <span
+                  key={idx}
+                  className="bg-blue-100 text-blue-800 text-xs font-medium px-3 py-1 rounded-full shadow-sm"
+                >
+                  {kw}
+                </span>
+              ))}
             </div>
           )}
 
@@ -278,6 +283,7 @@ function ArticleCard({ article }) {
           >
             {showCitations ? 'Ocultar citas' : 'Cómo citar este artículo'}
           </button>
+
           {showCitations && (
             <div className="text-gray-800 text-sm space-y-4 bg-white p-4 rounded-lg shadow-inner break-words">
               <p><strong className="font-medium">Chicago:</strong> {getChicagoCitation()}</p>
