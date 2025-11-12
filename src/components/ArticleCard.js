@@ -31,7 +31,9 @@ function ArticleCard({ article }) {
 
   const articleSlug = `${generateSlug(article['Título'])}-${article['Número de artículo']}`;
 
-  const htmlUrl = `https://www.revistacienciasestudiantes.com/articles/article-${articleSlug}.html`;
+  const htmlUrl = article?.['Número de artículo']
+    ? `https://www.revistacienciasestudiantes.com/articles/article-${articleSlug}.html`
+    : null;
 
   const pages = `${article?.['Primera página'] || ''}-${article?.['Última página'] || ''}`.trim() || '';
 
