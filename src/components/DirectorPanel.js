@@ -10,6 +10,12 @@ const ARTICULOS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLk
 const GH_API_BASE = 'https://api.github.com/repos/revista1919/revista1919.github.io/contents';
 const REPO_OWNER = 'revista1919';
 const REPO_NAME = 'revista1919.github.io';
+const DOMAIN = 'https://www.revistacienciasestudiantes.com';
+
+const generateSlug = (name) => {
+  if (!name) return '';
+  return name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-').replace(/[^\w-]/g, '').replace(/-+/g, '-').replace(/^-+|-+$/g, '');
+};
 
 const toBase64 = (file) =>
   new Promise((resolve, reject) => {
@@ -172,7 +178,7 @@ export default function DirectorPanel({ user }) {
         areas: (row['Área temática'] || '').split(';').map((a) => a.trim()).filter(Boolean),
         keywords: (row['Palabras clave'] || '').split(';').map((k) => k.trim()).filter(Boolean),
         keywords_english: (row['Keywords'] || '').split(';').map((k) => k.trim()).filter(Boolean),
-        pdfUrl: row['URL_PDF'] || `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/public/Articles/Articulo${row['Número de artículo']}.pdf`,
+        pdfUrl: row['URL_PDF'] || `${DOMAIN}/Articles/Article-${generateSlug(row['Título'])}-${row['Número de artículo']}.pdf`,
       }));
       
       setArticles(enrichedArticles);
@@ -329,11 +335,12 @@ console.log('🆕 Calculated articleNumber:', articleNumber, 'from nums:', nums)
 
         setStatus('Subiendo PDF...');
         const base64 = await toBase64(formData.pdfFile);
-        const fileName = `Articulo${articleNumber}.pdf`;
+        const articleSlug = `${generateSlug(formData.titulo)}-${articleNumber}`;
+        const fileName = `Article-${articleSlug}.pdf`;
         const message = `${action === 'add' ? 'Add' : 'Update'} PDF for article ${articleNumber}`;
         
         await uploadPDFToGitHub(base64, fileName, message);
-        pdfUrl = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/public/Articles/${fileName}`;
+        pdfUrl = `${DOMAIN}/Articles/${fileName}`;
         await updatePDFUrlInSheet(articleNumber, pdfUrl);
         
         console.log('✅ PDF uploaded:', pdfUrl);
@@ -400,7 +407,15 @@ await fetch(ARTICULOS_GAS_URL, {
       
       // Delete PDF if exists
       if (GH_TOKEN) {
-        await deletePDFFromGitHub(`Articulo${numero}.pdf`, `Delete PDF for article ${numero}`);
+        // Need to know the title to generate slug, but since deleting, perhaps fetch title or assume format
+        // For simplicity, assume old format or update to query title if needed
+        // But to make it work, we'll need the title. Since articles have it, find it
+        const articleToDelete = articles.find(a => a['Número de artículo'] === numero.toString());
+        if (articleToDelete) {
+          const articleSlug = `${generateSlug(articleToDelete['Título'])}-${numero}`;
+          const fileName = `Article-${articleSlug}.pdf`;
+          await deletePDFFromGitHub(fileName, `Delete PDF for article ${numero}`);
+        }
       }
       
       setStatus('✅ Artículo eliminado');
