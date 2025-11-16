@@ -1,3 +1,4 @@
+// Spanish Version: AdminSection.jsx
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
@@ -30,17 +31,19 @@ function AdminSection() {
     {
       name: 'Editor en Jefe',
       description: 'Supervisa todos los contenidos y coordina al equipo editorial. Garantiza la calidad de los artículos.',
-      isPostulable: true,
+      isPostulable: false,
     },
     {
       name: 'Editor de Sección',
       description: 'Revisa y edita textos de una sección específica (por ejemplo, Opinión, Cultura, Actualidad). Vota por publicar o no un trabajo. Principalmente aplica las correcciones hechas por los revisores. Es el encargado de comunicarse con el autor para solicitar datos y entregar su retroalimentación',
       isPostulable: true,
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=Espa%C3%B1ol&entry.324949366=Editor+de+Secci%C3%B3n'
     },
     {
       name: 'Revisor / Comité Editorial',
       description: 'Corrige estilo, ortografía y coherencia de los artículos. Además un revisor puede revisar fuentes, verificar calidad de las mismas y de los contenidos. Proporciona retroalimentación a los autores y vota si publicar o no un artículo.',
       isPostulable: true,
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=Espa%C3%B1ol&entry.324949366=Revisor'
     },
     {
       name: 'Responsable de Desarrollo Web',
@@ -51,11 +54,13 @@ function AdminSection() {
       name: 'Encargado de Soporte Técnico',
       description: 'Resuelve problemas técnicos relacionados con la carga de contenidos, formularios y correos.',
       isPostulable: true,
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=Espa%C3%B1ol&entry.324949366=Encargado+de+Soporte+T%C3%A9cnico'
     },
     {
       name: 'Encargado de Asignación de Artículos',
       description: 'Recibe, organiza y canaliza las postulaciones de artículos hacia los revisores y editores',
       isPostulable: true,
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=Espa%C3%B1ol&entry.324949366=Encargado+de+Asignaci%C3%B3n+de+Art%C3%ADculos'
     },
     {
       name: 'Encargado/a de Redes Sociales',
@@ -66,42 +71,49 @@ function AdminSection() {
       name: 'Diseñador/a Gráfico/a',
       description: 'Crea material visual como afiches, portadas y plantillas para redes sociales.',
       isPostulable: true,
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=Espa%C3%B1ol&entry.324949366=Dise%C3%B1ador/a+Gr%C3%A1fico/a'
     },
     {
       name: 'Community Manager',
       description: 'Interactúa con la comunidad, responde mensajes y fomenta la participación en las plataformas de la revista.',
       isPostulable: true,
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=Espa%C3%B1ol&entry.324949366=Community+Manager'
     },
     {
       name: 'Encargado/a de Nuevos Colaboradores',
       description: 'Orienta a nuevos postulantes a roles administrativos, revisores o editores.',
       isPostulable: true,
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=Espa%C3%B1ol&entry.324949366=Encargado/a+de+Nuevos+Colaboradores'
     },
     {
       name: 'Coordinador/a de Eventos o Convocatorias',
       description: 'Organiza conversatorios, debates, concursos u otras actividades para promover la revista.',
       isPostulable: true,
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=Espa%C3%B1ol&entry.324949366=Coordinador/a+de+Eventos+o+Convocatorias'
     },
     {
       name: 'Asesor/a Legal/Editorial',
-      description: 'Revisa términos legales, normas editoriales y derechos de autor para la revista (NO NECESARIO POR EL MOMENTO).',
+      description: 'Revisa términos legales, normas editoriales y derechos de autor para la revista.',
       isPostulable: true,
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=Espa%C3%B1ol&entry.324949366=Asesor/a+Legal/Editorial'
     },
     {
       name: 'Responsable de Finanzas / Transparencia',
-      description: 'Gestiona donaciones o presupuestos, asegurando transparencia en las finanzas (NO NECESARIO POR EL MOMENTO).',
+      description: 'Gestiona donaciones o presupuestos, asegurando transparencia en las finanzas.',
       isPostulable: true,
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=Espa%C3%B1ol&entry.324949366=Responsable+de+Finanzas+/+Transparencia'
+    },
+    {
+      name: 'Asesor Académico',
+      description: 'Verifica la calidad de un volumen y está disponible para consultas puntuales.',
+      isPostulable: true,
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=Espa%C3%B1ol&entry.324949366=Asesor+Acad%C3%A9mico'
     },
   ];
 
   const handleRoleClick = (role) => {
     setSelectedRole(role);
     setIsModalOpen(true);
-  };
-
-  const handlePostulateClick = () => {
-    window.open('https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform', '_blank');
-    setIsModalOpen(false);
   };
 
   const containerVariants = {
@@ -182,7 +194,7 @@ function AdminSection() {
             {role.isPostulable && (
               <button
                 className="mt-2 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
-                onClick={handlePostulateClick}
+                onClick={() => window.open(role.link, '_blank')}
                 aria-label={`Postular al rol ${role.name}`}
               >
                 Postular
@@ -223,7 +235,7 @@ function AdminSection() {
               {selectedRole.isPostulable && (
                 <button
                   className="mt-4 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
-                  onClick={handlePostulateClick}
+                  onClick={() => window.open(selectedRole.link, '_blank')}
                   aria-label={`Postular al rol ${selectedRole.name}`}
                 >
                   Postular ahora
