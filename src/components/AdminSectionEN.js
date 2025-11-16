@@ -1,3 +1,4 @@
+// English Version: AdminSection.jsx
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
@@ -30,17 +31,19 @@ function AdminSection() {
     {
       name: 'Editor-in-Chief',
       description: 'Oversees all content and coordinates the editorial team. Ensures the quality of articles. Receives, organizes, and channels article submissions to reviewers.',
-      isPostulable: true,
+      isPostulable: false,
     },
     {
       name: 'Section Editor',
       description: 'Reviews and edits texts for a specific section (e.g., Opinion, Culture, News). Votes on whether to publish a work. Primarily applies corrections made by reviewers. Communicates with authors to request information and provide feedback.',
       isPostulable: true,
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.293102540=Section+Editor'
     },
     {
       name: 'Reviewer / Editorial Committee',
       description: 'Corrects style, spelling, and coherence of articles. Reviewers may also verify sources, assess their quality, and evaluate content. Provides feedback to authors and votes on whether to publish an article.',
       isPostulable: true,
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.293102540=Reviewer'
     },
     {
       name: 'Web Development Manager',
@@ -51,12 +54,13 @@ function AdminSection() {
       name: 'Technical Support Manager',
       description: 'Resolves technical issues related to content uploads, forms, and emails.',
       isPostulable: true,
-      
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.293102540=Technical+Support+Manager'
     },
     {
       name: 'Article Assignment Manager',
       description: 'Receives, organizes, and channels article submissions to reviewers and editors.',
       isPostulable: true,
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.293102540=Article+Assignment+Manager'
     },
     {
       name: 'Social Media Manager',
@@ -67,42 +71,49 @@ function AdminSection() {
       name: 'Graphic Designer',
       description: 'Creates visual materials such as posters, covers, and templates for social media.',
       isPostulable: true,
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.293102540=Graphic+Designer'
     },
     {
       name: 'Community Manager',
       description: 'Interacts with the community, responds to messages, and encourages participation on the journal’s platforms.',
       isPostulable: true,
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.293102540=Community+Manager'
     },
     {
       name: 'New Collaborators Manager',
       description: 'Guides new applicants for administrative, reviewer, or editor roles.',
       isPostulable: true,
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.293102540=New+Collaborators+Manager'
     },
     {
       name: 'Events or Calls Coordinator',
       description: 'Organizes talks, debates, contests, or other activities to promote the journal.',
       isPostulable: true,
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.293102540=Events+or+Calls+Coordinator'
     },
     {
       name: 'Editorial/Legal Advisor',
-      description: 'Reviews legal terms, editorial standards, and copyright matters for the journal (NOT NECESSARY AT THE MOMENT).',
+      description: 'Reviews legal terms, editorial standards, and copyright matters for the journal.',
       isPostulable: true,
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.293102540=Editorial/Legal+Advisor'
     },
     {
       name: 'Finance/Transparency Manager',
-      description: 'Manages donations or budgets, ensuring transparency in finances (NOT NECESSARY AT THE MOMENT).',
+      description: 'Manages donations or budgets, ensuring transparency in finances.',
       isPostulable: true,
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.293102540=Finance/Transparency+Manager'
+    },
+    {
+      name: 'Academic Advisor',
+      description: 'Verifies the quality of a volume and is available for specific consultations.',
+      isPostulable: true,
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.293102540=Academic+Advisor'
     },
   ];
 
   const handleRoleClick = (role) => {
     setSelectedRole(role);
     setIsModalOpen(true);
-  };
-
-  const handlePostulateClick = () => {
-    window.open('https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform', '_blank');
-    setIsModalOpen(false);
   };
 
   const containerVariants = {
@@ -183,7 +194,7 @@ function AdminSection() {
             {role.isPostulable && (
               <button
                 className="mt-2 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
-                onClick={handlePostulateClick}
+                onClick={() => window.open(role.link, '_blank')}
                 aria-label={`Apply for the role ${role.name}`}
               >
                 Apply
@@ -224,7 +235,7 @@ function AdminSection() {
               {selectedRole.isPostulable && (
                 <button
                   className="mt-4 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
-                  onClick={handlePostulateClick}
+                  onClick={() => window.open(selectedRole.link, '_blank')}
                   aria-label={`Apply for the role ${selectedRole.name}`}
                 >
                   Apply now
