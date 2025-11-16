@@ -9,15 +9,12 @@ import AssignSection from './AssignSection';
 import { useTranslation } from 'react-i18next';
 import DirectorPanel from './DirectorPanel';
 import { motion, AnimatePresence } from 'framer-motion';
-
 const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby2B1OUt3TMqaed6Vz-iamUPn4gHhKXG2RRxiy8Nt6u69Cg-2kSze2XQ-NywX5QrNfy/exec';
 const RUBRIC_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzehxU_O7GkzfiCqCsSdnFwvA_Mhtfr_vSZjqVsBo3yx8ZEpr9Qur4NHPI09tyH1AZe/exec';
-
 const RUBRIC_CSV1 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=0&single=true&output=csv';
 const RUBRIC_CSV2 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=1438370398&single=true&output=csv';
 const RUBRIC_CSV3 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=1972050001&single=true&output=csv';
-
 const criteria = {
   'Revisor 1': [
     {
@@ -143,16 +140,13 @@ const criteria = {
     }
   ]
 };
-
 const getDecisionText = (percent) => {
   if (percent >= 85) return 'Aceptar sin cambios.';
   if (percent >= 70) return 'Aceptar con cambios menores.';
   if (percent >= 50) return 'Revisión mayor antes de publicar.';
   return 'Rechazar.';
 };
-
 const getTotal = (scores, crits) => crits.reduce((sum, c) => sum + (scores[c.key] || 0), 0);
-
 const base64EncodeUnicode = (str) => {
   const encoder = new TextEncoder();
   const bytes = encoder.encode(str);
@@ -160,7 +154,6 @@ const base64EncodeUnicode = (str) => {
   bytes.forEach(b => binary += String.fromCharCode(b));
   return btoa(binary);
 };
-
 const base64DecodeUnicode = (str) => {
   const binary = atob(str);
   const bytes = new Uint8Array(binary.length);
@@ -170,7 +163,6 @@ const base64DecodeUnicode = (str) => {
   const decoder = new TextDecoder();
   return decoder.decode(bytes);
 };
-
 const sanitizeInput = (input) => {
   if (!input) return '';
   return input.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
@@ -178,18 +170,14 @@ const sanitizeInput = (input) => {
               .replace(/\s+/g, ' ')
               .trim();
 };
-
 class ErrorBoundary extends React.Component {
   state = { hasError: false };
-
   static getDerivedStateFromError(error) {
     return { hasError: true };
   }
-
   componentDidCatch(error, errorInfo) {
     console.error('ErrorBoundary caught:', error, errorInfo);
   }
-
   render() {
     if (this.state.hasError) {
       return <div className="text-red-600 text-center p-4">Ocurrió un error. Por favor, recarga la página.</div>;
@@ -197,7 +185,6 @@ class ErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
-
 export default function PortalSection({ user, onLogout }) {
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -220,6 +207,8 @@ export default function PortalSection({ user, onLogout }) {
   const [isChiefEditorPanelExpanded, setIsChiefEditorPanelExpanded] = useState(false); // Estado para el panel colapsable del Editor en Jefe
   const feedbackQuillRefs = useRef({});
   const reportQuillRefs = useRef({});
+  const [userLoadAttempts, setUserLoadAttempts] = useState(0);
+  const maxUserLoadAttempts = 3;
 
 useEffect(() => {
   if (!user) {
@@ -251,9 +240,7 @@ useEffect(() => {
         fetch(RUBRIC_CSV2, { cache: 'no-store' }).then(r => r.text()),
         fetch(RUBRIC_CSV3, { cache: 'no-store' }).then(r => r.text())
       ]);
-
       const parseData = (csvText) => Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
-
       const data1 = parseData(csv1Text);
       const scoresMap1 = {};
       data1.forEach(row => {
@@ -267,7 +254,6 @@ useEffect(() => {
           };
         }
       });
-
       const data2 = parseData(csv2Text);
       const scoresMap2 = {};
       data2.forEach(row => {
@@ -281,7 +267,6 @@ useEffect(() => {
           };
         }
       });
-
       const data3 = parseData(csv3Text);
       const scoresMap3 = {};
       data3.forEach(row => {
@@ -296,14 +281,12 @@ useEffect(() => {
           };
         }
       });
-
       return { scoresMap1, scoresMap2, scoresMap3 };
     } catch (err) {
       console.error('Error fetching rubrics:', err);
       return { scoresMap1: {}, scoresMap2: {}, scoresMap3: {} };
     }
   };
-
   const fetchWithRetry = async (url, retries = 3, timeout = 10000) => {
     for (let i = 0; i < retries; i++) {
       try {
@@ -319,8 +302,7 @@ useEffect(() => {
       }
     }
   };
-
-  const fetchAssignments = async () => {
+  const fetchAssignments = async (effectiveName) => {
     try {
       setLoading(true);
       const [csvText, rubrics] = await Promise.all([
@@ -333,11 +315,11 @@ useEffect(() => {
         delimiter: ',',
         transform: (value) => value.trim(),
         complete: ({ data }) => {
-          const isAuthor = data.some((row) => row['Autor'] === user.name);
+          const isAuthor = data.some((row) => row['Autor']?.trim().toLowerCase() === effectiveName.trim().toLowerCase());
           let parsedAssignments = [];
           if (isAuthor) {
             parsedAssignments = data
-              .filter((row) => row['Autor'] === user.name)
+              .filter((row) => row['Autor']?.trim().toLowerCase() === effectiveName.trim().toLowerCase())
               .map((row) => ({
                 id: row['Nombre Artículo'],
                 'Nombre Artículo': row['Nombre Artículo'] || 'Sin título',
@@ -349,13 +331,13 @@ useEffect(() => {
           } else {
             parsedAssignments = data
               .filter((row) => {
-                if (row['Revisor 1'] === user.name) return true;
-                if (row['Revisor 2'] === user.name) return true;
-                if (row['Editor'] === user.name) return true;
+                if (row['Revisor 1']?.trim().toLowerCase() === effectiveName.trim().toLowerCase()) return true;
+                if (row['Revisor 2']?.trim().toLowerCase() === effectiveName.trim().toLowerCase()) return true;
+                if (row['Editor']?.trim().toLowerCase() === effectiveName.trim().toLowerCase()) return true;
                 return false;
               })
               .map((row) => {
-                const role = row['Revisor 1'] === user.name ? 'Revisor 1' : row['Revisor 2'] === user.name ? 'Revisor 2' : 'Editor';
+                const role = row['Revisor 1']?.trim().toLowerCase() === effectiveName.trim().toLowerCase() ? 'Revisor 1' : row['Revisor 2']?.trim().toLowerCase() === effectiveName.trim().toLowerCase() ? 'Revisor 2' : 'Editor';
                 const num = role === 'Revisor 1' ? 1 : role === 'Revisor 2' ? 2 : 3;
                 const assignment = {
                   id: row['Nombre Artículo'],
@@ -372,7 +354,6 @@ useEffect(() => {
                   informe2: row['Informe 2'] || 'Sin informe de Revisor 2.',
                   isCompleted: !!row[`Feedback ${num}`] && !!row[`Informe ${num}`] && !!row[`Voto ${num}`],
                 };
-
                 const name = assignment.id;
                 if (role === 'Revisor 1') {
                   assignment.scores = rubrics.scoresMap1[name] || { gramatica: 0, claridad: 0, estructura: 0, citacion: 0 };
@@ -383,7 +364,6 @@ useEffect(() => {
                   assignment.rev2Scores = rubrics.scoresMap2[name] || { relevancia: 0, rigor: 0, originalidad: 0, argumentos: 0 };
                   assignment.scores = rubrics.scoresMap3[name] || { modificaciones: 0, calidad: 0, aporte: 0, potencial: 0, decision: 0 };
                 }
-
                 return assignment;
               });
           }
@@ -411,18 +391,34 @@ useEffect(() => {
       setLoading(false);
     }
   };
-
   useEffect(() => {
-  if (!user || !user.name || !user.role) {
-    console.log('Error en fetchAssignments: usuario inválido', { user });
-    setError('Usuario no definido o información incompleta');
-    setLoading(false);
-    return;
-  }
-  console.log('Cargando asignaciones para usuario:', { uid: user.uid, name: user.name, role: user.role });
-  fetchAssignments();
-}, [user]);
-
+    if (!user || !user.role) {
+      console.log('Error en fetchAssignments: usuario inválido', { user });
+      setError('Usuario no definido o información incompleta');
+      setLoading(false);
+      return;
+    }
+    if (!user.name && userLoadAttempts < maxUserLoadAttempts) {
+      // Retry loading if name is missing (simulate async user data completion if needed)
+      const timer = setTimeout(() => {
+        setUserLoadAttempts(prev => prev + 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+    if (!user.name) {
+      console.error('Max attempts reached for user name loading');
+      setError('No se pudo cargar el nombre de usuario después de varios intentos');
+      setLoading(false);
+      return;
+    }
+    let effectiveName = user.name;
+    if (effectiveName.includes('@')) {
+      // Derive name from email format if name appears to be an email
+      effectiveName = effectiveName.split('@')[0].split('.').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+    }
+    console.log('Cargando asignaciones para usuario:', { uid: user.uid, name: effectiveName, role: user.role });
+    fetchAssignments(effectiveName);
+  }, [user, userLoadAttempts]);
   const isAuthor = assignments.length > 0 && assignments[0].role === 'Autor';
   const isChief = user?.role && user.role.split(';').map(r => r.trim()).includes('Editor en Jefe');
   const isDirector = user?.role && user.role.split(';').map(r => r.trim()).includes('Director General');
@@ -432,29 +428,27 @@ useEffect(() => {
   console.log('User roles:', user?.role);
   console.log('isDirector:', isDirector);
   console.log('isChief:', isChief);
-  const pendingAssignments = useMemo(() => 
-    isAuthor 
+  const pendingAssignments = useMemo(() =>
+    isAuthor
       ? assignments.filter((a) => !a.feedbackEditor || !['Aceptado', 'Rechazado'].includes(a.Estado))
-      : assignments.filter((a) => !a.isCompleted), 
+      : assignments.filter((a) => !a.isCompleted),
     [assignments, isAuthor]
   );
-  const completedAssignments = useMemo(() => 
-    isAuthor 
+  const completedAssignments = useMemo(() =>
+    isAuthor
       ? assignments.filter((a) => a.feedbackEditor && ['Aceptado', 'Rechazado'].includes(a.Estado))
-      : assignments.filter((a) => a.isCompleted), 
+      : assignments.filter((a) => a.isCompleted),
     [assignments, isAuthor]
   );
   const handleVote = (link, value) => {
     setVote((prev) => ({ ...prev, [link]: value }));
   };
-
   const handleRubricChange = (link, key, value) => {
     setRubricScores((prev) => ({
       ...prev,
       [link]: { ...prev[link], [key]: value }
     }));
   };
-
   const getRequiredKeys = (role) => {
     switch (role) {
       case 'Revisor 1': return ['gramatica', 'claridad', 'estructura', 'citacion'];
@@ -463,30 +457,25 @@ useEffect(() => {
       default: return [];
     }
   };
-
   const isRubricComplete = (link, role) => {
     const rubric = rubricScores[link] || {};
     const required = getRequiredKeys(role);
     return required.every(key => rubric[key] !== undefined && rubric[key] !== null);
   };
-
   const handleSubmitRubric = async (link, role) => {
     const articleName = assignments.find(a => a['Link Artículo'] === link)['Nombre Artículo'];
     const rubric = rubricScores[link] || {};
-
     const requiredKeys = getRequiredKeys(role);
     const missingKeys = requiredKeys.filter(key => rubric[key] === undefined || rubric[key] === null || isNaN(rubric[key]));
     if (missingKeys.length > 0) {
       setRubricStatus((prev) => ({ ...prev, [link]: `Error: Rúbrica incompleta. Faltan o inválidos: ${missingKeys.join(', ')}` }));
       return;
     }
-
     const rubricData = {
       articleName: articleName.trim(),
       role,
       rubric
     };
-
     try {
       let success = false;
       for (let attempt = 1; attempt <= 3; attempt++) {
@@ -508,7 +497,6 @@ useEffect(() => {
           }
         }
       }
-
       if (success) {
         setRubricStatus((prev) => ({ ...prev, [link]: 'Rúbrica enviada exitosamente' }));
         await fetchAssignments();
@@ -520,11 +508,9 @@ useEffect(() => {
       setRubricStatus((prev) => ({ ...prev, [link]: `Error: ${err.message}` }));
     }
   };
-
   const handleSubmit = async (link, role, feedbackText, reportText, voteValue) => {
     const encodedFeedback = base64EncodeUnicode(sanitizeInput(feedbackText || ''));
     const encodedReport = base64EncodeUnicode(sanitizeInput(reportText || ''));
-
     const mainData = {
       link,
       role,
@@ -532,7 +518,6 @@ useEffect(() => {
       feedback: encodedFeedback,
       report: encodedReport,
     };
-
     try {
       let mainSuccess = false;
       for (let attempt = 1; attempt <= 3; attempt++) {
@@ -554,7 +539,6 @@ useEffect(() => {
           }
         }
       }
-
       if (mainSuccess) {
         setSubmitStatus((prev) => ({ ...prev, [link]: 'Datos principales enviados exitosamente' }));
         await fetchAssignments();
@@ -566,18 +550,15 @@ useEffect(() => {
       setSubmitStatus((prev) => ({ ...prev, [link]: `Error: ${err.message}` }));
     }
   };
-
   const toggleTutorial = (link) => {
     setTutorialVisible((prev) => ({ ...prev, [link]: !prev[link] }));
   };
-
   const toggleFeedback = (link, type) => {
     setExpandedFeedback((prev) => ({
       ...prev,
       [link]: { ...prev[link], [type]: !prev[link]?.[type] }
     }));
   };
-
   const getTutorialText = (role) => {
   if (role === "Revisor 1") {
     return 'Como Revisor 1, tu rol es revisar aspectos técnicos como gramática, ortografía, citación de fuentes, detección de contenido generado por IA, coherencia lógica y estructura general del artículo. Deja comentarios detallados en el documento de Google Drive para sugerir mejoras. Asegúrate de que el lenguaje sea claro y académico. Debes dejar tu retroalimentación al autor en la casilla correspondiente. Además debes dejar un informe resumido explicando tus observaciones para guiar al editor. Por último, en la casilla de voto debes poner "sí" si apruebas el artículo, y "no" si lo rechazas.';
@@ -588,7 +569,6 @@ useEffect(() => {
   }
   return "";
 };
-
   const Tutorial = ({ role }) => {
     const tutorialText = getTutorialText(role);
     return (
@@ -602,14 +582,12 @@ useEffect(() => {
       </motion.div>
     );
   };
-
   const RubricViewer = ({ roleKey, scores, onChange, readOnly = false }) => {
     const crits = criteria[roleKey];
     if (!crits) return null;
     const total = getTotal(scores, crits);
     const max = crits.length * 2;
     const roleDisplay = roleKey === 'Revisor 1' ? 'Revisor 1 (Forma, estilo y técnica)' : roleKey === 'Revisor 2' ? 'Revisor 2 (Contenido y originalidad)' : 'Editor (Síntesis y decisión final)';
-
     return (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -649,21 +627,18 @@ useEffect(() => {
       </motion.div>
     );
   };
-
   const debouncedSetFeedback = useCallback(
     (link) => debounce((value) => {
       setFeedback((prev) => ({ ...prev, [link]: value }));
     }, 300),
     []
   );
-
   const debouncedSetReport = useCallback(
     (link) => debounce((value) => {
       setReport((prev) => ({ ...prev, [link]: value }));
     }, 300),
     []
   );
-
   const modules = useMemo(() => ({
     toolbar: {
       container: [
@@ -774,7 +749,6 @@ useEffect(() => {
       },
     },
   }), []);
-
   useEffect(() => {
     const setupCustomButton = (quillRef, link, type) => {
       if (quillRef.current) {
@@ -795,7 +769,6 @@ useEffect(() => {
         }
       }
     };
-
     Object.keys(feedbackQuillRefs.current).forEach(link => {
       setupCustomButton(feedbackQuillRefs.current[link], link, 'feedback');
     });
@@ -803,7 +776,6 @@ useEffect(() => {
       setupCustomButton(reportQuillRefs.current[link], link, 'report');
     });
   }, [feedbackQuillRefs.current, reportQuillRefs.current]);
-
   const formats = useMemo(() => [
     'bold', 'italic', 'underline', 'strike', 'blockquote',
     'list', 'bullet',
@@ -811,11 +783,9 @@ useEffect(() => {
     'align',
     'size'
   ], []);
-
   const encodeBody = (html) => {
     return base64EncodeUnicode(sanitizeInput(html));
   };
-
   const decodeBody = (encoded) => {
     if (!encoded) return <p className="text-gray-600 break-words">Sin contenido disponible.</p>;
     try {
@@ -826,7 +796,6 @@ useEffect(() => {
       return <p className="text-gray-600 break-words">Error al decodificar contenido.</p>;
     }
   };
-
   const handleImageModalSubmit = (link) => {
     const quillRef = feedbackQuillRefs.current[link] || reportQuillRefs.current[link];
     if (!quillRef) return;
@@ -868,7 +837,6 @@ useEffect(() => {
     setImageData((prev) => ({ ...prev, [link]: { url: '', width: '', height: '', align: 'left' } }));
     setEditingRange((prev) => ({ ...prev, [link]: null }));
   };
-
   const handleImageDataChange = (link, e) => {
     const { name, value } = e.target;
     setImageData((prev) => ({
@@ -876,18 +844,15 @@ useEffect(() => {
       [link]: { ...prev[link], [name]: value }
     }));
   };
-
 const AssignmentCard = ({ assignment, onClick, index }) => {
   const role = assignment.role;
   const nombre = assignment['Nombre Artículo'];
   const isAuthorCard = role === 'Autor';
-
   const statusColor = isAuthorCard
     ? (assignment.feedbackEditor && ['Aceptado', 'Rechazado'].includes(assignment.Estado)
       ? 'bg-green-100 text-green-800'
       : 'bg-yellow-100 text-yellow-800')
     : (assignment.isCompleted ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800');
-
   // Calcular porcentaje solo si no es autor
   let percent = 0;
   if (!isAuthorCard) {
@@ -897,7 +862,6 @@ const AssignmentCard = ({ assignment, onClick, index }) => {
     const max = (criteria[role] || criteria['Editor'] || []).length * 2;
     percent = max > 0 ? (total / max) * 100 : 0;
   }
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 50 }}
@@ -938,15 +902,12 @@ const AssignmentCard = ({ assignment, onClick, index }) => {
     </motion.div>
   );
 };
-
-
   const renderFullAssignment = (assignment) => {
   const link = assignment['Link Artículo'];
   const role = assignment.role;
   const nombre = assignment['Nombre Artículo'];
   const isPending = isAuthor ? (!assignment.feedbackEditor || !['Aceptado', 'Rechazado'].includes(assignment.Estado)) : !assignment.isCompleted;
   const isAuth = role === 'Autor';
-
   const handleRenderRubric = () => {
     if (isAuth) return null;
     if (isPending) {
@@ -1085,7 +1046,6 @@ const AssignmentCard = ({ assignment, onClick, index }) => {
       }
     }
   };
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -1109,7 +1069,6 @@ const AssignmentCard = ({ assignment, onClick, index }) => {
           Volver a lista
         </motion.button>
       </div>
-
       {isAuth ? (
   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-6">
     {assignment.feedbackEditor && ['Aceptado', 'Rechazado'].includes(assignment.Estado) ? (
@@ -1261,7 +1220,6 @@ const AssignmentCard = ({ assignment, onClick, index }) => {
                 </AnimatePresence>
               </motion.div>
             )}
-
             {isPending ? (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-6">
                 <motion.button
@@ -1386,7 +1344,6 @@ const AssignmentCard = ({ assignment, onClick, index }) => {
                 </div>
               </motion.div>
             )}
-
             <AnimatePresence>
               {showImageModal[link] && (
                 <motion.div
@@ -1479,13 +1436,11 @@ const AssignmentCard = ({ assignment, onClick, index }) => {
     </motion.div>
   );
 };
-
   // Director-specific functions for buttons
   const handleAddArticleClick = () => {
     // This function will be passed to DirectorPanel to trigger the add modal
-    // We don't need to implement it here as it's handled in DirectorPanel
+    // We don't need to need to implement it here as it's handled in DirectorPanel
   };
-
   const handleRebuildClick = () => {
     // This function will be passed to DirectorPanel to trigger the rebuild action
     // We don't need to implement it here as it's handled in DirectorPanel
@@ -1515,15 +1470,19 @@ if (!user || !user.name || !user.role) {
     </motion.div>
   );
 }
+let displayName = user.name;
+if (displayName.includes('@')) {
+  displayName = displayName.split('@')[0].split('.').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+}
    return (
-    
+   
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.8 }}
       className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 p-4 md:p-8"
     >
-      
+     
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
   <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
@@ -1537,7 +1496,7 @@ if (!user || !user.name || !user.role) {
         initial={{ scale: 0.8 }}
         animate={{ scale: 1 }}
         src={user.image}
-        alt={`${user?.name || 'Usuario'}'s profile`}
+        alt={`${displayName || 'Usuario'}'s profile`}
         className="w-10 h-10 rounded-full object-cover border-2 border-gray-300"
         onError={(e) => (e.target.style.display = 'none')} // Hide on error
       />
@@ -1547,10 +1506,10 @@ if (!user || !user.name || !user.role) {
         animate={{ scale: 1 }}
         className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center"
       >
-        <span className="text-gray-600 text-sm">{user?.name?.charAt(0) || 'U'}</span>
+        <span className="text-gray-600 text-sm">{displayName?.charAt(0) || 'U'}</span>
       </motion.div>
     )}
-    <span className="text-gray-600">Bienvenido, {user?.name || 'Usuario'}</span>
+    <span className="text-gray-600">Bienvenido, {displayName || 'Usuario'}</span>
     <motion.button
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
@@ -1561,7 +1520,7 @@ if (!user || !user.name || !user.role) {
     </motion.button>
   </div>
 </div>
-        
+       
         {error && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -1571,7 +1530,7 @@ if (!user || !user.name || !user.role) {
             {error}
           </motion.div>
         )}
-        
+       
      {/* News Upload Section only for Director General */}
         {isDirector && (
           <motion.div
@@ -1583,7 +1542,7 @@ if (!user || !user.name || !user.role) {
             <NewsUploadSection />
           </motion.div>
         )}
-        
+       
         {/* Director Panel */}
         {isDirector && (
           <motion.div
@@ -1691,7 +1650,7 @@ if (!user || !user.name || !user.role) {
             </AnimatePresence>
           </motion.div>
         )}
-        
+       
         {/* Task Section for Encargado de Redes Sociales and Responsable de Desarrollo Web */}
         {(isRrss || isWebDev) && !isDirector && !isChief && (
           <motion.div
@@ -1706,7 +1665,7 @@ if (!user || !user.name || !user.role) {
             <TaskSection user={user} />
           </motion.div>
         )}
-        
+       
         {/* Assignments and Tabs for all users with assignments */}
         {(pendingAssignments.length > 0 || completedAssignments.length > 0) && (
           <motion.div
@@ -1733,7 +1692,7 @@ if (!user || !user.name || !user.role) {
             </div>
           </motion.div>
         )}
-        
+       
         <ErrorBoundary>
           {(isChief || isDirector) && activeTab === 'asignar' && <AssignSection user={user} />}
           {(pendingAssignments.length > 0 || completedAssignments.length > 0 || isChief || isDirector) && (
@@ -1785,5 +1744,4 @@ if (!user || !user.name || !user.role) {
       </div>
     </motion.div>
   );
-
-}
+          }
