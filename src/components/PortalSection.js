@@ -207,9 +207,6 @@ export default function PortalSection({ user, onLogout }) {
   const [isChiefEditorPanelExpanded, setIsChiefEditorPanelExpanded] = useState(false); // Estado para el panel colapsable del Editor en Jefe
   const feedbackQuillRefs = useRef({});
   const reportQuillRefs = useRef({});
-  const [userLoadAttempts, setUserLoadAttempts] = useState(0);
-  const maxUserLoadAttempts = 3;
-
 useEffect(() => {
   if (!user) {
     console.log('Usuario nulo, limpiando estados de PortalSection');
@@ -315,11 +312,11 @@ useEffect(() => {
         delimiter: ',',
         transform: (value) => value.trim(),
         complete: ({ data }) => {
-          const isAuthor = data.some((row) => row['Autor']?.trim().toLowerCase() === effectiveName.trim().toLowerCase());
+          const isAuthor = data.some((row) => row['Autor'] === effectiveName);
           let parsedAssignments = [];
           if (isAuthor) {
             parsedAssignments = data
-              .filter((row) => row['Autor']?.trim().toLowerCase() === effectiveName.trim().toLowerCase())
+              .filter((row) => row['Autor'] === effectiveName)
               .map((row) => ({
                 id: row['Nombre Artículo'],
                 'Nombre Artículo': row['Nombre Artículo'] || 'Sin título',
@@ -331,13 +328,13 @@ useEffect(() => {
           } else {
             parsedAssignments = data
               .filter((row) => {
-                if (row['Revisor 1']?.trim().toLowerCase() === effectiveName.trim().toLowerCase()) return true;
-                if (row['Revisor 2']?.trim().toLowerCase() === effectiveName.trim().toLowerCase()) return true;
-                if (row['Editor']?.trim().toLowerCase() === effectiveName.trim().toLowerCase()) return true;
+                if (row['Revisor 1'] === effectiveName) return true;
+                if (row['Revisor 2'] === effectiveName) return true;
+                if (row['Editor'] === effectiveName) return true;
                 return false;
               })
               .map((row) => {
-                const role = row['Revisor 1']?.trim().toLowerCase() === effectiveName.trim().toLowerCase() ? 'Revisor 1' : row['Revisor 2']?.trim().toLowerCase() === effectiveName.trim().toLowerCase() ? 'Revisor 2' : 'Editor';
+                const role = row['Revisor 1'] === effectiveName ? 'Revisor 1' : row['Revisor 2'] === effectiveName ? 'Revisor 2' : 'Editor';
                 const num = role === 'Revisor 1' ? 1 : role === 'Revisor 2' ? 2 : 3;
                 const assignment = {
                   id: row['Nombre Artículo'],
@@ -398,13 +395,6 @@ useEffect(() => {
       setLoading(false);
       return;
     }
-    if (!user.name && userLoadAttempts < maxUserLoadAttempts) {
-      // Retry loading if name is missing (simulate async user data completion if needed)
-      const timer = setTimeout(() => {
-        setUserLoadAttempts(prev => prev + 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
     if (!user.name) {
       console.error('Max attempts reached for user name loading');
       setError('No se pudo cargar el nombre de usuario después de varios intentos');
@@ -412,13 +402,9 @@ useEffect(() => {
       return;
     }
     let effectiveName = user.name;
-    if (effectiveName.includes('@')) {
-      // Derive name from email format if name appears to be an email
-      effectiveName = effectiveName.split('@')[0].split('.').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
-    }
     console.log('Cargando asignaciones para usuario:', { uid: user.uid, name: effectiveName, role: user.role });
     fetchAssignments(effectiveName);
-  }, [user, userLoadAttempts]);
+  }, [user]);
   const isAuthor = assignments.length > 0 && assignments[0].role === 'Autor';
   const isChief = user?.role && user.role.split(';').map(r => r.trim()).includes('Editor en Jefe');
   const isDirector = user?.role && user.role.split(';').map(r => r.trim()).includes('Director General');
@@ -1439,7 +1425,7 @@ const AssignmentCard = ({ assignment, onClick, index }) => {
   // Director-specific functions for buttons
   const handleAddArticleClick = () => {
     // This function will be passed to DirectorPanel to trigger the add modal
-    // We don't need to need to implement it here as it's handled in DirectorPanel
+    // We don't need to implement it here as it's handled in DirectorPanel
   };
   const handleRebuildClick = () => {
     // This function will be passed to DirectorPanel to trigger the rebuild action
@@ -1471,18 +1457,15 @@ if (!user || !user.name || !user.role) {
   );
 }
 let displayName = user.name;
-if (displayName.includes('@')) {
-  displayName = displayName.split('@')[0].split('.').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
-}
    return (
-   
+  
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.8 }}
       className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 p-4 md:p-8"
     >
-     
+    
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
   <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
@@ -1520,7 +1503,7 @@ if (displayName.includes('@')) {
     </motion.button>
   </div>
 </div>
-       
+      
         {error && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -1530,7 +1513,7 @@ if (displayName.includes('@')) {
             {error}
           </motion.div>
         )}
-       
+      
      {/* News Upload Section only for Director General */}
         {isDirector && (
           <motion.div
@@ -1542,7 +1525,7 @@ if (displayName.includes('@')) {
             <NewsUploadSection />
           </motion.div>
         )}
-       
+      
         {/* Director Panel */}
         {isDirector && (
           <motion.div
@@ -1650,7 +1633,7 @@ if (displayName.includes('@')) {
             </AnimatePresence>
           </motion.div>
         )}
-       
+      
         {/* Task Section for Encargado de Redes Sociales and Responsable de Desarrollo Web */}
         {(isRrss || isWebDev) && !isDirector && !isChief && (
           <motion.div
@@ -1665,7 +1648,7 @@ if (displayName.includes('@')) {
             <TaskSection user={user} />
           </motion.div>
         )}
-       
+      
         {/* Assignments and Tabs for all users with assignments */}
         {(pendingAssignments.length > 0 || completedAssignments.length > 0) && (
           <motion.div
@@ -1692,7 +1675,7 @@ if (displayName.includes('@')) {
             </div>
           </motion.div>
         )}
-       
+      
         <ErrorBoundary>
           {(isChief || isDirector) && activeTab === 'asignar' && <AssignSection user={user} />}
           {(pendingAssignments.length > 0 || completedAssignments.length > 0 || isChief || isDirector) && (
@@ -1744,4 +1727,4 @@ if (displayName.includes('@')) {
       </div>
     </motion.div>
   );
-          }
+}
