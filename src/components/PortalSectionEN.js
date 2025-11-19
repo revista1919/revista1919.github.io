@@ -245,6 +245,13 @@ export default function PortalSection({ user, onLogout }) {
     }
   }, [user]);
 
+  // Added robustness: Check if user.name looks like an email and warn the user
+  useEffect(() => {
+    if (user && user.name && user.name.includes('@')) {
+      setError('Warning: Your name appears to be an email address. This may cause issues with assignment matching. Please update your display name in your Google account settings or contact the administrator.');
+    }
+  }, [user]);
+
   const fetchRubrics = async () => {
     try {
       const [csv1Text, csv2Text, csv3Text] = await Promise.all([
@@ -399,6 +406,10 @@ export default function PortalSection({ user, onLogout }) {
             }
           });
           setLoading(false);
+          // Added robustness: If no assignments found, provide a more informative message
+          if (parsedAssignments.length === 0 && !loading) {
+            setError(`No assignments found for '${user.name}'. If you expect assignments, please verify your account details or contact the administrator.`);
+          }
         },
         error: (err) => {
           console.error('Error parsing CSV:', err);
@@ -1789,4 +1800,4 @@ if (!user || !user.name || !user.role) {
     </motion.div>
   );
 
-}
+            }
