@@ -13,10 +13,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby2B1OUt3TMqaed6Vz-iamUPn4gHhKXG2RRxiy8Nt6u69Cg-2kSze2XQ-NywX5QrNfy/exec';
 const RUBRIC_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzehxU_O7GkzfiCqCsSdnFwvA_Mhtfr_vSZjqVsBo3yx8ZEpr9Qur4NHPI09tyH1AZe/exec';
-
 const RUBRIC_CSV1 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=0&single=true&output=csv';
 const RUBRIC_CSV2 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=1438370398&single=true&output=csv';
 const RUBRIC_CSV3 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=1972050001&single=true&output=csv';
+const TEAM_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 
 const criteria = {
   'Revisor 1': [
@@ -181,15 +181,12 @@ const sanitizeInput = (input) => {
 
 class ErrorBoundary extends React.Component {
   state = { hasError: false };
-
   static getDerivedStateFromError(error) {
     return { hasError: true };
   }
-
   componentDidCatch(error, errorInfo) {
     console.error('ErrorBoundary caught:', error, errorInfo);
   }
-
   render() {
     if (this.state.hasError) {
       return <div className="text-red-600 text-center p-4">Ocurrió un error. Por favor recargue la página.</div>;
@@ -245,9 +242,9 @@ export default function PortalSection({ user, onLogout }) {
     }
   }, [user]);
 
-  // Added robustness: Check if user.name looks like an email and warn the user
+  // Added robustness: Check if userName looks like an email and warn the user
   useEffect(() => {
-    if (user && user.name && user.name.includes('@')) {
+    if (user && userName && userName.includes('@')) {
       setError('Advertencia: Tu nombre parece ser una dirección de correo electrónico. Esto puede causar problemas con la coincidencia de asignaciones. Por favor, actualiza tu nombre de visualización en la configuración de tu cuenta de Google o contacta al administrador.');
     }
   }, [user]);
@@ -259,9 +256,7 @@ export default function PortalSection({ user, onLogout }) {
         fetch(RUBRIC_CSV2, { cache: 'no-store' }).then(r => r.text()),
         fetch(RUBRIC_CSV3, { cache: 'no-store' }).then(r => r.text())
       ]);
-
       const parseData = (csvText) => Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
-
       const data1 = parseData(csv1Text);
       const scoresMap1 = {};
       data1.forEach(row => {
@@ -275,7 +270,6 @@ export default function PortalSection({ user, onLogout }) {
           };
         }
       });
-
       const data2 = parseData(csv2Text);
       const scoresMap2 = {};
       data2.forEach(row => {
@@ -289,7 +283,6 @@ export default function PortalSection({ user, onLogout }) {
           };
         }
       });
-
       const data3 = parseData(csv3Text);
       const scoresMap3 = {};
       data3.forEach(row => {
@@ -304,7 +297,6 @@ export default function PortalSection({ user, onLogout }) {
           };
         }
       });
-
       return { scoresMap1, scoresMap2, scoresMap3 };
     } catch (err) {
       console.error('Error fetching rubrics:', err);
@@ -331,21 +323,30 @@ export default function PortalSection({ user, onLogout }) {
   const fetchAssignments = async () => {
     try {
       setLoading(true);
-      const [csvText, rubrics] = await Promise.all([
+      const [csvText, rubrics, teamText] = await Promise.all([
         fetchWithRetry(ASSIGNMENTS_CSV),
-        fetchRubrics()
+        fetchRubrics(),
+        fetchWithRetry(TEAM_CSV)
       ]);
+      
+      const teamData = Papa.parse(teamText, { header: true, skipEmptyLines: true }).data;
+      const userRow = teamData.find(row => row['Correo'] === user.email);
+      const userName = userRow ? userRow['Nombre'] : user.name;
+      if (!userRow) {
+        setError('No se encontró nombre para tu correo en la lista del equipo. Contacta al administrador.');
+      }
+
       Papa.parse(csvText, {
         header: true,
         skipEmptyLines: true,
         delimiter: ',',
         transform: (value) => value.trim(),
         complete: ({ data }) => {
-          const isAuthor = data.some((row) => row['Autor'] === user.name);
+          const isAuthor = data.some((row) => row['Autor'] === userName);
           let parsedAssignments = [];
           if (isAuthor) {
             parsedAssignments = data
-              .filter((row) => row['Autor'] === user.name)
+              .filter((row) => row['Autor'] === userName)
               .map((row) => ({
                 id: row['Nombre Artículo'],
                 'Nombre Artículo': row['Nombre Artículo'] || 'Sin título',
@@ -357,13 +358,13 @@ export default function PortalSection({ user, onLogout }) {
           } else {
             parsedAssignments = data
               .filter((row) => {
-                if (row['Revisor 1'] === user.name) return true;
-                if (row['Revisor 2'] === user.name) return true;
-                if (row['Editor'] === user.name) return true;
+                if (row['Revisor 1'] === userName) return true;
+                if (row['Revisor 2'] === userName) return true;
+                if (row['Editor'] === userName) return true;
                 return false;
               })
               .map((row) => {
-                const role = row['Revisor 1'] === user.name ? 'Revisor 1' : row['Revisor 2'] === user.name ? 'Revisor 2' : 'Editor';
+                const role = row['Revisor 1'] === userName ? 'Revisor 1' : row['Revisor 2'] === userName ? 'Revisor 2' : 'Editor';
                 const num = role === 'Revisor 1' ? 1 : role === 'Revisor 2' ? 2 : 3;
                 const assignment = {
                   id: row['Nombre Artículo'],
@@ -380,7 +381,6 @@ export default function PortalSection({ user, onLogout }) {
                   informe2: row['Informe 2'] || 'No hay informe del Revisor 2.',
                   isCompleted: !!row[`Feedback ${num}`] && !!row[`Informe ${num}`] && !!row[`Voto ${num}`],
                 };
-
                 const name = assignment.id;
                 if (role === 'Revisor 1') {
                   assignment.scores = rubrics.scoresMap1[name] || { gramatica: 0, claridad: 0, estructura: 0, citacion: 0 };
@@ -391,7 +391,6 @@ export default function PortalSection({ user, onLogout }) {
                   assignment.rev2Scores = rubrics.scoresMap2[name] || { relevancia: 0, rigor: 0, originalidad: 0, argumentos: 0 };
                   assignment.scores = rubrics.scoresMap3[name] || { modificaciones: 0, calidad: 0, aporte: 0, potencial: 0, decision: 0 };
                 }
-
                 return assignment;
               });
           }
@@ -408,7 +407,7 @@ export default function PortalSection({ user, onLogout }) {
           setLoading(false);
           // Added robustness: If no assignments found, provide a more informative message
           if (parsedAssignments.length === 0 && !loading) {
-            setError(`No se encontraron asignaciones para '${user.name}'. Si esperas asignaciones, por favor verifica los detalles de tu cuenta o contacta al administrador.`);
+            setError(`No se encontraron asignaciones para '${userName}'. Si esperas asignaciones, por favor verifica los detalles de tu cuenta o contacta al administrador.`);
           }
         },
         error: (err) => {
@@ -425,13 +424,13 @@ export default function PortalSection({ user, onLogout }) {
   };
 
   useEffect(() => {
-    if (!user || !user.name || !user.role) {
+    if (!user || !user.email || !user.name || !user.role) {
       console.log('Error en fetchAssignments: usuario inválido', { user });
       setError('Usuario no definido o información incompleta');
       setLoading(false);
       return;
     }
-    console.log('Cargando asignaciones para usuario:', { uid: user.uid, name: user.name, role: user.role });
+    console.log('Cargando asignaciones para usuario:', { uid: user.uid, email: user.email, name: user.name, effectiveName: userName, role: user.role });
     fetchAssignments();
   }, [user]);
 
@@ -444,18 +443,21 @@ export default function PortalSection({ user, onLogout }) {
   console.log('Roles del usuario:', user?.role);
   console.log('isDirector:', isDirector);
   console.log('isChief:', isChief);
-  const pendingAssignments = useMemo(() => 
-    isAuthor 
+
+  const pendingAssignments = useMemo(() =>
+    isAuthor
       ? assignments.filter((a) => !a.feedbackEditor || !['Aceptado', 'Rechazado'].includes(a.Estado))
-      : assignments.filter((a) => !a.isCompleted), 
+      : assignments.filter((a) => !a.isCompleted),
     [assignments, isAuthor]
   );
-  const completedAssignments = useMemo(() => 
-    isAuthor 
+
+  const completedAssignments = useMemo(() =>
+    isAuthor
       ? assignments.filter((a) => a.feedbackEditor && ['Aceptado', 'Rechazado'].includes(a.Estado))
-      : assignments.filter((a) => a.isCompleted), 
+      : assignments.filter((a) => a.isCompleted),
     [assignments, isAuthor]
   );
+
   const handleVote = (link, value) => {
     setVote((prev) => ({ ...prev, [link]: value }));
   };
@@ -485,20 +487,17 @@ export default function PortalSection({ user, onLogout }) {
   const handleSubmitRubric = async (link, role) => {
     const articleName = assignments.find(a => a['Link Artículo'] === link)['Nombre Artículo'];
     const rubric = rubricScores[link] || {};
-
     const requiredKeys = getRequiredKeys(role);
     const missingKeys = requiredKeys.filter(key => rubric[key] === undefined || rubric[key] === null || isNaN(rubric[key]));
     if (missingKeys.length > 0) {
       setRubricStatus((prev) => ({ ...prev, [link]: `Error: Rúbrica incompleta. Faltante o inválido: ${missingKeys.join(', ')}` }));
       return;
     }
-
     const rubricData = {
       articleName: articleName.trim(),
       role,
       rubric
     };
-
     try {
       let success = false;
       for (let attempt = 1; attempt <= 3; attempt++) {
@@ -520,7 +519,6 @@ export default function PortalSection({ user, onLogout }) {
           }
         }
       }
-
       if (success) {
         setRubricStatus((prev) => ({ ...prev, [link]: 'Rúbrica enviada con éxito' }));
         await fetchAssignments();
@@ -536,7 +534,6 @@ export default function PortalSection({ user, onLogout }) {
   const handleSubmit = async (link, role, feedbackText, reportText, voteValue) => {
     const encodedFeedback = base64EncodeUnicode(sanitizeInput(feedbackText || ''));
     const encodedReport = base64EncodeUnicode(sanitizeInput(reportText || ''));
-
     const mainData = {
       link,
       role,
@@ -544,7 +541,6 @@ export default function PortalSection({ user, onLogout }) {
       feedback: encodedFeedback,
       report: encodedReport,
     };
-
     try {
       let mainSuccess = false;
       for (let attempt = 1; attempt <= 3; attempt++) {
@@ -566,7 +562,6 @@ export default function PortalSection({ user, onLogout }) {
           }
         }
       }
-
       if (mainSuccess) {
         setSubmitStatus((prev) => ({ ...prev, [link]: 'Datos principales enviados con éxito' }));
         await fetchAssignments();
@@ -621,7 +616,6 @@ export default function PortalSection({ user, onLogout }) {
     const total = getTotal(scores, crits);
     const max = crits.length * 2;
     const roleDisplay = roleKey === 'Revisor 1' ? 'Revisor 1 (Forma, Estilo y Técnica)' : roleKey === 'Revisor 2' ? 'Revisor 2 (Contenido y Originalidad)' : 'Editor (Síntesis y Decisión Final)';
-
     return (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -807,7 +801,6 @@ export default function PortalSection({ user, onLogout }) {
         }
       }
     };
-
     Object.keys(feedbackQuillRefs.current).forEach(link => {
       setupCustomButton(feedbackQuillRefs.current[link], link, 'feedback');
     });
@@ -889,608 +882,599 @@ export default function PortalSection({ user, onLogout }) {
     }));
   };
 
-const AssignmentCard = ({ assignment, onClick, index }) => {
-  const role = assignment.role;
-  const nombre = assignment['Nombre Artículo'];
-  const isAuthorCard = role === 'Autor';
-
-  const statusColor = isAuthorCard
-    ? (assignment.feedbackEditor && ['Aceptado', 'Rechazado'].includes(assignment.Estado)
-      ? 'bg-green-100 text-green-800'
-      : 'bg-yellow-100 text-yellow-800')
-    : (assignment.isCompleted ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800');
-
-  // Calcular porcentaje solo si no es autor
-  let percent = 0;
-  if (!isAuthorCard) {
-    const total = role !== 'Editor'
-      ? getTotal(assignment.scores || {}, criteria[role] || [])
-      : getTotal(assignment.scores || {}, criteria['Editor'] || []);
-    const max = (criteria[role] || criteria['Editor'] || []).length * 2;
-    percent = max > 0 ? (total / max) * 100 : 0;
-  }
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 50 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: index * 0.1 }}
-      whileHover={{ scale: 1.02, boxShadow: '0 10px 20px rgba(0,0,0,0.1)' }}
-      className="bg-white p-6 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-200 h-full flex flex-col justify-between"
-      onClick={onClick}
-    >
-      <div>
-        <h4 className="text-xl font-bold text-gray-800 mb-2 break-words">{nombre}</h4>
-        <p className="text-sm text-gray-600 mb-3 break-words">Rol: {role}</p>
-        <div className="flex items-center justify-between mb-4">
-          <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor}`}>
-            {isAuthorCard
-              ? (assignment.feedbackEditor && ['Aceptado', 'Rechazado'].includes(assignment.Estado)
-                ? 'Archivado'
-                : 'En Revisión')
-              : (assignment.isCompleted ? 'Completado' : 'Pendiente')}
-          </span>
-          {!isAuthorCard && (
-            <span className="text-sm font-medium text-gray-700">
-              {percent.toFixed(0)}% Puntaje
+  const AssignmentCard = ({ assignment, onClick, index }) => {
+    const role = assignment.role;
+    const nombre = assignment['Nombre Artículo'];
+    const isAuthorCard = role === 'Autor';
+    const statusColor = isAuthorCard
+      ? (assignment.feedbackEditor && ['Aceptado', 'Rechazado'].includes(assignment.Estado)
+        ? 'bg-green-100 text-green-800'
+        : 'bg-yellow-100 text-yellow-800')
+      : (assignment.isCompleted ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800');
+    // Calcular porcentaje solo si no es autor
+    let percent = 0;
+    if (!isAuthorCard) {
+      const total = role !== 'Editor'
+        ? getTotal(assignment.scores || {}, criteria[role] || [])
+        : getTotal(assignment.scores || {}, criteria['Editor'] || []);
+      const max = (criteria[role] || criteria['Editor'] || []).length * 2;
+      percent = max > 0 ? (total / max) * 100 : 0;
+    }
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 50 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: index * 0.1 }}
+        whileHover={{ scale: 1.02, boxShadow: '0 10px 20px rgba(0,0,0,0.1)' }}
+        className="bg-white p-6 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-200 h-full flex flex-col justify-between"
+        onClick={onClick}
+      >
+        <div>
+          <h4 className="text-xl font-bold text-gray-800 mb-2 break-words">{nombre}</h4>
+          <p className="text-sm text-gray-600 mb-3 break-words">Rol: {role}</p>
+          <div className="flex items-center justify-between mb-4">
+            <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor}`}>
+              {isAuthorCard
+                ? (assignment.feedbackEditor && ['Aceptado', 'Rechazado'].includes(assignment.Estado)
+                  ? 'Archivado'
+                  : 'En Revisión')
+                : (assignment.isCompleted ? 'Completado' : 'Pendiente')}
             </span>
-          )}
+            {!isAuthorCard && (
+              <span className="text-sm font-medium text-gray-700">
+                {percent.toFixed(0)}% Puntaje
+              </span>
+            )}
+          </div>
+          <p className="text-gray-500 text-sm break-words">{assignment.Estado || 'Sin estado'}</p>
         </div>
-        <p className="text-gray-500 text-sm break-words">{assignment.Estado || 'Sin estado'}</p>
-      </div>
-      <div className="mt-4 pt-4 border-t border-gray-200">
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
-        >
-          Ver Detalles
-        </motion.button>
-      </div>
-    </motion.div>
-  );
-};
-
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
+          >
+            Ver Detalles
+          </motion.button>
+        </div>
+      </motion.div>
+    );
+  };
 
   const renderFullAssignment = (assignment) => {
-  const link = assignment['Link Artículo'];
-  const role = assignment.role;
-  const nombre = assignment['Nombre Artículo'];
-  const isPending = isAuthor ? (!assignment.feedbackEditor || !['Aceptado', 'Rechazado'].includes(assignment.Estado)) : !assignment.isCompleted;
-  const isAuth = role === 'Autor';
-
-  const handleRenderRubric = () => {
-    if (isAuth) return null;
-    if (isPending) {
-      if (role === 'Editor') {
-        const rev1Total = getTotal(assignment.rev1Scores, criteria['Revisor 1']);
-        const rev2Total = getTotal(assignment.rev2Scores, criteria['Revisor 2']);
-        const revPercent = ((rev1Total + rev2Total) / 16) * 100;
-        const editorTotal = getTotal(rubricScores[link] || {}, criteria['Editor']);
-        const overallTotal = rev1Total + rev2Total + editorTotal;
-        const overallPercent = (overallTotal / 26) * 100;
-        return (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h5 className="text-lg font-semibold text-gray-800">Rúbrica del Revisor 1</h5>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                onClick={() => toggleFeedback(link, 'rubric1')}
-                className="text-blue-600 hover:underline text-sm flex items-center"
-              >
-                {expandedFeedback[link]?.rubric1 ? 'Ocultar' : 'Mostrar'}
-                <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                </svg>
-              </motion.button>
-            </div>
-            <AnimatePresence>
-              {expandedFeedback[link]?.rubric1 && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
-                  <RubricViewer roleKey="Revisor 1" scores={assignment.rev1Scores} readOnly />
-                </motion.div>
-              )}
-            </AnimatePresence>
-            <div className="flex items-center justify-between">
-              <h5 className="text-lg font-semibold text-gray-800">Rúbrica del Revisor 2</h5>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                onClick={() => toggleFeedback(link, 'rubric2')}
-                className="text-blue-600 hover:underline text-sm flex items-center"
-              >
-                {expandedFeedback[link]?.rubric2 ? 'Ocultar' : 'Mostrar'}
-                <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                </svg>
-              </motion.button>
-            </div>
-            <AnimatePresence>
-              {expandedFeedback[link]?.rubric2 && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
-                  <RubricViewer roleKey="Revisor 2" scores={assignment.rev2Scores} readOnly />
-                </motion.div>
-              )}
-            </AnimatePresence>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-yellow-50 rounded-md">
-              <p className="font-medium break-words">Implicación de los Revisores: {revPercent.toFixed(1)}% - {getDecisionText(revPercent)}</p>
+    const link = assignment['Link Artículo'];
+    const role = assignment.role;
+    const nombre = assignment['Nombre Artículo'];
+    const isPending = isAuthor ? (!assignment.feedbackEditor || !['Aceptado', 'Rechazado'].includes(assignment.Estado)) : !assignment.isCompleted;
+    const isAuth = role === 'Autor';
+    const handleRenderRubric = () => {
+      if (isAuth) return null;
+      if (isPending) {
+        if (role === 'Editor') {
+          const rev1Total = getTotal(assignment.rev1Scores, criteria['Revisor 1']);
+          const rev2Total = getTotal(assignment.rev2Scores, criteria['Revisor 2']);
+          const revPercent = ((rev1Total + rev2Total) / 16) * 100;
+          const editorTotal = getTotal(rubricScores[link] || {}, criteria['Editor']);
+          const overallTotal = rev1Total + rev2Total + editorTotal;
+          const overallPercent = (overallTotal / 26) * 100;
+          return (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h5 className="text-lg font-semibold text-gray-800">Rúbrica del Revisor 1</h5>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  onClick={() => toggleFeedback(link, 'rubric1')}
+                  className="text-blue-600 hover:underline text-sm flex items-center"
+                >
+                  {expandedFeedback[link]?.rubric1 ? 'Ocultar' : 'Mostrar'}
+                  <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </motion.button>
+              </div>
+              <AnimatePresence>
+                {expandedFeedback[link]?.rubric1 && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                    <RubricViewer roleKey="Revisor 1" scores={assignment.rev1Scores} readOnly />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <div className="flex items-center justify-between">
+                <h5 className="text-lg font-semibold text-gray-800">Rúbrica del Revisor 2</h5>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  onClick={() => toggleFeedback(link, 'rubric2')}
+                  className="text-blue-600 hover:underline text-sm flex items-center"
+                >
+                  {expandedFeedback[link]?.rubric2 ? 'Ocultar' : 'Mostrar'}
+                  <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </motion.button>
+              </div>
+              <AnimatePresence>
+                {expandedFeedback[link]?.rubric2 && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                    <RubricViewer roleKey="Revisor 2" scores={assignment.rev2Scores} readOnly />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-yellow-50 rounded-md">
+                <p className="font-medium break-words">Implicación de los Revisores: {revPercent.toFixed(1)}% - {getDecisionText(revPercent)}</p>
+              </motion.div>
+              <RubricViewer
+                roleKey="Editor"
+                scores={rubricScores[link] || {}}
+                onChange={(key, val) => handleRubricChange(link, key, val)}
+              />
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-green-50 rounded-md">
+                <p className="font-medium break-words">Decisión General Sugerida: {overallPercent.toFixed(1)}% - {getDecisionText(overallPercent)}</p>
+              </motion.div>
             </motion.div>
+          );
+        } else {
+          return (
             <RubricViewer
-              roleKey="Editor"
+              roleKey={role}
               scores={rubricScores[link] || {}}
               onChange={(key, val) => handleRubricChange(link, key, val)}
             />
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-green-50 rounded-md">
-              <p className="font-medium break-words">Decisión General Sugerida: {overallPercent.toFixed(1)}% - {getDecisionText(overallPercent)}</p>
-            </motion.div>
-          </motion.div>
-        );
+          );
+        }
       } else {
-        return (
-          <RubricViewer
-            roleKey={role}
-            scores={rubricScores[link] || {}}
-            onChange={(key, val) => handleRubricChange(link, key, val)}
-          />
-        );
-      }
-    } else {
-      if (role === 'Editor') {
-        const rev1Total = getTotal(assignment.rev1Scores, criteria['Revisor 1']);
-        const rev2Total = getTotal(assignment.rev2Scores, criteria['Revisor 2']);
-        const revPercent = ((rev1Total + rev2Total) / 16) * 100;
-        const editorTotal = getTotal(assignment.scores, criteria['Editor']);
-        const overallTotal = rev1Total + rev2Total + editorTotal;
-        const overallPercent = (overallTotal / 26) * 100;
-        return (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h5 className="text-lg font-semibold text-gray-800">Rúbrica del Revisor 1</h5>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                onClick={() => toggleFeedback(link, 'rubric1')}
-                className="text-blue-600 hover:underline text-sm flex items-center"
-              >
-                {expandedFeedback[link]?.rubric1 ? 'Ocultar' : 'Mostrar'}
-                <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                </svg>
-              </motion.button>
-            </div>
-            <AnimatePresence>
-              {expandedFeedback[link]?.rubric1 && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
-                  <RubricViewer roleKey="Revisor 1" scores={assignment.rev1Scores} readOnly />
-                </motion.div>
-              )}
-            </AnimatePresence>
-            <div className="flex items-center justify-between">
-              <h5 className="text-lg font-semibold text-gray-800">Rúbrica del Revisor 2</h5>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                onClick={() => toggleFeedback(link, 'rubric2')}
-                className="text-blue-600 hover:underline text-sm flex items-center"
-              >
-                {expandedFeedback[link]?.rubric2 ? 'Ocultar' : 'Mostrar'}
-                <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                </svg>
-              </motion.button>
-            </div>
-            <AnimatePresence>
-              {expandedFeedback[link]?.rubric2 && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
-                  <RubricViewer roleKey="Revisor 2" scores={assignment.rev2Scores} readOnly />
-                </motion.div>
-              )}
-            </AnimatePresence>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-yellow-50 rounded-md">
-              <p className="font-medium break-words">Implicación de los Revisores: {revPercent.toFixed(1)}% - {getDecisionText(revPercent)}</p>
-            </motion.div>
-            <RubricViewer roleKey="Editor" scores={assignment.scores} readOnly />
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-green-50 rounded-md">
-              <p className="font-medium break-words">Decisión General: {overallPercent.toFixed(1)}% - {getDecisionText(overallPercent)}</p>
-            </motion.div>
-          </motion.div>
-        );
-      } else {
-        return <RubricViewer roleKey={role} scores={assignment.scores} readOnly />;
-      }
-    }
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="bg-white p-6 rounded-xl shadow-lg space-y-6 w-full"
-    >
-      <div className="flex justify-between items-start">
-        <div>
-          <h4 className="text-2xl font-bold text-gray-800 mb-2 break-words">{nombre}</h4>
-          <p className="text-gray-600 break-words">Rol: {role} | Estado: {assignment.Estado || 'Sin estado'}</p>
-        </div>
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          onClick={() => setSelectedAssignment(null)}
-          className="text-blue-600 hover:underline flex items-center text-sm"
-        >
-          <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-          </svg>
-          Volver a la Lista
-        </motion.button>
-      </div>
-
-      {isAuth ? (
-  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-6">
-    {assignment.feedbackEditor && ['Aceptado', 'Rechazado'].includes(assignment.Estado) ? (
-      <>
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="p-4 bg-green-50 rounded-md border-l-4 border-green-400">
-          <h5 className="text-lg font-semibold text-green-800 mb-2">Estado Final: {assignment.Estado}</h5>
-        </motion.div>
-        <h5 className="text-lg font-semibold text-gray-800">Feedback del Editor</h5>
-        <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto leading-relaxed">
-          {decodeBody(assignment.feedbackEditor)}
-        </div>
-      </>
-    ) : (
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="p-6 bg-yellow-50 rounded-md border-l-4 border-yellow-400 text-center">
-        <h5 className="text-xl font-semibold text-yellow-800 mb-2">Artículo en Revisión</h5>
-        <p className="text-yellow-700 text-lg">Tu artículo "{assignment['Nombre Artículo']}" está actualmente bajo revisión por evaluadores y el editor.</p>
-        <p className="text-yellow-600 mt-2">Recibirás una notificación con la decisión final y el feedback una vez que el proceso se complete.</p>
-      </motion.div>
-    )}
-  </motion.div>
-) : (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="lg:col-span-1 space-y-6">
-            <div className="space-y-2">
-              <motion.a
-                whileHover={{ scale: 1.05 }}
-                href={link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block bg-blue-600 text-white px-4 py-2 rounded-md shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm mb-2"
-              >
-                Abrir en Google Drive
-              </motion.a>
-              <motion.iframe
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.8 }}
-                src={link ? link.replace('/edit', '/preview') : ''}
-                className="w-full h-[350px] lg:h-[500px] rounded-xl shadow border border-gray-200"
-                title="Vista Previa del Artículo"
-                sandbox="allow-same-origin allow-scripts"
-                loading="lazy"
-              />
-            </div>
-            {handleRenderRubric()}
-          </div>
-          <div className="lg:col-span-1 space-y-6">
-            {role === 'Editor' && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <label className="block text-sm font-medium text-gray-700 break-words">Feedback del Revisor 1</label>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    onClick={() => toggleFeedback(link, 'feedback1')}
-                    className="text-blue-600 hover:underline text-sm flex items-center"
-                  >
-                    {expandedFeedback[link]?.feedback1 ? 'Ocultar' : 'Mostrar'}
-                    <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.feedback1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </motion.button>
-                </div>
-                <AnimatePresence>
-                  {expandedFeedback[link]?.feedback1 && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto"
-                    >
-                      {decodeBody(assignment.feedback1)}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-                <div className="flex items-center justify-between">
-                  <label className="block text-sm font-medium text-gray-700 break-words">Feedback del Revisor 2</label>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    onClick={() => toggleFeedback(link, 'feedback2')}
-                    className="text-blue-600 hover:underline text-sm flex items-center"
-                  >
-                    {expandedFeedback[link]?.feedback2 ? 'Ocultar' : 'Mostrar'}
-                    <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.feedback2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </motion.button>
-                </div>
-                <AnimatePresence>
-                  {expandedFeedback[link]?.feedback2 && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto"
-                    >
-                      {decodeBody(assignment.feedback2)}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-                <div className="flex items-center justify-between">
-                  <label className="block text-sm font-medium text-gray-700 break-words">Informe del Revisor 1</label>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    onClick={() => toggleFeedback(link, 'informe1')}
-                    className="text-blue-600 hover:underline text-sm flex items-center"
-                  >
-                    {expandedFeedback[link]?.informe1 ? 'Ocultar' : 'Mostrar'}
-                    <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.informe1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </motion.button>
-                </div>
-                <AnimatePresence>
-                  {expandedFeedback[link]?.informe1 && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto"
-                    >
-                      {decodeBody(assignment.informe1)}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-                <div className="flex items-center justify-between">
-                  <label className="block text-sm font-medium text-gray-700 break-words">Informe del Revisor 2</label>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    onClick={() => toggleFeedback(link, 'informe2')}
-                    className="text-blue-600 hover:underline text-sm flex items-center"
-                  >
-                    {expandedFeedback[link]?.informe2 ? 'Ocultar' : 'Mostrar'}
-                    <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.informe2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </motion.button>
-                </div>
-                <AnimatePresence>
-                  {expandedFeedback[link]?.informe2 && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto"
-                    >
-                      {decodeBody(assignment.informe2)}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-            )}
-
-            {isPending ? (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-6">
+        if (role === 'Editor') {
+          const rev1Total = getTotal(assignment.rev1Scores, criteria['Revisor 1']);
+          const rev2Total = getTotal(assignment.rev2Scores, criteria['Revisor 2']);
+          const revPercent = ((rev1Total + rev2Total) / 16) * 100;
+          const editorTotal = getTotal(assignment.scores, criteria['Editor']);
+          const overallTotal = rev1Total + rev2Total + editorTotal;
+          const overallPercent = (overallTotal / 26) * 100;
+          return (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h5 className="text-lg font-semibold text-gray-800">Rúbrica del Revisor 1</h5>
                 <motion.button
                   whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => toggleTutorial(link)}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
+                  onClick={() => toggleFeedback(link, 'rubric1')}
+                  className="text-blue-600 hover:underline text-sm flex items-center"
                 >
-                  {tutorialVisible[link] ? 'Ocultar Tutorial' : 'Ver Tutorial'}
+                  {expandedFeedback[link]?.rubric1 ? 'Ocultar' : 'Mostrar'}
+                  <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
                 </motion.button>
-                <AnimatePresence>
-                  {tutorialVisible[link] && <Tutorial role={role} />}
-                </AnimatePresence>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700 break-words">
-                    {role === 'Editor' ? 'Feedback Final al Autor' : 'Feedback al Autor'}
-                  </label>
-                  <ReactQuill
-                    ref={(el) => (feedbackQuillRefs.current[link] = el)}
-                    value={feedback[link] || ''}
-                    onChange={debouncedSetFeedback(link)}
-                    modules={modules}
-                    formats={formats}
-                    placeholder={role === 'Editor' ? 'Escribe feedback final sensible, sintetizando opiniones de revisores y tuyas.' : 'Escribe tu feedback aquí...'}
-                    className="border rounded-md text-gray-800 bg-white h-48"
-                    id={`feedback-${link}`}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700 break-words">Informe al Editor</label>
-                  <ReactQuill
-                    ref={(el) => (reportQuillRefs.current[link] = el)}
-                    value={report[link] || ''}
-                    onChange={debouncedSetReport(link)}
-                    modules={modules}
-                    formats={formats}
-                    placeholder="Escribe tu informe aquí..."
-                    className="border rounded-md text-gray-800 bg-white h-48"
-                    id={`report-${link}`}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700 break-words">Voto</label>
-                  <div className="flex space-x-4">
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => handleVote(link, 'si')}
-                      className={`px-4 py-2 rounded-md ${vote[link] === 'si' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} transition-colors text-sm`}
-                    >
-                      Sí
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => handleVote(link, 'no')}
-                      className={`px-4 py-2 rounded-md ${vote[link] === 'no' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} transition-colors text-sm`}
-                    >
-                      No
-                    </motion.button>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => handleSubmitRubric(link, role)}
-                    disabled={!isRubricComplete(link, role)}
-                    className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
-                  >
-                    Enviar Rúbrica
-                  </motion.button>
-                  {rubricStatus[link] && (
-                    <p className={`text-sm mt-2 ${rubricStatus[link].includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
-                      {rubricStatus[link]}
-                    </p>
-                  )}
-                </div>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => handleSubmit(link, role, feedback[link], report[link], vote[link])}
-                  disabled={!vote[link] || !feedback[link] || !report[link]}
-                  className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
-                >
-                  Enviar Revisión (Feedback, Informe, Voto)
-                </motion.button>
-                {submitStatus[link] && (
-                  <p className={`text-sm mt-2 ${submitStatus[link].includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
-                    {submitStatus[link]}
-                  </p>
-                )}
-              </motion.div>
-            ) : (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-6">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => toggleTutorial(link)}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
-                >
-                  {tutorialVisible[link] ? 'Ocultar Tutorial' : 'Ver Tutorial'}
-                </motion.button>
-                <AnimatePresence>
-                  {tutorialVisible[link] && <Tutorial role={role} />}
-                </AnimatePresence>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700 break-words">Feedback Enviado</label>
-                  <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
-                    {decodeBody(feedback[link] || 'Sin feedback.')}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700 break-words">Informe Enviado</label>
-                  <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
-                    {decodeBody(report[link] || 'Sin informe.')}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700 break-words">Voto Enviado</label>
-                  <p className="text-sm text-gray-600">{vote[link] ? vote[link].charAt(0).toUpperCase() + vote[link].slice(1) : 'No enviado'}</p>
-                </div>
-              </motion.div>
-            )}
-
-            <AnimatePresence>
-              {showImageModal[link] && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.3 }}
-                  className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-                >
-                  <motion.div
-                    initial={{ y: 50, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full"
-                  >
-                    <h4 className="text-lg font-semibold mb-4">{isEditingImage[link] ? 'Editar Imagen' : 'Insertar Imagen'}</h4>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">URL de la Imagen</label>
-                        <input
-                          type="text"
-                          name="url"
-                          value={imageData[link]?.url || ''}
-                          onChange={(e) => handleImageDataChange(link, e)}
-                          className="mt-1 block w-full border rounded-md p-2 text-sm"
-                          placeholder="https://example.com/image.jpg"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Ancho (px o %)</label>
-                        <input
-                          type="text"
-                          name="width"
-                          value={imageData[link]?.width || ''}
-                          onChange={(e) => handleImageDataChange(link, e)}
-                          className="mt-1 block w-full border rounded-md p-2 text-sm"
-                          placeholder="auto o 300px"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Alto (px o %)</label>
-                        <input
-                          type="text"
-                          name="height"
-                          value={imageData[link]?.height || ''}
-                          onChange={(e) => handleImageDataChange(link, e)}
-                          className="mt-1 block w-full border rounded-md p-2 text-sm"
-                          placeholder="auto o 200px"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Alineación</label>
-                        <select
-                          name="align"
-                          value={imageData[link]?.align || 'left'}
-                          onChange={(e) => handleImageDataChange(link, e)}
-                          className="mt-1 block w-full border rounded-md p-2 text-sm"
-                        >
-                          <option value="left">Izquierda</option>
-                          <option value="center">Centro</option>
-                          <option value="right">Derecha</option>
-                          <option value="justify">Justificado</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div className="mt-6 flex justify-end space-x-2">
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => setShowImageModal((prev) => ({ ...prev, [link]: false }))}
-                        className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 text-sm"
-                      >
-                        Cancelar
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => handleImageModalSubmit(link)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
-                      >
-                        {isEditingImage[link] ? 'Actualizar' : 'Insertar'}
-                      </motion.button>
-                    </div>
+              </div>
+              <AnimatePresence>
+                {expandedFeedback[link]?.rubric1 && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                    <RubricViewer roleKey="Revisor 1" scores={assignment.rev1Scores} readOnly />
                   </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                )}
+              </AnimatePresence>
+              <div className="flex items-center justify-between">
+                <h5 className="text-lg font-semibold text-gray-800">Rúbrica del Revisor 2</h5>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  onClick={() => toggleFeedback(link, 'rubric2')}
+                  className="text-blue-600 hover:underline text-sm flex items-center"
+                >
+                  {expandedFeedback[link]?.rubric2 ? 'Ocultar' : 'Mostrar'}
+                  <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </motion.button>
+              </div>
+              <AnimatePresence>
+                {expandedFeedback[link]?.rubric2 && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                    <RubricViewer roleKey="Revisor 2" scores={assignment.rev2Scores} readOnly />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-yellow-50 rounded-md">
+                <p className="font-medium break-words">Implicación de los Revisores: {revPercent.toFixed(1)}% - {getDecisionText(revPercent)}</p>
+              </motion.div>
+              <RubricViewer roleKey="Editor" scores={assignment.scores} readOnly />
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-green-50 rounded-md">
+                <p className="font-medium break-words">Decisión General: {overallPercent.toFixed(1)}% - {getDecisionText(overallPercent)}</p>
+              </motion.div>
+            </motion.div>
+          );
+        } else {
+          return <RubricViewer roleKey={role} scores={assignment.scores} readOnly />;
+        }
+      }
+    };
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="bg-white p-6 rounded-xl shadow-lg space-y-6 w-full"
+      >
+        <div className="flex justify-between items-start">
+          <div>
+            <h4 className="text-2xl font-bold text-gray-800 mb-2 break-words">{nombre}</h4>
+            <p className="text-gray-600 break-words">Rol: {role} | Estado: {assignment.Estado || 'Sin estado'}</p>
           </div>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            onClick={() => setSelectedAssignment(null)}
+            className="text-blue-600 hover:underline flex items-center text-sm"
+          >
+            <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            Volver a la Lista
+          </motion.button>
+        </div>
+        {isAuth ? (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-6">
+      {assignment.feedbackEditor && ['Aceptado', 'Rechazado'].includes(assignment.Estado) ? (
+        <>
+          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="p-4 bg-green-50 rounded-md border-l-4 border-green-400">
+            <h5 className="text-lg font-semibold text-green-800 mb-2">Estado Final: {assignment.Estado}</h5>
+          </motion.div>
+          <h5 className="text-lg font-semibold text-gray-800">Feedback del Editor</h5>
+          <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto leading-relaxed">
+            {decodeBody(assignment.feedbackEditor)}
+          </div>
+        </>
+      ) : (
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="p-6 bg-yellow-50 rounded-md border-l-4 border-yellow-400 text-center">
+          <h5 className="text-xl font-semibold text-yellow-800 mb-2">Artículo en Revisión</h5>
+          <p className="text-yellow-700 text-lg">Tu artículo "{assignment['Nombre Artículo']}" está actualmente bajo revisión por evaluadores y el editor.</p>
+          <p className="text-yellow-600 mt-2">Recibirás una notificación con la decisión final y el feedback una vez que el proceso se complete.</p>
         </motion.div>
       )}
     </motion.div>
-  );
-};
+  ) : (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="lg:col-span-1 space-y-6">
+              <div className="space-y-2">
+                <motion.a
+                  whileHover={{ scale: 1.05 }}
+                  href={link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block bg-blue-600 text-white px-4 py-2 rounded-md shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm mb-2"
+                >
+                  Abrir en Google Drive
+                </motion.a>
+                <motion.iframe
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.8 }}
+                  src={link ? link.replace('/edit', '/preview') : ''}
+                  className="w-full h-[350px] lg:h-[500px] rounded-xl shadow border border-gray-200"
+                  title="Vista Previa del Artículo"
+                  sandbox="allow-same-origin allow-scripts"
+                  loading="lazy"
+                />
+              </div>
+              {handleRenderRubric()}
+            </div>
+            <div className="lg:col-span-1 space-y-6">
+              {role === 'Editor' && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-medium text-gray-700 break-words">Feedback del Revisor 1</label>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      onClick={() => toggleFeedback(link, 'feedback1')}
+                      className="text-blue-600 hover:underline text-sm flex items-center"
+                    >
+                      {expandedFeedback[link]?.feedback1 ? 'Ocultar' : 'Mostrar'}
+                      <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.feedback1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </motion.button>
+                  </div>
+                  <AnimatePresence>
+                    {expandedFeedback[link]?.feedback1 && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto"
+                      >
+                        {decodeBody(assignment.feedback1)}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-medium text-gray-700 break-words">Feedback del Revisor 2</label>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      onClick={() => toggleFeedback(link, 'feedback2')}
+                      className="text-blue-600 hover:underline text-sm flex items-center"
+                    >
+                      {expandedFeedback[link]?.feedback2 ? 'Ocultar' : 'Mostrar'}
+                      <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.feedback2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </motion.button>
+                  </div>
+                  <AnimatePresence>
+                    {expandedFeedback[link]?.feedback2 && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto"
+                      >
+                        {decodeBody(assignment.feedback2)}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-medium text-gray-700 break-words">Informe del Revisor 1</label>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      onClick={() => toggleFeedback(link, 'informe1')}
+                      className="text-blue-600 hover:underline text-sm flex items-center"
+                    >
+                      {expandedFeedback[link]?.informe1 ? 'Ocultar' : 'Mostrar'}
+                      <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.informe1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </motion.button>
+                  </div>
+                  <AnimatePresence>
+                    {expandedFeedback[link]?.informe1 && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto"
+                      >
+                        {decodeBody(assignment.informe1)}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-medium text-gray-700 break-words">Informe del Revisor 2</label>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      onClick={() => toggleFeedback(link, 'informe2')}
+                      className="text-blue-600 hover:underline text-sm flex items-center"
+                    >
+                      {expandedFeedback[link]?.informe2 ? 'Ocultar' : 'Mostrar'}
+                      <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.informe2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </motion.button>
+                  </div>
+                  <AnimatePresence>
+                    {expandedFeedback[link]?.informe2 && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto"
+                      >
+                        {decodeBody(assignment.informe2)}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              )}
+              {isPending ? (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-6">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => toggleTutorial(link)}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
+                  >
+                    {tutorialVisible[link] ? 'Ocultar Tutorial' : 'Ver Tutorial'}
+                  </motion.button>
+                  <AnimatePresence>
+                    {tutorialVisible[link] && <Tutorial role={role} />}
+                  </AnimatePresence>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700 break-words">
+                      {role === 'Editor' ? 'Feedback Final al Autor' : 'Feedback al Autor'}
+                    </label>
+                    <ReactQuill
+                      ref={(el) => (feedbackQuillRefs.current[link] = el)}
+                      value={feedback[link] || ''}
+                      onChange={debouncedSetFeedback(link)}
+                      modules={modules}
+                      formats={formats}
+                      placeholder={role === 'Editor' ? 'Escribe feedback final sensible, sintetizando opiniones de revisores y tuyas.' : 'Escribe tu feedback aquí...'}
+                      className="border rounded-md text-gray-800 bg-white h-48"
+                      id={`feedback-${link}`}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700 break-words">Informe al Editor</label>
+                    <ReactQuill
+                      ref={(el) => (reportQuillRefs.current[link] = el)}
+                      value={report[link] || ''}
+                      onChange={debouncedSetReport(link)}
+                      modules={modules}
+                      formats={formats}
+                      placeholder="Escribe tu informe aquí..."
+                      className="border rounded-md text-gray-800 bg-white h-48"
+                      id={`report-${link}`}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700 break-words">Voto</label>
+                    <div className="flex space-x-4">
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => handleVote(link, 'si')}
+                        className={`px-4 py-2 rounded-md ${vote[link] === 'si' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} transition-colors text-sm`}
+                      >
+                        Sí
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => handleVote(link, 'no')}
+                        className={`px-4 py-2 rounded-md ${vote[link] === 'no' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} transition-colors text-sm`}
+                      >
+                        No
+                      </motion.button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => handleSubmitRubric(link, role)}
+                      disabled={!isRubricComplete(link, role)}
+                      className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
+                    >
+                      Enviar Rúbrica
+                    </motion.button>
+                    {rubricStatus[link] && (
+                      <p className={`text-sm mt-2 ${rubricStatus[link].includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
+                        {rubricStatus[link]}
+                      </p>
+                    )}
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleSubmit(link, role, feedback[link], report[link], vote[link])}
+                    disabled={!vote[link] || !feedback[link] || !report[link]}
+                    className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
+                  >
+                    Enviar Revisión (Feedback, Informe, Voto)
+                  </motion.button>
+                  {submitStatus[link] && (
+                    <p className={`text-sm mt-2 ${submitStatus[link].includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
+                      {submitStatus[link]}
+                    </p>
+                  )}
+                </motion.div>
+              ) : (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-6">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => toggleTutorial(link)}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
+                  >
+                    {tutorialVisible[link] ? 'Ocultar Tutorial' : 'Ver Tutorial'}
+                  </motion.button>
+                  <AnimatePresence>
+                    {tutorialVisible[link] && <Tutorial role={role} />}
+                  </AnimatePresence>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700 break-words">Feedback Enviado</label>
+                    <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
+                      {decodeBody(feedback[link] || 'Sin feedback.')}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700 break-words">Informe Enviado</label>
+                    <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
+                      {decodeBody(report[link] || 'Sin informe.')}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700 break-words">Voto Enviado</label>
+                    <p className="text-sm text-gray-600">{vote[link] ? vote[link].charAt(0).toUpperCase() + vote[link].slice(1) : 'No enviado'}</p>
+                  </div>
+                </motion.div>
+              )}
+              <AnimatePresence>
+                {showImageModal[link] && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ duration: 0.3 }}
+                    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+                  >
+                    <motion.div
+                      initial={{ y: 50, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full"
+                    >
+                      <h4 className="text-lg font-semibold mb-4">{isEditingImage[link] ? 'Editar Imagen' : 'Insertar Imagen'}</h4>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">URL de la Imagen</label>
+                          <input
+                            type="text"
+                            name="url"
+                            value={imageData[link]?.url || ''}
+                            onChange={(e) => handleImageDataChange(link, e)}
+                            className="mt-1 block w-full border rounded-md p-2 text-sm"
+                            placeholder="https://example.com/image.jpg"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">Ancho (px o %)</label>
+                          <input
+                            type="text"
+                            name="width"
+                            value={imageData[link]?.width || ''}
+                            onChange={(e) => handleImageDataChange(link, e)}
+                            className="mt-1 block w-full border rounded-md p-2 text-sm"
+                            placeholder="auto o 300px"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">Alto (px o %)</label>
+                          <input
+                            type="text"
+                            name="height"
+                            value={imageData[link]?.height || ''}
+                            onChange={(e) => handleImageDataChange(link, e)}
+                            className="mt-1 block w-full border rounded-md p-2 text-sm"
+                            placeholder="auto o 200px"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">Alineación</label>
+                          <select
+                            name="align"
+                            value={imageData[link]?.align || 'left'}
+                            onChange={(e) => handleImageDataChange(link, e)}
+                            className="mt-1 block w-full border rounded-md p-2 text-sm"
+                          >
+                            <option value="left">Izquierda</option>
+                            <option value="center">Centro</option>
+                            <option value="right">Derecha</option>
+                            <option value="justify">Justificado</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="mt-6 flex justify-end space-x-2">
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => setShowImageModal((prev) => ({ ...prev, [link]: false }))}
+                          className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 text-sm"
+                        >
+                          Cancelar
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => handleImageModalSubmit(link)}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                        >
+                          {isEditingImage[link] ? 'Actualizar' : 'Insertar'}
+                        </motion.button>
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </motion.div>
+        )}
+      </motion.div>
+    );
+  };
 
   // Director-specific functions for buttons
   const handleAddArticleClick = () => {
@@ -1503,78 +1487,76 @@ const AssignmentCard = ({ assignment, onClick, index }) => {
     // We don't need to implement it here as it's handled in DirectorPanel
   };
 
-if (!user || !user.name || !user.role) {
-  console.log('Usuario inválido:', user);
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="min-h-screen bg-gray-100 p-4 md:p-8 flex items-center justify-center"
-    >
-      <div className="text-center text-gray-600 bg-white p-6 rounded-lg shadow-md">
-        <p className="text-lg mb-4">Error: Información del usuario incompleta. Por favor inicia sesión nuevamente.</p>
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => {
-            console.log('Botón Cerrar Sesión clickeado en PortalSection');
-            onLogout();
-          }}
-          className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm"
-        >
-          Cerrar Sesión
-        </motion.button>
-      </div>
-    </motion.div>
-  );
-}
+  if (!user || !user.email || !user.name || !user.role) {
+    console.log('Usuario inválido:', user);
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="min-h-screen bg-gray-100 p-4 md:p-8 flex items-center justify-center"
+      >
+        <div className="text-center text-gray-600 bg-white p-6 rounded-lg shadow-md">
+          <p className="text-lg mb-4">Error: Información del usuario incompleta. Por favor inicia sesión nuevamente.</p>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => {
+              console.log('Botón Cerrar Sesión clickeado en PortalSection');
+              onLogout();
+            }}
+            className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm"
+          >
+            Cerrar Sesión
+          </motion.button>
+        </div>
+      </motion.div>
+    );
+  }
 
-   return (
-    
+  return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.8 }}
       className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 p-4 md:p-8"
     >
-      
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-  <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
-    {isAuthor && !isDirector && !isChief ? 'Mis Artículos' :
-     isDirector ? 'Panel del Director General' :
-     isChief ? 'Panel del Editor en Jefe' : 'Panel de Revisión'}
-  </h2>
-  <div className="flex items-center space-x-4">
-    {user?.image ? (
-      <motion.img
-        initial={{ scale: 0.8 }}
-        animate={{ scale: 1 }}
-        src={user.image}
-        alt={`Perfil de ${user?.name || 'Usuario'}`}
-        className="w-10 h-10 rounded-full object-cover border-2 border-gray-300"
-        onError={(e) => (e.target.style.display = 'none')} // Hide on error
-      />
-    ) : (
-      <motion.div
-        initial={{ scale: 0.8 }}
-        animate={{ scale: 1 }}
-        className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center"
-      >
-        <span className="text-gray-600 text-sm">{user?.name?.charAt(0) || 'U'}</span>
-      </motion.div>
-    )}
-    <span className="text-gray-600">Bienvenido, {user?.name || 'Usuario'}</span>
-    <motion.button
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
-      onClick={onLogout}
-      className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm"
-    >
-      Cerrar Sesión
-    </motion.button>
-  </div>
-</div>
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
+            {isAuthor && !isDirector && !isChief ? 'Mis Artículos' :
+             isDirector ? 'Panel del Director General' :
+             isChief ? 'Panel del Editor en Jefe' : 'Panel de Revisión'}
+          </h2>
+          <div className="flex items-center space-x-4">
+            {user?.image ? (
+              <motion.img
+                initial={{ scale: 0.8 }}
+                animate={{ scale: 1 }}
+                src={user.image}
+                alt={`Perfil de ${user?.name || 'Usuario'}`}
+                className="w-10 h-10 rounded-full object-cover border-2 border-gray-300"
+                onError={(e) => (e.target.style.display = 'none')} // Hide on error
+              />
+            ) : (
+              <motion.div
+                initial={{ scale: 0.8 }}
+                animate={{ scale: 1 }}
+                className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center"
+              >
+                <span className="text-gray-600 text-sm">{user?.name?.charAt(0) || 'U'}</span>
+              </motion.div>
+            )}
+            <span className="text-gray-600">Bienvenido, {user?.name || 'Usuario'}</span>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={onLogout}
+              className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm"
+            >
+              Cerrar Sesión
+            </motion.button>
+          </div>
+        </div>
         
         {error && (
           <motion.div
@@ -1799,5 +1781,4 @@ if (!user || !user.name || !user.role) {
       </div>
     </motion.div>
   );
-
-          }
+}
