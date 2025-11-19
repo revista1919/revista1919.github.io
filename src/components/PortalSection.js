@@ -11,12 +11,12 @@ import DirectorPanel from './DirectorPanel';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
+const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?gid=0&output=csv'; // Ajusta el gid si es necesario para la hoja de usuarios/team
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby2B1OUt3TMqaed6Vz-iamUPn4gHhKXG2RRxiy8Nt6u69Cg-2kSze2XQ-NywX5QrNfy/exec';
 const RUBRIC_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzehxU_O7GkzfiCqCsSdnFwvA_Mhtfr_vSZjqVsBo3yx8ZEpr9Qur4NHPI09tyH1AZe/exec';
 const RUBRIC_CSV1 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=0&single=true&output=csv';
 const RUBRIC_CSV2 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=1438370398&single=true&output=csv';
 const RUBRIC_CSV3 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=1972050001&single=true&output=csv';
-const TEAM_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 
 const criteria = {
   'Revisor 1': [
@@ -215,7 +215,7 @@ export default function PortalSection({ user, onLogout }) {
   const [expandedFeedback, setExpandedFeedback] = useState({});
   const [isDirectorPanelExpanded, setIsDirectorPanelExpanded] = useState(false);
   const [isChiefEditorPanelExpanded, setIsChiefEditorPanelExpanded] = useState(false);
-  const [userName, setUserName] = useState(user?.name || '');
+  const [effectiveName, setEffectiveName] = useState(user?.name || '');
   const feedbackQuillRefs = useRef({});
   const reportQuillRefs = useRef({});
 
@@ -240,8 +240,44 @@ export default function PortalSection({ user, onLogout }) {
       setExpandedFeedback({});
       setIsDirectorPanelExpanded(false);
       setIsChiefEditorPanelExpanded(false);
-      setUserName('');
+      setEffectiveName('');
     }
+  }, [user]);
+
+  // Fetch user mapping if name looks like email
+  useEffect(() => {
+    const fetchUserMapping = async () => {
+      if (user && user.name && user.name.includes('@')) {
+        setError('Advertencia: Tu nombre parece ser una dirección de correo electrónico. Intentando mapear al nombre real desde CSV...');
+        try {
+          const csvText = await fetchWithRetry(USERS_CSV);
+          Papa.parse(csvText, {
+            header: true,
+            skipEmptyLines: true,
+            complete: ({ data }) => {
+              const mapping = data.find(row => row['Correo']?.trim().toLowerCase() === user.name.trim().toLowerCase());
+              if (mapping && mapping['Nombre']) {
+                setEffectiveName(mapping['Nombre'].trim());
+                setError(''); // Clear error if mapping successful
+              } else {
+                setError('No se encontró mapeo de correo a nombre. Por favor, contacta al administrador.');
+              }
+            },
+            error: (err) => {
+              console.error('Error parsing users CSV:', err);
+              setError('Error al cargar mapeo de usuarios.');
+            },
+          });
+        } catch (err) {
+          console.error('Error fetching users CSV:', err);
+          setError('Error al conectar para mapeo de usuarios.');
+        }
+      } else if (user && user.name) {
+        setEffectiveName(user.name);
+      }
+    };
+
+    fetchUserMapping();
   }, [user]);
 
   const fetchRubrics = async () => {
@@ -318,34 +354,21 @@ export default function PortalSection({ user, onLogout }) {
   const fetchAssignments = async () => {
     try {
       setLoading(true);
-      const [csvText, rubrics, teamText] = await Promise.all([
+      const [csvText, rubrics] = await Promise.all([
         fetchWithRetry(ASSIGNMENTS_CSV),
-        fetchRubrics(),
-        fetchWithRetry(TEAM_CSV)
+        fetchRubrics()
       ]);
-      
-      const teamData = Papa.parse(teamText, { header: true, skipEmptyLines: true }).data;
-      const userRow = teamData.find(row => row['Correo']?.toLowerCase() === user.email.toLowerCase());
-      const newUserName = userRow ? userRow['Nombre'] : user.name;
-      setUserName(newUserName);
-      if (newUserName.includes('@')) {
-        setError('Advertencia: Tu nombre parece ser una dirección de correo electrónico. Esto puede causar problemas con la coincidencia de asignaciones. Por favor, actualiza tu nombre de visualización en la configuración de tu cuenta de Google o contacta al administrador.');
-      }
-      if (!userRow) {
-        setError('No se encontró nombre para tu correo en la lista del equipo. Contacta al administrador.');
-      }
-
       Papa.parse(csvText, {
         header: true,
         skipEmptyLines: true,
         delimiter: ',',
         transform: (value) => value.trim(),
         complete: ({ data }) => {
-          const isAuthor = data.some((row) => row['Autor'] === newUserName);
+          const isAuthor = data.some((row) => row['Autor'] === effectiveName);
           let parsedAssignments = [];
           if (isAuthor) {
             parsedAssignments = data
-              .filter((row) => row['Autor'] === newUserName)
+              .filter((row) => row['Autor'] === effectiveName)
               .map((row) => ({
                 id: row['Nombre Artículo'],
                 'Nombre Artículo': row['Nombre Artículo'] || 'Sin título',
@@ -357,13 +380,13 @@ export default function PortalSection({ user, onLogout }) {
           } else {
             parsedAssignments = data
               .filter((row) => {
-                if (row['Revisor 1'] === newUserName) return true;
-                if (row['Revisor 2'] === newUserName) return true;
-                if (row['Editor'] === newUserName) return true;
+                if (row['Revisor 1'] === effectiveName) return true;
+                if (row['Revisor 2'] === effectiveName) return true;
+                if (row['Editor'] === effectiveName) return true;
                 return false;
               })
               .map((row) => {
-                const role = row['Revisor 1'] === newUserName ? 'Revisor 1' : row['Revisor 2'] === newUserName ? 'Revisor 2' : 'Editor';
+                const role = row['Revisor 1'] === effectiveName ? 'Revisor 1' : row['Revisor 2'] === effectiveName ? 'Revisor 2' : 'Editor';
                 const num = role === 'Revisor 1' ? 1 : role === 'Revisor 2' ? 2 : 3;
                 const assignment = {
                   id: row['Nombre Artículo'],
@@ -404,9 +427,8 @@ export default function PortalSection({ user, onLogout }) {
             }
           });
           setLoading(false);
-          // Added robustness: If no assignments found, provide a more informative message
           if (parsedAssignments.length === 0 && !loading) {
-            setError(`No se encontraron asignaciones para '${newUserName}'. Si esperas asignaciones, por favor verifica los detalles de tu cuenta o contacta al administrador.`);
+            setError(`No se encontraron asignaciones para '${effectiveName}'. Si esperas asignaciones, por favor verifica los detalles de tu cuenta o contacta al administrador.`);
           }
         },
         error: (err) => {
@@ -423,15 +445,15 @@ export default function PortalSection({ user, onLogout }) {
   };
 
   useEffect(() => {
-    if (!user || !user.email || !user.name || !user.role) {
-      console.log('Error en fetchAssignments: usuario inválido', { user });
+    if (!user || !effectiveName || !user.role) {
+      console.log('Error en fetchAssignments: usuario inválido', { user, effectiveName });
       setError('Usuario no definido o información incompleta');
       setLoading(false);
       return;
     }
-    console.log('Cargando asignaciones para usuario:', { uid: user.uid, email: user.email, name: user.name, effectiveName: userName, role: user.role });
+    console.log('Cargando asignaciones para usuario:', { uid: user.uid, name: effectiveName, role: user.role });
     fetchAssignments();
-  }, [user]);
+  }, [user, effectiveName]);
 
   const isAuthor = assignments.length > 0 && assignments[0].role === 'Autor';
   const isChief = user?.role && user.role.split(';').map(r => r.trim()).includes('Editor en Jefe');
@@ -449,13 +471,14 @@ export default function PortalSection({ user, onLogout }) {
       : assignments.filter((a) => !a.isCompleted),
     [assignments, isAuthor]
   );
-
   const completedAssignments = useMemo(() =>
     isAuthor
       ? assignments.filter((a) => a.feedbackEditor && ['Aceptado', 'Rechazado'].includes(a.Estado))
       : assignments.filter((a) => a.isCompleted),
     [assignments, isAuthor]
   );
+
+  // Resto del código permanece igual...
 
   const handleVote = (link, value) => {
     setVote((prev) => ({ ...prev, [link]: value }));
@@ -1480,13 +1503,12 @@ export default function PortalSection({ user, onLogout }) {
     // This function will be passed to DirectorPanel to trigger the add modal
     // We don't need to implement it here as it's handled in DirectorPanel
   };
-
   const handleRebuildClick = () => {
     // This function will be passed to DirectorPanel to trigger the rebuild action
     // We don't need to implement it here as it's handled in DirectorPanel
   };
 
-  if (!user || !user.email || !user.name || !user.role) {
+  if (!user || !effectiveName || !user.role) {
     console.log('Usuario inválido:', user);
     return (
       <motion.div
@@ -1532,7 +1554,7 @@ export default function PortalSection({ user, onLogout }) {
                 initial={{ scale: 0.8 }}
                 animate={{ scale: 1 }}
                 src={user.image}
-                alt={`Perfil de ${userName || 'Usuario'}`}
+                alt={`Perfil de ${effectiveName || 'Usuario'}`}
                 className="w-10 h-10 rounded-full object-cover border-2 border-gray-300"
                 onError={(e) => (e.target.style.display = 'none')} // Hide on error
               />
@@ -1542,10 +1564,10 @@ export default function PortalSection({ user, onLogout }) {
                 animate={{ scale: 1 }}
                 className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center"
               >
-                <span className="text-gray-600 text-sm">{userName?.charAt(0) || 'U'}</span>
+                <span className="text-gray-600 text-sm">{effectiveName?.charAt(0) || 'U'}</span>
               </motion.div>
             )}
-            <span className="text-gray-600">Bienvenido, {userName || 'Usuario'}</span>
+            <span className="text-gray-600">Bienvenido, {effectiveName || 'Usuario'}</span>
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -1556,7 +1578,7 @@ export default function PortalSection({ user, onLogout }) {
             </motion.button>
           </div>
         </div>
-        
+
         {error && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -1566,8 +1588,7 @@ export default function PortalSection({ user, onLogout }) {
             {error}
           </motion.div>
         )}
-        
-     {/* Sección de Carga de Noticias solo para Director General */}
+
         {isDirector && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1578,8 +1599,7 @@ export default function PortalSection({ user, onLogout }) {
             <NewsUploadSection />
           </motion.div>
         )}
-        
-        {/* Panel del Director */}
+
         {isDirector && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1649,7 +1669,6 @@ export default function PortalSection({ user, onLogout }) {
             </AnimatePresence>
           </motion.div>
         )}
-        {/* Panel del Editor en Jefe */}
         {isChief && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1686,8 +1705,7 @@ export default function PortalSection({ user, onLogout }) {
             </AnimatePresence>
           </motion.div>
         )}
-        
-        {/* Sección de Tareas para Encargado de Redes Sociales y Responsable de Desarrollo Web */}
+
         {(isRrss || isWebDev) && !isDirector && !isChief && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1701,8 +1719,7 @@ export default function PortalSection({ user, onLogout }) {
             <TaskSection user={user} />
           </motion.div>
         )}
-        
-        {/* Asignaciones y Pestañas para todos los usuarios con asignaciones */}
+
         {(pendingAssignments.length > 0 || completedAssignments.length > 0) && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1728,7 +1745,7 @@ export default function PortalSection({ user, onLogout }) {
             </div>
           </motion.div>
         )}
-        
+
         <ErrorBoundary>
           {(isChief || isDirector) && activeTab === 'asignar' && <AssignSection user={user} />}
           {(pendingAssignments.length > 0 || completedAssignments.length > 0 || isChief || isDirector) && (
