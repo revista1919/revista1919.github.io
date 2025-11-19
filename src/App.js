@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Papa from 'papaparse';
 import { auth } from './firebase';
 import {
   onAuthStateChanged,
@@ -24,11 +25,9 @@ import PortalSection from './components/PortalSection';
 import NewsSection from './components/NewsSection';
 import './index.css';
 import { motion, AnimatePresence } from 'framer-motion';
-
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 const ARTICLES_JSON = '/articles.json';
 const isPrerendering = typeof navigator !== 'undefined' && navigator.userAgent.includes('ReactSnap');
-
 function App() {
   const { cleanPath } = useLanguage();
   const [articles, setArticles] = useState([]);
@@ -42,7 +41,6 @@ function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
-
   const fetchUserData = async (email) => {
     try {
       const response = await fetch(USERS_CSV, { cache: 'no-store' });
@@ -69,13 +67,11 @@ function App() {
       return { name: email, role: 'Usuario', image: '' };
     }
   };
-
   useEffect(() => {
     if (isPrerendering) {
       setAuthLoading(false);
       return;
     }
-
     setPersistence(auth, browserLocalPersistence)
       .then(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -113,20 +109,16 @@ function App() {
         setAuthLoading(false);
       });
   }, []);
-
   useEffect(() => {
     const fetchArticles = async () => {
       try {
         const response = await fetch(ARTICLES_JSON, { cache: 'no-store' });
-
         if (!response.ok) {
           throw new Error(`Error al cargar el archivo JSON: ${response.status}`);
         }
-
         const data = await response.json();
         setArticles(data);
         setFilteredArticles(data);
-
         const allAreas = data.flatMap((a) =>
           (a.area || '')
             .split(';')
@@ -135,21 +127,17 @@ function App() {
         );
         const uniqueAreas = [...new Set(allAreas)].sort();
         setAreas(uniqueAreas);
-
         setLoading(false);
       } catch (error) {
         console.error('Error fetching JSON:', error);
         setLoading(false);
       }
     };
-
     fetchArticles();
   }, []);
-
   const handleSearch = (term, area) => {
     setSearchTerm(term);
     setSelectedArea(area);
-
     const lowerTerm = term.toLowerCase();
     const filtered = articles.filter((article) => {
       const matchesSearch =
@@ -157,7 +145,6 @@ function App() {
         article.autores?.toLowerCase().includes(lowerTerm) ||
         article.resumen?.toLowerCase().includes(lowerTerm) ||
         article.palabras_clave?.join(', ')?.toLowerCase().includes(lowerTerm);
-
       const matchesArea =
         area === '' ||
         (article.area || '')
@@ -165,24 +152,19 @@ function App() {
           .split(';')
           .map((a) => a.trim())
           .some((a) => a.toLowerCase() === area.toLowerCase());
-
       return matchesSearch && matchesArea;
     });
-
     setFilteredArticles(filtered);
     setVisibleArticles(6);
   };
-
   const clearFilters = () => {
     setSearchTerm('');
     setSelectedArea('');
     setFilteredArticles(articles);
     setVisibleArticles(6);
   };
-
   const loadMoreArticles = () => setVisibleArticles((prev) => prev + 6);
   const showLessArticles = () => setVisibleArticles(6);
-
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -192,14 +174,13 @@ function App() {
       console.error('Error al cerrar sesión:', error);
     }
   };
-
   const sections = [
     {
       name: 'articles',
       label: 'Artículos',
       path: '/articles',
       component: (
-        <motion.div 
+        <motion.div
           className="py-8 max-w-7xl mx-auto"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -328,19 +309,15 @@ function App() {
       ),
     },
   ];
-
   if (authLoading) {
     return <div className="text-center text-gray-600">Cargando autenticación...</div>;
   }
-
   const isLoginActive = location.pathname.includes('login');
-
   const framerItem = (delay) => ({
     initial: { opacity: 0, x: -20 },
     animate: { opacity: 1, x: 0 },
     transition: { delay: 0.1 * delay, duration: 0.3 }
   });
-
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header onOpenMenu={() => setIsMenuOpen(true)} />
@@ -414,5 +391,4 @@ function App() {
     </div>
   );
 }
-
 export default App;
