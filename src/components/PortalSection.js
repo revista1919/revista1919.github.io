@@ -215,6 +215,7 @@ export default function PortalSection({ user, onLogout }) {
   const [expandedFeedback, setExpandedFeedback] = useState({});
   const [isDirectorPanelExpanded, setIsDirectorPanelExpanded] = useState(false);
   const [isChiefEditorPanelExpanded, setIsChiefEditorPanelExpanded] = useState(false);
+  const [userName, setUserName] = useState(user?.name || '');
   const feedbackQuillRefs = useRef({});
   const reportQuillRefs = useRef({});
 
@@ -239,13 +240,7 @@ export default function PortalSection({ user, onLogout }) {
       setExpandedFeedback({});
       setIsDirectorPanelExpanded(false);
       setIsChiefEditorPanelExpanded(false);
-    }
-  }, [user]);
-
-  // Added robustness: Check if userName looks like an email and warn the user
-  useEffect(() => {
-    if (user && userName && userName.includes('@')) {
-      setError('Advertencia: Tu nombre parece ser una dirección de correo electrónico. Esto puede causar problemas con la coincidencia de asignaciones. Por favor, actualiza tu nombre de visualización en la configuración de tu cuenta de Google o contacta al administrador.');
+      setUserName('');
     }
   }, [user]);
 
@@ -330,8 +325,12 @@ export default function PortalSection({ user, onLogout }) {
       ]);
       
       const teamData = Papa.parse(teamText, { header: true, skipEmptyLines: true }).data;
-      const userRow = teamData.find(row => row['Correo'] === user.email);
-      const userName = userRow ? userRow['Nombre'] : user.name;
+      const userRow = teamData.find(row => row['Correo']?.toLowerCase() === user.email.toLowerCase());
+      const newUserName = userRow ? userRow['Nombre'] : user.name;
+      setUserName(newUserName);
+      if (newUserName.includes('@')) {
+        setError('Advertencia: Tu nombre parece ser una dirección de correo electrónico. Esto puede causar problemas con la coincidencia de asignaciones. Por favor, actualiza tu nombre de visualización en la configuración de tu cuenta de Google o contacta al administrador.');
+      }
       if (!userRow) {
         setError('No se encontró nombre para tu correo en la lista del equipo. Contacta al administrador.');
       }
@@ -342,11 +341,11 @@ export default function PortalSection({ user, onLogout }) {
         delimiter: ',',
         transform: (value) => value.trim(),
         complete: ({ data }) => {
-          const isAuthor = data.some((row) => row['Autor'] === userName);
+          const isAuthor = data.some((row) => row['Autor'] === newUserName);
           let parsedAssignments = [];
           if (isAuthor) {
             parsedAssignments = data
-              .filter((row) => row['Autor'] === userName)
+              .filter((row) => row['Autor'] === newUserName)
               .map((row) => ({
                 id: row['Nombre Artículo'],
                 'Nombre Artículo': row['Nombre Artículo'] || 'Sin título',
@@ -358,13 +357,13 @@ export default function PortalSection({ user, onLogout }) {
           } else {
             parsedAssignments = data
               .filter((row) => {
-                if (row['Revisor 1'] === userName) return true;
-                if (row['Revisor 2'] === userName) return true;
-                if (row['Editor'] === userName) return true;
+                if (row['Revisor 1'] === newUserName) return true;
+                if (row['Revisor 2'] === newUserName) return true;
+                if (row['Editor'] === newUserName) return true;
                 return false;
               })
               .map((row) => {
-                const role = row['Revisor 1'] === userName ? 'Revisor 1' : row['Revisor 2'] === userName ? 'Revisor 2' : 'Editor';
+                const role = row['Revisor 1'] === newUserName ? 'Revisor 1' : row['Revisor 2'] === newUserName ? 'Revisor 2' : 'Editor';
                 const num = role === 'Revisor 1' ? 1 : role === 'Revisor 2' ? 2 : 3;
                 const assignment = {
                   id: row['Nombre Artículo'],
@@ -407,7 +406,7 @@ export default function PortalSection({ user, onLogout }) {
           setLoading(false);
           // Added robustness: If no assignments found, provide a more informative message
           if (parsedAssignments.length === 0 && !loading) {
-            setError(`No se encontraron asignaciones para '${userName}'. Si esperas asignaciones, por favor verifica los detalles de tu cuenta o contacta al administrador.`);
+            setError(`No se encontraron asignaciones para '${newUserName}'. Si esperas asignaciones, por favor verifica los detalles de tu cuenta o contacta al administrador.`);
           }
         },
         error: (err) => {
@@ -1533,7 +1532,7 @@ export default function PortalSection({ user, onLogout }) {
                 initial={{ scale: 0.8 }}
                 animate={{ scale: 1 }}
                 src={user.image}
-                alt={`Perfil de ${user?.name || 'Usuario'}`}
+                alt={`Perfil de ${userName || 'Usuario'}`}
                 className="w-10 h-10 rounded-full object-cover border-2 border-gray-300"
                 onError={(e) => (e.target.style.display = 'none')} // Hide on error
               />
@@ -1543,10 +1542,10 @@ export default function PortalSection({ user, onLogout }) {
                 animate={{ scale: 1 }}
                 className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center"
               >
-                <span className="text-gray-600 text-sm">{user?.name?.charAt(0) || 'U'}</span>
+                <span className="text-gray-600 text-sm">{userName?.charAt(0) || 'U'}</span>
               </motion.div>
             )}
-            <span className="text-gray-600">Bienvenido, {user?.name || 'Usuario'}</span>
+            <span className="text-gray-600">Bienvenido, {userName || 'Usuario'}</span>
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
