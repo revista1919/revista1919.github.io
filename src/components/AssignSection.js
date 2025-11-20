@@ -17,18 +17,26 @@ const parseDate = (dateStr) => {
   let year, month, day;
   if (parts[0].length === 4) { // YYYY-MM-DD
     year = parseInt(parts[0], 10);
-    month = parseInt(parts[1], 10);
+    month = parseInt(parts[1], 10) - 1;
     day = parseInt(parts[2], 10);
-  } else { // DD/MM/YYYY o DD-MM-YYYY
+  } else {
+    // Try DD/MM/YYYY first
     day = parseInt(parts[0], 10);
     month = parseInt(parts[1], 10);
     year = parseInt(parts[2], 10);
+    if (month > 12 || day > 31 || month < 1 || day < 1 || isNaN(year) || isNaN(month) || isNaN(day)) {
+      // Try MM/DD/YYYY
+      month = parseInt(parts[0], 10);
+      day = parseInt(parts[1], 10);
+      year = parseInt(parts[2], 10);
+      if (month > 12 || day > 31 || month < 1 || day < 1 || isNaN(year) || isNaN(month) || isNaN(day)) {
+        console.warn('Invalid date parsed:', dateStr);
+        return null;
+      }
+    }
+    month -= 1; // Adjust for JS Date
   }
-  if (isNaN(year) || isNaN(month) || isNaN(day) || month < 1 || month > 12 || day < 1 || day > 31) {
-    console.warn('Invalid date parsed:', dateStr);
-    return null;
-  }
-  return new Date(year, month - 1, day);
+  return new Date(year, month, day);
 };
 
 export default function AssignSection({ user, onClose }) {
@@ -394,6 +402,7 @@ export default function AssignSection({ user, onClose }) {
                         editor: isAssigned ? art.assignment.Editor || '' : '',
                         plazo: isAssigned ? (art.assignment.Plazo ? parseDate(art.assignment.Plazo) : null) : null,
                       };
+                      console.log('Loading plazo:', art.assignment?.Plazo, defData.plazo); // Added log for debug
                       setEditingData({
                         id: uniqueId,
                         data: defData,
