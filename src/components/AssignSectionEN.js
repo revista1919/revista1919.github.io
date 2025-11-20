@@ -17,8 +17,8 @@ export default function AssignSection({ user, onClose }) {
   const [editingData, setEditingData] = useState(null);
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const [submitStatus, setSubmitStatus] = useState({});
-  const [isSending, setIsSending] = useState({});
-  const [emailPreview, setEmailPreview] = useState(null);
+  const [isSending, setIsSending] = useState({}); // New state for loading indicators
+  const [emailPreview, setEmailPreview] = useState(null); // New state for email preview
   useEffect(() => {
     const fetchData = async () => {
       try {

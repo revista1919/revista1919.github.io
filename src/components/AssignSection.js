@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Papa from 'papaparse';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 const INCOMING_CSV = process.env.REACT_APP_FORM_CSV || '';
 const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby2B1OUt3TMqaed6Vz-iamUPn4gHhKXG2RRxiy8Nt6u69Cg-2kSze2XQ-NywX5QrNfy/exec';
 const sanitizeInput = (input) => input ? input.trim().toLowerCase().replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') : '';
+
 export default function AssignSection({ user, onClose }) {
   const [users, setUsers] = useState([]);
   const [reviewers, setReviewers] = useState([]);
@@ -17,8 +21,9 @@ export default function AssignSection({ user, onClose }) {
   const [editingData, setEditingData] = useState(null);
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const [submitStatus, setSubmitStatus] = useState({});
-  const [isSending, setIsSending] = useState({}); // New state for loading indicators
-  const [emailPreview, setEmailPreview] = useState(null); // New state for email preview
+  const [isSending, setIsSending] = useState({});
+  const [emailPreview, setEmailPreview] = useState(null);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -70,9 +75,11 @@ export default function AssignSection({ user, onClose }) {
     };
     fetchData();
   }, []);
+
   const isCompleted = (assign) => {
     return !!(assign['Feedback 1'] && assign['Informe 1'] && assign['Feedback 2'] && assign['Informe 2'] && assign['Feedback 3'] && assign['Informe 3']);
   };
+
   const groupedIncoming = useMemo(() => {
     const groupMap = {};
     incoming.forEach(art => {
@@ -100,9 +107,11 @@ export default function AssignSection({ user, onClose }) {
       articles,
     }));
   }, [incoming, assignments]);
+
   const totalPending = groupedIncoming.reduce((sum, group) => {
     return sum + group.articles.filter(art => !(art.assignment && isCompleted(art.assignment))).length;
   }, 0);
+
   const handleAssignOrUpdate = async (data, isUpdate = false) => {
     const action = isUpdate ? 'update' : 'assign';
     const body = {
@@ -113,6 +122,7 @@ export default function AssignSection({ user, onClose }) {
       rev2: data['Revisor 2'],
       editor: data.Editor,
       autor: data.Autor,
+      plazo: data.Plazo ? new Date(data.Plazo).toISOString().split('T')[0] : '', // Format as YYYY-MM-DD
     };
     const articleKey = data['Nombre Artículo'] || data.Autor;
     console.log("📤 Enviando datos al script:", body);
@@ -135,6 +145,7 @@ export default function AssignSection({ user, onClose }) {
       setIsSending({ ...isSending, [articleKey]: false });
     }
   };
+
   const handleContact = async (email, name, title, role, articleKey) => {
     console.log("📧 Sending reminder request for:", { email, name, title, role, articleKey });
     if (!email || !name || !title || !role) {
@@ -161,7 +172,6 @@ export default function AssignSection({ user, onClose }) {
       });
       console.log("📨 Fetch enviado (no-cors, no se puede leer la respuesta):", response);
       setSubmitStatus({ ...submitStatus, [articleKey]: 'Recordatorio enviado.' });
-      // Generate email preview content (matching sendReminderEmail in Google Apps Script)
       const articleLink = assignments.find(a => sanitizeInput(a['Nombre Artículo']) === sanitizeInput(title))?.['Link Artículo'] || '';
       const htmlBody = `
         <div style="font-family: 'Georgia', serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f1e9; border: 2px solid #8b5a2b; border-radius: 10px; color: #3c2f2f;">
@@ -195,33 +205,21 @@ export default function AssignSection({ user, onClose }) {
       setIsSending({ ...isSending, [articleKey]: false });
     }
   };
-  const handleContactEditor = (art) => {
-    console.log("Clicking Contactar Editor for:", art.assignment.Editor);
-    const editor = sectionEditors.find(e => e.Nombre === art.assignment.Editor);
-    if (!editor) {
-      console.error("Editor not found:", art.assignment.Editor);
-      setSubmitStatus({ ...submitStatus, [art['Título de su artículo']]: `Error: Editor (${art.assignment.Editor}) no encontrado.` });
-      return;
-    }
-    handleContact(
-      editor?.Correo || editor?.['Correo electrónico'],
-      art.assignment.Editor,
-      art['Título de su artículo'],
-      'Editor',
-      art['Título de su artículo']
-    );
-  };
+
   const getUniqueId = (groupAuthor, artTitle) => {
     return `${sanitizeInput(groupAuthor)}-${sanitizeInput(artTitle || 'unnamed')}`;
   };
+
   const tutorialSteps = [
     '1. Explora la lista de colaboradores haciendo clic en sus perfiles para ver descripciones, intereses y contactarlos si no cumplen plazos (usa el botón "Contactar" para un email profesional).',
     '2. En "Artículos por Autor", los artículos se agrupan por autor usando el "Título de su artículo". Se muestran solo los pendientes (sin todas las retroalimentaciones/informes).',
-    '3. Haz clic en "Asignar" para artículos sin asignación o "Editar" para actualizar. Completa los campos (título, link, revisores, editor) y confirma.',
+    '3. Haz clic en "Asignar" para artículos sin asignación o "Editar" para actualizar. Completa los campos (título, link, revisores, editor, plazo) y confirma.',
     '4. Usa los botones de contacto para enviar recordatorios institucionales por correo desde el servidor.',
     '5. El panel es responsive. Los artículos con todas las retroalimentaciones se ocultan automáticamente, independientemente del "Estado".',
   ];
+
   if (loading) return <div className="text-center p-4 text-gray-600">Cargando gestión de asignaciones...</div>;
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6 space-y-6 overflow-hidden">
       <div className="flex justify-between items-center">
@@ -267,11 +265,11 @@ export default function AssignSection({ user, onClose }) {
             </div>
             <p className="text-gray-700 mb-4 leading-relaxed">{selectedUser.Descripción}</p>
             <p className="text-sm font-medium mb-4">
-  <strong>Intereses:</strong> {selectedUser['Áreas de interés']?.split(';').map(i => i.trim()).join(', ') || 'N/A'}
-</p>
-<p className="text-sm text-gray-600 mb-4">
-  <strong>Correo:</strong> {selectedUser.Correo || selectedUser['Correo electrónico'] || 'N/A'}
-</p>
+              <strong>Intereses:</strong> {selectedUser['Áreas de interés']?.split(';').map(i => i.trim()).join(', ') || 'N/A'}
+            </p>
+            <p className="text-sm text-gray-600 mb-4">
+              <strong>Correo:</strong> {selectedUser.Correo || selectedUser['Correo electrónico'] || 'N/A'}
+            </p>
             <button
               onClick={() => handleContact(
                 selectedUser.Correo || selectedUser['Correo electrónico'],
@@ -313,6 +311,7 @@ export default function AssignSection({ user, onClose }) {
                     const currentR1 = isAssigned ? art.assignment['Revisor 1'] || 'No asignado' : 'No asignado';
                     const currentR2 = isAssigned ? art.assignment['Revisor 2'] || 'No asignado' : 'No asignado';
                     const currentEditor = isAssigned ? art.assignment.Editor || 'No asignado' : 'No asignado';
+                    const currentPlazo = isAssigned ? art.assignment.Plazo || 'No definido' : 'No definido';
                     const statusBadge = isAssigned ? 'Asignado (en revisión)' : 'Pendiente de asignar';
                     const badgeClass = isAssigned ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800';
                     const handleEditOrAssignClick = () => {
@@ -322,6 +321,7 @@ export default function AssignSection({ user, onClose }) {
                         r1: isAssigned ? art.assignment['Revisor 1'] || '' : '',
                         r2: isAssigned ? art.assignment['Revisor 2'] || '' : '',
                         editor: isAssigned ? art.assignment.Editor || '' : '',
+                        plazo: isAssigned ? art.assignment.Plazo || null : null,
                       };
                       setEditingData({
                         id: uniqueId,
@@ -347,6 +347,7 @@ export default function AssignSection({ user, onClose }) {
                           Editor: data.editor,
                           Autor: author,
                           'Área del artículo': area,
+                          Plazo: data.plazo,
                         },
                         isUpdate
                       );
@@ -373,6 +374,7 @@ export default function AssignSection({ user, onClose }) {
                           <p><strong>Revisor 1:</strong> {currentR1}</p>
                           <p><strong>Revisor 2:</strong> {currentR2}</p>
                           <p><strong>Editor:</strong> {currentEditor}</p>
+                          <p><strong>Plazo:</strong> {currentPlazo}</p>
                           <span className={`inline-block px-2 py-1 text-xs rounded-full ${badgeClass}`}>
                             {statusBadge}
                           </span>
@@ -502,11 +504,18 @@ export default function AssignSection({ user, onClose }) {
                                 <option value="">Seleccionar Editor</option>
                                 {sectionEditors.map((e) => <option key={e.Nombre} value={e.Nombre}>{e.Nombre}</option>)}
                               </select>
+                              <DatePicker
+                                selected={editingData.data.plazo}
+                                onChange={(date) => updateField('plazo', date)}
+                                dateFormat="yyyy-MM-dd"
+                                placeholderText="Seleccionar Plazo"
+                                className="border p-2 rounded-md text-sm w-full"
+                              />
                             </div>
                             <div className="flex space-x-2">
                               <button
                                 onClick={handleConfirm}
-                                disabled={!editingData.data.nombre || !editingData.data.link || !editingData.data.r1 || !editingData.data.r2 || !editingData.data.editor || isSending[articleKey]}
+                                disabled={!editingData.data.nombre || !editingData.data.link || !editingData.data.r1 || !editingData.data.r2 || !editingData.data.editor || !editingData.data.plazo || isSending[articleKey]}
                                 className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:bg-gray-400 text-sm"
                               >
                                 {isSending[articleKey] ? 'Cambiando...' : (editingData.isUpdate ? 'Actualizar' : 'Asignar')}
