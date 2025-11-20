@@ -294,7 +294,7 @@ export default function AssignSection({ user, onClose }) {
   const tutorialSteps = [
     '1. Explora la lista de colaboradores haciendo clic en sus perfiles para ver descripciones, intereses y contactarlos si no cumplen plazos (usa el botón "Contactar" para un email profesional).',
     '2. En "Artículos por Autor", los artículos se agrupan por autor usando el "Título de su artículo". Se muestran solo los pendientes (sin todas las retroalimentaciones/informes).',
-    '3. Haz clic en "Asignar" para artículos sin asignación o "Editar" para actualizar. Completa los campos (título, link, revisores, editor, plazo) y confirma.',
+    '3. Haz clic en "Asignar" para artículos sin asignación o "Editar" para actual izar. Completa los campos (título, link, revisores, editor, plazo) y confirma.',
     '4. Usa los botones de contacto para enviar recordatorios institucionales por correo desde el servidor.',
     '5. El panel es responsive. Los artículos con todas las retroalimentaciones se ocultan automáticamente, independientemente del "Estado".',
     '6. Usa el calendario para ver y editar plazos de artículos pendientes. Haz clic en un evento para editar la asignación.',
