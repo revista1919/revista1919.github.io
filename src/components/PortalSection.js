@@ -246,6 +246,7 @@ export default function PortalSection({ user, onClose }) {
   const [effectiveName, setEffectiveName] = useState(user?.name || '');
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [currentQuillType, setCurrentQuillType] = useState({});
   const feedbackQuillRefs = useRef({});
   const reportQuillRefs = useRef({});
   useEffect(() => {
@@ -718,18 +719,11 @@ export default function PortalSection({ user, onClose }) {
       container: [
         ['bold', 'italic', 'underline', 'strike', 'blockquote'],
         [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-        ['link', 'image', 'custom-image'],
+        ['link', 'image'],
         [{ 'align': ['', 'center', 'right', 'justify'] }],
         [{ 'size': ['small', false, 'large'] }],
         ['clean']
-      ],
-      handlers: {
-        'custom-image': (value, link) => {
-          setIsEditingImage((prev) => ({ ...prev, [link]: false }));
-          setImageData((prev) => ({ ...prev, [link]: { url: '', width: '', height: '', align: 'left' } }));
-          setShowImageModal((prev) => ({ ...prev, [link]: true }));
-        }
-      }
+      ]
     },
     imageResize: {
       parchment: ReactQuill.Quill.import('parchment'),
@@ -747,36 +741,20 @@ export default function PortalSection({ user, onClose }) {
     },
     keyboard: {
       bindings: {
-        deleteImage: {
-          key: ['Delete', 'Backspace'],
+        deleteImageBack: {
+          key: 'backspace',
           handler: function(range) {
-            if (!range) {
-              console.log('No hay selección activa para eliminar');
-              return true;
-            }
+            if (!range) return true;
             const editor = this.quill;
             const imageResize = editor.getModule('imageResize');
             let isImage = false;
             let deleteIndex = range.index;
             let deleteLength = 1;
             if (range.length === 0) {
-              const [leaf] = editor.getLeaf(range.index);
+              const [leaf] = editor.getLeaf(range.index - 1);
               if (leaf && leaf.domNode && leaf.domNode.tagName === 'IMG') {
                 isImage = true;
-              } else {
-                if (this.key === 'Backspace') {
-                  const [prevLeaf] = editor.getLeaf(range.index - 1);
-                  if (prevLeaf && prevLeaf.domNode && prevLeaf.domNode.tagName === 'IMG') {
-                    isImage = true;
-                    deleteIndex = range.index - 1;
-                  }
-                } else if (this.key === 'Delete') {
-                  const [nextLeaf] = editor.getLeaf(range.index);
-                  if (nextLeaf && nextLeaf.domNode && nextLeaf.domNode.tagName === 'IMG') {
-                    isImage = true;
-                    deleteIndex = range.index;
-                  }
-                }
+                deleteIndex = range.index - 1;
               }
             } else if (range.length === 1) {
               const [leaf] = editor.getLeaf(range.index);
@@ -793,7 +771,41 @@ export default function PortalSection({ user, onClose }) {
                 return false;
               } catch (err) {
                 console.error('Error al eliminar imagen:', err);
-                setSubmitStatus((prev) => ({ ...prev, [link]: 'Error al eliminar imagen' }));
+                return false;
+              }
+            }
+            return true;
+          },
+        },
+        deleteImageDel: {
+          key: 'delete',
+          handler: function(range) {
+            if (!range) return true;
+            const editor = this.quill;
+            const imageResize = editor.getModule('imageResize');
+            let isImage = false;
+            let deleteIndex = range.index;
+            let deleteLength = 1;
+            if (range.length === 0) {
+              const [leaf] = editor.getLeaf(range.index);
+              if (leaf && leaf.domNode && leaf.domNode.tagName === 'IMG') {
+                isImage = true;
+              }
+            } else if (range.length === 1) {
+              const [leaf] = editor.getLeaf(range.index);
+              if (leaf && leaf.domNode && leaf.domNode.tagName === 'IMG') {
+                isImage = true;
+              }
+            }
+            if (isImage) {
+              try {
+                if (imageResize) {
+                  imageResize.hide();
+                }
+                editor.deleteText(deleteIndex, deleteLength, ReactQuill.Quill.sources.USER);
+                return false;
+              } catch (err) {
+                console.error('Error al eliminar imagen:', err);
                 return false;
               }
             }
@@ -801,7 +813,7 @@ export default function PortalSection({ user, onClose }) {
           },
         },
         enterAfterImage: {
-          key: 'Enter',
+          key: 'enter',
           handler: function(range) {
             if (!range) return true;
             const editor = this.quill;
@@ -813,7 +825,6 @@ export default function PortalSection({ user, onClose }) {
                 return false;
               } catch (err) {
                 console.error('Error al insertar nueva línea después de imagen:', err);
-                setSubmitStatus((prev) => ({ ...prev, [link]: 'Error al agregar texto después de imagen' }));
                 return false;
               }
             }
@@ -832,6 +843,7 @@ export default function PortalSection({ user, onClose }) {
           setIsEditingImage((prev) => ({ ...prev, [link]: false }));
           setImageData((prev) => ({ ...prev, [link]: { url: '', width: '', height: '', align: 'left' } }));
           setShowImageModal((prev) => ({ ...prev, [link]: true }));
+          setCurrentQuillType((prev) => ({ ...prev, [link]: type }));
         });
         const button = document.createElement('button');
         button.className = 'ql-custom-image';
@@ -871,7 +883,8 @@ export default function PortalSection({ user, onClose }) {
     }
   };
   const handleImageModalSubmit = (link) => {
-    const quillRef = feedbackQuillRefs.current[link] || reportQuillRefs.current[link];
+    const type = currentQuillType[link] || 'feedback';
+    const quillRef = type === 'feedback' ? feedbackQuillRefs.current[link] : reportQuillRefs.current[link];
     if (!quillRef) return;
     const editor = quillRef.getEditor();
     let { url, width, height, align } = imageData[link] || {};
