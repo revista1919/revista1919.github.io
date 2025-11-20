@@ -1,624 +1,861 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import Papa from 'papaparse';
-
-const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
-const INCOMING_CSV = process.env.REACT_APP_FORM_CSV || '';
-const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby2B1OUt3TMqaed6Vz-iamUPn4gHhKXG2RRxiy8Nt6u69Cg-2kSze2XQ-NywX5QrNfy/exec';
-
-const sanitizeInput = (input) => input ? input.trim().toLowerCase().replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') : '';
-
-export default function AssignSection({ user, onClose }) {
-  const [users, setUsers] = useState([]);
-  const [reviewers, setReviewers] = useState([]);
-  const [sectionEditors, setSectionEditors] = useState([]);
-  const [incoming, setIncoming] = useState([]);
-  const [assignments, setAssignments] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [editingId, setEditingId] = useState(null);
-  const [editingData, setEditingData] = useState(null);
-  const [tutorialOpen, setTutorialOpen] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState({});
-  const [isSending, setIsSending] = useState({});
-  const [emailPreview, setEmailPreview] = useState(null);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        console.log("📡 Initiating fetch of CSVs...");
-
-        const [usersText, incomingText, assignmentsText] = await Promise.all([
-          fetch(USERS_CSV, { cache: 'no-store' }).then(r => r.text()),
-          fetch(INCOMING_CSV, { cache: 'no-store' }).then(r => r.text()),
-          fetch(ASSIGNMENTS_CSV, { cache: 'no-store' }).then(r => r.text()),
-        ]);
-
-        console.log("✅ CSVs downloaded");
-
-        const parsedUsers = Papa.parse(usersText, { header: true, skipEmptyLines: true }).data.filter(u => u.Nombre && u.Nombre.trim());
-        console.log("👥 Users parsed:", parsedUsers);
-
-        const filteredUsers = parsedUsers.filter(u => {
-          const roles = (u['Role in the Journal'] || u['Rol en la Revista'] || '').split(';').map(r => r.trim()).filter(Boolean);
-          return roles.some(r => r === 'Reviewer' || r === 'Section Editor' || r === 'Editor-in-Chief');
-        });
-        setUsers(filteredUsers);
-        console.log("✅ Filtered users (reviewers + editors + editors-in-chief):", filteredUsers);
-
-        const revs = filteredUsers.filter(u => (u['Role in the Journal'] || u['Rol en la Revista'] || '').includes('Reviewer'));
-        const eds = filteredUsers.filter(u => (u['Role in the Journal'] || u['Rol en la Revista'] || '').includes('Section Editor'));
-        const chiefs = filteredUsers.filter(u => (u['Role in the Journal'] || u['Rol en la Revista'] || '').includes('Editor-in-Chief'));
-        setReviewers(revs);
-        setSectionEditors([...eds, ...chiefs]);
-        console.log("👤 Reviewers:", revs);
-        console.log("📂 Editors (including chief):", [...eds, ...chiefs]);
-
-        const parsedIncoming = Papa.parse(incomingText, { header: true, skipEmptyLines: true }).data.filter(i => 
-          i['Name (first name and last name)'] && 
-          i['Title of your paper'] && 
-          i['Name (first name and last name)'].trim() && 
-          i['Title of your paper'].trim()
-        );
-        setIncoming(parsedIncoming);
-        console.log("📝 Incoming articles:", parsedIncoming);
-
-        const parsedAssignments = Papa.parse(assignmentsText, { header: true, skipEmptyLines: true }).data.filter(a => 
-          a['Nombre Artículo'] && a['Nombre Artículo'].trim() && a.Autor && a.Autor.trim()
-        );
-        const isCompleted = (assign) => {
-          return !!(assign['Feedback 1'] && assign['Informe 1'] && assign['Feedback 2'] && assign['Informe 2'] && assign['Feedback 3'] && assign['Informe 3']);
-        };
-        const pendingAssignments = parsedAssignments.filter(a => !isCompleted(a));
-        setAssignments(pendingAssignments);
-
-        console.log("📂 Pending assignments:", pendingAssignments);
-      } catch (err) {
-        console.error('❌ Error fetching data:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  const isCompleted = (assign) => {
-    return !!(assign['Feedback 1'] && assign['Informe 1'] && assign['Feedback 2'] && assign['Informe 2'] && assign['Feedback 3'] && assign['Informe 3']);
-  };
-
-  const groupedIncoming = useMemo(() => {
-    const groupMap = {};
-    incoming.forEach(art => {
-      const authorSanitized = sanitizeInput(art['Name (first name and last name)'] || '');
-      const titleSanitized = sanitizeInput(art['Title of your paper'] || '');
-      if (!groupMap[authorSanitized]) {
-        groupMap[authorSanitized] = [];
-      }
-      let matchingAssign = assignments.find(a => {
-        const aTitleSanitized = sanitizeInput(a['Nombre Artículo'] || '');
-        const aAuthorSanitized = sanitizeInput(a.Autor || '');
-        const exactMatch = aTitleSanitized === titleSanitized && aAuthorSanitized === authorSanitized;
-        const fuzzyTitleMatch = !exactMatch && (
-          aTitleSanitized.includes(titleSanitized) || 
-          titleSanitized.includes(aTitleSanitized)
-        );
-        return exactMatch || (fuzzyTitleMatch && aAuthorSanitized === authorSanitized);
-      });
-      groupMap[authorSanitized].push({ ...art, assignment: matchingAssign });
-    });
-    return Object.entries(groupMap).map(([sanitizedAuthor, articles]) => ({
-      authorName: articles[0]['Name (first name and last name)'],
-      authorEmail: articles[0]['Email direction'],
-      authorInstitution: articles[0]['Educational establishment'],
-      articles,
-    }));
-  }, [incoming, assignments]);
-
-  const totalPending = groupedIncoming.reduce((sum, group) => {
-    return sum + group.articles.filter(art => !(art.assignment && isCompleted(art.assignment))).length;
-  }, 0);
-
-  const handleAssignOrUpdate = async (data, isUpdate = false) => {
-    const action = isUpdate ? 'update' : 'assign';
-    const body = {
-      action,
-      title: data['Nombre Artículo'],
-      link: data['Link Artículo'],
-      rev1: data['Revisor 1'],
-      rev2: data['Revisor 2'],
-      editor: data.Editor,
-      autor: data.Autor,
-    };
-    const articleKey = data['Nombre Artículo'] || data.Autor;
-
-    console.log("📤 Sending data to script:", body);
-    setIsSending({ ...isSending, [articleKey]: true });
-
-    try {
-      const response = await fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      console.log("📨 Fetch sent, response (no-cors, cannot read):", response);
-      setSubmitStatus({ ...submitStatus, [articleKey]: 'Updated... please wait a moment to see the change, then refresh the page.' });
-      setEditingId(null);
-      setEditingData(null);
-    } catch (err) {
-      setSubmitStatus({ ...submitStatus, [articleKey]: '❌ Error: ' + err.message });
-      console.error('Error submitting:', err);
-    } finally {
-      setIsSending({ ...isSending, [articleKey]: false });
+function doPost(e) {
+  try {
+    if (!e || !e.postData || !e.postData.contents) {
+      Logger.log('Error: postData is undefined or missing contents');
+      return ContentService.createTextOutput('Error: Invalid request').setMimeType(ContentService.MimeType.TEXT);
     }
-  };
+    var data = JSON.parse(e.postData.contents);
+    var spreadsheetId = '1-M0Ca-3VmX-0t2M1uEVQsjEatzFFbxlfLlEXTUdp8ws';
+    var sheetName = 'Hoja 1';
+    var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(sheetName);
 
-  const handleContact = async (email, name, title, role, articleKey) => {
-    console.log("📧 Sending reminder request for:", { email, name, title, role, articleKey });
+    var rows = sheet.getDataRange().getValues();
+    var headers = rows[0];
+    var action = data.action;
 
-    if (!email || !name || !title || !role) {
-      console.error("Missing email, name, title, or role:", { email, name, title, role });
-      setSubmitStatus({ ...submitStatus, [articleKey]: `Error: Missing data to send the reminder.` });
-      return;
+    Logger.log('Headers found: ' + headers.join(', '));
+
+    if (action === 'assign') {
+      if (!data.title || !data.link || !data.autor) {
+        Logger.log('Error: Missing required fields: title=' + data.title + ', link=' + data.link + ', autor=' + data.autor);
+        return ContentService.createTextOutput('Error: Missing required fields').setMimeType(ContentService.MimeType.TEXT);
+      }
+      
+      // Get column indices
+      var linkIndex = headers.indexOf('Link Artículo');
+      var rev1Index = headers.indexOf('Revisor 1');
+      var rev2Index = headers.indexOf('Revisor 2');
+      var editorIndex = headers.indexOf('Editor');
+      var autorIndex = headers.indexOf('Autor');
+      var titleIndex = headers.indexOf('Nombre Artículo');
+      var estadoIndex = headers.indexOf('Estado'); // Index of column H
+      
+      // Validate all indices are valid
+      if (linkIndex === -1 || rev1Index === -1 || rev2Index === -1 || editorIndex === -1 || autorIndex === -1 || titleIndex === -1) {
+        Logger.log('Error: Missing headers. Indices: link=' + linkIndex + ', rev1=' + rev1Index + ', rev2=' + rev2Index + ', editor=' + editorIndex + ', autor=' + autorIndex + ', title=' + titleIndex);
+        return ContentService.createTextOutput('Error: One or more required headers not found').setMimeType(ContentService.MimeType.TEXT);
+      }
+      
+      // Find the first empty row (ignoring column H/Estado, index 7)
+      var dataRange = sheet.getDataRange();
+      var values = dataRange.getValues();
+      var targetRow = 1; // Start from row 2 (after headers)
+      var foundEmptyRow = false;
+      
+      for (var i = 1; i < values.length; i++) {
+        var rowIsEmpty = true;
+        for (var j = 0; j < values[i].length; j++) {
+          // Ignore column H (index 7, 0-based)
+          if (j !== 7 && values[i][j] !== '' && values[i][j] !== null) {
+            rowIsEmpty = false;
+            break;
+          }
+        }
+        if (rowIsEmpty) {
+          targetRow = i + 1; // Empty row found (1-based for setValues)
+          foundEmptyRow = true;
+          break;
+        }
+      }
+      
+      if (!foundEmptyRow) {
+        targetRow = values.length + 1; // If no empty row, use last + 1
+      }
+      
+      // Create new row with dynamic positions, without touching column H
+      var newRow = new Array(headers.length).fill('');
+      newRow[linkIndex] = data.link;
+      newRow[rev1Index] = data.rev1 || '';
+      newRow[rev2Index] = data.rev2 || '';
+      newRow[editorIndex] = data.editor || '';
+      newRow[autorIndex] = data.autor;
+      newRow[titleIndex] = data.title;
+      // Do not assign anything to newRow[estadoIndex] to preserve array formula
+      
+      Logger.log('Writing to row ' + targetRow + ': ' + newRow.join(', '));
+      
+      // Write only the relevant columns, avoiding column H
+      var columnsToWrite = [];
+      var valuesToWrite = [];
+      for (var j = 0; j < headers.length; j++) {
+        if (j !== estadoIndex) { // Exclude column H
+          columnsToWrite.push(j + 1); // 1-based for getRange
+          valuesToWrite.push(newRow[j]);
+        }
+      }
+      
+      // Write the values to the selected columns
+      for (var k = 0; k < columnsToWrite.length; k++) {
+        sheet.getRange(targetRow, columnsToWrite[k]).setValue(valuesToWrite[k]);
+      }
+      
+      // Do not touch column H, rely on the array formula in H2
+      
+      SpreadsheetApp.flush(); // Force immediate write
+      
+      // Verify the row was written
+      var writtenRow = sheet.getRange(targetRow, 1, 1, headers.length).getValues()[0];
+      Logger.log('Row written at ' + targetRow + ': ' + writtenRow.join(', '));
+      
+      // Automatically send assignment emails
+      var articleLink = data.link;
+      var articleName = data.title;
+      
+      // Send to Reviewer 1 if assigned
+      if (data.rev1) {
+        var rev1Email = getEmailByName(data.rev1);
+        if (rev1Email) {
+          sendAssignmentEmail(rev1Email, 'Reviewer 1', articleName, articleLink, true);
+          Logger.log('Assignment email sent to Reviewer 1: ' + rev1Email);
+        } else {
+          Logger.log('Warning: No email found for Reviewer 1: ' + data.rev1);
+        }
+      }
+      
+      // Send to Reviewer 2 if assigned
+      if (data.rev2) {
+        var rev2Email = getEmailByName(data.rev2);
+        if (rev2Email) {
+          sendAssignmentEmail(rev2Email, 'Reviewer 2', articleName, articleLink, true);
+          Logger.log('Assignment email sent to Reviewer 2: ' + rev2Email);
+        } else {
+          Logger.log('Warning: No email found for Reviewer 2: ' + data.rev2);
+        }
+      }
+      
+      // Send to Editor if assigned
+      if (data.editor) {
+        var editorEmail = getEmailByName(data.editor);
+        if (editorEmail) {
+          sendAssignmentEmail(editorEmail, 'Section Editor', articleName, articleLink, true);
+          Logger.log('Assignment email sent to Editor: ' + editorEmail);
+        } else {
+          Logger.log('Warning: No email found for Editor: ' + data.editor);
+        }
+      }
+      
+      Logger.log('Success: Added new assignment and sent emails for ' + data.title);
+      return ContentService.createTextOutput('Success: Assigned and emails sent').setMimeType(ContentService.MimeType.TEXT);
+      
+    } else if (action === 'update') {
+      if (!data.title) {
+        Logger.log('Error: Missing title for update');
+        return ContentService.createTextOutput('Error: Missing title').setMimeType(ContentService.MimeType.TEXT);
+      }
+      var titleIndex = headers.indexOf('Nombre Artículo');
+      if (titleIndex === -1) {
+        Logger.log('Error: Header "Nombre Artículo" not found');
+        return ContentService.createTextOutput('Error: Header not found').setMimeType(ContentService.MimeType.TEXT);
+      }
+      var found = false;
+      for (var i = 1; i < rows.length; i++) {
+        if (rows[i][titleIndex] && rows[i][titleIndex].toString().toLowerCase().trim() === data.title.toLowerCase().trim()) {
+          const colMap = {
+            rev1: headers.indexOf('Revisor 1'),
+            rev2: headers.indexOf('Revisor 2'),
+            editor: headers.indexOf('Editor'),
+            link: headers.indexOf('Link Artículo')
+          };
+          Object.keys(data).forEach(key => {
+            if (colMap[key] !== undefined && colMap[key] !== -1) {
+              sheet.getRange(i + 1, colMap[key] + 1).setValue(data[key] || '');
+            }
+          });
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        Logger.log('Error: Article not found for title ' + data.title);
+        return ContentService.createTextOutput('Error: Article not found').setMimeType(ContentService.MimeType.TEXT);
+      }
+      SpreadsheetApp.flush();
+      Logger.log('Success: Updated assignment for ' + data.title);
+      return ContentService.createTextOutput('Success: Updated').setMimeType(ContentService.MimeType.TEXT);
+    } else if (action === 'sendReminder') {
+      if (!data.email || !data.name || !data.title || !data.role) {
+        Logger.log('Error: Missing required fields for sendReminder: email, name, title, or role');
+        return ContentService.createTextOutput('Error: Missing required fields').setMimeType(ContentService.MimeType.TEXT);
+      }
+      var titleIndex = headers.indexOf('Nombre Artículo');
+      var linkIndex = headers.indexOf('Link Artículo');
+      if (titleIndex === -1 || linkIndex === -1) {
+        Logger.log('Error: Header "Nombre Artículo" or "Link Artículo" not found');
+        return ContentService.createTextOutput('Error: Header not found').setMimeType(ContentService.MimeType.TEXT);
+      }
+      var articleLink = '';
+      for (var i = 1; i < rows.length; i++) {
+        if (rows[i][titleIndex] && rows[i][titleIndex].toString().toLowerCase().trim() === data.title.toLowerCase().trim()) {
+          articleLink = rows[i][linkIndex] || '';
+          break;
+        }
+      }
+      if (!articleLink) {
+        Logger.log('Error: No link found for article ' + data.title);
+        return ContentService.createTextOutput('Error: Article link not found').setMimeType(ContentService.MimeType.TEXT);
+      }
+      sendReminderEmail(data.email, data.role, data.title, articleLink, data.name, data.senderName, true);
+      Logger.log('Success: Reminder sent to ' + data.email + ' for article ' + data.title);
+      return ContentService.createTextOutput('Success: Email sent').setMimeType(ContentService.MimeType.TEXT);
     }
 
-    setIsSending({ ...isSending, [articleKey]: true });
+    var linkIndex = headers.indexOf('Link Artículo');
+    if (linkIndex === -1) {
+      Logger.log('Error: Header "Link Artículo" not found');
+      return ContentService.createTextOutput('Error: Header not found').setMimeType(ContentService.MimeType.TEXT);
+    }
 
-    const body = {
-      action: 'sendReminder',
-      email,
-      name,
-      title,
-      role: role === 'Revisor 1' ? 'Reviewer 1' : role === 'Revisor 2' ? 'Reviewer 2' : role === 'Editor' ? 'Section Editor' : role,
-      senderName: user?.Nombre || 'Editorial Team',
-    };
+    var votoIndex, feedbackIndex, informeIndex;
+    if (data.role === 'Reviewer 1' || data.role === 'Revisor 1') {
+      votoIndex = headers.indexOf('Voto 1');
+      feedbackIndex = headers.indexOf('Feedback 1');
+      informeIndex = headers.indexOf('Informe 1');
+    } else if (data.role === 'Reviewer 2' || data.role === 'Revisor 2') {
+      votoIndex = headers.indexOf('Voto 2');
+      feedbackIndex = headers.indexOf('Feedback 2');
+      informeIndex = headers.indexOf('Informe 2');
+    } else if (data.role === 'Editor' || data.role === 'Section Editor') {
+      votoIndex = headers.indexOf('Voto 3');
+      feedbackIndex = headers.indexOf('Feedback 3');
+      informeIndex = headers.indexOf('Informe 3');
+    } else {
+      Logger.log('Error: Invalid role ' + data.role);
+      return ContentService.createTextOutput('Error: Invalid role').setMimeType(ContentService.MimeType.TEXT);
+    }
 
-    console.log("📤 Sending data to script:", body);
+    if (votoIndex === -1 || feedbackIndex === -1 || informeIndex === -1) {
+      Logger.log('Error: One or more headers not found for role ' + data.role);
+      return ContentService.createTextOutput('Error: Headers not found').setMimeType(ContentService.MimeType.TEXT);
+    }
 
-    try {
-      const response = await fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+    for (var i = 1; i < rows.length; i++) {
+      if (rows[i][linkIndex] === data.link) {
+        sheet.getRange(i + 1, votoIndex + 1).setValue(data.vote || '');
+        sheet.getRange(i + 1, feedbackIndex + 1).setValue(data.feedback || '');
+        
+        // Decode base64 for informe
+        var reportContent = '';
+        if (data.report) {
+          try {
+            var decodedBytes = Utilities.base64Decode(data.report);
+            reportContent = Utilities.newBlob(decodedBytes).getDataAsString('UTF-8');
+          } catch (decodeErr) {
+            reportContent = data.report;
+            Logger.log('Error decoding base64 for report: ' + decodeErr.message);
+          }
+        }
+        sheet.getRange(i + 1, informeIndex + 1).setValue(reportContent);
+        
+        var authorName = rows[i][headers.indexOf('Autor')];
+        var authorEmail = getEmailByName(authorName);
+        var articleName = rows[i][headers.indexOf('Nombre Artículo')];
+        var articleLink = rows[i][linkIndex];
+        
+        if ((data.role === 'Editor' || data.role === 'Section Editor') && data.feedback && authorEmail) {
+          sendFeedbackAvailableEmail(authorEmail, articleName, data.role, true);
+        }
+        
+        if ((data.role === 'Editor' || data.role === 'Section Editor') && data.report && authorEmail && articleLink) {
+          sendCorrectedDocumentEmail(authorEmail, articleName, articleLink, authorName, true);
+        }
+        
+        SpreadsheetApp.flush();
+        Logger.log('Success: Updated row ' + (i + 1));
+        return ContentService.createTextOutput('Success').setMimeType(ContentService.MimeType.TEXT);
+      }
+    }
 
-      console.log("📨 Fetch sent (no-cors, cannot read response):", response);
-      setSubmitStatus({ ...submitStatus, [articleKey]: 'Reminder sent.' });
+    Logger.log('Error: Row not found for link ' + data.link);
+    return ContentService.createTextOutput('Error: Row not found').setMimeType(ContentService.MimeType.TEXT);
+  } catch (err) {
+    Logger.log('Error in doPost: ' + err.message + ' | Data: ' + JSON.stringify(data));
+    return ContentService.createTextOutput('Error: ' + err.message).setMimeType(ContentService.MimeType.TEXT);
+  }
+}
 
-      const articleLink = assignments.find(a => sanitizeInput(a['Nombre Artículo']) === sanitizeInput(title))?.['Link Artículo'] || '';
-      const htmlBody = `
-        <div style="font-family: 'Georgia', serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f1e9; border: 2px solid #8b5a2b; border-radius: 10px; color: #3c2f2f;">
-          <div style="background-color: #8b5a2b; padding: 15px; border-radius: 8px 8px 0 0; text-align: center;">
-            <h2 style="color: #f8f1e9; margin: 0;">Review Reminder</h2>
-          </div>
-          <div style="padding: 20px;">
-            <p>Dear ${name},</p>
-            <p>We are writing to kindly remind you that you have a pending review for the article <strong>${title}</strong> as <strong>${body.role}</strong> for the <strong>National Journal of Student Sciences</strong>.</p>
-            <p><strong>Article Link:</strong> <a href="${articleLink}" style="color: #6b4e31; text-decoration: none; font-weight: bold;">Open in Google Drive</a></p>
-            <p><strong>Instructions:</strong></p>
-            <ul style="list-style-type: disc; margin-left: 20px; color: #3c2f2f;">
-              <li>Access the article via the provided link.</li>
-              <li>Log in to <a href="https://www.revistacienciasestudiantes.com/" style="color: #6b4e31; text-decoration: none;">our portal</a> to review detailed instructions and submit your report, feedback, and vote.</li>
-              <li>Please complete your review as soon as possible, as the deadline is approaching.</li>
-            </ul>
-            <p>If you need an extension or support, please contact us by replying to this email.</p>
-            <p>Thank you for your valuable contribution to our journal.</p>
-            <p>Sincerely,<br>${user?.Nombre || 'Editorial Team'}<br>Editor-in-Chief<br>National Journal of Student Sciences</p>
-          </div>
-          <div style="background-color: #e6d8c6; padding: 10px; border-radius: 0 0 8px 8px; text-align: center;">
-            <p style="font-size: 12px; color: #6b4e31; margin: 0;">We kindly ask that you respond to this email as soon as possible.</p>
-          </div>
+function sendReminderEmail(to, role, articleName, articleLink, name, senderName, isEnglish = false) {
+  let subject, htmlBody;
+  if (isEnglish) {
+    subject = 'Reminder: Review Deadlines - National Journal of Student Sciences';
+    htmlBody = `
+      <div style="font-family: 'Georgia', serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f1e9; border: 2px solid #8b5a2b; border-radius: 10px; color: #3c2f2f;">
+        <div style="background-color: #8b5a2b; padding: 15px; border-radius: 8px 8px 0 0; text-align: center;">
+          <h2 style="color: #f8f1e9; margin: 0;">Review Reminder</h2>
         </div>
-      `;
-      setEmailPreview({ to: email, subject: 'Reminder: Review Deadlines - National Journal of Student Sciences', htmlBody });
-    } catch (err) {
-      console.error("Error sending reminder:", err);
-      setSubmitStatus({ ...submitStatus, [articleKey]: `Error: ${err.message}` });
-    } finally {
-      setIsSending({ ...isSending, [articleKey]: false });
-    }
-  };
-
-  const handleContactEditor = (art) => {
-    console.log("Clicking Contact Editor for:", art.assignment.Editor);
-    const editor = sectionEditors.find(e => e.Nombre === art.assignment.Editor);
-    if (!editor) {
-      console.error("Editor not found:", art.assignment.Editor);
-      setSubmitStatus({ ...submitStatus, [art['Title of your paper']]: `Error: Editor (${art.assignment.Editor}) not found.` });
-      return;
-    }
-    handleContact(
-      editor?.Correo || editor?.['Correo electrónico'],
-      art.assignment.Editor,
-      art['Title of your paper'],
-      'Editor',
-      art['Title of your paper']
-    );
-  };
-
-  const getUniqueId = (groupAuthor, artTitle) => {
-    return `${sanitizeInput(groupAuthor)}-${sanitizeInput(artTitle || 'unnamed')}`;
-  };
-
-  const tutorialSteps = [
-    '1. Explore the list of collaborators by clicking on their profiles to view descriptions, interests, and contact them if they miss deadlines (use the "Contact" button for a professional email).',
-    '2. In "Articles by Author", articles are grouped by author using the "Title of your paper". Only pending articles (without all feedback/reports) are shown.',
-    '3. Click "Assign" for unassigned articles or "Edit" to update. Complete the fields (title, link, reviewers, editor) and confirm.',
-    '4. Use the contact buttons to send institutional email reminders from the server.',
-    '5. The panel is responsive. Articles with all feedback are automatically hidden, regardless of "Status".',
-  ];
-
-  if (loading) return <div className="text-center p-4 text-gray-600">Loading assignment management...</div>;
-
-  return (
-    <div className="bg-white rounded-lg shadow-md p-6 space-y-6 overflow-hidden">
-      <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold text-gray-800">Assignment Management</h3>
-        <div className="flex space-x-2">
-          <button
-            onClick={() => setTutorialOpen(true)}
-            className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
-          >
-            Help
-          </button>
-          {onClose && (
-            <button onClick={onClose} className="text-gray-500 hover:text-gray-700">×</button>
-          )}
+        <div style="padding: 20px;">
+          <p>Dear ${name},</p>
+          <p>We are writing to kindly remind you that you have a pending review for the article <strong>${articleName}</strong> as <strong>${role}</strong> for the <strong>National Journal of Student Sciences</strong>.</p>
+          <p><strong>Article Link:</strong> <a href="${articleLink}" style="color: #6b4e31; text-decoration: none; font-weight: bold;">Open in Google Drive</a></p>
+          <p><strong>Instructions:</strong></p>
+          <ul style="list-style-type: disc; margin-left: 20px; color: #3c2f2f;">
+            <li>Access the article via the provided link.</li>
+            <li>Log in to <a href="https://www.revistacienciasestudiantes.com/" style="color: #6b4e31; text-decoration: none;">our portal</a> to review detailed instructions and submit your report, feedback, and vote.</li>
+            <li>Please complete your review as soon as possible, as the deadline is approaching.</li>
+          </ul>
+          <p>If you need an extension or support, please contact us by replying to this email.</p>
+          <p>Thank you for your valuable contribution to our journal.</p>
+          <p>Sincerely,<br>${senderName}<br>Editor-in-Chief<br>National Journal of Student Sciences</p>
+        </div>
+        <div style="background-color: #e6d8c6; padding: 10px; border-radius: 0 0 8px 8px; text-align: center;">
+          <p style="font-size: 12px; color: #6b4e31; margin: 0;">We kindly ask that you respond to this email as soon as possible.</p>
         </div>
       </div>
-
-      <section>
-        <h4 className="text-lg font-semibold mb-4">Collaborators (Reviewers and Section Editors)</h4>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {users.map((u) => (
-            <div
-              key={u.Nombre}
-              className="bg-gray-50 p-3 rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-shadow border border-gray-200 flex flex-col items-center text-center h-full"
-              onClick={() => setSelectedUser(u)}
-            >
-              <img
-                src={u.Imagen || 'https://via.placeholder.com/64?text=?'} 
-                alt={u.Nombre}
-                className="w-16 h-16 rounded-full mb-2 object-cover"
-              />
-              <h5 className="font-medium text-sm">{u.Nombre}</h5>
-              <p className="text-xs text-gray-600">{(u['Role in the Journal'] || u['Rol en la Revista'] || '').split(';')[0].trim()}</p>
-            </div>
-          ))}
+    `;
+  } else {
+    subject = 'Recordatorio: Plazos de Revisión - Revista Nacional de las Ciencias para Estudiantes';
+    htmlBody = `
+      <div style="font-family: 'Georgia', serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f1e9; border: 2px solid #8b5a2b; border-radius: 10px; color: #3c2f2f;">
+        <div style="background-color: #8b5a2b; padding: 15px; border-radius: 8px 8px 0 0; text-align: center;">
+          <h2 style="color: #f8f1e9; margin: 0;">Recordatorio de Revisión</h2>
         </div>
-      </section>
-
-      {selectedUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-start mb-4">
-              <h5 className="font-bold text-lg">{selectedUser.Nombre}</h5>
-              <button onClick={() => setSelectedUser(null)} className="text-gray-500 hover:text-gray-700">×</button>
-            </div>
-            <p className="text-gray-700 mb-4 leading-relaxed">{selectedUser.Description || selectedUser.Descripción || 'N/A'}</p>
-            <p className="text-sm font-medium mb-4">
-              <strong>Interests:</strong> {(selectedUser['Areas of interest'] || selectedUser['Áreas de interés'] || '').split(';').map(i => i.trim()).join(', ') || 'N/A'}
-            </p>
-            <p className="text-sm text-gray-600 mb-4">
-              <strong>Email:</strong> {selectedUser.Correo || selectedUser['Correo electrónico'] || 'N/A'}
-            </p>
-            <button
-              onClick={() => handleContact(
-                selectedUser.Correo || selectedUser['Correo electrónico'],
-                selectedUser.Nombre,
-                'General',
-                (selectedUser['Role in the Journal'] || selectedUser['Rol en la Revista'] || '').includes('Reviewer') ? 'Reviewer' : 'Section Editor',
-                selectedUser.Nombre
-              )}
-              className="w-full bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 text-sm"
-              disabled={isSending[selectedUser.Nombre]}
-            >
-              {isSending[selectedUser.Nombre] ? 'Sending email...' : 'Contact via Email (Sensitive Reminder)'}
-            </button>
-            {submitStatus[selectedUser.Nombre] && (
-              <span className={`text-sm mt-2 block ${submitStatus[selectedUser.Nombre].includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
-                {submitStatus[selectedUser.Nombre]}
-              </span>
-            )}
-          </div>
+        <div style="padding: 20px;">
+          <p>Estimado/a ${name},</p>
+          <p>Le escribimos para recordarle amablemente que tiene pendiente la revisión del artículo <strong>${articleName}</strong> como <strong>${role}</strong> en la <strong>Revista Nacional de las Ciencias para Estudiantes</strong>.</p>
+          <p><strong>Enlace al artículo:</strong> <a href="${articleLink}" style="color: #6b4e31; text-decoration: none; font-weight: bold;">Abrir en Google Drive</a></p>
+          <p><strong>Instrucciones:</strong></p>
+          <ul style="list-style-type: disc; margin-left: 20px; color: #3c2f2f;">
+            <li>Accede al artículo mediante el enlace proporcionado.</li>
+            <li>Inicia sesión en <a href="https://www.revistacienciasestudiantes.com/" style="color: #6b4e31; text-decoration: none;">nuestro portal</a> para revisar las instrucciones detalladas y dejar tu informe, retroalimentación y voto.</li>
+            <li>Por favor, completa tu revisión lo antes posible, ya que el plazo está próximo a vencer.</li>
+          </ul>
+          <p>Si necesita alguna extensión o apoyo, contáctenos respondiendo a este correo.</p>
+          <p>Gracias por su valiosa contribución a nuestra revista.</p>
+          <p>Atentamente,<br>${senderName}<br>Editor en Jefe<br>Revista Nacional de las Ciencias para Estudiantes</p>
         </div>
-      )}
-
-      <section>
-        <h4 className="text-lg font-semibold mb-4">Articles by Author ({totalPending})</h4>
-        <div className="space-y-6">
-          {groupedIncoming.map((group) => (
-            <div key={group.authorName} className="bg-gray-50 p-4 rounded-lg border">
-              <div className="mb-4 p-3 bg-white rounded border">
-                <h5 className="font-medium text-lg">{group.authorName}</h5>
-                <p className="text-sm text-gray-600">Email: {group.authorEmail}</p>
-                <p className="text-sm text-gray-600">Institution: {group.authorInstitution}</p>
-              </div>
-              <div className="space-y-4">
-                {group.articles
-                  .filter(art => !(art.assignment && isCompleted(art.assignment)))
-                  .map((art) => {
-                    const uniqueId = getUniqueId(group.authorName, art['Title of your paper']);
-                    const isAssigned = !!art.assignment;
-                    const isEditingThis = editingId === uniqueId;
-                    const currentR1 = isAssigned ? art.assignment['Revisor 1'] || 'Not assigned' : 'Not assigned';
-                    const currentR2 = isAssigned ? art.assignment['Revisor 2'] || 'Not assigned' : 'Not assigned';
-                    const currentEditor = isAssigned ? art.assignment.Editor || 'Not assigned' : 'Not assigned';
-                    const statusBadge = isAssigned ? 'Assigned (under review)' : 'Pending assignment';
-                    const badgeClass = isAssigned ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800';
-
-                    const handleEditOrAssignClick = () => {
-                      const defData = {
-                        nombre: isAssigned ? art.assignment['Nombre Artículo'] || art['Title of your paper'] || '' : art['Title of your paper'] || '',
-                        link: isAssigned ? art.assignment['Link Artículo'] || art['Insert your paper in Word format here. It must be 1,000 to 10,000 words. Remember not to include your name in the document.'] || '' : art['Insert your paper in Word format here. It must be 1,000 to 10,000 words. Remember not to include your name in the document.'] || '',
-                        r1: isAssigned ? art.assignment['Revisor 1'] || '' : '',
-                        r2: isAssigned ? art.assignment['Revisor 2'] || '' : '',
-                        editor: isAssigned ? art.assignment.Editor || '' : '',
-                      };
-                      setEditingData({
-                        id: uniqueId,
-                        data: defData,
-                        isUpdate: isAssigned,
-                        author: group.authorName,
-                        area: art['Area of the paper (e.g.: economics)'],
-                      });
-                      setEditingId(uniqueId);
-                    };
-
-                    const handleCancel = () => {
-                      setEditingId(null);
-                      setEditingData(null);
-                    };
-
-                    const handleConfirm = () => {
-                      const { data, isUpdate, author, area } = editingData;
-                      handleAssignOrUpdate(
-                        {
-                          'Nombre Artículo': data.nombre,
-                          'Link Artículo': data.link,
-                          'Revisor 1': data.r1,
-                          'Revisor 2': data.r2,
-                          Editor: data.editor,
-                          Autor: author,
-                          'Área del artículo': area,
-                        },
-                        isUpdate
-                      );
-                    };
-
-                    const updateField = (field, value) => {
-                      setEditingData(prev => ({
-                        ...prev,
-                        data: { ...prev.data, [field]: value }
-                      }));
-                    };
-
-                    const articleKey = art['Title of your paper'] || uniqueId;
-
-                    return (
-                      <div key={uniqueId} className="bg-white p-4 rounded-lg border mb-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                          <div>
-                            <h6 className="font-medium">{art['Title of your paper'] || 'No title'}</h6>
-                            <p className="text-sm text-gray-600"><strong>Area:</strong> {art['Area of the paper (e.g.: economics)']}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm"><strong>Abstract:</strong> {sanitizeInput(art['Abstract (150-300 words)']).substring(0, 150)}...</p>
-                          </div>
-                        </div>
-                        <div className="mb-4 space-y-1 text-sm">
-                          <p><strong>Reviewer 1:</strong> {currentR1}</p>
-                          <p><strong>Reviewer 2:</strong> {currentR2}</p>
-                          <p><strong>Editor:</strong> {currentEditor}</p>
-                          <span className={`inline-block px-2 py-1 text-xs rounded-full ${badgeClass}`}>
-                            {statusBadge}
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          <button
-                            onClick={handleEditOrAssignClick}
-                            className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
-                            disabled={isSending[articleKey]}
-                          >
-                            {isSending[articleKey] ? 'Updating...' : (isAssigned ? 'Edit' : 'Assign')}
-                          </button>
-                          {isAssigned && art.assignment['Revisor 1'] && (
-                            <button
-                              onClick={() => {
-                                console.log("Clicking Contact R1 for:", art.assignment['Revisor 1']);
-                                const reviewer = reviewers.find(r => r.Nombre === art.assignment['Revisor 1']);
-                                if (!reviewer) {
-                                  console.error("Reviewer not found:", art.assignment['Revisor 1']);
-                                  setSubmitStatus({ ...submitStatus, [articleKey]: `Error: Reviewer 1 (${art.assignment['Revisor 1']}) not found.` });
-                                  return;
-                                }
-                                handleContact(
-                                  reviewer?.Correo || reviewer?.['Correo electrónico'],
-                                  art.assignment['Revisor 1'],
-                                  art['Title of your paper'],
-                                  'Revisor 1',
-                                  articleKey
-                                );
-                              }}
-                              className="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700"
-                              disabled={isSending[articleKey]}
-                            >
-                              {isSending[articleKey] ? 'Sending email...' : 'Contact R1'}
-                            </button>
-                          )}
-                          {isAssigned && art.assignment['Revisor 2'] && (
-                            <button
-                              onClick={() => {
-                                console.log("Clicking Contact R2 for:", art.assignment['Revisor 2']);
-                                const reviewer = reviewers.find(r => r.Nombre === art.assignment['Revisor 2']);
-                                if (!reviewer) {
-                                  console.error("Reviewer not found:", art.assignment['Revisor 2']);
-                                  setSubmitStatus({ ...submitStatus, [articleKey]: `Error: Reviewer 2 (${art.assignment['Revisor 2']}) not found.` });
-                                  return;
-                                }
-                                handleContact(
-                                  reviewer?.Correo || reviewer?.['Correo electrónico'],
-                                  art.assignment['Revisor 2'],
-                                  art['Title of your paper'],
-                                  'Revisor 2',
-                                  articleKey
-                                );
-                              }}
-                              className="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700"
-                              disabled={isSending[articleKey]}
-                            >
-                              {isSending[articleKey] ? 'Sending email...' : 'Contact R2'}
-                            </button>
-                          )}
-                          {isAssigned && art.assignment.Editor && (
-                            <button
-                              onClick={() => {
-                                console.log("Clicking Contact Editor for:", art.assignment.Editor);
-                                const editor = sectionEditors.find(e => e.Nombre === art.assignment.Editor);
-                                if (!editor) {
-                                  console.error("Editor not found:", art.assignment.Editor);
-                                  setSubmitStatus({ ...submitStatus, [articleKey]: `Error: Editor (${art.assignment.Editor}) not found.` });
-                                  return;
-                                }
-                                handleContact(
-                                  editor?.Correo || editor?.['Correo electrónico'],
-                                  art.assignment.Editor,
-                                  art['Title of your paper'],
-                                  'Editor',
-                                  articleKey
-                                );
-                              }}
-                              className="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700"
-                              disabled={isSending[articleKey]}
-                            >
-                              {isSending[articleKey] ? 'Sending email...' : 'Contact Editor'}
-                            </button>
-                          )}
-                          {submitStatus[articleKey] && (
-                            <span className={`text-sm mt-2 block ${submitStatus[articleKey].includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
-                              {submitStatus[articleKey]}
-                            </span>
-                          )}
-                        </div>
-                        {isEditingThis && (
-                          <div className="p-4 bg-gray-100 rounded border">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                              <input
-                                placeholder="Article Title"
-                                value={editingData.data.nombre}
-                                onChange={(e) => updateField('nombre', e.target.value)}
-                                className="border p-2 rounded-md text-sm"
-                              />
-                              <input
-                                placeholder="Google Drive Link"
-                                value={editingData.data.link}
-                                onChange={(e) => updateField('link', e.target.value)}
-                                className="border p-2 rounded-md text-sm"
-                              />
-                              <select
-                                value={editingData.data.r1}
-                                onChange={(e) => updateField('r1', e.target.value)}
-                                className="border p-2 rounded-md text-sm"
-                              >
-                                <option value="">Select Reviewer 1</option>
-                                {reviewers.map((r) => <option key={r.Nombre} value={r.Nombre}>{r.Nombre}</option>)}
-                              </select>
-                              <select
-                                value={editingData.data.r2}
-                                onChange={(e) => updateField('r2', e.target.value)}
-                                className="border p-2 rounded-md text-sm"
-                              >
-                                <option value="">Select Reviewer 2</option>
-                                {reviewers.map((r) => <option key={r.Nombre} value={r.Nombre}>{r.Nombre}</option>)}
-                              </select>
-                              <select
-                                value={editingData.data.editor}
-                                onChange={(e) => updateField('editor', e.target.value)}
-                                className="border p-2 rounded-md text-sm"
-                              >
-                                <option value="">Select Editor</option>
-                                {sectionEditors.map((e) => <option key={e.Nombre} value={e.Nombre}>{e.Nombre}</option>)}
-                              </select>
-                            </div>
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={handleConfirm}
-                                disabled={!editingData.data.nombre || !editingData.data.link || !editingData.data.r1 || !editingData.data.r2 || !editingData.data.editor || isSending[articleKey]}
-                                className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:bg-gray-400 text-sm"
-                              >
-                                {isSending[articleKey] ? 'Updating...' : (editingData.isUpdate ? 'Update' : 'Assign')}
-                              </button>
-                              <button
-                                onClick={handleCancel}
-                                className="bg-gray-500 text-white py-2 px-4 rounded-md hover:bg-gray-600 text-sm"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                            {submitStatus[articleKey] && (
-                              <span className={`text-sm mt-2 block ${submitStatus[articleKey].includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
-                                {submitStatus[articleKey]}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-              </div>
-            </div>
-          ))}
+        <div style="background-color: #e6d8c6; padding: 10px; border-radius: 0 0 8px 8px; text-align: center;">
+          <p style="font-size: 12px; color: #6b4e31; margin: 0;">Le pedimos amablemente que responda cuanto antes este correo si le es posible.</p>
         </div>
-      </section>
+      </div>
+    `;
+  }
 
-      {tutorialOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-start mb-4">
-              <h5 className="font-bold text-lg">Assignment Tutorial</h5>
-              <button onClick={() => setTutorialOpen(false)} className="text-gray-500 hover:text-gray-700">×</button>
-            </div>
-            <div className="space-y-3 text-sm leading-relaxed">
-              {tutorialSteps.map((step, i) => <p key={i}>{step}</p>)}
-            </div>
-            <button
-              onClick={() => setTutorialOpen(false)}
-              className="mt-4 w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
-            >
-              Understood
-            </button>
-          </div>
-        </div>
-      )}
+  try {
+    GmailApp.sendEmail(to, subject, isEnglish ? 'Review reminder.' : 'Recordatorio de revisión.', {
+      htmlBody: htmlBody,
+      name: isEnglish ? 'National Journal of Student Sciences' : 'Revista Nacional de las Ciencias para Estudiantes',
+      from: 'revistaestudiantespentauc@gmail.com'
+    });
+    Logger.log('Reminder email sent to ' + to + ' for article ' + articleName);
+  } catch (err) {
+    Logger.log('Error sending reminder email to ' + to + ': ' + err.message);
+    throw err;
+  }
+}
 
-      {emailPreview && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-start mb-4">
-              <h5 className="font-bold text-lg">Email Preview</h5>
-              <button onClick={() => setEmailPreview(null)} className="text-gray-500 hover:text-gray-700">×</button>
-            </div>
-            <div className="mb-4">
-              <p className="text-sm"><strong>To:</strong> {emailPreview.to}</p>
-              <p className="text-sm"><strong>Subject:</strong> {emailPreview.subject}</p>
-            </div>
-            <div
-              className="border p-4 rounded bg-gray-50"
-              dangerouslySetInnerHTML={{ __html: emailPreview.htmlBody }}
-            />
-            <button
-              onClick={() => setEmailPreview(null)}
-              className="mt-4 w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
-            >
-              Close
-            </button>
-          </div>
+function onSheetEdit(e) {
+  const sheet = e.source.getActiveSheet();
+  const editedRange = e.range;
+  const editedRow = editedRange.getRow();
+  const editedColumn = editedRange.getColumn();
+  const oldValue = e.oldValue;
+  const newValue = e.value;
+
+  const revisor1Col = 2; // Column B for Revisor 1
+  const revisor2Col = 3; // Column C for Revisor 2
+  const editorCol = 4; // Column D for Editor
+  const statusCol = 8; // Column H for Estado
+
+  if (oldValue === undefined || oldValue === '') {
+    let role, assigneeName, assigneeEmail, englishRole;
+    if (editedColumn === revisor1Col) {
+      role = 'Revisor 1';
+      englishRole = 'Reviewer 1';
+      assigneeName = newValue;
+      assigneeEmail = getEmailByName(assigneeName);
+    } else if (editedColumn === revisor2Col) {
+      role = 'Revisor 2';
+      englishRole = 'Reviewer 2';
+      assigneeName = newValue;
+      assigneeEmail = getEmailByName(assigneeName);
+    } else if (editedColumn === editorCol) {
+      role = 'Editor';
+      englishRole = 'Section Editor';
+      assigneeName = newValue;
+      assigneeEmail = getEmailByName(assigneeName);
+    } else if (editedColumn === statusCol && newValue === 'Accepted' || newValue === 'Aceptado') {
+      const authorName = sheet.getRange(editedRow, 9).getValue(); // Column I: Autor
+      const authorEmail = getEmailByName(authorName);
+      const articleName = sheet.getRange(editedRow, 16).getValue(); // Column P: Nombre Artículo
+      if (authorEmail) {
+        sendAcceptanceEmail(authorEmail, articleName, true);
+      }
+      return;
+    } else {
+      return;
+    }
+
+    if (assigneeEmail) {
+      const articleLink = sheet.getRange(editedRow, 1).getValue(); // Column A: Link Artículo
+      const articleName = sheet.getRange(editedRow, 16).getValue(); // Column P: Nombre Artículo
+      sendAssignmentEmail(assigneeEmail, englishRole, articleName, articleLink, true);
+    }
+  }
+}
+
+function sendAssignmentEmail(to, role, articleName, articleLink, isEnglish = false) {
+  let subject, htmlBody;
+  if (isEnglish) {
+    subject = 'New Review Assignment - National Journal of Student Sciences';
+    htmlBody = `
+      <div style="font-family: 'Georgia', serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f1e9; border: 2px solid #8b5a2b; border-radius: 10px; color: #3c2f2f;">
+        <div style="background-color: #8b5a2b; padding: 15px; border-radius: 8px 8px 0 0; text-align: center;">
+          <h2 style="color: #f8f1e9; margin: 0;">New Review Assignment</h2>
         </div>
-      )}
-    </div>
-  );
+        <div style="padding: 20px;">
+          <p>Dear,</p>
+          <p>We are pleased to inform you that you have been assigned as <strong>${role}</strong> to review the article:</p>
+          <h3 style="color: #6b4e31;">${articleName}</h3>
+          <p><strong>Article Link:</strong> <a href="${articleLink}" style="color: #6b4e31; text-decoration: none; font-weight: bold;">Open in Google Drive</a></p>
+          <p><strong>Instructions:</strong></p>
+          <ul style="list-style-type: disc; margin-left: 20px; color: #3c2f2f;">
+            <li>Access the article via the provided link.</li>
+            <li>Log in to <a href="https://www.revistacienciasestudiantes.com/" style="color: #6b4e31; text-decoration: none;">our portal</a> to review detailed instructions and submit your report, feedback, and vote.</li>
+            <li>Complete your review before the deadline indicated in the portal.</li>
+          </ul>
+          <p>If you have any questions, contact us through the journal's official email.</p>
+          <p>Thank you for your valuable contribution to the <strong>National Journal of Student Sciences</strong>.</p>
+          <p>Sincerely,<br>Editorial Team</p>
+        </div>
+        <div style="background-color: #e6d8c6; padding: 10px; border-radius: 0 0 8px 8px; text-align: center;">
+          <p style="font-size: 12px; color: #6b4e31; margin: 0;">This is an automatic message. Do not reply directly to this email.</p>
+        </div>
+      </div>
+    `;
+  } else {
+    subject = 'Nueva Asignación de Revisión - Revista Nacional de las Ciencias para Estudiantes';
+    htmlBody = `
+      <div style="font-family: 'Georgia', serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f1e9; border: 2px solid #8b5a2b; border-radius: 10px; color: #3c2f2f;">
+        <div style="background-color: #8b5a2b; padding: 15px; border-radius: 8px 8px 0 0; text-align: center;">
+          <h2 style="color: #f8f1e9; margin: 0;">Nueva Asignación de Revisión</h2>
+        </div>
+        <div style="padding: 20px;">
+          <p>Estimado/a,</p>
+          <p>Nos complace informarte que has sido asignado/a como <strong>${role}</strong> para revisar el artículo:</p>
+          <h3 style="color: #6b4e31;">${articleName}</h3>
+          <p><strong>Enlace al artículo:</strong> <a href="${articleLink}" style="color: #6b4e31; text-decoration: none; font-weight: bold;">Abrir en Google Drive</a></p>
+          <p><strong>Instrucciones:</strong></p>
+          <ul style="list-style-type: disc; margin-left: 20px; color: #3c2f2f;">
+            <li>Accede al artículo mediante el enlace proporcionado.</li>
+            <li>Inicia sesión en <a href="https://www.revistacienciasestudiantes.com/" style="color: #6b4e31; text-decoration: none;">nuestro portal</a> para revisar las instrucciones detalladas y dejar tu informe, retroalimentación y voto.</li>
+            <li>Completa tu revisión antes de la fecha límite indicada en el portal.</li>
+          </ul>
+          <p>Si tienes alguna duda, contáctanos a través del correo oficial de la revista.</p>
+          <p>Gracias por tu valiosa contribución a la <strong>Revista Nacional de las Ciencias para Estudiantes</strong>.</p>
+          <p>Atentamente,<br>Equipo Editorial</p>
+        </div>
+        <div style="background-color: #e6d8c6; padding: 10px; border-radius: 0 0 8px 8px; text-align: center;">
+          <p style="font-size: 12px; color: #6b4e31; margin: 0;">Este es un mensaje automático. No responda directamente a este correo.</p>
+        </div>
+      </div>
+    `;
+  }
+
+  try {
+    GmailApp.sendEmail(to, subject, isEnglish ? 'New review assignment.' : 'Nueva asignación de revisión.', {
+      htmlBody: htmlBody,
+      name: isEnglish ? 'National Journal of Student Sciences' : 'Revista Nacional de las Ciencias para Estudiantes',
+      from: 'revistaestudiantespentauc@gmail.com'
+    });
+    Logger.log('Email sent to ' + to + ' for the article ' + articleName);
+  } catch (err) {
+    Logger.log('Error sending email to ' + to + ': ' + err.message);
+    throw err;
+  }
+}
+
+function sendFeedbackAvailableEmail(to, articleName, role, isEnglish = false) {
+  let subject, htmlBody;
+  if (isEnglish) {
+    subject = 'Feedback Available - National Journal of Student Sciences';
+    htmlBody = `
+      <div style="font-family: 'Georgia', serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f1e9; border: 2px solid #8b5a2b; border-radius: 10px; color: #3c2f2f;">
+        <div style="background-color: #8b5a2b; padding: 15px; border-radius: 8px 8px 0 0; text-align: center;">
+          <h2 style="color: #f8f1e9; margin: 0;">Feedback Available</h2>
+        </div>
+        <div style="padding: 20px;">
+          <p>Dear authors,</p>
+          <p>We are pleased to inform you that the feedback from the <strong>${role}</strong> for your article <strong>${articleName}</strong> is now available.</p>
+          <p>Please log in to <a href="https://www.revistacienciasestudiantes.com/" style="color: #6b4e31; text-decoration: none; font-weight: bold;">our portal</a> to review the comments and the status of your article.</p>
+          <p><strong>Instructions:</strong></p>
+          <ul style="list-style-type: disc; margin-left: 20px; color: #3c2f2f;">
+            <li>Visit <a href="https://www.revistacienciasestudiantes.com/" style="color: #6b4e31; text-decoration: none;">www.revistacienciasestudiantes.com</a>.</li>
+            <li>Go to the <strong>Login / Article Status</strong> section.</li>
+            <li>Log in with your email and password to view the details.</li>
+          </ul>
+          <p>If you have any questions, contact us through the journal's official email.</p>
+          <p>Sincerely,<br>Editorial Team<br>National Journal of Student Sciences</p>
+        </div>
+        <div style="background-color: #e6d8c6; padding: 10px; border-radius: 0 0 8px 8px; text-align: center;">
+          <p style="font-size: 12px; color: #6b4e31; margin: 0;">This is an automatic message. Do not reply directly to this email.</p>
+        </div>
+      </div>
+    `;
+  } else {
+    subject = 'Feedback Disponible - Revista Nacional de las Ciencias para Estudiantes';
+    htmlBody = `
+      <div style="font-family: 'Georgia', serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f1e9; border: 2px solid #8b5a2b; border-radius: 10px; color: #3c2f2f;">
+        <div style="background-color: #8b5a2b; padding: 15px; border-radius: 8px 8px 0 0; text-align: center;">
+          <h2 style="color: #f8f1e9; margin: 0;">Feedback Disponible</h2>
+        </div>
+        <div style="padding: 20px;">
+          <p>Estimados autores,</p>
+          <p>Nos complace informarte que el feedback del <strong>${role}</strong> para tu artículo <strong>${articleName}</strong> ya está disponible.</p>
+          <p>Por favor, inicia sesión en <a href="https://www.revistacienciasestudiantes.com/" style="color: #6b4e31; text-decoration: none; font-weight: bold;">nuestro portal</a> para revisar los comentarios y el estado de tu artículo.</p>
+          <p><strong>Instrucciones:</strong></p>
+          <ul style="list-style-type: disc; margin-left: 20px; color: #3c2f2f;">
+            <li>Visita <a href="https://www.revistacienciasestudiantes.com/" style="color: #6b4e31; text-decoration: none;">www.revistacienciasestudiantes.com</a>.</li>
+            <li>Dirígete a la sección <strong>Login / Estado de Artículos</strong>.</li>
+            <li>Inicia sesión con tu correo y contraseña para ver los detalles.</li>
+          </ul>
+          <p>Si tienes alguna duda, contáctanos a través del correo oficial de la revista.</p>
+          <p>Atentamente,<br>Equipo Editorial<br>Revista Nacional de las Ciencias para Estudiantes</p>
+        </div>
+        <div style="background-color: #e6d8c6; padding: 10px; border-radius: 0 0 8px 8px; text-align: center;">
+          <p style="font-size: 12px; color: #6b4e31; margin: 0;">Este es un mensaje automático. No responda directamente a este correo.</p>
+        </div>
+      </div>
+    `;
+  }
+
+  try {
+    GmailApp.sendEmail(to, subject, isEnglish ? 'Feedback available.' : 'Feedback disponible.', {
+      htmlBody: htmlBody,
+      name: isEnglish ? 'National Journal of Student Sciences' : 'Revista Nacional de las Ciencias para Estudiantes',
+      from: 'revistaestudiantespentauc@gmail.com'
+    });
+    Logger.log('Feedback email sent to ' + to + ' for the article ' + articleName);
+  } catch (err) {
+    Logger.log('Error sending feedback email to ' + to + ': ' + err.message);
+    throw err;
+  }
+}
+
+function sendCorrectedDocumentEmail(to, articleName, articleLink, authorName, isEnglish = false) {
+  let subject, htmlBody, greetingName = authorName.trim();
+  if (authorName.includes(';')) {
+    greetingName = authorName.split(';')[0].trim();
+  }
+  if (isEnglish) {
+    subject = 'Corrected Document Available - National Journal of Student Sciences';
+    htmlBody = `
+      <div style="font-family: 'Georgia', serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f1e9; border: 2px solid #8b5a2b; border-radius: 10px; color: #3c2f2f;">
+        <div style="background-color: #8b5a2b; padding: 15px; border-radius: 8px 8px 0 0; text-align: center;">
+          <h2 style="color: #f8f1e9; margin: 0;">Corrected Document Available</h2>
+        </div>
+        <div style="padding: 20px;">
+          <p>Dear ${greetingName},</p>
+          <p>We are pleased to inform you that your document <strong>${articleName}</strong> now has the applied corrections. These are detailed in the "Report 3" column.</p>
+          <p><strong>Direct link to the article in Google Drive (read-only enabled):</strong> <a href="${articleLink}" style="color: #6b4e31; text-decoration: none; font-weight: bold;">Open document</a></p>
+          <p>Please read it carefully and let us know if you agree so we can proceed with the process.</p>
+          <p>If you agree, we ask that you send us your comments and stay attentive, as we will be sending you an email for the legal part of publishing the article, regarding copyright and other related aspects.</p>
+          <p>If you have any questions or need clarifications, do not hesitate to contact us through the journal's official email.</p>
+          <p>Thank you for your collaboration and contribution to the <strong>National Journal of Student Sciences</strong>.</p>
+          <p>Sincerely,<br>Editorial Team<br>National Journal of Student Sciences</p>
+        </div>
+        <div style="background-color: #e6d8c6; padding: 10px; border-radius: 0 0 8px 8px; text-align: center;">
+          <p style="font-size: 12px; color: #6b4e31; margin: 0;">This is an automatic message. Do not reply directly to this email.</p>
+        </div>
+      </div>
+    `;
+  } else {
+    subject = 'Documento Corregido Disponible - Revista Nacional de las Ciencias para Estudiantes';
+    htmlBody = `
+      <div style="font-family: 'Georgia', serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f1e9; border: 2px solid #8b5a2b; border-radius: 10px; color: #3c2f2f;">
+        <div style="background-color: #8b5a2b; padding: 15px; border-radius: 8px 8px 0 0; text-align: center;">
+          <h2 style="color: #f8f1e9; margin: 0;">Documento Corregido Disponible</h2>
+        </div>
+        <div style="padding: 20px;">
+          <p>Estimado/a ${greetingName},</p>
+          <p>Nos complace informarle que su documento <strong>${articleName}</strong> ya cuenta con las correcciones aplicadas. Estas se encuentran detalladas en la columna "Informe 3".</p>
+          <p><strong>Enlace directo al artículo en Google Drive (habilitado para solo lectura):</strong> <a href="${articleLink}" style="color: #6b4e31; text-decoration: none; font-weight: bold;">Abrir documento</a></p>
+          <p>Por favor, léalo detenidamente y háganos saber si está de acuerdo para poder avanzar en el proceso.</p>
+          <p>De estar de acuerdo, le pedimos que nos envíe sus comentarios y que esté atento/a, pues le estaremos enviando un correo para la parte legal de publicar el artículo, referente a los derechos de autor y demás aspectos relacionados.</p>
+          <p>Si tiene alguna duda o necesita aclaraciones, no dude en contactarnos a través del correo oficial de la revista.</p>
+          <p>Gracias por su colaboración y contribución a la <strong>Revista Nacional de las Ciencias para Estudiantes</strong>.</p>
+          <p>Atentamente,<br>Equipo Editorial<br>Revista Nacional de las Ciencias para Estudiantes</p>
+        </div>
+        <div style="background-color: #e6d8c6; padding: 10px; border-radius: 0 0 8px 8px; text-align: center;">
+          <p style="font-size: 12px; color: #6b4e31; margin: 0;">Este es un mensaje automático. No responda directamente a este correo.</p>
+        </div>
+      </div>
+    `;
+  }
+
+  try {
+    GmailApp.sendEmail(to, subject, isEnglish ? 'Corrected document available.' : 'Documento corregido disponible.', {
+      htmlBody: htmlBody,
+      name: isEnglish ? 'National Journal of Student Sciences' : 'Revista Nacional de las Ciencias para Estudiantes',
+      from: 'revistaestudiantespentauc@gmail.com'
+    });
+    Logger.log('Corrected document email sent to ' + to + ' for the article ' + articleName);
+  } catch (err) {
+    Logger.log('Error sending corrected document email to ' + to + ': ' + err.message);
+    throw err;
+  }
+}
+
+function sendAcceptanceEmail(to, articleName, isEnglish = false) {
+  let subject, htmlBody;
+  if (isEnglish) {
+    subject = 'Article Accepted! - National Journal of Student Sciences';
+    htmlBody = `
+      <div style="font-family: 'Georgia', serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f1e9; border: 2px solid #8b5a2b; border-radius: 10px; color: #3c2f2f;">
+        <div style="background-color: #8b5a2b; padding: 15px; border-radius: 8px 8px 0 0; text-align: center;">
+          <h2 style="color: #f8f1e9; margin: 0;">Congratulations, your article has been accepted!</h2>
+        </div>
+        <div style="padding: 20px;">
+          <p>Dear authors,</p>
+          <p>We are pleased to inform you that your article <strong>${articleName}</strong> has been <strong>accepted</strong> for publication in the <strong>National Journal of Student Sciences</strong>!</p>
+          <p>Please log in to <a href="https://www.revistacienciasestudiantes.com/" style="color: #6b4e31; text-decoration: none; font-weight: bold;">our portal</a> to review the details and next steps. If you do not see the feedback yet, do not worry, we will notify you when it is available.</p>
+          <p><strong>Instructions:</strong></p>
+          <ul style="list-style-type: disc; margin-left: 20px; color: #3c2f2f;">
+            <li>Visit <a href="https://www.revistacienciasestudiantes.com/" style="color: #6b4e31; text-decoration: none;">www.revistacienciasestudiantes.com</a>.</li>
+            <li>Go to the <strong>Login / Article Status</strong> section.</li>
+            <li>Log in with your email and password to view the details.</li>
+          </ul>
+          <p>Thank you for your valuable contribution to our journal.</p>
+          <p>Sincerely,<br>Editorial Team<br>National Journal of Student Sciences</p>
+        </div>
+        <div style="background-color: #e6d8c6; padding: 10px; border-radius: 0 0 8px 8px; text-align: center;">
+          <p style="font-size: 12px; color: #6b4e31; margin: 0;">This is an automatic message. Do not reply directly to this email.</p>
+        </div>
+      </div>
+    `;
+  } else {
+    subject = '¡Artículo Aceptado! - Revista Nacional de las Ciencias para Estudiantes';
+    htmlBody = `
+      <div style="font-family: 'Georgia', serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f1e9; border: 2px solid #8b5a2b; border-radius: 10px; color: #3c2f2f;">
+        <div style="background-color: #8b5a2b; padding: 15px; border-radius: 8px 8px 0 0; text-align: center;">
+          <h2 style="color: #f8f1e9; margin: 0;">¡Felicidades, tu artículo ha sido aceptado!</h2>
+        </div>
+        <div style="padding: 20px;">
+          <p>Estimados autores,</p>
+          <p>¡Nos complace informarte que tu artículo <strong>${articleName}</strong> ha sido <strong>aceptado</strong> para su publicación en la <strong>Revista Nacional de las Ciencias para Estudiantes</strong>!</p>
+          <p>Por favor, inicia sesión en <a href="https://www.revistacienciasestudiantes.com/" style="color: #6b4e31; text-decoration: none; font-weight: bold;">nuestro portal</a> para revisar los detalles y próximos pasos. Si aún no ves la retroalimentación, no te preocupes, te avisaremos cuando esté disponible.</p>
+          <p><strong>Instrucciones:</strong></p>
+          <ul style="list-style-type: disc; margin-left: 20px; color: #3c2f2f;">
+            <li>Visita <a href="https://www.revistacienciasestudiantes.com/" style="color: #6b4e31; text-decoration: none;">www.revistacienciasestudiantes.com</a>.</li>
+            <li>Dirígete a la sección <strong>Login / Estado de Artículos</strong>.</li>
+            <li>Inicia sesión con tu correo y contraseña para ver los detalles.</li>
+          </ul>
+          <p>Gracias por tu valiosa contribución a nuestra revista.</p>
+          <p>Atentamente,<br>Equipo Editorial<br>Revista Nacional de las Ciencias para Estudiantes</p>
+        </div>
+        <div style="background-color: #e6d8c6; padding: 10px; border-radius: 0 0 8px 8px; text-align: center;">
+          <p style="font-size: 12px; color: #6b4e31; margin: 0;">Este es un mensaje automático. No responda directamente a este correo.</p>
+        </div>
+      </div>
+    `;
+  }
+
+  try {
+    GmailApp.sendEmail(to, subject, isEnglish ? 'Article accepted.' : 'Artículo aceptado.', {
+      htmlBody: htmlBody,
+      name: isEnglish ? 'National Journal of Student Sciences' : 'Revista Nacional de las Ciencias para Estudiantes',
+      from: 'revistaestudiantespentauc@gmail.com'
+    });
+    Logger.log('Acceptance email sent to ' + to + ' for the article ' + articleName);
+  } catch (err) {
+    Logger.log('Error sending acceptance email to ' + to + ': ' + err.message);
+    throw err;
+  }
+}
+
+function getEmailByName(name) {
+  try {
+    const spreadsheetId = '1FIP4yMTNYtRYWiPwovWGPiWxQZ8wssko8u0-NkZOido';
+    const sheetName = 'Hoja 1';
+    const sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(sheetName);
+    const rows = sheet.getDataRange().getValues();
+    const headers = rows[0];
+    const nameIndex = headers.indexOf('Nombre');
+    const emailIndex = headers.indexOf('Correo');
+    
+    if (nameIndex === -1 || emailIndex === -1) {
+      Logger.log('Error: Headers "Nombre" or "Correo" not found in users sheet');
+      return null;
+    }
+
+    let searchName = name.trim();
+    if (name.includes(';')) {
+      searchName = name.split(';').map(n => n.trim())[0];
+    }
+
+    for (var i = 1; i < rows.length; i++) {
+      if (rows[i][nameIndex].trim() === searchName) {
+        return rows[i][emailIndex].trim();
+      }
+    }
+    Logger.log('Error: No email found for name ' + name);
+    return null;
+  } catch (err) {
+    Logger.log('Error in getEmailByName: ' + err.message);
+    return null;
+  }
+}
+
+function openFeedbackDialog() {
+  var html = HtmlService.createHtmlOutputFromFile("feedbackDialog")
+    .setWidth(400)
+    .setHeight(250);
+  SpreadsheetApp.getUi().showModalDialog(html, "Send delayed feedback");
+}
+
+function resendFeedback(articleName) {
+  var spreadsheetId = '1-M0Ca-3VmX-0t2M1uEVQsjEatzFFbxlfLlEXTUdp8ws';
+  var sheetName = 'Hoja 1';
+  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(sheetName);
+  var rows = sheet.getDataRange().getValues();
+  var headers = rows[0];
+
+  var feedbackIndex = headers.indexOf('Feedback 3');
+  var authorIndex = headers.indexOf('Autor');
+  var articleIndex = headers.indexOf('Nombre Artículo');
+
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][articleIndex] === articleName) {
+      var feedback = rows[i][feedbackIndex];
+      var authorName = rows[i][authorIndex];
+      if (feedback && authorName) {
+        var authorEmail = getEmailByName(authorName);
+        if (authorEmail) {
+          sendFeedbackAvailableEmail(authorEmail, articleName, "Editor", true);
+          return "Email sent to " + authorEmail;
+        }
+      }
+      throw new Error("No feedback or valid author found for this article.");
+    }
+  }
+  throw new Error("No article found with that name.");
+}
+
+function openAssignmentDialog() {
+  var html = HtmlService.createHtmlOutputFromFile("asignacionDialog")
+    .setWidth(400)
+    .setHeight(300);
+  SpreadsheetApp.getUi().showModalDialog(html, "Send delayed assignment");
+}
+
+function resendAssignment(articleName, role) {
+  var spreadsheetId = '1-M0Ca-3VmX-0t2M1uEVQsjEatzFFbxlfLlEXTUdp8ws';
+  var sheetName = 'Hoja 1';
+  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(sheetName);
+  var rows = sheet.getDataRange().getValues();
+  var headers = rows[0];
+
+  var articleIndex = headers.indexOf('Nombre Artículo');
+  var linkIndex = headers.indexOf('Link Artículo');
+
+  var colIndex;
+  if (role === 'Reviewer 1' || role === 'Revisor 1') colIndex = headers.indexOf('Revisor 1');
+  if (role === 'Reviewer 2' || role === 'Revisor 2') colIndex = headers.indexOf('Revisor 2');
+  if (role === 'Editor' || role === 'Section Editor') colIndex = headers.indexOf('Editor');
+
+  if (articleIndex === -1 || colIndex === -1 || linkIndex === -1) {
+    throw new Error("Required columns not found in the sheet.");
+  }
+
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][articleIndex] === articleName) {
+      var assigneeName = rows[i][colIndex];
+      var articleLink = rows[i][linkIndex];
+      if (assigneeName) {
+        var assigneeEmail = getEmailByName(assigneeName);
+        if (assigneeEmail) {
+          sendAssignmentEmail(assigneeEmail, role, articleName, articleLink, true);
+          return "Assignment resent to " + assigneeEmail;
+        }
+      }
+      throw new Error("No valid reviewer/editor found for this article.");
+    }
+  }
+  throw new Error("No article found with that name.");
+}
+
+function openAcceptanceDialog() {
+  var html = HtmlService.createHtmlOutputFromFile("aceptacionDialog")
+    .setWidth(400)
+    .setHeight(200);
+  SpreadsheetApp.getUi().showModalDialog(html, "Send delayed acceptance");
+}
+
+function resendAcceptance(articleName) {
+  var spreadsheetId = '1-M0Ca-3VmX-0t2M1uEVQsjEatzFFbxlfLlEXTUdp8ws';
+  var sheetName = 'Hoja 1';
+  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(sheetName);
+  var rows = sheet.getDataRange().getValues();
+  var headers = rows[0];
+
+  var articleIndex = headers.indexOf('Nombre Artículo');
+  var authorIndex = headers.indexOf('Autor');
+
+  if (articleIndex === -1 || authorIndex === -1) {
+    throw new Error("Required columns not found in the sheet.");
+  }
+
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][articleIndex] === articleName) {
+      var authorName = rows[i][authorIndex];
+      if (authorName) {
+        var authorEmail = getEmailByName(authorName);
+        if (authorEmail) {
+          sendAcceptanceEmail(authorEmail, articleName, true);
+          return "Acceptance email sent to " + authorEmail;
+        }
+      }
+      throw new Error("No valid author found for this article.");
+    }
+  }
+  throw new Error("No article found with that name.");
+}
+
+function openCorrectedDocumentDialog() {
+  var html = HtmlService.createHtmlOutputFromFile("documentoCorregidoDialog")
+    .setWidth(400)
+    .setHeight(200);
+  SpreadsheetApp.getUi().showModalDialog(html, "Send delayed corrected document");
+}
+
+function resendCorrectedDocument(articleName) {
+  var spreadsheetId = '1-M0Ca-3VmX-0t2M1uEVQsjEatzFFbxlfLlEXTUdp8ws';
+  var sheetName = 'Hoja 1';
+  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(sheetName);
+  var rows = sheet.getDataRange().getValues();
+  var headers = rows[0];
+
+  var articleIndex = headers.indexOf('Nombre Artículo');
+  var authorIndex = headers.indexOf('Autor');
+  var linkIndex = headers.indexOf('Link Artículo');
+  var informeIndex = headers.indexOf('Informe 3');
+
+  if (articleIndex === -1 || authorIndex === -1 || linkIndex === -1 || informeIndex === -1) {
+    throw new Error("Required columns not found in the sheet.");
+  }
+
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][articleIndex] === articleName) {
+      var authorName = rows[i][authorIndex];
+      var articleLink = rows[i][linkIndex];
+      var informe = rows[i][informeIndex];
+      if (authorName && informe) {
+        var authorEmail = getEmailByName(authorName);
+        if (authorEmail) {
+          sendCorrectedDocumentEmail(authorEmail, articleName, articleLink, authorName, true);
+          return "Corrected document email sent to " + authorEmail;
+        }
+      }
+      throw new Error("No report or valid author found for this article.");
+    }
+  }
+  throw new Error("No article found with that name.");
+}
+
+function onOpen() {
+  var ui = SpreadsheetApp.getUi();
+  ui.createMenu("📩 Feedback")
+    .addItem("Send delayed feedback", "openFeedbackDialog")
+    .addItem("Send delayed assignment", "openAssignmentDialog")
+    .addItem("Send delayed acceptance", "openAcceptanceDialog")
+    .addItem("Send delayed corrected document", "openCorrectedDocumentDialog")
+    .addToUi();
 }
