@@ -36,7 +36,8 @@ const parseDate = (dateStr) => {
     }
     month -= 1; // Adjust for JS Date
   }
-  return new Date(year, month, day);
+  // Cambio: Usar Date.UTC para evitar shifts de timezone al parsear (trata como UTC)
+  return new Date(Date.UTC(year, month, day));
 };
 
 export default function AssignSection({ user, onClose }) {
@@ -190,7 +191,10 @@ export default function AssignSection({ user, onClose }) {
   const handleAssignOrUpdate = async (data, isUpdate = false) => {
     const action = isUpdate ? 'update' : 'assign';
     const plazoValue = data.Plazo;
-    const plazoStr = plazoValue instanceof Date && !isNaN(plazoValue) ? plazoValue.toISOString().split('T')[0] : '';
+    // Cambio: Formateo manual para evitar shift de timezone (envía el día local exacto, sin toISOString)
+    const plazoStr = plazoValue instanceof Date && !isNaN(plazoValue)
+      ? `${plazoValue.getFullYear()}-${(plazoValue.getMonth() + 1).toString().padStart(2, '0')}-${plazoValue.getDate().toString().padStart(2, '0')}`
+      : '';
     const body = {
       action,
       title: data['Nombre Artículo'],
@@ -199,10 +203,10 @@ export default function AssignSection({ user, onClose }) {
       rev2: data['Revisor 2'],
       editor: data.Editor,
       autor: data.Autor,
-      plazo: plazoStr,
+      plazo: plazoStr, // Siempre se envía, incluso vacío (para forzar update si es necesario)
     };
     const articleKey = data['Nombre Artículo'] || data.Autor;
-    console.log("📤 Enviando datos al script:", body);
+    console.log("📤 Enviando datos al script (incluyendo plazo siempre):", body); // Log mejorado para depurar si plazo se manda
     setIsSending({ ...isSending, [articleKey]: true });
     try {
       const response = await fetch(SCRIPT_URL, {
