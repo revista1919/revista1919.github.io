@@ -709,7 +709,7 @@ export default function PortalSection({ user, onClose }) {
   );
   const debouncedSetReport = useCallback(
     (link) => debounce((value) => {
-      setReport((prev) => ({ ...prev, [link]: value }))
+      setReport((prev) => ({ ...prev, [link]: value }));
     }, 300),
     []
   );
