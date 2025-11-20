@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Papa from 'papaparse';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import CalendarComponent from './CalendarComponent';
 
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 const INCOMING_CSV = process.env.REACT_APP_FORM_CSV || '';
@@ -23,6 +24,7 @@ export default function AssignSection({ user, onClose }) {
   const [submitStatus, setSubmitStatus] = useState({});
   const [isSending, setIsSending] = useState({});
   const [emailPreview, setEmailPreview] = useState(null);
+  const [selectedEvent, setSelectedEvent] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -46,7 +48,7 @@ export default function AssignSection({ user, onClose }) {
         const revs = filteredUsers.filter(u => (u['Rol en la Revista'] || '').includes('Revisor'));
         const eds = filteredUsers.filter(u => (u['Rol en la Revista'] || '').includes('Editor de Sección'));
         const chiefs = filteredUsers.filter(u => (u['Rol en la Revista'] || '').includes('Editor en Jefe'));
-        setReviewers(revs);
+        setReviewers([...revs, ...eds, ...chiefs]);
         setSectionEditors([...eds, ...chiefs]);
         console.log("👤 Revisores:", revs);
         console.log("📂 Editores (incluyendo en jefe):", [...eds, ...chiefs]);
@@ -111,6 +113,50 @@ export default function AssignSection({ user, onClose }) {
   const totalPending = groupedIncoming.reduce((sum, group) => {
     return sum + group.articles.filter(art => !(art.assignment && isCompleted(art.assignment))).length;
   }, 0);
+
+  const calendarEvents = useMemo(() => {
+    return assignments
+      .filter(a => a.Plazo)
+      .map(a => ({
+        title: a['Nombre Artículo'],
+        start: new Date(a.Plazo),
+        end: new Date(a.Plazo),
+        allDay: true,
+        resource: a,
+      }));
+  }, [assignments]);
+
+  const handleSelectEvent = (event) => {
+    const assignment = event.resource;
+    const titleSanitized = sanitizeInput(assignment['Nombre Artículo']);
+    const authorSanitized = sanitizeInput(assignment.Autor);
+    // Find the group and art
+    for (const [sanitizedAuthor, articles] of Object.entries(groupedIncoming)) {
+      if (sanitizedAuthor === authorSanitized) {
+        const art = articles.find(a => sanitizeInput(a['Título de su artículo'] || '') === titleSanitized);
+        if (art) {
+          const uniqueId = getUniqueId(groupedIncoming.find(g => g.authorName === art['Nombre (primer nombre y primer apellido)']).authorName, art['Título de su artículo']);
+          const defData = {
+            nombre: assignment['Nombre Artículo'] || art['Título de su artículo'] || '',
+            link: assignment['Link Artículo'] || art['Inserta aquí tu artículo en formato Word. Debe tener de 1.000 a 10.000 palabras.'] || '',
+            r1: assignment['Revisor 1'] || '',
+            r2: assignment['Revisor 2'] || '',
+            editor: assignment.Editor || '',
+            plazo: assignment.Plazo ? new Date(assignment.Plazo) : null,
+          };
+          setEditingData({
+            id: uniqueId,
+            data: defData,
+            isUpdate: true,
+            author: assignment.Autor,
+            area: art['Área del artículo (e.g.: economía)'],
+          });
+          setEditingId(uniqueId);
+          break;
+        }
+      }
+    }
+  };
 
   const handleAssignOrUpdate = async (data, isUpdate = false) => {
     const action = isUpdate ? 'update' : 'assign';
@@ -216,6 +262,7 @@ export default function AssignSection({ user, onClose }) {
     '3. Haz clic en "Asignar" para artículos sin asignación o "Editar" para actualizar. Completa los campos (título, link, revisores, editor, plazo) y confirma.',
     '4. Usa los botones de contacto para enviar recordatorios institucionales por correo desde el servidor.',
     '5. El panel es responsive. Los artículos con todas las retroalimentaciones se ocultan automáticamente, independientemente del "Estado".',
+    '6. Usa el calendario para ver y editar plazos de artículos pendientes. Haz clic en un evento para editar la asignación.',
   ];
 
   if (loading) return <div className="text-center p-4 text-gray-600">Cargando gestión de asignaciones...</div>;
@@ -236,6 +283,7 @@ export default function AssignSection({ user, onClose }) {
           )}
         </div>
       </div>
+      <CalendarComponent events={calendarEvents} onSelectEvent={handleSelectEvent} />
       <section>
         <h4 className="text-lg font-semibold mb-4">Colaboradores (Revisores y Editores de Sección)</h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -321,7 +369,7 @@ export default function AssignSection({ user, onClose }) {
                         r1: isAssigned ? art.assignment['Revisor 1'] || '' : '',
                         r2: isAssigned ? art.assignment['Revisor 2'] || '' : '',
                         editor: isAssigned ? art.assignment.Editor || '' : '',
-                        plazo: isAssigned ? art.assignment.Plazo || null : null,
+                        plazo: isAssigned ? (art.assignment.Plazo ? new Date(art.assignment.Plazo) : null) : null,
                       };
                       setEditingData({
                         id: uniqueId,
