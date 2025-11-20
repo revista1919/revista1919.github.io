@@ -12,7 +12,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
-
 const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?gid=0&output=csv'; // Ajusta el gid si es necesario para la hoja de usuarios/team
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby2B1OUt3TMqaed6Vz-iamUPn4gHhKXG2RRxiy8Nt6u69Cg-2kSze2XQ-NywX5QrNfy/exec';
@@ -45,7 +44,7 @@ const criteria = {
       name: 'Estructura y organización',
       levels: {
         0: { label: '0 = Insuficiente ❌', desc: 'Desorganizado, sin secciones claras.' },
-        1: { label: '1 = Adecuado ⚖️', desc: 'Secciones presentes pero débiles.' },
+        1: { label: '1 = Adecuado ⚖️', desc: 'Secciones presentes pero con débiles.' },
         2: { label: '2 = Excelente ✅', desc: 'Introducción, desarrollo y conclusión bien diferenciados.' }
       }
     },
@@ -190,9 +189,7 @@ class ErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
-
 const localizer = momentLocalizer(moment);
-
 function CalendarComponent({ events, onSelectEvent }) {
   return (
     <div className="bg-white p-4 rounded-lg shadow-md mb-6">
@@ -226,8 +223,7 @@ function CalendarComponent({ events, onSelectEvent }) {
     </div>
   );
 }
-
-export default function PortalSection({ user, onLogout }) {
+export default function PortalSection({ user, onClose }) {
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState({});
@@ -693,7 +689,7 @@ export default function PortalSection({ user, onLogout }) {
                   }`}
                   disabled={readOnly}
                 >
-                  {info.label.split(' = ')[1]}
+                  {info.label}
                 </motion.button>
               ))}
             </div>
@@ -1154,26 +1150,26 @@ export default function PortalSection({ user, onLogout }) {
           </motion.button>
         </div>
         {isAuth ? (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-6">
-      {assignment.feedbackEditor && ['Aceptado', 'Rechazado'].includes(assignment.Estado) ? (
-        <>
-          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="p-4 bg-green-50 rounded-md border-l-4 border-green-400">
-            <h5 className="text-lg font-semibold text-green-800 mb-2">Estado Final: {assignment.Estado}</h5>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-6">
+            {assignment.feedbackEditor && ['Aceptado', 'Rechazado'].includes(assignment.Estado) ? (
+              <>
+                <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="p-4 bg-green-50 rounded-md border-l-4 border-green-400">
+                  <h5 className="text-lg font-semibold text-green-800 mb-2">Estado Final: {assignment.Estado}</h5>
+                </motion.div>
+                <h5 className="text-lg font-semibold text-gray-800">Feedback del Editor</h5>
+                <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto leading-relaxed">
+                  {decodeBody(assignment.feedbackEditor)}
+                </div>
+              </>
+            ) : (
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="p-6 bg-yellow-50 rounded-md border-l-4 border-yellow-400 text-center">
+                <h5 className="text-xl font-semibold text-yellow-800 mb-2">Artículo en Revisión</h5>
+                <p className="text-yellow-700 text-lg">Tu artículo "{assignment['Nombre Artículo']}" está actualmente bajo revisión por evaluadores y el editor.</p>
+                <p className="text-yellow-600 mt-2">Recibirás una notificación con la decisión final y el feedback una vez que el proceso se complete.</p>
+              </motion.div>
+            )}
           </motion.div>
-          <h5 className="text-lg font-semibold text-gray-800">Feedback del Editor</h5>
-          <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto leading-relaxed">
-            {decodeBody(assignment.feedbackEditor)}
-          </div>
-        </>
-      ) : (
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="p-6 bg-yellow-50 rounded-md border-l-4 border-yellow-400 text-center">
-          <h5 className="text-xl font-semibold text-yellow-800 mb-2">Artículo en Revisión</h5>
-          <p className="text-yellow-700 text-lg">Tu artículo "{assignment['Nombre Artículo']}" está actualmente bajo revisión por evaluadores y el editor.</p>
-          <p className="text-yellow-600 mt-2">Recibirás una notificación con la decisión final y el feedback una vez que el proceso se complete.</p>
-        </motion.div>
-      )}
-    </motion.div>
-  ) : (
+        ) : (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="lg:col-span-1 space-y-6">
               <div className="space-y-2">
@@ -1607,9 +1603,9 @@ export default function PortalSection({ user, onLogout }) {
             {error}
           </motion.div>
         )}
-        <CalendarComponent 
-          events={calendarEvents} 
-          onSelectEvent={(event) => setSelectedEvent(event.resource)} 
+        <CalendarComponent
+          events={calendarEvents}
+          onSelectEvent={(event) => setSelectedEvent(event.resource)}
         />
         {selectedEvent && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
