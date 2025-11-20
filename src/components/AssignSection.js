@@ -10,6 +10,27 @@ const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrr
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby2B1OUt3TMqaed6Vz-iamUPn4gHhKXG2RRxiy8Nt6u69Cg-2kSze2XQ-NywX5QrNfy/exec';
 const sanitizeInput = (input) => input ? input.trim().toLowerCase().replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') : '';
 
+const parseDate = (dateStr) => {
+  if (!dateStr) return null;
+  const parts = dateStr.split(/[-\/]/); // Maneja / o -
+  if (parts.length !== 3) return null;
+  let year, month, day;
+  if (parts[0].length === 4) { // YYYY-MM-DD
+    year = parseInt(parts[0], 10);
+    month = parseInt(parts[1], 10);
+    day = parseInt(parts[2], 10);
+  } else { // DD/MM/YYYY o DD-MM-YYYY
+    day = parseInt(parts[0], 10);
+    month = parseInt(parts[1], 10);
+    year = parseInt(parts[2], 10);
+  }
+  if (isNaN(year) || isNaN(month) || isNaN(day) || month < 1 || month > 12 || day < 1 || day > 31) {
+    console.warn('Invalid date parsed:', dateStr);
+    return null;
+  }
+  return new Date(year, month - 1, day);
+};
+
 export default function AssignSection({ user, onClose }) {
   const [users, setUsers] = useState([]);
   const [reviewers, setReviewers] = useState([]);
@@ -116,11 +137,11 @@ export default function AssignSection({ user, onClose }) {
 
   const calendarEvents = useMemo(() => {
     return assignments
-      .filter(a => a.Plazo)
+      .filter(a => a.Plazo && parseDate(a.Plazo))
       .map(a => ({
         title: a['Nombre Artículo'],
-        start: new Date(a.Plazo),
-        end: new Date(a.Plazo),
+        start: parseDate(a.Plazo),
+        end: parseDate(a.Plazo),
         allDay: true,
         resource: a,
       }));
@@ -131,18 +152,18 @@ export default function AssignSection({ user, onClose }) {
     const titleSanitized = sanitizeInput(assignment['Nombre Artículo']);
     const authorSanitized = sanitizeInput(assignment.Autor);
     // Find the group and art
-    for (const [sanitizedAuthor, articles] of Object.entries(groupedIncoming)) {
-      if (sanitizedAuthor === authorSanitized) {
-        const art = articles.find(a => sanitizeInput(a['Título de su artículo'] || '') === titleSanitized);
+    for (const group of groupedIncoming) {
+      if (sanitizeInput(group.authorName) === authorSanitized) {
+        const art = group.articles.find(a => sanitizeInput(a['Título de su artículo'] || '') === titleSanitized);
         if (art) {
-          const uniqueId = getUniqueId(groupedIncoming.find(g => g.authorName === art['Nombre (primer nombre y primer apellido)']).authorName, art['Título de su artículo']);
+          const uniqueId = getUniqueId(group.authorName, art['Título de su artículo']);
           const defData = {
             nombre: assignment['Nombre Artículo'] || art['Título de su artículo'] || '',
             link: assignment['Link Artículo'] || art['Inserta aquí tu artículo en formato Word. Debe tener de 1.000 a 10.000 palabras.'] || '',
             r1: assignment['Revisor 1'] || '',
             r2: assignment['Revisor 2'] || '',
             editor: assignment.Editor || '',
-            plazo: assignment.Plazo ? new Date(assignment.Plazo) : null,
+            plazo: assignment.Plazo ? parseDate(assignment.Plazo) : null,
           };
           setEditingData({
             id: uniqueId,
@@ -160,6 +181,8 @@ export default function AssignSection({ user, onClose }) {
 
   const handleAssignOrUpdate = async (data, isUpdate = false) => {
     const action = isUpdate ? 'update' : 'assign';
+    const plazoValue = data.Plazo;
+    const plazoStr = plazoValue instanceof Date && !isNaN(plazoValue) ? plazoValue.toISOString().split('T')[0] : '';
     const body = {
       action,
       title: data['Nombre Artículo'],
@@ -168,7 +191,7 @@ export default function AssignSection({ user, onClose }) {
       rev2: data['Revisor 2'],
       editor: data.Editor,
       autor: data.Autor,
-      plazo: data.Plazo ? new Date(data.Plazo).toISOString().split('T')[0] : '', // Format as YYYY-MM-DD
+      plazo: plazoStr,
     };
     const articleKey = data['Nombre Artículo'] || data.Autor;
     console.log("📤 Enviando datos al script:", body);
@@ -369,7 +392,7 @@ export default function AssignSection({ user, onClose }) {
                         r1: isAssigned ? art.assignment['Revisor 1'] || '' : '',
                         r2: isAssigned ? art.assignment['Revisor 2'] || '' : '',
                         editor: isAssigned ? art.assignment.Editor || '' : '',
-                        plazo: isAssigned ? (art.assignment.Plazo ? new Date(art.assignment.Plazo) : null) : null,
+                        plazo: isAssigned ? (art.assignment.Plazo ? parseDate(art.assignment.Plazo) : null) : null,
                       };
                       setEditingData({
                         id: uniqueId,
