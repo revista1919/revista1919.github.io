@@ -630,12 +630,12 @@ export default function AssignSection({ user, onClose }) {
         <h4 className="text-lg font-semibold mb-4">Hojas de Cálculo</h4>
         <div className="space-y-6">
           <div>
-            <h5 className="font-medium text-md mb-2">Hoja de Cálculo 1</h5>
-            <iframe src="https://docs.google.com/spreadsheets/d/1-M0Ca-3VmX-0t2M1uEVQsjEatzFFbxlfLlEXTUdp8ws/pubhtml?widget=true&headers=false" width="100%" height="600" frameborder="0"></iframe>
+            <h5 className="font-medium text-md mb-2">Artículos en revisión</h5>
+            <iframe src="https://docs.google.com/spreadsheets/d/1-M0Ca-3VmX-0t2M1uEVQsjEatzFFbxlfLlEXTUdp8ws/edit?usp=sharing" width="100%" height="600" frameborder="0"></iframe>
           </div>
           <div>
             <h5 className="font-medium text-md mb-2">Hoja de Cálculo 2</h5>
-            <iframe src="https://docs.google.com/spreadsheets/d/1sO6jANVLMzX409GkiIU5Z4g8G439ZjBVnquQUkPy1wE/pubhtml?gid=1161174444&single=true&widget=true&headers=false" width="100%" height="600" frameborder="0"></iframe>
+            <iframe src="https://docs.google.com/spreadsheets/d/1sO6jANVLMzX409GkiIU5Z4g8G439ZjBVnquQUkPy1wE/edit?usp=sharing" width="100%" height="600" frameborder="0"></iframe>
           </div>
         </div>
       </section>
