@@ -1,13 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Papa from 'papaparse';
-
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 const INCOMING_CSV = process.env.REACT_APP_FORM_CSV || '';
 const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby2B1OUt3TMqaed6Vz-iamUPn4gHhKXG2RRxiy8Nt6u69Cg-2kSze2XQ-NywX5QrNfy/exec';
-
 const sanitizeInput = (input) => input ? input.trim().toLowerCase().replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') : '';
-
 export default function AssignSection({ user, onClose }) {
   const [users, setUsers] = useState([]);
   const [reviewers, setReviewers] = useState([]);
@@ -22,31 +19,25 @@ export default function AssignSection({ user, onClose }) {
   const [submitStatus, setSubmitStatus] = useState({});
   const [isSending, setIsSending] = useState({}); // New state for loading indicators
   const [emailPreview, setEmailPreview] = useState(null); // New state for email preview
-
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         console.log("📡 Iniciando fetch de CSVs...");
-
         const [usersText, incomingText, assignmentsText] = await Promise.all([
           fetch(USERS_CSV, { cache: 'no-store' }).then(r => r.text()),
           fetch(INCOMING_CSV, { cache: 'no-store' }).then(r => r.text()),
           fetch(ASSIGNMENTS_CSV, { cache: 'no-store' }).then(r => r.text()),
         ]);
-
         console.log("✅ CSVs descargados");
-
         const parsedUsers = Papa.parse(usersText, { header: true, skipEmptyLines: true }).data.filter(u => u.Nombre && u.Nombre.trim());
         console.log("👥 Usuarios parseados:", parsedUsers);
-
         const filteredUsers = parsedUsers.filter(u => {
           const roles = (u['Rol en la Revista'] || '').split(';').map(r => r.trim()).filter(Boolean);
           return roles.some(r => r === 'Revisor' || r === 'Editor de Sección' || r === 'Editor en Jefe');
         });
         setUsers(filteredUsers);
         console.log("✅ Usuarios filtrados (revisores + editores + editores en jefe):", filteredUsers);
-
         const revs = filteredUsers.filter(u => (u['Rol en la Revista'] || '').includes('Revisor'));
         const eds = filteredUsers.filter(u => (u['Rol en la Revista'] || '').includes('Editor de Sección'));
         const chiefs = filteredUsers.filter(u => (u['Rol en la Revista'] || '').includes('Editor en Jefe'));
@@ -54,17 +45,15 @@ export default function AssignSection({ user, onClose }) {
         setSectionEditors([...eds, ...chiefs]);
         console.log("👤 Revisores:", revs);
         console.log("📂 Editores (incluyendo en jefe):", [...eds, ...chiefs]);
-
-        const parsedIncoming = Papa.parse(incomingText, { header: true, skipEmptyLines: true }).data.filter(i => 
-          i['Nombre (primer nombre y primer apellido)'] && 
-          i['Título de su artículo'] && 
-          i['Nombre (primer nombre y primer apellido)'].trim() && 
+        const parsedIncoming = Papa.parse(incomingText, { header: true, skipEmptyLines: true }).data.filter(i =>
+          i['Nombre (primer nombre y primer apellido)'] &&
+          i['Título de su artículo'] &&
+          i['Nombre (primer nombre y primer apellido)'].trim() &&
           i['Título de su artículo'].trim()
         );
         setIncoming(parsedIncoming);
         console.log("📝 Artículos entrantes:", parsedIncoming);
-
-        const parsedAssignments = Papa.parse(assignmentsText, { header: true, skipEmptyLines: true }).data.filter(a => 
+        const parsedAssignments = Papa.parse(assignmentsText, { header: true, skipEmptyLines: true }).data.filter(a =>
           a['Nombre Artículo'] && a['Nombre Artículo'].trim() && a.Autor && a.Autor.trim()
         );
         const isCompleted = (assign) => {
@@ -72,7 +61,6 @@ export default function AssignSection({ user, onClose }) {
         };
         const pendingAssignments = parsedAssignments.filter(a => !isCompleted(a));
         setAssignments(pendingAssignments);
-
         console.log("📂 Asignaciones pendientes:", pendingAssignments);
       } catch (err) {
         console.error('❌ Error fetching data:', err);
@@ -80,14 +68,11 @@ export default function AssignSection({ user, onClose }) {
         setLoading(false);
       }
     };
-
     fetchData();
   }, []);
-
   const isCompleted = (assign) => {
     return !!(assign['Feedback 1'] && assign['Informe 1'] && assign['Feedback 2'] && assign['Informe 2'] && assign['Feedback 3'] && assign['Informe 3']);
   };
-
   const groupedIncoming = useMemo(() => {
     const groupMap = {};
     incoming.forEach(art => {
@@ -101,7 +86,7 @@ export default function AssignSection({ user, onClose }) {
         const aAuthorSanitized = sanitizeInput(a.Autor || '');
         const exactMatch = aTitleSanitized === titleSanitized && aAuthorSanitized === authorSanitized;
         const fuzzyTitleMatch = !exactMatch && (
-          aTitleSanitized.includes(titleSanitized) || 
+          aTitleSanitized.includes(titleSanitized) ||
           titleSanitized.includes(aTitleSanitized)
         );
         return exactMatch || (fuzzyTitleMatch && aAuthorSanitized === authorSanitized);
@@ -115,11 +100,9 @@ export default function AssignSection({ user, onClose }) {
       articles,
     }));
   }, [incoming, assignments]);
-
   const totalPending = groupedIncoming.reduce((sum, group) => {
     return sum + group.articles.filter(art => !(art.assignment && isCompleted(art.assignment))).length;
   }, 0);
-
   const handleAssignOrUpdate = async (data, isUpdate = false) => {
     const action = isUpdate ? 'update' : 'assign';
     const body = {
@@ -132,10 +115,8 @@ export default function AssignSection({ user, onClose }) {
       autor: data.Autor,
     };
     const articleKey = data['Nombre Artículo'] || data.Autor;
-
     console.log("📤 Enviando datos al script:", body);
     setIsSending({ ...isSending, [articleKey]: true });
-
     try {
       const response = await fetch(SCRIPT_URL, {
         method: 'POST',
@@ -143,7 +124,6 @@ export default function AssignSection({ user, onClose }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-
       console.log("📨 Fetch enviado, response (no-cors, no se puede leer):", response);
       setSubmitStatus({ ...submitStatus, [articleKey]: 'Cambiado... espere unos momentos para ver el cambio, por favor reinicie la página.' });
       setEditingId(null);
@@ -155,18 +135,14 @@ export default function AssignSection({ user, onClose }) {
       setIsSending({ ...isSending, [articleKey]: false });
     }
   };
-
   const handleContact = async (email, name, title, role, articleKey) => {
     console.log("📧 Sending reminder request for:", { email, name, title, role, articleKey });
-
     if (!email || !name || !title || !role) {
       console.error("Missing email, name, title, or role:", { email, name, title, role });
       setSubmitStatus({ ...submitStatus, [articleKey]: `Error: Faltan datos para enviar el recordatorio.` });
       return;
     }
-
     setIsSending({ ...isSending, [articleKey]: true });
-
     const body = {
       action: 'sendReminder',
       email,
@@ -175,9 +151,7 @@ export default function AssignSection({ user, onClose }) {
       role,
       senderName: user?.Nombre || 'Equipo Editorial',
     };
-
     console.log("📤 Enviando datos al script:", body);
-
     try {
       const response = await fetch(SCRIPT_URL, {
         method: 'POST',
@@ -185,10 +159,8 @@ export default function AssignSection({ user, onClose }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-
       console.log("📨 Fetch enviado (no-cors, no se puede leer la respuesta):", response);
       setSubmitStatus({ ...submitStatus, [articleKey]: 'Recordatorio enviado.' });
-
       // Generate email preview content (matching sendReminderEmail in Google Apps Script)
       const articleLink = assignments.find(a => sanitizeInput(a['Nombre Artículo']) === sanitizeInput(title))?.['Link Artículo'] || '';
       const htmlBody = `
@@ -223,7 +195,6 @@ export default function AssignSection({ user, onClose }) {
       setIsSending({ ...isSending, [articleKey]: false });
     }
   };
-
   const handleContactEditor = (art) => {
     console.log("Clicking Contactar Editor for:", art.assignment.Editor);
     const editor = sectionEditors.find(e => e.Nombre === art.assignment.Editor);
@@ -240,11 +211,9 @@ export default function AssignSection({ user, onClose }) {
       art['Título de su artículo']
     );
   };
-
   const getUniqueId = (groupAuthor, artTitle) => {
     return `${sanitizeInput(groupAuthor)}-${sanitizeInput(artTitle || 'unnamed')}`;
   };
-
   const tutorialSteps = [
     '1. Explora la lista de colaboradores haciendo clic en sus perfiles para ver descripciones, intereses y contactarlos si no cumplen plazos (usa el botón "Contactar" para un email profesional).',
     '2. En "Artículos por Autor", los artículos se agrupan por autor usando el "Título de su artículo". Se muestran solo los pendientes (sin todas las retroalimentaciones/informes).',
@@ -252,9 +221,7 @@ export default function AssignSection({ user, onClose }) {
     '4. Usa los botones de contacto para enviar recordatorios institucionales por correo desde el servidor.',
     '5. El panel es responsive. Los artículos con todas las retroalimentaciones se ocultan automáticamente, independientemente del "Estado".',
   ];
-
   if (loading) return <div className="text-center p-4 text-gray-600">Cargando gestión de asignaciones...</div>;
-
   return (
     <div className="bg-white rounded-lg shadow-md p-6 space-y-6 overflow-hidden">
       <div className="flex justify-between items-center">
@@ -271,7 +238,6 @@ export default function AssignSection({ user, onClose }) {
           )}
         </div>
       </div>
-
       <section>
         <h4 className="text-lg font-semibold mb-4">Colaboradores (Revisores y Editores de Sección)</h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -282,7 +248,7 @@ export default function AssignSection({ user, onClose }) {
               onClick={() => setSelectedUser(u)}
             >
               <img
-                src={u.Imagen || 'https://via.placeholder.com/64?text=?'} 
+                src={u.Imagen || 'https://via.placeholder.com/64?text=?'}
                 alt={u.Nombre}
                 className="w-16 h-16 rounded-full mb-2 object-cover"
               />
@@ -292,7 +258,6 @@ export default function AssignSection({ user, onClose }) {
           ))}
         </div>
       </section>
-
       {selectedUser && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
@@ -328,7 +293,6 @@ export default function AssignSection({ user, onClose }) {
           </div>
         </div>
       )}
-
       <section>
         <h4 className="text-lg font-semibold mb-4">Artículos por Autor ({totalPending})</h4>
         <div className="space-y-6">
@@ -351,7 +315,6 @@ export default function AssignSection({ user, onClose }) {
                     const currentEditor = isAssigned ? art.assignment.Editor || 'No asignado' : 'No asignado';
                     const statusBadge = isAssigned ? 'Asignado (en revisión)' : 'Pendiente de asignar';
                     const badgeClass = isAssigned ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800';
-
                     const handleEditOrAssignClick = () => {
                       const defData = {
                         nombre: isAssigned ? art.assignment['Nombre Artículo'] || art['Título de su artículo'] || '' : art['Título de su artículo'] || '',
@@ -369,12 +332,10 @@ export default function AssignSection({ user, onClose }) {
                       });
                       setEditingId(uniqueId);
                     };
-
                     const handleCancel = () => {
                       setEditingId(null);
                       setEditingData(null);
                     };
-
                     const handleConfirm = () => {
                       const { data, isUpdate, author, area } = editingData;
                       handleAssignOrUpdate(
@@ -390,16 +351,13 @@ export default function AssignSection({ user, onClose }) {
                         isUpdate
                       );
                     };
-
                     const updateField = (field, value) => {
                       setEditingData(prev => ({
                         ...prev,
                         data: { ...prev.data, [field]: value }
                       }));
                     };
-
                     const articleKey = art['Título de su artículo'] || uniqueId;
-
                     return (
                       <div key={uniqueId} className="bg-white p-4 rounded-lg border mb-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -575,7 +533,6 @@ export default function AssignSection({ user, onClose }) {
           ))}
         </div>
       </section>
-
       {tutorialOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
@@ -595,7 +552,6 @@ export default function AssignSection({ user, onClose }) {
           </div>
         </div>
       )}
-
       {emailPreview && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
