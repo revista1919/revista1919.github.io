@@ -6,7 +6,6 @@ import { debounce } from 'lodash';
 import NewsUploadSection from './NewsUploadSectionEN';
 import TaskSection from './TaskSectionEN';
 import AssignSection from './AssignSectionEN';
-import { useTranslation } from 'react-i18next';
 import DirectorPanel from './DirectorPanelEN';
 import { motion, AnimatePresence } from 'framer-motion';
 

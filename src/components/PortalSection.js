@@ -9,6 +9,9 @@ import AssignSection from './AssignSection';
 import { useTranslation } from 'react-i18next';
 import DirectorPanel from './DirectorPanel';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Calendar, momentLocalizer } from 'react-big-calendar';
+import moment from 'moment';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
 
 const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?gid=0&output=csv'; // Ajusta el gid si es necesario para la hoja de usuarios/team
@@ -17,7 +20,6 @@ const RUBRIC_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzehxU_O7Gkzf
 const RUBRIC_CSV1 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=0&single=true&output=csv';
 const RUBRIC_CSV2 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=1438370398&single=true&output=csv';
 const RUBRIC_CSV3 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=1972050001&single=true&output=csv';
-
 const criteria = {
   'Revisor 1': [
     {
@@ -143,16 +145,13 @@ const criteria = {
     }
   ]
 };
-
 const getDecisionText = (percent) => {
   if (percent >= 85) return 'Aceptar sin cambios.';
   if (percent >= 70) return 'Aceptar con cambios menores.';
   if (percent >= 50) return 'Revisión mayor requerida antes de publicar.';
   return 'Rechazar.';
 };
-
 const getTotal = (scores, crits) => crits.reduce((sum, c) => sum + (scores[c.key] || 0), 0);
-
 const base64EncodeUnicode = (str) => {
   const encoder = new TextEncoder();
   const bytes = encoder.encode(str);
@@ -160,7 +159,6 @@ const base64EncodeUnicode = (str) => {
   bytes.forEach(b => binary += String.fromCharCode(b));
   return btoa(binary);
 };
-
 const base64DecodeUnicode = (str) => {
   const binary = atob(str);
   const bytes = new Uint8Array(binary.length);
@@ -170,7 +168,6 @@ const base64DecodeUnicode = (str) => {
   const decoder = new TextDecoder();
   return decoder.decode(bytes);
 };
-
 const sanitizeInput = (input) => {
   if (!input) return '';
   return input.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
@@ -178,7 +175,6 @@ const sanitizeInput = (input) => {
               .replace(/\s+/g, ' ')
               .trim();
 };
-
 class ErrorBoundary extends React.Component {
   state = { hasError: false };
   static getDerivedStateFromError(error) {
@@ -193,6 +189,42 @@ class ErrorBoundary extends React.Component {
     }
     return this.props.children;
   }
+}
+
+const localizer = momentLocalizer(moment);
+
+function CalendarComponent({ events, onSelectEvent }) {
+  return (
+    <div className="bg-white p-4 rounded-lg shadow-md mb-6">
+      <h3 className="text-xl font-bold text-gray-800 mb-4">Calendario de Plazos</h3>
+      <Calendar
+        localizer={localizer}
+        events={events}
+        startAccessor="start"
+        endAccessor="end"
+        style={{ height: 600 }}
+        onSelectEvent={onSelectEvent}
+        views={['month', 'week', 'day', 'agenda']}
+        popup
+        selectable
+        className="rounded-lg border border-gray-200"
+        messages={{
+          next: "Siguiente",
+          previous: "Anterior",
+          today: "Hoy",
+          month: "Mes",
+          week: "Semana",
+          day: "Día",
+          agenda: "Agenda",
+          date: "Fecha",
+          time: "Hora",
+          event: "Evento",
+          noEventsInRange: "No hay eventos en este rango",
+          showMore: total => `+ Ver más (${total})`
+        }}
+      />
+    </div>
+  );
 }
 
 export default function PortalSection({ user, onLogout }) {
@@ -216,9 +248,10 @@ export default function PortalSection({ user, onLogout }) {
   const [isDirectorPanelExpanded, setIsDirectorPanelExpanded] = useState(false);
   const [isChiefEditorPanelExpanded, setIsChiefEditorPanelExpanded] = useState(false);
   const [effectiveName, setEffectiveName] = useState(user?.name || '');
+  const [calendarEvents, setCalendarEvents] = useState([]);
+  const [selectedEvent, setSelectedEvent] = useState(null);
   const feedbackQuillRefs = useRef({});
   const reportQuillRefs = useRef({});
-
   useEffect(() => {
     if (!user) {
       console.log('Null user, clearing PortalSection states');
@@ -241,9 +274,10 @@ export default function PortalSection({ user, onLogout }) {
       setIsDirectorPanelExpanded(false);
       setIsChiefEditorPanelExpanded(false);
       setEffectiveName('');
+      setCalendarEvents([]);
+      setSelectedEvent(null);
     }
   }, [user]);
-
   // Fetch user mapping if name looks like email
   useEffect(() => {
     const fetchUserMapping = async () => {
@@ -276,10 +310,8 @@ export default function PortalSection({ user, onLogout }) {
         setEffectiveName(user.name);
       }
     };
-
     fetchUserMapping();
   }, [user]);
-
   const fetchRubrics = async () => {
     try {
       const [csv1Text, csv2Text, csv3Text] = await Promise.all([
@@ -334,7 +366,6 @@ export default function PortalSection({ user, onLogout }) {
       return { scoresMap1: {}, scoresMap2: {}, scoresMap3: {} };
     }
   };
-
   const fetchWithRetry = async (url, retries = 3, timeout = 10000) => {
     for (let i = 0; i < retries; i++) {
       try {
@@ -350,7 +381,6 @@ export default function PortalSection({ user, onLogout }) {
       }
     }
   };
-
   const fetchAssignments = async () => {
     try {
       setLoading(true);
@@ -376,6 +406,7 @@ export default function PortalSection({ user, onLogout }) {
                 role: 'Autor',
                 feedbackEditor: row['Feedback 3'] || 'No hay feedback del editor aún.',
                 isCompleted: !!row['Feedback 3'],
+                Plazo: row['Plazo'] || null,
               }));
           } else {
             parsedAssignments = data
@@ -402,6 +433,7 @@ export default function PortalSection({ user, onLogout }) {
                   informe1: row['Informe 1'] || 'No hay informe del Revisor 1.',
                   informe2: row['Informe 2'] || 'No hay informe del Revisor 2.',
                   isCompleted: !!row[`Feedback ${num}`] && !!row[`Informe ${num}`] && !!row[`Voto ${num}`],
+                  Plazo: row['Plazo'] || null,
                 };
                 const name = assignment.id;
                 if (role === 'Revisor 1') {
@@ -426,6 +458,17 @@ export default function PortalSection({ user, onLogout }) {
               setRubricScores((prev) => ({ ...prev, [link]: assignment.scores }));
             }
           });
+          // Create calendar events
+          const events = parsedAssignments
+            .filter(ass => ass.Plazo)
+            .map(ass => ({
+              title: `${ass['Nombre Artículo']} - ${ass.role}`,
+              start: new Date(ass.Plazo),
+              end: new Date(ass.Plazo),
+              allDay: true,
+              resource: ass,
+            }));
+          setCalendarEvents(events);
           setLoading(false);
           if (parsedAssignments.length === 0 && !loading) {
             setError(`No se encontraron asignaciones para '${effectiveName}'. Si esperas asignaciones, por favor verifica los detalles de tu cuenta o contacta al administrador.`);
@@ -443,7 +486,6 @@ export default function PortalSection({ user, onLogout }) {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     if (!user || !effectiveName || !user.role) {
       console.log('Error en fetchAssignments: usuario inválido', { user, effectiveName });
@@ -454,7 +496,6 @@ export default function PortalSection({ user, onLogout }) {
     console.log('Cargando asignaciones para usuario:', { uid: user.uid, name: effectiveName, role: user.role });
     fetchAssignments();
   }, [user, effectiveName]);
-
   const isAuthor = assignments.length > 0 && assignments[0].role === 'Autor';
   const isChief = user?.role && user.role.split(';').map(r => r.trim()).includes('Editor en Jefe');
   const isDirector = user?.role && user.role.split(';').map(r => r.trim()).includes('Director General');
@@ -464,7 +505,6 @@ export default function PortalSection({ user, onLogout }) {
   console.log('Roles del usuario:', user?.role);
   console.log('isDirector:', isDirector);
   console.log('isChief:', isChief);
-
   const pendingAssignments = useMemo(() =>
     isAuthor
       ? assignments.filter((a) => !a.feedbackEditor || !['Aceptado', 'Rechazado'].includes(a.Estado))
@@ -477,20 +517,16 @@ export default function PortalSection({ user, onLogout }) {
       : assignments.filter((a) => a.isCompleted),
     [assignments, isAuthor]
   );
-
   // Resto del código permanece igual...
-
   const handleVote = (link, value) => {
     setVote((prev) => ({ ...prev, [link]: value }));
   };
-
   const handleRubricChange = (link, key, value) => {
     setRubricScores((prev) => ({
       ...prev,
       [link]: { ...prev[link], [key]: value }
     }));
   };
-
   const getRequiredKeys = (role) => {
     switch (role) {
       case 'Revisor 1': return ['gramatica', 'claridad', 'estructura', 'citacion'];
@@ -499,13 +535,11 @@ export default function PortalSection({ user, onLogout }) {
       default: return [];
     }
   };
-
   const isRubricComplete = (link, role) => {
     const rubric = rubricScores[link] || {};
     const required = getRequiredKeys(role);
     return required.every(key => rubric[key] !== undefined && rubric[key] !== null);
   };
-
   const handleSubmitRubric = async (link, role) => {
     const articleName = assignments.find(a => a['Link Artículo'] === link)['Nombre Artículo'];
     const rubric = rubricScores[link] || {};
@@ -552,7 +586,6 @@ export default function PortalSection({ user, onLogout }) {
       setRubricStatus((prev) => ({ ...prev, [link]: `Error: ${err.message}` }));
     }
   };
-
   const handleSubmit = async (link, role, feedbackText, reportText, voteValue) => {
     const encodedFeedback = base64EncodeUnicode(sanitizeInput(feedbackText || ''));
     const encodedReport = base64EncodeUnicode(sanitizeInput(reportText || ''));
@@ -595,18 +628,15 @@ export default function PortalSection({ user, onLogout }) {
       setSubmitStatus((prev) => ({ ...prev, [link]: `Error: ${err.message}` }));
     }
   };
-
   const toggleTutorial = (link) => {
     setTutorialVisible((prev) => ({ ...prev, [link]: !prev[link] }));
   };
-
   const toggleFeedback = (link, type) => {
     setExpandedFeedback((prev) => ({
       ...prev,
       [link]: { ...prev[link], [type]: !prev[link]?.[type] }
     }));
   };
-
   const getTutorialText = (role) => {
     if (role === "Revisor 1") {
       return 'Como Revisor 1, tu rol es revisar aspectos técnicos como gramática, ortografía, citación de fuentes, detección de contenido generado por IA, coherencia lógica y estructura general del artículo. Proporciona comentarios detallados en el documento de Google Drive para sugerir mejoras. Asegúrate de que el lenguaje sea claro y académico. Debes proporcionar feedback al autor en la caja correspondiente. Además, debes enviar un informe resumido explicando tus observaciones para guiar al editor. Finalmente, en la caja de voto, ingresa "si" si apruebas el artículo, y "no" si lo rechazas.';
@@ -617,7 +647,6 @@ export default function PortalSection({ user, onLogout }) {
     }
     return "";
   };
-
   const Tutorial = ({ role }) => {
     const tutorialText = getTutorialText(role);
     return (
@@ -631,7 +660,6 @@ export default function PortalSection({ user, onLogout }) {
       </motion.div>
     );
   };
-
   const RubricViewer = ({ roleKey, scores, onChange, readOnly = false }) => {
     const crits = criteria[roleKey];
     if (!crits) return null;
@@ -677,21 +705,18 @@ export default function PortalSection({ user, onLogout }) {
       </motion.div>
     );
   };
-
   const debouncedSetFeedback = useCallback(
     (link) => debounce((value) => {
       setFeedback((prev) => ({ ...prev, [link]: value }));
     }, 300),
     []
   );
-
   const debouncedSetReport = useCallback(
     (link) => debounce((value) => {
       setReport((prev) => ({ ...prev, [link]: value }));
     }, 300),
     []
   );
-
   const modules = useMemo(() => ({
     toolbar: {
       container: [
@@ -802,7 +827,6 @@ export default function PortalSection({ user, onLogout }) {
       },
     },
   }), []);
-
   useEffect(() => {
     const setupCustomButton = (quillRef, link, type) => {
       if (quillRef.current) {
@@ -830,7 +854,6 @@ export default function PortalSection({ user, onLogout }) {
       setupCustomButton(reportQuillRefs.current[link], link, 'report');
     });
   }, [feedbackQuillRefs.current, reportQuillRefs.current]);
-
   const formats = useMemo(() => [
     'bold', 'italic', 'underline', 'strike', 'blockquote',
     'list', 'bullet',
@@ -838,11 +861,9 @@ export default function PortalSection({ user, onLogout }) {
     'align',
     'size'
   ], []);
-
   const encodeBody = (html) => {
     return base64EncodeUnicode(sanitizeInput(html));
   };
-
   const decodeBody = (encoded) => {
     if (!encoded) return <p className="text-gray-600 break-words">No hay contenido disponible.</p>;
     try {
@@ -853,7 +874,6 @@ export default function PortalSection({ user, onLogout }) {
       return <p className="text-gray-600 break-words">Error al decodificar contenido.</p>;
     }
   };
-
   const handleImageModalSubmit = (link) => {
     const quillRef = feedbackQuillRefs.current[link] || reportQuillRefs.current[link];
     if (!quillRef) return;
@@ -895,7 +915,6 @@ export default function PortalSection({ user, onLogout }) {
     setImageData((prev) => ({ ...prev, [link]: { url: '', width: '', height: '', align: 'left' } }));
     setEditingRange((prev) => ({ ...prev, [link]: null }));
   };
-
   const handleImageDataChange = (link, e) => {
     const { name, value } = e.target;
     setImageData((prev) => ({
@@ -903,7 +922,6 @@ export default function PortalSection({ user, onLogout }) {
       [link]: { ...prev[link], [name]: value }
     }));
   };
-
   const AssignmentCard = ({ assignment, onClick, index }) => {
     const role = assignment.role;
     const nombre = assignment['Nombre Artículo'];
@@ -934,6 +952,9 @@ export default function PortalSection({ user, onLogout }) {
         <div>
           <h4 className="text-xl font-bold text-gray-800 mb-2 break-words">{nombre}</h4>
           <p className="text-sm text-gray-600 mb-3 break-words">Rol: {role}</p>
+          {assignment.Plazo && (
+            <p className="text-sm text-gray-600 mb-3 break-words">Plazo: {new Date(assignment.Plazo).toLocaleDateString()}</p>
+          )}
           <div className="flex items-center justify-between mb-4">
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor}`}>
               {isAuthorCard
@@ -962,7 +983,6 @@ export default function PortalSection({ user, onLogout }) {
       </motion.div>
     );
   };
-
   const renderFullAssignment = (assignment) => {
     const link = assignment['Link Artículo'];
     const role = assignment.role;
@@ -1118,6 +1138,9 @@ export default function PortalSection({ user, onLogout }) {
           <div>
             <h4 className="text-2xl font-bold text-gray-800 mb-2 break-words">{nombre}</h4>
             <p className="text-gray-600 break-words">Rol: {role} | Estado: {assignment.Estado || 'Sin estado'}</p>
+            {assignment.Plazo && (
+              <p className="text-gray-600 break-words">Plazo: {new Date(assignment.Plazo).toLocaleDateString()}</p>
+            )}
           </div>
           <motion.button
             whileHover={{ scale: 1.05 }}
@@ -1497,7 +1520,6 @@ export default function PortalSection({ user, onLogout }) {
       </motion.div>
     );
   };
-
   // Director-specific functions for buttons
   const handleAddArticleClick = () => {
     // This function will be passed to DirectorPanel to trigger the add modal
@@ -1507,7 +1529,6 @@ export default function PortalSection({ user, onLogout }) {
     // This function will be passed to DirectorPanel to trigger the rebuild action
     // We don't need to implement it here as it's handled in DirectorPanel
   };
-
   if (!user || !effectiveName || !user.role) {
     console.log('Usuario inválido:', user);
     return (
@@ -1533,7 +1554,6 @@ export default function PortalSection({ user, onLogout }) {
       </motion.div>
     );
   }
-
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -1578,7 +1598,6 @@ export default function PortalSection({ user, onLogout }) {
             </motion.button>
           </div>
         </div>
-
         {error && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -1588,7 +1607,21 @@ export default function PortalSection({ user, onLogout }) {
             {error}
           </motion.div>
         )}
-
+        <CalendarComponent 
+          events={calendarEvents} 
+          onSelectEvent={(event) => setSelectedEvent(event.resource)} 
+        />
+        {selectedEvent && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
+              <div className="flex justify-between items-start mb-4">
+                <h5 className="font-bold text-lg">Detalles del Evento</h5>
+                <button onClick={() => setSelectedEvent(null)} className="text-gray-500 hover:text-gray-700">×</button>
+              </div>
+              {renderFullAssignment(selectedEvent)}
+            </div>
+          </div>
+        )}
         {isDirector && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1599,7 +1632,6 @@ export default function PortalSection({ user, onLogout }) {
             <NewsUploadSection />
           </motion.div>
         )}
-
         {isDirector && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1705,7 +1737,6 @@ export default function PortalSection({ user, onLogout }) {
             </AnimatePresence>
           </motion.div>
         )}
-
         {(isRrss || isWebDev) && !isDirector && !isChief && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1719,7 +1750,6 @@ export default function PortalSection({ user, onLogout }) {
             <TaskSection user={user} />
           </motion.div>
         )}
-
         {(pendingAssignments.length > 0 || completedAssignments.length > 0) && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1745,7 +1775,6 @@ export default function PortalSection({ user, onLogout }) {
             </div>
           </motion.div>
         )}
-
         <ErrorBoundary>
           {(isChief || isDirector) && activeTab === 'asignar' && <AssignSection user={user} />}
           {(pendingAssignments.length > 0 || completedAssignments.length > 0 || isChief || isDirector) && (
