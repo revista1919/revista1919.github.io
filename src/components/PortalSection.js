@@ -151,7 +151,9 @@ const getDecisionText = (percent) => {
   if (percent >= 50) return 'Revisión mayor requerida antes de publicar.';
   return 'Rechazar.';
 };
+
 const getTotal = (scores, crits) => crits.reduce((sum, c) => sum + (scores[c.key] || 0), 0);
+
 const base64EncodeUnicode = (str) => {
   const encoder = new TextEncoder();
   const bytes = encoder.encode(str);
@@ -159,6 +161,7 @@ const base64EncodeUnicode = (str) => {
   bytes.forEach(b => binary += String.fromCharCode(b));
   return btoa(binary);
 };
+
 const base64DecodeUnicode = (str) => {
   const binary = atob(str);
   const bytes = new Uint8Array(binary.length);
@@ -168,6 +171,7 @@ const base64DecodeUnicode = (str) => {
   const decoder = new TextDecoder();
   return decoder.decode(bytes);
 };
+
 const sanitizeInput = (input) => {
   if (!input) return '';
   return input.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
@@ -175,6 +179,7 @@ const sanitizeInput = (input) => {
               .replace(/\s+/g, ' ')
               .trim();
 };
+
 class ErrorBoundary extends React.Component {
   state = { hasError: false };
   static getDerivedStateFromError(error) {
@@ -250,11 +255,12 @@ export default function PortalSection({ user, onLogout }) {
   const [effectiveName, setEffectiveName] = useState(user?.name || '');
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
+
   const feedbackQuillRefs = useRef({});
   const reportQuillRefs = useRef({});
+
   useEffect(() => {
     if (!user) {
-      console.log('Null user, clearing PortalSection states');
       setAssignments([]);
       setFeedback({});
       setReport({});
@@ -278,7 +284,8 @@ export default function PortalSection({ user, onLogout }) {
       setSelectedEvent(null);
     }
   }, [user]);
-  // Fetch user mapping if name looks like email
+
+  // Mapeo de correo → nombre real
   useEffect(() => {
     const fetchUserMapping = async () => {
       if (user && user.name && user.name.includes('@')) {
@@ -292,7 +299,7 @@ export default function PortalSection({ user, onLogout }) {
               const mapping = data.find(row => row['Correo']?.trim().toLowerCase() === user.name.trim().toLowerCase());
               if (mapping && mapping['Nombre']) {
                 setEffectiveName(mapping['Nombre'].trim());
-                setError(''); // Clear error if mapping successful
+                setError('');
               } else {
                 setError('No se encontró mapeo de correo a nombre. Por favor, contacta al administrador.');
               }
@@ -312,6 +319,7 @@ export default function PortalSection({ user, onLogout }) {
     };
     fetchUserMapping();
   }, [user]);
+
   const fetchRubrics = async () => {
     try {
       const [csv1Text, csv2Text, csv3Text] = await Promise.all([
@@ -366,6 +374,7 @@ export default function PortalSection({ user, onLogout }) {
       return { scoresMap1: {}, scoresMap2: {}, scoresMap3: {} };
     }
   };
+
   const fetchWithRetry = async (url, retries = 3, timeout = 10000) => {
     for (let i = 0; i < retries; i++) {
       try {
@@ -381,6 +390,7 @@ export default function PortalSection({ user, onLogout }) {
       }
     }
   };
+
   const fetchAssignments = async () => {
     try {
       setLoading(true);
@@ -388,36 +398,49 @@ export default function PortalSection({ user, onLogout }) {
         fetchWithRetry(ASSIGNMENTS_CSV),
         fetchRubrics()
       ]);
+
       Papa.parse(csvText, {
         header: true,
         skipEmptyLines: true,
         delimiter: ',',
         transform: (value) => value.trim(),
         complete: ({ data }) => {
-          const isAuthor = data.some((row) => row['Autor'].split(';').map(name => name.trim()).includes(effectiveName));
+          const normalizedEffectiveName = effectiveName.trim().toLowerCase();
+
+          // Verificar si el usuario es autor de algún artículo (múltiples autores separados por ;)
+          const authorRows = data.filter(row => {
+            const autores = row['Autor'] || '';
+            return autores
+              .split(';')
+              .map(a => a.trim().toLowerCase())
+              .includes(normalizedEffectiveName);
+          });
+
           let parsedAssignments = [];
-          if (isAuthor) {
-            parsedAssignments = data
-              .filter((row) => row['Autor'].split(';').map(name => name.trim()).includes(effectiveName))
-              .map((row) => ({
-                id: row['Nombre Artículo'],
-                'Nombre Artículo': row['Nombre Artículo'] || 'Sin título',
-                Estado: row['Estado'],
-                role: 'Autor',
-                feedbackEditor: row['Feedback 3'] || 'No hay feedback del editor aún.',
-                isCompleted: !!row['Feedback 3'],
-                Plazo: row['Plazo'] || null,
-              }));
+
+          if (authorRows.length > 0) {
+            // Es autor → solo muestra sus artículos
+            parsedAssignments = authorRows.map(row => ({
+              id: row['Nombre Artículo'],
+              'Nombre Artículo': row['Nombre Artículo'] || 'Sin título',
+              Estado: row['Estado'],
+              role: 'Autor',
+              feedbackEditor: row['Feedback 3'] || 'No hay feedback del editor aún.',
+              isCompleted: !!row['Feedback 3'],
+              Plazo: row['Plazo'] || null,
+            }));
           } else {
+            // No es autor → revisor o editor
             parsedAssignments = data
-              .filter((row) => {
-                if (row['Revisor 1'] === effectiveName) return true;
-                if (row['Revisor 2'] === effectiveName) return true;
-                if (row['Editor'] === effectiveName) return true;
-                return false;
+              .filter(row => {
+                return row['Revisor 1']?.trim() === effectiveName ||
+                       row['Revisor 2']?.trim() === effectiveName ||
+                       row['Editor']?.trim() === effectiveName;
               })
-              .map((row) => {
-                const role = row['Revisor 1'] === effectiveName ? 'Revisor 1' : row['Revisor 2'] === effectiveName ? 'Revisor 2' : 'Editor';
+              .map(row => {
+                const role = row['Revisor 1']?.trim() === effectiveName ? 'Revisor 1'
+                          : row['Revisor 2']?.trim() === effectiveName ? 'Revisor 2'
+                          : 'Editor';
                 const num = role === 'Revisor 1' ? 1 : role === 'Revisor 2' ? 2 : 3;
                 const assignment = {
                   id: row['Nombre Artículo'],
@@ -435,6 +458,7 @@ export default function PortalSection({ user, onLogout }) {
                   isCompleted: !!row[`Feedback ${num}`] && !!row[`Informe ${num}`] && !!row[`Voto ${num}`],
                   Plazo: row['Plazo'] || null,
                 };
+
                 const name = assignment.id;
                 if (role === 'Revisor 1') {
                   assignment.scores = rubrics.scoresMap1[name] || { gramatica: 0, claridad: 0, estructura: 0, citacion: 0 };
@@ -448,17 +472,21 @@ export default function PortalSection({ user, onLogout }) {
                 return assignment;
               });
           }
+
           setAssignments(parsedAssignments);
-          parsedAssignments.forEach((assignment) => {
-            if (!isAuthor) {
+
+          // Inicializar estados locales
+          parsedAssignments.forEach(assignment => {
+            if (assignment.role !== 'Autor') {
               const link = assignment['Link Artículo'];
-              setVote((prev) => ({ ...prev, [link]: assignment.vote }));
-              setFeedback((prev) => ({ ...prev, [link]: assignment.feedback }));
-              setReport((prev) => ({ ...prev, [link]: assignment.report }));
-              setRubricScores((prev) => ({ ...prev, [link]: assignment.scores }));
+              setVote(prev => ({ ...prev, [link]: assignment.vote }));
+              setFeedback(prev => ({ ...prev, [link]: assignment.feedback }));
+              setReport(prev => ({ ...prev, [link]: assignment.report }));
+              setRubricScores(prev => ({ ...prev, [link]: assignment.scores }));
             }
           });
-          // Create calendar events
+
+          // Eventos del calendario
           const events = parsedAssignments
             .filter(ass => ass.Plazo)
             .map(ass => ({
@@ -469,7 +497,9 @@ export default function PortalSection({ user, onLogout }) {
               resource: ass,
             }));
           setCalendarEvents(events);
+
           setLoading(false);
+
           if (parsedAssignments.length === 0 && !loading) {
             setError(`No se encontraron asignaciones para '${effectiveName}'. Si esperas asignaciones, por favor verifica los detalles de tu cuenta o contacta al administrador.`);
           }
@@ -486,38 +516,40 @@ export default function PortalSection({ user, onLogout }) {
       setLoading(false);
     }
   };
+
   useEffect(() => {
     if (!user || !effectiveName || !user.role) {
-      console.log('Error en fetchAssignments: usuario inválido', { user, effectiveName });
       setError('Usuario no definido o información incompleta');
       setLoading(false);
       return;
     }
-    console.log('Cargando asignaciones para usuario:', { uid: user.uid, name: effectiveName, role: user.role });
     fetchAssignments();
   }, [user, effectiveName]);
+
+  // Roles del usuario
+  const userRoles = user?.role ? user.role.split(';').map(r => r.trim()) : [];
   const isAuthor = assignments.length > 0 && assignments[0].role === 'Autor';
-  const isChief = user?.role && user.role.split(';').map(r => r.trim()).includes('Editor en Jefe');
-  const isDirector = user?.role && user.role.split(';').map(r => r.trim()).includes('Director General');
-  const isRrss = user?.role && user.role.split(';').map(r => r.trim()).includes('Encargado de Redes Sociales');
-  const isWebDev = user?.role && user.role.split(';').map(r => r.trim()).includes('Responsable de Desarrollo Web');
-  console.log('Datos del usuario:', user);
-  console.log('Roles del usuario:', user?.role);
-  console.log('isDirector:', isDirector);
-  console.log('isChief:', isChief);
+  const isChief = userRoles.includes('Editor en Jefe');
+  const isDirector = userRoles.includes('Director General');
+  const isRrss = userRoles.includes('Encargado de Redes Sociales');
+  const isWebDev = userRoles.includes('Responsable de Desarrollo Web');
+
+  // Solo usuarios con rol superior a "Autor" ven el calendario
+  const canSeeCalendar = isChief || isDirector || isRrss || isWebDev || assignments.some(a => a.role !== 'Autor');
+
   const pendingAssignments = useMemo(() =>
     isAuthor
-      ? assignments.filter((a) => !a.feedbackEditor || !['Aceptado', 'Rechazado'].includes(a.Estado))
-      : assignments.filter((a) => !a.isCompleted),
+      ? assignments.filter(a => !a.feedbackEditor || !['Aceptado', 'Rechazado'].includes(a.Estado))
+      : assignments.filter(a => !a.isCompleted),
     [assignments, isAuthor]
   );
+
   const completedAssignments = useMemo(() =>
     isAuthor
-      ? assignments.filter((a) => a.feedbackEditor && ['Aceptado', 'Rechazado'].includes(a.Estado))
-      : assignments.filter((a) => a.isCompleted),
+      ? assignments.filter(a => a.feedbackEditor && ['Aceptado', 'Rechazado'].includes(a.Estado))
+      : assignments.filter(a => a.isCompleted),
     [assignments, isAuthor]
   );
-  // Resto del código permanece igual...
   const handleVote = (link, value) => {
     setVote((prev) => ({ ...prev, [link]: value }));
   };
