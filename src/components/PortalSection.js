@@ -394,11 +394,11 @@ export default function PortalSection({ user, onLogout }) {
         delimiter: ',',
         transform: (value) => value.trim(),
         complete: ({ data }) => {
-          const isAuthor = data.some((row) => row['Autor'] === effectiveName);
+          const isAuthor = data.some((row) => row['Autor'].split(';').map(name => name.trim()).includes(effectiveName));
           let parsedAssignments = [];
           if (isAuthor) {
             parsedAssignments = data
-              .filter((row) => row['Autor'] === effectiveName)
+              .filter((row) => row['Autor'].split(';').map(name => name.trim()).includes(effectiveName))
               .map((row) => ({
                 id: row['Nombre Artículo'],
                 'Nombre Artículo': row['Nombre Artículo'] || 'Sin título',
