@@ -6,538 +6,328 @@ const TEAM_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3Cjw
 const TEAM_GAS_URL = process.env.REACT_APP_TEAM_SCRIPT_URL || '';
 const APPLICATIONS_GAS_URL = process.env.REACT_APP_APPLICATIONS_SCRIPT_URL || '';
 
-export default function Admissions() {
-  const [applications, setApplications] = useState([]);
-  const [teamMembers, setTeamMembers] = useState([]);
-  const [teamEmails, setTeamEmails] = useState(new Set());
-  const [loading, setLoading] = useState(true);
-  const [expandedApp, setExpandedApp] = useState(null);
-  const [status, setStatus] = useState('');
-  const [minimized, setMinimized] = useState(true);
-  const [sending, setSending] = useState(false);
-  const [activeTab, setActiveTab] = useState('pending');
+export default function Admisiones() {
+  const [postulaciones, setPostulaciones] = useState([]);
+  const [miembrosEquipo, setMiembrosEquipo] = useState([]);
+  const [emailsEquipo, setEmailsEquipo] = useState(new Set());
+  const [cargando, setCargando] = useState(true);
+  const [postExpandida, setPostExpandida] = useState(null);
+  const [mensajeEstado, setMensajeEstado] = useState('');
+  const [minimizado, setMinimizado] = useState(true);
+  const [enviando, setEnviando] = useState(false);
+  const [pestanaActiva, setPestanaActiva] = useState('pendientes');
 
   useEffect(() => {
-    fetchApplications();
-    fetchTeam();
+    cargarEquipo();
+    cargarPostulaciones();
   }, []);
 
-  const fetchTeam = async () => {
+  const cargarEquipo = async () => {
     try {
       const response = await fetch(TEAM_CSV_URL, { cache: 'no-store' });
-      if (!response.ok) throw new Error('Failed to fetch team CSV');
-      const csvText = await response.text();
-      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
-      const validMembers = parsed.filter(row => row.Correo?.trim());
-      setTeamMembers(validMembers);
-      
-      console.log('Detected headers:', Object.keys(validMembers[0] || {}));
-      console.log('First members (with roles):', validMembers.slice(0, 3).map(m => ({ 
-        name: m.Nombre, 
-        role: m['Role in the Journal'] || m['Rol en la Revista'] || 'No role' 
-      })));
-      
-      const emails = new Set(validMembers.map(row => row.Correo?.trim().toLowerCase()));
-      setTeamEmails(emails);
+      if (!response.ok) throw new Error('No se pudo cargar el CSV del equipo');
+      const texto = await response.text();
+      const datos = Papa.parse(texto, { header: true, skipEmptyLines: true }).data;
+      const miembrosValidos = datos.filter(m => m.Correo?.trim());
+      setMiembrosEquipo(miembrosValidos);
+
+      const emails = new Set(miembrosValidos.map(m => m.Correo?.trim().toLowerCase()));
+      setEmailsEquipo(emails);
     } catch (err) {
-      setStatus(`Error fetching team: ${err.message}`);
+      setMensajeEstado(`Error cargando equipo: ${err.message}`);
     }
   };
 
-  const fetchApplications = async () => {
+  const cargarPostulaciones = async () => {
     try {
-      setLoading(true);
+      setCargando(true);
       const response = await fetch(APPLICATIONS_CSV_URL, { cache: 'no-store' });
-      if (!response.ok) throw new Error('Failed to fetch applications');
-      const csvText = await response.text();
-      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
-      const validApplications = parsed.filter(
-        app => app['First Name and Last Name']?.trim() && app['Email Direction']?.trim()
+      if (!response.ok) throw new Error('No se pudo cargar el CSV de postulaciones');
+      const texto = await response.text();
+      const datos = Papa.parse(texto, { header: true, skipEmptyLines: true }).data;
+
+      const validas = datos.filter(p =>
+        p['Nombre']?.trim() && p['Dirección de correo electrónico']?.trim()
       );
-      setApplications(validApplications);
+      setPostulaciones(validas);
     } catch (err) {
-      setStatus(`Error: ${err.message}`);
+      setMensajeEstado(`Error: ${err.message}`);
     } finally {
-      setLoading(false);
+      setCargando(false);
     }
   };
 
-  const toggleMinimized = () => setMinimized(!minimized);
+  const alternarMinimizado = () => setMinimizado(prev => !prev);
 
-  const toggleExpandApp = (id) => {
-    setExpandedApp(expandedApp === id ? null : id);
+  const alternarExpandir = (id) => {
+    setPostExpandida(postExpandida === id ? null : id);
   };
 
-  const sendPreselection = async (name, app) => {
-  if (!APPLICATIONS_GAS_URL) {
-    setStatus('❌ GAS URL not configured');
-    return;
-  }
-  if (!confirm(`Send preselection email to ${name}?`)) return;
-  setSending(true);
-  try {
-    // Determine language from form data, default to 'en' if not available
-    const language = app['¿Que idioma hablas?/What language do you speak?']?.toLowerCase().includes('español') ? 'es' : 'en';
-    await fetch(APPLICATIONS_GAS_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      redirect: 'follow',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'accept_applicant', name, language }),
-    });
-    setStatus('✅ Preselection sent');
-  } catch (err) {
-    setStatus(`❌ Error: ${err.message}`);
-  } finally {
-    setSending(false);
-  }
-};
-  const acceptAndRequestData = async (app) => {
-    if (!TEAM_GAS_URL) {
-      setStatus('❌ GAS URL not configured');
-      return;
+  const enviarPreseleccion = async (nombre, postulante) => {
+    if (!APPLICATIONS_GAS_URL) return setMensajeEstado('URL del script de postulaciones no configurada');
+    if (!confirm(`¿Enviar correo de preselección a ${nombre}?`)) return;
+
+    setEnviando(true);
+    try {
+      const idioma = postulante['¿Que idioma hablas?/What language do you speak?']
+        ?.toLowerCase()
+        .includes('español') ? 'es' : 'en';
+
+      await fetch(APPLICATIONS_GAS_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'accept_applicant',
+          name: nombre,
+          language: idioma
+        }),
+      });
+      setMensajeEstado('Preselección enviada correctamente');
+    } catch (err) {
+      setMensajeEstado(`Error al enviar preselección: ${err.message}`);
+    } finally {
+      setEnviando(false);
     }
-    if (!confirm(`Accept ${app['First Name and Last Name']} and request data?`)) return;
-    setSending(true);
+  };
+
+  const aceptarYPedirDatos = async (postulante) => {
+    if (!TEAM_GAS_URL) return setMensajeEstado('URL del script de equipo no configurada');
+    if (!confirm(`¿Aceptar a ${postulante['Nombre']} y pedirle sus datos para el equipo?`)) return;
+
+    setEnviando(true);
     try {
       await fetch(TEAM_GAS_URL, {
         method: 'POST',
         mode: 'no-cors',
-        redirect: 'follow',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
           action: 'add_and_send_team_acceptance',
-          name: app['First Name and Last Name'],
-          role: app['Position you wish to apply for'],
-          email: app['Email Direction'],
+          name: postulante['Nombre'],
+          role: postulante['Cargo al que desea postular'],
+          email: postulante['Dirección de correo electrónico'],
           description: '',
           interests: '',
           image: '',
-          language: 'en'
+          language: 'es'
         }),
       });
-      setStatus('✅ Accepted and request sent');
-      fetchTeam();
+      setMensajeEstado('Aceptado y correo de solicitud de datos enviado');
+      cargarEquipo(); // para actualizar lista de emails
     } catch (err) {
-      setStatus(`❌ Error: ${err.message}`);
+      setMensajeEstado(`Error: ${err.message}`);
     } finally {
-      setSending(false);
+      setEnviando(false);
     }
   };
 
-  const requestAuthorData = async (name) => {
-    if (!TEAM_GAS_URL) {
-      setStatus('❌ GAS URL not configured');
-      return;
-    }
-    if (!confirm(`Request data from ${name}?`)) return;
-    setSending(true);
+  const solicitarDatosAutor = async (nombre) => {
+    if (!TEAM_GAS_URL) return setMensajeEstado('URL del script no configurada');
+    if (!confirm(`¿Solicitar datos actualizados a ${nombre}?`)) return;
+
+    setEnviando(true);
     try {
       await fetch(TEAM_GAS_URL, {
         method: 'POST',
         mode: 'no-cors',
-        redirect: 'follow',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
           action: 'request_data',
           type: 'author',
-          name,
-          language: 'en'
+          name: nombre,
+          language: 'es'
         }),
       });
-      setStatus('✅ Data request sent');
+      setMensajeEstado('Solicitud de datos enviada');
     } catch (err) {
-      setStatus(`❌ Error: ${err.message}`);
+      setMensajeEstado(`Error: ${err.message}`);
     } finally {
-      setSending(false);
+      setEnviando(false);
     }
   };
 
-  const openEditForm = (member = {}) => {
-    const formWindow = window.open('', '_blank');
-    formWindow.document.write(`
+  const abrirFormularioEquipo = (miembro = {}) => {
+    const win = window.open('', '_blank');
+    win.document.write(`
       <!DOCTYPE html>
-      <html lang="en">
+      <html lang="es">
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>${member.Correo ? 'Edit' : 'Add'} Team Member</title>
+        <title>${miembro.Correo ? 'Editar' : 'Agregar'} Miembro del Equipo</title>
         <style>
-          body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-          }
-          .container {
-            max-width: 600px;
-            width: 100%;
-            margin: 20px;
-            padding: 24px;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-          }
-          h2 {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #1f2937;
-            text-align: center;
-            margin-bottom: 24px;
-          }
-          .form-group {
-            margin-bottom: 20px;
-          }
-          label {
-            display: block;
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: #374151;
-            margin-bottom: 8px;
-          }
-          input, textarea {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            font-size: 0.875rem;
-            color: #1f2937;
-            background: #f9fafb;
-            transition: border-color 0.3s, box-shadow 0.3s;
-          }
-          input:focus, textarea:focus {
-            outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-          }
-          textarea {
-            resize: vertical;
-            min-height: 100px;
-          }
-          .button-group {
-            display: flex;
-            justify-content: flex-end;
-            gap: 12px;
-            margin-top: 24px;
-          }
-          button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            font-size: 0.875rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 0.3s, transform 0.2s;
-          }
-          button[type="submit"] {
-            background: #3b82f6;
-            color: white;
-          }
-          button[type="button"] {
-            background: #e5e7eb;
-            color: #374151;
-          }
-          button:hover {
-            transform: translateY(-1px);
-          }
-          button[type="submit"]:hover {
-            background: #2563eb;
-          }
-          button[type="button"]:hover {
-            background: #d1d5db;
-          }
-          a {
-            color: #3b82f6;
-            text-decoration: none;
-          }
-          a:hover {
-            text-decoration: underline;
-          }
-          .help-text {
-            font-size: 0.75rem;
-            color: #6b7280;
-            margin-top: 8px;
-          }
-          @media (max-width: 640px) {
-            .container {
-              margin: 16px;
-              padding: 16px;
-            }
-            h2 {
-              font-size: 1.25rem;
-            }
-            input, textarea {
-              font-size: 0.8125rem;
-              padding: 10px;
-            }
-            button {
-              padding: 8px 16px;
-              font-size: 0.8125rem;
-            }
-          }
+          body {font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh;}
+          .cont {max-width:640px; width:90%; background:white; padding:32px; border-radius:16px; box-shadow:0 10px 40px rgba(0,0,0,0.15);}
+          h2 {text-align:center; color:#1e293b; margin-bottom:24px;}
+          label {display:block; margin:16px 0 8px; font-weight:600; color:#374151;}
+          input, textarea, select {width:100%; padding:12px; border:1px solid #d1d5db; border-radius:8px; font-size:15px;}
+          textarea {min-height:120px; resize:vertical;}
+          .btns {display:flex; justify-content:flex-end; gap:12px; margin-top:32px;}
+          button {padding:10px 24px; border:none; border-radius:8px; font-weight:600; cursor:pointer;}
+          .guardar {background:#3b82f6; color:white;}
+          .cancelar {background:#e2e8f0; color:#475569;}
         </style>
       </head>
       <body>
-        <div class="container">
-          <h2>${member.Correo ? 'Edit' : 'Add'} Team Member</h2>
-          <form id="teamForm" class="space-y-6">
-            <div class="form-group">
-              <label>Name</label>
-              <input type="text" name="name" value="${member.Nombre || ''}" required />
-            </div>
-            <div class="form-group">
-              <label>Email</label>
-              <input type="email" name="email" value="${member.Correo || ''}" required />
-            </div>
-            <div class="form-group">
-              <label>Role in the Journal</label>
-              <input type="text" name="role" value="${member['Role in the Journal'] || member['Rol en la Revista'] || member['Position you wish to apply for'] || ''}" required />
-            </div>
-            <div class="form-group">
-              <label>Description</label>
-              <textarea
-                name="description"
-                placeholder="Example: Francisca Pérez is a second-year high school student at Liceo Nacional de Maipú, with interests in mathematics and chemistry..."
-                required
-              >${member.Description || member.Descripción || ''}</textarea>
-            </div>
-            <div class="form-group">
-              <label>Areas of Interest</label>
-              <input
-                type="text"
-                name="interests"
-                placeholder="Example: History of Ideas, Theoretical Physics, Scientific Outreach"
-                required
-                value="${member['Areas of interest'] || member['Áreas de interés'] || ''}"
-              />
-            </div>
-            <div class="form-group">
-              <label>Image (URL)</label>
-              <input
-                type="url"
-                name="image"
-                placeholder="Enter the image URL (uploaded by the administrator)"
-                value="${member.Imagen || ''}"
-              />
-              <p class="help-text">
-                Upload the image received via email to <a href="https://postimages.org/" target="_blank">postimages.org</a> and paste the link here.
-              </p>
-            </div>
-            <div class="form-group">
-              <label>Language</label>
-              <select name="language">
-                <option value="en">English</option>
-                <option value="es">Español</option>
-              </select>
-            </div>
-            <div class="button-group">
-              <button type="button" onclick="window.close()">Cancel</button>
-              <button type="submit">Save</button>
+        <div class="cont">
+          <h2>${miembro.Correo ? 'Editar' : 'Agregar'} Miembro del Equipo</h2>
+          <form id="form">
+            <label>Nombre completo</label>
+            <input type="text" name="nombre" value="${miembro.Nombre || ''}" required>
+
+            <label>Correo electrónico</label>
+            <input type="email" name="email" value="${miembro.Correo || ''}" required>
+
+            <label>Rol en la Revista</label>
+            <input type="text" name="rol" value="${miembro['Rol en la Revista'] || ''}" required>
+
+            <label>Descripción</label>
+            <textarea name="descripcion" placeholder="Ejemplo: Estudiante de segundo medio del Liceo Nacional de Maipú...">${miembro.Descripción || ''}</textarea>
+
+            <label>Áreas de interés</label>
+            <input type="text" name="intereses" placeholder="Física Teórica; Divulgación Científica; Historia" value="${miembro['Áreas de interés'] || ''}" required>
+
+            <label>URL de la foto</label>
+            <input type="url" name="imagen" value="${miembro.Imagen || ''}">
+
+            <label>Idioma del correo</label>
+            <select name="idioma">
+              <option value="es">Español</option>
+              <option value="en">English</option>
+            </select>
+
+            <div class="btns">
+              <button type="button" class="cancelar" onclick="window.close()">Cancelar</button>
+              <button type="submit" class="guardar">Guardar</button>
             </div>
           </form>
         </div>
         <script>
-          document.getElementById('teamForm').addEventListener('submit', async (e) => {
+          document.getElementById('form').onsubmit = async (e) => {
             e.preventDefault();
-            const formData = new FormData(e.target);
-            const data = {
-              action: '${member.Correo ? 'update_team_member' : 'add_team_member'}',
-              name: formData.get('name'),
-              role: formData.get('role'),
-              email: formData.get('email'),
-              description: formData.get('description'),
-              interests: formData.get('interests'),
-              image: formData.get('image') || '',
-              language: formData.get('language')
+            const fd = new FormData(e.target);
+            const payload = {
+              action: '${miembro.Correo ? 'update_team_member' : 'add_team_member'}',
+              name: fd.get('nombre'),
+              role: fd.get('rol'),
+              email: fd.get('email'),
+              description: fd.get('descripcion'),
+              interests: fd.get('intereses'),
+              image: fd.get('imagen') || '',
+              language: fd.get('idioma')
             };
             try {
               await fetch('${TEAM_GAS_URL}', {
                 method: 'POST',
                 mode: 'no-cors',
-                redirect: 'follow',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(data)
+                headers: {'Content-Type': 'text/plain;charset=utf-8'},
+                body: JSON.stringify(payload)
               });
-              alert('Member ' + (data.action === 'update_team_member' ? 'updated' : 'added') + ' successfully');
+              alert('Miembro ${payload.action === 'update_team_member' ? 'actualizado' : 'agregado'} con éxito');
               window.close();
-            } catch (err) {
-              alert('Error ' + (data.action === 'update_team_member' ? 'updating' : 'adding') + ' member: ' + err.message);
+            } catch(err) {
+              alert('Error: ' + err.message);
             }
-          });
+          };
         </script>
       </body>
       </html>
     `);
   };
 
-  const pendingApplications = useMemo(
-    () =>
-      applications.filter(
-        app =>
-          app['First Name and Last Name']?.trim() &&
-          app['Email Direction']?.trim() &&
-          !teamEmails.has(app['Email Direction']?.trim().toLowerCase())
-      ),
-    [applications, teamEmails]
-  );
+  // Filtros
+  const pendientes = useMemo(() => postulaciones.filter(p =>
+    !emailsEquipo.has(p['Dirección de correo electrónico']?.trim().toLowerCase())
+  ), [postulaciones, emailsEquipo]);
 
-  const archivedApplications = useMemo(
-    () =>
-      applications.filter(
-        app =>
-          app['First Name and Last Name']?.trim() &&
-          app['Email Direction']?.trim() &&
-          teamEmails.has(app['Email Direction']?.trim().toLowerCase())
-      ),
-    [applications, teamEmails]
-  );
+  const archivadas = useMemo(() => postulaciones.filter(p =>
+    emailsEquipo.has(p['Dirección de correo electrónico']?.trim().toLowerCase())
+  ), [postulaciones, emailsEquipo]);
 
-  const teamMembersFiltered = useMemo(
-    () =>
-      teamMembers.filter(member => {
-        const rolValue = member['Role in the Journal'] || member['Rol en la Revista'] || '';
-        const roles = rolValue ? rolValue.split(';').map(r => r.trim().toLowerCase()) : [];
-        return roles.length > 1 || (roles.length === 1 && roles[0] !== 'author');
-      }),
-    [teamMembers]
-  );
+  const equipoPrincipal = useMemo(() => miembrosEquipo.filter(m => {
+    const roles = (m['Rol en la Revista'] || '').split(';').map(r => r.trim().toLowerCase());
+    return roles.length > 1 || (roles.length === 1 && roles[0] !== 'author');
+  }), [miembrosEquipo);
 
-  const authorMembers = useMemo(
-    () =>
-      teamMembers.filter(member => {
-        const rolValue = member['Role in the Journal'] || member['Rol en la Revista'] || '';
-        const roles = rolValue ? rolValue.split(';').map(r => r.trim().toLowerCase()) : [];
-        return roles.length === 1 && roles[0] === 'author';
-      }),
-    [teamMembers]
-  );
+  const autores = useMemo(() => miembrosEquipo.filter(m => {
+    const roles = (m['Rol en la Revista'] || '').split(';').map(r => r.trim().toLowerCase());
+    return roles.length === 1 && roles[0] === 'author';
+  }), [miembrosEquipo]);
 
   return (
     <div className="container">
       <div className="card">
-        <div className="header" onClick={toggleMinimized}>
+        <div className="header" onClick={alternarMinimizado}>
           <h2 className="header-title">
-            Manage Applications ({pendingApplications.length})
+            Gestionar Postulaciones ({pendientes.length})
           </h2>
-          <svg
-            className={`header-icon ${minimized ? '' : 'rotate-180'}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg className={`header-icon ${!minimizado ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </div>
-        {!minimized && (
-          <div>
+
+        {!minimizado && (
+          <>
             <div className="tabs">
-              <button
-                className={`tab ${activeTab === 'pending' ? 'tab-active' : ''}`}
-                onClick={() => setActiveTab('pending')}
-              >
-                Pending ({pendingApplications.length})
+              <button className={`tab ${pestanaActiva === 'pendientes' ? 'tab-active' : ''}`} onClick={() => setPestanaActiva('pendientes')}>
+                Pendientes ({pendientes.length})
               </button>
-              <button
-                className={`tab ${activeTab === 'archived' ? 'tab-active' : ''}`}
-                onClick={() => setActiveTab('archived')}
-              >
-                Archived ({archivedApplications.length})
+              <button className={`tab ${pestanaActiva === 'archivadas' ? 'tab-active' : ''}`} onClick={() => setPestanaActiva('archivadas')}>
+                Archivadas ({archivadas.length})
               </button>
-              <button
-                className={`tab ${activeTab === 'team' ? 'tab-active' : ''}`}
-                onClick={() => setActiveTab('team')}
-              >
-                Team ({teamMembersFiltered.length})
+              <button className={`tab ${pestanaActiva === 'equipo' ? 'tab-active' : ''}`} onClick={() => setPestanaActiva('equipo')}>
+                Equipo ({equipoPrincipal.length})
               </button>
-              <button
-                className={`tab ${activeTab === 'authors' ? 'tab-active' : ''}`}
-                onClick={() => setActiveTab('authors')}
-              >
-                Authors ({authorMembers.length})
+              <button className={`tab ${pestanaActiva === 'autores' ? 'tab-active' : ''}`} onClick={() => setPestanaActiva('autores')}>
+                Autores ({autores.length})
               </button>
             </div>
+
             <div className="content">
-              {loading ? (
+              {cargando ? (
                 <div className="loading">
                   <div className="spinner"></div>
-                  <span>Loading...</span>
+                  <span>Cargando datos...</span>
                 </div>
-              ) : activeTab === 'team' || activeTab === 'authors' ? (
+              ) : pestanaActiva === 'equipo' || pestanaActiva === 'autores' ? (
                 <>
-                  <div className="p-4">
-                    <button
-                      onClick={() => openEditForm()}
-                      className="action-button action-add mb-4"
-                    >
-                      Add New Member
+                  <div style={{padding: '16px'}}>
+                    <button onClick={() => abrirFormularioEquipo()} className="action-button action-add">
+                      + Agregar nuevo miembro
                     </button>
                   </div>
-                  {(activeTab === 'team' ? teamMembersFiltered : authorMembers).length === 0 ? (
-                    <div className="empty">No {activeTab === 'team' ? 'team members' : 'authors'}</div>
+
+                  {(pestanaActiva === 'equipo' ? equipoPrincipal : autores).length === 0 ? (
+                    <div className="empty">No hay {pestanaActiva === 'equipo' ? 'miembros del equipo' : 'autores'} aún</div>
                   ) : (
-                    (activeTab === 'team' ? teamMembersFiltered : authorMembers).map((member, index) => (
-                      <div key={index} className="application">
-                        <div className="application-header" onClick={() => toggleExpandApp(`${activeTab}-${index}`)}>
-                          <div className="flex items-center space-x-3">
-                            {member.Imagen && (
-                              <img
-                                src={member.Imagen}
-                                alt={member.Nombre}
-                                className="w-10 h-10 rounded-full object-cover"
-                              />
-                            )}
-                            <div className="application-info">
-                              <h3 className="application-name">{member.Nombre}</h3>
-                              <p className="application-role">{member['Role in the Journal'] || member['Rol en la Revista'] || 'No role'}</p>
+                    (pestanaActiva === 'equipo' ? equipoPrincipal : autores).map((m, i) => (
+                      <div key={i} className="application">
+                        <div className="application-header" onClick={() => alternarExpandir(`equipo-${i}`)}>
+                          <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
+                            {m.Imagen && <img src={m.Imagen} alt={m.Nombre} style={{width:40,height:40,borderRadius:'50%',objectFit:'cover'}} />}
+                            <div>
+                              <h3 className="application-name">{m.Nombre}</h3>
+                              <p className="application-role">{m['Rol en la Revista'] || 'Sin rol'}</p>
                             </div>
                           </div>
-                          <svg
-                            className={`application-icon ${expandedApp === `${activeTab}-${index}` ? 'rotate-180' : ''}`}
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
+                          <svg className={`application-icon ${postExpandida === `equipo-${i}` ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                           </svg>
                         </div>
-                        {expandedApp === `${activeTab}-${index}` && (
+
+                        {postExpandida === `equipo-${i}` && (
                           <div className="application-details">
                             <div className="details-grid">
-                              <div>
-                                <p className="details-label">Email</p>
-                                <p className="details-value">{member.Correo}</p>
-                              </div>
-                              <div>
-                                <p className="details-label">Description</p>
-                                <p className="details-value">{member.Description || member.Descripción || ''}</p>
-                              </div>
-                              <div>
-                                <p className="details-label">Areas of Interest</p>
-                                <p className="details-value">{member['Areas of interest'] || member['Áreas de interés'] || ''}</p>
-                              </div>
-                              <div>
-                                <p className="details-label">Image</p>
-                                <p className="details-value">{member.Imagen || ''}</p>
-                              </div>
+                              <div><strong>Correo:</strong> {m.Correo}</div>
+                              <div><strong>Descripción:</strong> {m.Descripción || '-'}</div>
+                              <div><strong>Áreas de interés:</strong> {m['Áreas de interés'] || '-'}</div>
+                              <div><strong>Imagen:</strong> {m.Imagen || 'Sin imagen'}</div>
                             </div>
-                            <div className="actions mt-4">
-                              <button
-                                onClick={() => openEditForm(member)}
-                                className="action-button action-edit"
-                              >
-                                Edit
-                              </button>
-                              {activeTab === 'authors' && (
-                                <button
-                                  onClick={() => requestAuthorData(member.Nombre)}
-                                  disabled={sending || !TEAM_GAS_URL}
-                                  className="action-button action-request"
-                                >
-                                  Request Data
+                            <div className="actions">
+                              <button onClick={() => abrirFormularioEquipo(m)} className="action-button action-edit">Editar</button>
+                              {pestanaActiva === 'autores' && (
+                                <button onClick={() => solicitarDatosAutor(m.Nombre)} disabled={enviando} className="action-button action-request">
+                                  Pedir datos actualizados
                                 </button>
                               )}
                             </div>
@@ -547,323 +337,110 @@ export default function Admissions() {
                     ))
                   )}
                 </>
-              ) : (activeTab === 'pending' ? pendingApplications : archivedApplications).length === 0 ? (
-                <div className="empty">No applications</div>
               ) : (
-                (activeTab === 'pending' ? pendingApplications : archivedApplications).map((app, index) => (
-                  <div key={index} className="application">
-                    <div className="application-header" onClick={() => toggleExpandApp(index)}>
-                      <div className="application-info">
-                        <h3 className="application-name">{app['First Name and Last Name']}</h3>
-                        <p className="application-role">{app['Position you wish to apply for']}</p>
+                (pestanaActiva === 'pendientes' ? pendientes : archivadas).length === 0 ? (
+                  <div className="empty">No hay postulaciones {pestanaActiva === 'pendientes' ? 'pendientes' : 'archivadas'}</div>
+                ) : (
+                  (pestanaActiva === 'pendientes' ? pendientes : archivadas).map((p, i) => (
+                    <div key={i} className="application">
+                      <div className="application-header" onClick={() => alternarExpandir(i)}>
+                        <div className="application-info">
+                          <h3 className="application-name">{p['Nombre']}</h3>
+                          <p className="application-role">{p['Cargo al que desea postular']}</p>
+                        </div>
+                        <svg className={`application-icon ${postExpandida === i ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
                       </div>
-                      <svg
-                        className={`application-icon ${expandedApp === index ? 'rotate-180' : ''}`}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
+
+                      {postExpandida === i && (
+                        <div className="application-details">
+                          <div className="details-grid">
+                            <div><strong>Correo:</strong> {p['Dirección de correo electrónico']}</div>
+                            <div><strong>Establecimiento:</strong> {p['Establecimiento educativo']}</div>
+                            <div><strong>Teléfono:</strong> {p['Número de teléfono']}</div>
+                            <div><strong>Carta de motivación y logros:</strong><br/>{p['Breve carta de motivación (por qué desea este cargo) y listado de logros. 250-500 palabras.']}</div>
+                          </div>
+
+                          <div className="actions">
+                            <button
+                              onClick={() => enviarPreseleccion(p['Nombre'], p)}
+                              disabled={enviando || pestanaActiva === 'archivadas'}
+                              className="action-button action-preselect"
+                            >
+                              Enviar Preselección
+                            </button>
+
+                            <button
+                              onClick={() => aceptarYPedirDatos(p)}
+                              disabled={enviando || pestanaActiva === 'archivadas'}
+                              className="action-button action-accept"
+                            >
+                              Aceptar y Pedir Datos
+                            </button>
+
+                            <button
+                              onClick={() => abrirFormularioEquipo({
+                                Nombre: p['Nombre'],
+                                Correo: p['Dirección de correo electrónico'],
+                                'Rol en la Revista': p['Cargo al que desea postular'],
+                                Descripción: '',
+                                'Áreas de interés': '',
+                                Imagen: '',
+                              })}
+                              className="action-button action-add"
+                            >
+                              Agregar al Equipo Manualmente
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    {expandedApp === index && (
-                      <div className="application-details">
-                        <div className="details-grid">
-                          <div>
-                            <p className="details-label">Email</p>
-                            <p className="details-value">{app['Email Direction']}</p>
-                          </div>
-                          <div>
-                            <p className="details-label">Educational Establishment</p>
-                            <p className="details-value">{app['Educational establishment']}</p>
-                          </div>
-                          <div>
-                            <p className="details-label">Phone Number</p>
-                            <p className="details-value">{app['Phone number']}</p>
-                          </div>
-                          <div>
-                            <p className="details-label">Cover Letter</p>
-                            <p className="details-value">{app['Short cover letter (why you want this position) and list of achievements. 250-500 words.']}</p>
-                          </div>
-                        </div>
-                        <div className="actions">
-                          <button
-  onClick={() => sendPreselection(app['First Name and Last Name'], app)}
-  disabled={sending || !APPLICATIONS_GAS_URL || activeTab === 'archived'}
-  className="action-button action-preselect"
->
-  Send Preselection
-</button>
-                          <button
-                            onClick={() => acceptAndRequestData(app)}
-                            disabled={sending || !TEAM_GAS_URL || activeTab === 'archived'}
-                            className="action-button action-accept"
-                          >
-                            Accept and Request Data
-                          </button>
-                          <button
-                            onClick={() => openEditForm({
-                              Nombre: app['First Name and Last Name'],
-                              Correo: app['Email Direction'],
-                              'Role in the Journal': app['Position you wish to apply for'],
-                              Description: '',
-                              'Areas of interest': '',
-                              Imagen: '',
-                            })}
-                            disabled={sending || !TEAM_GAS_URL}
-                            className="action-button action-add"
-                          >
-                            Add to Team
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))
+                  ))
+                )
               )}
             </div>
-          </div>
+          </>
         )}
-        {status && <div className="status">{status}</div>}
+
+        {mensajeEstado && <div className="status">{mensajeEstado}</div>}
       </div>
 
-      <style>{`
-        .container {
-          width: 100%;
-          max-width: 1400px;
-          margin: 16px auto;
-          padding: 0 16px;
-          font-family: 'Inter', sans-serif;
-        }
-        .card {
-          background: rgba(255, 255, 255, 0.95);
-          border-radius: 16px;
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-          backdrop-filter: blur(10px);
-          overflow: hidden;
-        }
-        .header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 16px 24px;
-          background: linear-gradient(90deg, #3b82f6, #60a5fa);
-          color: white;
-          cursor: pointer;
-          transition: background 0.3s;
-        }
-        .header:hover {
-          background: linear-gradient(90deg, #2563eb, #3b82f6);
-        }
-        .header-title {
-          font-size: 1.25rem;
-          font-weight: 600;
-        }
-        .header-icon {
-          width: 20px;
-          height: 20px;
-          transition: transform 0.3s;
-        }
-        .tabs {
-          display: flex;
-          border-bottom: 1px solid #e5e7eb;
-          background: #f9fafb;
-          overflow-x: auto;
-          padding: 8px;
-        }
-        .tab {
-          padding: 12px 20px;
-          font-size: 0.875rem;
-          font-weight: 500;
-          color: #6b7280;
-          transition: color 0.3s, border-color 0.3s;
-          border-bottom: 2px solid transparent;
-          white-space: nowrap;
-        }
-        .tab-active {
-          color: #3b82f6;
-          border-bottom: 2px solid #3b82f6;
-        }
-        .tab:hover {
-          color: #3b82f6;
-        }
-        .content {
-          max-height: 70vh;
-          overflow-y: auto;
-          padding: 16px;
-        }
-        .loading {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 24px;
-          color: #6b7280;
-        }
-        .spinner {
-          width: 24px;
-          height: 24px;
-          border: 2px solid #3b82f6;
-          border-top-color: transparent;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-          margin-right: 12px;
-        }
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-        .empty {
-          padding: 24px;
-          text-align: center;
-          color: #6b7280;
-        }
-        .application {
-          transition: background 0.2s;
-        }
-        .application:hover {
-          background: #f9fafb;
-        }
-        .application-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 12px 20px;
-          cursor: pointer;
-        }
-        .application-info {
-          flex: 1;
-        }
-        .application-name {
-          font-size: 1rem;
-          font-weight: 500;
-          color: #1f2937;
-        }
-        .application-role {
-          font-size: 0.875rem;
-          color: #6b7280;
-        }
-        .application-icon {
-          width: 16px;
-          height: 16px;
-          transition: transform 0.3s;
-        }
-        .application-details {
-          padding: 16px 20px;
-          background: #f3f4f6;
-        }
-        .details-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 16px;
-        }
-        .details-label {
-          font-size: 0.875rem;
-          font-weight: 500;
-          color: #374151;
-        }
-        .details-value {
-          font-size: 0.875rem;
-          color: #6b7280;
-          white-space: pre-wrap;
-        }
-        .actions {
-          display: flex;
-          gap: 12px;
-          margin-top: 16px;
-          flex-wrap: wrap;
-        }
-        .action-button {
-          padding: 8px 16px;
-          border: none;
-          border-radius: 8px;
-          font-size: 0.875rem;
-          font-weight: 500;
-          cursor: pointer;
-          transition: background 0.3s, transform 0.2s;
-        }
-        .action-button:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-        .action-preselect {
-          background: #dbeafe;
-          color: #1e40af;
-        }
-        .action-preselect:hover {
-          background: #bfdbfe;
-        }
-        .action-accept {
-          background: #dcfce7;
-          color: #15803d;
-        }
-        .action-accept:hover {
-          background: #bbf7d0;
-        }
-        .action-add {
-          background: #ede9fe;
-          color: #6d28d9;
-        }
-        .action-add:hover {
-          background: #ddd6fe;
-        }
-        .action-edit {
-          background: #fef3c7;
-          color: #92400e;
-        }
-        .action-edit:hover {
-          background: #fde68a;
-        }
-        .action-request {
-          background: #e0f2fe;
-          color: #075985;
-        }
-        .action-request:hover {
-          background: #bae6fd;
-        }
-        .action-button:hover {
-          transform: translateY(-1px);
-        }
-        .status {
-          padding: 16px;
-          text-align: center;
-          font-size: 0.875rem;
-          color: #374151;
-          background: #f3f4f6;
-          border-top: 1px solid #e5e7eb;
-        }
+      <style jsx>{`
+        .container { width: 100%; max-width: 1400px; margin: 20px auto; padding: 0 16px; font-family: 'Inter', sans-serif; }
+        .card { background: rgba(255,255,255,0.95); border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.1); overflow: hidden; }
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: linear-gradient(90deg, #3b82f6, #60a5fa); color: white; cursor: pointer; }
+        .header:hover { background: linear-gradient(90deg, #2563eb, #3b82f6); }
+        .header-title { font-size: 1.4rem; font-weight: 600; }
+        .header-icon { width: 24px; height: 24px; transition: transform 0.3s; }
+        .rotate-180 { transform: rotate(180deg); }
+        .tabs { display: flex; border-bottom: 1px solid #e5e7eb; background: #f9fafb; overflow-x: auto; }
+        .tab { padding: 12px 20px; font-weight: 500; color: #6b7280; border-bottom: 3px solid transparent; }
+        .tab-active { color: #3b82f6; border-bottom-color: #3b82f6; }
+        .content { max-height: 75vh; overflow-y: auto; padding: 20px; }
+        .loading { display: flex; justify-content: center; align-items: center; gap: 12px; padding: 40px; color: #6b7280; }
+        .spinner { width: 28px; height: 28px; border: 3px solid #3b82f6; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .empty { text-align: center; padding: 40px; color: #94a3b8; }
+        .application { margin-bottom: 12px; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: white; }
+        .application-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: #f8fafc; cursor: pointer; }
+        .application-name { margin: 0; font-size: 1.1rem; font-weight: 600; }
+        .application-role { margin: 4px 0 0; color: #64748b; }
+        .application-details { padding: 20px; background: #f1f5f9; }
+        .details-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 20px; }
+        .actions { display: flex; flex-wrap: wrap; gap: 12px; }
+        .action-button { padding: 10px 18px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .action-preselect { background: #dbeafe; color: #1e40af; }
+        .action-accept { background: #dcfce7; color: #166534; }
+        .action-add { background: #ede9fe; color: #6b21a8; }
+        .action-edit { background: #fef3c7; color: #92400e; }
+        .action-request { background: #e0f2fe; color: #0c4a6e; }
+        .action-button:hover { transform: translateY(-2px); filter: brightness(0.95); }
+        .action-button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .status { padding: 16px; text-align: center; background: #f3f4f6; border-top: 1px solid #e5e7eb; font-weight: 500; }
         @media (max-width: 640px) {
-          .container {
-            padding: 0 8px;
-            margin: 8px auto;
-          }
-          .header {
-            padding: 12px 16px;
-          }
-          .header-title {
-            font-size: 1.125rem;
-          }
-          .tabs {
-            padding: 4px;
-          }
-          .tab {
-            padding: 8px 12px;
-            font-size: 0.8125rem;
-          }
-          .content {
-            padding: 8px;
-          }
-          .application-header {
-            padding: 8px 12px;
-          }
-          .application-details {
-            padding: 8px 12px;
-          }
-          .details-grid {
-            grid-template-columns: 1fr;
-          }
-          .action-button {
-            padding: 6px 12px;
-            font-size: 0.8125rem;
-          }
+          .details-grid { grid-template-columns: 1fr; }
+          .actions { justify-content: center; }
         }
       `}</style>
     </div>
