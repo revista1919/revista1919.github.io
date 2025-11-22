@@ -12,7 +12,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
-
 const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?gid=0&output=csv'; // Ajusta el gid si es necesario para la hoja de usuarios/team
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby2B1OUt3TMqaed6Vz-iamUPn4gHhKXG2RRxiy8Nt6u69Cg-2kSze2XQ-NywX5QrNfy/exec';
@@ -151,9 +150,7 @@ const getDecisionText = (percent) => {
   if (percent >= 50) return 'Revisión mayor requerida antes de publicar.';
   return 'Rechazar.';
 };
-
 const getTotal = (scores, crits) => crits.reduce((sum, c) => sum + (scores[c.key] || 0), 0);
-
 const base64EncodeUnicode = (str) => {
   const encoder = new TextEncoder();
   const bytes = encoder.encode(str);
@@ -161,7 +158,6 @@ const base64EncodeUnicode = (str) => {
   bytes.forEach(b => binary += String.fromCharCode(b));
   return btoa(binary);
 };
-
 const base64DecodeUnicode = (str) => {
   const binary = atob(str);
   const bytes = new Uint8Array(binary.length);
@@ -171,7 +167,6 @@ const base64DecodeUnicode = (str) => {
   const decoder = new TextDecoder();
   return decoder.decode(bytes);
 };
-
 const sanitizeInput = (input) => {
   if (!input) return '';
   return input.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
@@ -179,7 +174,6 @@ const sanitizeInput = (input) => {
               .replace(/\s+/g, ' ')
               .trim();
 };
-
 class ErrorBoundary extends React.Component {
   state = { hasError: false };
   static getDerivedStateFromError(error) {
@@ -195,9 +189,7 @@ class ErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
-
 const localizer = momentLocalizer(moment);
-
 function CalendarComponent({ events, onSelectEvent }) {
   return (
     <div className="bg-white p-4 rounded-lg shadow-md mb-6">
@@ -231,7 +223,6 @@ function CalendarComponent({ events, onSelectEvent }) {
     </div>
   );
 }
-
 export default function PortalSection({ user, onLogout }) {
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -255,10 +246,8 @@ export default function PortalSection({ user, onLogout }) {
   const [effectiveName, setEffectiveName] = useState(user?.name || '');
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
-
   const feedbackQuillRefs = useRef({});
   const reportQuillRefs = useRef({});
-
   useEffect(() => {
     if (!user) {
       setAssignments([]);
@@ -284,7 +273,6 @@ export default function PortalSection({ user, onLogout }) {
       setSelectedEvent(null);
     }
   }, [user]);
-
   // Mapeo de correo → nombre real
   useEffect(() => {
     const fetchUserMapping = async () => {
@@ -319,7 +307,6 @@ export default function PortalSection({ user, onLogout }) {
     };
     fetchUserMapping();
   }, [user]);
-
   const fetchRubrics = async () => {
     try {
       const [csv1Text, csv2Text, csv3Text] = await Promise.all([
@@ -374,7 +361,6 @@ export default function PortalSection({ user, onLogout }) {
       return { scoresMap1: {}, scoresMap2: {}, scoresMap3: {} };
     }
   };
-
   const fetchWithRetry = async (url, retries = 3, timeout = 10000) => {
     for (let i = 0; i < retries; i++) {
       try {
@@ -390,7 +376,6 @@ export default function PortalSection({ user, onLogout }) {
       }
     }
   };
-
   const fetchAssignments = async () => {
     try {
       setLoading(true);
@@ -398,7 +383,6 @@ export default function PortalSection({ user, onLogout }) {
         fetchWithRetry(ASSIGNMENTS_CSV),
         fetchRubrics()
       ]);
-
       Papa.parse(csvText, {
         header: true,
         skipEmptyLines: true,
@@ -406,8 +390,7 @@ export default function PortalSection({ user, onLogout }) {
         transform: (value) => value.trim(),
         complete: ({ data }) => {
           const normalizedEffectiveName = effectiveName.trim().toLowerCase();
-
-          // Verificar si el usuario es autor de algún artículo (múltiples autores separados por ;)
+          // Fetch author assignments
           const authorRows = data.filter(row => {
             const autores = row['Autor'] || '';
             return autores
@@ -415,66 +398,58 @@ export default function PortalSection({ user, onLogout }) {
               .map(a => a.trim().toLowerCase())
               .includes(normalizedEffectiveName);
           });
-
-          let parsedAssignments = [];
-
-          if (authorRows.length > 0) {
-            // Es autor → solo muestra sus artículos
-            parsedAssignments = authorRows.map(row => ({
+          const authorAssignments = authorRows.map(row => ({
+            id: row['Nombre Artículo'],
+            'Nombre Artículo': row['Nombre Artículo'] || 'Sin título',
+            Estado: row['Estado'],
+            role: 'Autor',
+            feedbackEditor: row['Feedback 3'] || 'No hay feedback del editor aún.',
+            isCompleted: !!row['Feedback 3'],
+            Plazo: row['Plazo'] || null,
+          }));
+          // Fetch reviewer/editor assignments
+          const reviewerRows = data
+            .filter(row => {
+              return row['Revisor 1']?.trim() === effectiveName ||
+                     row['Revisor 2']?.trim() === effectiveName ||
+                     row['Editor']?.trim() === effectiveName;
+            });
+          const reviewerAssignments = reviewerRows.map(row => {
+            const role = row['Revisor 1']?.trim() === effectiveName ? 'Revisor 1'
+                      : row['Revisor 2']?.trim() === effectiveName ? 'Revisor 2'
+                      : 'Editor';
+            const num = role === 'Revisor 1' ? 1 : role === 'Revisor 2' ? 2 : 3;
+            const assignment = {
               id: row['Nombre Artículo'],
               'Nombre Artículo': row['Nombre Artículo'] || 'Sin título',
+              'Link Artículo': row['Link Artículo'],
               Estado: row['Estado'],
-              role: 'Autor',
-              feedbackEditor: row['Feedback 3'] || 'No hay feedback del editor aún.',
-              isCompleted: !!row['Feedback 3'],
+              role,
+              feedback: row[`Feedback ${num}`] || '',
+              report: row[`Informe ${num}`] || '',
+              vote: row[`Voto ${num}`] || '',
+              feedback1: row['Feedback 1'] || 'No hay feedback del Revisor 1.',
+              feedback2: row['Feedback 2'] || 'No hay feedback del Revisor 2.',
+              informe1: row['Informe 1'] || 'No hay informe del Revisor 1.',
+              informe2: row['Informe 2'] || 'No hay informe del Revisor 2.',
+              isCompleted: !!row[`Feedback ${num}`] && !!row[`Informe ${num}`] && !!row[`Voto ${num}`],
               Plazo: row['Plazo'] || null,
-            }));
-          } else {
-            // No es autor → revisor o editor
-            parsedAssignments = data
-              .filter(row => {
-                return row['Revisor 1']?.trim() === effectiveName ||
-                       row['Revisor 2']?.trim() === effectiveName ||
-                       row['Editor']?.trim() === effectiveName;
-              })
-              .map(row => {
-                const role = row['Revisor 1']?.trim() === effectiveName ? 'Revisor 1'
-                          : row['Revisor 2']?.trim() === effectiveName ? 'Revisor 2'
-                          : 'Editor';
-                const num = role === 'Revisor 1' ? 1 : role === 'Revisor 2' ? 2 : 3;
-                const assignment = {
-                  id: row['Nombre Artículo'],
-                  'Nombre Artículo': row['Nombre Artículo'] || 'Sin título',
-                  'Link Artículo': row['Link Artículo'],
-                  Estado: row['Estado'],
-                  role,
-                  feedback: row[`Feedback ${num}`] || '',
-                  report: row[`Informe ${num}`] || '',
-                  vote: row[`Voto ${num}`] || '',
-                  feedback1: row['Feedback 1'] || 'No hay feedback del Revisor 1.',
-                  feedback2: row['Feedback 2'] || 'No hay feedback del Revisor 2.',
-                  informe1: row['Informe 1'] || 'No hay informe del Revisor 1.',
-                  informe2: row['Informe 2'] || 'No hay informe del Revisor 2.',
-                  isCompleted: !!row[`Feedback ${num}`] && !!row[`Informe ${num}`] && !!row[`Voto ${num}`],
-                  Plazo: row['Plazo'] || null,
-                };
-
-                const name = assignment.id;
-                if (role === 'Revisor 1') {
-                  assignment.scores = rubrics.scoresMap1[name] || { gramatica: 0, claridad: 0, estructura: 0, citacion: 0 };
-                } else if (role === 'Revisor 2') {
-                  assignment.scores = rubrics.scoresMap2[name] || { relevancia: 0, rigor: 0, originalidad: 0, argumentos: 0 };
-                } else {
-                  assignment.rev1Scores = rubrics.scoresMap1[name] || { gramatica: 0, claridad: 0, estructura: 0, citacion: 0 };
-                  assignment.rev2Scores = rubrics.scoresMap2[name] || { relevancia: 0, rigor: 0, originalidad: 0, argumentos: 0 };
-                  assignment.scores = rubrics.scoresMap3[name] || { modificaciones: 0, calidad: 0, aporte: 0, potencial: 0, decision: 0 };
-                }
-                return assignment;
-              });
-          }
-
+            };
+            const name = assignment.id;
+            if (role === 'Revisor 1') {
+              assignment.scores = rubrics.scoresMap1[name] || { gramatica: 0, claridad: 0, estructura: 0, citacion: 0 };
+            } else if (role === 'Revisor 2') {
+              assignment.scores = rubrics.scoresMap2[name] || { relevancia: 0, rigor: 0, originalidad: 0, argumentos: 0 };
+            } else {
+              assignment.rev1Scores = rubrics.scoresMap1[name] || { gramatica: 0, claridad: 0, estructura: 0, citacion: 0 };
+              assignment.rev2Scores = rubrics.scoresMap2[name] || { relevancia: 0, rigor: 0, originalidad: 0, argumentos: 0 };
+              assignment.scores = rubrics.scoresMap3[name] || { modificaciones: 0, calidad: 0, aporte: 0, potencial: 0, decision: 0 };
+            }
+            return assignment;
+          });
+          // Combine: reviewer/editor first, then author
+          const parsedAssignments = [...reviewerAssignments, ...authorAssignments];
           setAssignments(parsedAssignments);
-
           // Inicializar estados locales
           parsedAssignments.forEach(assignment => {
             if (assignment.role !== 'Autor') {
@@ -485,7 +460,6 @@ export default function PortalSection({ user, onLogout }) {
               setRubricScores(prev => ({ ...prev, [link]: assignment.scores }));
             }
           });
-
           // Eventos del calendario
           const events = parsedAssignments
             .filter(ass => ass.Plazo)
@@ -497,9 +471,7 @@ export default function PortalSection({ user, onLogout }) {
               resource: ass,
             }));
           setCalendarEvents(events);
-
           setLoading(false);
-
           if (parsedAssignments.length === 0 && !loading) {
             setError(`No se encontraron asignaciones para '${effectiveName}'. Si esperas asignaciones, por favor verifica los detalles de tu cuenta o contacta al administrador.`);
           }
@@ -516,7 +488,6 @@ export default function PortalSection({ user, onLogout }) {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     if (!user || !effectiveName || !user.role) {
       setError('Usuario no definido o información incompleta');
@@ -525,7 +496,6 @@ export default function PortalSection({ user, onLogout }) {
     }
     fetchAssignments();
   }, [user, effectiveName]);
-
   // Roles del usuario
   const userRoles = user?.role ? user.role.split(';').map(r => r.trim()) : [];
   const isAuthor = assignments.length > 0 && assignments[0].role === 'Autor';
@@ -533,17 +503,14 @@ export default function PortalSection({ user, onLogout }) {
   const isDirector = userRoles.includes('Director General');
   const isRrss = userRoles.includes('Encargado de Redes Sociales');
   const isWebDev = userRoles.includes('Responsable de Desarrollo Web');
-
   // Solo usuarios con rol superior a "Autor" ven el calendario
   const canSeeCalendar = isChief || isDirector || isRrss || isWebDev || assignments.some(a => a.role !== 'Autor');
-
   const pendingAssignments = useMemo(() =>
     isAuthor
       ? assignments.filter(a => !a.feedbackEditor || !['Aceptado', 'Rechazado'].includes(a.Estado))
       : assignments.filter(a => !a.isCompleted),
     [assignments, isAuthor]
   );
-
   const completedAssignments = useMemo(() =>
     isAuthor
       ? assignments.filter(a => a.feedbackEditor && ['Aceptado', 'Rechazado'].includes(a.Estado))
@@ -1639,9 +1606,9 @@ export default function PortalSection({ user, onLogout }) {
             {error}
           </motion.div>
         )}
-        {!loading && !isAuthor && <CalendarComponent 
-          events={calendarEvents} 
-          onSelectEvent={(event) => setSelectedEvent(event.resource)} 
+        {!loading && !isAuthor && <CalendarComponent
+          events={calendarEvents}
+          onSelectEvent={(event) => setSelectedEvent(event.resource)}
         />}
         {selectedEvent && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
