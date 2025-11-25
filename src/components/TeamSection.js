@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Papa from 'papaparse';
 import { motion } from 'framer-motion';
-
 function TeamSection({ setActiveTab }) {
   const [mainData, setMainData] = useState([]);
   const [asesoresData, setAsesoresData] = useState([]);
@@ -10,10 +9,8 @@ function TeamSection({ setActiveTab }) {
   const [isLoading, setIsLoading] = useState(false);
   const [csvError, setCsvError] = useState(null);
   const [showAll, setShowAll] = useState(false);
-
   const csvUrl =
     'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
-
   // Cargar datos del CSV
   useEffect(() => {
     setIsLoading(true);
@@ -31,23 +28,19 @@ function TeamSection({ setActiveTab }) {
             .filter((role) => role);
           return !(memberRoles.length === 1 && memberRoles[0] === 'Autor');
         });
-
         // Separar datos especiales
         const asesores = allData.filter((data) => {
           const roles = (data['Rol en la Revista'] || '').split(';').map((r) => r.trim());
           return roles.includes('Asesor Académico');
         });
-
         const institutions = allData.filter((data) => {
           const roles = (data['Rol en la Revista'] || '').split(';').map((r) => r.trim());
           return roles.includes('Institución Colaboradora');
         });
-
         const mainMembers = allData.filter((data) => {
           const roles = (data['Rol en la Revista'] || '').split(';').map((r) => r.trim());
           return !roles.includes('Asesor Académico') && !roles.includes('Institución Colaboradora');
         });
-
         setMainData(mainMembers);
         setAsesoresData(asesores);
         setInstitutionsData(institutions);
@@ -63,21 +56,18 @@ function TeamSection({ setActiveTab }) {
       },
     });
   }, []);
-
-  // Extraer roles únicos (sin "Autor" puro ni roles especiales)
+  // Extraer roles únicos (sin "Autor" ni roles especiales)
   const roles = useMemo(() => {
     const allRoles = mainData.flatMap((data) => {
       const rolesString = data['Rol en la Revista'] || 'No especificado';
-      return rolesString.split(';').map((role) => role.trim()).filter((role) => role);
+      return rolesString.split(';').map((role) => role.trim()).filter((role) => role && role !== 'Autor');
     });
     const uniqueRoles = [...new Set(allRoles)];
     return ['Todos', ...uniqueRoles.sort()];
   }, [mainData]);
-
   // Filtrar miembros por rol (solo main)
   const filteredMembers = useMemo(() => {
     if (selectedRole === 'Todos') return mainData;
-
     return mainData.filter((data) => {
       const memberRoles = (data['Rol en la Revista'] || 'No especificado')
         .split(';')
@@ -85,10 +75,8 @@ function TeamSection({ setActiveTab }) {
       return memberRoles.includes(selectedRole);
     });
   }, [mainData, selectedRole]);
-
   // Miembros a mostrar en main (con límite)
   const displayedMembers = showAll ? filteredMembers : filteredMembers.slice(0, 15);
-
   // Generar slug para el nombre
   const generateSlug = (name) => {
     if (!name) return '';
@@ -99,14 +87,31 @@ function TeamSection({ setActiveTab }) {
       .replace(/\s+/g, '-')
       .replace(/[^a-z0-9-]/g, '');
   };
-
   // Manejar clic en un miembro: redirigir a página HTML
   const handleMemberClick = (memberName) => {
     if (!memberName) return;
     const slug = generateSlug(memberName);
     window.location.href = `/team/${slug}.html`;
   };
-
+  // Función para renderizar roles como badges épicos
+  const renderRoles = (rolesString) => {
+    if (!rolesString) return React.createElement('span', { className: 'text-gray-600 text-sm sm:text-base' }, 'No especificado');
+    const roles = rolesString
+      .split(';')
+      .map((role) => role.trim())
+      .filter((role) => role && role !== 'Autor');
+    if (roles.length === 0) return React.createElement('span', { className: 'text-gray-600 text-sm sm:text-base' }, 'No especificado');
+    return roles.map((role) =>
+      React.createElement(
+        'span',
+        {
+          key: role,
+          className: 'bg-blue-100 text-blue-800 text-xs font-medium inline-flex items-center px-2.5 py-0.5 rounded-full mr-2 last:mr-0 shadow-sm hover:bg-blue-200 transition-colors',
+        },
+        role
+      )
+    );
+  };
   // Variantes para animaciones
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -115,21 +120,17 @@ function TeamSection({ setActiveTab }) {
       transition: { staggerChildren: 0.1, duration: 0.5, ease: 'easeOut' },
     },
   };
-
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
   };
-
   const headerVariants = {
     hidden: { opacity: 0, y: -20 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
   };
-
   const loadingVariants = {
     animate: { opacity: [1, 0.5, 1], transition: { duration: 1.5, repeat: Infinity, ease: 'easeInOut' } },
   };
-
   return React.createElement(
     motion.div,
     {
@@ -263,9 +264,9 @@ function TeamSection({ setActiveTab }) {
                           member['Nombre']
                         ),
                         React.createElement(
-                          'p',
-                          { className: 'text-gray-600 text-sm sm:text-base' },
-                          member['Rol en la Revista'] || 'No especificado'
+                          'div',
+                          { className: 'mt-1 flex flex-wrap gap-1' },
+                          renderRoles(member['Rol en la Revista'])
                         )
                       )
                     )
@@ -358,9 +359,9 @@ function TeamSection({ setActiveTab }) {
                   member['Nombre']
                 ),
                 React.createElement(
-                  'p',
-                  { className: 'text-gray-600 text-sm sm:text-base' },
-                  member['Rol en la Revista'] || 'No especificado'
+                  'div',
+                  { className: 'mt-1 flex flex-wrap gap-1' },
+                  renderRoles(member['Rol en la Revista'])
                 )
               )
             )
@@ -469,5 +470,4 @@ function TeamSection({ setActiveTab }) {
     )
   );
 }
-
 export default TeamSection;
