@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import Papa from "papaparse";
 import { motion } from 'framer-motion';
-
 const CSV_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv";
-
 function generateSlug(name) {
   if (!name) return "";
   return name
@@ -16,7 +14,6 @@ function generateSlug(name) {
     .replace(/-+/g, "-")
     .replace(/^-+|-+$/g, "");
 }
-
 export default function TeamSectionEN({ setActiveTab }) {
   const [mainData, setMainData] = useState([]);
   const [advisorsData, setAdvisorsData] = useState([]);
@@ -25,7 +22,6 @@ export default function TeamSectionEN({ setActiveTab }) {
   const [isLoading, setIsLoading] = useState(false);
   const [csvError, setCsvError] = useState(null);
   const [showAll, setShowAll] = useState(false);
-
   useEffect(() => {
     setIsLoading(true);
     setCsvError(null);
@@ -34,15 +30,14 @@ export default function TeamSectionEN({ setActiveTab }) {
       header: true,
       skipEmptyLines: true,
       complete: (result) => {
-        // Filtrar aquí: excluir si el único rol es "Autor"
+        // Filtrar aquí: excluir si el único rol es "Author"
         const allData = (result.data || []).filter((data) => {
-          const memberRoles = (data["Rol en la Revista"] || "")
+          const memberRoles = (data["Role in the Journal"] || data["Rol en la Revista"] || "")
             .split(";")
             .map((role) => role.trim())
             .filter((role) => role);
-          return !(memberRoles.length === 1 && memberRoles[0] === "Autor");
+          return !(memberRoles.length === 1 && memberRoles[0] === "Author");
         });
-
         // Mapear datos usando campos en inglés donde disponible
         const mappedData = allData.map((member) => ({
           ...member,
@@ -50,23 +45,19 @@ export default function TeamSectionEN({ setActiveTab }) {
           roles: member["Role in the Journal"] || member["Rol en la Revista"] || "Not specified",
           slug: generateSlug(member["Nombre"]),
         }));
-
         // Separar datos especiales
         const advisors = mappedData.filter((data) => {
           const roles = (data.roles || "").split(";").map((r) => r.trim());
           return roles.includes("Academic Advisor");
         });
-
         const institutions = mappedData.filter((data) => {
           const roles = (data.roles || "").split(";").map((r) => r.trim());
           return roles.includes("Partner Institution");
         });
-
         const mainMembers = mappedData.filter((data) => {
           const roles = (data.roles || "").split(";").map((r) => r.trim());
           return !roles.includes("Academic Advisor") && !roles.includes("Partner Institution");
         });
-
         setMainData(mainMembers);
         setAdvisorsData(advisors);
         setInstitutionsData(institutions);
@@ -82,21 +73,18 @@ export default function TeamSectionEN({ setActiveTab }) {
       },
     });
   }, []);
-
-  // Extraer roles únicos (sin roles especiales)
+  // Extraer roles únicos (sin "Author" ni roles especiales)
   const roles = useMemo(() => {
     const allRoles = mainData.flatMap((data) => {
       const rolesString = data.roles || "Not specified";
-      return rolesString.split(";").map((role) => role.trim()).filter((role) => role);
+      return rolesString.split(";").map((role) => role.trim()).filter((role) => role && role !== "Author");
     });
     const uniqueRoles = [...new Set(allRoles)];
     return ["All", ...uniqueRoles.sort()];
   }, [mainData]);
-
   // Filtrar miembros por rol (solo main)
   const filteredMembers = useMemo(() => {
     if (selectedRole === "All") return mainData;
-
     return mainData.filter((data) => {
       const memberRoles = (data.roles || "Not specified")
         .split(";")
@@ -104,23 +92,29 @@ export default function TeamSectionEN({ setActiveTab }) {
       return memberRoles.includes(selectedRole);
     });
   }, [mainData, selectedRole]);
-
   // Miembros a mostrar en main (con límite)
   const displayedMembers = showAll ? filteredMembers : filteredMembers.slice(0, 15);
-
   const handleMemberClick = (memberSlug) => {
     if (!memberSlug) return;
     window.location.href = `/team/${memberSlug}.EN.html`;
   };
-
-  const formatRoles = (rolesString) => {
-    return (rolesString || "Not specified")
+  // Función para renderizar roles como badges épicos
+  const renderRoles = (rolesString) => {
+    if (!rolesString) return <span className="text-gray-600 text-sm sm:text-base">Not specified</span>;
+    const rolesList = rolesString
       .split(";")
       .map((role) => role.trim())
-      .filter((role) => role)
-      .join(", ");
+      .filter((role) => role && role !== "Author");
+    if (rolesList.length === 0) return <span className="text-gray-600 text-sm sm:text-base">Not specified</span>;
+    return rolesList.map((role) => (
+      <span
+        key={role}
+        className="bg-blue-100 text-blue-800 text-xs font-medium inline-flex items-center px-2.5 py-0.5 rounded-full mr-2 last:mr-0 shadow-sm hover:bg-blue-200 transition-colors"
+      >
+        {role}
+      </span>
+    ));
   };
-
   // Variantes para animaciones
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -129,21 +123,17 @@ export default function TeamSectionEN({ setActiveTab }) {
       transition: { staggerChildren: 0.1, duration: 0.5, ease: 'easeOut' },
     },
   };
-
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
   };
-
   const headerVariants = {
     hidden: { opacity: 0, y: -20 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
   };
-
   const loadingVariants = {
     animate: { opacity: [1, 0.5, 1], transition: { duration: 1.5, repeat: Infinity, ease: 'easeInOut' } },
   };
-
   return (
     <motion.div
       className="container mx-auto px-4 sm:px-6 py-8 bg-white"
@@ -245,7 +235,9 @@ export default function TeamSectionEN({ setActiveTab }) {
                       >
                         {member.nombre}
                       </p>
-                      <p className="text-gray-600 text-sm sm:text-base">{formatRoles(member.roles)}</p>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {renderRoles(member.roles)}
+                      </div>
                     </div>
                   </motion.div>
                 ))}
@@ -317,7 +309,9 @@ export default function TeamSectionEN({ setActiveTab }) {
                   >
                     {member.nombre}
                   </p>
-                  <p className="text-gray-600 text-sm sm:text-base">{formatRoles(member.roles)}</p>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {renderRoles(member.roles)}
+                  </div>
                 </div>
               </motion.div>
             ))}
@@ -376,7 +370,9 @@ export default function TeamSectionEN({ setActiveTab }) {
                   >
                     {member.nombre}
                   </a>
-                  <p className="text-gray-600 text-sm sm:text-base">{formatRoles(member.roles)}</p>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {renderRoles(member.roles)}
+                  </div>
                 </div>
               </motion.div>
             ))}
