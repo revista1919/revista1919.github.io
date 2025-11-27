@@ -178,7 +178,7 @@ function App() {
     {
       name: 'articles',
       label: 'Artículos',
-      path: '/articles',
+      path: '/article',
       component: (
         <motion.div
           className="py-8 max-w-7xl mx-auto"
@@ -281,7 +281,7 @@ function App() {
     {
       name: 'news',
       label: 'Noticias',
-      path: '/news',
+      path: '/new',
       component: <NewsSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
