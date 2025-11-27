@@ -1,3 +1,4 @@
+```javascript
 const fs = require('fs');
 const path = require('path');
 const fetch = require('node-fetch').default;
@@ -980,7 +981,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     </main>
     <footer>
       <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
-      <a href="/en/news">Back to News</a> | <a href="/">Back to home</a>
+      <a href="/news">Back to News</a> | <a href="/">Back to home</a>
     </footer>
   </div>
 </body>
@@ -1348,6 +1349,236 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
   <div class="profile-container">
     <div class="profile-header">
       <div class="profile-img-container">
+        ${imagen ? `<img src="${imagen}" alt="Foto de ${nombre}" class="profile-img">` : `<div class="profile-img-fallback">Sin Imagen</div>`}
+      </div>
+      <div class="profile-info">
+        <h1>${nombre}</h1>
+        <p class="role">${rolesStr}</p>
+      </div>
+    </div>
+    <div class="section">
+      <h2>Descripción</h2>
+      <p>${descripcion}</p>
+    </div>
+    <div class="section">
+      <h2>Áreas de interés</h2>
+      <div class="areas-tags">
+        ${areasTagsHtml}
+      </div>
+    </div>
+    ${articlesSectionEs}
+    <footer>
+      <p>&copy; ${new Date().getFullYear()} La Revista Nacional de Ciencias para Estudiantes</p>
+      <a href="/">Volver al inicio</a>
+    </footer>
+  </div>
+</body>
+</html>`;
+      const enContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="${description.substring(0, 160)}...">
+  <meta name="keywords" content="${areasEn}, ${rolesEn}, The National Review of Sciences for Students">
+  <meta name="author" content="${nombre}">
+  <title>${nombre} - Team of The National Review of Sciences for Students</title>
+  <link rel="stylesheet" href="/index.css">
+  <style>
+    body {
+      background-color: #f8f9fa;
+      font-family: 'Merriweather', 'Georgia', serif;
+      color: #2d3748;
+      margin: 0;
+      padding: 0;
+      line-height: 1.6;
+    }
+    .profile-container {
+      max-width: 900px;
+      margin: 3rem auto;
+      padding: 2rem;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      text-align: center;
+    }
+    .profile-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    @media (min-width: 768px) {
+      .profile-header {
+        flex-direction: row;
+        align-items: flex-start;
+        text-align: left;
+      }
+    }
+    .profile-img {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      object-fit: cover;
+      object-position: center;
+      border: 3px solid #2b6cb0;
+      transition: transform 0.3s ease;
+      display: block;
+    }
+    .profile-img:hover {
+      transform: scale(1.05);
+    }
+    .profile-img-fallback {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      color: #4a5568;
+      border: 3px solid #2b6cb0;
+    }
+    .profile-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    @media (min-width: 768px) {
+      .profile-info {
+        align-items: flex-start;
+      }
+    }
+    .section {
+      margin-top: 2rem;
+      text-align: justify;
+    }
+    .areas-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+    @media (min-width: 768px) {
+      .areas-tags {
+        justify-content: flex-start;
+      }
+    }
+    .area-tag {
+      background: #2d3748;
+      color: #ffffff;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      display: inline-block;
+    }
+    .articles-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .article-card {
+      background: #f9fafb;
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .article-card h3 {
+      margin-bottom: 0.5rem;
+      font-size: 1.2rem;
+    }
+    .article-card h3 a {
+      color: #2b6cb0;
+      text-decoration: none;
+    }
+    .article-card h3 a:hover {
+      text-decoration: underline;
+    }
+    .article-card .authors {
+      font-style: italic;
+      color: #4a5568;
+      margin-bottom: 0.5rem;
+    }
+    .article-card .meta {
+      font-size: 0.9rem;
+      color: #718096;
+    }
+    h1 {
+      color: #2b6cb0;
+      font-size: 2.25rem;
+      margin-bottom: 0.5rem;
+      font-weight: 700;
+    }
+    h2 {
+      color: #2d3748;
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      font-weight: 600;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 0.5rem;
+    }
+    .role {
+      font-size: 1.1rem;
+      color: #4a5568;
+      font-weight: 500;
+      background: #edf2f7;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      display: inline-block;
+    }
+    p {
+      margin-bottom: 1rem;
+      color: #4a5568;
+      font-size: 1rem;
+    }
+    footer {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #e2e8f0;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #718096;
+    }
+    a {
+      color: #2b6cb0;
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.3s ease;
+    }
+    a:hover {
+      color: #1a4971;
+      text-decoration: underline;
+    }
+    @media (max-width: 640px) {
+      .profile-container {
+        padding: 1.5rem;
+      }
+      .profile-img, .profile-img-fallback {
+        width: 150px;
+        height: 150px;
+      }
+      h1 {
+        font-size: 1.75rem;
+      }
+      h2 {
+        font-size: 1.25rem;
+      }
+      .area-tag {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="profile-container">
+    <div class="profile-header">
+      <div class="profile-img-container">
         ${imagen ? `<img src="${imagen}" alt="Photo of ${nombre}" class="profile-img">` : `<div class="profile-img-fallback">No Image</div>`}
       </div>
       <div class="profile-info">
@@ -1519,3 +1750,4 @@ Sitemap: ${domain}/sitemap.xml
     process.exit(1);
   }
 })();
+```
