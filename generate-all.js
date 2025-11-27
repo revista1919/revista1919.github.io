@@ -6,8 +6,8 @@ const articlesCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p
 const teamCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 const newsCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKnN8qMJcBN8im9Q61o-qElx1jQp5NdS80_B-FakCHrPLXHlQ_FXZWT0o5GVVHAM26l9sjLxsTCNO8/pub?output=csv';
 const outputJson = path.join(__dirname, 'dist', 'articles.json');
-const outputHtmlDir = path.join(__dirname, 'dist', 'article');
-const newsOutputHtmlDir = path.join(__dirname, 'dist', 'new');
+const outputHtmlDir = path.join(__dirname, 'dist', 'articles');
+const newsOutputHtmlDir = path.join(__dirname, 'dist', 'news');
 const teamOutputHtmlDir = path.join(__dirname, 'dist', 'team');
 const sectionsOutputDir = path.join(__dirname, 'dist', 'sections');
 const sitemapPath = path.join(__dirname, 'dist', 'sitemap.xml');
@@ -135,7 +135,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
   <meta name="citation_firstpage" content="${article.primeraPagina}">
   <meta name="citation_lastpage" content="${article.ultimaPagina}">
   <meta name="citation_pdf_url" content="${article.pdf}">
-  <meta name="citation_abstract_html_url" content="${domain}/article/article-${articleSlug}.html">
+  <meta name="citation_abstract_html_url" content="${domain}/articles/article-${articleSlug}.html">
   <meta name="citation_abstract" content="${article.resumen}">
   <meta name="citation_abstract" xml:lang="en" content="${article.englishAbstract}">
   <meta name="citation_keywords" content="${article.palabras_clave.join('; ')}">
@@ -369,7 +369,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
   <meta name="citation_firstpage" content="${article.primeraPagina}">
   <meta name="citation_lastpage" content="${article.ultimaPagina}">
   <meta name="citation_pdf_url" content="${article.pdf}">
-  <meta name="citation_abstract_html_url" content="${domain}/article/article-${articleSlug}EN.html">
+  <meta name="citation_abstract_html_url" content="${domain}/articles/article-${articleSlug}EN.html">
   <meta name="citation_abstract" content="${article.englishAbstract}">
   <meta name="citation_keywords" content="${article.keywords_english.join('; ')}">
   <meta name="citation_language" content="en">
@@ -573,7 +573,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
     </main>
     <footer>
       <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
-      <a href="https://www.revistacienciasestudiantes.com/en/article">Back to Home</a>
+      <a href="https://www.revistacienciasestudiantes.com/en/articles">Back to Home</a>
     </footer>
   </div>
 </body>
@@ -612,7 +612,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
           const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
           return `
           <li>
-            <a href="/article/article-${articleSlug}.html">${article.titulo}</a> - ${article.autores} (Vol. ${article.volumen}, Núm. ${article.numero})
+            <a href="/articles/article-${articleSlug}.html">${article.titulo}</a> - ${article.autores} (Vol. ${article.volumen}, Núm. ${article.numero})
           </li>
         `;
         }).join('')}
@@ -653,7 +653,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
           const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
           return `
           <li>
-            <a href="/article/article-${articleSlug}EN.html">${article.titulo}</a> - ${article.autores} (Vol. ${article.volumen}, No. ${article.numero})
+            <a href="/articles/article-${articleSlug}EN.html">${article.titulo}</a> - ${article.autores} (Vol. ${article.volumen}, No. ${article.numero})
           </li>
         `;
         }).join('')}
@@ -833,7 +833,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     </main>
     <footer>
       <p>&copy; ${new Date().getFullYear()} La Revista Nacional de Ciencias para Estudiantes</p>
-      <a href="/new">Volver a Noticias</a> | <a href="/">Volver al inicio</a>
+      <a href="/news">Volver a Noticias</a> | <a href="/">Volver al inicio</a>
     </footer>
   </div>
 </body>
@@ -980,7 +980,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     </main>
     <footer>
       <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
-      <a href="/new">Back to News</a> | <a href="/">Back to home</a>
+      <a href="/news">Back to News</a> | <a href="/">Back to home</a>
     </footer>
   </div>
 </body>
@@ -1021,7 +1021,7 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
           const slug = generateSlug(item.titulo + ' ' + item.fecha);
           return `
           <li>
-            <a href="/new/${slug}.html">${item.titulo}</a> (${item.fecha})
+            <a href="/news/${slug}.html">${item.titulo}</a> (${item.fecha})
           </li>
         `;
         }).join('')}
@@ -1061,7 +1061,7 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
           const slug = generateSlug(item.titulo + ' ' + item.fecha);
           return `
           <li>
-            <a href="/new/${slug}.EN.html">${item.title}</a> (${item.fecha})
+            <a href="/news/${slug}.EN.html">${item.title}</a> (${item.fecha})
           </li>
         `;
         }).join('')}
@@ -1119,7 +1119,7 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
             const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
             return `
             <div class="article-card">
-              <h3><a href="/article/article-${articleSlug}.html">${article.titulo}</a></h3>
+              <h3><a href="/articles/article-${articleSlug}.html">${article.titulo}</a></h3>
               <p class="authors">${article.autores}</p>
               <p class="meta">Fecha: ${article.fecha} | Volumen: ${article.volumen}, Número: ${article.numero}, Páginas: ${article.primeraPagina}-${article.ultimaPagina}</p>
             </div>
@@ -1135,7 +1135,7 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
             const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
             return `
             <div class="article-card">
-              <h3><a href="/article/article-${articleSlug}EN.html">${article.titulo}</a></h3>
+              <h3><a href="/articles/article-${articleSlug}EN.html">${article.titulo}</a></h3>
               <p class="authors">${article.autores}</p>
               <p class="meta">Date: ${article.fecha} | Volume: ${article.volumen}, Issue: ${article.numero}, Pages: ${article.primeraPagina}-${article.ultimaPagina}</p>
             </div>
@@ -1618,8 +1618,8 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
     }
     const appShellContent = fs.readFileSync(appShellPath, 'utf8');
     const spaRoutes = [
-      '/es/about', '/es/guidelines', '/es/faq', '/es/article', '/es/submit', '/es/team', '/es/new', '/es/login', '/es/admin',
-      '/en/about', '/en/guidelines', '/en/faq', '/en/article', '/en/submit', '/en/team', '/en/new', '/en/login', '/en/admin'
+      '/es/about', '/es/guidelines', '/es/faq', '/es/articles', '/es/submit', '/es/team', '/es/news', '/es/login', '/es/admin',
+      '/en/about', '/en/guidelines', '/en/faq', '/en/articles', '/en/submit', '/en/team', '/en/news', '/en/login', '/en/admin'
     ];
     spaRoutes.forEach(route => {
       const routePath = path.join(__dirname, 'dist', route);
@@ -1641,13 +1641,13 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
   <priority>1.0</priority>
 </url>
 <url>
-  <loc>${domain}/article/index.html</loc>
+  <loc>${domain}/articles/index.html</loc>
   <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.9</priority>
 </url>
 <url>
-  <loc>${domain}/article/index.EN.html</loc>
+  <loc>${domain}/articles/index.EN.html</loc>
   <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.9</priority>
@@ -1656,13 +1656,13 @@ ${articles.map(article => {
   const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
   return `
 <url>
-  <loc>${domain}/article/article-${articleSlug}.html</loc>
+  <loc>${domain}/articles/article-${articleSlug}.html</loc>
   <lastmod>${article.fecha}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.8</priority>
 </url>
 <url>
-  <loc>${domain}/article/article-${articleSlug}EN.html</loc>
+  <loc>${domain}/articles/article-${articleSlug}EN.html</loc>
   <lastmod>${article.fecha}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.8</priority>
@@ -1675,13 +1675,13 @@ ${articles.map(article => {
 </url>`;
 }).join('')}
 <url>
-  <loc>${domain}/new/index.html</loc>
+  <loc>${domain}/news/index.html</loc>
   <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.9</priority>
 </url>
 <url>
-  <loc>${domain}/new/index.EN.html</loc>
+  <loc>${domain}/news/index.EN.html</loc>
   <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.9</priority>
@@ -1690,13 +1690,13 @@ ${newsItems.map(item => {
       const slug = generateSlug(item.titulo + ' ' + item.fecha);
       return `
 <url>
-  <loc>${domain}/new/${slug}.html</loc>
+  <loc>${domain}/news/${slug}.html</loc>
   <lastmod>${item.fecha}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.8</priority>
 </url>
 <url>
-  <loc>${domain}/new/${slug}.EN.html</loc>
+  <loc>${domain}/news/${slug}.EN.html</loc>
   <lastmod>${item.fecha}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.8</priority>
