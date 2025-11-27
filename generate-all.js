@@ -6,8 +6,8 @@ const articlesCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p
 const teamCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 const newsCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKnN8qMJcBN8im9Q61o-qElx1jQp5NdS80_B-FakCHrPLXHlQ_FXZWT0o5GVVHAM26l9sjLxsTCNO8/pub?output=csv';
 const outputJson = path.join(__dirname, 'dist', 'articles.json');
-const outputHtmlDir = path.join(__dirname, 'dist', 'article');
-const newsOutputHtmlDir = path.join(__dirname, 'dist', 'new');
+const outputHtmlDir = path.join(__dirname, 'dist', 'articles');
+const newsOutputHtmlDir = path.join(__dirname, 'dist', 'news');
 const teamOutputHtmlDir = path.join(__dirname, 'dist', 'team');
 const sectionsOutputDir = path.join(__dirname, 'dist', 'sections');
 const sitemapPath = path.join(__dirname, 'dist', 'sitemap.xml');
@@ -26,7 +26,7 @@ function parseDateFlexible(dateStr) {
   }
   return dateStr;
 }
-function formatAuthorLastFirst(author) {
+function formatAuthorForCitation(author) {
   const parts = author.trim().split(' ');
   if (parts.length >= 2) {
     const apellido = parts.pop();
@@ -35,38 +35,50 @@ function formatAuthorLastFirst(author) {
   }
   return author;
 }
-function formatAuthorAPA(author) {
-  const formatted = formatAuthorLastFirst(author);
-  const [last, first] = formatted.split(', ');
-  if (!first) return formatted;
-  const initials = first.split(' ').map(n => n[0] + '.').join(' ');
+function getAPAAuthor(author) {
+  const parts = author.trim().split(/\s+/);
+  if (parts.length < 2) return author;
+  const last = parts.pop();
+  const initials = parts.map(n => n[0].toUpperCase() + '.').join(' ');
   return `${last}, ${initials}`;
 }
-function formatAuthorsDisplay(authorsStr, es = true) {
-  const authors = authorsStr.split(';').map(a => a.trim()).filter(a => a);
-  if (authors.length === 0) return '';
-  if (authors.length === 1) return authors[0];
-  const and = es ? 'y' : 'and';
-  if (authors.length === 2) return authors[0] + ` ${and} ` + authors[1];
-  return authors.slice(0, -1).join(', ') + `, ${and} ` + authors[authors.length - 1];
-}
-function formatAuthorsChicago(authorsStr, es = true) {
-  const authors = authorsStr.split(';').map(a => a.trim()).filter(a => a);
-  const formatted = authors.map(formatAuthorLastFirst);
-  const and = es ? 'y' : 'and';
-  if (formatted.length === 1) return formatted[0];
-  if (formatted.length === 2) return formatted[0] + `, ${and} ` + formatted[1];
-  return formatted[0] + ', et al.';
-}
-function formatAuthorsMLA(authorsStr, es = true) {
-  return formatAuthorsChicago(authorsStr, es);
-}
 function formatAuthorsAPA(authorsStr) {
-  const authors = authorsStr.split(';').map(a => a.trim()).filter(a => a);
-  const formatted = authors.map(formatAuthorAPA);
-  if (formatted.length === 1) return formatted[0];
-  if (formatted.length === 2) return formatted[0] + ' & ' + formatted[1];
-  return formatted.slice(0, -1).join(', ') + ', & ' + formatted[formatted.length - 1];
+  const authors = authorsStr.split(';').map(a => a.trim()).filter(Boolean);
+  if (!authors.length) return '';
+  const formatted = authors.map(getAPAAuthor);
+  if (formatted.length === 1) {
+    return formatted[0];
+  } else if (formatted.length === 2) {
+    return formatted[0] + ', & ' + formatted[1];
+  } else {
+    return formatted.slice(0, -1).join(', ') + ', & ' + formatted[formatted.length - 1];
+  }
+}
+function formatAuthorsChicagoOrMLA(authorsStr, language = 'es') {
+  const authors = authorsStr.split(';').map(a => a.trim()).filter(Boolean);
+  if (!authors.length) return '';
+  const formatted = authors.map(formatAuthorForCitation);
+  const connector = language === 'es' ? 'y' : 'and';
+  const etal = 'et al.';
+  if (formatted.length === 1) {
+    return formatted[0];
+  } else if (formatted.length === 2) {
+    return `${formatted[0]}, ${connector} ${formatted[1]}`;
+  } else {
+    return `${formatted[0]}, ${etal}`;
+  }
+}
+function formatAuthorsDisplay(authorsStr, language = 'es') {
+  const authors = authorsStr.split(';').map(a => a.trim()).filter(Boolean);
+  if (!authors.length) return 'Autor desconocido';
+  const connector = language === 'es' ? 'y' : 'and';
+  if (authors.length === 1) {
+    return authors[0];
+  } else if (authors.length === 2) {
+    return `${authors[0]} ${connector} ${authors[1]}`;
+  } else {
+    return authors.slice(0, -1).join(', ') + `, ${connector} ` + authors[authors.length - 1];
+  }
 }
 function generateSlug(name) {
   if (!name) return '';
@@ -145,11 +157,19 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
       });
     });
     articles.forEach(article => {
-  const authorsList = article.autores.split(';').map(a => formatAuthorLastFirst(a));
+  const authorsList = article.autores.split(';').map(a => formatAuthorForCitation(a));
   const authorMetaTags = authorsList.map(author => `<meta name="citation_author" content="${author}">`).join('\n');
   const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
   const pdfFileName = `Article-${articleSlug}.pdf`;
   article.pdf = `${domain}/Articles/${pdfFileName}`;
+  const authorsDisplayEs = formatAuthorsDisplay(article.autores, 'es');
+  const authorsDisplayEn = formatAuthorsDisplay(article.autores, 'en');
+  const authorsAPA = formatAuthorsAPA(article.autores);
+  const authorsChicagoEs = formatAuthorsChicagoOrMLA(article.autores, 'es');
+  const authorsMLAEs = formatAuthorsChicagoOrMLA(article.autores, 'es');
+  const authorsChicagoEn = formatAuthorsChicagoOrMLA(article.autores, 'en');
+  const authorsMLAEn = formatAuthorsChicagoOrMLA(article.autores, 'en');
+  const year = new Date(article.fecha).getFullYear();
   // Generar HTML en español
   const htmlContentEs = `
 <!DOCTYPE html>
@@ -166,7 +186,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
   <meta name="citation_firstpage" content="${article.primeraPagina}">
   <meta name="citation_lastpage" content="${article.ultimaPagina}">
   <meta name="citation_pdf_url" content="${article.pdf}">
-  <meta name="citation_abstract_html_url" content="${domain}/article/article-${articleSlug}.html">
+  <meta name="citation_abstract_html_url" content="${domain}/articles/article-${articleSlug}.html">
   <meta name="citation_abstract" content="${article.resumen}">
   <meta name="citation_abstract" xml:lang="en" content="${article.englishAbstract}">
   <meta name="citation_keywords" content="${article.palabras_clave.join('; ')}">
@@ -333,7 +353,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
   <div class="container">
     <header>
       <h1>${article.titulo}</h1>
-      <p class="authors">${formatAuthorsDisplay(article.autores, true)}</p>
+      <p class="authors">${authorsDisplayEs}</p>
       <p class="meta"><strong>Fecha de publicación:</strong> ${article.fecha}</p>
       <p class="meta"><strong>Volumen:</strong> ${article.volumen}, <strong>Número:</strong> ${article.numero}, <strong>Páginas:</strong> ${article.primeraPagina}-${article.ultimaPagina}</p>
       <p class="meta"><strong>Área temática:</strong> ${article.area}</p>
@@ -363,9 +383,9 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
       </section>
       <section class="citations">
         <h2>Citas</h2>
-        <p><strong>APA:</strong> ${formatAuthorsAPA(article.autores)}. (${new Date(article.fecha).getFullYear()}). ${article.titulo}. <em>La Revista Nacional de Ciencias para Estudiantes</em>, ${article.volumen}(${article.numero}), ${article.primeraPagina}-${article.ultimaPagina}.</p>
-        <p><strong>MLA:</strong> ${formatAuthorsMLA(article.autores, true)}. "${article.titulo}." <em>La Revista Nacional de Ciencias para Estudiantes</em>, vol. ${article.volumen}, no. ${article.numero}, ${new Date(article.fecha).getFullYear()}, pp. ${article.primeraPagina}-${article.ultimaPagina}.</p>
-        <p><strong>Chicago:</strong> ${formatAuthorsChicago(article.autores, true)}. "${article.titulo}." <em>La Revista Nacional de Ciencias para Estudiantes</em> ${article.volumen}, no. ${article.numero} (${new Date(article.fecha).getFullYear()}): ${article.primeraPagina}-${article.ultimaPagina}.</p>
+        <p><strong>APA:</strong> ${authorsAPA}. (${year}). ${article.titulo}. <em>La Revista Nacional de Ciencias para Estudiantes</em>, ${article.volumen}(${article.numero}), ${article.primeraPagina}-${article.ultimaPagina}.</p>
+        <p><strong>MLA:</strong> ${authorsMLAEs}. "${article.titulo}." <em>La Revista Nacional de Ciencias para Estudiantes</em>, vol. ${article.volumen}, no. ${article.numero}, ${year}, pp. ${article.primeraPagina}-${article.ultimaPagina}.</p>
+        <p><strong>Chicago:</strong> ${authorsChicagoEs}. "${article.titulo}." <em>La Revista Nacional de Ciencias para Estudiantes</em> ${article.volumen}, no. ${article.numero} (${year}): ${article.primeraPagina}-${article.ultimaPagina}.</p>
       </section>
       <section class="license">
         <h2>Licencia</h2>
@@ -375,7 +395,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
     </main>
     <footer>
       <p>&copy; ${new Date().getFullYear()} La Revista Nacional de Ciencias para Estudiantes</p>
-      <a href="/">Volver al inicio</a>
+      <a href="/es/article">Volver a Artículos</a> | <a href="/">Volver al inicio</a>
     </footer>
   </div>
 </body>
@@ -400,7 +420,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
   <meta name="citation_firstpage" content="${article.primeraPagina}">
   <meta name="citation_lastpage" content="${article.ultimaPagina}">
   <meta name="citation_pdf_url" content="${article.pdf}">
-  <meta name="citation_abstract_html_url" content="${domain}/article/article-${articleSlug}EN.html">
+  <meta name="citation_abstract_html_url" content="${domain}/articles/article-${articleSlug}EN.html">
   <meta name="citation_abstract" content="${article.englishAbstract}">
   <meta name="citation_keywords" content="${article.keywords_english.join('; ')}">
   <meta name="citation_language" content="en">
@@ -566,7 +586,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
   <div class="container">
     <header>
       <h1>${article.titulo}</h1>
-      <p class="authors">${formatAuthorsDisplay(article.autores, false)}</p>
+      <p class="authors">${authorsDisplayEn}</p>
       <p class="meta"><strong>Publication Date:</strong> ${article.fecha}</p>
       <p class="meta"><strong>Volume:</strong> ${article.volumen}, <strong>Issue:</strong> ${article.numero}, <strong>Pages:</strong> ${article.primeraPagina}-${article.ultimaPagina}</p>
       <p class="meta"><strong>Thematic Area:</strong> ${article.area}</p>
@@ -592,9 +612,9 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
       </section>
       <section class="citations">
         <h2>Citations</h2>
-        <p><strong>APA:</strong> ${formatAuthorsAPA(article.autores)}. (${new Date(article.fecha).getFullYear()}). ${article.titulo}. <em>The National Review of Sciences for Students</em>, ${article.volumen}(${article.numero}), ${article.primeraPagina}-${article.ultimaPagina}.</p>
-        <p><strong>MLA:</strong> ${formatAuthorsMLA(article.autores, false)}. "${article.titulo}." <em>The National Review of Sciences for Students</em>, vol. ${article.volumen}, no. ${article.numero}, ${new Date(article.fecha).getFullYear()}, pp. ${article.primeraPagina}-${article.ultimaPagina}.</p>
-        <p><strong>Chicago:</strong> ${formatAuthorsChicago(article.autores, false)}. "${article.titulo}." <em>The National Review of Sciences for Students</em> ${article.volumen}, no. ${article.numero} (${new Date(article.fecha).getFullYear()}): ${article.primeraPagina}-${article.ultimaPagina}.</p>
+        <p><strong>APA:</strong> ${authorsAPA}. (${year}). ${article.titulo}. <em>The National Review of Sciences for Students</em>, ${article.volumen}(${article.numero}), ${article.primeraPagina}-${article.ultimaPagina}.</p>
+        <p><strong>MLA:</strong> ${authorsMLAEn}. "${article.titulo}." <em>The National Review of Sciences for Students</em>, vol. ${article.volumen}, no. ${article.numero}, ${year}, pp. ${article.primeraPagina}-${article.ultimaPagina}.</p>
+        <p><strong>Chicago:</strong> ${authorsChicagoEn}. "${article.titulo}." <em>The National Review of Sciences for Students</em> ${article.volumen}, no. ${article.numero} (${year}): ${article.primeraPagina}-${article.ultimaPagina}.</p>
       </section>
       <section class="license">
         <h2>License</h2>
@@ -604,7 +624,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
     </main>
     <footer>
       <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
-      <a href="${domain}/en/article">Back to Home</a>
+      <a href="/en/article">Back to Articles</a> | <a href="/">Back to home</a>
     </footer>
   </div>
 </body>
@@ -643,7 +663,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
           const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
           return `
           <li>
-            <a href="/article/article-${articleSlug}.html">${article.titulo}</a> - ${article.autores} (Vol. ${article.volumen}, Núm. ${article.numero})
+            <a href="/articles/article-${articleSlug}.html">${article.titulo}</a> - ${article.autores} (Vol. ${article.volumen}, Núm. ${article.numero})
           </li>
         `;
         }).join('')}
@@ -684,7 +704,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
           const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
           return `
           <li>
-            <a href="/article/article-${articleSlug}EN.html">${article.titulo}</a> - ${article.autores} (Vol. ${article.volumen}, No. ${article.numero})
+            <a href="/articles/article-${articleSlug}EN.html">${article.titulo}</a> - ${article.autores} (Vol. ${article.volumen}, No. ${article.numero})
           </li>
         `;
         }).join('')}
@@ -864,7 +884,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     </main>
     <footer>
       <p>&copy; ${new Date().getFullYear()} La Revista Nacional de Ciencias para Estudiantes</p>
-      <a href="/new">Volver a Noticias</a> | <a href="/">Volver al inicio</a>
+      <a href="/es/new">Volver a Noticias</a> | <a href="/">Volver al inicio</a>
     </footer>
   </div>
 </body>
@@ -1011,7 +1031,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     </main>
     <footer>
       <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
-      <a href="/new">Back to News</a> | <a href="/">Back to home</a>
+      <a href="/en/new">Back to News</a> | <a href="/">Back to home</a>
     </footer>
   </div>
 </body>
@@ -1052,7 +1072,7 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
           const slug = generateSlug(item.titulo + ' ' + item.fecha);
           return `
           <li>
-            <a href="/new/${slug}.html">${item.titulo}</a> (${item.fecha})
+            <a href="/news/${slug}.html">${item.titulo}</a> (${item.fecha})
           </li>
         `;
         }).join('')}
@@ -1092,7 +1112,7 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
           const slug = generateSlug(item.titulo + ' ' + item.fecha);
           return `
           <li>
-            <a href="/new/${slug}.EN.html">${item.title}</a> (${item.fecha})
+            <a href="/news/${slug}.EN.html">${item.title}</a> (${item.fecha})
           </li>
         `;
         }).join('')}
@@ -1150,7 +1170,7 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
             const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
             return `
             <div class="article-card">
-              <h3><a href="/article/article-${articleSlug}.html">${article.titulo}</a></h3>
+              <h3><a href="/articles/article-${articleSlug}.html">${article.titulo}</a></h3>
               <p class="authors">${article.autores}</p>
               <p class="meta">Fecha: ${article.fecha} | Volumen: ${article.volumen}, Número: ${article.numero}, Páginas: ${article.primeraPagina}-${article.ultimaPagina}</p>
             </div>
@@ -1166,7 +1186,7 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
             const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
             return `
             <div class="article-card">
-              <h3><a href="/article/article-${articleSlug}EN.html">${article.titulo}</a></h3>
+              <h3><a href="/articles/article-${articleSlug}EN.html">${article.titulo}</a></h3>
               <p class="authors">${article.autores}</p>
               <p class="meta">Date: ${article.fecha} | Volume: ${article.volumen}, Issue: ${article.numero}, Pages: ${article.primeraPagina}-${article.ultimaPagina}</p>
             </div>
@@ -1672,13 +1692,13 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
   <priority>1.0</priority>
 </url>
 <url>
-  <loc>${domain}/article/index.html</loc>
+  <loc>${domain}/articles/index.html</loc>
   <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.9</priority>
 </url>
 <url>
-  <loc>${domain}/article/index.EN.html</loc>
+  <loc>${domain}/articles/index.EN.html</loc>
   <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.9</priority>
@@ -1687,13 +1707,13 @@ ${articles.map(article => {
   const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
   return `
 <url>
-  <loc>${domain}/article/article-${articleSlug}.html</loc>
+  <loc>${domain}/articles/article-${articleSlug}.html</loc>
   <lastmod>${article.fecha}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.8</priority>
 </url>
 <url>
-  <loc>${domain}/article/article-${articleSlug}EN.html</loc>
+  <loc>${domain}/articles/article-${articleSlug}EN.html</loc>
   <lastmod>${article.fecha}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.8</priority>
@@ -1706,13 +1726,13 @@ ${articles.map(article => {
 </url>`;
 }).join('')}
 <url>
-  <loc>${domain}/new/index.html</loc>
+  <loc>${domain}/news/index.html</loc>
   <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.9</priority>
 </url>
 <url>
-  <loc>${domain}/new/index.EN.html</loc>
+  <loc>${domain}/news/index.EN.html</loc>
   <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.9</priority>
@@ -1721,13 +1741,13 @@ ${newsItems.map(item => {
       const slug = generateSlug(item.titulo + ' ' + item.fecha);
       return `
 <url>
-  <loc>${domain}/new/${slug}.html</loc>
+  <loc>${domain}/news/${slug}.html</loc>
   <lastmod>${item.fecha}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.8</priority>
 </url>
 <url>
-  <loc>${domain}/new/${slug}.EN.html</loc>
+  <loc>${domain}/news/${slug}.EN.html</loc>
   <lastmod>${item.fecha}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.8</priority>
