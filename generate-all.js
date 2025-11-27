@@ -702,97 +702,74 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
   <link rel="stylesheet" href="/index.css">
   <style>
     body {
-      background: linear-gradient(135deg, #f4ece7 0%, #e8d9c6 100%);
-      font-family: 'Merriweather', 'Georgia', serif;
-      color: #2d3748;
+      font-family: 'Merriweather', serif;
+      line-height: 1.8;
+      color: #333;
+      background-color: #f9f9f9;
       margin: 0;
       padding: 0;
-      line-height: 1.7;
+      box-sizing: border-box;
     }
     .container {
       max-width: 900px;
       margin: 0 auto;
-      padding: 2rem;
+      padding: 2rem 1rem;
+      background: white;
+      box-shadow: 0 0 20px rgba(0,0,0,0.05);
+      border-radius: 8px;
+      box-sizing: border-box;
     }
     header {
       text-align: center;
-      margin-bottom: 3rem;
-      background: rgba(255, 255, 255, 0.9);
-      padding: 1.5rem;
-      border-radius: 16px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-bottom: 1px solid #eee;
+      padding-bottom: 1rem;
+      margin-bottom: 2rem;
     }
     .logo {
       width: 80px;
       height: auto;
       margin-bottom: 1rem;
-      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
       transition: transform 0.3s ease;
     }
     .logo:hover {
       transform: scale(1.05);
     }
     h1 {
-      color: #5a3e36;
-      font-size: 2rem;
-      margin: 0 0 0.5rem 0;
-      font-weight: 600;
-      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.05);
-      line-height: 1.3;
+      font-size: 1.8rem;
+      color: #2c3e50;
+      margin-bottom: 0.5rem;
     }
     .date {
-      color: #8b6f47;
-      font-size: 0.95rem;
-      font-style: italic;
-      margin: 0;
-      letter-spacing: 0.5px;
+      font-size: 0.9rem;
+      color: #777;
+      margin-bottom: 1rem;
     }
     main {
-      background: rgba(255, 255, 255, 0.95);
-      padding: 2rem;
-      border-radius: 16px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
       margin-bottom: 2rem;
     }
     .content {
-      font-size: 1.05rem;
-      color: #2d3748;
-      line-height: 1.8;
+      text-align: justify;
     }
     .content p {
       margin-bottom: 1.5rem;
-      text-align: justify;
-      hyphens: auto;
     }
     .content h2, .content h3 {
-      color: #5a3e36;
+      color: #34495e;
       margin-top: 2rem;
       margin-bottom: 1rem;
-      font-weight: 600;
-      border-bottom: 2px solid #f4ece7;
+      border-bottom: 1px solid #ddd;
       padding-bottom: 0.5rem;
     }
-    .content ol, .content ul {
-      margin: 1rem 0;
-      padding-left: 2rem;
-    }
-    .content li {
-      margin-bottom: 0.5rem;
-    }
     .content strong {
-      color: #800020;
+      color: #2980b9;
     }
     .content a {
-      color: #800020;
-      text-decoration: underline;
-      font-weight: 500;
+      color: #3498db;
+      text-decoration: none;
     }
     .content a:hover {
-      color: #5a0015;
+      text-decoration: underline;
+      color: #2980b9;
     }
     .content img {
       max-width: 100%;
@@ -803,40 +780,37 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     }
     footer {
       text-align: center;
-      margin-top: 2rem;
-      padding: 1.5rem;
-      color: #8b6f47;
-      font-size: 0.9rem;
-      background: rgba(255, 255, 255, 0.7);
-      border-radius: 12px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+      margin-top: 3rem;
+      padding-top: 1rem;
+      border-top: 1px solid #eee;
+      font-size: 0.85rem;
+      color: #777;
     }
     footer a {
-      color: #800020;
+      color: #3498db;
       text-decoration: none;
-      font-weight: 500;
       margin: 0 1rem;
-      transition: color 0.3s ease;
     }
     footer a:hover {
-      color: #5a0015;
+      color: #2980b9;
       text-decoration: underline;
     }
     @media (max-width: 768px) {
       .container {
-        padding: 1rem;
+        padding: 1.5rem 1rem;
       }
       h1 {
-        font-size: 1.6rem;
-      }
-      main {
-        padding: 1.5rem;
+        font-size: 1.5rem;
       }
       .logo {
         width: 60px;
       }
     }
-    /* Mejoras de legibilidad */
+    @media (max-width: 480px) {
+      h1 {
+        font-size: 1.3rem;
+      }
+    }
     .content {
       text-rendering: optimizeLegibility;
       -webkit-font-smoothing: antialiased;
@@ -875,97 +849,74 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
   <link rel="stylesheet" href="/index.css">
   <style>
     body {
-      background: linear-gradient(135deg, #f4ece7 0%, #e8d9c6 100%);
-      font-family: 'Merriweather', 'Georgia', serif;
-      color: #2d3748;
+      font-family: 'Merriweather', serif;
+      line-height: 1.8;
+      color: #333;
+      background-color: #f9f9f9;
       margin: 0;
       padding: 0;
-      line-height: 1.7;
+      box-sizing: border-box;
     }
     .container {
       max-width: 900px;
       margin: 0 auto;
-      padding: 2rem;
+      padding: 2rem 1rem;
+      background: white;
+      box-shadow: 0 0 20px rgba(0,0,0,0.05);
+      border-radius: 8px;
+      box-sizing: border-box;
     }
     header {
       text-align: center;
-      margin-bottom: 3rem;
-      background: rgba(255, 255, 255, 0.9);
-      padding: 1.5rem;
-      border-radius: 16px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-bottom: 1px solid #eee;
+      padding-bottom: 1rem;
+      margin-bottom: 2rem;
     }
     .logo {
       width: 80px;
       height: auto;
       margin-bottom: 1rem;
-      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
       transition: transform 0.3s ease;
     }
     .logo:hover {
       transform: scale(1.05);
     }
     h1 {
-      color: #5a3e36;
-      font-size: 2rem;
-      margin: 0 0 0.5rem 0;
-      font-weight: 600;
-      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.05);
-      line-height: 1.3;
+      font-size: 1.8rem;
+      color: #2c3e50;
+      margin-bottom: 0.5rem;
     }
     .date {
-      color: #8b6f47;
-      font-size: 0.95rem;
-      font-style: italic;
-      margin: 0;
-      letter-spacing: 0.5px;
+      font-size: 0.9rem;
+      color: #777;
+      margin-bottom: 1rem;
     }
     main {
-      background: rgba(255, 255, 255, 0.95);
-      padding: 2rem;
-      border-radius: 16px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
       margin-bottom: 2rem;
     }
     .content {
-      font-size: 1.05rem;
-      color: #2d3748;
-      line-height: 1.8;
+      text-align: justify;
     }
     .content p {
       margin-bottom: 1.5rem;
-      text-align: justify;
-      hyphens: auto;
     }
     .content h2, .content h3 {
-      color: #5a3e36;
+      color: #34495e;
       margin-top: 2rem;
       margin-bottom: 1rem;
-      font-weight: 600;
-      border-bottom: 2px solid #f4ece7;
+      border-bottom: 1px solid #ddd;
       padding-bottom: 0.5rem;
     }
-    .content ol, .content ul {
-      margin: 1rem 0;
-      padding-left: 2rem;
-    }
-    .content li {
-      margin-bottom: 0.5rem;
-    }
     .content strong {
-      color: #800020;
+      color: #2980b9;
     }
     .content a {
-      color: #800020;
-      text-decoration: underline;
-      font-weight: 500;
+      color: #3498db;
+      text-decoration: none;
     }
     .content a:hover {
-      color: #5a0015;
+      text-decoration: underline;
+      color: #2980b9;
     }
     .content img {
       max-width: 100%;
@@ -976,37 +927,35 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     }
     footer {
       text-align: center;
-      margin-top: 2rem;
-      padding: 1.5rem;
-      color: #8b6f47;
-      font-size: 0.9rem;
-      background: rgba(255, 255, 255, 0.7);
-      border-radius: 12px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+      margin-top: 3rem;
+      padding-top: 1rem;
+      border-top: 1px solid #eee;
+      font-size: 0.85rem;
+      color: #777;
     }
     footer a {
-      color: #800020;
+      color: #3498db;
       text-decoration: none;
-      font-weight: 500;
       margin: 0 1rem;
-      transition: color 0.3s ease;
     }
     footer a:hover {
-      color: #5a0015;
+      color: #2980b9;
       text-decoration: underline;
     }
     @media (max-width: 768px) {
       .container {
-        padding: 1rem;
+        padding: 1.5rem 1rem;
       }
       h1 {
-        font-size: 1.6rem;
-      }
-      main {
-        padding: 1.5rem;
+        font-size: 1.5rem;
       }
       .logo {
         width: 60px;
+      }
+    }
+    @media (max-width: 480px) {
+      h1 {
+        font-size: 1.3rem;
       }
     }
     .content {
