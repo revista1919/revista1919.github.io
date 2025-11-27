@@ -2,7 +2,6 @@ const fs = require('fs');
 const path = require('path');
 const fetch = require('node-fetch').default;
 const Papa = require('papaparse');
-
 const articlesCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p32EM6-0VYy18AdREQwXdpeet1WHTA4H2-W2FX7HKe1HPSyApWadUw9sKHdVYQXL5tP6yDRs/pub?output=csv';
 const teamCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 const newsCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKnN8qMJcBN8im9Q61o-qElx1jQp5NdS80_B-FakCHrPLXHlQ_FXZWT0o5GVVHAM26l9sjLxsTCNO8/pub?output=csv';
@@ -14,7 +13,6 @@ const sectionsOutputDir = path.join(__dirname, 'dist', 'sections');
 const sitemapPath = path.join(__dirname, 'dist', 'sitemap.xml');
 const robotsPath = path.join(__dirname, 'dist', 'robots.txt');
 const domain = 'https://www.revistacienciasestudiantes.com';
-
 function parseDateFlexible(dateStr) {
   if (!dateStr) return '';
   let date = new Date(dateStr);
@@ -28,7 +26,6 @@ function parseDateFlexible(dateStr) {
   }
   return dateStr;
 }
-
 function formatAuthorForCitation(author) {
   const parts = author.trim().split(' ');
   if (parts.length >= 2) {
@@ -38,7 +35,6 @@ function formatAuthorForCitation(author) {
   }
   return author;
 }
-
 function generateSlug(name) {
   if (!name) return '';
   name = name.toLowerCase();
@@ -49,20 +45,17 @@ function generateSlug(name) {
   name = name.replace(/^-+|-+$/g, '');
   return name;
 }
-
 function isBase64(str) {
   if (!str) return false;
   const base64Regex = /^data:image\/(png|jpe?g|gif);base64,/;
   return base64Regex.test(str);
 }
-
 function getImageSrc(image) {
   if (!image) return '';
   if (isBase64(image)) return image;
   if (image.startsWith('http')) return image;
   return '';
 }
-
 const base64DecodeUnicode = (str) => {
   try {
     const binary = atob(str);
@@ -77,12 +70,10 @@ const base64DecodeUnicode = (str) => {
     return '';
   }
 };
-
 if (!fs.existsSync(outputHtmlDir)) fs.mkdirSync(outputHtmlDir, { recursive: true });
 if (!fs.existsSync(newsOutputHtmlDir)) fs.mkdirSync(newsOutputHtmlDir, { recursive: true });
 if (!fs.existsSync(teamOutputHtmlDir)) fs.mkdirSync(teamOutputHtmlDir, { recursive: true });
 if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursive: true });
-
 (async () => {
   try {
     // Procesar artículos
@@ -112,14 +103,22 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
     fs.writeFileSync(outputJson, JSON.stringify(articles, null, 2), 'utf8');
     console.log(`✅ Archivo generado: ${outputJson} (${articles.length} artículos)`);
 
+    // Crear mapa de autores a artículos
+    let authorToArticles = {};
+    articles.forEach(article => {
+      const authors = article.autores.split(';').map(a => a.trim());
+      authors.forEach(auth => {
+        if (!authorToArticles[auth]) authorToArticles[auth] = [];
+        authorToArticles[auth].push(article);
+      });
+    });
+
     articles.forEach(article => {
   const authorsList = article.autores.split(';').map(a => formatAuthorForCitation(a));
   const authorMetaTags = authorsList.map(author => `<meta name="citation_author" content="${author}">`).join('\n');
-
   const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
   const pdfFileName = `Article-${articleSlug}.pdf`;
   article.pdf = `${domain}/Articles/${pdfFileName}`;
-
   // Generar HTML en español
   const htmlContentEs = `
 <!DOCTYPE html>
@@ -354,7 +353,6 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
   const filePathEs = path.join(outputHtmlDir, `article-${articleSlug}.html`);
   fs.writeFileSync(filePathEs, htmlContentEs, 'utf8');
   console.log(`Generado HTML de artículo en español: ${filePathEs}`);
-
   // Generar HTML en inglés
   const htmlContentEn = `
 <!DOCTYPE html>
@@ -585,7 +583,6 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
   fs.writeFileSync(filePathEn, htmlContentEn, 'utf8');
   console.log(`Generado HTML de artículo en inglés: ${filePathEn}`);
 });
-
     // Generar índice de artículos
     const articlesByYear = articles.reduce((acc, article) => {
       const year = new Date(article.fecha).getFullYear() || 'Sin fecha';
@@ -633,7 +630,6 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     const indexPath = path.join(outputHtmlDir, 'index.html');
     fs.writeFileSync(indexPath, indexContent, 'utf8');
     console.log(`Generado índice HTML de artículos: ${indexPath}`);
-
     // Generar índice de artículos en inglés
     let indexContentEn = `
 <!DOCTYPE html>
@@ -675,7 +671,6 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     const indexPathEn = path.join(outputHtmlDir, 'index.EN.html');
     fs.writeFileSync(indexPathEn, indexContentEn, 'utf8');
     console.log(`Generado índice HTML de artículos (EN): ${indexPathEn}`);
-
     // Procesar noticias
     const newsRes = await fetch(newsCsvUrl);
     if (!newsRes.ok) throw new Error(`Error descargando CSV de noticias: ${newsRes.statusText}`);
@@ -694,7 +689,6 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
         title: String(row["Title"] ?? ""),
         content: base64DecodeUnicode(String(row["Content of the new"] ?? "")),
       }));
-
     for (const newsItem of newsItems) {
       const slug = generateSlug(`${newsItem.titulo} ${newsItem.fecha}`);
       const esContent = `<!DOCTYPE html>
@@ -870,7 +864,6 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
   </div>
 </body>
 </html>`;
-
       const enContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1043,7 +1036,6 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
   </div>
 </body>
 </html>`;
-
       const esPath = path.join(newsOutputHtmlDir, `${slug}.html`);
       fs.writeFileSync(esPath, esContent, 'utf8');
       console.log(`Generado HTML de noticia (ES): ${esPath}`);
@@ -1051,7 +1043,6 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       fs.writeFileSync(enPath, enContent, 'utf8');
       console.log(`Generado HTML de noticia (EN): ${enPath}`);
     }
-
     // Generar índice de noticias
     const newsByYear = newsItems.reduce((acc, item) => {
       const year = new Date(item.fecha).getFullYear() || 'Sin fecha';
@@ -1094,7 +1085,6 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
   </footer>
 </body>
 </html>`;
-
     let newsIndexContentEn = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1130,32 +1120,35 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
   </footer>
 </body>
 </html>`;
-
     const newsEsIndexPath = path.join(newsOutputHtmlDir, 'index.html');
     fs.writeFileSync(newsEsIndexPath, newsIndexContent, 'utf8');
     console.log(`Generado índice HTML de noticias (ES): ${newsEsIndexPath}`);
     const newsEnIndexPath = path.join(newsOutputHtmlDir, 'index.EN.html');
     fs.writeFileSync(newsEnIndexPath, newsIndexContentEn, 'utf8');
     console.log(`Generado índice HTML de noticias (EN): ${newsEnIndexPath}`);
-
     // Procesar equipo
     const teamRes = await fetch(teamCsvUrl);
     if (!teamRes.ok) throw new Error(`Error descargando CSV de equipo: ${teamRes.statusText}`);
     const teamCsvData = await teamRes.text();
     const teamParsed = Papa.parse(teamCsvData, { header: true, skipEmptyLines: true });
     const allMembers = teamParsed.data.filter(row => (row['Nombre'] || '').trim() !== '');
-
     for (const member of allMembers) {
-      const roles = (member['Rol en la Revista'] || '').split(';').map(r => r.trim());
-      if (roles.includes('Institución Colaboradora')) continue;
+      const rolesEs = (member['Rol en la Revista'] || '').split(';').map(r => r.trim()).filter(r => r);
+      const rolesEnList = (member['Role in the Journal'] || '').split(';').map(r => r.trim()).filter(r => r);
       const nombre = member['Nombre'] || 'Miembro desconocido';
+      const publishedArticles = authorToArticles[nombre] || [];
+      const isAuthor = publishedArticles.length > 0;
+      let filteredRolesEs = rolesEs;
+      let filteredRolesEn = rolesEnList;
+      if (rolesEs.length > 1 && isAuthor) {
+        filteredRolesEs = rolesEs.filter(r => r.toLowerCase() !== 'autor');
+      }
+      if (rolesEnList.length > 1 && isAuthor) {
+        filteredRolesEn = rolesEnList.filter(r => r.toLowerCase() !== 'author');
+      }
+      const rolesStr = filteredRolesEs.join(', ') || 'No especificado';
+      const rolesEn = filteredRolesEn.join(', ') || 'Not specified';
       const slug = generateSlug(nombre);
-      const rolesStr = roles.join(', ') || 'No especificado';
-      const rolesEn = (member['Role in the Journal'] || 'Not specified')
-        .split(';')
-        .map(r => r.trim())
-        .filter(r => r)
-        .join(', ') || 'Not specified';
       const descripcion = member['Descripción'] || 'Información no disponible';
       const description = member['Description'] || 'Information not available';
       const areas = member['Áreas de interés'] || 'No especificadas';
@@ -1165,6 +1158,26 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
       const imagen = getImageSrc(member['Imagen'] || '');
       const areasTagsHtml = areasList.length ? areasList.map(area => `<span class="area-tag">${area}</span>`).join('') : '<p>No especificadas</p>';
       const areasTagsHtmlEn = areasListEn.length ? areasListEn.map(area => `<span class="area-tag">${area}</span>`).join('') : '<p>Not specified</p>';
+      const articlesSectionEs = isAuthor ? `
+      <div class="section">
+        <h2>Artículos Publicados</h2>
+        <ul class="articles-list">
+          ${publishedArticles.map(article => {
+            const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
+            return `<li><a href="/articles/article-${articleSlug}.html">${article.titulo}</a></li>`;
+          }).join('')}
+        </ul>
+      </div>` : '';
+      const articlesSectionEn = isAuthor ? `
+      <div class="section">
+        <h2>Published Articles</h2>
+        <ul class="articles-list">
+          ${publishedArticles.map(article => {
+            const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
+            return `<li><a href="/articles/article-${articleSlug}EN.html">${article.titulo}</a></li>`;
+          }).join('')}
+        </ul>
+      </div>` : '';
       const esContent = `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1268,6 +1281,26 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
       font-weight: 500;
       display: inline-block;
     }
+    .articles-list {
+      list-style: none;
+      padding: 0;
+    }
+    .articles-list li {
+      background: #edf2f7;
+      padding: 0.75rem 1.25rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .articles-list a {
+      color: #2d3748;
+      font-weight: 500;
+      text-decoration: none;
+    }
+    .articles-list a:hover {
+      color: #2b6cb0;
+      text-decoration: underline;
+    }
     h1 {
       color: #2b6cb0;
       font-size: 2.25rem;
@@ -1356,6 +1389,7 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
         ${areasTagsHtml}
       </div>
     </div>
+    ${articlesSectionEs}
     <footer>
       <p>&copy; ${new Date().getFullYear()} La Revista Nacional de Ciencias para Estudiantes</p>
       <a href="/">Volver al inicio</a>
@@ -1363,7 +1397,6 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
   </div>
 </body>
 </html>`;
-
       const enContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1467,6 +1500,26 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
       font-weight: 500;
       display: inline-block;
     }
+    .articles-list {
+      list-style: none;
+      padding: 0;
+    }
+    .articles-list li {
+      background: #edf2f7;
+      padding: 0.75rem 1.25rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .articles-list a {
+      color: #2d3748;
+      font-weight: 500;
+      text-decoration: none;
+    }
+    .articles-list a:hover {
+      color: #2b6cb0;
+      text-decoration: underline;
+    }
     h1 {
       color: #2b6cb0;
       font-size: 2.25rem;
@@ -1555,6 +1608,7 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
         ${areasTagsHtmlEn}
       </div>
     </div>
+    ${articlesSectionEn}
     <footer>
       <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
       <a href="/">Back to home</a>
@@ -1562,7 +1616,6 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
   </div>
 </body>
 </html>`;
-
       const esPath = path.join(teamOutputHtmlDir, `${slug}.html`);
       fs.writeFileSync(esPath, esContent, 'utf8');
       console.log(`Generado HTML de miembro (ES): ${esPath}`);
@@ -1570,7 +1623,6 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
       fs.writeFileSync(enPath, enContent, 'utf8');
       console.log(`Generado HTML de miembro (EN): ${enPath}`);
     }
-
     // Pre-renderizar rutas de la SPA
     console.log('🚀 Pre-renderizando las rutas de la aplicación...');
     const appShellPath = path.join(__dirname, 'dist', 'index.html');
@@ -1578,12 +1630,10 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
       throw new Error('El archivo principal dist/index.html no se encontró. Asegúrate de compilar la aplicación primero.');
     }
     const appShellContent = fs.readFileSync(appShellPath, 'utf8');
-
     const spaRoutes = [
       '/es/about', '/es/guidelines', '/es/faq', '/es/articles', '/es/submit', '/es/team', '/es/news', '/es/login', '/es/admin',
       '/en/about', '/en/guidelines', '/en/faq', '/en/articles', '/en/submit', '/en/team', '/en/news', '/en/login', '/en/admin'
     ];
-
     spaRoutes.forEach(route => {
       const routePath = path.join(__dirname, 'dist', route);
       if (!fs.existsSync(routePath)) {
@@ -1593,7 +1643,6 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
       fs.writeFileSync(indexPath, appShellContent, 'utf8');
     });
     console.log(`✅ ${spaRoutes.length} rutas de la aplicación pre-renderizadas.`);
-
     // Generar sitemap
     const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
@@ -1694,7 +1743,6 @@ ${spaRoutes.map(route => `
 </urlset>`.replace(/^\s*\n/gm, '');
     fs.writeFileSync(sitemapPath, sitemapContent, 'utf8');
     console.log(`Generado sitemap: ${sitemapPath}`);
-
     // Generar robots.txt
     const robotsContent = `User-agent: *
 Allow: /
@@ -1708,9 +1756,7 @@ Sitemap: ${domain}/sitemap.xml
     `.trim();
     fs.writeFileSync(robotsPath, robotsContent, 'utf8');
     console.log(`Generado robots.txt: ${robotsPath}`);
-
     console.log('🎉 ¡Proceso completado con éxito!');
-
   } catch (err) {
     console.error('❌ Error:', err);
     process.exit(1);
