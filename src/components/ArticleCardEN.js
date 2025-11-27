@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-// Helper functions (assuming these are defined; if not, implement them)
+// Helper functions
 const getYear = (date) => {
   if (!date) return 'n.d.';
   const parsedDate = new Date(date);
@@ -10,12 +10,74 @@ const getYear = (date) => {
 const parseDateFlexible = (date) => {
   if (!date) return 'Not available';
   const parsedDate = new Date(date);
-  return isNaN(parsedDate) ? date : parsedDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  return isNaN(parsedDate)
+    ? date
+    : parsedDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+};
+
+// Format names => "Juan Pérez" → "Pérez, Juan"
+const formatLastFirst = (name) => {
+  const parts = name.trim().split(' ');
+  if (parts.length === 1) return name; // If a single name, return as is
+  const last = parts.pop();
+  return `${last}, ${parts.join(' ')}`;
+};
+
+// Format names APA → "Juan Pérez" → "Pérez, J."
+const formatAPA = (name) => {
+  const parts = name.trim().split(' ');
+  if (parts.length === 1) return name;
+  const last = parts.pop();
+  const initials = parts.map((p) => p[0].toUpperCase() + '.').join(' ');
+  return `${last}, ${initials}`;
+};
+
+// CHICAGO RULES
+const formatChicagoAuthors = (authors) => {
+  if (authors.length === 1) return formatLastFirst(authors[0]);
+
+  if (authors.length === 2)
+    return `${formatLastFirst(authors[0])} and ${authors[1]}`;
+
+  return `${formatLastFirst(authors[0])} et al.`;
+};
+
+// APA RULES
+const formatAPAAuthors = (authors) => {
+  if (authors.length === 1) return formatAPA(authors[0]);
+
+  if (authors.length === 2)
+    return `${formatAPA(authors[0])}, & ${formatAPA(authors[1])}`;
+
+  return authors
+    .map((a, i) =>
+      i === authors.length - 1
+        ? `& ${formatAPA(a)}`
+        : `${formatAPA(a)}, `
+    )
+    .join('');
+};
+
+// MLA RULES
+const formatMLAAuthors = (authors) => {
+  if (authors.length === 1) return formatLastFirst(authors[0]);
+
+  if (authors.length === 2)
+    return `${formatLastFirst(authors[0])} and ${authors[1]}`;
+
+  return `${formatLastFirst(authors[0])} et al.`;
 };
 
 const generateSlug = (name) => {
   if (!name) return '';
-  return name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-').replace(/[^\w-]/g, '').replace(/-+/g, '-').replace(/^-+|-+$/g, '');
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/[^\w-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
 };
 
 function ArticleCardEN({ article }) {
@@ -29,20 +91,21 @@ function ArticleCardEN({ article }) {
   const journal = 'The National Review of Sciences for Students';
   const pdfUrl = article?.pdf || null;
 
-  const articleSlug = `${generateSlug(article['Título'])}-${article['Número de artículo']}`;
+  const authorsArray = article?.['Autor(es)']
+    ? article['Autor(es)'].split(';').map((a) => a.trim())
+    : [];
 
+  const articleSlug = `${generateSlug(article['Título'])}-${article['Número de artículo']}`;
   const htmlUrl = `https://www.revistacienciasestudiantes.com/articles/article-${articleSlug}EN.html`;
 
   const pages = `${article?.['Primera página'] || ''}-${article?.['Última página'] || ''}`.trim() || '';
 
-  const handleAuthorClick = (authorName) => {
-    if (!authorName) return;
-    const slug = generateSlug(authorName);
-    window.location.href = `/team/${slug}.EN.html`;
-  };
-
+  // C I T A C I O N E S  E N  I N G L E S
   const getChicagoCitation = () => {
-    const authors = article?.['Autor(es)']?.split(';').map(a => a.trim()).join('; ') || 'Unknown author';
+    const authors = authorsArray.length
+      ? formatChicagoAuthors(authorsArray)
+      : 'Unknown author';
+
     const title = article?.['Título'] || 'Untitled';
     const volume = article?.['Volumen'] || '';
     const number = article?.['Número'] || '';
@@ -61,7 +124,10 @@ function ArticleCardEN({ article }) {
   };
 
   const getApaCitation = () => {
-    const authors = article?.['Autor(es)']?.split(';').map(a => a.trim()).join('; ') || 'Unknown author';
+    const authors = authorsArray.length
+      ? formatAPAAuthors(authorsArray)
+      : 'Unknown author';
+
     const title = article?.['Título'] || 'Untitled';
     const volume = article?.['Volumen'] || '';
     const number = article?.['Número'] || '';
@@ -80,7 +146,10 @@ function ArticleCardEN({ article }) {
   };
 
   const getMlaCitation = () => {
-    const authors = article?.['Autor(es)']?.split(';').map(a => a.trim()).join('; ') || 'Unknown author';
+    const authors = authorsArray.length
+      ? formatMLAAuthors(authorsArray)
+      : 'Unknown author';
+
     const title = article?.['Título'] || 'Untitled';
     const volume = article?.['Volumen'] || '';
     const number = article?.['Número'] || '';
@@ -98,10 +167,16 @@ function ArticleCardEN({ article }) {
     );
   };
 
+  const handleAuthorClick = (authorName) => {
+    if (!authorName) return;
+    const slug = generateSlug(authorName);
+    window.location.href = `/team/${slug}.EN.html`;
+  };
+
   const toggleExpand = (e) => {
-    // Prevent expansion if clicking on interactive elements
     const tag = e.target.tagName.toLowerCase();
-    const isInteractive = ['a', 'button', 'span'].includes(tag) || e.target.closest('a, button, span');
+    const isInteractive =
+      ['a', 'button', 'span'].includes(tag) || e.target.closest('a, button, span');
     if (!isInteractive) {
       setIsExpanded(!isExpanded);
     }
@@ -117,32 +192,39 @@ function ArticleCardEN({ article }) {
 
   return (
     <div
-  className={`py-4 px-4 sm:px-6 bg-white hover:bg-gray-50 transition-colors duration-200 cursor-pointer border-b border-gray-200 last:border-b-0 ${isExpanded ? 'bg-gray-50' : ''}`}
-  onClick={toggleExpand}
-  role="button"
-  tabIndex={0}
-  aria-expanded={isExpanded}
-  aria-label={`Expand article: ${article['Título'] || 'Untitled'}`}
->
+      className={`py-4 px-4 sm:px-6 bg-white hover:bg-gray-50 transition-colors duration-200 cursor-pointer border-b border-gray-200 last:border-b-0 ${
+        isExpanded ? 'bg-gray-50' : ''
+      }`}
+      onClick={toggleExpand}
+      role="button"
+      tabIndex={0}
+      aria-expanded={isExpanded}
+      aria-label={`Expand article: ${article['Título'] || 'Untitled'}`}
+    >
       <h2 className="text-lg sm:text-xl font-semibold text-blue-700 hover:text-blue-800 transition-colors mb-2">
         {article['Título'] || 'Untitled'}
       </h2>
 
       <p className="text-sm text-gray-700 mb-2">
-        {article['Autor(es)'] ? (
-          article['Autor(es)'].split(';').map((a, idx, arr) => (
+        {authorsArray.length > 0 ? (
+          authorsArray.map((a, idx) => (
             <React.Fragment key={idx}>
               <span
                 className="cursor-pointer hover:text-blue-600 underline transition-colors"
-                onClick={(e) => { e.stopPropagation(); handleAuthorClick(a.trim()); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleAuthorClick(a);
+                }}
                 role="link"
                 tabIndex={0}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleAuthorClick(a.trim()); }}
-                aria-label={`View profile of ${a.trim()}`}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleAuthorClick(a);
+                }}
+                aria-label={`View profile of ${a}`}
               >
-                {a.trim()}
+                {a}
               </span>
-              {idx < arr.length - 1 ? '; ' : ''}
+              {idx < authorsArray.length - 1 ? '; ' : ''}
             </React.Fragment>
           ))
         ) : (
@@ -155,53 +237,50 @@ function ArticleCardEN({ article }) {
       </p>
 
       {!isExpanded && article['Abstract'] && (
-        <p className="text-sm text-gray-700 mt-2 line-clamp-3">
-          {article['Abstract']}
-        </p>
+        <p className="text-sm text-gray-700 mt-2 line-clamp-3">{article['Abstract']}</p>
       )}
 
       {isExpanded && (
         <div className="mt-4 space-y-4 animate-fade-in">
           <p className="text-sm text-gray-800">
-            <strong className="font-medium">Publication Date:</strong> {parseDateFlexible(article['Fecha'])}
+            <strong className="font-medium">Publication Date:</strong>{' '}
+            {parseDateFlexible(article['Fecha'])}
           </p>
-          {article['Área temática'] ? (
-  <div className="text-sm text-gray-800">
-    <strong className="font-medium">Thematic Area:</strong>{' '}
-    <div className="flex flex-wrap gap-2 mt-1">
-      {article['Área temática']
-        .split(';')
-        .map((area, idx) => (
-          <span
-            key={idx}
-            className="bg-yellow-100 text-yellow-800 text-xs font-medium px-3 py-1 rounded-full shadow-sm"
-          >
-            {area.trim()}
-          </span>
-        ))}
-    </div>
-  </div>
-) : (
-  <p className="text-sm text-gray-800">
-    <strong className="font-medium">Thematic Area:</strong> Not specified
-  </p>
-)}
-<p className="text-sm text-gray-800">
-    <strong className="font-medium">Keywords:</strong>
-  </p>
 
-          {article['Keywords'] && article['Keywords'].length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {article['Keywords']
-                .split(';')
-                .map((kw, idx) => (
+          {article['Área temática'] ? (
+            <div className="text-sm text-gray-800">
+              <strong className="font-medium">Thematic Area:</strong>{' '}
+              <div className="flex flex-wrap gap-2 mt-1">
+                {article['Área temática'].split(';').map((area, idx) => (
                   <span
                     key={idx}
-                    className="bg-blue-100 text-blue-800 text-xs font-medium px-3 py-1 rounded-full shadow-sm"
+                    className="bg-yellow-100 text-yellow-800 text-xs font-medium px-3 py-1 rounded-full shadow-sm"
                   >
-                    {kw.trim()}
+                    {area.trim()}
                   </span>
                 ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-800">
+              <strong className="font-medium">Thematic Area:</strong> Not specified
+            </p>
+          )}
+
+          <p className="text-sm text-gray-800">
+            <strong className="font-medium">Keywords:</strong>
+          </p>
+
+          {article['Keywords']?.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {article['Keywords'].split(';').map((kw, idx) => (
+                <span
+                  key={idx}
+                  className="bg-blue-100 text-blue-800 text-xs font-medium px-3 py-1 rounded-full shadow-sm"
+                >
+                  {kw.trim()}
+                </span>
+              ))}
             </div>
           )}
 
@@ -209,11 +288,16 @@ function ArticleCardEN({ article }) {
             <strong className="font-medium">Abstract: </strong>
             {article['Abstract'] ? (
               <>
-                {showFullAbstract ? article['Abstract'] : `${article['Abstract'].slice(0, 200)}...`}
+                {showFullAbstract
+                  ? article['Abstract']
+                  : `${article['Abstract'].slice(0, 200)}...`}
                 {article['Abstract'].length > 200 && (
                   <button
                     className="ml-2 text-blue-600 hover:text-blue-800 underline text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
-                    onClick={(e) => { e.stopPropagation(); setShowFullAbstract(!showFullAbstract); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowFullAbstract(!showFullAbstract);
+                    }}
                   >
                     {showFullAbstract ? 'Read less' : 'Read more'}
                   </button>
@@ -227,7 +311,10 @@ function ArticleCardEN({ article }) {
           <div>
             <button
               className="text-blue-600 hover:text-blue-800 underline text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
-              onClick={(e) => { e.stopPropagation(); setShowSpanishAbstract(!showSpanishAbstract); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowSpanishAbstract(!showSpanishAbstract);
+              }}
             >
               {showSpanishAbstract ? 'Hide Spanish abstract' : 'View Spanish abstract'}
             </button>
@@ -275,15 +362,25 @@ function ArticleCardEN({ article }) {
 
           <button
             className="text-brown-800 hover:text-brown-900 underline text-sm focus:outline-none focus:ring-2 focus:ring-brown-500 rounded"
-            onClick={(e) => { e.stopPropagation(); setShowCitations(!showCitations); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowCitations(!showCitations);
+            }}
           >
             {showCitations ? 'Hide citations' : 'How to cite this article'}
           </button>
+
           {showCitations && (
             <div className="text-gray-800 text-sm space-y-4 bg-white p-4 rounded-lg shadow-inner break-words">
-              <p><strong className="font-medium">Chicago:</strong> {getChicagoCitation()}</p>
-              <p><strong className="font-medium">APA:</strong> {getApaCitation()}</p>
-              <p><strong className="font-medium">MLA:</strong> {getMlaCitation()}</p>
+              <p>
+                <strong className="font-medium">Chicago:</strong> {getChicagoCitation()}
+              </p>
+              <p>
+                <strong className="font-medium">APA:</strong> {getApaCitation()}
+              </p>
+              <p>
+                <strong className="font-medium">MLA:</strong> {getMlaCitation()}
+              </p>
             </div>
           )}
         </div>
