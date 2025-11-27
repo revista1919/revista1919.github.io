@@ -10,27 +10,62 @@ const getYear = (date) => {
 const parseDateFlexible = (date) => {
   if (!date) return 'No disponible';
   const parsedDate = new Date(date);
-  return isNaN(parsedDate) ? date : parsedDate.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+  return isNaN(parsedDate)
+    ? date
+    : parsedDate.toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
 };
 
-// Slug que conserva letras con tilde → las normaliza sin eliminarlas
+// Slug generator
 const generateSlug = (name) => {
   if (!name) return '';
-
   const normalized = name
-    .normalize('NFD') // Descompone acentos: á → a + ◌́
-    .replace(/[\u0300-\u036f]/g, '') // Elimina marcas diacríticas
-    .replace(/ñ/gi, 'n') // ñ → n
-    .replace(/Ñ/gi, 'N'); // Ñ → N
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ñ/gi, 'n')
+    .replace(/Ñ/gi, 'N');
 
   return normalized
     .toLowerCase()
     .trim()
-    .replace(/\s+/g, '-')           // Espacios → guión
-    .replace(/[^a-z0-9-]/g, '')     // Solo letras, números y guiones
-    .replace(/-+/g, '-')            // Evita guiones múltiples
-    .replace(/^-+|-+$/g, '');       // Quita guiones al inicio/final
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
 };
+
+/* --------------------------  FORMATOS DE AUTORES -------------------------- */
+
+const chicagoAuthors = (authors) => {
+  if (authors.length === 1) return authors[0];
+  if (authors.length === 2) return `${authors[0]}, y ${authors[1]}`;
+  return `${authors[0]}, et al.`;
+};
+
+const apaFormatName = (fullName) => {
+  const parts = fullName.trim().split(' ');
+  const last = parts.pop();
+  const initials = parts.map((p) => p[0].toUpperCase() + '.').join(' ');
+  return `${last}, ${initials}`;
+};
+
+const apaAuthors = (authors) => {
+  const formatted = authors.map(apaFormatName);
+  if (formatted.length === 1) return formatted[0];
+  if (formatted.length === 2) return `${formatted[0]} & ${formatted[1]}`;
+  return formatted.slice(0, -1).join(', ') + ', & ' + formatted[formatted.length - 1];
+};
+
+const mlaAuthors = (authors) => {
+  if (authors.length === 1) return authors[0];
+  if (authors.length === 2) return `${authors[0]}, y ${authors[1]}`;
+  return `${authors[0]}, et al.`;
+};
+
+/* -------------------------------------------------------------------------- */
 
 function ArticleCard({ article }) {
   console.log('Objeto article recibido:', article);
@@ -52,15 +87,19 @@ function ArticleCard({ article }) {
     window.location.href = `/team/${slug}.html`;
   };
 
+  /* --------------------------- CITAS COMPLETAS ---------------------------- */
+
   const getChicagoCitation = () => {
-    const authors = article?.autores?.split(';').map(a => a.trim()).join('; ') || 'Autor desconocido';
+    const authorsRaw = article?.autores || '';
+    const authors = authorsRaw.split(';').map(a => a.trim()).filter(a => a);
     const title = article?.titulo || 'Sin título';
     const volume = article?.volumen || '';
     const number = article?.numero || '';
     const year = getYear(article?.fecha);
+
     return (
       <>
-        {authors}. “{title}.” <em>{journal}</em> {volume}, no. {number} ({year}): {pages}.{' '}
+        {chicagoAuthors(authors)}. “{title}.” <em>{journal}</em> {volume}, no. {number} ({year}): {pages}.{' '}
         {pdfUrl && (
           <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline break-words">
             {pdfUrl}
@@ -71,14 +110,16 @@ function ArticleCard({ article }) {
   };
 
   const getApaCitation = () => {
-    const authors = article?.autores?.split(';').map(a => a.trim()).join('; ') || 'Autor desconocido';
+    const authorsRaw = article?.autores || '';
+    const authors = authorsRaw.split(';').map(a => a.trim()).filter(a => a);
     const title = article?.titulo || 'Sin título';
     const volume = article?.volumen || '';
     const number = article?.numero || '';
     const year = getYear(article?.fecha);
+
     return (
       <>
-        {authors} ({year}). {title}. <em>{journal}</em>, {volume}({number}), {pages}.{' '}
+        {apaAuthors(authors)} ({year}). {title}. <em>{journal}</em>, {volume}({number}), {pages}.{' '}
         {pdfUrl && (
           <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline break-words">
             {pdfUrl}
@@ -89,14 +130,16 @@ function ArticleCard({ article }) {
   };
 
   const getMlaCitation = () => {
-    const authors = article?.autores?.split(';').map(a => a.trim()).join('; ') || 'Autor desconocido';
+    const authorsRaw = article?.autores || '';
+    const authors = authorsRaw.split(';').map(a => a.trim()).filter(a => a);
     const title = article?.titulo || 'Sin título';
     const volume = article?.volumen || '';
     const number = article?.numero || '';
     const year = getYear(article?.fecha);
+
     return (
       <>
-        {authors}. “{title}.” <em>{journal}</em>, vol. {volume}, no. {number}, {year}, pp. {pages}.{' '}
+        {mlaAuthors(authors)}. “{title}.” <em>{journal}</em>, vol. {volume}, no. {number}, {year}, pp. {pages}.{' '}
         {pdfUrl && (
           <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline break-words">
             {pdfUrl}
@@ -105,6 +148,8 @@ function ArticleCard({ article }) {
       </>
     );
   };
+
+  /* ----------------------------------------------------------------------- */
 
   const toggleExpand = (e) => {
     const tag = e.target.tagName.toLowerCase();
@@ -122,6 +167,8 @@ function ArticleCard({ article }) {
     );
   }
 
+  /* --------------------------- RENDER PRINCIPAL --------------------------- */
+
   return (
     <div
       className={`py-4 px-4 sm:px-6 bg-white hover:bg-gray-50 transition-colors duration-200 cursor-pointer border-b border-gray-200 last:border-b-0 ${isExpanded ? 'bg-gray-50' : ''}`}
@@ -134,6 +181,7 @@ function ArticleCard({ article }) {
       <h2 className="text-lg sm:text-xl font-semibold text-blue-700 hover:text-blue-800 transition-colors mb-2">
         {article.titulo || 'Sin título'}
       </h2>
+
       <p className="text-sm text-gray-700 mb-2">
         {article.autores ? (
           article.autores.split(';').map((a, idx, arr) => (
@@ -141,10 +189,6 @@ function ArticleCard({ article }) {
               <span
                 className="cursor-pointer hover:text-blue-600 underline transition-colors"
                 onClick={(e) => { e.stopPropagation(); handleAuthorClick(a.trim()); }}
-                role="link"
-                tabIndex={0}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleAuthorClick(a.trim()); }}
-                aria-label={`Ver perfil de ${a.trim()}`}
               >
                 {a.trim()}
               </span>
@@ -155,6 +199,7 @@ function ArticleCard({ article }) {
           'Autor desconocido'
         )}
       </p>
+
       <p className="text-xs text-green-600">
         {journal} · {getYear(article.fecha)} {pages && `· pp. ${pages}`}
       </p>
@@ -167,24 +212,24 @@ function ArticleCard({ article }) {
 
       {isExpanded && (
         <div className="mt-4 space-y-4 animate-fade-in">
+          {/* Fecha */}
           <p className="text-sm text-gray-800">
             <strong className="font-medium">Fecha:</strong> {parseDateFlexible(article.fecha)}
           </p>
 
+          {/* Áreas */}
           {article.area ? (
             <div className="text-sm text-gray-800">
               <strong className="font-medium">Áreas:</strong>{' '}
               <div className="flex flex-wrap gap-2 mt-1">
-                {article.area
-                  .split(';')
-                  .map((area, idx) => (
-                    <span
-                      key={idx}
-                      className="bg-yellow-100 text-yellow-800 text-xs font-medium px-3 py-1 rounded-full shadow-sm"
-                    >
-                      {area.trim()}
-                    </span>
-                  ))}
+                {article.area.split(';').map((area, idx) => (
+                  <span
+                    key={idx}
+                    className="bg-yellow-100 text-yellow-800 text-xs font-medium px-3 py-1 rounded-full shadow-sm"
+                  >
+                    {area.trim()}
+                  </span>
+                ))}
               </div>
             </div>
           ) : (
@@ -193,6 +238,7 @@ function ArticleCard({ article }) {
             </p>
           )}
 
+          {/* Palabras clave */}
           <p className="text-sm text-gray-800">
             <strong className="font-medium">Palabras Clave:</strong>
           </p>
@@ -209,6 +255,7 @@ function ArticleCard({ article }) {
             </div>
           )}
 
+          {/* Resumen */}
           <p className="text-sm text-gray-800">
             <strong className="font-medium">Resumen: </strong>
             {article.resumen ? (
@@ -216,7 +263,7 @@ function ArticleCard({ article }) {
                 {showFullAbstract ? article.resumen : `${article.resumen.slice(0, 200)}...`}
                 {article.resumen.length > 200 && (
                   <button
-                    className="ml-2 text-blue-600 hover:text-blue-800 underline text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+                    className="ml-2 text-blue-600 hover:text-blue-800 underline text-xs"
                     onClick={(e) => { e.stopPropagation(); setShowFullAbstract(!showFullAbstract); }}
                   >
                     {showFullAbstract ? 'Leer menos' : 'Leer más'}
@@ -228,9 +275,10 @@ function ArticleCard({ article }) {
             )}
           </p>
 
+          {/* Abstract inglés */}
           <div>
             <button
-              className="text-blue-600 hover:text-blue-800 underline text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+              className="text-blue-600 hover:text-blue-800 underline text-xs"
               onClick={(e) => { e.stopPropagation(); setShowEnglishAbstract(!showEnglishAbstract); }}
             >
               {showEnglishAbstract ? 'Ocultar abstract en inglés' : 'Ver abstract en inglés'}
@@ -242,6 +290,7 @@ function ArticleCard({ article }) {
             )}
           </div>
 
+          {/* Botones PDF / HTML */}
           <div className="flex flex-wrap gap-3">
             {pdfUrl && (
               <>
@@ -249,7 +298,7 @@ function ArticleCard({ article }) {
                   href={pdfUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm shadow"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm shadow"
                   onClick={(e) => e.stopPropagation()}
                 >
                   Abrir PDF
@@ -257,7 +306,7 @@ function ArticleCard({ article }) {
                 <a
                   href={pdfUrl}
                   download
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm shadow"
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm shadow"
                   onClick={(e) => e.stopPropagation()}
                 >
                   Descargar PDF
@@ -269,7 +318,7 @@ function ArticleCard({ article }) {
                 href={htmlUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm shadow"
+                className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-sm shadow"
                 onClick={(e) => e.stopPropagation()}
               >
                 Abrir página completa
@@ -277,18 +326,20 @@ function ArticleCard({ article }) {
             )}
           </div>
 
+          {/* Botón de citas */}
           <button
-            className="text-brown-800 hover:text-brown-900 underline text-sm focus:outline-none focus:ring-2 focus:ring-brown-500 rounded"
+            className="text-brown-800 hover:text-brown-900 underline text-sm"
             onClick={(e) => { e.stopPropagation(); setShowCitations(!showCitations); }}
           >
             {showCitations ? 'Ocultar citas' : 'Cómo citar este artículo'}
           </button>
 
+          {/* Citas */}
           {showCitations && (
             <div className="text-gray-800 text-sm space-y-4 bg-white p-4 rounded-lg shadow-inner break-words">
-              <p><strong className="font-medium">Chicago:</strong> {getChicagoCitation()}</p>
-              <p><strong className="font-medium">APA:</strong> {getApaCitation()}</p>
-              <p><strong className="font-medium">MLA:</strong> {getMlaCitation()}</p>
+              <p><strong>Chicago:</strong> {getChicagoCitation()}</p>
+              <p><strong>APA:</strong> {getApaCitation()}</p>
+              <p><strong>MLA:</strong> {getMlaCitation()}</p>
             </div>
           )}
         </div>
