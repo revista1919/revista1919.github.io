@@ -149,7 +149,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
   const authorMetaTags = authorsList.map(author => `<meta name="citation_author" content="${author}">`).join('\n');
   const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
   const pdfFileName = `Article-${articleSlug}.pdf`;
-  article.pdf = `${domain}/Article/${pdfFileName}`;
+  article.pdf = `${domain}/Articles/${pdfFileName}`;
   // Generar HTML en español
   const htmlContentEs = `
 <!DOCTYPE html>
@@ -604,7 +604,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
     </main>
     <footer>
       <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
-      <a href="/">Back to home</a>
+      <a href="${domain}/en/article">Back to Home</a>
     </footer>
   </div>
 </body>
