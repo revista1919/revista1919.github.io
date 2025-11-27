@@ -1,10 +1,42 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Papa from 'papaparse';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import CalendarComponent from './CalendarComponentEN';
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 const INCOMING_CSV = process.env.REACT_APP_FORM_CSV || '';
 const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby2B1OUt3TMqaed6Vz-iamUPn4gHhKXG2RRxiy8Nt6u69Cg-2kSze2XQ-NywX5QrNfy/exec';
 const sanitizeInput = (input) => input ? input.trim().toLowerCase().replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') : '';
+const parseDate = (dateStr) => {
+  if (!dateStr) return null;
+  const parts = dateStr.split(/[-\/]/); // Handles / or -
+  if (parts.length !== 3) return null;
+  let year, month, day;
+  if (parts[0].length === 4) { // YYYY-MM-DD
+    year = parseInt(parts[0], 10);
+    month = parseInt(parts[1], 10) - 1;
+    day = parseInt(parts[2], 10);
+  } else {
+    // Try DD/MM/YYYY first
+    day = parseInt(parts[0], 10);
+    month = parseInt(parts[1], 10);
+    year = parseInt(parts[2], 10);
+    if (month > 12 || day > 31 || month < 1 || day < 1 || isNaN(year) || isNaN(month) || isNaN(day)) {
+      // Try MM/DD/YYYY
+      month = parseInt(parts[0], 10);
+      day = parseInt(parts[1], 10);
+      year = parseInt(parts[2], 10);
+      if (month > 12 || day > 31 || month < 1 || day < 1 || isNaN(year) || isNaN(month) || isNaN(day)) {
+        console.warn('Invalid date parsed:', dateStr);
+        return null;
+      }
+    }
+    month -= 1; // Adjust for JS Date
+  }
+  // Change: Use Date.UTC to avoid timezone shifts when parsing (treat as UTC)
+  return new Date(Date.UTC(year, month, day));
+};
 export default function AssignSection({ user, onClose }) {
   const [users, setUsers] = useState([]);
   const [reviewers, setReviewers] = useState([]);
@@ -17,8 +49,9 @@ export default function AssignSection({ user, onClose }) {
   const [editingData, setEditingData] = useState(null);
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const [submitStatus, setSubmitStatus] = useState({});
-  const [isSending, setIsSending] = useState({}); // New state for loading indicators
-  const [emailPreview, setEmailPreview] = useState(null); // New state for email preview
+  const [isSending, setIsSending] = useState({});
+  const [emailPreview, setEmailPreview] = useState(null);
+  const [selectedEvent, setSelectedEvent] = useState(null);
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -41,7 +74,7 @@ export default function AssignSection({ user, onClose }) {
         const revs = filteredUsers.filter(u => (u['Role in the Journal'] || u['Rol en la Revista'] || '').includes('Reviewer') || (u['Role in the Journal'] || u['Rol en la Revista'] || '').includes('Revisor'));
         const eds = filteredUsers.filter(u => (u['Role in the Journal'] || u['Rol en la Revista'] || '').includes('Section Editor') || (u['Role in the Journal'] || u['Rol en la Revista'] || '').includes('Editor de Sección'));
         const chiefs = filteredUsers.filter(u => (u['Role in the Journal'] || u['Rol en la Revista'] || '').includes('Editor-in-Chief') || (u['Role in the Journal'] || u['Rol en la Revista'] || '').includes('Editor en Jefe'));
-        setReviewers(revs);
+        setReviewers([...revs, ...eds, ...chiefs]);
         setSectionEditors([...eds, ...chiefs]);
         console.log("👤 Reviewers:", revs);
         console.log("📂 Editors (including chief):", [...eds, ...chiefs]);
@@ -105,8 +138,55 @@ export default function AssignSection({ user, onClose }) {
   const totalPending = groupedIncoming.reduce((sum, group) => {
     return sum + group.articles.filter(art => !(art.assignment && isCompleted(art.assignment))).length;
   }, 0);
+  const calendarEvents = useMemo(() => {
+    return assignments
+      .filter(a => a.Plazo && parseDate(a.Plazo))
+      .map(a => ({
+        title: a['Nombre Artículo'],
+        start: parseDate(a.Plazo),
+        end: parseDate(a.Plazo),
+        allDay: true,
+        resource: a,
+      }));
+  }, [assignments]);
+  const handleSelectEvent = (event) => {
+    const assignment = event.resource;
+    const titleSanitized = sanitizeInput(assignment['Nombre Artículo']);
+    const authorSanitized = sanitizeInput(assignment.Autor);
+    // Find the group and art
+    for (const group of groupedIncoming) {
+      if (sanitizeInput(group.authorName) === authorSanitized) {
+        const art = group.articles.find(a => sanitizeInput(a['Title of your paper'] || a['Título de su artículo'] || '') === titleSanitized);
+        if (art) {
+          const uniqueId = getUniqueId(group.authorName, art['Title of your paper'] || art['Título de su artículo']);
+          const defData = {
+            nombre: assignment['Nombre Artículo'] || art['Title of your paper'] || art['Título de su artículo'] || '',
+            link: assignment['Link Artículo'] || art['Insert your paper in Word format here. It must be 1,000 to 10,000 words. Remember not to include your name in the document.'] || art['Inserta aquí tu artículo en formato Word. Debe tener de 1.000 a 10.000 palabras. Recuerda no incluir tu nombre en el documento.'] || '',
+            r1: assignment['Revisor 1'] || '',
+            r2: assignment['Revisor 2'] || '',
+            editor: assignment.Editor || '',
+            plazo: assignment.Plazo ? parseDate(assignment.Plazo) : null,
+          };
+          setEditingData({
+            id: uniqueId,
+            data: defData,
+            isUpdate: true,
+            author: assignment.Autor,
+            area: art['Area of the paper (e.g.: economics)'] || art['Área del artículo (e.g.: economía)'],
+          });
+          setEditingId(uniqueId);
+          break;
+        }
+      }
+    }
+  };
   const handleAssignOrUpdate = async (data, isUpdate = false) => {
     const action = isUpdate ? 'update' : 'assign';
+    const plazoValue = data.Plazo;
+    // Change: Manual formatting to avoid timezone shift (sends exact local day, without toISOString)
+    const plazoStr = plazoValue instanceof Date && !isNaN(plazoValue)
+      ? `${plazoValue.getFullYear()}-${(plazoValue.getMonth() + 1).toString().padStart(2, '0')}-${plazoValue.getDate().toString().padStart(2, '0')}`
+      : '';
     const body = {
       action,
       title: data['Nombre Artículo'],
@@ -115,9 +195,10 @@ export default function AssignSection({ user, onClose }) {
       rev2: data['Revisor 2'],
       editor: data.Editor,
       autor: data.Autor,
+      plazo: plazoStr, // Always send, even empty (to force update if needed)
     };
     const articleKey = data['Nombre Artículo'] || data.Autor;
-    console.log("📤 Sending data to script:", body);
+    console.log("📤 Sending data to script (including plazo always):", body); // Improved log for debugging if plazo is sent
     setIsSending({ ...isSending, [articleKey]: true });
     try {
       const response = await fetch(SCRIPT_URL, {
@@ -127,7 +208,7 @@ export default function AssignSection({ user, onClose }) {
         body: JSON.stringify(body),
       });
       console.log("📨 Fetch sent, response (no-cors, cannot read):", response);
-      setSubmitStatus({ ...submitStatus, [articleKey]: 'Updated... please wait a moment to see the change, then refresh the page.' });
+      setSubmitStatus({ ...submitStatus, [articleKey]: 'Updated... please wait a few moments to see the change, please refresh the page.' });
       setEditingId(null);
       setEditingData(null);
     } catch (err) {
@@ -162,7 +243,7 @@ export default function AssignSection({ user, onClose }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      console.log("📨 Fetch sent (no-cors, cannot read response):", response);
+      console.log("📨 Fetch sent (no-cors, cannot read the response):", response);
       setSubmitStatus({ ...submitStatus, [articleKey]: 'Reminder sent.' });
       const articleLink = assignments.find(a => sanitizeInput(a['Nombre Artículo']) === sanitizeInput(title))?.['Link Artículo'] || '';
       const htmlBody = `
@@ -201,11 +282,12 @@ export default function AssignSection({ user, onClose }) {
     return `${sanitizeInput(groupAuthor)}-${sanitizeInput(artTitle || 'unnamed')}`;
   };
   const tutorialSteps = [
-    '1. Explore the list of collaborators by clicking on their profiles to view descriptions, interests, and contact them if they miss deadlines (use the "Contact" button for a professional email).',
+    '1. Explore the list of collaborators by clicking on their profiles to view descriptions, interests and contact them if they do not meet deadlines (use the "Contact" button for a professional email).',
     '2. In "Articles by Author", articles are grouped by author using the "Title of your paper". Only pending articles (without all feedback/reports) are shown.',
-    '3. Click "Assign" for unassigned articles or "Edit" to update. Complete the fields (title, link, reviewers, editor) and confirm.',
-    '4. Use the contact buttons to send institutional email reminders from the server.',
-    '5. The panel is responsive. Articles with all feedback are automatically hidden, regardless of "Status".',
+    '3. Click "Assign" for articles without assignment or "Edit" to update. Complete the fields (title, link, reviewers, editor, deadline) and confirm.',
+    '4. Use the contact buttons to send institutional reminders by email from the server.',
+    '5. The panel is responsive. Articles with all feedback are automatically hidden, regardless of the "Status".',
+    '6. Use the calendar to view and edit deadlines for pending articles. Click on an event to edit the assignment.',
   ];
   if (loading) return <div className="text-center p-4 text-gray-600">Loading assignment management...</div>;
   return (
@@ -224,6 +306,7 @@ export default function AssignSection({ user, onClose }) {
           )}
         </div>
       </div>
+      <CalendarComponent events={calendarEvents} onSelectEvent={handleSelectEvent} />
       <section>
         <h4 className="text-lg font-semibold mb-4">Collaborators (Reviewers and Section Editors)</h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -251,9 +334,9 @@ export default function AssignSection({ user, onClose }) {
               <h5 className="font-bold text-lg">{selectedUser.Nombre}</h5>
               <button onClick={() => setSelectedUser(null)} className="text-gray-500 hover:text-gray-700">×</button>
             </div>
-            <p className="text-gray-700 mb-4 leading-relaxed">{selectedUser.Description || selectedUser.Descripción || 'N/A'}</p>
+            <p className="text-gray-700 mb-4 leading-relaxed">{selectedUser.Description || selectedUser.Descripción}</p>
             <p className="text-sm font-medium mb-4">
-              <strong>Interests:</strong> {(selectedUser['Areas of interest'] || selectedUser['Áreas de interés'] || '').split(';').map(i => i.trim()).join(', ') || 'N/A'}
+              <strong>Interests:</strong> {(selectedUser['Areas of interest'] || selectedUser['Áreas de interés'])?.split(';').map(i => i.trim()).join(', ') || 'N/A'}
             </p>
             <p className="text-sm text-gray-600 mb-4">
               <strong>Email:</strong> {selectedUser.Correo || selectedUser['Correo electrónico'] || 'N/A'}
@@ -263,7 +346,7 @@ export default function AssignSection({ user, onClose }) {
                 selectedUser.Correo || selectedUser['Correo electrónico'],
                 selectedUser.Nombre,
                 'General',
-                (selectedUser['Role in the Journal'] || selectedUser['Rol en la Revista'] || '').includes('Reviewer') || (selectedUser['Role in the Journal'] || selectedUser['Rol en la Revista'] || '').includes('Revisor') ? 'Reviewer' : 'Section Editor',
+                (selectedUser['Role in the Journal'] || selectedUser['Rol en la Revista'] || '').includes('Reviewer') || (selectedUser['Role in the Journal'] || selectedUser['Rol en la Revista'] || '').includes('Revisor') ? 'Reviewer' : 'Editor',
                 selectedUser.Nombre
               )}
               className="w-full bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 text-sm"
@@ -299,16 +382,19 @@ export default function AssignSection({ user, onClose }) {
                     const currentR1 = isAssigned ? art.assignment['Revisor 1'] || 'Not assigned' : 'Not assigned';
                     const currentR2 = isAssigned ? art.assignment['Revisor 2'] || 'Not assigned' : 'Not assigned';
                     const currentEditor = isAssigned ? art.assignment.Editor || 'Not assigned' : 'Not assigned';
+                    const currentPlazo = isAssigned ? art.assignment.Plazo || 'Not defined' : 'Not defined';
                     const statusBadge = isAssigned ? 'Assigned (under review)' : 'Pending assignment';
                     const badgeClass = isAssigned ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800';
                     const handleEditOrAssignClick = () => {
                       const defData = {
-                        nombre: isAssigned ? art.assignment['Nombre Artículo'] || (art['Title of your paper'] || art['Título de su artículo']) || '' : (art['Title of your paper'] || art['Título de su artículo']) || '',
-                        link: isAssigned ? art.assignment['Link Artículo'] || (art['Insert your paper in Word format here. It must be 1,000 to 10,000 words. Remember not to include your name in the document.'] || art['Inserta aquí tu artículo en formato Word. Debe tener de 1.000 a 10.000 palabras. Recuerda no incluir tu nombre en el documento.']) || '' : (art['Insert your paper in Word format here. It must be 1,000 to 10,000 words. Remember not to include your name in the document.'] || art['Inserta aquí tu artículo en formato Word. Debe tener de 1.000 a 10.000 palabras. Recuerda no incluir tu nombre en el documento.']) || '',
+                        nombre: isAssigned ? art.assignment['Nombre Artículo'] || art['Title of your paper'] || art['Título de su artículo'] || '' : art['Title of your paper'] || art['Título de su artículo'] || '',
+                        link: isAssigned ? art.assignment['Link Artículo'] || art['Insert your paper in Word format here. It must be 1,000 to 10,000 words. Remember not to include your name in the document.'] || '' : art['Insert your paper in Word format here. It must be 1,000 to 10,000 words. Remember not to include your name in the document.'] || '',
                         r1: isAssigned ? art.assignment['Revisor 1'] || '' : '',
                         r2: isAssigned ? art.assignment['Revisor 2'] || '' : '',
                         editor: isAssigned ? art.assignment.Editor || '' : '',
+                        plazo: isAssigned ? (art.assignment.Plazo ? parseDate(art.assignment.Plazo) : null) : null,
                       };
+                      console.log('Loading deadline:', art.assignment?.Plazo, defData.plazo); // Added log for debug
                       setEditingData({
                         id: uniqueId,
                         data: defData,
@@ -333,6 +419,7 @@ export default function AssignSection({ user, onClose }) {
                           Editor: data.editor,
                           Autor: author,
                           'Área del artículo': area,
+                          Plazo: data.plazo,
                         },
                         isUpdate
                       );
@@ -359,6 +446,7 @@ export default function AssignSection({ user, onClose }) {
                           <p><strong>Reviewer 1:</strong> {currentR1}</p>
                           <p><strong>Reviewer 2:</strong> {currentR2}</p>
                           <p><strong>Editor:</strong> {currentEditor}</p>
+                          <p><strong>Deadline:</strong> {currentPlazo}</p>
                           <span className={`inline-block px-2 py-1 text-xs rounded-full ${badgeClass}`}>
                             {statusBadge}
                           </span>
@@ -488,11 +576,18 @@ export default function AssignSection({ user, onClose }) {
                                 <option value="">Select Editor</option>
                                 {sectionEditors.map((e) => <option key={e.Nombre} value={e.Nombre}>{e.Nombre}</option>)}
                               </select>
+                              <DatePicker
+                                selected={editingData.data.plazo}
+                                onChange={(date) => updateField('plazo', date)}
+                                dateFormat="yyyy-MM-dd"
+                                placeholderText="Select Deadline"
+                                className="border p-2 rounded-md text-sm w-full"
+                              />
                             </div>
                             <div className="flex space-x-2">
                               <button
                                 onClick={handleConfirm}
-                                disabled={!editingData.data.nombre || !editingData.data.link || !editingData.data.r1 || !editingData.data.r2 || !editingData.data.editor || isSending[articleKey]}
+                                disabled={!editingData.data.nombre || !editingData.data.link || !editingData.data.r1 || !editingData.data.r2 || !editingData.data.editor || !editingData.data.plazo || isSending[articleKey]}
                                 className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:bg-gray-400 text-sm"
                               >
                                 {isSending[articleKey] ? 'Updating...' : (editingData.isUpdate ? 'Update' : 'Assign')}
@@ -519,6 +614,19 @@ export default function AssignSection({ user, onClose }) {
           ))}
         </div>
       </section>
+      <section>
+        <h4 className="text-lg font-semibold mb-4">Spreadsheets</h4>
+        <div className="space-y-6">
+          <div>
+            <h5 className="font-medium text-md mb-2">Articles under review</h5>
+            <iframe src="https://docs.google.com/spreadsheets/d/1-M0Ca-3VmX-0t2M1uEVQsjEatzFFbxlfLlEXTUdp8ws/edit?usp=sharing" width="100%" height="600" frameborder="0"></iframe>
+          </div>
+          <div>
+            <h5 className="font-medium text-md mb-2">Spreadsheet 2</h5>
+            <iframe src="https://docs.google.com/spreadsheets/d/1sO6jANVLMzX409GkiIU5Z4g8G439ZjBVnquQUkPy1wE/edit?usp=sharing" width="100%" height="600" frameborder="0"></iframe>
+          </div>
+        </div>
+      </section>
       {tutorialOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
@@ -542,7 +650,7 @@ export default function AssignSection({ user, onClose }) {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
             <div className="flex justify-between items-start mb-4">
-              <h5 className="font-bold text-lg">Email Preview</h5>
+              <h5 className="font-bold text-lg">Sent Email Preview</h5>
               <button onClick={() => setEmailPreview(null)} className="text-gray-500 hover:text-gray-700">×</button>
             </div>
             <div className="mb-4">
