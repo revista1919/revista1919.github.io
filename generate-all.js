@@ -1,4 +1,4 @@
-```javascript
+
 const fs = require('fs');
 const path = require('path');
 const fetch = require('node-fetch').default;
@@ -1750,4 +1750,4 @@ Sitemap: ${domain}/sitemap.xml
     process.exit(1);
   }
 })();
-```
+
