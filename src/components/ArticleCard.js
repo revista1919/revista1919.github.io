@@ -73,6 +73,9 @@ function ArticleCard({ article }) {
   const [showCitations, setShowCitations] = useState(false);
   const [showFullAbstract, setShowFullAbstract] = useState(false);
   const [showEnglishAbstract, setShowEnglishAbstract] = useState(false);
+  const [copiedChicago, setCopiedChicago] = useState(false);
+  const [copiedApa, setCopiedApa] = useState(false);
+  const [copiedMla, setCopiedMla] = useState(false);
 
   const journal = 'Revista Nacional de las Ciencias para Estudiantes';
   const pdfUrl = article?.pdf || null;
@@ -109,6 +112,17 @@ function ArticleCard({ article }) {
     );
   };
 
+  const getChicagoText = () => {
+    const authorsRaw = article?.autores || '';
+    const authors = authorsRaw.split(';').map(a => a.trim()).filter(a => a);
+    const title = article?.titulo || 'Sin título';
+    const volume = article?.volumen || '';
+    const number = article?.numero || '';
+    const year = getYear(article?.fecha);
+
+    return `${chicagoAuthors(authors)}. “${title}.” ${journal} ${volume}, no. ${number} (${year}): ${pages}. ${pdfUrl || ''}`;
+  };
+
   const getApaCitation = () => {
     const authorsRaw = article?.autores || '';
     const authors = authorsRaw.split(';').map(a => a.trim()).filter(a => a);
@@ -127,6 +141,17 @@ function ArticleCard({ article }) {
         )}
       </>
     );
+  };
+
+  const getApaText = () => {
+    const authorsRaw = article?.autores || '';
+    const authors = authorsRaw.split(';').map(a => a.trim()).filter(a => a);
+    const title = article?.titulo || 'Sin título';
+    const volume = article?.volumen || '';
+    const number = article?.numero || '';
+    const year = getYear(article?.fecha);
+
+    return `${apaAuthors(authors)} (${year}). ${title}. ${journal}, ${volume}(${number}), ${pages}. ${pdfUrl || ''}`;
   };
 
   const getMlaCitation = () => {
@@ -149,7 +174,39 @@ function ArticleCard({ article }) {
     );
   };
 
+  const getMlaText = () => {
+    const authorsRaw = article?.autores || '';
+    const authors = authorsRaw.split(';').map(a => a.trim()).filter(a => a);
+    const title = article?.titulo || 'Sin título';
+    const volume = article?.volumen || '';
+    const number = article?.numero || '';
+    const year = getYear(article?.fecha);
+
+    return `${mlaAuthors(authors)}. “${title}.” ${journal}, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}. ${pdfUrl || ''}`;
+  };
+
   /* ----------------------------------------------------------------------- */
+
+  const copyChicago = (e) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(getChicagoText());
+    setCopiedChicago(true);
+    setTimeout(() => setCopiedChicago(false), 2000);
+  };
+
+  const copyApa = (e) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(getApaText());
+    setCopiedApa(true);
+    setTimeout(() => setCopiedApa(false), 2000);
+  };
+
+  const copyMla = (e) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(getMlaText());
+    setCopiedMla(true);
+    setTimeout(() => setCopiedMla(false), 2000);
+  };
 
   const toggleExpand = (e) => {
     const tag = e.target.tagName.toLowerCase();
@@ -337,9 +394,33 @@ function ArticleCard({ article }) {
           {/* Citas */}
           {showCitations && (
             <div className="text-gray-800 text-sm space-y-4 bg-white p-4 rounded-lg shadow-inner break-words">
-              <p><strong>Chicago:</strong> {getChicagoCitation()}</p>
-              <p><strong>APA:</strong> {getApaCitation()}</p>
-              <p><strong>MLA:</strong> {getMlaCitation()}</p>
+              <div className="flex justify-between items-start">
+                <p><strong>Chicago:</strong> {getChicagoCitation()}</p>
+                <button
+                  className="ml-4 px-3 py-1 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 text-xs shadow"
+                  onClick={copyChicago}
+                >
+                  {copiedChicago ? '¡Copiado!' : 'Copiar'}
+                </button>
+              </div>
+              <div className="flex justify-between items-start">
+                <p><strong>APA:</strong> {getApaCitation()}</p>
+                <button
+                  className="ml-4 px-3 py-1 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 text-xs shadow"
+                  onClick={copyApa}
+                >
+                  {copiedApa ? '¡Copiado!' : 'Copiar'}
+                </button>
+              </div>
+              <div className="flex justify-between items-start">
+                <p><strong>MLA:</strong> {getMlaCitation()}</p>
+                <button
+                  className="ml-4 px-3 py-1 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 text-xs shadow"
+                  onClick={copyMla}
+                >
+                  {copiedMla ? '¡Copiado!' : 'Copiar'}
+                </button>
+              </div>
             </div>
           )}
         </div>
