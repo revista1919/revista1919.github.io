@@ -1140,10 +1140,10 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
       const isAuthor = publishedArticles.length > 0;
       let filteredRolesEs = rolesEs;
       let filteredRolesEn = rolesEnList;
-      if (rolesEs.length > 1 && isAuthor) {
+      if (rolesEs.length > 1) {
         filteredRolesEs = rolesEs.filter(r => r.toLowerCase() !== 'autor');
       }
-      if (rolesEnList.length > 1 && isAuthor) {
+      if (rolesEnList.length > 1) {
         filteredRolesEn = rolesEnList.filter(r => r.toLowerCase() !== 'author');
       }
       const rolesStr = filteredRolesEs.join(', ') || 'No especificado';
@@ -1161,22 +1161,34 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
       const articlesSectionEs = isAuthor ? `
       <div class="section">
         <h2>Artículos Publicados</h2>
-        <ul class="articles-list">
+        <div class="articles-container">
           ${publishedArticles.map(article => {
             const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
-            return `<li><a href="/articles/article-${articleSlug}.html">${article.titulo}</a></li>`;
+            return `
+            <div class="article-card">
+              <h3><a href="/articles/article-${articleSlug}.html">${article.titulo}</a></h3>
+              <p class="authors">${article.autores}</p>
+              <p class="meta">Fecha: ${article.fecha} | Volumen: ${article.volumen}, Número: ${article.numero}, Páginas: ${article.primeraPagina}-${article.ultimaPagina}</p>
+            </div>
+            `;
           }).join('')}
-        </ul>
+        </div>
       </div>` : '';
       const articlesSectionEn = isAuthor ? `
       <div class="section">
         <h2>Published Articles</h2>
-        <ul class="articles-list">
+        <div class="articles-container">
           ${publishedArticles.map(article => {
             const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
-            return `<li><a href="/articles/article-${articleSlug}EN.html">${article.titulo}</a></li>`;
+            return `
+            <div class="article-card">
+              <h3><a href="/articles/article-${articleSlug}EN.html">${article.titulo}</a></h3>
+              <p class="authors">${article.autores}</p>
+              <p class="meta">Date: ${article.fecha} | Volume: ${article.volumen}, Issue: ${article.numero}, Pages: ${article.primeraPagina}-${article.ultimaPagina}</p>
+            </div>
+            `;
           }).join('')}
-        </ul>
+        </div>
       </div>` : '';
       const esContent = `<!DOCTYPE html>
 <html lang="es">
@@ -1281,25 +1293,36 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
       font-weight: 500;
       display: inline-block;
     }
-    .articles-list {
-      list-style: none;
-      padding: 0;
+    .articles-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
     }
-    .articles-list li {
-      background: #edf2f7;
-      padding: 0.75rem 1.25rem;
+    .article-card {
+      background: #f9fafb;
+      padding: 1.5rem;
       border-radius: 8px;
-      margin-bottom: 1rem;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
-    .articles-list a {
-      color: #2d3748;
-      font-weight: 500;
+    .article-card h3 {
+      margin-bottom: 0.5rem;
+      font-size: 1.2rem;
+    }
+    .article-card h3 a {
+      color: #2b6cb0;
       text-decoration: none;
     }
-    .articles-list a:hover {
-      color: #2b6cb0;
+    .article-card h3 a:hover {
       text-decoration: underline;
+    }
+    .article-card .authors {
+      font-style: italic;
+      color: #4a5568;
+      margin-bottom: 0.5rem;
+    }
+    .article-card .meta {
+      font-size: 0.9rem;
+      color: #718096;
     }
     h1 {
       color: #2b6cb0;
@@ -1500,25 +1523,36 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
       font-weight: 500;
       display: inline-block;
     }
-    .articles-list {
-      list-style: none;
-      padding: 0;
+    .articles-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
     }
-    .articles-list li {
-      background: #edf2f7;
-      padding: 0.75rem 1.25rem;
+    .article-card {
+      background: #f9fafb;
+      padding: 1.5rem;
       border-radius: 8px;
-      margin-bottom: 1rem;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
-    .articles-list a {
-      color: #2d3748;
-      font-weight: 500;
+    .article-card h3 {
+      margin-bottom: 0.5rem;
+      font-size: 1.2rem;
+    }
+    .article-card h3 a {
+      color: #2b6cb0;
       text-decoration: none;
     }
-    .articles-list a:hover {
-      color: #2b6cb0;
+    .article-card h3 a:hover {
       text-decoration: underline;
+    }
+    .article-card .authors {
+      font-style: italic;
+      color: #4a5568;
+      margin-bottom: 0.5rem;
+    }
+    .article-card .meta {
+      font-size: 0.9rem;
+      color: #718096;
     }
     h1 {
       color: #2b6cb0;
