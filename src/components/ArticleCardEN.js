@@ -112,6 +112,16 @@ function ArticleCardEN({ article }) {
     const year = getYear(article?.['Fecha']);
     return `${authors}. "${title}." ${journal} ${volume}, no. ${number} (${year}): ${pages}. ${pdfUrl || ''}`;
   };
+  const getChicagoHtml = () => {
+    const authors = authorsArray.length
+      ? formatChicagoAuthors(authorsArray)
+      : 'Unknown author';
+    const title = article?.['Título'] || 'Untitled';
+    const volume = article?.['Volumen'] || '';
+    const number = article?.['Número'] || '';
+    const year = getYear(article?.['Fecha']);
+    return `${authors}. &ldquo;${title}.&rdquo; <em>${journal}</em> ${volume}, no. ${number} (${year}): ${pages}. ${pdfUrl ? `<a href="${pdfUrl}">${pdfUrl}</a>` : ''}`;
+  };
   const getApaCitation = () => {
     const authors = authorsArray.length
       ? formatAPAAuthors(authorsArray)
@@ -140,6 +150,16 @@ function ArticleCardEN({ article }) {
     const number = article?.['Número'] || '';
     const year = getYear(article?.['Fecha']);
     return `${authors} (${year}). ${title}. ${journal}, ${volume}(${number}), ${pages}. ${pdfUrl || ''}`;
+  };
+  const getApaHtml = () => {
+    const authors = authorsArray.length
+      ? formatAPAAuthors(authorsArray)
+      : 'Unknown author';
+    const title = article?.['Título'] || 'Untitled';
+    const volume = article?.['Volumen'] || '';
+    const number = article?.['Número'] || '';
+    const year = getYear(article?.['Fecha']);
+    return `${authors} (${year}). ${title}. <em>${journal}</em>, ${volume}(${number}), ${pages}. ${pdfUrl ? `<a href="${pdfUrl}">${pdfUrl}</a>` : ''}`;
   };
   const getMlaCitation = () => {
     const authors = authorsArray.length
@@ -170,28 +190,71 @@ function ArticleCardEN({ article }) {
     const year = getYear(article?.['Fecha']);
     return `${authors}. "${title}." ${journal}, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}. ${pdfUrl || ''}`;
   };
+  const getMlaHtml = () => {
+    const authors = authorsArray.length
+      ? formatMLAAuthors(authorsArray)
+      : 'Unknown author';
+    const title = article?.['Título'] || 'Untitled';
+    const volume = article?.['Volumen'] || '';
+    const number = article?.['Número'] || '';
+    const year = getYear(article?.['Fecha']);
+    return `${authors}. &ldquo;${title}.&rdquo; <em>${journal}</em>, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}. ${pdfUrl ? `<a href="${pdfUrl}">${pdfUrl}</a>` : ''}`;
+  };
   const handleAuthorClick = (authorName) => {
     if (!authorName) return;
     const slug = generateSlug(authorName);
     window.location.href = `/team/${slug}.EN.html`;
   };
-  const copyChicago = (e) => {
+  const copyChicago = async (e) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(getChicagoText());
-    setCopiedChicago(true);
-    setTimeout(() => setCopiedChicago(false), 2000);
+    const html = getChicagoHtml();
+    const plain = getChicagoText();
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/html': new Blob([html], { type: 'text/html' }),
+          'text/plain': new Blob([plain], { type: 'text/plain' }),
+        }),
+      ]);
+      setCopiedChicago(true);
+      setTimeout(() => setCopiedChicago(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy: ', err);
+    }
   };
-  const copyApa = (e) => {
+  const copyApa = async (e) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(getApaText());
-    setCopiedApa(true);
-    setTimeout(() => setCopiedApa(false), 2000);
+    const html = getApaHtml();
+    const plain = getApaText();
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/html': new Blob([html], { type: 'text/html' }),
+          'text/plain': new Blob([plain], { type: 'text/plain' }),
+        }),
+      ]);
+      setCopiedApa(true);
+      setTimeout(() => setCopiedApa(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy: ', err);
+    }
   };
-  const copyMla = (e) => {
+  const copyMla = async (e) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(getMlaText());
-    setCopiedMla(true);
-    setTimeout(() => setCopiedMla(false), 2000);
+    const html = getMlaHtml();
+    const plain = getMlaText();
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/html': new Blob([html], { type: 'text/html' }),
+          'text/plain': new Blob([plain], { type: 'text/plain' }),
+        }),
+      ]);
+      setCopiedMla(true);
+      setTimeout(() => setCopiedMla(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy: ', err);
+    }
   };
   const toggleExpand = (e) => {
     const tag = e.target.tagName.toLowerCase();
