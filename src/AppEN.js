@@ -212,7 +212,7 @@ function AppEN() {
     {
       name: 'articles',
       label: 'Articles',
-      path: '/en/articles',
+      path: '/en/article',
       component: (
         <motion.div 
           className="py-8 max-w-7xl mx-auto"
@@ -315,7 +315,7 @@ function AppEN() {
     {
       name: 'news',
       label: 'News',
-      path: '/en/news',
+      path: '/en/new',
       component: <NewsSection className="py-8 max-w-7xl mx-auto" />,
     },
     {
