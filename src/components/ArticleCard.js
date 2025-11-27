@@ -337,4 +337,162 @@ function ArticleCard({ article }) {
         <div className="mt-4 space-y-4 animate-fade-in">
           {/* Fecha */}
           <p className="text-sm text-gray-800">
-            <strong className="font-medium">Fecha:</strong> {parse
+            <strong className="font-medium">Fecha:</strong> {parseDateFlexible(article.fecha)}
+          </p>
+
+          {/* Áreas */}
+          {article.area ? (
+            <div className="text-sm text-gray-800">
+              <strong className="font-medium">Áreas:</strong>{' '}
+              <div className="flex flex-wrap gap-2 mt-1">
+                {article.area.split(';').map((area, idx) => (
+                  <span
+                    key={idx}
+                    className="bg-yellow-100 text-yellow-800 text-xs font-medium px-3 py-1 rounded-full shadow-sm"
+                  >
+                    {area.trim()}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-800">
+              <strong className="font-medium">Área:</strong> No especificada
+            </p>
+          )}
+
+          {/* Palabras clave */}
+          <p className="text-sm text-gray-800">
+            <strong className="font-medium">Palabras Clave:</strong>
+          </p>
+          {article.palabras_clave && article.palabras_clave.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {article.palabras_clave.map((kw, idx) => (
+                <span
+                  key={idx}
+                  className="bg-blue-100 text-blue-800 text-xs font-medium px-3 py-1 rounded-full shadow-sm"
+                >
+                  {kw}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Resumen */}
+          <p className="text-sm text-gray-800">
+            <strong className="font-medium">Resumen: </strong>
+            {article.resumen ? (
+              <>
+                {showFullAbstract ? article.resumen : `${article.resumen.slice(0, 200)}...`}
+                {article.resumen.length > 200 && (
+                  <button
+                    className="ml-2 text-blue-600 hover:text-blue-800 underline text-xs"
+                    onClick={(e) => { e.stopPropagation(); setShowFullAbstract(!showFullAbstract); }}
+                  >
+                    {showFullAbstract ? 'Leer menos' : 'Leer más'}
+                  </button>
+                )}
+              </>
+            ) : (
+              'Resumen no disponible'
+            )}
+          </p>
+
+          {/* Abstract inglés */}
+          <div>
+            <button
+              className="text-blue-600 hover:text-blue-800 underline text-xs"
+              onClick={(e) => { e.stopPropagation(); setShowEnglishAbstract(!showEnglishAbstract); }}
+            >
+              {showEnglishAbstract ? 'Ocultar abstract en inglés' : 'Ver abstract en inglés'}
+            </button>
+            {showEnglishAbstract && (
+              <p className="text-sm text-gray-800 mt-2 bg-white p-3 rounded-lg shadow-inner">
+                {article.englishAbstract || 'Abstract no disponible'}
+              </p>
+            )}
+          </div>
+
+          {/* Botones PDF / HTML */}
+          <div className="flex flex-wrap gap-3">
+            {pdfUrl && (
+              <>
+                <a
+                  href={pdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm shadow"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Abrir PDF
+                </a>
+                <a
+                  href={pdfUrl}
+                  download
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm shadow"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Descargar PDF
+                </a>
+              </>
+            )}
+            {htmlUrl && (
+              <a
+                href={htmlUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-sm shadow"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Abrir página completa
+              </a>
+            )}
+          </div>
+
+          {/* Botón de citas */}
+          <button
+            className="text-brown-800 hover:text-brown-900 underline text-sm"
+            onClick={(e) => { e.stopPropagation(); setShowCitations(!showCitations); }}
+          >
+            {showCitations ? 'Ocultar citas' : 'Cómo citar este artículo'}
+          </button>
+
+          {/* Citas */}
+          {showCitations && (
+            <div className="text-gray-800 text-sm space-y-4 bg-white p-4 rounded-lg shadow-inner break-words">
+              <div className="flex justify-between items-start">
+                <p><strong>Chicago:</strong> {getChicagoCitation()}</p>
+                <button
+                  className="ml-4 px-3 py-1 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 text-xs shadow"
+                  onClick={copyChicago}
+                >
+                  {copiedChicago ? '¡Copiado!' : 'Copiar'}
+                </button>
+              </div>
+              <div className="flex justify-between items-start">
+                <p><strong>APA:</strong> {getApaCitation()}</p>
+                <button
+                  className="ml-4 px-3 py-1 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 text-xs shadow"
+                  onClick={copyApa}
+                >
+                  {copiedApa ? '¡Copiado!' : 'Copiar'}
+                </button>
+              </div>
+              <div className="flex justify-between items-start">
+                <p><strong>MLA:</strong> {getMlaCitation()}</p>
+                <button
+                  className="ml-4 px-3 py-1 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 text-xs shadow"
+                  onClick={copyMla}
+                >
+                  {copiedMla ? '¡Copiado!' : 'Copiar'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default ArticleCard;
