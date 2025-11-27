@@ -999,7 +999,8 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       acc[year].push(item);
       return acc;
     }, {});
-    let newsIndexContent = `<!DOCTYPE html>
+    let newsIndexContent = `
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -1033,8 +1034,13 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
     <a href="/">Volver al inicio</a>
   </footer>
 </body>
-</html>`;
-    let newsIndexContentEn = `<!DOCTYPE html>
+</html>
+    `.trim();
+    const newsIndexPath = path.join(newsOutputHtmlDir, 'index.html');
+    fs.writeFileSync(newsIndexPath, newsIndexContent, 'utf8');
+    console.log(`Generado índice HTML de noticias: ${newsIndexPath}`);
+    let newsIndexContentEn = `
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1068,13 +1074,11 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
     <a href="/">Back to home</a>
   </footer>
 </body>
-</html>`;
-    const newsEsIndexPath = path.join(newsOutputHtmlDir, 'index.html');
-    fs.writeFileSync(newsEsIndexPath, newsIndexContent, 'utf8');
-    console.log(`Generado índice HTML de noticias (ES): ${newsEsIndexPath}`);
-    const newsEnIndexPath = path.join(newsOutputHtmlDir, 'index.EN.html');
-    fs.writeFileSync(newsEnIndexPath, newsIndexContentEn, 'utf8');
-    console.log(`Generado índice HTML de noticias (EN): ${newsEnIndexPath}`);
+</html>
+    `.trim();
+    const newsIndexPathEn = path.join(newsOutputHtmlDir, 'index.EN.html');
+    fs.writeFileSync(newsIndexPathEn, newsIndexContentEn, 'utf8');
+    console.log(`Generado índice HTML de noticias (EN): ${newsIndexPathEn}`);
     // Procesar equipo
     const teamRes = await fetch(teamCsvUrl);
     if (!teamRes.ok) throw new Error(`Error descargando CSV de equipo: ${teamRes.statusText}`);
