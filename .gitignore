@@ -33,6 +33,7 @@ yarn-debug.log*
 .env
 .env.local
 .env.*.local
+
 # ← AGREGADO: Firebase local config
 .firebase/
 .firebaserc
@@ -68,3 +69,7 @@ coverage/
 # Temp
 tmp/
 temp/
+
+# ← AGREGADO: credenciales sensibles de Google Cloud
+credenciales_seguras/
+*.json
