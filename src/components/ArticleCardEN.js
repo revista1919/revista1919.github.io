@@ -74,7 +74,8 @@ function ArticleCardEN({ article }) {
   const [copiedChicago, setCopiedChicago] = useState(false);
   const [copiedApa, setCopiedApa] = useState(false);
   const [copiedMla, setCopiedMla] = useState(false);
-  const journal = 'The National Review of Sciences for Students';
+  const journalDisplay = 'The National Review of Sciences for Students';
+  const journalFormal = 'Revista Nacional de las Ciencias para Estudiantes';
   const pdfUrl = article?.pdf || null;
   const authorsArray = article?.['Autor(es)']
     ? article['Autor(es)'].split(';').map((a) => a.trim())
@@ -93,7 +94,7 @@ function ArticleCardEN({ article }) {
     const year = getYear(article?.['Fecha']);
     return (
       <>
-        {authors}. "{title}." <em>{journal}</em> {volume}, no. {number} ({year}): {pages}.{' '}
+        {authors}. "{title}." <em>{journalFormal}</em> {volume}, no. {number} ({year}): {pages}.{' '}
         {pdfUrl && (
           <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline break-words">
             {pdfUrl}
@@ -110,7 +111,7 @@ function ArticleCardEN({ article }) {
     const volume = article?.['Volumen'] || '';
     const number = article?.['Número'] || '';
     const year = getYear(article?.['Fecha']);
-    return `${authors}. "${title}." ${journal} ${volume}, no. ${number} (${year}): ${pages}. ${pdfUrl || ''}`;
+    return `${authors}. "${title}." ${journalFormal} ${volume}, no. ${number} (${year}): ${pages}. ${pdfUrl || ''}`;
   };
   const getChicagoHtml = () => {
     const authors = authorsArray.length
@@ -120,7 +121,7 @@ function ArticleCardEN({ article }) {
     const volume = article?.['Volumen'] || '';
     const number = article?.['Número'] || '';
     const year = getYear(article?.['Fecha']);
-    return `${authors}. &ldquo;${title}.&rdquo; <em>${journal}</em> ${volume}, no. ${number} (${year}): ${pages}. ${pdfUrl ? `<a href="${pdfUrl}">${pdfUrl}</a>` : ''}`;
+    return `${authors}. &ldquo;${title}.&rdquo; <em>${journalFormal}</em> ${volume}, no. ${number} (${year}): ${pages}. ${pdfUrl ? `<a href="${pdfUrl}">${pdfUrl}</a>` : ''}`;
   };
   const getApaCitation = () => {
     const authors = authorsArray.length
@@ -132,7 +133,7 @@ function ArticleCardEN({ article }) {
     const year = getYear(article?.['Fecha']);
     return (
       <>
-        {authors} ({year}). {title}. <em>{journal}</em>, {volume}({number}), {pages}.{' '}
+        {authors} ({year}). {title}. <em>{journalFormal}</em>, {volume}({number}), {pages}.{' '}
         {pdfUrl && (
           <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline break-words">
             {pdfUrl}
@@ -149,7 +150,7 @@ function ArticleCardEN({ article }) {
     const volume = article?.['Volumen'] || '';
     const number = article?.['Número'] || '';
     const year = getYear(article?.['Fecha']);
-    return `${authors} (${year}). ${title}. ${journal}, ${volume}(${number}), ${pages}. ${pdfUrl || ''}`;
+    return `${authors} (${year}). ${title}. ${journalFormal}, ${volume}(${number}), ${pages}. ${pdfUrl || ''}`;
   };
   const getApaHtml = () => {
     const authors = authorsArray.length
@@ -159,7 +160,7 @@ function ArticleCardEN({ article }) {
     const volume = article?.['Volumen'] || '';
     const number = article?.['Número'] || '';
     const year = getYear(article?.['Fecha']);
-    return `${authors} (${year}). ${title}. <em>${journal}</em>, ${volume}(${number}), ${pages}. ${pdfUrl ? `<a href="${pdfUrl}">${pdfUrl}</a>` : ''}`;
+    return `${authors} (${year}). ${title}. <em>${journalFormal}</em>, ${volume}(${number}), ${pages}. ${pdfUrl ? `<a href="${pdfUrl}">${pdfUrl}</a>` : ''}`;
   };
   const getMlaCitation = () => {
     const authors = authorsArray.length
@@ -171,7 +172,7 @@ function ArticleCardEN({ article }) {
     const year = getYear(article?.['Fecha']);
     return (
       <>
-        {authors}. "{title}." <em>{journal}</em>, vol. {volume}, no. {number}, {year}, pp. {pages}.{' '}
+        {authors}. "{title}." <em>{journalFormal}</em>, vol. {volume}, no. {number}, {year}, pp. {pages}.{' '}
         {pdfUrl && (
           <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline break-words">
             {pdfUrl}
@@ -188,7 +189,7 @@ function ArticleCardEN({ article }) {
     const volume = article?.['Volumen'] || '';
     const number = article?.['Número'] || '';
     const year = getYear(article?.['Fecha']);
-    return `${authors}. "${title}." ${journal}, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}. ${pdfUrl || ''}`;
+    return `${authors}. "${title}." ${journalFormal}, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}. ${pdfUrl || ''}`;
   };
   const getMlaHtml = () => {
     const authors = authorsArray.length
@@ -198,7 +199,7 @@ function ArticleCardEN({ article }) {
     const volume = article?.['Volumen'] || '';
     const number = article?.['Número'] || '';
     const year = getYear(article?.['Fecha']);
-    return `${authors}. &ldquo;${title}.&rdquo; <em>${journal}</em>, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}. ${pdfUrl ? `<a href="${pdfUrl}">${pdfUrl}</a>` : ''}`;
+    return `${authors}. &ldquo;${title}.&rdquo; <em>${journalFormal}</em>, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}. ${pdfUrl ? `<a href="${pdfUrl}">${pdfUrl}</a>` : ''}`;
   };
   const handleAuthorClick = (authorName) => {
     if (!authorName) return;
@@ -312,7 +313,7 @@ function ArticleCardEN({ article }) {
         )}
       </p>
       <p className="text-xs text-green-600">
-        {journal} · {getYear(article['Fecha'])} {pages && `· pp. ${pages}`}
+        {journalDisplay} · {getYear(article['Fecha'])} {pages && `· pp. ${pages}`}
       </p>
       {!isExpanded && article['Abstract'] && (
         <p className="text-sm text-gray-700 mt-2 line-clamp-3">{article['Abstract']}</p>
