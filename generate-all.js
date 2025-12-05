@@ -180,7 +180,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
   <meta name="citation_title" content="${article.titulo}">
   ${authorMetaTags}
   <meta name="citation_publication_date" content="${article.fecha}">
-  <meta name="citation_journal_title" content="La Revista Nacional de Ciencias para Estudiantes">
+  <meta name="citation_journal_title" content="Revista Nacional de las Ciencias para Estudiantes">
   <meta name="citation_volume" content="${article.volumen}">
   <meta name="citation_issue" content="${article.numero}">
   <meta name="citation_firstpage" content="${article.primeraPagina}">
@@ -193,7 +193,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
   <meta name="citation_language" content="es">
   <meta name="description" content="${article.resumen.substring(0, 160)}...">
   <meta name="keywords" content="${article.palabras_clave.join(', ')}">
-  <title>${article.titulo} - La Revista Nacional de Ciencias para Estudiantes</title>
+  <title>${article.titulo} - Revista Nacional de las Ciencias para Estudiantes</title>
   <link rel="stylesheet" href="/index.css">
   <style>
     body {
@@ -383,9 +383,9 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
       </section>
       <section class="citations">
         <h2>Citas</h2>
-        <p><strong>APA:</strong> ${authorsAPA}. (${year}). ${article.titulo}. <em>La Revista Nacional de Ciencias para Estudiantes</em>, ${article.volumen}(${article.numero}), ${article.primeraPagina}-${article.ultimaPagina}.</p>
-        <p><strong>MLA:</strong> ${authorsMLAEs}. "${article.titulo}." <em>La Revista Nacional de Ciencias para Estudiantes</em>, vol. ${article.volumen}, no. ${article.numero}, ${year}, pp. ${article.primeraPagina}-${article.ultimaPagina}.</p>
-        <p><strong>Chicago:</strong> ${authorsChicagoEs}. "${article.titulo}." <em>La Revista Nacional de Ciencias para Estudiantes</em> ${article.volumen}, no. ${article.numero} (${year}): ${article.primeraPagina}-${article.ultimaPagina}.</p>
+        <p><strong>APA:</strong> ${authorsAPA}. (${year}). ${article.titulo}. <em>Revista Nacional de las Ciencias para Estudiantes</em>, ${article.volumen}(${article.numero}), ${article.primeraPagina}-${article.ultimaPagina}.</p>
+        <p><strong>MLA:</strong> ${authorsMLAEs}. "${article.titulo}." <em>Revista Nacional de las Ciencias para Estudiantes</em>, vol. ${article.volumen}, no. ${article.numero}, ${year}, pp. ${article.primeraPagina}-${article.ultimaPagina}.</p>
+        <p><strong>Chicago:</strong> ${authorsChicagoEs}. "${article.titulo}." <em>Revista Nacional de las Ciencias para Estudiantes</em> ${article.volumen}, no. ${article.numero} (${year}): ${article.primeraPagina}-${article.ultimaPagina}.</p>
       </section>
       <section class="license">
         <h2>Licencia</h2>
@@ -394,7 +394,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
       </section>
     </main>
     <footer>
-      <p>&copy; ${new Date().getFullYear()} La Revista Nacional de Ciencias para Estudiantes</p>
+      <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes</p>
       <a href="/es/article">Volver a Artículos</a> | <a href="/">Volver al inicio</a>
     </footer>
   </div>
@@ -414,7 +414,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
   <meta name="citation_title" content="${article.titulo}">
   ${authorMetaTags}
   <meta name="citation_publication_date" content="${article.fecha}">
-  <meta name="citation_journal_title" content="The National Review of Sciences for Students">
+  <meta name="citation_journal_title" content="Revista Nacional de las Ciencias para Estudiantes">
   <meta name="citation_volume" content="${article.volumen}">
   <meta name="citation_issue" content="${article.numero}">
   <meta name="citation_firstpage" content="${article.primeraPagina}">
@@ -612,9 +612,9 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
       </section>
       <section class="citations">
         <h2>Citations</h2>
-        <p><strong>APA:</strong> ${authorsAPA}. (${year}). ${article.titulo}. <em>The National Review of Sciences for Students</em>, ${article.volumen}(${article.numero}), ${article.primeraPagina}-${article.ultimaPagina}.</p>
-        <p><strong>MLA:</strong> ${authorsMLAEn}. "${article.titulo}." <em>The National Review of Sciences for Students</em>, vol. ${article.volumen}, no. ${article.numero}, ${year}, pp. ${article.primeraPagina}-${article.ultimaPagina}.</p>
-        <p><strong>Chicago:</strong> ${authorsChicagoEn}. "${article.titulo}." <em>The National Review of Sciences for Students</em> ${article.volumen}, no. ${article.numero} (${year}): ${article.primeraPagina}-${article.ultimaPagina}.</p>
+        <p><strong>APA:</strong> ${authorsAPA}. (${year}). ${article.titulo}. <em>Revista Nacional de las Ciencias para Estudiantes</em>, ${article.volumen}(${article.numero}), ${article.primeraPagina}-${article.ultimaPagina}.</p>
+        <p><strong>MLA:</strong> ${authorsMLAEn}. "${article.titulo}." <em>Revista Nacional de las Ciencias para Estudiantes</em>, vol. ${article.volumen}, no. ${article.numero}, ${year}, pp. ${article.primeraPagina}-${article.ultimaPagina}.</p>
+        <p><strong>Chicago:</strong> ${authorsChicagoEn}. "${article.titulo}." <em>Revista Nacional de las Ciencias para Estudiantes</em> ${article.volumen}, no. ${article.numero} (${year}): ${article.primeraPagina}-${article.ultimaPagina}.</p>
       </section>
       <section class="license">
         <h2>License</h2>
@@ -646,7 +646,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Índice de Artículos - La Revista Nacional de Ciencias para Estudiantes</title>
+  <title>Índice de Artículos - Revista Nacional de las Ciencias para Estudiantes</title>
   <link rel="stylesheet" href="/index.css">
 </head>
 <body>
@@ -672,7 +672,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
 `).join('')}
   </main>
   <footer>
-    <p>&copy; ${new Date().getFullYear()} La Revista Nacional de Ciencias para Estudiantes</p>
+    <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes</p>
     <a href="/">Volver al inicio</a>
   </footer>
 </body>
@@ -749,7 +749,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="${newsItem.titulo.substring(0, 160)}...">
   <meta name="keywords" content="noticias, revista ciencias estudiantes, ${newsItem.titulo.replace(/[^a-zA-Z0-9]/g, ' ').substring(0, 100)}">
-  <title>${newsItem.titulo} - Noticias - La Revista Nacional de Ciencias para Estudiantes</title>
+  <title>${newsItem.titulo} - Noticias - Revista Nacional de las Ciencias para Estudiantes</title>
   <link rel="stylesheet" href="/index.css">
   <style>
     body {
@@ -872,7 +872,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
   <div class="container">
     <header>
       <a href="/">
-        <img src="/logo.png" alt="Logo de La Revista Nacional de Ciencias para Estudiantes" class="logo">
+        <img src="/logo.png" alt="Logo de Revista Nacional de las Ciencias para Estudiantes" class="logo">
       </a>
       <h1>${newsItem.titulo}</h1>
       <p class="date">Publicado el ${newsItem.fecha}</p>
@@ -883,7 +883,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       </div>
     </main>
     <footer>
-      <p>&copy; ${new Date().getFullYear()} La Revista Nacional de Ciencias para Estudiantes</p>
+      <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes</p>
       <a href="/es/new">Volver a Noticias</a> | <a href="/">Volver al inicio</a>
     </footer>
   </div>
@@ -1055,7 +1055,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Índice de Noticias - La Revista Nacional de Ciencias para Estudiantes</title>
+  <title>Índice de Noticias - Revista Nacional de las Ciencias para Estudiantes</title>
   <link rel="stylesheet" href="/index.css">
 </head>
 <body>
@@ -1081,7 +1081,7 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
 `).join('')}
   </main>
   <footer>
-    <p>&copy; ${new Date().getFullYear()} La Revista Nacional de Ciencias para Estudiantes</p>
+    <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes</p>
     <a href="/">Volver al inicio</a>
   </footer>
 </body>
@@ -1200,9 +1200,9 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="${descripcion.substring(0, 160)}...">
-  <meta name="keywords" content="${areas}, ${rolesStr}, La Revista Nacional de Ciencias para Estudiantes">
+  <meta name="keywords" content="${areas}, ${rolesStr}, Revista Nacional de las Ciencias para Estudiantes">
   <meta name="author" content="${nombre}">
-  <title>${nombre} - Equipo de La Revista Nacional de Ciencias para Estudiantes</title>
+  <title>${nombre} - Equipo de Revista Nacional de las Ciencias para Estudiantes</title>
   <link rel="stylesheet" href="/index.css">
   <style>
     body {
@@ -1418,7 +1418,7 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
     </div>
     ${articlesSectionEs}
     <footer>
-      <p>&copy; ${new Date().getFullYear()} La Revista Nacional de Ciencias para Estudiantes</p>
+      <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes</p>
       <a href="/">Volver al inicio</a>
     </footer>
   </div>
@@ -1684,7 +1684,7 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
     // Generar sitemap
     const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
-<!-- Created for La Revista Nacional de Ciencias para Estudiantes -->
+<!-- Created for Revista Nacional de las Ciencias para Estudiantes -->
 <url>
   <loc>${domain}/</loc>
   <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
