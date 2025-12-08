@@ -12,6 +12,7 @@ import { useLanguage } from './hooks/useLanguage';
 import Header from './components/HeaderEN';
 import SearchAndFilters from './components/SearchAndFiltersEN';
 import ArticleCard from './components/ArticleCardEN';
+import VolumeCard from './components/VolumeCardEN';  // Nuevo
 import Tabs from './components/TabsEN';
 import SubmitSection from './components/SubmitSectionEN';
 import AdminSection from './components/AdminSectionEN';
@@ -27,6 +28,8 @@ import './index.css';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
+const ARTICLES_JSON = '/articles.json';
+const VOLUMES_JSON = '/volumes.json';  // Nuevo
 const isPrerendering = typeof navigator !== 'undefined' && navigator.userAgent.includes('ReactSnap');
 
 function AppEN() {
@@ -36,6 +39,11 @@ function AppEN() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedArea, setSelectedArea] = useState('');
   const [areas, setAreas] = useState([]);
+  const [volumes, setVolumes] = useState([]);  // Nuevo
+  const [filteredVolumes, setFilteredVolumes] = useState([]);  // Nuevo
+  const [volumeSearchTerm, setVolumeSearchTerm] = useState('');  // Nuevo
+  const [selectedVolumeArea, setSelectedVolumeArea] = useState('');  // Nuevo
+  const [volumeAreas, setVolumeAreas] = useState([]);  // Nuevo
   const [loading, setLoading] = useState(true);
   const [visibleArticles, setVisibleArticles] = useState(6);
   const [user, setUser] = useState(null);
@@ -117,75 +125,97 @@ function AppEN() {
   useEffect(() => {
     const fetchArticles = async () => {
       try {
-        const response = await fetch(
-          'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p32EM6-0VYy18AdREQwXdpeet1WHTA4H2-W2FX7HKe1HPSyApWadUw9sKHdVYQXL5tP6yDRs/pub?output=csv',
-          { cache: 'no-store' }
-        );
-
+        const response = await fetch(ARTICLES_JSON, { cache: 'no-store' });
         if (!response.ok) {
-          throw new Error(`Error loading CSV file: ${response.status}`);
+          throw new Error(`Error loading the JSON file: ${response.status}`);
         }
-
-        const csvText = await response.text();
-        Papa.parse(csvText, {
-          header: true,
-          skipEmptyLines: true,
-          delimiter: ',',
-          transform: (value) => value.trim(),
-          complete: ({ data }) => {
-            setArticles(data);
-            setFilteredArticles(data);
-
-            const allAreas = data.flatMap((a) =>
-              (a['Área temática'] || '')
-                .split(';')
-                .map((area) => area.trim())
-                .filter(Boolean)
-            );
-            const uniqueAreas = [...new Set(allAreas)].sort();
-            setAreas(uniqueAreas);
-
-            setLoading(false);
-          },
-          error: (error) => {
-            console.error('Error parsing CSV:', error);
-            setLoading(false);
-          },
-        });
+        const data = await response.json();
+        setArticles(data);
+        setFilteredArticles(data);
+        const allAreas = data.flatMap((a) =>
+          (a.area || '')
+            .split(';')
+            .map((area) => area.trim())
+            .filter(Boolean)
+        );
+        const uniqueAreas = [...new Set(allAreas)].sort();
+        setAreas(uniqueAreas);
+        setLoading(false);
       } catch (error) {
-        console.error('Error fetching CSV:', error);
+        console.error('Error fetching JSON:', error);
         setLoading(false);
       }
     };
-
     fetchArticles();
+  }, []);
+
+  useEffect(() => {
+    const fetchVolumes = async () => {
+      try {
+        const response = await fetch(VOLUMES_JSON, { cache: 'no-store' });
+        if (!response.ok) {
+          throw new Error(`Error loading volumes.json: ${response.status}`);
+        }
+        const data = await response.json();
+        setVolumes(data);
+        setFilteredVolumes(data);
+        const allVolumeAreas = data.flatMap((v) =>
+          (v.area || '')
+            .split(';')
+            .map((area) => area.trim())
+            .filter(Boolean)
+        );
+        const uniqueVolumeAreas = [...new Set(allVolumeAreas)].sort();
+        setVolumeAreas(uniqueVolumeAreas);
+      } catch (error) {
+        console.error('Error fetching volumes JSON:', error);
+      }
+    };
+    fetchVolumes();
   }, []);
 
   const handleSearch = (term, area) => {
     setSearchTerm(term);
     setSelectedArea(area);
-
     const lowerTerm = term.toLowerCase();
     const filtered = articles.filter((article) => {
       const matchesSearch =
-        article['Título']?.toLowerCase().includes(lowerTerm) ||
-        article['Autor(es)']?.toLowerCase().includes(lowerTerm) ||
-        article['Resumen']?.toLowerCase().includes(lowerTerm) ||
-        article['Palabras clave']?.toLowerCase().includes(lowerTerm);
-
+        article.titulo?.toLowerCase().includes(lowerTerm) ||
+        article.autores?.toLowerCase().includes(lowerTerm) ||
+        article.englishAbstract?.toLowerCase().includes(lowerTerm) ||
+        article.keywords_english?.join(', ')?.toLowerCase().includes(lowerTerm);
       const matchesArea =
         area === '' ||
-        (article['Área temática'] || '')
+        (article.area || '')
           .toLowerCase()
           .split(';')
           .map((a) => a.trim())
           .some((a) => a.toLowerCase() === area.toLowerCase());
-
       return matchesSearch && matchesArea;
     });
-
     setFilteredArticles(filtered);
     setVisibleArticles(6);
+  };
+
+  const handleVolumeSearch = (term, area) => {
+    setVolumeSearchTerm(term);
+    setSelectedVolumeArea(area);
+    const lowerTerm = term.toLowerCase();
+    const filtered = volumes.filter((volume) => {
+      const matchesSearch =
+        volume.titulo?.toLowerCase().includes(lowerTerm) ||
+        volume.abstract?.toLowerCase().includes(lowerTerm) ||
+        volume.keywords?.join(', ')?.toLowerCase().includes(lowerTerm);
+      const matchesArea =
+        area === '' ||
+        (volume.area || '')
+          .toLowerCase()
+          .split(';')
+          .map((a) => a.trim())
+          .some((a) => a.toLowerCase() === area.toLowerCase());
+      return matchesSearch && matchesArea;
+    });
+    setFilteredVolumes(filtered);
   };
 
   const clearFilters = () => {
@@ -193,6 +223,12 @@ function AppEN() {
     setSelectedArea('');
     setFilteredArticles(articles);
     setVisibleArticles(6);
+  };
+
+  const clearVolumeFilters = () => {
+    setVolumeSearchTerm('');
+    setSelectedVolumeArea('');
+    setFilteredVolumes(volumes);
   };
 
   const loadMoreArticles = () => setVisibleArticles((prev) => prev + 6);
@@ -214,7 +250,7 @@ function AppEN() {
       label: 'Articles',
       path: '/en/article',
       component: (
-        <motion.div 
+        <motion.div
           className="py-8 max-w-7xl mx-auto"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -241,7 +277,7 @@ function AppEN() {
             ) : (
               filteredArticles.slice(0, visibleArticles).map((article, index) => (
                 <motion.div
-                  key={article['Título']}
+                  key={article.titulo}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1, duration: 0.3 }}
@@ -257,7 +293,7 @@ function AppEN() {
                 className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                 onClick={loadMoreArticles}
               >
-                Load More
+                Load more
               </button>
             </div>
           )}
@@ -266,9 +302,50 @@ function AppEN() {
               className="fixed bottom-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 z-10 text-base"
               onClick={showLessArticles}
             >
-              Show Less
+              Show less
             </button>
           )}
+        </motion.div>
+      ),
+    },
+    {
+      name: 'volumes',
+      label: 'Volumes',
+      path: '/en/volumes',
+      component: (
+        <motion.div
+          className="py-8 max-w-7xl mx-auto"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <SearchAndFilters
+            searchTerm={volumeSearchTerm}
+            setSearchTerm={setVolumeSearchTerm}
+            selectedArea={selectedVolumeArea}
+            setSelectedArea={setSelectedVolumeArea}
+            areas={volumeAreas}
+            onSearch={handleVolumeSearch}
+            clearFilters={clearVolumeFilters}
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+            {filteredVolumes.length === 0 ? (
+              <p className="text-center text-base text-gray-600 col-span-full">
+                No volumes available yet.
+              </p>
+            ) : (
+              filteredVolumes.map((volume, index) => (
+                <motion.div
+                  key={`${volume.volumen}-${volume.numero}`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1, duration: 0.3 }}
+                >
+                  <VolumeCard volume={volume} />
+                </motion.div>
+              ))
+            )}
+          </div>
         </motion.div>
       ),
     },

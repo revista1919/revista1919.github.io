@@ -12,6 +12,7 @@ import { useLanguage } from './hooks/useLanguage';
 import Header from './components/Header';
 import SearchAndFilters from './components/SearchAndFilters';
 import ArticleCard from './components/ArticleCard';
+import VolumeCard from './components/VolumeCard';  // Nuevo import
 import Tabs from './components/Tabs';
 import SubmitSection from './components/SubmitSection';
 import AdminSection from './components/AdminSection';
@@ -27,6 +28,7 @@ import './index.css';
 import { motion, AnimatePresence } from 'framer-motion';
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 const ARTICLES_JSON = '/articles.json';
+const VOLUMES_JSON = '/volumes.json';  // Nuevo JSON para volúmenes
 const isPrerendering = typeof navigator !== 'undefined' && navigator.userAgent.includes('ReactSnap');
 function App() {
   const { cleanPath } = useLanguage();
@@ -35,6 +37,11 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedArea, setSelectedArea] = useState('');
   const [areas, setAreas] = useState([]);
+  const [volumes, setVolumes] = useState([]);  // Nuevo estado para volúmenes
+  const [filteredVolumes, setFilteredVolumes] = useState([]);  // Nuevo
+  const [volumeSearchTerm, setVolumeSearchTerm] = useState('');  // Separado
+  const [selectedVolumeArea, setSelectedVolumeArea] = useState('');  // Separado
+  const [volumeAreas, setVolumeAreas] = useState([]);  // Áreas de volúmenes
   const [loading, setLoading] = useState(true);
   const [visibleArticles, setVisibleArticles] = useState(6);
   const [user, setUser] = useState(null);
@@ -135,6 +142,31 @@ function App() {
     };
     fetchArticles();
   }, []);
+  // Nuevo useEffect para volúmenes
+  useEffect(() => {
+    const fetchVolumes = async () => {
+      try {
+        const response = await fetch(VOLUMES_JSON, { cache: 'no-store' });
+        if (!response.ok) {
+          throw new Error(`Error al cargar volumes.json: ${response.status}`);
+        }
+        const data = await response.json();
+        setVolumes(data);
+        setFilteredVolumes(data);
+        const allVolumeAreas = data.flatMap((v) =>
+          (v.area || '')
+            .split(';')
+            .map((area) => area.trim())
+            .filter(Boolean)
+        );
+        const uniqueVolumeAreas = [...new Set(allVolumeAreas)].sort();
+        setVolumeAreas(uniqueVolumeAreas);
+      } catch (error) {
+        console.error('Error fetching volumes JSON:', error);
+      }
+    };
+    fetchVolumes();
+  }, []);
   const handleSearch = (term, area) => {
     setSearchTerm(term);
     setSelectedArea(area);
@@ -157,11 +189,37 @@ function App() {
     setFilteredArticles(filtered);
     setVisibleArticles(6);
   };
+  // Nuevo handleSearch para volúmenes
+  const handleVolumeSearch = (term, area) => {
+    setVolumeSearchTerm(term);
+    setSelectedVolumeArea(area);
+    const lowerTerm = term.toLowerCase();
+    const filtered = volumes.filter((volume) => {
+      const matchesSearch =
+        volume.titulo?.toLowerCase().includes(lowerTerm) ||
+        volume.resumen?.toLowerCase().includes(lowerTerm) ||
+        volume.palabras_clave?.join(', ')?.toLowerCase().includes(lowerTerm);
+      const matchesArea =
+        area === '' ||
+        (volume.area || '')
+          .toLowerCase()
+          .split(';')
+          .map((a) => a.trim())
+          .some((a) => a.toLowerCase() === area.toLowerCase());
+      return matchesSearch && matchesArea;
+    });
+    setFilteredVolumes(filtered);
+  };
   const clearFilters = () => {
     setSearchTerm('');
     setSelectedArea('');
     setFilteredArticles(articles);
     setVisibleArticles(6);
+  };
+  const clearVolumeFilters = () => {
+    setVolumeSearchTerm('');
+    setSelectedVolumeArea('');
+    setFilteredVolumes(volumes);
   };
   const loadMoreArticles = () => setVisibleArticles((prev) => prev + 6);
   const showLessArticles = () => setVisibleArticles(6);
@@ -235,6 +293,48 @@ function App() {
               Mostrar menos
             </button>
           )}
+        </motion.div>
+      ),
+    },
+    // Nueva sección para Volúmenes
+    {
+      name: 'volumes',
+      label: 'Volúmenes',
+      path: '/volumes',
+      component: (
+        <motion.div
+          className="py-8 max-w-7xl mx-auto"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <SearchAndFilters
+            searchTerm={volumeSearchTerm}
+            setSearchTerm={setVolumeSearchTerm}
+            selectedArea={selectedVolumeArea}
+            setSelectedArea={setSelectedVolumeArea}
+            areas={volumeAreas}
+            onSearch={handleVolumeSearch}
+            clearFilters={clearVolumeFilters}
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+            {filteredVolumes.length === 0 ? (
+              <p className="text-center text-base text-gray-600 col-span-full">
+                No hay volúmenes disponibles aún.
+              </p>
+            ) : (
+              filteredVolumes.map((volume, index) => (
+                <motion.div
+                  key={`${volume.volumen}-${volume.numero}`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1, duration: 0.3 }}
+                >
+                  <VolumeCard volume={volume} />
+                </motion.div>
+              ))
+            )}
+          </div>
         </motion.div>
       ),
     },

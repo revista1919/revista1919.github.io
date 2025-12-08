@@ -3,13 +3,21 @@ import Papa from 'papaparse';
 import Admissions from './AdmissionsEN';
 import MailsTeam from './MailsTeamEN';
 
-// ✅ Environment variables injected by Webpack DefinePlugin
+// ✅ Environment variables
 const ARTICULOS_GAS_URL = process.env.REACT_APP_ARTICULOS_SCRIPT_URL || '';
+const VOLUMES_GAS_URL = process.env.REACT_APP_VOLUMES_SCRIPT_URL || '';
 const GH_TOKEN = process.env.REACT_APP_GH_TOKEN || '';
 const ARTICULOS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p32EM6-0VYy18AdREQwXdpeet1WHTA4H2-W2FX7HKe1HPSyApWadUw9sKHdVYQXL5tP6yDRs/pub?output=csv';
+const VOLUMES_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTTs7eHa-_bbWkSzOxaM26oi79ioBYFyTcNB0EaEBt0VYWZeCZq2S4FUnaHXcB8lf2T78XhET9v5WTh/pub?output=csv';
 const GH_API_BASE = 'https://api.github.com/repos/revista1919/revista1919.github.io/contents';
 const REPO_OWNER = 'revista1919';
 const REPO_NAME = 'revista1919.github.io';
+const DOMAIN = 'https://www.revistacienciasestudiantes.com';
+
+const generateSlug = (name) => {
+  if (!name) return '';
+  return name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-').replace(/[^\w-]/g, '').replace(/-+/g, '-').replace(/^-+|-+$/g, '');
+};
 
 const toBase64 = (file) =>
   new Promise((resolve, reject) => {
@@ -20,10 +28,10 @@ const toBase64 = (file) =>
   });
 
 // GitHub API Functions
-const uploadPDFToGitHub = async (base64Content, fileName, message, sha = null) => {
+const uploadPDFToGitHub = async (base64Content, fileName, message, sha = null, folder = 'Articles') => {
   if (!GH_TOKEN) throw new Error('GitHub token not available');
   
-  const path = `public/Articles/${fileName}`;
+  const path = `public/${folder}/${fileName}`;
   const url = `${GH_API_BASE}/${path}`;
   const payload = {
     message,
@@ -49,10 +57,10 @@ const uploadPDFToGitHub = async (base64Content, fileName, message, sha = null) =
   return await response.json();
 };
 
-const deletePDFFromGitHub = async (fileName, message) => {
+const deletePDFFromGitHub = async (fileName, message, folder = 'Articles') => {
   if (!GH_TOKEN) throw new Error('GitHub token not available');
   
-  const path = `public/Articles/${fileName}`;
+  const path = `public/${folder}/${fileName}`;
   const url = `${GH_API_BASE}/${path}`;
   
   const getRes = await fetch(url, {
@@ -105,7 +113,7 @@ const triggerRebuild = async () => {
   }
 };
 
-export default function DirectorPanel({ user }) {
+export default function DirectorPanelEN({ user }) {
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState({});
@@ -130,74 +138,98 @@ export default function DirectorPanel({ user }) {
   const [status, setStatus] = useState('');
   const [uploading, setUploading] = useState(false);
 
-  // ✅ Debug logging moved inside the component
+  const [volumes, setVolumes] = useState([]);
+  const [volumeLoading, setVolumeLoading] = useState(true);
+  const [volumeExpanded, setVolumeExpanded] = useState({});
+  const [showAddVolumeModal, setShowAddVolumeModal] = useState(false);
+  const [showEditVolumeModal, setShowEditVolumeModal] = useState(false);
+  const [editingVolume, setEditingVolume] = useState(null);
+  const [volumeFormData, setVolumeFormData] = useState({
+    volumen: '',
+    numero: '',
+    fecha: '',
+    titulo: '',
+    resumen: '',
+    abstract: '',
+    portada: '',
+    areaTematica: '',
+    palabrasClave: '',
+    keywords: '',
+    pdfFile: null,
+  });
+  const [volumeStatus, setVolumeStatus] = useState('');
+  const [volumeUploading, setVolumeUploading] = useState(false);
+
   useEffect(() => {
     console.log('🔍 DirectorPanel Config:', {
-      GAS_URL: ARTICULOS_GAS_URL ? `${ARTICULOS_GAS_URL.slice(0, 40)}...` : 'MISSING',
-      HAS_TOKEN: !!GH_TOKEN,
-      TOKEN_LENGTH: GH_TOKEN ? `${GH_TOKEN.length} chars` : '0',
-      READY: !!(ARTICULOS_GAS_URL && GH_TOKEN),
+      ARTICULOS_GAS: ARTICULOS_GAS_URL ? 'Set' : 'Missing',
+      VOLUMES_GAS: VOLUMES_GAS_URL ? 'Set' : 'Missing',
+      GH_TOKEN: GH_TOKEN ? 'Set' : 'Missing',
     });
   }, []);
 
   useEffect(() => {
     fetchArticles();
+    fetchVolumes();
   }, []);
 
   const fetchArticles = async () => {
     try {
       setLoading(true);
-      console.log('📥 Loading articles from Google Sheets...');
-      
-      const response = await fetch(ARTICULOS_CSV_URL, {
-        cache: 'no-store',
-        headers: { Accept: 'text/csv' },
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch CSV: ${response.status}`);
-      }
-      
+      const response = await fetch(ARTICULOS_CSV_URL, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`Failed to fetch articles CSV: ${response.status}`);
       const csvText = await response.text();
-      const parsed = Papa.parse(csvText, {
-        header: true,
-        skipEmptyLines: true,
-        dynamicTyping: false,
-      }).data;
-      
-      console.log(`📊 Loaded ${parsed.length} articles`);
-      
-      const enrichedArticles = parsed.map((row) => ({
+      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
+      const enriched = parsed.map(row => ({
         ...row,
-        areas: (row['Área temática'] || '').split(';').map((a) => a.trim()).filter(Boolean),
-        keywords: (row['Palabras clave'] || '').split(';').map((k) => k.trim()).filter(Boolean),
-        keywords_english: (row['Keywords'] || '').split(';').map((k) => k.trim()).filter(Boolean),
-        pdfUrl: row['URL_PDF'] || `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/public/Articles/Articulo${row['Número de artículo']}.pdf`,
+        pdfUrl: row['PDF'] || `${DOMAIN}/Articles/Article-${generateSlug(row['Título'])}-${row['Número de artículo']}.pdf`,
       }));
-      
-      setArticles(enrichedArticles);
-      setStatus('');
+      setArticles(enriched);
     } catch (err) {
-      console.error('❌ Error loading articles:', err);
-      setStatus(`Error loading articles: ${err.message}`);
-      setArticles([]);
+      setStatus(`Error: ${err.message}`);
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleExpand = (numero) => {
-    setExpanded((prev) => ({ ...prev, [numero]: !prev[numero] }));
+  const fetchVolumes = async () => {
+    try {
+      setVolumeLoading(true);
+      const response = await fetch(VOLUMES_CSV_URL, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`Failed to fetch volumes CSV: ${response.status}`);
+      const csvText = await response.text();
+      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
+      const enriched = parsed.map(row => ({
+        ...row,
+        pdf: row['PDF'] || `${DOMAIN}/Volumes/Volume-${row['Volumen']}-${row['Número']}.pdf`,
+      }));
+      setVolumes(enriched);
+    } catch (err) {
+      setVolumeStatus(`Error: ${err.message}`);
+      console.error(err);
+    } finally {
+      setVolumeLoading(false);
+    }
   };
+
+  const toggleExpand = (numero) => setExpanded(prev => ({ ...prev, [numero]: !prev[numero] }));
+
+  const toggleVolumeExpand = (numero) => setVolumeExpanded(prev => ({ ...prev, [numero]: !prev[numero] }));
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleFileChange = (e) => {
-    setFormData((prev) => ({ ...prev, pdfFile: e.target.files[0] }));
+  const handleVolumeInputChange = (e) => {
+    const { name, value } = e.target;
+    setVolumeFormData(prev => ({ ...prev, [name]: value }));
   };
+
+  const handleFileChange = (e) => setFormData(prev => ({ ...prev, pdfFile: e.target.files[0] }));
+
+  const handleVolumeFileChange = (e) => setVolumeFormData(prev => ({ ...prev, pdfFile: e.target.files[0] }));
 
   const resetForm = () => {
     setFormData({
@@ -217,213 +249,136 @@ export default function DirectorPanel({ user }) {
     });
   };
 
-  const updatePDFUrlInSheet = async (numero, pdfUrl) => {
-    if (!ARTICULOS_GAS_URL) {
-      console.warn('⚠️ No GAS URL, skipping PDF URL update');
-      return;
-    }
-    
+  const resetVolumeForm = () => {
+    setVolumeFormData({
+      volumen: '',
+      numero: '',
+      fecha: '',
+      titulo: '',
+      resumen: '',
+      abstract: '',
+      portada: '',
+      areaTematica: '',
+      palabrasClave: '',
+      keywords: '',
+      pdfFile: null,
+    });
+  };
+
+  const updatePDFUrlInSheet = async (numero, pdfUrl, gasUrl = ARTICULOS_GAS_URL) => {
+    if (!gasUrl) return;
     try {
-      const data = {
-        action: 'update_pdf_url',
-        numero: parseInt(numero),
-        pdfUrl,
-      };
-      await fetch(ARTICULOS_GAS_URL, {
+      const data = { action: 'update_pdf_url', numero: parseInt(numero), pdfUrl };
+      await fetch(gasUrl, {
         method: 'POST',
         redirect: 'follow',
         body: JSON.stringify(data),
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        headers: { 'Content-Type': 'text/plain' },
       });
-      console.log('✅ PDF URL updated in sheet:', numero, pdfUrl);
     } catch (err) {
-      console.error('❌ Failed to update PDF URL:', err);
+      console.error(err);
     }
   };
 
-  const submitToSheet = async (action, articleData, numero = null) => {
-    if (!ARTICULOS_GAS_URL) {
-      throw new Error('Google Apps Script URL not configured');
-    }
-
-    const data = {
-      action,
-      article: articleData,
-      ...(numero && { numero }),
-    };
-
-    console.log(`📄 Submitting to GAS: ${action}`, { hasNumero: !!numero });
-    
-    const response = await fetch(ARTICULOS_GAS_URL, {
+  const submitToSheet = async (action, dataObj, numero = null, gasUrl = ARTICULOS_GAS_URL, type = 'article') => {
+    if (!gasUrl) throw new Error('GAS URL missing');
+    const data = { action, [type]: dataObj, ...(numero && { numero }) };
+    const response = await fetch(gasUrl, {
       method: 'POST',
       redirect: 'follow',
       body: JSON.stringify(data),
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      headers: { 'Content-Type': 'text/plain' },
     });
-
-    const resText = await response.text();
-    if (resText.includes('error')) {
-      throw new Error(`GAS error: ${resText}`);
-    }
-
-    // Wait for sync
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    await fetchArticles();
+    const text = await response.text();
+    if (text.includes('error')) throw new Error(text);
+    await new Promise(r => setTimeout(r, 1000));
   };
 
-  const handleSubmit = async (action = 'add') => {
-    if (!formData.titulo.trim() || !formData.autores.trim()) {
-      setStatus('❌ Title and author(s) are required');
+  const handleSubmit = async (action = 'add', gasUrl = ARTICULOS_GAS_URL, form = formData, setU = setUploading, setS = setStatus, folder = 'Articles', fetchFunc = fetchArticles, closeFunc = closeModals, type = 'article', editing = editingArticle) => {
+    if (!form.titulo?.trim()) {
+      setS('❌ Title required');
       return;
     }
-
-    if (!ARTICULOS_GAS_URL) {
-      setStatus('❌ Google Apps Script not configured');
-      return;
-    }
-
-    setUploading(true);
+    setU(true);
     try {
-      setStatus('Processing...');
-      console.log(`🚀 ${action === 'add' ? 'Adding' : 'Editing'} article...`);
-      
-      const articleData = {
-        titulo: formData.titulo.trim(),
-        autores: formData.autores.trim(),
-        resumen: formData.resumen || '',
-        abstract: formData.abstract || '',
-        fecha: formData.fecha,
-        volumen: formData.volumen || '',
-        numero: formData.numero || '',
-        primeraPagina: formData.primeraPagina || '',
-        ultimaPagina: formData.ultimaPagina || '',
-        areaTematica: formData.areaTematica || '',
-        palabrasClave: formData.palabrasClave || '',
-        keywords: formData.keywords || '',
-        urlPdf: '',
-      };
-
-      let articleNumber;
+      setS('Processing...');
+      const dataObj = { ...form, pdfFile: null, urlPdf: '' };
+      let num;
       if (action === 'add') {
-        await submitToSheet('add', articleData);
-        await new Promise(resolve => setTimeout(resolve, 3000));  // Wait 3 seconds for propagation
-        // Get the new article number after refresh
-        await fetchArticles();
-        const nums = articles.map(a => parseInt(a['Número de artículo'] || '0', 10)).filter(n => !isNaN(n) && isFinite(n));
-        const maxNum = nums.length > 0 ? Math.max(...nums) : 0;
-        articleNumber = maxNum + 1;
-        console.log('🆕 Calculated articleNumber:', articleNumber, 'from nums:', nums);
-        console.log('🆕 New article number:', articleNumber);
+        await submitToSheet('add', dataObj, null, gasUrl, type);
+        await new Promise(r => setTimeout(r, 3000));
+        await fetchFunc();
+        const items = type === 'article' ? articles : volumes;
+        const nums = items.map(i => parseInt(i['Número'] || '0')).filter(n => !isNaN(n));
+        num = Math.max(...nums, 0) + 1;
       } else {
-        articleNumber = editingArticle['Número de artículo'];
-        await submitToSheet('edit', articleData, articleNumber);
+        num = editing['Número'];
+        await submitToSheet('edit', dataObj, num, gasUrl, type);
       }
-
-      // Handle PDF upload
       let pdfUrl = null;
-      if (formData.pdfFile) {
-        if (!GH_TOKEN) {
-          setStatus('✅ Metadata saved. Upload PDF manually.');
-          return;
-        }
-
-        setStatus('Uploading PDF...');
-        const base64 = await toBase64(formData.pdfFile);
-        const fileName = `Articulo${articleNumber}.pdf`;
-        const message = `${action === 'add' ? 'Add' : 'Update'} PDF for article ${articleNumber}`;
-        
-        await uploadPDFToGitHub(base64, fileName, message);
-        pdfUrl = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/public/Articles/${fileName}`;
-        await updatePDFUrlInSheet(articleNumber, pdfUrl);
-        
-        console.log('✅ PDF uploaded:', pdfUrl);
-        setStatus(`✅ ${action === 'add' ? 'Article added' : 'Article updated'} with PDF`);
-      } else {
-        setStatus(`✅ ${action === 'add' ? 'Article added' : 'Article updated'}`);
+      if (form.pdfFile) {
+        const base64 = await toBase64(form.pdfFile);
+        const slug = `${generateSlug(form.titulo)}-${num}`;
+        const fileName = `${type.charAt(0).toUpperCase() + type.slice(1)}-${slug}.pdf`;
+        await uploadPDFToGitHub(base64, fileName, `${action} PDF for ${type} ${num}`, null, folder);
+        pdfUrl = `${DOMAIN}/${folder}/${fileName}`;
+        await updatePDFUrlInSheet(num, pdfUrl, gasUrl);
       }
-
-      closeModals();
-      await fetchArticles();
-      if (GH_TOKEN) {
-        await triggerRebuild();
-        setStatus(`${status} and rebuild started.`);
-      }
-      
+      closeFunc();
+      await fetchFunc();
+      if (GH_TOKEN) await triggerRebuild();
+      setS('✅ Operation completed');
     } catch (err) {
-      console.error('💥 Submit error:', err);
-      setStatus(`❌ Error: ${err.message}`);
+      setS(`❌ Error: ${err.message}`);
     } finally {
-      setUploading(false);
+      setU(false);
     }
   };
 
-  const handleEdit = (article) => {
-    setEditingArticle(article);
-    setFormData({
-      titulo: article['Título'] || '',
-      autores: article['Autor(es)'] || '',
-      resumen: article['Resumen'] || '',
-      abstract: article['Abstract'] || '',
-      fecha: article['Fecha'] || '',
-      volumen: article['Volumen'] || '',
-      numero: article['Número'] || '',
-      primeraPagina: article['Primera página'] || '',
-      ultimaPagina: article['Última página'] || '',
-      areaTematica: article['Área temática'] || '',
-      palabrasClave: article['Palabras clave'] || '',
-      keywords: article['Keywords'] || '',
-      pdfFile: null,
-    });
-    setShowEditModal(true);
+  const handleVolumeSubmit = async (action = 'add') => {
+    await handleSubmit(action, VOLUMES_GAS_URL, volumeFormData, setVolumeUploading, setVolumeStatus, 'Volumes', fetchVolumes, closeVolumeModals, 'volume', editingVolume);
   };
 
-  const handleDelete = async (numero) => {
-    if (!confirm(`Delete article #${numero}?`)) return;
-    
-    if (!ARTICULOS_GAS_URL) {
-      setStatus('❌ Google Apps Script not configured');
-      return;
-    }
+  const handleEdit = (item, setEditing, setForm, setShow, fields) => {
+    setEditing(item);
+    const newForm = {};
+    fields.forEach(f => newForm[f] = item[f.toUpperCase().charAt(0) + f.slice(1)] || '');
+    setForm({ ...newForm, pdfFile: null });
+    setShow(true);
+  };
 
+  const handleVolumeEdit = (volume) => handleEdit(volume, setEditingVolume, setVolumeFormData, setShowEditVolumeModal, ['volumen', 'numero', 'fecha', 'titulo', 'resumen', 'abstract', 'portada', 'areaTematica', 'palabrasClave', 'keywords']);
+
+  const handleDelete = async (numero, gasUrl, folder, fetchFunc, setS) => {
+    if (!confirm('Delete?')) return;
     try {
-      setStatus('Deleting...');
-      
-      // Delete from sheet
+      setS('Deleting...');
       const data = { action: 'delete', numero: parseInt(numero) };
-      await fetch(ARTICULOS_GAS_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        redirect: 'follow',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(data),
-      });
-      
-      // Delete PDF if exists
+      await fetch(gasUrl, { method: 'POST', body: JSON.stringify(data), headers: { 'Content-Type': 'text/plain' } });
       if (GH_TOKEN) {
-        await deletePDFFromGitHub(`Articulo${numero}.pdf`, `Delete PDF for article ${numero}`);
+        const items = gasUrl === ARTICULOS_GAS_URL ? articles : volumes;
+        const item = items.find(i => i['Número'] === numero.toString());
+        if (item) {
+          const slug = `${generateSlug(item['Título'])}-${numero}`;
+          const fileName = `${gasUrl === ARTICULOS_GAS_URL ? 'Article' : 'Volume'}-${slug}.pdf`;
+          await deletePDFFromGitHub(fileName, `Delete PDF for ${gasUrl === ARTICULOS_GAS_URL ? 'article' : 'volume'} ${numero}`, folder);
+        }
       }
-      
-      setStatus('✅ Article deleted');
-      await fetchArticles();
-      
+      await fetchFunc();
+      setS('✅ Deleted');
     } catch (err) {
-      console.error('💥 Delete error:', err);
-      setStatus(`❌ Error: ${err.message}`);
+      setS(`❌ Error: ${err.message}`);
     }
   };
+
+  const handleVolumeDelete = async (numero) => await handleDelete(numero, VOLUMES_GAS_URL, 'Volumes', fetchVolumes, setVolumeStatus);
 
   const handleRebuild = async () => {
-    if (!GH_TOKEN) {
-      setStatus('❌ GitHub token not configured');
-      return;
-    }
-
     try {
       setStatus('Starting rebuild...');
       await triggerRebuild();
       setStatus('✅ Rebuild started');
     } catch (err) {
-      console.error('💥 Rebuild error:', err);
       setStatus(`❌ Error: ${err.message}`);
     }
   };
@@ -433,6 +388,13 @@ export default function DirectorPanel({ user }) {
     setShowEditModal(false);
     setEditingArticle(null);
     resetForm();
+  };
+
+  const closeVolumeModals = () => {
+    setShowAddVolumeModal(false);
+    setShowEditVolumeModal(false);
+    setEditingVolume(null);
+    resetVolumeForm();
   };
 
   // Config status component
@@ -452,15 +414,21 @@ export default function DirectorPanel({ user }) {
           <h3 className="text-sm font-medium text-yellow-800">Configuration Required</h3>
           <div className="mt-2 text-sm text-yellow-700 space-y-1">
             <p>
-              ✅ Google Apps Script:{' '}
+              ✅ GAS Articles:{' '}
               <span className={ARTICULOS_GAS_URL ? 'text-green-600' : 'text-red-600'}>
-                {ARTICULOS_GAS_URL ? 'Configured' : 'Not configured'}
+                {ARTICULOS_GAS_URL ? 'Configured' : 'Missing'}
+              </span>
+            </p>
+            <p>
+              ✅ GAS Volumes:{' '}
+              <span className={VOLUMES_GAS_URL ? 'text-green-600' : 'text-red-600'}>
+                {VOLUMES_GAS_URL ? 'Configured' : 'Missing'}
               </span>
             </p>
             <p>
               ✅ GitHub Token:{' '}
               <span className={GH_TOKEN ? 'text-green-600' : 'text-red-600'}>
-                {GH_TOKEN ? 'Configured' : 'Not configured'}
+                {GH_TOKEN ? 'Configured' : 'Missing'}
               </span>
             </p>
           </div>
@@ -469,12 +437,12 @@ export default function DirectorPanel({ user }) {
     </div>
   );
 
-  if (loading) {
+  if (loading || volumeLoading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading articles...</p>
+          <p className="text-gray-600">Loading content...</p>
         </div>
       </div>
     );
@@ -483,10 +451,7 @@ export default function DirectorPanel({ user }) {
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        {/* Config Status */}
-        {(!ARTICULOS_GAS_URL || !GH_TOKEN) && <ConfigStatus />}
-
-        {/* Header */}
+        {(!ARTICULOS_GAS_URL || !VOLUMES_GAS_URL || !GH_TOKEN) && <ConfigStatus />}
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
             <div>
@@ -516,8 +481,6 @@ export default function DirectorPanel({ user }) {
             </div>
           </div>
         </div>
-
-        {/* Status Message */}
         {status && (
           <div
             className={`mb-6 p-4 rounded-lg ${
@@ -531,8 +494,19 @@ export default function DirectorPanel({ user }) {
             {status}
           </div>
         )}
-
-        {/* Upload Progress */}
+        {volumeStatus && (
+          <div
+            className={`mb-6 p-4 rounded-lg ${
+              volumeStatus.includes('Error') || volumeStatus.includes('❌')
+                ? 'bg-red-50 border border-red-200 text-red-800'
+                : volumeStatus.includes('Uploading') || volumeStatus.includes('Processing')
+                ? 'bg-blue-50 border border-blue-200 text-blue-800'
+                : 'bg-green-50 border border-green-200 text-green-800'
+            }`}
+          >
+            {volumeStatus}
+          </div>
+        )}
         {uploading && (
           <div className="fixed top-4 right-4 bg-white rounded-lg shadow-lg p-4 z-50 border">
             <div className="flex items-center space-x-3">
@@ -541,8 +515,14 @@ export default function DirectorPanel({ user }) {
             </div>
           </div>
         )}
-
-        {/* Main Content */}
+        {volumeUploading && (
+          <div className="fixed top-4 right-4 bg-white rounded-lg shadow-lg p-4 z-50 border">
+            <div className="flex items-center space-x-3">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+              <span className="text-sm font-medium text-gray-900">Uploading...</span>
+            </div>
+          </div>
+        )}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="px-6 py-5 border-b border-gray-200">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-2 sm:space-y-0">
@@ -563,7 +543,6 @@ export default function DirectorPanel({ user }) {
               </button>
             </div>
           </div>
-
           <div className="divide-y divide-gray-200">
             {articles.length === 0 ? (
               <div className="px-6 py-12 text-center">
@@ -713,380 +692,180 @@ export default function DirectorPanel({ user }) {
                 ))}
               </div>
             )}
+          </div>
+        </div>
 
-            {/* Add Modal */}
-            {showAddModal && (
-              <div
-                className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
-                onClick={closeModals}
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden mt-8">
+          <div className="px-6 py-5 border-b border-gray-200">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-2 sm:space-y-0">
+              <h2 className="text-lg font-medium text-gray-900">Volumes ({volumes.length})</h2>
+              <button
+                onClick={() => setShowAddVolumeModal(true)}
+                disabled={!VOLUMES_GAS_URL}
+                className={`px-4 py-2 rounded-md font-medium flex items-center space-x-2 transition-colors ${
+                  VOLUMES_GAS_URL
+                    ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
               >
-                <div
-                  className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white"
-                  onClick={(e) => e.stopPropagation()}
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                <span>Add Volume</span>
+              </button>
+            </div>
+          </div>
+          <div className="divide-y divide-gray-200">
+            {volumes.length === 0 ? (
+              <div className="px-6 py-12 text-center">
+                <svg
+                  className="mx-auto h-12 w-12 text-gray-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
                 >
-                  <div className="mt-3">
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">Add New Article</h3>
-                    <form
-                      className="space-y-4"
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        handleSubmit('add');
-                      }}
-                    >
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
-                        <input
-                          name="titulo"
-                          value={formData.titulo}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          required
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Author(s) * (separate with ;)
-                        </label>
-                        <input
-                          name="autores"
-                          value={formData.autores}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          required
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                          <input
-                            name="fecha"
-                            type="date"
-                            value={formData.fecha}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Volume</label>
-                          <input
-                            name="volumen"
-                            value={formData.volumen}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Issue</label>
-                          <input
-                            name="numero"
-                            value={formData.numero}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Pages</label>
-                          <input
-                            name="primeraPagina"
-                            placeholder="Start"
-                            value={formData.primeraPagina}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          />
-                          <input
-                            name="ultimaPagina"
-                            placeholder="End"
-                            value={formData.ultimaPagina}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 mt-1"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Thematic Area (separate with ;)
-                        </label>
-                        <input
-                          name="areaTematica"
-                          value={formData.areaTematica}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Keywords (Spanish, separate with ;)
-                        </label>
-                        <input
-                          name="palabrasClave"
-                          value={formData.palabrasClave}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      </div>
-<div>
-  <label className="block text-sm font-medium text-gray-700 mb-1">
-    Keywords (English, separate with ;)
-  </label>
-  <input
-    name="keywords"
-    value={formData.keywords}
-    onChange={handleInputChange}
-    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-  />
-</div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Abstract (Spanish)</label>
-                        <textarea
-                          name="resumen"
-                          value={formData.resumen}
-                          onChange={handleInputChange}
-                          rows="3"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 resize-none"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Abstract (English)</label>
-                        <textarea
-                          name="abstract"
-                          value={formData.abstract}
-                          onChange={handleInputChange}
-                          rows="3"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 resize-none"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">PDF File</label>
-                        <input
-                          type="file"
-                          accept=".pdf"
-                          onChange={handleFileChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                        />
-                        <p className="mt-1 text-xs text-gray-500">The PDF will be automatically uploaded to GitHub</p>
-                      </div>
-
-                      <div className="pt-4 border-t border-gray-200 flex justify-end space-x-3">
-                        <button
-                          type="button"
-                          onClick={closeModals}
-                          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="submit"
-                          disabled={!formData.titulo.trim() || !formData.autores.trim() || uploading}
-                          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {uploading ? 'Processing...' : 'Add Article'}
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-                </div>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                <h3 className="mt-2 text-sm font-medium text-gray-900">No Volumes</h3>
+                <p className="mt-1 text-sm text-gray-500">Start by adding your first volume.</p>
+                {VOLUMES_GAS_URL && (
+                  <button
+                    onClick={() => setShowAddVolumeModal(true)}
+                    className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                  >
+                    Add First Volume
+                  </button>
+                )}
               </div>
-            )}
-
-            {/* Edit Modal */}
-            {showEditModal && editingArticle && (
-              <div
-                className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
-                onClick={closeModals}
-              >
-                <div
-                  className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="mt-3">
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">
-                      Edit Article #{editingArticle['Número de artículo']}
-                    </h3>
-                    <form
-                      className="space-y-4"
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        handleSubmit('edit');
-                      }}
+            ) : (
+              <div className="max-h-96 overflow-y-auto">
+                {volumes.map((volume, index) => (
+                  <div key={index} className="hover:bg-gray-50">
+                    <div
+                      className="px-6 py-4 cursor-pointer flex justify-between items-center"
+                      onClick={() => toggleVolumeExpand(volume['Número'])}
                     >
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
-                        <input
-                          name="titulo"
-                          value={formData.titulo}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          required
-                        />
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-medium text-gray-900 truncate" title={volume['Título']}>
+                          {volume['Título']}
+                        </h3>
+                        <p className="mt-1 text-sm text-gray-500 truncate">
+                          Volume {volume['Volumen']} Issue {volume['Número']}
+                        </p>
                       </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Author(s) * (separate with ;)
-                        </label>
-                        <input
-                          name="autores"
-                          value={formData.autores}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          required
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                          <input
-                            name="fecha"
-                            type="date"
-                            value={formData.fecha}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Volume</label>
-                          <input
-                            name="volumen"
-                            value={formData.volumen}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Issue</label>
-                          <input
-                            name="numero"
-                            value={formData.numero}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Pages</label>
-                          <input
-                            name="primeraPagina"
-                            placeholder="Start"
-                            value={formData.primeraPagina}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          />
-                          <input
-                            name="ultimaPagina"
-                            placeholder="End"
-                            value={formData.ultimaPagina}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 mt-1"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Thematic Area (separate with ;)
-                        </label>
-                        <input
-                          name="areaTematica"
-                          value={formData.areaTematica}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Keywords (Spanish, separate with ;)
-                        </label>
-                        <input
-                          name="palabrasClave"
-                          value={formData.palabrasClave}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      </div>
-<div>
-  <label className="block text-sm font-medium text-gray-700 mb-1">
-    Keywords (English, separate with ;)
-  </label>
-  <input
-    name="keywords"
-    value={formData.keywords}
-    onChange={handleInputChange}
-    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-  />
-</div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Abstract (Spanish)</label>
-                        <textarea
-                          name="resumen"
-                          value={formData.resumen}
-                          onChange={handleInputChange}
-                          rows="3"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 resize-none"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Abstract (English)</label>
-                        <textarea
-                          name="abstract"
-                          value={formData.abstract}
-                          onChange={handleInputChange}
-                          rows="3"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 resize-none"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">PDF File</label>
-                        <input
-                          type="file"
-                          accept=".pdf"
-                          onChange={handleFileChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                        />
-                        <p className="mt-1 text-xs text-gray-500">The PDF will be automatically uploaded to GitHub</p>
-                      </div>
-
-                      <div className="pt-4 border-t border-gray-200 flex justify-end space-x-3">
-                        <button
-                          type="button"
-                          onClick={closeModals}
-                          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      <div className="ml-4 flex-shrink-0 flex items-center space-x-2">
+                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                          #{volume['Número']}
+                        </span>
+                        <svg
+                          className={`w-4 h-4 text-gray-400 transition-transform ${
+                            volumeExpanded[volume['Número']] ? 'rotate-180' : ''
+                          }`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
                         >
-                          Cancel
-                        </button>
-                        <button
-                          type="submit"
-                          disabled={!formData.titulo.trim() || !formData.autores.trim() || uploading}
-                          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {uploading ? 'Updating...' : 'Update Article'}
-                        </button>
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
                       </div>
-                    </form>
+                    </div>
+
+                    {volumeExpanded[volume['Número']] && (
+                      <div className="px-6 pb-4 bg-gray-50">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <p className="text-gray-900 font-medium">Abstract (Spanish)</p>
+                            <p className="mt-1 text-gray-600">{volume['Resumen'] || 'Not available'}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-900 font-medium">Abstract (English)</p>
+                            <p className="mt-1 text-gray-600">{volume['Abstract'] || 'Not available'}</p>
+                          </div>
+                          <div className="md:col-span-2">
+                            <p className="text-gray-900 font-medium">Details</p>
+                            <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <p className="text-gray-500">Date</p>
+                                <p className="font-medium">{volume['Fecha'] || 'N/A'}</p>
+                              </div>
+                              <div>
+                                <p className="text-gray-500">Volume/Issue</p>
+                                <p className="font-medium">{`${volume['Volumen'] || 'N/A'}/${volume['Número'] || 'N/A'}`}</p>
+                              </div>
+                              <div>
+                                <p className="text-gray-500">Cover</p>
+                                <p className="font-medium">{volume['Portada'] || 'N/A'}</p>
+                              </div>
+                              <div>
+                                <p className="text-gray-500">Thematic Area</p>
+                                <p className="font-medium">{volume['Área temática'] || 'N/A'}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                          <div className="flex justify-between items-center">
+                            <a
+                              href={volume.pdf}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md transition-colors ${
+                                volume.pdf.startsWith('http')
+                                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                              }`}
+                            >
+                              <svg
+                                className="w-4 h-4 mr-2"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                />
+                              </svg>
+                              PDF
+                            </a>
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleVolumeEdit(volume);
+                                }}
+                                className="px-3 py-2 text-sm font-medium text-yellow-600 bg-yellow-100 hover:bg-yellow-200 rounded-md transition-colors"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleVolumeDelete(volume['Número']);
+                                }}
+                                className="px-3 py-2 text-sm font-medium text-red-600 bg-red-100 hover:bg-red-200 rounded-md transition-colors"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
+                ))}
               </div>
             )}
           </div>
         </div>
-
-        {/* Additional Components */}
         <MailsTeam />
         <Admissions />
       </div>

@@ -94,7 +94,7 @@ export default function AssignSection({ user, onClose }) {
           a['Nombre Artículo'] && a['Nombre Artículo'].trim() && a.Autor && a.Autor.trim()
         );
         const isCompleted = (assign) => {
-          return !!(assign['Feedback 1'] && assign['Informe 1'] && assign['Feedback 2'] && assign['Informe 2'] && assign['Feedback 3'] && assign['Informe 3']);
+          return !!(assign['Feedback 3'] && assign['Informe 3']);
         };
         const pendingAssignments = parsedAssignments.filter(a => !isCompleted(a));
         setAssignments(pendingAssignments);
@@ -109,7 +109,7 @@ export default function AssignSection({ user, onClose }) {
   }, []);
 
   const isCompleted = (assign) => {
-    return !!(assign['Feedback 1'] && assign['Informe 1'] && assign['Feedback 2'] && assign['Informe 2'] && assign['Feedback 3'] && assign['Informe 3']);
+    return !!(assign['Feedback 3'] && assign['Informe 3']);
   };
 
   const groupedIncoming = useMemo(() => {

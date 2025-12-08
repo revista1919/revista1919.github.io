@@ -5,8 +5,11 @@ const Papa = require('papaparse');
 const articlesCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p32EM6-0VYy18AdREQwXdpeet1WHTA4H2-W2FX7HKe1HPSyApWadUw9sKHdVYQXL5tP6yDRs/pub?output=csv';
 const teamCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 const newsCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKnN8qMJcBN8im9Q61o-qElx1jQp5NdS80_B-FakCHrPLXHlQ_FXZWT0o5GVVHAM26l9sjLxsTCNO8/pub?output=csv';
+const volumesCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTTs7eHa-_bbWkSzOxaM26oi79ioBYFyTcNB0EaEBt0VYWZeCZq2S4FUnaHXcB8lf2T78XhET9v5WTh/pub?output=csv'; // Nuevo
 const outputJson = path.join(__dirname, 'dist', 'articles.json');
+const volumesOutputJson = path.join(__dirname, 'dist', 'volumes.json'); // Nuevo
 const outputHtmlDir = path.join(__dirname, 'dist', 'articles');
+const volumesOutputHtmlDir = path.join(__dirname, 'dist', 'volumes'); // Nuevo
 const newsOutputHtmlDir = path.join(__dirname, 'dist', 'news');
 const teamOutputHtmlDir = path.join(__dirname, 'dist', 'team');
 const sectionsOutputDir = path.join(__dirname, 'dist', 'sections');
@@ -116,12 +119,13 @@ const base64DecodeUnicode = (str) => {
   }
 };
 if (!fs.existsSync(outputHtmlDir)) fs.mkdirSync(outputHtmlDir, { recursive: true });
+if (!fs.existsSync(volumesOutputHtmlDir)) fs.mkdirSync(volumesOutputHtmlDir, { recursive: true }); // Nuevo
 if (!fs.existsSync(newsOutputHtmlDir)) fs.mkdirSync(newsOutputHtmlDir, { recursive: true });
 if (!fs.existsSync(teamOutputHtmlDir)) fs.mkdirSync(teamOutputHtmlDir, { recursive: true });
 if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursive: true });
 (async () => {
   try {
-    // Procesar artículos
+    // Procesar artículos (mismo)
     const articlesRes = await fetch(articlesCsvUrl);
     if (!articlesRes.ok) throw new Error(`Error descargando CSV de artículos: ${articlesRes.statusText}`);
     const articlesCsvData = await articlesRes.text();
@@ -147,7 +151,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
     }));
     fs.writeFileSync(outputJson, JSON.stringify(articles, null, 2), 'utf8');
     console.log(`✅ Archivo generado: ${outputJson} (${articles.length} artículos)`);
-    // Crear mapa de autores a artículos
+    // Crear mapa de autores a artículos (mismo)
     let authorToArticles = {};
     articles.forEach(article => {
       const authors = article.autores.split(';').map(a => a.trim());
@@ -170,7 +174,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
   const authorsChicagoEn = formatAuthorsChicagoOrMLA(article.autores, 'en');
   const authorsMLAEn = formatAuthorsChicagoOrMLA(article.autores, 'en');
   const year = new Date(article.fecha).getFullYear();
-  // Generar HTML en español
+  // Generar HTML en español (mismo)
   const htmlContentEs = `
 <!DOCTYPE html>
 <html lang="es">
@@ -404,7 +408,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
   const filePathEs = path.join(outputHtmlDir, `article-${articleSlug}.html`);
   fs.writeFileSync(filePathEs, htmlContentEs, 'utf8');
   console.log(`Generado HTML de artículo en español: ${filePathEs}`);
-  // Generar HTML en inglés
+  // Generar HTML en inglés (mismo)
   const htmlContentEn = `
 <!DOCTYPE html>
 <html lang="en">
@@ -634,7 +638,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
   fs.writeFileSync(filePathEn, htmlContentEn, 'utf8');
   console.log(`Generado HTML de artículo en inglés: ${filePathEn}`);
 });
-    // Generar índice de artículos
+    // Generar índice de artículos (mismo)
     const articlesByYear = articles.reduce((acc, article) => {
       const year = new Date(article.fecha).getFullYear() || 'Sin fecha';
       if (!acc[year]) acc[year] = [];
@@ -681,7 +685,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     const indexPath = path.join(outputHtmlDir, 'index.html');
     fs.writeFileSync(indexPath, indexContent, 'utf8');
     console.log(`Generado índice HTML de artículos: ${indexPath}`);
-    // Generar índice de artículos en inglés
+    // Generar índice de artículos en inglés (mismo)
     let indexContentEn = `
 <!DOCTYPE html>
 <html lang="en">
@@ -722,6 +726,506 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     const indexPathEn = path.join(outputHtmlDir, 'index.EN.html');
     fs.writeFileSync(indexPathEn, indexContentEn, 'utf8');
     console.log(`Generado índice HTML de artículos (EN): ${indexPathEn}`);
+    // Nuevo: Procesar volúmenes
+    const volumesRes = await fetch(volumesCsvUrl);
+    if (!volumesRes.ok) throw new Error(`Error descargando CSV de volúmenes: ${volumesRes.statusText}`);
+    const volumesCsvData = await volumesRes.text();
+    const volumesParsed = Papa.parse(volumesCsvData, { header: true, skipEmptyLines: true });
+    const volumes = volumesParsed.data.map(row => ({
+      volumen: row['Volumen'] || '',
+      numero: row['Número'] || '',
+      fecha: parseDateFlexible(row['Fecha']),
+      titulo: row['Título'] || 'Sin título',
+      resumen: row['Resumen'] || 'Resumen no disponible',
+      abstract: row['Abstract'] || 'Abstract not available',
+      portada: getImageSrc(row['Portada']),
+      pdf: row['PDF'] || '',
+      area: row['Área temática'] || '',
+      palabras_clave: row['Palabras clave']
+        ? row['Palabras clave'].split(/[;,]/).map(k => k.trim())
+        : [],
+      keywords: row['Keywords']
+        ? row['Keywords'].split(';').map(k => k.trim())
+        : []
+    }));
+    fs.writeFileSync(volumesOutputJson, JSON.stringify(volumes, null, 2), 'utf8');
+    console.log(`✅ Archivo generado: ${volumesOutputJson} (${volumes.length} volúmenes)`);
+    volumes.forEach(volume => {
+      const volumeSlug = `volume-${volume.volumen}-${volume.numero}`;
+      const pdfFileName = `Volume-${volumeSlug}.pdf`;
+      volume.pdf = `${domain}/Volumes/${pdfFileName}`;
+      const year = new Date(volume.fecha).getFullYear();
+      // Generar HTML en español para volumen
+      const htmlContentEs = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="citation_title" content="${volume.titulo}">
+  <meta name="citation_publication_date" content="${volume.fecha}">
+  <meta name="citation_journal_title" content="Revista Nacional de las Ciencias para Estudiantes">
+  <meta name="citation_volume" content="${volume.volumen}">
+  <meta name="citation_issue" content="${volume.numero}">
+  <meta name="citation_pdf_url" content="${volume.pdf}">
+  <meta name="citation_abstract_html_url" content="${domain}/volumes/volume-${volumeSlug}.html">
+  <meta name="citation_abstract" content="${volume.resumen}">
+  <meta name="citation_abstract" xml:lang="en" content="${volume.abstract}">
+  <meta name="citation_keywords" content="${volume.palabras_clave.join('; ')}">
+  <meta name="citation_language" content="es">
+  <meta name="description" content="${volume.resumen.substring(0, 160)}...">
+  <meta name="keywords" content="${volume.palabras_clave.join(', ')}">
+  <title>Volumen ${volume.volumen} Número ${volume.numero} - Revista Nacional de las Ciencias para Estudiantes</title>
+  <link rel="stylesheet" href="/index.css">
+  <style>
+    /* Estilo más ceremonioso: fondos gradient, bordes dorados, tipografía elegante */
+    body {
+      font-family: 'Merriweather', serif;
+      line-height: 1.8;
+      color: #333;
+      background: linear-gradient(to bottom, #f9f9f9, #fff);
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 3rem 2rem;
+      background: white;
+      box-shadow: 0 0 30px rgba(0,0,0,0.1);
+      border-radius: 12px;
+      border: 1px solid #d4af37; /* Dorado */
+      box-sizing: border-box;
+    }
+    header {
+      text-align: center;
+      border-bottom: 2px solid #d4af37;
+      padding-bottom: 1.5rem;
+      margin-bottom: 3rem;
+    }
+    h1 {
+      font-size: 2.2rem;
+      color: #b8860b; /* Dorado oscuro */
+      margin-bottom: 0.5rem;
+      font-weight: bold;
+    }
+    .meta {
+      font-size: 1rem;
+      color: #555;
+      margin-bottom: 0.5rem;
+    }
+    section {
+      margin-bottom: 2.5rem;
+    }
+    h2 {
+      font-size: 1.5rem;
+      color: #b8860b;
+      border-bottom: 1px solid #d4af37;
+      padding-bottom: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+    p {
+      text-align: justify;
+    }
+    .keywords {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .keyword {
+      background: #fdf5e6;
+      color: #b8860b;
+      padding: 0.4rem 1rem;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      border: 1px solid #d4af37;
+    }
+    .pdf-preview {
+      width: 100%;
+      height: 700px;
+      border: 1px solid #d4af37;
+      border-radius: 8px;
+      margin-top: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .buttons {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+    .button {
+      padding: 0.8rem 2rem;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: all 0.3s;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .open-pdf {
+      background: #b8860b;
+      color: white;
+    }
+    .open-pdf:hover {
+      background: #a67c00;
+    }
+    .download-pdf {
+      background: #d4af37;
+      color: white;
+    }
+    .download-pdf:hover {
+      background: #c49b2e;
+    }
+    footer {
+      text-align: center;
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #d4af37;
+      font-size: 0.9rem;
+      color: #777;
+    }
+    @media (max-width: 768px) {
+      .container {
+        padding: 2rem 1rem;
+      }
+      h1 {
+        font-size: 1.8rem;
+      }
+      .pdf-preview {
+        height: 500px;
+      }
+      .buttons {
+        flex-direction: column;
+        gap: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Volumen ${volume.volumen} - Número ${volume.numero}</h1>
+      <p class="meta"><strong>Fecha de publicación:</strong> ${volume.fecha}</p>
+      <p class="meta"><strong>Área temática:</strong> ${volume.area}</p>
+    </header>
+    <main>
+      <section>
+        <h2>Palabras clave</h2>
+        <div class="keywords">
+          ${volume.palabras_clave.map(kw => `<span class="keyword">${kw}</span>`).join('')}
+        </div>
+      </section>
+      <section>
+        <h2>Resumen</h2>
+        <p>${volume.resumen}</p>
+      </section>
+      <section>
+        <h2>Abstract (English)</h2>
+        <p>${volume.abstract}</p>
+      </section>
+      <section>
+        <h2>Visualización del PDF</h2>
+        <embed src="${volume.pdf}" type="application/pdf" class="pdf-preview" />
+        <div class="buttons">
+          <a href="${volume.pdf}" target="_blank" rel="noopener noreferrer" class="button open-pdf">Abrir PDF en nueva pestaña</a>
+          <a href="${volume.pdf}" download class="button download-pdf">Descargar PDF</a>
+        </div>
+      </section>
+      <section class="license">
+        <h2>Licencia</h2>
+        <p>Este volumen se publica bajo licencia <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Atribución 4.0 Internacional (CC BY 4.0)</a>.</p>
+        <img src="https://mirrors.creativecommons.org/presskit/buttons/88x31/png/by.png" alt="CC BY 4.0" style="width:88px; height:31px;">
+      </section>
+    </main>
+    <footer>
+      <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes</p>
+      <a href="/es/volumes">Volver a Volúmenes</a> | <a href="/">Volver al inicio</a>
+    </footer>
+  </div>
+</body>
+</html>
+  `.trim();
+  const filePathEs = path.join(volumesOutputHtmlDir, `volume-${volumeSlug}.html`);
+  fs.writeFileSync(filePathEs, htmlContentEs, 'utf8');
+  console.log(`Generado HTML de volumen en español: ${filePathEs}`);
+      // Generar HTML en inglés para volumen
+      const htmlContentEn = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="citation_title" content="${volume.titulo}">
+  <meta name="citation_publication_date" content="${volume.fecha}">
+  <meta name="citation_journal_title" content="Revista Nacional de las Ciencias para Estudiantes">
+  <meta name="citation_volume" content="${volume.volumen}">
+  <meta name="citation_issue" content="${volume.numero}">
+  <meta name="citation_pdf_url" content="${volume.pdf}">
+  <meta name="citation_abstract_html_url" content="${domain}/volumes/volume-${volumeSlug}EN.html">
+  <meta name="citation_abstract" content="${volume.abstract}">
+  <meta name="citation_keywords" content="${volume.keywords.join('; ')}">
+  <meta name="citation_language" content="en">
+  <meta name="description" content="${volume.abstract.substring(0, 160)}...">
+  <meta name="keywords" content="${volume.keywords.join(', ')}">
+  <title>Volume ${volume.volumen} Issue ${volume.numero} - The National Review of Sciences for Students</title>
+  <link rel="stylesheet" href="/index.css">
+  <style>
+    /* Estilo más ceremonioso: fondos gradient, bordes dorados, tipografía elegante */
+    body {
+      font-family: 'Merriweather', serif;
+      line-height: 1.8;
+      color: #333;
+      background: linear-gradient(to bottom, #f9f9f9, #fff);
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 3rem 2rem;
+      background: white;
+      box-shadow: 0 0 30px rgba(0,0,0,0.1);
+      border-radius: 12px;
+      border: 1px solid #d4af37; /* Golden */
+      box-sizing: border-box;
+    }
+    header {
+      text-align: center;
+      border-bottom: 2px solid #d4af37;
+      padding-bottom: 1.5rem;
+      margin-bottom: 3rem;
+    }
+    h1 {
+      font-size: 2.2rem;
+      color: #b8860b; /* Dark golden */
+      margin-bottom: 0.5rem;
+      font-weight: bold;
+    }
+    .meta {
+      font-size: 1rem;
+      color: #555;
+      margin-bottom: 0.5rem;
+    }
+    section {
+      margin-bottom: 2.5rem;
+    }
+    h2 {
+      font-size: 1.5rem;
+      color: #b8860b;
+      border-bottom: 1px solid #d4af37;
+      padding-bottom: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+    p {
+      text-align: justify;
+    }
+    .keywords {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .keyword {
+      background: #fdf5e6;
+      color: #b8860b;
+      padding: 0.4rem 1rem;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      border: 1px solid #d4af37;
+    }
+    .pdf-preview {
+      width: 100%;
+      height: 700px;
+      border: 1px solid #d4af37;
+      border-radius: 8px;
+      margin-top: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .buttons {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+    .button {
+      padding: 0.8rem 2rem;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: all 0.3s;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .open-pdf {
+      background: #b8860b;
+      color: white;
+    }
+    .open-pdf:hover {
+      background: #a67c00;
+    }
+    .download-pdf {
+      background: #d4af37;
+      color: white;
+    }
+    .download-pdf:hover {
+      background: #c49b2e;
+    }
+    footer {
+      text-align: center;
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #d4af37;
+      font-size: 0.9rem;
+      color: #777;
+    }
+    @media (max-width: 768px) {
+      .container {
+        padding: 2rem 1rem;
+      }
+      h1 {
+        font-size: 1.8rem;
+      }
+      .pdf-preview {
+        height: 500px;
+      }
+      .buttons {
+        flex-direction: column;
+        gap: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Volume ${volume.volumen} - Issue ${volume.numero}</h1>
+      <p class="meta"><strong>Publication Date:</strong> ${volume.fecha}</p>
+      <p class="meta"><strong>Thematic Area:</strong> ${volume.area}</p>
+    </header>
+    <main>
+      <section>
+        <h2>Keywords</h2>
+        <div class="keywords">
+          ${volume.keywords.map(kw => `<span class="keyword">${kw}</span>`).join('')}
+        </div>
+      </section>
+      <section>
+        <h2>Abstract</h2>
+        <p>${volume.abstract}</p>
+      </section>
+      <section>
+        <h2>PDF Preview</h2>
+        <embed src="${volume.pdf}" type="application/pdf" class="pdf-preview" />
+        <div class="buttons">
+          <a href="${volume.pdf}" target="_blank" rel="noopener noreferrer" class="button open-pdf">Open PDF in New Tab</a>
+          <a href="${volume.pdf}" download class="button download-pdf">Download PDF</a>
+        </div>
+      </section>
+      <section class="license">
+        <h2>License</h2>
+        <p>This volume is published under a <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International (CC BY 4.0)</a> license.</p>
+        <img src="https://mirrors.creativecommons.org/presskit/buttons/88x31/png/by.png" alt="CC BY 4.0" style="width:88px; height:31px;">
+      </section>
+    </main>
+    <footer>
+      <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
+      <a href="/en/volumes">Back to Volumes</a> | <a href="/">Back to home</a>
+    </footer>
+  </div>
+</body>
+</html>
+  `.trim();
+      const filePathEn = path.join(volumesOutputHtmlDir, `volume-${volumeSlug}EN.html`);
+      fs.writeFileSync(filePathEn, htmlContentEn, 'utf8');
+      console.log(`Generado HTML de volumen en inglés: ${filePathEn}`);
+    });
+    // Generar índice de volúmenes
+    const volumesByYear = volumes.reduce((acc, volume) => {
+      const year = new Date(volume.fecha).getFullYear() || 'Sin fecha';
+      if (!acc[year]) acc[year] = [];
+      acc[year].push(volume);
+      return acc;
+    }, {});
+    let volumesIndexContent = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Índice de Volúmenes - Revista Nacional de las Ciencias para Estudiantes</title>
+  <link rel="stylesheet" href="/index.css">
+</head>
+<body>
+  <header>
+    <h1>Índice de Volúmenes por Año</h1>
+    <p>Accede a los volúmenes por año de publicación. Cada enlace lleva a la página del volumen con resumen y PDF.</p>
+  </header>
+  <main>
+${Object.keys(volumesByYear).sort().reverse().map(year => `
+    <section>
+      <h2>Año ${year}</h2>
+      <ul>
+        ${volumesByYear[year].map(volume => {
+          const volumeSlug = `volume-${volume.volumen}-${volume.numero}`;
+          return `
+          <li>
+            <a href="/volumes/volume-${volumeSlug}.html">Volumen ${volume.volumen}, Número ${volume.numero}</a> - ${volume.titulo} (${volume.fecha})
+          </li>
+        `;
+        }).join('')}
+      </ul>
+    </section>
+`).join('')}
+  </main>
+  <footer>
+    <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes</p>
+    <a href="/">Volver al inicio</a>
+  </footer>
+</body>
+</html>
+    `.trim();
+    const volumesIndexPath = path.join(volumesOutputHtmlDir, 'index.html');
+    fs.writeFileSync(volumesIndexPath, volumesIndexContent, 'utf8');
+    console.log(`Generado índice HTML de volúmenes: ${volumesIndexPath}`);
+    let volumesIndexContentEn = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Index of Volumes - The National Review of Sciences for Students</title>
+  <link rel="stylesheet" href="/index.css">
+</head>
+<body>
+  <header>
+    <h1>Index of Volumes by Year</h1>
+    <p>Access volumes by year of publication. Each link leads to the volume page with abstract and PDF.</p>
+  </header>
+  <main>
+${Object.keys(volumesByYear).sort().reverse().map(year => `
+    <section>
+      <h2>Year ${year}</h2>
+      <ul>
+        ${volumesByYear[year].map(volume => {
+          const volumeSlug = `volume-${volume.volumen}-${volume.numero}`;
+          return `
+          <li>
+            <a href="/volumes/volume-${volumeSlug}EN.html">Volume ${volume.volumen}, Issue ${volume.numero}</a> - ${volume.titulo} (${volume.fecha})
+          </li>
+        `;
+        }).join('')}
+      </ul>
+    </section>
+`).join('')}
+  </main>
+  <footer>
+    <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
+    <a href="/">Back to home</a>
+  </footer>
+</body>
+</html>
+    `.trim();
+    const volumesIndexPathEn = path.join(volumesOutputHtmlDir, 'index.EN.html');
+    fs.writeFileSync(volumesIndexPathEn, volumesIndexContentEn, 'utf8');
+    console.log(`Generado índice HTML de volúmenes (EN): ${volumesIndexPathEn}`);
     // Procesar noticias
     const newsRes = await fetch(newsCsvUrl);
     if (!newsRes.ok) throw new Error(`Error descargando CSV de noticias: ${newsRes.statusText}`);
@@ -1669,8 +2173,8 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
     }
     const appShellContent = fs.readFileSync(appShellPath, 'utf8');
     const spaRoutes = [
-      '/es/about', '/es/guidelines', '/es/faq', '/es/article', '/es/submit', '/es/team', '/es/new', '/es/login', '/es/admin',
-      '/en/about', '/en/guidelines', '/en/faq', '/en/article', '/en/submit', '/en/team', '/en/new', '/en/login', '/en/admin'
+      '/es/about', '/es/guidelines', '/es/faq', '/es/article', '/es/submit', '/es/team', '/es/new', '/es/login', '/es/admin', '/es/volumes',
+      '/en/about', '/en/guidelines', '/en/faq', '/en/article', '/en/submit', '/en/team', '/en/new', '/en/login', '/en/admin', '/en/volumes'
     ];
     spaRoutes.forEach(route => {
       const routePath = path.join(__dirname, 'dist', route);
@@ -1721,6 +2225,40 @@ ${articles.map(article => {
 <url>
   <loc>${article.pdf}</loc>
   <lastmod>${article.fecha}</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.8</priority>
+</url>`;
+}).join('')}
+<url>
+  <loc>${domain}/volumes/index.html</loc>
+  <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.9</priority>
+</url>
+<url>
+  <loc>${domain}/volumes/index.EN.html</loc>
+  <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.9</priority>
+</url>
+${volumes.map(volume => {
+  const volumeSlug = `volume-${volume.volumen}-${volume.numero}`;
+  return `
+<url>
+  <loc>${domain}/volumes/volume-${volumeSlug}.html</loc>
+  <lastmod>${volume.fecha}</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.8</priority>
+</url>
+<url>
+  <loc>${domain}/volumes/volume-${volumeSlug}EN.html</loc>
+  <lastmod>${volume.fecha}</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.8</priority>
+</url>
+<url>
+  <loc>${volume.pdf}</loc>
+  <lastmod>${volume.fecha}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.8</priority>
 </url>`;

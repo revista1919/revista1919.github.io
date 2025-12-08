@@ -5,8 +5,10 @@ import MailsTeam from './MailsTeam';
 
 // ✅ Variables de entorno inyectadas por Webpack DefinePlugin
 const ARTICULOS_GAS_URL = process.env.REACT_APP_ARTICULOS_SCRIPT_URL || '';
+const VOLUMES_GAS_URL = process.env.REACT_APP_VOLUMES_SCRIPT_URL || '';
 const GH_TOKEN = process.env.REACT_APP_GH_TOKEN || '';
 const ARTICULOS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p32EM6-0VYy18AdREQwXdpeet1WHTA4H2-W2FX7HKe1HPSyApWadUw9sKHdVYQXL5tP6yDRs/pub?output=csv';
+const VOLUMES_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTTs7eHa-_bbWkSzOxaM26oi79ioBYFyTcNB0EaEBt0VYWZeCZq2S4FUnaHXcB8lf2T78XhET9v5WTh/pub?output=csv';
 const GH_API_BASE = 'https://api.github.com/repos/revista1919/revista1919.github.io/contents';
 const REPO_OWNER = 'revista1919';
 const REPO_NAME = 'revista1919.github.io';
@@ -26,10 +28,10 @@ const toBase64 = (file) =>
   });
 
 // GitHub API Functions
-const uploadPDFToGitHub = async (base64Content, fileName, message, sha = null) => {
+const uploadPDFToGitHub = async (base64Content, fileName, message, sha = null, folder = 'Articles') => {
   if (!GH_TOKEN) throw new Error('GitHub token no disponible');
   
-  const path = `public/Articles/${fileName}`;
+  const path = `public/${folder}/${fileName}`;
   const url = `${GH_API_BASE}/${path}`;
   const payload = {
     message,
@@ -55,10 +57,10 @@ const uploadPDFToGitHub = async (base64Content, fileName, message, sha = null) =
   return await response.json();
 };
 
-const deletePDFFromGitHub = async (fileName, message) => {
+const deletePDFFromGitHub = async (fileName, message, folder = 'Articles') => {
   if (!GH_TOKEN) throw new Error('GitHub token no disponible');
   
-  const path = `public/Articles/${fileName}`;
+  const path = `public/${folder}/${fileName}`;
   const url = `${GH_API_BASE}/${path}`;
   
   const getRes = await fetch(url, {
@@ -136,74 +138,99 @@ export default function DirectorPanel({ user }) {
   const [status, setStatus] = useState('');
   const [uploading, setUploading] = useState(false);
 
-  // ✅ Debug logging movido dentro del componente
+  const [volumes, setVolumes] = useState([]);
+  const [volumeLoading, setVolumeLoading] = useState(true);
+  const [volumeExpanded, setVolumeExpanded] = useState({});
+  const [showAddVolumeModal, setShowAddVolumeModal] = useState(false);
+  const [showEditVolumeModal, setShowEditVolumeModal] = useState(false);
+  const [editingVolume, setEditingVolume] = useState(null);
+  const [volumeFormData, setVolumeFormData] = useState({
+    volumen: '',
+    numero: '',
+    fecha: '',
+    titulo: '',
+    resumen: '',
+    abstract: '',
+    portada: '',
+    areaTematica: '',
+    palabrasClave: '',
+    keywords: '',
+    pdfFile: null,
+  });
+  const [volumeStatus, setVolumeStatus] = useState('');
+  const [volumeUploading, setVolumeUploading] = useState(false);
+
+  // ✅ Debug logging
   useEffect(() => {
     console.log('🔍 DirectorPanel Config:', {
-      GAS_URL: ARTICULOS_GAS_URL ? `${ARTICULOS_GAS_URL.slice(0, 40)}...` : 'MISSING',
-      HAS_TOKEN: !!GH_TOKEN,
-      TOKEN_LENGTH: GH_TOKEN ? `${GH_TOKEN.length} chars` : '0',
-      READY: !!(ARTICULOS_GAS_URL && GH_TOKEN),
+      ARTICULOS_GAS: ARTICULOS_GAS_URL ? 'Set' : 'Missing',
+      VOLUMES_GAS: VOLUMES_GAS_URL ? 'Set' : 'Missing',
+      GH_TOKEN: GH_TOKEN ? 'Set' : 'Missing',
     });
   }, []);
 
   useEffect(() => {
     fetchArticles();
+    fetchVolumes();
   }, []);
 
   const fetchArticles = async () => {
     try {
       setLoading(true);
-      console.log('📥 Loading articles from Google Sheets...');
-      
-      const response = await fetch(ARTICULOS_CSV_URL, {
-        cache: 'no-store',
-        headers: { Accept: 'text/csv' },
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch CSV: ${response.status}`);
-      }
-      
+      const response = await fetch(ARTICULOS_CSV_URL, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`Failed to fetch articles CSV: ${response.status}`);
       const csvText = await response.text();
-      const parsed = Papa.parse(csvText, {
-        header: true,
-        skipEmptyLines: true,
-        dynamicTyping: false,
-      }).data;
-      
-      console.log(`📊 Loaded ${parsed.length} articles`);
-      
-      const enrichedArticles = parsed.map((row) => ({
+      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
+      const enriched = parsed.map(row => ({
         ...row,
-        areas: (row['Área temática'] || '').split(';').map((a) => a.trim()).filter(Boolean),
-        keywords: (row['Palabras clave'] || '').split(';').map((k) => k.trim()).filter(Boolean),
-        keywords_english: (row['Keywords'] || '').split(';').map((k) => k.trim()).filter(Boolean),
-        pdfUrl: row['URL_PDF'] || `${DOMAIN}/Articles/Article-${generateSlug(row['Título'])}-${row['Número de artículo']}.pdf`,
+        pdfUrl: row['PDF'] || `${DOMAIN}/Articles/Article-${generateSlug(row['Título'])}-${row['Número de artículo']}.pdf`,
       }));
-      
-      setArticles(enrichedArticles);
-      setStatus('');
+      setArticles(enriched);
     } catch (err) {
-      console.error('❌ Error loading articles:', err);
-      setStatus(`Error loading articles: ${err.message}`);
-      setArticles([]);
+      setStatus(`Error: ${err.message}`);
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleExpand = (numero) => {
-    setExpanded((prev) => ({ ...prev, [numero]: !prev[numero] }));
+  const fetchVolumes = async () => {
+    try {
+      setVolumeLoading(true);
+      const response = await fetch(VOLUMES_CSV_URL, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`Failed to fetch volumes CSV: ${response.status}`);
+      const csvText = await response.text();
+      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
+      const enriched = parsed.map(row => ({
+        ...row,
+        pdf: row['PDF'] || `${DOMAIN}/Volumes/Volume-${row['Volumen']}-${row['Número']}.pdf`,
+      }));
+      setVolumes(enriched);
+    } catch (err) {
+      setVolumeStatus(`Error: ${err.message}`);
+      console.error(err);
+    } finally {
+      setVolumeLoading(false);
+    }
   };
+
+  const toggleExpand = (numero) => setExpanded(prev => ({ ...prev, [numero]: !prev[numero] }));
+
+  const toggleVolumeExpand = (numero) => setVolumeExpanded(prev => ({ ...prev, [numero]: !prev[numero] }));
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleFileChange = (e) => {
-    setFormData((prev) => ({ ...prev, pdfFile: e.target.files[0] }));
+  const handleVolumeInputChange = (e) => {
+    const { name, value } = e.target;
+    setVolumeFormData(prev => ({ ...prev, [name]: value }));
   };
+
+  const handleFileChange = (e) => setFormData(prev => ({ ...prev, pdfFile: e.target.files[0] }));
+
+  const handleVolumeFileChange = (e) => setVolumeFormData(prev => ({ ...prev, pdfFile: e.target.files[0] }));
 
   const resetForm = () => {
     setFormData({
@@ -223,222 +250,136 @@ export default function DirectorPanel({ user }) {
     });
   };
 
-  const updatePDFUrlInSheet = async (numero, pdfUrl) => {
-    if (!ARTICULOS_GAS_URL) {
-      console.warn('⚠️ No GAS URL, skipping PDF URL update');
-      return;
-    }
-    
-    try {
-      const data = {
-  action: 'update_pdf_url',
-  numero: parseInt(numero),
-  pdfUrl,
-};
-await fetch(ARTICULOS_GAS_URL, {
-  method: 'POST',
-  redirect: 'follow',
-  body: JSON.stringify(data),
-  headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-});
-console.log('✅ PDF URL updated in sheet:', numero, pdfUrl);
-    } catch (err) {
-      console.error('❌ Failed to update PDF URL:', err);
-    }
-  };
-
-  const submitToSheet = async (action, articleData, numero = null) => {
-    if (!ARTICULOS_GAS_URL) {
-      throw new Error('Google Apps Script URL no configurada');
-    }
-
-    const data = {
-      action,
-      article: articleData,
-      ...(numero && { numero }),
-    };
-
-    console.log(`📄 Submitting to GAS: ${action}`, { hasNumero: !!numero });
-    
-    const response = await fetch(ARTICULOS_GAS_URL, {
-  method: 'POST',
-  redirect: 'follow',  // Para manejar redirects de GAS
-  body: JSON.stringify(data),
-  headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-});
-
-  const resText = await response.text();
-if (resText.includes('error')) {
-  throw new Error(`GAS error: ${resText}`);
-}
-
-    // Wait for sync
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    await fetchArticles();
-  };
-
-  const handleSubmit = async (action = 'add') => {
-    if (!formData.titulo.trim() || !formData.autores.trim()) {
-      setStatus('❌ Título y autor(es) son obligatorios');
-      return;
-    }
-
-    if (!ARTICULOS_GAS_URL) {
-      setStatus('❌ Google Apps Script no configurado');
-      return;
-    }
-
-    setUploading(true);
-    try {
-      setStatus('Procesando...');
-      console.log(`🚀 ${action === 'add' ? 'Adding' : 'Editing'} article...`);
-      
-      const articleData = {
-        titulo: formData.titulo.trim(),
-        autores: formData.autores.trim(),
-        resumen: formData.resumen || '',
-        abstract: formData.abstract || '',
-        fecha: formData.fecha,
-        volumen: formData.volumen || '',
-        numero: formData.numero || '',
-        primeraPagina: formData.primeraPagina || '',
-        ultimaPagina: formData.ultimaPagina || '',
-        areaTematica: formData.areaTematica || '',
-        palabrasClave: formData.palabrasClave || '',
-        keywords: formData.keywords || '',
-        urlPdf: '',
-      };
-
-      let articleNumber;
-      if (action === 'add') {
-        await submitToSheet('add', articleData);
-        await new Promise(resolve => setTimeout(resolve, 3000));  // Espera 3 segundos para propagación
-        // Get the new article number after refresh
-        await fetchArticles();
-        const nums = articles.map(a => parseInt(a['Número de artículo'] || '0', 10)).filter(n => !isNaN(n) && isFinite(n));
-const maxNum = nums.length > 0 ? Math.max(...nums) : 0;
-articleNumber = maxNum + 1;
-console.log('🆕 Calculated articleNumber:', articleNumber, 'from nums:', nums);
-        console.log('🆕 New article number:', articleNumber);
-      } else {
-        articleNumber = editingArticle['Número de artículo'];
-        await submitToSheet('edit', articleData, articleNumber);
-      }
-
-      // Handle PDF upload
-      let pdfUrl = null;
-      if (formData.pdfFile) {
-        if (!GH_TOKEN) {
-          setStatus('✅ Metadata guardado. Sube PDF manualmente.');
-          return;
-        }
-
-        setStatus('Subiendo PDF...');
-        const base64 = await toBase64(formData.pdfFile);
-        const articleSlug = `${generateSlug(formData.titulo)}-${articleNumber}`;
-        const fileName = `Article-${articleSlug}.pdf`;
-        const message = `${action === 'add' ? 'Add' : 'Update'} PDF for article ${articleNumber}`;
-        
-        await uploadPDFToGitHub(base64, fileName, message);
-        pdfUrl = `${DOMAIN}/Articles/${fileName}`;
-        await updatePDFUrlInSheet(articleNumber, pdfUrl);
-        
-        console.log('✅ PDF uploaded:', pdfUrl);
-        setStatus(`✅ ${action === 'add' ? 'Artículo agregado' : 'Artículo actualizado'} con PDF`);
-      } else {
-        setStatus(`✅ ${action === 'add' ? 'Artículo agregado' : 'Artículo actualizado'}`);
-      }
-
-      closeModals();
-      await fetchArticles();
-      if (GH_TOKEN) {
-  await triggerRebuild();
-  setStatus(`${status} y rebuild iniciado.`);
-}
-      
-    } catch (err) {
-      console.error('💥 Submit error:', err);
-      setStatus(`❌ Error: ${err.message}`);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleEdit = (article) => {
-    setEditingArticle(article);
-    setFormData({
-      titulo: article['Título'] || '',
-      autores: article['Autor(es)'] || '',
-      resumen: article['Resumen'] || '',
-      abstract: article['Abstract'] || '',
-      fecha: article['Fecha'] || '',
-      volumen: article['Volumen'] || '',
-      numero: article['Número'] || '',
-      primeraPagina: article['Primera página'] || '',
-      ultimaPagina: article['Última página'] || '',
-      areaTematica: article['Área temática'] || '',
-      palabrasClave: article['Palabras clave'] || '',
-      keywords: article['Keywords'] || '',
+  const resetVolumeForm = () => {
+    setVolumeFormData({
+      volumen: '',
+      numero: '',
+      fecha: '',
+      titulo: '',
+      resumen: '',
+      abstract: '',
+      portada: '',
+      areaTematica: '',
+      palabrasClave: '',
+      keywords: '',
       pdfFile: null,
     });
-    setShowEditModal(true);
   };
 
-  const handleDelete = async (numero) => {
-    if (!confirm(`¿Eliminar artículo #${numero}?`)) return;
-    
-    if (!ARTICULOS_GAS_URL) {
-      setStatus('❌ Google Apps Script no configurado');
+  const updatePDFUrlInSheet = async (numero, pdfUrl, gasUrl = ARTICULOS_GAS_URL) => {
+    if (!gasUrl) return;
+    try {
+      const data = { action: 'update_pdf_url', numero: parseInt(numero), pdfUrl };
+      await fetch(gasUrl, {
+        method: 'POST',
+        redirect: 'follow',
+        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'text/plain' },
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const submitToSheet = async (action, dataObj, numero = null, gasUrl = ARTICULOS_GAS_URL, type = 'article') => {
+    if (!gasUrl) throw new Error('GAS URL missing');
+    const data = { action, [type]: dataObj, ...(numero && { numero }) };
+    const response = await fetch(gasUrl, {
+      method: 'POST',
+      redirect: 'follow',
+      body: JSON.stringify(data),
+      headers: { 'Content-Type': 'text/plain' },
+    });
+    const text = await response.text();
+    if (text.includes('error')) throw new Error(text);
+    await new Promise(r => setTimeout(r, 1000));
+  };
+
+  const handleSubmit = async (action = 'add', gasUrl = ARTICULOS_GAS_URL, form = formData, setU = setUploading, setS = setStatus, folder = 'Articles', fetchFunc = fetchArticles, closeFunc = closeModals, type = 'article', editing = editingArticle) => {
+    if (!form.titulo?.trim()) {
+      setS('❌ Título requerido');
       return;
     }
-
+    setU(true);
     try {
-      setStatus('Eliminando...');
-      
-      // Delete from sheet
-const data = { action: 'delete', numero: parseInt(numero) };
-await fetch(ARTICULOS_GAS_URL, {
-  method: 'POST',
-  mode: 'no-cors',
-  redirect: 'follow',
-  headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-  body: JSON.stringify(data),
-});
-      
-      // Delete PDF if exists
+      setS('Procesando...');
+      const dataObj = { ...form, pdfFile: null, urlPdf: '' };
+      let num;
+      if (action === 'add') {
+        await submitToSheet('add', dataObj, null, gasUrl, type);
+        await new Promise(r => setTimeout(r, 3000));
+        await fetchFunc();
+        const items = type === 'article' ? articles : volumes;
+        const nums = items.map(i => parseInt(i['Número'] || '0')).filter(n => !isNaN(n));
+        num = Math.max(...nums, 0) + 1;
+      } else {
+        num = editing['Número'];
+        await submitToSheet('edit', dataObj, num, gasUrl, type);
+      }
+      let pdfUrl = null;
+      if (form.pdfFile) {
+        const base64 = await toBase64(form.pdfFile);
+        const slug = `${generateSlug(form.titulo)}-${num}`;
+        const fileName = `${type.charAt(0).toUpperCase() + type.slice(1)}-${slug}.pdf`;
+        await uploadPDFToGitHub(base64, fileName, `${action} PDF for ${type} ${num}`, null, folder);
+        pdfUrl = `${DOMAIN}/${folder}/${fileName}`;
+        await updatePDFUrlInSheet(num, pdfUrl, gasUrl);
+      }
+      closeFunc();
+      await fetchFunc();
+      if (GH_TOKEN) await triggerRebuild();
+      setS('✅ Operación completada');
+    } catch (err) {
+      setS(`❌ Error: ${err.message}`);
+    } finally {
+      setU(false);
+    }
+  };
+
+  const handleVolumeSubmit = async (action = 'add') => {
+    await handleSubmit(action, VOLUMES_GAS_URL, volumeFormData, setVolumeUploading, setVolumeStatus, 'Volumes', fetchVolumes, closeVolumeModals, 'volume', editingVolume);
+  };
+
+  const handleEdit = (item, setEditing, setForm, setShow, fields) => {
+    setEditing(item);
+    const newForm = {};
+    fields.forEach(f => newForm[f] = item[f.toUpperCase().charAt(0) + f.slice(1)] || '');
+    setForm({ ...newForm, pdfFile: null });
+    setShow(true);
+  };
+
+  const handleVolumeEdit = (volume) => handleEdit(volume, setEditingVolume, setVolumeFormData, setShowEditVolumeModal, ['volumen', 'numero', 'fecha', 'titulo', 'resumen', 'abstract', 'portada', 'areaTematica', 'palabrasClave', 'keywords']);
+
+  const handleDelete = async (numero, gasUrl, folder, fetchFunc, setS) => {
+    if (!confirm('¿Eliminar?')) return;
+    try {
+      setS('Eliminando...');
+      const data = { action: 'delete', numero: parseInt(numero) };
+      await fetch(gasUrl, { method: 'POST', body: JSON.stringify(data), headers: { 'Content-Type': 'text/plain' } });
       if (GH_TOKEN) {
-        // Need to know the title to generate slug, but since deleting, perhaps fetch title or assume format
-        // For simplicity, assume old format or update to query title if needed
-        // But to make it work, we'll need the title. Since articles have it, find it
-        const articleToDelete = articles.find(a => a['Número de artículo'] === numero.toString());
-        if (articleToDelete) {
-          const articleSlug = `${generateSlug(articleToDelete['Título'])}-${numero}`;
-          const fileName = `Article-${articleSlug}.pdf`;
-          await deletePDFFromGitHub(fileName, `Delete PDF for article ${numero}`);
+        const items = gasUrl === ARTICULOS_GAS_URL ? articles : volumes;
+        const item = items.find(i => i['Número'] === numero.toString());
+        if (item) {
+          const slug = `${generateSlug(item['Título'])}-${numero}`;
+          const fileName = `${gasUrl === ARTICULOS_GAS_URL ? 'Article' : 'Volume'}-${slug}.pdf`;
+          await deletePDFFromGitHub(fileName, `Delete PDF for ${gasUrl === ARTICULOS_GAS_URL ? 'article' : 'volume'} ${numero}`, folder);
         }
       }
-      
-      setStatus('✅ Artículo eliminado');
-      await fetchArticles();
-      
+      await fetchFunc();
+      setS('✅ Eliminado');
     } catch (err) {
-      console.error('💥 Delete error:', err);
-      setStatus(`❌ Error: ${err.message}`);
+      setS(`❌ Error: ${err.message}`);
     }
   };
 
-  const handleRebuild = async () => {
-    if (!GH_TOKEN) {
-      setStatus('❌ GitHub token no configurado');
-      return;
-    }
+  const handleVolumeDelete = async (numero) => await handleDelete(numero, VOLUMES_GAS_URL, 'Volumes', fetchVolumes, setVolumeStatus);
 
+  const handleRebuild = async () => {
     try {
       setStatus('Iniciando rebuild...');
       await triggerRebuild();
       setStatus('✅ Rebuild iniciado');
     } catch (err) {
-      console.error('💥 Rebuild error:', err);
       setStatus(`❌ Error: ${err.message}`);
     }
   };
@@ -448,6 +389,13 @@ await fetch(ARTICULOS_GAS_URL, {
     setShowEditModal(false);
     setEditingArticle(null);
     resetForm();
+  };
+
+  const closeVolumeModals = () => {
+    setShowAddVolumeModal(false);
+    setShowEditVolumeModal(false);
+    setEditingVolume(null);
+    resetVolumeForm();
   };
 
   // Config status component
@@ -467,15 +415,21 @@ await fetch(ARTICULOS_GAS_URL, {
           <h3 className="text-sm font-medium text-yellow-800">Configuración requerida</h3>
           <div className="mt-2 text-sm text-yellow-700 space-y-1">
             <p>
-              ✅ Google Apps Script:{' '}
+              ✅ GAS Artículos:{' '}
               <span className={ARTICULOS_GAS_URL ? 'text-green-600' : 'text-red-600'}>
-                {ARTICULOS_GAS_URL ? 'Configurado' : 'Falta configurar'}
+                {ARTICULOS_GAS_URL ? 'Configurado' : 'Falta'}
+              </span>
+            </p>
+            <p>
+              ✅ GAS Volúmenes:{' '}
+              <span className={VOLUMES_GAS_URL ? 'text-green-600' : 'text-red-600'}>
+                {VOLUMES_GAS_URL ? 'Configurado' : 'Falta'}
               </span>
             </p>
             <p>
               ✅ GitHub Token:{' '}
               <span className={GH_TOKEN ? 'text-green-600' : 'text-red-600'}>
-                {GH_TOKEN ? 'Configurado' : 'Falta configurar'}
+                {GH_TOKEN ? 'Configurado' : 'Falta'}
               </span>
             </p>
           </div>
@@ -484,80 +438,19 @@ await fetch(ARTICULOS_GAS_URL, {
     </div>
   );
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando artículos...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading || volumeLoading) return <div>Cargando...</div>;
 
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        {/* Config Status */}
-        {(!ARTICULOS_GAS_URL || !GH_TOKEN) && <ConfigStatus />}
-
-        {/* Header */}
+        {(!ARTICULOS_GAS_URL || !VOLUMES_GAS_URL || !GH_TOKEN) && <ConfigStatus />}
         <div className="mb-8">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Panel del Director</h1>
-              <p className="mt-2 text-sm text-gray-600">Gestiona artículos y contenido de la revista</p>
-            </div>
-            <div className="flex space-x-3">
-              <button
-                onClick={handleRebuild}
-                disabled={!GH_TOKEN}
-                className={`px-4 py-2 rounded-md font-medium flex items-center space-x-2 transition-colors ${
-                  GH_TOKEN
-                    ? 'bg-green-600 text-white hover:bg-green-700 shadow-sm'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                  />
-                </svg>
-                <span>Rebuild Site</span>
-              </button>
-            </div>
-          </div>
+          <h1 className="text-3xl font-bold text-gray-900">Panel del Director</h1>
+          <button onClick={handleRebuild} className="mt-4 bg-green-600 text-white px-4 py-2 rounded">Rebuild Site</button>
         </div>
-
-        {/* Status Message */}
-        {status && (
-          <div
-            className={`mb-6 p-4 rounded-lg ${
-              status.includes('Error') || status.includes('❌')
-                ? 'bg-red-50 border border-red-200 text-red-800'
-                : status.includes('Subiendo') || status.includes('Procesando')
-                ? 'bg-blue-50 border border-blue-200 text-blue-800'
-                : 'bg-green-50 border border-green-200 text-green-800'
-            }`}
-          >
-            {status}
-          </div>
-        )}
-
-        {/* Upload Progress */}
-        {uploading && (
-          <div className="fixed top-4 right-4 bg-white rounded-lg shadow-lg p-4 z-50 border">
-            <div className="flex items-center space-x-3">
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-              <span className="text-sm font-medium text-gray-900">Subiendo...</span>
-            </div>
-          </div>
-        )}
-
-        {/* Main Content */}
+        {status && <div>{status}</div>}
+        {volumeStatus && <div>{volumeStatus}</div>}
+        {/* Sección Artículos (mismo) */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="px-6 py-5 border-b border-gray-200">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-2 sm:space-y-0">
@@ -1109,7 +1002,504 @@ await fetch(ARTICULOS_GAS_URL, {
           </div>
         </div>
 
-        {/* Componentes adicionales */}
+        {/* Sección Volúmenes */}
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden mt-8">
+          <div className="px-6 py-5 border-b border-gray-200">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-2 sm:space-y-0">
+              <h2 className="text-lg font-medium text-gray-900">Volúmenes ({volumes.length})</h2>
+              <button
+                onClick={() => setShowAddVolumeModal(true)}
+                disabled={!VOLUMES_GAS_URL}
+                className={`px-4 py-2 rounded-md font-medium flex items-center space-x-2 transition-colors ${
+                  VOLUMES_GAS_URL
+                    ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                <span>Agregar Volumen</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="divide-y divide-gray-200">
+            {volumes.length === 0 ? (
+              <div className="px-6 py-12 text-center">
+                <svg
+                  className="mx-auto h-12 w-12 text-gray-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                <h3 className="mt-2 text-sm font-medium text-gray-900">No hay volúmenes</h3>
+                <p className="mt-1 text-sm text-gray-500">Comienza agregando tu primer volumen.</p>
+                {VOLUMES_GAS_URL && (
+                  <button
+                    onClick={() => setShowAddVolumeModal(true)}
+                    className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                  >
+                    Agregar primer volumen
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="max-h-96 overflow-y-auto">
+                {volumes.map((volume, index) => (
+                  <div key={index} className="hover:bg-gray-50">
+                    <div
+                      className="px-6 py-4 cursor-pointer flex justify-between items-center"
+                      onClick={() => toggleVolumeExpand(volume['Número'])}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-medium text-gray-900 truncate" title={volume['Título']}>
+                          {volume['Título']}
+                        </h3>
+                        <p className="mt-1 text-sm text-gray-500 truncate" title={volume['Volumen']}>
+                          Volumen {volume['Volumen']}, Número {volume['Número']}
+                        </p>
+                      </div>
+                      <div className="ml-4 flex-shrink-0 flex items-center space-x-2">
+                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                          #{volume['Número']}
+                        </span>
+                        <svg
+                          className={`w-4 h-4 text-gray-400 transition-transform ${
+                            volumeExpanded[volume['Número']] ? 'rotate-180' : ''
+                          }`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </div>
+
+                    {volumeExpanded[volume['Número']] && (
+                      <div className="px-6 pb-4 bg-gray-50">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <p className="text-gray-900 font-medium">Resumen</p>
+                            <p className="mt-1 text-gray-600">{volume['Resumen'] || 'No disponible'}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-900 font-medium">Abstract</p>
+                            <p className="mt-1 text-gray-600">{volume['Abstract'] || 'No disponible'}</p>
+                          </div>
+                          <div className="md:col-span-2">
+                            <p className="text-gray-900 font-medium">Detalles</p>
+                            <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <p className="text-gray-500">Fecha</p>
+                                <p className="font-medium">{volume['Fecha'] || 'N/A'}</p>
+                              </div>
+                              <div>
+                                <p className="text-gray-500">Vol/Nº</p>
+                                <p className="font-medium">{`${volume['Volumen'] || 'N/A'}/${volume['Número'] || 'N/A'}`}</p>
+                              </div>
+                              <div>
+                                <p className="text-gray-500">Portada</p>
+                                <p className="font-medium">{volume['Portada'] || 'N/A'}</p>
+                              </div>
+                              <div>
+                                <p className="text-gray-500">Área</p>
+                                <p className="font-medium">{volume['Área temática'] || 'N/A'}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                          <div className="flex justify-between items-center">
+                            <a
+                              href={volume.pdf}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md transition-colors ${
+                                volume.pdf.startsWith('http')
+                                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                              }`}
+                            >
+                              <svg
+                                className="w-4 h-4 mr-2"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                />
+                              </svg>
+                              PDF
+                            </a>
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleVolumeEdit(volume);
+                                }}
+                                className="px-3 py-2 text-sm font-medium text-yellow-600 bg-yellow-100 hover:bg-yellow-200 rounded-md transition-colors"
+                              >
+                                Editar
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleVolumeDelete(volume['Número']);
+                                }}
+                                className="px-3 py-2 text-sm font-medium text-red-600 bg-red-100 hover:bg-red-200 rounded-md transition-colors"
+                              >
+                                Eliminar
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add Volume Modal */}
+            {showAddVolumeModal && (
+              <div
+                className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
+                onClick={closeVolumeModals}
+              >
+                <div
+                  className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="mt-3">
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">Agregar Nuevo Volumen</h3>
+                    <form
+                      className="space-y-4"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        handleVolumeSubmit('add');
+                      }}
+                    >
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Volumen *</label>
+                        <input
+                          name="volumen"
+                          value={volumeFormData.volumen}
+                          onChange={handleVolumeInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Número *</label>
+                        <input
+                          name="numero"
+                          value={volumeFormData.numero}
+                          onChange={handleVolumeInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+                        <input
+                          name="fecha"
+                          type="date"
+                          value={volumeFormData.fecha}
+                          onChange={handleVolumeInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Título</label>
+                        <input
+                          name="titulo"
+                          value={volumeFormData.titulo}
+                          onChange={handleVolumeInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Portada (URL)</label>
+                        <input
+                          name="portada"
+                          value={volumeFormData.portada}
+                          onChange={handleVolumeInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Área temática</label>
+                        <input
+                          name="areaTematica"
+                          value={volumeFormData.areaTematica}
+                          onChange={handleVolumeInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Palabras clave (separar con ;)
+                        </label>
+                        <input
+                          name="palabrasClave"
+                          value={volumeFormData.palabrasClave}
+                          onChange={handleVolumeInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Keywords (separar con ;)
+                        </label>
+                        <input
+                          name="keywords"
+                          value={volumeFormData.keywords}
+                          onChange={handleVolumeInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Resumen</label>
+                        <textarea
+                          name="resumen"
+                          value={volumeFormData.resumen}
+                          onChange={handleVolumeInputChange}
+                          rows="3"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 resize-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Abstract</label>
+                        <textarea
+                          name="abstract"
+                          value={volumeFormData.abstract}
+                          onChange={handleVolumeInputChange}
+                          rows="3"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 resize-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Archivo PDF</label>
+                        <input
+                          type="file"
+                          accept=".pdf"
+                          onChange={handleVolumeFileChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                        />
+                        <p className="mt-1 text-xs text-gray-500">El PDF se subirá automáticamente a GitHub</p>
+                      </div>
+
+                      <div className="pt-4 border-t border-gray-200 flex justify-end space-x-3">
+                        <button
+                          type="button"
+                          onClick={closeVolumeModals}
+                          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={!volumeFormData.volumen.trim() || !volumeFormData.numero.trim() || volumeUploading}
+                          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {volumeUploading ? 'Procesando...' : 'Agregar Volumen'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Edit Volume Modal */}
+            {showEditVolumeModal && editingVolume && (
+              <div
+                className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
+                onClick={closeVolumeModals}
+              >
+                <div
+                  className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="mt-3">
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">
+                      Editar Volumen #{editingVolume['Número']}
+                    </h3>
+                    <form
+                      className="space-y-4"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        handleVolumeSubmit('edit');
+                      }}
+                    >
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Volumen *</label>
+                        <input
+                          name="volumen"
+                          value={volumeFormData.volumen}
+                          onChange={handleVolumeInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Número *</label>
+                        <input
+                          name="numero"
+                          value={volumeFormData.numero}
+                          onChange={handleVolumeInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+                        <input
+                          name="fecha"
+                          type="date"
+                          value={volumeFormData.fecha}
+                          onChange={handleVolumeInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Título</label>
+                        <input
+                          name="titulo"
+                          value={volumeFormData.titulo}
+                          onChange={handleVolumeInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Portada (URL)</label>
+                        <input
+                          name="portada"
+                          value={volumeFormData.portada}
+                          onChange={handleVolumeInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Área temática</label>
+                        <input
+                          name="areaTematica"
+                          value={volumeFormData.areaTematica}
+                          onChange={handleVolumeInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Palabras clave (separar con ;)
+                        </label>
+                        <input
+                          name="palabrasClave"
+                          value={volumeFormData.palabrasClave}
+                          onChange={handleVolumeInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Keywords (separar con ;)
+                        </label>
+                        <input
+                          name="keywords"
+                          value={volumeFormData.keywords}
+                          onChange={handleVolumeInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Resumen</label>
+                        <textarea
+                          name="resumen"
+                          value={volumeFormData.resumen}
+                          onChange={handleVolumeInputChange}
+                          rows="3"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 resize-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Abstract</label>
+                        <textarea
+                          name="abstract"
+                          value={volumeFormData.abstract}
+                          onChange={handleVolumeInputChange}
+                          rows="3"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 resize-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Archivo PDF</label>
+                        <input
+                          type="file"
+                          accept=".pdf"
+                          onChange={handleVolumeFileChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                        />
+                        <p className="mt-1 text-xs text-gray-500">El PDF se subirá automáticamente a GitHub</p>
+                      </div>
+
+                      <div className="pt-4 border-t border-gray-200 flex justify-end space-x-3">
+                        <button
+                          type="button"
+                          onClick={closeVolumeModals}
+                          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={!volumeFormData.volumen.trim() || !volumeFormData.numero.trim() || volumeUploading}
+                          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {volumeUploading ? 'Actualizando...' : 'Actualizar Volumen'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
         <MailsTeam />
         <Admissions />
       </div>
