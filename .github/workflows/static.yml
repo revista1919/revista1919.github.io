@@ -67,6 +67,7 @@ jobs:
           echo "🔨 Building with env vars..."
           # ← CORREGIDO: Crear .env.local con todas las variables
           echo "REACT_APP_ARTICULOS_SCRIPT_URL=${{ secrets.ARTICULOS_SCRIPT }}" > .env.local
+          echo "REACT_APP_VOLUMES_SCRIPT_URL=${{ secrets.VOLUMES_SCRIPT_URL }}" > .env.local
           echo "REACT_APP_TEAM_SCRIPT_URL=${{ secrets.TEAM_SCRIPT }}" >> .env.local
           echo "REACT_APP_APPLICATIONS_SCRIPT_URL=${{ secrets.APPLICATIONS_SCRIPT }}" >> .env.local
           echo "REACT_APP_GH_TOKEN=${{ secrets.MY_GITHUB_TOKEN }}" >> .env.local
@@ -122,6 +123,13 @@ jobs:
             echo "✅ CSV URL encontrada en bundle"
           else
             echo "⚠️ REACT_APP_USERS_CSV no encontrada en bundle"
+          fi
+
+          echo "🔍 Checking for VOLUME SCRIPT:"
+          if grep -r "REACT_APP_VOLUMES_SCRIPT_URL" dist/; then
+            echo "✅ URL URL encontrada en bundle"
+          else
+            echo "⚠️ REACT_APP_VOLUMES_SCRIPT_URL no encontrada en bundle"
           fi
           
           echo "🔍 Checking for FORM_CSV URL:" # ← AÑADIDO: Verificación de FORM_CSV
