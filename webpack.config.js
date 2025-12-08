@@ -164,6 +164,7 @@ const defineEnvVars = {
     { from: 'public/CNAME', to: 'CNAME', toType: 'file', noErrorOnMissing: true },
     { from: 'public/sw.js', to: 'sw.js', noErrorOnMissing: true },
     { from: 'public/Articles', to: 'Articles', noErrorOnMissing: true },
+    { from: 'public/Volumes', to: 'Volumes', noErrorOnMissing: true },
     { from: 'firebase.json', to: 'firebase.json', noErrorOnMissing: true },
     { from: '.firebaserc', to: '.firebaserc', noErrorOnMissing: true },
     { from: 'public/policies.html', to: 'policies.html', noErrorOnMissing: true },

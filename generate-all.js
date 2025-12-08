@@ -768,7 +768,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
   <meta name="citation_volume" content="${volume.volumen}">
   <meta name="citation_issue" content="${volume.numero}">
   <meta name="citation_pdf_url" content="${volume.pdf}">
-  <meta name="citation_abstract_html_url" content="${domain}/volumes/volume-${volumeSlug}.html">
+  <meta name="citation_abstract_html_url" content="${domain}/volumes/${volumeSlug}.html">
   <meta name="citation_abstract" content="${volume.resumen}">
   <meta name="citation_abstract" xml:lang="en" content="${volume.abstract}">
   <meta name="citation_keywords" content="${volume.palabras_clave.join('; ')}">
@@ -946,7 +946,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
 </body>
 </html>
   `.trim();
-  const filePathEs = path.join(volumesOutputHtmlDir, `volume-${volumeSlug}.html`);
+  const filePathEs = path.join(volumesOutputHtmlDir, `${volumeSlug}.html`);
   fs.writeFileSync(filePathEs, htmlContentEs, 'utf8');
   console.log(`Generado HTML de volumen en español: ${filePathEs}`);
       // Generar HTML en inglés para volumen
@@ -962,7 +962,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
   <meta name="citation_volume" content="${volume.volumen}">
   <meta name="citation_issue" content="${volume.numero}">
   <meta name="citation_pdf_url" content="${volume.pdf}">
-  <meta name="citation_abstract_html_url" content="${domain}/volumes/volume-${volumeSlug}EN.html">
+  <meta name="citation_abstract_html_url" content="${domain}/volumes/${volumeSlug}EN.html">
   <meta name="citation_abstract" content="${volume.abstract}">
   <meta name="citation_keywords" content="${volume.keywords.join('; ')}">
   <meta name="citation_language" content="en">
@@ -1135,7 +1135,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
 </body>
 </html>
   `.trim();
-      const filePathEn = path.join(volumesOutputHtmlDir, `volume-${volumeSlug}EN.html`);
+      const filePathEn = path.join(volumesOutputHtmlDir, `${volumeSlug}EN.html`);
       fs.writeFileSync(filePathEn, htmlContentEn, 'utf8');
       console.log(`Generado HTML de volumen en inglés: ${filePathEn}`);
     });
@@ -1168,7 +1168,7 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
           const volumeSlug = `volume-${volume.volumen}-${volume.numero}`;
           return `
           <li>
-            <a href="/volumes/volume-${volumeSlug}.html">Volumen ${volume.volumen}, Número ${volume.numero}</a> - ${volume.titulo} (${volume.fecha})
+            <a href="/volumes/${volumeSlug}.html">Volumen ${volume.volumen}, Número ${volume.numero}</a> - ${volume.titulo} (${volume.fecha})
           </li>
         `;
         }).join('')}
@@ -1208,7 +1208,7 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
           const volumeSlug = `volume-${volume.volumen}-${volume.numero}`;
           return `
           <li>
-            <a href="/volumes/volume-${volumeSlug}EN.html">Volume ${volume.volumen}, Issue ${volume.numero}</a> - ${volume.titulo} (${volume.fecha})
+            <a href="/volumes/${volumeSlug}EN.html">Volume ${volume.volumen}, Issue ${volume.numero}</a> - ${volume.titulo} (${volume.fecha})
           </li>
         `;
         }).join('')}
@@ -2245,13 +2245,13 @@ ${volumes.map(volume => {
   const volumeSlug = `volume-${volume.volumen}-${volume.numero}`;
   return `
 <url>
-  <loc>${domain}/volumes/volume-${volumeSlug}.html</loc>
+  <loc>${domain}/volumes/${volumeSlug}.html</loc>
   <lastmod>${volume.fecha}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.8</priority>
 </url>
 <url>
-  <loc>${domain}/volumes/volume-${volumeSlug}EN.html</loc>
+  <loc>${domain}/volumes/${volumeSlug}EN.html</loc>
   <lastmod>${volume.fecha}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.8</priority>
