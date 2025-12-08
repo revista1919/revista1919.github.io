@@ -15,41 +15,49 @@ require('dotenv').config({ path: path.resolve(__dirname, '.env'), override: true
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
 
-  // Debug: Print environment variables
-  console.log('🔍 Webpack Environment Variables:', {
-    'REACT_APP_FIREBASE_API_KEY': process.env.REACT_APP_FIREBASE_API_KEY ? 'PRESENT' : 'MISSING',
-    'REACT_APP_FIREBASE_PROJECT_ID': process.env.REACT_APP_FIREBASE_PROJECT_ID || 'MISSING',
-    'REACT_APP_USERS_CSV': process.env.REACT_APP_USERS_CSV ? `${process.env.REACT_APP_USERS_CSV.slice(0, 40)}...` : 'MISSING',
-    'REACT_APP_FORM_CSV': process.env.REACT_APP_FORM_CSV ? `${process.env.REACT_APP_FORM_CSV.slice(0, 40)}...` : 'MISSING',
-    'REACT_APP_ARTICULOS_SCRIPT_URL': process.env.REACT_APP_ARTICULOS_SCRIPT_URL ? `${process.env.REACT_APP_ARTICULOS_SCRIPT_URL.slice(0, 40)}...` : 'MISSING',
-    'REACT_APP_TEAM_SCRIPT_URL': process.env.REACT_APP_TEAM_SCRIPT_URL ? `${process.env.REACT_APP_TEAM_SCRIPT_URL.slice(0, 40)}...` : 'MISSING',
-    'REACT_APP_APPLICATIONS_SCRIPT_URL': process.env.REACT_APP_APPLICATIONS_SCRIPT_URL ? `${process.env.REACT_APP_APPLICATIONS_SCRIPT_URL.slice(0, 40)}...` : 'MISSING',
-    'REACT_APP_GH_TOKEN': process.env.REACT_APP_GH_TOKEN ? 'PRESENT' : 'MISSING',
-    'REACT_APP_API_GEMINI': process.env.REACT_APP_API_GEMINI ? 'PRESENT' : 'MISSING',
-    'NODE_ENV': process.env.NODE_ENV || 'development',
-    'DEBUG': process.env.DEBUG || false,
-    '.env.local loaded': dotenvConfig.parsed ? Object.keys(dotenvConfig.parsed).length : 0,
-  });
+// Debug: Print environment variables
+console.log('🔍 Webpack Environment Variables:', {
+  'REACT_APP_FIREBASE_API_KEY': process.env.REACT_APP_FIREBASE_API_KEY ? 'PRESENT' : 'MISSING',
+  'REACT_APP_FIREBASE_PROJECT_ID': process.env.REACT_APP_FIREBASE_PROJECT_ID || 'MISSING',
+  'REACT_APP_USERS_CSV': process.env.REACT_APP_USERS_CSV ? `${process.env.REACT_APP_USERS_CSV.slice(0, 40)}...` : 'MISSING',
+  'REACT_APP_FORM_CSV': process.env.REACT_APP_FORM_CSV ? `${process.env.REACT_APP_FORM_CSV.slice(0, 40)}...` : 'MISSING',
+  'REACT_APP_ARTICULOS_SCRIPT_URL': process.env.REACT_APP_ARTICULOS_SCRIPT_URL ? `${process.env.REACT_APP_ARTICULOS_SCRIPT_URL.slice(0, 40)}...` : 'MISSING',
+  'REACT_APP_VOLUMES_SCRIPT_URL': process.env.REACT_APP_VOLUMES_SCRIPT_URL ? `${process.env.REACT_APP_VOLUMES_SCRIPT_URL.slice(0, 40)}...` : 'MISSING', // ← AÑADIDO
+  'REACT_APP_TEAM_SCRIPT_URL': process.env.REACT_APP_TEAM_SCRIPT_URL ? `${process.env.REACT_APP_TEAM_SCRIPT_URL.slice(0, 40)}...` : 'MISSING',
+  'REACT_APP_APPLICATIONS_SCRIPT_URL': process.env.REACT_APP_APPLICATIONS_SCRIPT_URL ? `${process.env.REACT_APP_APPLICATIONS_SCRIPT_URL.slice(0, 40)}...` : 'MISSING',
+  'REACT_APP_GH_TOKEN': process.env.REACT_APP_GH_TOKEN ? 'PRESENT' : 'MISSING',
+  'REACT_APP_API_GEMINI': process.env.REACT_APP_API_GEMINI ? 'PRESENT' : 'MISSING',
+  'NODE_ENV': process.env.NODE_ENV || 'development',
+  'DEBUG': process.env.DEBUG || false,
+  '.env.local loaded': dotenvConfig.parsed ? Object.keys(dotenvConfig.parsed).length : 0,
+});
 
-  // Inject environment variables
-  const defineEnvVars = {
-    'process.env.NODE_ENV': JSON.stringify(isProduction ? 'production' : 'development'),
-    'process.env.REACT_APP_ARTICULOS_SCRIPT_URL': JSON.stringify(process.env.REACT_APP_ARTICULOS_SCRIPT_URL || ''),
-    'process.env.REACT_APP_TEAM_SCRIPT_URL': JSON.stringify(process.env.REACT_APP_TEAM_SCRIPT_URL || ''),
-    'process.env.REACT_APP_APPLICATIONS_SCRIPT_URL': JSON.stringify(process.env.REACT_APP_APPLICATIONS_SCRIPT_URL || ''),
-    'process.env.REACT_APP_GH_TOKEN': JSON.stringify(process.env.REACT_APP_GH_TOKEN || ''),
-    'process.env.REACT_APP_USERS_CSV': JSON.stringify(process.env.REACT_APP_USERS_CSV || ''),
-    'process.env.REACT_APP_FORM_CSV': JSON.stringify(process.env.REACT_APP_FORM_CSV || ''),
-    'process.env.REACT_APP_FIREBASE_API_KEY': JSON.stringify(process.env.REACT_APP_FIREBASE_API_KEY || ''),
-    'process.env.REACT_APP_FIREBASE_AUTH_DOMAIN': JSON.stringify(process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || 'usuarios-rnce.firebaseapp.com'),
-    'process.env.REACT_APP_FIREBASE_PROJECT_ID': JSON.stringify(process.env.REACT_APP_FIREBASE_PROJECT_ID || 'usuarios-rnce'),
-    'process.env.REACT_APP_FIREBASE_STORAGE_BUCKET': JSON.stringify(process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || 'usuarios-rnce.firebasestorage.app'),
-    'process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID': JSON.stringify(process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID || '688242139131'),
-    'process.env.REACT_APP_FIREBASE_APP_ID': JSON.stringify(process.env.REACT_APP_FIREBASE_APP_ID || '1:688242139131:web:3a98663545e73110c3f55e'),
-    'process.env.REACT_APP_FIREBASE_MEASUREMENT_ID': JSON.stringify(process.env.REACT_APP_FIREBASE_MEASUREMENT_ID || 'G-K90MKB7BDP'),
-    'process.env.REACT_APP_API_GEMINI': JSON.stringify(process.env.REACT_APP_API_GEMINI || ''),
-    'process.env.DEBUG': JSON.stringify(process.env.DEBUG === 'true' || process.env.DEBUG === true),
-  };
+// Inject environment variables
+const defineEnvVars = {
+  'process.env.NODE_ENV': JSON.stringify(isProduction ? 'production' : 'development'),
+
+  'process.env.REACT_APP_ARTICULOS_SCRIPT_URL': JSON.stringify(process.env.REACT_APP_ARTICULOS_SCRIPT_URL || ''),
+  'process.env.REACT_APP_VOLUMES_SCRIPT_URL': JSON.stringify(process.env.REACT_APP_VOLUMES_SCRIPT_URL || ''), // ← AÑADIDO
+  'process.env.REACT_APP_TEAM_SCRIPT_URL': JSON.stringify(process.env.REACT_APP_TEAM_SCRIPT_URL || ''),
+  'process.env.REACT_APP_APPLICATIONS_SCRIPT_URL': JSON.stringify(process.env.REACT_APP_APPLICATIONS_SCRIPT_URL || ''),
+  'process.env.REACT_APP_GH_TOKEN': JSON.stringify(process.env.REACT_APP_GH_TOKEN || ''),
+
+  'process.env.REACT_APP_USERS_CSV': JSON.stringify(process.env.REACT_APP_USERS_CSV || ''),
+  'process.env.REACT_APP_FORM_CSV': JSON.stringify(process.env.REACT_APP_FORM_CSV || ''),
+
+  'process.env.REACT_APP_FIREBASE_API_KEY': JSON.stringify(process.env.REACT_APP_FIREBASE_API_KEY || ''),
+  'process.env.REACT_APP_FIREBASE_AUTH_DOMAIN': JSON.stringify(process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || 'usuarios-rnce.firebaseapp.com'),
+  'process.env.REACT_APP_FIREBASE_PROJECT_ID': JSON.stringify(process.env.REACT_APP_FIREBASE_PROJECT_ID || 'usuarios-rnce'),
+  'process.env.REACT_APP_FIREBASE_STORAGE_BUCKET': JSON.stringify(process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || 'usuarios-rnce.firebasestorage.app'),
+  'process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID': JSON.stringify(process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID || '688242139131'),
+  'process.env.REACT_APP_FIREBASE_APP_ID': JSON.stringify(process.env.REACT_APP_FIREBASE_APP_ID || '1:688242139131:web:3a98663545e73110c3f55e'),
+  'process.env.REACT_APP_FIREBASE_MEASUREMENT_ID': JSON.stringify(process.env.REACT_APP_FIREBASE_MEASUREMENT_ID || 'G-K90MKB7BDP'),
+
+  'process.env.REACT_APP_API_GEMINI': JSON.stringify(process.env.REACT_APP_API_GEMINI || ''),
+
+  'process.env.DEBUG': JSON.stringify(process.env.DEBUG === 'true' || process.env.DEBUG === true),
+};
+
 
   return {
     entry: {
