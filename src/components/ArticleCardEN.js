@@ -77,21 +77,21 @@ function ArticleCardEN({ article }) {
   const journalDisplay = 'The National Review of Sciences for Students';
   const journalFormal = 'Revista Nacional de las Ciencias para Estudiantes';
   const pdfUrl = article?.pdf || null;
-  const authorsArray = article?.['Autor(es)']
-    ? article['Autor(es)'].split(';').map((a) => a.trim())
+  const authorsArray = article?.autores
+    ? article.autores.split(';').map((a) => a.trim())
     : [];
-  const articleSlug = `${generateSlug(article['Título'])}-${article['Número de artículo']}`;
+  const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
   const htmlUrl = `https://www.revistacienciasestudiantes.com/articles/article-${articleSlug}EN.html`;
-  const pages = `${article?.['Primera página'] || ''}-${article?.['Última página'] || ''}`.trim() || '';
+  const pages = `${article?.primeraPagina || ''}-${article?.ultimaPagina || ''}`.trim() || '';
   // C I T A C I O N E S E N I N G L E S
   const getChicagoCitation = () => {
     const authors = authorsArray.length
       ? formatChicagoAuthors(authorsArray)
       : 'Unknown author';
-    const title = article?.['Título'] || 'Untitled';
-    const volume = article?.['Volumen'] || '';
-    const number = article?.['Número'] || '';
-    const year = getYear(article?.['Fecha']);
+    const title = article?.titulo || 'Untitled';
+    const volume = article?.volumen || '';
+    const number = article?.numero || '';
+    const year = getYear(article?.fecha);
     return (
       <>
         {authors}. "{title}." <em>{journalFormal}</em> {volume}, no. {number} ({year}): {pages}.{' '}
@@ -107,30 +107,30 @@ function ArticleCardEN({ article }) {
     const authors = authorsArray.length
       ? formatChicagoAuthors(authorsArray)
       : 'Unknown author';
-    const title = article?.['Título'] || 'Untitled';
-    const volume = article?.['Volumen'] || '';
-    const number = article?.['Número'] || '';
-    const year = getYear(article?.['Fecha']);
+    const title = article?.titulo || 'Untitled';
+    const volume = article?.volumen || '';
+    const number = article?.numero || '';
+    const year = getYear(article?.fecha);
     return `${authors}. "${title}." ${journalFormal} ${volume}, no. ${number} (${year}): ${pages}. ${pdfUrl || ''}`;
   };
   const getChicagoHtml = () => {
     const authors = authorsArray.length
       ? formatChicagoAuthors(authorsArray)
       : 'Unknown author';
-    const title = article?.['Título'] || 'Untitled';
-    const volume = article?.['Volumen'] || '';
-    const number = article?.['Número'] || '';
-    const year = getYear(article?.['Fecha']);
+    const title = article?.titulo || 'Untitled';
+    const volume = article?.volumen || '';
+    const number = article?.numero || '';
+    const year = getYear(article?.fecha);
     return `${authors}. &ldquo;${title}.&rdquo; <em>${journalFormal}</em> ${volume}, no. ${number} (${year}): ${pages}. ${pdfUrl ? `<a href="${pdfUrl}">${pdfUrl}</a>` : ''}`;
   };
   const getApaCitation = () => {
     const authors = authorsArray.length
       ? formatAPAAuthors(authorsArray)
       : 'Unknown author';
-    const title = article?.['Título'] || 'Untitled';
-    const volume = article?.['Volumen'] || '';
-    const number = article?.['Número'] || '';
-    const year = getYear(article?.['Fecha']);
+    const title = article?.titulo || 'Untitled';
+    const volume = article?.volumen || '';
+    const number = article?.numero || '';
+    const year = getYear(article?.fecha);
     return (
       <>
         {authors} ({year}). {title}. <em>{journalFormal}</em>, {volume}({number}), {pages}.{' '}
@@ -146,30 +146,30 @@ function ArticleCardEN({ article }) {
     const authors = authorsArray.length
       ? formatAPAAuthors(authorsArray)
       : 'Unknown author';
-    const title = article?.['Título'] || 'Untitled';
-    const volume = article?.['Volumen'] || '';
-    const number = article?.['Número'] || '';
-    const year = getYear(article?.['Fecha']);
+    const title = article?.titulo || 'Untitled';
+    const volume = article?.volumen || '';
+    const number = article?.numero || '';
+    const year = getYear(article?.fecha);
     return `${authors} (${year}). ${title}. ${journalFormal}, ${volume}(${number}), ${pages}. ${pdfUrl || ''}`;
   };
   const getApaHtml = () => {
     const authors = authorsArray.length
       ? formatAPAAuthors(authorsArray)
       : 'Unknown author';
-    const title = article?.['Título'] || 'Untitled';
-    const volume = article?.['Volumen'] || '';
-    const number = article?.['Número'] || '';
-    const year = getYear(article?.['Fecha']);
+    const title = article?.titulo || 'Untitled';
+    const volume = article?.volumen || '';
+    const number = article?.numero || '';
+    const year = getYear(article?.fecha);
     return `${authors} (${year}). ${title}. <em>${journalFormal}</em>, ${volume}(${number}), ${pages}. ${pdfUrl ? `<a href="${pdfUrl}">${pdfUrl}</a>` : ''}`;
   };
   const getMlaCitation = () => {
     const authors = authorsArray.length
       ? formatMLAAuthors(authorsArray)
       : 'Unknown author';
-    const title = article?.['Título'] || 'Untitled';
-    const volume = article?.['Volumen'] || '';
-    const number = article?.['Número'] || '';
-    const year = getYear(article?.['Fecha']);
+    const title = article?.titulo || 'Untitled';
+    const volume = article?.volumen || '';
+    const number = article?.numero || '';
+    const year = getYear(article?.fecha);
     return (
       <>
         {authors}. "{title}." <em>{journalFormal}</em>, vol. {volume}, no. {number}, {year}, pp. {pages}.{' '}
@@ -185,26 +185,26 @@ function ArticleCardEN({ article }) {
     const authors = authorsArray.length
       ? formatMLAAuthors(authorsArray)
       : 'Unknown author';
-    const title = article?.['Título'] || 'Untitled';
-    const volume = article?.['Volumen'] || '';
-    const number = article?.['Número'] || '';
-    const year = getYear(article?.['Fecha']);
+    const title = article?.titulo || 'Untitled';
+    const volume = article?.volumen || '';
+    const number = article?.numero || '';
+    const year = getYear(article?.fecha);
     return `${authors}. "${title}." ${journalFormal}, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}. ${pdfUrl || ''}`;
   };
   const getMlaHtml = () => {
     const authors = authorsArray.length
       ? formatMLAAuthors(authorsArray)
       : 'Unknown author';
-    const title = article?.['Título'] || 'Untitled';
-    const volume = article?.['Volumen'] || '';
-    const number = article?.['Número'] || '';
-    const year = getYear(article?.['Fecha']);
+    const title = article?.titulo || 'Untitled';
+    const volume = article?.volumen || '';
+    const number = article?.numero || '';
+    const year = getYear(article?.fecha);
     return `${authors}. &ldquo;${title}.&rdquo; <em>${journalFormal}</em>, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}. ${pdfUrl ? `<a href="${pdfUrl}">${pdfUrl}</a>` : ''}`;
   };
   const handleAuthorClick = (authorName) => {
     if (!authorName) return;
     const slug = generateSlug(authorName);
-    window.location.href = `/team/${slug}.EN.html`;
+    window.location.href = `/team/${slug}EN.html`;
   };
   const copyChicago = async (e) => {
     e.stopPropagation();
@@ -281,10 +281,10 @@ function ArticleCardEN({ article }) {
       role="button"
       tabIndex={0}
       aria-expanded={isExpanded}
-      aria-label={`Expand article: ${article['Título'] || 'Untitled'}`}
+      aria-label={`Expand article: ${article.titulo || 'Untitled'}`}
     >
       <h2 className="text-lg sm:text-xl font-semibold text-blue-700 hover:text-blue-800 transition-colors mb-2">
-        {article['Título'] || 'Untitled'}
+        {article.titulo || 'Untitled'}
       </h2>
       <p className="text-sm text-gray-700 mb-2">
         {authorsArray.length > 0 ? (
@@ -313,22 +313,22 @@ function ArticleCardEN({ article }) {
         )}
       </p>
       <p className="text-xs text-green-600">
-        {journalDisplay} · {getYear(article['Fecha'])} {pages && `· pp. ${pages}`}
+        {journalDisplay} · {getYear(article.fecha)} {pages && `· pp. ${pages}`}
       </p>
-      {!isExpanded && article['Abstract'] && (
-        <p className="text-sm text-gray-700 mt-2 line-clamp-3">{article['Abstract']}</p>
+      {!isExpanded && article.englishAbstract && (
+        <p className="text-sm text-gray-700 mt-2 line-clamp-3">{article.englishAbstract}</p>
       )}
       {isExpanded && (
         <div className="mt-4 space-y-4 animate-fade-in">
           <p className="text-sm text-gray-800">
             <strong className="font-medium">Publication Date:</strong>{' '}
-            {parseDateFlexible(article['Fecha'])}
+            {parseDateFlexible(article.fecha)}
           </p>
-          {article['Área temática'] ? (
+          {article.area ? (
             <div className="text-sm text-gray-800">
               <strong className="font-medium">Thematic Area:</strong>{' '}
               <div className="flex flex-wrap gap-2 mt-1">
-                {article['Área temática'].split(';').map((area, idx) => (
+                {article.area.split(';').map((area, idx) => (
                   <span
                     key={idx}
                     className="bg-yellow-100 text-yellow-800 text-xs font-medium px-3 py-1 rounded-full shadow-sm"
@@ -346,9 +346,9 @@ function ArticleCardEN({ article }) {
           <p className="text-sm text-gray-800">
             <strong className="font-medium">Keywords:</strong>
           </p>
-          {article['Keywords']?.length > 0 && (
+          {article.keywords_english?.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {article['Keywords'].split(';').map((kw, idx) => (
+              {article.keywords_english.map((kw, idx) => (
                 <span
                   key={idx}
                   className="bg-blue-100 text-blue-800 text-xs font-medium px-3 py-1 rounded-full shadow-sm"
@@ -360,12 +360,12 @@ function ArticleCardEN({ article }) {
           )}
           <p className="text-sm text-gray-800">
             <strong className="font-medium">Abstract: </strong>
-            {article['Abstract'] ? (
+            {article.englishAbstract ? (
               <>
                 {showFullAbstract
-                  ? article['Abstract']
-                  : `${article['Abstract'].slice(0, 200)}...`}
-                {article['Abstract'].length > 200 && (
+                  ? article.englishAbstract
+                  : `${article.englishAbstract.slice(0, 200)}...`}
+                {article.englishAbstract.length > 200 && (
                   <button
                     className="ml-2 text-blue-600 hover:text-blue-800 underline text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
                     onClick={(e) => {
@@ -393,7 +393,7 @@ function ArticleCardEN({ article }) {
             </button>
             {showSpanishAbstract && (
               <p className="text-sm text-gray-800 mt-2 bg-white p-3 rounded-lg shadow-inner">
-                {article['Resumen'] || 'Resumen no disponible'}
+                {article.resumen || 'Resumen no disponible'}
               </p>
             )}
           </div>
