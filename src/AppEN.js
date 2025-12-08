@@ -311,7 +311,7 @@ function AppEN() {
     {
       name: 'volumes',
       label: 'Volumes',
-      path: '/en/volumes',
+      path: '/en/volume',
       component: (
         <motion.div
           className="py-8 max-w-7xl mx-auto"

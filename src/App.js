@@ -300,7 +300,7 @@ function App() {
     {
       name: 'volumes',
       label: 'Volúmenes',
-      path: '/volumes',
+      path: '/volume',
       component: (
         <motion.div
           className="py-8 max-w-7xl mx-auto"

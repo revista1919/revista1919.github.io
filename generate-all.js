@@ -778,7 +778,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
   <title>Volumen ${volume.volumen} Número ${volume.numero} - Revista Nacional de las Ciencias para Estudiantes</title>
   <link rel="stylesheet" href="/index.css">
   <style>
-    /* Estilo más ceremonioso: fondos gradient, bordes dorados, tipografía elegante */
+    /* Estilo profesional: fondos gradient, bordes azules, tipografía elegante */
     body {
       font-family: 'Merriweather', serif;
       line-height: 1.8;
@@ -795,18 +795,18 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       background: white;
       box-shadow: 0 0 30px rgba(0,0,0,0.1);
       border-radius: 12px;
-      border: 1px solid #d4af37; /* Dorado */
+      border: 1px solid #3498db; /* Azul */
       box-sizing: border-box;
     }
     header {
       text-align: center;
-      border-bottom: 2px solid #d4af37;
+      border-bottom: 2px solid #3498db;
       padding-bottom: 1.5rem;
       margin-bottom: 3rem;
     }
     h1 {
       font-size: 2.2rem;
-      color: #b8860b; /* Dorado oscuro */
+      color: #2980b9; /* Azul oscuro */
       margin-bottom: 0.5rem;
       font-weight: bold;
     }
@@ -820,8 +820,8 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     }
     h2 {
       font-size: 1.5rem;
-      color: #b8860b;
-      border-bottom: 1px solid #d4af37;
+      color: #2980b9;
+      border-bottom: 1px solid #3498db;
       padding-bottom: 0.5rem;
       margin-bottom: 1.5rem;
     }
@@ -834,17 +834,17 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       gap: 0.5rem;
     }
     .keyword {
-      background: #fdf5e6;
-      color: #b8860b;
+      background: #e8f4fd;
+      color: #2980b9;
       padding: 0.4rem 1rem;
       border-radius: 20px;
       font-size: 0.9rem;
-      border: 1px solid #d4af37;
+      border: 1px solid #3498db;
     }
     .pdf-preview {
       width: 100%;
       height: 700px;
-      border: 1px solid #d4af37;
+      border: 1px solid #3498db;
       border-radius: 8px;
       margin-top: 1.5rem;
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
@@ -864,24 +864,24 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
     .open-pdf {
-      background: #b8860b;
+      background: #3498db;
       color: white;
     }
     .open-pdf:hover {
-      background: #a67c00;
+      background: #2980b9;
     }
     .download-pdf {
-      background: #d4af37;
+      background: #27ae60;
       color: white;
     }
     .download-pdf:hover {
-      background: #c49b2e;
+      background: #219a52;
     }
     footer {
       text-align: center;
       margin-top: 3rem;
       padding-top: 1.5rem;
-      border-top: 1px solid #d4af37;
+      border-top: 1px solid #3498db;
       font-size: 0.9rem;
       color: #777;
     }
@@ -940,7 +940,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     </main>
     <footer>
       <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes</p>
-      <a href="/es/volumes">Volver a Volúmenes</a> | <a href="/">Volver al inicio</a>
+      <a href="/es/volume">Volver a Volúmenes</a> | <a href="/">Volver al inicio</a>
     </footer>
   </div>
 </body>
@@ -971,7 +971,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
   <title>Volume ${volume.volumen} Issue ${volume.numero} - The National Review of Sciences for Students</title>
   <link rel="stylesheet" href="/index.css">
   <style>
-    /* Estilo más ceremonioso: fondos gradient, bordes dorados, tipografía elegante */
+    /* Estilo profesional: fondos gradient, bordes azules, tipografía elegante */
     body {
       font-family: 'Merriweather', serif;
       line-height: 1.8;
@@ -988,18 +988,18 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       background: white;
       box-shadow: 0 0 30px rgba(0,0,0,0.1);
       border-radius: 12px;
-      border: 1px solid #d4af37; /* Golden */
+      border: 1px solid #3498db; /* Blue */
       box-sizing: border-box;
     }
     header {
       text-align: center;
-      border-bottom: 2px solid #d4af37;
+      border-bottom: 2px solid #3498db;
       padding-bottom: 1.5rem;
       margin-bottom: 3rem;
     }
     h1 {
       font-size: 2.2rem;
-      color: #b8860b; /* Dark golden */
+      color: #2980b9; /* Dark blue */
       margin-bottom: 0.5rem;
       font-weight: bold;
     }
@@ -1013,8 +1013,8 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     }
     h2 {
       font-size: 1.5rem;
-      color: #b8860b;
-      border-bottom: 1px solid #d4af37;
+      color: #2980b9;
+      border-bottom: 1px solid #3498db;
       padding-bottom: 0.5rem;
       margin-bottom: 1.5rem;
     }
@@ -1027,17 +1027,17 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       gap: 0.5rem;
     }
     .keyword {
-      background: #fdf5e6;
-      color: #b8860b;
+      background: #e8f4fd;
+      color: #2980b9;
       padding: 0.4rem 1rem;
       border-radius: 20px;
       font-size: 0.9rem;
-      border: 1px solid #d4af37;
+      border: 1px solid #3498db;
     }
     .pdf-preview {
       width: 100%;
       height: 700px;
-      border: 1px solid #d4af37;
+      border: 1px solid #3498db;
       border-radius: 8px;
       margin-top: 1.5rem;
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
@@ -1057,24 +1057,24 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
     .open-pdf {
-      background: #b8860b;
+      background: #3498db;
       color: white;
     }
     .open-pdf:hover {
-      background: #a67c00;
+      background: #2980b9;
     }
     .download-pdf {
-      background: #d4af37;
+      background: #27ae60;
       color: white;
     }
     .download-pdf:hover {
-      background: #c49b2e;
+      background: #219a52;
     }
     footer {
       text-align: center;
       margin-top: 3rem;
       padding-top: 1.5rem;
-      border-top: 1px solid #d4af37;
+      border-top: 1px solid #3498db;
       font-size: 0.9rem;
       color: #777;
     }
@@ -1129,7 +1129,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     </main>
     <footer>
       <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
-      <a href="/en/volumes">Back to Volumes</a> | <a href="/">Back to home</a>
+      <a href="/en/volume">Back to Volumes</a> | <a href="/">Back to home</a>
     </footer>
   </div>
 </body>
@@ -2173,8 +2173,8 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
     }
     const appShellContent = fs.readFileSync(appShellPath, 'utf8');
     const spaRoutes = [
-      '/es/about', '/es/guidelines', '/es/faq', '/es/article', '/es/submit', '/es/team', '/es/new', '/es/login', '/es/admin', '/es/volumes',
-      '/en/about', '/en/guidelines', '/en/faq', '/en/article', '/en/submit', '/en/team', '/en/new', '/en/login', '/en/admin', '/en/volumes'
+      '/es/about', '/es/guidelines', '/es/faq', '/es/article', '/es/submit', '/es/team', '/es/new', '/es/login', '/es/admin', '/es/volume',
+      '/en/about', '/en/guidelines', '/en/faq', '/en/article', '/en/submit', '/en/team', '/en/new', '/en/login', '/en/admin', '/en/volume'
     ];
     spaRoutes.forEach(route => {
       const routePath = path.join(__dirname, 'dist', route);
