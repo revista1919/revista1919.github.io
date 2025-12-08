@@ -51,8 +51,10 @@ jobs:
           echo "FIREBASE_API_KEY length: ${#FIREBASE_API_KEY}"
           echo "API_GEMINI length: ${#API_GEMINI}"
           echo "FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-MISSING}"
+          echo "VOLUMES_SCRIPT_URL length: ${#VOLUMES_SCRIPT_URL}"
         env:
           ARTICULOS_SCRIPT: ${{ secrets.ARTICULOS_SCRIPT }}
+          VOLUMES_SCRIPT_URL: ${{ secrets.VOLUMES_SCRIPT_URL }}
           TEAM_SCRIPT: ${{ secrets.TEAM_SCRIPT }}
           APPLICATIONS_SCRIPT: ${{ secrets.APPLICATIONS_SCRIPT }}
           MY_GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
