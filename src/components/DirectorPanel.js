@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 import Admissions from './Admissions';
 import MailsTeam from './MailsTeam';
-
 // ✅ Variables de entorno inyectadas por Webpack DefinePlugin
 const ARTICULOS_GAS_URL = process.env.REACT_APP_ARTICULOS_SCRIPT_URL || '';
 const VOLUMES_GAS_URL = process.env.REACT_APP_VOLUMES_SCRIPT_URL || '';
@@ -13,12 +12,10 @@ const GH_API_BASE = 'https://api.github.com/repos/revista1919/revista1919.github
 const REPO_OWNER = 'revista1919';
 const REPO_NAME = 'revista1919.github.io';
 const DOMAIN = 'https://www.revistacienciasestudiantes.com';
-
 const generateSlug = (name) => {
   if (!name) return '';
   return name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-').replace(/[^\w-]/g, '').replace(/-+/g, '-').replace(/^-+|-+$/g, '');
 };
-
 const toBase64 = (file) =>
   new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -26,11 +23,10 @@ const toBase64 = (file) =>
     reader.onload = () => resolve(reader.result.split(',')[1]);
     reader.onerror = (error) => reject(error);
   });
-
 // GitHub API Functions
 const uploadPDFToGitHub = async (base64Content, fileName, message, sha = null, folder = 'Articles') => {
   if (!GH_TOKEN) throw new Error('GitHub token no disponible');
-  
+ 
   const path = `public/${folder}/${fileName}`;
   const url = `${GH_API_BASE}/${path}`;
   const payload = {
@@ -38,7 +34,7 @@ const uploadPDFToGitHub = async (base64Content, fileName, message, sha = null, f
     content: base64Content,
     ...(sha && { sha }),
   };
-  
+ 
   const response = await fetch(url, {
     method: 'PUT',
     headers: {
@@ -48,38 +44,37 @@ const uploadPDFToGitHub = async (base64Content, fileName, message, sha = null, f
     },
     body: JSON.stringify(payload),
   });
-  
+ 
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(`Upload failed: ${response.status} - ${errorText}`);
   }
-  
+ 
   return await response.json();
 };
-
 const deletePDFFromGitHub = async (fileName, message, folder = 'Articles') => {
   if (!GH_TOKEN) throw new Error('GitHub token no disponible');
-  
+ 
   const path = `public/${folder}/${fileName}`;
   const url = `${GH_API_BASE}/${path}`;
-  
+ 
   const getRes = await fetch(url, {
     headers: {
       Authorization: `token ${GH_TOKEN}`,
       Accept: 'application/vnd.github.v3+json',
     },
   });
-  
+ 
   if (getRes.status === 404) {
     console.log('ℹ️ PDF not found, skipping delete:', fileName);
     return;
   }
-  
+ 
   if (!getRes.ok) throw new Error(`Failed to get file info: ${getRes.status}`);
-  
+ 
   const file = await getRes.json();
   const payload = { message, sha: file.sha };
-  
+ 
   const delRes = await fetch(url, {
     method: 'DELETE',
     headers: {
@@ -89,13 +84,12 @@ const deletePDFFromGitHub = async (fileName, message, folder = 'Articles') => {
     },
     body: JSON.stringify(payload),
   });
-  
+ 
   if (!delRes.ok) throw new Error(`Delete failed: ${delRes.status}`);
 };
-
 const triggerRebuild = async () => {
   if (!GH_TOKEN) throw new Error('GitHub token no disponible');
-  
+ 
   const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/dispatches`;
   const response = await fetch(url, {
     method: 'POST',
@@ -106,13 +100,12 @@ const triggerRebuild = async () => {
     },
     body: JSON.stringify({ event_type: 'rebuild' }),
   });
-  
+ 
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(`Rebuild failed: ${response.status} - ${errorText}`);
   }
 };
-
 export default function DirectorPanel({ user }) {
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -137,7 +130,6 @@ export default function DirectorPanel({ user }) {
   });
   const [status, setStatus] = useState('');
   const [uploading, setUploading] = useState(false);
-
   const [volumes, setVolumes] = useState([]);
   const [volumeLoading, setVolumeLoading] = useState(true);
   const [volumeExpanded, setVolumeExpanded] = useState({});
@@ -159,7 +151,6 @@ export default function DirectorPanel({ user }) {
   });
   const [volumeStatus, setVolumeStatus] = useState('');
   const [volumeUploading, setVolumeUploading] = useState(false);
-
   // ✅ Debug logging
   useEffect(() => {
     console.log('🔍 DirectorPanel Config:', {
@@ -168,12 +159,10 @@ export default function DirectorPanel({ user }) {
       GH_TOKEN: GH_TOKEN ? 'Set' : 'Missing',
     });
   }, []);
-
   useEffect(() => {
     fetchArticles();
     fetchVolumes();
   }, []);
-
   const fetchArticles = async () => {
     try {
       setLoading(true);
@@ -184,6 +173,7 @@ export default function DirectorPanel({ user }) {
       const enriched = parsed.map(row => ({
         ...row,
         pdfUrl: row['PDF'] || `${DOMAIN}/Articles/Article-${generateSlug(row['Título'])}-${row['Número de artículo']}.pdf`,
+        areas: row['Área temática'] ? row['Área temática'].split(';').map(a => a.trim()).filter(a => a) : [],
       }));
       setArticles(enriched);
     } catch (err) {
@@ -193,7 +183,6 @@ export default function DirectorPanel({ user }) {
       setLoading(false);
     }
   };
-
   const fetchVolumes = async () => {
     try {
       setVolumeLoading(true);
@@ -213,25 +202,18 @@ export default function DirectorPanel({ user }) {
       setVolumeLoading(false);
     }
   };
-
   const toggleExpand = (numero) => setExpanded(prev => ({ ...prev, [numero]: !prev[numero] }));
-
   const toggleVolumeExpand = (numero) => setVolumeExpanded(prev => ({ ...prev, [numero]: !prev[numero] }));
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
-
   const handleVolumeInputChange = (e) => {
     const { name, value } = e.target;
     setVolumeFormData(prev => ({ ...prev, [name]: value }));
   };
-
   const handleFileChange = (e) => setFormData(prev => ({ ...prev, pdfFile: e.target.files[0] }));
-
   const handleVolumeFileChange = (e) => setVolumeFormData(prev => ({ ...prev, pdfFile: e.target.files[0] }));
-
   const resetForm = () => {
     setFormData({
       titulo: '',
@@ -249,7 +231,6 @@ export default function DirectorPanel({ user }) {
       pdfFile: null,
     });
   };
-
   const resetVolumeForm = () => {
     setVolumeFormData({
       volumen: '',
@@ -265,7 +246,6 @@ export default function DirectorPanel({ user }) {
       pdfFile: null,
     });
   };
-
   const updatePDFUrlInSheet = async (numero, pdfUrl, gasUrl = ARTICULOS_GAS_URL) => {
     if (!gasUrl) return;
     try {
@@ -280,7 +260,6 @@ export default function DirectorPanel({ user }) {
       console.error(err);
     }
   };
-
   const submitToSheet = async (action, dataObj, numero = null, gasUrl = ARTICULOS_GAS_URL, type = 'article') => {
     if (!gasUrl) throw new Error('GAS URL missing');
     const data = { action, [type]: dataObj, ...(numero && { numero }) };
@@ -294,7 +273,6 @@ export default function DirectorPanel({ user }) {
     if (text.includes('error')) throw new Error(text);
     await new Promise(r => setTimeout(r, 1000));
   };
-
   const handleSubmit = async (action = 'add', gasUrl = ARTICULOS_GAS_URL, form = formData, setU = setUploading, setS = setStatus, folder = 'Articles', fetchFunc = fetchArticles, closeFunc = closeModals, type = 'article', editing = editingArticle) => {
     if (!form.titulo?.trim()) {
       setS('❌ Título requerido');
@@ -335,21 +313,18 @@ export default function DirectorPanel({ user }) {
       setU(false);
     }
   };
-
   const handleVolumeSubmit = async (action = 'add') => {
     await handleSubmit(action, VOLUMES_GAS_URL, volumeFormData, setVolumeUploading, setVolumeStatus, 'Volumes', fetchVolumes, closeVolumeModals, 'volume', editingVolume);
   };
-
   const handleEdit = (item, setEditing, setForm, setShow, fields) => {
     setEditing(item);
     const newForm = {};
-    fields.forEach(f => newForm[f] = item[f.toUpperCase().charAt(0) + f.slice(1)] || '');
+    fields.forEach(f => newForm[f] = item[f.charAt(0).toUpperCase() + f.slice(1)] || '');
     setForm({ ...newForm, pdfFile: null });
     setShow(true);
   };
-
+  const handleArticleEdit = (article) => handleEdit(article, setEditingArticle, setFormData, setShowEditModal, ['titulo', 'autores', 'resumen', 'abstract', 'fecha', 'volumen', 'numero', 'primeraPagina', 'ultimaPagina', 'areaTematica', 'palabrasClave', 'keywords']);
   const handleVolumeEdit = (volume) => handleEdit(volume, setEditingVolume, setVolumeFormData, setShowEditVolumeModal, ['volumen', 'numero', 'fecha', 'titulo', 'resumen', 'abstract', 'portada', 'areaTematica', 'palabrasClave', 'keywords']);
-
   const handleDelete = async (numero, gasUrl, folder, fetchFunc, setS) => {
     if (!confirm('¿Eliminar?')) return;
     try {
@@ -371,9 +346,8 @@ export default function DirectorPanel({ user }) {
       setS(`❌ Error: ${err.message}`);
     }
   };
-
+  const handleArticleDelete = async (numero) => await handleDelete(numero, ARTICULOS_GAS_URL, 'Articles', fetchArticles, setStatus);
   const handleVolumeDelete = async (numero) => await handleDelete(numero, VOLUMES_GAS_URL, 'Volumes', fetchVolumes, setVolumeStatus);
-
   const handleRebuild = async () => {
     try {
       setStatus('Iniciando rebuild...');
@@ -383,21 +357,18 @@ export default function DirectorPanel({ user }) {
       setStatus(`❌ Error: ${err.message}`);
     }
   };
-
   const closeModals = () => {
     setShowAddModal(false);
     setShowEditModal(false);
     setEditingArticle(null);
     resetForm();
   };
-
   const closeVolumeModals = () => {
     setShowAddVolumeModal(false);
     setShowEditVolumeModal(false);
     setEditingVolume(null);
     resetVolumeForm();
   };
-
   // Config status component
   const ConfigStatus = () => (
     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
@@ -437,9 +408,7 @@ export default function DirectorPanel({ user }) {
       </div>
     </div>
   );
-
   if (loading || volumeLoading) return <div>Cargando...</div>;
-
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
@@ -471,7 +440,6 @@ export default function DirectorPanel({ user }) {
               </button>
             </div>
           </div>
-
           <div className="divide-y divide-gray-200">
             {articles.length === 0 ? (
               <div className="px-6 py-12 text-center">
@@ -531,7 +499,6 @@ export default function DirectorPanel({ user }) {
                         </svg>
                       </div>
                     </div>
-
                     {expanded[article['Número de artículo']] && (
                       <div className="px-6 pb-4 bg-gray-50">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
@@ -565,7 +532,6 @@ export default function DirectorPanel({ user }) {
                             </div>
                           </div>
                         </div>
-
                         <div className="mt-4 pt-4 border-t border-gray-200">
                           <div className="flex justify-between items-center">
                             <a
@@ -597,7 +563,7 @@ export default function DirectorPanel({ user }) {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleEdit(article);
+                                  handleArticleEdit(article);
                                 }}
                                 className="px-3 py-2 text-sm font-medium text-yellow-600 bg-yellow-100 hover:bg-yellow-200 rounded-md transition-colors"
                               >
@@ -606,7 +572,7 @@ export default function DirectorPanel({ user }) {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleDelete(article['Número de artículo']);
+                                  handleArticleDelete(article['Número de artículo']);
                                 }}
                                 className="px-3 py-2 text-sm font-medium text-red-600 bg-red-100 hover:bg-red-200 rounded-md transition-colors"
                               >
@@ -621,7 +587,6 @@ export default function DirectorPanel({ user }) {
                 ))}
               </div>
             )}
-
             {/* Add Modal */}
             {showAddModal && (
               <div
@@ -651,7 +616,6 @@ export default function DirectorPanel({ user }) {
                           required
                         />
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Autor(es) * (separar con ;)
@@ -664,7 +628,6 @@ export default function DirectorPanel({ user }) {
                           required
                         />
                       </div>
-
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
@@ -686,7 +649,6 @@ export default function DirectorPanel({ user }) {
                           />
                         </div>
                       </div>
-
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -717,7 +679,6 @@ export default function DirectorPanel({ user }) {
                           />
                         </div>
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Área temática (separar con ;)
@@ -729,7 +690,6 @@ export default function DirectorPanel({ user }) {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Palabras clave (separar con ;)
@@ -752,7 +712,6 @@ export default function DirectorPanel({ user }) {
     className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
   />
 </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Resumen</label>
                         <textarea
@@ -763,7 +722,6 @@ export default function DirectorPanel({ user }) {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 resize-none"
                         />
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Abstract (English)
@@ -776,7 +734,6 @@ export default function DirectorPanel({ user }) {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 resize-none"
                         />
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Archivo PDF</label>
                         <input
@@ -787,7 +744,6 @@ export default function DirectorPanel({ user }) {
                         />
                         <p className="mt-1 text-xs text-gray-500">El PDF se subirá automáticamente a GitHub</p>
                       </div>
-
                       <div className="pt-4 border-t border-gray-200 flex justify-end space-x-3">
                         <button
                           type="button"
@@ -809,7 +765,6 @@ export default function DirectorPanel({ user }) {
                 </div>
               </div>
             )}
-
             {/* Edit Modal */}
             {showEditModal && editingArticle && (
               <div
@@ -841,7 +796,6 @@ export default function DirectorPanel({ user }) {
                           required
                         />
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Autor(es) * (separar con ;)
@@ -854,7 +808,6 @@ export default function DirectorPanel({ user }) {
                           required
                         />
                       </div>
-
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
@@ -876,7 +829,6 @@ export default function DirectorPanel({ user }) {
                           />
                         </div>
                       </div>
-
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -907,7 +859,6 @@ export default function DirectorPanel({ user }) {
                           />
                         </div>
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Área temática (separar con ;)
@@ -919,7 +870,6 @@ export default function DirectorPanel({ user }) {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Palabras clave (separar con ;)
@@ -942,7 +892,6 @@ export default function DirectorPanel({ user }) {
     className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
   />
 </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Resumen</label>
                         <textarea
@@ -953,7 +902,6 @@ export default function DirectorPanel({ user }) {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 resize-none"
                         />
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Abstract (English)
@@ -966,7 +914,6 @@ export default function DirectorPanel({ user }) {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 resize-none"
                         />
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Archivo PDF</label>
                         <input
@@ -977,7 +924,6 @@ export default function DirectorPanel({ user }) {
                         />
                         <p className="mt-1 text-xs text-gray-500">El PDF se subirá automáticamente a GitHub</p>
                       </div>
-
                       <div className="pt-4 border-t border-gray-200 flex justify-end space-x-3">
                         <button
                           type="button"
@@ -1001,7 +947,6 @@ export default function DirectorPanel({ user }) {
             )}
           </div>
         </div>
-
         {/* Sección Volúmenes */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden mt-8">
           <div className="px-6 py-5 border-b border-gray-200">
@@ -1023,7 +968,6 @@ export default function DirectorPanel({ user }) {
               </button>
             </div>
           </div>
-
           <div className="divide-y divide-gray-200">
             {volumes.length === 0 ? (
               <div className="px-6 py-12 text-center">
@@ -1083,7 +1027,6 @@ export default function DirectorPanel({ user }) {
                         </svg>
                       </div>
                     </div>
-
                     {volumeExpanded[volume['Número']] && (
                       <div className="px-6 pb-4 bg-gray-50">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
@@ -1117,7 +1060,6 @@ export default function DirectorPanel({ user }) {
                             </div>
                           </div>
                         </div>
-
                         <div className="mt-4 pt-4 border-t border-gray-200">
                           <div className="flex justify-between items-center">
                             <a
@@ -1173,7 +1115,6 @@ export default function DirectorPanel({ user }) {
                 ))}
               </div>
             )}
-
             {/* Add Volume Modal */}
             {showAddVolumeModal && (
               <div
@@ -1203,7 +1144,6 @@ export default function DirectorPanel({ user }) {
                           required
                         />
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Número *</label>
                         <input
@@ -1214,7 +1154,6 @@ export default function DirectorPanel({ user }) {
                           required
                         />
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
                         <input
@@ -1225,7 +1164,6 @@ export default function DirectorPanel({ user }) {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Título</label>
                         <input
@@ -1235,7 +1173,6 @@ export default function DirectorPanel({ user }) {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Portada (URL)</label>
                         <input
@@ -1245,7 +1182,6 @@ export default function DirectorPanel({ user }) {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Área temática</label>
                         <input
@@ -1255,7 +1191,6 @@ export default function DirectorPanel({ user }) {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Palabras clave (separar con ;)
@@ -1267,7 +1202,6 @@ export default function DirectorPanel({ user }) {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Keywords (separar con ;)
@@ -1279,7 +1213,6 @@ export default function DirectorPanel({ user }) {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Resumen</label>
                         <textarea
@@ -1290,7 +1223,6 @@ export default function DirectorPanel({ user }) {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 resize-none"
                         />
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Abstract</label>
                         <textarea
@@ -1301,7 +1233,6 @@ export default function DirectorPanel({ user }) {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 resize-none"
                         />
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Archivo PDF</label>
                         <input
@@ -1312,7 +1243,6 @@ export default function DirectorPanel({ user }) {
                         />
                         <p className="mt-1 text-xs text-gray-500">El PDF se subirá automáticamente a GitHub</p>
                       </div>
-
                       <div className="pt-4 border-t border-gray-200 flex justify-end space-x-3">
                         <button
                           type="button"
@@ -1334,7 +1264,6 @@ export default function DirectorPanel({ user }) {
                 </div>
               </div>
             )}
-
             {/* Edit Volume Modal */}
             {showEditVolumeModal && editingVolume && (
               <div
@@ -1366,7 +1295,6 @@ export default function DirectorPanel({ user }) {
                           required
                         />
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Número *</label>
                         <input
@@ -1377,7 +1305,6 @@ export default function DirectorPanel({ user }) {
                           required
                         />
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
                         <input
@@ -1388,7 +1315,6 @@ export default function DirectorPanel({ user }) {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Título</label>
                         <input
@@ -1398,7 +1324,6 @@ export default function DirectorPanel({ user }) {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Portada (URL)</label>
                         <input
@@ -1408,7 +1333,6 @@ export default function DirectorPanel({ user }) {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Área temática</label>
                         <input
@@ -1418,7 +1342,6 @@ export default function DirectorPanel({ user }) {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Palabras clave (separar con ;)
@@ -1430,7 +1353,6 @@ export default function DirectorPanel({ user }) {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Keywords (separar con ;)
@@ -1442,7 +1364,6 @@ export default function DirectorPanel({ user }) {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Resumen</label>
                         <textarea
@@ -1453,7 +1374,6 @@ export default function DirectorPanel({ user }) {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 resize-none"
                         />
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Abstract</label>
                         <textarea
@@ -1464,7 +1384,6 @@ export default function DirectorPanel({ user }) {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 resize-none"
                         />
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Archivo PDF</label>
                         <input
@@ -1475,7 +1394,6 @@ export default function DirectorPanel({ user }) {
                         />
                         <p className="mt-1 text-xs text-gray-500">El PDF se subirá automáticamente a GitHub</p>
                       </div>
-
                       <div className="pt-4 border-t border-gray-200 flex justify-end space-x-3">
                         <button
                           type="button"
@@ -1499,7 +1417,6 @@ export default function DirectorPanel({ user }) {
             )}
           </div>
         </div>
-
         <MailsTeam />
         <Admissions />
       </div>
