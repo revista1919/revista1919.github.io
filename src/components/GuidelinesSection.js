@@ -128,7 +128,59 @@ function GuidelinesSection() {
           </motion.a>
         ))}
       </motion.div>
+      {/* Academic Tools Recommendation */}
+<motion.h3
+  className="text-xl font-bold mt-10 mb-4 text-gray-800"
+  initial={{ opacity: 0 }}
+  animate={{ opacity: 1 }}
+  transition={{ delay: 0.7, duration: 0.5 }}
+>
+  Herramientas académicas recomendadas
+</motion.h3>
+
+<motion.div
+  className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+  variants={containerVariants}
+  initial="hidden"
+  animate="visible"
+>
+  <motion.a
+    href="https://www.revistacienciasestudiantes.com/academic-tools"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="flex flex-col sm:flex-row items-center gap-4 p-5 bg-gray-50 rounded-xl shadow hover:shadow-md transition"
+    variants={itemVariants}
+    whileHover={{ scale: 1.02 }}
+  >
+    <img
+      src="https://www.revistacienciasestudiantes.com/academic-tools/assets/logoP.png"
+      alt="Academic Tools logo"
+      className="w-20 h-20 object-contain"
+    />
+
+    <div>
+      <h4 className="text-lg font-bold text-gray-800 mb-1">
+        Academic Tools
+      </h4>
+      <p className="text-sm text-gray-600 mb-2">
+        Plataforma gratuita con herramientas esenciales para estudiantes,
+        investigadores y académicos.
+      </p>
+      <ul className="text-sm text-gray-600 list-disc pl-5">
+        <li>Unir y gestionar archivos PDF</li>
+        <li>Generar citas académicas automáticamente</li>
+        <li>Analizar y procesar texto académico</li>
+        <li>Utilidades rápidas para tareas universitarias</li>
+      </ul>
+      <span className="inline-block mt-3 text-blue-600 font-medium">
+        Visitar Academic Tools →
+      </span>
+    </div>
+  </motion.a>
+</motion.div>
+
     </motion.div>
+    
   );
 }
 
