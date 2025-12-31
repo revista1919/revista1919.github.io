@@ -216,27 +216,33 @@ function App() {
   useEffect(() => {
     const path = typeof cleanPath === 'function' ? cleanPath(location.pathname) : location.pathname;
     if (path === '/article' || path === '/' || path === '') {
-      const term = searchParams.get('article_search') || '';
-      const area = searchParams.get('article_area') || '';
+      const term = searchParams.get('article_search') ?? '';
+      const area = searchParams.get('article_area') ?? '';
       setSearchTerm(term);
       setSelectedArea(area);
     } else if (path === '/volume') {
-      const term = searchParams.get('volume_search') || '';
-      const area = searchParams.get('volume_area') || '';
+      const term = searchParams.get('volume_search') ?? '';
+      const area = searchParams.get('volume_area') ?? '';
       setVolumeSearchTerm(term);
       setSelectedVolumeArea(area);
     }
   }, [location.pathname, searchParams, cleanPath]);
   const handleSearch = (term, area) => {
+    const params = new URLSearchParams();
+    if (term) params.set('article_search', term);
+    if (area) params.set('article_area', area);
     setSearchTerm(term);
     setSelectedArea(area);
-    setSearchParams({ article_search: term, article_area: area });
+    setSearchParams(params);
   };
   // Nuevo handleSearch para volúmenes
   const handleVolumeSearch = (term, area) => {
+    const params = new URLSearchParams();
+    if (term) params.set('volume_search', term);
+    if (area) params.set('volume_area', area);
     setVolumeSearchTerm(term);
     setSelectedVolumeArea(area);
-    setSearchParams({ volume_search: term, volume_area: area });
+    setSearchParams(params);
   };
   const clearFilters = () => {
     setSearchTerm('');
