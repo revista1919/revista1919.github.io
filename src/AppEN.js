@@ -177,10 +177,10 @@ function AppEN() {
     const lowerTerm = searchTerm.toLowerCase();
     const filtered = articles.filter((article) => {
       const matchesSearch =
-        article.titulo?.toLowerCase().includes(lowerTerm) ||
-        article.autores?.toLowerCase().includes(lowerTerm) ||
-        article.englishAbstract?.toLowerCase().includes(lowerTerm) ||
-        article.keywords_english?.join(', ')?.toLowerCase().includes(lowerTerm);
+        (article.titulo || '').toLowerCase().includes(lowerTerm) ||
+        (article.autores || '').toLowerCase().includes(lowerTerm) ||
+        (article.englishAbstract || '').toLowerCase().includes(lowerTerm) ||
+        (Array.isArray(article.keywords_english) ? article.keywords_english.join(', ') : (article.keywords_english || '')).toLowerCase().includes(lowerTerm);
       const matchesArea =
         selectedArea === '' ||
         (article.area || '')
@@ -198,9 +198,9 @@ function AppEN() {
     const lowerTerm = volumeSearchTerm.toLowerCase();
     const filtered = volumes.filter((volume) => {
       const matchesSearch =
-        volume.titulo?.toLowerCase().includes(lowerTerm) ||
-        volume.abstract?.toLowerCase().includes(lowerTerm) ||
-        volume.keywords?.join(', ')?.toLowerCase().includes(lowerTerm);
+        (volume.titulo || '').toLowerCase().includes(lowerTerm) ||
+        (volume.abstract || '').toLowerCase().includes(lowerTerm) ||
+        (Array.isArray(volume.keywords) ? volume.keywords.join(', ') : (volume.keywords || '')).toLowerCase().includes(lowerTerm);
       const matchesArea =
         selectedVolumeArea === '' ||
         (volume.area || '')
