@@ -241,12 +241,12 @@ function App() {
   const clearFilters = () => {
     setSearchTerm('');
     setSelectedArea('');
-    setSearchParams({});
+    setSearchParams(new URLSearchParams());
   };
   const clearVolumeFilters = () => {
     setVolumeSearchTerm('');
     setSelectedVolumeArea('');
-    setSearchParams({});
+    setSearchParams(new URLSearchParams());
   };
   const loadMoreArticles = () => setVisibleArticles((prev) => prev + 6);
   const showLessArticles = () => setVisibleArticles(6);
