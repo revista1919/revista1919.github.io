@@ -1,6 +1,3 @@
-const fs = require('fs');
-const path = require('path');
-const fetch = require('node-fetch').default;
 const Papa = require('papaparse');
 const articlesCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p32EM6-0VYy18AdREQwXdpeet1WHTA4H2-W2FX7HKe1HPSyApWadUw9sKHdVYQXL5tP6yDRs/pub?output=csv';
 const teamCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
@@ -45,10 +42,9 @@ function getAPAAuthor(author) {
   const initials = parts.map(n => n[0].toUpperCase() + '.').join(' ');
   return `${last}, ${initials}`;
 }
-function formatAuthorsAPA(authorsStr) {
-  const authors = authorsStr.split(';').map(a => a.trim()).filter(Boolean);
-  if (!authors.length) return '';
-  const formatted = authors.map(getAPAAuthor);
+function formatAuthorsAPA(authors) {
+  const formatted = authors.map(a => getAPAAuthor(a.name));
+  if (!formatted.length) return '';
   if (formatted.length === 1) {
     return formatted[0];
   } else if (formatted.length === 2) {
@@ -57,10 +53,9 @@ function formatAuthorsAPA(authorsStr) {
     return formatted.slice(0, -1).join(', ') + ', & ' + formatted[formatted.length - 1];
   }
 }
-function formatAuthorsChicagoOrMLA(authorsStr, language = 'es') {
-  const authors = authorsStr.split(';').map(a => a.trim()).filter(Boolean);
-  if (!authors.length) return '';
-  const formatted = authors.map(formatAuthorForCitation);
+function formatAuthorsChicagoOrMLA(authors, language = 'es') {
+  const formatted = authors.map(a => formatAuthorForCitation(a.name));
+  if (!formatted.length) return '';
   const connector = language === 'es' ? 'y' : 'and';
   const etal = 'et al.';
   if (formatted.length === 1) {
@@ -71,16 +66,16 @@ function formatAuthorsChicagoOrMLA(authorsStr, language = 'es') {
     return `${formatted[0]}, ${etal}`;
   }
 }
-function formatAuthorsDisplay(authorsStr, language = 'es') {
-  const authors = authorsStr.split(';').map(a => a.trim()).filter(Boolean);
-  if (!authors.length) return 'Autor desconocido';
+function formatAuthorsDisplay(authors, language = 'es') {
+  const names = authors.map(a => a.name);
+  if (!names.length) return 'Autor desconocido';
   const connector = language === 'es' ? 'y' : 'and';
-  if (authors.length === 1) {
-    return authors[0];
-  } else if (authors.length === 2) {
-    return `${authors[0]} ${connector} ${authors[1]}`;
+  if (names.length === 1) {
+    return names[0];
+  } else if (names.length === 2) {
+    return `${names[0]} ${connector} ${names[1]}`;
   } else {
-    return authors.slice(0, -1).join(', ') + `, ${connector} ` + authors[authors.length - 1];
+    return names.slice(0, -1).join(', ') + `, ${connector} ` + names[names.length - 1];
   }
 }
 function generateSlug(name) {
@@ -125,43 +120,71 @@ if (!fs.existsSync(teamOutputHtmlDir)) fs.mkdirSync(teamOutputHtmlDir, { recursi
 if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursive: true });
 (async () => {
   try {
-    // Procesar artículos (mismo)
+    // Procesar equipo primero para mapear instituciones
+    const teamRes = await fetch(teamCsvUrl);
+    if (!teamRes.ok) throw new Error(`Error descargando CSV de equipo: ${teamRes.statusText}`);
+    const teamCsvData = await teamRes.text();
+    const teamParsed = Papa.parse(teamCsvData, { header: true, skipEmptyLines: true });
+    const allMembers = teamParsed.data.map(row => ({
+      nombre: row['Nombre'] || 'Miembro desconocido',
+      institution: row['Institution'] || '',
+      // Otros campos existentes...
+      'Rol en la Revista': row['Rol en la Revista'] || '',
+      'Role in the Journal': row['Role in the Journal'] || '',
+      'Descripción': row['Descripción'] || 'Información no disponible',
+      'Description': row['Description'] || 'Information not available',
+      'Áreas de interés': row['Áreas de interés'] || 'No especificadas',
+      'Areas of interest': row['Areas of interest'] || 'Not specified',
+      'Imagen': row['Imagen'] || ''
+    })).filter(member => member.nombre.trim() !== '');
+    const nameToInstitution = {};
+    allMembers.forEach(member => {
+      nameToInstitution[member.nombre] = member.institution;
+    });
+    // Procesar artículos
     const articlesRes = await fetch(articlesCsvUrl);
     if (!articlesRes.ok) throw new Error(`Error descargando CSV de artículos: ${articlesRes.statusText}`);
     const articlesCsvData = await articlesRes.text();
     const articlesParsed = Papa.parse(articlesCsvData, { header: true, skipEmptyLines: true });
-    const articles = articlesParsed.data.map(row => ({
-      titulo: row['Título'] || 'Sin título',
-      autores: row['Autor(es)'] || 'Autor desconocido',
-      resumen: row['Resumen'] || 'Resumen no disponible',
-      englishAbstract: row['Abstract'] || 'English abstract not available',
-      fecha: parseDateFlexible(row['Fecha']),
-      volumen: row['Volumen'] || '',
-      numero: row['Número'] || '',
-      primeraPagina: row['Primera página'] || '',
-      ultimaPagina: row['Última página'] || '',
-      area: row['Área temática'] || '',
-      numeroArticulo: row['Número de artículo'] || '',
-      palabras_clave: row['Palabras clave']
-        ? row['Palabras clave'].split(/[;,]/).map(k => k.trim())
-        : [],
-      keywords_english: row['Keywords']
-        ? row['Keywords'].split(';').map(k => k.trim())
-        : []
-    }));
+    const articles = articlesParsed.data.map(row => {
+      const authorsStr = row['Autor(es)'] || 'Autor desconocido';
+      const authors = authorsStr.split(';').map(a => a.trim()).filter(Boolean).map(name => ({
+        name,
+        institution: nameToInstitution[name] || ''
+      }));
+      return {
+        titulo: row['Título'] || 'Sin título',
+        autores, // Ahora array de {name, institution}
+        resumen: row['Resumen'] || 'Resumen no disponible',
+        englishAbstract: row['Abstract'] || 'English abstract not available',
+        fecha: parseDateFlexible(row['Fecha']),
+        volumen: row['Volumen'] || '',
+        numero: row['Número'] || '',
+        primeraPagina: row['Primera página'] || '',
+        ultimaPagina: row['Última página'] || '',
+        area: row['Área temática'] || '',
+        numeroArticulo: row['Número de artículo'] || '',
+        palabras_clave: row['Palabras clave']
+          ? row['Palabras clave'].split(/[;,]/).map(k => k.trim())
+          : [],
+        keywords_english: row['Keywords']
+          ? row['Keywords'].split(';').map(k => k.trim())
+          : []
+      };
+    });
     fs.writeFileSync(outputJson, JSON.stringify(articles, null, 2), 'utf8');
     console.log(`✅ Archivo generado: ${outputJson} (${articles.length} artículos)`);
-    // Crear mapa de autores a artículos (mismo)
+    // Crear mapa de autores a artículos
     let authorToArticles = {};
     articles.forEach(article => {
-      const authors = article.autores.split(';').map(a => a.trim());
-      authors.forEach(auth => {
-        if (!authorToArticles[auth]) authorToArticles[auth] = [];
-        authorToArticles[auth].push(article);
+      article.autores.forEach(auth => {
+        const name = auth.name;
+        if (!authorToArticles[name]) authorToArticles[name] = [];
+        authorToArticles[name].push(article);
       });
     });
     articles.forEach(article => {
-  const authorsList = article.autores.split(';').map(a => formatAuthorForCitation(a));
+  const authorsList = article.autores.map(a => formatAuthorForCitation(a.name));
   const authorMetaTags = authorsList.map(author => `<meta name="citation_author" content="${author}">`).join('\n');
   const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
   const pdfFileName = `Article-${articleSlug}.pdf`;
@@ -667,7 +690,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
           const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
           return `
           <li>
-            <a href="/articles/article-${articleSlug}.html">${article.titulo}</a> - ${article.autores} (Vol. ${article.volumen}, Núm. ${article.numero})
+            <a href="/articles/article-${articleSlug}.html">${article.titulo}</a> - ${formatAuthorsDisplay(article.autores, 'es')} (Vol. ${article.volumen}, Núm. ${article.numero})
           </li>
         `;
         }).join('')}
@@ -708,7 +731,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
           const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
           return `
           <li>
-            <a href="/articles/article-${articleSlug}EN.html">${article.titulo}</a> - ${article.autores} (Vol. ${article.volumen}, No. ${article.numero})
+            <a href="/articles/article-${articleSlug}EN.html">${article.titulo}</a> - ${formatAuthorsDisplay(article.autores, 'en')} (Vol. ${article.volumen}, No. ${article.numero})
           </li>
         `;
         }).join('')}
@@ -1636,15 +1659,10 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
     fs.writeFileSync(newsIndexPathEn, newsIndexContentEn, 'utf8');
     console.log(`Generado índice HTML de noticias (EN): ${newsIndexPathEn}`);
     // Procesar equipo
-    const teamRes = await fetch(teamCsvUrl);
-    if (!teamRes.ok) throw new Error(`Error descargando CSV de equipo: ${teamRes.statusText}`);
-    const teamCsvData = await teamRes.text();
-    const teamParsed = Papa.parse(teamCsvData, { header: true, skipEmptyLines: true });
-    const allMembers = teamParsed.data.filter(row => (row['Nombre'] || '').trim() !== '');
     for (const member of allMembers) {
       const rolesEs = (member['Rol en la Revista'] || '').split(';').map(r => r.trim()).filter(r => r);
       const rolesEnList = (member['Role in the Journal'] || '').split(';').map(r => r.trim()).filter(r => r);
-      const nombre = member['Nombre'] || 'Miembro desconocido';
+      const nombre = member.nombre;
       const publishedArticles = authorToArticles[nombre] || [];
       const isAuthor = publishedArticles.length > 0;
       let filteredRolesEs = rolesEs;
@@ -1658,13 +1676,13 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
       const rolesStr = filteredRolesEs.join(', ') || 'No especificado';
       const rolesEn = filteredRolesEn.join(', ') || 'Not specified';
       const slug = generateSlug(nombre);
-      const descripcion = member['Descripción'] || 'Información no disponible';
-      const description = member['Description'] || 'Information not available';
-      const areas = member['Áreas de interés'] || 'No especificadas';
-      const areasEn = member['Areas of interest'] || 'Not specified';
+      const descripcion = member['Descripción'];
+      const description = member['Description'];
+      const areas = member['Áreas de interés'];
+      const areasEn = member['Areas of interest'];
       const areasList = areas.split(';').map(a => a.trim()).filter(a => a);
       const areasListEn = areasEn.split(';').map(a => a.trim()).filter(a => a);
-      const imagen = getImageSrc(member['Imagen'] || '');
+      const imagen = getImageSrc(member['Imagen']);
       const areasTagsHtml = areasList.length ? areasList.map(area => `<span class="area-tag">${area}</span>`).join('') : '<p>No especificadas</p>';
       const areasTagsHtmlEn = areasListEn.length ? areasListEn.map(area => `<span class="area-tag">${area}</span>`).join('') : '<p>Not specified</p>';
       const articlesSectionEs = isAuthor ? `
@@ -1676,7 +1694,7 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
             return `
             <div class="article-card">
               <h3><a href="/articles/article-${articleSlug}.html">${article.titulo}</a></h3>
-              <p class="authors">${article.autores}</p>
+              <p class="authors">${formatAuthorsDisplay(article.autores, 'es')}</p>
               <p class="meta">Fecha: ${article.fecha} | Volumen: ${article.volumen}, Número: ${article.numero}, Páginas: ${article.primeraPagina}-${article.ultimaPagina}</p>
             </div>
             `;
@@ -1692,13 +1710,15 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
             return `
             <div class="article-card">
               <h3><a href="/articles/article-${articleSlug}EN.html">${article.titulo}</a></h3>
-              <p class="authors">${article.autores}</p>
+              <p class="authors">${formatAuthorsDisplay(article.autores, 'en')}</p>
               <p class="meta">Date: ${article.fecha} | Volume: ${article.volumen}, Issue: ${article.numero}, Pages: ${article.primeraPagina}-${article.ultimaPagina}</p>
             </div>
             `;
           }).join('')}
         </div>
       </div>` : '';
+      const institutionHtmlEs = member.institution ? `<p class="institution"><strong>Institución:</strong> ${member.institution}</p>` : '';
+      const institutionHtmlEn = member.institution ? `<p class="institution"><strong>Institution:</strong> ${member.institution}</p>` : '';
       const esContent = `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1856,6 +1876,15 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
       border-radius: 20px;
       display: inline-block;
     }
+    .institution {
+      font-size: 1.1rem;
+      color: #4a5568;
+      font-weight: 500;
+      background: #edf2f7;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      display: inline-block;
+    }
     p {
       margin-bottom: 1rem;
       color: #4a5568;
@@ -1909,6 +1938,7 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
       <div class="profile-info">
         <h1>${nombre}</h1>
         <p class="role">${rolesStr}</p>
+        ${institutionHtmlEs}
       </div>
     </div>
     <div class="section">
@@ -2086,6 +2116,15 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
       border-radius: 20px;
       display: inline-block;
     }
+    .institution {
+      font-size: 1.1rem;
+      color: #4a5568;
+      font-weight: 500;
+      background: #edf2f7;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      display: inline-block;
+    }
     p {
       margin-bottom: 1rem;
       color: #4a5568;
@@ -2139,6 +2178,7 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
       <div class="profile-info">
         <h1>${nombre}</h1>
         <p class="role">${rolesEn}</p>
+        ${institutionHtmlEn}
       </div>
     </div>
     <div class="section">
@@ -2295,7 +2335,7 @@ ${newsItems.map(item => {
 ${allMembers.map(member => {
       const roles = (member['Rol en la Revista'] || '').split(';').map(r => r.trim());
       if (roles.includes('Institución Colaboradora')) return '';
-      const slug = generateSlug(member['Nombre']);
+      const slug = generateSlug(member.nombre);
       return `
 <url>
   <loc>${domain}/team/${slug}.html</loc>
