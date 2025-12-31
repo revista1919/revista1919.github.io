@@ -176,11 +176,15 @@ function AppEN() {
   const filterArticles = () => {
     const lowerTerm = searchTerm.toLowerCase();
     const filtered = articles.filter((article) => {
+      const tituloStr = typeof article.titulo === 'string' ? article.titulo : Array.isArray(article.titulo) ? article.titulo.join(', ') : '';
+      const autoresStr = typeof article.autores === 'string' ? article.autores : Array.isArray(article.autores) ? article.autores.join(', ') : '';
+      const abstractStr = typeof article.englishAbstract === 'string' ? article.englishAbstract : Array.isArray(article.englishAbstract) ? article.englishAbstract.join(', ') : '';
+      const keStr = Array.isArray(article.keywords_english) ? article.keywords_english.join(', ') : typeof article.keywords_english === 'string' ? article.keywords_english : '';
       const matchesSearch =
-        (article.titulo || '').toLowerCase().includes(lowerTerm) ||
-        (article.autores || '').toLowerCase().includes(lowerTerm) ||
-        (article.englishAbstract || '').toLowerCase().includes(lowerTerm) ||
-        (Array.isArray(article.keywords_english) ? article.keywords_english.join(', ') : (article.keywords_english || '')).toLowerCase().includes(lowerTerm);
+        tituloStr.toLowerCase().includes(lowerTerm) ||
+        autoresStr.toLowerCase().includes(lowerTerm) ||
+        abstractStr.toLowerCase().includes(lowerTerm) ||
+        keStr.toLowerCase().includes(lowerTerm);
       const matchesArea =
         selectedArea === '' ||
         (article.area || '')
@@ -197,10 +201,13 @@ function AppEN() {
   const filterVolumes = () => {
     const lowerTerm = volumeSearchTerm.toLowerCase();
     const filtered = volumes.filter((volume) => {
+      const tituloStr = typeof volume.titulo === 'string' ? volume.titulo : Array.isArray(volume.titulo) ? volume.titulo.join(', ') : '';
+      const abstractStr = typeof volume.abstract === 'string' ? volume.abstract : Array.isArray(volume.abstract) ? volume.abstract.join(', ') : '';
+      const kStr = Array.isArray(volume.keywords) ? volume.keywords.join(', ') : typeof volume.keywords === 'string' ? volume.keywords : '';
       const matchesSearch =
-        (volume.titulo || '').toLowerCase().includes(lowerTerm) ||
-        (volume.abstract || '').toLowerCase().includes(lowerTerm) ||
-        (Array.isArray(volume.keywords) ? volume.keywords.join(', ') : (volume.keywords || '')).toLowerCase().includes(lowerTerm);
+        tituloStr.toLowerCase().includes(lowerTerm) ||
+        abstractStr.toLowerCase().includes(lowerTerm) ||
+        kStr.toLowerCase().includes(lowerTerm);
       const matchesArea =
         selectedVolumeArea === '' ||
         (volume.area || '')
