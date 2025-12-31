@@ -181,6 +181,7 @@ function App() {
         safeString(article.titulo).toLowerCase().includes(lowerTerm) ||
         safeString(article.autores).toLowerCase().includes(lowerTerm) ||
         safeString(article.resumen).toLowerCase().includes(lowerTerm) ||
+        safeString(article.institutions).toLowerCase().includes(lowerTerm) ||
         safeString(article.palabras_clave).toLowerCase().includes(lowerTerm);
       const matchesArea =
         selectedArea === '' ||

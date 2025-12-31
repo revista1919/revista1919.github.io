@@ -189,6 +189,7 @@ function AppEN() {
         safeString(article.titulo).toLowerCase().includes(lowerTerm) ||
         safeString(article.autores).toLowerCase().includes(lowerTerm) ||
         safeString(article.englishAbstract).toLowerCase().includes(lowerTerm) ||
+        safeString(article.institutions).toLowerCase().includes(lowerTerm) ||
         safeString(article.keywords_english).toLowerCase().includes(lowerTerm);
       const matchesArea =
         selectedArea === '' ||
