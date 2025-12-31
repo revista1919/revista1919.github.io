@@ -7,7 +7,7 @@ import {
   browserLocalPersistence,
   signOut,
 } from 'firebase/auth';
-import { Routes, Route, useLocation, NavLink } from 'react-router-dom';
+import { Routes, Route, useLocation, NavLink, useSearchParams } from 'react-router-dom';
 import { useLanguage } from './hooks/useLanguage';
 import Header from './components/HeaderEN';
 import SearchAndFilters from './components/SearchAndFiltersEN';
@@ -50,6 +50,7 @@ function AppEN() {
   const [authLoading, setAuthLoading] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const fetchUserData = async (email) => {
     try {
@@ -174,61 +175,96 @@ function AppEN() {
     fetchVolumes();
   }, []);
 
-  const handleSearch = (term, area) => {
-    setSearchTerm(term);
-    setSelectedArea(area);
-    const lowerTerm = term.toLowerCase();
+  const safeString = (val) => {
+    if (val == null) return '';
+    if (typeof val === 'string') return val;
+    if (Array.isArray(val)) return val.join(', ');
+    return String(val);
+  };
+
+  useEffect(() => {
+    const lowerTerm = searchTerm.toLowerCase();
     const filtered = articles.filter((article) => {
       const matchesSearch =
-        article.titulo?.toLowerCase().includes(lowerTerm) ||
-        article.autores?.toLowerCase().includes(lowerTerm) ||
-        article.englishAbstract?.toLowerCase().includes(lowerTerm) ||
-        article.keywords_english?.join(', ')?.toLowerCase().includes(lowerTerm);
+        safeString(article.titulo).toLowerCase().includes(lowerTerm) ||
+        safeString(article.autores).toLowerCase().includes(lowerTerm) ||
+        safeString(article.englishAbstract).toLowerCase().includes(lowerTerm) ||
+        safeString(article.keywords_english).toLowerCase().includes(lowerTerm);
       const matchesArea =
-        area === '' ||
-        (article.area || '')
+        selectedArea === '' ||
+        safeString(article.area)
           .toLowerCase()
           .split(';')
           .map((a) => a.trim())
-          .some((a) => a.toLowerCase() === area.toLowerCase());
+          .some((a) => a.toLowerCase() === selectedArea.toLowerCase());
       return matchesSearch && matchesArea;
     });
     setFilteredArticles(filtered);
     setVisibleArticles(6);
-  };
+  }, [searchTerm, selectedArea, articles]);
 
-  const handleVolumeSearch = (term, area) => {
-    setVolumeSearchTerm(term);
-    setSelectedVolumeArea(area);
-    const lowerTerm = term.toLowerCase();
+  useEffect(() => {
+    const lowerTerm = volumeSearchTerm.toLowerCase();
     const filtered = volumes.filter((volume) => {
       const matchesSearch =
-        volume.titulo?.toLowerCase().includes(lowerTerm) ||
-        volume.abstract?.toLowerCase().includes(lowerTerm) ||
-        volume.keywords?.join(', ')?.toLowerCase().includes(lowerTerm);
+        safeString(volume.titulo).toLowerCase().includes(lowerTerm) ||
+        safeString(volume.abstract).toLowerCase().includes(lowerTerm) ||
+        safeString(volume.keywords).toLowerCase().includes(lowerTerm);
       const matchesArea =
-        area === '' ||
-        (volume.area || '')
+        selectedVolumeArea === '' ||
+        safeString(volume.area)
           .toLowerCase()
           .split(';')
           .map((a) => a.trim())
-          .some((a) => a.toLowerCase() === area.toLowerCase());
+          .some((a) => a.toLowerCase() === selectedVolumeArea.toLowerCase());
       return matchesSearch && matchesArea;
     });
     setFilteredVolumes(filtered);
+  }, [volumeSearchTerm, selectedVolumeArea, volumes]);
+
+  useEffect(() => {
+    const path = typeof cleanPath === 'function' ? cleanPath(location.pathname) : location.pathname;
+    if (path === '/article' || path === '/' || path === '') {
+      const term = searchParams.get('article_search') ?? '';
+      const area = searchParams.get('article_area') ?? '';
+      setSearchTerm(term);
+      setSelectedArea(area);
+    } else if (path === '/volume') {
+      const term = searchParams.get('volume_search') ?? '';
+      const area = searchParams.get('volume_area') ?? '';
+      setVolumeSearchTerm(term);
+      setSelectedVolumeArea(area);
+    }
+  }, [location.pathname, searchParams, cleanPath]);
+
+  const handleSearch = (term, area) => {
+    const params = new URLSearchParams();
+    if (term) params.set('article_search', term);
+    if (area) params.set('article_area', area);
+    setSearchTerm(term);
+    setSelectedArea(area);
+    setSearchParams(params);
+  };
+
+  const handleVolumeSearch = (term, area) => {
+    const params = new URLSearchParams();
+    if (term) params.set('volume_search', term);
+    if (area) params.set('volume_area', area);
+    setVolumeSearchTerm(term);
+    setSelectedVolumeArea(area);
+    setSearchParams(params);
   };
 
   const clearFilters = () => {
     setSearchTerm('');
     setSelectedArea('');
-    setFilteredArticles(articles);
-    setVisibleArticles(6);
+    setSearchParams(new URLSearchParams());
   };
 
   const clearVolumeFilters = () => {
     setVolumeSearchTerm('');
     setSelectedVolumeArea('');
-    setFilteredVolumes(volumes);
+    setSearchParams(new URLSearchParams());
   };
 
   const loadMoreArticles = () => setVisibleArticles((prev) => prev + 6);
