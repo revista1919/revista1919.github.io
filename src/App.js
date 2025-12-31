@@ -7,7 +7,7 @@ import {
   browserLocalPersistence,
   signOut,
 } from 'firebase/auth';
-import { Routes, Route, useLocation, NavLink } from 'react-router-dom';
+import { Routes, Route, useLocation, NavLink, useSearchParams } from 'react-router-dom';
 import { useLanguage } from './hooks/useLanguage';
 import Header from './components/Header';
 import SearchAndFilters from './components/SearchAndFilters';
@@ -48,6 +48,7 @@ function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const fetchUserData = async (email) => {
     try {
       const response = await fetch(USERS_CSV, { cache: 'no-store' });
@@ -125,7 +126,6 @@ function App() {
         }
         const data = await response.json();
         setArticles(data);
-        setFilteredArticles(data);
         const allAreas = data.flatMap((a) =>
           (a.area || '')
             .split(';')
@@ -152,7 +152,6 @@ function App() {
         }
         const data = await response.json();
         setVolumes(data);
-        setFilteredVolumes(data);
         const allVolumeAreas = data.flatMap((v) =>
           (v.area || '')
             .split(';')
@@ -167,10 +166,8 @@ function App() {
     };
     fetchVolumes();
   }, []);
-  const handleSearch = (term, area) => {
-    setSearchTerm(term);
-    setSelectedArea(area);
-    const lowerTerm = term.toLowerCase();
+  const filterArticles = () => {
+    const lowerTerm = searchTerm.toLowerCase();
     const filtered = articles.filter((article) => {
       const matchesSearch =
         article.titulo?.toLowerCase().includes(lowerTerm) ||
@@ -178,48 +175,103 @@ function App() {
         article.resumen?.toLowerCase().includes(lowerTerm) ||
         article.palabras_clave?.join(', ')?.toLowerCase().includes(lowerTerm);
       const matchesArea =
-        area === '' ||
+        selectedArea === '' ||
         (article.area || '')
           .toLowerCase()
           .split(';')
           .map((a) => a.trim())
-          .some((a) => a.toLowerCase() === area.toLowerCase());
+          .some((a) => a.toLowerCase() === selectedArea.toLowerCase());
       return matchesSearch && matchesArea;
     });
     setFilteredArticles(filtered);
     setVisibleArticles(6);
   };
-  // Nuevo handleSearch para volúmenes
-  const handleVolumeSearch = (term, area) => {
-    setVolumeSearchTerm(term);
-    setSelectedVolumeArea(area);
-    const lowerTerm = term.toLowerCase();
+  const filterVolumes = () => {
+    const lowerTerm = volumeSearchTerm.toLowerCase();
     const filtered = volumes.filter((volume) => {
       const matchesSearch =
         volume.titulo?.toLowerCase().includes(lowerTerm) ||
         volume.resumen?.toLowerCase().includes(lowerTerm) ||
         volume.palabras_clave?.join(', ')?.toLowerCase().includes(lowerTerm);
       const matchesArea =
-        area === '' ||
+        selectedVolumeArea === '' ||
         (volume.area || '')
           .toLowerCase()
           .split(';')
           .map((a) => a.trim())
-          .some((a) => a.toLowerCase() === area.toLowerCase());
+          .some((a) => a.toLowerCase() === selectedVolumeArea.toLowerCase());
       return matchesSearch && matchesArea;
     });
     setFilteredVolumes(filtered);
   };
+  useEffect(() => {
+    filterArticles();
+  }, [searchTerm, selectedArea, articles]);
+  useEffect(() => {
+    filterVolumes();
+  }, [volumeSearchTerm, selectedVolumeArea, volumes]);
+  useEffect(() => {
+    const path = cleanPath(location.pathname);
+    if (path === '/article') {
+      const q = searchParams.get('q') || '';
+      const area = searchParams.get('area') || '';
+      setSearchTerm(q);
+      setSelectedArea(area);
+    } else if (path === '/volume') {
+      const qv = searchParams.get('qv') || '';
+      const areav = searchParams.get('areav') || '';
+      setVolumeSearchTerm(qv);
+      setSelectedVolumeArea(areav);
+    }
+  }, [location.pathname, searchParams]);
+  const handleSearch = (term, area) => {
+    setSearchTerm(term);
+    setSelectedArea(area);
+    const newParams = new URLSearchParams(searchParams);
+    if (term) {
+      newParams.set('q', term);
+    } else {
+      newParams.delete('q');
+    }
+    if (area) {
+      newParams.set('area', area);
+    } else {
+      newParams.delete('area');
+    }
+    setSearchParams(newParams);
+  };
+  // Nuevo handleSearch para volúmenes
+  const handleVolumeSearch = (term, area) => {
+    setVolumeSearchTerm(term);
+    setSelectedVolumeArea(area);
+    const newParams = new URLSearchParams(searchParams);
+    if (term) {
+      newParams.set('qv', term);
+    } else {
+      newParams.delete('qv');
+    }
+    if (area) {
+      newParams.set('areav', area);
+    } else {
+      newParams.delete('areav');
+    }
+    setSearchParams(newParams);
+  };
   const clearFilters = () => {
     setSearchTerm('');
     setSelectedArea('');
-    setFilteredArticles(articles);
-    setVisibleArticles(6);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete('q');
+    newParams.delete('area');
+    setSearchParams(newParams);
   };
   const clearVolumeFilters = () => {
     setVolumeSearchTerm('');
     setSelectedVolumeArea('');
-    setFilteredVolumes(volumes);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete('qv');
+    newParams.delete('areav');
+    setSearchParams(newParams);
   };
   const loadMoreArticles = () => setVisibleArticles((prev) => prev + 6);
   const showLessArticles = () => setVisibleArticles(6);

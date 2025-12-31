@@ -26,7 +26,6 @@ const toBase64 = (file) =>
 // GitHub API Functions
 const uploadPDFToGitHub = async (base64Content, fileName, message, sha = null, folder = 'Articles') => {
   if (!GH_TOKEN) throw new Error('GitHub token no disponible');
- 
   const path = `public/${folder}/${fileName}`;
   const url = `${GH_API_BASE}/${path}`;
   const payload = {
@@ -34,7 +33,6 @@ const uploadPDFToGitHub = async (base64Content, fileName, message, sha = null, f
     content: base64Content,
     ...(sha && { sha }),
   };
- 
   const response = await fetch(url, {
     method: 'PUT',
     headers: {
@@ -44,37 +42,29 @@ const uploadPDFToGitHub = async (base64Content, fileName, message, sha = null, f
     },
     body: JSON.stringify(payload),
   });
- 
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(`Upload failed: ${response.status} - ${errorText}`);
   }
- 
   return await response.json();
 };
 const deletePDFFromGitHub = async (fileName, message, folder = 'Articles') => {
   if (!GH_TOKEN) throw new Error('GitHub token no disponible');
- 
   const path = `public/${folder}/${fileName}`;
   const url = `${GH_API_BASE}/${path}`;
- 
   const getRes = await fetch(url, {
     headers: {
       Authorization: `token ${GH_TOKEN}`,
       Accept: 'application/vnd.github.v3+json',
     },
   });
- 
   if (getRes.status === 404) {
     console.log('ℹ️ PDF not found, skipping delete:', fileName);
     return;
   }
- 
   if (!getRes.ok) throw new Error(`Failed to get file info: ${getRes.status}`);
- 
   const file = await getRes.json();
   const payload = { message, sha: file.sha };
- 
   const delRes = await fetch(url, {
     method: 'DELETE',
     headers: {
@@ -84,12 +74,10 @@ const deletePDFFromGitHub = async (fileName, message, folder = 'Articles') => {
     },
     body: JSON.stringify(payload),
   });
- 
   if (!delRes.ok) throw new Error(`Delete failed: ${delRes.status}`);
 };
 const triggerRebuild = async () => {
   if (!GH_TOKEN) throw new Error('GitHub token no disponible');
- 
   const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/dispatches`;
   const response = await fetch(url, {
     method: 'POST',
@@ -100,7 +88,6 @@ const triggerRebuild = async () => {
     },
     body: JSON.stringify({ event_type: 'rebuild' }),
   });
- 
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(`Rebuild failed: ${response.status} - ${errorText}`);
@@ -288,10 +275,11 @@ export default function DirectorPanel({ user }) {
         await new Promise(r => setTimeout(r, 3000));
         await fetchFunc();
         const items = type === 'article' ? articles : volumes;
-        const nums = items.map(i => parseInt(i['Número'] || '0')).filter(n => !isNaN(n));
-        num = Math.max(...nums, 0) + 1;
+        const numField = type === 'article' ? 'Número de artículo' : 'Número';
+        const nums = items.map(i => parseInt(i[numField] || '0')).filter(n => !isNaN(n));
+        num = nums.length > 0 ? Math.max(...nums, 0) + 1 : items.length + 1; // Use max, fallback to row count
       } else {
-        num = editing['Número'];
+        num = editing[type === 'article' ? 'Número de artículo' : 'Número'];
         await submitToSheet('edit', dataObj, num, gasUrl, type);
       }
       let pdfUrl = null;
@@ -316,15 +304,31 @@ export default function DirectorPanel({ user }) {
   const handleVolumeSubmit = async (action = 'add') => {
     await handleSubmit(action, VOLUMES_GAS_URL, volumeFormData, setVolumeUploading, setVolumeStatus, 'Volumes', fetchVolumes, closeVolumeModals, 'volume', editingVolume);
   };
-  const handleEdit = (item, setEditing, setForm, setShow, fields) => {
+  const getFieldMap = (type) => ({
+    titulo: 'Título',
+    autores: 'Autor(es)',
+    resumen: 'Resumen',
+    abstract: 'Abstract',
+    fecha: 'Fecha',
+    volumen: 'Volumen',
+    numero: type === 'article' ? 'Número de artículo' : 'Número',
+    primeraPagina: 'Primera página',
+    ultimaPagina: 'Última página',
+    areaTematica: 'Área temática',
+    palabrasClave: 'Palabras clave',
+    keywords: 'Keywords',
+    portada: 'Portada',
+  });
+  const handleEdit = (item, setEditing, setForm, setShow, fields, type) => {
     setEditing(item);
+    const fieldMap = getFieldMap(type);
     const newForm = {};
-    fields.forEach(f => newForm[f] = item[f.charAt(0).toUpperCase() + f.slice(1)] || '');
+    fields.forEach(f => newForm[f] = item[fieldMap[f]] || '');
     setForm({ ...newForm, pdfFile: null });
     setShow(true);
   };
-  const handleArticleEdit = (article) => handleEdit(article, setEditingArticle, setFormData, setShowEditModal, ['titulo', 'autores', 'resumen', 'abstract', 'fecha', 'volumen', 'numero', 'primeraPagina', 'ultimaPagina', 'areaTematica', 'palabrasClave', 'keywords']);
-  const handleVolumeEdit = (volume) => handleEdit(volume, setEditingVolume, setVolumeFormData, setShowEditVolumeModal, ['volumen', 'numero', 'fecha', 'titulo', 'resumen', 'abstract', 'portada', 'areaTematica', 'palabrasClave', 'keywords']);
+  const handleArticleEdit = (article) => handleEdit(article, setEditingArticle, setFormData, setShowEditModal, ['titulo', 'autores', 'resumen', 'abstract', 'fecha', 'volumen', 'numero', 'primeraPagina', 'ultimaPagina', 'areaTematica', 'palabrasClave', 'keywords'], 'article');
+  const handleVolumeEdit = (volume) => handleEdit(volume, setEditingVolume, setVolumeFormData, setShowEditVolumeModal, ['volumen', 'numero', 'fecha', 'titulo', 'resumen', 'abstract', 'portada', 'areaTematica', 'palabrasClave', 'keywords'], 'volume');
   const handleDelete = async (numero, gasUrl, folder, fetchFunc, setS) => {
     if (!confirm('¿Eliminar?')) return;
     try {
@@ -333,7 +337,8 @@ export default function DirectorPanel({ user }) {
       await fetch(gasUrl, { method: 'POST', body: JSON.stringify(data), headers: { 'Content-Type': 'text/plain' } });
       if (GH_TOKEN) {
         const items = gasUrl === ARTICULOS_GAS_URL ? articles : volumes;
-        const item = items.find(i => i['Número'] === numero.toString());
+        const numField = gasUrl === ARTICULOS_GAS_URL ? 'Número de artículo' : 'Número';
+        const item = items.find(i => i[numField] === numero.toString());
         if (item) {
           const slug = `${generateSlug(item['Título'])}-${numero}`;
           const fileName = `${gasUrl === ARTICULOS_GAS_URL ? 'Article' : 'Volume'}-${slug}.pdf`;
@@ -701,17 +706,17 @@ export default function DirectorPanel({ user }) {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
-<div>
-  <label className="block text-sm font-medium text-gray-700 mb-1">
-    Keywords (Inglés, separar con ;)
-  </label>
-  <input
-    name="keywords"
-    value={formData.keywords}
-    onChange={handleInputChange}
-    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-  />
-</div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Keywords (Inglés, separar con ;)
+                        </label>
+                        <input
+                          name="keywords"
+                          value={formData.keywords}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Resumen</label>
                         <textarea
@@ -881,17 +886,17 @@ export default function DirectorPanel({ user }) {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
-<div>
-  <label className="block text-sm font-medium text-gray-700 mb-1">
-    Keywords (Inglés, separar con ;)
-  </label>
-  <input
-    name="keywords"
-    value={formData.keywords}
-    onChange={handleInputChange}
-    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-  />
-</div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Keywords (Inglés, separar con ;)
+                        </label>
+                        <input
+                          name="keywords"
+                          value={formData.keywords}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Resumen</label>
                         <textarea
