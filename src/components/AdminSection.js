@@ -212,7 +212,7 @@ function AdminSection() {
       <div className="mt-24 pt-12 border-t border-gray-100 text-center">
         <p className="text-xs text-gray-400 font-serif leading-relaxed">
           La Revista Nacional de las Ciencias para Estudiantes no discrimina por origen, género o institución.<br/>
-          Todas las postulaciones son revisadas por el Comité de Ética y Transparencia.
+          Todas las postulaciones son revisadas por nuestro comité.
         </p>
       </div>
     </section>
