@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from "react";
 import Papa from "papaparse";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from 'react-i18next';
 
 const NEWS_CSV =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vQKnN8qMJcBN8im9Q61o-qElx1jQp5NdS80_B-FakCHrPLXHlQ_FXZWT0o5GVVHAM26l9sjLxsTCNO8/pub?output=csv";
+
+const scriptURL =
+  "https://script.google.com/macros/s/AKfycbzyyR93tD85nPprIKAR_IDoWYBSAnlFwVes09rJgOM3KQsByg_MgzafWDK1BcFhfVJHew/exec";
 
 const base64DecodeUnicode = (str) => {
   try {
@@ -21,7 +24,7 @@ const base64DecodeUnicode = (str) => {
   }
 };
 
-function generateSlug(name) {
+const generateSlug = (name) => {
   if (!name) return '';
   name = name.toLowerCase();
   name = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -30,19 +33,37 @@ function generateSlug(name) {
   name = name.replace(/-+/g, '-');
   name = name.replace(/^-+|-+$/g, '');
   return name;
-}
+};
+
+const parseDate = (raw) => {
+  if (!raw) return { label: "Sin fecha", iso: "" };
+  let d = new Date(raw);
+  if (isNaN(d.getTime())) {
+    const match = raw.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+    if (match) {
+      const [, day, month, year] = match;
+      d = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
+    }
+  }
+  if (isNaN(d.getTime())) {
+    return { label: raw, iso: "" };
+  }
+  return {
+    label: d.toLocaleDateString("es-CL", { day: "2-digit", month: "long", year: "numeric" }),
+    iso: d.toISOString().split('T')[0]
+  };
+};
 
 export default function NewsSection({ className }) {
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState("");
-  const [visibleNews, setVisibleNews] = useState(6);
+  const [visibleNews, setVisibleNews] = useState(7);
   const [nombre, setNombre] = useState("");
   const [correo, setCorreo] = useState("");
   const [enviado, setEnviado] = useState(false);
-  const scriptURL =
-    "https://script.google.com/macros/s/AKfycbzyyR93tD85nPprIKAR_IDoWYBSAnlFwVes09rJgOM3KQsByg_MgzafWDK1BcFhfVJHew/exec";
+  const [subscribing, setSubscribing] = useState(false);
 
   useEffect(() => {
     const fetchNews = async () => {
@@ -69,9 +90,8 @@ export default function NewsSection({ className }) {
               )
               .map((item) => ({
                 titulo: String(item["Título"] ?? ""),
-                cuerpo: String(item["Contenido de la noticia"] ?? ""),
-                fecha: formatDate(String(item["Fecha"] ?? "")),
-                fechaIso: parseDateIso(String(item["Fecha"] ?? "")),
+                cuerpo: base64DecodeUnicode(String(item["Contenido de la noticia"] ?? "")),
+                ...parseDate(String(item["Fecha"] ?? ""))
               }));
             setNews(validNews);
             setLoading(false);
@@ -93,6 +113,8 @@ export default function NewsSection({ className }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (subscribing) return;
+    setSubscribing(true);
     const formData = new URLSearchParams();
     formData.append("nombre", nombre);
     formData.append("correo", correo);
@@ -102,247 +124,140 @@ export default function NewsSection({ className }) {
         setEnviado(true);
         setNombre("");
         setCorreo("");
+        setSubscribing(false);
       })
-      .catch((err) => alert("Error al enviar: " + err));
+      .catch((err) => {
+        alert("Error al enviar: " + err);
+        setSubscribing(false);
+      });
   };
-
-  function parseDateIso(raw) {
-    if (!raw) return '';
-    let parsedDate = new Date(raw);
-    if (isNaN(parsedDate.getTime())) {
-      const datePattern = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/;
-      const match = raw.match(datePattern);
-      if (match) {
-        const [, day, month, year] = match;
-        parsedDate = new Date(`${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`);
-      }
-    }
-    if (!isNaN(parsedDate.getTime())) {
-      return parsedDate.toISOString().split('T')[0];
-    }
-    return '';
-  }
-
-  function formatDate(raw) {
-    if (!raw) return "Sin fecha";
-    let parsedDate = new Date(raw);
-    if (isNaN(parsedDate.getTime())) {
-      const datePattern = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/;
-      const match = raw.match(datePattern);
-      if (match) {
-        const [, day, month, year] = match;
-        parsedDate = new Date(`${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`);
-      }
-    }
-    if (!isNaN(parsedDate.getTime())) {
-      try {
-        return parsedDate.toLocaleString("es-CL", {
-          timeZone: "America/Santiago",
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-      } catch {
-        return raw;
-      }
-    }
-    return raw;
-  }
-
-  function truncateHTML(html, maxLength = 200) {
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
-    const paragraphs = Array.from(tempDiv.querySelectorAll('p, div, h1, h2, h3, ul, ol, img'));
-    let truncated = '';
-    let charCount = 0;
-    for (let elem of paragraphs) {
-      const elemText = elem.outerHTML;
-      if (charCount + elemText.length > maxLength) {
-        const textContent = elem.textContent || '';
-        if (textContent.length > 0) {
-          const remaining = maxLength - charCount;
-          truncated += elem.outerHTML.substring(0, elem.outerHTML.length - (textContent.length - remaining)) + '...';
-        }
-        break;
-      }
-      truncated += elemText;
-      charCount += elemText.length;
-    }
-    return truncated;
-  }
-
-  function decodeBody(body, truncate = false) {
-    if (!body) return <p className="text-gray-800">Sin contenido disponible.</p>;
-    try {
-      let html = base64DecodeUnicode(body);
-      if (truncate) {
-        html = truncateHTML(html, 200);
-      }
-      return (
-        <div
-          className="ql-editor break-words leading-relaxed text-gray-800 overflow-hidden"
-          style={{ lineHeight: '1.6', marginBottom: '10px' }}
-          dangerouslySetInnerHTML={{ __html: html }}
-        />
-      );
-    } catch (err) {
-      console.error('Error decoding body:', err);
-      return <p className="text-gray-800">Error al decodificar contenido.</p>;
-    }
-  }
 
   const filteredNews = news.filter((n) =>
     n.titulo?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const loadMoreNews = () => setVisibleNews((prev) => prev + 6);
+  const featured = filteredNews[0];
+  const remaining = filteredNews.slice(1, visibleNews);
 
-  const openNews = (item) => {
-    const slug = generateSlug(`${item.titulo} ${item.fechaIso}`);
-    window.location.href = `/news/${slug}.html`;
-  };
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 },
-  };
-
-  if (loading) return <p className="text-center text-gray-600">Cargando noticias...</p>;
-  if (error) return <p className="text-center text-red-600">{error}</p>;
+  if (loading) return <div className="py-20 text-center font-serif italic text-gray-400">Actualizando archivo de noticias...</div>;
+  if (error) return <div className="py-20 text-center font-serif italic text-red-600">{error}</div>;
 
   return (
     <motion.div
-      className={`space-y-6 bg-white p-6 rounded-xl shadow-lg ${className || ""}`}
+      className={`max-w-7xl mx-auto px-4 py-12 bg-white text-gray-900 ${className || ""}`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <motion.h3
-        className="text-2xl font-bold text-gray-800"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2, duration: 0.5 }}
-      >
-        Noticias
-      </motion.h3>
-      <motion.div
-        className="bg-gray-50 p-6 rounded-xl shadow-md max-w-2xl mx-auto border border-gray-200"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3, duration: 0.5 }}
-      >
-        <h4 className="text-xl font-bold text-gray-800 text-center mb-3">
-          Suscríbete a nuestra Newsletter
-        </h4>
-        <p className="text-center text-gray-600 mb-6 text-base">
-          Recibe directamente en tu correo las últimas noticias y artículos académicos.
-        </p>
-        {!enviado ? (
-          <form
-            onSubmit={handleSubmit}
-            className="flex flex-col sm:flex-row justify-center items-center gap-3"
-          >
-            <input
-              type="text"
-              placeholder="Tu nombre"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              required
-              className="px-4 py-2 rounded-lg border border-gray-300 w-full sm:flex-1 text-gray-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-            />
-            <input
-              type="email"
-              placeholder="Tu correo"
-              value={correo}
-              onChange={(e) => setCorreo(e.target.value)}
-              required
-              className="px-4 py-2 rounded-lg border border-gray-300 w-full sm:flex-1 text-gray-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-            />
-            <button
-              type="submit"
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium shadow-md hover:bg-blue-700 transition-colors duration-200"
-            >
-              Suscribirse
-            </button>
-          </form>
-        ) : (
-          <p className="text-green-600 font-semibold text-center mt-4">
-            ¡Gracias por suscribirte!
-          </p>
-        )}
-      </motion.div>
-      <input
-        type="text"
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-800"
-        placeholder="Buscar noticias..."
-      />
-      <motion.div
-        className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
+      <header className="border-b-4 border-black pb-6 mb-12 flex flex-col md:flex-row justify-between items-end gap-8">
+        <div>
+          <h2 className="text-5xl font-serif font-black tracking-tighter mb-2">Boletín Informativo</h2>
+          <p className="text-gray-500 font-serif italic">Crónicas, avances y anuncios de la comunidad científica estudiantil.</p>
+        </div>
+        <div className="w-full md:w-auto bg-gray-50 p-4 border border-gray-200">
+          <p className="text-[10px] uppercase tracking-widest font-bold mb-3 text-gray-400">Suscripción Institucional</p>
+          {!enviado ? (
+            <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+              <input
+                type="text"
+                placeholder="Tu nombre"
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+                required
+                className="bg-white border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:border-black transition-colors"
+              />
+              <input
+                type="email"
+                placeholder="correo@ejemplo.edu"
+                value={correo}
+                onChange={(e) => setCorreo(e.target.value)}
+                required
+                className="bg-white border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:border-black transition-colors"
+              />
+              <button
+                disabled={subscribing}
+                className="bg-black text-white px-4 py-1.5 text-[10px] uppercase font-bold hover:bg-[#007398] transition-colors"
+              >
+                {subscribing ? "Enviando..." : "Unirse"}
+              </button>
+            </form>
+          ) : (
+            <p className="text-green-600 font-semibold text-center mt-4 text-sm">¡Gracias por suscribirte!</p>
+          )}
+        </div>
+      </header>
+      <div className="mb-12 relative">
+        <input
+          type="text"
+          placeholder="Filtrar por palabra clave..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full border-b border-gray-300 py-2 text-lg font-serif italic focus:outline-none focus:border-black transition-colors"
+        />
+        <span className="absolute right-0 top-2 text-gray-300 underline text-xs uppercase tracking-widest">Archivo Digital</span>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
         {filteredNews.length === 0 ? (
-          <p className="text-center text-gray-600 col-span-full">
-            No se encontraron noticias.
-          </p>
+          <p className="col-span-full text-center text-gray-500 font-serif italic text-lg">No se encontraron noticias.</p>
         ) : (
-          filteredNews.slice(0, visibleNews).map((item, idx) => (
-            <motion.div
-              key={idx}
-              variants={itemVariants}
-              whileHover={{ scale: 1.02 }}
-              className="bg-gray-50 p-5 rounded-xl shadow-md cursor-pointer flex flex-col border border-gray-200 hover:shadow-lg transition"
-              onClick={() => openNews(item)}
-            >
-              <h4
-                className="text-lg font-bold text-blue-600 mb-2 leading-snug"
-                style={{
-                  display: "-webkit-box",
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: "vertical",
-                  overflow: "hidden",
-                }}
+          <>
+            {featured && (
+              <motion.article
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="lg:col-span-7 group cursor-pointer"
+                onClick={() => window.location.href = `/news/${generateSlug(featured.titulo + " " + featured.iso)}.html`}
               >
-                {item.titulo}
-              </h4>
-              <p className="text-sm text-gray-500 mb-3 italic">{item.fecha}</p>
-              <div
-                className="text-gray-800 text-sm leading-relaxed overflow-hidden"
-                style={{
-                  display: "-webkit-box",
-                  WebkitLineClamp: 3,
-                  WebkitBoxOrient: "vertical",
-                  overflow: "hidden",
-                }}
-              >
-                {decodeBody(item.cuerpo, true)}
-              </div>
-            </motion.div>
-          ))
+                <div className="mb-4 overflow-hidden bg-gray-100 aspect-video flex items-center justify-center border border-gray-100">
+                  <span className="text-6xl font-serif font-black text-gray-200 uppercase tracking-tighter">Ciencia Hoy</span>
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#007398] mb-4 block">Nota Editorial</span>
+                <h3 className="text-4xl font-serif font-bold leading-tight mb-4 group-hover:underline underline-offset-4 decoration-1">
+                  {featured.titulo}
+                </h3>
+                <div
+                  className="text-gray-600 leading-relaxed mb-4 line-clamp-3 font-serif italic text-lg"
+                  dangerouslySetInnerHTML={{ __html: featured.cuerpo }}
+                />
+                <time className="text-xs font-mono text-gray-400 uppercase tracking-widest">{featured.label}</time>
+              </motion.article>
+            )}
+            <div className="lg:col-span-5 flex flex-col gap-8 divide-y divide-gray-100">
+              <AnimatePresence>
+                {remaining.map((item, idx) => (
+                  <motion.article
+                    key={idx}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.1 }}
+                    className="pt-8 first:pt-0 group cursor-pointer"
+                    onClick={() => window.location.href = `/news/${generateSlug(item.titulo + " " + item.iso)}.html`}
+                  >
+                    <time className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-2">
+                      {item.label}
+                    </time>
+                    <h4 className="text-xl font-serif font-bold leading-snug group-hover:text-[#007398] transition-colors">
+                      {item.titulo}
+                    </h4>
+                    <div
+                      className="mt-2 text-sm text-gray-500 line-clamp-2 leading-relaxed"
+                      dangerouslySetInnerHTML={{ __html: item.cuerpo }}
+                    />
+                  </motion.article>
+                ))}
+              </AnimatePresence>
+            </div>
+          </>
         )}
-      </motion.div>
-      {!loading && filteredNews.length > visibleNews && (
-        <div className="text-center mt-6">
+      </div>
+      {filteredNews.length > visibleNews && (
+        <div className="mt-20 flex justify-center border-t border-black pt-8">
           <button
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
-            onClick={loadMoreNews}
+            onClick={() => setVisibleNews((prev) => prev + 6)}
+            className="group flex items-center gap-4 text-xs font-black uppercase tracking-[0.5em] hover:text-[#007398] transition-all"
           >
-            Ver más
+            Cargar más registros
+            <span className="group-hover:translate-x-2 transition-transform">→</span>
           </button>
         </div>
       )}
