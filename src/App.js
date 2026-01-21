@@ -1,3 +1,4 @@
+// App.js
 import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 import { auth } from './firebase';
@@ -12,7 +13,7 @@ import { useLanguage } from './hooks/useLanguage';
 import Header from './components/Header';
 import SearchAndFilters from './components/SearchAndFilters';
 import ArticleCard from './components/ArticleCard';
-import VolumeCard from './components/VolumeCard';  // Nuevo import
+import VolumeCard from './components/VolumeCard';
 import Tabs from './components/Tabs';
 import SubmitSection from './components/SubmitSection';
 import AdminSection from './components/AdminSection';
@@ -26,10 +27,12 @@ import PortalSection from './components/PortalSection';
 import NewsSection from './components/NewsSection';
 import './index.css';
 import { motion, AnimatePresence } from 'framer-motion';
+
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 const ARTICLES_JSON = '/articles.json';
-const VOLUMES_JSON = '/volumes.json';  // Nuevo JSON para volúmenes
+const VOLUMES_JSON = '/volumes.json';
 const isPrerendering = typeof navigator !== 'undefined' && navigator.userAgent.includes('ReactSnap');
+
 function App() {
   const { cleanPath } = useLanguage();
   const [articles, setArticles] = useState([]);
@@ -37,11 +40,11 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedArea, setSelectedArea] = useState('');
   const [areas, setAreas] = useState([]);
-  const [volumes, setVolumes] = useState([]);  // Nuevo estado para volúmenes
-  const [filteredVolumes, setFilteredVolumes] = useState([]);  // Nuevo
-  const [volumeSearchTerm, setVolumeSearchTerm] = useState('');  // Separado
-  const [selectedVolumeArea, setSelectedVolumeArea] = useState('');  // Separado
-  const [volumeAreas, setVolumeAreas] = useState([]);  // Áreas de volúmenes
+  const [volumes, setVolumes] = useState([]);
+  const [filteredVolumes, setFilteredVolumes] = useState([]);
+  const [volumeSearchTerm, setVolumeSearchTerm] = useState('');
+  const [selectedVolumeArea, setSelectedVolumeArea] = useState('');
+  const [volumeAreas, setVolumeAreas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [visibleArticles, setVisibleArticles] = useState(6);
   const [user, setUser] = useState(null);
@@ -49,6 +52,7 @@ function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
+
   const fetchUserData = async (email) => {
     try {
       const response = await fetch(USERS_CSV, { cache: 'no-store' });
@@ -75,6 +79,7 @@ function App() {
       return { name: email, role: 'Usuario', image: '' };
     }
   };
+
   useEffect(() => {
     if (isPrerendering) {
       setAuthLoading(false);
@@ -117,6 +122,7 @@ function App() {
         setAuthLoading(false);
       });
   }, []);
+
   useEffect(() => {
     const fetchArticles = async () => {
       try {
@@ -143,7 +149,7 @@ function App() {
     };
     fetchArticles();
   }, []);
-  // Nuevo useEffect para volúmenes
+
   useEffect(() => {
     const fetchVolumes = async () => {
       try {
@@ -168,12 +174,14 @@ function App() {
     };
     fetchVolumes();
   }, []);
+
   const safeString = (val) => {
     if (val == null) return '';
     if (typeof val === 'string') return val;
     if (Array.isArray(val)) return val.join(', ');
     return String(val);
   };
+
   useEffect(() => {
     const lowerTerm = searchTerm.toLowerCase();
     const filtered = articles.filter((article) => {
@@ -182,7 +190,9 @@ function App() {
         safeString(article.autores).toLowerCase().includes(lowerTerm) ||
         safeString(article.resumen).toLowerCase().includes(lowerTerm) ||
         safeString(article.institutions).toLowerCase().includes(lowerTerm) ||
-        safeString(article.palabras_clave).toLowerCase().includes(lowerTerm);
+        safeString(article.palabras_clave).toLowerCase().includes(lowerTerm) ||
+        safeString(article.volumen).toLowerCase().includes(lowerTerm) ||
+        safeString(article.numero).toLowerCase().includes(lowerTerm);
       const matchesArea =
         selectedArea === '' ||
         safeString(article.area)
@@ -195,14 +205,16 @@ function App() {
     setFilteredArticles(filtered);
     setVisibleArticles(6);
   }, [searchTerm, selectedArea, articles]);
-  // Similar for volumes
+
   useEffect(() => {
     const lowerTerm = volumeSearchTerm.toLowerCase();
     const filtered = volumes.filter((volume) => {
       const matchesSearch =
         safeString(volume.titulo).toLowerCase().includes(lowerTerm) ||
         safeString(volume.resumen).toLowerCase().includes(lowerTerm) ||
-        safeString(volume.palabras_clave).toLowerCase().includes(lowerTerm);
+        safeString(volume.palabras_clave).toLowerCase().includes(lowerTerm) ||
+        safeString(volume.volumen).toLowerCase().includes(lowerTerm) ||
+        safeString(volume.numero).toLowerCase().includes(lowerTerm);
       const matchesArea =
         selectedVolumeArea === '' ||
         safeString(volume.area)
@@ -214,6 +226,7 @@ function App() {
     });
     setFilteredVolumes(filtered);
   }, [volumeSearchTerm, selectedVolumeArea, volumes]);
+
   useEffect(() => {
     const path = typeof cleanPath === 'function' ? cleanPath(location.pathname) : location.pathname;
     if (path === '/article' || path === '/' || path === '') {
@@ -228,6 +241,7 @@ function App() {
       setSelectedVolumeArea(area);
     }
   }, [location.pathname, searchParams, cleanPath]);
+
   const handleSearch = (term, area) => {
     const params = new URLSearchParams();
     if (term) params.set('article_search', term);
@@ -236,7 +250,7 @@ function App() {
     setSelectedArea(area);
     setSearchParams(params);
   };
-  // Nuevo handleSearch para volúmenes
+
   const handleVolumeSearch = (term, area) => {
     const params = new URLSearchParams();
     if (term) params.set('volume_search', term);
@@ -245,18 +259,22 @@ function App() {
     setSelectedVolumeArea(area);
     setSearchParams(params);
   };
+
   const clearFilters = () => {
     setSearchTerm('');
     setSelectedArea('');
     setSearchParams(new URLSearchParams());
   };
+
   const clearVolumeFilters = () => {
     setVolumeSearchTerm('');
     setSelectedVolumeArea('');
     setSearchParams(new URLSearchParams());
   };
+
   const loadMoreArticles = () => setVisibleArticles((prev) => prev + 6);
   const showLessArticles = () => setVisibleArticles(6);
+
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -266,6 +284,7 @@ function App() {
       console.error('Error al cerrar sesión:', error);
     }
   };
+
   const sections = [
     {
       name: 'articles',
@@ -286,6 +305,8 @@ function App() {
             areas={areas}
             onSearch={handleSearch}
             clearFilters={clearFilters}
+            placeholder="Buscar artículos..."
+            quickTags={[]}
           />
           <div className="articles mt-8">
             {loading ? (
@@ -349,7 +370,6 @@ function App() {
         </motion.div>
       ),
     },
-    // Nueva sección para Volúmenes
     {
       name: 'volumes',
       label: 'Volúmenes',
@@ -369,12 +389,19 @@ function App() {
             areas={volumeAreas}
             onSearch={handleVolumeSearch}
             clearFilters={clearVolumeFilters}
+            placeholder="Buscar volúmenes..."
+            quickTags={['2024', 'Vol. 1', 'Número 2']}
           />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
             {filteredVolumes.length === 0 ? (
-              <p className="text-center text-base text-gray-600 col-span-full">
-                No hay volúmenes disponibles aún.
-              </p>
+              <div className="bg-white border border-gray-200 p-12 text-center rounded-sm col-span-full">
+                <p className="text-lg text-gray-600 font-serif italic">
+                  "No se han encontrado volúmenes para los criterios seleccionados."
+                </p>
+                <p className="mt-2 text-sm text-[#007398] font-bold uppercase tracking-wider">
+                  ¡Explora otras áreas!
+                </p>
+              </div>
             ) : (
               filteredVolumes.map((volume, index) => (
                 <motion.div
@@ -462,15 +489,18 @@ function App() {
       ),
     },
   ];
+
   if (authLoading) {
     return <div className="text-center text-gray-600">Cargando autenticación...</div>;
   }
+
   const isLoginActive = location.pathname.includes('login');
   const framerItem = (delay) => ({
     initial: { opacity: 0, x: -20 },
     animate: { opacity: 1, x: 0 },
     transition: { delay: 0.1 * delay, duration: 0.3 }
   });
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header onOpenMenu={() => setIsMenuOpen(true)} />
@@ -544,4 +574,5 @@ function App() {
     </div>
   );
 }
+
 export default App;
