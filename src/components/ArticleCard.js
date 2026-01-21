@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Helper functions
 const getYear = (date) => {
@@ -69,17 +69,13 @@ function ArticleCard({ article }) {
   console.log('Objeto article recibido:', article);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showCitations, setShowCitations] = useState(false);
-  const [showFullAbstract, setShowFullAbstract] = useState(false);
   const [showEnglishAbstract, setShowEnglishAbstract] = useState(false);
-  const [copiedChicago, setCopiedChicago] = useState(false);
-  const [copiedApa, setCopiedApa] = useState(false);
-  const [copiedMla, setCopiedMla] = useState(false);
+  const [copiedFormat, setCopiedFormat] = useState(null);
 
   const journal = 'Revista Nacional de las Ciencias para Estudiantes';
+  const articleSlug = `${generateSlug(article?.titulo || '')}-${article?.numeroArticulo || ''}`;
   const pdfUrl = article?.pdf || null;
-  const htmlUrl = article?.numeroArticulo
-    ? `https://www.revistacienciasestudiantes.com/articles/article-${generateSlug(article.titulo)}-${article.numeroArticulo}.html`
-    : null;
+  const htmlUrl = `/articles/article-${articleSlug}.html`;
   const pages = `${article?.primeraPagina || ''}-${article?.ultimaPagina || ''}`.trim() || '';
 
   const handleAuthorClick = (authorName) => {
@@ -89,25 +85,6 @@ function ArticleCard({ article }) {
   };
 
   /* --------------------------- CITAS COMPLETAS ---------------------------- */
-  const getChicagoCitation = () => {
-    const authorsRaw = article?.autores || '';
-    const authors = authorsRaw.split(';').map(a => a.trim()).filter(a => a);
-    const title = article?.titulo || 'Sin título';
-    const volume = article?.volumen || '';
-    const number = article?.numero || '';
-    const year = getYear(article?.fecha);
-    return (
-      <>
-        {chicagoAuthors(authors)}. “{title}.” <em>{journal}</em> {volume}, no. {number} ({year}): {pages}.{' '}
-        {pdfUrl && (
-          <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="text-[#007398] underline break-words">
-            {pdfUrl}
-          </a>
-        )}
-      </>
-    );
-  };
-
   const getChicagoText = () => {
     const authorsRaw = article?.autores || '';
     const authors = authorsRaw.split(';').map(a => a.trim()).filter(a => a);
@@ -115,36 +92,7 @@ function ArticleCard({ article }) {
     const volume = article?.volumen || '';
     const number = article?.numero || '';
     const year = getYear(article?.fecha);
-    return `${chicagoAuthors(authors)}. “${title}.” ${journal} ${volume}, no. ${number} (${year}): ${pages}. ${pdfUrl || ''}`;
-  };
-
-  const getChicagoHtml = () => {
-    const authorsRaw = article?.autores || '';
-    const authors = authorsRaw.split(';').map(a => a.trim()).filter(a => a);
-    const title = article?.titulo || 'Sin título';
-    const volume = article?.volumen || '';
-    const number = article?.numero || '';
-    const year = getYear(article?.fecha);
-    return `${chicagoAuthors(authors)}. &ldquo;${title}.&rdquo; <em>${journal}</em> ${volume}, no. ${number} (${year}): ${pages}. ${pdfUrl ? `<a href="${pdfUrl}">${pdfUrl}</a>` : ''}`;
-  };
-
-  const getApaCitation = () => {
-    const authorsRaw = article?.autores || '';
-    const authors = authorsRaw.split(';').map(a => a.trim()).filter(a => a);
-    const title = article?.titulo || 'Sin título';
-    const volume = article?.volumen || '';
-    const number = article?.numero || '';
-    const year = getYear(article?.fecha);
-    return (
-      <>
-        {apaAuthors(authors)} ({year}). {title}. <em>{journal}</em>, {volume}({number}), {pages}.{' '}
-        {pdfUrl && (
-          <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="text-[#007398] underline break-words">
-            {pdfUrl}
-          </a>
-        )}
-      </>
-    );
+    return `${chicagoAuthors(authors)}. "${title}." ${journal} ${volume}, no. ${number} (${year}): ${pages}.`;
   };
 
   const getApaText = () => {
@@ -154,36 +102,7 @@ function ArticleCard({ article }) {
     const volume = article?.volumen || '';
     const number = article?.numero || '';
     const year = getYear(article?.fecha);
-    return `${apaAuthors(authors)} (${year}). ${title}. ${journal}, ${volume}(${number}), ${pages}. ${pdfUrl || ''}`;
-  };
-
-  const getApaHtml = () => {
-    const authorsRaw = article?.autores || '';
-    const authors = authorsRaw.split(';').map(a => a.trim()).filter(a => a);
-    const title = article?.titulo || 'Sin título';
-    const volume = article?.volumen || '';
-    const number = article?.numero || '';
-    const year = getYear(article?.fecha);
-    return `${apaAuthors(authors)} (${year}). ${title}. <em>${journal}</em>, ${volume}(${number}), ${pages}. ${pdfUrl ? `<a href="${pdfUrl}">${pdfUrl}</a>` : ''}`;
-  };
-
-  const getMlaCitation = () => {
-    const authorsRaw = article?.autores || '';
-    const authors = authorsRaw.split(';').map(a => a.trim()).filter(a => a);
-    const title = article?.titulo || 'Sin título';
-    const volume = article?.volumen || '';
-    const number = article?.numero || '';
-    const year = getYear(article?.fecha);
-    return (
-      <>
-        {mlaAuthors(authors)}. “{title}.” <em>{journal}</em>, vol. {volume}, no. {number}, {year}, pp. {pages}.{' '}
-        {pdfUrl && (
-          <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="text-[#007398] underline break-words">
-            {pdfUrl}
-          </a>
-        )}
-      </>
-    );
+    return `${apaAuthors(authors)} (${year}). ${title}. ${journal}, ${volume}(${number}), ${pages}.`;
   };
 
   const getMlaText = () => {
@@ -193,71 +112,17 @@ function ArticleCard({ article }) {
     const volume = article?.volumen || '';
     const number = article?.numero || '';
     const year = getYear(article?.fecha);
-    return `${mlaAuthors(authors)}. “${title}.” ${journal}, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}. ${pdfUrl || ''}`;
-  };
-
-  const getMlaHtml = () => {
-    const authorsRaw = article?.autores || '';
-    const authors = authorsRaw.split(';').map(a => a.trim()).filter(a => a);
-    const title = article?.titulo || 'Sin título';
-    const volume = article?.volumen || '';
-    const number = article?.numero || '';
-    const year = getYear(article?.fecha);
-    return `${mlaAuthors(authors)}. &ldquo;${title}.&rdquo; <em>${journal}</em>, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}. ${pdfUrl ? `<a href="${pdfUrl}">${pdfUrl}</a>` : ''}`;
+    return `${mlaAuthors(authors)}. "${title}." ${journal}, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}.`;
   };
   /* ----------------------------------------------------------------------- */
 
-  const copyChicago = async (e) => {
-    e.stopPropagation();
-    const html = getChicagoHtml();
-    const plain = getChicagoText();
+  const copyToClipboard = async (text, format) => {
     try {
-      await navigator.clipboard.write([
-        new ClipboardItem({
-          'text/html': new Blob([html], { type: 'text/html' }),
-          'text/plain': new Blob([plain], { type: 'text/plain' }),
-        }),
-      ]);
-      setCopiedChicago(true);
-      setTimeout(() => setCopiedChicago(false), 2000);
+      await navigator.clipboard.writeText(text);
+      setCopiedFormat(format);
+      setTimeout(() => setCopiedFormat(null), 2000);
     } catch (err) {
-      console.error('Failed to copy: ', err);
-    }
-  };
-
-  const copyApa = async (e) => {
-    e.stopPropagation();
-    const html = getApaHtml();
-    const plain = getApaText();
-    try {
-      await navigator.clipboard.write([
-        new ClipboardItem({
-          'text/html': new Blob([html], { type: 'text/html' }),
-          'text/plain': new Blob([plain], { type: 'text/plain' }),
-        }),
-      ]);
-      setCopiedApa(true);
-      setTimeout(() => setCopiedApa(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy: ', err);
-    }
-  };
-
-  const copyMla = async (e) => {
-    e.stopPropagation();
-    const html = getMlaHtml();
-    const plain = getMlaText();
-    try {
-      await navigator.clipboard.write([
-        new ClipboardItem({
-          'text/html': new Blob([html], { type: 'text/html' }),
-          'text/plain': new Blob([plain], { type: 'text/plain' }),
-        }),
-      ]);
-      setCopiedMla(true);
-      setTimeout(() => setCopiedMla(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy: ', err);
+      console.error('Error al copiar: ', err);
     }
   };
 
@@ -272,228 +137,200 @@ function ArticleCard({ article }) {
   if (!article || Object.keys(article).length === 0) {
     return (
       <motion.div
-        className="group relative bg-white border border-[#e4e4e4] rounded-xl p-6 mb-6 hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300"
-        whileHover={{ y: -4 }}
+        className="group relative bg-white border border-gray-200 rounded-sm p-6 mb-6 hover:shadow-md transition-all duration-300"
+        layout
       >
-        <p className="text-center text-[#666666] font-medium">No se encontraron datos para este artículo.</p>
+        <p className="text-center text-gray-500 font-medium">No se encontraron datos para este artículo.</p>
       </motion.div>
     );
   }
 
+  const authorsArray = (article?.autores || '').split(';').map(a => a.trim()).filter(a => a);
+
   /* --------------------------- RENDER PRINCIPAL --------------------------- */
   return (
     <motion.div
-      className="group relative bg-white border border-[#e4e4e4] rounded-xl p-6 mb-6 hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300"
-      whileHover={{ y: -4 }}
+      className="group relative bg-white border border-gray-200 rounded-sm p-6 mb-6 hover:shadow-md transition-all duration-300"
+      layout
       onClick={toggleExpand}
       role="button"
       tabIndex={0}
       aria-expanded={isExpanded}
       aria-label={`Expandir artículo: ${article.titulo || 'Sin título'}`}
     >
-      {/* Indicador lateral de color primary-blue */}
-      <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#007398] rounded-l-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-      <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+      {/* Indicador lateral Azul (estilo académico) */}
+      <div className={`absolute left-0 top-0 bottom-0 w-1 transition-colors ${isExpanded ? 'bg-[#007398]' : 'bg-gray-200 group-hover:bg-[#007398]'}`} />
+      <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-6">
         <div className="flex-1">
           {/* Metadatos superiores */}
-          <div className="flex flex-wrap items-center gap-3 mb-3 text-[11px] font-bold uppercase tracking-wider text-[#666666]">
-            <span className="text-[#007398] bg-[#007398]/5 px-2 py-0.5 rounded">
-              {article.area}
-            </span>
+          <div className="flex flex-wrap items-center gap-3 mb-3 text-[10px] font-bold uppercase tracking-widest text-gray-500">
+            <span className="text-[#007398]">{article.area}</span>
             <span>•</span>
-            <span>{parseDateFlexible(article.fecha)}</span>
+            <span>VOL. {article.volumen}</span>
+            <span>•</span>
+            <span>NO. {article.numero}</span>
           </div>
-          {/* Título */}
-          <h3 className="text-xl md:text-2xl font-serif font-semibold text-[#333333] group-hover:text-[#007398] transition-colors mb-2">
+          {/* Título - Usando Serif como en el HTML */}
+          <h3
+            className="text-xl md:text-2xl font-serif font-bold text-black leading-tight mb-3 cursor-pointer hover:text-[#007398] transition-colors"
+          >
             {article.titulo}
           </h3>
-          {/* Autores con estilo de link sutil */}
-          <p className="text-sm text-[#007398] mb-4 font-medium">
-            {article.autores.split(';').map((auth, i) => (
+          {/* Autores */}
+          <div className="flex flex-wrap gap-x-2 text-sm mb-4">
+            {authorsArray.map((auth, i) => (
               <span
                 key={i}
-                className="hover:text-[#005a77] cursor-pointer transition-colors"
-                onClick={(e) => { e.stopPropagation(); handleAuthorClick(auth.trim()); }}
+                onClick={(e) => { e.stopPropagation(); handleAuthorClick(auth); }}
+                className="text-[#007398] hover:underline cursor-pointer font-medium"
               >
-                {auth.trim()}{i < article.autores.split(';').length - 1 ? ', ' : ''}
+                {auth}{i < authorsArray.length - 1 ? ',' : ''}
               </span>
             ))}
-          </p>
-        </div>
-        {/* Botones de acción compactos laterales */}
-        <div className="flex md:flex-col gap-2">
-          <button
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-[#007398] text-white text-xs font-bold rounded-lg hover:bg-[#005a77] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            onClick={(e) => { e.stopPropagation(); if (pdfUrl) window.open(pdfUrl, '_blank'); }}
-            disabled={!pdfUrl}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-            PDF
-          </button>
-          <button
-            className="px-4 py-2 border border-[#007398] text-[#007398] text-xs font-bold rounded-lg hover:bg-[#f0f7f9] transition-all"
-            onClick={(e) => { e.stopPropagation(); setShowCitations(!showCitations); }}
-          >
-            Citar
-          </button>
-        </div>
-      </div>
-      {/* Resumen colapsable con fondo suave */}
-      <div className="mt-4 pt-4 border-t border-[#e4e4e4]">
-        <p className="text-sm text-[#666666] leading-relaxed line-clamp-2">
-          {article.resumen}
-        </p>
-        <button
-          className="mt-2 text-[#007398] text-xs font-bold hover:underline"
-          onClick={(e) => { e.stopPropagation(); setShowFullAbstract(!showFullAbstract); }}
-        >
-          Leer abstract completo →
-        </button>
-      </div>
-      {isExpanded && (
-        <div className="mt-4 space-y-4 animate-fade-in">
-          {/* Fecha */}
-          <p className="text-sm text-[#333333]">
-            <strong className="font-medium">Fecha:</strong> {parseDateFlexible(article.fecha)}
-          </p>
-          {/* Áreas */}
-          {article.area ? (
-            <div className="text-sm text-[#333333]">
-              <strong className="font-medium">Áreas:</strong>{' '}
-              <div className="flex flex-wrap gap-2 mt-1">
-                {article.area.split(';').map((area, idx) => (
-                  <span
-                    key={idx}
-                    className="text-[#007398] text-xs font-medium px-3 py-1"
-                  >
-                    {area.trim()}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-[#333333]">
-              <strong className="font-medium">Área:</strong> No especificada
-            </p>
-          )}
-          {/* Palabras clave */}
-          <p className="text-sm text-[#333333]">
-            <strong className="font-medium">Palabras Clave:</strong>
-          </p>
-          {article.palabras_clave && article.palabras_clave.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {article.palabras_clave.map((kw, idx) => (
-                <span
-                  key={idx}
-                  className="text-[#007398] text-xs font-medium px-3 py-1"
-                >
-                  {kw}
-                </span>
-              ))}
-            </div>
-          )}
-          {/* Resumen */}
-          <p className="text-sm text-[#333333]">
-            <strong className="font-medium">Resumen: </strong>
-            {article.resumen ? (
-              <>
-                {showFullAbstract ? article.resumen : `${article.resumen.slice(0, 200)}...`}
-                {article.resumen.length > 200 && (
-                  <button
-                    className="ml-2 text-[#007398] hover:text-[#005a77] underline text-xs"
-                    onClick={(e) => { e.stopPropagation(); setShowFullAbstract(!showFullAbstract); }}
-                  >
-                    {showFullAbstract ? 'Leer menos' : 'Leer más'}
-                  </button>
-                )}
-              </>
-            ) : (
-              'Resumen no disponible'
-            )}
-          </p>
-          {/* Abstract inglés */}
-          <div>
-            <button
-              className="text-[#007398] hover:text-[#005a77] underline text-xs"
-              onClick={(e) => { e.stopPropagation(); setShowEnglishAbstract(!showEnglishAbstract); }}
-            >
-              {showEnglishAbstract ? 'Ocultar abstract en inglés' : 'Ver abstract en inglés'}
-            </button>
-            {showEnglishAbstract && (
-              <p className="text-sm text-[#333333] mt-2 bg-white p-3 rounded-lg shadow-inner">
-                {article.englishAbstract || 'Abstract no disponible'}
-              </p>
-            )}
           </div>
-          {/* Botones PDF / HTML */}
-          <div className="flex flex-wrap gap-3">
-            {pdfUrl && (
-              <>
+          {/* Abstract corto (siempre visible) */}
+          <p className="text-sm text-gray-600 leading-relaxed line-clamp-2 mb-4 italic">
+            {article.resumen}
+          </p>
+        </div>
+        {/* Botones de acción principales */}
+        <div className="flex md:flex-col gap-2 min-w-[120px]">
+          {pdfUrl ? (
+  <a
+    href={pdfUrl}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="flex items-center justify-center gap-2 px-4 py-2 bg-[#007398] text-white text-xs font-bold rounded-sm hover:bg-[#005a77] transition-all"
+    onClick={(e) => e.stopPropagation()}
+  >
+    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+    </svg>
+    PDF
+  </a>
+) : (
+  <div className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-300 text-gray-600 text-xs font-bold rounded-sm cursor-not-allowed">
+    PDF no disponible
+  </div>
+)}
+
+          <button
+            onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }}
+            className="px-4 py-2 border border-[#007398] text-[#007398] text-xs font-bold rounded-sm hover:bg-gray-50 transition-all"
+          >
+            {isExpanded ? 'CERRAR' : 'DETALLES'}
+          </button>
+        </div>
+      </div>
+      {/* Contenido Expandible */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="mt-6 pt-6 border-t border-gray-100 space-y-6">
+              {/* Información General */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-[#333]">
+                <div>
+                  <p className="mb-1"><strong className="text-gray-900">Publicado:</strong> {parseDateFlexible(article.fecha)}</p>
+                  <p><strong className="text-gray-900">Páginas:</strong> {pages}</p>
+                </div>
+                <div>
+                  {/* Palabras Clave - Ahora elegantes en azul oscuro/gris */}
+                  <strong className="text-gray-900 block mb-2">Palabras Clave:</strong>
+                  <div className="flex flex-wrap gap-2">
+                    {article.palabras_clave?.map((kw, idx) => (
+                      <span key={idx} className="bg-gray-100 text-[#333] border border-gray-200 text-[11px] px-2 py-0.5 rounded-sm">
+                        {kw}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              {/* Abstracts */}
+              <div className="space-y-4">
+                <div className="bg-gray-50 p-4 rounded-sm">
+                  <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-2">Resumen Completo</h4>
+                  <p className="text-sm text-[#333] leading-relaxed text-justify font-serif">{article.resumen || 'Resumen no disponible'}</p>
+                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowEnglishAbstract(!showEnglishAbstract); }}
+                  className="text-[#007398] text-xs font-bold hover:underline"
+                >
+                  {showEnglishAbstract ? '↓ OCULTAR ABSTRACT (EN)' : '→ VER ABSTRACT (ENGLISH)'}
+                </button>
+                {showEnglishAbstract && (
+                  <div className="bg-[#f0f7f9] p-4 rounded-sm border-l-2 border-[#007398]">
+                    <p className="text-sm text-[#333] italic leading-relaxed font-serif">{article.englishAbstract || 'No English abstract available.'}</p>
+                  </div>
+                )}
+              </div>
+              {/* Footer de la Card con Citas */}
+              <div className="flex flex-wrap gap-3 pt-4">
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowCitations(!showCitations); }}
+                  className="text-xs font-bold text-gray-500 hover:text-black flex items-center gap-1"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+                  CITAR ARTÍCULO
+                </button>
                 <a
-                  href={pdfUrl}
+                  href={htmlUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-4 py-2 bg-[#007398] text-white rounded-md hover:bg-[#005a77] text-sm shadow"
+                  className="text-xs font-bold text-[#007398] hover:underline flex items-center gap-1"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  Abrir PDF
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                  VER PÁGINA COMPLETA
                 </a>
-                <a
-                  href={pdfUrl}
-                  download
-                  className="px-4 py-2 border border-[#007398] text-[#007398] rounded-md hover:bg-[#f0f7f9] text-sm shadow"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  Descargar PDF
-                </a>
-              </>
-            )}
-            {htmlUrl && (
-              <a
-                href={htmlUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-4 py-2 bg-[#007398] text-white rounded-md hover:bg-[#005a77] text-sm shadow"
-                onClick={(e) => e.stopPropagation()}
-              >
-                Abrir página completa
-              </a>
-            )}
-          </div>
-          {/* Citas */}
-          {showCitations && (
-            <div className="text-[#333333] text-sm space-y-4 bg-[#f4f4f4] p-4 rounded-lg shadow-inner break-words border-l-4 border-[#007398]">
-              <div className="flex justify-between items-start">
-                <p><strong>Chicago:</strong> {getChicagoCitation()}</p>
-                <button
-                  className="ml-4 px-3 py-1 bg-[#e4e4e4] text-[#333333] rounded-md hover:bg-[#cccccc] text-xs shadow"
-                  onClick={copyChicago}
-                >
-                  {copiedChicago ? '¡Copiado!' : 'Copiar'}
-                </button>
               </div>
-              <div className="flex justify-between items-start">
-                <p><strong>APA:</strong> {getApaCitation()}</p>
-                <button
-                  className="ml-4 px-3 py-1 bg-[#e4e4e4] text-[#333333] rounded-md hover:bg-[#cccccc] text-xs shadow"
-                  onClick={copyApa}
-                >
-                  {copiedApa ? '¡Copiado!' : 'Copiar'}
-                </button>
-              </div>
-              <div className="flex justify-between items-start">
-                <p><strong>MLA:</strong> {getMlaCitation()}</p>
-                <button
-                  className="ml-4 px-3 py-1 bg-[#e4e4e4] text-[#333333] rounded-md hover:bg-[#cccccc] text-xs shadow"
-                  onClick={copyMla}
-                >
-                  {copiedMla ? '¡Copiado!' : 'Copiar'}
-                </button>
-              </div>
+              {/* Sección de Citas Estilo Académico */}
+              {showCitations && (
+                <div className="bg-gray-50 border border-gray-200 p-4 text-[12px] space-y-3">
+                  <div className="flex justify-between items-start gap-4">
+                    <p className="leading-relaxed">
+                      <strong>APA:</strong> {getApaText()}
+                    </p>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); copyToClipboard(getApaText(), 'APA'); }}
+                      className="text-[#007398] font-bold"
+                    >
+                      {copiedFormat === 'APA' ? 'COPIADO' : 'COPIAR'}
+                    </button>
+                  </div>
+                  <div className="flex justify-between items-start gap-4">
+                    <p className="leading-relaxed">
+                      <strong>MLA:</strong> {getMlaText()}
+                    </p>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); copyToClipboard(getMlaText(), 'MLA'); }}
+                      className="text-[#007398] font-bold"
+                    >
+                      {copiedFormat === 'MLA' ? 'COPIADO' : 'COPIAR'}
+                    </button>
+                  </div>
+                  <div className="flex justify-between items-start gap-4">
+                    <p className="leading-relaxed">
+                      <strong>Chicago:</strong> {getChicagoText()}
+                    </p>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); copyToClipboard(getChicagoText(), 'Chicago'); }}
+                      className="text-[#007398] font-bold"
+                    >
+                      {copiedFormat === 'Chicago' ? 'COPIADO' : 'COPIAR'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
