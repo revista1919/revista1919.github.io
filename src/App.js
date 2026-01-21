@@ -205,6 +205,7 @@ const normalizeNumberSearch = (term) => {
       // volumen / número normal
       safeString(article.volumen).toLowerCase().includes(lowerTerm) ||
       safeString(article.numero).toLowerCase().includes(lowerTerm) ||
+safeString(article.fecha).toLowerCase().includes(lowerTerm) ||
 
       // volumen / número inteligente
       safeString(article.volumen).includes(numericTerm) ||
@@ -228,13 +229,18 @@ const normalizeNumberSearch = (term) => {
 
   useEffect(() => {
     const lowerTerm = volumeSearchTerm.toLowerCase();
+const numericTerm = normalizeNumberSearch(volumeSearchTerm);
+
     const filtered = volumes.filter((volume) => {
       const matchesSearch =
-        safeString(volume.titulo).toLowerCase().includes(lowerTerm) ||
-        safeString(volume.resumen).toLowerCase().includes(lowerTerm) ||
-        safeString(volume.palabras_clave).toLowerCase().includes(lowerTerm) ||
-        safeString(volume.volumen).toLowerCase().includes(lowerTerm) ||
-        safeString(volume.numero).toLowerCase().includes(lowerTerm);
+  safeString(volume.titulo).toLowerCase().includes(lowerTerm) ||
+  safeString(volume.resumen).toLowerCase().includes(lowerTerm) ||
+  safeString(volume.palabras_clave).toLowerCase().includes(lowerTerm) ||
+  safeString(volume.volumen).toLowerCase().includes(lowerTerm) ||
+  safeString(volume.numero).toLowerCase().includes(lowerTerm) ||
+  safeString(volume.volumen).includes(numericTerm) ||
+  safeString(volume.numero).includes(numericTerm);
+
       const matchesArea =
         selectedVolumeArea === '' ||
         safeString(volume.area)

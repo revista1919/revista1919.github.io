@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Papa from 'papaparse';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+
 function TeamSection({ setActiveTab }) {
   const [mainData, setMainData] = useState([]);
   const [asesoresData, setAsesoresData] = useState([]);
@@ -11,7 +12,7 @@ function TeamSection({ setActiveTab }) {
   const [showAll, setShowAll] = useState(false);
   const csvUrl =
     'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
-  // Cargar datos del CSV
+
   useEffect(() => {
     setIsLoading(true);
     setCsvError(null);
@@ -20,7 +21,6 @@ function TeamSection({ setActiveTab }) {
       header: true,
       skipEmptyLines: true,
       complete: (result) => {
-        // Filtrar aquí: excluir si el único rol es "Autor"
         const allData = (result.data || []).filter((data) => {
           const memberRoles = (data['Rol en la Revista'] || '')
             .split(';')
@@ -28,7 +28,6 @@ function TeamSection({ setActiveTab }) {
             .filter((role) => role);
           return !(memberRoles.length === 1 && memberRoles[0] === 'Autor');
         });
-        // Separar datos especiales
         const asesores = allData.filter((data) => {
           const roles = (data['Rol en la Revista'] || '').split(';').map((r) => r.trim());
           return roles.includes('Asesor Académico');
@@ -56,7 +55,7 @@ function TeamSection({ setActiveTab }) {
       },
     });
   }, []);
-  // Extraer roles únicos (sin "Autor" ni roles especiales)
+
   const roles = useMemo(() => {
     const allRoles = mainData.flatMap((data) => {
       const rolesString = data['Rol en la Revista'] || 'No especificado';
@@ -65,7 +64,7 @@ function TeamSection({ setActiveTab }) {
     const uniqueRoles = [...new Set(allRoles)];
     return ['Todos', ...uniqueRoles.sort()];
   }, [mainData]);
-  // Filtrar miembros por rol (solo main)
+
   const filteredMembers = useMemo(() => {
     if (selectedRole === 'Todos') return mainData;
     return mainData.filter((data) => {
@@ -75,9 +74,9 @@ function TeamSection({ setActiveTab }) {
       return memberRoles.includes(selectedRole);
     });
   }, [mainData, selectedRole]);
-  // Miembros a mostrar en main (con límite)
+
   const displayedMembers = showAll ? filteredMembers : filteredMembers.slice(0, 15);
-  // Generar slug para el nombre
+
   const generateSlug = (name) => {
     if (!name) return '';
     return name
@@ -87,387 +86,185 @@ function TeamSection({ setActiveTab }) {
       .replace(/\s+/g, '-')
       .replace(/[^a-z0-9-]/g, '');
   };
-  // Manejar clic en un miembro: redirigir a página HTML
+
   const handleMemberClick = (memberName) => {
     if (!memberName) return;
     const slug = generateSlug(memberName);
     window.location.href = `/team/${slug}.html`;
   };
-  // Función para renderizar roles como badges épicos
-  const renderRoles = (rolesString) => {
-    if (!rolesString) return React.createElement('span', { className: 'text-gray-600 text-sm sm:text-base' }, 'No especificado');
-    const roles = rolesString
-      .split(';')
-      .map((role) => role.trim())
-      .filter((role) => role && role !== 'Autor');
-    if (roles.length === 0) return React.createElement('span', { className: 'text-gray-600 text-sm sm:text-base' }, 'No especificado');
-    return roles.map((role) =>
-      React.createElement(
-        'span',
-        {
-          key: role,
-          className: 'bg-blue-100 text-blue-800 text-xs font-medium inline-flex items-center px-2.5 py-0.5 rounded-full mr-2 last:mr-0 shadow-sm hover:bg-blue-200 transition-colors',
-        },
-        role
-      )
-    );
-  };
-  // Variantes para animaciones
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1, duration: 0.5, ease: 'easeOut' },
-    },
-  };
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
-  };
-  const headerVariants = {
-    hidden: { opacity: 0, y: -20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
-  };
-  const loadingVariants = {
-    animate: { opacity: [1, 0.5, 1], transition: { duration: 1.5, repeat: Infinity, ease: 'easeInOut' } },
-  };
-  return React.createElement(
-    motion.div,
-    {
-      className: 'container mx-auto px-4 sm:px-6 py-8 bg-white',
-      initial: { opacity: 0 },
-      animate: { opacity: 1 },
-      transition: { duration: 0.5, ease: 'easeOut' },
-    },
-    // Encabezado
-    React.createElement(
-      motion.h1,
-      {
-        className: 'text-3xl sm:text-4xl font-bold text-gray-800 mb-4 sm:mb-6 text-center',
-        variants: headerVariants,
-        initial: 'hidden',
-        animate: 'visible',
-      },
-      'Nuestro Equipo'
-    ),
-    React.createElement(
-      motion.p,
-      {
-        className: 'text-gray-600 text-sm sm:text-lg mb-6 sm:mb-8 text-center max-w-2xl mx-auto',
-        variants: headerVariants,
-        initial: 'hidden',
-        animate: 'visible',
-      },
-      'Conoce al equipo que impulsa la Revista Nacional de las Ciencias para Estudiantes. Cada miembro aporta su pasión y experiencia para fomentar la divulgación científica y apoyar a los estudiantes en su camino hacia la investigación.'
-    ),
-    // Botones de filtro (solo para main)
-    React.createElement(
-      motion.div,
-      {
-        className: 'flex flex-wrap justify-center gap-2 sm:gap-4 mb-6 sm:mb-8',
-        variants: containerVariants,
-        initial: 'hidden',
-        animate: 'visible',
-      },
-      roles.map((role) =>
-        React.createElement(
-          motion.button,
-          {
-            key: role,
-            className: `px-4 py-2 rounded-full text-sm sm:text-base font-semibold transition-colors ${
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 py-16 bg-white min-h-screen">
+      {/* Header Estilo Journal */}
+      <header className="text-center mb-16">
+        <motion.span
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          className="text-[10px] uppercase tracking-[0.4em] font-bold text-[#007398] mb-4 block"
+        >
+          Estructura Organizacional
+        </motion.span>
+        <motion.h1
+          initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+          className="text-4xl sm:text-5xl font-serif text-gray-900 mb-6"
+        >
+          Cuerpo Editorial y Académico
+        </motion.h1>
+        <div className="w-24 h-1 bg-gray-200 mx-auto mb-6"></div>
+        <p className="text-gray-500 max-w-2xl mx-auto leading-relaxed italic font-serif">
+          "Fomentando la excelencia científica a través de la colaboración académica y el rigor editorial."
+        </p>
+      </header>
+      {/* Selector de Roles - Estilo Minimalista */}
+      <div className="flex flex-wrap justify-center gap-3 mb-12 border-b border-gray-100 pb-8">
+        {roles.map((role) => (
+          <button
+            key={role}
+            onClick={() => setSelectedRole(role)}
+            className={`px-5 py-2 text-xs uppercase tracking-widest transition-all duration-300 border ${
               selectedRole === role
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-blue-100'
-            } focus:outline-none focus:ring-2 focus:ring-blue-500`,
-            onClick: () => setSelectedRole(role),
-            'aria-label': `Filtrar por rol ${role}`,
-            whileHover: { scale: 1.1 },
-            whileTap: { scale: 0.95 },
-            transition: { type: 'spring', stiffness: 300 },
-            variants: itemVariants,
-          },
-          role
-        )
-      )
-    ),
-    // Lista de miembros main
-    isLoading
-      ? React.createElement(
-          motion.p,
-          {
-            className: 'text-gray-600 text-sm sm:text-lg text-center',
-            variants: loadingVariants,
-            animate: 'animate',
-          },
-          'Cargando...'
-        )
-      : csvError
-      ? React.createElement('p', { className: 'text-red-600 text-sm sm:text-lg text-center' }, csvError)
-      : React.createElement(
-          'div',
-          null,
-          filteredMembers.length === 0
-            ? React.createElement(
-                'p',
-                { className: 'text-gray-600 text-sm sm:text-lg text-center' },
-                'No se encontraron miembros para este rol.'
-              )
-            : React.createElement(
-                'div',
-                null,
-                React.createElement(
-                  motion.div,
-                  {
-                    className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6',
-                    variants: containerVariants,
-                    initial: 'hidden',
-                    animate: 'visible',
-                  },
-                  displayedMembers.map((member) =>
-                    React.createElement(
-                      motion.div,
-                      {
-                        key: member['Nombre'],
-                        className: 'bg-gray-50 p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow flex items-center space-x-4',
-                        variants: itemVariants,
-                        whileHover: { scale: 1.02, boxShadow: '0px 5px 10px rgba(0,0,0,0.1)' },
-                        transition: { duration: 0.3, ease: 'easeOut' },
-                      },
-                      // Imagen circular
-                      member['Imagen']
-                        ? React.createElement(
-                            motion.img,
-                            {
-                              src: member['Imagen'],
-                              alt: `Foto de ${member['Nombre']}`,
-                              className: 'w-12 h-12 rounded-full object-cover',
-                              onError: (e) => {
-                                e.target.style.display = 'none'; // Ocultar imagen si falla
-                              },
-                              initial: { opacity: 0, scale: 0.8 },
-                              animate: { opacity: 1, scale: 1 },
-                              transition: { duration: 0.5 },
-                            }
-                          )
-                        : null,
-                      // Contenedor para nombre y rol
-                      React.createElement(
-                        'div',
-                        null,
-                        React.createElement(
-                          'p',
-                          {
-                            className: 'text-base sm:text-lg font-semibold text-blue-600 cursor-pointer hover:underline',
-                            onClick: () => handleMemberClick(member['Nombre']),
-                            'aria-label': `Ver información de ${member['Nombre']}`,
-                          },
-                          member['Nombre']
-                        ),
-                        React.createElement(
-                          'div',
-                          { className: 'mt-1 flex flex-wrap gap-1' },
-                          renderRoles(member['Rol en la Revista'])
-                        )
-                      )
-                    )
-                  )
-                ),
-                filteredMembers.length > 15 &&
-                  React.createElement(
-                    'div',
-                    { className: 'text-center mt-4' },
-                    React.createElement(
-                      motion.button,
-                      {
-                        className: 'px-4 py-2 rounded-full text-sm sm:text-base font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500',
-                        onClick: () => setShowAll(!showAll),
-                        whileHover: { scale: 1.1 },
-                        whileTap: { scale: 0.95 },
-                        transition: { type: 'spring', stiffness: 300 },
-                      },
-                      showAll ? 'Mostrar menos' : 'Mostrar más'
-                    )
-                  )
-              )
-        ),
-    // Sección de Asesores Académicos (si existen)
-    asesoresData.length > 0 &&
-      React.createElement(
-        motion.div,
-        {
-          className: 'mt-12',
-          initial: { opacity: 0, y: 20 },
-          animate: { opacity: 1, y: 0 },
-          transition: { duration: 0.5, delay: 0.2 },
-        },
-        React.createElement(
-          motion.h2,
-          {
-            className: 'text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-6 text-center',
-            variants: headerVariants,
-            initial: 'hidden',
-            animate: 'visible',
-          },
-          'Nuestro Consejo de Asesoría Académica'
-        ),
-        React.createElement(
-          motion.div,
-          {
-            className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6',
-            variants: containerVariants,
-            initial: 'hidden',
-            animate: 'visible',
-          },
-          asesoresData.map((member) =>
-            React.createElement(
-              motion.div,
-              {
-                key: member['Nombre'],
-                className: 'bg-gray-50 p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow flex items-center space-x-4',
-                variants: itemVariants,
-                whileHover: { scale: 1.02, boxShadow: '0px 5px 10px rgba(0,0,0,0.1)' },
-                transition: { duration: 0.3, ease: 'easeOut' },
-              },
-              // Imagen circular
-              member['Imagen']
-                ? React.createElement(
-                    motion.img,
-                    {
-                      src: member['Imagen'],
-                      alt: `Foto de ${member['Nombre']}`,
-                      className: 'w-12 h-12 rounded-full object-cover',
-                      onError: (e) => {
-                        e.target.style.display = 'none'; // Ocultar imagen si falla
-                      },
-                      initial: { opacity: 0, scale: 0.8 },
-                      animate: { opacity: 1, scale: 1 },
-                      transition: { duration: 0.5 },
-                    }
-                  )
-                : null,
-              // Contenedor para nombre y rol
-              React.createElement(
-                'div',
-                null,
-                React.createElement(
-                  'p',
-                  {
-                    className: 'text-base sm:text-lg font-semibold text-blue-600 cursor-pointer hover:underline',
-                    onClick: () => handleMemberClick(member['Nombre']),
-                    'aria-label': `Ver información de ${member['Nombre']}`,
-                  },
-                  member['Nombre']
-                ),
-                React.createElement(
-                  'div',
-                  { className: 'mt-1 flex flex-wrap gap-1' },
-                  renderRoles(member['Rol en la Revista'])
-                )
-              )
-            )
-          )
-        )
-      ),
-    // Sección de Instituciones Colaboradoras (si existen)
-    institutionsData.length > 0 &&
-      React.createElement(
-        motion.div,
-        {
-          className: 'mt-12',
-          initial: { opacity: 0, y: 20 },
-          animate: { opacity: 1, y: 0 },
-          transition: { duration: 0.5, delay: 0.4 },
-        },
-        React.createElement(
-          motion.h2,
-          {
-            className: 'text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-6 text-center',
-            variants: headerVariants,
-            initial: 'hidden',
-            animate: 'visible',
-          },
-          'Instituciones Colaboradoras'
-        ),
-        React.createElement(
-          motion.div,
-          {
-            className: 'grid grid-cols-1 sm:grid-cols-2 gap-6',
-            variants: containerVariants,
-            initial: 'hidden',
-            animate: 'visible',
-          },
-          institutionsData.map((member) =>
-            React.createElement(
-              motion.div,
-              {
-                key: member['Nombre'],
-                className: 'bg-gray-50 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow flex items-center space-x-6',
-                variants: itemVariants,
-                whileHover: { scale: 1.02, boxShadow: '0px 5px 10px rgba(0,0,0,0.1)' },
-                transition: { duration: 0.3, ease: 'easeOut' },
-              },
-              // Logo más grande
-              member['Imagen']
-                ? React.createElement(
-                    motion.img,
-                    {
-                      src: member['Imagen'],
-                      alt: `Logo de ${member['Nombre']}`,
-                      className: 'w-20 h-20 rounded-full object-contain',
-                      onError: (e) => {
-                        e.target.style.display = 'none'; // Ocultar imagen si falla
-                      },
-                      initial: { opacity: 0, rotate: -10 },
-                      animate: { opacity: 1, rotate: 0 },
-                      transition: { duration: 0.5 },
-                    }
-                  )
-                : null,
-              // Nombre con enlace al sitio web
-              React.createElement(
-                'div',
-                null,
-                React.createElement(
-                  'a',
-                  {
-                    href: member['Correo'],
-                    target: '_blank',
-                    rel: 'noopener noreferrer',
-                    className: 'text-lg sm:text-xl font-semibold text-blue-600 hover:underline',
-                    'aria-label': `Visitar sitio web de ${member['Nombre']}`,
-                  },
-                  member['Nombre']
-                )
-              )
-            )
-          )
-        )
-      ),
-    // Mensaje de postulación
-    React.createElement(
-      motion.div,
-      {
-        className: 'mt-8 sm:mt-12 text-center',
-        initial: { opacity: 0, y: 20 },
-        animate: { opacity: 1, y: 0 },
-        transition: { duration: 0.5, delay: 0.6 },
-      },
-      React.createElement(
-        'p',
-        { className: 'text-gray-600 text-sm sm:text-lg mb-4 sm:mb-6' },
-        'Nuestro equipo está en constante crecimiento, y tú puedes ser parte de él. Si compartes nuestra pasión por la ciencia y la educación, te invitamos a unirte. Envía tu candidatura a través de la pestaña ',
-        React.createElement(
-          'a',
-          {
-            className: 'text-blue-600 hover:underline font-semibold',
-            href: 'https://www.revistacienciasestudiantes.com/es/admin',
-            'aria-label': 'Ir a la pestaña de Postula a algún cargo para postular',
-          },
-          '¡Postula a algún cargo!'
-        ),
-        '.'
-      )
-    )
+                ? 'bg-gray-900 text-white border-gray-900'
+                : 'text-gray-500 border-gray-200 hover:border-gray-400'
+            }`}
+          >
+            {role}
+          </button>
+        ))}
+      </div>
+      {/* Grid de Miembros Operativos */}
+      {isLoading ? (
+        <div className="text-center py-20 font-serif italic text-gray-400 animate-pulse">Cargando Directorio...</div>
+      ) : csvError ? (
+        <p className="text-red-600 text-sm sm:text-lg text-center">{csvError}</p>
+      ) : filteredMembers.length === 0 ? (
+        <p className="text-gray-600 text-sm sm:text-lg text-center">No se encontraron miembros para este rol.</p>
+      ) : (
+        <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <AnimatePresence>
+            {displayedMembers.map((member) => (
+              <motion.div
+                layout
+                key={member['Nombre']}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="group p-6 border border-gray-100 hover:border-[#007398]/30 hover:shadow-2xl hover:shadow-gray-200/50 transition-all duration-500 bg-white relative overflow-hidden"
+              >
+                <div className="flex items-center space-x-5">
+                  <div className="relative">
+                    {member['Imagen'] && (
+                      <div className="w-20 h-20 overflow-hidden border border-gray-100 p-1 group-hover:border-[#007398] transition-colors duration-500">
+                        <img
+                          src={member['Imagen']}
+                          alt={member['Nombre']}
+                          className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <h3
+                      onClick={() => handleMemberClick(member['Nombre'])}
+                      className="text-lg font-serif text-gray-900 group-hover:text-[#007398] cursor-pointer transition-colors"
+                    >
+                      {member['Nombre']}
+                    </h3>
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {(member['Rol en la Revista'] || '').split(';').map((role) => role.trim()).filter((role) => role && role !== 'Autor').map((role) => (
+                        <span key={role} className="text-[9px] uppercase tracking-tighter bg-gray-50 text-gray-500 px-2 py-0.5 border border-gray-100 italic">
+                          {role}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </motion.div>
+      )}
+      {/* Ver más */}
+      {filteredMembers.length > 15 && (
+        <div className="text-center mt-12">
+          <button
+            onClick={() => setShowAll(!showAll)}
+            className="text-[11px] uppercase tracking-[0.2em] font-bold text-gray-400 hover:text-[#007398] transition-colors"
+          >
+            {showAll ? "[ — Ver Menos ]" : "[ + Ver Todo el Personal ]"}
+          </button>
+        </div>
+      )}
+      {/* Sección de Asesores Académicos - Diseño de Alta Jerarquía */}
+      {asesoresData.length > 0 && (
+        <section className="mt-24 pt-16 border-t border-gray-100">
+          <h2 className="text-2xl font-serif text-center mb-12 text-gray-800 tracking-tight">Consejo Superior de Asesoría</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {asesoresData.map((member) => (
+              <div key={member['Nombre']} className="text-center p-6 border border-gray-50 bg-gray-50/30 cursor-pointer" onClick={() => handleMemberClick(member['Nombre'])}>
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full overflow-hidden border-2 border-white shadow-sm">
+                  {member['Imagen'] && (
+                    <img
+                      src={member['Imagen']}
+                      className="w-full h-full object-cover grayscale"
+                      alt={member['Nombre']}
+                      onError={(e) => { e.target.style.display = 'none'; }}
+                    />
+                  )}
+                </div>
+                <h4 className="text-md font-serif text-gray-900 hover:text-[#007398] transition-colors">{member['Nombre']}</h4>
+                <p className="text-[10px] text-[#007398] uppercase mt-1 tracking-widest font-bold">Asesor Académico</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+      {/* Sección de Instituciones Colaboradoras */}
+      {institutionsData.length > 0 && (
+        <section className="mt-24 pt-16 border-t border-gray-100">
+          <h2 className="text-2xl font-serif text-center mb-12 text-gray-800 tracking-tight">Instituciones Colaboradoras</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {institutionsData.map((member) => (
+              <div key={member['Nombre']} className="text-center p-6 border border-gray-50 bg-gray-50/30">
+                <div className="w-20 h-20 mx-auto mb-4 rounded-full overflow-hidden border-2 border-white shadow-sm">
+                  {member['Imagen'] && (
+                    <img
+                      src={member['Imagen']}
+                      className="w-full h-full object-contain"
+                      alt={member['Nombre']}
+                      onError={(e) => { e.target.style.display = 'none'; }}
+                    />
+                  )}
+                </div>
+                <a
+                  href={member['Correo']}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-md font-serif text-gray-900 hover:text-[#007398] transition-colors"
+                >
+                  {member['Nombre']}
+                </a>
+                <p className="text-[10px] text-[#007398] uppercase mt-1 tracking-widest font-bold">Institución Colaboradora</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+      {/* Footer de Captación */}
+      <footer className="mt-32 p-12 bg-gray-900 text-white text-center relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-1 bg-[#007398]"></div>
+        <h3 className="text-2xl font-serif mb-4">¿Desea formar parte de nuestra historia?</h3>
+        <p className="text-gray-400 text-sm max-w-xl mx-auto mb-8 font-serif italic">
+          Buscamos mentes brillantes apasionadas por la comunicación científica.
+        </p>
+        <a
+          href="https://www.revistacienciasestudiantes.com/es/admin"
+          className="inline-block border border-white px-8 py-3 text-[10px] uppercase tracking-[0.3em] font-bold hover:bg-white hover:text-black transition-all"
+        >
+          Postular a un cargo editorial
+        </a>
+      </footer>
+    </div>
   );
 }
+
 export default TeamSection;
