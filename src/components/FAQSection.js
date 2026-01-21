@@ -2,69 +2,40 @@ import React from 'react';
 import { motion } from 'framer-motion';
 
 function FAQSection() {
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 },
-  };
+  const faqs = [
+    { q: "¿Quién puede publicar?", a: "Cualquier estudiante escolar o universitario del mundo." },
+    { q: "¿Uso de IA?", a: "Prohibido. Cualquier rastro de generación por IA resultará en rechazo automático por ética académica." },
+    { q: "¿Tiempos de respuesta?", a: "El proceso de revisión toma entre 1 y 3 semanas según la complejidad del área." },
+    { q: "¿Cómo es la revisión?", a: "Sistema 'Doble Ciego': ni el autor ni el revisor conocen sus identidades para garantizar imparcialidad." },
+    { q: "¿Publicación y Indexación?", a: "Los artículos se indexan en Google Académico y estamos en proceso de obtención de ISSN." },
+    { q: "¿Formato de envío?", a: "Archivos Word (.docx), siguiendo estrictamente el Estilo Chicago." }
+  ];
 
   return (
-    <motion.div
-      className="faq-section bg-white p-6 rounded-xl shadow-lg mt-6"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-    >
-      <motion.h2
-        className="text-2xl font-bold mb-4 text-gray-800"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2, duration: 0.5 }}
-      >
-        Preguntas Frecuentes
-      </motion.h2>
-      <motion.ul
-        className="list-disc pl-5 text-base"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <motion.li variants={itemVariants} className="mb-3">
-          <strong>¿Quién puede publicar?</strong> Cualquier estudiante escolar o universitario del mundo.
-        </motion.li>
-        <motion.li variants={itemVariants} className="mb-3">
-          <strong>¿Se puede usar IA para ayudarme a escribir?</strong> No. Será rechazado automáticamente.
-        </motion.li>
-        <motion.li variants={itemVariants} className="mb-3">
-          <strong>¿Cuánto se demoran en responder?</strong> Entre 1 y 3 semanas, dependiendo del volumen de solicitudes.
-        </motion.li>
-        <motion.li variants={itemVariants} className="mb-3">
-          <strong>¿Cómo se revisa un artículo?</strong> Revisión doble ciego, sin nombre del autor. Hay alumnos y profesores que revisarán tu artículo según tu área.
-        </motion.li>
-        <motion.li variants={itemVariants} className="mb-3">
-          <strong>¿Cómo es el proceso editorial?</strong> Cuando nos envías tu artículo se le asignan revisores y un editor, este último se comunicará contigo cuando termine la revisión de tu artículo, para disutir cambios u otros temas.
-        </motion.li>
-        <motion.li variants={itemVariants} className="mb-3">
-          <strong>¿Qué pasará cuando mi artículo se publique?</strong> El artículo aparecerá en nuestra página web y será indexado en Google Académico. Estamos haciendo los procedimientos para conseguir nuestro ISSN. También es posible que te invitemos a nuestro podcast, además de difundirlo en nuestras Redes Sociales
-        </motion.li>
-        <motion.li variants={itemVariants} className="mb-3">
-          <strong>¿En qué formato envío el artículo?</strong> Word (.docx), estilo Chicago, 2.000–10.000 palabras.
-        </motion.li>
-        <motion.li variants={itemVariants} className="mb-3">
-          <strong>¿Cómo puedo postular a algún cargo?</strong> Desde la pestaña "¡Postula a algún cargo!".
-        </motion.li>
-      </motion.ul>
-    </motion.div>
+    <section className="py-20 bg-white">
+      <div className="max-w-7xl mx-auto px-6">
+        <h2 className="text-3xl font-serif font-bold mb-12 border-b-2 border-black pb-4 inline-block">
+          Preguntas Frecuentes
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+          {faqs.map((faq, i) => (
+            <motion.div 
+              key={i}
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1 }}
+              className="group"
+            >
+              <h4 className="text-sm font-bold uppercase tracking-widest text-[#007398] mb-3 group-hover:translate-x-1 transition-transform">
+                {faq.q}
+              </h4>
+              <p className="text-gray-600 font-serif leading-relaxed italic border-l border-gray-100 pl-4">
+                {faq.a}
+              </p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
-
-export default FAQSection;

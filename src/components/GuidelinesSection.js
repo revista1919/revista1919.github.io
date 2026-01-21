@@ -1,187 +1,79 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 
 function GuidelinesSection() {
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 },
-  };
+  const resources = [
+    { name: 'Google Scholar', url: 'https://scholar.google.com/', desc: 'Buscador líder para literatura académica.' },
+    { name: 'SciELO', url: 'https://scielo.org/es/', desc: 'Biblioteca científica de acceso abierto.' },
+    { name: 'Consensus', url: 'https://consensus.app/', desc: 'Buscador de evidencia científica con IA.' }
+  ];
 
   return (
-    <motion.div
-      className="guidelines-section bg-white p-6 rounded-xl shadow-lg mt-6"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-    >
-      <motion.h2
-        className="text-2xl font-bold mb-4 text-gray-800"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2, duration: 0.5 }}
-      >
-        Normas Editoriales
-      </motion.h2>
-      <motion.ul
-        className="list-disc pl-5 text-base"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <motion.li variants={itemVariants} className="mb-3">Extensión: 1.000–10.000 palabras (tablas no cuentan como palabras)</motion.li>
-        <motion.li variants={itemVariants} className="mb-3">Formato: Word (.docx), sin nombre del autor en el documento</motion.li>
-        <motion.li variants={itemVariants} className="mb-3">Originalidad: El artículo debe ser inédito, no publicado ni enviado a otro medio, y no puede usar IA para redactar</motion.li>
-        <motion.li variants={itemVariants} className="mb-3">
-          Citación: Exclusivamente{' '}
-          <a
-            href="https://www.chicagomanualofstyle.org/tools_citationguide.html"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-500 hover:underline"
-          >
-            estilo Chicago
-          </a>
-        </motion.li>
-        <motion.li variants={itemVariants} className="mb-3">Aceptamos artículos en español y en inglés</motion.li>
-        <motion.li variants={itemVariants} className="mb-3">Elementos permitidos: Gráficas, ecuaciones, imágenes, tablas (fuera del conteo de palabras)</motion.li>
-        <motion.li variants={itemVariants} className="mb-3">
-          Políticas de Envío de Artículos: Consulte las políticas completas{' '}
-          <a
-            href="https://www.revistacienciasestudiantes.com/policies.html"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-500 hover:underline"
-          >
-            aquí
-          </a>
-        </motion.li>
-      </motion.ul>
-      <motion.h3
-        className="text-xl font-bold mt-6 mb-3 text-gray-800"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5, duration: 0.5 }}
-      >
-        Para aprender a hacer un artículo científico, te recomendamos los siguientes videos:
-      </motion.h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <iframe
-          width="100%"
-          height="200"
-          src="https://www.youtube.com/embed/wyPhAGW6-94"
-          title="Video 1"
-          frameBorder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        />
-        <iframe
-          width="100%"
-          height="200"
-          src="https://www.youtube.com/embed/videoseries?list=PL8yQlmhs7KsBerg9X63QnZnlNAopwzDmw"
-          title="Playlist"
-          frameBorder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        />
+    <section className="py-20 bg-[#fafafa]">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
+          
+          {/* Normas Editoriales */}
+          <div className="lg:col-span-1">
+            <h2 className="text-3xl font-serif font-bold mb-8">Normas Editoriales</h2>
+            <ul className="space-y-6">
+              {[
+                { label: 'Extensión', val: '1.000–10.000 palabras' },
+                { label: 'Formato', val: 'Word (.docx) anónimo' },
+                { label: 'Citación', val: 'Estilo Chicago (Exclusivo)', link: 'https://www.chicagomanualofstyle.org' },
+                { label: 'Idiomas', val: 'Español e Inglés' }
+              ].map((item, i) => (
+                <li key={i} className="border-b border-gray-200 pb-2">
+                  <span className="text-[10px] uppercase font-black text-gray-400 block tracking-widest">{item.label}</span>
+                  {item.link ? (
+                    <a href={item.link} target="_blank" className="text-gray-900 font-medium hover:text-[#007398] underline decoration-gray-300">
+                      {item.val}
+                    </a>
+                  ) : (
+                    <span className="text-gray-900 font-medium">{item.val}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <a href="https://www.revistacienciasestudiantes.com/policies.html" className="mt-8 inline-block bg-black text-white px-6 py-3 text-[10px] uppercase font-bold tracking-[0.2em] hover:bg-[#007398] transition-colors">
+              Políticas Completas
+            </a>
+          </div>
+
+          {/* Videos y Recursos */}
+          <div className="lg:col-span-2 space-y-12">
+            <div>
+              <h3 className="text-xs uppercase tracking-[0.3em] font-black text-gray-400 mb-6 italic underline">Talleres Audiovisuales</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="aspect-video bg-black rounded-sm overflow-hidden shadow-xl">
+                  <iframe width="100%" height="100%" src="https://www.youtube.com/embed/wyPhAGW6-94" frameBorder="0" allowFullScreen title="Taller 1" />
+                </div>
+                <div className="aspect-video bg-black rounded-sm overflow-hidden shadow-xl">
+                  <iframe width="100%" height="100%" src="https://www.youtube.com/embed/videoseries?list=PL8yQlmhs7KsBerg9X63QnZnlNAopwzDmw" frameBorder="0" allowFullScreen title="Playlist" />
+                </div>
+              </div>
+            </div>
+
+            {/* Academic Tools Highlight */}
+            <div className="bg-white border border-gray-200 p-8 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden">
+              <div className="absolute top-0 right-0 bg-[#007398] text-white text-[8px] font-bold px-3 py-1 uppercase tracking-tighter">
+                Recomendado
+              </div>
+              <img src="https://www.revistacienciasestudiantes.com/academic-tools/assets/logoP.png" className="w-24 h-24 object-contain grayscale hover:grayscale-0 transition-all" alt="Logo" />
+              <div>
+                <h4 className="text-xl font-serif font-bold mb-2">Academic Tools</h4>
+                <p className="text-sm text-gray-500 mb-4 font-serif italic">Plataforma integral para gestión de PDFs, citación automática y procesamiento de texto académico.</p>
+                <div className="flex flex-wrap gap-4 text-[10px] font-bold uppercase text-[#007398]">
+                  <span>• Gestión PDF</span> <span>• Generador Citas</span> <span>• Análisis de Texto</span>
+                </div>
+                <a href="https://www.revistacienciasestudiantes.com/academic-tools" className="mt-6 inline-block text-[11px] font-black uppercase tracking-widest border-b-2 border-black pb-1 hover:border-[#007398] hover:text-[#007398] transition-all">
+                  Acceder a la Suite →
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      <motion.h3
-        className="text-xl font-bold mt-8 mb-4 text-gray-800"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.6, duration: 0.5 }}
-      >
-        Para investigar, te recomendamos los siguientes sitios:
-      </motion.h3>
-      <motion.div
-        className="grid grid-cols-1 sm:grid-cols-3 gap-4"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        {[
-          { name: 'Google Scholar', url: 'https://scholar.google.com/', desc: 'Buscador académico de Google con millones de artículos científicos.' },
-          { name: 'SciELO', url: 'https://scielo.org/es/', desc: 'Biblioteca científica en línea de acceso abierto en español y portugués.' },
-          { name: 'Consensus', url: 'https://consensus.app/', desc: 'Plataforma impulsada por IA para encontrar y resumir artículos científicos.' }
-        ].map((site, index) => (
-          <motion.a
-            key={index}
-            href={site.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block p-4 bg-gray-50 rounded-xl shadow hover:shadow-md transition"
-            variants={itemVariants}
-            whileHover={{ scale: 1.02 }}
-          >
-            <h4 className="text-lg font-bold text-gray-800 mb-2">{site.name}</h4>
-            <p className="text-sm text-gray-600">{site.desc}</p>
-          </motion.a>
-        ))}
-      </motion.div>
-      {/* Academic Tools Recommendation */}
-<motion.h3
-  className="text-xl font-bold mt-10 mb-4 text-gray-800"
-  initial={{ opacity: 0 }}
-  animate={{ opacity: 1 }}
-  transition={{ delay: 0.7, duration: 0.5 }}
->
-  Herramientas académicas recomendadas
-</motion.h3>
-
-<motion.div
-  className="grid grid-cols-1 sm:grid-cols-2 gap-4"
-  variants={containerVariants}
-  initial="hidden"
-  animate="visible"
->
-  <motion.a
-    href="https://www.revistacienciasestudiantes.com/academic-tools"
-    target="_blank"
-    rel="noopener noreferrer"
-    className="flex flex-col sm:flex-row items-center gap-4 p-5 bg-gray-50 rounded-xl shadow hover:shadow-md transition"
-    variants={itemVariants}
-    whileHover={{ scale: 1.02 }}
-  >
-    <img
-      src="https://www.revistacienciasestudiantes.com/academic-tools/assets/logoP.png"
-      alt="Academic Tools logo"
-      className="w-20 h-20 object-contain"
-    />
-
-    <div>
-      <h4 className="text-lg font-bold text-gray-800 mb-1">
-        Academic Tools
-      </h4>
-      <p className="text-sm text-gray-600 mb-2">
-        Plataforma gratuita con herramientas esenciales para estudiantes,
-        investigadores y académicos.
-      </p>
-      <ul className="text-sm text-gray-600 list-disc pl-5">
-        <li>Unir y gestionar archivos PDF</li>
-        <li>Generar citas académicas automáticamente</li>
-        <li>Analizar y procesar texto académico</li>
-        <li>Utilidades rápidas para tareas universitarias</li>
-      </ul>
-      <span className="inline-block mt-3 text-blue-600 font-medium">
-        Visitar Academic Tools →
-      </span>
-    </div>
-  </motion.a>
-</motion.div>
-
-    </motion.div>
-    
+    </section>
   );
 }
-
-export default GuidelinesSection;

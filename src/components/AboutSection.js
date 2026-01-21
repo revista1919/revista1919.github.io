@@ -1,41 +1,32 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 
 function AboutSection() {
   return (
-    <motion.div
-      className="about-section bg-white p-6 rounded-xl shadow-lg mt-6"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
+    <motion.section 
+      initial={{ opacity: 0 }} 
+      whileInView={{ opacity: 1 }}
+      className="py-20 border-t border-b border-gray-100 bg-[#fdfdfd]"
     >
-      <motion.h2
-        className="text-2xl font-bold mb-4 text-gray-800"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2, duration: 0.5 }}
-      >
-        Quiénes Somos
-      </motion.h2>
-      <motion.p
-        className="text-base mb-3 text-gray-600"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.3, duration: 0.5 }}
-      >
-        La Revista Nacional de las Ciencias para Estudiantes es una publicación interdisciplinaria revisada por pares, escrita, editada y curada por estudiantes y profesores, escolares y universitarios. Está abierta a todo el mundo, aunque fomenta especialmente la participación de chilenos, pero está abierta a todo el mundo. Su objetivo es fomentar el pensamiento crítico y la investigación científica entre jóvenes, mediante un sistema de publicación serio, accesible y riguroso.
-      </motion.p>
-      <motion.p
-        className="text-base text-gray-600"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.4, duration: 0.5 }}
-      >
-        <em>No está asociada a ninguna institución, programa ni colegio en particular. Es una iniciativa independiente, abierta a todos los estudiantes. No hay ningún costo, es completamente gratuita y opera gracias al compromiso de nuestros colaboradores.</em>
-      </motion.p>
-    </motion.div>
+      <div className="max-w-4xl mx-auto px-6">
+        <span className="text-[10px] uppercase tracking-[0.4em] font-bold text-[#007398] block mb-6 text-center">
+          Nuestra Identidad
+        </span>
+        <h2 className="text-4xl md:text-5xl font-serif font-bold text-gray-900 mb-8 text-center leading-tight">
+          Fomentando la próxima generación de rigor científico
+        </h2>
+        <div className="space-y-6 text-lg leading-relaxed text-gray-700 font-serif italic">
+          <p>
+            La <span className="font-bold text-gray-900 not-italic">Revista Nacional de las Ciencias para Estudiantes</span> es una publicación interdisciplinaria revisada por pares, curada por una comunidad global de académicos y estudiantes.
+          </p>
+          <p className="border-l-4 border-[#007398] pl-6 py-2 bg-white shadow-sm">
+            "Nuestro objetivo es democratizar el acceso a la publicación científica seria, permitiendo que estudiantes de todos los niveles experimenten el rigor de la investigación real."
+          </p>
+          <p className="text-base not-italic text-gray-500 font-sans">
+            Operamos como una iniciativa <span className="text-gray-900 font-medium text-sm tracking-wide uppercase">independiente y gratuita</span>, sin afiliaciones institucionales restrictivas, garantizando total autonomía editorial.
+          </p>
+        </div>
+      </div>
+    </motion.section>
   );
 }
-
-export default AboutSection;
