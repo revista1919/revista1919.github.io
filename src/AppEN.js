@@ -520,7 +520,7 @@ const numericTerm = normalizeNumberSearch(volumeSearchTerm);
       ),
     },
   ];
-
+if (authLoading) {
   return (
   <div className="h-screen flex items-center justify-center bg-white">
     <motion.div
@@ -532,7 +532,7 @@ const numericTerm = normalizeNumberSearch(volumeSearchTerm);
     </motion.div>
   </div>
 );
-
+}
 
   const isLoginActive = location.pathname.includes('login');
   const framerItem = (delay) => ({
