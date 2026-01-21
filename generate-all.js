@@ -193,172 +193,432 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
   const authorsMLAEn = formatAuthorsChicagoOrMLA(article.autores, 'en');
   const year = new Date(article.fecha).getFullYear();
   // Generar HTML en español (mismo)
- // ================== HTML ESPAÑOL (REEMPLAZO DIRECTO) ==================
+ // HTML completo en español (reemplazar bloque)
 const htmlContentEs = `
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="citation_title" content="\${article.titulo}">
-  \${authorMetaTags}
-  <meta name="citation_publication_date" content="\${article.fecha}">
+  <meta name="citation_title" content="${article.titulo}">
+  ${authorMetaTags}
+  <meta name="citation_publication_date" content="${article.fecha}">
   <meta name="citation_journal_title" content="Revista Nacional de las Ciencias para Estudiantes">
-  <meta name="citation_volume" content="\${article.volumen}">
-  <meta name="citation_issue" content="\${article.numero}">
-  <meta name="citation_firstpage" content="\${article.primeraPagina}">
-  <meta name="citation_lastpage" content="\${article.ultimaPagina}">
-  <meta name="citation_pdf_url" content="\${article.pdf}">
-  <meta name="citation_abstract_html_url" content="\${domain}/articles/article-\${articleSlug}.html">
-  <meta name="citation_abstract" content="\${article.resumen}">
-  <meta name="citation_abstract" xml:lang="en" content="\${article.englishAbstract}">
-  <meta name="citation_keywords" content="\${article.palabras_clave.join('; ')}">
+  <meta name="citation_volume" content="${article.volumen}">
+  <meta name="citation_issue" content="${article.numero}">
+  <meta name="citation_firstpage" content="${article.primeraPagina}">
+  <meta name="citation_lastpage" content="${article.ultimaPagina}">
+  <meta name="citation_pdf_url" content="${article.pdf}">
+  <meta name="citation_abstract_html_url" content="${domain}/articles/article-${articleSlug}.html">
+  <meta name="citation_abstract" content="${article.resumen}">
+  <meta name="citation_abstract" xml:lang="en" content="${article.englishAbstract}">
+  <meta name="citation_keywords" content="${article.palabras_clave.join('; ')}">
   <meta name="citation_language" content="es">
-  <meta name="description" content="\${article.resumen.substring(0,160)}...">
-  <meta name="keywords" content="\${article.palabras_clave.join(', ')}">
-  <title>\${article.titulo} - Revista Nacional de las Ciencias para Estudiantes</title>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Serif:wght@400;700&display=swap" rel="stylesheet">
+  <meta name="description" content="${article.resumen.substring(0, 160)}...">
+  <meta name="keywords" content="${article.palabras_clave.join(', ')}">
+  <title>${article.titulo} - Revista Nacional de las Ciencias para Estudiantes</title>
+  <link rel="stylesheet" href="/index.css">
   <style>
-    :root{--elsevier-blue:#007398;--elsevier-dark:#333;--elsevier-grey:#666;--border-color:#e4e4e4;}
-    body{font-family:'Noto Sans',sans-serif;background:#f0f0f0;margin:0}
-    .top-bar{background:#fff;border-bottom:1px solid var(--border-color);padding:10px 20px;display:flex;justify-content:space-between;align-items:center}
-    .journal-name{font-weight:bold;color:var(--elsevier-blue);text-decoration:none;font-size:.9rem}
-    .main-wrapper{max-width:1200px;margin:20px auto;display:grid;grid-template-columns:250px 1fr;gap:30px;padding:0 20px}
-    aside{font-size:.9rem}
-    .outline-box{position:sticky;top:20px}
-    .outline-title{font-weight:bold;border-bottom:1px solid var(--border-color);padding-bottom:10px;margin-bottom:15px;font-size:.8rem;text-transform:uppercase}
-    .outline-list{list-style:none;padding:0}
-    .outline-list li{margin-bottom:10px}
-    .outline-list a{color:var(--elsevier-blue);text-decoration:none}
-    .article-container{background:#fff;padding:40px;box-shadow:0 2px 4px rgba(0,0,0,.05)}
-    header{border-bottom:1px solid var(--border-color);margin-bottom:30px;padding-bottom:20px}
-    h1{font-family:'Noto Serif',serif;font-size:2.2rem;margin:10px 0;color:#000}
-    .authors{color:var(--elsevier-blue);margin:15px 0}
-    h2{margin-top:40px;border-bottom:1px solid #eee}
-    p{font-family:'Noto Serif',serif;text-align:justify}
-    .pdf-preview{width:100%;height:700px;border:1px solid var(--border-color);margin-bottom:20px}
-    .btn{padding:12px 24px;border-radius:2px;text-decoration:none;font-weight:bold;display:inline-flex;justify-content:center;align-items:center}
-    .btn-primary{background:var(--elsevier-blue);color:#fff}
-    .btn-outline{border:1px solid var(--elsevier-blue);color:var(--elsevier-blue)}
-    footer{text-align:center;padding:40px;color:var(--elsevier-grey);font-size:.8rem}
-    @media(max-width:900px){.main-wrapper{grid-template-columns:1fr}aside{display:none}}
+    /* Estilos basados en el diseño original, sin referencias externas de marca */
+    body {
+      font-family: 'Merriweather', serif;
+      line-height: 1.8;
+      color: #333;
+      background-color: #f9f9f9;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+      background: white;
+      box-shadow: 0 0 20px rgba(0,0,0,0.05);
+      border-radius: 8px;
+      box-sizing: border-box;
+    }
+    header {
+      text-align: center;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 1rem;
+      margin-bottom: 2rem;
+    }
+    h1 {
+      font-size: 1.8rem;
+      color: #2c3e50;
+      margin-bottom: 0.5rem;
+    }
+    .authors {
+      font-size: 1.1rem;
+      color: #555;
+      margin-bottom: 1rem;
+    }
+    .meta {
+      font-size: 0.9rem;
+      color: #777;
+      margin-bottom: 0.5rem;
+    }
+    section {
+      margin-bottom: 2rem;
+    }
+    h2 {
+      font-size: 1.3rem;
+      color: #34495e;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    p {
+      text-align: justify;
+    }
+    .keywords {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .keyword {
+      background: #e8f4fd;
+      color: #2980b9;
+      padding: 0.3rem 0.8rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+    }
+    .pdf-preview {
+      width: 100%;
+      height: 600px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-top: 1rem;
+      box-sizing: border-box;
+    }
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-top: 1rem;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+    .button {
+      padding: 0.7rem 1.5rem;
+      border-radius: 4px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: background 0.3s;
+      flex: 1 1 100%;
+      text-align: center;
+      box-sizing: border-box;
+    }
+    .open-pdf {
+      background: #3498db;
+      color: white;
+    }
+    .open-pdf:hover {
+      background: #2980b9;
+    }
+    .download-pdf {
+      background: #27ae60;
+      color: white;
+    }
+    .download-pdf:hover {
+      background: #219a52;
+    }
+    .citations p {
+      background: #f8f8f8;
+      padding: 1rem;
+      border-left: 4px solid #ddd;
+      margin-bottom: 1rem;
+      font-size: 0.95rem;
+    }
+    .license img { vertical-align: middle; margin-top: 0.5rem; }
+    footer {
+      text-align: center;
+      margin-top: 3rem;
+      padding-top: 1rem;
+      border-top: 1px solid #eee;
+      font-size: 0.85rem;
+      color: #777;
+    }
+    .back-links { margin-top: 0.5rem; }
+    .back-links a { color: #2980b9; text-decoration: none; margin: 0 .5rem; }
+    @media (max-width: 768px) {
+      .container { padding: 1.5rem 1rem; }
+      h1 { font-size: 1.5rem; }
+      .pdf-preview { height: 60vh; min-height: 300px; }
+      .buttons { flex-direction: column; gap: 0.5rem; }
+      .button { width: 100%; max-width: 100%; }
+    }
+    @media (max-width: 480px) {
+      h1 { font-size: 1.3rem; }
+      .authors { font-size: 1rem; }
+      .pdf-preview { height: 50vh; min-height: 250px; }
+    }
   </style>
 </head>
 <body>
-  <div class="top-bar">
-    <a href="/" class="journal-name">REVISTA NACIONAL DE LAS CIENCIAS PARA ESTUDIANTES</a>
-    <div style="font-size:.8rem;color:#666;">Volumen \${article.volumen}, Número \${article.numero}</div>
-  </div>
-
-  <div class="main-wrapper">
-    <aside>
-      <div class="outline-box">
-        <div class="outline-title">Contenido</div>
-        <ul class="outline-list">
-          <li><a href="#abstract">Resumen</a></li>
-          <li><a href="#preview">PDF</a></li>
-          <li><a href="#citations">Citar</a></li>
-        </ul>
-        <div class="outline-title" style="margin-top:30px">Acciones</div>
-        <a href="\${article.pdf}" target="_blank" rel="noopener noreferrer" class="btn btn-outline" style="width:100%;margin-bottom:10px">Abrir PDF</a>
-        <a href="\${article.pdf}" download class="btn btn-primary" style="width:100%">Descargar PDF</a>
-        <a href="/" class="btn btn-outline" style="width:100%;margin-top:10px">Volver al inicio</a>
-      </div>
-    </aside>
-
-    <main class="article-container">
-      <header>
-        <div style="color:#666;font-size:.85rem">\${article.area} | Artículo de Investigación</div>
-        <h1>\${article.titulo}</h1>
-        <div class="authors">\${authorsDisplayEs}</div>
-        <div style="font-size:.85rem;color:#666">
-          Publicado: \${article.fecha} | Páginas: \${article.primeraPagina}-\${article.ultimaPagina}
+  <div class="container">
+    <header>
+      <h1>${article.titulo}</h1>
+      <p class="authors">${authorsDisplayEs}</p>
+      <p class="meta"><strong>Fecha de publicación:</strong> ${article.fecha}</p>
+      <p class="meta"><strong>Volumen:</strong> ${article.volumen}, <strong>Número:</strong> ${article.numero}, <strong>Páginas:</strong> ${article.primeraPagina}-${article.ultimaPagina}</p>
+      <p class="meta"><strong>Área temática:</strong> ${article.area}</p>
+    </header>
+    <main>
+      <section>
+        <h2>Palabras clave</h2>
+        <div class="keywords">
+          ${article.palabras_clave.map(kw => `<span class="keyword">${kw}</span>`).join('')}
         </div>
-      </header>
-
-      <section id="abstract">
+      </section>
+      <section>
         <h2>Resumen</h2>
-        <p>\${article.resumen}</p>
+        <p>${article.resumen}</p>
       </section>
-
-      <section id="preview">
+      <section>
+        <h2>Abstract (English)</h2>
+        <p>${article.englishAbstract}</p>
+      </section>
+      <section>
         <h2>Visualización del PDF</h2>
-        <embed src="\${article.pdf}" type="application/pdf" class="pdf-preview">
-        <div style="display:flex;gap:15px;flex-wrap:wrap">
-          <a href="\${article.pdf}" target="_blank" rel="noopener noreferrer" class="btn btn-outline">Abrir en nueva pestaña</a>
-          <a href="\${article.pdf}" download class="btn btn-primary">Descargar PDF</a>
-          <a href="/" class="btn btn-outline">Volver al inicio</a>
+        <embed src="${article.pdf}" type="application/pdf" class="pdf-preview" />
+        <div class="buttons">
+          <!-- Abrir en nueva pestaña con rel seguro -->
+          <a href="${article.pdf}" target="_blank" rel="noopener noreferrer" class="button open-pdf">Abrir PDF en nueva pestaña</a>
+          <a href="${article.pdf}" download class="button download-pdf">Descargar PDF</a>
         </div>
       </section>
-
-      <section id="citations">
-        <h2>Cómo citar</h2>
-        <p><strong>APA:</strong> \${authorsAPA}. (\${year}). \${article.titulo}. <em>Revista Nacional de las Ciencias para Estudiantes</em>, \${article.volumen}(\${article.numero}), \${article.primeraPagina}-\${article.ultimaPagina}.</p>
+      <section class="citations">
+        <h2>Citas</h2>
+        <p><strong>APA:</strong> ${authorsAPA}. (${year}). ${article.titulo}. <em>Revista Nacional de las Ciencias para Estudiantes</em>, ${article.volumen}(${article.numero}), ${article.primeraPagina}-${article.ultimaPagina}.</p>
+        <p><strong>MLA:</strong> ${authorsMLAEs}. "${article.titulo}." <em>Revista Nacional de las Ciencias para Estudiantes</em>, vol. ${article.volumen}, no. ${article.numero}, ${year}, pp. ${article.primeraPagina}-${article.ultimaPagina}.</p>
+        <p><strong>Chicago:</strong> ${authorsChicagoEs}. "${article.titulo}." <em>Revista Nacional de las Ciencias para Estudiantes</em> ${article.volumen}, no. ${article.numero} (${year}): ${article.primeraPagina}-${article.ultimaPagina}.</p>
+      </section>
+      <section class="license">
+        <h2>Licencia</h2>
+        <p>Este artículo se publica bajo licencia <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Atribución 4.0 Internacional (CC BY 4.0)</a>.</p>
+        <img src="https://mirrors.creativecommons.org/presskit/buttons/88x31/png/by.png" alt="CC BY 4.0" style="width:88px; height:31px;">
       </section>
     </main>
+    <footer>
+      <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes</p>
+      <div class="back-links">
+        <a href="/es/article">Volver a Artículos</a> | <a href="/">Volver al inicio</a>
+      </div>
+    </footer>
   </div>
-
-  <footer>
-    <p>&copy; \${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes</p>
-    <p><a href="/es/article">Volver al catálogo</a> | <a href="/">Inicio</a></p>
-  </footer>
 </body>
 </html>
 `.trim();
 
-
-// ================== HTML INGLÉS (REEMPLAZO DIRECTO) ==================
+// HTML completo en inglés (reemplazar bloque)
 const htmlContentEn = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="citation_title" content="\${article.titulo}">
-  \${authorMetaTags}
-  <meta name="citation_publication_date" content="\${article.fecha}">
-  <meta name="citation_journal_title" content="The National Review of Sciences for Students">
-  <meta name="citation_volume" content="\${article.volumen}">
-  <meta name="citation_issue" content="\${article.numero}">
-  <meta name="citation_firstpage" content="\${article.primeraPagina}">
-  <meta name="citation_lastpage" content="\${article.ultimaPagina}">
-  <meta name="citation_pdf_url" content="\${article.pdf}">
-  <meta name="citation_abstract_html_url" content="\${domain}/articles/article-\${articleSlug}EN.html">
-  <meta name="citation_abstract" content="\${article.englishAbstract}">
-  <meta name="citation_keywords" content="\${article.keywords_english.join('; ')}">
+  <meta name="citation_title" content="${article.titulo}">
+  ${authorMetaTags}
+  <meta name="citation_publication_date" content="${article.fecha}">
+  <meta name="citation_journal_title" content="Revista Nacional de las Ciencias para Estudiantes">
+  <meta name="citation_volume" content="${article.volumen}">
+  <meta name="citation_issue" content="${article.numero}">
+  <meta name="citation_firstpage" content="${article.primeraPagina}">
+  <meta name="citation_lastpage" content="${article.ultimaPagina}">
+  <meta name="citation_pdf_url" content="${article.pdf}">
+  <meta name="citation_abstract_html_url" content="${domain}/articles/article-${articleSlug}EN.html">
+  <meta name="citation_abstract" content="${article.englishAbstract}">
+  <meta name="citation_keywords" content="${article.keywords_english.join('; ')}">
   <meta name="citation_language" content="en">
-  <title>\${article.titulo} - The National Review of Sciences for Students</title>
+  <meta name="description" content="${article.englishAbstract.substring(0, 160)}...">
+  <meta name="keywords" content="${article.keywords_english.join(', ')}">
+  <title>${article.titulo} - The National Review of Sciences for Students</title>
+  <link rel="stylesheet" href="/index.css">
   <style>
-    body{font-family:Arial,sans-serif;background:#f0f0f0;margin:0}
-    .container{max-width:900px;margin:20px auto;background:#fff;padding:30px}
-    .pdf-preview{width:100%;height:600px;border:1px solid #ccc}
-    .btn{padding:10px 20px;text-decoration:none;border:1px solid #007398;margin-right:10px}
-    .primary{background:#007398;color:#fff}
+    /* Estilos equivalentes al bloque en español, mismo aspecto y estructura */
+    body {
+      font-family: 'Merriweather', serif;
+      line-height: 1.8;
+      color: #333;
+      background-color: #f9f9f9;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+      background: white;
+      box-shadow: 0 0 20px rgba(0,0,0,0.05);
+      border-radius: 8px;
+      box-sizing: border-box;
+    }
+    header {
+      text-align: center;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 1rem;
+      margin-bottom: 2rem;
+    }
+    h1 {
+      font-size: 1.8rem;
+      color: #2c3e50;
+      margin-bottom: 0.5rem;
+    }
+    .authors {
+      font-size: 1.1rem;
+      color: #555;
+      margin-bottom: 1rem;
+    }
+    .meta {
+      font-size: 0.9rem;
+      color: #777;
+      margin-bottom: 0.5rem;
+    }
+    section {
+      margin-bottom: 2rem;
+    }
+    h2 {
+      font-size: 1.3rem;
+      color: #34495e;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    p {
+      text-align: justify;
+    }
+    .keywords {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .keyword {
+      background: #e8f4fd;
+      color: #2980b9;
+      padding: 0.3rem 0.8rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+    }
+    .pdf-preview {
+      width: 100%;
+      height: 600px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-top: 1rem;
+      box-sizing: border-box;
+    }
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-top: 1rem;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+    .button {
+      padding: 0.7rem 1.5rem;
+      border-radius: 4px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: background 0.3s;
+      flex: 1 1 100%;
+      text-align: center;
+      box-sizing: border-box;
+    }
+    .open-pdf {
+      background: #3498db;
+      color: white;
+    }
+    .open-pdf:hover {
+      background: #2980b9;
+    }
+    .download-pdf {
+      background: #27ae60;
+      color: white;
+    }
+    .download-pdf:hover {
+      background: #219a52;
+    }
+    .citations p {
+      background: #f8f8f8;
+      padding: 1rem;
+      border-left: 4px solid #ddd;
+      margin-bottom: 1rem;
+      font-size: 0.95rem;
+    }
+    footer {
+      text-align: center;
+      margin-top: 3rem;
+      padding-top: 1rem;
+      border-top: 1px solid #eee;
+      font-size: 0.85rem;
+      color: #777;
+    }
+    .back-links { margin-top: 0.5rem; }
+    .back-links a { color: #2980b9; text-decoration: none; margin: 0 .5rem; }
+    @media (max-width: 768px) {
+      .container { padding: 1.5rem 1rem; }
+      h1 { font-size: 1.5rem; }
+      .pdf-preview { height: 60vh; min-height: 300px; }
+      .buttons { flex-direction: column; gap: 0.5rem; }
+      .button { width: 100%; max-width: 100%; }
+    }
+    @media (max-width: 480px) {
+      h1 { font-size: 1.3rem; }
+      .authors { font-size: 1rem; }
+      .pdf-preview { height: 50vh; min-height: 250px; }
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>\${article.titulo}</h1>
-    <p>\${authorsDisplayEn}</p>
-    <p><strong>Published:</strong> \${article.fecha}</p>
-
-    <h2>Abstract</h2>
-    <p>\${article.englishAbstract}</p>
-
-    <h2>PDF Preview</h2>
-    <embed src="\${article.pdf}" type="application/pdf" class="pdf-preview">
-    <div style="margin-top:15px">
-      <a href="\${article.pdf}" target="_blank" rel="noopener noreferrer" class="btn">Open in new tab</a>
-      <a href="\${article.pdf}" download class="btn primary">Download PDF</a>
-      <a href="/" class="btn">Back to home</a>
-    </div>
-
-    <h2>Citation</h2>
-    <p><strong>APA:</strong> \${authorsAPA}. (\${year}). \${article.titulo}. <em>Revista Nacional de las Ciencias para Estudiantes</em>, \${article.volumen}(\${article.numero}), \${article.primeraPagina}-\${article.ultimaPagina}.</p>
-
-    <footer style="margin-top:40px;text-align:center">
-      <p>&copy; \${new Date().getFullYear()} The National Review of Sciences for Students</p>
-      <a href="/en/article">Back to articles</a> | <a href="/">Home</a>
+    <header>
+      <h1>${article.titulo}</h1>
+      <p class="authors">${authorsDisplayEn}</p>
+      <p class="meta"><strong>Publication Date:</strong> ${article.fecha}</p>
+      <p class="meta"><strong>Volume:</strong> ${article.volumen}, <strong>Issue:</strong> ${article.numero}, <strong>Pages:</strong> ${article.primeraPagina}-${article.ultimaPagina}</p>
+      <p class="meta"><strong>Thematic Area:</strong> ${article.area}</p>
+    </header>
+    <main>
+      <section>
+        <h2>Keywords</h2>
+        <div class="keywords">
+          ${article.keywords_english.map(kw => `<span class="keyword">${kw}</span>`).join('')}
+        </div>
+      </section>
+      <section>
+        <h2>Abstract</h2>
+        <p>${article.englishAbstract}</p>
+      </section>
+      <section>
+        <h2>PDF Preview</h2>
+        <embed src="${article.pdf}" type="application/pdf" class="pdf-preview" />
+        <div class="buttons">
+          <!-- Open in new tab (secure) -->
+          <a href="${article.pdf}" target="_blank" rel="noopener noreferrer" class="button open-pdf">Open PDF in New Tab</a>
+          <a href="${article.pdf}" download class="button download-pdf">Download PDF</a>
+        </div>
+      </section>
+      <section class="citations">
+        <h2>Citations</h2>
+        <p><strong>APA:</strong> ${authorsAPA}. (${year}). ${article.titulo}. <em>Revista Nacional de las Ciencias para Estudiantes</em>, ${article.volumen}(${article.numero}), ${article.primeraPagina}-${article.ultimaPagina}.</p>
+        <p><strong>MLA:</strong> ${authorsMLAEn}. "${article.titulo}." <em>Revista Nacional de las Ciencias para Estudiantes</em>, vol. ${article.volumen}, no. ${article.numero}, ${year}, pp. ${article.primeraPagina}-${article.ultimaPagina}.</p>
+        <p><strong>Chicago:</strong> ${authorsChicagoEn}. "${article.titulo}." <em>Revista Nacional de las Ciencias para Estudiantes</em> ${article.volumen}, no. ${article.numero} (${year}): ${article.primeraPagina}-${article.ultimaPagina}.</p>
+      </section>
+      <section class="license">
+        <h2>License</h2>
+        <p>This article is published under a <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International (CC BY 4.0)</a> license.</p>
+        <img src="https://mirrors.creativecommons.org/presskit/buttons/88x31/png/by.png" alt="CC BY 4.0" style="width:88px; height:31px;">
+      </section>
+    </main>
+    <footer>
+      <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
+      <div class="back-links">
+        <a href="/en/article">Back to Articles</a> | <a href="/">Back to home</a>
+      </div>
     </footer>
   </div>
 </body>
