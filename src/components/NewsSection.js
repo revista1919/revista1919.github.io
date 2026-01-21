@@ -211,7 +211,7 @@ export default function NewsSection({ className }) {
           <p className="text-gray-500 font-serif italic">Crónicas, avances y anuncios de la comunidad científica estudiantil.</p>
         </div>
         <div className="w-full md:w-auto bg-gray-50 p-4 border border-gray-200">
-          <p className="text-[10px] uppercase tracking-widest font-bold mb-3 text-gray-400">Suscripción Institucional</p>
+          <p className="text-[10px] uppercase tracking-widest font-bold mb-3 text-gray-400">Suscripción al Boletín</p>
           {!enviado ? (
             <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2">
               <input
@@ -224,7 +224,7 @@ export default function NewsSection({ className }) {
               />
               <input
                 type="email"
-                placeholder="correo@ejemplo.edu"
+                placeholder="correo@gmail.com"
                 value={correo}
                 onChange={(e) => setCorreo(e.target.value)}
                 required
@@ -262,12 +262,15 @@ export default function NewsSection({ className }) {
         {featured && (
           <motion.article
             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            className="lg:col-span-7 group cursor-pointer"
+            className="col-span-full group cursor-pointer"
             onClick={() => openNews(featured)}
           >
             <div className="mb-4 overflow-hidden bg-gray-100 aspect-video flex items-center justify-center border border-gray-100">
-              {/* Aquí podrías poner una imagen si el CSV la tuviera, si no, un placeholder tipográfico elegante */}
-              <span className="text-6xl font-serif font-black text-gray-200 uppercase tracking-tighter">Ciencia Hoy</span>
+              <img 
+                src="https://www.revistacienciasestudiantes.com/team.jpg" 
+                alt="Equipo de la revista" 
+                className="w-full h-full object-cover"
+              />
             </div>
             <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#007398] mb-4 block">Nota Editorial</span>
             <h3 className="text-4xl font-serif font-bold leading-tight mb-4 group-hover:underline underline-offset-4 decoration-1">
@@ -278,36 +281,38 @@ export default function NewsSection({ className }) {
             >
               {decodeBody(featured.cuerpo)}
             </div>
-            <time className="text-xs font-mono text-gray-400 uppercase tracking-widest">{featured.fecha}</time>
+            <div className="mt-4 text-[#007398] font-bold text-sm uppercase tracking-wide group-hover:underline">Leer completa →</div>
+            <time className="text-xs font-mono text-gray-400 uppercase tracking-widest block mt-2">{featured.fecha}</time>
           </motion.article>
         )}
-        {/* Listado Lateral (Grid secundario) */}
-        <div className="lg:col-span-5 flex flex-col gap-8 divide-y divide-gray-100">
-          <AnimatePresence>
-            {remaining.map((item, idx) => (
-              <motion.article
-                key={idx}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: idx * 0.1 }}
-                className="pt-8 first:pt-0 group cursor-pointer"
-                onClick={() => openNews(item)}
+      </div>
+      {/* Listado de Noticias en Dos Columnas */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mt-12">
+        <AnimatePresence>
+          {remaining.map((item, idx) => (
+            <motion.article
+              key={idx}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: idx * 0.1 }}
+              className="group cursor-pointer"
+              onClick={() => openNews(item)}
+            >
+              <time className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-2">
+                {item.fecha}
+              </time>
+              <h4 className="text-xl font-serif font-bold leading-snug group-hover:text-[#007398] transition-colors">
+                {item.titulo}
+              </h4>
+              <div
+                className="mt-2 text-sm text-gray-500 line-clamp-2 leading-relaxed"
               >
-                <time className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-2">
-                  {item.fecha}
-                </time>
-                <h4 className="text-xl font-serif font-bold leading-snug group-hover:text-[#007398] transition-colors">
-                  {item.titulo}
-                </h4>
-                <div
-                  className="mt-2 text-sm text-gray-500 line-clamp-2 leading-relaxed"
-                >
-                  {decodeBody(item.cuerpo)}
-                </div>
-              </motion.article>
-            ))}
-          </AnimatePresence>
-        </div>
+                {decodeBody(item.cuerpo)}
+              </div>
+              <div className="mt-4 text-[#007398] font-bold text-sm uppercase tracking-wide group-hover:underline">Leer más →</div>
+            </motion.article>
+          ))}
+        </AnimatePresence>
       </div>
       {filteredNews.length === 0 && (
         <p className="text-center text-gray-600 col-span-full mt-8">

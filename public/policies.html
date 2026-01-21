@@ -3,106 +3,155 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Políticas de Envío de Artículos - Revista Nacional de las Ciencias para Estudiantes</title>
+  <title>Políticas de Envío - Revista Nacional de las Ciencias</title>
   <style>
+    :root {
+      --primary: #007398;
+      --text: #1a1a1a;
+      --light-text: #666;
+      --border: #e5e7eb;
+    }
     body {
-      font-family: 'Georgia', serif;
-      line-height: 1.6;
+      font-family: 'serif', 'Georgia', Times, serif;
+      line-height: 1.7;
       margin: 0;
       padding: 0;
-      background-color: #f4f4f9;
-      color: #333;
+      background-color: #f9f9f9;
+      color: var(--text);
     }
-    .container {
-      max-width: 800px;
-      margin: 40px auto;
-      padding: 20px;
+    .page-wrapper {
+      max-width: 850px;
+      margin: 60px auto;
       background-color: #fff;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-      border-radius: 8px;
+      padding: 60px 80px;
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.02);
     }
     .header {
       text-align: center;
-      padding-bottom: 20px;
-      border-bottom: 2px solid #004aad;
+      border-bottom: 3px double var(--text);
+      padding-bottom: 30px;
+      margin-bottom: 50px;
     }
     .header img {
-      max-width: 200px;
-      height: auto;
-      margin-bottom: 10px;
+      max-width: 160px;
+      margin-bottom: 20px;
+      filter: grayscale(1);
     }
     .header h1 {
-      font-size: 2.2em;
-      color: #004aad;
+      font-size: 2.4em;
       margin: 0;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+    .document-meta {
+      font-family: sans-serif;
+      text-transform: uppercase;
+      font-size: 10px;
+      letter-spacing: 0.3em;
+      color: var(--primary);
+      font-weight: bold;
+      margin-top: 10px;
     }
     h2 {
-      color: #004aad;
-      font-size: 1.8em;
-      margin-top: 30px;
-      border-left: 4px solid #004aad;
-      padding-left: 10px;
+      font-family: sans-serif;
+      font-size: 0.9em;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--primary);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+      margin-top: 40px;
     }
-    p, li {
-      font-size: 1.1em;
-      margin: 10px 0;
+    p {
+      margin-bottom: 20px;
+      font-size: 1.05em;
     }
-    ul {
+    .policy-list {
+      list-style: none;
+      padding: 0;
+    }
+    .policy-item {
+      margin-bottom: 25px;
       padding-left: 20px;
+      border-left: 2px solid var(--border);
     }
-    li {
-      margin-bottom: 10px;
+    .policy-item strong {
+      display: block;
+      font-family: sans-serif;
+      font-size: 0.85em;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 5px;
+      color: var(--text);
     }
     a {
-      color: #004aad;
-      text-decoration: none;
-    }
-    a:hover {
+      color: var(--primary);
       text-decoration: underline;
+      text-underline-offset: 3px;
     }
     .footer {
+      margin-top: 60px;
+      padding-top: 30px;
+      border-top: 1px solid var(--border);
       text-align: center;
-      margin-top: 40px;
-      font-size: 0.9em;
-      color: #666;
+      font-family: sans-serif;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--light-text);
+    }
+    @media (max-width: 768px) {
+      .page-wrapper { margin: 20px; padding: 30px; }
+      .header h1 { font-size: 1.8em; }
     }
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="page-wrapper">
     <div class="header">
-      <img src="logo.png" alt="Logo de la Revista Nacional de las Ciencias para Estudiantes">
+      <img src="logo.png" alt="Logo">
       <h1>Políticas de Envío de Artículos</h1>
-      <p>Revista Nacional de las Ciencias para Estudiantes</p>
+      <div class="document-meta">Protocolo Editorial RevCiencias • v.2025</div>
     </div>
 
-    <h2>Introducción</h2>
-    <p>Este documento establece las políticas para el envío de artículos a la <em>Revista Nacional de las Ciencias para Estudiantes</em>. Se entiende por "envío" el proceso de mandar el artículo a través del formulario en línea disponible en la página web de la revista, así como cualquier otro procedimiento que se siga para dicho fin.</p>
+    <h2>01. Introducción</h2>
+    <p>Este documento establece el marco normativo para el envío de manuscritos a la <em>Revista Nacional de las Ciencias para Estudiantes</em>. Se define como "envío" toda transferencia de material intelectual a través de nuestros canales oficiales.</p>
 
-    <h2>Términos y Condiciones</h2>
-    <p>A continuación, se enumeran los términos y condiciones del proceso de envío:</p>
-    <ul>
-      <li><strong>Compromiso con las Normas Editoriales</strong><br>
-        Con el envío de su artículo, el autor se compromete a seguir las normas editoriales explicitadas en la página web de la revista, accesibles a través del enlace: <a href="https://www.revistacienciasestudiantes.com/es/guidelines/">https://www.revistacienciasestudiantes.com/es/guidelines/</a>.</li>
-      <li><strong>Disponibilidad de Datos</strong><br>
-        Con el envío de su artículo, el autor acepta que los datos referentes al formulario y al documento del artículo queden a completa disponibilidad de la revista y sean utilizados como datos públicos en internet.</li>
-      <li><strong>Cesión de Derechos No Exclusivos</strong><br>
-        Con el envío de su artículo, el autor cede a la revista un derecho no exclusivo para leer el artículo, realizar las correcciones pertinentes, proveer feedback y emitir un informe sobre las correcciones realizadas.</li>
-      <li><strong>Ausencia de Garantía de Publicación</strong><br>
-        El envío de un artículo en ningún caso garantiza su publicación. La decisión de rechazar un artículo queda a discreción de los revisores y el editor, por cualquiera de los motivos establecidos en las normas editoriales.</li>
-      <li><strong>Responsabilidad por Impacto Emocional</strong><br>
-        La revista no se responsabiliza por el impacto emocional que una retroalimentación pueda causar en el autor.</li>
-      <li><strong>Reenvío y Envío Múltiple de Artículos</strong><br>
-        Si un artículo es rechazado, el autor puede reenviarlo las veces que desee. Asimismo, el autor puede enviar cuantos artículos estime conveniente. En ningún caso se garantiza la aceptación de ninguno de ellos en particular.</li>
-      <li><strong>Compromiso en Caso de Aceptación</strong><br>
-        En caso de que el artículo sea aceptado, el autor se compromete a colaborar en el proceso de publicación, proporcionando la información legal requerida por la revista.</li>
-    </ul>
+    <h2>02. Cláusulas y Condiciones</h2>
+    <div class="policy-list">
+      <div class="policy-item">
+        <strong>Adhesión Normativa</strong>
+        El envío del artículo implica la aceptación total de las <a href="https://www.revistacienciasestudiantes.com/es/guidelines/">Normas Editoriales</a> vigentes.
+      </div>
+      <div class="policy-item">
+        <strong>Disponibilidad de Datos</strong>
+        El autor acepta que la información del formulario y el manuscrito queden a disposición de la revista para su tratamiento editorial y eventual publicación pública.
+      </div>
+      <div class="policy-item">
+        <strong>Derechos de Revisión</strong>
+        Se concede a la revista el derecho no exclusivo de evaluación, corrección, retroalimentación y emisión de dictámenes técnicos.
+      </div>
+      <div class="policy-item">
+        <strong>Discrecionalidad Editorial</strong>
+        El proceso de envío no constituye promesa de publicación. La aceptación final depende exclusivamente del comité de pares y editores.
+      </div>
+      <div class="policy-item">
+        <strong>Responsabilidad Ética</strong>
+        La revista se compromete a una revisión rigurosa; el autor asume la recepción de críticas profesionales como parte del crecimiento académico.
+      </div>
+      <div class="policy-item">
+        <strong>Iteración de Manuscritos</strong>
+        No existen límites de reenvío para artículos rechazados, siempre que incorporen mejoras significativas tras la retroalimentación.
+      </div>
+    </div>
 
-    <h2>Notas Finales</h2>
-    <p>Estas políticas son obligatorias para todos los autores que envíen artículos a la revista. Cualquier incumplimiento puede resultar en el rechazo del envío. Para más detalles sobre las normas editoriales, consulte el enlace proporcionado en el punto 1.</p>
+    <h2>03. Notas Finales</h2>
+    <p>El incumplimiento de cualquiera de estos puntos faculta a la revista para desestimar el envío de forma inmediata. La transparencia y el rigor son los pilares de nuestra institución.</p>
 
     <div class="footer">
-      <p>Revista Nacional de las Ciencias para Estudiantes &copy; 2025</p>
+      Revista Nacional de las Ciencias para Estudiantes &copy; 2025 <br>
+      Santiago de Chile • Publicación Independiente
     </div>
   </div>
 </body>
