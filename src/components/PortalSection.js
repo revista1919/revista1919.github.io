@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
+
 const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?gid=0&output=csv'; // Ajusta el gid si es necesario para la hoja de usuarios/team
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby2B1OUt3TMqaed6Vz-iamUPn4gHhKXG2RRxiy8Nt6u69Cg-2kSze2XQ-NywX5QrNfy/exec';
@@ -19,6 +20,7 @@ const RUBRIC_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzehxU_O7Gkzf
 const RUBRIC_CSV1 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=0&single=true&output=csv';
 const RUBRIC_CSV2 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=1438370398&single=true&output=csv';
 const RUBRIC_CSV3 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=1972050001&single=true&output=csv';
+
 const criteria = {
   'Revisor 1': [
     {
@@ -144,13 +146,16 @@ const criteria = {
     }
   ]
 };
+
 const getDecisionText = (percent) => {
   if (percent >= 85) return 'Aceptar sin cambios.';
   if (percent >= 70) return 'Aceptar con cambios menores.';
   if (percent >= 50) return 'Revisión mayor requerida antes de publicar.';
   return 'Rechazar.';
 };
+
 const getTotal = (scores, crits) => crits.reduce((sum, c) => sum + (scores[c.key] || 0), 0);
+
 const base64EncodeUnicode = (str) => {
   const encoder = new TextEncoder();
   const bytes = encoder.encode(str);
@@ -158,6 +163,7 @@ const base64EncodeUnicode = (str) => {
   bytes.forEach(b => binary += String.fromCharCode(b));
   return btoa(binary);
 };
+
 const base64DecodeUnicode = (str) => {
   const binary = atob(str);
   const bytes = new Uint8Array(binary.length);
@@ -167,6 +173,7 @@ const base64DecodeUnicode = (str) => {
   const decoder = new TextDecoder();
   return decoder.decode(bytes);
 };
+
 const sanitizeInput = (input) => {
   if (!input) return '';
   return input.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
@@ -174,6 +181,7 @@ const sanitizeInput = (input) => {
               .replace(/\s+/g, ' ')
               .trim();
 };
+
 class ErrorBoundary extends React.Component {
   state = { hasError: false };
   static getDerivedStateFromError(error) {
@@ -189,11 +197,13 @@ class ErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
+
 const localizer = momentLocalizer(moment);
+
 function CalendarComponent({ events, onSelectEvent }) {
   return (
-    <div className="bg-white p-4 rounded-lg shadow-md mb-6">
-      <h3 className="text-xl font-bold text-gray-800 mb-4">Calendario de Plazos</h3>
+    <div className="bg-white border border-gray-200 p-8 rounded-sm shadow-sm mb-6">
+      <h3 className="font-serif text-2xl font-bold text-gray-900 mb-4">Calendario de Plazos</h3>
       <Calendar
         localizer={localizer}
         events={events}
@@ -223,6 +233,109 @@ function CalendarComponent({ events, onSelectEvent }) {
     </div>
   );
 }
+
+/** * DISEÑO MODERNIZADO: Rúbrica estilo formulario de revisión por pares
+ */
+const RubricViewer = ({ roleKey, scores, onChange, readOnly = false }) => {
+  const crits = criteria[roleKey];
+  if (!crits) return null;
+  const total = getTotal(scores, crits);
+  const max = crits.length * 2;
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+      className="bg-white border border-gray-200 rounded-lg overflow-hidden mb-8"
+    >
+      <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+        <h5 className="font-serif text-lg font-bold text-gray-900 uppercase tracking-tight">
+          Protocolo de Evaluación: {roleKey}
+        </h5>
+        <div className="text-sm font-mono font-bold text-blue-700 bg-blue-50 px-3 py-1 rounded">
+          SCORE: {total} / {max}
+        </div>
+      </div>
+     
+      <div className="p-6 space-y-8">
+        {crits.map((c) => (
+          <div key={c.key} className="border-b border-gray-100 last:border-0 pb-6">
+            <div className="flex justify-between items-start mb-4">
+              <h6 className="font-sans font-bold text-xs uppercase tracking-widest text-gray-500">{c.name}</h6>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              {Object.entries(c.levels).map(([val, info]) => (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => !readOnly && onChange && onChange(c.key, parseInt(val))}
+                  className={`relative p-4 text-left border rounded-md transition-all duration-200 ${
+                    scores[c.key] == val
+                    ? 'border-blue-600 bg-blue-50/50 ring-1 ring-blue-600'
+                    : 'border-gray-200 hover:border-gray-300 bg-white'
+                  } ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}
+                >
+                  <span className={`block text-xs font-bold mb-1 ${scores[c.key] == val ? 'text-blue-700' : 'text-gray-400'}`}>
+                    NIVEL {val}
+                  </span>
+                  <p className="text-sm text-gray-800 leading-snug">{info.label.split('=')[1]}</p>
+                  {scores[c.key] == val && (
+                    <motion.div layoutId="check" className="absolute top-2 right-2 text-blue-600">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293l-4 4a1 1 0 01-1.414 0l-2-2a1 1 0 111.414-1.414L9 10.586l3.293-3.293a1 1 0 011.414 1.414z"/></svg>
+                    </motion.div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  );
+};
+
+/**
+ * TARJETA DE ASIGNACIÓN: Estilo Card Editorial
+ */
+const AssignmentCard = ({ assignment, onClick, index }) => {
+  const role = assignment.role;
+  const isAuthorCard = role === 'Autor';
+  const isCompleted = isAuthorCard
+    ? (assignment.feedbackEditor && ['Aceptado', 'Rechazado'].includes(assignment.Estado))
+    : assignment.isCompleted;
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05 }}
+      whileHover={{ y: -4 }}
+      onClick={onClick}
+      className="group bg-white border border-gray-200 p-6 flex flex-col h-full hover:border-blue-400 transition-all cursor-pointer relative"
+    >
+      <div className="flex justify-between items-start mb-4">
+        <span className="text-[10px] font-sans font-bold uppercase tracking-[0.2em] text-blue-600">
+          {role}
+        </span>
+        <div className={`w-2 h-2 rounded-full ${isCompleted ? 'bg-green-500' : 'bg-amber-400 animate-pulse'}`} />
+      </div>
+     
+      <h4 className="font-serif text-xl font-bold text-gray-900 group-hover:text-blue-800 transition-colors mb-4 line-clamp-2">
+        {assignment['Nombre Artículo']}
+      </h4>
+      <div className="mt-auto pt-4 border-t border-gray-50 space-y-2">
+        <div className="flex justify-between text-xs text-gray-500 font-sans">
+          <span>PLAZO</span>
+          <span className="font-bold">{assignment.Plazo ? new Date(assignment.Plazo).toLocaleDateString() : 'SIN FECHA'}</span>
+        </div>
+        <div className="flex justify-between text-xs text-gray-500 font-sans">
+          <span>ESTADO</span>
+          <span className={`font-bold ${isCompleted ? 'text-green-700' : 'text-amber-700'}`}>
+            {isCompleted ? 'FINALIZADO' : 'PENDIENTE'}
+          </span>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
 export default function PortalSection({ user, onLogout }) {
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -248,6 +361,7 @@ export default function PortalSection({ user, onLogout }) {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const feedbackQuillRefs = useRef({});
   const reportQuillRefs = useRef({});
+
   useEffect(() => {
     if (!user) {
       setAssignments([]);
@@ -273,6 +387,7 @@ export default function PortalSection({ user, onLogout }) {
       setSelectedEvent(null);
     }
   }, [user]);
+
   // Mapeo de correo → nombre real
   useEffect(() => {
     const fetchUserMapping = async () => {
@@ -307,6 +422,7 @@ export default function PortalSection({ user, onLogout }) {
     };
     fetchUserMapping();
   }, [user]);
+
   const fetchRubrics = async () => {
     try {
       const [csv1Text, csv2Text, csv3Text] = await Promise.all([
@@ -361,6 +477,7 @@ export default function PortalSection({ user, onLogout }) {
       return { scoresMap1: {}, scoresMap2: {}, scoresMap3: {} };
     }
   };
+
   const fetchWithRetry = async (url, retries = 3, timeout = 10000) => {
     for (let i = 0; i < retries; i++) {
       try {
@@ -376,6 +493,7 @@ export default function PortalSection({ user, onLogout }) {
       }
     }
   };
+
   const fetchAssignments = async () => {
     try {
       setLoading(true);
@@ -488,6 +606,7 @@ export default function PortalSection({ user, onLogout }) {
       setLoading(false);
     }
   };
+
   useEffect(() => {
     if (!user || !effectiveName || !user.role) {
       setError('Usuario no definido o información incompleta');
@@ -496,6 +615,7 @@ export default function PortalSection({ user, onLogout }) {
     }
     fetchAssignments();
   }, [user, effectiveName]);
+
   // Roles del usuario
   const userRoles = user?.role ? user.role.split(';').map(r => r.trim()) : [];
   const isAuthor = assignments.length > 0 && assignments[0].role === 'Autor';
@@ -505,27 +625,32 @@ export default function PortalSection({ user, onLogout }) {
   const isWebDev = userRoles.includes('Responsable de Desarrollo Web');
   // Solo usuarios con rol superior a "Autor" ven el calendario
   const canSeeCalendar = isChief || isDirector || isRrss || isWebDev || assignments.some(a => a.role !== 'Autor');
+
   const pendingAssignments = useMemo(() =>
     isAuthor
       ? assignments.filter(a => !a.feedbackEditor || !['Aceptado', 'Rechazado'].includes(a.Estado))
       : assignments.filter(a => !a.isCompleted),
     [assignments, isAuthor]
   );
+
   const completedAssignments = useMemo(() =>
     isAuthor
       ? assignments.filter(a => a.feedbackEditor && ['Aceptado', 'Rechazado'].includes(a.Estado))
       : assignments.filter(a => a.isCompleted),
     [assignments, isAuthor]
   );
+
   const handleVote = (link, value) => {
     setVote((prev) => ({ ...prev, [link]: value }));
   };
+
   const handleRubricChange = (link, key, value) => {
     setRubricScores((prev) => ({
       ...prev,
       [link]: { ...prev[link], [key]: value }
     }));
   };
+
   const getRequiredKeys = (role) => {
     switch (role) {
       case 'Revisor 1': return ['gramatica', 'claridad', 'estructura', 'citacion'];
@@ -534,11 +659,13 @@ export default function PortalSection({ user, onLogout }) {
       default: return [];
     }
   };
+
   const isRubricComplete = (link, role) => {
     const rubric = rubricScores[link] || {};
     const required = getRequiredKeys(role);
     return required.every(key => rubric[key] !== undefined && rubric[key] !== null);
   };
+
   const handleSubmitRubric = async (link, role) => {
     const articleName = assignments.find(a => a['Link Artículo'] === link)['Nombre Artículo'];
     const rubric = rubricScores[link] || {};
@@ -585,6 +712,7 @@ export default function PortalSection({ user, onLogout }) {
       setRubricStatus((prev) => ({ ...prev, [link]: `Error: ${err.message}` }));
     }
   };
+
   const handleSubmit = async (link, role, feedbackText, reportText, voteValue) => {
     const encodedFeedback = base64EncodeUnicode(sanitizeInput(feedbackText || ''));
     const encodedReport = base64EncodeUnicode(sanitizeInput(reportText || ''));
@@ -627,15 +755,18 @@ export default function PortalSection({ user, onLogout }) {
       setSubmitStatus((prev) => ({ ...prev, [link]: `Error: ${err.message}` }));
     }
   };
+
   const toggleTutorial = (link) => {
     setTutorialVisible((prev) => ({ ...prev, [link]: !prev[link] }));
   };
+
   const toggleFeedback = (link, type) => {
     setExpandedFeedback((prev) => ({
       ...prev,
       [link]: { ...prev[link], [type]: !prev[link]?.[type] }
     }));
   };
+
   const getTutorialText = (role) => {
     if (role === "Revisor 1") {
       return 'Como Revisor 1, tu rol es revisar aspectos técnicos como gramática, ortografía, citación de fuentes, detección de contenido generado por IA, coherencia lógica y estructura general del artículo. Proporciona comentarios detallados en el documento de Google Drive para sugerir mejoras. Asegúrate de que el lenguaje sea claro y académico. Debes proporcionar feedback al autor en la caja correspondiente. Además, debes enviar un informe resumido explicando tus observaciones para guiar al editor. Finalmente, en la caja de voto, ingresa "si" si apruebas el artículo, y "no" si lo rechazas.';
@@ -646,6 +777,7 @@ export default function PortalSection({ user, onLogout }) {
     }
     return "";
   };
+
   const Tutorial = ({ role }) => {
     const tutorialText = getTutorialText(role);
     return (
@@ -659,63 +791,21 @@ export default function PortalSection({ user, onLogout }) {
       </motion.div>
     );
   };
-  const RubricViewer = ({ roleKey, scores, onChange, readOnly = false }) => {
-    const crits = criteria[roleKey];
-    if (!crits) return null;
-    const total = getTotal(scores, crits);
-    const max = crits.length * 2;
-    const roleDisplay = roleKey === 'Revisor 1' ? 'Revisor 1 (Forma, Estilo y Técnica)' : roleKey === 'Revisor 2' ? 'Revisor 2 (Contenido y Originalidad)' : 'Editor (Síntesis y Decisión Final)';
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white p-4 rounded-lg shadow-md mb-6 overflow-hidden"
-      >
-        <h5 className="font-semibold mb-4 text-gray-800 border-b pb-2 break-words">{roleDisplay} - Total: {total} / {max}</h5>
-        {crits.map((c) => (
-          <div key={c.key} className="mb-4 p-3 bg-gray-50 rounded-md">
-            <h6 className="font-medium mb-2 text-gray-700 break-words">{c.name}</h6>
-            <div className="flex space-x-1 mb-2">
-              {Object.entries(c.levels).map(([val, info]) => (
-                <motion.button
-                  key={val}
-                  type="button"
-                  onClick={() => !readOnly && onChange && onChange(c.key, parseInt(val))}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className={`flex-1 py-2 px-3 rounded text-xs font-medium transition-colors break-words ${
-                    scores[c.key] == val
-                      ? 'bg-blue-500 text-white shadow-md'
-                      : readOnly
-                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                  disabled={readOnly}
-                >
-                  {info.label.split(' = ')[1]}
-                </motion.button>
-              ))}
-            </div>
-            <p className={`text-xs italic ${readOnly ? 'text-gray-500' : 'text-blue-600'} break-words`}>
-              {c.levels[scores[c.key] || 0].desc}
-            </p>
-          </div>
-        ))}
-      </motion.div>
-    );
-  };
+
   const debouncedSetFeedback = useCallback(
     (link) => debounce((value) => {
       setFeedback((prev) => ({ ...prev, [link]: value }));
     }, 300),
     []
   );
+
   const debouncedSetReport = useCallback(
     (link) => debounce((value) => {
       setReport((prev) => ({ ...prev, [link]: value }));
     }, 300),
     []
   );
+
   const modules = useMemo(() => ({
     toolbar: {
       container: [
@@ -826,6 +916,7 @@ export default function PortalSection({ user, onLogout }) {
       },
     },
   }), []);
+
   useEffect(() => {
     const setupCustomButton = (quillRef, link, type) => {
       if (quillRef.current) {
@@ -853,6 +944,7 @@ export default function PortalSection({ user, onLogout }) {
       setupCustomButton(reportQuillRefs.current[link], link, 'report');
     });
   }, [feedbackQuillRefs.current, reportQuillRefs.current]);
+
   const formats = useMemo(() => [
     'bold', 'italic', 'underline', 'strike', 'blockquote',
     'list', 'bullet',
@@ -860,9 +952,7 @@ export default function PortalSection({ user, onLogout }) {
     'align',
     'size'
   ], []);
-  const encodeBody = (html) => {
-    return base64EncodeUnicode(sanitizeInput(html));
-  };
+
   const decodeBody = (encoded) => {
     if (!encoded) return <p className="text-gray-600 break-words">No hay contenido disponible.</p>;
     try {
@@ -873,6 +963,7 @@ export default function PortalSection({ user, onLogout }) {
       return <p className="text-gray-600 break-words">Error al decodificar contenido.</p>;
     }
   };
+
   const handleImageModalSubmit = (link) => {
     const quillRef = feedbackQuillRefs.current[link] || reportQuillRefs.current[link];
     if (!quillRef) return;
@@ -914,6 +1005,7 @@ export default function PortalSection({ user, onLogout }) {
     setImageData((prev) => ({ ...prev, [link]: { url: '', width: '', height: '', align: 'left' } }));
     setEditingRange((prev) => ({ ...prev, [link]: null }));
   };
+
   const handleImageDataChange = (link, e) => {
     const { name, value } = e.target;
     setImageData((prev) => ({
@@ -921,67 +1013,7 @@ export default function PortalSection({ user, onLogout }) {
       [link]: { ...prev[link], [name]: value }
     }));
   };
-  const AssignmentCard = ({ assignment, onClick, index }) => {
-    const role = assignment.role;
-    const nombre = assignment['Nombre Artículo'];
-    const isAuthorCard = role === 'Autor';
-    const statusColor = isAuthorCard
-      ? (assignment.feedbackEditor && ['Aceptado', 'Rechazado'].includes(assignment.Estado)
-        ? 'bg-green-100 text-green-800'
-        : 'bg-yellow-100 text-yellow-800')
-      : (assignment.isCompleted ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800');
-    // Calcular porcentaje solo si no es autor
-    let percent = 0;
-    if (!isAuthorCard) {
-      const total = role !== 'Editor'
-        ? getTotal(assignment.scores || {}, criteria[role] || [])
-        : getTotal(assignment.scores || {}, criteria['Editor'] || []);
-      const max = (criteria[role] || criteria['Editor'] || []).length * 2;
-      percent = max > 0 ? (total / max) * 100 : 0;
-    }
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 50 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: index * 0.1 }}
-        whileHover={{ scale: 1.02, boxShadow: '0 10px 20px rgba(0,0,0,0.1)' }}
-        className="bg-white p-6 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-200 h-full flex flex-col justify-between"
-        onClick={onClick}
-      >
-        <div>
-          <h4 className="text-xl font-bold text-gray-800 mb-2 break-words">{nombre}</h4>
-          <p className="text-sm text-gray-600 mb-3 break-words">Rol: {role}</p>
-          {assignment.Plazo && (
-            <p className="text-sm text-gray-600 mb-3 break-words">Plazo: {new Date(assignment.Plazo).toLocaleDateString()}</p>
-          )}
-          <div className="flex items-center justify-between mb-4">
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor}`}>
-              {isAuthorCard
-                ? (assignment.feedbackEditor && ['Aceptado', 'Rechazado'].includes(assignment.Estado)
-                  ? 'Archivado'
-                  : 'En Revisión')
-                : (assignment.isCompleted ? 'Completado' : 'Pendiente')}
-            </span>
-            {!isAuthorCard && (
-              <span className="text-sm font-medium text-gray-700">
-                {percent.toFixed(0)}% Puntaje
-              </span>
-            )}
-          </div>
-          <p className="text-gray-500 text-sm break-words">{assignment.Estado || 'Sin estado'}</p>
-        </div>
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
-          >
-            Ver Detalles
-          </motion.button>
-        </div>
-      </motion.div>
-    );
-  };
+
   const renderFullAssignment = (assignment) => {
     const link = assignment['Link Artículo'];
     const role = assignment.role;
@@ -1153,26 +1185,26 @@ export default function PortalSection({ user, onLogout }) {
           </motion.button>
         </div>
         {isAuth ? (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-6">
-      {assignment.feedbackEditor && ['Aceptado', 'Rechazado'].includes(assignment.Estado) ? (
-        <>
-          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="p-4 bg-green-50 rounded-md border-l-4 border-green-400">
-            <h5 className="text-lg font-semibold text-green-800 mb-2">Estado Final: {assignment.Estado}</h5>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-6">
+            {assignment.feedbackEditor && ['Aceptado', 'Rechazado'].includes(assignment.Estado) ? (
+              <>
+                <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="p-4 bg-green-50 rounded-md border-l-4 border-green-400">
+                  <h5 className="text-lg font-semibold text-green-800 mb-2">Estado Final: {assignment.Estado}</h5>
+                </motion.div>
+                <h5 className="text-lg font-semibold text-gray-800">Feedback del Editor</h5>
+                <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto leading-relaxed">
+                  {decodeBody(assignment.feedbackEditor)}
+                </div>
+              </>
+            ) : (
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="p-6 bg-yellow-50 rounded-md border-l-4 border-yellow-400 text-center">
+                <h5 className="text-xl font-semibold text-yellow-800 mb-2">Artículo en Revisión</h5>
+                <p className="text-yellow-700 text-lg">Tu artículo "{assignment['Nombre Artículo']}" está actualmente bajo revisión por evaluadores y el editor.</p>
+                <p className="text-yellow-600 mt-2">Recibirás una notificación con la decisión final y el feedback una vez que el proceso se complete.</p>
+              </motion.div>
+            )}
           </motion.div>
-          <h5 className="text-lg font-semibold text-gray-800">Feedback del Editor</h5>
-          <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto leading-relaxed">
-            {decodeBody(assignment.feedbackEditor)}
-          </div>
-        </>
-      ) : (
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="p-6 bg-yellow-50 rounded-md border-l-4 border-yellow-400 text-center">
-          <h5 className="text-xl font-semibold text-yellow-800 mb-2">Artículo en Revisión</h5>
-          <p className="text-yellow-700 text-lg">Tu artículo "{assignment['Nombre Artículo']}" está actualmente bajo revisión por evaluadores y el editor.</p>
-          <p className="text-yellow-600 mt-2">Recibirás una notificación con la decisión final y el feedback una vez que el proceso se complete.</p>
-        </motion.div>
-      )}
-    </motion.div>
-  ) : (
+        ) : (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="lg:col-span-1 space-y-6">
               <div className="space-y-2">
@@ -1519,15 +1551,19 @@ export default function PortalSection({ user, onLogout }) {
       </motion.div>
     );
   };
-  // Director-specific functions for buttons
-  const handleAddArticleClick = () => {
-    // This function will be passed to DirectorPanel to trigger the add modal
-    // We don't need to implement it here as it's handled in DirectorPanel
-  };
-  const handleRebuildClick = () => {
-    // This function will be passed to DirectorPanel to trigger the rebuild action
-    // We don't need to implement it here as it's handled in DirectorPanel
-  };
+
+  const tabs = [
+    { id: 'assignments', label: 'MIS ASIGNACIONES' },
+    { id: 'completed', label: 'COMPLETADAS' },
+    { id: 'calendar', label: 'CALENDARIO ACADÉMICO', hidden: !canSeeCalendar },
+    { id: 'director', label: 'PANEL DIRECTIVO', hidden: !isDirector },
+    { id: 'chief', label: 'PANEL EDITOR JEFE', hidden: !isChief },
+    { id: 'tasks', label: 'MIS TAREAS', hidden: !isRrss && !isWebDev },
+    { id: 'news', label: 'PUBLICAR NOTICIAS', hidden: !isDirector },
+  ];
+
+  const currentAssignments = activeTab === 'assignments' ? pendingAssignments : completedAssignments;
+
   if (!user || !effectiveName || !user.role) {
     console.log('Usuario inválido:', user);
     return (
@@ -1553,231 +1589,59 @@ export default function PortalSection({ user, onLogout }) {
       </motion.div>
     );
   }
+
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.8 }}
-      className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 p-4 md:p-8"
-    >
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
-            {isAuthor && !isDirector && !isChief ? 'Mis Artículos' :
-             isDirector ? 'Panel del Director General' :
-             isChief ? 'Panel del Editor en Jefe' : 'Panel de Revisión'}
-          </h2>
-          <div className="flex items-center space-x-4">
-            {user?.image ? (
-              <motion.img
-                initial={{ scale: 0.8 }}
-                animate={{ scale: 1 }}
-                src={user.image}
-                alt={`Perfil de ${effectiveName || 'Usuario'}`}
-                className="w-10 h-10 rounded-full object-cover border-2 border-gray-300"
-                onError={(e) => (e.target.style.display = 'none')} // Hide on error
-              />
-            ) : (
-              <motion.div
-                initial={{ scale: 0.8 }}
-                animate={{ scale: 1 }}
-                className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center"
-              >
-                <span className="text-gray-600 text-sm">{effectiveName?.charAt(0) || 'U'}</span>
-              </motion.div>
-            )}
-            <span className="text-gray-600">Bienvenido, {effectiveName || 'Usuario'}</span>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={onLogout}
-              className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm"
-            >
-              Cerrar Sesión
-            </motion.button>
-          </div>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 bg-[#fafafa] min-h-screen">
+      {/* Header del Portal */}
+      <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between border-b border-gray-900 pb-8">
+        <div>
+          <h1 className="font-serif text-5xl font-bold text-gray-900 tracking-tighter mb-2">
+            Portal Editorial
+          </h1>
+          <p className="text-gray-500 font-sans tracking-widest uppercase text-xs">
+            Sesión activa: <span className="font-bold text-gray-800">{effectiveName}</span>
+          </p>
         </div>
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-red-100 text-red-700 p-4 rounded-md mb-6"
+        <button
+          onClick={onLogout}
+          className="mt-4 md:mt-0 text-xs font-bold uppercase tracking-widest px-6 py-2 border border-gray-900 hover:bg-gray-900 hover:text-white transition-all"
+        >
+          Cerrar Sesión
+        </button>
+      </header>
+      {/* Navegación Estilo Editorial */}
+      <nav className="flex flex-wrap gap-8 mb-12 border-b border-gray-200">
+        {tabs.filter(t => !t.hidden).map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`pb-4 text-xs font-bold uppercase tracking-widest transition-all relative ${
+              activeTab === tab.id ? 'text-blue-700' : 'text-gray-400 hover:text-gray-600'
+            }`}
           >
-            {error}
-          </motion.div>
-        )}
-        {!loading && !isAuthor && <CalendarComponent
-          events={calendarEvents}
-          onSelectEvent={(event) => setSelectedEvent(event.resource)}
-        />}
-        {selectedEvent && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
-              <div className="flex justify-between items-start mb-4">
-                <h5 className="font-bold text-lg">Detalles del Evento</h5>
-                <button onClick={() => setSelectedEvent(null)} className="text-gray-500 hover:text-gray-700">×</button>
-              </div>
-              {renderFullAssignment(selectedEvent)}
-            </div>
-          </div>
-        )}
-        {isDirector && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="mb-6"
-          >
-            <NewsUploadSection />
-          </motion.div>
-        )}
-        {isDirector && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="mb-6 bg-white rounded-xl shadow-lg p-4"
-          >
-            <div className="flex justify-between items-center">
-              <h3 className="text-xl font-semibold text-gray-800">Panel del Director General</h3>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setIsDirectorPanelExpanded(!isDirectorPanelExpanded)}
-                className="bg-gray-200 text-gray-800 px-3 py-1 rounded-md hover:bg-gray-300 text-sm flex items-center space-x-2"
-              >
-                <span>{isDirectorPanelExpanded ? 'Minimizar' : 'Expandir'}</span>
-                <svg className={`w-4 h-4 transform ${isDirectorPanelExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                </svg>
-              </motion.button>
-            </div>
-            <div className="mt-4 flex space-x-4">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => {
-                  console.log('Botón agregar artículo clickeado');
-                  document.dispatchEvent(new CustomEvent('openAddArticleModal'));
-                }}
-                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium flex items-center space-x-2"
-                style={{ display: 'inline-flex !important', visibility: 'visible !important' }}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                <span>Agregar Artículo</span>
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => {
-                  console.log('Botón actualizar página clickeado');
-                  document.dispatchEvent(new CustomEvent('rebuildPage'));
-                }}
-                className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors font-medium flex items-center space-x-2"
-                style={{ display: 'inline-flex !important', visibility: 'visible !important' }}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                <span>Actualizar Página</span>
-              </motion.button>
-            </div>
-            <AnimatePresence>
-              {isDirectorPanelExpanded && (
+            {tab.label}
+            {activeTab === tab.id && (
+              <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700" />
+            )}
+          </button>
+        ))}
+      </nav>
+      <main>
+        <AnimatePresence mode="wait">
+          {activeTab === 'assignments' || activeTab === 'completed' ? (
+            <motion.section
+              key="assignments"
+              initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
+            >
+              {error && (
                 <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="mt-4 space-y-6 overflow-hidden"
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-red-100 text-red-700 p-4 rounded-md mb-6"
                 >
-                  <DirectorPanel user={user} />
-                  <TaskSection user={user} />
+                  {error}
                 </motion.div>
               )}
-            </AnimatePresence>
-          </motion.div>
-        )}
-        {isChief && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="mb-6 bg-white rounded-xl shadow-lg p-4"
-          >
-            <div className="flex justify-between items-center">
-              <h3 className="text-xl font-semibold text-gray-800">Panel del Editor en Jefe</h3>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setIsChiefEditorPanelExpanded(!isChiefEditorPanelExpanded)}
-                className="bg-gray-200 text-gray-800 px-3 py-1 rounded-md hover:bg-gray-300 text-sm flex items-center space-x-2"
-              >
-                <span>{isChiefEditorPanelExpanded ? 'Minimizar' : 'Expandir'}</span>
-                <svg className={`w-4 h-4 transform ${isChiefEditorPanelExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                </svg>
-              </motion.button>
-            </div>
-            <AnimatePresence>
-              {isChiefEditorPanelExpanded && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="mt-4 space-y-6 overflow-hidden"
-                >
-                  <AssignSection user={user} />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
-        )}
-        {(isRrss || isWebDev) && !isDirector && !isChief && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="mb-6 bg-white rounded-xl shadow-lg p-4"
-          >
-            <div className="flex justify-between items-center">
-              <h3 className="text-xl font-semibold text-gray-800">Mis Tareas en {isRrss ? 'Redes Sociales' : 'Desarrollo Web'}</h3>
-            </div>
-            <TaskSection user={user} />
-          </motion.div>
-        )}
-        {(pendingAssignments.length > 0 || completedAssignments.length > 0) && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-            className="mb-6"
-          >
-            <div className="flex space-x-4 border-b">
-              <motion.button
-                whileHover={{ y: -2 }}
-                onClick={() => setActiveTab('assignments')}
-                className={`pb-2 px-4 text-sm font-medium transition-all duration-300 ${activeTab === 'assignments' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}
-              >
-                {isAuthor ? 'Artículos en Revisión' : 'Asignaciones Pendientes'} ({pendingAssignments.length})
-              </motion.button>
-              <motion.button
-                whileHover={{ y: -2 }}
-                onClick={() => setActiveTab('completed')}
-                className={`pb-2 px-4 text-sm font-medium transition-all duration-300 ${activeTab === 'completed' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}
-              >
-                {isAuthor ? 'Artículos Archivados' : 'Asignaciones Completadas'} ({completedAssignments.length})
-              </motion.button>
-            </div>
-          </motion.div>
-        )}
-        <ErrorBoundary>
-          {(isChief || isDirector) && activeTab === 'asignar' && <AssignSection user={user} />}
-          {(pendingAssignments.length > 0 || completedAssignments.length > 0 || isChief || isDirector) && (
-            <>
               {loading ? (
                 <motion.div
                   initial={{ opacity: 0 }}
@@ -1787,42 +1651,188 @@ export default function PortalSection({ user, onLogout }) {
                   <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
                   <p className="ml-4 text-gray-600">Cargando asignaciones...</p>
                 </motion.div>
-              ) : selectedAssignment ? (
-                renderFullAssignment(selectedAssignment)
+              ) : currentAssignments.length === 0 ? (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="col-span-full text-center p-12 bg-white rounded-xl shadow-lg"
+                >
+                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                  <h3 className="mt-4 text-xl font-semibold text-gray-800">No hay asignaciones {activeTab === 'assignments' ? 'pendientes' : 'completadas'} en este momento.</h3>
+                  <p className="mt-2 text-gray-600">¡Mantente atento, nuevas oportunidades vendrán pronto!</p>
+                </motion.div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {(() => {
-                    const currentAssignments = activeTab === 'assignments' ? pendingAssignments : completedAssignments;
-                    if (currentAssignments.length === 0) {
-                      return (
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          className="col-span-full text-center p-12 bg-white rounded-xl shadow-lg"
-                        >
-                          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                          </svg>
-                          <h3 className="mt-4 text-xl font-semibold text-gray-800">No hay asignaciones {activeTab === 'assignments' ? 'pendientes' : 'completadas'} en este momento.</h3>
-                          <p className="mt-2 text-gray-600">¡Mantente atento, nuevas oportunidades vendrán pronto!</p>
-                        </motion.div>
-                      );
-                    }
-                    return currentAssignments.map((assignment, index) => (
-                      <AssignmentCard
-                        key={assignment.id}
-                        assignment={assignment}
-                        onClick={() => setSelectedAssignment(assignment)}
-                        index={index}
-                      />
-                    ));
-                  })()}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {currentAssignments.map((ass, idx) => (
+                    <AssignmentCard
+                      key={ass.id}
+                      assignment={ass}
+                      index={idx}
+                      onClick={() => setSelectedAssignment(ass)}
+                    />
+                  ))}
                 </div>
               )}
-            </>
-          )}
-        </ErrorBoundary>
-      </div>
-    </motion.div>
+            </motion.section>
+          ) : activeTab === 'calendar' ? (
+            <motion.div
+              key="calendar"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              className="bg-white border border-gray-200 p-8 rounded-sm shadow-sm"
+            >
+              <CalendarComponent events={calendarEvents} onSelectEvent={(e) => setSelectedAssignment(e.resource)} />
+            </motion.div>
+          ) : activeTab === 'director' ? (
+            <motion.div
+              key="director"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              className="bg-white border border-gray-200 p-8 rounded-sm shadow-sm"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-serif text-2xl font-bold text-gray-900">Panel del Director General</h3>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setIsDirectorPanelExpanded(!isDirectorPanelExpanded)}
+                  className="bg-gray-200 text-gray-800 px-3 py-1 rounded-md hover:bg-gray-300 text-sm flex items-center space-x-2"
+                >
+                  <span>{isDirectorPanelExpanded ? 'Minimizar' : 'Expandir'}</span>
+                  <svg className={`w-4 h-4 transform ${isDirectorPanelExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </motion.button>
+              </div>
+              <AnimatePresence>
+                {isDirectorPanelExpanded && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="mt-4 space-y-6 overflow-hidden"
+                  >
+                    <DirectorPanel user={user} />
+                    <TaskSection user={user} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <div className="mt-4 flex space-x-4">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => {
+                    console.log('Botón agregar artículo clickeado');
+                    document.dispatchEvent(new CustomEvent('openAddArticleModal'));
+                  }}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium flex items-center space-x-2"
+                  style={{ display: 'inline-flex !important', visibility: 'visible !important' }}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  <span>Agregar Artículo</span>
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => {
+                    console.log('Botón actualizar página clickeado');
+                    document.dispatchEvent(new CustomEvent('rebuildPage'));
+                  }}
+                  className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors font-medium flex items-center space-x-2"
+                  style={{ display: 'inline-flex !important', visibility: 'visible !important' }}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  <span>Actualizar Página</span>
+                </motion.button>
+              </div>
+            </motion.div>
+          ) : activeTab === 'chief' ? (
+            <motion.div
+              key="chief"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              className="bg-white border border-gray-200 p-8 rounded-sm shadow-sm"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-serif text-2xl font-bold text-gray-900">Panel del Editor en Jefe</h3>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setIsChiefEditorPanelExpanded(!isChiefEditorPanelExpanded)}
+                  className="bg-gray-200 text-gray-800 px-3 py-1 rounded-md hover:bg-gray-300 text-sm flex items-center space-x-2"
+                >
+                  <span>{isChiefEditorPanelExpanded ? 'Minimizar' : 'Expandir'}</span>
+                  <svg className={`w-4 h-4 transform ${isChiefEditorPanelExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </motion.button>
+              </div>
+              <AnimatePresence>
+                {isChiefEditorPanelExpanded && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="mt-4 space-y-6 overflow-hidden"
+                  >
+                    <AssignSection user={user} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          ) : activeTab === 'tasks' ? (
+            <motion.div
+              key="tasks"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              className="bg-white border border-gray-200 p-8 rounded-sm shadow-sm"
+            >
+              <h3 className="font-serif text-2xl font-bold text-gray-900 mb-4">Mis Tareas en {isRrss ? 'Redes Sociales' : 'Desarrollo Web'}</h3>
+              <TaskSection user={user} />
+            </motion.div>
+          ) : activeTab === 'news' ? (
+            <motion.div
+              key="news"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              className="bg-white border border-gray-200 p-8 rounded-sm shadow-sm"
+            >
+              <h3 className="font-serif text-2xl font-bold text-gray-900 mb-4">Publicar Noticias</h3>
+              <NewsUploadSection />
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+      </main>
+      {/* MODAL DE DETALLE (Overlay Editorial) */}
+      <AnimatePresence>
+        {selectedAssignment && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-white/95 backdrop-blur-sm overflow-y-auto px-4 py-12"
+          >
+            <div className="max-w-4xl mx-auto">
+              <button
+                onClick={() => setSelectedAssignment(null)}
+                className="mb-8 font-sans font-bold text-xs uppercase tracking-widest flex items-center hover:text-blue-600"
+              >
+                ← Volver al Portal
+              </button>
+              <header className="mb-12">
+                <span className="text-xs font-bold text-blue-600 tracking-[0.3em] uppercase">{selectedAssignment.role}</span>
+                <h2 className="font-serif text-4xl font-bold text-gray-900 mt-2 mb-4 leading-tight">
+                  {selectedAssignment['Nombre Artículo']}
+                </h2>
+                <div className="h-1 w-24 bg-gray-900" />
+              </header>
+              {/* Renderizar Rúbrica y Formularios aquí con los nuevos componentes estilizados */}
+              {renderFullAssignment(selectedAssignment)}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
