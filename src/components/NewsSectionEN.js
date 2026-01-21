@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import Papa from "papaparse";
 import { motion, AnimatePresence } from "framer-motion";
-import { useTranslation } from 'react-i18next';
 const NEWS_CSV =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vQKnN8qMJcBN8im9Q61o-qElx1jQp5NdS80_B-FakCHrPLXHlQ_FXZWT0o5GVVHAM26l9sjLxsTCNO8/pub?output=csv";
+const DOMAIN = "https://www.revistacienciasestudiantes.com";
 const base64DecodeUnicode = (str) => {
   try {
     const binary = atob(str);
@@ -95,7 +95,7 @@ function truncateHTML(html, maxLength = 200) {
 function decodeBody(body, truncate = false) {
   if (!body) return <p className="text-gray-800">No content available.</p>;
   try {
-    let html = base64DecodeUnicode(body);
+    let html = body;
     if (truncate) {
       html = truncateHTML(html, 200);
     }
@@ -134,24 +134,49 @@ export default function NewsSectionEN({ className }) {
           skipEmptyLines: true,
           delimiter: ",",
           transform: (value) => (typeof value === "string" ? value.trim() : value),
-          complete: ({ data }) => {
+          complete: async ({ data }) => {
             if (!data || data.length === 0) {
-              setError("CSV empty or invalid format");
+              setError("CSV is empty or has invalid format");
               setLoading(false);
               return;
             }
-            const validNews = data
-              .filter(
-                (item) =>
-                  (item["Title"] || "").trim() !== "" &&
-                  (item["News Content"] || "").trim() !== ""
-              )
-              .map((item) => ({
-                titulo: String(item["Title"] ?? ""),
-                cuerpo: String(item["News Content"] ?? ""),
-                fecha: formatDate(String(item["Date"] ?? "")),
-                fechaIso: parseDateIso(String(item["Date"] ?? "")),
-              }));
+            const validNews = await Promise.all(
+              data
+                .filter(
+                  (item) =>
+                    (item["Título"] || "").trim() !== "" &&
+                    (item["Contenido de la noticia"] || "").trim() !== ""
+                )
+                .map(async (item) => {
+                  const spanishTitle = String(item["Título"] ?? "");
+                  const fecha = String(item["Fecha"] ?? "");
+                  const fechaIso = parseDateIso(fecha);
+                  const slug = generateSlug(`${spanishTitle} ${fechaIso}`);
+                  const htmlUrl = `${DOMAIN}/news/${slug}.EN.html`;
+                  let title = spanishTitle; // Fallback to Spanish title
+                  let body = base64DecodeUnicode(String(item["Contenido de la noticia"] ?? "")); // Fallback to CSV content
+                  try {
+                    const htmlResponse = await fetch(htmlUrl);
+                    if (!htmlResponse.ok) throw new Error(`Failed to fetch HTML: ${htmlUrl}`);
+                    const htmlText = await htmlResponse.text();
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(htmlText, "text/html");
+                    const titleElement = doc.querySelector("h1");
+                    const contentDiv = doc.querySelector(".content.ql-editor");
+                    title = titleElement ? titleElement.textContent : spanishTitle;
+                    body = contentDiv ? contentDiv.innerHTML : body;
+                  } catch (err) {
+                    console.error(`Error fetching HTML for ${slug}:`, err);
+                  }
+                  return {
+                    titulo: title,
+                    cuerpo: body,
+                    fecha: formatDate(fecha),
+                    fechaIso,
+                    slug,
+                  };
+                })
+            );
             setNews(validNews);
             setLoading(false);
           },
@@ -193,8 +218,7 @@ export default function NewsSectionEN({ className }) {
   );
   const loadMoreNews = () => setVisibleNews((prev) => prev + 6);
   const openNews = (item) => {
-    const slug = generateSlug(`${item.titulo} ${item.fechaIso}`);
-    window.location.href = `/news/${slug}EN.html`;
+    window.location.href = `/news/${item.slug}.EN.html`;
   };
   const featured = filteredNews[0];
   const remaining = filteredNews.slice(1, visibleNews);
@@ -208,8 +232,8 @@ export default function NewsSectionEN({ className }) {
       {/* --- HEADER & NEWSLETTER --- */}
       <header className="border-b-4 border-black pb-6 mb-12 flex flex-col md:flex-row justify-between items-end gap-8">
         <div>
-          <h3 className="text-5xl font-serif font-black tracking-tighter mb-2">Newsletter</h3>
-          <p className="text-gray-500 font-serif italic">Chronicles, advances, and announcements from the student scientific community.</p>
+          <h2 className="text-5xl font-serif font-black tracking-tighter mb-2">Newsletter</h2>
+          <p className="text-gray-500 font-serif italic">Chronicles, advances and announcements from the student scientific community.</p>
         </div>
         <div className="w-full md:w-auto bg-gray-50 p-4 border border-gray-200">
           <p className="text-[10px] uppercase tracking-widest font-bold mb-3 text-gray-400">Subscription</p>
@@ -240,9 +264,9 @@ export default function NewsSectionEN({ className }) {
               </button>
             </form>
           ) : (
-            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[#007398] text-sm italic font-serif">
+            <p className="text-green-600 font-semibold text-center mt-4">
               Thank you for subscribing!
-            </motion.p>
+            </p>
           )}
         </div>
       </header>
@@ -268,9 +292,9 @@ export default function NewsSectionEN({ className }) {
               onClick={() => openNews(featured)}
             >
               <div className="mb-4 overflow-hidden bg-gray-100 aspect-video flex items-center justify-center border border-gray-100">
-                <img 
-                  src="https://www.revistacienciasestudiantes.com/team.jpg" 
-                  alt="Journal Team" 
+                <img
+                  src="https://www.revistacienciasestudiantes.com/team.jpg"
+                  alt="Magazine Team"
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -357,7 +381,7 @@ export default function NewsSectionEN({ className }) {
             onClick={loadMoreNews}
             className="group flex items-center gap-4 text-xs font-black uppercase tracking-[0.5em] hover:text-[#007398] transition-all"
           >
-            Load more records
+            Load more entries
             <span className="group-hover:translate-x-2 transition-transform">→</span>
           </button>
         </div>
