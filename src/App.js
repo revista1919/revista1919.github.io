@@ -1,5 +1,5 @@
 // App.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Papa from 'papaparse';
 import { auth } from './firebase';
 import {
@@ -184,62 +184,58 @@ function App() {
     if (Array.isArray(val)) return val.join(', ');
     return String(val);
   };
-const normalizeNumberSearch = (term) => {
-  if (!term) return '';
-  const onlyNumbers = term.replace(/[^0-9]/g, '');
-  return onlyNumbers || term.toLowerCase();
-};
+
+  const normalizeNumberSearch = (term) => {
+    if (!term) return '';
+    const onlyNumbers = term.replace(/[^0-9]/g, '');
+    return onlyNumbers || term.toLowerCase();
+  };
 
   useEffect(() => {
-  const lowerTerm = searchTerm.toLowerCase();
-  const numericTerm = normalizeNumberSearch(searchTerm);
+    const lowerTerm = searchTerm.toLowerCase();
+    const numericTerm = normalizeNumberSearch(searchTerm);
 
-  const filtered = articles.filter((article) => {
-    const matchesSearch =
-      safeString(article.titulo).toLowerCase().includes(lowerTerm) ||
-      safeString(article.autores).toLowerCase().includes(lowerTerm) ||
-      safeString(article.resumen).toLowerCase().includes(lowerTerm) ||
-      safeString(article.institutions).toLowerCase().includes(lowerTerm) ||
-      safeString(article.palabras_clave).toLowerCase().includes(lowerTerm) ||
+    const filtered = articles.filter((article) => {
+      const matchesSearch =
+        safeString(article.titulo).toLowerCase().includes(lowerTerm) ||
+        safeString(article.autores).toLowerCase().includes(lowerTerm) ||
+        safeString(article.resumen).toLowerCase().includes(lowerTerm) ||
+        safeString(article.institutions).toLowerCase().includes(lowerTerm) ||
+        safeString(article.palabras_clave).toLowerCase().includes(lowerTerm) ||
+        safeString(article.volumen).toLowerCase().includes(lowerTerm) ||
+        safeString(article.numero).toLowerCase().includes(lowerTerm) ||
+        safeString(article.fecha).toLowerCase().includes(lowerTerm) ||
+        safeString(article.volumen).includes(numericTerm) ||
+        safeString(article.numero).includes(numericTerm);
 
-      // volumen / número normal
-      safeString(article.volumen).toLowerCase().includes(lowerTerm) ||
-      safeString(article.numero).toLowerCase().includes(lowerTerm) ||
-safeString(article.fecha).toLowerCase().includes(lowerTerm) ||
+      const matchesArea =
+        selectedArea === '' ||
+        safeString(article.area)
+          .toLowerCase()
+          .split(';')
+          .map((a) => a.trim())
+          .some((a) => a === selectedArea.toLowerCase());
 
-      // volumen / número inteligente
-      safeString(article.volumen).includes(numericTerm) ||
-      safeString(article.numero).includes(numericTerm);
+      return matchesSearch && matchesArea;
+    });
 
-    const matchesArea =
-      selectedArea === '' ||
-      safeString(article.area)
-        .toLowerCase()
-        .split(';')
-        .map((a) => a.trim())
-        .some((a) => a === selectedArea.toLowerCase());
-
-    return matchesSearch && matchesArea;
-  });
-
-  setFilteredArticles(filtered);
-  setVisibleArticles(6);
-}, [searchTerm, selectedArea, articles]);
-
+    setFilteredArticles(filtered);
+    setVisibleArticles(6);
+  }, [searchTerm, selectedArea, articles]);
 
   useEffect(() => {
     const lowerTerm = volumeSearchTerm.toLowerCase();
-const numericTerm = normalizeNumberSearch(volumeSearchTerm);
+    const numericTerm = normalizeNumberSearch(volumeSearchTerm);
 
     const filtered = volumes.filter((volume) => {
       const matchesSearch =
-  safeString(volume.titulo).toLowerCase().includes(lowerTerm) ||
-  safeString(volume.resumen).toLowerCase().includes(lowerTerm) ||
-  safeString(volume.palabras_clave).toLowerCase().includes(lowerTerm) ||
-  safeString(volume.volumen).toLowerCase().includes(lowerTerm) ||
-  safeString(volume.numero).toLowerCase().includes(lowerTerm) ||
-  safeString(volume.volumen).includes(numericTerm) ||
-  safeString(volume.numero).includes(numericTerm);
+        safeString(volume.titulo).toLowerCase().includes(lowerTerm) ||
+        safeString(volume.resumen).toLowerCase().includes(lowerTerm) ||
+        safeString(volume.palabras_clave).toLowerCase().includes(lowerTerm) ||
+        safeString(volume.volumen).toLowerCase().includes(lowerTerm) ||
+        safeString(volume.numero).toLowerCase().includes(lowerTerm) ||
+        safeString(volume.volumen).includes(numericTerm) ||
+        safeString(volume.numero).includes(numericTerm);
 
       const matchesArea =
         selectedVolumeArea === '' ||
@@ -311,7 +307,7 @@ const numericTerm = normalizeNumberSearch(volumeSearchTerm);
     }
   };
 
-  const sections = [
+  const sections = useMemo(() => [
     {
       name: 'articles',
       label: 'Artículos',
@@ -351,7 +347,6 @@ const numericTerm = normalizeNumberSearch(volumeSearchTerm);
               </div>
             ) : (
               <>
-                {/* Lista de Artículos */}
                 <div className="space-y-6">
                   {filteredArticles.slice(0, visibleArticles).map((article, index) => (
                     <motion.div
@@ -364,12 +359,10 @@ const numericTerm = normalizeNumberSearch(volumeSearchTerm);
                     </motion.div>
                   ))}
                 </div>
-                {/* Panel de Control de Paginación Mejorado */}
                 <div className="mt-12 mb-8 flex flex-col items-center border-t border-gray-200 pt-8">
                   <p className="text-xs text-gray-500 uppercase tracking-widest font-bold mb-6">
                     Mostrando {Math.min(visibleArticles, filteredArticles.length)} de {filteredArticles.length} artículos
                   </p>
-                 
                   <div className="flex gap-4">
                     {filteredArticles.length > visibleArticles && (
                       <button
@@ -379,7 +372,6 @@ const numericTerm = normalizeNumberSearch(volumeSearchTerm);
                         Cargar más registros
                       </button>
                     )}
-                   
                     {visibleArticles > 6 && (
                       <button
                         className="px-8 py-3 border border-gray-300 text-gray-600 text-xs font-bold uppercase tracking-widest rounded-sm hover:bg-white hover:text-black transition-all"
@@ -519,10 +511,20 @@ const numericTerm = normalizeNumberSearch(volumeSearchTerm);
         </div>
       ),
     },
-  ];
+  ], [articles, filteredArticles, areas, searchTerm, selectedArea, volumes, filteredVolumes, volumeAreas, volumeSearchTerm, selectedVolumeArea, loading, volumeLoading, visibleArticles, user]);
 
   if (authLoading) {
-    return <div className="text-center text-gray-600">Cargando autenticación...</div>;
+    return (
+      <div className="h-screen flex items-center justify-center bg-white">
+        <motion.div
+          animate={{ scale: [1, 1.1, 1] }}
+          transition={{ repeat: Infinity, duration: 2 }}
+          className="font-serif text-2xl font-bold tracking-tighter text-blue-900"
+        >
+          REVISTA ACADÉMICA
+        </motion.div>
+      </div>
+    );
   }
 
   const isLoginActive = location.pathname.includes('login');
@@ -533,23 +535,37 @@ const numericTerm = normalizeNumberSearch(volumeSearchTerm);
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-[#F9FAFB] flex flex-col font-sans text-gray-900">
       <Header onOpenMenu={() => setIsMenuOpen(true)} />
-      <div
-        className={`container ${
-          user && isLoginActive
-            ? 'max-w-full px-0'
-            : 'mx-auto px-6 lg:px-8'
-        } flex-grow`}
-      >
-        <Tabs sections={sections} />
-        <Routes>
-          {sections.map((section) => (
-            <Route key={section.name} path={section.path} element={section.component} />
-          ))}
-          <Route path="/" element={sections.find(s => s.name === 'articles').component} />
-        </Routes>
-      </div>
+      <nav className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4">
+          <Tabs sections={sections} />
+        </div>
+      </nav>
+      <main className="flex-grow">
+        <AnimatePresence mode="wait">
+          <Routes location={location} key={location.pathname}>
+            {sections.map(s => (
+              <Route key={s.path} path={s.path} element={
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.3 }}
+                  className={`container ${
+                    user && isLoginActive
+                      ? 'max-w-full px-0'
+                      : 'mx-auto px-6 lg:px-8'
+                  } flex-grow`}
+                >
+                  {s.component}
+                </motion.div>
+              } />
+            ))}
+            <Route path="/" element={sections.find(s => s.name === 'articles').component} />
+          </Routes>
+        </AnimatePresence>
+      </main>
       <AnimatePresence>
         {isMenuOpen && (
           <>
