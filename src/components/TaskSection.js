@@ -8,14 +8,12 @@ Quill.register('modules/imageResize', ImageResize);
 
 // For local CSV files, assume they are imported or embedded
 // Replace these with actual CSV content or file paths in your project
-const USERS_CSV = `Nombre,Rol en la Revista
-John Doe,Director General;Encargado de Redes Sociales
-Jane Smith,Responsable de Desarrollo Web
-...`; // Add your CSV content here
+const USERS_CSV_URL =
+  'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 
-const TASKS_CSV = `Redes sociales,Nombre,Cumplido 1,Comentario 1,Desarrollo Web,Nombre.1,Cumplido 2,Comentario 2
-Task 1,John Doe,si,Comment 1,Task 2,Jane Smith,no,Comment 2
-...`; // Add your CSV content here
+const TASKS_CSV_URL =
+  'https://docs.google.com/spreadsheets/d/e/2PACX-1vSCEOtMwYPu0_kn1hmQi0qT6FZq6HRF09WtuDSqOxBNgMor_FyRRtc6_YVKHQQhWJCy-mIa2zwP6uAU/pub?output=csv';
+
 
 const TASK_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxMo7aV_vz_3mOCUWKpcqnWmassUdApD_KfAHROTdgd_MDDiaXikgVV0OZ5qVYmhZgd/exec';
 const AREAS = {
@@ -159,29 +157,48 @@ export default function TaskSection({ user }) {
   };
 
   const parseUsers = () => {
-    try {
-      const parsed = Papa.parse(USERS_CSV, { header: true, skipEmptyLines: true }).data;
-      setUsers(parsed);
-    } catch (err) {
-      console.error('Error parsing users:', err);
-      setError('Error al cargar usuarios: ' + err.message);
-    }
-  };
+  return new Promise((resolve, reject) => {
+    Papa.parse(USERS_CSV_URL, {
+      download: true,
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        setUsers(results.data);
+        resolve();
+      },
+      error: (err) => {
+        console.error('Error parsing users:', err);
+        setError('Error al cargar usuarios');
+        reject(err);
+      },
+    });
+  });
+};
+
 
   const parseTasks = () => {
-    try {
-      const parsed = Papa.parse(TASKS_CSV, { header: true, skipEmptyLines: true }).data.map(
-        (row, index) => ({
+  return new Promise((resolve, reject) => {
+    Papa.parse(TASKS_CSV_URL, {
+      download: true,
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const parsed = results.data.map((row, index) => ({
           ...row,
           rowIndex: index,
-        })
-      );
-      setTasks(parsed);
-    } catch (err) {
-      console.error('Error parsing tasks:', err);
-      setError('Error al cargar tareas: ' + err.message);
-    }
-  };
+        }));
+        setTasks(parsed);
+        resolve();
+      },
+      error: (err) => {
+        console.error('Error parsing tasks:', err);
+        setError('Error al cargar tareas');
+        reject(err);
+      },
+    });
+  });
+};
+
 
   useEffect(() => {
     Promise.all([parseUsers(), parseTasks()])
