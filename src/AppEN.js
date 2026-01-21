@@ -1,3 +1,4 @@
+// App.js
 import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 import { auth } from './firebase';
@@ -12,7 +13,7 @@ import { useLanguage } from './hooks/useLanguage';
 import Header from './components/HeaderEN';
 import SearchAndFilters from './components/SearchAndFiltersEN';
 import ArticleCard from './components/ArticleCardEN';
-import VolumeCard from './components/VolumeCardEN';  // Nuevo
+import VolumeCard from './components/VolumeCardEN';
 import Tabs from './components/TabsEN';
 import SubmitSection from './components/SubmitSectionEN';
 import AdminSection from './components/AdminSectionEN';
@@ -29,7 +30,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 const ARTICLES_JSON = '/articles.json';
-const VOLUMES_JSON = '/volumes.json';  // Nuevo
+const VOLUMES_JSON = '/volumes.json';
 const isPrerendering = typeof navigator !== 'undefined' && navigator.userAgent.includes('ReactSnap');
 
 function AppEN() {
@@ -39,12 +40,13 @@ function AppEN() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedArea, setSelectedArea] = useState('');
   const [areas, setAreas] = useState([]);
-  const [volumes, setVolumes] = useState([]);  // Nuevo
-  const [filteredVolumes, setFilteredVolumes] = useState([]);  // Nuevo
-  const [volumeSearchTerm, setVolumeSearchTerm] = useState('');  // Nuevo
-  const [selectedVolumeArea, setSelectedVolumeArea] = useState('');  // Nuevo
-  const [volumeAreas, setVolumeAreas] = useState([]);  // Nuevo
+  const [volumes, setVolumes] = useState([]);
+  const [filteredVolumes, setFilteredVolumes] = useState([]);
+  const [volumeSearchTerm, setVolumeSearchTerm] = useState('');
+  const [selectedVolumeArea, setSelectedVolumeArea] = useState('');
+  const [volumeAreas, setVolumeAreas] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [volumeLoading, setVolumeLoading] = useState(true);
   const [visibleArticles, setVisibleArticles] = useState(6);
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -84,7 +86,6 @@ function AppEN() {
       setAuthLoading(false);
       return;
     }
-
     setPersistence(auth, browserLocalPersistence)
       .then(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -168,8 +169,10 @@ function AppEN() {
         );
         const uniqueVolumeAreas = [...new Set(allVolumeAreas)].sort();
         setVolumeAreas(uniqueVolumeAreas);
+        setVolumeLoading(false);
       } catch (error) {
         console.error('Error fetching volumes JSON:', error);
+        setVolumeLoading(false);
       }
     };
     fetchVolumes();
@@ -181,36 +184,63 @@ function AppEN() {
     if (Array.isArray(val)) return val.join(', ');
     return String(val);
   };
+const normalizeNumberSearch = (term) => {
+  if (!term) return '';
+  const onlyNumbers = term.replace(/[^0-9]/g, '');
+  return onlyNumbers || term.toLowerCase();
+};
 
   useEffect(() => {
-    const lowerTerm = searchTerm.toLowerCase();
-    const filtered = articles.filter((article) => {
-      const matchesSearch =
-        safeString(article.titulo).toLowerCase().includes(lowerTerm) ||
-        safeString(article.autores).toLowerCase().includes(lowerTerm) ||
-        safeString(article.englishAbstract).toLowerCase().includes(lowerTerm) ||
-        safeString(article.institutions).toLowerCase().includes(lowerTerm) ||
-        safeString(article.keywords_english).toLowerCase().includes(lowerTerm);
-      const matchesArea =
-        selectedArea === '' ||
-        safeString(article.area)
-          .toLowerCase()
-          .split(';')
-          .map((a) => a.trim())
-          .some((a) => a.toLowerCase() === selectedArea.toLowerCase());
-      return matchesSearch && matchesArea;
-    });
-    setFilteredArticles(filtered);
-    setVisibleArticles(6);
-  }, [searchTerm, selectedArea, articles]);
+  const lowerTerm = searchTerm.toLowerCase();
+  const numericTerm = normalizeNumberSearch(searchTerm);
+
+  const filtered = articles.filter((article) => {
+    const matchesSearch =
+      safeString(article.titulo).toLowerCase().includes(lowerTerm) ||
+      safeString(article.autores).toLowerCase().includes(lowerTerm) ||
+      safeString(article.englishAbstract).toLowerCase().includes(lowerTerm) ||
+      safeString(article.institutions).toLowerCase().includes(lowerTerm) ||
+      safeString(article.keywords_english).toLowerCase().includes(lowerTerm) ||
+
+      // volume / number normal
+      safeString(article.volumen).toLowerCase().includes(lowerTerm) ||
+      safeString(article.numero).toLowerCase().includes(lowerTerm) ||
+safeString(article.fecha).toLowerCase().includes(lowerTerm) ||
+
+      // volume / number smart
+      safeString(article.volumen).includes(numericTerm) ||
+      safeString(article.numero).includes(numericTerm);
+
+    const matchesArea =
+      selectedArea === '' ||
+      safeString(article.area)
+        .toLowerCase()
+        .split(';')
+        .map((a) => a.trim())
+        .some((a) => a === selectedArea.toLowerCase());
+
+    return matchesSearch && matchesArea;
+  });
+
+  setFilteredArticles(filtered);
+  setVisibleArticles(6);
+}, [searchTerm, selectedArea, articles]);
+
 
   useEffect(() => {
     const lowerTerm = volumeSearchTerm.toLowerCase();
+const numericTerm = normalizeNumberSearch(volumeSearchTerm);
+
     const filtered = volumes.filter((volume) => {
       const matchesSearch =
-        safeString(volume.titulo).toLowerCase().includes(lowerTerm) ||
-        safeString(volume.abstract).toLowerCase().includes(lowerTerm) ||
-        safeString(volume.keywords).toLowerCase().includes(lowerTerm);
+  safeString(volume.titulo).toLowerCase().includes(lowerTerm) ||
+  safeString(volume.abstract).toLowerCase().includes(lowerTerm) ||
+  safeString(volume.keywords).toLowerCase().includes(lowerTerm) ||
+  safeString(volume.volumen).toLowerCase().includes(lowerTerm) ||
+  safeString(volume.numero).toLowerCase().includes(lowerTerm) ||
+  safeString(volume.volumen).includes(numericTerm) ||
+  safeString(volume.numero).includes(numericTerm);
+
       const matchesArea =
         selectedVolumeArea === '' ||
         safeString(volume.area)
@@ -225,12 +255,12 @@ function AppEN() {
 
   useEffect(() => {
     const path = typeof cleanPath === 'function' ? cleanPath(location.pathname) : location.pathname;
-    if (path === '/article' || path === '/' || path === '') {
+    if (path === '/en/article' || path === '/' || path === '') {
       const term = searchParams.get('article_search') ?? '';
       const area = searchParams.get('article_area') ?? '';
       setSearchTerm(term);
       setSelectedArea(area);
-    } else if (path === '/volume') {
+    } else if (path === '/en/volume') {
       const term = searchParams.get('volume_search') ?? '';
       const area = searchParams.get('volume_area') ?? '';
       setVolumeSearchTerm(term);
@@ -301,47 +331,68 @@ function AppEN() {
             areas={areas}
             onSearch={handleSearch}
             clearFilters={clearFilters}
+            placeholder="Search articles..."
+            quickTags={['2025', 'Vol. 1', 'Issue 1']}
           />
-          <div className="articles mt-6">
+          <div className="articles mt-8">
             {loading ? (
-              <p className="text-center text-base text-gray-600 col-span-full">
-                Loading...
-              </p>
+              <div className="flex flex-col items-center justify-center py-20">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#007398]"></div>
+                <p className="mt-4 text-gray-500 font-serif italic">Loading bibliographic file...</p>
+              </div>
             ) : filteredArticles.length === 0 ? (
-              <p className="text-center text-base text-gray-600 col-span-full">
-                We are currently in the review and collection period for articles. Submit yours via the form in the next tab.
-              </p>
+              <div className="bg-white border border-gray-200 p-12 text-center rounded-sm">
+                <p className="text-lg text-gray-600 font-serif italic">
+                  "No records found for the selected criteria."
+                </p>
+                <p className="mt-2 text-sm text-[#007398] font-bold uppercase tracking-wider">
+                  Be the first to publish in this area!
+                </p>
+              </div>
             ) : (
-              filteredArticles.slice(0, visibleArticles).map((article, index) => (
-                <motion.div
-                  key={article.titulo}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1, duration: 0.3 }}
-                >
-                  <ArticleCard article={article} />
-                </motion.div>
-              ))
+              <>
+                {/* Articles List */}
+                <div className="space-y-6">
+                  {filteredArticles.slice(0, visibleArticles).map((article, index) => (
+                    <motion.div
+                      key={article.titulo}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index % 6 * 0.05, duration: 0.3 }}
+                    >
+                      <ArticleCard article={article} />
+                    </motion.div>
+                  ))}
+                </div>
+                {/* Enhanced Pagination Control Panel */}
+                <div className="mt-12 mb-8 flex flex-col items-center border-t border-gray-200 pt-8">
+                  <p className="text-xs text-gray-500 uppercase tracking-widest font-bold mb-6">
+                    Showing {Math.min(visibleArticles, filteredArticles.length)} of {filteredArticles.length} articles
+                  </p>
+                 
+                  <div className="flex gap-4">
+                    {filteredArticles.length > visibleArticles && (
+                      <button
+                        className="px-8 py-3 bg-[#007398] text-white text-xs font-bold uppercase tracking-widest rounded-sm hover:bg-[#005a77] transition-all shadow-sm"
+                        onClick={loadMoreArticles}
+                      >
+                        Load more records
+                      </button>
+                    )}
+                   
+                    {visibleArticles > 6 && (
+                      <button
+                        className="px-8 py-3 border border-gray-300 text-gray-600 text-xs font-bold uppercase tracking-widest rounded-sm hover:bg-white hover:text-black transition-all"
+                        onClick={showLessArticles}
+                      >
+                        Show less
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </>
             )}
           </div>
-          {!loading && filteredArticles.length > visibleArticles && (
-            <div className="text-center mt-6">
-              <button
-                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
-                onClick={loadMoreArticles}
-              >
-                Load more
-              </button>
-            </div>
-          )}
-          {!loading && visibleArticles > 6 && (
-            <button
-              className="fixed bottom-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 z-10 text-base"
-              onClick={showLessArticles}
-            >
-              Show less
-            </button>
-          )}
         </motion.div>
       ),
     },
@@ -364,12 +415,24 @@ function AppEN() {
             areas={volumeAreas}
             onSearch={handleVolumeSearch}
             clearFilters={clearVolumeFilters}
+            placeholder="Search volumes..."
+            quickTags={['2025', 'Vol. 1', 'Issue 1']}
           />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-            {filteredVolumes.length === 0 ? (
-              <p className="text-center text-base text-gray-600 col-span-full">
-                No volumes available yet.
-              </p>
+            {volumeLoading ? (
+              <div className="flex flex-col items-center justify-center py-20 col-span-full">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#007398]"></div>
+                <p className="mt-4 text-gray-500 font-serif italic">Loading volumes...</p>
+              </div>
+            ) : filteredVolumes.length === 0 ? (
+              <div className="bg-white border border-gray-200 p-12 text-center rounded-sm col-span-full">
+                <p className="text-lg text-gray-600 font-serif italic">
+                  "No volumes found for the selected criteria."
+                </p>
+                <p className="mt-2 text-sm text-[#007398] font-bold uppercase tracking-wider">
+                  Explore other areas!
+                </p>
+              </div>
             ) : (
               filteredVolumes.map((volume, index) => (
                 <motion.div
@@ -463,7 +526,6 @@ function AppEN() {
   }
 
   const isLoginActive = location.pathname.includes('login');
-
   const framerItem = (delay) => ({
     initial: { opacity: 0, x: -20 },
     animate: { opacity: 1, x: 0 },

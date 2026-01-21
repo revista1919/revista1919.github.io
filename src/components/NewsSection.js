@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import Papa from "papaparse";
 import { motion, AnimatePresence } from "framer-motion";
@@ -199,7 +198,7 @@ export default function NewsSection({ className }) {
   };
   const featured = filteredNews[0];
   const remaining = filteredNews.slice(1, visibleNews);
-  const half = Math.ceil(remaining.length / 2);
+  const half = Math.floor(remaining.length / 2);
   const leftNews = remaining.slice(0, half);
   const rightNews = remaining.slice(half);
   if (loading) return <div className="py-20 text-center font-serif italic text-gray-400">Actualizando archivo de noticias...</div>;

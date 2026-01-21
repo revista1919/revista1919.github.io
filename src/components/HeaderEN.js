@@ -16,7 +16,7 @@ function HeaderEN({ onOpenMenu }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: 'easeOut' }}
       className="text-white p-3 sm:p-6 mb-4 sm:mb-6 relative"
-      style={{ backgroundColor: '#52262dff' }}
+      style={{ backgroundColor: 'rgb(44, 17, 21)' }}
     >
       <div className="container mx-auto flex flex-col sm:flex-row items-center justify-between relative">
         <button
