@@ -192,8 +192,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
   const authorsChicagoEn = formatAuthorsChicagoOrMLA(article.autores, 'en');
   const authorsMLAEn = formatAuthorsChicagoOrMLA(article.autores, 'en');
   const year = new Date(article.fecha).getFullYear();
-  // Generar HTML en español (mismo)
- // HTML completo en español (reemplazar bloque)
+  // Generar HTML en español
 const htmlContentEs = `
 <!DOCTYPE html>
 <html lang="es">
@@ -217,202 +216,269 @@ const htmlContentEs = `
   <meta name="description" content="${article.resumen.substring(0, 160)}...">
   <meta name="keywords" content="${article.palabras_clave.join(', ')}">
   <title>${article.titulo} - Revista Nacional de las Ciencias para Estudiantes</title>
-  <link rel="stylesheet" href="/index.css">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
   <style>
-    /* Estilos basados en el diseño original, sin referencias externas de marca */
+    :root {
+      --primary-blue: #007398;
+      --primary-dark: #333333;
+      --primary-grey: #666666;
+      --border-color: #e4e4e4;
+      --bg-light: #fdfdfd;
+    }
     body {
-      font-family: 'Merriweather', serif;
-      line-height: 1.8;
-      color: #333;
-      background-color: #f9f9f9;
+      font-family: 'Noto Sans', sans-serif;
+      line-height: 1.6;
+      color: var(--primary-dark);
+      background-color: #f0f0f0;
       margin: 0;
       padding: 0;
-      box-sizing: border-box;
     }
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 2rem 1rem;
+    .top-bar {
       background: white;
-      box-shadow: 0 0 20px rgba(0,0,0,0.05);
-      border-radius: 8px;
-      box-sizing: border-box;
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .journal-name {
+      font-weight: bold;
+      color: var(--primary-blue);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .main-wrapper {
+      max-width: 1200px;
+      margin: 20px auto;
+      display: grid;
+      grid-template-columns: 250px 1fr;
+      gap: 30px;
+      padding: 0 20px;
+    }
+    /* Sidebar */
+    aside {
+      font-size: 0.9rem;
+    }
+    .outline-box {
+      position: sticky;
+      top: 20px;
+    }
+    .outline-title {
+      font-weight: bold;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 10px;
+      margin-bottom: 15px;
+      text-transform: uppercase;
+      font-size: 0.8rem;
+      letter-spacing: 1px;
+    }
+    .outline-list {
+      list-style: none;
+      padding: 0;
+    }
+    .outline-list li {
+      margin-bottom: 10px;
+    }
+    .outline-list a {
+      color: var(--primary-blue);
+      text-decoration: none;
+    }
+    /* Main Content */
+    .article-container {
+      background: white;
+      padding: 40px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      border-radius: 2px;
     }
     header {
-      text-align: center;
-      border-bottom: 1px solid #eee;
-      padding-bottom: 1rem;
-      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+    }
+    .journal-meta {
+      font-size: 0.85rem;
+      color: var(--primary-grey);
+      margin-bottom: 15px;
     }
     h1 {
-      font-size: 1.8rem;
-      color: #2c3e50;
-      margin-bottom: 0.5rem;
+      font-family: 'Noto Serif', serif;
+      font-size: 2.2rem;
+      margin: 10px 0;
+      line-height: 1.2;
+      color: #000;
     }
     .authors {
       font-size: 1.1rem;
-      color: #555;
-      margin-bottom: 1rem;
+      color: var(--primary-blue);
+      margin: 15px 0;
     }
-    .meta {
-      font-size: 0.9rem;
-      color: #777;
-      margin-bottom: 0.5rem;
-    }
-    section {
-      margin-bottom: 2rem;
+    .article-info-row {
+      font-size: 0.85rem;
+      display: flex;
+      gap: 20px;
+      color: var(--primary-grey);
+      margin-top: 10px;
     }
     h2 {
-      font-size: 1.3rem;
-      color: #34495e;
-      border-bottom: 1px solid #ddd;
-      padding-bottom: 0.5rem;
-      margin-bottom: 1rem;
+      font-family: 'Noto Sans', sans-serif;
+      font-size: 1.4rem;
+      color: var(--primary-dark);
+      margin-top: 40px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 5px;
     }
     p {
+      font-family: 'Noto Serif', serif;
+      font-size: 1.05rem;
       text-align: justify;
     }
-    .keywords {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
+    .keywords-box {
+      background: #f9f9f9;
+      padding: 15px;
+      border-radius: 4px;
+      margin: 20px 0;
     }
-    .keyword {
-      background: #e8f4fd;
-      color: #2980b9;
-      padding: 0.3rem 0.8rem;
-      border-radius: 20px;
-      font-size: 0.85rem;
+    .keyword-tag {
+      display: inline-block;
+      margin-right: 15px;
+      font-size: 0.9rem;
+      color: var(--primary-blue);
+    }
+    .pdf-viewer-section {
+      margin-top: 50px;
+      padding-top: 20px;
+      border-top: 2px solid var(--primary-blue);
     }
     .pdf-preview {
       width: 100%;
-      height: 600px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      margin-top: 1rem;
-      box-sizing: border-box;
+      height: 700px;
+      border: 1px solid var(--border-color);
+      margin-bottom: 20px;
     }
-    .buttons {
+    .action-buttons {
       display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      margin-top: 1rem;
-      max-width: 100%;
-      box-sizing: border-box;
+      gap: 15px;
     }
-    .button {
-      padding: 0.7rem 1.5rem;
-      border-radius: 4px;
+    .btn {
+      padding: 12px 24px;
+      border-radius: 2px;
       text-decoration: none;
       font-weight: bold;
-      transition: background 0.3s;
-      flex: 1 1 100%;
-      text-align: center;
-      box-sizing: border-box;
+      font-size: 0.9rem;
+      display: inline-flex;
+      align-items: center;
+      transition: 0.2s;
     }
-    .open-pdf {
-      background: #3498db;
+    .btn-primary {
+      background: var(--primary-blue);
       color: white;
     }
-    .open-pdf:hover {
-      background: #2980b9;
+    .btn-primary:hover { background: #005a77; }
+    .btn-outline {
+      border: 1px solid var(--primary-blue);
+      color: var(--primary-blue);
     }
-    .download-pdf {
-      background: #27ae60;
-      color: white;
+    .btn-outline:hover { background: #f0f7f9; }
+    .citation-card {
+      background: #f4f4f4;
+      padding: 20px;
+      font-size: 0.9rem;
+      border-left: 4px solid var(--primary-blue);
     }
-    .download-pdf:hover {
-      background: #219a52;
-    }
-    .citations p {
-      background: #f8f8f8;
-      padding: 1rem;
-      border-left: 4px solid #ddd;
-      margin-bottom: 1rem;
-      font-size: 0.95rem;
-    }
-    .license img { vertical-align: middle; margin-top: 0.5rem; }
     footer {
       text-align: center;
-      margin-top: 3rem;
-      padding-top: 1rem;
-      border-top: 1px solid #eee;
-      font-size: 0.85rem;
-      color: #777;
+      padding: 40px;
+      color: var(--primary-grey);
+      font-size: 0.8rem;
     }
-    .back-links { margin-top: 0.5rem; }
-    .back-links a { color: #2980b9; text-decoration: none; margin: 0 .5rem; }
-    @media (max-width: 768px) {
-      .container { padding: 1.5rem 1rem; }
-      h1 { font-size: 1.5rem; }
-      .pdf-preview { height: 60vh; min-height: 300px; }
-      .buttons { flex-direction: column; gap: 0.5rem; }
-      .button { width: 100%; max-width: 100%; }
-    }
-    @media (max-width: 480px) {
-      h1 { font-size: 1.3rem; }
-      .authors { font-size: 1rem; }
-      .pdf-preview { height: 50vh; min-height: 250px; }
+    @media (max-width: 900px) {
+      .main-wrapper { grid-template-columns: 1fr; }
+      aside { display: none; }
+      .article-container { padding: 20px; }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>${article.titulo}</h1>
-      <p class="authors">${authorsDisplayEs}</p>
-      <p class="meta"><strong>Fecha de publicación:</strong> ${article.fecha}</p>
-      <p class="meta"><strong>Volumen:</strong> ${article.volumen}, <strong>Número:</strong> ${article.numero}, <strong>Páginas:</strong> ${article.primeraPagina}-${article.ultimaPagina}</p>
-      <p class="meta"><strong>Área temática:</strong> ${article.area}</p>
-    </header>
-    <main>
-      <section>
-        <h2>Palabras clave</h2>
-        <div class="keywords">
-          ${article.palabras_clave.map(kw => `<span class="keyword">${kw}</span>`).join('')}
+  <div class="top-bar">
+    <a href="/" class="journal-name">REVISTA NACIONAL DE LAS CIENCIAS PARA ESTUDIANTES</a>
+    <div style="font-size: 0.8rem; color: #666;">Volume ${article.volumen}, Issue ${article.numero}</div>
+  </div>
+  <div class="main-wrapper">
+    <aside>
+      <div class="outline-box">
+        <div class="outline-title">Contenido</div>
+        <ul class="outline-list">
+          <li><a href="#abstract">Resumen</a></li>
+          <li><a href="#english-abstract">Abstract (English)</a></li>
+          <li><a href="#keywords">Palabras clave</a></li>
+          <li><a href="#preview">Visualización PDF</a></li>
+          <li><a href="#citations">Citar</a></li>
+          <li><a href="#license">Licencia</a></li>
+        </ul>
+        <div class="outline-title" style="margin-top:30px">Acciones</div>
+        <a href="${article.pdf}" download class="btn btn-primary" style="width:100%; box-sizing:border-box; justify-content:center;">Descargar PDF</a>
+      </div>
+    </aside>
+    <main class="article-container">
+      <header>
+        <div class="journal-meta">
+          ${article.area} | Artículo de Investigación
         </div>
-      </section>
-      <section>
+        <h1>${article.titulo}</h1>
+        <div class="authors">${authorsDisplayEs}</div>
+        <div class="article-info-row">
+          <span><strong>Publicado:</strong> ${article.fecha}</span>
+          <span><strong>Páginas:</strong> ${article.primeraPagina}-${article.ultimaPagina}</span>
+        </div>
+      </header>
+      <section id="abstract">
         <h2>Resumen</h2>
         <p>${article.resumen}</p>
       </section>
-      <section>
+      <section id="english-abstract">
         <h2>Abstract (English)</h2>
-        <p>${article.englishAbstract}</p>
+        <p style="font-style: italic; color: #444;">${article.englishAbstract}</p>
       </section>
-      <section>
+      <section id="keywords" class="keywords-box">
+        <strong style="font-size:0.9rem; display:block; margin-bottom:10px;">Palabras clave:</strong>
+        ${article.palabras_clave.map(kw => `<span class="keyword-tag">${kw}</span>`).join('')}
+      </section>
+      <section id="preview" class="pdf-viewer-section">
         <h2>Visualización del PDF</h2>
         <embed src="${article.pdf}" type="application/pdf" class="pdf-preview" />
-        <div class="buttons">
-          <!-- Abrir en nueva pestaña con rel seguro -->
-          <a href="${article.pdf}" target="_blank" rel="noopener noreferrer" class="button open-pdf">Abrir PDF en nueva pestaña</a>
-          <a href="${article.pdf}" download class="button download-pdf">Descargar PDF</a>
+        <div class="action-buttons">
+          <a href="${article.pdf}" target="_blank" class="btn btn-outline">Ver en pantalla completa</a>
+          <a href="${article.pdf}" download class="btn btn-primary">Descargar artículo (PDF)</a>
         </div>
       </section>
-      <section class="citations">
-        <h2>Citas</h2>
-        <p><strong>APA:</strong> ${authorsAPA}. (${year}). ${article.titulo}. <em>Revista Nacional de las Ciencias para Estudiantes</em>, ${article.volumen}(${article.numero}), ${article.primeraPagina}-${article.ultimaPagina}.</p>
-        <p><strong>MLA:</strong> ${authorsMLAEs}. "${article.titulo}." <em>Revista Nacional de las Ciencias para Estudiantes</em>, vol. ${article.volumen}, no. ${article.numero}, ${year}, pp. ${article.primeraPagina}-${article.ultimaPagina}.</p>
-        <p><strong>Chicago:</strong> ${authorsChicagoEs}. "${article.titulo}." <em>Revista Nacional de las Ciencias para Estudiantes</em> ${article.volumen}, no. ${article.numero} (${year}): ${article.primeraPagina}-${article.ultimaPagina}.</p>
+      <section id="citations" style="margin-top:50px;">
+        <h2>Cómo citar este artículo</h2>
+        <div class="citation-card">
+          <p style="margin:0 0 10px 0"><strong>APA:</strong> ${authorsAPA}. (${year}). ${article.titulo}. <em>Revista Nacional de las Ciencias para Estudiantes</em>, ${article.volumen}(${article.numero}), ${article.primeraPagina}-${article.ultimaPagina}.</p>
+          <p style="margin:0 0 10px 0"><strong>MLA:</strong> ${authorsMLAEs}. "${article.titulo}." <em>Revista Nacional de las Ciencias para Estudiantes</em>, vol. ${article.volumen}, no. ${article.numero}, ${year}, pp. ${article.primeraPagina}-${article.ultimaPagina}.</p>
+          <p style="margin:0"><strong>Chicago:</strong> ${authorsChicagoEs}. "${article.titulo}." <em>Revista Nacional de las Ciencias para Estudiantes</em> ${article.volumen}, no. ${article.numero} (${year}): ${article.primeraPagina}-${article.ultimaPagina}.</p>
+        </div>
       </section>
-      <section class="license">
-        <h2>Licencia</h2>
-        <p>Este artículo se publica bajo licencia <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Atribución 4.0 Internacional (CC BY 4.0)</a>.</p>
-        <img src="https://mirrors.creativecommons.org/presskit/buttons/88x31/png/by.png" alt="CC BY 4.0" style="width:88px; height:31px;">
+      <section id="license" style="margin-top:40px; font-size: 0.85rem; border-top: 1px solid #eee; padding-top:20px;">
+        <img src="https://mirrors.creativecommons.org/presskit/buttons/88x31/png/by.png" alt="CC BY 4.0" style="float:left; margin-right:15px; width:70px;">
+        <p style="font-family: sans-serif; font-size: 0.8rem; color: #666;">
+          Este artículo se publica bajo licencia <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Atribución 4.0 (CC BY 4.0)</a>.
+          Usted es libre de compartir y adaptar el material siempre que se otorgue el crédito apropiado.
+        </p>
       </section>
     </main>
-    <footer>
-      <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes</p>
-      <div class="back-links">
-        <a href="/es/article">Volver a Artículos</a> | <a href="/">Volver al inicio</a>
-      </div>
-    </footer>
   </div>
+  <footer>
+    <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes.</p>
+    <p><a href="/es/article" style="color:var(--primary-blue)">Volver al catálogo</a></p>
+  </footer>
 </body>
 </html>
 `.trim();
-
-// HTML completo en inglés (reemplazar bloque)
+  const filePathEs = path.join(outputHtmlDir, `article-${articleSlug}.html`);
+  fs.writeFileSync(filePathEs, htmlContentEs, 'utf8');
+  console.log(`Generado HTML de artículo en español: ${filePathEs}`);
+  // Generar HTML en inglés
 const htmlContentEn = `
 <!DOCTYPE html>
 <html lang="en">
@@ -422,7 +488,7 @@ const htmlContentEn = `
   <meta name="citation_title" content="${article.titulo}">
   ${authorMetaTags}
   <meta name="citation_publication_date" content="${article.fecha}">
-  <meta name="citation_journal_title" content="Revista Nacional de las Ciencias para Estudiantes">
+  <meta name="citation_journal_title" content="The National Review of Sciences for Students">
   <meta name="citation_volume" content="${article.volumen}">
   <meta name="citation_issue" content="${article.numero}">
   <meta name="citation_firstpage" content="${article.primeraPagina}">
@@ -432,199 +498,106 @@ const htmlContentEn = `
   <meta name="citation_abstract" content="${article.englishAbstract}">
   <meta name="citation_keywords" content="${article.keywords_english.join('; ')}">
   <meta name="citation_language" content="en">
-  <meta name="description" content="${article.englishAbstract.substring(0, 160)}...">
-  <meta name="keywords" content="${article.keywords_english.join(', ')}">
   <title>${article.titulo} - The National Review of Sciences for Students</title>
-  <link rel="stylesheet" href="/index.css">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
   <style>
-    /* Estilos equivalentes al bloque en español, mismo aspecto y estructura */
-    body {
-      font-family: 'Merriweather', serif;
-      line-height: 1.8;
-      color: #333;
-      background-color: #f9f9f9;
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
+    :root {
+      --primary-blue: #007398;
+      --primary-dark: #333333;
+      --primary-grey: #666666;
+      --border-color: #e4e4e4;
     }
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 2rem 1rem;
-      background: white;
-      box-shadow: 0 0 20px rgba(0,0,0,0.05);
-      border-radius: 8px;
-      box-sizing: border-box;
-    }
-    header {
-      text-align: center;
-      border-bottom: 1px solid #eee;
-      padding-bottom: 1rem;
-      margin-bottom: 2rem;
-    }
-    h1 {
-      font-size: 1.8rem;
-      color: #2c3e50;
-      margin-bottom: 0.5rem;
-    }
-    .authors {
-      font-size: 1.1rem;
-      color: #555;
-      margin-bottom: 1rem;
-    }
-    .meta {
-      font-size: 0.9rem;
-      color: #777;
-      margin-bottom: 0.5rem;
-    }
-    section {
-      margin-bottom: 2rem;
-    }
-    h2 {
-      font-size: 1.3rem;
-      color: #34495e;
-      border-bottom: 1px solid #ddd;
-      padding-bottom: 0.5rem;
-      margin-bottom: 1rem;
-    }
-    p {
-      text-align: justify;
-    }
-    .keywords {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-    }
-    .keyword {
-      background: #e8f4fd;
-      color: #2980b9;
-      padding: 0.3rem 0.8rem;
-      border-radius: 20px;
-      font-size: 0.85rem;
-    }
-    .pdf-preview {
-      width: 100%;
-      height: 600px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      margin-top: 1rem;
-      box-sizing: border-box;
-    }
-    .buttons {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      margin-top: 1rem;
-      max-width: 100%;
-      box-sizing: border-box;
-    }
-    .button {
-      padding: 0.7rem 1.5rem;
-      border-radius: 4px;
-      text-decoration: none;
-      font-weight: bold;
-      transition: background 0.3s;
-      flex: 1 1 100%;
-      text-align: center;
-      box-sizing: border-box;
-    }
-    .open-pdf {
-      background: #3498db;
-      color: white;
-    }
-    .open-pdf:hover {
-      background: #2980b9;
-    }
-    .download-pdf {
-      background: #27ae60;
-      color: white;
-    }
-    .download-pdf:hover {
-      background: #219a52;
-    }
-    .citations p {
-      background: #f8f8f8;
-      padding: 1rem;
-      border-left: 4px solid #ddd;
-      margin-bottom: 1rem;
-      font-size: 0.95rem;
-    }
-    footer {
-      text-align: center;
-      margin-top: 3rem;
-      padding-top: 1rem;
-      border-top: 1px solid #eee;
-      font-size: 0.85rem;
-      color: #777;
-    }
-    .back-links { margin-top: 0.5rem; }
-    .back-links a { color: #2980b9; text-decoration: none; margin: 0 .5rem; }
-    @media (max-width: 768px) {
-      .container { padding: 1.5rem 1rem; }
-      h1 { font-size: 1.5rem; }
-      .pdf-preview { height: 60vh; min-height: 300px; }
-      .buttons { flex-direction: column; gap: 0.5rem; }
-      .button { width: 100%; max-width: 100%; }
-    }
-    @media (max-width: 480px) {
-      h1 { font-size: 1.3rem; }
-      .authors { font-size: 1rem; }
-      .pdf-preview { height: 50vh; min-height: 250px; }
-    }
+    body { font-family: 'Noto Sans', sans-serif; line-height: 1.6; color: var(--primary-dark); background-color: #f0f0f0; margin: 0; }
+    .top-bar { background: white; border-bottom: 1px solid var(--border-color); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
+    .journal-name { font-weight: bold; color: var(--primary-blue); text-decoration: none; font-size: 0.9rem; }
+    .main-wrapper { max-width: 1200px; margin: 20px auto; display: grid; grid-template-columns: 250px 1fr; gap: 30px; padding: 0 20px; }
+    aside { font-size: 0.9rem; }
+    .outline-box { position: sticky; top: 20px; }
+    .outline-title { font-weight: bold; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px; text-transform: uppercase; font-size: 0.8rem; }
+    .outline-list { list-style: none; padding: 0; }
+    .outline-list a { color: var(--primary-blue); text-decoration: none; }
+    .article-container { background: white; padding: 40px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    header { border-bottom: 1px solid var(--border-color); margin-bottom: 30px; padding-bottom: 20px; }
+    h1 { font-family: 'Noto Serif', serif; font-size: 2.2rem; margin: 10px 0; color: #000; }
+    .authors { font-size: 1.1rem; color: var(--primary-blue); margin: 15px 0; }
+    h2 { font-family: 'Noto Sans', sans-serif; font-size: 1.4rem; color: var(--primary-dark); margin-top: 40px; border-bottom: 1px solid #eee; }
+    p { font-family: 'Noto Serif', serif; font-size: 1.05rem; text-align: justify; }
+    .pdf-preview { width: 100%; height: 700px; border: 1px solid var(--border-color); margin-bottom: 20px; }
+    .btn { padding: 12px 24px; border-radius: 2px; text-decoration: none; font-weight: bold; display: inline-flex; align-items: center; }
+    .btn-primary { background: var(--primary-blue); color: white; }
+    .citation-card { background: #f4f4f4; padding: 20px; border-left: 4px solid var(--primary-blue); font-size: 0.9rem; }
+    footer { text-align: center; padding: 40px; color: var(--primary-grey); font-size: 0.8rem; }
+    @media (max-width: 900px) { .main-wrapper { grid-template-columns: 1fr; } aside { display: none; } }
   </style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>${article.titulo}</h1>
-      <p class="authors">${authorsDisplayEn}</p>
-      <p class="meta"><strong>Publication Date:</strong> ${article.fecha}</p>
-      <p class="meta"><strong>Volume:</strong> ${article.volumen}, <strong>Issue:</strong> ${article.numero}, <strong>Pages:</strong> ${article.primeraPagina}-${article.ultimaPagina}</p>
-      <p class="meta"><strong>Thematic Area:</strong> ${article.area}</p>
-    </header>
-    <main>
-      <section>
-        <h2>Keywords</h2>
-        <div class="keywords">
-          ${article.keywords_english.map(kw => `<span class="keyword">${kw}</span>`).join('')}
+  <div class="top-bar">
+    <a href="/" class="journal-name">THE NATIONAL REVIEW OF SCIENCES FOR STUDENTS</a>
+    <div style="font-size: 0.8rem; color: #666;">Vol ${article.volumen}, Issue ${article.numero}</div>
+  </div>
+  <div class="main-wrapper">
+    <aside>
+      <div class="outline-box">
+        <div class="outline-title">Outline</div>
+        <ul class="outline-list">
+          <li><a href="#abstract">Abstract</a></li>
+          <li><a href="#keywords">Keywords</a></li>
+          <li><a href="#preview">PDF Preview</a></li>
+          <li><a href="#citations">Citations</a></li>
+          <li><a href="#license">License</a></li>
+        </ul>
+        <a href="${article.pdf}" download class="btn btn-primary" style="margin-top:20px; width:100%; box-sizing:border-box; justify-content:center;">Download PDF</a>
+      </div>
+    </aside>
+    <main class="article-container">
+      <header>
+        <div class="journal-meta">${article.area} | Research Article</div>
+        <h1>${article.titulo}</h1>
+        <div class="authors">${authorsDisplayEn}</div>
+        <div style="font-size: 0.85rem; color: #666;">
+          <strong>Published:</strong> ${article.fecha} | <strong>Pages:</strong> ${article.primeraPagina}-${article.ultimaPagina}
         </div>
-      </section>
-      <section>
+      </header>
+      <section id="abstract">
         <h2>Abstract</h2>
         <p>${article.englishAbstract}</p>
       </section>
-      <section>
+      <section id="keywords" style="background: #f9f9f9; padding: 15px; margin: 20px 0;">
+        <strong style="font-size:0.9rem;">Keywords:</strong><br>
+        ${article.keywords_english.map(kw => `<span style="color:var(--primary-blue); margin-right:15px; font-size:0.9rem;">${kw}</span>`).join('')}
+      </section>
+      <section id="preview" style="margin-top:50px;">
         <h2>PDF Preview</h2>
         <embed src="${article.pdf}" type="application/pdf" class="pdf-preview" />
-        <div class="buttons">
-          <!-- Open in new tab (secure) -->
-          <a href="${article.pdf}" target="_blank" rel="noopener noreferrer" class="button open-pdf">Open PDF in New Tab</a>
-          <a href="${article.pdf}" download class="button download-pdf">Download PDF</a>
+        <div style="display:flex; gap:15px;">
+          <a href="${article.pdf}" target="_blank" class="btn btn-outline">View Full Screen</a>
+          <a href="${article.pdf}" download class="btn btn-primary">Download Full Article</a>
         </div>
       </section>
-      <section class="citations">
-        <h2>Citations</h2>
-        <p><strong>APA:</strong> ${authorsAPA}. (${year}). ${article.titulo}. <em>Revista Nacional de las Ciencias para Estudiantes</em>, ${article.volumen}(${article.numero}), ${article.primeraPagina}-${article.ultimaPagina}.</p>
-        <p><strong>MLA:</strong> ${authorsMLAEn}. "${article.titulo}." <em>Revista Nacional de las Ciencias para Estudiantes</em>, vol. ${article.volumen}, no. ${article.numero}, ${year}, pp. ${article.primeraPagina}-${article.ultimaPagina}.</p>
-        <p><strong>Chicago:</strong> ${authorsChicagoEn}. "${article.titulo}." <em>Revista Nacional de las Ciencias para Estudiantes</em> ${article.volumen}, no. ${article.numero} (${year}): ${article.primeraPagina}-${article.ultimaPagina}.</p>
+      <section id="citations" style="margin-top:50px;">
+        <h2>Cite this article</h2>
+        <div class="citation-card">
+          <p style="margin:0 0 10px 0"><strong>APA:</strong> ${authorsAPA}. (${year}). ${article.titulo}. <em>Revista Nacional de las Ciencias para Estudiantes</em>, ${article.volumen}(${article.numero}), ${article.primeraPagina}-${article.ultimaPagina}.</p>
+          <p style="margin:0 0 10px 0"><strong>MLA:</strong> ${authorsMLAEn}. "${article.titulo}." <em>Revista Nacional de las Ciencias para Estudiantes</em>, vol. ${article.volumen}, no. ${article.numero}, ${year}, pp. ${article.primeraPagina}-${article.ultimaPagina}.</p>
+          <p style="margin:0"><strong>Chicago:</strong> ${authorsChicagoEn}. "${article.titulo}." <em>Revista Nacional de las Ciencias para Estudiantes</em> ${article.volumen}, no. ${article.numero} (${year}): ${article.primeraPagina}-${article.ultimaPagina}.</p>
+        </div>
       </section>
-      <section class="license">
-        <h2>License</h2>
-        <p>This article is published under a <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International (CC BY 4.0)</a> license.</p>
-        <img src="https://mirrors.creativecommons.org/presskit/buttons/88x31/png/by.png" alt="CC BY 4.0" style="width:88px; height:31px;">
+      <section id="license" style="margin-top:40px; font-size: 0.85rem; border-top: 1px solid #eee; padding-top:20px;">
+        <img src="https://mirrors.creativecommons.org/presskit/buttons/88x31/png/by.png" alt="CC BY 4.0" style="float:left; margin-right:15px; width:70px;">
+        <p style="font-family: sans-serif; font-size: 0.8rem; color: #666;">
+          This article is published under a <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 (CC BY 4.0)</a> license.
+          You are free to share and adapt the material as long as appropriate credit is given.
+        </p>
       </section>
     </main>
-    <footer>
-      <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
-      <div class="back-links">
-        <a href="/en/article">Back to Articles</a> | <a href="/">Back to home</a>
-      </div>
-    </footer>
   </div>
+  <footer>
+    <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
+    <p><a href="/en/article" style="color:var(--primary-blue)">Back to catalog</a></p>
+  </footer>
 </body>
 </html>
 `.trim();
-
   const filePathEn = path.join(outputHtmlDir, `article-${articleSlug}EN.html`);
   fs.writeFileSync(filePathEn, htmlContentEn, 'utf8');
   console.log(`Generado HTML de artículo en inglés: ${filePathEn}`);
@@ -642,33 +615,123 @@ const htmlContentEn = `
 <head>
   <meta charset="UTF-8">
   <title>Índice de Artículos - Revista Nacional de las Ciencias para Estudiantes</title>
-  <link rel="stylesheet" href="/index.css">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-blue: #007398;
+      --primary-dark: #333333;
+      --primary-grey: #666666;
+      --border-color: #e4e4e4;
+      --bg-light: #fdfdfd;
+    }
+    body {
+      font-family: 'Noto Sans', sans-serif;
+      line-height: 1.6;
+      color: var(--primary-dark);
+      background-color: #f0f0f0;
+      margin: 0;
+      padding: 0;
+    }
+    .top-bar {
+      background: white;
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .journal-name {
+      font-weight: bold;
+      color: var(--primary-blue);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .main-wrapper {
+      max-width: 1200px;
+      margin: 20px auto;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 30px;
+      padding: 0 20px;
+    }
+    .article-container {
+      background: white;
+      padding: 40px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      border-radius: 2px;
+    }
+    header {
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+    }
+    h1 {
+      font-family: 'Noto Serif', serif;
+      font-size: 2.2rem;
+      margin: 10px 0;
+      line-height: 1.2;
+      color: #000;
+    }
+    h2 {
+      font-family: 'Noto Sans', sans-serif;
+      font-size: 1.4rem;
+      color: var(--primary-dark);
+      margin-top: 40px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 5px;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    ul li {
+      margin-bottom: 10px;
+    }
+    ul li a {
+      color: var(--primary-blue);
+      text-decoration: none;
+    }
+    footer {
+      text-align: center;
+      padding: 40px;
+      color: var(--primary-grey);
+      font-size: 0.8rem;
+    }
+    @media (max-width: 900px) {
+      .article-container { padding: 20px; }
+    }
+  </style>
 </head>
 <body>
-  <header>
-    <h1>Índice de Artículos por Año</h1>
-    <p>Accede a los artículos por año de publicación. Cada enlace lleva a la página del artículo con resumen y PDF.</p>
-  </header>
-  <main>
+  <div class="top-bar">
+    <a href="/" class="journal-name">REVISTA NACIONAL DE LAS CIENCIAS PARA ESTUDIANTES</a>
+  </div>
+  <div class="main-wrapper">
+    <main class="article-container">
+      <header>
+        <h1>Índice de Artículos por Año</h1>
+        <p>Accede a los artículos por año de publicación. Cada enlace lleva a la página del artículo con resumen y PDF.</p>
+      </header>
 ${Object.keys(articlesByYear).sort().reverse().map(year => `
-    <section>
-      <h2>Año ${year}</h2>
-      <ul>
-        ${articlesByYear[year].map(article => {
-          const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
-          return `
-          <li>
-            <a href="/articles/article-${articleSlug}.html">${article.titulo}</a> - ${article.autores} (Vol. ${article.volumen}, Núm. ${article.numero})
-          </li>
-        `;
-        }).join('')}
-      </ul>
-    </section>
+      <section>
+        <h2>Año ${year}</h2>
+        <ul>
+          ${articlesByYear[year].map(article => {
+            const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
+            return `
+            <li>
+              <a href="/articles/article-${articleSlug}.html">${article.titulo}</a> - ${article.autores} (Vol. ${article.volumen}, Núm. ${article.numero})
+            </li>
+          `;
+          }).join('')}
+        </ul>
+      </section>
 `).join('')}
-  </main>
+    </main>
+  </div>
   <footer>
-    <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes</p>
-    <a href="/">Volver al inicio</a>
+    <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes.</p>
+    <p><a href="/" style="color:var(--primary-blue)">Volver al inicio</a></p>
   </footer>
 </body>
 </html>
@@ -683,33 +746,123 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
 <head>
   <meta charset="UTF-8">
   <title>Index of Articles - The National Review of Sciences for Students</title>
-  <link rel="stylesheet" href="/index.css">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-blue: #007398;
+      --primary-dark: #333333;
+      --primary-grey: #666666;
+      --border-color: #e4e4e4;
+      --bg-light: #fdfdfd;
+    }
+    body {
+      font-family: 'Noto Sans', sans-serif;
+      line-height: 1.6;
+      color: var(--primary-dark);
+      background-color: #f0f0f0;
+      margin: 0;
+      padding: 0;
+    }
+    .top-bar {
+      background: white;
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .journal-name {
+      font-weight: bold;
+      color: var(--primary-blue);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .main-wrapper {
+      max-width: 1200px;
+      margin: 20px auto;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 30px;
+      padding: 0 20px;
+    }
+    .article-container {
+      background: white;
+      padding: 40px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      border-radius: 2px;
+    }
+    header {
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+    }
+    h1 {
+      font-family: 'Noto Serif', serif;
+      font-size: 2.2rem;
+      margin: 10px 0;
+      line-height: 1.2;
+      color: #000;
+    }
+    h2 {
+      font-family: 'Noto Sans', sans-serif;
+      font-size: 1.4rem;
+      color: var(--primary-dark);
+      margin-top: 40px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 5px;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    ul li {
+      margin-bottom: 10px;
+    }
+    ul li a {
+      color: var(--primary-blue);
+      text-decoration: none;
+    }
+    footer {
+      text-align: center;
+      padding: 40px;
+      color: var(--primary-grey);
+      font-size: 0.8rem;
+    }
+    @media (max-width: 900px) {
+      .article-container { padding: 20px; }
+    }
+  </style>
 </head>
 <body>
-  <header>
-    <h1>Index of Articles by Year</h1>
-    <p>Access articles by year of publication. Each link leads to the article page with abstract and PDF.</p>
-  </header>
-  <main>
+  <div class="top-bar">
+    <a href="/" class="journal-name">THE NATIONAL REVIEW OF SCIENCES FOR STUDENTS</a>
+  </div>
+  <div class="main-wrapper">
+    <main class="article-container">
+      <header>
+        <h1>Index of Articles by Year</h1>
+        <p>Access articles by year of publication. Each link leads to the article page with abstract and PDF.</p>
+      </header>
 ${Object.keys(articlesByYear).sort().reverse().map(year => `
-    <section>
-      <h2>Year ${year}</h2>
-      <ul>
-        ${articlesByYear[year].map(article => {
-          const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
-          return `
-          <li>
-            <a href="/articles/article-${articleSlug}EN.html">${article.titulo}</a> - ${article.autores} (Vol. ${article.volumen}, No. ${article.numero})
-          </li>
-        `;
-        }).join('')}
-      </ul>
-    </section>
+      <section>
+        <h2>Year ${year}</h2>
+        <ul>
+          ${articlesByYear[year].map(article => {
+            const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
+            return `
+            <li>
+              <a href="/articles/article-${articleSlug}EN.html">${article.titulo}</a> - ${article.autores} (Vol. ${article.volumen}, No. ${article.numero})
+            </li>
+          `;
+          }).join('')}
+        </ul>
+      </section>
 `).join('')}
-  </main>
+    </main>
+  </div>
   <footer>
     <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
-    <a href="/">Back to home</a>
+    <p><a href="/" style="color:var(--primary-blue)">Back to home</a></p>
   </footer>
 </body>
 </html>
@@ -768,173 +921,240 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
   <meta name="description" content="${volume.resumen.substring(0, 160)}...">
   <meta name="keywords" content="${volume.palabras_clave.join(', ')}">
   <title>Volumen ${volume.volumen} Número ${volume.numero} - Revista Nacional de las Ciencias para Estudiantes</title>
-  <link rel="stylesheet" href="/index.css">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
   <style>
-    /* Estilo profesional: fondos gradient, bordes azules, tipografía elegante */
+    :root {
+      --primary-blue: #007398;
+      --primary-dark: #333333;
+      --primary-grey: #666666;
+      --border-color: #e4e4e4;
+      --bg-light: #fdfdfd;
+    }
     body {
-      font-family: 'Merriweather', serif;
-      line-height: 1.8;
-      color: #333;
-      background: linear-gradient(to bottom, #f9f9f9, #fff);
+      font-family: 'Noto Sans', sans-serif;
+      line-height: 1.6;
+      color: var(--primary-dark);
+      background-color: #f0f0f0;
       margin: 0;
       padding: 0;
-      box-sizing: border-box;
     }
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 3rem 2rem;
+    .top-bar {
       background: white;
-      box-shadow: 0 0 30px rgba(0,0,0,0.1);
-      border-radius: 12px;
-      border: 1px solid #3498db; /* Azul */
-      box-sizing: border-box;
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .journal-name {
+      font-weight: bold;
+      color: var(--primary-blue);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .main-wrapper {
+      max-width: 1200px;
+      margin: 20px auto;
+      display: grid;
+      grid-template-columns: 250px 1fr;
+      gap: 30px;
+      padding: 0 20px;
+    }
+    /* Sidebar */
+    aside {
+      font-size: 0.9rem;
+    }
+    .outline-box {
+      position: sticky;
+      top: 20px;
+    }
+    .outline-title {
+      font-weight: bold;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 10px;
+      margin-bottom: 15px;
+      text-transform: uppercase;
+      font-size: 0.8rem;
+      letter-spacing: 1px;
+    }
+    .outline-list {
+      list-style: none;
+      padding: 0;
+    }
+    .outline-list li {
+      margin-bottom: 10px;
+    }
+    .outline-list a {
+      color: var(--primary-blue);
+      text-decoration: none;
+    }
+    /* Main Content */
+    .article-container {
+      background: white;
+      padding: 40px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      border-radius: 2px;
     }
     header {
-      text-align: center;
-      border-bottom: 2px solid #3498db;
-      padding-bottom: 1.5rem;
-      margin-bottom: 3rem;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+    }
+    .journal-meta {
+      font-size: 0.85rem;
+      color: var(--primary-grey);
+      margin-bottom: 15px;
     }
     h1 {
+      font-family: 'Noto Serif', serif;
       font-size: 2.2rem;
-      color: #2980b9; /* Azul oscuro */
-      margin-bottom: 0.5rem;
-      font-weight: bold;
+      margin: 10px 0;
+      line-height: 1.2;
+      color: #000;
     }
-    .meta {
-      font-size: 1rem;
-      color: #555;
-      margin-bottom: 0.5rem;
-    }
-    section {
-      margin-bottom: 2.5rem;
+    .article-info-row {
+      font-size: 0.85rem;
+      display: flex;
+      gap: 20px;
+      color: var(--primary-grey);
+      margin-top: 10px;
     }
     h2 {
-      font-size: 1.5rem;
-      color: #2980b9;
-      border-bottom: 1px solid #3498db;
-      padding-bottom: 0.5rem;
-      margin-bottom: 1.5rem;
+      font-family: 'Noto Sans', sans-serif;
+      font-size: 1.4rem;
+      color: var(--primary-dark);
+      margin-top: 40px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 5px;
     }
     p {
+      font-family: 'Noto Serif', serif;
+      font-size: 1.05rem;
       text-align: justify;
     }
-    .keywords {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
+    .keywords-box {
+      background: #f9f9f9;
+      padding: 15px;
+      border-radius: 4px;
+      margin: 20px 0;
     }
-    .keyword {
-      background: #e8f4fd;
-      color: #2980b9;
-      padding: 0.4rem 1rem;
-      border-radius: 20px;
+    .keyword-tag {
+      display: inline-block;
+      margin-right: 15px;
       font-size: 0.9rem;
-      border: 1px solid #3498db;
+      color: var(--primary-blue);
+    }
+    .pdf-viewer-section {
+      margin-top: 50px;
+      padding-top: 20px;
+      border-top: 2px solid var(--primary-blue);
     }
     .pdf-preview {
       width: 100%;
       height: 700px;
-      border: 1px solid #3498db;
-      border-radius: 8px;
-      margin-top: 1.5rem;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      border: 1px solid var(--border-color);
+      margin-bottom: 20px;
     }
-    .buttons {
+    .action-buttons {
       display: flex;
-      justify-content: center;
-      gap: 1.5rem;
-      margin-top: 2rem;
+      gap: 15px;
     }
-    .button {
-      padding: 0.8rem 2rem;
-      border-radius: 6px;
+    .btn {
+      padding: 12px 24px;
+      border-radius: 2px;
       text-decoration: none;
       font-weight: bold;
-      transition: all 0.3s;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      font-size: 0.9rem;
+      display: inline-flex;
+      align-items: center;
+      transition: 0.2s;
     }
-    .open-pdf {
-      background: #3498db;
+    .btn-primary {
+      background: var(--primary-blue);
       color: white;
     }
-    .open-pdf:hover {
-      background: #2980b9;
+    .btn-primary:hover { background: #005a77; }
+    .btn-outline {
+      border: 1px solid var(--primary-blue);
+      color: var(--primary-blue);
     }
-    .download-pdf {
-      background: #27ae60;
-      color: white;
-    }
-    .download-pdf:hover {
-      background: #219a52;
-    }
+    .btn-outline:hover { background: #f0f7f9; }
     footer {
       text-align: center;
-      margin-top: 3rem;
-      padding-top: 1.5rem;
-      border-top: 1px solid #3498db;
-      font-size: 0.9rem;
-      color: #777;
+      padding: 40px;
+      color: var(--primary-grey);
+      font-size: 0.8rem;
     }
-    @media (max-width: 768px) {
-      .container {
-        padding: 2rem 1rem;
-      }
-      h1 {
-        font-size: 1.8rem;
-      }
-      .pdf-preview {
-        height: 500px;
-      }
-      .buttons {
-        flex-direction: column;
-        gap: 1rem;
-      }
+    @media (max-width: 900px) {
+      .main-wrapper { grid-template-columns: 1fr; }
+      aside { display: none; }
+      .article-container { padding: 20px; }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>Volumen ${volume.volumen} - Número ${volume.numero}</h1>
-      <p class="meta"><strong>Fecha de publicación:</strong> ${volume.fecha}</p>
-      <p class="meta"><strong>Área temática:</strong> ${volume.area}</p>
-    </header>
-    <main>
-      <section>
-        <h2>Palabras clave</h2>
-        <div class="keywords">
-          ${volume.palabras_clave.map(kw => `<span class="keyword">${kw}</span>`).join('')}
+  <div class="top-bar">
+    <a href="/" class="journal-name">REVISTA NACIONAL DE LAS CIENCIAS PARA ESTUDIANTES</a>
+    <div style="font-size: 0.8rem; color: #666;">Volume ${volume.volumen}, Issue ${volume.numero}</div>
+  </div>
+  <div class="main-wrapper">
+    <aside>
+      <div class="outline-box">
+        <div class="outline-title">Contenido</div>
+        <ul class="outline-list">
+          <li><a href="#abstract">Resumen</a></li>
+          <li><a href="#english-abstract">Abstract (English)</a></li>
+          <li><a href="#keywords">Palabras clave</a></li>
+          <li><a href="#preview">Visualización PDF</a></li>
+          <li><a href="#license">Licencia</a></li>
+        </ul>
+        <div class="outline-title" style="margin-top:30px">Acciones</div>
+        <a href="${volume.pdf}" download class="btn btn-primary" style="width:100%; box-sizing:border-box; justify-content:center;">Descargar PDF</a>
+      </div>
+    </aside>
+    <main class="article-container">
+      <header>
+        <div class="journal-meta">
+          ${volume.area}
         </div>
-      </section>
-      <section>
+        <h1>Volumen ${volume.volumen} - Número ${volume.numero}</h1>
+        <div class="article-info-row">
+          <span><strong>Publicado:</strong> ${volume.fecha}</span>
+        </div>
+      </header>
+      <section id="abstract">
         <h2>Resumen</h2>
         <p>${volume.resumen}</p>
       </section>
-      <section>
+      <section id="english-abstract">
         <h2>Abstract (English)</h2>
-        <p>${volume.abstract}</p>
+        <p style="font-style: italic; color: #444;">${volume.abstract}</p>
       </section>
-      <section>
+      <section id="keywords" class="keywords-box">
+        <strong style="font-size:0.9rem; display:block; margin-bottom:10px;">Palabras clave:</strong>
+        ${volume.palabras_clave.map(kw => `<span class="keyword-tag">${kw}</span>`).join('')}
+      </section>
+      <section id="preview" class="pdf-viewer-section">
         <h2>Visualización del PDF</h2>
         <embed src="${volume.pdf}" type="application/pdf" class="pdf-preview" />
-        <div class="buttons">
-          <a href="${volume.pdf}" target="_blank" rel="noopener noreferrer" class="button open-pdf">Abrir PDF en nueva pestaña</a>
-          <a href="${volume.pdf}" download class="button download-pdf">Descargar PDF</a>
+        <div class="action-buttons">
+          <a href="${volume.pdf}" target="_blank" class="btn btn-outline">Ver en pantalla completa</a>
+          <a href="${volume.pdf}" download class="btn btn-primary">Descargar volumen (PDF)</a>
         </div>
       </section>
-      <section class="license">
-        <h2>Licencia</h2>
-        <p>Este volumen se publica bajo licencia <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Atribución 4.0 Internacional (CC BY 4.0)</a>.</p>
-        <img src="https://mirrors.creativecommons.org/presskit/buttons/88x31/png/by.png" alt="CC BY 4.0" style="width:88px; height:31px;">
+      <section id="license" style="margin-top:40px; font-size: 0.85rem; border-top: 1px solid #eee; padding-top:20px;">
+        <img src="https://mirrors.creativecommons.org/presskit/buttons/88x31/png/by.png" alt="CC BY 4.0" style="float:left; margin-right:15px; width:70px;">
+        <p style="font-family: sans-serif; font-size: 0.8rem; color: #666;">
+          Este volumen se publica bajo licencia <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Atribución 4.0 (CC BY 4.0)</a>.
+          Usted es libre de compartir y adaptar el material siempre que se otorgue el crédito apropiado.
+        </p>
       </section>
     </main>
-    <footer>
-      <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes</p>
-      <a href="/es/volume">Volver a Volúmenes</a> | <a href="/">Volver al inicio</a>
-    </footer>
   </div>
+  <footer>
+    <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes.</p>
+    <p><a href="/es/volume" style="color:var(--primary-blue)">Volver a Volúmenes</a></p>
+  </footer>
 </body>
 </html>
   `.trim();
@@ -961,169 +1181,90 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
   <meta name="description" content="${volume.abstract.substring(0, 160)}...">
   <meta name="keywords" content="${volume.keywords.join(', ')}">
   <title>Volume ${volume.volumen} Issue ${volume.numero} - The National Review of Sciences for Students</title>
-  <link rel="stylesheet" href="/index.css">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
   <style>
-    /* Estilo profesional: fondos gradient, bordes azules, tipografía elegante */
-    body {
-      font-family: 'Merriweather', serif;
-      line-height: 1.8;
-      color: #333;
-      background: linear-gradient(to bottom, #f9f9f9, #fff);
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
+    :root {
+      --primary-blue: #007398;
+      --primary-dark: #333333;
+      --primary-grey: #666666;
+      --border-color: #e4e4e4;
     }
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 3rem 2rem;
-      background: white;
-      box-shadow: 0 0 30px rgba(0,0,0,0.1);
-      border-radius: 12px;
-      border: 1px solid #3498db; /* Blue */
-      box-sizing: border-box;
-    }
-    header {
-      text-align: center;
-      border-bottom: 2px solid #3498db;
-      padding-bottom: 1.5rem;
-      margin-bottom: 3rem;
-    }
-    h1 {
-      font-size: 2.2rem;
-      color: #2980b9; /* Dark blue */
-      margin-bottom: 0.5rem;
-      font-weight: bold;
-    }
-    .meta {
-      font-size: 1rem;
-      color: #555;
-      margin-bottom: 0.5rem;
-    }
-    section {
-      margin-bottom: 2.5rem;
-    }
-    h2 {
-      font-size: 1.5rem;
-      color: #2980b9;
-      border-bottom: 1px solid #3498db;
-      padding-bottom: 0.5rem;
-      margin-bottom: 1.5rem;
-    }
-    p {
-      text-align: justify;
-    }
-    .keywords {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-    }
-    .keyword {
-      background: #e8f4fd;
-      color: #2980b9;
-      padding: 0.4rem 1rem;
-      border-radius: 20px;
-      font-size: 0.9rem;
-      border: 1px solid #3498db;
-    }
-    .pdf-preview {
-      width: 100%;
-      height: 700px;
-      border: 1px solid #3498db;
-      border-radius: 8px;
-      margin-top: 1.5rem;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    .buttons {
-      display: flex;
-      justify-content: center;
-      gap: 1.5rem;
-      margin-top: 2rem;
-    }
-    .button {
-      padding: 0.8rem 2rem;
-      border-radius: 6px;
-      text-decoration: none;
-      font-weight: bold;
-      transition: all 0.3s;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    .open-pdf {
-      background: #3498db;
-      color: white;
-    }
-    .open-pdf:hover {
-      background: #2980b9;
-    }
-    .download-pdf {
-      background: #27ae60;
-      color: white;
-    }
-    .download-pdf:hover {
-      background: #219a52;
-    }
-    footer {
-      text-align: center;
-      margin-top: 3rem;
-      padding-top: 1.5rem;
-      border-top: 1px solid #3498db;
-      font-size: 0.9rem;
-      color: #777;
-    }
-    @media (max-width: 768px) {
-      .container {
-        padding: 2rem 1rem;
-      }
-      h1 {
-        font-size: 1.8rem;
-      }
-      .pdf-preview {
-        height: 500px;
-      }
-      .buttons {
-        flex-direction: column;
-        gap: 1rem;
-      }
-    }
+    body { font-family: 'Noto Sans', sans-serif; line-height: 1.6; color: var(--primary-dark); background-color: #f0f0f0; margin: 0; }
+    .top-bar { background: white; border-bottom: 1px solid var(--border-color); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
+    .journal-name { font-weight: bold; color: var(--primary-blue); text-decoration: none; font-size: 0.9rem; }
+    .main-wrapper { max-width: 1200px; margin: 20px auto; display: grid; grid-template-columns: 250px 1fr; gap: 30px; padding: 0 20px; }
+    aside { font-size: 0.9rem; }
+    .outline-box { position: sticky; top: 20px; }
+    .outline-title { font-weight: bold; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px; text-transform: uppercase; font-size: 0.8rem; }
+    .outline-list { list-style: none; padding: 0; }
+    .outline-list a { color: var(--primary-blue); text-decoration: none; }
+    .article-container { background: white; padding: 40px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    header { border-bottom: 1px solid var(--border-color); margin-bottom: 30px; padding-bottom: 20px; }
+    h1 { font-family: 'Noto Serif', serif; font-size: 2.2rem; margin: 10px 0; color: #000; }
+    h2 { font-family: 'Noto Sans', sans-serif; font-size: 1.4rem; color: var(--primary-dark); margin-top: 40px; border-bottom: 1px solid #eee; }
+    p { font-family: 'Noto Serif', serif; font-size: 1.05rem; text-align: justify; }
+    .pdf-preview { width: 100%; height: 700px; border: 1px solid var(--border-color); margin-bottom: 20px; }
+    .btn { padding: 12px 24px; border-radius: 2px; text-decoration: none; font-weight: bold; display: inline-flex; align-items: center; }
+    .btn-primary { background: var(--primary-blue); color: white; }
+    footer { text-align: center; padding: 40px; color: var(--primary-grey); font-size: 0.8rem; }
+    @media (max-width: 900px) { .main-wrapper { grid-template-columns: 1fr; } aside { display: none; } }
   </style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>Volume ${volume.volumen} - Issue ${volume.numero}</h1>
-      <p class="meta"><strong>Publication Date:</strong> ${volume.fecha}</p>
-      <p class="meta"><strong>Thematic Area:</strong> ${volume.area}</p>
-    </header>
-    <main>
-      <section>
-        <h2>Keywords</h2>
-        <div class="keywords">
-          ${volume.keywords.map(kw => `<span class="keyword">${kw}</span>`).join('')}
+  <div class="top-bar">
+    <a href="/" class="journal-name">THE NATIONAL REVIEW OF SCIENCES FOR STUDENTS</a>
+    <div style="font-size: 0.8rem; color: #666;">Vol ${volume.volumen}, Issue ${volume.numero}</div>
+  </div>
+  <div class="main-wrapper">
+    <aside>
+      <div class="outline-box">
+        <div class="outline-title">Outline</div>
+        <ul class="outline-list">
+          <li><a href="#abstract">Abstract</a></li>
+          <li><a href="#keywords">Keywords</a></li>
+          <li><a href="#preview">PDF Preview</a></li>
+          <li><a href="#license">License</a></li>
+        </ul>
+        <a href="${volume.pdf}" download class="btn btn-primary" style="margin-top:20px; width:100%; box-sizing:border-box; justify-content:center;">Download PDF</a>
+      </div>
+    </aside>
+    <main class="article-container">
+      <header>
+        <div class="journal-meta">${volume.area}</div>
+        <h1>Volume ${volume.volumen} - Issue ${volume.numero}</h1>
+        <div style="font-size: 0.85rem; color: #666;">
+          <strong>Published:</strong> ${volume.fecha}
         </div>
-      </section>
-      <section>
+      </header>
+      <section id="abstract">
         <h2>Abstract</h2>
         <p>${volume.abstract}</p>
       </section>
-      <section>
+      <section id="keywords" style="background: #f9f9f9; padding: 15px; margin: 20px 0;">
+        <strong style="font-size:0.9rem;">Keywords:</strong><br>
+        ${volume.keywords.map(kw => `<span style="color:var(--primary-blue); margin-right:15px; font-size:0.9rem;">${kw}</span>`).join('')}
+      </section>
+      <section id="preview" style="margin-top:50px;">
         <h2>PDF Preview</h2>
         <embed src="${volume.pdf}" type="application/pdf" class="pdf-preview" />
-        <div class="buttons">
-          <a href="${volume.pdf}" target="_blank" rel="noopener noreferrer" class="button open-pdf">Open PDF in New Tab</a>
-          <a href="${volume.pdf}" download class="button download-pdf">Download PDF</a>
+        <div style="display:flex; gap:15px;">
+          <a href="${volume.pdf}" target="_blank" class="btn btn-outline">View Full Screen</a>
+          <a href="${volume.pdf}" download class="btn btn-primary">Download Volume</a>
         </div>
       </section>
-      <section class="license">
-        <h2>License</h2>
-        <p>This volume is published under a <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International (CC BY 4.0)</a> license.</p>
-        <img src="https://mirrors.creativecommons.org/presskit/buttons/88x31/png/by.png" alt="CC BY 4.0" style="width:88px; height:31px;">
+      <section id="license" style="margin-top:40px; font-size: 0.85rem; border-top: 1px solid #eee; padding-top:20px;">
+        <img src="https://mirrors.creativecommons.org/presskit/buttons/88x31/png/by.png" alt="CC BY 4.0" style="float:left; margin-right:15px; width:70px;">
+        <p style="font-family: sans-serif; font-size: 0.8rem; color: #666;">
+          This volume is published under a <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 (CC BY 4.0)</a> license.
+          You are free to share and adapt the material as long as appropriate credit is given.
+        </p>
       </section>
     </main>
-    <footer>
-      <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
-      <a href="/en/volume">Back to Volumes</a> | <a href="/">Back to home</a>
-    </footer>
   </div>
+  <footer>
+    <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
+    <p><a href="/en/volume" style="color:var(--primary-blue)">Back to Volumes</a></p>
+  </footer>
 </body>
 </html>
   `.trim();
@@ -1144,33 +1285,123 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
 <head>
   <meta charset="UTF-8">
   <title>Índice de Volúmenes - Revista Nacional de las Ciencias para Estudiantes</title>
-  <link rel="stylesheet" href="/index.css">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-blue: #007398;
+      --primary-dark: #333333;
+      --primary-grey: #666666;
+      --border-color: #e4e4e4;
+      --bg-light: #fdfdfd;
+    }
+    body {
+      font-family: 'Noto Sans', sans-serif;
+      line-height: 1.6;
+      color: var(--primary-dark);
+      background-color: #f0f0f0;
+      margin: 0;
+      padding: 0;
+    }
+    .top-bar {
+      background: white;
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .journal-name {
+      font-weight: bold;
+      color: var(--primary-blue);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .main-wrapper {
+      max-width: 1200px;
+      margin: 20px auto;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 30px;
+      padding: 0 20px;
+    }
+    .article-container {
+      background: white;
+      padding: 40px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      border-radius: 2px;
+    }
+    header {
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+    }
+    h1 {
+      font-family: 'Noto Serif', serif;
+      font-size: 2.2rem;
+      margin: 10px 0;
+      line-height: 1.2;
+      color: #000;
+    }
+    h2 {
+      font-family: 'Noto Sans', sans-serif;
+      font-size: 1.4rem;
+      color: var(--primary-dark);
+      margin-top: 40px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 5px;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    ul li {
+      margin-bottom: 10px;
+    }
+    ul li a {
+      color: var(--primary-blue);
+      text-decoration: none;
+    }
+    footer {
+      text-align: center;
+      padding: 40px;
+      color: var(--primary-grey);
+      font-size: 0.8rem;
+    }
+    @media (max-width: 900px) {
+      .article-container { padding: 20px; }
+    }
+  </style>
 </head>
 <body>
-  <header>
-    <h1>Índice de Volúmenes por Año</h1>
-    <p>Accede a los volúmenes por año de publicación. Cada enlace lleva a la página del volumen con resumen y PDF.</p>
-  </header>
-  <main>
+  <div class="top-bar">
+    <a href="/" class="journal-name">REVISTA NACIONAL DE LAS CIENCIAS PARA ESTUDIANTES</a>
+  </div>
+  <div class="main-wrapper">
+    <main class="article-container">
+      <header>
+        <h1>Índice de Volúmenes por Año</h1>
+        <p>Accede a los volúmenes por año de publicación. Cada enlace lleva a la página del volumen con resumen y PDF.</p>
+      </header>
 ${Object.keys(volumesByYear).sort().reverse().map(year => `
-    <section>
-      <h2>Año ${year}</h2>
-      <ul>
-        ${volumesByYear[year].map(volume => {
-          const volumeSlug = `${volume.volumen}-${volume.numero}`;
-          return `
-          <li>
-            <a href="/volumes/volume-${volumeSlug}.html">Volumen ${volume.volumen}, Número ${volume.numero}</a> - ${volume.titulo} (${volume.fecha})
-          </li>
-        `;
-        }).join('')}
-      </ul>
-    </section>
+      <section>
+        <h2>Año ${year}</h2>
+        <ul>
+          ${volumesByYear[year].map(volume => {
+            const volumeSlug = `${volume.volumen}-${volume.numero}`;
+            return `
+            <li>
+              <a href="/volumes/volume-${volumeSlug}.html">Volumen ${volume.volumen}, Número ${volume.numero}</a> - ${volume.titulo} (${volume.fecha})
+            </li>
+          `;
+          }).join('')}
+        </ul>
+      </section>
 `).join('')}
-  </main>
+    </main>
+  </div>
   <footer>
-    <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes</p>
-    <a href="/">Volver al inicio</a>
+    <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes.</p>
+    <p><a href="/" style="color:var(--primary-blue)">Volver al inicio</a></p>
   </footer>
 </body>
 </html>
@@ -1184,33 +1415,123 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
 <head>
   <meta charset="UTF-8">
   <title>Index of Volumes - The National Review of Sciences for Students</title>
-  <link rel="stylesheet" href="/index.css">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-blue: #007398;
+      --primary-dark: #333333;
+      --primary-grey: #666666;
+      --border-color: #e4e4e4;
+      --bg-light: #fdfdfd;
+    }
+    body {
+      font-family: 'Noto Sans', sans-serif;
+      line-height: 1.6;
+      color: var(--primary-dark);
+      background-color: #f0f0f0;
+      margin: 0;
+      padding: 0;
+    }
+    .top-bar {
+      background: white;
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .journal-name {
+      font-weight: bold;
+      color: var(--primary-blue);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .main-wrapper {
+      max-width: 1200px;
+      margin: 20px auto;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 30px;
+      padding: 0 20px;
+    }
+    .article-container {
+      background: white;
+      padding: 40px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      border-radius: 2px;
+    }
+    header {
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+    }
+    h1 {
+      font-family: 'Noto Serif', serif;
+      font-size: 2.2rem;
+      margin: 10px 0;
+      line-height: 1.2;
+      color: #000;
+    }
+    h2 {
+      font-family: 'Noto Sans', sans-serif;
+      font-size: 1.4rem;
+      color: var(--primary-dark);
+      margin-top: 40px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 5px;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    ul li {
+      margin-bottom: 10px;
+    }
+    ul li a {
+      color: var(--primary-blue);
+      text-decoration: none;
+    }
+    footer {
+      text-align: center;
+      padding: 40px;
+      color: var(--primary-grey);
+      font-size: 0.8rem;
+    }
+    @media (max-width: 900px) {
+      .article-container { padding: 20px; }
+    }
+  </style>
 </head>
 <body>
-  <header>
-    <h1>Index of Volumes by Year</h1>
-    <p>Access volumes by year of publication. Each link leads to the volume page with abstract and PDF.</p>
-  </header>
-  <main>
+  <div class="top-bar">
+    <a href="/" class="journal-name">THE NATIONAL REVIEW OF SCIENCES FOR STUDENTS</a>
+  </div>
+  <div class="main-wrapper">
+    <main class="article-container">
+      <header>
+        <h1>Index of Volumes by Year</h1>
+        <p>Access volumes by year of publication. Each link leads to the volume page with abstract and PDF.</p>
+      </header>
 ${Object.keys(volumesByYear).sort().reverse().map(year => `
-    <section>
-      <h2>Year ${year}</h2>
-      <ul>
-        ${volumesByYear[year].map(volume => {
-          const volumeSlug = `${volume.volumen}-${volume.numero}`;
-          return `
-          <li>
-            <a href="/volumes/volume-${volumeSlug}EN.html">Volume ${volume.volumen}, Issue ${volume.numero}</a> - ${volume.titulo} (${volume.fecha})
-          </li>
-        `;
-        }).join('')}
-      </ul>
-    </section>
+      <section>
+        <h2>Year ${year}</h2>
+        <ul>
+          ${volumesByYear[year].map(volume => {
+            const volumeSlug = `${volume.volumen}-${volume.numero}`;
+            return `
+            <li>
+              <a href="/volumes/volume-${volumeSlug}EN.html">Volume ${volume.volumen}, Issue ${volume.numero}</a> - ${volume.titulo} (${volume.fecha})
+            </li>
+          `;
+          }).join('')}
+        </ul>
+      </section>
 `).join('')}
-  </main>
+    </main>
+  </div>
   <footer>
     <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
-    <a href="/">Back to home</a>
+    <p><a href="/" style="color:var(--primary-blue)">Back to home</a></p>
   </footer>
 </body>
 </html>
@@ -1246,31 +1567,55 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
   <meta name="description" content="${newsItem.titulo.substring(0, 160)}...">
   <meta name="keywords" content="noticias, revista ciencias estudiantes, ${newsItem.titulo.replace(/[^a-zA-Z0-9]/g, ' ').substring(0, 100)}">
   <title>${newsItem.titulo} - Noticias - Revista Nacional de las Ciencias para Estudiantes</title>
-  <link rel="stylesheet" href="/index.css">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --primary-blue: #007398;
+      --primary-dark: #333333;
+      --primary-grey: #666666;
+      --border-color: #e4e4e4;
+      --bg-light: #fdfdfd;
+    }
     body {
-      font-family: 'Merriweather', serif;
-      line-height: 1.8;
-      color: #333;
-      background-color: #f9f9f9;
+      font-family: 'Noto Sans', sans-serif;
+      line-height: 1.6;
+      color: var(--primary-dark);
+      background-color: #f0f0f0;
       margin: 0;
       padding: 0;
-      box-sizing: border-box;
     }
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 2rem 1rem;
+    .top-bar {
       background: white;
-      box-shadow: 0 0 20px rgba(0,0,0,0.05);
-      border-radius: 8px;
-      box-sizing: border-box;
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .journal-name {
+      font-weight: bold;
+      color: var(--primary-blue);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .main-wrapper {
+      max-width: 1200px;
+      margin: 20px auto;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 30px;
+      padding: 0 20px;
+    }
+    .article-container {
+      background: white;
+      padding: 40px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      border-radius: 2px;
     }
     header {
-      text-align: center;
-      border-bottom: 1px solid #eee;
-      padding-bottom: 1rem;
-      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 30px;
+      padding-bottom: 20px;
     }
     .logo {
       width: 80px;
@@ -1282,19 +1627,20 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
       transform: scale(1.05);
     }
     h1 {
-      font-size: 1.8rem;
-      color: #2c3e50;
-      margin-bottom: 0.5rem;
+      font-family: 'Noto Serif', serif;
+      font-size: 2.2rem;
+      margin: 10px 0;
+      line-height: 1.2;
+      color: #000;
     }
     .date {
       font-size: 0.9rem;
       color: #777;
       margin-bottom: 1rem;
     }
-    main {
-      margin-bottom: 2rem;
-    }
     .content {
+      font-family: 'Noto Serif', serif;
+      font-size: 1.05rem;
       text-align: justify;
     }
     .content p {
@@ -1308,15 +1654,15 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
       padding-bottom: 0.5rem;
     }
     .content strong {
-      color: #2980b9;
+      color: var(--primary-blue);
     }
     .content a {
-      color: #3498db;
+      color: var(--primary-blue);
       text-decoration: none;
     }
     .content a:hover {
       text-decoration: underline;
-      color: #2980b9;
+      color: #005a77;
     }
     .content img {
       max-width: 100%;
@@ -1327,62 +1673,37 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
     }
     footer {
       text-align: center;
-      margin-top: 3rem;
-      padding-top: 1rem;
-      border-top: 1px solid #eee;
-      font-size: 0.85rem;
-      color: #777;
+      padding: 40px;
+      color: var(--primary-grey);
+      font-size: 0.8rem;
     }
-    footer a {
-      color: #3498db;
-      text-decoration: none;
-      margin: 0 1rem;
-    }
-    footer a:hover {
-      color: #2980b9;
-      text-decoration: underline;
-    }
-    @media (max-width: 768px) {
-      .container {
-        padding: 1.5rem 1rem;
-      }
-      h1 {
-        font-size: 1.5rem;
-      }
-      .logo {
-        width: 60px;
-      }
-    }
-    @media (max-width: 480px) {
-      h1 {
-        font-size: 1.3rem;
-      }
-    }
-    .content {
-      text-rendering: optimizeLegibility;
-      -webkit-font-smoothing: antialiased;
+    @media (max-width: 900px) {
+      .article-container { padding: 20px; }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <a href="/">
-        <img src="/logo.png" alt="Logo de Revista Nacional de las Ciencias para Estudiantes" class="logo">
-      </a>
-      <h1>${newsItem.titulo}</h1>
-      <p class="date">Publicado el ${newsItem.fecha}</p>
-    </header>
-    <main>
+  <div class="top-bar">
+    <a href="/" class="journal-name">REVISTA NACIONAL DE LAS CIENCIAS PARA ESTUDIANTES</a>
+  </div>
+  <div class="main-wrapper">
+    <main class="article-container">
+      <header>
+        <a href="/">
+          <img src="/logo.png" alt="Logo de Revista Nacional de las Ciencias para Estudiantes" class="logo">
+        </a>
+        <h1>${newsItem.titulo}</h1>
+        <p class="date">Publicado el ${newsItem.fecha}</p>
+      </header>
       <div class="content ql-editor">
         ${newsItem.cuerpo}
       </div>
     </main>
-    <footer>
-      <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes</p>
-      <a href="/es/new">Volver a Noticias</a> | <a href="/">Volver al inicio</a>
-    </footer>
   </div>
+  <footer>
+    <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes.</p>
+    <p><a href="/es/new" style="color:var(--primary-blue)">Volver a Noticias</a></p>
+  </footer>
 </body>
 </html>`;
       const enContent = `<!DOCTYPE html>
@@ -1393,31 +1714,55 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
   <meta name="description" content="${newsItem.title.substring(0, 160)}...">
   <meta name="keywords" content="news, student science journal, ${newsItem.title.replace(/[^a-zA-Z0-9]/g, ' ').substring(0, 100)}">
   <title>${newsItem.title} - News - The National Review of Sciences for Students</title>
-  <link rel="stylesheet" href="/index.css">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --primary-blue: #007398;
+      --primary-dark: #333333;
+      --primary-grey: #666666;
+      --border-color: #e4e4e4;
+      --bg-light: #fdfdfd;
+    }
     body {
-      font-family: 'Merriweather', serif;
-      line-height: 1.8;
-      color: #333;
-      background-color: #f9f9f9;
+      font-family: 'Noto Sans', sans-serif;
+      line-height: 1.6;
+      color: var(--primary-dark);
+      background-color: #f0f0f0;
       margin: 0;
       padding: 0;
-      box-sizing: border-box;
     }
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 2rem 1rem;
+    .top-bar {
       background: white;
-      box-shadow: 0 0 20px rgba(0,0,0,0.05);
-      border-radius: 8px;
-      box-sizing: border-box;
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .journal-name {
+      font-weight: bold;
+      color: var(--primary-blue);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .main-wrapper {
+      max-width: 1200px;
+      margin: 20px auto;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 30px;
+      padding: 0 20px;
+    }
+    .article-container {
+      background: white;
+      padding: 40px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      border-radius: 2px;
     }
     header {
-      text-align: center;
-      border-bottom: 1px solid #eee;
-      padding-bottom: 1rem;
-      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 30px;
+      padding-bottom: 20px;
     }
     .logo {
       width: 80px;
@@ -1429,19 +1774,20 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
       transform: scale(1.05);
     }
     h1 {
-      font-size: 1.8rem;
-      color: #2c3e50;
-      margin-bottom: 0.5rem;
+      font-family: 'Noto Serif', serif;
+      font-size: 2.2rem;
+      margin: 10px 0;
+      line-height: 1.2;
+      color: #000;
     }
     .date {
       font-size: 0.9rem;
       color: #777;
       margin-bottom: 1rem;
     }
-    main {
-      margin-bottom: 2rem;
-    }
     .content {
+      font-family: 'Noto Serif', serif;
+      font-size: 1.05rem;
       text-align: justify;
     }
     .content p {
@@ -1455,15 +1801,15 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
       padding-bottom: 0.5rem;
     }
     .content strong {
-      color: #2980b9;
+      color: var(--primary-blue);
     }
     .content a {
-      color: #3498db;
+      color: var(--primary-blue);
       text-decoration: none;
     }
     .content a:hover {
       text-decoration: underline;
-      color: #2980b9;
+      color: #005a77;
     }
     .content img {
       max-width: 100%;
@@ -1474,62 +1820,37 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
     }
     footer {
       text-align: center;
-      margin-top: 3rem;
-      padding-top: 1rem;
-      border-top: 1px solid #eee;
-      font-size: 0.85rem;
-      color: #777;
+      padding: 40px;
+      color: var(--primary-grey);
+      font-size: 0.8rem;
     }
-    footer a {
-      color: #3498db;
-      text-decoration: none;
-      margin: 0 1rem;
-    }
-    footer a:hover {
-      color: #2980b9;
-      text-decoration: underline;
-    }
-    @media (max-width: 768px) {
-      .container {
-        padding: 1.5rem 1rem;
-      }
-      h1 {
-        font-size: 1.5rem;
-      }
-      .logo {
-        width: 60px;
-      }
-    }
-    @media (max-width: 480px) {
-      h1 {
-        font-size: 1.3rem;
-      }
-    }
-    .content {
-      text-rendering: optimizeLegibility;
-      -webkit-font-smoothing: antialiased;
+    @media (max-width: 900px) {
+      .article-container { padding: 20px; }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <a href="/">
-        <img src="/logoEN.png" alt="Logo of The National Review of Sciences for Students" class="logo">
-      </a>
-      <h1>${newsItem.title}</h1>
-      <p class="date">Published on ${newsItem.fecha}</p>
-    </header>
-    <main>
+  <div class="top-bar">
+    <a href="/" class="journal-name">THE NATIONAL REVIEW OF SCIENCES FOR STUDENTS</a>
+  </div>
+  <div class="main-wrapper">
+    <main class="article-container">
+      <header>
+        <a href="/">
+          <img src="/logoEN.png" alt="Logo of The National Review of Sciences for Students" class="logo">
+        </a>
+        <h1>${newsItem.title}</h1>
+        <p class="date">Published on ${newsItem.fecha}</p>
+      </header>
       <div class="content ql-editor">
         ${newsItem.content}
       </div>
     </main>
-    <footer>
-      <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
-      <a href="/en/new">Back to News</a> | <a href="/">Back to home</a>
-    </footer>
   </div>
+  <footer>
+    <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
+    <p><a href="/en/new" style="color:var(--primary-blue)">Back to News</a></p>
+  </footer>
 </body>
 </html>`;
       const esPath = path.join(newsOutputHtmlDir, `${slug}.html`);
@@ -1552,33 +1873,123 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
 <head>
   <meta charset="UTF-8">
   <title>Índice de Noticias - Revista Nacional de las Ciencias para Estudiantes</title>
-  <link rel="stylesheet" href="/index.css">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-blue: #007398;
+      --primary-dark: #333333;
+      --primary-grey: #666666;
+      --border-color: #e4e4e4;
+      --bg-light: #fdfdfd;
+    }
+    body {
+      font-family: 'Noto Sans', sans-serif;
+      line-height: 1.6;
+      color: var(--primary-dark);
+      background-color: #f0f0f0;
+      margin: 0;
+      padding: 0;
+    }
+    .top-bar {
+      background: white;
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .journal-name {
+      font-weight: bold;
+      color: var(--primary-blue);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .main-wrapper {
+      max-width: 1200px;
+      margin: 20px auto;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 30px;
+      padding: 0 20px;
+    }
+    .article-container {
+      background: white;
+      padding: 40px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      border-radius: 2px;
+    }
+    header {
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+    }
+    h1 {
+      font-family: 'Noto Serif', serif;
+      font-size: 2.2rem;
+      margin: 10px 0;
+      line-height: 1.2;
+      color: #000;
+    }
+    h2 {
+      font-family: 'Noto Sans', sans-serif;
+      font-size: 1.4rem;
+      color: var(--primary-dark);
+      margin-top: 40px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 5px;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    ul li {
+      margin-bottom: 10px;
+    }
+    ul li a {
+      color: var(--primary-blue);
+      text-decoration: none;
+    }
+    footer {
+      text-align: center;
+      padding: 40px;
+      color: var(--primary-grey);
+      font-size: 0.8rem;
+    }
+    @media (max-width: 900px) {
+      .article-container { padding: 20px; }
+    }
+  </style>
 </head>
 <body>
-  <header>
-    <h1>Índice de Noticias por Año</h1>
-    <p>Accede a las noticias por año de publicación.</p>
-  </header>
-  <main>
+  <div class="top-bar">
+    <a href="/" class="journal-name">REVISTA NACIONAL DE LAS CIENCIAS PARA ESTUDIANTES</a>
+  </div>
+  <div class="main-wrapper">
+    <main class="article-container">
+      <header>
+        <h1>Índice de Noticias por Año</h1>
+        <p>Accede a las noticias por año de publicación.</p>
+      </header>
 ${Object.keys(newsByYear).sort().reverse().map(year => `
-    <section>
-      <h2>Año ${year}</h2>
-      <ul>
-        ${newsByYear[year].map(item => {
-          const slug = generateSlug(item.titulo + ' ' + item.fecha);
-          return `
-          <li>
-            <a href="/news/${slug}.html">${item.titulo}</a> (${item.fecha})
-          </li>
-        `;
-        }).join('')}
-      </ul>
-    </section>
+      <section>
+        <h2>Año ${year}</h2>
+        <ul>
+          ${newsByYear[year].map(item => {
+            const slug = generateSlug(item.titulo + ' ' + item.fecha);
+            return `
+            <li>
+              <a href="/news/${slug}.html">${item.titulo}</a> (${item.fecha})
+            </li>
+          `;
+          }).join('')}
+        </ul>
+      </section>
 `).join('')}
-  </main>
+    </main>
+  </div>
   <footer>
-    <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes</p>
-    <a href="/">Volver al inicio</a>
+    <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes.</p>
+    <p><a href="/" style="color:var(--primary-blue)">Volver al inicio</a></p>
   </footer>
 </body>
 </html>
@@ -1592,33 +2003,123 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
 <head>
   <meta charset="UTF-8">
   <title>News Index - The National Review of Sciences for Students</title>
-  <link rel="stylesheet" href="/index.css">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-blue: #007398;
+      --primary-dark: #333333;
+      --primary-grey: #666666;
+      --border-color: #e4e4e4;
+      --bg-light: #fdfdfd;
+    }
+    body {
+      font-family: 'Noto Sans', sans-serif;
+      line-height: 1.6;
+      color: var(--primary-dark);
+      background-color: #f0f0f0;
+      margin: 0;
+      padding: 0;
+    }
+    .top-bar {
+      background: white;
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .journal-name {
+      font-weight: bold;
+      color: var(--primary-blue);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .main-wrapper {
+      max-width: 1200px;
+      margin: 20px auto;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 30px;
+      padding: 0 20px;
+    }
+    .article-container {
+      background: white;
+      padding: 40px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      border-radius: 2px;
+    }
+    header {
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+    }
+    h1 {
+      font-family: 'Noto Serif', serif;
+      font-size: 2.2rem;
+      margin: 10px 0;
+      line-height: 1.2;
+      color: #000;
+    }
+    h2 {
+      font-family: 'Noto Sans', sans-serif;
+      font-size: 1.4rem;
+      color: var(--primary-dark);
+      margin-top: 40px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 5px;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    ul li {
+      margin-bottom: 10px;
+    }
+    ul li a {
+      color: var(--primary-blue);
+      text-decoration: none;
+    }
+    footer {
+      text-align: center;
+      padding: 40px;
+      color: var(--primary-grey);
+      font-size: 0.8rem;
+    }
+    @media (max-width: 900px) {
+      .article-container { padding: 20px; }
+    }
+  </style>
 </head>
 <body>
-  <header>
-    <h1>News Index by Year</h1>
-    <p>Access news by year of publication.</p>
-  </header>
-  <main>
+  <div class="top-bar">
+    <a href="/" class="journal-name">THE NATIONAL REVIEW OF SCIENCES FOR STUDENTS</a>
+  </div>
+  <div class="main-wrapper">
+    <main class="article-container">
+      <header>
+        <h1>News Index by Year</h1>
+        <p>Access news by year of publication.</p>
+      </header>
 ${Object.keys(newsByYear).sort().reverse().map(year => `
-    <section>
-      <h2>Year ${year}</h2>
-      <ul>
-        ${newsByYear[year].map(item => {
-          const slug = generateSlug(item.titulo + ' ' + item.fecha);
-          return `
-          <li>
-            <a href="/news/${slug}.EN.html">${item.title}</a> (${item.fecha})
-          </li>
-        `;
-        }).join('')}
-      </ul>
-    </section>
+      <section>
+        <h2>Year ${year}</h2>
+        <ul>
+          ${newsByYear[year].map(item => {
+            const slug = generateSlug(item.titulo + ' ' + item.fecha);
+            return `
+            <li>
+              <a href="/news/${slug}.EN.html">${item.title}</a> (${item.fecha})
+            </li>
+          `;
+          }).join('')}
+        </ul>
+      </section>
 `).join('')}
-  </main>
+    </main>
+  </div>
   <footer>
     <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students</p>
-    <a href="/">Back to home</a>
+    <p><a href="/" style="color:var(--primary-blue)">Back to home</a></p>
   </footer>
 </body>
 </html>
@@ -1626,6 +2127,8 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
     const newsIndexPathEn = path.join(newsOutputHtmlDir, 'index.EN.html');
     fs.writeFileSync(newsIndexPathEn, newsIndexContentEn, 'utf8');
     console.log(`Generado índice HTML de noticias (EN): ${newsIndexPathEn}`);
+   
+
     // Procesar equipo
     const allMembers = teamParsed.data.filter(row => (row['Nombre'] || '').trim() !== '');
     for (const member of allMembers) {
