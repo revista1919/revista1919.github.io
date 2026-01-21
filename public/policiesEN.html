@@ -1,108 +1,157 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Article Submission Policies - The National Review of Sciences for Students</title>
   <style>
+    :root {
+      --primary: #007398;
+      --text: #1a1a1a;
+      --light-text: #666;
+      --border: #e5e7eb;
+    }
     body {
-      font-family: 'Georgia', serif;
-      line-height: 1.6;
+      font-family: 'serif', 'Georgia', Times, serif;
+      line-height: 1.7;
       margin: 0;
       padding: 0;
-      background-color: #f4f4f9;
-      color: #333;
+      background-color: #f9f9f9;
+      color: var(--text);
     }
-    .container {
-      max-width: 800px;
-      margin: 40px auto;
-      padding: 20px;
+    .page-wrapper {
+      max-width: 850px;
+      margin: 60px auto;
       background-color: #fff;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-      border-radius: 8px;
+      padding: 60px 80px;
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.02);
     }
     .header {
       text-align: center;
-      padding-bottom: 20px;
-      border-bottom: 2px solid #004aad;
+      border-bottom: 3px double var(--text);
+      padding-bottom: 30px;
+      margin-bottom: 50px;
     }
     .header img {
-      max-width: 200px;
-      height: auto;
-      margin-bottom: 10px;
+      max-width: 160px;
+      margin-bottom: 20px;
+      filter: grayscale(1);
     }
     .header h1 {
-      font-size: 2.2em;
-      color: #004aad;
+      font-size: 2.4em;
       margin: 0;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+    .document-meta {
+      font-family: sans-serif;
+      text-transform: uppercase;
+      font-size: 10px;
+      letter-spacing: 0.3em;
+      color: var(--primary);
+      font-weight: bold;
+      margin-top: 10px;
     }
     h2 {
-      color: #004aad;
-      font-size: 1.8em;
-      margin-top: 30px;
-      border-left: 4px solid #004aad;
-      padding-left: 10px;
+      font-family: sans-serif;
+      font-size: 0.9em;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--primary);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+      margin-top: 40px;
     }
-    p, li {
-      font-size: 1.1em;
-      margin: 10px 0;
+    p {
+      margin-bottom: 20px;
+      font-size: 1.05em;
     }
-    ul {
+    .policy-list {
+      list-style: none;
+      padding: 0;
+    }
+    .policy-item {
+      margin-bottom: 25px;
       padding-left: 20px;
+      border-left: 2px solid var(--border);
     }
-    li {
-      margin-bottom: 10px;
+    .policy-item strong {
+      display: block;
+      font-family: sans-serif;
+      font-size: 0.85em;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 5px;
+      color: var(--text);
     }
     a {
-      color: #004aad;
-      text-decoration: none;
-    }
-    a:hover {
+      color: var(--primary);
       text-decoration: underline;
+      text-underline-offset: 3px;
     }
     .footer {
+      margin-top: 60px;
+      padding-top: 30px;
+      border-top: 1px solid var(--border);
       text-align: center;
-      margin-top: 40px;
-      font-size: 0.9em;
-      color: #666;
+      font-family: sans-serif;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--light-text);
+    }
+    @media (max-width: 768px) {
+      .page-wrapper { margin: 20px; padding: 30px; }
+      .header h1 { font-size: 1.8em; }
     }
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="page-wrapper">
     <div class="header">
-      <img src="logoEN.png" alt="Logo of The National Review of Sciences for Students">
+      <img src="logo.png" alt="Logo">
       <h1>Article Submission Policies</h1>
-      <p>The National Review of Sciences for Students</p>
+      <div class="document-meta">Editorial Protocol RevCiencias • v.2025</div>
     </div>
 
-    <h2>Introduction</h2>
-    <p>This document outlines the policies for submitting articles to <em>The National Review of Sciences for Students</em>. The term "submission" refers to the process of sending an article through the online form available on the journal’s website, as well as any other procedures followed for this purpose.</p>
+    <h2>01. Introduction</h2>
+    <p>This document establishes the regulatory framework for submitting manuscripts to the <em>National Review of Sciences for Students</em>. "Submission" is defined as any transfer of intellectual material through our official channels.</p>
 
-    <h2>Terms and Conditions</h2>
-    <p>The following terms and conditions apply to the submission process:</p>
-    <ul>
-      <li><strong>Compliance with Editorial Guidelines</strong><br>
-        By submitting an article, the author agrees to adhere to the editorial guidelines specified on the journal’s website, accessible at: <a href="https://www.revistacienciasestudiantes.com/en/guidelines/">https://www.revistacienciasestudiantes.com/en/guidelines/</a>.</li>
-      <li><strong>Data Availability</strong><br>
-        By submitting an article, the author consents to the data provided in the submission form and the article document being fully available to the journal and used as public data on the internet.</li>
-      <li><strong>Non-Exclusive Rights</strong><br>
-        By submitting an article, the author grants the journal a non-exclusive right to read the article, make necessary corrections, provide feedback, and issue a report on the corrections made.</li>
-      <li><strong>No Guarantee of Publication</strong><br>
-        Submitting an article does not guarantee its publication. The decision to reject an article is at the discretion of the reviewers and editor, based on any reasons outlined in the editorial guidelines.</li>
-      <li><strong>Responsibility for Emotional Impact</strong><br>
-        The journal is not responsible for any emotional impact that feedback may have on the author.</li>
-      <li><strong>Resubmission and Multiple Submissions</strong><br>
-        If an article is rejected, the author may resubmit it as many times as desired. Additionally, the author may submit as many articles as they deem appropriate. However, acceptance of any specific article is not guaranteed.</li>
-      <li><strong>Commitment Upon Acceptance</strong><br>
-        If an article is accepted, the author agrees to cooperate in the publication process by providing the legal information required by the journal.</li>
-    </ul>
+    <h2>02. Clauses and Conditions</h2>
+    <div class="policy-list">
+      <div class="policy-item">
+        <strong>Regulatory Adherence</strong>
+        Submitting the article implies full acceptance of the current <a href="https://www.revistacienciasestudiantes.com/en/guidelines/">Editorial Guidelines</a>.
+      </div>
+      <div class="policy-item">
+        <strong>Data Availability</strong>
+        The author accepts that the form information and the manuscript will be available to the journal for editorial processing and potential public publication.
+      </div>
+      <div class="policy-item">
+        <strong>Review Rights</strong>
+        The journal is granted a non-exclusive right to evaluation, correction, feedback, and issuance of technical reports.
+      </div>
+      <div class="policy-item">
+        <strong>Editorial Discretion</strong>
+        The submission process does not constitute a promise of publication. Final acceptance depends solely on the peer committee and editors.
+      </div>
+      <div class="policy-item">
+        <strong>Ethical Responsibility</strong>
+        The journal commits to rigorous review; the author assumes receiving professional criticism as part of academic growth.
+      </div>
+      <div class="policy-item">
+        <strong>Manuscript Iteration</strong>
+        There are no resubmission limits for rejected articles, as long as they incorporate significant improvements after feedback.
+      </div>
+    </div>
 
-    <h2>Final Notes</h2>
-    <p>These policies are mandatory for all authors submitting articles to the journal. Non-compliance may result in the rejection of the submission. For further details on the editorial guidelines, please refer to the link provided in point 1.</p>
+    <h2>03. Final Notes</h2>
+    <p>Non-compliance with any of these points empowers the journal to dismiss the submission immediately. Transparency and rigor are the pillars of our institution.</p>
 
     <div class="footer">
-      <p>The National Review of Sciences for Students &copy; 2025</p>
+      National Review of Sciences for Students &copy; 2025 <br>
+      Santiago de Chile • Independent Publication
     </div>
   </div>
 </body>
