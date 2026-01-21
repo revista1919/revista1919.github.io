@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 
 // Helper functions
 const getYear = (date) => {
@@ -284,54 +285,85 @@ function ArticleCard({ article }) {
 
   if (!article || Object.keys(article).length === 0) {
     return (
-      <div className="py-6 px-4 sm:px-6 border-b border-gray-200 last:border-b-0">
+      <motion.div
+        className="group relative bg-white border border-gray-100 rounded-xl p-6 mb-6 hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300"
+        whileHover={{ y: -4 }}
+      >
         <p className="text-center text-gray-500 font-medium">No se encontraron datos para este artículo.</p>
-      </div>
+      </motion.div>
     );
   }
 
   /* --------------------------- RENDER PRINCIPAL --------------------------- */
 
   return (
-    <div
-      className={`py-4 px-4 sm:px-6 bg-white hover:bg-gray-50 transition-colors duration-200 cursor-pointer border-b border-gray-200 last:border-b-0 ${isExpanded ? 'bg-gray-50' : ''}`}
+    <motion.div
+      className="group relative bg-white border border-gray-100 rounded-xl p-6 mb-6 hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300"
+      whileHover={{ y: -4 }}
       onClick={toggleExpand}
       role="button"
       tabIndex={0}
       aria-expanded={isExpanded}
       aria-label={`Expandir artículo: ${article.titulo || 'Sin título'}`}
     >
-      <h2 className="text-lg sm:text-xl font-semibold text-blue-700 hover:text-blue-800 transition-colors mb-2">
-        {article.titulo || 'Sin título'}
-      </h2>
-
-      <p className="text-sm text-gray-700 mb-2">
-        {article.autores ? (
-          article.autores.split(';').map((a, idx, arr) => (
-            <React.Fragment key={idx}>
-              <span
-                className="cursor-pointer hover:text-blue-600 underline transition-colors"
-                onClick={(e) => { e.stopPropagation(); handleAuthorClick(a.trim()); }}
+      {/* Indicador lateral de color burdeos */}
+      <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#52262d] rounded-l-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+      <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+        <div className="flex-1">
+          {/* Metadatos superiores */}
+          <div className="flex flex-wrap items-center gap-3 mb-3 text-[11px] font-bold uppercase tracking-wider text-gray-400">
+            <span className="text-[#52262d] bg-[#52262d]/5 px-2 py-0.5 rounded">
+              {article.area}
+            </span>
+            <span>•</span>
+            <span>{parseDateFlexible(article.fecha)}</span>
+          </div>
+          {/* Título */}
+          <h3 className="text-xl md:text-2xl font-serif font-semibold text-gray-900 group-hover:text-[#52262d] transition-colors mb-2">
+            {article.titulo}
+          </h3>
+          {/* Autores con estilo de link sutil */}
+          <p className="text-sm text-gray-600 mb-4 font-medium">
+            {article.autores.split(';').map((auth, i) => (
+              <span 
+                key={i} 
+                className="hover:text-blue-600 cursor-pointer transition-colors"
+                onClick={(e) => { e.stopPropagation(); handleAuthorClick(auth.trim()); }}
               >
-                {a.trim()}
+                {auth.trim()}{i < article.autores.split(';').length - 1 ? ', ' : ''}
               </span>
-              {idx < arr.length - 1 ? '; ' : ''}
-            </React.Fragment>
-          ))
-        ) : (
-          'Autor desconocido'
-        )}
-      </p>
-
-      <p className="text-xs text-green-600">
-        {journal} · {getYear(article.fecha)} {pages && `· pp. ${pages}`}
-      </p>
-
-      {!isExpanded && article.resumen && (
-        <p className="text-sm text-gray-700 mt-2 line-clamp-3">
-          {article.resumen}
+            ))}
+          </p>
+        </div>
+        {/* Botones de acción compactos laterales */}
+        <div className="flex md:flex-col gap-2">
+          <button 
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-900 text-white text-xs font-bold rounded-lg hover:bg-gray-800 transition-all"
+            onClick={(e) => { e.stopPropagation(); window.open(pdfUrl, '_blank'); }}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+            PDF
+          </button>
+          <button 
+            className="px-4 py-2 border border-gray-200 text-gray-700 text-xs font-bold rounded-lg hover:bg-gray-50 transition-all"
+            onClick={(e) => { e.stopPropagation(); setShowCitations(!showCitations); }}
+          >
+            Citar
+          </button>
+        </div>
+      </div>
+      {/* Resumen colapsable con fondo suave */}
+      <div className="mt-4 pt-4 border-t border-gray-50">
+        <p className="text-sm text-gray-500 leading-relaxed line-clamp-2 italic">
+          "{article.resumen}"
         </p>
-      )}
+        <button 
+          className="mt-2 text-[#52262d] text-xs font-bold hover:underline"
+          onClick={(e) => { e.stopPropagation(); setShowFullAbstract(!showFullAbstract); }}
+        >
+          Leer abstract completo →
+        </button>
+      </div>
 
       {isExpanded && (
         <div className="mt-4 space-y-4 animate-fade-in">
@@ -449,14 +481,6 @@ function ArticleCard({ article }) {
             )}
           </div>
 
-          {/* Botón de citas */}
-          <button
-            className="text-brown-800 hover:text-brown-900 underline text-sm"
-            onClick={(e) => { e.stopPropagation(); setShowCitations(!showCitations); }}
-          >
-            {showCitations ? 'Ocultar citas' : 'Cómo citar este artículo'}
-          </button>
-
           {/* Citas */}
           {showCitations && (
             <div className="text-gray-800 text-sm space-y-4 bg-white p-4 rounded-lg shadow-inner break-words">
@@ -491,7 +515,7 @@ function ArticleCard({ article }) {
           )}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
 
