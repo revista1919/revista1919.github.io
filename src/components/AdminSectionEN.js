@@ -1,252 +1,222 @@
-// English Version: AdminSection.jsx
-import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+// English Version: AdminSectionEN.jsx
+import React from 'react';
 import { motion } from 'framer-motion';
 
-function AdminSection() {
-  const [selectedRole, setSelectedRole] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
+function AdminSectionEN() {
   const roles = [
     {
       name: 'Founder',
-      description: 'Person who started the project, defining its vision and initial goals. Oversees the strategic direction of the journal.',
+      category: 'Direction',
+      description: 'Person who initiated the project, defining its vision and initial objectives. Oversees the strategic direction of the journal.',
       isPostulable: false,
     },
     {
       name: 'Co-Founder',
-      description: 'Key collaborator in the project’s foundation, supporting the Founder in strategic decision-making.',
+      category: 'Direction',
+      description: 'Key collaborator in the founding of the project, supporting the Founder in strategic decision-making.',
       isPostulable: false,
     },
     {
       name: 'General Director',
+      category: 'Direction',
       description: 'Responsible for the overall vision, team coordination, external relations, and global oversight of the journal.',
       isPostulable: false,
     },
     {
       name: 'Deputy General Director',
-      description: 'Assists the General Director in strategic decisions and assumes leadership in their absence.',
+      category: 'Direction',
+      description: 'Assists the General Director in strategic decisions and assumes direction in their absence.',
       isPostulable: false,
     },
     {
       name: 'Editor-in-Chief',
-      description: 'Oversees all content and coordinates the editorial team. Ensures the quality of articles. Receives, organizes, and channels article submissions to reviewers.',
+      category: 'Editorial',
+      description: 'Oversees all content and coordinates the editorial team. Ensures the quality of articles.',
       isPostulable: false,
     },
     {
       name: 'Section Editor',
-      description: 'Reviews and edits texts for a specific section (e.g., Opinion, Culture, News). Votes on whether to publish a work. Primarily applies corrections made by reviewers. Communicates with authors to request information and provide feedback.',
+      category: 'Editorial',
+      description: 'Reviews and edits texts from a specific section (e.g., Opinion, Culture, Current Affairs). Votes on whether to publish a work. Mainly applies corrections made by reviewers. Responsible for communicating with the author to request data and provide feedback.',
       isPostulable: true,
-      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.293102540=Section+Editor'
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.324949366=Section+Editor'
     },
     {
       name: 'Reviewer / Editorial Committee',
-      description: 'Corrects style, spelling, and coherence of articles. Reviewers may also verify sources, assess their quality, and evaluate content. Provides feedback to authors and votes on whether to publish an article.',
+      category: 'Editorial',
+      description: 'Corrects style, spelling, and coherence of articles. Additionally, a reviewer can check sources, verify their quality and content. Provides feedback to authors and votes on whether to publish an article.',
       isPostulable: true,
-      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.293102540=Reviewer'
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.324949366=Reviewer'
+    },
+    {
+      name: 'Article Assignment Manager',
+      category: 'Editorial',
+      description: 'Receives, organizes, and channels article submissions to reviewers and editors.',
+      isPostulable: true,
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.324949366=Article+Assignment+Manager'
     },
     {
       name: 'Web Development Manager',
-      description: 'Manages the website, fixes technical issues, and implements design and functionality improvements.',
+      category: 'Technology',
+      description: 'Manages the website, fixes technical errors, and implements design and functionality improvements.',
       isPostulable: false,
     },
     {
       name: 'Technical Support Manager',
-      description: 'Resolves technical issues related to content uploads, forms, and emails.',
+      category: 'Technology',
+      description: 'Resolves technical issues related to content upload, forms, and emails.',
       isPostulable: true,
-      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.293102540=Technical+Support+Manager'
-    },
-    {
-      name: 'Article Assignment Manager',
-      description: 'Receives, organizes, and channels article submissions to reviewers and editors.',
-      isPostulable: true,
-      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.293102540=Article+Assignment+Manager'
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.324949366=Technical+Support+Manager'
     },
     {
       name: 'Social Media Manager',
-      description: 'Manages social media platforms (Instagram, X, TikTok, etc.), publishes content, and promotes the journal.',
-      isPostulable: false,
+      category: 'Communications',
+      description: 'Manages social media (Instagram, X, TikTok, etc.), posts content, and promotes the journal.',
+      isPostulable: true,
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.324949366=Social+Media+Manager'
     },
     {
       name: 'Graphic Designer',
-      description: 'Creates visual materials such as posters, covers, and templates for social media.',
+      category: 'Design',
+      description: 'Creates visual material such as posters, covers, and templates for social media.',
       isPostulable: true,
-      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.293102540=Graphic+Designer'
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.324949366=Graphic+Designer'
     },
     {
       name: 'Community Manager',
-      description: 'Interacts with the community, responds to messages, and encourages participation on the journal’s platforms.',
+      category: 'Communications',
+      description: 'Interacts with the community, responds to messages, and encourages participation on the journal\'s platforms.',
       isPostulable: true,
-      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.293102540=Community+Manager'
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.324949366=Community+Manager'
     },
     {
       name: 'New Collaborators Manager',
-      description: 'Guides new applicants for administrative, reviewer, or editor roles.',
+      category: 'Operations',
+      description: 'Guides new applicants for administrative roles, reviewers, or editors.',
       isPostulable: true,
-      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.293102540=New+Collaborators+Manager'
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.324949366=New+Collaborators+Manager'
     },
     {
       name: 'Events or Calls Coordinator',
+      category: 'Operations',
       description: 'Organizes talks, debates, contests, or other activities to promote the journal.',
       isPostulable: true,
-      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.293102540=Events+or+Calls+Coordinator'
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.324949366=Events+or+Calls+Coordinator'
     },
     {
-      name: 'Editorial/Legal Advisor',
-      description: 'Reviews legal terms, editorial standards, and copyright matters for the journal.',
+      name: 'Legal/Editorial Advisor',
+      category: 'Consulting',
+      description: 'Reviews legal terms, editorial standards, and copyrights for the journal.',
       isPostulable: true,
-      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.293102540=Editorial/Legal+Advisor'
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.324949366=Legal/Editorial+Advisor'
     },
     {
-      name: 'Finance/Transparency Manager',
-      description: 'Manages donations or budgets, ensuring transparency in finances.',
+      name: 'Finance / Transparency Manager',
+      category: 'Finance',
+      description: 'Manages donations or budgets, ensuring financial transparency.',
       isPostulable: true,
-      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.293102540=Finance/Transparency+Manager'
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.324949366=Finance+/+Transparency+Manager'
     },
     {
       name: 'Academic Advisor',
+      category: 'Consulting',
       description: 'Verifies the quality of a volume and is available for specific consultations.',
       isPostulable: true,
-      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.293102540=Academic+Advisor'
+      link: 'https://docs.google.com/forms/d/e/1FAIpQLSc7qqwQCnKSxr2Ix1uYrfMnDY5uvV64WUzATAP63ax71vfFNg/viewform?usp=pp_url&entry.311312536=English&entry.324949366=Academic+Advisor'
     },
   ];
 
-  const handleRoleClick = (role) => {
-    setSelectedRole(role);
-    setIsModalOpen(true);
-  };
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 },
-  };
+  // Group roles by category for a more professional reading
+  const categories = [...new Set(roles.map(r => r.category))];
 
   return (
-    <motion.div
-      className="admin-section bg-white p-6 rounded-xl shadow-lg mt-6"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-    >
-      <motion.h2
-        className="text-2xl font-bold mb-4 text-gray-800 text-center"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2, duration: 0.5 }}
-      >
-        Join our team
-      </motion.h2>
-      <motion.p
-        className="text-base text-gray-600 mb-6 text-center max-w-2xl mx-auto"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.3, duration: 0.5 }}
-      >
-        Be part of the National Review of Sciences for Students. Contribute your talent to scientific dissemination and support students on their path to research. Select a role to learn about its functions or apply for available positions. You can review the application policies at{' '}
-        <a
-          href="https://www.revistacienciasestudiantes.com/policiesAppEN.html"
-          className="text-blue-600 hover:underline"
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="View application policies"
-        >
-          our application policies
-        </a>
-        .
-      </motion.p>
-      <motion.div
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        {roles.map((role) => (
-          <motion.div
-            key={role.name}
-            className={`p-4 rounded-xl shadow-md transition-shadow hover:shadow-lg ${
-              role.isPostulable ? 'bg-blue-50' : 'bg-gray-100 cursor-not-allowed'
-            }`}
-            variants={itemVariants}
-            whileHover={{ scale: 1.02 }}
+    <section className="max-w-7xl mx-auto px-4 py-20 bg-white">
+      {/* Editorial Style Header */}
+      <div className="border-b-2 border-black pb-8 mb-16 text-center md:text-left">
+        <span className="text-[10px] uppercase tracking-[0.4em] font-bold text-[#007398] block mb-2">
+          Academic Opportunities
+        </span>
+        <h2 className="text-4xl md:text-5xl font-serif font-bold text-gray-900 mb-6">
+          Call for Collaborators
+        </h2>
+        <div className="flex flex-col md:flex-row justify-between items-end gap-6">
+          <p className="text-lg text-gray-600 max-w-3xl font-serif italic leading-relaxed">
+            "We seek minds committed to excellence and scientific dissemination. Join a global network of students and academics dedicated to intellectual rigor."
+          </p>
+          <a
+            href="https://www.revistacienciasestudiantes.com/policiesAppEN.html"
+            className="text-[11px] font-bold uppercase tracking-widest border-b border-black pb-1 hover:text-[#007398] hover:border-[#007398] transition-all whitespace-nowrap"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="View application policies"
           >
-            <p
-              className={`text-lg font-semibold ${
-                role.isPostulable ? 'text-blue-600 cursor-pointer hover:underline' : 'text-gray-500'
-              }`}
-              onClick={role.isPostulable ? () => handleRoleClick(role) : null}
-              aria-label={`View description of the role ${role.name}`}
-            >
-              {role.name}
-            </p>
-            <p className="text-base text-gray-600">
-              {role.isPostulable ? 'Position open for applications' : 'Position defined'}
-            </p>
-            {role.isPostulable && (
-              <button
-                className="mt-2 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
-                onClick={() => window.open(role.link, '_blank')}
-                aria-label={`Apply for the role ${role.name}`}
-              >
-                Apply
-              </button>
-            )}
-          </motion.div>
-        ))}
-      </motion.div>
-      {isModalOpen && (
-        <motion.div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-        >
-          <motion.div
-            className="bg-white p-6 rounded-xl max-w-lg max-h-[90vh] overflow-y-auto mx-4 shadow-xl"
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-          >
-            <div className="flex justify-between items-center mb-4 border-b border-gray-200 pb-2">
-              <h3 className="text-xl font-bold text-gray-800">{selectedRole.name}</h3>
-              <button
-                className="text-gray-500 hover:text-gray-700 text-xl focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full w-8 h-8 flex items-center justify-center"
-                onClick={() => setIsModalOpen(false)}
-                aria-label="Close role description modal"
-              >
-                ×
-              </button>
+            View Application Policies →
+          </a>
+        </div>
+      </div>
+      {/* Categories Grid */}
+      <div className="space-y-20">
+        {categories.map((cat) => (
+          <div key={cat} className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            {/* Category Title Lateral */}
+            <div className="lg:col-span-1">
+              <h3 className="text-xs uppercase tracking-[0.3em] font-black text-gray-400 border-l-2 border-gray-100 pl-4 py-1">
+                {cat}
+              </h3>
             </div>
-            <div className="text-gray-700 text-base">
-              <p className="font-semibold text-blue-600 mb-2">Description:</p>
-              <p className="text-gray-600 mb-4">{selectedRole.description}</p>
-              <p className="text-gray-600">
-                {selectedRole.isPostulable ? 'This position is open for applications.' : 'This position is defined and does not accept applications.'}
-              </p>
-              {selectedRole.isPostulable && (
-                <button
-                  className="mt-4 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
-                  onClick={() => window.open(selectedRole.link, '_blank')}
-                  aria-label={`Apply for the role ${selectedRole.name}`}
+            {/* Roles in the category */}
+            <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+              {roles.filter(r => r.category === cat).map((role) => (
+                <motion.div
+                  key={role.name}
+                  whileHover={{ y: -4 }}
+                  className={`group relative p-6 border rounded-sm transition-all duration-300 ${
+                    role.isPostulable
+                      ? 'border-gray-200 hover:border-[#007398] bg-white shadow-sm hover:shadow-md'
+                      : 'border-gray-100 bg-gray-50 opacity-80'
+                  }`}
                 >
-                  Apply now
-                </button>
-              )}
+                  <div className="flex justify-between items-start mb-4">
+                    <h4 className="text-lg font-serif font-bold text-gray-900 group-hover:text-[#007398] transition-colors">
+                      {role.name}
+                    </h4>
+                    {role.isPostulable && (
+                      <span className="text-[9px] bg-[#007398]/10 text-[#007398] px-2 py-0.5 font-bold uppercase tracking-tighter">
+                        Open
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-500 leading-relaxed mb-6 font-serif italic">
+                    {role.description}
+                  </p>
+                  {role.isPostulable ? (
+                    <button
+                      onClick={() => window.open(role.link, '_blank')}
+                      className="w-full py-2 bg-gray-900 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-[#007398] transition-colors rounded-sm"
+                      aria-label={`Apply for the role ${role.name}`}
+                    >
+                      Submit Application
+                    </button>
+                  ) : (
+                    <div className="text-[10px] text-gray-400 uppercase tracking-widest font-medium italic">
+                      Defined Institutional Position
+                    </div>
+                  )}
+                </motion.div>
+              ))}
             </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </motion.div>
+          </div>
+        ))}
+      </div>
+      {/* Subtle Footer */}
+      <div className="mt-24 pt-12 border-t border-gray-100 text-center">
+        <p className="text-xs text-gray-400 font-serif leading-relaxed">
+          The National Review of Sciences for Students does not discriminate based on origin, gender, or institution.<br/>
+          All applications are reviewed by our committee.
+        </p>
+      </div>
+    </section>
   );
 }
 
-export default AdminSection;
+export default AdminSectionEN;
