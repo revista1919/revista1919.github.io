@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react";
 import Papa from "papaparse";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from 'react-i18next';
-
 const NEWS_CSV =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vQKnN8qMJcBN8im9Q61o-qElx1jQp5NdS80_B-FakCHrPLXHlQ_FXZWT0o5GVVHAM26l9sjLxsTCNO8/pub?output=csv";
 const base64DecodeUnicode = (str) => {
@@ -200,6 +199,9 @@ export default function NewsSection({ className }) {
   };
   const featured = filteredNews[0];
   const remaining = filteredNews.slice(1, visibleNews);
+  const half = Math.ceil(remaining.length / 2);
+  const leftNews = remaining.slice(0, half);
+  const rightNews = remaining.slice(half);
   if (loading) return <div className="py-20 text-center font-serif italic text-gray-400">Actualizando archivo de noticias...</div>;
   if (error) return <p className="text-center text-red-600">{error}</p>;
   return (
@@ -211,7 +213,7 @@ export default function NewsSection({ className }) {
           <p className="text-gray-500 font-serif italic">Crónicas, avances y anuncios de la comunidad científica estudiantil.</p>
         </div>
         <div className="w-full md:w-auto bg-gray-50 p-4 border border-gray-200">
-          <p className="text-[10px] uppercase tracking-widest font-bold mb-3 text-gray-400">Suscripción al Boletín</p>
+          <p className="text-[10px] uppercase tracking-widest font-bold mb-3 text-gray-400">Suscripción</p>
           {!enviado ? (
             <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2">
               <input
@@ -258,61 +260,92 @@ export default function NewsSection({ className }) {
       </div>
       {/* --- GRID EDITORIAL --- */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-        {/* Noticia Destacada (Hero) */}
-        {featured && (
-          <motion.article
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            className="col-span-full group cursor-pointer"
-            onClick={() => openNews(featured)}
-          >
-            <div className="mb-4 overflow-hidden bg-gray-100 aspect-video flex items-center justify-center border border-gray-100">
-              <img 
-                src="https://www.revistacienciasestudiantes.com/team.jpg" 
-                alt="Equipo de la revista" 
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#007398] mb-4 block">Nota Editorial</span>
-            <h3 className="text-4xl font-serif font-bold leading-tight mb-4 group-hover:underline underline-offset-4 decoration-1">
-              {featured.titulo}
-            </h3>
-            <div
-              className="text-gray-600 leading-relaxed mb-4 line-clamp-3 font-serif italic text-lg"
-            >
-              {decodeBody(featured.cuerpo)}
-            </div>
-            <div className="mt-4 text-[#007398] font-bold text-sm uppercase tracking-wide group-hover:underline">Leer completa →</div>
-            <time className="text-xs font-mono text-gray-400 uppercase tracking-widest block mt-2">{featured.fecha}</time>
-          </motion.article>
-        )}
-      </div>
-      {/* Listado de Noticias en Dos Columnas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mt-12">
-        <AnimatePresence>
-          {remaining.map((item, idx) => (
+        {/* Columna Izquierda: Nota Editorial + Noticias Izquierdas */}
+        <div className="lg:col-span-7 flex flex-col gap-12">
+          {featured && (
             <motion.article
-              key={idx}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: idx * 0.1 }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               className="group cursor-pointer"
-              onClick={() => openNews(item)}
+              onClick={() => openNews(featured)}
             >
-              <time className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-2">
-                {item.fecha}
-              </time>
-              <h4 className="text-xl font-serif font-bold leading-snug group-hover:text-[#007398] transition-colors">
-                {item.titulo}
-              </h4>
-              <div
-                className="mt-2 text-sm text-gray-500 line-clamp-2 leading-relaxed"
-              >
-                {decodeBody(item.cuerpo)}
+              <div className="mb-4 overflow-hidden bg-gray-100 aspect-video flex items-center justify-center border border-gray-100">
+                <img 
+                  src="https://www.revistacienciasestudiantes.com/team.jpg" 
+                  alt="Equipo de la Revista" 
+                  className="w-full h-full object-cover"
+                />
               </div>
-              <div className="mt-4 text-[#007398] font-bold text-sm uppercase tracking-wide group-hover:underline">Leer más →</div>
+              <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#007398] mb-4 block">Nota Editorial</span>
+              <h3 className="text-4xl font-serif font-bold leading-tight mb-4 group-hover:underline underline-offset-4 decoration-1">
+                {featured.titulo}
+              </h3>
+              <div
+                className="text-gray-600 leading-relaxed mb-4 line-clamp-3 font-serif italic text-lg"
+              >
+                {decodeBody(featured.cuerpo)}
+              </div>
+              <div className="flex justify-between items-center">
+                <time className="text-xs font-mono text-gray-400 uppercase tracking-widest">{featured.fecha}</time>
+                <span className="text-sm text-gray-500 group-hover:text-[#007398] transition-colors">Leer más →</span>
+              </div>
             </motion.article>
-          ))}
-        </AnimatePresence>
+          )}
+          <div className="flex flex-col gap-8 divide-y divide-gray-100">
+            <AnimatePresence>
+              {leftNews.map((item, idx) => (
+                <motion.article
+                  key={`left-${idx}`}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.1 }}
+                  className="pt-8 first:pt-0 group cursor-pointer"
+                  onClick={() => openNews(item)}
+                >
+                  <time className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-2">
+                    {item.fecha}
+                  </time>
+                  <h4 className="text-xl font-serif font-bold leading-snug group-hover:text-[#007398] transition-colors">
+                    {item.titulo}
+                  </h4>
+                  <div
+                    className="mt-2 text-sm text-gray-500 line-clamp-2 leading-relaxed"
+                  >
+                    {decodeBody(item.cuerpo)}
+                  </div>
+                  <span className="mt-2 text-sm text-gray-500 group-hover:text-[#007398] transition-colors block text-right">Leer más →</span>
+                </motion.article>
+              ))}
+            </AnimatePresence>
+          </div>
+        </div>
+        {/* Columna Derecha: Noticias Derechas */}
+        <div className="lg:col-span-5 flex flex-col gap-8 divide-y divide-gray-100">
+          <AnimatePresence>
+            {rightNews.map((item, idx) => (
+              <motion.article
+                key={`right-${idx}`}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.1 }}
+                className="pt-8 first:pt-0 group cursor-pointer"
+                onClick={() => openNews(item)}
+              >
+                <time className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-2">
+                  {item.fecha}
+                </time>
+                <h4 className="text-xl font-serif font-bold leading-snug group-hover:text-[#007398] transition-colors">
+                  {item.titulo}
+                </h4>
+                <div
+                  className="mt-2 text-sm text-gray-500 line-clamp-2 leading-relaxed"
+                >
+                  {decodeBody(item.cuerpo)}
+                </div>
+                <span className="mt-2 text-sm text-gray-500 group-hover:text-[#007398] transition-colors block text-right">Leer más →</span>
+              </motion.article>
+            ))}
+          </AnimatePresence>
+        </div>
       </div>
       {filteredNews.length === 0 && (
         <p className="text-center text-gray-600 col-span-full mt-8">
