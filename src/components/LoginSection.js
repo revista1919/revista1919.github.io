@@ -375,12 +375,12 @@ export default function LoginSection({ onLogin }) {
         </div>
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-1.5 block">Correo Institucional</label>
+            <label className="text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-1.5 block">Correo</label>
             <div className="relative">
               <input
                 type="email"
                 className="w-full bg-gray-50 border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:border-[#007398] focus:bg-white transition-all"
-                placeholder="ejemplo@universidad.cl"
+                placeholder="ejemplo@gmail.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={isLoading}
