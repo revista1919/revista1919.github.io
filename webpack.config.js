@@ -158,6 +158,7 @@ const defineEnvVars = {
       new CopyWebpackPlugin({
   patterns: [
     { from: 'public/logo.png', to: '.' },
+    { from: 'public/team.jpg', to: '.' },
     { from: 'public/logoEN.png', to: '.' },
     { from: 'public/site.webmanifest', to: 'manifest.json' },
     { from: 'public/404.html', to: '404.html', noErrorOnMissing: true },
