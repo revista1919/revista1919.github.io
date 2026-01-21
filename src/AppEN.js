@@ -521,9 +521,18 @@ const numericTerm = normalizeNumberSearch(volumeSearchTerm);
     },
   ];
 
-  if (authLoading) {
-    return <div className="text-center text-gray-600">Loading authentication...</div>;
-  }
+  return (
+  <div className="h-screen flex items-center justify-center bg-white">
+    <motion.div
+      animate={{ scale: [1, 1.1, 1] }}
+      transition={{ repeat: Infinity, duration: 2 }}
+      className="font-serif text-2xl font-bold tracking-tighter text-blue-900"
+    >
+      ACADEMIC JOURNAL
+    </motion.div>
+  </div>
+);
+
 
   const isLoginActive = location.pathname.includes('login');
   const framerItem = (delay) => ({
@@ -533,7 +542,7 @@ const numericTerm = normalizeNumberSearch(volumeSearchTerm);
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-[#F9FAFB] flex flex-col font-sans text-gray-900">
       <Header onOpenMenu={() => setIsMenuOpen(true)} />
       <div
         className={`container ${
@@ -542,7 +551,12 @@ const numericTerm = normalizeNumberSearch(volumeSearchTerm);
             : 'mx-auto px-6 lg:px-8'
         } flex-grow`}
       >
-        <Tabs sections={sections} />
+        <nav className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200">
+  <div className="max-w-7xl mx-auto px-4">
+    <Tabs sections={sections} />
+  </div>
+</nav>
+
         <Routes>
           {sections.map((section) => (
             <Route key={section.name} path={section.path.substring(3)} element={section.component} />

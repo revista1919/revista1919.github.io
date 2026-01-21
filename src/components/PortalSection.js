@@ -785,7 +785,7 @@ export default function PortalSection({ user, onLogout }) {
         initial={{ opacity: 0, height: 0 }}
         animate={{ opacity: 1, height: 'auto' }}
         exit={{ opacity: 0, height: 0 }}
-        className="text-gray-800 bg-gray-50 p-4 rounded-md border border-gray-200 leading-relaxed break-words overflow-hidden"
+        className="text-gray-800 bg-gray-50 p-4 rounded-md border border-gray-200 leading-relaxed break-words overflow-hidden font-sans text-sm"
       >
         <div className="mb-4" dangerouslySetInnerHTML={{ __html: tutorialText }} />
       </motion.div>
@@ -954,13 +954,13 @@ export default function PortalSection({ user, onLogout }) {
   ], []);
 
   const decodeBody = (encoded) => {
-    if (!encoded) return <p className="text-gray-600 break-words">No hay contenido disponible.</p>;
+    if (!encoded) return <p className="text-gray-600 font-sans text-sm break-words">No hay contenido disponible.</p>;
     try {
       const html = base64DecodeUnicode(encoded);
-      return <div className="ql-editor break-words leading-relaxed" dangerouslySetInnerHTML={{ __html: html }} />;
+      return <div className="ql-editor break-words leading-relaxed font-sans text-sm text-gray-800" dangerouslySetInnerHTML={{ __html: html }} />;
     } catch (err) {
       console.error('Error al decodificar contenido:', err);
-      return <p className="text-gray-600 break-words">Error al decodificar contenido.</p>;
+      return <p className="text-gray-600 font-sans text-sm break-words">Error al decodificar contenido.</p>;
     }
   };
 
@@ -1031,13 +1031,13 @@ export default function PortalSection({ user, onLogout }) {
           const overallTotal = rev1Total + rev2Total + editorTotal;
           const overallPercent = (overallTotal / 26) * 100;
           return (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h5 className="text-lg font-semibold text-gray-800">Rúbrica del Revisor 1</h5>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-8">
+              <div className="space-y-2">
+                <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Rúbrica del Revisor 1</h5>
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   onClick={() => toggleFeedback(link, 'rubric1')}
-                  className="text-blue-600 hover:underline text-sm flex items-center"
+                  className="text-blue-600 hover:underline text-sm font-sans flex items-center"
                 >
                   {expandedFeedback[link]?.rubric1 ? 'Ocultar' : 'Mostrar'}
                   <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1052,12 +1052,12 @@ export default function PortalSection({ user, onLogout }) {
                   </motion.div>
                 )}
               </AnimatePresence>
-              <div className="flex items-center justify-between">
-                <h5 className="text-lg font-semibold text-gray-800">Rúbrica del Revisor 2</h5>
+              <div className="space-y-2">
+                <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Rúbrica del Revisor 2</h5>
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   onClick={() => toggleFeedback(link, 'rubric2')}
-                  className="text-blue-600 hover:underline text-sm flex items-center"
+                  className="text-blue-600 hover:underline text-sm font-sans flex items-center"
                 >
                   {expandedFeedback[link]?.rubric2 ? 'Ocultar' : 'Mostrar'}
                   <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1072,16 +1072,16 @@ export default function PortalSection({ user, onLogout }) {
                   </motion.div>
                 )}
               </AnimatePresence>
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-yellow-50 rounded-md">
-                <p className="font-medium break-words">Implicación de los Revisores: {revPercent.toFixed(1)}% - {getDecisionText(revPercent)}</p>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-yellow-50 rounded-md border border-yellow-200">
+                <p className="font-sans text-sm text-yellow-800">Implicación de los Revisores: {revPercent.toFixed(1)}% - {getDecisionText(revPercent)}</p>
               </motion.div>
               <RubricViewer
                 roleKey="Editor"
                 scores={rubricScores[link] || {}}
                 onChange={(key, val) => handleRubricChange(link, key, val)}
               />
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-green-50 rounded-md">
-                <p className="font-medium break-words">Decisión General Sugerida: {overallPercent.toFixed(1)}% - {getDecisionText(overallPercent)}</p>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-green-50 rounded-md border border-green-200">
+                <p className="font-sans text-sm text-green-800">Decisión General Sugerida: {overallPercent.toFixed(1)}% - {getDecisionText(overallPercent)}</p>
               </motion.div>
             </motion.div>
           );
@@ -1103,13 +1103,13 @@ export default function PortalSection({ user, onLogout }) {
           const overallTotal = rev1Total + rev2Total + editorTotal;
           const overallPercent = (overallTotal / 26) * 100;
           return (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h5 className="text-lg font-semibold text-gray-800">Rúbrica del Revisor 1</h5>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-8">
+              <div className="space-y-2">
+                <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Rúbrica del Revisor 1</h5>
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   onClick={() => toggleFeedback(link, 'rubric1')}
-                  className="text-blue-600 hover:underline text-sm flex items-center"
+                  className="text-blue-600 hover:underline text-sm font-sans flex items-center"
                 >
                   {expandedFeedback[link]?.rubric1 ? 'Ocultar' : 'Mostrar'}
                   <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1124,12 +1124,12 @@ export default function PortalSection({ user, onLogout }) {
                   </motion.div>
                 )}
               </AnimatePresence>
-              <div className="flex items-center justify-between">
-                <h5 className="text-lg font-semibold text-gray-800">Rúbrica del Revisor 2</h5>
+              <div className="space-y-2">
+                <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Rúbrica del Revisor 2</h5>
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   onClick={() => toggleFeedback(link, 'rubric2')}
-                  className="text-blue-600 hover:underline text-sm flex items-center"
+                  className="text-blue-600 hover:underline text-sm font-sans flex items-center"
                 >
                   {expandedFeedback[link]?.rubric2 ? 'Ocultar' : 'Mostrar'}
                   <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1144,12 +1144,12 @@ export default function PortalSection({ user, onLogout }) {
                   </motion.div>
                 )}
               </AnimatePresence>
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-yellow-50 rounded-md">
-                <p className="font-medium break-words">Implicación de los Revisores: {revPercent.toFixed(1)}% - {getDecisionText(revPercent)}</p>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-yellow-50 rounded-md border border-yellow-200">
+                <p className="font-sans text-sm text-yellow-800">Implicación de los Revisores: {revPercent.toFixed(1)}% - {getDecisionText(revPercent)}</p>
               </motion.div>
               <RubricViewer roleKey="Editor" scores={assignment.scores} readOnly />
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-green-50 rounded-md">
-                <p className="font-medium break-words">Decisión General: {overallPercent.toFixed(1)}% - {getDecisionText(overallPercent)}</p>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-green-50 rounded-md border border-green-200">
+                <p className="font-sans text-sm text-green-800">Decisión General: {overallPercent.toFixed(1)}% - {getDecisionText(overallPercent)}</p>
               </motion.div>
             </motion.div>
           );
@@ -1160,60 +1160,55 @@ export default function PortalSection({ user, onLogout }) {
     };
     return (
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="bg-white p-6 rounded-xl shadow-lg space-y-6 w-full"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="space-y-12"
       >
-        <div className="flex justify-between items-start">
-          <div>
-            <h4 className="text-2xl font-bold text-gray-800 mb-2 break-words">{nombre}</h4>
-            <p className="text-gray-600 break-words">Rol: {role} | Estado: {assignment.Estado || 'Sin estado'}</p>
+        <header className="mb-8">
+          <span className="text-xs font-sans font-bold text-blue-600 tracking-[0.3em] uppercase">{role}</span>
+          <h2 className="font-serif text-4xl font-bold text-gray-900 mt-2 mb-4 leading-tight break-words">{nombre}</h2>
+          <div className="space-y-1 text-sm font-sans text-gray-600">
+            <p>Estado: {assignment.Estado || 'Sin estado'}</p>
             {assignment.Plazo && (
-              <p className="text-gray-600 break-words">Plazo: {new Date(assignment.Plazo).toLocaleDateString()}</p>
+              <p>Plazo: {new Date(assignment.Plazo).toLocaleDateString()}</p>
             )}
           </div>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            onClick={() => setSelectedAssignment(null)}
-            className="text-blue-600 hover:underline flex items-center text-sm"
-          >
-            <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-            </svg>
-            Volver a la Lista
-          </motion.button>
-        </div>
+          <div className="h-1 w-24 bg-gray-900 mt-4" />
+        </header>
         {isAuth ? (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-6">
+          <>
             {assignment.feedbackEditor && ['Aceptado', 'Rechazado'].includes(assignment.Estado) ? (
               <>
-                <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="p-4 bg-green-50 rounded-md border-l-4 border-green-400">
-                  <h5 className="text-lg font-semibold text-green-800 mb-2">Estado Final: {assignment.Estado}</h5>
-                </motion.div>
-                <h5 className="text-lg font-semibold text-gray-800">Feedback del Editor</h5>
-                <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto leading-relaxed">
-                  {decodeBody(assignment.feedbackEditor)}
+                <div className="p-6 bg-green-50 rounded-md border border-green-200">
+                  <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-green-700 mb-2">Estado Final</h5>
+                  <p className="font-serif text-xl font-bold text-green-800">{assignment.Estado}</p>
+                </div>
+                <div className="space-y-4">
+                  <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Feedback del Editor</h5>
+                  <div className="bg-gray-50 p-6 rounded-md border border-gray-200 max-h-96 overflow-y-auto">
+                    {decodeBody(assignment.feedbackEditor)}
+                  </div>
                 </div>
               </>
             ) : (
-              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="p-6 bg-yellow-50 rounded-md border-l-4 border-yellow-400 text-center">
-                <h5 className="text-xl font-semibold text-yellow-800 mb-2">Artículo en Revisión</h5>
-                <p className="text-yellow-700 text-lg">Tu artículo "{assignment['Nombre Artículo']}" está actualmente bajo revisión por evaluadores y el editor.</p>
-                <p className="text-yellow-600 mt-2">Recibirás una notificación con la decisión final y el feedback una vez que el proceso se complete.</p>
-              </motion.div>
+              <div className="p-8 bg-yellow-50 rounded-md border border-yellow-200 text-center space-y-4">
+                <h5 className="font-serif text-2xl font-bold text-yellow-800">Artículo en Revisión</h5>
+                <p className="font-sans text-sm text-yellow-700 leading-relaxed">Su artículo "{assignment['Nombre Artículo']}" se encuentra actualmente en proceso de revisión por parte de los evaluadores y el editor.</p>
+                <p className="font-sans text-sm text-yellow-600 leading-relaxed">Recibirá una notificación con la decisión final y el feedback correspondiente una vez completado el proceso.</p>
+              </div>
             )}
-          </motion.div>
+          </>
         ) : (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="lg:col-span-1 space-y-6">
-              <div className="space-y-2">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            <div className="space-y-8">
+              <div className="space-y-4">
+                <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Vista Previa del Artículo</h5>
                 <motion.a
-                  whileHover={{ scale: 1.05 }}
+                  whileHover={{ scale: 1.02 }}
                   href={link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-block bg-blue-600 text-white px-4 py-2 rounded-md shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm mb-2"
+                  className="inline-block bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors text-sm font-sans font-bold uppercase tracking-widest"
                 >
                   Abrir en Google Drive
                 </motion.a>
@@ -1222,7 +1217,7 @@ export default function PortalSection({ user, onLogout }) {
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.8 }}
                   src={link ? link.replace('/edit', '/preview') : ''}
-                  className="w-full h-[350px] lg:h-[500px] rounded-xl shadow border border-gray-200"
+                  className="w-full h-[400px] lg:h-[600px] rounded-md border border-gray-200"
                   title="Vista Previa del Artículo"
                   sandbox="allow-same-origin allow-scripts"
                   loading="lazy"
@@ -1230,15 +1225,15 @@ export default function PortalSection({ user, onLogout }) {
               </div>
               {handleRenderRubric()}
             </div>
-            <div className="lg:col-span-1 space-y-6">
+            <div className="space-y-8">
               {role === 'Editor' && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-sm font-medium text-gray-700 break-words">Feedback del Revisor 1</label>
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="block font-sans text-xs font-bold uppercase tracking-widest text-gray-500 break-words">Feedback del Revisor 1</label>
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       onClick={() => toggleFeedback(link, 'feedback1')}
-                      className="text-blue-600 hover:underline text-sm flex items-center"
+                      className="text-blue-600 hover:underline text-sm font-sans flex items-center"
                     >
                       {expandedFeedback[link]?.feedback1 ? 'Ocultar' : 'Mostrar'}
                       <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.feedback1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1252,18 +1247,18 @@ export default function PortalSection({ user, onLogout }) {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto"
+                        className="bg-gray-50 p-6 rounded-md border border-gray-200 max-h-64 overflow-y-auto"
                       >
                         {decodeBody(assignment.feedback1)}
                       </motion.div>
                     )}
                   </AnimatePresence>
-                  <div className="flex items-center justify-between">
-                    <label className="block text-sm font-medium text-gray-700 break-words">Feedback del Revisor 2</label>
+                  <div className="space-y-2">
+                    <label className="block font-sans text-xs font-bold uppercase tracking-widest text-gray-500 break-words">Feedback del Revisor 2</label>
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       onClick={() => toggleFeedback(link, 'feedback2')}
-                      className="text-blue-600 hover:underline text-sm flex items-center"
+                      className="text-blue-600 hover:underline text-sm font-sans flex items-center"
                     >
                       {expandedFeedback[link]?.feedback2 ? 'Ocultar' : 'Mostrar'}
                       <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.feedback2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1277,18 +1272,18 @@ export default function PortalSection({ user, onLogout }) {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto"
+                        className="bg-gray-50 p-6 rounded-md border border-gray-200 max-h-64 overflow-y-auto"
                       >
                         {decodeBody(assignment.feedback2)}
                       </motion.div>
                     )}
                   </AnimatePresence>
-                  <div className="flex items-center justify-between">
-                    <label className="block text-sm font-medium text-gray-700 break-words">Informe del Revisor 1</label>
+                  <div className="space-y-2">
+                    <label className="block font-sans text-xs font-bold uppercase tracking-widest text-gray-500 break-words">Informe del Revisor 1</label>
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       onClick={() => toggleFeedback(link, 'informe1')}
-                      className="text-blue-600 hover:underline text-sm flex items-center"
+                      className="text-blue-600 hover:underline text-sm font-sans flex items-center"
                     >
                       {expandedFeedback[link]?.informe1 ? 'Ocultar' : 'Mostrar'}
                       <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.informe1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1302,18 +1297,18 @@ export default function PortalSection({ user, onLogout }) {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto"
+                        className="bg-gray-50 p-6 rounded-md border border-gray-200 max-h-64 overflow-y-auto"
                       >
                         {decodeBody(assignment.informe1)}
                       </motion.div>
                     )}
                   </AnimatePresence>
-                  <div className="flex items-center justify-between">
-                    <label className="block text-sm font-medium text-gray-700 break-words">Informe del Revisor 2</label>
+                  <div className="space-y-2">
+                    <label className="block font-sans text-xs font-bold uppercase tracking-widest text-gray-500 break-words">Informe del Revisor 2</label>
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       onClick={() => toggleFeedback(link, 'informe2')}
-                      className="text-blue-600 hover:underline text-sm flex items-center"
+                      className="text-blue-600 hover:underline text-sm font-sans flex items-center"
                     >
                       {expandedFeedback[link]?.informe2 ? 'Ocultar' : 'Mostrar'}
                       <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.informe2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1327,7 +1322,7 @@ export default function PortalSection({ user, onLogout }) {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto"
+                        className="bg-gray-50 p-6 rounded-md border border-gray-200 max-h-64 overflow-y-auto"
                       >
                         {decodeBody(assignment.informe2)}
                       </motion.div>
@@ -1336,12 +1331,12 @@ export default function PortalSection({ user, onLogout }) {
                 </motion.div>
               )}
               {isPending ? (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-6">
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-8">
                   <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => toggleTutorial(link)}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
+                    className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 text-sm font-sans font-bold uppercase tracking-widest"
                   >
                     {tutorialVisible[link] ? 'Ocultar Tutorial' : 'Ver Tutorial'}
                   </motion.button>
@@ -1349,7 +1344,7 @@ export default function PortalSection({ user, onLogout }) {
                     {tutorialVisible[link] && <Tutorial role={role} />}
                   </AnimatePresence>
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700 break-words">
+                    <label className="block font-sans text-xs font-bold uppercase tracking-widest text-gray-500 break-words">
                       {role === 'Editor' ? 'Feedback Final al Autor' : 'Feedback al Autor'}
                     </label>
                     <ReactQuill
@@ -1358,40 +1353,40 @@ export default function PortalSection({ user, onLogout }) {
                       onChange={debouncedSetFeedback(link)}
                       modules={modules}
                       formats={formats}
-                      placeholder={role === 'Editor' ? 'Escribe feedback final sensible, sintetizando opiniones de revisores y tuyas.' : 'Escribe tu feedback aquí...'}
-                      className="border rounded-md text-gray-800 bg-white h-48"
+                      placeholder={role === 'Editor' ? 'Escriba el feedback final de manera sensible, sintetizando las opiniones de los revisores y las suyas.' : 'Escriba su feedback aquí...'}
+                      className="border border-gray-200 rounded-md bg-white h-48"
                       id={`feedback-${link}`}
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700 break-words">Informe al Editor</label>
+                    <label className="block font-sans text-xs font-bold uppercase tracking-widest text-gray-500 break-words">Informe al Editor</label>
                     <ReactQuill
                       ref={(el) => (reportQuillRefs.current[link] = el)}
                       value={report[link] || ''}
                       onChange={debouncedSetReport(link)}
                       modules={modules}
                       formats={formats}
-                      placeholder="Escribe tu informe aquí..."
-                      className="border rounded-md text-gray-800 bg-white h-48"
+                      placeholder="Escriba su informe aquí..."
+                      className="border border-gray-200 rounded-md bg-white h-48"
                       id={`report-${link}`}
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700 break-words">Voto</label>
+                    <label className="block font-sans text-xs font-bold uppercase tracking-widest text-gray-500 break-words">Voto</label>
                     <div className="flex space-x-4">
                       <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
                         onClick={() => handleVote(link, 'si')}
-                        className={`px-4 py-2 rounded-md ${vote[link] === 'si' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} transition-colors text-sm`}
+                        className={`px-6 py-2 rounded-md font-sans text-sm font-bold uppercase tracking-widest ${vote[link] === 'si' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} transition-colors`}
                       >
                         Sí
                       </motion.button>
                       <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
                         onClick={() => handleVote(link, 'no')}
-                        className={`px-4 py-2 rounded-md ${vote[link] === 'no' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} transition-colors text-sm`}
+                        className={`px-6 py-2 rounded-md font-sans text-sm font-bold uppercase tracking-widest ${vote[link] === 'no' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} transition-colors`}
                       >
                         No
                       </motion.button>
@@ -1399,42 +1394,42 @@ export default function PortalSection({ user, onLogout }) {
                   </div>
                   <div className="space-y-2">
                     <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
                       onClick={() => handleSubmitRubric(link, role)}
                       disabled={!isRubricComplete(link, role)}
-                      className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
+                      className="w-full bg-purple-600 text-white py-3 px-4 rounded-md hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-sans text-sm font-bold uppercase tracking-widest"
                     >
                       Enviar Rúbrica
                     </motion.button>
                     {rubricStatus[link] && (
-                      <p className={`text-sm mt-2 ${rubricStatus[link].includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
+                      <p className={`text-sm font-sans mt-2 ${rubricStatus[link].includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
                         {rubricStatus[link]}
                       </p>
                     )}
                   </div>
                   <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => handleSubmit(link, role, feedback[link], report[link], vote[link])}
                     disabled={!vote[link] || !feedback[link] || !report[link]}
-                    className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
+                    className="w-full bg-green-600 text-white py-3 px-4 rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-sans text-sm font-bold uppercase tracking-widest"
                   >
                     Enviar Revisión (Feedback, Informe, Voto)
                   </motion.button>
                   {submitStatus[link] && (
-                    <p className={`text-sm mt-2 ${submitStatus[link].includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
+                    <p className={`text-sm font-sans mt-2 ${submitStatus[link].includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
                       {submitStatus[link]}
                     </p>
                   )}
                 </motion.div>
               ) : (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-6">
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-8">
                   <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => toggleTutorial(link)}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
+                    className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 text-sm font-sans font-bold uppercase tracking-widest"
                   >
                     {tutorialVisible[link] ? 'Ocultar Tutorial' : 'Ver Tutorial'}
                   </motion.button>
@@ -1442,20 +1437,20 @@ export default function PortalSection({ user, onLogout }) {
                     {tutorialVisible[link] && <Tutorial role={role} />}
                   </AnimatePresence>
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700 break-words">Feedback Enviado</label>
-                    <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
+                    <label className="block font-sans text-xs font-bold uppercase tracking-widest text-gray-500 break-words">Feedback Enviado</label>
+                    <div className="bg-gray-50 p-6 rounded-md border border-gray-200 max-h-64 overflow-y-auto">
                       {decodeBody(feedback[link] || 'Sin feedback.')}
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700 break-words">Informe Enviado</label>
-                    <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
+                    <label className="block font-sans text-xs font-bold uppercase tracking-widest text-gray-500 break-words">Informe Enviado</label>
+                    <div className="bg-gray-50 p-6 rounded-md border border-gray-200 max-h-64 overflow-y-auto">
                       {decodeBody(report[link] || 'Sin informe.')}
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700 break-words">Voto Enviado</label>
-                    <p className="text-sm text-gray-600">{vote[link] ? vote[link].charAt(0).toUpperCase() + vote[link].slice(1) : 'No enviado'}</p>
+                    <label className="block font-sans text-xs font-bold uppercase tracking-widest text-gray-500 break-words">Voto Enviado</label>
+                    <p className="font-sans text-sm text-gray-600">{vote[link] ? vote[link].charAt(0).toUpperCase() + vote[link].slice(1) : 'No enviado'}</p>
                   </div>
                 </motion.div>
               )}
@@ -1471,50 +1466,50 @@ export default function PortalSection({ user, onLogout }) {
                     <motion.div
                       initial={{ y: 50, opacity: 0 }}
                       animate={{ y: 0, opacity: 1 }}
-                      className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full"
+                      className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full space-y-6"
                     >
-                      <h4 className="text-lg font-semibold mb-4">{isEditingImage[link] ? 'Editar Imagen' : 'Insertar Imagen'}</h4>
+                      <h4 className="font-serif text-xl font-bold text-gray-900">{isEditingImage[link] ? 'Editar Imagen' : 'Insertar Imagen'}</h4>
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700">URL de la Imagen</label>
+                          <label className="block font-sans text-xs font-bold uppercase tracking-widest text-gray-500">URL de la Imagen</label>
                           <input
                             type="text"
                             name="url"
                             value={imageData[link]?.url || ''}
                             onChange={(e) => handleImageDataChange(link, e)}
-                            className="mt-1 block w-full border rounded-md p-2 text-sm"
+                            className="mt-1 block w-full border border-gray-200 rounded-md p-2 text-sm font-sans"
                             placeholder="https://example.com/image.jpg"
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700">Ancho (px o %)</label>
+                          <label className="block font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Ancho (px o %)</label>
                           <input
                             type="text"
                             name="width"
                             value={imageData[link]?.width || ''}
                             onChange={(e) => handleImageDataChange(link, e)}
-                            className="mt-1 block w-full border rounded-md p-2 text-sm"
+                            className="mt-1 block w-full border border-gray-200 rounded-md p-2 text-sm font-sans"
                             placeholder="auto o 300px"
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700">Alto (px o %)</label>
+                          <label className="block font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Alto (px o %)</label>
                           <input
                             type="text"
                             name="height"
                             value={imageData[link]?.height || ''}
                             onChange={(e) => handleImageDataChange(link, e)}
-                            className="mt-1 block w-full border rounded-md p-2 text-sm"
+                            className="mt-1 block w-full border border-gray-200 rounded-md p-2 text-sm font-sans"
                             placeholder="auto o 200px"
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700">Alineación</label>
+                          <label className="block font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Alineación</label>
                           <select
                             name="align"
                             value={imageData[link]?.align || 'left'}
                             onChange={(e) => handleImageDataChange(link, e)}
-                            className="mt-1 block w-full border rounded-md p-2 text-sm"
+                            className="mt-1 block w-full border border-gray-200 rounded-md p-2 text-sm font-sans"
                           >
                             <option value="left">Izquierda</option>
                             <option value="center">Centro</option>
@@ -1523,20 +1518,20 @@ export default function PortalSection({ user, onLogout }) {
                           </select>
                         </div>
                       </div>
-                      <div className="mt-6 flex justify-end space-x-2">
+                      <div className="mt-6 flex justify-end space-x-4">
                         <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
                           onClick={() => setShowImageModal((prev) => ({ ...prev, [link]: false }))}
-                          className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 text-sm"
+                          className="px-6 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 text-sm font-sans font-bold uppercase tracking-widest"
                         >
                           Cancelar
                         </motion.button>
                         <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
                           onClick={() => handleImageModalSubmit(link)}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                          className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-sans font-bold uppercase tracking-widest"
                         >
                           {isEditingImage[link] ? 'Actualizar' : 'Insertar'}
                         </motion.button>
@@ -1546,7 +1541,7 @@ export default function PortalSection({ user, onLogout }) {
                 )}
               </AnimatePresence>
             </div>
-          </motion.div>
+          </div>
         )}
       </motion.div>
     );
@@ -1570,10 +1565,10 @@ export default function PortalSection({ user, onLogout }) {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="min-h-screen bg-gray-100 p-4 md:p-8 flex items-center justify-center"
+        className="min-h-screen bg-[#fafafa] p-4 md:p-8 flex items-center justify-center"
       >
         <div className="text-center text-gray-600 bg-white p-6 rounded-lg shadow-md">
-          <p className="text-lg mb-4">Error: Información del usuario incompleta. Por favor inicia sesión nuevamente.</p>
+          <p className="text-lg font-sans mb-4">Error: Información del usuario incompleta. Por favor inicia sesión nuevamente.</p>
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -1581,7 +1576,7 @@ export default function PortalSection({ user, onLogout }) {
               console.log('Botón Cerrar Sesión clickeado en PortalSection');
               onLogout();
             }}
-            className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm"
+            className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm font-sans font-bold uppercase tracking-widest"
           >
             Cerrar Sesión
           </motion.button>
@@ -1598,9 +1593,30 @@ export default function PortalSection({ user, onLogout }) {
           <h1 className="font-serif text-5xl font-bold text-gray-900 tracking-tighter mb-2">
             Portal Editorial
           </h1>
-          <p className="text-gray-500 font-sans tracking-widest uppercase text-xs">
-            Sesión activa: <span className="font-bold text-gray-800">{effectiveName}</span>
-          </p>
+          <div className="flex items-center space-x-3">
+            <p className="text-gray-500 font-sans tracking-widest uppercase text-xs">
+              Sesión activa:
+            </p>
+            {user?.image ? (
+              <motion.img
+                initial={{ scale: 0.8 }}
+                animate={{ scale: 1 }}
+                src={user.image}
+                alt={`Perfil de ${effectiveName || 'Usuario'}`}
+                className="w-6 h-6 rounded-full object-cover border-2 border-gray-300"
+                onError={(e) => (e.target.style.display = 'none')} // Hide on error
+              />
+            ) : (
+              <motion.div
+                initial={{ scale: 0.8 }}
+                animate={{ scale: 1 }}
+                className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center border-2 border-gray-300"
+              >
+                <span className="text-gray-600 text-xs font-sans">{effectiveName?.charAt(0) || 'U'}</span>
+              </motion.div>
+            )}
+            <span className="font-bold text-gray-800 font-sans text-xs uppercase tracking-widest">{effectiveName}</span>
+          </div>
         </div>
         <button
           onClick={onLogout}
@@ -1637,7 +1653,7 @@ export default function PortalSection({ user, onLogout }) {
                 <motion.div
                   initial={{ opacity: 0, y: -20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-red-100 text-red-700 p-4 rounded-md mb-6"
+                  className="bg-red-100 text-red-700 p-6 rounded-md mb-8 font-sans text-sm"
                 >
                   {error}
                 </motion.div>
@@ -1649,19 +1665,19 @@ export default function PortalSection({ user, onLogout }) {
                   className="flex justify-center items-center h-32"
                 >
                   <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
-                  <p className="ml-4 text-gray-600">Cargando asignaciones...</p>
+                  <p className="ml-4 text-gray-600 font-sans text-sm">Cargando asignaciones...</p>
                 </motion.div>
               ) : currentAssignments.length === 0 ? (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="col-span-full text-center p-12 bg-white rounded-xl shadow-lg"
+                  className="text-center p-12 bg-white rounded-md border border-gray-200 shadow-sm"
                 >
                   <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                   </svg>
-                  <h3 className="mt-4 text-xl font-semibold text-gray-800">No hay asignaciones {activeTab === 'assignments' ? 'pendientes' : 'completadas'} en este momento.</h3>
-                  <p className="mt-2 text-gray-600">¡Mantente atento, nuevas oportunidades vendrán pronto!</p>
+                  <h3 className="mt-4 font-serif text-xl font-bold text-gray-900">No hay asignaciones {activeTab === 'assignments' ? 'pendientes' : 'completadas'} en este momento.</h3>
+                  <p className="mt-2 text-gray-600 font-sans text-sm">Manténgase atento para nuevas oportunidades.</p>
                 </motion.div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -1696,7 +1712,7 @@ export default function PortalSection({ user, onLogout }) {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setIsDirectorPanelExpanded(!isDirectorPanelExpanded)}
-                  className="bg-gray-200 text-gray-800 px-3 py-1 rounded-md hover:bg-gray-300 text-sm flex items-center space-x-2"
+                  className="bg-gray-200 text-gray-800 px-3 py-1 rounded-md hover:bg-gray-300 text-sm font-sans font-bold uppercase tracking-widest flex items-center space-x-2"
                 >
                   <span>{isDirectorPanelExpanded ? 'Minimizar' : 'Expandir'}</span>
                   <svg className={`w-4 h-4 transform ${isDirectorPanelExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1726,7 +1742,7 @@ export default function PortalSection({ user, onLogout }) {
                     console.log('Botón agregar artículo clickeado');
                     document.dispatchEvent(new CustomEvent('openAddArticleModal'));
                   }}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium flex items-center space-x-2"
+                  className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors font-sans text-sm font-bold uppercase tracking-widest flex items-center space-x-2"
                   style={{ display: 'inline-flex !important', visibility: 'visible !important' }}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1741,7 +1757,7 @@ export default function PortalSection({ user, onLogout }) {
                     console.log('Botón actualizar página clickeado');
                     document.dispatchEvent(new CustomEvent('rebuildPage'));
                   }}
-                  className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors font-medium flex items-center space-x-2"
+                  className="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 transition-colors font-sans text-sm font-bold uppercase tracking-widest flex items-center space-x-2"
                   style={{ display: 'inline-flex !important', visibility: 'visible !important' }}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1763,7 +1779,7 @@ export default function PortalSection({ user, onLogout }) {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setIsChiefEditorPanelExpanded(!isChiefEditorPanelExpanded)}
-                  className="bg-gray-200 text-gray-800 px-3 py-1 rounded-md hover:bg-gray-300 text-sm flex items-center space-x-2"
+                  className="bg-gray-200 text-gray-800 px-3 py-1 rounded-md hover:bg-gray-300 text-sm font-sans font-bold uppercase tracking-widest flex items-center space-x-2"
                 >
                   <span>{isChiefEditorPanelExpanded ? 'Minimizar' : 'Expandir'}</span>
                   <svg className={`w-4 h-4 transform ${isChiefEditorPanelExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
