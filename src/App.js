@@ -287,46 +287,65 @@ function App() {
             onSearch={handleSearch}
             clearFilters={clearFilters}
           />
-          <div className="articles mt-6">
+          <div className="articles mt-8">
             {loading ? (
-              <p className="text-center text-base text-gray-600 col-span-full">
-                Cargando...
-              </p>
+              <div className="flex flex-col items-center justify-center py-20">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#007398]"></div>
+                <p className="mt-4 text-gray-500 font-serif italic">Cargando archivo bibliográfico...</p>
+              </div>
             ) : filteredArticles.length === 0 ? (
-              <p className="text-center text-base text-gray-600 col-span-full">
-                Actualmente estamos en periodo de revisión y recolección de artículos. Envíanos el tuyo a través del formulario en la siguiente pestaña.
-              </p>
+              <div className="bg-white border border-gray-200 p-12 text-center rounded-sm">
+                <p className="text-lg text-gray-600 font-serif italic">
+                  "No se han encontrado registros para los criterios seleccionados."
+                </p>
+                <p className="mt-2 text-sm text-[#007398] font-bold uppercase tracking-wider">
+                  ¡Sé el primero en publicar en esta área!
+                </p>
+              </div>
             ) : (
-              filteredArticles.slice(0, visibleArticles).map((article, index) => (
-                <motion.div
-                  key={article.titulo}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1, duration: 0.3 }}
-                >
-                  <ArticleCard article={article} />
-                </motion.div>
-              ))
+              <>
+                {/* Lista de Artículos */}
+                <div className="space-y-6">
+                  {filteredArticles.slice(0, visibleArticles).map((article, index) => (
+                    <motion.div
+                      key={article.titulo}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index % 6 * 0.05, duration: 0.3 }}
+                    >
+                      <ArticleCard article={article} />
+                    </motion.div>
+                  ))}
+                </div>
+                {/* Panel de Control de Paginación Mejorado */}
+                <div className="mt-12 mb-8 flex flex-col items-center border-t border-gray-200 pt-8">
+                  <p className="text-xs text-gray-500 uppercase tracking-widest font-bold mb-6">
+                    Mostrando {Math.min(visibleArticles, filteredArticles.length)} de {filteredArticles.length} artículos
+                  </p>
+                 
+                  <div className="flex gap-4">
+                    {filteredArticles.length > visibleArticles && (
+                      <button
+                        className="px-8 py-3 bg-[#007398] text-white text-xs font-bold uppercase tracking-widest rounded-sm hover:bg-[#005a77] transition-all shadow-sm"
+                        onClick={loadMoreArticles}
+                      >
+                        Cargar más registros
+                      </button>
+                    )}
+                   
+                    {visibleArticles > 6 && (
+                      <button
+                        className="px-8 py-3 border border-gray-300 text-gray-600 text-xs font-bold uppercase tracking-widest rounded-sm hover:bg-white hover:text-black transition-all"
+                        onClick={showLessArticles}
+                      >
+                        Ver menos
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </>
             )}
           </div>
-          {!loading && filteredArticles.length > visibleArticles && (
-            <div className="text-center mt-6">
-              <button
-                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
-                onClick={loadMoreArticles}
-              >
-                Cargar más
-              </button>
-            </div>
-          )}
-          {!loading && visibleArticles > 6 && (
-            <button
-              className="fixed bottom-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 z-10 text-base"
-              onClick={showLessArticles}
-            >
-              Mostrar menos
-            </button>
-          )}
         </motion.div>
       ),
     },
