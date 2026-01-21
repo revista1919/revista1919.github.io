@@ -184,30 +184,47 @@ function App() {
     if (Array.isArray(val)) return val.join(', ');
     return String(val);
   };
+const normalizeNumberSearch = (term) => {
+  if (!term) return '';
+  const onlyNumbers = term.replace(/[^0-9]/g, '');
+  return onlyNumbers || term.toLowerCase();
+};
 
   useEffect(() => {
-    const lowerTerm = searchTerm.toLowerCase();
-    const filtered = articles.filter((article) => {
-      const matchesSearch =
-        safeString(article.titulo).toLowerCase().includes(lowerTerm) ||
-        safeString(article.autores).toLowerCase().includes(lowerTerm) ||
-        safeString(article.resumen).toLowerCase().includes(lowerTerm) ||
-        safeString(article.institutions).toLowerCase().includes(lowerTerm) ||
-        safeString(article.palabras_clave).toLowerCase().includes(lowerTerm) ||
-        safeString(article.volumen).toLowerCase().includes(lowerTerm) ||
-        safeString(article.numero).toLowerCase().includes(lowerTerm);
-      const matchesArea =
-        selectedArea === '' ||
-        safeString(article.area)
-          .toLowerCase()
-          .split(';')
-          .map((a) => a.trim())
-          .some((a) => a.toLowerCase() === selectedArea.toLowerCase());
-      return matchesSearch && matchesArea;
-    });
-    setFilteredArticles(filtered);
-    setVisibleArticles(6);
-  }, [searchTerm, selectedArea, articles]);
+  const lowerTerm = searchTerm.toLowerCase();
+  const numericTerm = normalizeNumberSearch(searchTerm);
+
+  const filtered = articles.filter((article) => {
+    const matchesSearch =
+      safeString(article.titulo).toLowerCase().includes(lowerTerm) ||
+      safeString(article.autores).toLowerCase().includes(lowerTerm) ||
+      safeString(article.resumen).toLowerCase().includes(lowerTerm) ||
+      safeString(article.institutions).toLowerCase().includes(lowerTerm) ||
+      safeString(article.palabras_clave).toLowerCase().includes(lowerTerm) ||
+
+      // volumen / número normal
+      safeString(article.volumen).toLowerCase().includes(lowerTerm) ||
+      safeString(article.numero).toLowerCase().includes(lowerTerm) ||
+
+      // volumen / número inteligente
+      safeString(article.volumen).includes(numericTerm) ||
+      safeString(article.numero).includes(numericTerm);
+
+    const matchesArea =
+      selectedArea === '' ||
+      safeString(article.area)
+        .toLowerCase()
+        .split(';')
+        .map((a) => a.trim())
+        .some((a) => a === selectedArea.toLowerCase());
+
+    return matchesSearch && matchesArea;
+  });
+
+  setFilteredArticles(filtered);
+  setVisibleArticles(6);
+}, [searchTerm, selectedArea, articles]);
+
 
   useEffect(() => {
     const lowerTerm = volumeSearchTerm.toLowerCase();
