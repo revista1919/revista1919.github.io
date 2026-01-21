@@ -46,6 +46,7 @@ function App() {
   const [selectedVolumeArea, setSelectedVolumeArea] = useState('');
   const [volumeAreas, setVolumeAreas] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [volumeLoading, setVolumeLoading] = useState(true);
   const [visibleArticles, setVisibleArticles] = useState(6);
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -168,8 +169,10 @@ function App() {
         );
         const uniqueVolumeAreas = [...new Set(allVolumeAreas)].sort();
         setVolumeAreas(uniqueVolumeAreas);
+        setVolumeLoading(false);
       } catch (error) {
         console.error('Error fetching volumes JSON:', error);
+        setVolumeLoading(false);
       }
     };
     fetchVolumes();
@@ -306,7 +309,7 @@ function App() {
             onSearch={handleSearch}
             clearFilters={clearFilters}
             placeholder="Buscar artículos..."
-            quickTags={[]}
+            quickTags={['2025', 'Vol. 1', 'Número 1']}
           />
           <div className="articles mt-8">
             {loading ? (
@@ -390,10 +393,15 @@ function App() {
             onSearch={handleVolumeSearch}
             clearFilters={clearVolumeFilters}
             placeholder="Buscar volúmenes..."
-            quickTags={['2024', 'Vol. 1', 'Número 2']}
+            quickTags={['2025', 'Vol. 1', 'Número 1']}
           />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-            {filteredVolumes.length === 0 ? (
+            {volumeLoading ? (
+              <div className="flex flex-col items-center justify-center py-20 col-span-full">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#007398]"></div>
+                <p className="mt-4 text-gray-500 font-serif italic">Cargando volúmenes...</p>
+              </div>
+            ) : filteredVolumes.length === 0 ? (
               <div className="bg-white border border-gray-200 p-12 text-center rounded-sm col-span-full">
                 <p className="text-lg text-gray-600 font-serif italic">
                   "No se han encontrado volúmenes para los criterios seleccionados."
