@@ -74,7 +74,12 @@ function ArticleCard({ article }) {
 
   const journal = 'Revista Nacional de las Ciencias para Estudiantes';
   const articleSlug = `${generateSlug(article?.titulo || '')}-${article?.numeroArticulo || ''}`;
-  const pdfUrl = article?.pdf || null;
+  const pdfUrl =
+  article?.pdf ||
+  article?.pdf_url ||
+  article?.url_pdf ||
+  `https://www.revistacienciasestudiantes.com/Articles/Article-${generateSlug(article?.titulo || '')}-${article?.numeroArticulo || ''}.pdf`;
+
   const htmlUrl = `/articles/article-${articleSlug}.html`;
   const pages = `${article?.primeraPagina || ''}-${article?.ultimaPagina || ''}`.trim() || '';
 
