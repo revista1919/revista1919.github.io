@@ -14,23 +14,22 @@ function FAQSection() {
   return (
     <section className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-6">
-        <h2 className="text-3xl font-serif font-bold mb-12 border-b-2 border-gray-300 pb-4 inline-block">
+        <h2 className="text-3xl font-serif font-bold mb-12 border-b-2 border-black pb-4 inline-block">
           Preguntas Frecuentes
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
           {faqs.map((faq, i) => (
             <motion.div
               key={i}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 10 }}
               whileInView={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1, duration: 0.4 }}
-              whileHover={{ scale: 1.02 }}
-              className="group bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow"
+              transition={{ delay: i * 0.1, duration: 0.3 }}
+              className="group p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow bg-white"
             >
               <h4 className="text-sm font-bold uppercase tracking-widest text-[#007398] mb-3 group-hover:translate-x-1 transition-transform">
                 {faq.q}
               </h4>
-              <p className="text-gray-600 font-serif leading-relaxed italic border-l-4 border-gray-200 pl-4">
+              <p className="text-gray-600 font-serif leading-relaxed italic border-l border-gray-100 pl-4">
                 {faq.a}
               </p>
             </motion.div>
@@ -40,3 +39,5 @@ function FAQSection() {
     </section>
   );
 }
+
+export default FAQSection;
