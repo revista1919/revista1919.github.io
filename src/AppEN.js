@@ -535,7 +535,9 @@ function AppEN() {
 
   const isLoginActive = location.pathname.includes('login');
   const normalizedPath = typeof cleanPath === 'function' ? cleanPath(location.pathname) : location.pathname;
-  const isHome = normalizedPath === '/' || normalizedPath === '' || location.pathname === '/en';
+  const isHome =
+  normalizedPath === '/' ||
+  normalizedPath === '';
   const framerItem = (delay) => ({
     initial: { opacity: 0, x: -20 },
     animate: { opacity: 1, x: 0 },
