@@ -70,14 +70,7 @@ const HomeSection = ({ onOpenMenu }) => {
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.6, ease: 'easeOut' }}
             />
-            <motion.h1
-              className="text-xl sm:text-3xl font-bold italic font-serif text-center text-gray-900"
-              initial={{ x: -20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ delay: 0.2, duration: 0.5, ease: 'easeOut' }}
-            >
-              Revista Nacional de las Ciencias para Estudiantes
-            </motion.h1>
+
           </div>
           <button
             onClick={handleLanguageToggle}
@@ -100,7 +93,7 @@ const HomeSection = ({ onOpenMenu }) => {
             transition={{ duration: 0.8 }}
           >
             <span className="text-[9px] sm:text-[10px] font-bold text-blue-600 uppercase tracking-[0.3em] mb-4 block text-center lg:text-left">
-              Revista científica estudiantil
+              Revista Nacional de las Ciencias para Estudiantes
             </span>
             <h1 className="text-4xl sm:text-5xl lg:text-7xl font-serif font-bold text-gray-900 leading-[1.1] mb-6 text-center lg:text-left">
               Un espacio para el <span className="italic text-gray-500 underline decoration-blue-200 underline-offset-8">trabajo científico</span> estudiantil
@@ -131,7 +124,7 @@ const HomeSection = ({ onOpenMenu }) => {
           >
             <div className="aspect-[4/5] bg-gray-100 rounded-2xl overflow-hidden shadow-2xl grayscale hover:grayscale-0 transition-all duration-700">
               <img
-                src="https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&q=80&w=1000"
+                src="https://images.unsplash.com/photo-1616017640739-44ce2bfd9b4e?q=80&w=1374&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
                 alt="Trabajo científico estudiantil"
                 className="w-full h-full object-cover"
               />
