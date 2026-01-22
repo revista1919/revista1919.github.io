@@ -50,7 +50,7 @@ function SubmitSection() {
             Have you verified that your manuscript complies with all citation and formatting standards?
           </p>
           <button
-            onClick={() => navigate('/guidelines')}
+            onClick={() => navigate('/en/guidelines')}
             className="text-xs font-bold uppercase tracking-widest text-blue-700 hover:text-blue-900 transition-colors flex items-center"
           >
             Consult Guidelines →
