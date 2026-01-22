@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
@@ -146,7 +146,6 @@ const getTotal = (scores, crits) => crits.reduce((sum, c) => sum + (scores[c.key
 const ModernRubric = ({ roleKey, scores, onChange, readOnly }) => {
   const crits = criteria[roleKey];
   if (!crits) return null;
-
   return (
     <div className="space-y-12">
       {crits.map((c, idx) => (
@@ -176,11 +175,7 @@ const ModernRubric = ({ roleKey, scores, onChange, readOnly }) => {
                   key={val}
                   disabled={readOnly}
                   onClick={() => onChange(c.key, val)}
-                  className={`relative p-4 text-left rounded-xl border-2 transition-all duration-300 ${
-                    isSelected
-                      ? 'border-blue-600 bg-blue-50/30 shadow-md ring-1 ring-blue-600/20'
-                      : 'border-gray-100 hover:border-blue-200 bg-white opacity-60 hover:opacity-100'
-                  }`}
+                  className={`relative p-4 text-left rounded-xl border-2 transition-all duration-300 ${isSelected ? 'border-blue-600 bg-blue-50/30 shadow-md ring-1 ring-blue-600/20' : 'border-gray-100 hover:border-blue-200 bg-white opacity-60 hover:opacity-100'}`}
                 >
                   <div className="flex justify-between items-start mb-2">
                     <span className={`text-[10px] font-bold uppercase tracking-tighter ${isSelected ? 'text-blue-700' : 'text-gray-400'}`}>
@@ -188,9 +183,7 @@ const ModernRubric = ({ roleKey, scores, onChange, readOnly }) => {
                     </span>
                     {isSelected && (
                       <motion.div layoutId={`check-${c.key}`} className="text-blue-600">
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293l-4 4a1 1 0 01-1.414 0l-2-2a1 1 0 111.414-1.414L9 10.586l3.293-3.293a1 1 0 011.414 1.414z"/>
-                        </svg>
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293l-4 4a1 1 0 01-1.414 0l-2-2a1 1 0 111.414-1.414L9 10.586l3.293-3.293a1 1 0 011.414 1.414z"/></svg>
                       </motion.div>
                     )}
                   </div>
@@ -210,63 +203,27 @@ const ModernRubric = ({ roleKey, scores, onChange, readOnly }) => {
 /**
  * REVIEWER WORKSPACE (MODERN MODAL)
  */
-const ReviewerWorkspace = ({
-  assignment,
-  onClose,
-  handleSubmitRubric,
-  handleSubmit,
-  handleVote,
-  rubricScores,
-  feedback,
-  report,
-  vote,
-  rubricStatus,
-  submitStatus,
-  isPending,
-  role,
-  link,
-  toggleTutorial,
-  tutorialVisible,
-  debouncedSetFeedback,
-  debouncedSetReport,
-  modules,
-  formats,
-  decodeBody,
-  showImageModal,
-  imageData,
-  isEditingImage,
-  handleImageDataChange,
-  handleImageModalSubmit,
-  expandedFeedback,
-  toggleFeedback,
-  getDecisionText
-}) => {
+const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubmit, handleVote, rubricScores, feedback, report, vote, rubricStatus, submitStatus, isPending, role, link, toggleTutorial, tutorialVisible, debouncedSetFeedback, debouncedSetReport, modules, formats, decodeBody, showImageModal, imageData, isEditingImage, handleImageDataChange, handleImageModalSubmit, expandedFeedback, toggleFeedback, getDecisionText }) => {
   const [localScores, setLocalScores] = useState(rubricScores[link] || {});
   const [localFeedback, setLocalFeedback] = useState(feedback[link] || '');
   const [localReport, setLocalReport] = useState(report[link] || '');
   const [localVote, setLocalVote] = useState(vote[link] || '');
-
   const totalScore = useMemo(() => getTotal(localScores, criteria[role] || []), [localScores, role]);
   const maxScore = (criteria[role] || []).length * 2;
   const progress = maxScore > 0 ? (totalScore / maxScore) * 100 : 0;
-
   const handleLocalRubricChange = (key, val) => {
-    setLocalScores(prev => ({ ...prev, [key]: val }));
+    setLocalScores(prev => ({...prev, [key]: val}));
   };
-
   const handleLocalVote = (value) => {
     setLocalVote(value);
     handleVote(link, value);
   };
-
   const debouncedLocalFeedback = debounce(setLocalFeedback, 300);
   const debouncedLocalReport = debounce(setLocalReport, 300);
-
   const onSave = () => {
     handleSubmitRubric(link, role);
     handleSubmit(link, role, localFeedback, localReport, localVote);
   };
-
   const handleRenderRubric = () => {
     if (role === 'Editor') {
       const rev1Total = getTotal(assignment.rev1Scores, criteria['Reviewer 1']);
@@ -275,7 +232,6 @@ const ReviewerWorkspace = ({
       const editorTotal = getTotal(localScores, criteria['Editor']);
       const overallTotal = rev1Total + rev2Total + editorTotal;
       const overallPercent = (overallTotal / 26) * 100;
-
       return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-8">
           <div className="space-y-2">
@@ -298,7 +254,6 @@ const ReviewerWorkspace = ({
               </motion.div>
             )}
           </AnimatePresence>
-
           <div className="space-y-2">
             <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Reviewer 1 Feedback</h5>
             <motion.button
@@ -319,36 +274,36 @@ const ReviewerWorkspace = ({
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
                 className="bg-gray-50 p-6 rounded-md border border-gray-200 max-h-64 overflow-y-auto font-sans text-sm text-gray-800 leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: decodeBody(assignment.feedback1) }}
-              />
+              >
+                {decodeBody(assignment.feedback1)}
+              </motion.div>
             )}
           </AnimatePresence>
-
           <div className="space-y-2">
             <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Reviewer 1 Report</h5>
             <motion.button
               whileHover={{ scale: 1.05 }}
-              onClick={() => toggleFeedback(link, 'report1')}
+              onClick={() => toggleFeedback(link, 'informe1')}
               className="text-blue-600 hover:underline text-sm font-sans flex items-center"
             >
-              {expandedFeedback[link]?.report1 ? 'Hide' : 'Show'}
-              <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.report1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {expandedFeedback[link]?.informe1 ? 'Hide' : 'Show'}
+              <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.informe1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
               </svg>
             </motion.button>
           </div>
           <AnimatePresence>
-            {expandedFeedback[link]?.report1 && (
+            {expandedFeedback[link]?.informe1 && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
                 className="bg-gray-50 p-6 rounded-md border border-gray-200 max-h-64 overflow-y-auto font-sans text-sm text-gray-800 leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: decodeBody(assignment.report1) }}
-              />
+              >
+                {decodeBody(assignment.informe1)}
+              </motion.div>
             )}
           </AnimatePresence>
-
           <div className="space-y-2">
             <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Reviewer 2 Rubric</h5>
             <motion.button
@@ -369,7 +324,6 @@ const ReviewerWorkspace = ({
               </motion.div>
             )}
           </AnimatePresence>
-
           <div className="space-y-2">
             <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Reviewer 2 Feedback</h5>
             <motion.button
@@ -390,70 +344,62 @@ const ReviewerWorkspace = ({
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
                 className="bg-gray-50 p-6 rounded-md border border-gray-200 max-h-64 overflow-y-auto font-sans text-sm text-gray-800 leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: decodeBody(assignment.feedback2) }}
-              />
+              >
+                {decodeBody(assignment.feedback2)}
+              </motion.div>
             )}
           </AnimatePresence>
-
           <div className="space-y-2">
             <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Reviewer 2 Report</h5>
             <motion.button
               whileHover={{ scale: 1.05 }}
-              onClick={() => toggleFeedback(link, 'report2')}
+              onClick={() => toggleFeedback(link, 'informe2')}
               className="text-blue-600 hover:underline text-sm font-sans flex items-center"
             >
-              {expandedFeedback[link]?.report2 ? 'Hide' : 'Show'}
-              <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.report2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {expandedFeedback[link]?.informe2 ? 'Hide' : 'Show'}
+              <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.informe2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
               </svg>
             </motion.button>
           </div>
           <AnimatePresence>
-            {expandedFeedback[link]?.report2 && (
+            {expandedFeedback[link]?.informe2 && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
                 className="bg-gray-50 p-6 rounded-md border border-gray-200 max-h-64 overflow-y-auto font-sans text-sm text-gray-800 leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: decodeBody(assignment.report2) }}
-              />
+              >
+                {decodeBody(assignment.informe2)}
+              </motion.div>
             )}
           </AnimatePresence>
-
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-yellow-50 rounded-md border border-yellow-200">
-            <p className="font-sans text-sm text-yellow-800">
-              Reviewers Combined: {revPercent.toFixed(1)}% — {getDecisionText(revPercent)}
-            </p>
+            <p className="font-sans text-sm text-yellow-800">Reviewers Combined: {revPercent.toFixed(1)}% - {getDecisionText(revPercent)}</p>
           </motion.div>
-
           <ModernRubric
             roleKey="Editor"
             scores={localScores}
             onChange={handleLocalRubricChange}
             readOnly={false}
           />
-
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-green-50 rounded-md border border-green-200">
-            <p className="font-sans text-sm text-green-800">
-              Suggested Overall Decision: {overallPercent.toFixed(1)}% — {getDecisionText(overallPercent)}
-            </p>
+            <p className="font-sans text-sm text-green-800">Suggested Overall Decision: {overallPercent.toFixed(1)}% - {getDecisionText(overallPercent)}</p>
           </motion.div>
         </motion.div>
       );
+    } else {
+      return (
+        <ModernRubric
+          roleKey={role}
+          scores={localScores}
+          onChange={handleLocalRubricChange}
+          readOnly={false}
+        />
+      );
     }
-
-    return (
-      <ModernRubric
-        roleKey={role}
-        scores={localScores}
-        onChange={handleLocalRubricChange}
-        readOnly={false}
-      />
-    );
   };
-
   const isAuth = role === 'Author';
-
   if (isAuth) {
     return (
       <motion.div
@@ -463,42 +409,37 @@ const ReviewerWorkspace = ({
         <header className="h-16 border-b border-gray-200 px-4 md:px-8 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-10">
           <div className="flex items-center gap-3 md:gap-6">
             <button onClick={onClose} className="text-gray-400 hover:text-gray-900 transition-colors">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
             <div className="h-6 w-[1px] bg-gray-200" />
             <div>
               <span className="text-[10px] font-bold text-blue-600 uppercase tracking-[0.2em]">My Article</span>
-              <h2 className="text-sm font-bold text-gray-900 truncate max-w-[200px] md:max-w-[400px]">
-                {assignment['Nombre Artículo']}
-              </h2>
+              <h2 className="text-sm font-bold text-gray-900 truncate max-w-[200px] md:max-w-[400px]">{assignment['Nombre Artículo']}</h2>
             </div>
           </div>
         </header>
-
         <div className="flex-grow overflow-y-auto p-4 md:p-8 lg:p-16">
           <div className="max-w-2xl mx-auto space-y-8">
             {assignment.feedbackEditor && ['Aceptado', 'Rechazado'].includes(assignment.Estado) ? (
               <>
                 <div className="p-6 bg-green-50 rounded-md border border-green-200">
                   <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-green-700 mb-2">Final Status</h5>
-                  <p className="font-serif text-xl font-bold text-green-800">{assignment.Estado}</p>
+                  <p className="font-serif text-xl font-bold text-green-800">
+                    {assignment.Estado === 'Aceptado' ? 'Accepted' : 'Rejected'}
+                  </p>
                 </div>
                 <div className="space-y-4">
                   <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Editor Feedback</h5>
-                  <div className="bg-gray-50 p-6 rounded-md border border-gray-200 max-h-96 overflow-y-auto font-sans text-sm text-gray-800 leading-relaxed"
-                    dangerouslySetInnerHTML={{ __html: decodeBody(assignment.feedbackEditor) }}
-                  />
+                  <div className="bg-gray-50 p-6 rounded-md border border-gray-200 max-h-96 overflow-y-auto font-sans text-sm text-gray-800 leading-relaxed">
+                    {decodeBody(assignment.feedbackEditor)}
+                  </div>
                 </div>
               </>
             ) : (
               <div className="text-center space-y-4">
                 <h5 className="font-serif text-2xl font-bold text-yellow-800">Article Under Review</h5>
-                <p className="font-sans text-sm text-yellow-700 leading-relaxed">
-                  Your article "{assignment['Nombre Artículo']}" is currently being reviewed by peer reviewers and the editor.
-                </p>
-                <p className="font-sans text-sm text-yellow-600 leading-relaxed">
-                  You will be notified with the final decision and feedback once the process is complete.
-                </p>
+                <p className="font-sans text-sm text-yellow-700 leading-relaxed">Your article "{assignment['Nombre Artículo']}" is currently being reviewed by peer reviewers and the editor.</p>
+                <p className="font-sans text-sm text-yellow-600 leading-relaxed">You will be notified with the final decision and feedback once the process is complete.</p>
               </div>
             )}
           </div>
@@ -506,29 +447,23 @@ const ReviewerWorkspace = ({
       </motion.div>
     );
   }
-
-  // Vista del revisor / editor
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 z-[60] bg-white flex flex-col"
     >
-      {/* Top Bar */}
       <header className="h-16 border-b border-gray-200 px-4 md:px-8 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-10">
         <div className="flex items-center gap-3 md:gap-6">
           <button onClick={onClose} className="text-gray-400 hover:text-gray-900 transition-colors">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg>
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
           <div className="h-6 w-[1px] bg-gray-200" />
           <div>
             <span className="text-[10px] font-bold text-blue-600 uppercase tracking-[0.2em]">Peer Review</span>
-            <h2 className="text-sm font-bold text-gray-900 truncate max-w-[200px] md:max-w-[400px]">
-              {assignment['Nombre Artículo']}
-            </h2>
+            <h2 className="text-sm font-bold text-gray-900 truncate max-w-[200px] md:max-w-[400px]">{assignment['Nombre Artículo']}</h2>
           </div>
         </div>
-
-        <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
+        <div className="flex items-center gap-2 md:gap-4">
           <div className="flex flex-col items-end mr-2 md:mr-4">
             <span className="text-[10px] text-gray-400 font-bold uppercase">Progress</span>
             <div className="w-24 md:w-32 h-1.5 bg-gray-100 rounded-full mt-1 overflow-hidden">
@@ -547,22 +482,17 @@ const ReviewerWorkspace = ({
           </button>
         </div>
       </header>
-
-      {/* Contenido principal */}
       <div className="flex-grow overflow-y-auto pt-16 md:pt-0 lg:flex">
-        {/* Left: Manuscript */}
-        <section className="bg-gray-50/50 p-4 md:p-8 lg:p-16 border-b border-gray-100 lg:border-b-0 lg:border-r">
+        <section className="bg-gray-50/50 p-4 md:p-8 lg:p-16 border-b border-gray-100">
           <article className="max-w-2xl mx-auto bg-white p-6 md:p-12 shadow-sm border border-gray-100 rounded-sm space-y-8">
             <header className="border-b border-gray-900 pb-8">
-              <span className="bg-gray-900 text-white px-2 py-1 text-[9px] font-bold uppercase mb-4 inline-block">
-                Original Manuscript
-              </span>
+              <span className="bg-gray-900 text-white px-2 py-1 text-[9px] font-bold uppercase mb-4 inline-block">Original Manuscript</span>
               <h1 className="font-serif text-2xl md:text-3xl font-bold leading-tight text-gray-900 mb-6">
                 {assignment['Nombre Artículo']}
               </h1>
             </header>
             <div className="font-serif text-base md:text-lg leading-relaxed text-gray-800 space-y-6">
-              <div dangerouslySetInnerHTML={{ __html: decodeBody(assignment.content || '') }} />
+              <div dangerouslySetInnerHTML={{ __html: assignment.content }} />
               <motion.iframe
                 src={assignment['Link Artículo'] ? assignment['Link Artículo'].replace('/edit', '/preview') : ''}
                 className="w-full h-64 md:h-96 border-2 border-dashed border-gray-100 rounded-xl"
@@ -571,19 +501,13 @@ const ReviewerWorkspace = ({
             </div>
           </article>
         </section>
-
-        {/* Right: Evaluation form */}
         <section className="bg-white p-4 md:p-8 lg:p-12 mt-8 lg:mt-0">
           <div className="max-w-xl mx-auto space-y-8">
             <div className="pt-8 lg:pt-16">
               <h3 className="font-serif text-2xl font-bold text-gray-900 mb-2">Review Protocol</h3>
-              <p className="text-sm text-gray-500 font-sans leading-relaxed">
-                Assign scores based on the scientific and methodological quality of the submission.
-              </p>
+              <p className="text-sm text-gray-500 font-sans leading-relaxed">Assign scores based on the scientific and methodological quality of the submission.</p>
             </div>
-
             {handleRenderRubric()}
-
             <div className="mt-16 pt-8 border-t border-gray-100 space-y-6">
               <h4 className="font-serif text-xl font-bold text-gray-900">Comments for the Author</h4>
               <ReactQuill
@@ -596,7 +520,6 @@ const ReviewerWorkspace = ({
                 className="bg-white rounded-lg border border-gray-200"
               />
             </div>
-
             <div className="mt-8 space-y-6">
               <h4 className="font-serif text-xl font-bold text-gray-900">Confidential Report for the Editor</h4>
               <ReactQuill
@@ -609,7 +532,6 @@ const ReviewerWorkspace = ({
                 className="bg-white rounded-lg border border-gray-200"
               />
             </div>
-
             <div className="mt-8 space-y-4">
               <h4 className="font-serif text-xl font-bold text-gray-900">Final Vote</h4>
               <div className="flex space-x-4">
@@ -617,9 +539,7 @@ const ReviewerWorkspace = ({
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => handleLocalVote('yes')}
-                  className={`flex-1 py-3 rounded-md font-sans text-sm font-bold uppercase tracking-widest ${
-                    localVote === 'yes' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  } transition-colors`}
+                  className={`flex-1 py-3 rounded-md font-sans text-sm font-bold uppercase tracking-widest ${localVote === 'yes' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} transition-colors`}
                 >
                   Yes
                 </motion.button>
@@ -627,28 +547,24 @@ const ReviewerWorkspace = ({
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => handleLocalVote('no')}
-                  className={`flex-1 py-3 rounded-md font-sans text-sm font-bold uppercase tracking-widest ${
-                    localVote === 'no' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  } transition-colors`}
+                  className={`flex-1 py-3 rounded-md font-sans text-sm font-bold uppercase tracking-widest ${localVote === 'no' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} transition-colors`}
                 >
                   No
                 </motion.button>
               </div>
             </div>
-
             <div className="mt-12 p-6 bg-blue-900 rounded-xl text-white flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-0 shadow-xl">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Final Score</p>
-                <p className="text-3xl font-serif font-bold">
-                  {totalScore} <span className="text-sm opacity-50">/ {maxScore}</span>
-                </p>
+                <p className="text-3xl font-serif font-bold">{totalScore} <span className="text-sm opacity-50">/ {maxScore}</span></p>
               </div>
               <div className="text-left md:text-right">
                 <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Recommendation</p>
-                <p className="font-bold text-lg">{getDecisionText(progress)}</p>
+                <p className="font-bold text-lg">
+                  {getDecisionText(progress)}
+                </p>
               </div>
             </div>
-
             {rubricStatus[link] && (
               <p className={`text-sm font-sans mt-4 ${rubricStatus[link].includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
                 {rubricStatus[link]}
@@ -662,8 +578,6 @@ const ReviewerWorkspace = ({
           </div>
         </section>
       </div>
-
-      {/* Modal para insertar/editar imagen */}
       <AnimatePresence>
         {showImageModal[link] && (
           <motion.div
@@ -678,9 +592,7 @@ const ReviewerWorkspace = ({
               animate={{ y: 0, opacity: 1 }}
               className="bg-white p-6 md:p-8 rounded-lg shadow-xl max-w-md w-full space-y-6"
             >
-              <h4 className="font-serif text-xl font-bold text-gray-900">
-                {isEditingImage[link] ? 'Edit Image' : 'Insert Image'}
-              </h4>
+              <h4 className="font-serif text-xl font-bold text-gray-900">{isEditingImage[link] ? 'Edit Image' : 'Insert Image'}</h4>
               <div className="space-y-4">
                 <div>
                   <label className="block font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Image URL</label>
@@ -730,12 +642,11 @@ const ReviewerWorkspace = ({
                   </select>
                 </div>
               </div>
-
               <div className="mt-6 flex justify-end space-x-4">
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => setShowImageModal(prev => ({ ...prev, [link]: false }))}
+                  onClick={() => setShowImageModal((prev) => ({ ...prev, [link]: false }))}
                   className="px-6 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 text-sm font-sans font-bold uppercase tracking-widest"
                 >
                   Cancel
