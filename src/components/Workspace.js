@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactQuill from 'react-quill';
@@ -181,7 +182,7 @@ const ModernRubric = ({ roleKey, scores, onChange, readOnly }) => {
                       : 'border-gray-100 hover:border-blue-200 bg-white opacity-60 hover:opacity-100'
                   }`}
                 >
-                  <div className="flex justify-between items-start mb-2">
+                  <div className="flex justify-justify-between items-start mb-2">
                     <span className={`text-[10px] font-bold uppercase tracking-tighter ${isSelected ? 'text-blue-700' : 'text-gray-400'}`}>
                       Nivel {val}
                     </span>
@@ -208,7 +209,6 @@ const ModernRubric = ({ roleKey, scores, onChange, readOnly }) => {
  * WORKSPACE DEL REVISOR (MODAL MODERNIZADO)
  */
 const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubmit, handleVote, rubricScores, feedback, report, vote, rubricStatus, submitStatus, isPending, role, link, toggleTutorial, tutorialVisible, debouncedSetFeedback, debouncedSetReport, modules, formats, decodeBody, showImageModal, imageData, isEditingImage, handleImageDataChange, handleImageModalSubmit, expandedFeedback, toggleFeedback, getDecisionText }) => {
-  const [activeStep, setActiveStep] = useState('manuscript'); // 'manuscript' o 'evaluation'
   const [localScores, setLocalScores] = useState(rubricScores[link] || {});
   const [localFeedback, setLocalFeedback] = useState(feedback[link] || '');
   const [localReport, setLocalReport] = useState(report[link] || '');
@@ -231,7 +231,6 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
   const debouncedLocalReport = debounce(setLocalReport, 300);
 
   const onSave = () => {
-    handleRubricChange(link, localScores);
     handleSubmitRubric(link, role);
     handleSubmit(link, role, localFeedback, localReport, localVote);
   };
@@ -267,6 +266,56 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
             )}
           </AnimatePresence>
           <div className="space-y-2">
+            <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Feedback del Revisor 1</h5>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              onClick={() => toggleFeedback(link, 'feedback1')}
+              className="text-blue-600 hover:underline text-sm font-sans flex items-center"
+            >
+              {expandedFeedback[link]?.feedback1 ? 'Ocultar' : 'Mostrar'}
+              <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.feedback1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </motion.button>
+          </div>
+          <AnimatePresence>
+            {expandedFeedback[link]?.feedback1 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="bg-gray-50 p-6 rounded-md border border-gray-200 max-h-64 overflow-y-auto font-sans text-sm text-gray-800 leading-relaxed"
+              >
+                {decodeBody(assignment.feedback1)}
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <div className="space-y-2">
+            <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Informe del Revisor 1</h5>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              onClick={() => toggleFeedback(link, 'informe1')}
+              className="text-blue-600 hover:underline text-sm font-sans flex items-center"
+            >
+              {expandedFeedback[link]?.informe1 ? 'Ocultar' : 'Mostrar'}
+              <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.informe1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </motion.button>
+          </div>
+          <AnimatePresence>
+            {expandedFeedback[link]?.informe1 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="bg-gray-50 p-6 rounded-md border border-gray-200 max-h-64 overflow-y-auto font-sans text-sm text-gray-800 leading-relaxed"
+              >
+                {decodeBody(assignment.informe1)}
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <div className="space-y-2">
             <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Rúbrica del Revisor 2</h5>
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -283,6 +332,56 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
             {expandedFeedback[link]?.rubric2 && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
                 <ModernRubric roleKey="Revisor 2" scores={assignment.rev2Scores} readOnly={true} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <div className="space-y-2">
+            <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Feedback del Revisor 2</h5>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              onClick={() => toggleFeedback(link, 'feedback2')}
+              className="text-blue-600 hover:underline text-sm font-sans flex items-center"
+            >
+              {expandedFeedback[link]?.feedback2 ? 'Ocultar' : 'Mostrar'}
+              <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.feedback2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </motion.button>
+          </div>
+          <AnimatePresence>
+            {expandedFeedback[link]?.feedback2 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="bg-gray-50 p-6 rounded-md border border-gray-200 max-h-64 overflow-y-auto font-sans text-sm text-gray-800 leading-relaxed"
+              >
+                {decodeBody(assignment.feedback2)}
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <div className="space-y-2">
+            <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Informe del Revisor 2</h5>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              onClick={() => toggleFeedback(link, 'informe2')}
+              className="text-blue-600 hover:underline text-sm font-sans flex items-center"
+            >
+              {expandedFeedback[link]?.informe2 ? 'Ocultar' : 'Mostrar'}
+              <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.informe2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </motion.button>
+          </div>
+          <AnimatePresence>
+            {expandedFeedback[link]?.informe2 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="bg-gray-50 p-6 rounded-md border border-gray-200 max-h-64 overflow-y-auto font-sans text-sm text-gray-800 leading-relaxed"
+              >
+                {decodeBody(assignment.informe2)}
               </motion.div>
             )}
           </AnimatePresence>
@@ -320,39 +419,41 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         className="fixed inset-0 z-[60] bg-white flex flex-col"
       >
-        <header className="h-16 border-b border-gray-200 px-8 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-10">
-          <div className="flex items-center gap-6">
+        <header className="h-16 border-b border-gray-200 px-4 md:px-8 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-10">
+          <div className="flex items-center gap-3 md:gap-6">
             <button onClick={onClose} className="text-gray-400 hover:text-gray-900 transition-colors">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
             <div className="h-6 w-[1px] bg-gray-200" />
             <div>
               <span className="text-[10px] font-bold text-blue-600 uppercase tracking-[0.2em]">Mi Artículo</span>
-              <h2 className="text-sm font-bold text-gray-900 truncate max-w-[400px]">{assignment['Nombre Artículo']}</h2>
+              <h2 className="text-sm font-bold text-gray-900 truncate max-w-[200px] md:max-w-[400px]">{assignment['Nombre Artículo']}</h2>
             </div>
           </div>
         </header>
-        <div className="flex-grow flex flex-col items-center justify-center p-8">
-          {assignment.feedbackEditor && ['Aceptado', 'Rechazado'].includes(assignment.Estado) ? (
-            <div className="max-w-2xl w-full space-y-8">
-              <div className="p-6 bg-green-50 rounded-md border border-green-200">
-                <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-green-700 mb-2">Estado Final</h5>
-                <p className="font-serif text-xl font-bold text-green-800">{assignment.Estado}</p>
-              </div>
-              <div className="space-y-4">
-                <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Feedback del Editor</h5>
-                <div className="bg-gray-50 p-6 rounded-md border border-gray-200 max-h-96 overflow-y-auto font-sans text-sm text-gray-800 leading-relaxed">
-                  {decodeBody(assignment.feedbackEditor)}
+        <div className="flex-grow overflow-y-auto p-4 md:p-8 lg:p-16">
+          <div className="max-w-2xl mx-auto space-y-8">
+            {assignment.feedbackEditor && ['Aceptado', 'Rechazado'].includes(assignment.Estado) ? (
+              <>
+                <div className="p-6 bg-green-50 rounded-md border border-green-200">
+                  <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-green-700 mb-2">Estado Final</h5>
+                  <p className="font-serif text-xl font-bold text-green-800">{assignment.Estado}</p>
                 </div>
+                <div className="space-y-4">
+                  <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Feedback del Editor</h5>
+                  <div className="bg-gray-50 p-6 rounded-md border border-gray-200 max-h-96 overflow-y-auto font-sans text-sm text-gray-800 leading-relaxed">
+                    {decodeBody(assignment.feedbackEditor)}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="text-center space-y-4">
+                <h5 className="font-serif text-2xl font-bold text-yellow-800">Artículo en Revisión</h5>
+                <p className="font-sans text-sm text-yellow-700 leading-relaxed">Su artículo "{assignment['Nombre Artículo']}" se encuentra actualmente en proceso de revisión por parte de los evaluadores y el editor.</p>
+                <p className="font-sans text-sm text-yellow-600 leading-relaxed">Recibirá una notificación con la decisión final y el feedback correspondiente una vez completado el proceso.</p>
               </div>
-            </div>
-          ) : (
-            <div className="max-w-2xl w-full text-center space-y-4">
-              <h5 className="font-serif text-2xl font-bold text-yellow-800">Artículo en Revisión</h5>
-              <p className="font-sans text-sm text-yellow-700 leading-relaxed">Su artículo "{assignment['Nombre Artículo']}" se encuentra actualmente en proceso de revisión por parte de los evaluadores y el editor.</p>
-              <p className="font-sans text-sm text-yellow-600 leading-relaxed">Recibirá una notificación con la decisión final y el feedback correspondiente una vez completado el proceso.</p>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </motion.div>
     );
@@ -376,7 +477,7 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
           </div>
         </div>
         <div className="flex items-center gap-2 md:gap-4">
-          <div className="hidden md:flex flex-col items-end mr-2 md:mr-4">
+          <div className="flex flex-col items-end mr-2 md:mr-4">
             <span className="text-[10px] text-gray-400 font-bold uppercase">Progreso</span>
             <div className="w-24 md:w-32 h-1.5 bg-gray-100 rounded-full mt-1 overflow-hidden">
               <motion.div
@@ -395,10 +496,9 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
         </div>
       </header>
       {/* Main Content: Split View - Stack vertical in mobile */}
-      <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
-       
+      <div className="flex-grow overflow-y-auto">
         {/* Lado Izquierdo: El Manuscrito (Modo Lectura) */}
-        <section className="flex-1 overflow-y-auto bg-gray-50/50 p-4 md:p-8 lg:p-16 border-b lg:border-r lg:border-b-0 border-gray-100 order-2 lg:order-1">
+        <section className="bg-gray-50/50 p-4 md:p-8 lg:p-16 border-b border-gray-100">
           <article className="max-w-2xl mx-auto bg-white p-6 md:p-12 shadow-sm border border-gray-100 rounded-sm space-y-8">
             <header className="border-b border-gray-900 pb-8">
                <span className="bg-gray-900 text-white px-2 py-1 text-[9px] font-bold uppercase mb-4 inline-block">Manuscrito Original</span>
@@ -406,12 +506,14 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
                  {assignment['Nombre Artículo']}
                </h1>
             </header>
-           
+            <div className="space-y-6">
+              <h4 className="font-serif text-xl font-bold text-gray-900">Resumen Ejecutivo</h4>
+              <p className="font-sans text-sm text-gray-600 leading-relaxed italic border-l-2 border-gray-200 pl-4">
+                {assignment.summary || "Resumen ejecutivo del manuscrito enviado para evaluación. (Nota: Si no se proporciona, generar uno basado en el contenido.)"}
+              </p>
+            </div>
             <div className="font-serif text-base md:text-lg leading-relaxed text-gray-800 space-y-6">
               {/* Aquí iría el contenido del artículo o un visor de PDF */}
-              <p className="italic text-gray-500 border-l-2 border-gray-200 pl-4 text-sm">
-                Resumen ejecutivo del manuscrito enviado para evaluación...
-              </p>
               <div dangerouslySetInnerHTML={{ __html: assignment.content }} />
               <motion.iframe
                 src={assignment['Link Artículo'] ? assignment['Link Artículo'].replace('/edit', '/preview') : ''}
@@ -422,9 +524,9 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
           </article>
         </section>
         {/* Lado Derecho: La Evaluación (Modo Escritura) */}
-        <section className="w-full lg:w-[500px] xl:w-[600px] overflow-y-auto bg-white p-4 md:p-8 lg:p-12 order-1 lg:order-2">
+        <section className="bg-white p-4 md:p-8 lg:p-12 mt-8 lg:mt-0">
           <div className="max-w-xl mx-auto space-y-8">
-            <div className="mb-10">
+            <div className="pt-8 lg:pt-16">
               <h3 className="font-serif text-2xl font-bold text-gray-900 mb-2">Protocolo de Evaluación</h3>
               <p className="text-sm text-gray-500 font-sans leading-relaxed">Asigne el puntaje correspondiente basándose en la calidad científica y metodológica del texto.</p>
             </div>
