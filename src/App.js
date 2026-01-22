@@ -521,7 +521,7 @@ function App() {
           transition={{ repeat: Infinity, duration: 2 }}
           className="font-serif text-2xl font-bold tracking-tighter text-blue-900"
         >
-          REVISTA ACADÉMICA
+          REVISTA NACIONAL DE LAS CIENCIAS PARA ESTUDIANTES
         </motion.div>
       </div>
     );

@@ -3,12 +3,11 @@ import Papa from 'papaparse';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { debounce } from 'lodash';
-import { ReviewerWorkspace } from './Workspace';
-import NewsUploadSection from './NewsUploadSection';
-import TaskSection from './TaskSection';
-import AssignSection from './AssignSection';
-import { useTranslation } from 'react-i18next';
-import DirectorPanel from './DirectorPanel';
+import { ReviewerWorkspace } from './WorkspaceEN';
+import NewsUploadSectionEN from './NewsUploadSectionEN';
+import TaskSectionEN from './TaskSectionEN';
+import AssignSectionEN from './AssignSectionEN';
+import DirectorPanelEN from './DirectorPanelEN';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
@@ -21,8 +20,6 @@ const RUBRIC_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzehxU_O7Gkzf
 const RUBRIC_CSV1 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=0&single=true&output=csv';
 const RUBRIC_CSV2 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=1438370398&single=true&output=csv';
 const RUBRIC_CSV3 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=1972050001&single=true&output=csv';
-
-
 
 const getDecisionText = (percent) => {
   if (percent >= 85) return 'Accept without changes.';
@@ -77,41 +74,40 @@ const localizer = momentLocalizer(moment);
 
 function CalendarComponent({ events, onSelectEvent }) {
   return (
-    <div className="bg-white border-0 sm:border border-gray-200 p-2 sm:p-4 md:p-8 rounded-sm shadow-sm mb-6 overflow-hidden">
+    <div className="bg-white border border-gray-200 p-8 rounded-sm shadow-sm mb-6">
       <h3 className="font-serif text-2xl font-bold text-gray-900 mb-4">Deadline Calendar</h3>
-      <div className="h-[300px] sm:h-[400px] md:h-[600px]">
-        <Calendar
-          localizer={localizer}
-          events={events}
-          startAccessor="start"
-          endAccessor="end"
-          style={{ height: '100%' }}
-          onSelectEvent={onSelectEvent}
-          views={['month', 'week', 'day', 'agenda']}
-          popup
-          selectable
-          className="rounded-lg border-0 sm:border border-gray-200 overflow-hidden"
-          messages={{
-            next: "Next",
-            previous: "Previous",
-            today: "Today",
-            month: "Month",
-            week: "Week",
-            day: "Day",
-            agenda: "Agenda",
-            date: "Date",
-            time: "Time",
-            event: "Event",
-            noEventsInRange: "No events in this range",
-            showMore: total => `+ Show more (${total})`
-          }}
-        />
-      </div>
+      <Calendar
+        localizer={localizer}
+        events={events}
+        startAccessor="start"
+        endAccessor="end"
+        style={{ height: 600 }}
+        onSelectEvent={onSelectEvent}
+        views={['month', 'week', 'day', 'agenda']}
+        popup
+        selectable
+        className="rounded-lg border border-gray-200"
+        messages={{
+          next: "Next",
+          previous: "Previous",
+          today: "Today",
+          month: "Month",
+          week: "Week",
+          day: "Day",
+          agenda: "Agenda",
+          date: "Date",
+          time: "Time",
+          event: "Event",
+          noEventsInRange: "No events in this range",
+          showMore: total => `+ Show more (${total})`
+        }}
+      />
     </div>
   );
 }
 
-/** * MODERNIZED DESIGN: Rubric peer review form style
+/**
+ * MODERNIZED DESIGN: Peer-review form style rubric
  */
 const RubricViewer = ({ roleKey, scores, onChange, readOnly = false }) => {
   const crits = criteria[roleKey];
@@ -121,24 +117,23 @@ const RubricViewer = ({ roleKey, scores, onChange, readOnly = false }) => {
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-      className="bg-white border-0 sm:border border-gray-200 rounded-lg overflow-hidden mb-8"
+      className="bg-white border border-gray-200 rounded-lg overflow-hidden mb-8"
     >
-      <div className="bg-gray-50 px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-4 border-b border-gray-200 flex justify-between items-center">
-        <h5 className="font-serif text-lg font-bold text-gray-900 uppercase tracking-tight break-words">
+      <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+        <h5 className="font-serif text-lg font-bold text-gray-900 uppercase tracking-tight">
           Evaluation Protocol: {roleKey}
         </h5>
         <div className="text-sm font-mono font-bold text-blue-700 bg-blue-50 px-3 py-1 rounded">
           SCORE: {total} / {max}
         </div>
       </div>
-     
-      <div className="p-2 sm:p-4 md:p-6 space-y-4 md:space-y-8">
+      <div className="p-6 space-y-8">
         {crits.map((c) => (
           <div key={c.key} className="border-b border-gray-100 last:border-0 pb-6">
             <div className="flex justify-between items-start mb-4">
-              <h6 className="font-sans font-bold text-xs uppercase tracking-widest text-gray-500 break-words">{c.name}</h6>
+              <h6 className="font-sans font-bold text-xs uppercase tracking-widest text-gray-500">{c.name}</h6>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               {Object.entries(c.levels).map(([val, info]) => (
                 <button
                   key={val}
@@ -146,14 +141,14 @@ const RubricViewer = ({ roleKey, scores, onChange, readOnly = false }) => {
                   onClick={() => !readOnly && onChange && onChange(c.key, parseInt(val))}
                   className={`relative p-4 text-left border rounded-md transition-all duration-200 ${
                     scores[c.key] == val
-                    ? 'border-blue-600 bg-blue-50/50 ring-1 ring-blue-600'
-                    : 'border-gray-200 hover:border-gray-300 bg-white'
+                      ? 'border-blue-600 bg-blue-50/50 ring-1 ring-blue-600'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
                   } ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}
                 >
                   <span className={`block text-xs font-bold mb-1 ${scores[c.key] == val ? 'text-blue-700' : 'text-gray-400'}`}>
                     LEVEL {val}
                   </span>
-                  <p className="text-sm text-gray-800 leading-snug break-words">{info.label.split('=')[1]}</p>
+                  <p className="text-sm text-gray-800 leading-snug">{info.label.split('=')[1]?.trim()}</p>
                   {scores[c.key] == val && (
                     <motion.div layoutId="check" className="absolute top-2 right-2 text-blue-600">
                       <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293l-4 4a1 1 0 01-1.414 0l-2-2a1 1 0 111.414-1.414L9 10.586l3.293-3.293a1 1 0 011.414 1.414z"/></svg>
@@ -170,14 +165,15 @@ const RubricViewer = ({ roleKey, scores, onChange, readOnly = false }) => {
 };
 
 /**
- * ASSIGNMENT CARD: Editorial Card Style
+ * ASSIGNMENT CARD
  */
 const AssignmentCard = ({ assignment, onClick, index }) => {
   const role = assignment.role;
   const isAuthorCard = role === 'Author';
   const isCompleted = isAuthorCard
-    ? (assignment.feedbackEditor && ['Accepted', 'Rejected'].includes(assignment.Status))
+    ? (assignment.feedbackEditor && ['Accepted', 'Rejected'].includes(assignment.Estado))
     : assignment.isCompleted;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -185,26 +181,25 @@ const AssignmentCard = ({ assignment, onClick, index }) => {
       transition={{ delay: index * 0.05 }}
       whileHover={{ y: -4 }}
       onClick={onClick}
-      className="group bg-white border-0 sm:border border-gray-200 p-2 sm:p-4 md:p-6 flex flex-col h-full hover:border-blue-400 transition-all cursor-pointer relative overflow-hidden"
+      className="group bg-white border border-gray-200 p-6 flex flex-col h-full hover:border-blue-400 transition-all cursor-pointer relative"
     >
       <div className="flex justify-between items-start mb-4">
-        <span className="text-[10px] font-sans font-bold uppercase tracking-[0.2em] text-blue-600 break-words">
+        <span className="text-[10px] font-sans font-bold uppercase tracking-[0.2em] text-blue-600">
           {role}
         </span>
         <div className={`w-2 h-2 rounded-full ${isCompleted ? 'bg-green-500' : 'bg-amber-400 animate-pulse'}`} />
       </div>
-     
-      <h4 className="font-serif text-xl font-bold text-gray-900 group-hover:text-blue-800 transition-colors mb-4 line-clamp-2 break-words">
-        {assignment['Article Name']}
+      <h4 className="font-serif text-xl font-bold text-gray-900 group-hover:text-blue-800 transition-colors mb-4 line-clamp-2">
+        {assignment['Nombre Artículo']}
       </h4>
       <div className="mt-auto pt-4 border-t border-gray-50 space-y-2">
         <div className="flex justify-between text-xs text-gray-500 font-sans">
           <span>DEADLINE</span>
-          <span className="font-bold break-words">{assignment.Deadline ? new Date(assignment.Deadline).toLocaleDateString() : 'NO DATE'}</span>
+          <span className="font-bold">{assignment.Plazo ? new Date(assignment.Plazo).toLocaleDateString() : 'NO DATE'}</span>
         </div>
         <div className="flex justify-between text-xs text-gray-500 font-sans">
           <span>STATUS</span>
-          <span className={`font-bold break-words ${isCompleted ? 'text-green-700' : 'text-amber-700'}`}>
+          <span className={`font-bold ${isCompleted ? 'text-green-700' : 'text-amber-700'}`}>
             {isCompleted ? 'COMPLETED' : 'PENDING'}
           </span>
         </div>
@@ -265,7 +260,7 @@ export default function PortalSection({ user, onLogout }) {
     }
   }, [user]);
 
-  // Email mapping → real name
+  // Email → real name mapping
   useEffect(() => {
     const fetchUserMapping = async () => {
       if (user && user.name && user.name.includes('@')) {
@@ -276,9 +271,9 @@ export default function PortalSection({ user, onLogout }) {
             header: true,
             skipEmptyLines: true,
             complete: ({ data }) => {
-              const mapping = data.find(row => row['Email']?.trim().toLowerCase() === user.name.trim().toLowerCase());
-              if (mapping && mapping['Name']) {
-                setEffectiveName(mapping['Name'].trim());
+              const mapping = data.find(row => row['Correo']?.trim().toLowerCase() === user.name.trim().toLowerCase());
+              if (mapping && mapping['Nombre']) {
+                setEffectiveName(mapping['Nombre'].trim());
                 setError('');
               } else {
                 setError('No email to name mapping found. Please contact the administrator.');
@@ -286,12 +281,12 @@ export default function PortalSection({ user, onLogout }) {
             },
             error: (err) => {
               console.error('Error parsing users CSV:', err);
-              setError('Error loading user mapping.');
+              setError('Error loading users mapping.');
             },
           });
         } catch (err) {
           console.error('Error fetching users CSV:', err);
-          setError('Error connecting for user mapping.');
+          setError('Error connecting for users mapping.');
         }
       } else if (user && user.name) {
         setEffectiveName(user.name);
@@ -311,40 +306,40 @@ export default function PortalSection({ user, onLogout }) {
       const data1 = parseData(csv1Text);
       const scoresMap1 = {};
       data1.forEach(row => {
-        const name = row['Article Name']?.trim();
+        const name = row['Nombre del Artículo']?.trim();
         if (name) {
           scoresMap1[name] = {
-            grammar: parseInt(row['Grammar and spelling']) || 0,
-            clarity: parseInt(row['Clarity and coherence']) || 0,
-            structure: parseInt(row['Structure and organization']) || 0,
-            citation: parseInt(row['Citation and references']) || 0
+            gramatica: parseInt(row['Gramática y ortografía']) || 0,
+            claridad: parseInt(row['Claridad y coherencia']) || 0,
+            estructura: parseInt(row['Estructura y organización']) || 0,
+            citacion: parseInt(row['Citación y referencias']) || 0
           };
         }
       });
       const data2 = parseData(csv2Text);
       const scoresMap2 = {};
       data2.forEach(row => {
-        const name = row['Article Name']?.trim();
+        const name = row['Nombre del Artículo']?.trim();
         if (name) {
           scoresMap2[name] = {
-            relevance: parseInt(row['Topic relevance']) || 0,
-            rigor: parseInt(row['Rigor in source usage']) || 0,
-            originality: parseInt(row['Originality and creativity']) || 0,
-            arguments: parseInt(row['Quality of arguments']) || 0
+            relevancia: parseInt(row['Relevancia del tema']) || 0,
+            rigor: parseInt(row['Rigor en el uso de fuentes']) || 0,
+            originalidad: parseInt(row['Originalidad y creatividad']) || 0,
+            argumentos: parseInt(row['Calidad de los argumentos']) || 0
           };
         }
       });
       const data3 = parseData(csv3Text);
       const scoresMap3 = {};
       data3.forEach(row => {
-        const name = row['Article Name']?.trim();
+        const name = row['Nombre del Artículo']?.trim();
         if (name) {
           scoresMap3[name] = {
-            modifications: parseInt(row['Degree of modifications']) || 0,
-            quality: parseInt(row['Final text quality']) || 0,
-            contribution: parseInt(row['Global essay contribution']) || 0,
-            potential: parseInt(row['Motivational potential']) || 0,
-            decision: parseInt(row['Final decision']) || 0
+            modificaciones: parseInt(row['Grado de modificaciones']) || 0,
+            calidad: parseInt(row['Calidad final del texto']) || 0,
+            aporte: parseInt(row['Aporte global del ensayo']) || 0,
+            potencial: parseInt(row['Potencial motivador']) || 0,
+            decision: parseInt(row['Decisión final']) || 0
           };
         }
       });
@@ -387,88 +382,86 @@ export default function PortalSection({ user, onLogout }) {
           const normalizedEffectiveName = effectiveName.trim().toLowerCase();
           // Fetch author assignments
           const authorRows = data.filter(row => {
-            const authors = row['Author'] || '';
-            return authors
+            const autores = row['Autor'] || '';
+            return autores
               .split(';')
               .map(a => a.trim().toLowerCase())
               .includes(normalizedEffectiveName);
           });
           const authorAssignments = authorRows.map(row => ({
-            id: row['Article Name'],
-            'Article Name': row['Article Name'] || 'Untitled',
-            Status: row['Status'],
+            id: row['Nombre Artículo'],
+            'Nombre Artículo': row['Nombre Artículo'] || 'No title',
+            Estado: row['Estado'],
             role: 'Author',
-            feedbackEditor: row['Feedback 3'] || 'No feedback from the editor yet.',
+            feedbackEditor: row['Feedback 3'] || 'No editor feedback yet.',
             isCompleted: !!row['Feedback 3'],
-            Deadline: row['Deadline'] || null,
+            Plazo: row['Plazo'] || null,
           }));
           // Fetch reviewer/editor assignments
           const reviewerRows = data
             .filter(row => {
-              return row['Reviewer 1']?.trim() === effectiveName ||
-                     row['Reviewer 2']?.trim() === effectiveName ||
+              return row['Revisor 1']?.trim() === effectiveName ||
+                     row['Revisor 2']?.trim() === effectiveName ||
                      row['Editor']?.trim() === effectiveName;
             });
           const reviewerAssignments = reviewerRows.map(row => {
-            const role = row['Reviewer 1']?.trim() === effectiveName ? 'Reviewer 1'
-                      : row['Reviewer 2']?.trim() === effectiveName ? 'Reviewer 2'
+            const role = row['Revisor 1']?.trim() === effectiveName ? 'Reviewer 1'
+                      : row['Revisor 2']?.trim() === effectiveName ? 'Reviewer 2'
                       : 'Editor';
             const num = role === 'Reviewer 1' ? 1 : role === 'Reviewer 2' ? 2 : 3;
             const assignment = {
-              id: row['Article Name'],
-              'Article Name': row['Article Name'] || 'Untitled',
-              'Article Link': row['Article Link'],
-              Status: row['Status'],
+              id: row['Nombre Artículo'],
+              'Nombre Artículo': row['Nombre Artículo'] || 'No title',
+              'Link Artículo': row['Link Artículo'],
+              Estado: row['Estado'],
               role,
               feedback: row[`Feedback ${num}`] || '',
-              report: row[`Report ${num}`] || '',
-              vote: row[`Vote ${num}`] || '',
+              report: row[`Informe ${num}`] || '',
+              vote: row[`Voto ${num}`] || '',
               feedback1: row['Feedback 1'] || 'No feedback from Reviewer 1.',
               feedback2: row['Feedback 2'] || 'No feedback from Reviewer 2.',
-              report1: row['Report 1'] || 'No report from Reviewer 1.',
-              report2: row['Report 2'] || 'No report from Reviewer 2.',
-              isCompleted: !!row[`Feedback ${num}`] && !!row[`Report ${num}`] && !!row[`Vote ${num}`],
-              Deadline: row['Deadline'] || null,
+              informe1: row['Informe 1'] || 'No report from Reviewer 1.',
+              informe2: row['Informe 2'] || 'No report from Reviewer 2.',
+              isCompleted: !!row[`Feedback ${num}`] && !!row[`Informe ${num}`] && !!row[`Voto ${num}`],
+              Plazo: row['Plazo'] || null,
             };
             const name = assignment.id;
             if (role === 'Reviewer 1') {
-              assignment.scores = rubrics.scoresMap1[name] || { grammar: 0, clarity: 0, structure: 0, citation: 0 };
+              assignment.scores = rubrics.scoresMap1[name] || { gramatica: 0, claridad: 0, estructura: 0, citacion: 0 };
             } else if (role === 'Reviewer 2') {
-              assignment.scores = rubrics.scoresMap2[name] || { relevance: 0, rigor: 0, originality: 0, arguments: 0 };
+              assignment.scores = rubrics.scoresMap2[name] || { relevancia: 0, rigor: 0, originalidad: 0, argumentos: 0 };
             } else {
-              assignment.rev1Scores = rubrics.scoresMap1[name] || { grammar: 0, clarity: 0, structure: 0, citation: 0 };
-              assignment.rev2Scores = rubrics.scoresMap2[name] || { relevance: 0, rigor: 0, originality: 0, arguments: 0 };
-              assignment.scores = rubrics.scoresMap3[name] || { modifications: 0, quality: 0, contribution: 0, potential: 0, decision: 0 };
+              assignment.rev1Scores = rubrics.scoresMap1[name] || { gramatica: 0, claridad: 0, estructura: 0, citacion: 0 };
+              assignment.rev2Scores = rubrics.scoresMap2[name] || { relevancia: 0, rigor: 0, originalidad: 0, argumentos: 0 };
+              assignment.scores = rubrics.scoresMap3[name] || { modificaciones: 0, calidad: 0, aporte: 0, potencial: 0, decision: 0 };
             }
             return assignment;
           });
-          // Combine: reviewer/editor first, then author
+          // Combine assignments
           const parsedAssignments = [...reviewerAssignments, ...authorAssignments];
           setAssignments(parsedAssignments);
-          // Initialize local states
           parsedAssignments.forEach(assignment => {
             if (assignment.role !== 'Author') {
-              const link = assignment['Article Link'];
+              const link = assignment['Link Artículo'];
               setVote(prev => ({ ...prev, [link]: assignment.vote }));
               setFeedback(prev => ({ ...prev, [link]: assignment.feedback }));
               setReport(prev => ({ ...prev, [link]: assignment.report }));
               setRubricScores(prev => ({ ...prev, [link]: assignment.scores }));
             }
           });
-          // Calendar events
           const events = parsedAssignments
-            .filter(ass => ass.Deadline)
+            .filter(ass => ass.Plazo)
             .map(ass => ({
-              title: `${ass['Article Name']} - ${ass.role}`,
-              start: new Date(ass.Deadline),
-              end: new Date(ass.Deadline),
+              title: `${ass['Nombre Artículo']} - ${ass.role}`,
+              start: new Date(ass.Plazo),
+              end: new Date(ass.Plazo),
               allDay: true,
               resource: ass,
             }));
           setCalendarEvents(events);
           setLoading(false);
           if (parsedAssignments.length === 0 && !loading) {
-            setError(`No assignments found for '${effectiveName}'. If you expect assignments, please check your account details or contact the administrator.`);
+            setError(`No assignments found for '${effectiveName}'. If you expect assignments, please verify your account details or contact the administrator.`);
           }
         },
         error: (err) => {
@@ -493,26 +486,24 @@ export default function PortalSection({ user, onLogout }) {
     fetchAssignments();
   }, [user, effectiveName]);
 
-  // User roles
   const userRoles = user?.role ? user.role.split(';').map(r => r.trim()) : [];
   const isAuthor = assignments.length > 0 && assignments[0].role === 'Author';
-  const isChief = userRoles.includes('Chief Editor');
-  const isDirector = userRoles.includes('General Director');
-  const isRrss = userRoles.includes('Social Media Manager');
-  const isWebDev = userRoles.includes('Web Development Manager');
-  // Only users with role higher than "Author" see the calendar
+  const isChief = userRoles.includes('Editor en Jefe');
+  const isDirector = userRoles.includes('Director General');
+  const isRrss = userRoles.includes('Encargado de Redes Sociales');
+  const isWebDev = userRoles.includes('Responsable de Desarrollo Web');
   const canSeeCalendar = isChief || isDirector || isRrss || isWebDev || assignments.some(a => a.role !== 'Author');
 
   const pendingAssignments = useMemo(() =>
     isAuthor
-      ? assignments.filter(a => !a.feedbackEditor || !['Accepted', 'Rejected'].includes(a.Status))
+      ? assignments.filter(a => !a.feedbackEditor || !['Aceptado', 'Rechazado'].includes(a.Estado))
       : assignments.filter(a => !a.isCompleted),
     [assignments, isAuthor]
   );
 
   const completedAssignments = useMemo(() =>
     isAuthor
-      ? assignments.filter(a => a.feedbackEditor && ['Accepted', 'Rejected'].includes(a.Status))
+      ? assignments.filter(a => a.feedbackEditor && ['Aceptado', 'Rechazado'].includes(a.Estado))
       : assignments.filter(a => a.isCompleted),
     [assignments, isAuthor]
   );
@@ -530,9 +521,9 @@ export default function PortalSection({ user, onLogout }) {
 
   const getRequiredKeys = (role) => {
     switch (role) {
-      case 'Reviewer 1': return ['grammar', 'clarity', 'structure', 'citation'];
-      case 'Reviewer 2': return ['relevance', 'rigor', 'originality', 'arguments'];
-      case 'Editor': return ['modifications', 'quality', 'contribution', 'potential', 'decision'];
+      case 'Reviewer 1': return ['gramatica', 'claridad', 'estructura', 'citacion'];
+      case 'Reviewer 2': return ['relevancia', 'rigor', 'originalidad', 'argumentos'];
+      case 'Editor': return ['modificaciones', 'calidad', 'aporte', 'potencial', 'decision'];
       default: return [];
     }
   };
@@ -544,7 +535,7 @@ export default function PortalSection({ user, onLogout }) {
   };
 
   const handleSubmitRubric = async (link, role) => {
-    const articleName = assignments.find(a => a['Article Link'] === link)['Article Name'];
+    const articleName = assignments.find(a => a['Link Artículo'] === link)['Nombre Artículo'];
     const rubric = rubricScores[link] || {};
     const requiredKeys = getRequiredKeys(role);
     const missingKeys = requiredKeys.filter(key => rubric[key] === undefined || rubric[key] === null || isNaN(rubric[key]));
@@ -645,12 +636,12 @@ export default function PortalSection({ user, onLogout }) {
   };
 
   const getTutorialText = (role) => {
-    if (role === "Reviewer 1") {
-      return 'As Reviewer 1, your role is to review technical aspects such as grammar, spelling, source citation, detection of AI-generated content, logical coherence, and overall article structure. Provide detailed comments in the Google Drive document to suggest improvements. Ensure the language is clear and academic. You must provide feedback to the author in the corresponding box. Additionally, you must submit a summary report explaining your observations to guide the editor. Finally, in the vote box, enter "yes" if you approve the article, and "no" if you reject it.';
-    } else if (role === "Reviewer 2") {
-      return 'As Reviewer 2, focus on substantive content: verify the accuracy of sources, the seriousness and originality of the topic, the relevance of arguments, and the contribution to the field of study. Evaluate if the article is innovative and well-supported. Leave comments in the Google Drive document. You must provide feedback to the author in the corresponding box. Additionally, you must submit a summary report explaining your observations to guide the editor. Finally, in the vote box, enter "yes" if you approve the article, and "no" if you reject it.';
-    } else if (role === "Editor") {
-      return `As Editor, your responsibility is to review the feedback and reports from the reviewers, integrate them with your own evaluation, and write a final sensitive and constructive feedback for the author. Edit the text directly if necessary and decide the final status of the article. Use the Google Drive document for editions. You must provide feedback to the author synthesizing the reviewers' feedback. Your message should be precise and sensitive, without discouraging the author. For this, use the "sandwich" technique. If you don't know what it is, consult <a href="https://www.santanderopenacademy.com/en/blog/sandwich-technique.html" style="color: blue;">here</a>. Based on psychological studies, such as those indicating that feedback improves performance only in 30% of cases if not handled well, ensure the criticism is specific, actionable, and not diluted by positive comments to maximize effectiveness. You can complement with the SBI model (Situation-Behavior-Impact) for greater clarity: describe the situation, the observed behavior, and its impact. Then, submit your report with the changes made, which should be precise and academic. Finally, in the vote box, enter "yes" if you approve the article, and "no" if you reject it.`;
+    if (role === 'Reviewer 1') {
+      return 'As Reviewer 1, your role is to review technical aspects such as grammar, spelling, source citation, AI-generated content detection, logical coherence, and overall structure. Provide detailed comments in the Google Drive document to suggest improvements. Ensure the language is clear and academic. You must provide feedback to the author in the corresponding box. Additionally, submit a summarized report explaining your observations to guide the editor. Finally, in the vote box, enter "yes" if you approve the article, and "no" if you reject it.';
+    } else if (role === 'Reviewer 2') {
+      return 'As Reviewer 2, focus on substantive content: verify source accuracy, topic seriousness and originality, argument relevance, and contribution to the field. Evaluate if the article is innovative and well-supported. Leave comments in the Google Drive document. You must provide feedback to the author in the corresponding box. Additionally, submit a summarized report explaining your observations to guide the editor. Finally, in the vote box, enter "yes" if you approve the article, and "no" if you reject it.';
+    } else if (role === 'Editor') {
+      return `As Editor, your responsibility is to review the reviewers' feedback and reports, integrate them with your own evaluation, and write a final sensitive and constructive feedback for the author. Edit the text directly if necessary and decide the article's final status. Use the Google Drive document for edits. You must provide feedback to the author synthesizing the reviewers' feedback. Your message must be precise and sensitive, without discouraging the author. Use the "sandwich" technique. If you don't know what it is, consult <a href="https://www.santanderopenacademy.com/en/blog/sandwich-technique.html" style="color: blue;">here</a>. Based on psychological studies indicating feedback improves performance in only 30% of cases if mishandled, ensure criticism is specific, actionable, and not diluted by positive comments to maximize effectiveness. Complement with the SBI model (Situation-Behavior-Impact) for clarity: describe the situation, observed behavior, and impact. Then, submit your report with changes made, which must be precise and academic. Finally, in the vote box, enter "yes" if you approve the article, and "no" if you reject it.`;
     }
     return "";
   };
@@ -720,10 +711,7 @@ export default function PortalSection({ user, onLogout }) {
         deleteImage: {
           key: ['Delete', 'Backspace'],
           handler: function(range) {
-            if (!range) {
-              console.log('No active selection to delete');
-              return true;
-            }
+            if (!range) return true;
             const editor = this.quill;
             const imageResize = editor.getModule('imageResize');
             let isImage = false;
@@ -847,7 +835,7 @@ export default function PortalSection({ user, onLogout }) {
     const editor = quillRef.getEditor();
     let { url, width, height, align } = imageData[link] || {};
     if (!url) {
-      setSubmitStatus((prev) => ({ ...prev, [link]: 'The image URL is required.' }));
+      setSubmitStatus((prev) => ({ ...prev, [link]: 'Image URL is required.' }));
       return;
     }
     if (width && width !== 'auto' && !width.match(/%|px$/)) width += 'px';
@@ -891,8 +879,6 @@ export default function PortalSection({ user, onLogout }) {
     }));
   };
 
-  
-
   const tabs = [
     { id: 'assignments', label: 'MY ASSIGNMENTS' },
     { id: 'completed', label: 'COMPLETED' },
@@ -932,16 +918,16 @@ export default function PortalSection({ user, onLogout }) {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-6 sm:py-12 bg-[#fafafa] min-h-screen">
-      {/* Portal Header */}
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 bg-[#fafafa] min-h-screen">
+      {/* Header */}
       <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between border-b border-gray-900 pb-8">
         <div>
-          <h1 className="font-serif text-5xl font-bold text-gray-900 tracking-tighter mb-2 break-words">
+          <h1 className="font-serif text-5xl font-bold text-gray-900 tracking-tighter mb-2">
             Editorial Portal
           </h1>
           <div className="flex items-center space-x-3">
-            <p className="text-gray-500 font-sans tracking-widest uppercase text-xs break-words">
-              Active session:
+            <p className="text-gray-500 font-sans tracking-widest uppercase text-xs">
+              Active Session:
             </p>
             {user?.image ? (
               <motion.img
@@ -961,7 +947,7 @@ export default function PortalSection({ user, onLogout }) {
                 <span className="text-gray-600 text-xs font-sans">{effectiveName?.charAt(0) || 'U'}</span>
               </motion.div>
             )}
-            <span className="font-bold text-gray-800 font-sans text-xs uppercase tracking-widest break-words">{effectiveName}</span>
+            <span className="font-bold text-gray-800 font-sans text-xs uppercase tracking-widest">{effectiveName}</span>
           </div>
         </div>
         <button
@@ -971,8 +957,9 @@ export default function PortalSection({ user, onLogout }) {
           Log Out
         </button>
       </header>
-      {/* Editorial Style Navigation */}
-      <nav className="flex flex-wrap gap-4 md:gap-8 mb-12 border-b border-gray-200">
+
+      {/* Navigation */}
+      <nav className="flex flex-wrap gap-8 mb-12 border-b border-gray-200">
         {tabs.filter(t => !t.hidden).map(tab => (
           <button
             key={tab.id}
@@ -988,6 +975,7 @@ export default function PortalSection({ user, onLogout }) {
           </button>
         ))}
       </nav>
+
       <main>
         <AnimatePresence mode="wait">
           {activeTab === 'assignments' || activeTab === 'completed' ? (
@@ -999,7 +987,7 @@ export default function PortalSection({ user, onLogout }) {
                 <motion.div
                   initial={{ opacity: 0, y: -20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-red-100 text-red-700 p-6 rounded-md mb-8 font-sans text-sm break-words"
+                  className="bg-red-100 text-red-700 p-6 rounded-md mb-8 font-sans text-sm"
                 >
                   {error}
                 </motion.div>
@@ -1011,7 +999,7 @@ export default function PortalSection({ user, onLogout }) {
                   className="flex justify-center items-center h-32"
                 >
                   <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
-                  <p className="ml-4 text-gray-600 font-sans text-sm break-words">Loading assignments...</p>
+                  <p className="ml-4 text-gray-600 font-sans text-sm">Loading assignments...</p>
                 </motion.div>
               ) : currentAssignments.length === 0 ? (
                 <motion.div
@@ -1022,11 +1010,11 @@ export default function PortalSection({ user, onLogout }) {
                   <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                   </svg>
-                  <h3 className="mt-4 font-serif text-xl font-bold text-gray-900 break-words">No {activeTab === 'assignments' ? 'pending' : 'completed'} assignments at this time.</h3>
-                  <p className="mt-2 text-gray-600 font-sans text-sm break-words">Stay tuned for new opportunities.</p>
+                  <h3 className="mt-4 font-serif text-xl font-bold text-gray-900">No assignments {activeTab === 'assignments' ? 'pending' : 'completed'} at this time.</h3>
+                  <p className="mt-2 text-gray-600 font-sans text-sm">Stay tuned for new opportunities.</p>
                 </motion.div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {currentAssignments.map((ass, idx) => (
                     <AssignmentCard
                       key={ass.id}
@@ -1042,7 +1030,7 @@ export default function PortalSection({ user, onLogout }) {
             <motion.div
               key="calendar"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              className="bg-white border-0 sm:border border-gray-200 p-2 sm:p-4 md:p-8 rounded-sm shadow-sm overflow-hidden"
+              className="bg-white border border-gray-200 p-8 rounded-sm shadow-sm"
             >
               <CalendarComponent events={calendarEvents} onSelectEvent={(e) => setSelectedAssignment(e.resource)} />
             </motion.div>
@@ -1050,10 +1038,10 @@ export default function PortalSection({ user, onLogout }) {
             <motion.div
               key="director"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              className="bg-white border-0 sm:border border-gray-200 p-2 sm:p-4 md:p-8 rounded-sm shadow-sm overflow-hidden"
+              className="bg-white border border-gray-200 p-8 rounded-sm shadow-sm"
             >
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-serif text-2xl font-bold text-gray-900 break-words">General Director Panel</h3>
+                <h3 className="font-serif text-2xl font-bold text-gray-900">General Director Panel</h3>
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -1075,12 +1063,12 @@ export default function PortalSection({ user, onLogout }) {
                     transition={{ duration: 0.3 }}
                     className="mt-4 space-y-6 overflow-hidden"
                   >
-                    <DirectorPanel user={user} />
-                    <TaskSection user={user} />
+                    <DirectorPanelEN user={user} />
+                    <TaskSectionEN user={user} />
                   </motion.div>
                 )}
               </AnimatePresence>
-              <div className="mt-4 flex space-x-4 flex-wrap gap-2">
+              <div className="mt-4 flex space-x-4">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -1117,10 +1105,10 @@ export default function PortalSection({ user, onLogout }) {
             <motion.div
               key="chief"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              className="bg-white border-0 sm:border border-gray-200 p-4 sm:p-6 md:p-10 rounded-sm shadow-sm overflow-hidden"
+              className="bg-white border border-gray-200 p-8 rounded-sm shadow-sm"
             >
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-serif text-2xl font-bold text-gray-900 break-words">Chief Editor Panel</h3>
+                <h3 className="font-serif text-2xl font-bold text-gray-900">Chief Editor Panel</h3>
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -1142,7 +1130,7 @@ export default function PortalSection({ user, onLogout }) {
                     transition={{ duration: 0.3 }}
                     className="mt-4 space-y-6 overflow-hidden"
                   >
-                    <AssignSection user={user} />
+                    <AssignSectionEN user={user} />
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -1151,29 +1139,30 @@ export default function PortalSection({ user, onLogout }) {
             <motion.div
               key="tasks"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              className="bg-white border-0 sm:border border-gray-200 p-2 sm:p-4 md:p-8 rounded-sm shadow-sm overflow-hidden"
+              className="bg-white border border-gray-200 p-8 rounded-sm shadow-sm"
             >
-              <h3 className="font-serif text-2xl font-bold text-gray-900 mb-4 break-words">My Tasks in {isRrss ? 'Social Media' : 'Web Development'}</h3>
-              <TaskSection user={user} />
+              <h3 className="font-serif text-2xl font-bold text-gray-900 mb-4">My Tasks in {isRrss ? 'Social Media' : 'Web Development'}</h3>
+              <TaskSectionEN user={user} />
             </motion.div>
           ) : activeTab === 'news' ? (
             <motion.div
               key="news"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              className="bg-white border-0 sm:border border-gray-200 p-2 sm:p-4 md:p-8 rounded-sm shadow-sm overflow-hidden"
+              className="bg-white border border-gray-200 p-8 rounded-sm shadow-sm"
             >
-              <h3 className="font-serif text-2xl font-bold text-gray-900 mb-4 break-words">Publish News</h3>
-              <NewsUploadSection />
+              <h3 className="font-serif text-2xl font-bold text-gray-900 mb-4">Publish News</h3>
+              <NewsUploadSectionEN />
             </motion.div>
           ) : null}
         </AnimatePresence>
       </main>
-      {/* DETAIL MODAL (Editorial Overlay) */}
+
+      {/* Assignment Detail Modal */}
       <AnimatePresence>
         {selectedAssignment && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-white/95 backdrop-blur-sm overflow-y-auto px-2 py-6 sm:px-4 sm:py-12"
+            className="fixed inset-0 z-50 bg-white/95 backdrop-blur-sm overflow-y-auto px-4 py-12"
           >
             <div className="max-w-4xl mx-auto">
               <button
@@ -1183,44 +1172,43 @@ export default function PortalSection({ user, onLogout }) {
                 ← Back to Portal
               </button>
               <header className="mb-12">
-                <span className="text-xs font-bold text-blue-600 tracking-[0.3em] uppercase break-words">{selectedAssignment.role}</span>
-                <h2 className="font-serif text-4xl font-bold text-gray-900 mt-2 mb-4 leading-tight break-words">
-                  {selectedAssignment['Article Name']}
+                <span className="text-xs font-bold text-blue-600 tracking-[0.3em] uppercase">{selectedAssignment.role}</span>
+                <h2 className="font-serif text-4xl font-bold text-gray-900 mt-2 mb-4 leading-tight">
+                  {selectedAssignment['Nombre Artículo']}
                 </h2>
                 <div className="h-1 w-24 bg-gray-900" />
               </header>
-              {/* Render Rubric and Forms here with the new stylized components */}
-              <ReviewerWorkspace 
-  assignment={selectedAssignment}
-  onClose={() => setSelectedAssignment(null)}
-  handleSubmitRubric={handleSubmitRubric}
-  handleSubmit={handleSubmit}
-  handleVote={handleVote}
-  rubricScores={rubricScores}
-  feedback={feedback}
-  report={report}
-  vote={vote}
-  rubricStatus={rubricStatus}
-  submitStatus={submitStatus}
-  isPending={isAuthor ? (!selectedAssignment.feedbackEditor || !['Accepted', 'Rejected'].includes(selectedAssignment.Status)) : !selectedAssignment.isCompleted}
-  role={selectedAssignment.role}
-  link={selectedAssignment['Article Link']}
-  toggleTutorial={toggleTutorial}
-  tutorialVisible={tutorialVisible}
-  debouncedSetFeedback={debouncedSetFeedback}
-  debouncedSetReport={debouncedSetReport}
-  modules={modules}
-  formats={formats}
-  decodeBody={decodeBody}
-  showImageModal={showImageModal}
-  imageData={imageData}
-  isEditingImage={isEditingImage}
-  handleImageDataChange={handleImageDataChange}
-  handleImageModalSubmit={handleImageModalSubmit}
-  expandedFeedback={expandedFeedback}
-  toggleFeedback={toggleFeedback}
-  getDecisionText={getDecisionText}
-/>
+              <ReviewerWorkspace
+                assignment={selectedAssignment}
+                onClose={() => setSelectedAssignment(null)}
+                handleSubmitRubric={handleSubmitRubric}
+                handleSubmit={handleSubmit}
+                handleVote={handleVote}
+                rubricScores={rubricScores}
+                feedback={feedback}
+                report={report}
+                vote={vote}
+                rubricStatus={rubricStatus}
+                submitStatus={submitStatus}
+                isPending={isAuthor ? (!selectedAssignment.feedbackEditor || !['Aceptado', 'Rechazado'].includes(selectedAssignment.Estado)) : !selectedAssignment.isCompleted}
+                role={selectedAssignment.role}
+                link={selectedAssignment['Link Artículo']}
+                toggleTutorial={toggleTutorial}
+                tutorialVisible={tutorialVisible}
+                debouncedSetFeedback={debouncedSetFeedback}
+                debouncedSetReport={debouncedSetReport}
+                modules={modules}
+                formats={formats}
+                decodeBody={decodeBody}
+                showImageModal={showImageModal}
+                imageData={imageData}
+                isEditingImage={isEditingImage}
+                handleImageDataChange={handleImageDataChange}
+                handleImageModalSubmit={handleImageModalSubmit}
+                expandedFeedback={expandedFeedback}
+                toggleFeedback={toggleFeedback}
+                getDecisionText={getDecisionText}
+              />
             </div>
           </motion.div>
         )}
