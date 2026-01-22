@@ -623,15 +623,19 @@ function AppEN() {
                 {sections.map((section, index) => (
                   <motion.div key={section.name} {...framerItem(index)}>
                     <NavLink
-                      to={section.path}
-                      className={({ isActive }) =>
-                        `block py-3 px-4 text-base font-medium rounded-md transition-colors ${isActive ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`
-                      }
-                      onClick={() => setIsMenuOpen(false)}
-                      aria-label={`Go to ${section.label}`}
-                    >
-                      {section.label}
-                    </NavLink>
+  to={section.path}
+  end={section.name === 'home'}
+  className={({ isActive }) =>
+    `block py-3 px-4 rounded-md ${
+      isActive
+        ? 'bg-blue-600 text-white'
+        : 'text-gray-700 hover:bg-gray-100'
+    }`
+  }
+>
+  {section.label}
+</NavLink>
+
                   </motion.div>
                 ))}
               </div>

@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { debounce } from 'lodash';
-
 const criteria = {
   'Reviewer 1': [
     {
@@ -129,16 +128,13 @@ const criteria = {
     }
   ]
 };
-
 const getDecisionText = (percent) => {
   if (percent >= 85) return 'Accept without changes.';
   if (percent >= 70) return 'Accept with minor changes.';
   if (percent >= 50) return 'Major revision required before publication.';
   return 'Reject.';
 };
-
 const getTotal = (scores, crits) => crits.reduce((sum, c) => sum + (scores[c.key] || 0), 0);
-
 /**
  * INTERACTIVE RUBRIC COMPONENT "SENSE"
  * Designed for precise clicking and immediate visual feedback.
@@ -146,7 +142,6 @@ const getTotal = (scores, crits) => crits.reduce((sum, c) => sum + (scores[c.key
 const ModernRubric = ({ roleKey, scores, onChange, readOnly }) => {
   const crits = criteria[roleKey];
   if (!crits) return null;
-
   return (
     <div className="space-y-12">
       {crits.map((c, idx) => (
@@ -170,7 +165,6 @@ const ModernRubric = ({ roleKey, scores, onChange, readOnly }) => {
               const val = parseInt(valStr);
               const isSelected = scores[c.key] === val;
               const levelInfo = info.label.split('=')[1]?.trim() || "No description";
-
               return (
                 <button
                   key={val}
@@ -206,7 +200,6 @@ const ModernRubric = ({ roleKey, scores, onChange, readOnly }) => {
     </div>
   );
 };
-
 /**
  * REVIEWER WORKSPACE (MODERN MODAL)
  */
@@ -245,28 +238,22 @@ const ReviewerWorkspace = ({
   const [localFeedback, setLocalFeedback] = useState(feedback[link] || '');
   const [localReport, setLocalReport] = useState(report[link] || '');
   const [localVote, setLocalVote] = useState(vote[link] || '');
-
   const totalScore = useMemo(() => getTotal(localScores, criteria[role] || []), [localScores, role]);
   const maxScore = (criteria[role] || []).length * 2;
   const progress = maxScore > 0 ? (totalScore / maxScore) * 100 : 0;
-
   const handleLocalRubricChange = (key, val) => {
     setLocalScores(prev => ({ ...prev, [key]: val }));
   };
-
   const handleLocalVote = (value) => {
     setLocalVote(value);
     handleVote(link, value);
   };
-
   const debouncedLocalFeedback = debounce(setLocalFeedback, 300);
   const debouncedLocalReport = debounce(setLocalReport, 300);
-
   const onSave = () => {
     handleSubmitRubric(link, role);
     handleSubmit(link, role, localFeedback, localReport, localVote);
   };
-
   const handleRenderRubric = () => {
     if (role === 'Editor') {
       const rev1Total = getTotal(assignment.rev1Scores, criteria['Reviewer 1']);
@@ -275,7 +262,6 @@ const ReviewerWorkspace = ({
       const editorTotal = getTotal(localScores, criteria['Editor']);
       const overallTotal = rev1Total + rev2Total + editorTotal;
       const overallPercent = (overallTotal / 26) * 100;
-
       return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-8">
           <div className="space-y-2">
@@ -298,7 +284,7 @@ const ReviewerWorkspace = ({
               </motion.div>
             )}
           </AnimatePresence>
-
+          {/* Reviewer 1 Feedback */}
           <div className="space-y-2">
             <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Reviewer 1 Feedback</h5>
             <motion.button
@@ -323,7 +309,7 @@ const ReviewerWorkspace = ({
               />
             )}
           </AnimatePresence>
-
+          {/* Reviewer 1 Report */}
           <div className="space-y-2">
             <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Reviewer 1 Report</h5>
             <motion.button
@@ -348,7 +334,6 @@ const ReviewerWorkspace = ({
               />
             )}
           </AnimatePresence>
-
           <div className="space-y-2">
             <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Reviewer 2 Rubric</h5>
             <motion.button
@@ -369,7 +354,6 @@ const ReviewerWorkspace = ({
               </motion.div>
             )}
           </AnimatePresence>
-
           <div className="space-y-2">
             <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Reviewer 2 Feedback</h5>
             <motion.button
@@ -394,7 +378,6 @@ const ReviewerWorkspace = ({
               />
             )}
           </AnimatePresence>
-
           <div className="space-y-2">
             <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Reviewer 2 Report</h5>
             <motion.button
@@ -419,20 +402,17 @@ const ReviewerWorkspace = ({
               />
             )}
           </AnimatePresence>
-
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-yellow-50 rounded-md border border-yellow-200">
             <p className="font-sans text-sm text-yellow-800">
               Reviewers Combined: {revPercent.toFixed(1)}% — {getDecisionText(revPercent)}
             </p>
           </motion.div>
-
           <ModernRubric
             roleKey="Editor"
             scores={localScores}
             onChange={handleLocalRubricChange}
             readOnly={false}
           />
-
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-green-50 rounded-md border border-green-200">
             <p className="font-sans text-sm text-green-800">
               Suggested Overall Decision: {overallPercent.toFixed(1)}% — {getDecisionText(overallPercent)}
@@ -441,7 +421,6 @@ const ReviewerWorkspace = ({
         </motion.div>
       );
     }
-
     return (
       <ModernRubric
         roleKey={role}
@@ -451,9 +430,7 @@ const ReviewerWorkspace = ({
       />
     );
   };
-
   const isAuth = role === 'Author';
-
   if (isAuth) {
     return (
       <motion.div
@@ -468,13 +445,12 @@ const ReviewerWorkspace = ({
             <div className="h-6 w-[1px] bg-gray-200" />
             <div>
               <span className="text-[10px] font-bold text-blue-600 uppercase tracking-[0.2em]">My Article</span>
-              <h2 className="text-sm font-bold text-gray-900 truncate max-w-[200px] md:max-w-[400px]">
+              <h2 className="text-sm font-bold text-gray-900 truncate max-w-[120px] sm:max-w-[200px] md:max-w-[400px]">
                 {assignment['Nombre Artículo']}
               </h2>
             </div>
           </div>
         </header>
-
         <div className="flex-grow overflow-y-auto p-4 md:p-8 lg:p-16">
           <div className="max-w-2xl mx-auto space-y-8">
             {assignment.feedbackEditor && ['Aceptado', 'Rechazado'].includes(assignment.Estado) ? (
@@ -506,7 +482,6 @@ const ReviewerWorkspace = ({
       </motion.div>
     );
   }
-
   // Vista del revisor / editor
   return (
     <motion.div
@@ -522,16 +497,15 @@ const ReviewerWorkspace = ({
           <div className="h-6 w-[1px] bg-gray-200" />
           <div>
             <span className="text-[10px] font-bold text-blue-600 uppercase tracking-[0.2em]">Peer Review</span>
-            <h2 className="text-sm font-bold text-gray-900 truncate max-w-[200px] md:max-w-[400px]">
+            <h2 className="text-sm font-bold text-gray-900 truncate max-w-[120px] sm:max-w-[200px] md:max-w-[400px]">
               {assignment['Nombre Artículo']}
             </h2>
           </div>
         </div>
-
-        <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
-          <div className="flex flex-col items-end mr-2 md:mr-4">
-            <span className="text-[10px] text-gray-400 font-bold uppercase">Progress</span>
-            <div className="w-24 md:w-32 h-1.5 bg-gray-100 rounded-full mt-1 overflow-hidden">
+        <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
+          <div className="flex flex-col items-end mr-1 sm:mr-2 md:mr-4">
+            <span className="text-[10px] text-gray-400 font-bold uppercase hidden sm:block">Progress</span>
+            <div className="w-[60px] sm:w-24 md:w-32 h-1.5 bg-gray-100 rounded-full mt-1 overflow-hidden">
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${progress}%` }}
@@ -541,13 +515,12 @@ const ReviewerWorkspace = ({
           </div>
           <button
             onClick={onSave}
-            className="px-4 md:px-6 py-2 bg-gray-900 text-white text-xs font-bold uppercase tracking-widest hover:bg-blue-700 transition-all rounded-sm"
+            className="px-2 sm:px-4 md:px-6 py-2 bg-gray-900 text-white text-[10px] sm:text-xs font-bold uppercase tracking-widest hover:bg-blue-700 transition-all rounded-sm"
           >
             Submit Review
           </button>
         </div>
       </header>
-
       {/* Contenido principal */}
       <div className="flex-grow overflow-y-auto pt-16 md:pt-0 lg:flex">
         {/* Left: Manuscript */}
@@ -562,7 +535,7 @@ const ReviewerWorkspace = ({
               </h1>
             </header>
             <div className="font-serif text-base md:text-lg leading-relaxed text-gray-800 space-y-6">
-              <div dangerouslySetInnerHTML={{ __html: decodeBody(assignment.content || '') }} />
+              <div dangerouslySetInnerHTML={{ __html: assignment.content || '' }} />
               <motion.iframe
                 src={assignment['Link Artículo'] ? assignment['Link Artículo'].replace('/edit', '/preview') : ''}
                 className="w-full h-64 md:h-96 border-2 border-dashed border-gray-100 rounded-xl"
@@ -571,7 +544,6 @@ const ReviewerWorkspace = ({
             </div>
           </article>
         </section>
-
         {/* Right: Evaluation form */}
         <section className="bg-white p-4 md:p-8 lg:p-12 mt-8 lg:mt-0">
           <div className="max-w-xl mx-auto space-y-8">
@@ -581,9 +553,7 @@ const ReviewerWorkspace = ({
                 Assign scores based on the scientific and methodological quality of the submission.
               </p>
             </div>
-
             {handleRenderRubric()}
-
             <div className="mt-16 pt-8 border-t border-gray-100 space-y-6">
               <h4 className="font-serif text-xl font-bold text-gray-900">Comments for the Author</h4>
               <ReactQuill
@@ -596,7 +566,6 @@ const ReviewerWorkspace = ({
                 className="bg-white rounded-lg border border-gray-200"
               />
             </div>
-
             <div className="mt-8 space-y-6">
               <h4 className="font-serif text-xl font-bold text-gray-900">Confidential Report for the Editor</h4>
               <ReactQuill
@@ -609,7 +578,6 @@ const ReviewerWorkspace = ({
                 className="bg-white rounded-lg border border-gray-200"
               />
             </div>
-
             <div className="mt-8 space-y-4">
               <h4 className="font-serif text-xl font-bold text-gray-900">Final Vote</h4>
               <div className="flex space-x-4">
@@ -635,7 +603,6 @@ const ReviewerWorkspace = ({
                 </motion.button>
               </div>
             </div>
-
             <div className="mt-12 p-6 bg-blue-900 rounded-xl text-white flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-0 shadow-xl">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Final Score</p>
@@ -648,7 +615,6 @@ const ReviewerWorkspace = ({
                 <p className="font-bold text-lg">{getDecisionText(progress)}</p>
               </div>
             </div>
-
             {rubricStatus[link] && (
               <p className={`text-sm font-sans mt-4 ${rubricStatus[link].includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
                 {rubricStatus[link]}
@@ -662,7 +628,6 @@ const ReviewerWorkspace = ({
           </div>
         </section>
       </div>
-
       {/* Modal para insertar/editar imagen */}
       <AnimatePresence>
         {showImageModal[link] && (
@@ -730,7 +695,6 @@ const ReviewerWorkspace = ({
                   </select>
                 </div>
               </div>
-
               <div className="mt-6 flex justify-end space-x-4">
                 <motion.button
                   whileHover={{ scale: 1.02 }}
@@ -756,5 +720,4 @@ const ReviewerWorkspace = ({
     </motion.div>
   );
 };
-
 export { ReviewerWorkspace };

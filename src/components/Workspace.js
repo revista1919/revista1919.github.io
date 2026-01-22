@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { debounce } from 'lodash';
-
 const criteria = {
   'Revisor 1': [
     {
@@ -129,16 +128,13 @@ const criteria = {
     }
   ]
 };
-
 const getDecisionText = (percent) => {
   if (percent >= 85) return 'Aceptar sin cambios.';
   if (percent >= 70) return 'Aceptar con cambios menores.';
   if (percent >= 50) return 'Revisión mayor requerida antes de publicar.';
   return 'Rechazar.';
 };
-
 const getTotal = (scores, crits) => crits.reduce((sum, c) => sum + (scores[c.key] || 0), 0);
-
 /**
  * COMPONENTE: RÚBRICA INTERACTIVA "SENSE"
  * Diseñado para que el revisor haga clic con precisión y vea el impacto inmediato.
@@ -169,7 +165,7 @@ const ModernRubric = ({ roleKey, scores, onChange, readOnly }) => {
               const val = parseInt(valStr);
               const isSelected = scores[c.key] === val;
               const levelInfo = info.label.split('=')[1] || "Sin descripción";
-             
+            
               return (
                 <button
                   key={val}
@@ -203,7 +199,6 @@ const ModernRubric = ({ roleKey, scores, onChange, readOnly }) => {
     </div>
   );
 };
-
 /**
  * WORKSPACE DEL REVISOR (MODAL MODERNIZADO)
  */
@@ -212,28 +207,22 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
   const [localFeedback, setLocalFeedback] = useState(feedback[link] || '');
   const [localReport, setLocalReport] = useState(report[link] || '');
   const [localVote, setLocalVote] = useState(vote[link] || '');
-
   const totalScore = useMemo(() => getTotal(localScores, criteria[role] || []), [localScores, role]);
   const maxScore = (criteria[role] || []).length * 2;
   const progress = maxScore > 0 ? (totalScore / maxScore) * 100 : 0;
-
   const handleLocalRubricChange = (key, val) => {
     setLocalScores(prev => ({...prev, [key]: val}));
   };
-
   const handleLocalVote = (value) => {
     setLocalVote(value);
     handleVote(link, value);
   };
-
   const debouncedLocalFeedback = debounce(setLocalFeedback, 300);
   const debouncedLocalReport = debounce(setLocalReport, 300);
-
   const onSave = () => {
     handleSubmitRubric(link, role);
     handleSubmit(link, role, localFeedback, localReport, localVote);
   };
-
   const handleRenderRubric = () => {
     if (role === 'Editor') {
       const rev1Total = getTotal(assignment.rev1Scores, criteria['Revisor 1']);
@@ -405,9 +394,7 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
       );
     }
   };
-
   const isAuth = role === 'Autor';
-
   if (isAuth) {
     return (
       <motion.div
@@ -422,7 +409,7 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
             <div className="h-6 w-[1px] bg-gray-200" />
             <div>
               <span className="text-[10px] font-bold text-blue-600 uppercase tracking-[0.2em]">Mi Artículo</span>
-              <h2 className="text-sm font-bold text-gray-900 truncate max-w-[200px] md:max-w-[400px]">{assignment['Nombre Artículo']}</h2>
+              <h2 className="text-sm font-bold text-gray-900 truncate max-w-[120px] sm:max-w-[200px] md:max-w-[400px]">{assignment['Nombre Artículo']}</h2>
             </div>
           </div>
         </header>
@@ -453,7 +440,6 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
       </motion.div>
     );
   }
-
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -468,13 +454,13 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
           <div className="h-6 w-[1px] bg-gray-200" />
           <div>
             <span className="text-[10px] font-bold text-blue-600 uppercase tracking-[0.2em]">Evaluación por Pares</span>
-            <h2 className="text-sm font-bold text-gray-900 truncate max-w-[200px] md:max-w-[400px]">{assignment['Nombre Artículo']}</h2>
+            <h2 className="text-sm font-bold text-gray-900 truncate max-w-[120px] sm:max-w-[200px] md:max-w-[400px]">{assignment['Nombre Artículo']}</h2>
           </div>
         </div>
-        <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
-          <div className="flex flex-col items-end mr-2 md:mr-4">
-            <span className="text-[10px] text-gray-400 font-bold uppercase">Progreso</span>
-            <div className="w-24 md:w-32 h-1.5 bg-gray-100 rounded-full mt-1 overflow-hidden">
+        <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
+          <div className="flex flex-col items-end mr-1 sm:mr-2 md:mr-4">
+            <span className="text-[10px] text-gray-400 font-bold uppercase hidden sm:block">Progreso</span>
+            <div className="w-[60px] sm:w-24 md:w-32 h-1.5 bg-gray-100 rounded-full mt-1 overflow-hidden">
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${progress}%` }}
@@ -484,7 +470,7 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
           </div>
           <button
             onClick={onSave}
-            className="px-4 md:px-6 py-2 bg-gray-900 text-white text-xs font-bold uppercase tracking-widest hover:bg-blue-700 transition-all rounded-sm"
+            className="px-2 sm:px-4 md:px-6 py-2 bg-gray-900 text-white text-[10px] sm:text-xs font-bold uppercase tracking-widest hover:bg-blue-700 transition-all rounded-sm"
           >
             Enviar Revisión
           </button>
@@ -503,7 +489,7 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
             </header>
             <div className="font-serif text-base md:text-lg leading-relaxed text-gray-800 space-y-6">
               {/* Aquí iría el contenido del artículo o un visor de PDF */}
-              <div dangerouslySetInnerHTML={{ __html: decodeBody(assignment.content) }} />
+              <div dangerouslySetInnerHTML={{ __html: assignment.content }} />
               <motion.iframe
                 src={assignment['Link Artículo'] ? assignment['Link Artículo'].replace('/edit', '/preview') : ''}
                 className="w-full h-64 md:h-96 border-2 border-dashed border-gray-100 rounded-xl"
@@ -679,5 +665,4 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
     </motion.div>
   );
 };
-
 export { ReviewerWorkspace };
