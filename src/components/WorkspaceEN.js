@@ -299,7 +299,6 @@ const ReviewerWorkspace = ({
             )}
           </AnimatePresence>
 
-          {/* Reviewer 1 Feedback */}
           <div className="space-y-2">
             <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Reviewer 1 Feedback</h5>
             <motion.button
@@ -320,13 +319,106 @@ const ReviewerWorkspace = ({
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
                 className="bg-gray-50 p-6 rounded-md border border-gray-200 max-h-64 overflow-y-auto font-sans text-sm text-gray-800 leading-relaxed"
-              >
-                {decodeBody(assignment.feedback1)}
+                dangerouslySetInnerHTML={{ __html: decodeBody(assignment.feedback1) }}
+              />
+            )}
+          </AnimatePresence>
+
+          <div className="space-y-2">
+            <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Reviewer 1 Report</h5>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              onClick={() => toggleFeedback(link, 'report1')}
+              className="text-blue-600 hover:underline text-sm font-sans flex items-center"
+            >
+              {expandedFeedback[link]?.report1 ? 'Hide' : 'Show'}
+              <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.report1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </motion.button>
+          </div>
+          <AnimatePresence>
+            {expandedFeedback[link]?.report1 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="bg-gray-50 p-6 rounded-md border border-gray-200 max-h-64 overflow-y-auto font-sans text-sm text-gray-800 leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: decodeBody(assignment.report1) }}
+              />
+            )}
+          </AnimatePresence>
+
+          <div className="space-y-2">
+            <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Reviewer 2 Rubric</h5>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              onClick={() => toggleFeedback(link, 'rubric2')}
+              className="text-blue-600 hover:underline text-sm font-sans flex items-center"
+            >
+              {expandedFeedback[link]?.rubric2 ? 'Hide' : 'Show'}
+              <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </motion.button>
+          </div>
+          <AnimatePresence>
+            {expandedFeedback[link]?.rubric2 && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                <ModernRubric roleKey="Reviewer 2" scores={assignment.rev2Scores} readOnly={true} />
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* ... (el resto de secciones de Reviewer 1 y Reviewer 2 siguen el mismo patrón) ... */}
+          <div className="space-y-2">
+            <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Reviewer 2 Feedback</h5>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              onClick={() => toggleFeedback(link, 'feedback2')}
+              className="text-blue-600 hover:underline text-sm font-sans flex items-center"
+            >
+              {expandedFeedback[link]?.feedback2 ? 'Hide' : 'Show'}
+              <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.feedback2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </motion.button>
+          </div>
+          <AnimatePresence>
+            {expandedFeedback[link]?.feedback2 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="bg-gray-50 p-6 rounded-md border border-gray-200 max-h-64 overflow-y-auto font-sans text-sm text-gray-800 leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: decodeBody(assignment.feedback2) }}
+              />
+            )}
+          </AnimatePresence>
+
+          <div className="space-y-2">
+            <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Reviewer 2 Report</h5>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              onClick={() => toggleFeedback(link, 'report2')}
+              className="text-blue-600 hover:underline text-sm font-sans flex items-center"
+            >
+              {expandedFeedback[link]?.report2 ? 'Hide' : 'Show'}
+              <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.report2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </motion.button>
+          </div>
+          <AnimatePresence>
+            {expandedFeedback[link]?.report2 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="bg-gray-50 p-6 rounded-md border border-gray-200 max-h-64 overflow-y-auto font-sans text-sm text-gray-800 leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: decodeBody(assignment.report2) }}
+              />
+            )}
+          </AnimatePresence>
 
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-yellow-50 rounded-md border border-yellow-200">
             <p className="font-sans text-sm text-yellow-800">
@@ -393,9 +485,9 @@ const ReviewerWorkspace = ({
                 </div>
                 <div className="space-y-4">
                   <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Editor Feedback</h5>
-                  <div className="bg-gray-50 p-6 rounded-md border border-gray-200 max-h-96 overflow-y-auto font-sans text-sm text-gray-800 leading-relaxed">
-                    {decodeBody(assignment.feedbackEditor)}
-                  </div>
+                  <div className="bg-gray-50 p-6 rounded-md border border-gray-200 max-h-96 overflow-y-auto font-sans text-sm text-gray-800 leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: decodeBody(assignment.feedbackEditor) }}
+                  />
                 </div>
               </>
             ) : (
@@ -436,7 +528,7 @@ const ReviewerWorkspace = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 md:gap-4">
+        <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
           <div className="flex flex-col items-end mr-2 md:mr-4">
             <span className="text-[10px] text-gray-400 font-bold uppercase">Progress</span>
             <div className="w-24 md:w-32 h-1.5 bg-gray-100 rounded-full mt-1 overflow-hidden">
@@ -470,7 +562,7 @@ const ReviewerWorkspace = ({
               </h1>
             </header>
             <div className="font-serif text-base md:text-lg leading-relaxed text-gray-800 space-y-6">
-              <div dangerouslySetInnerHTML={{ __html: assignment.content || '' }} />
+              <div dangerouslySetInnerHTML={{ __html: decodeBody(assignment.content || '') }} />
               <motion.iframe
                 src={assignment['Link Artículo'] ? assignment['Link Artículo'].replace('/edit', '/preview') : ''}
                 className="w-full h-64 md:h-96 border-2 border-dashed border-gray-100 rounded-xl"
