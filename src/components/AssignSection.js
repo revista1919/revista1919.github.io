@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Papa from 'papaparse';
@@ -121,7 +122,7 @@ export default function AssignSection({ user, onClose }) {
   }, []);
 
   const isCompleted = (assign) => {
-    return !!(assign['Feedback 3'] && assign['Informe 3']);
+    return !!assign['Feedback 3'] && assign['Feedback 3'].trim() !== '';
   };
 
   const groupedIncoming = useMemo(() => {
@@ -142,7 +143,7 @@ export default function AssignSection({ user, onClose }) {
         );
         return exactMatch || (fuzzyTitleMatch && aAuthorSanitized === authorSanitized);
       });
-      // Fix: If matched and completed, skip adding to group if completed
+      // Skip if completed
       if (matchingAssign && isCompleted(matchingAssign)) {
         return;
       }
@@ -551,20 +552,6 @@ export default function AssignSection({ user, onClose }) {
                     </div>
                   </div>
                 ))}
-              </div>
-              {/* Hojas de Cálculo */}
-              <div className="mt-10">
-                <h3 className="font-serif text-xl font-bold mb-4">Hojas de Cálculo</h3>
-                <div className="space-y-6">
-                  <div>
-                    <h5 className="font-medium text-md mb-2">Artículos en revisión</h5>
-                    <iframe src="https://docs.google.com/spreadsheets/d/1-M0Ca-3VmX-0t2M1uEVQsjEatzFFbxlfLlEXTUdp8ws/edit?usp=sharing" width="100%" height="600" frameborder="0"></iframe>
-                  </div>
-                  <div>
-                    <h5 className="font-medium text-md mb-2">Hoja de Cálculo 2</h5>
-                    <iframe src="https://docs.google.com/spreadsheets/d/1sO6jANVLMzX409GkiIU5Z4g8G439ZjBVnquQUkPy1wE/edit?usp=sharing" width="100%" height="600" frameborder="0"></iframe>
-                  </div>
-                </div>
               </div>
             </motion.section>
           )}
