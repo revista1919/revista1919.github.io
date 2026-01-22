@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Papa from 'papaparse';
@@ -69,7 +68,8 @@ export default function AssignSection({ user, onClose }) {
   const [reviewers, setReviewers] = useState([]);
   const [sectionEditors, setSectionEditors] = useState([]);
   const [incoming, setIncoming] = useState([]);
-  const [assignments, setAssignments] = useState([]);
+  const [allAssignments, setAllAssignments] = useState([]);
+  const [pendingAssignments, setPendingAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
   const [editingId, setEditingId] = useState(null);
@@ -110,8 +110,9 @@ export default function AssignSection({ user, onClose }) {
         const parsedAssignments = Papa.parse(assignmentsText, { header: true, skipEmptyLines: true }).data.filter(a =>
           a['Nombre Artículo'] && a['Nombre Artículo'].trim() && a.Autor && a.Autor.trim()
         );
-        const pendingAssignments = parsedAssignments.filter(a => !isCompleted(a));
-        setAssignments(pendingAssignments);
+        setAllAssignments(parsedAssignments);
+        const pending = parsedAssignments.filter(a => !isCompleted(a));
+        setPendingAssignments(pending);
       } catch (err) {
         console.error('❌ Error fetching data:', err);
       } finally {
@@ -122,7 +123,7 @@ export default function AssignSection({ user, onClose }) {
   }, []);
 
   const isCompleted = (assign) => {
-    return !!assign['Feedback 3'] && assign['Feedback 3'].trim() !== '';
+    return !!assign?.['Feedback 3'] && assign['Feedback 3'].trim() !== '';
   };
 
   const groupedIncoming = useMemo(() => {
@@ -133,7 +134,7 @@ export default function AssignSection({ user, onClose }) {
       if (!groupMap[authorSanitized]) {
         groupMap[authorSanitized] = [];
       }
-      let matchingAssign = assignments.find(a => {
+      let matchingAssign = allAssignments.find(a => {
         const aTitleSanitized = sanitizeInput(a['Nombre Artículo'] || '');
         const aAuthorSanitized = sanitizeInput(a.Autor || '');
         const exactMatch = aTitleSanitized === titleSanitized && aAuthorSanitized === authorSanitized;
@@ -143,7 +144,6 @@ export default function AssignSection({ user, onClose }) {
         );
         return exactMatch || (fuzzyTitleMatch && aAuthorSanitized === authorSanitized);
       });
-      // Skip if completed
       if (matchingAssign && isCompleted(matchingAssign)) {
         return;
       }
@@ -155,19 +155,19 @@ export default function AssignSection({ user, onClose }) {
       authorInstitution: articles[0]['Establecimiento educacional'],
       articles: articles.filter(art => !(art.assignment && isCompleted(art.assignment))),
     })).filter(group => group.articles.length > 0);
-  }, [incoming, assignments]);
+  }, [incoming, allAssignments]);
 
   const totalPending = groupedIncoming.reduce((sum, group) => sum + group.articles.length, 0);
 
   const calendarEvents = useMemo(() => {
-    return assignments.map(a => ({
+    return pendingAssignments.map(a => ({
       title: a['Nombre Artículo'],
       start: parseDate(a.Plazo),
       end: parseDate(a.Plazo),
       allDay: true,
       resource: a,
     })).filter(event => event.start);
-  }, [assignments]);
+  }, [pendingAssignments]);
 
   const handleSelectEvent = (event) => {
     const assignment = event.resource;
@@ -257,7 +257,7 @@ export default function AssignSection({ user, onClose }) {
         body: JSON.stringify(body),
       });
       setSubmitStatus({ ...submitStatus, [articleKey]: 'Recordatorio enviado.' });
-      const articleLink = assignments.find(a => sanitizeInput(a['Nombre Artículo']) === sanitizeInput(title))?.['Link Artículo'] || '';
+      const articleLink = pendingAssignments.find(a => sanitizeInput(a['Nombre Artículo']) === sanitizeInput(title))?.['Link Artículo'] || '';
       const htmlBody = `
         <div style="font-family: 'Georgia', serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f1e9; border: 2px solid #8b5a2b; border-radius: 10px; color: #3c2f2f;">
           <div style="background-color: #8b5a2b; padding: 15px; border-radius: 8px 8px 0 0; text-align: center;">
@@ -399,8 +399,19 @@ export default function AssignSection({ user, onClose }) {
         {/* Métricas */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
           <MetricCard label="Artículos Totales" value={incoming.length} color="text-gray-900" />
-          <MetricCard label="Por Asignar" value={incoming.filter(i => !assignments.some(a => sanitizeInput(a['Nombre Artículo']) === sanitizeInput(i['Título de su artículo']) && sanitizeInput(a.Autor) === sanitizeInput(i['Nombre (primer nombre y primer apellido)']))).length} color="text-amber-600" />
-          <MetricCard label="En Revisión" value={assignments.length} color="text-blue-600" />
+          <MetricCard label="Por Asignar" value={incoming.filter(i => !allAssignments.some(a => {
+            const aTitleSanitized = sanitizeInput(a['Nombre Artículo'] || '');
+            const aAuthorSanitized = sanitizeInput(a.Autor || '');
+            const titleSanitized = sanitizeInput(i['Título de su artículo'] || '');
+            const authorSanitized = sanitizeInput(i['Nombre (primer nombre y primer apellido)'] || '');
+            const exactMatch = aTitleSanitized === titleSanitized && aAuthorSanitized === authorSanitized;
+            const fuzzyTitleMatch = !exactMatch && (
+              aTitleSanitized.includes(titleSanitized) ||
+              titleSanitized.includes(aTitleSanitized)
+            );
+            return exactMatch || (fuzzyTitleMatch && aAuthorSanitized === authorSanitized);
+          })).length} color="text-amber-600" />
+          <MetricCard label="En Revisión" value={pendingAssignments.length} color="text-blue-600" />
           <MetricCard label="Revisores Activos" value={users.length} color="text-emerald-600" />
         </div>
 
@@ -438,6 +449,7 @@ export default function AssignSection({ user, onClose }) {
                           const isAssigned = !!art.assignment;
                           const articleKey = art['Título de su artículo'] || uniqueId;
                           const type = isAssigned ? 'assigned' : 'pending'; // TODO: Add overdue logic if needed
+                          const docLink = art['Inserta aquí tu artículo en formato Word. Debe tener de 1.000 a 10.000 palabras.'] || '';
                           return (
                             <div key={uniqueId} className="flex items-start justify-between bg-gray-50/50 p-4 rounded-xl border border-transparent hover:border-gray-200 transition-colors">
                               <div className="max-w-xl">
@@ -447,6 +459,11 @@ export default function AssignSection({ user, onClose }) {
                                 </div>
                                 <h5 className="font-serif text-md font-bold text-gray-800 mb-2">{art['Título de su artículo']}</h5>
                                 <p className="text-[11px] text-gray-500 mb-2">{sanitizeInput(art['Abstract o resumen (150-300 palabras)']).substring(0, 150)}...</p>
+                                {docLink && (
+                                  <p className="text-[11px] text-gray-500 mb-2">
+                                    <span className="font-bold">Link del Documento:</span> <a href={docLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Ver documento</a>
+                                  </p>
+                                )}
                                 {isAssigned && (
                                   <div className="flex gap-4 items-center">
                                     <div className="flex -space-x-2">
