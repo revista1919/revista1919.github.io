@@ -73,6 +73,8 @@ const HomeSection = ({ onOpenMenu }) => {
 
           </div>
           <motion.button
+          
+
   onClick={handleLanguageToggle}
   whileTap={{ scale: 0.95 }}
   className="relative flex items-center bg-gray-100/80 backdrop-blur-sm border border-gray-200 p-1 rounded-full w-20 h-9 overflow-hidden shadow-sm"
@@ -96,7 +98,7 @@ const HomeSection = ({ onOpenMenu }) => {
     </span>
   </div>
 </motion.button>
-
+</div>
 
         {/* HERO */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 items-center mb-20 sm:mb-32">
@@ -200,7 +202,7 @@ const HomeSection = ({ onOpenMenu }) => {
         </motion.div>
       </div>
     </div>
-    </div>
+    
   );
 };
 export default HomeSection;
