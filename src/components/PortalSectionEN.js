@@ -46,6 +46,14 @@ const base64DecodeUnicode = (str) => {
   return decoder.decode(bytes);
 };
 
+const safeDecodeUnicode = (str) => {
+  try {
+    return base64DecodeUnicode(str);
+  } catch {
+    return str;
+  }
+};
+
 const sanitizeInput = (input) => {
   if (!input) return '';
   return input.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
@@ -444,8 +452,8 @@ export default function PortalSection({ user, onLogout }) {
             if (assignment.role !== 'Author') {
               const link = assignment['Link Artículo'];
               setVote(prev => ({ ...prev, [link]: assignment.vote }));
-              setFeedback(prev => ({ ...prev, [link]: assignment.feedback }));
-              setReport(prev => ({ ...prev, [link]: assignment.report }));
+              setFeedback(prev => ({ ...prev, [link]: safeDecodeUnicode(assignment.feedback) }));
+              setReport(prev => ({ ...prev, [link]: safeDecodeUnicode(assignment.report) }));
               setRubricScores(prev => ({ ...prev, [link]: assignment.scores }));
             }
           });
@@ -825,7 +833,7 @@ export default function PortalSection({ user, onLogout }) {
       return <div className="ql-editor break-words leading-relaxed font-sans text-sm text-gray-800" dangerouslySetInnerHTML={{ __html: html }} />;
     } catch (err) {
       console.error('Error decoding content:', err);
-      return <p className="text-gray-600 font-sans text-sm break-words">Error decoding content.</p>;
+      return <div className="ql-editor break-words leading-relaxed font-sans text-sm text-gray-800" dangerouslySetInnerHTML={{ __html: encoded }} />;
     }
   };
 
