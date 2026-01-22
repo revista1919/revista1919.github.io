@@ -1,12 +1,18 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, useScroll, useTransform } from 'framer-motion';
+import { useLanguage } from '../hooks/useLanguage';
+import logo from '../../public/logo.png';
 
-const HomeSection = () => {
+const HomeSection = ({ onOpenMenu }) => {
   const navigate = useNavigate();
   const { scrollY } = useScroll();
-  
-  const y1 = useTransform(scrollY, [0, 500], [0, 200]);
+  const y1 = useTransform(scrollY, [0, 500], [0, 150]);
+  const { switchLanguage, language } = useLanguage();
+
+  const handleLanguageToggle = () => {
+    switchLanguage(language === 'es' ? 'en' : 'es');
+  };
 
   const cards = [
     {
@@ -37,49 +43,86 @@ const HomeSection = () => {
 
   return (
     <div className="relative overflow-hidden bg-white">
-      <div className="absolute top-0 left-0 w-full h-[100vh] overflow-hidden pointer-events-none opacity-20 z-0">
+      <div className="absolute top-0 left-0 w-full h-[100vh] overflow-hidden pointer-events-none opacity-20 z-0 hidden md:block">
         <motion.div style={{ y: y1 }} className="absolute -top-24 -right-24 w-96 h-96 bg-blue-100 rounded-full blur-3xl" />
         <motion.div style={{ y: y1 }} className="absolute top-1/2 -left-24 w-80 h-80 bg-gray-100 rounded-full blur-3xl" />
       </div>
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-20 sm:pt-6 sm:pb-32">
+        {/* Integrated Header Elements */}
+        <div className="flex items-center justify-between mb-8 sm:mb-12">
+          <button
+            onClick={onOpenMenu}
+            className="flex items-center justify-center w-8 h-8 focus:outline-none"
+            aria-label="Abrir menú"
+          >
+            <div className="space-y-1">
+              <div className="w-5 h-0.5 bg-gray-900 rounded"></div>
+              <div className="w-5 h-0.5 bg-gray-900 rounded"></div>
+              <div className="w-5 h-0.5 bg-gray-900 rounded"></div>
+            </div>
+          </button>
+          <div className="flex flex-col items-center flex-grow">
+            <motion.img
+              src={logo}
+              alt="Revista Logo"
+              className="h-16 sm:h-20 mb-2"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.6, ease: 'easeOut' }}
+            />
+            <motion.h1
+              className="text-xl sm:text-3xl font-bold italic font-serif text-center text-gray-900"
+              initial={{ x: -20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.5, ease: 'easeOut' }}
+            >
+              Revista Nacional de las Ciencias para Estudiantes
+            </motion.h1>
+          </div>
+          <button
+            onClick={handleLanguageToggle}
+            className="px-2 py-1 rounded-full text-xs font-medium transition-all duration-200 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-opacity-20"
+            style={{ 
+              backgroundColor: 'rgba(0, 0, 0, 0.05)',
+              border: '1px solid rgba(0, 0, 0, 0.1)',
+            }}
+            title={`Cambiar a ${language === 'es' ? 'Inglés' : 'Español'}`}
+          >
+            {language === 'es' ? 'EN' : 'ES'}
+          </button>
+        </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-6 pt-24 pb-32">
-        
         {/* HERO */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-32">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 items-center mb-20 sm:mb-32">
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-[0.4em] mb-4 block">
-              Revista Nacional de las Ciencias para Estudiantes
+            <span className="text-[9px] sm:text-[10px] font-bold text-blue-600 uppercase tracking-[0.3em] mb-4 block text-center lg:text-left">
+              Revista científica estudiantil
             </span>
-
-            <h1 className="text-5xl md:text-7xl font-serif font-bold text-gray-900 leading-[1.1] mb-6">
+            <h1 className="text-4xl sm:text-5xl lg:text-7xl font-serif font-bold text-gray-900 leading-[1.1] mb-6 text-center lg:text-left">
               Un espacio para el <span className="italic text-gray-500 underline decoration-blue-200 underline-offset-8">trabajo científico</span> estudiantil
             </h1>
-
-            <p className="text-lg text-gray-600 mb-10 font-light leading-relaxed max-w-lg">
+            <p className="text-base sm:text-lg text-gray-600 mb-8 sm:mb-10 font-light leading-relaxed max-w-lg mx-auto lg:mx-0 text-center lg:text-left">
               La Revista Nacional de las Ciencias para Estudiantes es una plataforma dedicada a la difusión de trabajos científicos desarrollados por estudiantes, promoviendo el aprendizaje y la discusión académica.
             </p>
-
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <button
                 onClick={() => navigate('/article')}
-                className="px-10 py-4 bg-gray-900 text-white font-bold text-xs uppercase tracking-widest hover:bg-blue-600 transition-all shadow-2xl hover:-translate-y-1"
+                className="px-8 sm:px-10 py-4 bg-gray-900 text-white font-bold text-xs uppercase tracking-widest hover:bg-blue-600 transition-all shadow-2xl hover:-translate-y-1"
               >
                 Ver artículos
               </button>
-
               <button
                 onClick={() => navigate('/about')}
-                className="px-10 py-4 border border-gray-200 text-gray-900 font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
+                className="px-8 sm:px-10 py-4 border border-gray-200 text-gray-900 font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
               >
                 Sobre la revista
               </button>
             </div>
           </motion.div>
-
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -95,9 +138,8 @@ const HomeSection = () => {
             </div>
           </motion.div>
         </div>
-
         {/* GRID */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {cards.map((card, index) => (
             <motion.div
               key={card.path}
@@ -106,61 +148,52 @@ const HomeSection = () => {
               viewport={{ once: true }}
               transition={{ delay: index * 0.1 }}
               onClick={() => navigate(card.path)}
-              className="group relative bg-white p-10 border border-gray-100 hover:border-blue-200 hover:shadow-2xl transition-all cursor-pointer overflow-hidden"
+              className="group relative bg-white p-6 sm:p-10 border border-gray-100 hover:border-blue-200 hover:shadow-2xl transition-all cursor-pointer overflow-hidden"
             >
               <div className="relative z-10">
-                <div className="w-12 h-12 mb-8 text-gray-300 group-hover:text-blue-600 transition-colors">
+                <div className="w-10 sm:w-12 h-10 sm:h-12 mb-6 sm:mb-8 text-gray-300 group-hover:text-blue-600 transition-colors">
                   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={card.icon} />
                   </svg>
                 </div>
-
-                <h3 className="text-xl font-bold text-gray-900 mb-3">
+                <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-3">
                   {card.title}
                 </h3>
-
                 <p className="text-gray-500 text-sm leading-relaxed mb-6">
                   {card.desc}
                 </p>
-
                 <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all">
                   Acceder →
                 </span>
               </div>
-
               <div className="absolute top-0 left-0 w-1 h-0 bg-blue-600 group-hover:h-full transition-all duration-300" />
             </motion.div>
           ))}
         </div>
-
         {/* INVITACIÓN */}
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="mt-32 relative rounded-3xl overflow-hidden bg-gray-900 p-12 lg:p-20 text-center"
+          className="mt-20 sm:mt-32 relative rounded-2xl sm:rounded-3xl overflow-hidden bg-gray-900 p-8 sm:p-12 lg:p-20 text-center"
         >
           <div className="relative z-10 max-w-2xl mx-auto">
-            <h2 className="text-3xl lg:text-4xl font-serif font-bold text-white mb-6 italic">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold text-white mb-6 italic">
               “La ciencia se construye aprendiendo y compartiendo.”
             </h2>
-
-            <p className="text-gray-400 font-light mb-10">
+            <p className="text-gray-400 font-light mb-8 sm:mb-10">
               Invitamos a estudiantes interesados en la divulgación científica a participar en el proyecto editorial y en las distintas áreas de trabajo de la revista.
             </p>
-
             <button
               onClick={() => navigate('/admin')}
-              className="px-12 py-4 bg-white text-gray-900 text-xs font-bold uppercase tracking-[0.3em] hover:bg-blue-500 hover:text-white transition-all"
+              className="px-10 sm:px-12 py-4 bg-white text-gray-900 text-xs font-bold uppercase tracking-[0.3em] hover:bg-blue-500 hover:text-white transition-all"
             >
               Conocer convocatoria
             </button>
           </div>
         </motion.div>
-
       </div>
     </div>
   );
 };
-
 export default HomeSection;

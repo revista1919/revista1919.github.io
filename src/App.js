@@ -529,6 +529,7 @@ function App() {
   }
 
   const isLoginActive = location.pathname.includes('login');
+  const isHome = location.pathname === '/' || location.pathname === '';
   const framerItem = (delay) => ({
     initial: { opacity: 0, x: -20 },
     animate: { opacity: 1, x: 0 },
@@ -537,7 +538,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] flex flex-col font-sans text-gray-900">
-      <Header onOpenMenu={() => setIsMenuOpen(true)} />
+      {!isHome && <Header onOpenMenu={() => setIsMenuOpen(true)} />}
       <nav className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4">
           <Tabs sections={sections} />
@@ -546,7 +547,7 @@ function App() {
       <main className="flex-grow">
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
-            <Route path="/" element={<HomeSection />} />
+            <Route path="/" element={<HomeSection onOpenMenu={() => setIsMenuOpen(true)} />} />
             {sections.map(s => (
               <Route key={s.path} path={s.path} element={
                 <motion.div
