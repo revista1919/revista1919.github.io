@@ -113,6 +113,7 @@ function decodeBody(body, truncate = false) {
 }
 export default function NewsSection({ className }) {
   const [news, setNews] = useState([]);
+  const [welcomeNote, setWelcomeNote] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState("");
@@ -154,6 +155,8 @@ export default function NewsSection({ className }) {
                 timestamp: new Date(parseDateIso(String(item["Fecha"] ?? ""))).getTime()
               }))
               .sort((a, b) => b.timestamp - a.timestamp);
+            const foundWelcome = validNews.find(n => n.fechaIso === '2025-09-15');
+            setWelcomeNote(foundWelcome);
             setNews(validNews);
             setLoading(false);
           },
@@ -265,12 +268,22 @@ export default function NewsSection({ className }) {
             className="grid grid-cols-1 lg:grid-cols-12 gap-8 pb-12 border-b border-gray-100 group cursor-pointer"
             onClick={() => openNews(featured)}
           >
-            <div className="lg:col-span-7 overflow-hidden rounded-sm bg-gray-100 aspect-video">
-              <img 
-                src="https://www.revistacienciasestudiantes.com/team.jpg" 
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
-                alt="Featured"
-              />
+            <div className="lg:col-span-7 flex flex-col gap-8">
+              <div className="overflow-hidden rounded-sm bg-gray-100 aspect-video">
+                <img 
+                  src="https://www.revistacienciasestudiantes.com/team.jpg" 
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+                  alt="Featured"
+                />
+              </div>
+              {welcomeNote && welcomeNote.fechaIso !== featured.fechaIso && (
+                <div className="group/welcome cursor-pointer" onClick={(e) => { e.stopPropagation(); openNews(welcomeNote); }}>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-600 mb-4 block">Nota Editorial</span>
+                  <h3 className="text-4xl font-serif font-bold leading-tight group-hover/welcome:text-blue-600 transition-colors">
+                    {welcomeNote.titulo}
+                  </h3>
+                </div>
+              )}
             </div>
             <div className="lg:col-span-5 flex flex-col justify-center">
               <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-600 mb-4 block">Última Actualización</span>
