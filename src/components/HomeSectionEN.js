@@ -3,17 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { useLanguage } from '../hooks/useLanguage';
 import logo from '../../public/logoEN.png';
-
 const HomeSection = ({ onOpenMenu }) => {
   const navigate = useNavigate();
   const { scrollY } = useScroll();
   const y1 = useTransform(scrollY, [0, 500], [0, 150]);
   const { switchLanguage, language } = useLanguage();
-
   const handleLanguageToggle = () => {
     switchLanguage(language === 'es' ? 'en' : 'es');
   };
-
   const cards = [
     {
       title: 'Articles',
@@ -44,11 +41,9 @@ const HomeSection = ({ onOpenMenu }) => {
       bgImage: 'https://www.revistacienciasestudiantes.com/team.jpg'
     }
   ];
-
   const Card = ({ card, index }) => {
     const [imageLoaded, setImageLoaded] = React.useState(false);
     const navigate = useNavigate();
-
     return (
       <motion.div
         key={card.path}
@@ -57,37 +52,43 @@ const HomeSection = ({ onOpenMenu }) => {
         viewport={{ once: true }}
         transition={{ delay: index * 0.1 }}
         onClick={() => navigate(card.path)}
-        className={`group relative p-6 sm:p-10 border border-gray-100 hover:border-blue-200 hover:shadow-2xl transition-all cursor-pointer overflow-hidden ${imageLoaded ? 'bg-gray-900' : 'bg-white'}`}
+        className="group relative h-[350px] sm:h-[400px] flex flex-col justify-end p-6 sm:p-8 overflow-hidden rounded-2xl cursor-pointer bg-gray-100 transition-all shadow-sm hover:shadow-2xl"
       >
-        <img
-          src={card.bgImage}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover brightness-75"
-          style={{ display: imageLoaded ? 'block' : 'none' }}
-          onLoad={() => setImageLoaded(true)}
-          onError={() => setImageLoaded(false)}
-        />
+        {card.bgImage && (
+          <>
+            <img
+              src={card.bgImage}
+              alt=""
+              onLoad={() => setImageLoaded(true)}
+              className={`absolute top-0 left-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 to-transparent" />
+            <div className="absolute inset-0 bg-blue-600/0 group-hover:bg-blue-600/10 transition-opacity" />
+          </>
+        )}
         <div className="relative z-10">
-          <div className={`w-10 sm:w-12 h-10 sm:h-12 mb-6 sm:mb-8 transition-colors ${imageLoaded ? 'text-white/30 group-hover:text-blue-400' : 'text-gray-300 group-hover:text-blue-600'}`}>
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={card.icon} />
+          <div className="bg-white/10 p-3 rounded-full mb-4 w-fit transition-colors group-hover:bg-blue-400/20">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={card.icon} />
             </svg>
           </div>
-          <h3 className={`text-lg sm:text-xl font-bold mb-3 ${imageLoaded ? 'text-white' : 'text-gray-900'}`}>
+          <h3 className="text-2xl font-bold text-white mb-2">
             {card.title}
           </h3>
-          <p className={`text-sm leading-relaxed mb-6 ${imageLoaded ? 'text-gray-300' : 'text-gray-500'}`}>
+          <p className="text-gray-200 mb-4">
             {card.desc}
           </p>
-          <span className={`text-[10px] font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all ${imageLoaded ? 'text-blue-400' : 'text-blue-600'}`}>
-            Access →
-          </span>
+          <div className="inline-flex items-center gap-2 text-blue-400 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+            <span>Explore</span>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
         </div>
-        <div className="absolute top-0 left-0 w-1 h-0 bg-blue-600 group-hover:h-full transition-all duration-300" />
+        <div className="absolute inset-0 border-2 border-transparent group-hover:border-blue-400/20 rounded-2xl pointer-events-none transition-all" />
       </motion.div>
     );
   };
-
   return (
     <div className="relative overflow-hidden bg-white">
       <div className="absolute top-0 left-0 w-full h-[100vh] overflow-hidden pointer-events-none opacity-20 z-0 hidden md:block">
@@ -100,12 +101,9 @@ const HomeSection = ({ onOpenMenu }) => {
           className="absolute top-1/2 -left-24 w-80 h-80 bg-gray-100 rounded-full blur-3xl"
         />
       </div>
-
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-20 sm:pt-6 sm:pb-32">
-
         {/* Integrated Header Elements */}
         <div className="flex items-center justify-between mb-8 sm:mb-12 relative">
-
           {/* LEFT SIDE */}
           <div className="flex-1 flex justify-start">
             <button
@@ -123,7 +121,6 @@ const HomeSection = ({ onOpenMenu }) => {
               </span>
             </button>
           </div>
-
           {/* CENTER */}
           <div className="flex-shrink-0 px-4">
             <motion.div
@@ -142,7 +139,6 @@ const HomeSection = ({ onOpenMenu }) => {
               <div className="h-px w-8 bg-blue-200 mt-2 hidden sm:block"></div>
             </motion.div>
           </div>
-
           {/* RIGHT SIDE */}
           <div className="flex-1 flex justify-end">
             <motion.button
@@ -164,7 +160,6 @@ const HomeSection = ({ onOpenMenu }) => {
             </motion.button>
           </div>
         </div>
-
         {/* HERO */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 items-center mb-20 sm:mb-32">
           <motion.div
@@ -211,14 +206,12 @@ const HomeSection = ({ onOpenMenu }) => {
             </div>
           </motion.div>
         </div>
-
         {/* GRID */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {cards.map((card, index) => (
             <Card key={card.path} card={card} index={index} />
           ))}
         </div>
-
         {/* INVITATION */}
         <motion.div
           initial={{ opacity: 0, y: 40 }}
@@ -245,5 +238,4 @@ const HomeSection = ({ onOpenMenu }) => {
     </div>
   );
 };
-
 export default HomeSection;
