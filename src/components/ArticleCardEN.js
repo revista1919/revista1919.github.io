@@ -148,6 +148,7 @@ function ArticleCardEN({ article }) {
   }
 
   const authorsArray = (article?.autores || '').split(';').map(a => a.trim()).filter(a => a);
+  const type = article.type || 'Research Article';
 
   /* --------------------------- MAIN RENDER --------------------------- */
   return (
@@ -171,6 +172,8 @@ function ArticleCardEN({ article }) {
             <span>VOL. {article.volumen}</span>
             <span>•</span>
             <span>NO. {article.numero}</span>
+            <span>•</span>
+            <span>{type}</span>
           </div>
           {/* Title - Using Serif as in HTML */}
           <h3
