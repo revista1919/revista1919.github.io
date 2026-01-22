@@ -496,7 +496,7 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
         </div>
       </header>
       {/* Main Content: Split View - Stack vertical in mobile */}
-      <div className="flex-grow overflow-y-auto">
+      <div className="flex-grow overflow-y-auto pt-16 md:pt-0 lg:flex">
         {/* Lado Izquierdo: El Manuscrito (Modo Lectura) */}
         <section className="bg-gray-50/50 p-4 md:p-8 lg:p-16 border-b border-gray-100">
           <article className="max-w-2xl mx-auto bg-white p-6 md:p-12 shadow-sm border border-gray-100 rounded-sm space-y-8">
