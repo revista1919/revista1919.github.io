@@ -3,6 +3,7 @@ import Papa from 'papaparse';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { debounce } from 'lodash';
+import { ReviewerWorkspace } from './WorkspaceEN';
 import NewsUploadSectionEN from './NewsUploadSectionEN';
 import TaskSectionEN from './TaskSectionEN';
 import AssignSectionEN from './AssignSectionEN';
@@ -11,6 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
+
 const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?gid=0&output=csv'; // Adjust the gid if necessary for the users/team sheet
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby2B1OUt3TMqaed6Vz-iamUPn4gHhKXG2RRxiy8Nt6u69Cg-2kSze2XQ-NywX5QrNfy/exec';
@@ -18,138 +20,14 @@ const RUBRIC_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzehxU_O7Gkzf
 const RUBRIC_CSV1 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=0&single=true&output=csv';
 const RUBRIC_CSV2 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=1438370398&single=true&output=csv';
 const RUBRIC_CSV3 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=1972050001&single=true&output=csv';
-const criteria = {
-  'Reviewer 1': [
-    {
-      key: 'gramatica',
-      name: 'Grammar and Spelling',
-      levels: {
-        0: { label: '0 = Insufficient ❌', desc: 'Many serious errors, difficult to read.' },
-        1: { label: '1 = Adequate ⚖️', desc: 'Some errors, but comprehensible.' },
-        2: { label: '2 = Excellent ✅', desc: 'Very few errors, clean text.' }
-      }
-    },
-    {
-      key: 'claridad',
-      name: 'Clarity and Coherence',
-      levels: {
-        0: { label: '0 = Insufficient ❌', desc: 'Confusing, incoherent.' },
-        1: { label: '1 = Adequate ⚖️', desc: 'Sometimes confusing but understandable.' },
-        2: { label: '2 = Excellent ✅', desc: 'Clear, precise, and coherent.' }
-      }
-    },
-    {
-      key: 'estructura',
-      name: 'Structure and Organization',
-      levels: {
-        0: { label: '0 = Insufficient ❌', desc: 'Disorganized, no clear sections.' },
-        1: { label: '1 = Adequate ⚖️', desc: 'Sections present but weak.' },
-        2: { label: '2 = Excellent ✅', desc: 'Introduction, development, and conclusion well differentiated.' }
-      }
-    },
-    {
-      key: 'citacion',
-      name: 'Citation and References',
-      levels: {
-        0: { label: '0 = Insufficient ❌', desc: 'No sources or poorly cited.' },
-        1: { label: '1 = Adequate ⚖️', desc: 'Sources present but with errors.' },
-        2: { label: '2 = Excellent ✅', desc: 'Reliable sources, well cited.' }
-      }
-    }
-  ],
-  'Reviewer 2': [
-    {
-      key: 'relevancia',
-      name: 'Topic Relevance',
-      levels: {
-        0: { label: '0 = Insufficient ❌', desc: 'Irrelevant or out-of-context topic.' },
-        1: { label: '1 = Adequate ⚖️', desc: 'Valid but superficial topic.' },
-        2: { label: '2 = Excellent ✅', desc: 'Relevant and engaging topic.' }
-      }
-    },
-    {
-      key: 'rigor',
-      name: 'Rigor in Source Use',
-      levels: {
-        0: { label: '0 = Insufficient ❌', desc: 'No sources or unreliable.' },
-        1: { label: '1 = Adequate ⚖️', desc: 'Few sources, some questionable.' },
-        2: { label: '2 = Excellent ✅', desc: 'Varied, reliable, and well-used sources.' }
-      }
-    },
-    {
-      key: 'originalidad',
-      name: 'Originality and Creativity',
-      levels: {
-        0: { label: '0 = Insufficient ❌', desc: 'Repeats information without analysis.' },
-        1: { label: '1 = Adequate ⚖️', desc: 'Combines ideas with little elaboration.' },
-        2: { label: '2 = Excellent ✅', desc: 'Contributes original ideas and reflections.' }
-      }
-    },
-    {
-      key: 'argumentos',
-      name: 'Quality of Arguments',
-      levels: {
-        0: { label: '0 = Insufficient ❌', desc: 'Confusing, unsupported, or incoherent.' },
-        1: { label: '1 = Adequate ⚖️', desc: 'Clear but weak.' },
-        2: { label: '2 = Excellent ✅', desc: 'Solid, well-supported, and convincing.' }
-      }
-    }
-  ],
-  'Editor': [
-    {
-      key: 'modificaciones',
-      name: 'Degree of Modifications',
-      levels: {
-        0: { label: '0 = Insufficient ❌', desc: 'Required extensive corrections, nearly rewritten.' },
-        1: { label: '1 = Adequate ⚖️', desc: 'Needed several manageable corrections.' },
-        2: { label: '2 = Excellent ✅', desc: 'Only minor adjustments.' }
-      }
-    },
-    {
-      key: 'calidad',
-      name: 'Final Text Quality',
-      levels: {
-        0: { label: '0 = Insufficient ❌', desc: 'Still weak or unclear after changes.' },
-        1: { label: '1 = Adequate ⚖️', desc: 'Acceptable text, though improvable.' },
-        2: { label: '2 = Excellent ✅', desc: 'Solid, clear, and publishable text.' }
-      }
-    },
-    {
-      key: 'aporte',
-      name: 'Overall Essay Contribution',
-      levels: {
-        0: { label: '0 = Insufficient ❌', desc: 'Little relevance or repetitive.' },
-        1: { label: '1 = Adequate ⚖️', desc: 'Interesting, but not outstanding.' },
-        2: { label: '2 = Excellent ✅', desc: 'Highly valuable, innovative, or inspiring.' }
-      }
-    },
-    {
-      key: 'potencial',
-      name: 'Motivational Potential',
-      levels: {
-        0: { label: '0 = Insufficient ❌', desc: 'Does not motivate or contribute to the journal’s spirit.' },
-        1: { label: '1 = Adequate ⚖️', desc: 'May motivate some students.' },
-        2: { label: '2 = Excellent ✅', desc: 'Inspires, encourages reflection and dialogue.' }
-      }
-    },
-    {
-      key: 'decision',
-      name: 'Final Decision',
-      levels: {
-        0: { label: '0 = Reject', desc: 'Reject.' },
-        1: { label: '1 = Accept with Major Changes', desc: 'Accept with major changes.' },
-        2: { label: '2 = Accept (with or without minor changes)', desc: 'Accept (with or without minor changes).' }
-      }
-    }
-  ]
-};
+
 const getDecisionText = (percent) => {
   if (percent >= 85) return 'Accept without changes.';
   if (percent >= 70) return 'Accept with minor changes.';
   if (percent >= 50) return 'Major revision required before publishing.';
   return 'Reject.';
 };
-const getTotal = (scores, crits) => crits.reduce((sum, c) => sum + (scores[c.key] || 0), 0);
+
 const base64EncodeUnicode = (str) => {
   const encoder = new TextEncoder();
   const bytes = encoder.encode(str);
@@ -157,6 +35,7 @@ const base64EncodeUnicode = (str) => {
   bytes.forEach(b => binary += String.fromCharCode(b));
   return btoa(binary);
 };
+
 const base64DecodeUnicode = (str) => {
   const binary = atob(str);
   const bytes = new Uint8Array(binary.length);
@@ -166,6 +45,7 @@ const base64DecodeUnicode = (str) => {
   const decoder = new TextDecoder();
   return decoder.decode(bytes);
 };
+
 const sanitizeInput = (input) => {
   if (!input) return '';
   return input.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
@@ -173,6 +53,7 @@ const sanitizeInput = (input) => {
               .replace(/\s+/g, ' ')
               .trim();
 };
+
 class ErrorBoundary extends React.Component {
   state = { hasError: false };
   static getDerivedStateFromError(error) {
@@ -188,11 +69,13 @@ class ErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
+
 const localizer = momentLocalizer(moment);
+
 function CalendarComponent({ events, onSelectEvent }) {
   return (
-    <div className="bg-white p-4 rounded-lg shadow-md mb-6">
-      <h3 className="text-xl font-bold text-gray-800 mb-4">Deadline Calendar</h3>
+    <div className="bg-white border border-gray-200 p-8 rounded-sm shadow-sm mb-6">
+      <h3 className="font-serif text-2xl font-bold text-gray-900 mb-4">Deadline Calendar</h3>
       <Calendar
         localizer={localizer}
         events={events}
@@ -222,6 +105,109 @@ function CalendarComponent({ events, onSelectEvent }) {
     </div>
   );
 }
+
+/**
+ * MODERNIZED DESIGN: Peer-review form style rubric
+ */
+const RubricViewer = ({ roleKey, scores, onChange, readOnly = false }) => {
+  const crits = criteria[roleKey];
+  if (!crits) return null;
+  const total = getTotal(scores, crits);
+  const max = crits.length * 2;
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+      className="bg-white border border-gray-200 rounded-lg overflow-hidden mb-8"
+    >
+      <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+        <h5 className="font-serif text-lg font-bold text-gray-900 uppercase tracking-tight">
+          Evaluation Protocol: {roleKey}
+        </h5>
+        <div className="text-sm font-mono font-bold text-blue-700 bg-blue-50 px-3 py-1 rounded">
+          SCORE: {total} / {max}
+        </div>
+      </div>
+      <div className="p-6 space-y-8">
+        {crits.map((c) => (
+          <div key={c.key} className="border-b border-gray-100 last:border-0 pb-6">
+            <div className="flex justify-between items-start mb-4">
+              <h6 className="font-sans font-bold text-xs uppercase tracking-widest text-gray-500">{c.name}</h6>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              {Object.entries(c.levels).map(([val, info]) => (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => !readOnly && onChange && onChange(c.key, parseInt(val))}
+                  className={`relative p-4 text-left border rounded-md transition-all duration-200 ${
+                    scores[c.key] == val
+                      ? 'border-blue-600 bg-blue-50/50 ring-1 ring-blue-600'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                  } ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}
+                >
+                  <span className={`block text-xs font-bold mb-1 ${scores[c.key] == val ? 'text-blue-700' : 'text-gray-400'}`}>
+                    LEVEL {val}
+                  </span>
+                  <p className="text-sm text-gray-800 leading-snug">{info.label.split('=')[1]?.trim()}</p>
+                  {scores[c.key] == val && (
+                    <motion.div layoutId="check" className="absolute top-2 right-2 text-blue-600">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293l-4 4a1 1 0 01-1.414 0l-2-2a1 1 0 111.414-1.414L9 10.586l3.293-3.293a1 1 0 011.414 1.414z"/></svg>
+                    </motion.div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  );
+};
+
+/**
+ * ASSIGNMENT CARD
+ */
+const AssignmentCard = ({ assignment, onClick, index }) => {
+  const role = assignment.role;
+  const isAuthorCard = role === 'Author';
+  const isCompleted = isAuthorCard
+    ? (assignment.feedbackEditor && ['Accepted', 'Rejected'].includes(assignment.Estado))
+    : assignment.isCompleted;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05 }}
+      whileHover={{ y: -4 }}
+      onClick={onClick}
+      className="group bg-white border border-gray-200 p-6 flex flex-col h-full hover:border-blue-400 transition-all cursor-pointer relative"
+    >
+      <div className="flex justify-between items-start mb-4">
+        <span className="text-[10px] font-sans font-bold uppercase tracking-[0.2em] text-blue-600">
+          {role}
+        </span>
+        <div className={`w-2 h-2 rounded-full ${isCompleted ? 'bg-green-500' : 'bg-amber-400 animate-pulse'}`} />
+      </div>
+      <h4 className="font-serif text-xl font-bold text-gray-900 group-hover:text-blue-800 transition-colors mb-4 line-clamp-2">
+        {assignment['Nombre Artículo']}
+      </h4>
+      <div className="mt-auto pt-4 border-t border-gray-50 space-y-2">
+        <div className="flex justify-between text-xs text-gray-500 font-sans">
+          <span>DEADLINE</span>
+          <span className="font-bold">{assignment.Plazo ? new Date(assignment.Plazo).toLocaleDateString() : 'NO DATE'}</span>
+        </div>
+        <div className="flex justify-between text-xs text-gray-500 font-sans">
+          <span>STATUS</span>
+          <span className={`font-bold ${isCompleted ? 'text-green-700' : 'text-amber-700'}`}>
+            {isCompleted ? 'COMPLETED' : 'PENDING'}
+          </span>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
 export default function PortalSection({ user, onLogout }) {
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -247,6 +233,7 @@ export default function PortalSection({ user, onLogout }) {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const feedbackQuillRefs = useRef({});
   const reportQuillRefs = useRef({});
+
   useEffect(() => {
     if (!user) {
       setAssignments([]);
@@ -272,7 +259,8 @@ export default function PortalSection({ user, onLogout }) {
       setSelectedEvent(null);
     }
   }, [user]);
-  // Mapping email → real name
+
+  // Email → real name mapping
   useEffect(() => {
     const fetchUserMapping = async () => {
       if (user && user.name && user.name.includes('@')) {
@@ -306,6 +294,7 @@ export default function PortalSection({ user, onLogout }) {
     };
     fetchUserMapping();
   }, [user]);
+
   const fetchRubrics = async () => {
     try {
       const [csv1Text, csv2Text, csv3Text] = await Promise.all([
@@ -360,6 +349,7 @@ export default function PortalSection({ user, onLogout }) {
       return { scoresMap1: {}, scoresMap2: {}, scoresMap3: {} };
     }
   };
+
   const fetchWithRetry = async (url, retries = 3, timeout = 10000) => {
     for (let i = 0; i < retries; i++) {
       try {
@@ -375,6 +365,7 @@ export default function PortalSection({ user, onLogout }) {
       }
     }
   };
+
   const fetchAssignments = async () => {
     try {
       setLoading(true);
@@ -402,7 +393,7 @@ export default function PortalSection({ user, onLogout }) {
             'Nombre Artículo': row['Nombre Artículo'] || 'No title',
             Estado: row['Estado'],
             role: 'Author',
-            feedbackEditor: row['Feedback 3'] || 'No feedback from editor yet.',
+            feedbackEditor: row['Feedback 3'] || 'No editor feedback yet.',
             isCompleted: !!row['Feedback 3'],
             Plazo: row['Plazo'] || null,
           }));
@@ -446,10 +437,9 @@ export default function PortalSection({ user, onLogout }) {
             }
             return assignment;
           });
-          // Combine: reviewer/editor first, then author
+          // Combine assignments
           const parsedAssignments = [...reviewerAssignments, ...authorAssignments];
           setAssignments(parsedAssignments);
-          // Initialize local states
           parsedAssignments.forEach(assignment => {
             if (assignment.role !== 'Author') {
               const link = assignment['Link Artículo'];
@@ -459,7 +449,6 @@ export default function PortalSection({ user, onLogout }) {
               setRubricScores(prev => ({ ...prev, [link]: assignment.scores }));
             }
           });
-          // Calendar events
           const events = parsedAssignments
             .filter(ass => ass.Plazo)
             .map(ass => ({
@@ -483,10 +472,11 @@ export default function PortalSection({ user, onLogout }) {
       });
     } catch (err) {
       console.error('Error loading assignments:', err);
-      setError('Error connecting to the server');
+      setError('Error connecting to server');
       setLoading(false);
     }
   };
+
   useEffect(() => {
     if (!user || !effectiveName || !user.role) {
       setError('User not defined or incomplete information');
@@ -495,36 +485,40 @@ export default function PortalSection({ user, onLogout }) {
     }
     fetchAssignments();
   }, [user, effectiveName]);
-  // User roles
+
   const userRoles = user?.role ? user.role.split(';').map(r => r.trim()) : [];
   const isAuthor = assignments.length > 0 && assignments[0].role === 'Author';
   const isChief = userRoles.includes('Editor en Jefe');
   const isDirector = userRoles.includes('Director General');
   const isRrss = userRoles.includes('Encargado de Redes Sociales');
   const isWebDev = userRoles.includes('Responsable de Desarrollo Web');
-  // Only users with role above "Author" see the calendar
   const canSeeCalendar = isChief || isDirector || isRrss || isWebDev || assignments.some(a => a.role !== 'Author');
+
   const pendingAssignments = useMemo(() =>
     isAuthor
       ? assignments.filter(a => !a.feedbackEditor || !['Aceptado', 'Rechazado'].includes(a.Estado))
       : assignments.filter(a => !a.isCompleted),
     [assignments, isAuthor]
   );
+
   const completedAssignments = useMemo(() =>
     isAuthor
       ? assignments.filter(a => a.feedbackEditor && ['Aceptado', 'Rechazado'].includes(a.Estado))
       : assignments.filter(a => a.isCompleted),
     [assignments, isAuthor]
   );
+
   const handleVote = (link, value) => {
     setVote((prev) => ({ ...prev, [link]: value }));
   };
+
   const handleRubricChange = (link, key, value) => {
     setRubricScores((prev) => ({
       ...prev,
       [link]: { ...prev[link], [key]: value }
     }));
   };
+
   const getRequiredKeys = (role) => {
     switch (role) {
       case 'Reviewer 1': return ['gramatica', 'claridad', 'estructura', 'citacion'];
@@ -533,11 +527,13 @@ export default function PortalSection({ user, onLogout }) {
       default: return [];
     }
   };
+
   const isRubricComplete = (link, role) => {
     const rubric = rubricScores[link] || {};
     const required = getRequiredKeys(role);
     return required.every(key => rubric[key] !== undefined && rubric[key] !== null);
   };
+
   const handleSubmitRubric = async (link, role) => {
     const articleName = assignments.find(a => a['Link Artículo'] === link)['Nombre Artículo'];
     const rubric = rubricScores[link] || {};
@@ -584,6 +580,7 @@ export default function PortalSection({ user, onLogout }) {
       setRubricStatus((prev) => ({ ...prev, [link]: `Error: ${err.message}` }));
     }
   };
+
   const handleSubmit = async (link, role, feedbackText, reportText, voteValue) => {
     const encodedFeedback = base64EncodeUnicode(sanitizeInput(feedbackText || ''));
     const encodedReport = base64EncodeUnicode(sanitizeInput(reportText || ''));
@@ -626,25 +623,29 @@ export default function PortalSection({ user, onLogout }) {
       setSubmitStatus((prev) => ({ ...prev, [link]: `Error: ${err.message}` }));
     }
   };
+
   const toggleTutorial = (link) => {
     setTutorialVisible((prev) => ({ ...prev, [link]: !prev[link] }));
   };
+
   const toggleFeedback = (link, type) => {
     setExpandedFeedback((prev) => ({
       ...prev,
       [link]: { ...prev[link], [type]: !prev[link]?.[type] }
     }));
   };
+
   const getTutorialText = (role) => {
-    if (role === "Reviewer 1") {
-      return 'As Reviewer 1, your role is to review technical aspects such as grammar, spelling, citation of sources, detection of content generated by AI, logical coherence and general structure of the article. Provide detailed comments in the Google Drive document to suggest improvements. Ensure the language is clear and academic. You must provide feedback to the author in the corresponding box. Additionally, you must send a summarized report explaining your observations to guide the editor. Finally, in the vote box, enter "yes" if you approve the article, and "no" if you reject it.';
-    } else if (role === "Reviewer 2") {
-      return 'As Reviewer 2, focus on the substantive content: verify the accuracy of the sources, the seriousness and originality of the topic, the relevance of the arguments and the contribution to the field of study. Evaluate if the article is innovative and well supported. Leave comments in the Google Drive document. You must provide feedback to the author in the corresponding box. Additionally, you must send a summarized report explaining your observations to guide the editor. Finally, in the vote box, enter "yes" if you approve the article, and "no" if you reject it.';
-    } else if (role === "Editor") {
-      return `As Editor, your responsibility is to review the feedback and reports of the reviewers, integrate them with your own evaluation, and write a final sensitive and constructive feedback for the author. Edit the text directly if necessary and decide the final status of the article. Use the Google Drive document for editions. You must provide feedback to the author synthesizing the reviewers' feedback. Your message must be precise and sensitive, without discouraging the author. For this, use the "sandwich" technique. If you don't know what it is, check <a href="https://en.wikipedia.org/wiki/Sandwich_technique" style="color: blue;">here</a>. Based on psychological studies, such as those indicating that feedback improves performance only in 30% of cases if not handled well, ensure that the criticism is specific, actionable and not diluted by positive comments to maximize effectiveness. You can complement with the SBI model (Situation-Behavior-Impact) for greater clarity: describe the situation, the observed behavior and its impact. Then, send your report with the changes made, which must be precise and academic. Finally, in the vote box, enter "yes" if you approve the article, and "no" if you reject it.`;
+    if (role === 'Reviewer 1') {
+      return 'As Reviewer 1, your role is to review technical aspects such as grammar, spelling, source citation, AI-generated content detection, logical coherence, and overall structure. Provide detailed comments in the Google Drive document to suggest improvements. Ensure the language is clear and academic. You must provide feedback to the author in the corresponding box. Additionally, submit a summarized report explaining your observations to guide the editor. Finally, in the vote box, enter "yes" if you approve the article, and "no" if you reject it.';
+    } else if (role === 'Reviewer 2') {
+      return 'As Reviewer 2, focus on substantive content: verify source accuracy, topic seriousness and originality, argument relevance, and contribution to the field. Evaluate if the article is innovative and well-supported. Leave comments in the Google Drive document. You must provide feedback to the author in the corresponding box. Additionally, submit a summarized report explaining your observations to guide the editor. Finally, in the vote box, enter "yes" if you approve the article, and "no" if you reject it.';
+    } else if (role === 'Editor') {
+      return `As Editor, your responsibility is to review the reviewers' feedback and reports, integrate them with your own evaluation, and write a final sensitive and constructive feedback for the author. Edit the text directly if necessary and decide the article's final status. Use the Google Drive document for edits. You must provide feedback to the author synthesizing the reviewers' feedback. Your message must be precise and sensitive, without discouraging the author. Use the "sandwich" technique. If you don't know what it is, consult <a href="https://www.santanderopenacademy.com/en/blog/sandwich-technique.html" style="color: blue;">here</a>. Based on psychological studies indicating feedback improves performance in only 30% of cases if mishandled, ensure criticism is specific, actionable, and not diluted by positive comments to maximize effectiveness. Complement with the SBI model (Situation-Behavior-Impact) for clarity: describe the situation, observed behavior, and impact. Then, submit your report with changes made, which must be precise and academic. Finally, in the vote box, enter "yes" if you approve the article, and "no" if you reject it.`;
     }
     return "";
   };
+
   const Tutorial = ({ role }) => {
     const tutorialText = getTutorialText(role);
     return (
@@ -652,69 +653,27 @@ export default function PortalSection({ user, onLogout }) {
         initial={{ opacity: 0, height: 0 }}
         animate={{ opacity: 1, height: 'auto' }}
         exit={{ opacity: 0, height: 0 }}
-        className="text-gray-800 bg-gray-50 p-4 rounded-md border border-gray-200 leading-relaxed break-words overflow-hidden"
+        className="text-gray-800 bg-gray-50 p-4 rounded-md border border-gray-200 leading-relaxed break-words overflow-hidden font-sans text-sm"
       >
         <div className="mb-4" dangerouslySetInnerHTML={{ __html: tutorialText }} />
       </motion.div>
     );
   };
-  const RubricViewer = ({ roleKey, scores, onChange, readOnly = false }) => {
-    const crits = criteria[roleKey];
-    if (!crits) return null;
-    const total = getTotal(scores, crits);
-    const max = crits.length * 2;
-    const roleDisplay = roleKey === 'Reviewer 1' ? 'Reviewer 1 (Form, Style and Technique)' : roleKey === 'Reviewer 2' ? 'Reviewer 2 (Content and Originality)' : 'Editor (Synthesis and Final Decision)';
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white p-4 rounded-lg shadow-md mb-6 overflow-hidden"
-      >
-        <h5 className="font-semibold mb-4 text-gray-800 border-b pb-2 break-words">{roleDisplay} - Total: {total} / {max}</h5>
-        {crits.map((c) => (
-          <div key={c.key} className="mb-4 p-3 bg-gray-50 rounded-md">
-            <h6 className="font-medium mb-2 text-gray-700 break-words">{c.name}</h6>
-            <div className="flex space-x-1 mb-2">
-              {Object.entries(c.levels).map(([val, info]) => (
-                <motion.button
-                  key={val}
-                  type="button"
-                  onClick={() => !readOnly && onChange && onChange(c.key, parseInt(val))}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className={`flex-1 py-2 px-3 rounded text-xs font-medium transition-colors break-words ${
-                    scores[c.key] == val
-                      ? 'bg-blue-500 text-white shadow-md'
-                      : readOnly
-                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                  disabled={readOnly}
-                >
-                  {info.label.split(' = ')[1]}
-                </motion.button>
-              ))}
-            </div>
-            <p className={`text-xs italic ${readOnly ? 'text-gray-500' : 'text-blue-600'} break-words`}>
-              {c.levels[scores[c.key] || 0].desc}
-            </p>
-          </div>
-        ))}
-      </motion.div>
-    );
-  };
+
   const debouncedSetFeedback = useCallback(
     (link) => debounce((value) => {
       setFeedback((prev) => ({ ...prev, [link]: value }));
     }, 300),
     []
   );
+
   const debouncedSetReport = useCallback(
     (link) => debounce((value) => {
       setReport((prev) => ({ ...prev, [link]: value }));
     }, 300),
     []
   );
+
   const modules = useMemo(() => ({
     toolbar: {
       container: [
@@ -752,10 +711,7 @@ export default function PortalSection({ user, onLogout }) {
         deleteImage: {
           key: ['Delete', 'Backspace'],
           handler: function(range) {
-            if (!range) {
-              console.log('No active selection to delete');
-              return true;
-            }
+            if (!range) return true;
             const editor = this.quill;
             const imageResize = editor.getModule('imageResize');
             let isImage = false;
@@ -825,6 +781,7 @@ export default function PortalSection({ user, onLogout }) {
       },
     },
   }), []);
+
   useEffect(() => {
     const setupCustomButton = (quillRef, link, type) => {
       if (quillRef.current) {
@@ -852,6 +809,7 @@ export default function PortalSection({ user, onLogout }) {
       setupCustomButton(reportQuillRefs.current[link], link, 'report');
     });
   }, [feedbackQuillRefs.current, reportQuillRefs.current]);
+
   const formats = useMemo(() => [
     'bold', 'italic', 'underline', 'strike', 'blockquote',
     'list', 'bullet',
@@ -859,19 +817,18 @@ export default function PortalSection({ user, onLogout }) {
     'align',
     'size'
   ], []);
-  const encodeBody = (html) => {
-    return base64EncodeUnicode(sanitizeInput(html));
-  };
+
   const decodeBody = (encoded) => {
-    if (!encoded) return <p className="text-gray-600 break-words">No content available.</p>;
+    if (!encoded) return <p className="text-gray-600 font-sans text-sm break-words">No content available.</p>;
     try {
       const html = base64DecodeUnicode(encoded);
-      return <div className="ql-editor break-words leading-relaxed" dangerouslySetInnerHTML={{ __html: html }} />;
+      return <div className="ql-editor break-words leading-relaxed font-sans text-sm text-gray-800" dangerouslySetInnerHTML={{ __html: html }} />;
     } catch (err) {
       console.error('Error decoding content:', err);
-      return <p className="text-gray-600 break-words">Error decoding content.</p>;
+      return <p className="text-gray-600 font-sans text-sm break-words">Error decoding content.</p>;
     }
   };
+
   const handleImageModalSubmit = (link) => {
     const quillRef = feedbackQuillRefs.current[link] || reportQuillRefs.current[link];
     if (!quillRef) return;
@@ -913,6 +870,7 @@ export default function PortalSection({ user, onLogout }) {
     setImageData((prev) => ({ ...prev, [link]: { url: '', width: '', height: '', align: 'left' } }));
     setEditingRange((prev) => ({ ...prev, [link]: null }));
   };
+
   const handleImageDataChange = (link, e) => {
     const { name, value } = e.target;
     setImageData((prev) => ({
@@ -920,623 +878,29 @@ export default function PortalSection({ user, onLogout }) {
       [link]: { ...prev[link], [name]: value }
     }));
   };
-  const AssignmentCard = ({ assignment, onClick, index }) => {
-    const role = assignment.role;
-    const nombre = assignment['Nombre Artículo'];
-    const isAuthorCard = role === 'Author';
-    const statusColor = isAuthorCard
-      ? (assignment.feedbackEditor && ['Aceptado', 'Rechazado'].includes(assignment.Estado)
-        ? 'bg-green-100 text-green-800'
-        : 'bg-yellow-100 text-yellow-800')
-      : (assignment.isCompleted ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800');
-    // Calculate percentage only if not author
-    let percent = 0;
-    if (!isAuthorCard) {
-      const total = role !== 'Editor'
-        ? getTotal(assignment.scores || {}, criteria[role] || [])
-        : getTotal(assignment.scores || {}, criteria['Editor'] || []);
-      const max = (criteria[role] || criteria['Editor'] || []).length * 2;
-      percent = max > 0 ? (total / max) * 100 : 0;
-    }
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 50 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: index * 0.1 }}
-        whileHover={{ scale: 1.02, boxShadow: '0 10px 20px rgba(0,0,0,0.1)' }}
-        className="bg-white p-6 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-200 h-full flex flex-col justify-between"
-        onClick={onClick}
-      >
-        <div>
-          <h4 className="text-xl font-bold text-gray-800 mb-2 break-words">{nombre}</h4>
-          <p className="text-sm text-gray-600 mb-3 break-words">Role: {role}</p>
-          {assignment.Plazo && (
-            <p className="text-sm text-gray-600 mb-3 break-words">Deadline: {new Date(assignment.Plazo).toLocaleDateString()}</p>
-          )}
-          <div className="flex items-center justify-between mb-4">
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor}`}>
-              {isAuthorCard
-                ? (assignment.feedbackEditor && ['Aceptado', 'Rechazado'].includes(assignment.Estado)
-                  ? 'Archived'
-                  : 'Under Review')
-                : (assignment.isCompleted ? 'Completed' : 'Pending')}
-            </span>
-            {!isAuthorCard && (
-              <span className="text-sm font-medium text-gray-700">
-                {percent.toFixed(0)}% Score
-              </span>
-            )}
-          </div>
-          <p className="text-gray-500 text-sm break-words">{assignment.Estado || 'No status'}</p>
-        </div>
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
-          >
-            View Details
-          </motion.button>
-        </div>
-      </motion.div>
-    );
-  };
-  const renderFullAssignment = (assignment) => {
-    const link = assignment['Link Artículo'];
-    const role = assignment.role;
-    const nombre = assignment['Nombre Artículo'];
-    const isPending = isAuthor ? (!assignment.feedbackEditor || !['Aceptado', 'Rechazado'].includes(assignment.Estado)) : !assignment.isCompleted;
-    const isAuth = role === 'Author';
-    const handleRenderRubric = () => {
-      if (isAuth) return null;
-      if (isPending) {
-        if (role === 'Editor') {
-          const rev1Total = getTotal(assignment.rev1Scores, criteria['Reviewer 1']);
-          const rev2Total = getTotal(assignment.rev2Scores, criteria['Reviewer 2']);
-          const revPercent = ((rev1Total + rev2Total) / 16) * 100;
-          const editorTotal = getTotal(rubricScores[link] || {}, criteria['Editor']);
-          const overallTotal = rev1Total + rev2Total + editorTotal;
-          const overallPercent = (overallTotal / 26) * 100;
-          return (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h5 className="text-lg font-semibold text-gray-800">Reviewer 1 Rubric</h5>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  onClick={() => toggleFeedback(link, 'rubric1')}
-                  className="text-blue-600 hover:underline text-sm flex items-center"
-                >
-                  {expandedFeedback[link]?.rubric1 ? 'Hide' : 'Show'}
-                  <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </motion.button>
-              </div>
-              <AnimatePresence>
-                {expandedFeedback[link]?.rubric1 && (
-                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
-                    <RubricViewer roleKey="Reviewer 1" scores={assignment.rev1Scores} readOnly />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              <div className="flex items-center justify-between">
-                <h5 className="text-lg font-semibold text-gray-800">Reviewer 2 Rubric</h5>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  onClick={() => toggleFeedback(link, 'rubric2')}
-                  className="text-blue-600 hover:underline text-sm flex items-center"
-                >
-                  {expandedFeedback[link]?.rubric2 ? 'Hide' : 'Show'}
-                  <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </motion.button>
-              </div>
-              <AnimatePresence>
-                {expandedFeedback[link]?.rubric2 && (
-                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
-                    <RubricViewer roleKey="Reviewer 2" scores={assignment.rev2Scores} readOnly />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-yellow-50 rounded-md">
-                <p className="font-medium break-words">Reviewers' Implication: {revPercent.toFixed(1)}% - {getDecisionText(revPercent)}</p>
-              </motion.div>
-              <RubricViewer
-                roleKey="Editor"
-                scores={rubricScores[link] || {}}
-                onChange={(key, val) => handleRubricChange(link, key, val)}
-              />
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-green-50 rounded-md">
-                <p className="font-medium break-words">Suggested General Decision: {overallPercent.toFixed(1)}% - {getDecisionText(overallPercent)}</p>
-              </motion.div>
-            </motion.div>
-          );
-        } else {
-          return (
-            <RubricViewer
-              roleKey={role}
-              scores={rubricScores[link] || {}}
-              onChange={(key, val) => handleRubricChange(link, key, val)}
-            />
-          );
-        }
-      } else {
-        if (role === 'Editor') {
-          const rev1Total = getTotal(assignment.rev1Scores, criteria['Reviewer 1']);
-          const rev2Total = getTotal(assignment.rev2Scores, criteria['Reviewer 2']);
-          const revPercent = ((rev1Total + rev2Total) / 16) * 100;
-          const editorTotal = getTotal(assignment.scores, criteria['Editor']);
-          const overallTotal = rev1Total + rev2Total + editorTotal;
-          const overallPercent = (overallTotal / 26) * 100;
-          return (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h5 className="text-lg font-semibold text-gray-800">Reviewer 1 Rubric</h5>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  onClick={() => toggleFeedback(link, 'rubric1')}
-                  className="text-blue-600 hover:underline text-sm flex items-center"
-                >
-                  {expandedFeedback[link]?.rubric1 ? 'Hide' : 'Show'}
-                  <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </motion.button>
-              </div>
-              <AnimatePresence>
-                {expandedFeedback[link]?.rubric1 && (
-                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
-                    <RubricViewer roleKey="Reviewer 1" scores={assignment.rev1Scores} readOnly />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              <div className="flex items-center justify-between">
-                <h5 className="text-lg font-semibold text-gray-800">Reviewer 2 Rubric</h5>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  onClick={() => toggleFeedback(link, 'rubric2')}
-                  className="text-blue-600 hover:underline text-sm flex items-center"
-                >
-                  {expandedFeedback[link]?.rubric2 ? 'Hide' : 'Show'}
-                  <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.rubric2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </motion.button>
-              </div>
-              <AnimatePresence>
-                {expandedFeedback[link]?.rubric2 && (
-                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
-                    <RubricViewer roleKey="Reviewer 2" scores={assignment.rev2Scores} readOnly />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-yellow-50 rounded-md">
-                <p className="font-medium break-words">Reviewers' Implication: {revPercent.toFixed(1)}% - {getDecisionText(revPercent)}</p>
-              </motion.div>
-              <RubricViewer roleKey="Editor" scores={assignment.scores} readOnly />
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-green-50 rounded-md">
-                <p className="font-medium break-words">General Decision: {overallPercent.toFixed(1)}% - {getDecisionText(overallPercent)}</p>
-              </motion.div>
-            </motion.div>
-          );
-        } else {
-          return <RubricViewer roleKey={role} scores={assignment.scores} readOnly />;
-        }
-      }
-    };
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="bg-white p-6 rounded-xl shadow-lg space-y-6 w-full"
-      >
-        <div className="flex justify-between items-start">
-          <div>
-            <h4 className="text-2xl font-bold text-gray-800 mb-2 break-words">{nombre}</h4>
-            <p className="text-gray-600 break-words">Role: {role} | Status: {assignment.Estado || 'No status'}</p>
-            {assignment.Plazo && (
-              <p className="text-gray-600 break-words">Deadline: {new Date(assignment.Plazo).toLocaleDateString()}</p>
-            )}
-          </div>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            onClick={() => setSelectedAssignment(null)}
-            className="text-blue-600 hover:underline flex items-center text-sm"
-          >
-            <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to List
-          </motion.button>
-        </div>
-        {isAuth ? (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-6">
-      {assignment.feedbackEditor && ['Aceptado', 'Rechazado'].includes(assignment.Estado) ? (
-        <>
-          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="p-4 bg-green-50 rounded-md border-l-4 border-green-400">
-            <h5 className="text-lg font-semibold text-green-800 mb-2">Final Status: {assignment.Estado}</h5>
-          </motion.div>
-          <h5 className="text-lg font-semibold text-gray-800">Editor Feedback</h5>
-          <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto leading-relaxed">
-            {decodeBody(assignment.feedbackEditor)}
-          </div>
-        </>
-      ) : (
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="p-6 bg-yellow-50 rounded-md border-l-4 border-yellow-400 text-center">
-          <h5 className="text-xl font-semibold text-yellow-800 mb-2">Article Under Review</h5>
-          <p className="text-yellow-700 text-lg">Your article "{assignment['Nombre Artículo']}" is currently under review by evaluators and the editor.</p>
-          <p className="text-yellow-600 mt-2">You will receive a notification with the final decision and feedback once the process is complete.</p>
-        </motion.div>
-      )}
-    </motion.div>
-  ) : (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="lg:col-span-1 space-y-6">
-              <div className="space-y-2">
-                <motion.a
-                  whileHover={{ scale: 1.05 }}
-                  href={link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block bg-blue-600 text-white px-4 py-2 rounded-md shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm mb-2"
-                >
-                  Open in Google Drive
-                </motion.a>
-                <motion.iframe
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.8 }}
-                  src={link ? link.replace('/edit', '/preview') : ''}
-                  className="w-full h-[350px] lg:h-[500px] rounded-xl shadow border border-gray-200"
-                  title="Article Preview"
-                  sandbox="allow-same-origin allow-scripts"
-                  loading="lazy"
-                />
-              </div>
-              {handleRenderRubric()}
-            </div>
-            <div className="lg:col-span-1 space-y-6">
-              {role === 'Editor' && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-sm font-medium text-gray-700 break-words">Reviewer 1 Feedback</label>
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      onClick={() => toggleFeedback(link, 'feedback1')}
-                      className="text-blue-600 hover:underline text-sm flex items-center"
-                    >
-                      {expandedFeedback[link]?.feedback1 ? 'Hide' : 'Show'}
-                      <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.feedback1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </motion.button>
-                  </div>
-                  <AnimatePresence>
-                    {expandedFeedback[link]?.feedback1 && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto"
-                      >
-                        {decodeBody(assignment.feedback1)}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                  <div className="flex items-center justify-between">
-                    <label className="block text-sm font-medium text-gray-700 break-words">Reviewer 2 Feedback</label>
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      onClick={() => toggleFeedback(link, 'feedback2')}
-                      className="text-blue-600 hover:underline text-sm flex items-center"
-                    >
-                      {expandedFeedback[link]?.feedback2 ? 'Hide' : 'Show'}
-                      <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.feedback2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </motion.button>
-                  </div>
-                  <AnimatePresence>
-                    {expandedFeedback[link]?.feedback2 && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto"
-                      >
-                        {decodeBody(assignment.feedback2)}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                  <div className="flex items-center justify-between">
-                    <label className="block text-sm font-medium text-gray-700 break-words">Reviewer 1 Report</label>
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      onClick={() => toggleFeedback(link, 'informe1')}
-                      className="text-blue-600 hover:underline text-sm flex items-center"
-                    >
-                      {expandedFeedback[link]?.informe1 ? 'Hide' : 'Show'}
-                      <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.informe1 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </motion.button>
-                  </div>
-                  <AnimatePresence>
-                    {expandedFeedback[link]?.informe1 && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto"
-                      >
-                        {decodeBody(assignment.informe1)}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                  <div className="flex items-center justify-between">
-                    <label className="block text-sm font-medium text-gray-700 break-words">Reviewer 2 Report</label>
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      onClick={() => toggleFeedback(link, 'informe2')}
-                      className="text-blue-600 hover:underline text-sm flex items-center"
-                    >
-                      {expandedFeedback[link]?.informe2 ? 'Hide' : 'Show'}
-                      <svg className={`w-4 h-4 ml-1 transform ${expandedFeedback[link]?.informe2 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </motion.button>
-                  </div>
-                  <AnimatePresence>
-                    {expandedFeedback[link]?.informe2 && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto"
-                      >
-                        {decodeBody(assignment.informe2)}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </motion.div>
-              )}
-              {isPending ? (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-6">
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => toggleTutorial(link)}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
-                  >
-                    {tutorialVisible[link] ? 'Hide Tutorial' : 'View Tutorial'}
-                  </motion.button>
-                  <AnimatePresence>
-                    {tutorialVisible[link] && <Tutorial role={role} />}
-                  </AnimatePresence>
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700 break-words">
-                      {role === 'Editor' ? 'Final Feedback to Author' : 'Feedback to Author'}
-                    </label>
-                    <ReactQuill
-                      ref={(el) => (feedbackQuillRefs.current[link] = el)}
-                      value={feedback[link] || ''}
-                      onChange={debouncedSetFeedback(link)}
-                      modules={modules}
-                      formats={formats}
-                      placeholder={role === 'Editor' ? 'Write sensitive final feedback, synthesizing reviewers’ and your opinions.' : 'Write your feedback here...'}
-                      className="border rounded-md text-gray-800 bg-white h-48"
-                      id={`feedback-${link}`}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700 break-words">Report to Editor</label>
-                    <ReactQuill
-                      ref={(el) => (reportQuillRefs.current[link] = el)}
-                      value={report[link] || ''}
-                      onChange={debouncedSetReport(link)}
-                      modules={modules}
-                      formats={formats}
-                      placeholder="Write your report here..."
-                      className="border rounded-md text-gray-800 bg-white h-48"
-                      id={`report-${link}`}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700 break-words">Vote</label>
-                    <div className="flex space-x-4">
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => handleVote(link, 'si')}
-                        className={`px-4 py-2 rounded-md ${vote[link] === 'si' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} transition-colors text-sm`}
-                      >
-                        Yes
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => handleVote(link, 'no')}
-                        className={`px-4 py-2 rounded-md ${vote[link] === 'no' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} transition-colors text-sm`}
-                      >
-                        No
-                      </motion.button>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => handleSubmitRubric(link, role)}
-                      disabled={!isRubricComplete(link, role)}
-                      className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
-                    >
-                      Submit Rubric
-                    </motion.button>
-                    {rubricStatus[link] && (
-                      <p className={`text-sm mt-2 ${rubricStatus[link].includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
-                        {rubricStatus[link]}
-                      </p>
-                    )}
-                  </div>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => handleSubmit(link, role, feedback[link], report[link], vote[link])}
-                    disabled={!vote[link] || !feedback[link] || !report[link]}
-                    className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
-                  >
-                    Submit Review (Feedback, Report, Vote)
-                  </motion.button>
-                  {submitStatus[link] && (
-                    <p className={`text-sm mt-2 ${submitStatus[link].includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
-                      {submitStatus[link]}
-                    </p>
-                  )}
-                </motion.div>
-              ) : (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-6">
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => toggleTutorial(link)}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
-                  >
-                    {tutorialVisible[link] ? 'Hide Tutorial' : 'View Tutorial'}
-                  </motion.button>
-                  <AnimatePresence>
-                    {tutorialVisible[link] && <Tutorial role={role} />}
-                  </AnimatePresence>
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700 break-words">Submitted Feedback</label>
-                    <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
-                      {decodeBody(feedback[link] || 'No feedback.')}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700 break-words">Submitted Report</label>
-                    <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-48 overflow-y-auto">
-                      {decodeBody(report[link] || 'No report.')}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700 break-words">Submitted Vote</label>
-                    <p className="text-sm text-gray-600">{vote[link] ? vote[link].charAt(0).toUpperCase() + vote[link].slice(1) : 'Not submitted'}</p>
-                  </div>
-                </motion.div>
-              )}
-              <AnimatePresence>
-                {showImageModal[link] && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    transition={{ duration: 0.3 }}
-                    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-                  >
-                    <motion.div
-                      initial={{ y: 50, opacity: 0 }}
-                      animate={{ y: 0, opacity: 1 }}
-                      className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full"
-                    >
-                      <h4 className="text-lg font-semibold mb-4">{isEditingImage[link] ? 'Edit Image' : 'Insert Image'}</h4>
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">Image URL</label>
-                          <input
-                            type="text"
-                            name="url"
-                            value={imageData[link]?.url || ''}
-                            onChange={(e) => handleImageDataChange(link, e)}
-                            className="mt-1 block w-full border rounded-md p-2 text-sm"
-                            placeholder="https://example.com/image.jpg"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">Width (px or %)</label>
-                          <input
-                            type="text"
-                            name="width"
-                            value={imageData[link]?.width || ''}
-                            onChange={(e) => handleImageDataChange(link, e)}
-                            className="mt-1 block w-full border rounded-md p-2 text-sm"
-                            placeholder="auto or 300px"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">Height (px or %)</label>
-                          <input
-                            type="text"
-                            name="height"
-                            value={imageData[link]?.height || ''}
-                            onChange={(e) => handleImageDataChange(link, e)}
-                            className="mt-1 block w-full border rounded-md p-2 text-sm"
-                            placeholder="auto or 200px"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">Alignment</label>
-                          <select
-                            name="align"
-                            value={imageData[link]?.align || 'left'}
-                            onChange={(e) => handleImageDataChange(link, e)}
-                            className="mt-1 block w-full border rounded-md p-2 text-sm"
-                          >
-                            <option value="left">Left</option>
-                            <option value="center">Center</option>
-                            <option value="right">Right</option>
-                            <option value="justify">Justified</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div className="mt-6 flex justify-end space-x-2">
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => setShowImageModal((prev) => ({ ...prev, [link]: false }))}
-                          className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 text-sm"
-                        >
-                          Cancel
-                        </motion.button>
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => handleImageModalSubmit(link)}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
-                        >
-                          {isEditingImage[link] ? 'Update' : 'Insert'}
-                        </motion.button>
-                      </div>
-                    </motion.div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </motion.div>
-        )}
-      </motion.div>
-    );
-  };
-  // Director-specific functions for buttons
-  const handleAddArticleClick = () => {
-    // This function will be passed to DirectorPanel to trigger the add modal
-    // We don't need to implement it here as it's handled in DirectorPanel
-  };
-  const handleRebuildClick = () => {
-    // This function will be passed to DirectorPanel to trigger the rebuild action
-    // We don't need to implement it here as it's handled in DirectorPanel
-  };
+
+  const tabs = [
+    { id: 'assignments', label: 'MY ASSIGNMENTS' },
+    { id: 'completed', label: 'COMPLETED' },
+    { id: 'calendar', label: 'ACADEMIC CALENDAR', hidden: !canSeeCalendar },
+    { id: 'director', label: 'DIRECTOR PANEL', hidden: !isDirector },
+    { id: 'chief', label: 'CHIEF EDITOR PANEL', hidden: !isChief },
+    { id: 'tasks', label: 'MY TASKS', hidden: !isRrss && !isWebDev },
+    { id: 'news', label: 'PUBLISH NEWS', hidden: !isDirector },
+  ];
+
+  const currentAssignments = activeTab === 'assignments' ? pendingAssignments : completedAssignments;
+
   if (!user || !effectiveName || !user.role) {
     console.log('Invalid user:', user);
     return (
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="min-h-screen bg-gray-100 p-4 md:p-8 flex items-center justify-center"
+        className="min-h-screen bg-[#fafafa] p-4 md:p-8 flex items-center justify-center"
       >
         <div className="text-center text-gray-600 bg-white p-6 rounded-lg shadow-md">
-          <p className="text-lg mb-4">Error: Incomplete user information. Please log in again.</p>
+          <p className="text-lg font-sans mb-4">Error: Incomplete user information. Please log in again.</p>
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -1544,7 +908,7 @@ export default function PortalSection({ user, onLogout }) {
               console.log('Log Out button clicked in PortalSection');
               onLogout();
             }}
-            className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm"
+            className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm font-sans font-bold uppercase tracking-widest"
           >
             Log Out
           </motion.button>
@@ -1552,231 +916,82 @@ export default function PortalSection({ user, onLogout }) {
       </motion.div>
     );
   }
+
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.8 }}
-      className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 p-4 md:p-8"
-    >
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
-            {isAuthor && !isDirector && !isChief ? 'My Articles' :
-             isDirector ? 'General Director Panel' :
-             isChief ? 'Chief Editor Panel' : 'Review Panel'}
-          </h2>
-          <div className="flex items-center space-x-4">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 bg-[#fafafa] min-h-screen">
+      {/* Header */}
+      <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between border-b border-gray-900 pb-8">
+        <div>
+          <h1 className="font-serif text-5xl font-bold text-gray-900 tracking-tighter mb-2">
+            Editorial Portal
+          </h1>
+          <div className="flex items-center space-x-3">
+            <p className="text-gray-500 font-sans tracking-widest uppercase text-xs">
+              Active Session:
+            </p>
             {user?.image ? (
               <motion.img
                 initial={{ scale: 0.8 }}
                 animate={{ scale: 1 }}
                 src={user.image}
                 alt={`Profile of ${effectiveName || 'User'}`}
-                className="w-10 h-10 rounded-full object-cover border-2 border-gray-300"
+                className="w-6 h-6 rounded-full object-cover border-2 border-gray-300"
                 onError={(e) => (e.target.style.display = 'none')} // Hide on error
               />
             ) : (
               <motion.div
                 initial={{ scale: 0.8 }}
                 animate={{ scale: 1 }}
-                className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center"
+                className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center border-2 border-gray-300"
               >
-                <span className="text-gray-600 text-sm">{effectiveName?.charAt(0) || 'U'}</span>
+                <span className="text-gray-600 text-xs font-sans">{effectiveName?.charAt(0) || 'U'}</span>
               </motion.div>
             )}
-            <span className="text-gray-600">Welcome, {effectiveName || 'User'}</span>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={onLogout}
-              className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm"
-            >
-              Log Out
-            </motion.button>
+            <span className="font-bold text-gray-800 font-sans text-xs uppercase tracking-widest">{effectiveName}</span>
           </div>
         </div>
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-red-100 text-red-700 p-4 rounded-md mb-6"
+        <button
+          onClick={onLogout}
+          className="mt-4 md:mt-0 text-xs font-bold uppercase tracking-widest px-6 py-2 border border-gray-900 hover:bg-gray-900 hover:text-white transition-all"
+        >
+          Log Out
+        </button>
+      </header>
+
+      {/* Navigation */}
+      <nav className="flex flex-wrap gap-8 mb-12 border-b border-gray-200">
+        {tabs.filter(t => !t.hidden).map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`pb-4 text-xs font-bold uppercase tracking-widest transition-all relative ${
+              activeTab === tab.id ? 'text-blue-700' : 'text-gray-400 hover:text-gray-600'
+            }`}
           >
-            {error}
-          </motion.div>
-        )}
-        {!loading && !isAuthor && <CalendarComponent
-          events={calendarEvents}
-          onSelectEvent={(event) => setSelectedEvent(event.resource)}
-        />}
-        {selectedEvent && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
-              <div className="flex justify-between items-start mb-4">
-                <h5 className="font-bold text-lg">Event Details</h5>
-                <button onClick={() => setSelectedEvent(null)} className="text-gray-500 hover:text-gray-700">×</button>
-              </div>
-              {renderFullAssignment(selectedEvent)}
-            </div>
-          </div>
-        )}
-        {isDirector && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="mb-6"
-          >
-            <NewsUploadSectionEN />
-          </motion.div>
-        )}
-        {isDirector && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="mb-6 bg-white rounded-xl shadow-lg p-4"
-          >
-            <div className="flex justify-between items-center">
-              <h3 className="text-xl font-semibold text-gray-800">General Director Panel</h3>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setIsDirectorPanelExpanded(!isDirectorPanelExpanded)}
-                className="bg-gray-200 text-gray-800 px-3 py-1 rounded-md hover:bg-gray-300 text-sm flex items-center space-x-2"
-              >
-                <span>{isDirectorPanelExpanded ? 'Minimize' : 'Expand'}</span>
-                <svg className={`w-4 h-4 transform ${isDirectorPanelExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                </svg>
-              </motion.button>
-            </div>
-            <div className="mt-4 flex space-x-4">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => {
-                  console.log('Add article button clicked');
-                  document.dispatchEvent(new CustomEvent('openAddArticleModal'));
-                }}
-                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium flex items-center space-x-2"
-                style={{ display: 'inline-flex !important', visibility: 'visible !important' }}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                <span>Add Article</span>
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => {
-                  console.log('Update page button clicked');
-                  document.dispatchEvent(new CustomEvent('rebuildPage'));
-                }}
-                className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors font-medium flex items-center space-x-2"
-                style={{ display: 'inline-flex !important', visibility: 'visible !important' }}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                <span>Update Page</span>
-              </motion.button>
-            </div>
-            <AnimatePresence>
-              {isDirectorPanelExpanded && (
+            {tab.label}
+            {activeTab === tab.id && (
+              <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700" />
+            )}
+          </button>
+        ))}
+      </nav>
+
+      <main>
+        <AnimatePresence mode="wait">
+          {activeTab === 'assignments' || activeTab === 'completed' ? (
+            <motion.section
+              key="assignments"
+              initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
+            >
+              {error && (
                 <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="mt-4 space-y-6 overflow-hidden"
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-red-100 text-red-700 p-6 rounded-md mb-8 font-sans text-sm"
                 >
-                  <DirectorPanelEN user={user} />
-                  <TaskSectionEN user={user} />
+                  {error}
                 </motion.div>
               )}
-            </AnimatePresence>
-          </motion.div>
-        )}
-        {isChief && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="mb-6 bg-white rounded-xl shadow-lg p-4"
-          >
-            <div className="flex justify-between items-center">
-              <h3 className="text-xl font-semibold text-gray-800">Chief Editor Panel</h3>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setIsChiefEditorPanelExpanded(!isChiefEditorPanelExpanded)}
-                className="bg-gray-200 text-gray-800 px-3 py-1 rounded-md hover:bg-gray-300 text-sm flex items-center space-x-2"
-              >
-                <span>{isChiefEditorPanelExpanded ? 'Minimize' : 'Expand'}</span>
-                <svg className={`w-4 h-4 transform ${isChiefEditorPanelExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                </svg>
-              </motion.button>
-            </div>
-            <AnimatePresence>
-              {isChiefEditorPanelExpanded && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="mt-4 space-y-6 overflow-hidden"
-                >
-                  <AssignSectionEN user={user} />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
-        )}
-        {(isRrss || isWebDev) && !isDirector && !isChief && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="mb-6 bg-white rounded-xl shadow-lg p-4"
-          >
-            <div className="flex justify-between items-center">
-              <h3 className="text-xl font-semibold text-gray-800">My Tasks in {isRrss ? 'Social Media' : 'Web Development'}</h3>
-            </div>
-            <TaskSectionEN user={user} />
-          </motion.div>
-        )}
-        {(pendingAssignments.length > 0 || completedAssignments.length > 0) && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-            className="mb-6"
-          >
-            <div className="flex space-x-4 border-b">
-              <motion.button
-                whileHover={{ y: -2 }}
-                onClick={() => setActiveTab('assignments')}
-                className={`pb-2 px-4 text-sm font-medium transition-all duration-300 ${activeTab === 'assignments' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}
-              >
-                {isAuthor ? 'Articles Under Review' : 'Pending Assignments'} ({pendingAssignments.length})
-              </motion.button>
-              <motion.button
-                whileHover={{ y: -2 }}
-                onClick={() => setActiveTab('completed')}
-                className={`pb-2 px-4 text-sm font-medium transition-all duration-300 ${activeTab === 'completed' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}
-              >
-                {isAuthor ? 'Archived Articles' : 'Completed Assignments'} ({completedAssignments.length})
-              </motion.button>
-            </div>
-          </motion.div>
-        )}
-        <ErrorBoundary>
-          {(isChief || isDirector) && activeTab === 'asignar' && <AssignSectionEN user={user} />}
-          {(pendingAssignments.length > 0 || completedAssignments.length > 0 || isChief || isDirector) && (
-            <>
               {loading ? (
                 <motion.div
                   initial={{ opacity: 0 }}
@@ -1784,44 +999,220 @@ export default function PortalSection({ user, onLogout }) {
                   className="flex justify-center items-center h-32"
                 >
                   <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
-                  <p className="ml-4 text-gray-600">Loading assignments...</p>
+                  <p className="ml-4 text-gray-600 font-sans text-sm">Loading assignments...</p>
                 </motion.div>
-              ) : selectedAssignment ? (
-                renderFullAssignment(selectedAssignment)
+              ) : currentAssignments.length === 0 ? (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="text-center p-12 bg-white rounded-md border border-gray-200 shadow-sm"
+                >
+                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                  <h3 className="mt-4 font-serif text-xl font-bold text-gray-900">No assignments {activeTab === 'assignments' ? 'pending' : 'completed'} at this time.</h3>
+                  <p className="mt-2 text-gray-600 font-sans text-sm">Stay tuned for new opportunities.</p>
+                </motion.div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {(() => {
-                    const currentAssignments = activeTab === 'assignments' ? pendingAssignments : completedAssignments;
-                    if (currentAssignments.length === 0) {
-                      return (
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          className="col-span-full text-center p-12 bg-white rounded-xl shadow-lg"
-                        >
-                          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                          </svg>
-                          <h3 className="mt-4 text-xl font-semibold text-gray-800">No assignments {activeTab === 'assignments' ? 'pending' : 'completed'} at this moment.</h3>
-                          <p className="mt-2 text-gray-600">Stay tuned, new opportunities will come soon!</p>
-                        </motion.div>
-                      );
-                    }
-                    return currentAssignments.map((assignment, index) => (
-                      <AssignmentCard
-                        key={assignment.id}
-                        assignment={assignment}
-                        onClick={() => setSelectedAssignment(assignment)}
-                        index={index}
-                      />
-                    ));
-                  })()}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {currentAssignments.map((ass, idx) => (
+                    <AssignmentCard
+                      key={ass.id}
+                      assignment={ass}
+                      index={idx}
+                      onClick={() => setSelectedAssignment(ass)}
+                    />
+                  ))}
                 </div>
               )}
-            </>
-          )}
-        </ErrorBoundary>
-      </div>
-    </motion.div>
+            </motion.section>
+          ) : activeTab === 'calendar' ? (
+            <motion.div
+              key="calendar"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              className="bg-white border border-gray-200 p-8 rounded-sm shadow-sm"
+            >
+              <CalendarComponent events={calendarEvents} onSelectEvent={(e) => setSelectedAssignment(e.resource)} />
+            </motion.div>
+          ) : activeTab === 'director' ? (
+            <motion.div
+              key="director"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              className="bg-white border border-gray-200 p-8 rounded-sm shadow-sm"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-serif text-2xl font-bold text-gray-900">General Director Panel</h3>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setIsDirectorPanelExpanded(!isDirectorPanelExpanded)}
+                  className="bg-gray-200 text-gray-800 px-3 py-1 rounded-md hover:bg-gray-300 text-sm font-sans font-bold uppercase tracking-widest flex items-center space-x-2"
+                >
+                  <span>{isDirectorPanelExpanded ? 'Minimize' : 'Expand'}</span>
+                  <svg className={`w-4 h-4 transform ${isDirectorPanelExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </motion.button>
+              </div>
+              <AnimatePresence>
+                {isDirectorPanelExpanded && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="mt-4 space-y-6 overflow-hidden"
+                  >
+                    <DirectorPanelEN user={user} />
+                    <TaskSectionEN user={user} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <div className="mt-4 flex space-x-4">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => {
+                    console.log('Add article button clicked');
+                    document.dispatchEvent(new CustomEvent('openAddArticleModal'));
+                  }}
+                  className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors font-sans text-sm font-bold uppercase tracking-widest flex items-center space-x-2"
+                  style={{ display: 'inline-flex !important', visibility: 'visible !important' }}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  <span>Add Article</span>
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => {
+                    console.log('Update page button clicked');
+                    document.dispatchEvent(new CustomEvent('rebuildPage'));
+                  }}
+                  className="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 transition-colors font-sans text-sm font-bold uppercase tracking-widest flex items-center space-x-2"
+                  style={{ display: 'inline-flex !important', visibility: 'visible !important' }}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  <span>Update Page</span>
+                </motion.button>
+              </div>
+            </motion.div>
+          ) : activeTab === 'chief' ? (
+            <motion.div
+              key="chief"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              className="bg-white border border-gray-200 p-8 rounded-sm shadow-sm"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-serif text-2xl font-bold text-gray-900">Chief Editor Panel</h3>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setIsChiefEditorPanelExpanded(!isChiefEditorPanelExpanded)}
+                  className="bg-gray-200 text-gray-800 px-3 py-1 rounded-md hover:bg-gray-300 text-sm font-sans font-bold uppercase tracking-widest flex items-center space-x-2"
+                >
+                  <span>{isChiefEditorPanelExpanded ? 'Minimize' : 'Expand'}</span>
+                  <svg className={`w-4 h-4 transform ${isChiefEditorPanelExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </motion.button>
+              </div>
+              <AnimatePresence>
+                {isChiefEditorPanelExpanded && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="mt-4 space-y-6 overflow-hidden"
+                  >
+                    <AssignSectionEN user={user} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          ) : activeTab === 'tasks' ? (
+            <motion.div
+              key="tasks"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              className="bg-white border border-gray-200 p-8 rounded-sm shadow-sm"
+            >
+              <h3 className="font-serif text-2xl font-bold text-gray-900 mb-4">My Tasks in {isRrss ? 'Social Media' : 'Web Development'}</h3>
+              <TaskSectionEN user={user} />
+            </motion.div>
+          ) : activeTab === 'news' ? (
+            <motion.div
+              key="news"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              className="bg-white border border-gray-200 p-8 rounded-sm shadow-sm"
+            >
+              <h3 className="font-serif text-2xl font-bold text-gray-900 mb-4">Publish News</h3>
+              <NewsUploadSectionEN />
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+      </main>
+
+      {/* Assignment Detail Modal */}
+      <AnimatePresence>
+        {selectedAssignment && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-white/95 backdrop-blur-sm overflow-y-auto px-4 py-12"
+          >
+            <div className="max-w-4xl mx-auto">
+              <button
+                onClick={() => setSelectedAssignment(null)}
+                className="mb-8 font-sans font-bold text-xs uppercase tracking-widest flex items-center hover:text-blue-600"
+              >
+                ← Back to Portal
+              </button>
+              <header className="mb-12">
+                <span className="text-xs font-bold text-blue-600 tracking-[0.3em] uppercase">{selectedAssignment.role}</span>
+                <h2 className="font-serif text-4xl font-bold text-gray-900 mt-2 mb-4 leading-tight">
+                  {selectedAssignment['Nombre Artículo']}
+                </h2>
+                <div className="h-1 w-24 bg-gray-900" />
+              </header>
+              <ReviewerWorkspace
+                assignment={selectedAssignment}
+                onClose={() => setSelectedAssignment(null)}
+                handleSubmitRubric={handleSubmitRubric}
+                handleSubmit={handleSubmit}
+                handleVote={handleVote}
+                rubricScores={rubricScores}
+                feedback={feedback}
+                report={report}
+                vote={vote}
+                rubricStatus={rubricStatus}
+                submitStatus={submitStatus}
+                isPending={isAuthor ? (!selectedAssignment.feedbackEditor || !['Aceptado', 'Rechazado'].includes(selectedAssignment.Estado)) : !selectedAssignment.isCompleted}
+                role={selectedAssignment.role}
+                link={selectedAssignment['Link Artículo']}
+                toggleTutorial={toggleTutorial}
+                tutorialVisible={tutorialVisible}
+                debouncedSetFeedback={debouncedSetFeedback}
+                debouncedSetReport={debouncedSetReport}
+                modules={modules}
+                formats={formats}
+                decodeBody={decodeBody}
+                showImageModal={showImageModal}
+                imageData={imageData}
+                isEditingImage={isEditingImage}
+                handleImageDataChange={handleImageDataChange}
+                handleImageModalSubmit={handleImageModalSubmit}
+                expandedFeedback={expandedFeedback}
+                toggleFeedback={toggleFeedback}
+                getDecisionText={getDecisionText}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }

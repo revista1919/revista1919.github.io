@@ -506,12 +506,6 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
                  {assignment['Nombre Artículo']}
                </h1>
             </header>
-            <div className="space-y-6">
-              <h4 className="font-serif text-xl font-bold text-gray-900">Resumen Ejecutivo</h4>
-              <p className="font-sans text-sm text-gray-600 leading-relaxed italic border-l-2 border-gray-200 pl-4">
-                {assignment.summary || "Resumen ejecutivo del manuscrito enviado para evaluación. (Nota: Si no se proporciona, generar uno basado en el contenido.)"}
-              </p>
-            </div>
             <div className="font-serif text-base md:text-lg leading-relaxed text-gray-800 space-y-6">
               {/* Aquí iría el contenido del artículo o un visor de PDF */}
               <div dangerouslySetInnerHTML={{ __html: assignment.content }} />

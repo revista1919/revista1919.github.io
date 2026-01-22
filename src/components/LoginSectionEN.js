@@ -27,7 +27,7 @@ export default function LoginSection({ onLogin }) {
   useEffect(() => {
     if (!auth) {
       console.error('Error: auth is not defined. Check firebase.js');
-      setMessage({ text: 'Configuration error. Please contact the team.', type: 'error' });
+      setMessage({ text: 'Configuration error. Contact the team.', type: 'error' });
       return;
     }
 
@@ -40,11 +40,8 @@ export default function LoginSection({ onLogin }) {
         );
 
         if (!csvUser) {
-          setMessage({
-            text: 'This email is not authorized. Are you an author or staff member? If so, please contact us by email.',
-            type: 'error'
-          });
-          await signOut(auth).catch(err => console.error('Sign out error:', err));
+          setMessage({ text: 'This email is not authorized. Are you an author or team member? If so, contact us by email.', type: 'error' });
+          await signOut(auth).catch((err) => console.error('Error signing out:', err));
           setCurrentUser(null);
           return;
         }
@@ -73,8 +70,8 @@ export default function LoginSection({ onLogin }) {
       setIsLoading(true);
       try {
         const response = await fetch(USERS_CSV, { cache: 'no-store' });
-        if (!response.ok) throw new Error(`CSV load error: ${response.status}`);
-
+        if (!response.ok) throw new Error(`Error loading CSV: ${response.status}`);
+        
         const csvText = await response.text();
         Papa.parse(csvText, {
           header: true,
@@ -93,7 +90,7 @@ export default function LoginSection({ onLogin }) {
             setIsLoading(false);
           },
           error: (err) => {
-            console.error('CSV error:', err);
+            console.error('CSV Error:', err);
             setMessage({ text: 'Error loading the user list', type: 'error' });
             setIsLoading(false);
           },
@@ -153,18 +150,14 @@ export default function LoginSection({ onLogin }) {
       const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
       const user = userCredential.user;
       console.log('✅ User created:', user.uid);
-
-      setMessage({
-        text: `Password created for ${user.email}! You can now sign in.`,
-        type: 'success'
-      });
+      setMessage({ text: `Password created for ${user.email}! You can now sign in.`, type: 'success' });
 
       setEmail('');
       setPassword('');
       setIsLogin(true);
       setErrors({ email: '', password: '' });
     } catch (error) {
-      console.error('Sign up error:', error.code, error.message);
+      console.error('Signup error:', error.code, error.message);
       let errorText = 'Error creating account';
 
       switch (error.code) {
@@ -178,7 +171,7 @@ export default function LoginSection({ onLogin }) {
           errorText = 'Invalid email';
           break;
         case 'auth/too-many-requests':
-          errorText = 'Too many attempts. Please try again later.';
+          errorText = 'Too many attempts. Try again later.';
           break;
         default:
           errorText = error.message || 'Unknown error';
@@ -217,7 +210,7 @@ export default function LoginSection({ onLogin }) {
       if (onLogin) onLogin(userData);
     } catch (error) {
       console.error('Login error:', error.code, error.message);
-      let errorText = 'Login error';
+      let errorText = 'Error signing in';
 
       switch (error.code) {
         case 'auth/invalid-credential':
@@ -229,7 +222,7 @@ export default function LoginSection({ onLogin }) {
           errorText = 'Invalid email';
           break;
         case 'auth/too-many-requests':
-          errorText = 'Too many attempts. Please try again later.';
+          errorText = 'Too many attempts. Try again later.';
           break;
         default:
           errorText = error.message || 'Unknown error';
@@ -243,7 +236,7 @@ export default function LoginSection({ onLogin }) {
 
   const handleForgotPassword = async () => {
     if (!email) {
-      setMessage({ text: 'Please enter your email first', type: 'error' });
+      setMessage({ text: 'Enter your email first', type: 'error' });
       return;
     }
 
@@ -254,7 +247,7 @@ export default function LoginSection({ onLogin }) {
     );
 
     if (!userFromCSV) {
-      setMessage({ text: 'This email is not authorized in the list', type: 'error' });
+      setMessage({ text: 'This email is not authorized on the list', type: 'error' });
       return;
     }
 
@@ -264,10 +257,7 @@ export default function LoginSection({ onLogin }) {
     try {
       await sendPasswordResetEmail(auth, normalizedEmail);
       console.log('✅ Password reset email sent to:', normalizedEmail);
-      setMessage({
-        text: 'Check your email (including spam) to reset your password. It may take a few minutes.',
-        type: 'success'
-      });
+      setMessage({ text: 'Check your email (including spam/junk) to reset your password. It may take a few minutes.', type: 'success' });
     } catch (error) {
       console.error('Forgot password error:', error.code, error.message);
       let errorText = 'Error sending password reset email';
@@ -277,10 +267,10 @@ export default function LoginSection({ onLogin }) {
           errorText = 'Invalid email format';
           break;
         case 'auth/user-not-found':
-          errorText = 'No account found with this email. Please create a password first.';
+          errorText = 'No account registered with this email. Use "Create Password" first.';
           break;
         case 'auth/too-many-requests':
-          errorText = 'Too many attempts. Please wait 10–15 minutes.';
+          errorText = 'Too many attempts. Wait 10–15 minutes.';
           break;
         case 'auth/missing-email':
           errorText = 'Email is missing';
@@ -305,18 +295,19 @@ export default function LoginSection({ onLogin }) {
       setIsLogin(true);
       if (onLogin) onLogin(null);
     } catch (error) {
-      console.error('Sign out error:', error);
+      console.error('Logout error:', error);
       setMessage({ text: 'Error signing out', type: 'error' });
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isLogin) await handleLogin();
-    else await handleSignUp();
+    if (isLogin) {
+      await handleLogin();
+    } else {
+      await handleSignUp();
+    }
   };
-
-  /* ---------- UI BELOW (TEXT TRANSLATED ONLY) ---------- */
 
   if (currentUser) {
     return (
@@ -326,9 +317,7 @@ export default function LoginSection({ onLogin }) {
             <UserIcon className="h-10 w-10 text-gray-400" />
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-[0.3em] font-bold text-[#007398] mb-1">
-              Signed In
-            </p>
+            <p className="text-[10px] uppercase tracking-[0.3em] font-bold text-[#007398] mb-1">Session Active</p>
             <h3 className="text-2xl font-serif font-bold text-gray-900">{currentUser.name}</h3>
             <p className="text-sm text-gray-500 font-mono">{currentUser.role}</p>
           </div>
@@ -340,11 +329,14 @@ export default function LoginSection({ onLogin }) {
           </button>
           <AnimatePresence>
             {message.text && (
-              <motion.div className={`mt-6 p-4 text-[11px] font-medium leading-relaxed border-l-4 ${
-                message.type === 'error'
-                  ? 'bg-red-50 border-red-500 text-red-700'
-                  : 'bg-green-50 border-green-500 text-green-700'
-              }`}>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className={`mt-6 p-4 text-[11px] font-medium leading-relaxed border-l-4 ${
+                  message.type === 'error' ? 'bg-red-50 border-red-500 text-red-700' : 'bg-green-50 border-green-500 text-green-700'
+                }`}
+              >
                 {message.text}
               </motion.div>
             )}
@@ -359,7 +351,7 @@ export default function LoginSection({ onLogin }) {
       <div className="max-w-md mx-auto py-12 px-6">
         <div className="bg-white border-2 border-black p-8 text-center space-y-6">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#007398] mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading authorized users...</p>
+          <p className="text-gray-600">Loading user list...</p>
         </div>
       </div>
     );
@@ -367,7 +359,11 @@ export default function LoginSection({ onLogin }) {
 
   return (
     <div className="max-w-md mx-auto py-16 px-6">
-      <motion.div className="bg-white border border-gray-200 p-8 shadow-sm relative overflow-hidden">
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="bg-white border border-gray-200 p-8 shadow-sm relative overflow-hidden"
+      >
         <div className="absolute top-0 left-0 w-full h-1 bg-[#007398]" />
         <div className="text-center mb-10">
           <h2 className="text-3xl font-serif font-bold text-gray-900 mb-2">
@@ -377,11 +373,95 @@ export default function LoginSection({ onLogin }) {
             National Journal of Sciences
           </p>
         </div>
-
-        {/* form unchanged */}
-
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-1.5 block">Email</label>
+            <div className="relative">
+              <input
+                type="email"
+                className="w-full bg-gray-50 border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:border-[#007398] focus:bg-white transition-all"
+                placeholder="example@gmail.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isLoading}
+              />
+            </div>
+            {errors.email && <p className="mt-1 text-[11px] text-red-700">{errors.email}</p>}
+          </div>
+          <div>
+            <div className="flex justify-between items-end mb-1.5">
+              <label className="text-[10px] uppercase font-bold tracking-widest text-gray-500 block">Password</label>
+              {isLogin && (
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  className="text-[9px] uppercase font-bold text-[#007398] hover:underline"
+                  disabled={isLoading || !email}
+                >
+                  Forgot your password?
+                </button>
+              )}
+            </div>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                className="w-full bg-gray-50 border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:border-[#007398] focus:bg-white transition-all"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={isLoading}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                disabled={isLoading}
+              >
+                {showPassword ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+              </button>
+            </div>
+            {errors.password && <p className="mt-1 text-[11px] text-red-700">{errors.password}</p>}
+          </div>
+          <button
+            type="submit"
+            disabled={isLoading || users.length === 0}
+            className="w-full bg-black text-white py-4 text-xs uppercase font-black tracking-[0.2em] hover:bg-[#007398] transition-colors flex items-center justify-center gap-3 disabled:bg-gray-400"
+          >
+            {isLoading ? (
+              <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <>{isLogin ? 'Sign In' : 'Set Password'}</>
+            )}
+          </button>
+        </form>
+        <div className="mt-8 pt-6 border-t border-gray-100 text-center">
+          <button
+            onClick={() => setIsLogin(!isLogin)}
+            className="text-xs text-gray-500 hover:text-black transition-colors"
+            disabled={isLoading}
+          >
+            {isLogin ? (
+              <>First time here? <span className="font-bold text-[#007398]">Create your password</span></>
+            ) : (
+              <>Already have an account? <span className="font-bold text-[#007398]">Sign in</span></>
+            )}
+          </button>
+        </div>
+        <AnimatePresence>
+          {message.text && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className={`mt-6 p-4 text-[11px] font-medium leading-relaxed border-l-4 ${
+                message.type === 'error' ? 'bg-red-50 border-red-500 text-red-700' : 'bg-green-50 border-green-500 text-green-700'
+              }`}
+            >
+              {message.text}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
-
       <p className="mt-8 text-center text-[10px] text-gray-400 uppercase tracking-widest leading-loose">
         Editorial Management System <br />
         For journal users only.
