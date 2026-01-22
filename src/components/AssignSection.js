@@ -4,14 +4,11 @@ import Papa from 'papaparse';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import CalendarComponent from './CalendarComponent';
-
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 const INCOMING_CSV = process.env.REACT_APP_FORM_CSV || '';
 const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby2B1OUt3TMqaed6Vz-iamUPn4gHhKXG2RRxiy8Nt6u69Cg-2kSze2XQ-NywX5QrNfy/exec';
-
 const sanitizeInput = (input) => input ? input.trim().toLowerCase().replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') : '';
-
 const parseDate = (dateStr) => {
   if (!dateStr) return null;
   const parts = dateStr.split(/[-\/]/);
@@ -37,9 +34,7 @@ const parseDate = (dateStr) => {
   }
   return new Date(Date.UTC(year, month, day));
 };
-
 // --- COMPONENTES ATÓMICOS ESTILIZADOS ---
-
 const StatusBadge = ({ type }) => {
   const styles = {
     assigned: "bg-emerald-50 text-emerald-700 border-emerald-100",
@@ -54,14 +49,12 @@ const StatusBadge = ({ type }) => {
     </span>
   );
 };
-
 const MetricCard = ({ label, value, color }) => (
   <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">{label}</p>
     <p className={`text-3xl font-serif font-bold ${color}`}>{value}</p>
   </div>
 );
-
 export default function AssignSection({ user, onClose }) {
   const [activeView, setActiveView] = useState('articles'); // 'articles' | 'collaborators' | 'calendar'
   const [users, setUsers] = useState([]);
@@ -79,7 +72,6 @@ export default function AssignSection({ user, onClose }) {
   const [isSending, setIsSending] = useState({});
   const [emailPreview, setEmailPreview] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
-
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -121,11 +113,9 @@ export default function AssignSection({ user, onClose }) {
     };
     fetchData();
   }, []);
-
   const isCompleted = (assign) => {
     return !!assign?.['Feedback 3'] && assign['Feedback 3'].trim() !== '';
   };
-
   const groupedIncoming = useMemo(() => {
     const groupMap = {};
     incoming.forEach(art => {
@@ -149,16 +139,16 @@ export default function AssignSection({ user, onClose }) {
       }
       groupMap[authorSanitized].push({ ...art, assignment: matchingAssign });
     });
-    return Object.entries(groupMap).map(([sanitizedAuthor, articles]) => ({
-      authorName: articles[0]['Nombre (primer nombre y primer apellido)'],
-      authorEmail: articles[0]['Correo electrónico'],
-      authorInstitution: articles[0]['Establecimiento educacional'],
-      articles: articles.filter(art => !(art.assignment && isCompleted(art.assignment))),
-    })).filter(group => group.articles.length > 0);
+    return Object.entries(groupMap)
+      .filter(([sanitizedAuthor, articles]) => articles.length > 0)
+      .map(([sanitizedAuthor, articles]) => ({
+        authorName: articles[0]['Nombre (primer nombre y primer apellido)'],
+        authorEmail: articles[0]['Correo electrónico'],
+        authorInstitution: articles[0]['Establecimiento educacional'],
+        articles: articles.filter(art => !(art.assignment && isCompleted(art.assignment))),
+      })).filter(group => group.articles.length > 0);
   }, [incoming, allAssignments]);
-
   const totalPending = groupedIncoming.reduce((sum, group) => sum + group.articles.length, 0);
-
   const calendarEvents = useMemo(() => {
     return pendingAssignments.map(a => ({
       title: a['Nombre Artículo'],
@@ -168,7 +158,6 @@ export default function AssignSection({ user, onClose }) {
       resource: a,
     })).filter(event => event.start);
   }, [pendingAssignments]);
-
   const handleSelectEvent = (event) => {
     const assignment = event.resource;
     const titleSanitized = sanitizeInput(assignment['Nombre Artículo']);
@@ -199,7 +188,6 @@ export default function AssignSection({ user, onClose }) {
       }
     }
   };
-
   const handleAssignOrUpdate = async (data, isUpdate = false) => {
     const action = isUpdate ? 'update' : 'assign';
     const plazoValue = data.Plazo;
@@ -234,7 +222,6 @@ export default function AssignSection({ user, onClose }) {
       setIsSending({ ...isSending, [articleKey]: false });
     }
   };
-
   const handleContact = async (email, name, title, role, articleKey) => {
     if (!email || !name || !title || !role) {
       setSubmitStatus({ ...submitStatus, [articleKey]: `Error: Faltan datos para enviar el recordatorio.` });
@@ -289,11 +276,9 @@ export default function AssignSection({ user, onClose }) {
       setIsSending({ ...isSending, [articleKey]: false });
     }
   };
-
   const getUniqueId = (groupAuthor, artTitle) => {
     return `${sanitizeInput(groupAuthor)}-${sanitizeInput(artTitle || 'unnamed')}`;
   };
-
   const tutorialSteps = [
     '1. Explora la lista de colaboradores haciendo clic en sus perfiles para ver descripciones, intereses y contactarlos si no cumplen plazos (usa el botón "Contactar" para un email profesional).',
     '2. En "Artículos por Autor", los artículos se agrupan por autor usando el "Título de su artículo". Se muestran solo los pendientes (sin todas las retroalimentaciones/informes).',
@@ -302,7 +287,6 @@ export default function AssignSection({ user, onClose }) {
     '5. El panel es responsive. Los artículos con todas las retroalimentaciones se ocultan automáticamente, independientemente del "Estado".',
     '6. Usa el calendario para ver y editar plazos de artículos pendientes. Haz clic en un evento para editar la asignación.',
   ];
-
   const handleEditOrAssignClick = (group, art) => {
     const uniqueId = getUniqueId(group.authorName, art['Título de su artículo']);
     const isAssigned = !!art.assignment;
@@ -323,12 +307,10 @@ export default function AssignSection({ user, onClose }) {
     });
     setEditingId(uniqueId);
   };
-
   const handleCancel = () => {
     setEditingId(null);
     setEditingData(null);
   };
-
   const handleConfirm = () => {
     const { data, isUpdate, author, area } = editingData;
     handleAssignOrUpdate(
@@ -345,16 +327,13 @@ export default function AssignSection({ user, onClose }) {
       isUpdate
     );
   };
-
   const updateField = (field, value) => {
     setEditingData(prev => ({
       ...prev,
       data: { ...prev.data, [field]: value }
     }));
   };
-
   if (loading) return <div className="text-center p-4 text-gray-600">Cargando gestión de asignaciones...</div>;
-
   return (
     <div className="min-h-screen bg-[#F9FAFB] pb-20">
       {/* Header */}
@@ -394,7 +373,6 @@ export default function AssignSection({ user, onClose }) {
           </div>
         </div>
       </header>
-
       <main className="max-w-7xl mx-auto px-8 py-8">
         {/* Métricas */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
@@ -414,10 +392,9 @@ export default function AssignSection({ user, onClose }) {
           <MetricCard label="En Revisión" value={pendingAssignments.length} color="text-blue-600" />
           <MetricCard label="Revisores Activos" value={users.length} color="text-emerald-600" />
         </div>
-
         <AnimatePresence mode="wait">
           {activeView === 'articles' && (
-            <motion.section 
+            <motion.section
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
               className="space-y-6"
             >
@@ -425,7 +402,6 @@ export default function AssignSection({ user, onClose }) {
                 <h3 className="font-serif text-xl font-bold">Manuscritos Entrantes ({totalPending})</h3>
                 <div className="text-xs font-bold text-blue-600 cursor-pointer">Filtrar por Área ↓</div>
               </div>
-
               <div className="grid grid-cols-1 gap-4">
                 {groupedIncoming.map((group) => (
                   <div key={group.authorName} className="group bg-white rounded-2xl border border-gray-100 p-6 hover:shadow-xl hover:border-blue-100 transition-all duration-300">
@@ -441,7 +417,6 @@ export default function AssignSection({ user, onClose }) {
                           {group.authorInstitution}
                         </p>
                       </div>
-
                       {/* Info de Artículos */}
                       <div className="flex-grow space-y-4">
                         {group.articles.map((art) => {
@@ -485,7 +460,7 @@ export default function AssignSection({ user, onClose }) {
                                 )}
                               </div>
                               <div className="self-center flex flex-col gap-2">
-                                <button 
+                                <button
                                   onClick={() => handleEditOrAssignClick(group, art)}
                                   className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-xs font-bold hover:bg-gray-900 hover:text-white transition-all shadow-sm"
                                   disabled={isSending[articleKey]}
@@ -572,9 +547,8 @@ export default function AssignSection({ user, onClose }) {
               </div>
             </motion.section>
           )}
-
           {activeView === 'collaborators' && (
-            <motion.section 
+            <motion.section
               initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
             >
@@ -589,7 +563,7 @@ export default function AssignSection({ user, onClose }) {
                     <h5 className="font-bold text-gray-900">{u.Nombre}</h5>
                     <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mt-1">{(u['Rol en la Revista'] || '').split(';')[0]}</p>
                     <div className="mt-4 pt-4 border-t border-gray-50 flex justify-around">
-                      <button 
+                      <button
                         onClick={() => handleContact(
                           u.Correo || u['Correo electrónico'],
                           u.Nombre,
@@ -616,7 +590,6 @@ export default function AssignSection({ user, onClose }) {
               })}
             </motion.section>
           )}
-
           {activeView === 'calendar' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
               <CalendarComponent events={calendarEvents} onSelectEvent={handleSelectEvent} />
@@ -624,17 +597,16 @@ export default function AssignSection({ user, onClose }) {
           )}
         </AnimatePresence>
       </main>
-
       {/* OVERLAY DE ASIGNACIÓN */}
       <AnimatePresence>
         {editingId && (
           <>
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={handleCancel}
               className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-40"
             />
-            <motion.div 
+            <motion.div
               initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="fixed top-0 right-0 h-full w-full max-w-lg bg-white z-50 shadow-2xl p-10 overflow-y-auto"
@@ -644,11 +616,10 @@ export default function AssignSection({ user, onClose }) {
                 <h2 className="font-serif text-3xl font-bold text-gray-900 mt-2 leading-tight">{editingData.data.nombre}</h2>
                 <p className="text-sm text-gray-500 mt-4 italic">"{editingData.area}"</p>
               </header>
-
               <div className="space-y-8">
                 <div className="space-y-2">
                   <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Nombre del Artículo</label>
-                  <input 
+                  <input
                     className="w-full bg-gray-50 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
                     value={editingData.data.nombre}
                     onChange={(e) => updateField('nombre', e.target.value)}
@@ -656,17 +627,16 @@ export default function AssignSection({ user, onClose }) {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Enlace al Documento</label>
-                  <input 
+                  <input
                     className="w-full bg-gray-50 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
                     value={editingData.data.link}
                     onChange={(e) => updateField('link', e.target.value)}
                   />
                 </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Revisor Líder (1)</label>
-                    <select 
+                    <select
                       className="w-full bg-gray-50 border-none rounded-xl px-4 py-3 text-sm"
                       value={editingData.data.r1}
                       onChange={(e) => updateField('r1', e.target.value)}
@@ -677,7 +647,7 @@ export default function AssignSection({ user, onClose }) {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Revisor de Par (2)</label>
-                    <select 
+                    <select
                       className="w-full bg-gray-50 border-none rounded-xl px-4 py-3 text-sm"
                       value={editingData.data.r2}
                       onChange={(e) => updateField('r2', e.target.value)}
@@ -687,10 +657,9 @@ export default function AssignSection({ user, onClose }) {
                     </select>
                   </div>
                 </div>
-
                 <div className="space-y-2">
                   <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Editor de Sección</label>
-                  <select 
+                  <select
                     className="w-full bg-gray-50 border-none rounded-xl px-4 py-3 text-sm"
                     value={editingData.data.editor}
                     onChange={(e) => updateField('editor', e.target.value)}
@@ -699,26 +668,24 @@ export default function AssignSection({ user, onClose }) {
                     {sectionEditors.map(e => <option key={e.Nombre} value={e.Nombre}>{e.Nombre}</option>)}
                   </select>
                 </div>
-
                 <div className="space-y-2">
                   <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Fecha Límite (Deadline)</label>
-                  <DatePicker 
+                  <DatePicker
                     selected={editingData.data.plazo}
                     onChange={(date) => updateField('plazo', date)}
                     className="w-full bg-gray-50 border-none rounded-xl px-4 py-3 text-sm"
                     dateFormat="yyyy-MM-dd"
                   />
                 </div>
-
                 <div className="pt-10 flex gap-4">
-                  <button 
+                  <button
                     onClick={handleConfirm}
                     disabled={!editingData.data.nombre || !editingData.data.link || !editingData.data.r1 || !editingData.data.r2 || !editingData.data.editor || !editingData.data.plazo || isSending[editingData.id]}
                     className="flex-grow bg-gray-900 text-white py-4 rounded-xl font-bold text-sm hover:bg-blue-600 transition-all shadow-lg disabled:bg-gray-400"
                   >
                     {isSending[editingData.id] ? 'Cambiando...' : (editingData.isUpdate ? 'Actualizar' : 'Asignar')}
                   </button>
-                  <button 
+                  <button
                     onClick={handleCancel}
                     className="px-6 py-4 border border-gray-200 rounded-xl font-bold text-sm hover:bg-gray-50"
                   >
@@ -735,7 +702,6 @@ export default function AssignSection({ user, onClose }) {
           </>
         )}
       </AnimatePresence>
-
       {/* Modal de Usuario Seleccionado */}
       {selectedUser && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -772,7 +738,6 @@ export default function AssignSection({ user, onClose }) {
           </div>
         </div>
       )}
-
       {/* Tutorial Modal */}
       {tutorialOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -793,7 +758,6 @@ export default function AssignSection({ user, onClose }) {
           </div>
         </div>
       )}
-
       {/* Email Preview Modal */}
       {emailPreview && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
