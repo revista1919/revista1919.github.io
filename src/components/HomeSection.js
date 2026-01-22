@@ -72,18 +72,31 @@ const HomeSection = ({ onOpenMenu }) => {
             />
 
           </div>
-          <button
-            onClick={handleLanguageToggle}
-            className="px-2 py-1 rounded-full text-xs font-medium transition-all duration-200 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-opacity-20"
-            style={{ 
-              backgroundColor: 'rgba(0, 0, 0, 0.05)',
-              border: '1px solid rgba(0, 0, 0, 0.1)',
-            }}
-            title={`Cambiar a ${language === 'es' ? 'Inglés' : 'Español'}`}
-          >
-            {language === 'es' ? 'EN' : 'ES'}
-          </button>
-        </div>
+          <motion.button
+  onClick={handleLanguageToggle}
+  whileTap={{ scale: 0.95 }}
+  className="relative flex items-center bg-gray-100/80 backdrop-blur-sm border border-gray-200 p-1 rounded-full w-20 h-9 overflow-hidden shadow-sm"
+  title={`Cambiar a ${language === 'es' ? 'Inglés' : 'Español'}`}
+>
+  {/* Fondo deslizante */}
+  <motion.div
+    className="absolute top-1 bottom-1 w-[34px] bg-white rounded-full shadow-md z-0"
+    initial={false}
+    animate={{ x: language === 'es' ? 0 : 38 }}
+    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+  />
+
+  {/* Etiquetas */}
+  <div className="relative z-10 flex w-full justify-around items-center text-[10px] font-bold tracking-tighter">
+    <span className={`transition-colors duration-300 ${language === 'es' ? 'text-blue-600' : 'text-gray-400'}`}>
+      ES
+    </span>
+    <span className={`transition-colors duration-300 ${language === 'en' ? 'text-blue-600' : 'text-gray-400'}`}>
+      EN
+    </span>
+  </div>
+</motion.button>
+
 
         {/* HERO */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 items-center mb-20 sm:mb-32">
@@ -186,6 +199,7 @@ const HomeSection = ({ onOpenMenu }) => {
           </div>
         </motion.div>
       </div>
+    </div>
     </div>
   );
 };
