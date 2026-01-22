@@ -1,3 +1,4 @@
+}
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Papa from 'papaparse';
 import ReactQuill from 'react-quill';
@@ -77,34 +78,36 @@ const localizer = momentLocalizer(moment);
 
 function CalendarComponent({ events, onSelectEvent }) {
   return (
-    <div className="bg-white border border-gray-200 p-8 rounded-sm shadow-sm mb-6">
+    <div className="bg-white border border-gray-200 p-4 md:p-8 rounded-sm shadow-sm mb-6 overflow-hidden">
       <h3 className="font-serif text-2xl font-bold text-gray-900 mb-4">Calendario de Plazos</h3>
-      <Calendar
-        localizer={localizer}
-        events={events}
-        startAccessor="start"
-        endAccessor="end"
-        style={{ height: 600 }}
-        onSelectEvent={onSelectEvent}
-        views={['month', 'week', 'day', 'agenda']}
-        popup
-        selectable
-        className="rounded-lg border border-gray-200"
-        messages={{
-          next: "Siguiente",
-          previous: "Anterior",
-          today: "Hoy",
-          month: "Mes",
-          week: "Semana",
-          day: "Día",
-          agenda: "Agenda",
-          date: "Fecha",
-          time: "Hora",
-          event: "Evento",
-          noEventsInRange: "No hay eventos en este rango",
-          showMore: total => `+ Ver más (${total})`
-        }}
-      />
+      <div className="h-[400px] md:h-[600px]">
+        <Calendar
+          localizer={localizer}
+          events={events}
+          startAccessor="start"
+          endAccessor="end"
+          style={{ height: '100%' }}
+          onSelectEvent={onSelectEvent}
+          views={['month', 'week', 'day', 'agenda']}
+          popup
+          selectable
+          className="rounded-lg border border-gray-200 overflow-hidden"
+          messages={{
+            next: "Siguiente",
+            previous: "Anterior",
+            today: "Hoy",
+            month: "Mes",
+            week: "Semana",
+            day: "Día",
+            agenda: "Agenda",
+            date: "Fecha",
+            time: "Hora",
+            event: "Evento",
+            noEventsInRange: "No hay eventos en este rango",
+            showMore: total => `+ Ver más (${total})`
+          }}
+        />
+      </div>
     </div>
   );
 }
@@ -121,7 +124,7 @@ const RubricViewer = ({ roleKey, scores, onChange, readOnly = false }) => {
       initial={{ opacity: 0 }} animate={{ opacity: 1 }}
       className="bg-white border border-gray-200 rounded-lg overflow-hidden mb-8"
     >
-      <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+      <div className="bg-gray-50 px-4 py-3 md:px-6 md:py-4 border-b border-gray-200 flex justify-between items-center">
         <h5 className="font-serif text-lg font-bold text-gray-900 uppercase tracking-tight">
           Protocolo de Evaluación: {roleKey}
         </h5>
@@ -130,13 +133,13 @@ const RubricViewer = ({ roleKey, scores, onChange, readOnly = false }) => {
         </div>
       </div>
      
-      <div className="p-6 space-y-8">
+      <div className="p-4 md:p-6 space-y-4 md:space-y-8">
         {crits.map((c) => (
           <div key={c.key} className="border-b border-gray-100 last:border-0 pb-6">
             <div className="flex justify-between items-start mb-4">
-              <h6 className="font-sans font-bold text-xs uppercase tracking-widest text-gray-500">{c.name}</h6>
+              <h6 className="font-sans font-bold text-xs uppercase tracking-widest text-gray-500 break-words">{c.name}</h6>
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {Object.entries(c.levels).map(([val, info]) => (
                 <button
                   key={val}
@@ -151,7 +154,7 @@ const RubricViewer = ({ roleKey, scores, onChange, readOnly = false }) => {
                   <span className={`block text-xs font-bold mb-1 ${scores[c.key] == val ? 'text-blue-700' : 'text-gray-400'}`}>
                     NIVEL {val}
                   </span>
-                  <p className="text-sm text-gray-800 leading-snug">{info.label.split('=')[1]}</p>
+                  <p className="text-sm text-gray-800 leading-snug break-words">{info.label.split('=')[1]}</p>
                   {scores[c.key] == val && (
                     <motion.div layoutId="check" className="absolute top-2 right-2 text-blue-600">
                       <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293l-4 4a1 1 0 01-1.414 0l-2-2a1 1 0 111.414-1.414L9 10.586l3.293-3.293a1 1 0 011.414 1.414z"/></svg>
@@ -183,26 +186,26 @@ const AssignmentCard = ({ assignment, onClick, index }) => {
       transition={{ delay: index * 0.05 }}
       whileHover={{ y: -4 }}
       onClick={onClick}
-      className="group bg-white border border-gray-200 p-6 flex flex-col h-full hover:border-blue-400 transition-all cursor-pointer relative"
+      className="group bg-white border border-gray-200 p-4 md:p-6 flex flex-col h-full hover:border-blue-400 transition-all cursor-pointer relative overflow-hidden"
     >
       <div className="flex justify-between items-start mb-4">
-        <span className="text-[10px] font-sans font-bold uppercase tracking-[0.2em] text-blue-600">
+        <span className="text-[10px] font-sans font-bold uppercase tracking-[0.2em] text-blue-600 break-words">
           {role}
         </span>
         <div className={`w-2 h-2 rounded-full ${isCompleted ? 'bg-green-500' : 'bg-amber-400 animate-pulse'}`} />
       </div>
      
-      <h4 className="font-serif text-xl font-bold text-gray-900 group-hover:text-blue-800 transition-colors mb-4 line-clamp-2">
+      <h4 className="font-serif text-xl font-bold text-gray-900 group-hover:text-blue-800 transition-colors mb-4 line-clamp-2 break-words">
         {assignment['Nombre Artículo']}
       </h4>
       <div className="mt-auto pt-4 border-t border-gray-50 space-y-2">
         <div className="flex justify-between text-xs text-gray-500 font-sans">
           <span>PLAZO</span>
-          <span className="font-bold">{assignment.Plazo ? new Date(assignment.Plazo).toLocaleDateString() : 'SIN FECHA'}</span>
+          <span className="font-bold break-words">{assignment.Plazo ? new Date(assignment.Plazo).toLocaleDateString() : 'SIN FECHA'}</span>
         </div>
         <div className="flex justify-between text-xs text-gray-500 font-sans">
           <span>ESTADO</span>
-          <span className={`font-bold ${isCompleted ? 'text-green-700' : 'text-amber-700'}`}>
+          <span className={`font-bold break-words ${isCompleted ? 'text-green-700' : 'text-amber-700'}`}>
             {isCompleted ? 'FINALIZADO' : 'PENDIENTE'}
           </span>
         </div>
@@ -930,15 +933,15 @@ export default function PortalSection({ user, onLogout }) {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 bg-[#fafafa] min-h-screen">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-12 bg-[#fafafa] min-h-screen">
       {/* Header del Portal */}
       <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between border-b border-gray-900 pb-8">
         <div>
-          <h1 className="font-serif text-5xl font-bold text-gray-900 tracking-tighter mb-2">
+          <h1 className="font-serif text-5xl font-bold text-gray-900 tracking-tighter mb-2 break-words">
             Portal Editorial
           </h1>
           <div className="flex items-center space-x-3">
-            <p className="text-gray-500 font-sans tracking-widest uppercase text-xs">
+            <p className="text-gray-500 font-sans tracking-widest uppercase text-xs break-words">
               Sesión activa:
             </p>
             {user?.image ? (
@@ -959,7 +962,7 @@ export default function PortalSection({ user, onLogout }) {
                 <span className="text-gray-600 text-xs font-sans">{effectiveName?.charAt(0) || 'U'}</span>
               </motion.div>
             )}
-            <span className="font-bold text-gray-800 font-sans text-xs uppercase tracking-widest">{effectiveName}</span>
+            <span className="font-bold text-gray-800 font-sans text-xs uppercase tracking-widest break-words">{effectiveName}</span>
           </div>
         </div>
         <button
@@ -970,7 +973,7 @@ export default function PortalSection({ user, onLogout }) {
         </button>
       </header>
       {/* Navegación Estilo Editorial */}
-      <nav className="flex flex-wrap gap-8 mb-12 border-b border-gray-200">
+      <nav className="flex flex-wrap gap-4 md:gap-8 mb-12 border-b border-gray-200">
         {tabs.filter(t => !t.hidden).map(tab => (
           <button
             key={tab.id}
@@ -997,7 +1000,7 @@ export default function PortalSection({ user, onLogout }) {
                 <motion.div
                   initial={{ opacity: 0, y: -20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-red-100 text-red-700 p-6 rounded-md mb-8 font-sans text-sm"
+                  className="bg-red-100 text-red-700 p-6 rounded-md mb-8 font-sans text-sm break-words"
                 >
                   {error}
                 </motion.div>
@@ -1009,7 +1012,7 @@ export default function PortalSection({ user, onLogout }) {
                   className="flex justify-center items-center h-32"
                 >
                   <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
-                  <p className="ml-4 text-gray-600 font-sans text-sm">Cargando asignaciones...</p>
+                  <p className="ml-4 text-gray-600 font-sans text-sm break-words">Cargando asignaciones...</p>
                 </motion.div>
               ) : currentAssignments.length === 0 ? (
                 <motion.div
@@ -1020,8 +1023,8 @@ export default function PortalSection({ user, onLogout }) {
                   <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                   </svg>
-                  <h3 className="mt-4 font-serif text-xl font-bold text-gray-900">No hay asignaciones {activeTab === 'assignments' ? 'pendientes' : 'completadas'} en este momento.</h3>
-                  <p className="mt-2 text-gray-600 font-sans text-sm">Manténgase atento para nuevas oportunidades.</p>
+                  <h3 className="mt-4 font-serif text-xl font-bold text-gray-900 break-words">No hay asignaciones {activeTab === 'assignments' ? 'pendientes' : 'completadas'} en este momento.</h3>
+                  <p className="mt-2 text-gray-600 font-sans text-sm break-words">Manténgase atento para nuevas oportunidades.</p>
                 </motion.div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -1040,7 +1043,7 @@ export default function PortalSection({ user, onLogout }) {
             <motion.div
               key="calendar"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              className="bg-white border border-gray-200 p-8 rounded-sm shadow-sm"
+              className="bg-white border border-gray-200 p-4 md:p-8 rounded-sm shadow-sm overflow-hidden"
             >
               <CalendarComponent events={calendarEvents} onSelectEvent={(e) => setSelectedAssignment(e.resource)} />
             </motion.div>
@@ -1048,10 +1051,10 @@ export default function PortalSection({ user, onLogout }) {
             <motion.div
               key="director"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              className="bg-white border border-gray-200 p-8 rounded-sm shadow-sm"
+              className="bg-white border border-gray-200 p-4 md:p-8 rounded-sm shadow-sm overflow-hidden"
             >
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-serif text-2xl font-bold text-gray-900">Panel del Director General</h3>
+                <h3 className="font-serif text-2xl font-bold text-gray-900 break-words">Panel del Director General</h3>
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -1078,7 +1081,7 @@ export default function PortalSection({ user, onLogout }) {
                   </motion.div>
                 )}
               </AnimatePresence>
-              <div className="mt-4 flex space-x-4">
+              <div className="mt-4 flex space-x-4 flex-wrap gap-2">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -1115,10 +1118,10 @@ export default function PortalSection({ user, onLogout }) {
             <motion.div
               key="chief"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              className="bg-white border border-gray-200 p-8 rounded-sm shadow-sm"
+              className="bg-white border border-gray-200 p-4 md:p-8 rounded-sm shadow-sm overflow-hidden"
             >
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-serif text-2xl font-bold text-gray-900">Panel del Editor en Jefe</h3>
+                <h3 className="font-serif text-2xl font-bold text-gray-900 break-words">Panel del Editor en Jefe</h3>
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -1149,18 +1152,18 @@ export default function PortalSection({ user, onLogout }) {
             <motion.div
               key="tasks"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              className="bg-white border border-gray-200 p-8 rounded-sm shadow-sm"
+              className="bg-white border border-gray-200 p-4 md:p-8 rounded-sm shadow-sm overflow-hidden"
             >
-              <h3 className="font-serif text-2xl font-bold text-gray-900 mb-4">Mis Tareas en {isRrss ? 'Redes Sociales' : 'Desarrollo Web'}</h3>
+              <h3 className="font-serif text-2xl font-bold text-gray-900 mb-4 break-words">Mis Tareas en {isRrss ? 'Redes Sociales' : 'Desarrollo Web'}</h3>
               <TaskSection user={user} />
             </motion.div>
           ) : activeTab === 'news' ? (
             <motion.div
               key="news"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              className="bg-white border border-gray-200 p-8 rounded-sm shadow-sm"
+              className="bg-white border border-gray-200 p-4 md:p-8 rounded-sm shadow-sm overflow-hidden"
             >
-              <h3 className="font-serif text-2xl font-bold text-gray-900 mb-4">Publicar Noticias</h3>
+              <h3 className="font-serif text-2xl font-bold text-gray-900 mb-4 break-words">Publicar Noticias</h3>
               <NewsUploadSection />
             </motion.div>
           ) : null}
@@ -1171,7 +1174,7 @@ export default function PortalSection({ user, onLogout }) {
         {selectedAssignment && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-white/95 backdrop-blur-sm overflow-y-auto px-4 py-12"
+            className="fixed inset-0 z-50 bg-white/95 backdrop-blur-sm overflow-y-auto px-2 py-6 sm:px-4 sm:py-12"
           >
             <div className="max-w-4xl mx-auto">
               <button
@@ -1181,8 +1184,8 @@ export default function PortalSection({ user, onLogout }) {
                 ← Volver al Portal
               </button>
               <header className="mb-12">
-                <span className="text-xs font-bold text-blue-600 tracking-[0.3em] uppercase">{selectedAssignment.role}</span>
-                <h2 className="font-serif text-4xl font-bold text-gray-900 mt-2 mb-4 leading-tight">
+                <span className="text-xs font-bold text-blue-600 tracking-[0.3em] uppercase break-words">{selectedAssignment.role}</span>
+                <h2 className="font-serif text-4xl font-bold text-gray-900 mt-2 mb-4 leading-tight break-words">
                   {selectedAssignment['Nombre Artículo']}
                 </h2>
                 <div className="h-1 w-24 bg-gray-900" />
