@@ -1,4 +1,4 @@
-}
+
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Papa from 'papaparse';
 import ReactQuill from 'react-quill';
