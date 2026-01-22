@@ -25,6 +25,7 @@ import Footer from './components/Footer';
 import LoginSection from './components/LoginSection';
 import PortalSection from './components/PortalSection';
 import NewsSection from './components/NewsSection';
+import HomeSection from './components/HomeSection'; // Asegúrate de que la ruta sea correcta
 import './index.css';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -545,6 +546,7 @@ function App() {
       <main className="flex-grow">
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
+            <Route path="/" element={<HomeSection />} />
             {sections.map(s => (
               <Route key={s.path} path={s.path} element={
                 <motion.div
@@ -562,7 +564,6 @@ function App() {
                 </motion.div>
               } />
             ))}
-            <Route path="/" element={sections.find(s => s.name === 'articles').component} />
           </Routes>
         </AnimatePresence>
       </main>
