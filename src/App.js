@@ -311,6 +311,12 @@ function App() {
 
   const sections = useMemo(() => [
     {
+      name: 'home',
+      label: 'Inicio',
+      path: '/',
+      component: <HomeSection onOpenMenu={() => setIsMenuOpen(true)} />,
+    },
+    {
       name: 'articles',
       label: 'Artículos',
       path: '/article',
@@ -553,8 +559,7 @@ const isHome = normalizedPath === '/' || normalizedPath === '' || rawPath === '/
       </nav>
       <main className="flex-grow">
         <AnimatePresence mode="wait">
-          <Routes location={location} key={location.pathname}>
-            <Route path="/" element={<HomeSection onOpenMenu={() => setIsMenuOpen(true)} />} />
+          <Routes location={location} key={location.key}>
             {sections.map(s => (
               <Route key={s.path} path={s.path} element={
                 <motion.div

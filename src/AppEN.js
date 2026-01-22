@@ -312,6 +312,12 @@ function AppEN() {
 
   const sections = useMemo(() => [
     {
+      name: 'home',
+      label: 'Home',
+      path: '/en',
+      component: <HomeSectionEN onOpenMenu={() => setIsMenuOpen(true)} />,
+    },
+    {
       name: 'articles',
       label: 'Articles',
       path: '/en/article',
@@ -560,12 +566,27 @@ function AppEN() {
           </div>
         </nav>
 
-        <Routes>
-          <Route path="/" element={<HomeSectionEN onOpenMenu={() => setIsMenuOpen(true)} />} />
-          {sections.map((section) => (
-            <Route key={section.name} path={section.path.substring(3)} element={section.component} />
-          ))}
-        </Routes>
+        <AnimatePresence mode="wait">
+          <Routes key={location.key}>
+            {sections.map((section) => (
+              <Route key={section.name} path={section.path.substring(3)} element={
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.3 }}
+                  className={`container ${
+                    user && isLoginActive
+                      ? 'max-w-full px-0'
+                      : 'mx-auto px-6 lg:px-8'
+                  } flex-grow`}
+                >
+                  {section.component}
+                </motion.div>
+              } />
+            ))}
+          </Routes>
+        </AnimatePresence>
       </div>
       <AnimatePresence>
         {isMenuOpen && (
