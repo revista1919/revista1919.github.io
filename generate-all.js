@@ -165,7 +165,9 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
         : [],
       keywords_english: row['Keywords']
         ? row['Keywords'].split(';').map(k => k.trim())
-        : []
+        : [],
+      tipo: row['Tipo'] || '',
+      type: row['Type'] || ''
     }});
     fs.writeFileSync(outputJson, JSON.stringify(articles, null, 2), 'utf8');
     console.log(`✅ Archivo generado: ${outputJson} (${articles.length} artículos)`);
@@ -184,14 +186,17 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
   const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
   const pdfFileName = `Article-${articleSlug}.pdf`;
   article.pdf = `${domain}/Articles/${pdfFileName}`;
-  const authorsDisplayEs = formatAuthorsDisplay(article.autores, 'es');
-  const authorsDisplayEn = formatAuthorsDisplay(article.autores, 'en');
+  const authorsArray = article.autores.split(';').map(a => a.trim()).filter(Boolean);
+  const authorsDisplayEs = authorsArray.map(auth => `<a href="/team/${generateSlug(auth)}.html" class="author-link" style="color: var(--primary-blue); text-decoration: none; cursor: pointer; font-weight: 500;">${auth}</a>`).join(', ');
+  const authorsDisplayEn = authorsArray.map(auth => `<a href="/team/${generateSlug(auth)}.EN.html" class="author-link" style="color: var(--primary-blue); text-decoration: none; cursor: pointer; font-weight: 500;">${auth}</a>`).join(', ');
   const authorsAPA = formatAuthorsAPA(article.autores);
   const authorsChicagoEs = formatAuthorsChicagoOrMLA(article.autores, 'es');
   const authorsMLAEs = formatAuthorsChicagoOrMLA(article.autores, 'es');
   const authorsChicagoEn = formatAuthorsChicagoOrMLA(article.autores, 'en');
   const authorsMLAEn = formatAuthorsChicagoOrMLA(article.autores, 'en');
   const year = new Date(article.fecha).getFullYear();
+  const tipoEs = article.tipo || 'Artículo de Investigación';
+  const typeEn = article.type || 'Research Article';
   // Generar HTML en español
   const htmlContentEs = `
 <!DOCTYPE html>
@@ -311,6 +316,12 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
       font-size: 1.1rem;
       color: var(--primary-blue);
       margin: 15px 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .authors a:hover {
+      text-decoration: underline;
     }
     .article-info-row {
       font-size: 0.85rem;
@@ -318,6 +329,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
       gap: 20px;
       color: var(--text-grey);
       margin-top: 10px;
+      flex-wrap: wrap;
     }
     h2 {
       font-family: 'Noto Sans', sans-serif;
@@ -358,6 +370,8 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
     .action-buttons {
       display: flex;
       gap: 15px;
+      flex-wrap: wrap;
+      justify-content: flex-start;
     }
     .btn {
       padding: 12px 24px;
@@ -395,6 +409,28 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
       .main-wrapper { grid-template-columns: 1fr; }
       aside { display: none; }
       .article-container { padding: 20px; }
+      .journal-meta, .article-info-row, .authors, .keywords-box, .action-buttons {
+        justify-content: center;
+        text-align: center;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .keywords-box {
+        text-align: center;
+      }
+      .keyword-tag {
+        margin: 0.25rem 0;
+        display: block;
+      }
+      p, h1, h2 {
+        text-align: center;
+      }
+      .citation-card p {
+        text-align: left;
+        word-break: break-word;
+        overflow-wrap: break-word;
+      }
     }
   </style>
 </head>
@@ -423,7 +459,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
     <main class="article-container">
       <header>
         <div class="journal-meta">
-          ${article.area} | Artículo de Investigación
+          ${article.area} | ${tipoEs}
         </div>
         <h1>${article.titulo}</h1>
         <div class="authors">${authorsDisplayEs}</div>
@@ -520,7 +556,8 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
     .article-container { background: white; padding: 40px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     header { border-bottom: 1px solid var(--border); margin-bottom: 30px; padding-bottom: 20px; }
     h1 { font-family: 'Noto Serif', serif; font-size: 2.2rem; margin: 10px 0; color: #000; }
-    .authors { font-size: 1.1rem; color: var(--primary-blue); margin: 15px 0; }
+    .authors { font-size: 1.1rem; color: var(--primary-blue); margin: 15px 0; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .authors a:hover { text-decoration: underline; }
     h2 { font-family: 'Noto Sans', sans-serif; font-size: 1.4rem; color: var(--text-dark); margin-top: 40px; border-bottom: 1px solid #eee; }
     p { font-family: 'Noto Serif', serif; font-size: 1.05rem; text-align: justify; }
     .pdf-preview { width: 100%; height: 700px; border: 1px solid var(--border); margin-bottom: 20px; }
@@ -534,7 +571,23 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
     .btn-outline:hover { background: #f0f7f9; }
     .citation-card { background: #f4f4f4; padding: 20px; border-left: 4px solid var(--primary-blue); font-size: 0.9rem; }
     footer { text-align: center; padding: 40px; color: var(--text-grey); font-size: 0.8rem; }
-    @media (max-width: 900px) { .main-wrapper { grid-template-columns: 1fr; } aside { display: none; } .article-container { padding: 20px; } }
+    .action-buttons { display: flex; gap: 15px; flex-wrap: wrap; justify-content: flex-start; }
+    @media (max-width: 900px) {
+      .main-wrapper { grid-template-columns: 1fr; }
+      aside { display: none; }
+      .article-container { padding: 20px; }
+      .journal-meta, .article-info-row, .authors, .keywords-box, .action-buttons {
+        justify-content: center;
+        text-align: center;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .keywords-box { text-align: center; }
+      .keyword-tag { margin: 0.25rem 0; display: block; }
+      p, h1, h2 { text-align: center; }
+      .citation-card p { text-align: left; word-break: break-word; overflow-wrap: break-word; }
+    }
   </style>
 </head>
 <body>
@@ -559,7 +612,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
     </aside>
     <main class="article-container">
       <header>
-        <div class="journal-meta">${article.area} | Research Article</div>
+        <div class="journal-meta">${article.area} | ${typeEn}</div>
         <h1>${article.titulo}</h1>
         <div class="authors">${authorsDisplayEn}</div>
         <div style="font-size: 0.85rem; color: #666;">
@@ -577,7 +630,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
       <section id="preview" style="margin-top:50px;">
         <h2>PDF Preview</h2>
         <embed src="${article.pdf}" type="application/pdf" class="pdf-preview" />
-        <div style="display:flex; gap:15px;">
+        <div class="action-buttons">
           <a href="${article.pdf}" target="_blank" class="btn btn-outline">View Full Screen</a>
           <a href="${article.pdf}" download class="btn btn-primary">Download Full Article</a>
         </div>
@@ -1439,7 +1492,6 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
       --text-dark: #333333;
       --text-grey: #666666;
       --border: #e4e4e4;
-      --bg-light: #fdfdfd;
     }
     body {
       font-family: 'Noto Sans', sans-serif;

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import Papa from 'papaparse';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -10,39 +11,59 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby2B1OUt3TMqaed6Vz-i
 const sanitizeInput = (input) => input ? input.trim().toLowerCase().replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') : '';
 const parseDate = (dateStr) => {
   if (!dateStr) return null;
-  const parts = dateStr.split(/[-\/]/); // Handles / or -
+  const parts = dateStr.split(/[-\/]/);
   if (parts.length !== 3) return null;
   let year, month, day;
-  if (parts[0].length === 4) { // YYYY-MM-DD
+  if (parts[0].length === 4) {
     year = parseInt(parts[0], 10);
     month = parseInt(parts[1], 10) - 1;
     day = parseInt(parts[2], 10);
   } else {
-    // Try DD/MM/YYYY first
     day = parseInt(parts[0], 10);
     month = parseInt(parts[1], 10);
     year = parseInt(parts[2], 10);
     if (month > 12 || day > 31 || month < 1 || day < 1 || isNaN(year) || isNaN(month) || isNaN(day)) {
-      // Try MM/DD/YYYY
       month = parseInt(parts[0], 10);
       day = parseInt(parts[1], 10);
       year = parseInt(parts[2], 10);
       if (month > 12 || day > 31 || month < 1 || day < 1 || isNaN(year) || isNaN(month) || isNaN(day)) {
-        console.warn('Invalid date parsed:', dateStr);
         return null;
       }
     }
-    month -= 1; // Adjust for JS Date
+    month -= 1;
   }
-  // Change: Use Date.UTC to avoid timezone shifts when parsing (treat as UTC)
   return new Date(Date.UTC(year, month, day));
 };
+// --- STYLED ATOMIC COMPONENTS ---
+const StatusBadge = ({ type }) => {
+  const styles = {
+    assigned: "bg-emerald-50 text-emerald-700 border-emerald-100",
+    pending: "bg-amber-50 text-amber-700 border-amber-100",
+    overdue: "bg-rose-50 text-rose-700 border-rose-100"
+  };
+  const label = type === 'assigned' ? 'In Process' : type === 'pending' ? 'Unassigned' : 'Overdue';
+  
+  return (
+    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${styles[type]}`}>
+      {label}
+    </span>
+  );
+};
+const MetricCard = ({ label, value, color }) => (
+  <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">{label}</p>
+    <p className={`text-3xl font-serif font-bold ${color}`}>{value}</p>
+  </div>
+);
+const ARTICLE_LINK_COLUMN = 'Insert your paper in Word format here. It must be 1,000 to 10,000 words. Remember not to include your name in the document.';
 export default function AssignSection({ user, onClose }) {
+  const [activeView, setActiveView] = useState('articles'); // 'articles' | 'collaborators' | 'calendar' | 'spreadsheets'
   const [users, setUsers] = useState([]);
   const [reviewers, setReviewers] = useState([]);
   const [sectionEditors, setSectionEditors] = useState([]);
   const [incoming, setIncoming] = useState([]);
-  const [assignments, setAssignments] = useState([]);
+  const [allAssignments, setAllAssignments] = useState([]);
+  const [pendingAssignments, setPendingAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
   const [editingId, setEditingId] = useState(null);
@@ -56,28 +77,22 @@ export default function AssignSection({ user, onClose }) {
     const fetchData = async () => {
       try {
         setLoading(true);
-        console.log("📡 Initiating fetch of CSVs...");
         const [usersText, incomingText, assignmentsText] = await Promise.all([
           fetch(USERS_CSV, { cache: 'no-store' }).then(r => r.text()),
           fetch(INCOMING_CSV, { cache: 'no-store' }).then(r => r.text()),
           fetch(ASSIGNMENTS_CSV, { cache: 'no-store' }).then(r => r.text()),
         ]);
-        console.log("✅ CSVs downloaded");
         const parsedUsers = Papa.parse(usersText, { header: true, skipEmptyLines: true }).data.filter(u => u.Nombre && u.Nombre.trim());
-        console.log("👥 Users parsed:", parsedUsers);
         const filteredUsers = parsedUsers.filter(u => {
           const roles = (u['Role in the Journal'] || u['Rol en la Revista'] || '').split(';').map(r => r.trim()).filter(Boolean);
           return roles.some(r => r === 'Reviewer' || r === 'Section Editor' || r === 'Editor-in-Chief' || r === 'Revisor' || r === 'Editor de Sección' || r === 'Editor en Jefe');
         });
         setUsers(filteredUsers);
-        console.log("✅ Filtered users (reviewers + editors + editors-in-chief):", filteredUsers);
         const revs = filteredUsers.filter(u => (u['Role in the Journal'] || u['Rol en la Revista'] || '').includes('Reviewer') || (u['Role in the Journal'] || u['Rol en la Revista'] || '').includes('Revisor'));
         const eds = filteredUsers.filter(u => (u['Role in the Journal'] || u['Rol en la Revista'] || '').includes('Section Editor') || (u['Role in the Journal'] || u['Rol en la Revista'] || '').includes('Editor de Sección'));
         const chiefs = filteredUsers.filter(u => (u['Role in the Journal'] || u['Rol en la Revista'] || '').includes('Editor-in-Chief') || (u['Role in the Journal'] || u['Rol en la Revista'] || '').includes('Editor en Jefe'));
         setReviewers([...revs, ...eds, ...chiefs]);
         setSectionEditors([...eds, ...chiefs]);
-        console.log("👤 Reviewers:", revs);
-        console.log("📂 Editors (including chief):", [...eds, ...chiefs]);
         const parsedIncoming = Papa.parse(incomingText, { header: true, skipEmptyLines: true }).data.filter(i =>
           (i['Name (first name and last name)'] || i['Nombre (primer nombre y primer apellido)']) &&
           (i['Title of your paper'] || i['Título de su artículo']) &&
@@ -85,16 +100,12 @@ export default function AssignSection({ user, onClose }) {
           (i['Title of your paper'] || i['Título de su artículo']).trim()
         );
         setIncoming(parsedIncoming);
-        console.log("📝 Incoming articles:", parsedIncoming);
         const parsedAssignments = Papa.parse(assignmentsText, { header: true, skipEmptyLines: true }).data.filter(a =>
           a['Nombre Artículo'] && a['Nombre Artículo'].trim() && a.Autor && a.Autor.trim()
         );
-        const isCompleted = (assign) => {
-          return !!(assign['Feedback 3'] && assign['Informe 3']);
-        };
-        const pendingAssignments = parsedAssignments.filter(a => !isCompleted(a));
-        setAssignments(pendingAssignments);
-        console.log("📂 Pending assignments:", pendingAssignments);
+        setAllAssignments(parsedAssignments);
+        const pending = parsedAssignments.filter(a => !isCompleted(a));
+        setPendingAssignments(pending);
       } catch (err) {
         console.error('❌ Error fetching data:', err);
       } finally {
@@ -104,7 +115,7 @@ export default function AssignSection({ user, onClose }) {
     fetchData();
   }, []);
   const isCompleted = (assign) => {
-    return !!(assign['Feedback 3'] && assign['Informe 3']);
+    return !!assign?.['Feedback 3'] && assign['Feedback 3'].trim() !== '';
   };
   const groupedIncoming = useMemo(() => {
     const groupMap = {};
@@ -116,7 +127,7 @@ export default function AssignSection({ user, onClose }) {
       if (!groupMap[authorSanitized]) {
         groupMap[authorSanitized] = [];
       }
-      let matchingAssign = assignments.find(a => {
+      let matchingAssign = allAssignments.find(a => {
         const aTitleSanitized = sanitizeInput(a['Nombre Artículo'] || '');
         const aAuthorSanitized = sanitizeInput(a.Autor || '');
         const exactMatch = aTitleSanitized === titleSanitized && aAuthorSanitized === authorSanitized;
@@ -126,34 +137,34 @@ export default function AssignSection({ user, onClose }) {
         );
         return exactMatch || (fuzzyTitleMatch && aAuthorSanitized === authorSanitized);
       });
+      if (matchingAssign && isCompleted(matchingAssign)) {
+        return;
+      }
       groupMap[authorSanitized].push({ ...art, assignment: matchingAssign });
     });
-    return Object.entries(groupMap).map(([sanitizedAuthor, articles]) => ({
-      authorName: articles[0]['Name (first name and last name)'] || articles[0]['Nombre (primer nombre y primer apellido)'],
-      authorEmail: articles[0]['Email direction'] || articles[0]['Correo electrónico'],
-      authorInstitution: articles[0]['Educational establishment'] || articles[0]['Establecimiento educacional'],
-      articles,
-    }));
-  }, [incoming, assignments]);
-  const totalPending = groupedIncoming.reduce((sum, group) => {
-    return sum + group.articles.filter(art => !(art.assignment && isCompleted(art.assignment))).length;
-  }, 0);
+    return Object.entries(groupMap)
+      .filter(([sanitizedAuthor, articles]) => articles.length > 0)
+      .map(([sanitizedAuthor, articles]) => ({
+        authorName: articles[0]['Name (first name and last name)'] || articles[0]['Nombre (primer nombre y primer apellido)'],
+        authorEmail: articles[0]['Email direction'] || articles[0]['Correo electrónico'],
+        authorInstitution: articles[0]['Educational establishment'] || articles[0]['Establecimiento educacional'],
+        articles: articles.filter(art => !(art.assignment && isCompleted(art.assignment))),
+      })).filter(group => group.articles.length > 0);
+  }, [incoming, allAssignments]);
+  const totalPending = groupedIncoming.reduce((sum, group) => sum + group.articles.length, 0);
   const calendarEvents = useMemo(() => {
-    return assignments
-      .filter(a => a.Plazo && parseDate(a.Plazo))
-      .map(a => ({
-        title: a['Nombre Artículo'],
-        start: parseDate(a.Plazo),
-        end: parseDate(a.Plazo),
-        allDay: true,
-        resource: a,
-      }));
-  }, [assignments]);
+    return pendingAssignments.map(a => ({
+      title: a['Nombre Artículo'],
+      start: parseDate(a.Plazo),
+      end: parseDate(a.Plazo),
+      allDay: true,
+      resource: a,
+    })).filter(event => event.start);
+  }, [pendingAssignments]);
   const handleSelectEvent = (event) => {
     const assignment = event.resource;
     const titleSanitized = sanitizeInput(assignment['Nombre Artículo']);
     const authorSanitized = sanitizeInput(assignment.Autor);
-    // Find the group and art
     for (const group of groupedIncoming) {
       if (sanitizeInput(group.authorName) === authorSanitized) {
         const art = group.articles.find(a => sanitizeInput(a['Title of your paper'] || a['Título de su artículo'] || '') === titleSanitized);
@@ -161,7 +172,7 @@ export default function AssignSection({ user, onClose }) {
           const uniqueId = getUniqueId(group.authorName, art['Title of your paper'] || art['Título de su artículo']);
           const defData = {
             nombre: assignment['Nombre Artículo'] || art['Title of your paper'] || art['Título de su artículo'] || '',
-            link: assignment['Link Artículo'] || art['Insert your paper in Word format here. It must be 1,000 to 10,000 words. Remember not to include your name in the document.'] || art['Inserta aquí tu artículo en formato Word. Debe tener de 1.000 a 10.000 palabras. Recuerda no incluir tu nombre en el documento.'] || '',
+            link: assignment['Link Artículo'] || art[ARTICLE_LINK_COLUMN] || '',
             r1: assignment['Revisor 1'] || '',
             r2: assignment['Revisor 2'] || '',
             editor: assignment.Editor || '',
@@ -183,7 +194,6 @@ export default function AssignSection({ user, onClose }) {
   const handleAssignOrUpdate = async (data, isUpdate = false) => {
     const action = isUpdate ? 'update' : 'assign';
     const plazoValue = data.Plazo;
-    // Change: Manual formatting to avoid timezone shift (sends exact local day, without toISOString)
     const plazoStr = plazoValue instanceof Date && !isNaN(plazoValue)
       ? `${plazoValue.getFullYear()}-${(plazoValue.getMonth() + 1).toString().padStart(2, '0')}-${plazoValue.getDate().toString().padStart(2, '0')}`
       : '';
@@ -195,33 +205,28 @@ export default function AssignSection({ user, onClose }) {
       rev2: data['Revisor 2'],
       editor: data.Editor,
       autor: data.Autor,
-      plazo: plazoStr, // Always send, even empty (to force update if needed)
+      plazo: plazoStr,
     };
     const articleKey = data['Nombre Artículo'] || data.Autor;
-    console.log("📤 Sending data to script (including plazo always):", body); // Improved log for debugging if plazo is sent
     setIsSending({ ...isSending, [articleKey]: true });
     try {
-      const response = await fetch(SCRIPT_URL, {
+      await fetch(SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      console.log("📨 Fetch sent, response (no-cors, cannot read):", response);
       setSubmitStatus({ ...submitStatus, [articleKey]: 'Updated... please wait a few moments to see the change, please refresh the page.' });
       setEditingId(null);
       setEditingData(null);
     } catch (err) {
       setSubmitStatus({ ...submitStatus, [articleKey]: '❌ Error: ' + err.message });
-      console.error('Error submitting:', err);
     } finally {
       setIsSending({ ...isSending, [articleKey]: false });
     }
   };
   const handleContact = async (email, name, title, role, articleKey) => {
-    console.log("📧 Sending reminder request for:", { email, name, title, role, articleKey });
     if (!email || !name || !title || !role) {
-      console.error("Missing email, name, title, or role:", { email, name, title, role });
       setSubmitStatus({ ...submitStatus, [articleKey]: `Error: Missing data to send the reminder.` });
       return;
     }
@@ -235,17 +240,15 @@ export default function AssignSection({ user, onClose }) {
       role: englishRole,
       senderName: user?.Nombre || 'Editorial Team',
     };
-    console.log("📤 Sending data to script:", body);
     try {
-      const response = await fetch(SCRIPT_URL, {
+      await fetch(SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      console.log("📨 Fetch sent (no-cors, cannot read the response):", response);
       setSubmitStatus({ ...submitStatus, [articleKey]: 'Reminder sent.' });
-      const articleLink = assignments.find(a => sanitizeInput(a['Nombre Artículo']) === sanitizeInput(title))?.['Link Artículo'] || '';
+      const articleLink = pendingAssignments.find(a => sanitizeInput(a['Nombre Artículo']) === sanitizeInput(title))?.['Link Artículo'] || '';
       const htmlBody = `
         <div style="font-family: 'Georgia', serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f1e9; border: 2px solid #8b5a2b; border-radius: 10px; color: #3c2f2f;">
           <div style="background-color: #8b5a2b; padding: 15px; border-radius: 8px 8px 0 0; text-align: center;">
@@ -272,7 +275,6 @@ export default function AssignSection({ user, onClose }) {
       `;
       setEmailPreview({ to: email, subject: 'Reminder: Review Deadlines - National Journal of Student Sciences', htmlBody });
     } catch (err) {
-      console.error("Error sending reminder:", err);
       setSubmitStatus({ ...submitStatus, [articleKey]: `Error: ${err.message}` });
     } finally {
       setIsSending({ ...isSending, [articleKey]: false });
@@ -289,44 +291,441 @@ export default function AssignSection({ user, onClose }) {
     '5. The panel is responsive. Articles with all feedback are automatically hidden, regardless of the "Status".',
     '6. Use the calendar to view and edit deadlines for pending articles. Click on an event to edit the assignment.',
   ];
+  const handleEditOrAssignClick = (group, art) => {
+    const uniqueId = getUniqueId(group.authorName, art['Title of your paper'] || art['Título de su artículo']);
+    const isAssigned = !!art.assignment;
+    const defData = {
+      nombre: isAssigned ? art.assignment['Nombre Artículo'] || art['Title of your paper'] || art['Título de su artículo'] || '' : art['Title of your paper'] || art['Título de su artículo'] || '',
+      link: isAssigned ? art.assignment['Link Artículo'] || art[ARTICLE_LINK_COLUMN] || '' : art[ARTICLE_LINK_COLUMN] || '',
+      r1: isAssigned ? art.assignment['Revisor 1'] || '' : '',
+      r2: isAssigned ? art.assignment['Revisor 2'] || '' : '',
+      editor: isAssigned ? art.assignment.Editor || '' : '',
+      plazo: isAssigned ? (art.assignment.Plazo ? parseDate(art.assignment.Plazo) : null) : null,
+    };
+    setEditingData({
+      id: uniqueId,
+      data: defData,
+      isUpdate: isAssigned,
+      author: group.authorName,
+      area: art['Area of the paper (e.g.: economics)'] || art['Área del artículo (e.g.: economía)'],
+    });
+    setEditingId(uniqueId);
+  };
+  const handleCancel = () => {
+    setEditingId(null);
+    setEditingData(null);
+  };
+  const handleConfirm = () => {
+    const { data, isUpdate, author, area } = editingData;
+    handleAssignOrUpdate(
+      {
+        'Nombre Artículo': data.nombre,
+        'Link Artículo': data.link,
+        'Revisor 1': data.r1,
+        'Revisor 2': data.r2,
+        Editor: data.editor,
+        Autor: author,
+        'Área del artículo': area,
+        Plazo: data.plazo,
+      },
+      isUpdate
+    );
+  };
+  const updateField = (field, value) => {
+    setEditingData(prev => ({
+      ...prev,
+      data: { ...prev.data, [field]: value }
+    }));
+  };
   if (loading) return <div className="text-center p-4 text-gray-600">Loading assignment management...</div>;
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 space-y-6 overflow-hidden">
-      <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold text-gray-800">Assignment Management</h3>
-        <div className="flex space-x-2">
-          <button
-            onClick={() => setTutorialOpen(true)}
-            className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
-          >
-            Help
-          </button>
-          {onClose && (
-            <button onClick={onClose} className="text-gray-500 hover:text-gray-700">×</button>
-          )}
-        </div>
-      </div>
-      <CalendarComponent events={calendarEvents} onSelectEvent={handleSelectEvent} />
-      <section>
-        <h4 className="text-lg font-semibold mb-4">Collaborators (Reviewers and Section Editors)</h4>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {users.map((u) => (
-            <div
-              key={u.Nombre}
-              className="bg-gray-50 p-3 rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-shadow border border-gray-200 flex flex-col items-center text-center h-full"
-              onClick={() => setSelectedUser(u)}
+    <div className="min-h-screen bg-[#F9FAFB] pb-20">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-30 px-8 py-4">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <div>
+            <h2 className="font-serif text-2xl font-bold text-gray-900">Editorial Control Panel</h2>
+            <p className="text-xs text-gray-500 font-medium uppercase tracking-tight">Workflow and Collaborators Management</p>
+          </div>
+          <nav className="flex bg-gray-100 p-1 rounded-xl">
+            {[
+              { id: 'articles', label: 'Articles', icon: '📝' },
+              { id: 'collaborators', label: 'Team', icon: '👥' },
+              { id: 'calendar', label: 'Deadlines', icon: '📅' },
+              { id: 'spreadsheets', label: 'Spreadsheets', icon: '📊' }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveView(tab.id)}
+                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${
+                  activeView === tab.id ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                <span>{tab.icon}</span> {tab.label}
+              </button>
+            ))}
+          </nav>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => setTutorialOpen(true)}
+              className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
             >
-              <img
-                src={u.Imagen || 'https://via.placeholder.com/64?text=?'}
-                alt={u.Nombre}
-                className="w-16 h-16 rounded-full mb-2 object-cover"
-              />
-              <h5 className="font-medium text-sm">{u.Nombre}</h5>
-              <p className="text-xs text-gray-600">{(u['Role in the Journal'] || u['Rol en la Revista'] || '').split(';')[0].trim()}</p>
-            </div>
-          ))}
+              Help
+            </button>
+            {onClose && (
+              <button onClick={onClose} className="text-gray-500 hover:text-gray-700">×</button>
+            )}
+          </div>
         </div>
-      </section>
+      </header>
+      <main className="max-w-7xl mx-auto px-8 py-8">
+        {/* Metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+          <MetricCard label="Total Articles" value={incoming.length} color="text-gray-900" />
+          <MetricCard label="To Assign" value={incoming.filter(i => !allAssignments.some(a => {
+            const aTitleSanitized = sanitizeInput(a['Nombre Artículo'] || '');
+            const aAuthorSanitized = sanitizeInput(a.Autor || '');
+            const titleSanitized = sanitizeInput(i['Title of your paper'] || i['Título de su artículo'] || '');
+            const authorSanitized = sanitizeInput(i['Name (first name and last name)'] || i['Nombre (primer nombre y primer apellido)'] || '');
+            const exactMatch = aTitleSanitized === titleSanitized && aAuthorSanitized === authorSanitized;
+            const fuzzyTitleMatch = !exactMatch && (
+              aTitleSanitized.includes(titleSanitized) ||
+              titleSanitized.includes(aTitleSanitized)
+            );
+            return exactMatch || (fuzzyTitleMatch && aAuthorSanitized === authorSanitized);
+          })).length} color="text-amber-600" />
+          <MetricCard label="In Review" value={pendingAssignments.length} color="text-blue-600" />
+          <MetricCard label="Active Reviewers" value={users.length} color="text-emerald-600" />
+        </div>
+        <AnimatePresence mode="wait">
+          {activeView === 'articles' && (
+            <motion.section
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="space-y-6"
+            >
+              <div className="flex justify-between items-end mb-4">
+                <h3 className="font-serif text-xl font-bold">Incoming Manuscripts ({totalPending})</h3>
+                <div className="text-xs font-bold text-blue-600 cursor-pointer">Filter by Area ↓</div>
+              </div>
+              <div className="grid grid-cols-1 gap-4">
+                {groupedIncoming.map((group) => (
+                  <div key={group.authorName} className="group bg-white rounded-2xl border border-gray-100 p-6 hover:shadow-xl hover:border-blue-100 transition-all duration-300">
+                    <div className="flex flex-col lg:flex-row justify-between gap-6">
+                      {/* Author Info */}
+                      <div className="flex-none lg:w-1/4 border-r border-gray-50 pr-6">
+                        <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 font-bold mb-3">
+                          {group.authorName[0]}
+                        </div>
+                        <h4 className="font-bold text-gray-900 leading-tight">{group.authorName}</h4>
+                        <p className="text-xs text-gray-500 mt-1 truncate">{group.authorEmail}</p>
+                        <p className="text-[10px] text-gray-400 font-medium uppercase mt-2 tracking-tighter italic">
+                          {group.authorInstitution}
+                        </p>
+                      </div>
+                      {/* Articles Info */}
+                      <div className="flex-grow space-y-4">
+                        {group.articles.map((art) => {
+                          const uniqueId = getUniqueId(group.authorName, art['Title of your paper'] || art['Título de su artículo']);
+                          const isAssigned = !!art.assignment;
+                          const articleKey = art['Title of your paper'] || art['Título de su artículo'] || uniqueId;
+                          const type = isAssigned ? 'assigned' : 'pending'; // TODO: Add overdue logic if needed
+                          const docLink = art[ARTICLE_LINK_COLUMN] || '';
+                          return (
+                            <div key={uniqueId} className="flex items-start justify-between bg-gray-50/50 p-4 rounded-xl border border-transparent hover:border-gray-200 transition-colors">
+                              <div className="max-w-xl">
+                                <div className="flex items-center gap-3 mb-1">
+                                  <StatusBadge type={type} />
+                                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{art['Area of the paper (e.g.: economics)'] || art['Área del artículo (e.g.: economía)']}</span>
+                                </div>
+                                <h5 className="font-serif text-md font-bold text-gray-800 mb-2">{art['Title of your paper'] || art['Título de su artículo']}</h5>
+                                <p className="text-[11px] text-gray-500 mb-2">{sanitizeInput(art['Abstract (150-300 words)'] || art['Abstract o resumen (150-300 palabras)']).substring(0, 150)}...</p>
+                                {docLink && (
+                                  <p className="text-[11px] text-gray-500 mb-2">
+                                    <span className="font-bold">Document Link:</span> <a href={docLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">View document</a>
+                                  </p>
+                                )}
+                                {isAssigned && (
+                                  <div className="flex gap-4 items-center">
+                                    <div className="flex -space-x-2">
+                                      {[1, 2].map(i => (
+                                        <div key={i} title={`Reviewer ${i}`} className="w-7 h-7 rounded-full bg-white border border-gray-200 flex items-center justify-center text-[10px] font-bold">
+                                          {art.assignment[`Revisor ${i}`]?.[0] || '?'}
+                                        </div>
+                                      ))}
+                                    </div>
+                                    <div className="h-4 w-[1px] bg-gray-200" />
+                                    <p className="text-[11px] text-gray-500">
+                                      <span className="font-bold">Deadline:</span> {art.assignment.Plazo || 'No date'}
+                                    </p>
+                                    <div className="h-4 w-[1px] bg-gray-200" />
+                                    <p className="text-[11px] text-gray-500">
+                                      <span className="font-bold">Editor:</span> {art.assignment.Editor || 'Unassigned'}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="self-center flex flex-col gap-2">
+                                <button
+                                  onClick={() => handleEditOrAssignClick(group, art)}
+                                  className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-xs font-bold hover:bg-gray-900 hover:text-white transition-all shadow-sm"
+                                  disabled={isSending[articleKey]}
+                                >
+                                  {isSending[articleKey] ? 'Updating...' : (isAssigned ? 'Manage' : 'Assign Team')}
+                                </button>
+                                {isAssigned && (
+                                  <div className="flex gap-2">
+                                    {art.assignment['Revisor 1'] && (
+                                      <button
+                                        onClick={() => {
+                                          const reviewer = reviewers.find(r => r.Nombre === art.assignment['Revisor 1']);
+                                          if (reviewer) {
+                                            handleContact(
+                                              reviewer?.Correo || reviewer?.['Correo electrónico'],
+                                              art.assignment['Revisor 1'],
+                                              art['Title of your paper'] || art['Título de su artículo'],
+                                              'Revisor 1',
+                                              articleKey
+                                            );
+                                          }
+                                        }}
+                                        className="px-3 py-1 bg-yellow-50 text-yellow-700 rounded text-[10px] font-bold hover:bg-yellow-100"
+                                        disabled={isSending[articleKey]}
+                                      >
+                                        Contact R1
+                                      </button>
+                                    )}
+                                    {art.assignment['Revisor 2'] && (
+                                      <button
+                                        onClick={() => {
+                                          const reviewer = reviewers.find(r => r.Nombre === art.assignment['Revisor 2']);
+                                          if (reviewer) {
+                                            handleContact(
+                                              reviewer?.Correo || reviewer?.['Correo electrónico'],
+                                              art.assignment['Revisor 2'],
+                                              art['Title of your paper'] || art['Título de su artículo'],
+                                              'Revisor 2',
+                                              articleKey
+                                            );
+                                          }
+                                        }}
+                                        className="px-3 py-1 bg-yellow-50 text-yellow-700 rounded text-[10px] font-bold hover:bg-yellow-100"
+                                        disabled={isSending[articleKey]}
+                                      >
+                                        Contact R2
+                                      </button>
+                                    )}
+                                    {art.assignment.Editor && (
+                                      <button
+                                        onClick={() => {
+                                          const editor = sectionEditors.find(e => e.Nombre === art.assignment.Editor);
+                                          if (editor) {
+                                            handleContact(
+                                              editor?.Correo || editor?.['Correo electrónico'],
+                                              art.assignment.Editor,
+                                              art['Title of your paper'] || art['Título de su artículo'],
+                                              'Editor',
+                                              articleKey
+                                            );
+                                          }
+                                        }}
+                                        className="px-3 py-1 bg-yellow-50 text-yellow-700 rounded text-[10px] font-bold hover:bg-yellow-100"
+                                        disabled={isSending[articleKey]}
+                                      >
+                                        Contact Editor
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                                {submitStatus[articleKey] && (
+                                  <span className={`text-[10px] ${submitStatus[articleKey].includes('Error') ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                    {submitStatus[articleKey]}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.section>
+          )}
+          {activeView === 'collaborators' && (
+            <motion.section
+              initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+            >
+              {users.map((u) => {
+                const userKey = u.Nombre;
+                return (
+                  <div key={u.Nombre} className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover:shadow-lg transition-all group">
+                    <div className="relative inline-block mb-4">
+                      <img src={u.Imagen || 'https://via.placeholder.com/64?text=?'} className="w-20 h-20 rounded-full object-cover ring-4 ring-gray-50 group-hover:ring-blue-50 transition-all" />
+                      <div className="absolute bottom-0 right-0 w-5 h-5 bg-emerald-500 border-2 border-white rounded-full" />
+                    </div>
+                    <h5 className="font-bold text-gray-900">{u.Nombre}</h5>
+                    <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mt-1">{(u['Role in the Journal'] || u['Rol en la Revista'] || '').split(';')[0]}</p>
+                    <div className="mt-4 pt-4 border-t border-gray-50 flex justify-around">
+                      <button
+                        onClick={() => handleContact(
+                          u.Correo || u['Correo electrónico'],
+                          u.Nombre,
+                          'General',
+                          (u['Role in the Journal'] || u['Rol en la Revista'] || '').includes('Reviewer') || (u['Role in the Journal'] || u['Rol en la Revista'] || '').includes('Revisor') ? 'Reviewer' : 'Editor',
+                          userKey
+                        )}
+                        className="text-gray-400 hover:text-blue-600 transition-colors"
+                        disabled={isSending[userKey]}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                      </button>
+                      <button onClick={() => setSelectedUser(u)} className="text-gray-400 hover:text-blue-600 transition-colors">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      </button>
+                    </div>
+                    {submitStatus[userKey] && (
+                      <span className={`text-[10px] block mt-2 ${submitStatus[userKey].includes('Error') ? 'text-rose-600' : 'text-emerald-600'}`}>
+                        {submitStatus[userKey]}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </motion.section>
+          )}
+          {activeView === 'calendar' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+              <CalendarComponent events={calendarEvents} onSelectEvent={handleSelectEvent} />
+            </motion.div>
+          )}
+          {activeView === 'spreadsheets' && (
+            <motion.section
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="space-y-6"
+            >
+              <h3 className="font-serif text-xl font-bold">Spreadsheets</h3>
+              <div className="space-y-6">
+                <div>
+                  <h5 className="font-medium text-md mb-2">Articles under review</h5>
+                  <iframe src="https://docs.google.com/spreadsheets/d/1-M0Ca-3VmX-0t2M1uEVQsjEatzFFbxlfLlEXTUdp8ws/edit?usp=sharing" width="100%" height="600" frameborder="0"></iframe>
+                </div>
+                <div>
+                  <h5 className="font-medium text-md mb-2">Spreadsheet 2</h5>
+                  <iframe src="https://docs.google.com/spreadsheets/d/1sO6jANVLMzX409GkiIU5Z4g8G439ZjBVnquQUkPy1wE/edit?usp=sharing" width="100%" height="600" frameborder="0"></iframe>
+                </div>
+              </div>
+            </motion.section>
+          )}
+        </AnimatePresence>
+      </main>
+      {/* ASSIGNMENT OVERLAY */}
+      <AnimatePresence>
+        {editingId && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={handleCancel}
+              className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-40"
+            />
+            <motion.div
+              initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed top-0 right-0 h-full w-full max-w-lg bg-white z-50 shadow-2xl p-10 overflow-y-auto"
+            >
+              <header className="mb-10">
+                <span className="text-[10px] font-bold text-blue-600 uppercase tracking-[0.3em]">Assignment Editor</span>
+                <h2 className="font-serif text-3xl font-bold text-gray-900 mt-2 leading-tight">{editingData.data.nombre}</h2>
+                <p className="text-sm text-gray-500 mt-4 italic">"{editingData.area}"</p>
+              </header>
+              <div className="space-y-8">
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Article Name</label>
+                  <input
+                    className="w-full bg-gray-50 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+                    value={editingData.data.nombre}
+                    onChange={(e) => updateField('nombre', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Document Link</label>
+                  <input
+                    className="w-full bg-gray-50 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+                    value={editingData.data.link}
+                    onChange={(e) => updateField('link', e.target.value)}
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Lead Reviewer (1)</label>
+                    <select
+                      className="w-full bg-gray-50 border-none rounded-xl px-4 py-3 text-sm"
+                      value={editingData.data.r1}
+                      onChange={(e) => updateField('r1', e.target.value)}
+                    >
+                      <option value="">Select...</option>
+                      {reviewers.map(r => <option key={r.Nombre} value={r.Nombre}>{r.Nombre}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Peer Reviewer (2)</label>
+                    <select
+                      className="w-full bg-gray-50 border-none rounded-xl px-4 py-3 text-sm"
+                      value={editingData.data.r2}
+                      onChange={(e) => updateField('r2', e.target.value)}
+                    >
+                      <option value="">Select...</option>
+                      {reviewers.map(r => <option key={r.Nombre} value={r.Nombre}>{r.Nombre}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Section Editor</label>
+                  <select
+                    className="w-full bg-gray-50 border-none rounded-xl px-4 py-3 text-sm"
+                    value={editingData.data.editor}
+                    onChange={(e) => updateField('editor', e.target.value)}
+                  >
+                    <option value="">Select...</option>
+                    {sectionEditors.map(e => <option key={e.Nombre} value={e.Nombre}>{e.Nombre}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Deadline Date</label>
+                  <DatePicker
+                    selected={editingData.data.plazo}
+                    onChange={(date) => updateField('plazo', date)}
+                    className="w-full bg-gray-50 border-none rounded-xl px-4 py-3 text-sm"
+                    dateFormat="yyyy-MM-dd"
+                  />
+                </div>
+                <div className="pt-10 flex gap-4">
+                  <button
+                    onClick={handleConfirm}
+                    disabled={!editingData.data.nombre || !editingData.data.link || !editingData.data.r1 || !editingData.data.r2 || !editingData.data.editor || !editingData.data.plazo || isSending[editingData.id]}
+                    className="flex-grow bg-gray-900 text-white py-4 rounded-xl font-bold text-sm hover:bg-blue-600 transition-all shadow-lg disabled:bg-gray-400"
+                  >
+                    {isSending[editingData.id] ? 'Updating...' : (editingData.isUpdate ? 'Update' : 'Assign')}
+                  </button>
+                  <button
+                    onClick={handleCancel}
+                    className="px-6 py-4 border border-gray-200 rounded-xl font-bold text-sm hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                {submitStatus[editingData.id] && (
+                  <span className={`text-sm block ${submitStatus[editingData.id].includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
+                    {submitStatus[editingData.id]}
+                  </span>
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+      {/* Selected User Modal */}
       {selectedUser && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
@@ -362,276 +761,12 @@ export default function AssignSection({ user, onClose }) {
           </div>
         </div>
       )}
-      <section>
-        <h4 className="text-lg font-semibold mb-4">Articles by Author ({totalPending})</h4>
-        <div className="space-y-6">
-          {groupedIncoming.map((group) => (
-            <div key={group.authorName} className="bg-gray-50 p-4 rounded-lg border">
-              <div className="mb-4 p-3 bg-white rounded border">
-                <h5 className="font-medium text-lg">{group.authorName}</h5>
-                <p className="text-sm text-gray-600">Email: {group.authorEmail}</p>
-                <p className="text-sm text-gray-600">Institution: {group.authorInstitution}</p>
-              </div>
-              <div className="space-y-4">
-                {group.articles
-                  .filter(art => !(art.assignment && isCompleted(art.assignment)))
-                  .map((art) => {
-                    const uniqueId = getUniqueId(group.authorName, art['Title of your paper'] || art['Título de su artículo']);
-                    const isAssigned = !!art.assignment;
-                    const isEditingThis = editingId === uniqueId;
-                    const currentR1 = isAssigned ? art.assignment['Revisor 1'] || 'Not assigned' : 'Not assigned';
-                    const currentR2 = isAssigned ? art.assignment['Revisor 2'] || 'Not assigned' : 'Not assigned';
-                    const currentEditor = isAssigned ? art.assignment.Editor || 'Not assigned' : 'Not assigned';
-                    const currentPlazo = isAssigned ? art.assignment.Plazo || 'Not defined' : 'Not defined';
-                    const statusBadge = isAssigned ? 'Assigned (under review)' : 'Pending assignment';
-                    const badgeClass = isAssigned ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800';
-                    const handleEditOrAssignClick = () => {
-                      const defData = {
-                        nombre: isAssigned ? art.assignment['Nombre Artículo'] || art['Title of your paper'] || art['Título de su artículo'] || '' : art['Title of your paper'] || art['Título de su artículo'] || '',
-                        link: isAssigned ? art.assignment['Link Artículo'] || art['Insert your paper in Word format here. It must be 1,000 to 10,000 words. Remember not to include your name in the document.'] || '' : art['Insert your paper in Word format here. It must be 1,000 to 10,000 words. Remember not to include your name in the document.'] || '',
-                        r1: isAssigned ? art.assignment['Revisor 1'] || '' : '',
-                        r2: isAssigned ? art.assignment['Revisor 2'] || '' : '',
-                        editor: isAssigned ? art.assignment.Editor || '' : '',
-                        plazo: isAssigned ? (art.assignment.Plazo ? parseDate(art.assignment.Plazo) : null) : null,
-                      };
-                      console.log('Loading deadline:', art.assignment?.Plazo, defData.plazo); // Added log for debug
-                      setEditingData({
-                        id: uniqueId,
-                        data: defData,
-                        isUpdate: isAssigned,
-                        author: group.authorName,
-                        area: art['Area of the paper (e.g.: economics)'] || art['Área del artículo (e.g.: economía)'],
-                      });
-                      setEditingId(uniqueId);
-                    };
-                    const handleCancel = () => {
-                      setEditingId(null);
-                      setEditingData(null);
-                    };
-                    const handleConfirm = () => {
-                      const { data, isUpdate, author, area } = editingData;
-                      handleAssignOrUpdate(
-                        {
-                          'Nombre Artículo': data.nombre,
-                          'Link Artículo': data.link,
-                          'Revisor 1': data.r1,
-                          'Revisor 2': data.r2,
-                          Editor: data.editor,
-                          Autor: author,
-                          'Área del artículo': area,
-                          Plazo: data.plazo,
-                        },
-                        isUpdate
-                      );
-                    };
-                    const updateField = (field, value) => {
-                      setEditingData(prev => ({
-                        ...prev,
-                        data: { ...prev.data, [field]: value }
-                      }));
-                    };
-                    const articleKey = art['Title of your paper'] || art['Título de su artículo'] || uniqueId;
-                    return (
-                      <div key={uniqueId} className="bg-white p-4 rounded-lg border mb-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                          <div>
-                            <h6 className="font-medium">{art['Title of your paper'] || art['Título de su artículo'] || 'No title'}</h6>
-                            <p className="text-sm text-gray-600"><strong>Area:</strong> {art['Area of the paper (e.g.: economics)'] || art['Área del artículo (e.g.: economía)']}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm"><strong>Abstract:</strong> {sanitizeInput(art['Abstract (150-300 words)'] || art['Abstract o resumen (150-300 palabras)']).substring(0, 150)}...</p>
-                          </div>
-                        </div>
-                        <div className="mb-4 space-y-1 text-sm">
-                          <p><strong>Reviewer 1:</strong> {currentR1}</p>
-                          <p><strong>Reviewer 2:</strong> {currentR2}</p>
-                          <p><strong>Editor:</strong> {currentEditor}</p>
-                          <p><strong>Deadline:</strong> {currentPlazo}</p>
-                          <span className={`inline-block px-2 py-1 text-xs rounded-full ${badgeClass}`}>
-                            {statusBadge}
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          <button
-                            onClick={handleEditOrAssignClick}
-                            className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
-                            disabled={isSending[articleKey]}
-                          >
-                            {isSending[articleKey] ? 'Updating...' : (isAssigned ? 'Edit' : 'Assign')}
-                          </button>
-                          {isAssigned && art.assignment['Revisor 1'] && (
-                            <button
-                              onClick={() => {
-                                console.log("Clicking Contact R1 for:", art.assignment['Revisor 1']);
-                                const reviewer = reviewers.find(r => r.Nombre === art.assignment['Revisor 1']);
-                                if (!reviewer) {
-                                  console.error("Reviewer not found:", art.assignment['Revisor 1']);
-                                  setSubmitStatus({ ...submitStatus, [articleKey]: `Error: Reviewer 1 (${art.assignment['Revisor 1']}) not found.` });
-                                  return;
-                                }
-                                handleContact(
-                                  reviewer?.Correo || reviewer?.['Correo electrónico'],
-                                  art.assignment['Revisor 1'],
-                                  art['Title of your paper'] || art['Título de su artículo'],
-                                  'Revisor 1',
-                                  articleKey
-                                );
-                              }}
-                              className="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700"
-                              disabled={isSending[articleKey]}
-                            >
-                              {isSending[articleKey] ? 'Sending email...' : 'Contact R1'}
-                            </button>
-                          )}
-                          {isAssigned && art.assignment['Revisor 2'] && (
-                            <button
-                              onClick={() => {
-                                console.log("Clicking Contact R2 for:", art.assignment['Revisor 2']);
-                                const reviewer = reviewers.find(r => r.Nombre === art.assignment['Revisor 2']);
-                                if (!reviewer) {
-                                  console.error("Reviewer not found:", art.assignment['Revisor 2']);
-                                  setSubmitStatus({ ...submitStatus, [articleKey]: `Error: Reviewer 2 (${art.assignment['Revisor 2']}) not found.` });
-                                  return;
-                                }
-                                handleContact(
-                                  reviewer?.Correo || reviewer?.['Correo electrónico'],
-                                  art.assignment['Revisor 2'],
-                                  art['Title of your paper'] || art['Título de su artículo'],
-                                  'Revisor 2',
-                                  articleKey
-                                );
-                              }}
-                              className="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700"
-                              disabled={isSending[articleKey]}
-                            >
-                              {isSending[articleKey] ? 'Sending email...' : 'Contact R2'}
-                            </button>
-                          )}
-                          {isAssigned && art.assignment.Editor && (
-                            <button
-                              onClick={() => {
-                                console.log("Clicking Contact Editor for:", art.assignment.Editor);
-                                const editor = sectionEditors.find(e => e.Nombre === art.assignment.Editor);
-                                if (!editor) {
-                                  console.error("Editor not found:", art.assignment.Editor);
-                                  setSubmitStatus({ ...submitStatus, [articleKey]: `Error: Editor (${art.assignment.Editor}) not found.` });
-                                  return;
-                                }
-                                handleContact(
-                                  editor?.Correo || editor?.['Correo electrónico'],
-                                  art.assignment.Editor,
-                                  art['Title of your paper'] || art['Título de su artículo'],
-                                  'Editor',
-                                  articleKey
-                                );
-                              }}
-                              className="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700"
-                              disabled={isSending[articleKey]}
-                            >
-                              {isSending[articleKey] ? 'Sending email...' : 'Contact Editor'}
-                            </button>
-                          )}
-                          {submitStatus[articleKey] && (
-                            <span className={`text-sm mt-2 block ${submitStatus[articleKey].includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
-                              {submitStatus[articleKey]}
-                            </span>
-                          )}
-                        </div>
-                        {isEditingThis && (
-                          <div className="p-4 bg-gray-100 rounded border">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                              <input
-                                placeholder="Article Title"
-                                value={editingData.data.nombre}
-                                onChange={(e) => updateField('nombre', e.target.value)}
-                                className="border p-2 rounded-md text-sm"
-                              />
-                              <input
-                                placeholder="Google Drive Link"
-                                value={editingData.data.link}
-                                onChange={(e) => updateField('link', e.target.value)}
-                                className="border p-2 rounded-md text-sm"
-                              />
-                              <select
-                                value={editingData.data.r1}
-                                onChange={(e) => updateField('r1', e.target.value)}
-                                className="border p-2 rounded-md text-sm"
-                              >
-                                <option value="">Select Reviewer 1</option>
-                                {reviewers.map((r) => <option key={r.Nombre} value={r.Nombre}>{r.Nombre}</option>)}
-                              </select>
-                              <select
-                                value={editingData.data.r2}
-                                onChange={(e) => updateField('r2', e.target.value)}
-                                className="border p-2 rounded-md text-sm"
-                              >
-                                <option value="">Select Reviewer 2</option>
-                                {reviewers.map((r) => <option key={r.Nombre} value={r.Nombre}>{r.Nombre}</option>)}
-                              </select>
-                              <select
-                                value={editingData.data.editor}
-                                onChange={(e) => updateField('editor', e.target.value)}
-                                className="border p-2 rounded-md text-sm"
-                              >
-                                <option value="">Select Editor</option>
-                                {sectionEditors.map((e) => <option key={e.Nombre} value={e.Nombre}>{e.Nombre}</option>)}
-                              </select>
-                              <DatePicker
-                                selected={editingData.data.plazo}
-                                onChange={(date) => updateField('plazo', date)}
-                                dateFormat="yyyy-MM-dd"
-                                placeholderText="Select Deadline"
-                                className="border p-2 rounded-md text-sm w-full"
-                              />
-                            </div>
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={handleConfirm}
-                                disabled={!editingData.data.nombre || !editingData.data.link || !editingData.data.r1 || !editingData.data.r2 || !editingData.data.editor || !editingData.data.plazo || isSending[articleKey]}
-                                className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:bg-gray-400 text-sm"
-                              >
-                                {isSending[articleKey] ? 'Updating...' : (editingData.isUpdate ? 'Update' : 'Assign')}
-                              </button>
-                              <button
-                                onClick={handleCancel}
-                                className="bg-gray-500 text-white py-2 px-4 rounded-md hover:bg-gray-600 text-sm"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                            {submitStatus[articleKey] && (
-                              <span className={`text-sm mt-2 block ${submitStatus[articleKey].includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
-                                {submitStatus[articleKey]}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-      <section>
-        <h4 className="text-lg font-semibold mb-4">Spreadsheets</h4>
-        <div className="space-y-6">
-          <div>
-            <h5 className="font-medium text-md mb-2">Articles under review</h5>
-            <iframe src="https://docs.google.com/spreadsheets/d/1-M0Ca-3VmX-0t2M1uEVQsjEatzFFbxlfLlEXTUdp8ws/edit?usp=sharing" width="100%" height="600" frameborder="0"></iframe>
-          </div>
-          <div>
-            <h5 className="font-medium text-md mb-2">Spreadsheet 2</h5>
-            <iframe src="https://docs.google.com/spreadsheets/d/1sO6jANVLMzX409GkiIU5Z4g8G439ZjBVnquQUkPy1wE/edit?usp=sharing" width="100%" height="600" frameborder="0"></iframe>
-          </div>
-        </div>
-      </section>
+      {/* Tutorial Modal */}
       {tutorialOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
             <div className="flex justify-between items-start mb-4">
-              <h5 className="font-bold text-lg">Assignment Tutorial</h5>
+              <h5 className="font-bold text-lg">Management Tutorial</h5>
               <button onClick={() => setTutorialOpen(false)} className="text-gray-500 hover:text-gray-700">×</button>
             </div>
             <div className="space-y-3 text-sm leading-relaxed">
@@ -646,6 +781,7 @@ export default function AssignSection({ user, onClose }) {
           </div>
         </div>
       )}
+      {/* Email Preview Modal */}
       {emailPreview && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
