@@ -534,7 +534,7 @@ function App() {
     ? cleanPath(location.pathname)
     : location.pathname;
 
-const isHome = normalizedPath === '/' || normalizedPath === '';
+const isHome = normalizedPath === '/' || normalizedPath === '' || location.pathname === '/es';
   const framerItem = (delay) => ({
     initial: { opacity: 0, x: -20 },
     animate: { opacity: 1, x: 0 },

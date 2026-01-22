@@ -1,5 +1,5 @@
 // App.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Papa from 'papaparse';
 import { auth } from './firebase';
 import {
@@ -25,6 +25,7 @@ import Footer from './components/FooterEN';
 import LoginSection from './components/LoginSectionEN';
 import PortalSection from './components/PortalSectionEN';
 import NewsSection from './components/NewsSectionEN';
+import HomeSectionEN from './components/HomeSectionEN';
 import './index.css';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -184,62 +185,59 @@ function AppEN() {
     if (Array.isArray(val)) return val.join(', ');
     return String(val);
   };
-const normalizeNumberSearch = (term) => {
-  if (!term) return '';
-  const onlyNumbers = term.replace(/[^0-9]/g, '');
-  return onlyNumbers || term.toLowerCase();
-};
+
+  const normalizeNumberSearch = (term) => {
+    if (!term) return '';
+    const onlyNumbers = term.replace(/[^0-9]/g, '');
+    return onlyNumbers || term.toLowerCase();
+  };
 
   useEffect(() => {
-  const lowerTerm = searchTerm.toLowerCase();
-  const numericTerm = normalizeNumberSearch(searchTerm);
+    const lowerTerm = searchTerm.toLowerCase();
+    const numericTerm = normalizeNumberSearch(searchTerm);
 
-  const filtered = articles.filter((article) => {
-    const matchesSearch =
-      safeString(article.titulo).toLowerCase().includes(lowerTerm) ||
-      safeString(article.autores).toLowerCase().includes(lowerTerm) ||
-      safeString(article.englishAbstract).toLowerCase().includes(lowerTerm) ||
-      safeString(article.institutions).toLowerCase().includes(lowerTerm) ||
-      safeString(article.keywords_english).toLowerCase().includes(lowerTerm) ||
+    const filtered = articles.filter((article) => {
+      const matchesSearch =
+        safeString(article.titulo).toLowerCase().includes(lowerTerm) ||
+        safeString(article.autores).toLowerCase().includes(lowerTerm) ||
+        safeString(article.englishAbstract).toLowerCase().includes(lowerTerm) ||
+        safeString(article.institutions).toLowerCase().includes(lowerTerm) ||
+        safeString(article.keywords_english).toLowerCase().includes(lowerTerm) ||
+        safeString(article.volumen).toLowerCase().includes(lowerTerm) ||
+        safeString(article.numero).toLowerCase().includes(lowerTerm) ||
+        safeString(article.fecha).toLowerCase().includes(lowerTerm) ||
+        safeString(article.volumen).includes(numericTerm) ||
+        safeString(article.numero).includes(numericTerm);
 
-      // volume / number normal
-      safeString(article.volumen).toLowerCase().includes(lowerTerm) ||
-      safeString(article.numero).toLowerCase().includes(lowerTerm) ||
-safeString(article.fecha).toLowerCase().includes(lowerTerm) ||
+      const matchesArea =
+        selectedArea === '' ||
+        safeString(article.area)
+          .toLowerCase()
+          .split(';')
+          .map((a) => a.trim())
+          .some((a) => a === selectedArea.toLowerCase());
 
-      // volume / number smart
-      safeString(article.volumen).includes(numericTerm) ||
-      safeString(article.numero).includes(numericTerm);
+      return matchesSearch && matchesArea;
+    });
 
-    const matchesArea =
-      selectedArea === '' ||
-      safeString(article.area)
-        .toLowerCase()
-        .split(';')
-        .map((a) => a.trim())
-        .some((a) => a === selectedArea.toLowerCase());
-
-    return matchesSearch && matchesArea;
-  });
-
-  setFilteredArticles(filtered);
-  setVisibleArticles(6);
-}, [searchTerm, selectedArea, articles]);
+    setFilteredArticles(filtered);
+    setVisibleArticles(6);
+  }, [searchTerm, selectedArea, articles]);
 
 
   useEffect(() => {
     const lowerTerm = volumeSearchTerm.toLowerCase();
-const numericTerm = normalizeNumberSearch(volumeSearchTerm);
+    const numericTerm = normalizeNumberSearch(volumeSearchTerm);
 
     const filtered = volumes.filter((volume) => {
       const matchesSearch =
-  safeString(volume.titulo).toLowerCase().includes(lowerTerm) ||
-  safeString(volume.abstract).toLowerCase().includes(lowerTerm) ||
-  safeString(volume.keywords).toLowerCase().includes(lowerTerm) ||
-  safeString(volume.volumen).toLowerCase().includes(lowerTerm) ||
-  safeString(volume.numero).toLowerCase().includes(lowerTerm) ||
-  safeString(volume.volumen).includes(numericTerm) ||
-  safeString(volume.numero).includes(numericTerm);
+        safeString(volume.titulo).toLowerCase().includes(lowerTerm) ||
+        safeString(volume.abstract).toLowerCase().includes(lowerTerm) ||
+        safeString(volume.keywords).toLowerCase().includes(lowerTerm) ||
+        safeString(volume.volumen).toLowerCase().includes(lowerTerm) ||
+        safeString(volume.numero).toLowerCase().includes(lowerTerm) ||
+        safeString(volume.volumen).includes(numericTerm) ||
+        safeString(volume.numero).includes(numericTerm);
 
       const matchesArea =
         selectedVolumeArea === '' ||
@@ -311,7 +309,7 @@ const numericTerm = normalizeNumberSearch(volumeSearchTerm);
     }
   };
 
-  const sections = [
+  const sections = useMemo(() => [
     {
       name: 'articles',
       label: 'Articles',
@@ -519,22 +517,25 @@ const numericTerm = normalizeNumberSearch(volumeSearchTerm);
         </div>
       ),
     },
-  ];
-if (authLoading) {
-  return (
-  <div className="h-screen flex items-center justify-center bg-white">
-    <motion.div
-      animate={{ scale: [1, 1.1, 1] }}
-      transition={{ repeat: Infinity, duration: 2 }}
-      className="font-serif text-2xl font-bold tracking-tighter text-blue-900"
-    >
-      LOADING ...
-    </motion.div>
-  </div>
-);
-}
+  ], [articles, filteredArticles, areas, searchTerm, selectedArea, volumes, filteredVolumes, volumeAreas, volumeSearchTerm, selectedVolumeArea, loading, volumeLoading, visibleArticles, user]);
+
+  if (authLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-white">
+        <motion.div
+          animate={{ scale: [1, 1.1, 1] }}
+          transition={{ repeat: Infinity, duration: 2 }}
+          className="font-serif text-2xl font-bold tracking-tighter text-blue-900"
+        >
+          LOADING ...
+        </motion.div>
+      </div>
+    );
+  }
 
   const isLoginActive = location.pathname.includes('login');
+  const normalizedPath = typeof cleanPath === 'function' ? cleanPath(location.pathname) : location.pathname;
+  const isHome = normalizedPath === '/' || normalizedPath === '' || location.pathname === '/en';
   const framerItem = (delay) => ({
     initial: { opacity: 0, x: -20 },
     animate: { opacity: 1, x: 0 },
@@ -543,7 +544,7 @@ if (authLoading) {
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] flex flex-col font-sans text-gray-900">
-      <Header onOpenMenu={() => setIsMenuOpen(true)} />
+      {!isHome && <Header onOpenMenu={() => setIsMenuOpen(true)} />}
       <div
         className={`container ${
           user && isLoginActive
@@ -552,16 +553,16 @@ if (authLoading) {
         } flex-grow`}
       >
         <nav className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200">
-  <div className="max-w-7xl mx-auto px-4">
-    <Tabs sections={sections} />
-  </div>
-</nav>
+          <div className="max-w-7xl mx-auto px-4">
+            <Tabs sections={sections} />
+          </div>
+        </nav>
 
         <Routes>
+          <Route path="/" element={<HomeSectionEN onOpenMenu={() => setIsMenuOpen(true)} />} />
           {sections.map((section) => (
             <Route key={section.name} path={section.path.substring(3)} element={section.component} />
           ))}
-          <Route path="/" element={sections.find(s => s.name === 'articles').component} />
         </Routes>
       </div>
       <AnimatePresence>
