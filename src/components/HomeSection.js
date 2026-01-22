@@ -38,67 +38,85 @@ const HomeSection = ({ onOpenMenu }) => {
       desc: 'Avisos, actividades y novedades de la comunidad científica estudiantil.',
       path: '/new',
       icon: 'M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z'
-    },
+    }
   ];
 
   return (
     <div className="relative overflow-hidden bg-white">
       <div className="absolute top-0 left-0 w-full h-[100vh] overflow-hidden pointer-events-none opacity-20 z-0 hidden md:block">
-        <motion.div style={{ y: y1 }} className="absolute -top-24 -right-24 w-96 h-96 bg-blue-100 rounded-full blur-3xl" />
-        <motion.div style={{ y: y1 }} className="absolute top-1/2 -left-24 w-80 h-80 bg-gray-100 rounded-full blur-3xl" />
+        <motion.div
+          style={{ y: y1 }}
+          className="absolute -top-24 -right-24 w-96 h-96 bg-blue-100 rounded-full blur-3xl"
+        />
+        <motion.div
+          style={{ y: y1 }}
+          className="absolute top-1/2 -left-24 w-80 h-80 bg-gray-100 rounded-full blur-3xl"
+        />
       </div>
+
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-20 sm:pt-6 sm:pb-32">
+
         {/* Integrated Header Elements */}
-        <div className="flex items-center justify-between mb-8 sm:mb-12">
-          <button
-            onClick={onOpenMenu}
-            className="flex items-center justify-center w-8 h-8 focus:outline-none"
-            aria-label="Abrir menú"
-          >
-            <div className="space-y-1">
-              <div className="w-5 h-0.5 bg-gray-900 rounded"></div>
-              <div className="w-5 h-0.5 bg-gray-900 rounded"></div>
-              <div className="w-5 h-0.5 bg-gray-900 rounded"></div>
-            </div>
-          </button>
-          <div className="flex flex-col items-center flex-grow">
-            <motion.img
-              src={logo}
-              alt="Revista Logo"
-              className="h-16 sm:h-20 mb-2"
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.6, ease: 'easeOut' }}
-            />
+        <div className="flex items-center justify-between mb-8 sm:mb-12 relative">
 
+          {/* LADO IZQUIERDO */}
+          <div className="flex-1 flex justify-start">
+            <button
+              onClick={onOpenMenu}
+              className="group flex items-center gap-2 p-2 hover:bg-gray-50 rounded-lg transition-colors focus:outline-none"
+              aria-label="Abrir menú"
+            >
+              <div className="space-y-1.5">
+                <div className="w-5 h-0.5 bg-gray-900 rounded group-hover:w-6 transition-all"></div>
+                <div className="w-6 h-0.5 bg-gray-900 rounded"></div>
+                <div className="w-4 h-0.5 bg-gray-900 rounded group-hover:w-6 transition-all"></div>
+              </div>
+              <span className="hidden sm:block text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                Menú
+              </span>
+            </button>
           </div>
-          <motion.button
-          
 
-  onClick={handleLanguageToggle}
-  whileTap={{ scale: 0.95 }}
-  className="relative flex items-center bg-gray-100/80 backdrop-blur-sm border border-gray-200 p-1 rounded-full w-20 h-9 overflow-hidden shadow-sm"
-  title={`Cambiar a ${language === 'es' ? 'Inglés' : 'Español'}`}
->
-  {/* Fondo deslizante */}
-  <motion.div
-    className="absolute top-1 bottom-1 w-[34px] bg-white rounded-full shadow-md z-0"
-    initial={false}
-    animate={{ x: language === 'es' ? 0 : 38 }}
-    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-  />
+          {/* CENTRO */}
+          <div className="flex-shrink-0 px-4">
+            <motion.div
+              onClick={() => navigate('/')}
+              className="cursor-pointer flex flex-col items-center"
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.6 }}
+              whileHover={{ scale: 1.02 }}
+            >
+              <img
+                src={logo}
+                alt="Revista Logo"
+                className="h-12 sm:h-16 w-auto object-contain drop-shadow-sm"
+              />
+              <div className="h-px w-8 bg-blue-200 mt-2 hidden sm:block"></div>
+            </motion.div>
+          </div>
 
-  {/* Etiquetas */}
-  <div className="relative z-10 flex w-full justify-around items-center text-[10px] font-bold tracking-tighter">
-    <span className={`transition-colors duration-300 ${language === 'es' ? 'text-blue-600' : 'text-gray-400'}`}>
-      ES
-    </span>
-    <span className={`transition-colors duration-300 ${language === 'en' ? 'text-blue-600' : 'text-gray-400'}`}>
-      EN
-    </span>
-  </div>
-</motion.button>
-</div>
+          {/* LADO DERECHO */}
+          <div className="flex-1 flex justify-end">
+            <motion.button
+              onClick={handleLanguageToggle}
+              whileTap={{ scale: 0.95 }}
+              className="relative flex items-center bg-gray-100/80 backdrop-blur-sm border border-gray-200 p-1 rounded-full w-20 h-9 overflow-hidden shadow-sm"
+              title={`Cambiar a ${language === 'es' ? 'Inglés' : 'Español'}`}
+            >
+              <motion.div
+                className="absolute top-1 bottom-1 w-[34px] bg-white rounded-full shadow-md z-0"
+                initial={false}
+                animate={{ x: language === 'es' ? 0 : 38 }}
+                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              />
+              <div className="relative z-10 flex w-full justify-around items-center text-[10px] font-bold tracking-tighter">
+                <span className={language === 'es' ? 'text-blue-600' : 'text-gray-400'}>ES</span>
+                <span className={language === 'en' ? 'text-blue-600' : 'text-gray-400'}>EN</span>
+              </div>
+            </motion.button>
+          </div>
+        </div>
 
         {/* HERO */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 items-center mb-20 sm:mb-32">
