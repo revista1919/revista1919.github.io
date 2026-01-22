@@ -251,7 +251,8 @@ function App() {
   }, [volumeSearchTerm, selectedVolumeArea, volumes]);
 
   useEffect(() => {
-    const path = typeof cleanPath === 'function' ? cleanPath(location.pathname) : location.pathname;
+    const rawPath = location.pathname.replace(/\/$/, '');
+    const path = typeof cleanPath === 'function' ? cleanPath(rawPath) : rawPath;
     if (path === '/article' || path === '/' || path === '') {
       const term = searchParams.get('article_search') ?? '';
       const area = searchParams.get('article_area') ?? '';
@@ -529,15 +530,13 @@ function App() {
   }
 
   const isLoginActive = location.pathname.includes('login');
+  const rawPath = location.pathname.replace(/\/$/, '');
   const normalizedPath =
   typeof cleanPath === 'function'
-    ? cleanPath(location.pathname)
-    : location.pathname;
+    ? cleanPath(rawPath)
+    : rawPath;
 
-const isHome =
-  normalizedPath === '/' ||
-  normalizedPath === '';
-
+const isHome = normalizedPath === '/' || normalizedPath === '' || rawPath === '/es';
   const framerItem = (delay) => ({
     initial: { opacity: 0, x: -20 },
     animate: { opacity: 1, x: 0 },

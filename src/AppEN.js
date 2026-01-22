@@ -252,13 +252,14 @@ function AppEN() {
   }, [volumeSearchTerm, selectedVolumeArea, volumes]);
 
   useEffect(() => {
-    const path = typeof cleanPath === 'function' ? cleanPath(location.pathname) : location.pathname;
-    if (path === '/en/article' || path === '/' || path === '') {
+    const rawPath = location.pathname.replace(/\/$/, '');
+    const path = typeof cleanPath === 'function' ? cleanPath(rawPath) : rawPath;
+    if (path === '/article' || path === '/' || path === '') {
       const term = searchParams.get('article_search') ?? '';
       const area = searchParams.get('article_area') ?? '';
       setSearchTerm(term);
       setSelectedArea(area);
-    } else if (path === '/en/volume') {
+    } else if (path === '/volume') {
       const term = searchParams.get('volume_search') ?? '';
       const area = searchParams.get('volume_area') ?? '';
       setVolumeSearchTerm(term);
@@ -534,10 +535,9 @@ function AppEN() {
   }
 
   const isLoginActive = location.pathname.includes('login');
-  const normalizedPath = typeof cleanPath === 'function' ? cleanPath(location.pathname) : location.pathname;
-  const isHome =
-  normalizedPath === '/' ||
-  normalizedPath === '';
+  const rawPath = location.pathname.replace(/\/$/, '');
+  const normalizedPath = typeof cleanPath === 'function' ? cleanPath(rawPath) : rawPath;
+  const isHome = normalizedPath === '/' || normalizedPath === '' || rawPath === '/en';
   const framerItem = (delay) => ({
     initial: { opacity: 0, x: -20 },
     animate: { opacity: 1, x: 0 },
