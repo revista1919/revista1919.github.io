@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Papa from 'papaparse';
 import ReactQuill from 'react-quill';
@@ -48,6 +47,14 @@ const base64DecodeUnicode = (str) => {
   }
   const decoder = new TextDecoder();
   return decoder.decode(bytes);
+};
+
+const safeDecodeUnicode = (str) => {
+  try {
+    return base64DecodeUnicode(str);
+  } catch {
+    return str;
+  }
 };
 
 const sanitizeInput = (input) => {
@@ -451,8 +458,8 @@ export default function PortalSection({ user, onLogout }) {
             if (assignment.role !== 'Autor') {
               const link = assignment['Link Artículo'];
               setVote(prev => ({ ...prev, [link]: assignment.vote }));
-              setFeedback(prev => ({ ...prev, [link]: assignment.feedback }));
-              setReport(prev => ({ ...prev, [link]: assignment.report }));
+              setFeedback(prev => ({ ...prev, [link]: safeDecodeUnicode(assignment.feedback) }));
+              setReport(prev => ({ ...prev, [link]: safeDecodeUnicode(assignment.report) }));
               setRubricScores(prev => ({ ...prev, [link]: assignment.scores }));
             }
           });
@@ -838,7 +845,7 @@ export default function PortalSection({ user, onLogout }) {
       return <div className="ql-editor break-words leading-relaxed font-sans text-sm text-gray-800" dangerouslySetInnerHTML={{ __html: html }} />;
     } catch (err) {
       console.error('Error al decodificar contenido:', err);
-      return <p className="text-gray-600 font-sans text-sm break-words">Error al decodificar contenido.</p>;
+      return <div className="ql-editor break-words leading-relaxed font-sans text-sm text-gray-800" dangerouslySetInnerHTML={{ __html: encoded }} />;
     }
   };
 

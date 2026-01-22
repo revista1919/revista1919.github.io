@@ -169,17 +169,13 @@ const ModernRubric = ({ roleKey, scores, onChange, readOnly }) => {
               const val = parseInt(valStr);
               const isSelected = scores[c.key] === val;
               const levelInfo = info.label.split('=')[1] || "Sin descripción";
-             
+
               return (
                 <button
                   key={val}
                   disabled={readOnly}
                   onClick={() => onChange(c.key, val)}
-                  className={`relative p-4 text-left rounded-xl border-2 transition-all duration-300 ${
-                    isSelected
-                      ? 'border-blue-600 bg-blue-50/30 shadow-md ring-1 ring-blue-600/20'
-                      : 'border-gray-100 hover:border-blue-200 bg-white opacity-60 hover:opacity-100'
-                  }`}
+                  className={`relative p-4 text-left rounded-xl border-2 transition-all duration-300 ${isSelected ? 'border-blue-600 bg-blue-50/30 shadow-md ring-1 ring-blue-600/20' : 'border-gray-100 hover:border-blue-200 bg-white opacity-60 hover:opacity-100'}`}
                 >
                   <div className="flex justify-between items-start mb-2">
                     <span className={`text-[10px] font-bold uppercase tracking-tighter ${isSelected ? 'text-blue-700' : 'text-gray-400'}`}>
@@ -212,28 +208,22 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
   const [localFeedback, setLocalFeedback] = useState(feedback[link] || '');
   const [localReport, setLocalReport] = useState(report[link] || '');
   const [localVote, setLocalVote] = useState(vote[link] || '');
-
   const totalScore = useMemo(() => getTotal(localScores, criteria[role] || []), [localScores, role]);
   const maxScore = (criteria[role] || []).length * 2;
   const progress = maxScore > 0 ? (totalScore / maxScore) * 100 : 0;
-
   const handleLocalRubricChange = (key, val) => {
     setLocalScores(prev => ({...prev, [key]: val}));
   };
-
   const handleLocalVote = (value) => {
     setLocalVote(value);
     handleVote(link, value);
   };
-
   const debouncedLocalFeedback = debounce(setLocalFeedback, 300);
   const debouncedLocalReport = debounce(setLocalReport, 300);
-
   const onSave = () => {
     handleSubmitRubric(link, role);
     handleSubmit(link, role, localFeedback, localReport, localVote);
   };
-
   const handleRenderRubric = () => {
     if (role === 'Editor') {
       const rev1Total = getTotal(assignment.rev1Scores, criteria['Revisor 1']);
@@ -284,8 +274,9 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
                 className="bg-gray-50 p-6 rounded-md border border-gray-200 max-h-64 overflow-y-auto font-sans text-sm text-gray-800 leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: decodeBody(assignment.feedback1) }}
-              />
+              >
+                {decodeBody(assignment.feedback1)}
+              </motion.div>
             )}
           </AnimatePresence>
           <div className="space-y-2">
@@ -308,8 +299,9 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
                 className="bg-gray-50 p-6 rounded-md border border-gray-200 max-h-64 overflow-y-auto font-sans text-sm text-gray-800 leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: decodeBody(assignment.informe1) }}
-              />
+              >
+                {decodeBody(assignment.informe1)}
+              </motion.div>
             )}
           </AnimatePresence>
           <div className="space-y-2">
@@ -352,8 +344,9 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
                 className="bg-gray-50 p-6 rounded-md border border-gray-200 max-h-64 overflow-y-auto font-sans text-sm text-gray-800 leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: decodeBody(assignment.feedback2) }}
-              />
+              >
+                {decodeBody(assignment.feedback2)}
+              </motion.div>
             )}
           </AnimatePresence>
           <div className="space-y-2">
@@ -376,8 +369,9 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
                 className="bg-gray-50 p-6 rounded-md border border-gray-200 max-h-64 overflow-y-auto font-sans text-sm text-gray-800 leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: decodeBody(assignment.informe2) }}
-              />
+              >
+                {decodeBody(assignment.informe2)}
+              </motion.div>
             )}
           </AnimatePresence>
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-yellow-50 rounded-md border border-yellow-200">
@@ -405,9 +399,7 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
       );
     }
   };
-
   const isAuth = role === 'Autor';
-
   if (isAuth) {
     return (
       <motion.div
@@ -417,7 +409,7 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
         <header className="h-16 border-b border-gray-200 px-4 md:px-8 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-10">
           <div className="flex items-center gap-3 md:gap-6">
             <button onClick={onClose} className="text-gray-400 hover:text-gray-900 transition-colors">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
             <div className="h-6 w-[1px] bg-gray-200" />
             <div>
@@ -436,9 +428,9 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
                 </div>
                 <div className="space-y-4">
                   <h5 className="font-sans text-xs font-bold uppercase tracking-widest text-gray-500">Feedback del Editor</h5>
-                  <div className="bg-gray-50 p-6 rounded-md border border-gray-200 max-h-96 overflow-y-auto font-sans text-sm text-gray-800 leading-relaxed"
-                    dangerouslySetInnerHTML={{ __html: decodeBody(assignment.feedbackEditor) }}
-                  />
+                  <div className="bg-gray-50 p-6 rounded-md border border-gray-200 max-h-96 overflow-y-auto font-sans text-sm text-gray-800 leading-relaxed">
+                    {decodeBody(assignment.feedbackEditor)}
+                  </div>
                 </div>
               </>
             ) : (
@@ -453,7 +445,6 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
       </motion.div>
     );
   }
-
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -463,7 +454,7 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
       <header className="h-16 border-b border-gray-200 px-4 md:px-8 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-10">
         <div className="flex items-center gap-3 md:gap-6">
           <button onClick={onClose} className="text-gray-400 hover:text-gray-900 transition-colors">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg>
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
           <div className="h-6 w-[1px] bg-gray-200" />
           <div>
@@ -471,7 +462,7 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
             <h2 className="text-sm font-bold text-gray-900 truncate max-w-[200px] md:max-w-[400px]">{assignment['Nombre Artículo']}</h2>
           </div>
         </div>
-        <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
+        <div className="flex items-center gap-2 md:gap-4">
           <div className="flex flex-col items-end mr-2 md:mr-4">
             <span className="text-[10px] text-gray-400 font-bold uppercase">Progreso</span>
             <div className="w-24 md:w-32 h-1.5 bg-gray-100 rounded-full mt-1 overflow-hidden">
@@ -496,14 +487,14 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
         <section className="bg-gray-50/50 p-4 md:p-8 lg:p-16 border-b border-gray-100">
           <article className="max-w-2xl mx-auto bg-white p-6 md:p-12 shadow-sm border border-gray-100 rounded-sm space-y-8">
             <header className="border-b border-gray-900 pb-8">
-               <span className="bg-gray-900 text-white px-2 py-1 text-[9px] font-bold uppercase mb-4 inline-block">Manuscrito Original</span>
-               <h1 className="font-serif text-2xl md:text-3xl font-bold leading-tight text-gray-900 mb-6">
-                 {assignment['Nombre Artículo']}
-               </h1>
+              <span className="bg-gray-900 text-white px-2 py-1 text-[9px] font-bold uppercase mb-4 inline-block">Manuscrito Original</span>
+              <h1 className="font-serif text-2xl md:text-3xl font-bold leading-tight text-gray-900 mb-6">
+                {assignment['Nombre Artículo']}
+              </h1>
             </header>
             <div className="font-serif text-base md:text-lg leading-relaxed text-gray-800 space-y-6">
               {/* Aquí iría el contenido del artículo o un visor de PDF */}
-              <div dangerouslySetInnerHTML={{ __html: decodeBody(assignment.content) }} />
+              <div dangerouslySetInnerHTML={{ __html: assignment.content }} />
               <motion.iframe
                 src={assignment['Link Artículo'] ? assignment['Link Artículo'].replace('/edit', '/preview') : ''}
                 className="w-full h-64 md:h-96 border-2 border-dashed border-gray-100 rounded-xl"
