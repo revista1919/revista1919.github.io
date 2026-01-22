@@ -107,7 +107,7 @@ const HomeSection = ({ onOpenMenu }) => {
           className="absolute top-1/4 -left-20 w-72 h-72 bg-gray-200 rounded-full blur-3xl"
         />
       </div>
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-20 sm:pt-6 sm:pb-32">
+      <div className="relative z-10 w-full px-0 pt-4 pb-20 sm:pt-6 sm:pb-32">
         {/* Integrated Header Elements */}
         <div className="flex items-center justify-between mb-8 sm:mb-12 relative">
           {/* LADO IZQUIERDO */}
