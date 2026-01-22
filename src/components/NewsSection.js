@@ -151,7 +151,9 @@ export default function NewsSection({ className }) {
                 cuerpo: String(item["Contenido de la noticia"] ?? ""),
                 fecha: formatDate(String(item["Fecha"] ?? "")),
                 fechaIso: parseDateIso(String(item["Fecha"] ?? "")),
-              }));
+                timestamp: new Date(parseDateIso(String(item["Fecha"] ?? ""))).getTime()
+              }))
+              .sort((a, b) => b.timestamp - a.timestamp);
             setNews(validNews);
             setLoading(false);
           },
@@ -197,10 +199,7 @@ export default function NewsSection({ className }) {
     window.location.href = `/news/${slug}.html`;
   };
   const featured = filteredNews[0];
-  const remaining = filteredNews.slice(1, visibleNews);
-  const half = Math.floor(remaining.length / 2);
-  const leftNews = remaining.slice(0, half);
-  const rightNews = remaining.slice(half);
+  const listNews = filteredNews.slice(1, visibleNews);
   if (loading) return <div className="py-20 text-center font-serif italic text-gray-400">Actualizando archivo de noticias...</div>;
   if (error) return <p className="text-center text-red-600">{error}</p>;
   return (
@@ -250,97 +249,68 @@ export default function NewsSection({ className }) {
       <div className="mb-12 relative">
         <input
           type="text"
-          placeholder="Filtrar por palabra clave..."
-          className="w-full border-b border-gray-300 py-2 text-lg font-serif italic focus:outline-none focus:border-black transition-colors"
+          placeholder="Buscar en el archivo..."
+          className="w-full border-b border-gray-200 py-2 text-lg font-serif italic focus:outline-none focus:border-blue-600 transition-colors"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
-        <span className="absolute right-0 top-2 text-gray-300 underline text-xs uppercase tracking-widest">Archivo Digital</span>
       </div>
-      {/* --- GRID EDITORIAL --- */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-        {/* Columna Izquierda: Nota Editorial + Noticias Izquierdas */}
-        <div className="lg:col-span-7 flex flex-col gap-12">
-          {featured && (
-            <motion.article
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              className="group cursor-pointer"
-              onClick={() => openNews(featured)}
-            >
-              <div className="mb-4 overflow-hidden bg-gray-100 aspect-video flex items-center justify-center border border-gray-100">
-                <img 
-                  src="https://www.revistacienciasestudiantes.com/team.jpg" 
-                  alt="Equipo de la Revista" 
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#007398] mb-4 block">Nota Editorial</span>
-              <h3 className="text-4xl font-serif font-bold leading-tight mb-4 group-hover:underline underline-offset-4 decoration-1">
+      {/* --- GRID EDITORIAL SIMÉTRICO --- */}
+      <div className="flex flex-col gap-12">
+        {/* 1. ARTÍCULO DESTACADO (Más Reciente) */}
+        {featured && (
+          <motion.article
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="grid grid-cols-1 lg:grid-cols-12 gap-8 pb-12 border-b border-gray-100 group cursor-pointer"
+            onClick={() => openNews(featured)}
+          >
+            <div className="lg:col-span-7 overflow-hidden rounded-sm bg-gray-100 aspect-video">
+              <img 
+                src="https://www.revistacienciasestudiantes.com/team.jpg" 
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+                alt="Featured"
+              />
+            </div>
+            <div className="lg:col-span-5 flex flex-col justify-center">
+              <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-600 mb-4 block">Última Actualización</span>
+              <h3 className="text-4xl font-serif font-bold leading-tight mb-4 group-hover:text-blue-600 transition-colors">
                 {featured.titulo}
               </h3>
-              <div
-                className="text-gray-600 leading-relaxed mb-4 line-clamp-3 font-serif italic text-lg"
-              >
-                {decodeBody(featured.cuerpo)}
+              <div className="text-gray-600 font-serif text-lg mb-6 line-clamp-3 italic">
+                {decodeBody(featured.cuerpo, true)}
               </div>
-              <div className="flex justify-between items-center">
-                <time className="text-xs font-mono text-gray-400 uppercase tracking-widest">{featured.fecha}</time>
-                <span className="text-sm text-gray-500 group-hover:text-[#007398] transition-colors">Leer más →</span>
-              </div>
-            </motion.article>
-          )}
-          <div className="flex flex-col gap-8 divide-y divide-gray-100">
-            <AnimatePresence>
-              {leftNews.map((item, idx) => (
-                <motion.article
-                  key={`left-${idx}`}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.1 }}
-                  className="pt-8 first:pt-0 group cursor-pointer"
-                  onClick={() => openNews(item)}
-                >
-                  <time className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-2">
-                    {item.fecha}
-                  </time>
-                  <h4 className="text-xl font-serif font-bold leading-snug group-hover:text-[#007398] transition-colors">
-                    {item.titulo}
-                  </h4>
-                  <div
-                    className="mt-2 text-sm text-gray-500 line-clamp-2 leading-relaxed"
-                  >
-                    {decodeBody(item.cuerpo)}
-                  </div>
-                  <span className="mt-2 text-sm text-gray-500 group-hover:text-[#007398] transition-colors block text-right">Leer más →</span>
-                </motion.article>
-              ))}
-            </AnimatePresence>
-          </div>
-        </div>
-        {/* Columna Derecha: Noticias Derechas */}
-        <div className="lg:col-span-5 flex flex-col gap-8 divide-y divide-gray-100">
+              <time className="text-xs font-mono text-gray-400">{featured.fecha}</time>
+            </div>
+          </motion.article>
+        )}
+        {/* 2. GRID DE NOTICIAS RESTANTES (Simetría Perfecta) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-16">
           <AnimatePresence>
-            {rightNews.map((item, idx) => (
+            {listNews.map((item, idx) => (
               <motion.article
-                key={`right-${idx}`}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
+                key={idx}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
                 transition={{ delay: idx * 0.1 }}
-                className="pt-8 first:pt-0 group cursor-pointer"
+                className="flex flex-col border-t border-gray-100 pt-6 group cursor-pointer"
                 onClick={() => openNews(item)}
               >
-                <time className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-2">
+                <time className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-3 block">
                   {item.fecha}
                 </time>
-                <h4 className="text-xl font-serif font-bold leading-snug group-hover:text-[#007398] transition-colors">
+                <h4 className="text-xl font-serif font-bold leading-snug mb-3 group-hover:underline decoration-blue-200">
                   {item.titulo}
                 </h4>
-                <div
-                  className="mt-2 text-sm text-gray-500 line-clamp-2 leading-relaxed"
-                >
-                  {decodeBody(item.cuerpo)}
+                <div className="text-sm text-gray-500 line-clamp-3 leading-relaxed mb-4 italic">
+                  {decodeBody(item.cuerpo, true)}
                 </div>
-                <span className="mt-2 text-sm text-gray-500 group-hover:text-[#007398] transition-colors block text-right">Leer más →</span>
+                <div className="mt-auto pt-4 flex justify-end border-t border-gray-50">
+                  <span className="text-[10px] font-black uppercase tracking-widest group-hover:text-blue-600 transition-colors">
+                    Leer Nota →
+                  </span>
+                </div>
               </motion.article>
             ))}
           </AnimatePresence>
@@ -352,13 +322,12 @@ export default function NewsSection({ className }) {
         </p>
       )}
       {!loading && filteredNews.length > visibleNews && (
-        <div className="mt-20 flex justify-center border-t border-black pt-8">
+        <div className="mt-20 flex justify-center border-t-2 border-black pt-10">
           <button
             onClick={loadMoreNews}
-            className="group flex items-center gap-4 text-xs font-black uppercase tracking-[0.5em] hover:text-[#007398] transition-all"
+            className="px-12 py-4 bg-gray-900 text-white text-[10px] font-black uppercase tracking-[0.4em] hover:bg-blue-600 transition-all shadow-xl"
           >
-            Cargar más registros
-            <span className="group-hover:translate-x-2 transition-transform">→</span>
+            Explorar Archivo Completo
           </button>
         </div>
       )}
