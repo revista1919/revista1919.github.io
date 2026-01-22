@@ -91,16 +91,18 @@ const HomeSection = ({ onOpenMenu }) => {
   };
   return (
     <div className="relative overflow-hidden bg-white">
-      <div className="absolute top-0 left-0 w-full h-[100vh] overflow-hidden pointer-events-none opacity-20 z-0 hidden md:block">
+      {/* --- MEJORA 1: BLOBS DE COLOR VISIBLES EN MÓVIL --- */}
+      <div className="absolute top-0 left-0 w-full h-[100vh] overflow-hidden pointer-events-none z-0">
         <motion.div
           style={{ y: y1 }}
-          className="absolute -top-24 -right-24 w-96 h-96 bg-blue-100 rounded-full blur-3xl"
+          className="absolute -top-24 -right-24 w-64 h-64 sm:w-96 sm:h-96 bg-blue-100/50 rounded-full blur-3xl"
         />
         <motion.div
           style={{ y: y1 }}
-          className="absolute top-1/2 -left-24 w-80 h-80 bg-gray-100 rounded-full blur-3xl"
+          className="absolute top-1/4 -left-24 w-48 h-48 sm:w-80 sm:h-80 bg-gray-100/50 rounded-full blur-3xl"
         />
       </div>
+
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-20 sm:pt-6 sm:pb-32">
         {/* Integrated Header Elements */}
         <div className="flex items-center justify-between mb-8 sm:mb-12 relative">
@@ -160,37 +162,57 @@ const HomeSection = ({ onOpenMenu }) => {
             </motion.button>
           </div>
         </div>
-        {/* HERO */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 items-center mb-20 sm:mb-32">
+
+        {/* --- HERO SECTION RE-DISEÑADO --- */}
+        <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 items-center mb-20 sm:mb-32">
+          
+          {/* --- MEJORA 2: IMAGEN DE FONDO SOLO PARA MÓVIL (HOOK VISUAL) --- */}
+          <div className="absolute inset-0 -z-10 block lg:hidden opacity-[0.15] scale-110">
+              <img 
+                  src="https://images.unsplash.com/photo-1616017640739-44ce2bfd9b4e?q=80&w=1374&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" 
+                  alt=""
+                  className="w-full h-full object-cover mask-image-b"
+                  style={{ maskImage: 'linear-gradient(to bottom, black, transparent)' }}
+              />
+          </div>
+
           <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
+            className="relative"
           >
-            <span className="text-[9px] sm:text-[10px] font-bold text-blue-600 uppercase tracking-[0.3em] mb-4 block text-center lg:text-left">
+            {/* Badge más llamativo */}
+            <span className="inline-block text-[10px] font-bold text-blue-600 uppercase tracking-[0.2em] mb-4 px-3 py-1 bg-blue-50 rounded-full lg:bg-transparent lg:p-0">
               Revista Nacional de las Ciencias para Estudiantes
             </span>
+            
             <h1 className="text-4xl sm:text-5xl lg:text-7xl font-serif font-bold text-gray-900 leading-[1.1] mb-6 text-center lg:text-left">
-              Un espacio para el <span className="italic text-gray-500 underline decoration-blue-200 underline-offset-8">trabajo científico</span> estudiantil
+              Un espacio para el <br className="hidden sm:block" />
+              <span className="italic text-gray-500 underline decoration-blue-200 underline-offset-8">trabajo científico</span> estudiantil
             </h1>
+            
             <p className="text-base sm:text-lg text-gray-600 mb-8 sm:mb-10 font-light leading-relaxed max-w-lg mx-auto lg:mx-0 text-center lg:text-left">
               La Revista Nacional de las Ciencias para Estudiantes es una plataforma dedicada a la difusión de trabajos científicos desarrollados por estudiantes, promoviendo el aprendizaje y la discusión académica.
             </p>
+
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <button
                 onClick={() => navigate('/article')}
-                className="px-8 sm:px-10 py-4 bg-gray-900 text-white font-bold text-xs uppercase tracking-widest hover:bg-blue-600 transition-all shadow-2xl hover:-translate-y-1"
+                className="px-8 py-4 bg-gray-900 text-white font-bold text-xs uppercase tracking-widest hover:bg-blue-600 transition-all shadow-xl active:scale-95"
               >
                 Ver artículos
               </button>
               <button
                 onClick={() => navigate('/about')}
-                className="px-8 sm:px-10 py-4 border border-gray-200 text-gray-900 font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
+                className="px-8 py-4 border border-gray-200 bg-white/50 backdrop-blur-sm text-gray-900 font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
               >
                 Sobre la revista
               </button>
             </div>
           </motion.div>
+
+          {/* --- DESKTOP IMAGE (Se mantiene igual) --- */}
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -206,12 +228,14 @@ const HomeSection = ({ onOpenMenu }) => {
             </div>
           </motion.div>
         </div>
-        {/* GRID */}
+
+        {/* GRID DE CARDS (Se mantiene igual) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {cards.map((card, index) => (
             <Card key={card.path} card={card} index={index} />
           ))}
         </div>
+
         {/* INVITACIÓN */}
         <motion.div
           initial={{ opacity: 0, y: 40 }}
@@ -236,7 +260,6 @@ const HomeSection = ({ onOpenMenu }) => {
         </motion.div>
       </div>
     </div>
-   
   );
 };
 export default HomeSection;
