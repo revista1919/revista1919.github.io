@@ -118,24 +118,7 @@ function SearchAndFiltersEN({
             </button>
           </div>
         </div>
-        {/* Quick Search Suggestions (Tags) */}
-        {quickTags.length > 0 && (
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            <span className="text-[11px] text-gray-400 font-medium">Quick Search:</span>
-            {quickTags.map((tag) => (
-              <button
-                key={tag}
-                onClick={() => {
-                  setSearchTerm(tag);
-                  onSearch(tag, selectedArea, selectedVolume, selectedNumber);
-                }}
-                className="text-[10px] px-2 py-1 bg-gray-50 text-gray-500 border border-gray-200 rounded-full hover:border-[#007398] hover:text-[#007398] transition-all"
-              >
-                {tag}
-              </button>
-            ))}
-          </div>
-        )}
+        
       </div>
     </div>
   );
