@@ -189,7 +189,7 @@ const HomeSection = ({ onOpenMenu }) => {
             <motion.div 
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="block lg:hidden w-full aspect-video mb-8 rounded-2xl overflow-hidden shadow-xl grayscale"
+              className="block lg:hidden w-full aspect-video mb-8 rounded-2xl overflow-hidden shadow-xl"
             >
               <img
                 src="https://images.unsplash.com/photo-1616017640739-44ce2bfd9b4e?q=80&w=1374&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
