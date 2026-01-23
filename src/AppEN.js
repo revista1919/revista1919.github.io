@@ -193,43 +193,21 @@ function AppEN() {
   };
 
   useEffect(() => {
-    const term = searchTerm.trim().toLowerCase();
+    const lowerTerm = searchTerm.toLowerCase();
     const numericTerm = normalizeNumberSearch(searchTerm);
 
     const filtered = articles.filter((article) => {
-      let matchesSearch = false;
-
-      if (term) {
-        const volumePrefixes = ['vol\\.?', 'volume'];
-        const numberPrefixes = ['num\\.?', 'number', 'issue'];
-        const volumeRegex = new RegExp(`^(${volumePrefixes.join('|')})\\s*(\\d+)$`);
-        const numberRegex = new RegExp(`^(${numberPrefixes.join('|')})\\s*(\\d+)$`);
-
-        const volMatch = term.match(volumeRegex);
-        const numMatch = term.match(numberRegex);
-
-        if (volMatch) {
-          const volNum = volMatch[2];
-          matchesSearch = safeString(article.volumen).includes(volNum);
-        } else if (numMatch) {
-          const numNum = numMatch[2];
-          matchesSearch = safeString(article.numero).includes(numNum);
-        } else {
-          matchesSearch =
-            safeString(article.titulo).toLowerCase().includes(term) ||
-            safeString(article.autores).toLowerCase().includes(term) ||
-            safeString(article.englishAbstract).toLowerCase().includes(term) ||
-            safeString(article.institutions).toLowerCase().includes(term) ||
-            safeString(article.keywords_english).toLowerCase().includes(term) ||
-            safeString(article.volumen).toLowerCase().includes(term) ||
-            safeString(article.numero).toLowerCase().includes(term) ||
-            safeString(article.fecha).toLowerCase().includes(term) ||
-            safeString(article.volumen).includes(numericTerm) ||
-            safeString(article.numero).includes(numericTerm);
-        }
-      } else {
-        matchesSearch = true;
-      }
+      const matchesSearch =
+        safeString(article.titulo).toLowerCase().includes(lowerTerm) ||
+        safeString(article.autores).toLowerCase().includes(lowerTerm) ||
+        safeString(article.englishAbstract).toLowerCase().includes(lowerTerm) ||
+        safeString(article.institutions).toLowerCase().includes(lowerTerm) ||
+        safeString(article.keywords_english).toLowerCase().includes(lowerTerm) ||
+        safeString(article.volumen).toLowerCase().includes(lowerTerm) ||
+        safeString(article.numero).toLowerCase().includes(lowerTerm) ||
+        safeString(article.fecha).toLowerCase().includes(lowerTerm) ||
+        safeString(article.volumen).includes(numericTerm) ||
+        safeString(article.numero).includes(numericTerm);
 
       const matchesArea =
         selectedArea === '' ||
@@ -248,40 +226,18 @@ function AppEN() {
 
 
   useEffect(() => {
-    const term = volumeSearchTerm.trim().toLowerCase();
+    const lowerTerm = volumeSearchTerm.toLowerCase();
     const numericTerm = normalizeNumberSearch(volumeSearchTerm);
 
     const filtered = volumes.filter((volume) => {
-      let matchesSearch = false;
-
-      if (term) {
-        const volumePrefixes = ['vol\\.?', 'volume'];
-        const numberPrefixes = ['num\\.?', 'number', 'issue'];
-        const volumeRegex = new RegExp(`^(${volumePrefixes.join('|')})\\s*(\\d+)$`);
-        const numberRegex = new RegExp(`^(${numberPrefixes.join('|')})\\s*(\\d+)$`);
-
-        const volMatch = term.match(volumeRegex);
-        const numMatch = term.match(numberRegex);
-
-        if (volMatch) {
-          const volNum = volMatch[2];
-          matchesSearch = safeString(volume.volumen).includes(volNum);
-        } else if (numMatch) {
-          const numNum = numMatch[2];
-          matchesSearch = safeString(volume.numero).includes(numNum);
-        } else {
-          matchesSearch =
-            safeString(volume.titulo).toLowerCase().includes(term) ||
-            safeString(volume.abstract).toLowerCase().includes(term) ||
-            safeString(volume.keywords).toLowerCase().includes(term) ||
-            safeString(volume.volumen).toLowerCase().includes(term) ||
-            safeString(volume.numero).toLowerCase().includes(term) ||
-            safeString(volume.volumen).includes(numericTerm) ||
-            safeString(volume.numero).includes(numericTerm);
-        }
-      } else {
-        matchesSearch = true;
-      }
+      const matchesSearch =
+        safeString(volume.titulo).toLowerCase().includes(lowerTerm) ||
+        safeString(volume.abstract).toLowerCase().includes(lowerTerm) ||
+        safeString(volume.keywords).toLowerCase().includes(lowerTerm) ||
+        safeString(volume.volumen).toLowerCase().includes(lowerTerm) ||
+        safeString(volume.numero).toLowerCase().includes(lowerTerm) ||
+        safeString(volume.volumen).includes(numericTerm) ||
+        safeString(volume.numero).includes(numericTerm);
 
       const matchesArea =
         selectedVolumeArea === '' ||
