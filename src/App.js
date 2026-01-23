@@ -570,6 +570,8 @@ const isHome = normalizedPath === '/' || normalizedPath === '' || rawPath === '/
                   className={`container ${
                     user && isLoginActive
                       ? 'max-w-full px-0'
+                      : isHome
+                      ? 'max-w-full px-0'
                       : 'mx-auto px-6 lg:px-8'
                   } flex-grow`}
                 >
