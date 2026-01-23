@@ -437,6 +437,11 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
       header {
         text-align: left;
       }
+      h1, h2, p, .content {
+        word-break: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+      }
     }
   </style>
 </head>
@@ -597,6 +602,11 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
       h1, h2 { text-align: left; }
       .citation-card p { text-align: justify; word-break: break-word; overflow-wrap: break-word; }
       header { text-align: left; }
+      h1, h2, p, .content {
+        word-break: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+      }
     }
   </style>
 </head>
@@ -680,7 +690,7 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
       acc[year].push(article);
       return acc;
     }, {});
-    let indexContent = `
+    const indexContent = `
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -762,6 +772,11 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
     }
     @media (max-width: 900px) {
       .article-container { padding: 20px; }
+      h1, h2, p, .content {
+        word-break: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+      }
     }
   </style>
 </head>
@@ -825,7 +840,13 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     ul { list-style: none; padding: 0; }
     a { color: var(--primary-blue); text-decoration: none; }
     footer { text-align: center; padding: 40px; color: var(--text-grey); font-size: 0.8rem; }
-    @media (max-width: 900px) { .article-container { padding: 20px; } }
+    @media (max-width: 900px) { .article-container { padding: 20px; } 
+      h1, h2, p, .content {
+        word-break: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1105,6 +1126,11 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       header {
         text-align: left;
       }
+      h1, h2, p, .content {
+        word-break: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+      }
     }
   </style>
 </head>
@@ -1236,7 +1262,13 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       .keyword-tag { margin: 0.25rem 0; display: inline-block; }
       p { text-align: justify; }
       h1, h2 { text-align: left; }
-      header { text-align: left; } }
+      header { text-align: left; } 
+      h1, h2, p, .content {
+        word-break: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1396,6 +1428,11 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     }
     @media (max-width: 900px) {
       .article-container { padding: 20px; }
+      h1, h2, p, .content {
+        word-break: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+      }
     }
   </style>
 </head>
@@ -1458,7 +1495,13 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
     ul { list-style: none; padding: 0; }
     a { color: var(--primary-blue); text-decoration: none; }
     footer { text-align: center; padding: 40px; color: var(--text-grey); font-size: 0.8rem; }
-    @media (max-width: 900px) { .article-container { padding: 20px; } }
+    @media (max-width: 900px) { .article-container { padding: 20px; } 
+      h1, h2, p, .content {
+        word-break: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1657,6 +1700,11 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
       .content, .content p, .date { text-align: justify; }
       h1, .content h2, .content h3 { text-align: left; }
       header { text-align: left; }
+      h1, h2, p, .content {
+        word-break: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+      }
     }
   </style>
 </head>
@@ -1729,7 +1777,13 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
     @media (max-width: 900px) { .main-wrapper { grid-template-columns: 1fr; } aside { display: none; } .article-container { padding: 20px; }
       .content, .content p, .date { text-align: justify; }
       h1, .content h2, .content h3 { text-align: left; }
-      header { text-align: left; } }
+      header { text-align: left; }
+      h1, h2, p, .content {
+        word-break: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1766,7 +1820,6 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
       fs.writeFileSync(enPath, enContent, 'utf8');
       console.log(`Generado HTML de noticia (EN): ${enPath}`);
     }
-
     // Generar índice de noticias
     const newsByYear = newsItems.reduce((acc, item) => {
       const year = new Date(item.fecha).getFullYear() || 'Sin fecha';
@@ -1856,6 +1909,11 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
     }
     @media (max-width: 900px) {
       .article-container { padding: 20px; }
+      h1, h2, p, .content {
+        word-break: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+      }
     }
   </style>
 </head>
@@ -1918,7 +1976,13 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
     ul { list-style: none; padding: 0; }
     a { color: var(--primary-blue); text-decoration: none; }
     footer { text-align: center; padding: 40px; color: var(--text-grey); font-size: 0.8rem; }
-    @media (max-width: 900px) { .article-container { padding: 20px; } }
+    @media (max-width: 900px) { .article-container { padding: 20px; } 
+      h1, h2, p, .content {
+        word-break: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+      }
+    }
   </style>
 </head>
 <body>
