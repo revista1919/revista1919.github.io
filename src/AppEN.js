@@ -28,12 +28,10 @@ import NewsSection from './components/NewsSectionEN';
 import HomeSectionEN from './components/HomeSectionEN';
 import './index.css';
 import { motion, AnimatePresence } from 'framer-motion';
-
 const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 const ARTICLES_JSON = '/articles.json';
 const VOLUMES_JSON = '/volumes.json';
 const isPrerendering = typeof navigator !== 'undefined' && navigator.userAgent.includes('ReactSnap');
-
 function AppEN() {
   const { cleanPath } = useLanguage();
   const [articles, setArticles] = useState([]);
@@ -54,7 +52,14 @@ function AppEN() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-
+  const [selectedArticleVolume, setSelectedArticleVolume] = useState('');
+  const [selectedArticleNumber, setSelectedArticleNumber] = useState('');
+  const [articleVolumes, setArticleVolumes] = useState([]);
+  const [articleNumbers, setArticleNumbers] = useState([]);
+  const [selectedVolumeVolume, setSelectedVolumeVolume] = useState('');
+  const [selectedVolumeNumber, setSelectedVolumeNumber] = useState('');
+  const [volumeVolumes, setVolumeVolumes] = useState([]);
+  const [volumeNumbers, setVolumeNumbers] = useState([]);
   const fetchUserData = async (email) => {
     try {
       const response = await fetch(USERS_CSV, { cache: 'no-store' });
@@ -81,7 +86,6 @@ function AppEN() {
       return { name: email, role: 'User', image: '' };
     }
   };
-
   useEffect(() => {
     if (isPrerendering) {
       setAuthLoading(false);
@@ -124,7 +128,6 @@ function AppEN() {
         setAuthLoading(false);
       });
   }, []);
-
   useEffect(() => {
     const fetchArticles = async () => {
       try {
@@ -133,9 +136,10 @@ function AppEN() {
           throw new Error(`Error loading the JSON file: ${response.status}`);
         }
         const data = await response.json();
-        setArticles(data);
-        setFilteredArticles(data);
-        const allAreas = data.flatMap((a) =>
+        const sortedData = data.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+        setArticles(sortedData);
+        setFilteredArticles(sortedData);
+        const allAreas = sortedData.flatMap((a) =>
           (a.area || '')
             .split(';')
             .map((area) => area.trim())
@@ -143,6 +147,16 @@ function AppEN() {
         );
         const uniqueAreas = [...new Set(allAreas)].sort();
         setAreas(uniqueAreas);
+        const uniqueVolumes = [...new Set(sortedData.map(a => safeString(a.volumen)))].filter(Boolean).sort((a, b) => {
+          const getNum = str => parseInt(str.replace(/\D+/g, '')) || 0;
+          return getNum(b) - getNum(a);
+        });
+        const uniqueNumbers = [...new Set(sortedData.map(a => safeString(a.numero)))].filter(Boolean).sort((a, b) => {
+          const getNum = str => parseInt(str.replace(/\D+/g, '')) || 0;
+          return getNum(b) - getNum(a);
+        });
+        setArticleVolumes(uniqueVolumes);
+        setArticleNumbers(uniqueNumbers);
         setLoading(false);
       } catch (error) {
         console.error('Error fetching JSON:', error);
@@ -151,7 +165,6 @@ function AppEN() {
     };
     fetchArticles();
   }, []);
-
   useEffect(() => {
     const fetchVolumes = async () => {
       try {
@@ -160,9 +173,10 @@ function AppEN() {
           throw new Error(`Error loading volumes.json: ${response.status}`);
         }
         const data = await response.json();
-        setVolumes(data);
-        setFilteredVolumes(data);
-        const allVolumeAreas = data.flatMap((v) =>
+        const sortedData = data.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+        setVolumes(sortedData);
+        setFilteredVolumes(sortedData);
+        const allVolumeAreas = sortedData.flatMap((v) =>
           (v.area || '')
             .split(';')
             .map((area) => area.trim())
@@ -170,6 +184,16 @@ function AppEN() {
         );
         const uniqueVolumeAreas = [...new Set(allVolumeAreas)].sort();
         setVolumeAreas(uniqueVolumeAreas);
+        const uniqueVolumes = [...new Set(sortedData.map(v => safeString(v.volumen)))].filter(Boolean).sort((a, b) => {
+          const getNum = str => parseInt(str.replace(/\D+/g, '')) || 0;
+          return getNum(b) - getNum(a);
+        });
+        const uniqueNumbers = [...new Set(sortedData.map(v => safeString(v.numero)))].filter(Boolean).sort((a, b) => {
+          const getNum = str => parseInt(str.replace(/\D+/g, '')) || 0;
+          return getNum(b) - getNum(a);
+        });
+        setVolumeVolumes(uniqueVolumes);
+        setVolumeNumbers(uniqueNumbers);
         setVolumeLoading(false);
       } catch (error) {
         console.error('Error fetching volumes JSON:', error);
@@ -178,24 +202,20 @@ function AppEN() {
     };
     fetchVolumes();
   }, []);
-
   const safeString = (val) => {
     if (val == null) return '';
     if (typeof val === 'string') return val;
     if (Array.isArray(val)) return val.join(', ');
     return String(val);
   };
-
   const normalizeNumberSearch = (term) => {
     if (!term) return '';
     const onlyNumbers = term.replace(/[^0-9]/g, '');
     return onlyNumbers || term.toLowerCase();
   };
-
   useEffect(() => {
     const lowerTerm = searchTerm.toLowerCase();
     const numericTerm = normalizeNumberSearch(searchTerm);
-
     const filtered = articles.filter((article) => {
       const matchesSearch =
         safeString(article.titulo).toLowerCase().includes(lowerTerm) ||
@@ -208,7 +228,6 @@ function AppEN() {
         safeString(article.fecha).toLowerCase().includes(lowerTerm) ||
         safeString(article.volumen).includes(numericTerm) ||
         safeString(article.numero).includes(numericTerm);
-
       const matchesArea =
         selectedArea === '' ||
         safeString(article.area)
@@ -216,19 +235,20 @@ function AppEN() {
           .split(';')
           .map((a) => a.trim())
           .some((a) => a === selectedArea.toLowerCase());
-
-      return matchesSearch && matchesArea;
+      const matchesVolume =
+        selectedArticleVolume === '' ||
+        safeString(article.volumen) === selectedArticleVolume;
+      const matchesNumber =
+        selectedArticleNumber === '' ||
+        safeString(article.numero) === selectedArticleNumber;
+      return matchesSearch && matchesArea && matchesVolume && matchesNumber;
     });
-
     setFilteredArticles(filtered);
     setVisibleArticles(6);
-  }, [searchTerm, selectedArea, articles]);
-
-
+  }, [searchTerm, selectedArea, selectedArticleVolume, selectedArticleNumber, articles]);
   useEffect(() => {
     const lowerTerm = volumeSearchTerm.toLowerCase();
     const numericTerm = normalizeNumberSearch(volumeSearchTerm);
-
     const filtered = volumes.filter((volume) => {
       const matchesSearch =
         safeString(volume.titulo).toLowerCase().includes(lowerTerm) ||
@@ -238,7 +258,6 @@ function AppEN() {
         safeString(volume.numero).toLowerCase().includes(lowerTerm) ||
         safeString(volume.volumen).includes(numericTerm) ||
         safeString(volume.numero).includes(numericTerm);
-
       const matchesArea =
         selectedVolumeArea === '' ||
         safeString(volume.area)
@@ -246,60 +265,79 @@ function AppEN() {
           .split(';')
           .map((a) => a.trim())
           .some((a) => a.toLowerCase() === selectedVolumeArea.toLowerCase());
-      return matchesSearch && matchesArea;
+      const matchesVolume =
+        selectedVolumeVolume === '' ||
+        safeString(volume.volumen) === selectedVolumeVolume;
+      const matchesNumber =
+        selectedVolumeNumber === '' ||
+        safeString(volume.numero) === selectedVolumeNumber;
+      return matchesSearch && matchesArea && matchesVolume && matchesNumber;
     });
     setFilteredVolumes(filtered);
-  }, [volumeSearchTerm, selectedVolumeArea, volumes]);
-
+  }, [volumeSearchTerm, selectedVolumeArea, selectedVolumeVolume, selectedVolumeNumber, volumes]);
   useEffect(() => {
     const rawPath = location.pathname.replace(/\/$/, '');
     const path = typeof cleanPath === 'function' ? cleanPath(rawPath) : rawPath;
     if (path === '/article' || path === '/' || path === '') {
       const term = searchParams.get('article_search') ?? '';
       const area = searchParams.get('article_area') ?? '';
+      const volume = searchParams.get('article_volume') ?? '';
+      const number = searchParams.get('article_number') ?? '';
       setSearchTerm(term);
       setSelectedArea(area);
+      setSelectedArticleVolume(volume);
+      setSelectedArticleNumber(number);
     } else if (path === '/volume') {
       const term = searchParams.get('volume_search') ?? '';
       const area = searchParams.get('volume_area') ?? '';
+      const volume = searchParams.get('volume_volume') ?? '';
+      const number = searchParams.get('volume_number') ?? '';
       setVolumeSearchTerm(term);
       setSelectedVolumeArea(area);
+      setSelectedVolumeVolume(volume);
+      setSelectedVolumeNumber(number);
     }
   }, [location.pathname, searchParams, cleanPath]);
-
-  const handleSearch = (term, area) => {
+  const handleSearch = (term, area, volume, number) => {
     const params = new URLSearchParams();
     if (term) params.set('article_search', term);
     if (area) params.set('article_area', area);
+    if (volume) params.set('article_volume', volume);
+    if (number) params.set('article_number', number);
     setSearchTerm(term);
     setSelectedArea(area);
+    setSelectedArticleVolume(volume);
+    setSelectedArticleNumber(number);
     setSearchParams(params);
   };
-
-  const handleVolumeSearch = (term, area) => {
+  const handleVolumeSearch = (term, area, volume, number) => {
     const params = new URLSearchParams();
     if (term) params.set('volume_search', term);
     if (area) params.set('volume_area', area);
+    if (volume) params.set('volume_volume', volume);
+    if (number) params.set('volume_number', number);
     setVolumeSearchTerm(term);
     setSelectedVolumeArea(area);
+    setSelectedVolumeVolume(volume);
+    setSelectedVolumeNumber(number);
     setSearchParams(params);
   };
-
   const clearFilters = () => {
     setSearchTerm('');
     setSelectedArea('');
+    setSelectedArticleVolume('');
+    setSelectedArticleNumber('');
     setSearchParams(new URLSearchParams());
   };
-
   const clearVolumeFilters = () => {
     setVolumeSearchTerm('');
     setSelectedVolumeArea('');
+    setSelectedVolumeVolume('');
+    setSelectedVolumeNumber('');
     setSearchParams(new URLSearchParams());
   };
-
   const loadMoreArticles = () => setVisibleArticles((prev) => prev + 6);
   const showLessArticles = () => setVisibleArticles(6);
-
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -309,7 +347,6 @@ function AppEN() {
       console.error('Error signing out:', error);
     }
   };
-
   const sections = useMemo(() => [
     {
       name: 'home',
@@ -338,6 +375,12 @@ function AppEN() {
             clearFilters={clearFilters}
             placeholder="Search articles..."
             quickTags={['2025', 'Vol. 1', 'Issue 1']}
+            selectedVolume={selectedArticleVolume}
+            setSelectedVolume={setSelectedArticleVolume}
+            volumesList={articleVolumes}
+            selectedNumber={selectedArticleNumber}
+            setSelectedNumber={setSelectedArticleNumber}
+            numbersList={articleNumbers}
           />
           <div className="articles mt-8">
             {loading ? (
@@ -374,7 +417,7 @@ function AppEN() {
                   <p className="text-xs text-gray-500 uppercase tracking-widest font-bold mb-6">
                     Showing {Math.min(visibleArticles, filteredArticles.length)} of {filteredArticles.length} articles
                   </p>
-                 
+                
                   <div className="flex gap-4">
                     {filteredArticles.length > visibleArticles && (
                       <button
@@ -384,7 +427,7 @@ function AppEN() {
                         Load more records
                       </button>
                     )}
-                   
+                  
                     {visibleArticles > 6 && (
                       <button
                         className="px-8 py-3 border border-gray-300 text-gray-600 text-xs font-bold uppercase tracking-widest rounded-sm hover:bg-white hover:text-black transition-all"
@@ -422,6 +465,12 @@ function AppEN() {
             clearFilters={clearVolumeFilters}
             placeholder="Search volumes..."
             quickTags={['2025', 'Vol. 1', 'Issue 1']}
+            selectedVolume={selectedVolumeVolume}
+            setSelectedVolume={setSelectedVolumeVolume}
+            volumesList={volumeVolumes}
+            selectedNumber={selectedVolumeNumber}
+            setSelectedNumber={setSelectedVolumeNumber}
+            numbersList={volumeNumbers}
           />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
             {volumeLoading ? (
@@ -524,8 +573,7 @@ function AppEN() {
         </div>
       ),
     },
-  ], [articles, filteredArticles, areas, searchTerm, selectedArea, volumes, filteredVolumes, volumeAreas, volumeSearchTerm, selectedVolumeArea, loading, volumeLoading, visibleArticles, user]);
-
+  ], [articles, filteredArticles, areas, searchTerm, selectedArea, selectedArticleVolume, selectedArticleNumber, articleVolumes, articleNumbers, volumes, filteredVolumes, volumeAreas, volumeSearchTerm, selectedVolumeArea, selectedVolumeVolume, selectedVolumeNumber, volumeVolumes, volumeNumbers, loading, volumeLoading, visibleArticles, user]);
   if (authLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-white">
@@ -539,7 +587,6 @@ function AppEN() {
       </div>
     );
   }
-
   const isLoginActive = location.pathname.includes('login');
   const rawPath = location.pathname.replace(/\/$/, '');
   const normalizedPath = typeof cleanPath === 'function' ? cleanPath(rawPath) : rawPath;
@@ -549,7 +596,6 @@ function AppEN() {
     animate: { opacity: 1, x: 0 },
     transition: { delay: 0.1 * delay, duration: 0.3 }
   });
-
   return (
     <div className="min-h-screen bg-[#F9FAFB] flex flex-col font-sans text-gray-900">
       {!isHome && <Header onOpenMenu={() => setIsMenuOpen(true)} />}
@@ -565,7 +611,6 @@ function AppEN() {
             <Tabs sections={sections} />
           </div>
         </nav>
-
         <AnimatePresence mode="wait">
           <Routes key={location.key}>
             {sections.map((section) => (
@@ -635,7 +680,6 @@ function AppEN() {
 >
   {section.label}
 </NavLink>
-
                   </motion.div>
                 ))}
               </div>
@@ -647,5 +691,4 @@ function AppEN() {
     </div>
   );
 }
-
 export default AppEN;
