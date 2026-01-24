@@ -412,7 +412,7 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
             <div className="h-6 w-[1px] bg-gray-200" />
-            <div>
+            <div className="flex-1 min-w-0">
               <span className="text-[10px] font-bold text-blue-600 uppercase tracking-[0.2em]">My Article</span>
               <h2 className="text-sm font-bold text-gray-900 truncate max-w-[200px] md:max-w-[400px]">{assignment['Nombre Artículo']}</h2>
             </div>
@@ -458,7 +458,7 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
           <div className="h-6 w-[1px] bg-gray-200" />
-          <div>
+          <div className="flex-1 min-w-0">
             <span className="text-[10px] font-bold text-blue-600 uppercase tracking-[0.2em]">Peer Review</span>
             <h2 className="text-sm font-bold text-gray-900 truncate max-w-[200px] md:max-w-[400px]">{assignment['Nombre Artículo']}</h2>
           </div>
@@ -476,7 +476,7 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
           </div>
           <button
             onClick={onSave}
-            className="px-4 md:px-6 py-2 bg-gray-900 text-white text-xs font-bold uppercase tracking-widest hover:bg-blue-700 transition-all rounded-sm"
+            className="hidden md:block px-4 md:px-6 py-2 bg-gray-900 text-white text-xs font-bold uppercase tracking-widest hover:bg-blue-700 transition-all rounded-sm"
           >
             Submit Review
           </button>
@@ -490,6 +490,16 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
               <h1 className="font-serif text-2xl md:text-3xl font-bold leading-tight text-gray-900 mb-6">
                 {assignment['Nombre Artículo']}
               </h1>
+              <div className="mt-4">
+                <motion.button
+                  onClick={() => window.open(assignment['Link Artículo'], '_blank')}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="px-4 py-2 bg-blue-600 text-white text-xs font-bold uppercase tracking-widest hover:bg-blue-700 transition-all rounded-sm"
+                >
+                  Open in New Tab
+                </motion.button>
+              </div>
             </header>
             <div className="font-serif text-base md:text-lg leading-relaxed text-gray-800 space-y-6">
               <div dangerouslySetInnerHTML={{ __html: assignment.content }} />
@@ -577,6 +587,14 @@ const ReviewerWorkspace = ({ assignment, onClose, handleSubmitRubric, handleSubm
             )}
           </div>
         </section>
+      </div>
+      <div className="block md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 p-4 z-20">
+        <button
+          onClick={onSave}
+          className="w-full px-4 py-3 bg-gray-900 text-white text-xs font-bold uppercase tracking-widest hover:bg-blue-700 transition-all rounded-sm"
+        >
+          Submit Review
+        </button>
       </div>
       <AnimatePresence>
         {showImageModal[link] && (
