@@ -2,15 +2,16 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Papa from 'papaparse';
 import ReactQuill from 'react-quill';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  ClipboardList, CheckCircle2, Clock, Plus, User,
-  Globe, Share2, X, Calendar, Layout, ChevronRight, AlertCircle
-} from 'lucide-react';
+import { ClipboardList, CheckCircle2, Clock, Plus, User, Globe, Share2, X, Calendar, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import 'react-quill/dist/quill.snow.css';
 
-// URLs
-const USERS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
-const TASKS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSCEOtMwYPu0_kn1hmQi0qT6FZq6HRF09WtuDSqOxBNgMor_FyRRtc6_YVKHQQhWJCy-mIa2zwP6uAU/pub?output=csv';
+// URLs de Configuración
+const USERS_CSV_URL =
+  'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
+
+const TASKS_CSV_URL =
+  'https://docs.google.com/spreadsheets/d/e/2PACX-1vSCEOtMwYPu0_kn1hmQi0qT6FZq6HRF09WtuDSqOxBNgMor_FyRRtc6_YVKHQQhWJCy-mIa2zwP6uAU/pub?output=csv';
+
 const TASK_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxMo7aV_vz_3mOCUWKpcqnWmassUdApD_KfAHROTdgd_MDDiaXikgVV0OZ5qVYmhZgd/exec';
 
 const AREAS = {
@@ -19,15 +20,15 @@ const AREAS = {
 };
 
 function formatDate(dateStr) {
-  if (!dateStr) return 'Sin plazo';
+  if (!dateStr) return 'N/A';
   try {
     const date = new Date(dateStr);
-    return date.toLocaleString('es-ES', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return date.toLocaleString('es-ES', { 
+      day: '2-digit', 
+      month: 'long', 
+      year: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit' 
     });
   } catch (e) {
     return dateStr;
@@ -49,8 +50,9 @@ export default function ModernTaskSection({ user }) {
   const [deadline, setDeadline] = useState('');
   const [submitStatus, setSubmitStatus] = useState({ type: '', msg: '' });
   const [error, setError] = useState('');
+  const [expandedComments, setExpandedComments] = useState(new Set());
 
-  // Load Data
+  // --- Lógica de Carga y Datos ---
   useEffect(() => {
     loadData();
   }, []);
@@ -58,10 +60,7 @@ export default function ModernTaskSection({ user }) {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [uRes, tRes] = await Promise.all([
-        fetch(USERS_CSV_URL).then(r => r.text()),
-        fetch(TASKS_CSV_URL).then(r => r.text())
-      ]);
+      const [uRes, tRes] = await Promise.all([fetch(USERS_CSV_URL).then((r) => r.text()), fetch(TASKS_CSV_URL).then((r) => r.text())]);
       setUsers(Papa.parse(uRes, { header: true, skipEmptyLines: true }).data);
       setTasks(
         Papa.parse(tRes, { header: true, skipEmptyLines: true }).data.map((t, i) => ({
@@ -76,7 +75,7 @@ export default function ModernTaskSection({ user }) {
     setLoading(false);
   };
 
-  // Business Logic
+  // --- Lógica de Negocio y Permisos ---
   const currentUserData = users.find((u) => u.Nombre === user.name);
   const roles = currentUserData?.['Rol en la Revista']?.split(';').map((r) => r.trim()) || [];
   const isDirector = roles.includes('Director General');
@@ -84,28 +83,27 @@ export default function ModernTaskSection({ user }) {
   const filteredTasks = useMemo(() => {
     return tasks.reduce((acc, task, index) => {
       const areasConfig = [
-        {
-          key: 'Redes sociales',
-          name: task.Nombre,
-          completed: task['Cumplido 1'] === 'si',
-          comment: task['Comentario 1'],
+        { 
+          key: 'Redes sociales', 
+          name: task.Nombre, 
+          completed: task['Cumplido 1'] === 'si', 
+          comment: task['Comentario 1'], 
           area: AREAS.RRSS,
           assignDate: task['Fecha Asignación 1'],
           completeDate: task['Fecha Completado 1'],
           plazo: task['Plazo 1']
         },
-        {
-          key: 'Desarrollo Web',
-          name: task['Nombre.1'],
-          completed: task['Cumplido 2'] === 'si',
-          comment: task['Comentario 2'],
+        { 
+          key: 'Desarrollo Web', 
+          name: task['Nombre.1'], 
+          completed: task['Cumplido 2'] === 'si', 
+          comment: task['Comentario 2'], 
           area: AREAS.WEB,
           assignDate: task['Fecha Asignación 2'],
           completeDate: task['Fecha Completado 2'],
           plazo: task['Plazo 2']
         },
       ];
-
       areasConfig.forEach((conf) => {
         if (task[conf.key] && (isDirector || conf.name === user.name || !conf.name)) {
           acc.push({
@@ -126,9 +124,80 @@ export default function ModernTaskSection({ user }) {
     }, []);
   }, [tasks, user.name, isDirector]);
 
-  const canCompleteTask = useCallback((task) => {
-    return !isDirector && (task.assignedName === user.name || task.assignedName === 'Equipo General');
-  }, [isDirector, user.name]);
+  const canCompleteTask = useCallback(
+    (task) => {
+      return !isDirector && (task.assignedName === user.name || task.assignedName === 'Equipo General');
+    },
+    [isDirector, user.name]
+  );
+
+  // --- ENVÍO DE TAREA ---
+  const handleAssignTask = async () => {
+    if (!taskContent.trim()) {
+      setSubmitStatus({ type: 'error', msg: 'La tarea no puede estar vacía' });
+      return;
+    }
+    setSubmitStatus({ type: 'info', msg: 'Procesando asignación...' });
+    const encodedTask = btoa(unescape(encodeURIComponent(taskContent)));
+    const payload = {
+      action: 'assign',
+      area: selectedArea,
+      task: encodedTask,
+      assignedTo: selectedAssignee,
+      plazo: deadline,
+    };
+    try {
+      await fetch(TASK_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        body: JSON.stringify(payload),
+      });
+      setSubmitStatus({ type: 'success', msg: 'Tarea asignada.' });
+      setTimeout(() => {
+        setShowAssignModal(false);
+        setTaskContent('');
+        setSelectedAssignee('');
+        setDeadline('');
+        loadData();
+        setSubmitStatus({ type: '', msg: '' });
+      }, 2000);
+    } catch (e) {
+      setSubmitStatus({ type: 'error', msg: 'Error en la conexión: ' + e.message });
+    }
+  };
+
+  // --- COMPLETAR TAREA ---
+  const handleCompleteTask = async () => {
+    if (!commentContent.trim()) {
+      setSubmitStatus({ type: 'error', msg: 'El comentario no puede estar vacía' });
+      return;
+    }
+    setSubmitStatus({ type: 'info', msg: 'Procesando completado...' });
+    const encodedComment = btoa(unescape(encodeURIComponent(commentContent)));
+    const payload = {
+      action: 'complete',
+      area: selectedTask.area,
+      row: selectedTask.rowIndex + 2,
+      comment: encodedComment,
+    };
+    try {
+      await fetch(TASK_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        body: JSON.stringify(payload),
+      });
+      setSubmitStatus({ type: 'success', msg: 'Tarea completada.' });
+      setTimeout(() => {
+        setShowCompleteModal(false);
+        setCommentContent('');
+        setSelectedTask(null);
+        loadData();
+        setSubmitStatus({ type: '', msg: '' });
+      }, 2000);
+    } catch (e) {
+      setSubmitStatus({ type: 'error', msg: 'Error en la conexión: ' + e.message });
+    }
+  };
 
   const decodeBody = (encoded) => {
     if (!encoded) return '';
@@ -139,213 +208,174 @@ export default function ModernTaskSection({ user }) {
     }
   };
 
-  // Handle Assign Task
-  const handleAssignTask = async () => {
-    if (!taskContent.trim()) {
-      setSubmitStatus({ type: 'error', msg: 'La tarea no puede estar vacía' });
-      return;
-    }
-    setSubmitStatus({ type: 'info', msg: 'Asignando tarea...' });
-
-    const encodedTask = btoa(unescape(encodeURIComponent(taskContent)));
-    const payload = {
-      action: 'assign',
-      area: selectedArea,
-      task: encodedTask,
-      assignedTo: selectedAssignee,
-      plazo: deadline,
-    };
-
-    try {
-      await fetch(TASK_SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        body: JSON.stringify(payload),
-      });
-
-      setSubmitStatus({ type: 'success', msg: '¡Tarea asignada correctamente!' });
-      setTimeout(() => {
-        setShowAssignModal(false);
-        setTaskContent('');
-        setSelectedAssignee('');
-        setDeadline('');
-        loadData();
-        setSubmitStatus({ type: '', msg: '' });
-      }, 1800);
-    } catch (e) {
-      setSubmitStatus({ type: 'error', msg: 'Error al asignar tarea' });
-    }
-  };
-
-  // Handle Complete Task
-  const handleCompleteTask = async () => {
-    if (!commentContent.trim()) {
-      setSubmitStatus({ type: 'error', msg: 'El comentario es obligatorio' });
-      return;
-    }
-    setSubmitStatus({ type: 'info', msg: 'Completando tarea...' });
-
-    const encodedComment = btoa(unescape(encodeURIComponent(commentContent)));
-    const payload = {
-      action: 'complete',
-      area: selectedTask.area,
-      row: selectedTask.rowIndex + 2,
-      comment: encodedComment,
-    };
-
-    try {
-      await fetch(TASK_SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        body: JSON.stringify(payload),
-      });
-
-      setSubmitStatus({ type: 'success', msg: '¡Tarea completada!' });
-      setTimeout(() => {
-        setShowCompleteModal(false);
-        setCommentContent('');
-        setSelectedTask(null);
-        loadData();
-        setSubmitStatus({ type: '', msg: '' });
-      }, 1800);
-    } catch (e) {
-      setSubmitStatus({ type: 'error', msg: 'Error al completar tarea' });
-    }
-  };
-
   const quillModules = {
     toolbar: [
-      ['bold', 'italic', 'underline'],
+      ['bold', 'italic', 'underline', 'strike'],
       [{ list: 'ordered' }, { list: 'bullet' }],
       ['link'],
       ['clean'],
     ],
   };
 
+  const toggleExpandComment = (taskId) => {
+    const newSet = new Set(expandedComments);
+    if (newSet.has(taskId)) {
+      newSet.delete(taskId);
+    } else {
+      newSet.add(taskId);
+    }
+    setExpandedComments(newSet);
+  };
+
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[500px]">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-          className="w-12 h-12 border-4 border-slate-200 border-t-sky-600 rounded-full"
-        />
-        <p className="mt-6 text-xs font-bold tracking-[0.4em] text-slate-400">CARGANDO TAREAS</p>
+      <div className="flex flex-col items-center justify-center min-h-[500px] bg-slate-50/50 rounded-3xl border border-dashed border-slate-200">
+        <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }} className="w-10 h-10 border-2 border-slate-200 border-t-[#007398] rounded-full mb-4" />
+        <span className="text-[10px] font-bold tracking-[0.3em] text-slate-400 uppercase">Sincronizando Workspace</span>
       </div>
     );
   }
 
-  if (error) return <div className="text-red-500 text-center py-10">{error}</div>;
+  if (error) return <div className="text-red-600 text-center p-4">{error}</div>;
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-10 font-sans">
-      {/* Header */}
-      <header className="flex flex-col md:flex-row md:items-end justify-between mb-14 gap-8">
-        <div>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="bg-sky-100 text-sky-600 p-3 rounded-2xl">
-              <Layout size={24} />
+    <div className="max-w-7xl mx-auto py-10 px-4 sm:px-6 font-sans text-slate-900 antialiased">
+      {/* Header Estilo Dashboard */}
+      <header className="relative mb-16 flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-slate-100 pb-6">
+        <div className="space-y-2">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-sky-50 text-sky-600 rounded-lg">
+              <ClipboardList size={20} />
             </div>
-            <div>
-              <p className="text-sky-600 text-xs font-bold tracking-widest">EDITORIAL WORKSPACE</p>
-              <h1 className="text-4xl font-serif text-slate-800 font-medium tracking-tight">Panel de Tareas</h1>
-            </div>
+            <span className="text-[10px] font-bold tracking-[.2em] text-[#007398] uppercase italic">Editorial Management</span>
           </div>
+          <h2 className="text-4xl font-serif font-medium text-slate-800 tracking-tight">Panel de Tareas</h2>
         </div>
-
         {isDirector && (
           <motion.button
-            whileHover={{ scale: 1.03 }}
+            whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => setShowAssignModal(true)}
-            className="flex items-center gap-3 bg-slate-900 hover:bg-sky-700 text-white px-8 py-4 rounded-3xl text-sm font-bold uppercase tracking-widest transition-all shadow-xl"
+            className="flex items-center gap-3 bg-[#007398] text-white px-8 py-4 rounded-2xl text-[12px] font-bold uppercase tracking-widest hover:bg-[#005a77] transition-all shadow-2xl shadow-slate-200"
           >
-            <Plus size={18} />
-            Nueva Tarea
+            <Plus size={16} /> Nueva Tarea
           </motion.button>
         )}
       </header>
 
-      {/* Modern Tabs */}
-      <div className="flex gap-3 mb-12 bg-slate-100/70 w-fit p-1.5 rounded-3xl border border-slate-200">
+      {/* Tabs Estilo "Pill" */}
+      <div className="flex gap-4 mb-12 p-1 bg-slate-100/50 w-fit rounded-2xl border border-slate-100">
         {[
-          { id: 'pending', label: 'Pendientes', icon: Clock, count: filteredTasks.filter(t => !t.completed).length },
-          { id: 'completed', label: 'Completadas', icon: CheckCircle2, count: filteredTasks.filter(t => t.completed).length },
+          { id: 'pending', label: 'Pendientes', icon: Clock, count: filteredTasks.filter((t) => !t.completed).length },
+          { id: 'completed', label: 'Completadas', icon: CheckCircle2, count: filteredTasks.filter((t) => t.completed).length },
         ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-3 px-7 py-3.5 rounded-2xl text-sm font-semibold transition-all ${
-              activeTab === tab.id
-                ? 'bg-white shadow text-sky-700'
-                : 'text-slate-500 hover:text-slate-700'
+            className={`flex items-center gap-3 px-6 py-3 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all ${
+              activeTab === tab.id ? 'bg-white text-[#007398] shadow-sm' : 'text-slate-400 hover:text-slate-600'
             }`}
           >
-            <tab.icon size={18} />
+            <tab.icon size={14} />
             {tab.label}
-            <span className="px-3 py-0.5 text-xs rounded-full bg-slate-200 text-slate-600 font-medium">
+            <span className={`ml-2 px-2 py-0.5 rounded-md text-[9px] ${activeTab === tab.id ? 'bg-sky-50 text-[#007398]' : 'bg-slate-200 text-slate-500'}`}>
               {tab.count}
             </span>
           </button>
         ))}
       </div>
 
-      {/* Task Grid */}
+      {/* Grid de Tareas */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         <AnimatePresence mode="popLayout">
           {filteredTasks
             .filter((t) => (activeTab === 'pending' ? !t.completed : t.completed))
-            .map((task) => (
-              <motion.div
-                key={task.id}
-                layout
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-white border border-slate-100 rounded-3xl p-8 hover:shadow-xl hover:border-sky-200 transition-all group flex flex-col min-h-[420px]"
-              >
-                {/* Area Badge */}
-                <div className="flex justify-between items-start mb-6">
-                  <span className={`text-xs font-bold uppercase tracking-widest px-4 py-2 rounded-full ${
-                    task.area === AREAS.RRSS 
-                      ? 'bg-indigo-50 text-indigo-700' 
-                      : 'bg-fuchsia-50 text-fuchsia-700'
-                  }`}>
-                    {task.area}
-                  </span>
-                  {task.completed ? (
-                    <CheckCircle2 className="text-emerald-500" size={24} />
-                  ) : (
-                    <div className="relative">
-                      <div className="absolute w-3 h-3 bg-sky-400 rounded-full animate-ping"></div>
-                      <div className="w-3 h-3 bg-sky-500 rounded-full"></div>
+            .map((task) => {
+              const isExpanded = expandedComments.has(task.id);
+              return (
+                <motion.div
+                  key={task.id}
+                  layout
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="group relative bg-white border border-slate-100 p-8 hover:border-[#007398]/20 transition-all rounded-[32px] shadow-sm hover:shadow-xl hover:shadow-[#007398]/5 flex flex-col min-h-[400px]"
+                >
+                  {/* Status Dot */}
+                  <div className="absolute top-8 right-8">
+                    {!task.completed ? (
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#007398] opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-[#007398]"></span>
+                      </span>
+                    ) : (
+                      <CheckCircle2 size={16} className="text-green-500" />
+                    )}
+                  </div>
+                  <div className="mb-6">
+                    <span
+                      className={`text-[9px] font-black uppercase tracking-[.2em] px-3 py-1.5 rounded-lg inline-block mb-4 ${
+                        task.area === AREAS.RRSS ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'
+                      }`}
+                    >
+                      {task.area}
+                    </span>
+                    <div className="font-serif text-lg leading-snug text-slate-700 group-hover:text-slate-900 transition-colors line-clamp-4 overflow-hidden">
+                      <div dangerouslySetInnerHTML={{ __html: decodeBody(task.taskText) }} />
+                    </div>
+                  </div>
+                  {/* Sección de Fechas */}
+                  <div className="space-y-3 mb-6">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-slate-400 font-medium flex items-center gap-1.5">
+                        <Calendar size={12} /> Asignada:
+                      </span>
+                      <span className="font-bold text-slate-700">{formatDate(task.assignDate)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-slate-400 font-medium flex items-center gap-1.5">
+                        <Calendar size={12} /> Plazo:
+                      </span>
+                      <span className={`font-bold ${!task.completed ? 'text-rose-500' : 'text-slate-400'}`}>{formatDate(task.plazo)}</span>
+                    </div>
+                    {task.completed && (
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-slate-400 font-medium flex items-center gap-1.5">
+                          <Calendar size={12} /> Completada:
+                        </span>
+                        <span className="font-bold text-green-600">{formatDate(task.completeDate)}</span>
+                      </div>
+                    )}
+                  </div>
+                  {task.completed && task.comment && (
+                    <div className="mt-auto pt-6 border-t border-slate-50">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] uppercase tracking-wide text-slate-500 font-bold">Comentario:</span>
+                        <button
+                          onClick={() => toggleExpandComment(task.id)}
+                          className="text-[10px] text-[#007398] hover:underline flex items-center gap-1"
+                        >
+                          {isExpanded ? 'Ver menos' : 'Ampliar'} {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                        </button>
+                      </div>
+                      <div
+                        className={`bg-slate-50 p-4 rounded-2xl italic text-xs text-slate-500 font-serif overflow-hidden ${
+                          isExpanded ? '' : 'line-clamp-3'
+                        }`}
+                        dangerouslySetInnerHTML={{ __html: decodeBody(task.comment) }}
+                      />
                     </div>
                   )}
-                </div>
-
-                {/* Task Content */}
-                <div className="font-serif text-[15px] leading-relaxed text-slate-700 mb-8 line-clamp-5">
-                  <div dangerouslySetInnerHTML={{ __html: decodeBody(task.taskText) }} />
-                </div>
-
-                {/* Footer Info */}
-                <div className="mt-auto pt-6 border-t border-slate-100">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-slate-400 font-medium">Plazo</span>
-                    <span className="font-semibold text-slate-700">{formatDate(task.plazo)}</span>
-                  </div>
-
-                  <div className="mt-6 flex items-center justify-between">
+                  <div className="flex items-center justify-between pt-4 mt-auto">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 bg-slate-800 rounded-2xl flex items-center justify-center text-white text-sm font-bold">
+                      <div className="w-8 h-8 rounded-full bg-[#007398] flex items-center justify-center text-[10px] text-white font-bold">
                         {task.assignedName.charAt(0)}
                       </div>
-                      <div>
-                        <p className="text-[10px] text-slate-400 font-medium">ASIGNADO A</p>
-                        <p className="font-semibold text-slate-700">{task.assignedName}</p>
+                      <div className="flex flex-col">
+                        <span className="text-[10px] text-slate-400 uppercase tracking-tighter font-bold">Asignado a</span>
+                        <span className="text-[11px] font-bold text-slate-700">{task.assignedName}</span>
                       </div>
                     </div>
-
                     {!task.completed && canCompleteTask(task) && (
                       <button
                         onClick={() => {
@@ -353,163 +383,116 @@ export default function ModernTaskSection({ user }) {
                           setCommentContent('');
                           setShowCompleteModal(true);
                         }}
-                        className="bg-sky-50 hover:bg-sky-600 hover:text-white p-3 rounded-2xl transition-all"
+                        className="p-2 bg-sky-50 text-[#007398] rounded-xl hover:bg-[#007398] hover:text-white transition-all"
                       >
-                        <ChevronRight size={20} />
+                        <ChevronDown size={18} className="rotate-[-90deg]" />
                       </button>
                     )}
                   </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
         </AnimatePresence>
       </div>
 
-      {/* Modals */}
+      {/* Modal de Asignación */}
       <AnimatePresence>
-        {/* Assign Modal */}
         {showAssignModal && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/40 backdrop-blur-lg"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 backdrop-blur-xl bg-slate-900/20"
           >
             <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-3xl w-full max-w-3xl shadow-2xl p-10 relative"
+              initial={{ y: 50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 50, opacity: 0 }}
+              className="bg-white w-full max-w-3xl rounded-[40px] p-8 sm:p-12 shadow-2xl relative overflow-hidden max-h-[90vh] overflow-y-auto"
             >
               <button
+                className="absolute top-4 right-4 sm:top-8 sm:right-8 p-2 hover:bg-slate-100 rounded-full transition-all"
                 onClick={() => setShowAssignModal(false)}
-                className="absolute top-6 right-6 text-slate-400 hover:text-slate-600"
               >
-                <X size={24} />
+                <X size={20} />
               </button>
-
-              <h3 className="text-3xl font-serif mb-8">Nueva Tarea</h3>
-
-              {/* Form Fields */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-9">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-2">ÁREA</label>
-                  <select value={selectedArea} onChange={(e) => setSelectedArea(e.target.value)} className="w-full px-5 py-3.5 bg-slate-50 rounded-2xl focus:ring-2 ring-sky-500 outline-none">
+              <h3 className="text-2xl sm:text-3xl font-serif mb-8 text-slate-800">Asignar Nueva Tarea</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Área</label>
+                  <select
+                    value={selectedArea}
+                    onChange={(e) => setSelectedArea(e.target.value)}
+                    className="w-full bg-slate-50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 ring-[#007398]/20 outline-none"
+                  >
                     <option value={AREAS.RRSS}>{AREAS.RRSS}</option>
                     <option value={AREAS.WEB}>{AREAS.WEB}</option>
                   </select>
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-2">ASIGNAR A</label>
-                  <select value={selectedAssignee} onChange={(e) => setSelectedAssignee(e.target.value)} className="w-full px-5 py-3.5 bg-slate-50 rounded-2xl focus:ring-2 ring-sky-500 outline-none">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Asignado a</label>
+                  <select
+                    value={selectedAssignee}
+                    onChange={(e) => setSelectedAssignee(e.target.value)}
+                    className="w-full bg-slate-50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 ring-[#007398]/20 outline-none"
+                  >
                     <option value="">Equipo General</option>
                     {users
-                      .filter(u => u['Rol en la Revista']?.includes(selectedArea === AREAS.RRSS ? 'Redes Sociales' : 'Desarrollo Web'))
-                      .map(u => (
-                        <option key={u.Nombre} value={u.Nombre}>{u.Nombre}</option>
+                      .filter((u) =>
+                        u['Rol en la Revista']?.includes(selectedArea === AREAS.RRSS ? 'Encargado de Redes Sociales' : 'Responsable de Desarrollo Web')
+                      )
+                      .map((u) => (
+                        <option key={u.Nombre} value={u.Nombre}>
+                          {u.Nombre}
+                        </option>
                       ))}
                   </select>
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-2">PLAZO</label>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Plazo (opcional)</label>
                   <input
                     type="date"
                     value={deadline}
                     onChange={(e) => setDeadline(e.target.value)}
-                    className="w-full px-5 py-3.5 bg-slate-50 rounded-2xl focus:ring-2 ring-sky-500 outline-none"
+                    className="w-full bg-slate-50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 ring-[#007398]/20 outline-none"
                   />
                 </div>
               </div>
-
               <div className="mb-10">
-                <label className="block text-xs font-bold text-slate-500 mb-2">DESCRIPCIÓN</label>
-                <div className="border border-slate-200 rounded-3xl overflow-hidden">
+                <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1 mb-3">Descripción</label>
+                <div className="rounded-3xl overflow-hidden border border-slate-100">
                   <ReactQuill
                     theme="snow"
                     value={taskContent}
                     onChange={setTaskContent}
                     modules={quillModules}
-                    className="min-h-[160px]"
-                    placeholder="Describe la tarea..."
+                    className="h-40 sm:h-48 font-serif text-sm"
+                    placeholder="Describe la tarea detalladamente..."
                   />
                 </div>
               </div>
-
-              <div className="flex justify-between items-center">
-                <div className={`text-sm font-medium ${submitStatus.type === 'error' ? 'text-red-500' : 'text-emerald-600'}`}>
+              <div className="flex items-center justify-between mt-8 sm:mt-12">
+                <span
+                  className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 ${
+                    submitStatus.type === 'error' ? 'text-red-500' : submitStatus.type === 'success' ? 'text-green-500' : 'text-gray-400'
+                  }`}
+                >
+                  {submitStatus.msg && <AlertCircle size={14} />}
                   {submitStatus.msg}
-                </div>
+                </span>
                 <div className="flex gap-4">
-                  <button onClick={() => setShowAssignModal(false)} className="px-8 py-3 text-slate-500 font-medium">
+                  <button
+                    onClick={() => setShowAssignModal(false)}
+                    className="px-6 sm:px-8 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors"
+                  >
                     Cancelar
                   </button>
                   <button
                     onClick={handleAssignTask}
                     disabled={!taskContent.trim()}
-                    className="bg-slate-900 hover:bg-sky-700 disabled:bg-slate-400 text-white px-10 py-3.5 rounded-2xl font-semibold transition-all"
+                    className="bg-[#007398] text-white px-8 sm:px-10 py-3 sm:py-4 rounded-2xl text-[11px] font-black uppercase tracking-[.2em] shadow-xl shadow-slate-200 hover:bg-[#005a77] transition-all disabled:opacity-50"
                   >
-                    Asignar Tarea
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-
-        {/* Complete Modal */}
-        {showCompleteModal && selectedTask && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/40 backdrop-blur-lg"
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-3xl w-full max-w-3xl shadow-2xl p-10 relative"
-            >
-              <button onClick={() => setShowCompleteModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-600">
-                <X size={24} />
-              </button>
-
-              <h3 className="text-2xl font-serif mb-2">Completar Tarea</h3>
-              <p className="text-sky-600 mb-6">{selectedTask.area}</p>
-
-              <div className="mb-8">
-                <label className="text-xs font-bold text-slate-500 mb-2 block">TAREA ORIGINAL</label>
-                <div className="bg-slate-50 p-5 rounded-2xl text-slate-700" dangerouslySetInnerHTML={{ __html: decodeBody(selectedTask.taskText) }} />
-              </div>
-
-              <div className="mb-8">
-                <label className="block text-xs font-bold text-slate-500 mb-2">TU COMENTARIO</label>
-                <div className="border border-slate-200 rounded-3xl overflow-hidden">
-                  <ReactQuill
-                    theme="snow"
-                    value={commentContent}
-                    onChange={setCommentContent}
-                    modules={quillModules}
-                    className="min-h-[140px]"
-                    placeholder="¿Qué se realizó?"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-between items-center">
-                <div className={`text-sm font-medium ${submitStatus.type === 'error' ? 'text-red-500' : 'text-emerald-600'}`}>
-                  {submitStatus.msg}
-                </div>
-                <div className="flex gap-4">
-                  <button onClick={() => setShowCompleteModal(false)} className="px-8 py-3 text-slate-500 font-medium">
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={handleCompleteTask}
-                    disabled={!commentContent.trim()}
-                    className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-400 text-white px-10 py-3.5 rounded-2xl font-semibold transition-all"
-                  >
-                    Marcar como Completada
+                    Asignar
                   </button>
                 </div>
               </div>
@@ -517,6 +500,81 @@ export default function ModernTaskSection({ user }) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Modal de Completado */}
+      <AnimatePresence>
+        {showCompleteModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 backdrop-blur-xl bg-slate-900/20"
+          >
+            <motion.div
+              initial={{ y: 50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 50, opacity: 0 }}
+              className="bg-white w-full max-w-3xl rounded-[40px] p-8 sm:p-12 shadow-2xl relative overflow-hidden max-h-[90vh] overflow-y-auto"
+            >
+              <button
+                className="absolute top-4 right-4 sm:top-8 sm:right-8 p-2 hover:bg-slate-100 rounded-full transition-all"
+                onClick={() => setShowCompleteModal(false)}
+              >
+                <X size={20} />
+              </button>
+              <h3 className="text-2xl sm:text-3xl font-serif mb-8 text-slate-800">Completar Tarea: {selectedTask?.area}</h3>
+              <div className="mb-4 font-serif text-sm text-slate-700">
+                <span className="block text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-2">Descripción</span>
+                <div dangerouslySetInnerHTML={{ __html: decodeBody(selectedTask?.taskText) }} />
+              </div>
+              <div className="mb-10">
+                <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1 mb-3">Comentario</label>
+                <div className="rounded-3xl overflow-hidden border border-slate-100">
+                  <ReactQuill
+                    theme="snow"
+                    value={commentContent}
+                    onChange={setCommentContent}
+                    modules={quillModules}
+                    className="h-40 sm:h-48 font-serif text-sm"
+                    placeholder="Describe lo realizado..."
+                  />
+                </div>
+              </div>
+              <div className="flex items-center justify-between mt-8 sm:mt-12">
+                <span
+                  className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 ${
+                    submitStatus.type === 'error' ? 'text-red-500' : submitStatus.type === 'success' ? 'text-green-500' : 'text-gray-400'
+                  }`}
+                >
+                  {submitStatus.msg && <AlertCircle size={14} />}
+                  {submitStatus.msg}
+                </span>
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => setShowCompleteModal(false)}
+                    className="px-6 sm:px-8 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleCompleteTask}
+                    disabled={!commentContent.trim()}
+                    className="bg-[#007398] text-white px-8 sm:px-10 py-3 sm:py-4 rounded-2xl text-[11px] font-black uppercase tracking-[.2em] shadow-xl shadow-slate-200 hover:bg-[#005a77] transition-all disabled:opacity-50"
+                  >
+                    Completar
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <style jsx global>{`
+        .ql-container.ql-snow { border: none !important; font-family: 'Georgia', serif; font-size: 16px; }
+        .ql-toolbar.ql-snow { border: none !important; background: #f8fafc; border-bottom: 1px solid #f1f5f9 !important; padding: 12px !important; }
+        .ql-editor.ql-blank::before { color: #cbd5e1 !important; font-style: normal !important; }
+      `}</style>
     </div>
   );
 }
