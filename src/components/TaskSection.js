@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import Papa from 'papaparse';
 import ReactQuill from 'react-quill';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ClipboardList, CheckCircle2, Clock, Plus, User, Globe, Share2, X, Calendar } from 'lucide-react';
+import { ClipboardList, CheckCircle2, Clock, Plus, User, Globe, Share2, X } from 'lucide-react';
 import 'react-quill/dist/quill.snow.css';
 
 // URLs de Configuración
@@ -29,8 +29,8 @@ export default function ModernTaskSection({ user }) {
   const [selectedTask, setSelectedTask] = useState(null);
   const [selectedArea, setSelectedArea] = useState(AREAS.RRSS);
   const [selectedAssignee, setSelectedAssignee] = useState('');
-  const [selectedDeadline, setSelectedDeadline] = useState('');
   const [taskContent, setTaskContent] = useState('');
+  const [deadline, setDeadline] = useState('');
   const [commentContent, setCommentContent] = useState('');
   const [submitStatus, setSubmitStatus] = useState({ type: '', msg: '' });
   const [error, setError] = useState('');
@@ -69,13 +69,25 @@ export default function ModernTaskSection({ user }) {
   const filteredTasks = useMemo(() => {
     return tasks.reduce((acc, task, index) => {
       const areasConfig = [
-        { 
-          key: 'Redes sociales', name: task.Nombre, completed: task['Cumplido 1'] === 'si', comment: task['Comentario 1'], 
-          area: AREAS.RRSS, deadline: task['Plazo 1'], assignDate: task['Fecha Asignación 1'], completeDate: task['Fecha Cumplimiento 1']
+        {
+          key: 'Redes sociales',
+          name: task.Nombre,
+          completed: task['Cumplido 1'] === 'si',
+          comment: task['Comentario 1'],
+          assignDate: task['Assignment Date 1'],
+          deadline: task['Deadline 1'],
+          completeDate: task['Completion Date 1'],
+          area: AREAS.RRSS,
         },
-        { 
-          key: 'Desarrollo Web', name: task['Nombre.1'], completed: task['Cumplido 2'] === 'si', comment: task['Comentario 2'], 
-          area: AREAS.WEB, deadline: task['Plazo 2'], assignDate: task['Fecha Asignación 2'], completeDate: task['Fecha Cumplimiento 2']
+        {
+          key: 'Desarrollo Web',
+          name: task['Nombre.1'],
+          completed: task['Cumplido 2'] === 'si',
+          comment: task['Comentario 2'],
+          assignDate: task['Assignment Date 2'],
+          deadline: task['Deadline 2'],
+          completeDate: task['Completion Date 2'],
+          area: AREAS.WEB,
         },
       ];
       areasConfig.forEach((conf) => {
@@ -87,8 +99,8 @@ export default function ModernTaskSection({ user }) {
             assignedName: conf.name || 'Equipo General',
             completed: conf.completed,
             comment: conf.comment,
-            deadline: conf.deadline,
             assignDate: conf.assignDate,
+            deadline: conf.deadline,
             completeDate: conf.completeDate,
             rowIndex: index,
           });
@@ -120,28 +132,22 @@ export default function ModernTaskSection({ user }) {
       area: selectedArea,
       task: encodedTask,
       assignedTo: selectedAssignee,
-      plazo: selectedDeadline,
+      deadline: deadline,
       notifyEmail: targetEmail,
       directorName: directorName,
     };
     try {
-      const response = await fetch(TASK_SCRIPT_URL, {
+      await fetch(TASK_SCRIPT_URL, {
         method: 'POST',
-        mode: 'cors', // Cambiado a cors para leer respuesta
-        headers: { 'Content-Type': 'application/json' },
+        mode: 'no-cors',
         body: JSON.stringify(payload),
       });
-      const result = await response.json();
-      if (result.success) {
-        setSubmitStatus({ type: 'success', msg: 'Tarea asignada. Se ha enviado un aviso por correo.' });
-      } else {
-        setSubmitStatus({ type: 'error', msg: `Error: ${result.error}` });
-      }
+      setSubmitStatus({ type: 'success', msg: 'Tarea asignada. Se ha enviado un aviso por correo.' });
       setTimeout(() => {
         setShowAssignModal(false);
         setTaskContent('');
+        setDeadline('');
         setSelectedAssignee('');
-        setSelectedDeadline('');
         loadData();
         setSubmitStatus({ type: '', msg: '' });
       }, 2000);
@@ -158,29 +164,23 @@ export default function ModernTaskSection({ user }) {
     }
     setSubmitStatus({ type: 'info', msg: 'Procesando completado y envío de notificación...' });
     const encodedComment = btoa(unescape(encodeURIComponent(commentContent)));
+    const encodedTask = btoa(unescape(encodeURIComponent(selectedTask.taskText))); // Ensure encoded
     const payload = {
       action: 'complete',
       area: selectedTask.area,
       row: selectedTask.rowIndex + 2,
       comment: encodedComment,
       notifyEmail: directorEmail,
-      task: selectedTask.taskText, // ya encoded
+      task: encodedTask,
       assignedTo: user.name,
-      directorName: directorName,
     };
     try {
-      const response = await fetch(TASK_SCRIPT_URL, {
+      await fetch(TASK_SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      const result = await response.json();
-      if (result.success) {
-        setSubmitStatus({ type: 'success', msg: 'Tarea completada. Se ha enviado un aviso al director.' });
-      } else {
-        setSubmitStatus({ type: 'error', msg: `Error: ${result.error}` });
-      }
+      setSubmitStatus({ type: 'success', msg: 'Tarea completada. Se ha enviado un aviso al director.' });
       setTimeout(() => {
         setShowCompleteModal(false);
         setCommentContent('');
@@ -200,12 +200,6 @@ export default function ModernTaskSection({ user }) {
     } catch (e) {
       return encoded;
     }
-  };
-
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '';
-    const date = new Date(dateStr);
-    return date.toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' });
   };
 
   const quillModules = {
@@ -295,16 +289,14 @@ export default function ModernTaskSection({ user }) {
                 <div className="flex-1 font-serif text-sm leading-relaxed text-gray-700 mb-6 overflow-hidden">
                   <div dangerouslySetInnerHTML={{ __html: decodeBody(task.taskText) }} />
                 </div>
+                {task.assignDate && (
+                  <p className="text-[10px] text-gray-500 mb-1">Asignada el: {task.assignDate}</p>
+                )}
                 {task.deadline && (
-                  <div className="flex items-center gap-2 mb-4 text-gray-600 text-sm">
-                    <Calendar size={14} />
-                    <span>Plazo: {formatDate(task.deadline)}</span>
-                  </div>
+                  <p className="text-[10px] text-red-600 mb-1">Plazo: {task.deadline}</p>
                 )}
                 {task.completed && task.completeDate && (
-                  <div className="text-gray-500 text-xs mb-4">
-                    Completado el: {formatDate(task.completeDate)}
-                  </div>
+                  <p className="text-[10px] text-green-600 mb-1">Completada el: {task.completeDate}</p>
                 )}
                 {task.completed && task.comment && (
                   <div className="mt-4 pt-4 border-t border-gray-100">
@@ -389,18 +381,18 @@ export default function ModernTaskSection({ user }) {
                   </select>
                 </div>
               </div>
-              <div className="mb-6 space-y-2">
-                <label className="text-[10px] font-bold uppercase text-gray-400 tracking-widest">Plazo (opcional)</label>
+              <div className="mb-6">
+                <label className="block text-[10px] font-bold uppercase text-gray-400 tracking-widest mb-3">Plazo (opcional)</label>
                 <input
                   type="date"
-                  value={selectedDeadline}
-                  onChange={(e) => setSelectedDeadline(e.target.value)}
+                  value={deadline}
+                  onChange={(e) => setDeadline(e.target.value)}
                   className="w-full border-b border-gray-200 py-2 focus:border-[#007398] outline-none text-sm transition-all"
                 />
               </div>
               <div className="mb-8">
                 <label className="block text-[10px] font-bold uppercase text-gray-400 tracking-widest mb-3">Descripción</label>
-                <div className="h-64 border border-gray-100 rounded-sm"> {/* Aumentado altura para evitar tapar botón */}
+                <div className="h-64 border border-gray-100 rounded-sm">
                   <ReactQuill
                     theme="snow"
                     value={taskContent}
@@ -411,29 +403,29 @@ export default function ModernTaskSection({ user }) {
                   />
                 </div>
               </div>
-              <div className="flex items-center justify-between">
+              {submitStatus.msg && (
                 <span
-                  className={`text-[10px] font-bold uppercase tracking-widest ${
+                  className={`block mb-4 text-[10px] font-bold uppercase tracking-widest ${
                     submitStatus.type === 'error' ? 'text-red-500' : submitStatus.type === 'success' ? 'text-green-500' : 'text-gray-400'
                   }`}
                 >
                   {submitStatus.msg}
                 </span>
-                <div className="flex gap-4">
-                  <button
-                    onClick={() => setShowAssignModal(false)}
-                    className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={handleAssignTask}
-                    disabled={!taskContent.trim()}
-                    className="bg-[#007398] text-white px-8 py-3 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-[#005a77] transition-all disabled:opacity-50"
-                  >
-                    Asignar
-                  </button>
-                </div>
+              )}
+              <div className="flex justify-end gap-4">
+                <button
+                  onClick={() => setShowAssignModal(false)}
+                  className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleAssignTask}
+                  disabled={!taskContent.trim()}
+                  className="bg-[#007398] text-white px-8 py-3 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-[#005a77] transition-all disabled:opacity-50"
+                >
+                  Asignar
+                </button>
               </div>
             </motion.div>
           </motion.div>
@@ -464,11 +456,11 @@ export default function ModernTaskSection({ user }) {
                 <span className="block text-[10px] font-bold uppercase text-gray-400 tracking-widest mb-2">Descripción</span>
                 <div dangerouslySetInnerHTML={{ __html: decodeBody(selectedTask?.taskText) }} />
               </div>
+              {selectedTask?.assignDate && (
+                <p className="text-[10px] text-gray-500 mb-1">Asignada el: {selectedTask.assignDate}</p>
+              )}
               {selectedTask?.deadline && (
-                <div className="flex items-center gap-2 mb-4 text-gray-600 text-sm">
-                  <Calendar size={14} />
-                  <span>Plazo: {formatDate(selectedTask.deadline)}</span>
-                </div>
+                <p className="text-[10px] text-red-600 mb-4">Plazo: {selectedTask.deadline}</p>
               )}
               <div className="mb-8">
                 <label className="block text-[10px] font-bold uppercase text-gray-400 tracking-widest mb-3">Comentario</label>
@@ -483,29 +475,29 @@ export default function ModernTaskSection({ user }) {
                   />
                 </div>
               </div>
-              <div className="flex items-center justify-between">
+              {submitStatus.msg && (
                 <span
-                  className={`text-[10px] font-bold uppercase tracking-widest ${
+                  className={`block mb-4 text-[10px] font-bold uppercase tracking-widest ${
                     submitStatus.type === 'error' ? 'text-red-500' : submitStatus.type === 'success' ? 'text-green-500' : 'text-gray-400'
                   }`}
                 >
                   {submitStatus.msg}
                 </span>
-                <div className="flex gap-4">
-                  <button
-                    onClick={() => setShowCompleteModal(false)}
-                    className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={handleCompleteTask}
-                    disabled={!commentContent.trim()}
-                    className="bg-[#007398] text-white px-8 py-3 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-[#005a77] transition-all disabled:opacity-50"
-                  >
-                    Completar
-                  </button>
-                </div>
+              )}
+              <div className="flex justify-end gap-4">
+                <button
+                  onClick={() => setShowCompleteModal(false)}
+                  className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleCompleteTask}
+                  disabled={!commentContent.trim()}
+                  className="bg-[#007398] text-white px-8 py-3 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-[#005a77] transition-all disabled:opacity-50"
+                >
+                  Completar
+                </button>
               </div>
             </motion.div>
           </motion.div>
