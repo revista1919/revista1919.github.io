@@ -41,6 +41,7 @@ jobs:
           echo "MY_GITHUB_TOKEN length: ${#MY_GITHUB_TOKEN}"
           echo "USERS_CSV length: ${#USERS_CSV}"
           echo "FORM_CSV length: ${#FORM_CSV}"
+          echo "REBUILD_TOKEN length: ${#REBUILD_TOKEN}"
           echo "FIREBASE_API_KEY length: ${#FIREBASE_API_KEY}"
           echo "API_GEMINI length: ${#API_GEMINI}"
           echo "FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-MISSING}"
@@ -54,6 +55,7 @@ jobs:
           USERS_CSV: ${{ secrets.USERS_CSV }}
           FORM_CSV: ${{ secrets.FORM_CSV }}
           FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          REBUILD_TOKEN: ${{ secrets.REBUILD_TOKEN }}
           API_GEMINI: ${{ secrets.API_GEMINI }}
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
       - name: Build project
@@ -70,6 +72,8 @@ jobs:
           echo "REACT_APP_API_GEMINI=${{ secrets.API_GEMINI }}" >> .env.local
           echo "REACT_APP_FIREBASE_AUTH_DOMAIN=usuarios-rnce.firebaseapp.com" >> .env.local
           echo "REACT_APP_FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}" >> .env.local
+          echo "REACT_APP_REBUILD_TOKEN=${{ secrets.REBUILD_TOKEN }}" >> .env.local
+
           echo "REACT_APP_FIREBASE_STORAGE_BUCKET=usuarios-rnce.firebasestorage.app" >> .env.local
           echo "REACT_APP_FIREBASE_MESSAGING_SENDER_ID=688242139131" >> .env.local
           echo "REACT_APP_FIREBASE_APP_ID=1:688242139131:web:3a98663545e73110c3f55e" >> .env.local
