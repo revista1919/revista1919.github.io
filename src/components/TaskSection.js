@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Papa from 'papaparse';
 import ReactQuill from 'react-quill';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ClipboardList, CheckCircle2, Clock, Plus, User, Globe, Share2, X } from 'lucide-react';
+import { ClipboardList, CheckCircle2, Clock, Plus, User, Globe, Share2, X, Calendar } from 'lucide-react';
 import 'react-quill/dist/quill.snow.css';
 
 // URLs de Configuración
@@ -18,6 +18,22 @@ const AREAS = {
   RRSS: 'Redes Sociales',
   WEB: 'Desarrollo Web',
 };
+
+function formatDate(dateStr) {
+  if (!dateStr) return 'N/A';
+  try {
+    const date = new Date(dateStr);
+    return date.toLocaleString('es-ES', { 
+      day: '2-digit', 
+      month: 'long', 
+      year: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  } catch (e) {
+    return dateStr;
+  }
+}
 
 export default function ModernTaskSection({ user }) {
   const [users, setUsers] = useState([]);
@@ -66,8 +82,26 @@ export default function ModernTaskSection({ user }) {
   const filteredTasks = useMemo(() => {
     return tasks.reduce((acc, task, index) => {
       const areasConfig = [
-        { key: 'Redes sociales', name: task.Nombre, completed: task['Cumplido 1'] === 'si', comment: task['Comentario 1'], area: AREAS.RRSS },
-        { key: 'Desarrollo Web', name: task['Nombre.1'], completed: task['Cumplido 2'] === 'si', comment: task['Comentario 2'], area: AREAS.WEB },
+        { 
+          key: 'Redes sociales', 
+          name: task.Nombre, 
+          completed: task['Cumplido 1'] === 'si', 
+          comment: task['Comentario 1'], 
+          area: AREAS.RRSS,
+          assignDate: task['Fecha Asignación 1'],
+          completeDate: task['Fecha Completado 1'],
+          plazo: task['Plazo 1']
+        },
+        { 
+          key: 'Desarrollo Web', 
+          name: task['Nombre.1'], 
+          completed: task['Cumplido 2'] === 'si', 
+          comment: task['Comentario 2'], 
+          area: AREAS.WEB,
+          assignDate: task['Fecha Asignación 2'],
+          completeDate: task['Fecha Completado 2'],
+          plazo: task['Plazo 2']
+        },
       ];
       areasConfig.forEach((conf) => {
         if (task[conf.key] && (isDirector || conf.name === user.name || !conf.name)) {
@@ -78,6 +112,9 @@ export default function ModernTaskSection({ user }) {
             assignedName: conf.name || 'Equipo General',
             completed: conf.completed,
             comment: conf.comment,
+            assignDate: conf.assignDate,
+            completeDate: conf.completeDate,
+            plazo: conf.plazo,
             rowIndex: index,
           });
         }
@@ -256,6 +293,23 @@ export default function ModernTaskSection({ user }) {
                 </div>
                 <div className="flex-1 font-serif text-sm leading-relaxed text-gray-700 mb-6 overflow-hidden">
                   <div dangerouslySetInnerHTML={{ __html: decodeBody(task.taskText) }} />
+                </div>
+                {/* Sección de Fechas - Diseño Moderno */}
+                <div className="mb-6 space-y-2">
+                  <div className="flex items-center gap-2 text-[10px] text-gray-500">
+                    <Calendar size={12} />
+                    <span>Asignada: {formatDate(task.assignDate)}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px] text-gray-500">
+                    <Calendar size={12} />
+                    <span>Plazo: {formatDate(task.plazo)}</span>
+                  </div>
+                  {task.completed && (
+                    <div className="flex items-center gap-2 text-[10px] text-green-600">
+                      <Calendar size={12} />
+                      <span>Completada: {formatDate(task.completeDate)}</span>
+                    </div>
+                  )}
                 </div>
                 {task.completed && task.comment && (
                   <div className="mt-4 pt-4 border-t border-gray-100">
