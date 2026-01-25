@@ -126,18 +126,11 @@ export default function ModernTaskSection({ user }) {
       directorName: directorName,
     };
     try {
-      const response = await fetch(TASK_SCRIPT_URL, {
+      await fetch(TASK_SCRIPT_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        mode: 'no-cors',
         body: JSON.stringify(payload),
       });
-      if (!response.ok) {
-        throw new Error(`Error en el servidor: ${response.status} - ${await response.text()}`);
-      }
-      const data = await response.json();
-      if (!data.success) {
-        throw new Error(data.error || 'Error desconocido en el script');
-      }
       setSubmitStatus({ type: 'success', msg: 'Tarea asignada. Se ha enviado un aviso por correo.' });
       setTimeout(() => {
         setShowAssignModal(false);
@@ -148,8 +141,7 @@ export default function ModernTaskSection({ user }) {
         setSubmitStatus({ type: '', msg: '' });
       }, 2000);
     } catch (e) {
-      console.error('Error en handleAssignTask:', e);
-      setSubmitStatus({ type: 'error', msg: 'Error en la conexión o procesamiento: ' + e.message });
+      setSubmitStatus({ type: 'error', msg: 'Error en la conexión: ' + e.message });
     }
   };
   // --- COMPLETAR TAREA + NOTIFICACIÓN ---
@@ -160,27 +152,22 @@ export default function ModernTaskSection({ user }) {
     }
     setSubmitStatus({ type: 'info', msg: 'Procesando completado y envío de notificación...' });
     const encodedComment = btoa(unescape(encodeURIComponent(commentContent)));
+    const encodedTask = btoa(unescape(encodeURIComponent(selectedTask.taskText))); // Ensure encoded
     const payload = {
       action: 'complete',
       area: selectedTask.area,
       row: selectedTask.rowIndex + 2,
       comment: encodedComment,
       notifyEmail: directorEmail,
+      task: encodedTask,
       assignedTo: user.name,
     };
     try {
-      const response = await fetch(TASK_SCRIPT_URL, {
+      await fetch(TASK_SCRIPT_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        mode: 'no-cors',
         body: JSON.stringify(payload),
       });
-      if (!response.ok) {
-        throw new Error(`Error en el servidor: ${response.status} - ${await response.text()}`);
-      }
-      const data = await response.json();
-      if (!data.success) {
-        throw new Error(data.error || 'Error desconocido en el script');
-      }
       setSubmitStatus({ type: 'success', msg: 'Tarea completada. Se ha enviado un aviso al director.' });
       setTimeout(() => {
         setShowCompleteModal(false);
@@ -190,8 +177,7 @@ export default function ModernTaskSection({ user }) {
         setSubmitStatus({ type: '', msg: '' });
       }, 2000);
     } catch (e) {
-      console.error('Error en handleCompleteTask:', e);
-      setSubmitStatus({ type: 'error', msg: 'Error en la conexión o procesamiento: ' + e.message });
+      setSubmitStatus({ type: 'error', msg: 'Error en la conexión: ' + e.message });
     }
   };
   const decodeBody = (encoded) => {
@@ -384,9 +370,9 @@ export default function ModernTaskSection({ user }) {
                   className="w-full border-b border-gray-200 py-2 focus:border-[#007398] outline-none text-sm transition-all"
                 />
               </div>
-              <div className="mb-8">
+              <div className="mb-12">
                 <label className="block text-[10px] font-bold uppercase text-gray-400 tracking-widest mb-3">Descripción</label>
-                <div className="h-64 border border-gray-100 rounded-sm">
+                <div className="h-48 border border-gray-100 rounded-sm">
                   <ReactQuill
                     theme="snow"
                     value={taskContent}
@@ -406,7 +392,7 @@ export default function ModernTaskSection({ user }) {
                   {submitStatus.msg}
                 </span>
               )}
-              <div className="sticky bottom-0 bg-white pt-4 -mx-8 px-8 border-t border-gray-100 flex justify-end gap-4">
+              <div className="flex justify-end gap-4">
                 <button
                   onClick={() => setShowAssignModal(false)}
                   className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-colors"
@@ -455,9 +441,9 @@ export default function ModernTaskSection({ user }) {
               {selectedTask?.deadline && (
                 <p className="text-[10px] text-red-600 mb-4">Plazo: {selectedTask.deadline}</p>
               )}
-              <div className="mb-8">
+              <div className="mb-12">
                 <label className="block text-[10px] font-bold uppercase text-gray-400 tracking-widest mb-3">Comentario</label>
-                <div className="h-64 border border-gray-100 rounded-sm">
+                <div className="h-48 border border-gray-100 rounded-sm">
                   <ReactQuill
                     theme="snow"
                     value={commentContent}
@@ -477,7 +463,7 @@ export default function ModernTaskSection({ user }) {
                   {submitStatus.msg}
                 </span>
               )}
-              <div className="sticky bottom-0 bg-white pt-4 -mx-8 px-8 border-t border-gray-100 flex justify-end gap-4">
+              <div className="flex justify-end gap-4">
                 <button
                   onClick={() => setShowCompleteModal(false)}
                   className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-colors"
