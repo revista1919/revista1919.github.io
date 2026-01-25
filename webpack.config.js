@@ -177,16 +177,12 @@ const defineEnvVars = {
       
       new WebpackShellPluginNext({
   onBuildEnd: {
-    scripts: [
-      {
-        command: 'node generate-all.js',
-        cwd: path.resolve(__dirname),
-      }
-    ],
+    scripts: ['npm run generate-all'],
     blocking: true,
     parallel: false,
   },
 }),
+
 
       ...(isProduction ? [
         new webpack.BannerPlugin({
