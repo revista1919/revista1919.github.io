@@ -175,14 +175,19 @@ const defineEnvVars = {
   ],
 }),
       
-      new webpack.DefinePlugin(defineEnvVars),
       new WebpackShellPluginNext({
-        onBuildEnd: {
-          scripts: ['node generate-all.js'],
-          blocking: true,
-          parallel: false,
-        },
-      }),
+  onBuildEnd: {
+    scripts: [
+      {
+        command: 'node generate-all.js',
+        cwd: path.resolve(__dirname),
+      }
+    ],
+    blocking: true,
+    parallel: false,
+  },
+}),
+
       ...(isProduction ? [
         new webpack.BannerPlugin({
           banner: `/* Revista 1919 - Built ${new Date().toISOString()} | Firebase Auth Enabled */`,
