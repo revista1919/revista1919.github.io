@@ -1,898 +1,592 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Papa from 'papaparse';
-import ReactQuill, { Quill } from 'react-quill';
+import ReactQuill from 'react-quill';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ClipboardList, CheckCircle2, Clock, Plus, User, Globe, Share2, X, Calendar, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import 'react-quill/dist/quill.snow.css';
-import ImageResize from 'quill-image-resize-module-react';
-import { debounce } from 'lodash';
-Quill.register('modules/imageResize', ImageResize);
 
-// For local CSV files, assume they are imported or embedded
-// Replace these with actual CSV content or file paths in your project
-const USERS_CSV = `Name,Role in the Magazine
-John Doe,General Director;Social Media Manager
-Jane Smith,Web Development Manager
-...`; // Add your CSV content here
+// URLs de Configuración
+const USERS_CSV_URL =
+  'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 
-const TASKS_CSV = `Social Media,Name,Completed 1,Comment 1,Web Development,Name.1,Completed 2,Comment 2
-Task 1,John Doe,yes,Comment 1,Task 2,Jane Smith,no,Comment 2
-...`; // Add your CSV content here
+const TASKS_CSV_URL =
+  'https://docs.google.com/spreadsheets/d/e/2PACX-1vSCEOtMwYPu0_kn1hmQi0qT6FZq6HRF09WtuDSqOxBNgMor_FyRRtc6_YVKHQQhWJCy-mIa2zwP6uAU/pub?output=csv';
 
 const TASK_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxMo7aV_vz_3mOCUWKpcqnWmassUdApD_KfAHROTdgd_MDDiaXikgVV0OZ5qVYmhZgd/exec';
+
 const AREAS = {
-  SM: 'Social Media',
-  WD: 'Web Development',
+  RRSS: 'Social Media',
+  WEB: 'Web Development',
 };
 
-const getAreaColumns = (area) => {
-  if (area === AREAS.SM) {
-    return { taskCol: 0, nameCol: 1, completedCol: 2, commentCol: 3 };
-  } else {
-    return { taskCol: 4, nameCol: 5, completedCol: 6, commentCol: 7 };
+const AREA_MAP_TO_ES = {
+  'Social Media': 'Redes Sociales',
+  'Web Development': 'Desarrollo Web',
+};
+
+const ROLE_MAP = {
+  'Social Media': 'Encargado de Redes Sociales',
+  'Web Development': 'Responsable de Desarrollo Web',
+};
+
+function formatDate(dateStr) {
+  if (!dateStr) return 'N/A';
+  try {
+    const date = new Date(dateStr);
+    return date.toLocaleString('en-US', { 
+      day: '2-digit', 
+      month: 'long', 
+      year: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  } catch (e) {
+    return dateStr;
   }
-};
+}
 
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000;
-const REQUEST_TIMEOUT = 15000;
-
-const base64EncodeUnicode = (str) => {
-  const encoder = new TextEncoder();
-  const bytes = encoder.encode(str);
-  let binary = '';
-  bytes.forEach((b) => (binary += String.fromCharCode(b)));
-  return btoa(binary);
-};
-
-const sanitizeInput = (input) => {
-  if (!input) return '';
-  return input
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/on\w+="[^"]*"/gi, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-};
-
-export default function TaskSection({ user }) {
+export default function ModernTaskSectionEN({ user }) {
   const [users, setUsers] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('pending');
   const [showAssignModal, setShowAssignModal] = useState(false);
-  const [selectedArea, setSelectedArea] = useState(AREAS.SM);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [selectedArea, setSelectedArea] = useState(AREAS.RRSS);
   const [selectedAssignee, setSelectedAssignee] = useState('');
   const [taskContent, setTaskContent] = useState('');
-  const [commentContent, setCommentContent] = useState({});
-  const [submitStatus, setSubmitStatus] = useState({});
+  const [commentContent, setCommentContent] = useState('');
+  const [deadline, setDeadline] = useState('');
+  const [submitStatus, setSubmitStatus] = useState({ type: '', msg: '' });
   const [error, setError] = useState('');
-  const taskEditorRef = useRef(null);
-  const commentEditorsRef = useRef({});
+  const [expandedComments, setExpandedComments] = useState(new Set());
 
+  // --- Lógica de Carga y Datos ---
   useEffect(() => {
-    const style = document.createElement('style');
-    style.innerHTML = `
-      .ql-tooltip {
-        z-index: 10000 !important;
-        position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
-        background: white !important;
-        border: 1px solid #ccc !important;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1) !important;
-        padding: 5px !important;
-        border-radius: 4px !important;
-        overflow: visible !important;
-      }
-      .ql-container {
-        overflow: visible !important;
-        position: relative !important;
-        font-family: inherit !important;
-      }
-      .ql-editor {
-        min-height: 100% !important;
-        padding: 12px !important;
-        line-height: 1.5 !important;
-        font-size: 14px !important;
-        outline: none !important;
-        white-space: pre-wrap !important;
-        overflow-y: auto !important;
-      }
-      .ql-modal {
-        z-index: 10001 !important;
-      }
-      .ql-toolbar {
-        z-index: 10002 !important;
-        position: sticky !important;
-        top: 0 !important;
-        background: white !important;
-        border-bottom: 1px solid #ddd !important;
-      }
-      .ql-link-tooltip .ql-preview {
-        display: none !important;
-      }
-      .ql-editor:focus {
-        outline: none !important;
-      }
-      .ql-editor img {
-        max-width: 100% !important;
-        height: auto !important;
-        border-radius: 4px !important;
-        display: block !important;
-        margin: 8px auto !important;
-      }
-      .modal-content .ql-container {
-        max-height: 300px !important;
-      }
-    `;
-    document.head.appendChild(style);
-    return () => style.remove();
+    loadData();
   }, []);
 
-  const fetchWithRetry = async (url, options, retries = MAX_RETRIES) => {
+  const loadData = async () => {
+    setLoading(true);
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
-      const response = await fetch(url, {
-        ...options,
-        mode: 'no-cors',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Cache-Control': 'no-cache',
-        },
-        signal: controller.signal,
-        keepalive: true,
-      });
-      clearTimeout(timeoutId);
-      // Note: With 'no-cors', response body can't be read, so we assume success
-      return { ok: true };
-    } catch (err) {
-      if (err.name === 'AbortError') {
-        throw new Error('Request timed out');
-      }
-      if (retries > 0) {
-        console.warn(`Retry ${MAX_RETRIES - retries + 1}/${MAX_RETRIES}: ${err.message}`);
-        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
-        return fetchWithRetry(url, options, retries - 1);
-      }
-      throw new Error(`Fetch failed after ${MAX_RETRIES} retries: ${err.message}`);
-    }
-  };
-
-  const parseUsers = () => {
-    try {
-      const parsed = Papa.parse(USERS_CSV, { header: true, skipEmptyLines: true }).data;
-      setUsers(parsed);
-    } catch (err) {
-      console.error('Error parsing users:', err);
-      setError('Error loading users: ' + err.message);
-    }
-  };
-
-  const parseTasks = () => {
-    try {
-      const parsed = Papa.parse(TASKS_CSV, { header: true, skipEmptyLines: true }).data.map(
-        (row, index) => ({
-          ...row,
-          rowIndex: index,
-        })
+      const [uRes, tRes] = await Promise.all([fetch(USERS_CSV_URL).then((r) => r.text()), fetch(TASKS_CSV_URL).then((r) => r.text())]);
+      setUsers(Papa.parse(uRes, { header: true, skipEmptyLines: true }).data);
+      setTasks(
+        Papa.parse(tRes, { header: true, skipEmptyLines: true }).data.map((t, i) => ({
+          ...t,
+          rowIndex: i,
+        }))
       );
-      setTasks(parsed);
-    } catch (err) {
-      console.error('Error parsing tasks:', err);
-      setError('Error loading tasks: ' + err.message);
+    } catch (e) {
+      console.error(e);
+      setError('Error loading data');
     }
+    setLoading(false);
   };
 
-  useEffect(() => {
-    Promise.all([parseUsers(), parseTasks()])
-      .then(() => setLoading(false))
-      .catch((err) => {
-        console.error('Error in initial parse:', err);
-        setError('Error initializing: ' + err.message);
-      });
-  }, []);
-
-  useEffect(() => {
-    const setupEditor = (editor, spellcheck = true) => {
-      if (editor && editor.root) {
-        editor.root.setAttribute('spellcheck', spellcheck ? 'true' : 'false');
-        editor.root.setAttribute('lang', 'en');
-        editor.root.setAttribute('contenteditable', 'true');
-        editor.root.addEventListener('focus', () => {
-          editor.root.classList.add('ql-focused');
-        });
-        editor.root.addEventListener('blur', () => {
-          editor.root.classList.remove('ql-focused');
-        });
-      }
-    };
-
-    if (taskEditorRef.current) {
-      setupEditor(taskEditorRef.current);
-    }
-
-    Object.values(commentEditorsRef.current).forEach((editor) => {
-      if (editor) {
-        setupEditor(editor);
-      }
-    });
-  }, [commentContent]);
-
-  const currentUser = users.find((u) => u.Name === user.name);
-  const userRoles = currentUser
-    ? currentUser['Role in the Magazine']?.split(';').map((r) => r.trim())
-    : [];
-  const isDirector = userRoles.includes('General Director');
-  const isSM = userRoles.includes('Social Media Manager');
-  const isWD = userRoles.includes('Web Development Manager');
-  const isAssignee = (isSM || isWD) && !isDirector;
-  const smUsers = users.filter((u) =>
-    u['Role in the Magazine']?.includes('Social Media Manager')
-  );
-  const wdUsers = users.filter((u) =>
-    u['Role in the Magazine']?.includes('Web Development Manager')
-  );
+  // --- Lógica de Negocio y Permisos ---
+  const currentUserData = users.find((u) => u.Nombre === user.name);
+  const roles = currentUserData?.['Rol en la Revista']?.split(';').map((r) => r.trim()) || [];
+  const isDirector = roles.includes('Director General');
 
   const filteredTasks = useMemo(() => {
-    return tasks.reduce((areaTasks, task, index) => {
-      if (!isDirector && !isAssignee) return areaTasks;
-      if (isSM || isDirector) {
-        const taskText = task['Social Media'];
-        const assignedName = task.Name || '';
-        const completed = task['Completed 1'] === 'yes';
-        if (taskText && (!assignedName || assignedName === user.name || isDirector)) {
-          areaTasks.push({
-            ...task,
-            area: AREAS.SM,
-            taskText,
-            assignedName,
-            completed,
-            comment: task['Comment 1'],
+    return tasks.reduce((acc, task, index) => {
+      const areasConfig = [
+        { 
+          key: 'Redes sociales', 
+          name: task.Nombre, 
+          completed: task['Cumplido 1'] === 'si', 
+          comment: task['Comentario 1'], 
+          area: AREAS.RRSS,
+          assignDate: task['Fecha Asignación 1'],
+          completeDate: task['Fecha Completado 1'],
+          plazo: task['Plazo 1']
+        },
+        { 
+          key: 'Desarrollo Web', 
+          name: task['Nombre.1'], 
+          completed: task['Cumplido 2'] === 'si', 
+          comment: task['Comentario 2'], 
+          area: AREAS.WEB,
+          assignDate: task['Fecha Asignación 2'],
+          completeDate: task['Fecha Completado 2'],
+          plazo: task['Plazo 2']
+        },
+      ];
+      areasConfig.forEach((conf) => {
+        if (task[conf.key] && (isDirector || conf.name === user.name || !conf.name)) {
+          acc.push({
+            id: `${index}-${conf.area}`,
+            area: conf.area,
+            taskText: task[conf.key],
+            assignedName: conf.name || 'General Team',
+            completed: conf.completed,
+            comment: conf.comment,
+            assignDate: conf.assignDate,
+            completeDate: conf.completeDate,
+            plazo: conf.plazo,
             rowIndex: index,
           });
         }
-      }
-      if (isWD || isDirector) {
-        const taskText = task['Web Development'];
-        const assignedName = task['Name.1'] || '';
-        const completed = task['Completed 2'] === 'yes';
-        if (taskText && (!assignedName || assignedName === user.name || isDirector)) {
-          areaTasks.push({
-            ...task,
-            area: AREAS.WD,
-            taskText,
-            assignedName,
-            completed,
-            comment: task['Comment 2'],
-            rowIndex: index,
-          });
-        }
-      }
-      return areaTasks;
-    }, []);
-  }, [tasks, user.name, isDirector, isSM, isWD]);
-
-  const pendingTasks = useMemo(() => filteredTasks.filter((t) => !t.completed), [filteredTasks]);
-  const completedTasks = useMemo(() => filteredTasks.filter((t) => t.completed), [filteredTasks]);
-
-  const uploadImage = async (file) => {
-    try {
-      const reader = new FileReader();
-      return new Promise((resolve, reject) => {
-        reader.onload = async (e) => {
-          const base64 = e.target.result.split(',')[1];
-          const mime = file.type;
-          const name = file.name;
-          try {
-            const response = await fetchWithRetry(TASK_SCRIPT_URL, {
-              method: 'POST',
-              body: JSON.stringify({
-                action: 'upload_image',
-                data: base64,
-                mime: mime,
-                name: name,
-              }),
-            });
-            // With no-cors, we can't read response body, so assume success
-            resolve('https://placeholder-image-url.com'); // Replace with actual URL logic if needed
-          } catch (err) {
-            reject(err);
-          }
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
       });
-    } catch (err) {
-      console.error('Error uploading image:', err);
-      return null;
-    }
-  };
+      return acc;
+    }, []);
+  }, [tasks, user.name, isDirector]);
 
-  const encodeBody = useCallback(
-    (html, editorRef = null) => {
-      try {
-        if (!html || html.trim() === '') return '';
-
-        let cleanedHtml = sanitizeInput(html);
-
-        if (cleanedHtml.includes('<img')) {
-          const tempDiv = document.createElement('div');
-          tempDiv.innerHTML = cleanedHtml;
-          const images = tempDiv.querySelectorAll('img');
-
-          if (images.length > 0) {
-            console.log(`Processing ${images.length} images...`);
-            images.forEach((img, index) => {
-              try {
-                let style = `max-width:100%;height:auto;border-radius:4px;display:block;margin:8px auto;`;
-                style += 'max-width:100% !important;box-sizing:border-box !important;';
-                img.setAttribute('style', style);
-                img.setAttribute('loading', 'lazy');
-                img.setAttribute('alt', `Image ${index + 1} of the task`);
-              } catch (imgError) {
-                console.warn(`Error processing image ${index}:`, imgError);
-              }
-            });
-            cleanedHtml = tempDiv.innerHTML;
-          }
-        }
-
-        const encoded = base64EncodeUnicode(cleanedHtml);
-        console.log(`Encoded content: ${encoded.length} characters`);
-        return encoded;
-      } catch (err) {
-        console.error('Error encoding body:', err);
-        try {
-          const uriEncoded = encodeURIComponent(html);
-          return btoa(uriEncoded);
-        } catch (fallbackErr) {
-          console.error('Error in fallback encoding:', fallbackErr);
-          return base64EncodeUnicode(html);
-        }
-      }
+  const canCompleteTask = useCallback(
+    (task) => {
+      return !isDirector && (task.assignedName === user.name || task.assignedName === 'General Team');
     },
-    []
+    [isDirector, user.name]
   );
 
-  const decodeBody = useCallback((body) => {
-    if (!body) return <p className="text-gray-600">No content.</p>;
-    try {
-      let decoded;
-      try {
-        decoded = decodeURIComponent(escape(atob(body)));
-      } catch (e1) {
-        try {
-          decoded = atob(body);
-        } catch (e2) {
-          decoded = body;
-        }
-      }
-
-      const sanitized = decoded
-        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-        .replace(/on\w+="[^"]*"/gi, '');
-
-      return (
-        <div
-          className="ql-editor prose max-w-none"
-          dangerouslySetInnerHTML={{ __html: sanitized }}
-          style={{ lineHeight: '1.6', fontSize: '14px', color: '#374151' }}
-        />
-      );
-    } catch (err) {
-      console.error('Error decoding body:', err);
-      return <p className="text-red-600">Error displaying content: {err.message}</p>;
-    }
-  }, []);
-
+  // --- ENVÍO DE TAREA ---
   const handleAssignTask = async () => {
     if (!taskContent.trim()) {
-      setSubmitStatus({ assign: 'The task cannot be empty' });
+      setSubmitStatus({ type: 'error', msg: 'The task cannot be empty' });
       return;
     }
-
-    setSubmitStatus({ assign: 'Sending...' });
-
-    const encodedTask = encodeBody(taskContent, taskEditorRef);
-    if (!encodedTask || encodedTask.length === 0) {
-      setSubmitStatus({ assign: 'Error: Could not process the task content' });
-      return;
-    }
-
-    const data = {
+    setSubmitStatus({ type: 'info', msg: 'Processing assignment...' });
+    const encodedTask = btoa(unescape(encodeURIComponent(taskContent)));
+    const payload = {
       action: 'assign',
-      area: selectedArea,
+      area: AREA_MAP_TO_ES[selectedArea],
       task: encodedTask,
-      assignedTo: selectedAssignee || '',
+      assignedTo: selectedAssignee,
+      plazo: deadline,
+      lang: 'en'
     };
-
     try {
-      await fetchWithRetry(TASK_SCRIPT_URL, {
+      await fetch(TASK_SCRIPT_URL, {
         method: 'POST',
-        body: JSON.stringify(data),
+        mode: 'no-cors',
+        body: JSON.stringify(payload),
       });
-
-      setSubmitStatus({ assign: 'Task assigned successfully! 🎉' });
-      setShowAssignModal(false);
-      setTaskContent('');
-      setSelectedAssignee('');
-      setTimeout(() => parseTasks(), 1000);
-    } catch (err) {
-      console.error('Error assigning task:', err);
-      setSubmitStatus({ assign: `Error assigning task: ${err.message}` });
+      setSubmitStatus({ type: 'success', msg: 'Task assigned.' });
+      setTimeout(() => {
+        setShowAssignModal(false);
+        setTaskContent('');
+        setSelectedAssignee('');
+        setDeadline('');
+        loadData();
+        setSubmitStatus({ type: '', msg: '' });
+      }, 2000);
+    } catch (e) {
+      setSubmitStatus({ type: 'error', msg: 'Connection error: ' + e.message });
     }
   };
 
-  const handleCompleteTask = async (task) => {
-    const comment = commentContent[task.rowIndex] || '';
-    if (!comment.trim()) {
-      setSubmitStatus({ complete: 'The comment cannot be empty' });
+  // --- COMPLETAR TAREA ---
+  const handleCompleteTask = async () => {
+    if (!commentContent.trim()) {
+      setSubmitStatus({ type: 'error', msg: 'The comment cannot be empty' });
       return;
     }
-
-    setSubmitStatus({ complete: 'Sending...' });
-
-    const commentEditor = commentEditorsRef.current[task.rowIndex];
-    const encodedComment = encodeBody(comment, commentEditor);
-    if (!encodedComment || encodedComment.length === 0) {
-      setSubmitStatus({ complete: 'Error: Could not process the comment' });
-      return;
-    }
-
-    const data = {
+    setSubmitStatus({ type: 'info', msg: 'Processing completion...' });
+    const encodedComment = btoa(unescape(encodeURIComponent(commentContent)));
+    const payload = {
       action: 'complete',
-      area: task.area,
-      row: task.rowIndex + 2,
+      area: AREA_MAP_TO_ES[selectedTask.area],
+      row: selectedTask.rowIndex + 2,
       comment: encodedComment,
+      lang: 'en'
     };
-
     try {
-      await fetchWithRetry(TASK_SCRIPT_URL, {
+      await fetch(TASK_SCRIPT_URL, {
         method: 'POST',
-        body: JSON.stringify(data),
+        mode: 'no-cors',
+        body: JSON.stringify(payload),
       });
-
-      setSubmitStatus({ complete: 'Task completed successfully! 🎉' });
-      setCommentContent((prev) => ({ ...prev, [task.rowIndex]: '' }));
-      setTimeout(() => parseTasks(), 1000);
-    } catch (err) {
-      console.error('Error completing task:', err);
-      setSubmitStatus({ complete: `Error completing task: ${err.message}` });
+      setSubmitStatus({ type: 'success', msg: 'Task completed.' });
+      setTimeout(() => {
+        setShowCompleteModal(false);
+        setCommentContent('');
+        setSelectedTask(null);
+        loadData();
+        setSubmitStatus({ type: '', msg: '' });
+      }, 2000);
+    } catch (e) {
+      setSubmitStatus({ type: 'error', msg: 'Connection error: ' + e.message });
     }
   };
 
-  const debouncedHandleCommentChange = useCallback(
-    debounce((rowIndex, value) => {
-      setCommentContent((prev) => ({ ...prev, [rowIndex]: value }));
-    }, 500),
-    []
-  );
-
-  const debouncedSetTaskContent = useCallback(
-    debounce((value) => {
-      setTaskContent(value);
-    }, 500),
-    []
-  );
-
-  const modules = useMemo(
-    () => ({
-      toolbar: {
-        container: [
-          ['bold', 'italic', 'underline', 'strike', 'blockquote'],
-          [{ list: 'ordered' }, { list: 'bullet' }],
-          ['link', 'image'],
-          [{ align: ['', 'center', 'right', 'justify'] }],
-          [{ size: ['small', false, 'large'] }],
-          ['clean'],
-        ],
-        handlers: {
-          link: function (value) {
-            if (value) {
-              const href = prompt('Enter the URL:');
-              if (href) {
-                const range = this.quill.getSelection();
-                this.quill.format('link', href, 'user');
-              }
-            } else {
-              this.quill.format('link', false);
-            }
-          },
-          image: function () {
-            const input = document.createElement('input');
-            input.setAttribute('type', 'file');
-            input.setAttribute('accept', 'image/*');
-            input.click();
-            input.onchange = async () => {
-              if (input.files && input.files[0]) {
-                const file = input.files[0];
-                const url = await uploadImage(file);
-                if (url) {
-                  const range = this.quill.getSelection(true);
-                  this.quill.insertEmbed(range.index, 'image', url, 'user');
-                  this.quill.setSelection(range.index + 1, 'silent');
-                }
-              }
-            };
-          },
-        },
-      },
-      imageResize: {
-        parchment: Quill.import('parchment'),
-        modules: ['Resize', 'DisplaySize', 'Toolbar'],
-        handleStyles: {
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          border: 'none',
-          color: 'white',
-          cursor: 'move',
-        },
-        displayStyles: {
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          border: 'none',
-          color: 'white',
-        },
-        onImageResize: (img, height, width) => {
-          if (width > 800) {
-            const ratio = 800 / width;
-            height = Math.round(height * ratio);
-            width = 800;
-          }
-          if (height > 800) {
-            const ratio = 800 / height;
-            width = Math.round(width * ratio);
-            height = 800;
-          }
-          return { height, width };
-        },
-      },
-      clipboard: {
-        matchVisual: false,
-      },
-    }),
-    []
-  );
-
-  const formats = [
-    'header',
-    'font',
-    'size',
-    'bold',
-    'italic',
-    'underline',
-    'strike',
-    'blockquote',
-    'list',
-    'bullet',
-    'indent',
-    'link',
-    'image',
-    'color',
-    'background',
-    'align',
-  ];
-
-  const canCompleteTask = (task) => {
-    if (isDirector) return false;
-    if (!isAssignee) return false;
-    return task.assignedName === user.name || task.assignedName === '';
+  const decodeBody = (encoded) => {
+    if (!encoded) return '';
+    try {
+      return decodeURIComponent(escape(atob(encoded)));
+    } catch (e) {
+      return encoded;
+    }
   };
 
-  const TaskQuillEditor = React.forwardRef(
-    ({ value, onChange, placeholder, className }, ref) => {
-      const quillRef = useRef(null);
-      const containerRef = useRef(null);
+  const quillModules = {
+    toolbar: [
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ list: 'ordered' }, { list: 'bullet' }],
+      ['link'],
+      ['clean'],
+    ],
+  };
 
-      useEffect(() => {
-        if (quillRef.current && ref) {
-          ref.current = quillRef.current.getEditor();
-          taskEditorRef.current = quillRef.current.getEditor();
-        }
-      }, [ref]);
-
-      useEffect(() => {
-        const handleKeyDown = (e) => {
-          if (e.key === 'Enter' && e.shiftKey) {
-            e.preventDefault();
-          }
-        };
-
-        const editorRoot = containerRef.current?.querySelector('.ql-editor');
-        if (editorRoot) {
-          editorRoot.addEventListener('keydown', handleKeyDown);
-          editorRoot.addEventListener('input', () => {
-            if (document.activeElement !== editorRoot) {
-              editorRoot.focus();
-            }
-          });
-        }
-
-        return () => {
-          if (editorRoot) {
-            editorRoot.removeEventListener('keydown', handleKeyDown);
-          }
-        };
-      }, []);
-
-      return (
-        <div ref={containerRef} className="w-full h-full relative">
-          <ReactQuill
-            ref={quillRef}
-            value={value}
-            onChange={onChange}
-            modules={modules}
-            formats={formats}
-            placeholder={placeholder}
-            className={`w-full h-full ${className || ''}`}
-            theme="snow"
-            bounds={'.modal-content'}
-            preserveWhitespace={true}
-            readOnly={false}
-            tabIndex={0}
-          />
-        </div>
-      );
+  const toggleExpandComment = (taskId) => {
+    const newSet = new Set(expandedComments);
+    if (newSet.has(taskId)) {
+      newSet.delete(taskId);
+    } else {
+      newSet.add(taskId);
     }
-  );
+    setExpandedComments(newSet);
+  };
 
-  TaskQuillEditor.displayName = 'TaskQuillEditor';
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[500px] bg-slate-50/50 rounded-3xl border border-dashed border-slate-200">
+        <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }} className="w-10 h-10 border-2 border-slate-200 border-t-[#007398] rounded-full mb-4" />
+        <span className="text-[10px] font-bold tracking-[0.3em] text-slate-400 uppercase">Synchronizing Workspace</span>
+      </div>
+    );
+  }
 
-  const CommentQuillEditor = React.forwardRef(
-    ({ value, onChange, rowIndex, placeholder, className }, ref) => {
-      const quillRef = useRef(null);
-      const containerRef = useRef(null);
-
-      useEffect(() => {
-        if (quillRef.current && rowIndex) {
-          const editor = quillRef.current.getEditor();
-          commentEditorsRef.current[rowIndex] = editor;
-          if (ref) ref.current = editor;
-        }
-      }, [rowIndex, ref]);
-
-      useEffect(() => {
-        const handleFocus = () => {
-          const editorRoot = containerRef.current?.querySelector('.ql-editor');
-          if (editorRoot) {
-            editorRoot.focus();
-          }
-        };
-
-        const container = containerRef.current;
-        if (container) {
-          container.addEventListener('click', handleFocus);
-        }
-
-        return () => {
-          if (container) {
-            container.removeEventListener('click', handleFocus);
-          }
-        };
-      }, []);
-
-      return (
-        <div ref={containerRef} className="w-full h-full relative">
-          <ReactQuill
-            ref={quillRef}
-            value={value}
-            onChange={(content, delta, source, editor) => {
-              if (source === 'user') {
-                onChange(rowIndex, content, delta, source, editor);
-              }
-            }}
-            modules={modules}
-            formats={formats}
-            placeholder={placeholder}
-            className={`w-full h-full ${className || ''}`}
-            theme="snow"
-            bounds={document.body}
-            preserveWhitespace={true}
-            readOnly={false}
-            tabIndex={0}
-          />
-        </div>
-      );
-    }
-  );
-
-  CommentQuillEditor.displayName = 'CommentQuillEditor';
-
-  if (loading) return <div className="text-center p-4 text-gray-600">Loading tasks...</div>;
   if (error) return <div className="text-red-600 text-center p-4">{error}</div>;
-  if (!isDirector && !isAssignee) return null;
 
   return (
-    <div className="pt-4 space-y-6">
-      {isDirector && (
-        <button
-          onClick={() => setShowAssignModal(true)}
-          className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium"
-          aria-label="Assign new task"
-        >
-          Assign New Task
-        </button>
-      )}
+    <div className="max-w-7xl mx-auto py-10 px-4 sm:px-6 font-sans text-slate-900 antialiased">
+      {/* Header Estilo Dashboard */}
+      <header className="relative mb-16 flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-slate-100 pb-6">
+        <div className="space-y-2">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-sky-50 text-sky-600 rounded-lg">
+              <ClipboardList size={20} />
+            </div>
+            <span className="text-[10px] font-bold tracking-[.2em] text-[#007398] uppercase italic">Editorial Management</span>
+          </div>
+          <h2 className="text-4xl font-serif font-medium text-slate-800 tracking-tight">Task Panel</h2>
+        </div>
+        {isDirector && (
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setShowAssignModal(true)}
+            className="flex items-center gap-3 bg-[#007398] text-white px-8 py-4 rounded-2xl text-[12px] font-bold uppercase tracking-widest hover:bg-[#005a77] transition-all shadow-2xl shadow-slate-200"
+          >
+            <Plus size={16} /> New Task
+          </motion.button>
+        )}
+      </header>
 
-      <div className="flex space-x-4 border-b border-gray-200">
-        <button
-          onClick={() => setActiveTab('pending')}
-          className={`pb-2 px-4 text-sm font-medium transition-colors ${
-            activeTab === 'pending'
-              ? 'border-b-2 border-blue-600 text-blue-600'
-              : 'text-gray-600 hover:text-blue-600'
-          }`}
-          aria-label="View pending tasks"
-        >
-          Pending ({pendingTasks.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('completed')}
-          className={`pb-2 px-4 text-sm font-medium transition-colors ${
-            activeTab === 'completed'
-              ? 'border-b-2 border-blue-600 text-blue-600'
-              : 'text-gray-600 hover:text-blue-600'
-          }`}
-          aria-label="View completed tasks"
-        >
-          Completed ({completedTasks.length})
-        </button>
+      {/* Tabs Estilo "Pill" */}
+      <div className="flex gap-4 mb-12 p-1 bg-slate-100/50 w-fit rounded-2xl border border-slate-100">
+        {[
+          { id: 'pending', label: 'Pending', icon: Clock, count: filteredTasks.filter((t) => !t.completed).length },
+          { id: 'completed', label: 'Completed', icon: CheckCircle2, count: filteredTasks.filter((t) => t.completed).length },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-3 px-6 py-3 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all ${
+              activeTab === tab.id ? 'bg-white text-[#007398] shadow-sm' : 'text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            <tab.icon size={14} />
+            {tab.label}
+            <span className={`ml-2 px-2 py-0.5 rounded-md text-[9px] ${activeTab === tab.id ? 'bg-sky-50 text-[#007398]' : 'bg-slate-200 text-slate-500'}`}>
+              {tab.count}
+            </span>
+          </button>
+        ))}
       </div>
 
-      <div className="grid gap-6">
-        {(activeTab === 'pending' ? pendingTasks : completedTasks).map((task) => (
-          <div
-            key={`${task.area}-${task.rowIndex}`}
-            className="bg-white p-4 sm:p-6 rounded-lg shadow-md border border-gray-200 w-full overflow-hidden box-border"
+      {/* Grid de Tareas */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <AnimatePresence mode="popLayout">
+          {filteredTasks
+            .filter((t) => (activeTab === 'pending' ? !t.completed : t.completed))
+            .map((task) => {
+              const isExpanded = expandedComments.has(task.id);
+              return (
+                <motion.div
+                  key={task.id}
+                  layout
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="group relative bg-white border border-slate-100 p-8 hover:border-[#007398]/20 transition-all rounded-[32px] shadow-sm hover:shadow-xl hover:shadow-[#007398]/5 flex flex-col min-h-[400px]"
+                >
+                  {/* Status Dot */}
+                  <div className="absolute top-8 right-8">
+                    {!task.completed ? (
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#007398] opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-[#007398]"></span>
+                      </span>
+                    ) : (
+                      <CheckCircle2 size={16} className="text-green-500" />
+                    )}
+                  </div>
+                  <div className="mb-6">
+                    <span
+                      className={`text-[9px] font-black uppercase tracking-[.2em] px-3 py-1.5 rounded-lg inline-block mb-4 ${
+                        task.area === AREAS.RRSS ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'
+                      }`}
+                    >
+                      {task.area}
+                    </span>
+                    <div className="font-serif text-lg leading-snug text-slate-700 group-hover:text-slate-900 transition-colors line-clamp-4 overflow-hidden">
+                      <div dangerouslySetInnerHTML={{ __html: decodeBody(task.taskText) }} />
+                    </div>
+                  </div>
+                  {/* Sección de Fechas */}
+                  <div className="space-y-3 mb-6">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-slate-400 font-medium flex items-center gap-1.5">
+                        <Calendar size={12} /> Assigned:
+                      </span>
+                      <span className="font-bold text-slate-700">{formatDate(task.assignDate)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-slate-400 font-medium flex items-center gap-1.5">
+                        <Calendar size={12} /> Deadline:
+                      </span>
+                      <span className={`font-bold ${!task.completed ? 'text-rose-500' : 'text-slate-400'}`}>{formatDate(task.plazo)}</span>
+                    </div>
+                    {task.completed && (
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-slate-400 font-medium flex items-center gap-1.5">
+                          <Calendar size={12} /> Completed:
+                        </span>
+                        <span className="font-bold text-green-600">{formatDate(task.completeDate)}</span>
+                      </div>
+                    )}
+                  </div>
+                  {task.completed && task.comment && (
+                    <div className="mt-auto pt-6 border-t border-slate-50">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] uppercase tracking-wide text-slate-500 font-bold">Comment:</span>
+                        <button
+                          onClick={() => toggleExpandComment(task.id)}
+                          className="text-[10px] text-[#007398] hover:underline flex items-center gap-1"
+                        >
+                          {isExpanded ? 'See less' : 'Expand'} {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                        </button>
+                      </div>
+                      <div
+                        className={`bg-slate-50 p-4 rounded-2xl italic text-xs text-slate-500 font-serif overflow-hidden ${
+                          isExpanded ? '' : 'line-clamp-3'
+                        }`}
+                        dangerouslySetInnerHTML={{ __html: decodeBody(task.comment) }}
+                      />
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between pt-4 mt-auto">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-[#007398] flex items-center justify-center text-[10px] text-white font-bold">
+                        {task.assignedName.charAt(0)}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[10px] text-slate-400 uppercase tracking-tighter font-bold">Assigned to</span>
+                        <span className="text-[11px] font-bold text-slate-700">{task.assignedName}</span>
+                      </div>
+                    </div>
+                    {!task.completed && canCompleteTask(task) && (
+                      <button
+                        onClick={() => {
+                          setSelectedTask(task);
+                          setCommentContent('');
+                          setShowCompleteModal(true);
+                        }}
+                        className="p-2 bg-sky-50 text-[#007398] rounded-xl hover:bg-[#007398] hover:text-white transition-all"
+                      >
+                        <ChevronDown size={18} className="rotate-[-90deg]" />
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+        </AnimatePresence>
+      </div>
+
+      {/* Modal de Asignación */}
+      <AnimatePresence>
+        {showAssignModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 backdrop-blur-xl bg-slate-900/20"
           >
-            <h3 className="font-bold text-lg text-gray-800 mb-2">
-              {task.area} - {task.assignedName || 'All'}
-            </h3>
-            <div className="text-gray-600 mb-4 prose max-w-none">
-              {decodeBody(task.taskText)}
-            </div>
-
-            {task.completed && (
-              <div className="mt-2 text-green-600 bg-green-50 p-3 rounded-md">
-                <span className="font-medium">Completed:</span>{' '}
-                <div className="mt-2 prose max-w-none">{decodeBody(task.comment)}</div>
-              </div>
-            )}
-
-            {!task.completed && canCompleteTask(task) && (
-              <div className="mt-4 space-y-4 w-full">
-                <div className="min-h-[8rem] border rounded-md overflow-hidden w-full">
-                  <CommentQuillEditor
-                    value={commentContent[task.rowIndex] || ''}
-                    onChange={(rowIndex, content) => {
-                      debouncedHandleCommentChange(rowIndex, content);
-                    }}
-                    rowIndex={task.rowIndex}
-                    placeholder="Comment on what was done... (for images, use the image button to avoid size issues)"
-                    className="h-[200px] text-gray-800 bg-white"
+            <motion.div
+              initial={{ y: 50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 50, opacity: 0 }}
+              className="bg-white w-full max-w-3xl rounded-[40px] p-8 sm:p-12 shadow-2xl relative overflow-hidden max-h-[90vh] overflow-y-auto"
+            >
+              <button
+                className="absolute top-4 right-4 sm:top-8 sm:right-8 p-2 hover:bg-slate-100 rounded-full transition-all"
+                onClick={() => setShowAssignModal(false)}
+              >
+                <X size={20} />
+              </button>
+              <h3 className="text-2xl sm:text-3xl font-serif mb-8 text-slate-800">Assign New Task</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Area</label>
+                  <select
+                    value={selectedArea}
+                    onChange={(e) => setSelectedArea(e.target.value)}
+                    className="w-full bg-slate-50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 ring-[#007398]/20 outline-none"
+                  >
+                    <option value={AREAS.RRSS}>{AREAS.RRSS}</option>
+                    <option value={AREAS.WEB}>{AREAS.WEB}</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Assigned to</label>
+                  <select
+                    value={selectedAssignee}
+                    onChange={(e) => setSelectedAssignee(e.target.value)}
+                    className="w-full bg-slate-50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 ring-[#007398]/20 outline-none"
+                  >
+                    <option value="">General Team</option>
+                    {users
+                      .filter((u) =>
+                        u['Rol en la Revista']?.includes(ROLE_MAP[selectedArea])
+                      )
+                      .map((u) => (
+                        <option key={u.Nombre} value={u.Nombre}>
+                          {u.Nombre}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Deadline (optional)</label>
+                  <input
+                    type="date"
+                    value={deadline}
+                    onChange={(e) => setDeadline(e.target.value)}
+                    className="w-full bg-slate-50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 ring-[#007398]/20 outline-none"
                   />
                 </div>
-                <button
-                  onClick={() => handleCompleteTask(task)}
-                  className="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 text-sm font-medium disabled:opacity-50"
-                  disabled={!commentContent[task.rowIndex]?.trim()}
-                  aria-label="Mark task as completed"
-                >
-                  Mark Completed
-                </button>
               </div>
-            )}
-          </div>
-        ))}
-
-        {(activeTab === 'pending' ? pendingTasks : completedTasks).length === 0 && (
-          <div className="text-center text-gray-600 py-8">
-            No {activeTab === 'pending' ? 'pending' : 'completed'} tasks.
-          </div>
-        )}
-      </div>
-
-      {showAssignModal && isDirector && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col relative modal-content">
-            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 z-10">
-              <h3 className="font-bold text-lg text-gray-800 mb-2">Assign New Task</h3>
-              <p className="text-sm text-gray-600">Describe the task and select the assignee</p>
-            </div>
-
-            <div className="flex-grow overflow-y-auto p-4 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <select
-                  value={selectedArea}
-                  onChange={(e) => setSelectedArea(e.target.value)}
-                  className="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                  aria-label="Select task area"
-                >
-                  <option value={AREAS.SM}>{AREAS.SM}</option>
-                  <option value={AREAS.WD}>{AREAS.WD}</option>
-                </select>
-
-                <select
-                  value={selectedAssignee}
-                  onChange={(e) => setSelectedAssignee(e.target.value)}
-                  className="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                  aria-label="Select assignee"
-                >
-                  <option value="">All {selectedArea === AREAS.SM ? 'SM' : 'WD'}</option>
-                  {(selectedArea === AREAS.SM ? smUsers : wdUsers).map((u) => (
-                    <option key={u.Name} value={u.Name}>
-                      {u.Name}
-                    </option>
-                  ))}
-                </select>
+              <div className="mb-10">
+                <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1 mb-3">Description</label>
+                <div className="rounded-3xl overflow-hidden border border-slate-100">
+                  <ReactQuill
+                    theme="snow"
+                    value={taskContent}
+                    onChange={setTaskContent}
+                    modules={quillModules}
+                    className="h-40 sm:h-48 font-serif text-sm"
+                    placeholder="Describe the task in detail..."
+                  />
+                </div>
               </div>
-
-              <div className="min-h-[12rem] border border-gray-300 rounded-md overflow-hidden w-full">
-                <TaskQuillEditor
-                  value={taskContent}
-                  onChange={debouncedSetTaskContent}
-                  placeholder="Describe the task in detail... (for images, use the image button to avoid size issues)"
-                  className="h-[250px]"
-                  ref={taskEditorRef}
-                />
-              </div>
-
-              <div className="text-xs text-gray-500">
-                💡 You can use <strong>rich formatting</strong>, add <strong>images</strong> and{' '}
-                <strong>links</strong>. The content will be saved automatically in Google Sheets.
-              </div>
-            </div>
-
-            <div className="sticky bottom-0 pt-4 pb-4 px-4 bg-white border-t border-gray-200 flex justify-end space-x-3">
-              <button
-                onClick={() => {
-                  setShowAssignModal(false);
-                  setTaskContent('');
-                  setSelectedAssignee('');
-                }}
-                className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition-colors text-sm font-medium"
-                aria-label="Cancel task assignment"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAssignTask}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={!taskContent.trim()}
-                aria-label="Assign task"
-              >
-                {submitStatus.assign === 'Sending...' ? 'Sending...' : 'Assign Task'}
-              </button>
-            </div>
-
-            {submitStatus.assign && (
-              <div className="px-4 pb-4">
-                <p
-                  className={`text-sm ${
-                    submitStatus.assign?.includes('Error')
-                      ? 'text-red-600'
-                      : submitStatus.assign?.includes('success')
-                      ? 'text-green-600'
-                      : 'text-blue-600'
+              <div className="flex items-center justify-between mt-8 sm:mt-12">
+                <span
+                  className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 ${
+                    submitStatus.type === 'error' ? 'text-red-500' : submitStatus.type === 'success' ? 'text-green-500' : 'text-gray-400'
                   }`}
                 >
-                  {submitStatus.assign}
-                </p>
+                  {submitStatus.msg && <AlertCircle size={14} />}
+                  {submitStatus.msg}
+                </span>
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => setShowAssignModal(false)}
+                    className="px-6 sm:px-8 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAssignTask}
+                    disabled={!taskContent.trim()}
+                    className="bg-[#007398] text-white px-8 sm:px-10 py-3 sm:py-4 rounded-2xl text-[11px] font-black uppercase tracking-[.2em] shadow-xl shadow-slate-200 hover:bg-[#005a77] transition-all disabled:opacity-50"
+                  >
+                    Assign
+                  </button>
+                </div>
               </div>
-            )}
-          </div>
-        </div>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {submitStatus.complete && (
-        <div
-          className={`mt-4 p-3 rounded-md border ${
-            submitStatus.complete?.includes('Error')
-              ? 'border-red-300 bg-red-50 text-red-700'
-              : 'border-green-300 bg-green-50 text-green-700'
-          }`}
-        >
-          <p className="text-sm">{submitStatus.complete}</p>
-        </div>
-      )}
+      {/* Modal de Completado */}
+      <AnimatePresence>
+        {showCompleteModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 backdrop-blur-xl bg-slate-900/20"
+          >
+            <motion.div
+              initial={{ y: 50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 50, opacity: 0 }}
+              className="bg-white w-full max-w-3xl rounded-[40px] p-8 sm:p-12 shadow-2xl relative overflow-hidden max-h-[90vh] overflow-y-auto"
+            >
+              <button
+                className="absolute top-4 right-4 sm:top-8 sm:right-8 p-2 hover:bg-slate-100 rounded-full transition-all"
+                onClick={() => setShowCompleteModal(false)}
+              >
+                <X size={20} />
+              </button>
+              <h3 className="text-2xl sm:text-3xl font-serif mb-8 text-slate-800">Complete Task: {selectedTask?.area}</h3>
+              <div className="mb-4 font-serif text-sm text-slate-700">
+                <span className="block text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-2">Description</span>
+                <div dangerouslySetInnerHTML={{ __html: decodeBody(selectedTask?.taskText) }} />
+              </div>
+              <div className="mb-10">
+                <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1 mb-3">Comment</label>
+                <div className="rounded-3xl overflow-hidden border border-slate-100">
+                  <ReactQuill
+                    theme="snow"
+                    value={commentContent}
+                    onChange={setCommentContent}
+                    modules={quillModules}
+                    className="h-40 sm:h-48 font-serif text-sm"
+                    placeholder="Describe what was done..."
+                  />
+                </div>
+              </div>
+              <div className="flex items-center justify-between mt-8 sm:mt-12">
+                <span
+                  className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 ${
+                    submitStatus.type === 'error' ? 'text-red-500' : submitStatus.type === 'success' ? 'text-green-500' : 'text-gray-400'
+                  }`}
+                >
+                  {submitStatus.msg && <AlertCircle size={14} />}
+                  {submitStatus.msg}
+                </span>
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => setShowCompleteModal(false)}
+                    className="px-6 sm:px-8 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCompleteTask}
+                    disabled={!commentContent.trim()}
+                    className="bg-[#007398] text-white px-8 sm:px-10 py-3 sm:py-4 rounded-2xl text-[11px] font-black uppercase tracking-[.2em] shadow-xl shadow-slate-200 hover:bg-[#005a77] transition-all disabled:opacity-50"
+                  >
+                    Complete
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <style jsx global>{`
+        .ql-container.ql-snow { border: none !important; font-family: 'Georgia', serif; font-size: 16px; }
+        .ql-toolbar.ql-snow { border: none !important; background: #f8fafc; border-bottom: 1px solid #f1f5f9 !important; padding: 12px !important; }
+        .ql-editor.ql-blank::before { color: #cbd5e1 !important; font-style: normal !important; }
+      `}</style>
     </div>
   );
 }
