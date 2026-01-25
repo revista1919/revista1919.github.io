@@ -24,7 +24,7 @@ const sanitizeInput = (input) => {
 export default function NewsUploadSection() {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
-  const [message, setMessage] = useState('');
+  const [status, setStatus] = useState({ type: '', msg: '' });
   const [isLoading, setIsLoading] = useState(false);
   const [errorCount, setErrorCount] = useState(0);
   const quillRef = useRef(null);
@@ -37,9 +37,21 @@ export default function NewsUploadSection() {
   const debouncedSetBody = useCallback(
     debounce((value) => {
       setBody(value);
+      localStorage.setItem('newsBody', value);
     }, 300),
     []
   );
+  // Cargar datos de localStorage al montar
+  useEffect(() => {
+    const savedTitle = localStorage.getItem('newsTitle');
+    const savedBody = localStorage.getItem('newsBody');
+    if (savedTitle) setTitle(savedTitle);
+    if (savedBody) setBody(savedBody);
+  }, []);
+  // Guardar title en localStorage
+  useEffect(() => {
+    localStorage.setItem('newsTitle', title);
+  }, [title]);
   // Configurar editor: corrector ortográfico y limpieza inicial
   useEffect(() => {
     if (quillRef.current) {
@@ -60,20 +72,18 @@ export default function NewsUploadSection() {
     const addButtons = () => {
       const imageResize = editor.getModule('imageResize');
       if (imageResize && imageResize.toolbar && typeof imageResize.toolbar.appendChild === 'function') {
+        if (imageResize.toolbar.querySelector('.ql-custom-group')) return;
         const buttonContainer = document.createElement('span');
-        buttonContainer.className = 'ql-formats';
+        buttonContainer.className = 'ql-formats ql-custom-group';
+        buttonContainer.style.borderLeft = '1px solid #ccc';
+        buttonContainer.style.marginLeft = '8px';
+        buttonContainer.style.paddingLeft = '8px';
         buttonContainer.innerHTML = `
-          <button type="button" title="Eliminar imagen" class="ql-delete-image">
-            <svg viewBox="0 0 18 18">
-              <line class="ql-stroke" x1="3" x2="15" y1="3" y2="15"></line>
-              <line class="ql-stroke" x1="3" x2="15" y1="15" y2="3"></line>
-            </svg>
+          <button type="button" title="Eliminar imagen" class="ql-delete-image" style="color: #ef4444">
+            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
           </button>
-          <button type="button" title="Editar imagen" class="ql-edit-image">
-            <svg viewBox="0 0 18 18">
-              <polygon class="ql-fill ql-stroke" points="6 10 4 12 2 10 4 8"></polygon>
-              <path class="ql-stroke" d="M8.09,13.91A4.6,4.6,0,0,0,9,14,5,5,0,1,0,4,9"></path>
-            </svg>
+          <button type="button" title="Editar imagen" class="ql-edit-image" style="color: #3b82f6">
+            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
           </button>
         `;
         imageResize.toolbar.appendChild(buttonContainer);
@@ -105,13 +115,13 @@ export default function NewsUploadSection() {
                 imageResize.hide();
               } catch (err) {
                 console.error('Error al eliminar imagen:', err);
-                setMessage('Error al eliminar la imagen');
+                setStatus({ type: 'error', msg: 'Error al eliminar la imagen' });
               }
             } else {
-              setMessage('Selecciona una imagen para eliminar');
+              setStatus({ type: 'error', msg: 'Selecciona una imagen para eliminar' });
             }
           } else {
-            setMessage('No hay selección activa para eliminar');
+            setStatus({ type: 'error', msg: 'No hay selección activa para eliminar' });
           }
         };
         buttonContainer.querySelector('.ql-edit-image').onclick = () => {
@@ -131,7 +141,7 @@ export default function NewsUploadSection() {
               setIsEditingImage(true);
               setShowImageModal(true);
             } else {
-              setMessage('Selecciona una imagen para editar');
+              setStatus({ type: 'error', msg: 'Selecciona una imagen para editar' });
             }
           }
         };
@@ -173,7 +183,7 @@ export default function NewsUploadSection() {
           key: ['Delete', 'Backspace'],
           handler: function(range) {
             if (!range) {
-              setMessage('No hay selección activa para eliminar');
+              setStatus({ type: 'error', msg: 'No hay selección activa para eliminar' });
               return true;
             }
             const editor = this.quill;
@@ -215,7 +225,7 @@ export default function NewsUploadSection() {
                 return false;
               } catch (err) {
                 console.error('Error deleting image:', err);
-                setMessage('Error al eliminar la imagen');
+                setStatus({ type: 'error', msg: 'Error al eliminar la imagen' });
                 return false;
               }
             }
@@ -235,7 +245,7 @@ export default function NewsUploadSection() {
                 return false;
               } catch (err) {
                 console.error('Error inserting new line after image:', err);
-                setMessage('Error al añadir texto después de la imagen');
+                setStatus({ type: 'error', msg: 'Error al añadir texto después de la imagen' });
                 return false;
               }
             }
@@ -293,14 +303,14 @@ export default function NewsUploadSection() {
             }
           }
           
-          let style = 'max-width:100%;height:auto;border-radius:4px;margin:8px 0;display:block;';
+          let style = 'max-width:100%;height:auto;border-radius:8px;margin:12px 0;display:block;';
           
           switch (align) {
             case 'center':
               style += 'margin-left:auto;margin-right:auto;';
               break;
             case 'right':
-              style += 'float:right;margin-left:8px;margin-right:0;';
+              style += 'float:right;margin-left:12px;margin-right:0;';
               if (parent) parent.style.overflow = 'hidden';
               break;
             case 'justify':
@@ -308,7 +318,7 @@ export default function NewsUploadSection() {
               break;
             case 'left':
             default:
-              style += 'float:left;margin-right:8px;margin-left:0;';
+              style += 'float:left;margin-right:12px;margin-left:0;';
               if (parent) parent.style.overflow = 'hidden';
               break;
           }
@@ -360,12 +370,12 @@ export default function NewsUploadSection() {
   const handleSubmit = async () => {
     const validationError = validateInputs();
     if (validationError) {
-      setMessage(validationError);
+      setStatus({ type: 'error', msg: validationError });
       return;
     }
     
     setIsLoading(true);
-    setMessage('');
+    setStatus({ type: 'info', msg: 'Procesando noticia...' });
     
     console.log('HTML original:', body); // Debug
     
@@ -374,7 +384,7 @@ export default function NewsUploadSection() {
     console.log('Encoded body preview:', encodedBody.substring(0, 100)); // Debug
     
     if (!encodedBody) {
-      setMessage('Error: No se pudo procesar el contenido');
+      setStatus({ type: 'error', msg: 'Error: No se pudo procesar el contenido' });
       setIsLoading(false);
       return;
     }
@@ -405,11 +415,16 @@ export default function NewsUploadSection() {
         });
         
         console.log(`Attempt ${attempt + 1}: Request sent successfully`);
-        setMessage('¡Noticia enviada exitosamente! 🎉');
+        setStatus({ type: 'success', msg: '¡Noticia enviada exitosamente! 🎉' });
         setTitle('');
         setBody('');
+        localStorage.removeItem('newsTitle');
+        localStorage.removeItem('newsBody');
         setErrorCount(0);
         setIsLoading(false);
+        if (editorRef.current) {
+          editorRef.current.setText('');
+        }
         return;
         
       } catch (err) {
@@ -417,7 +432,7 @@ export default function NewsUploadSection() {
         console.error(`Attempt ${attempt} failed:`, err);
         
         if (attempt === maxRetries) {
-          setMessage(`Error al enviar la noticia tras ${maxRetries} intentos. Verifica tu conexión.`);
+          setStatus({ type: 'error', msg: `Error al enviar la noticia tras ${maxRetries} intentos. Verifica tu conexión.` });
           setErrorCount((prev) => prev + 1);
           setIsLoading(false);
           return;
@@ -434,7 +449,7 @@ export default function NewsUploadSection() {
     const editor = quillRef.current.getEditor();
     let { url, width, height, align } = imageData;
     if (!url) {
-      setMessage('La URL de la imagen es obligatoria.');
+      setStatus({ type: 'error', msg: 'La URL de la imagen es obligatoria.' });
       return;
     }
     if (width && width !== 'auto' && !width.match(/%|px$/)) width += 'px';
@@ -473,138 +488,178 @@ export default function NewsUploadSection() {
     const { name, value } = e.target;
     setImageData((prev) => ({ ...prev, [name]: value }));
   };
-  // Opcional: Agregar un useEffect para limpiar el editor cuando se envía
-  useEffect(() => {
-    if (message.includes('exitosa') && quillRef.current) {
-      const editor = quillRef.current.getEditor();
-      if (editor) {
-        editor.setText(''); // Limpiar el editor
-      }
-    }
-  }, [message]);
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md space-y-4 max-w-2xl mx-auto">
-      <h4 className="text-lg font-semibold text-[#5a3e36]">Subir Nueva Noticia</h4>
-      <input
-        type="text"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#5a3e36] text-[#5a3e36] placeholder-gray-400"
-        placeholder="Título de la noticia"
-        disabled={isLoading}
-      />
-      <div className="flex flex-col space-y-4">
-        <div className="min-h-[16rem] border rounded-md overflow-auto">
-          <ReactQuill
-            ref={quillRef}
-            value={body || ''}
-            onChange={debouncedSetBody}
-            modules={modules}
-            formats={formats}
-            placeholder="Cuerpo de la noticia"
-            className="h-full text-[#5a3e36] bg-white"
-            readOnly={isLoading}
+    <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 transition-all">
+      {/* Header */}
+      <div className="bg-[#5a3e36] p-6 text-white flex items-center justify-between">
+        <div>
+          <h4 className="text-xl font-bold tracking-tight">Subir Nueva Noticia</h4>
+          <p className="text-sm opacity-80">Redacta y publica contenido de alta calidad</p>
+        </div>
+        <div className="bg-white/10 p-3 rounded-full">
+          <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" fill="none" strokeWidth="2"><path d="M19 20l-7-7-7 7V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+        </div>
+      </div>
+      <div className="p-8 space-y-6">
+        {/* Input Título */}
+        <div className="space-y-1">
+          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Título de la noticia</label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full px-5 py-3 text-lg font-medium border-2 border-gray-100 rounded-xl focus:border-[#5a3e36] focus:ring-0 transition-all outline-none placeholder-gray-300"
+            placeholder="Ej: Gran descubrimiento en la zona norte..."
+            disabled={isLoading}
           />
         </div>
-        <div className="flex flex-col space-y-2">
-          <button
-            onClick={() => {
-              setIsEditingImage(false);
-              setImageData({ url: '', width: '', height: '', align: 'left' });
-              setShowImageModal(true);
-            }}
-            className="px-4 py-2 bg-[#5a3e36] text-white rounded-md hover:bg-[#7a5c4f]"
-            disabled={isLoading}
-          >
-            Insertar Imagen Manualmente
-          </button>
+        {/* Editor Quill */}
+        <div className="space-y-1">
+          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Cuerpo de la noticia</label>
+          <div className={`rounded-xl border-2 transition-all ${isLoading ? 'opacity-50 pointer-events-none' : 'border-gray-100 focus-within:border-[#5a3e36]'}`}>
+            <ReactQuill
+              ref={quillRef}
+              value={body || ''}
+              onChange={debouncedSetBody}
+              modules={modules}
+              formats={formats}
+              placeholder="Escribe aquí tu noticia..."
+              className="modern-quill-editor"
+              readOnly={isLoading}
+            />
+          </div>
+        </div>
+        {/* Botonera Principal */}
+        <div className="pt-2">
           <button
             onClick={handleSubmit}
             disabled={isLoading || errorCount >= 5}
-            className={`w-full px-4 py-2 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-[#5a3e36] transition-colors ${
-              isLoading || errorCount >= 5
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-[#5a3e36] hover:bg-[#7a5c4f]'
+            className={`relative w-full flex items-center justify-center gap-2 px-6 py-3 text-white font-bold rounded-xl transition-all shadow-lg ${
+              isLoading || errorCount >= 5 ? 'bg-gray-400' : 'bg-[#5a3e36] hover:bg-[#462f29] active:scale-95'
             }`}
           >
-            {isLoading ? 'Enviando...' : 'Enviar Noticia'}
+            {isLoading ? (
+              <span className="flex items-center gap-2">
+                <svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Enviando...
+              </span>
+            ) : 'Enviar Noticia'}
           </button>
         </div>
+        {/* Mensajes de Estado */}
+        {status.msg && (
+          <div className={`p-4 rounded-xl text-center text-sm font-medium animate-in fade-in slide-in-from-bottom-2 ${
+            status.type === 'error' ? 'bg-red-50 text-red-600' :
+            status.type === 'success' ? 'bg-green-50 text-green-600' : 'bg-blue-50 text-blue-600'
+          }`}>
+            {status.msg}
+          </div>
+        )}
+        {errorCount >= 5 && (
+          <div className="p-4 rounded-xl text-center text-sm font-medium bg-red-50 text-red-600">
+            Demasiados intentos fallidos. Por favor, intenta de nuevo más tarde.
+          </div>
+        )}
       </div>
-      <p className="text-sm text-gray-500">
-        Nota: El corrector ortográfico del navegador está activo (en español). Revisa sugerencias en rojo.
-      </p>
-      {message && (
-        <p
-          className={`text-center text-sm ${
-            message.includes('Error') || message.includes('Advertencia') ? 'text-red-500' : 'text-green-500'
-          }`}
-        >
-          {message}
+      {/* Footer info */}
+      <div className="bg-gray-50 p-4 border-t border-gray-100 flex items-center justify-center gap-2">
+        <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+        <p className="text-[11px] text-gray-400 uppercase font-bold tracking-widest text-center">
+          Corrector ortográfico activo (ES) • Sistema de auto-guardado habilitado
         </p>
-      )}
-      {errorCount >= 5 && (
-        <p className="text-center text-sm text-red-500">
-          Demasiados intentos fallidos. Por favor, intenta de nuevo más tarde.
-        </p>
-      )}
+      </div>
       {showImageModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
-            <h5 className="text-lg font-semibold mb-4">{isEditingImage ? 'Editar Imagen' : 'Insertar Imagen'}</h5>
-            <input
-              type="text"
-              name="url"
-              value={imageData.url}
-              onChange={handleImageDataChange}
-              placeholder="URL de la imagen"
-              className="w-full px-4 py-2 border rounded-md mb-2"
-              disabled={isEditingImage}
-            />
-            <input
-              type="text"
-              name="width"
-              value={imageData.width}
-              onChange={handleImageDataChange}
-              placeholder="Ancho (ej: 300px o 50%)"
-              className="w-full px-4 py-2 border rounded-md mb-2"
-            />
-            <input
-              type="text"
-              name="height"
-              value={imageData.height}
-              onChange={handleImageDataChange}
-              placeholder="Alto (ej: 200px o auto)"
-              className="w-full px-4 py-2 border rounded-md mb-2"
-            />
-            <select
-              name="align"
-              value={imageData.align}
-              onChange={handleImageDataChange}
-              className="w-full px-4 py-2 border rounded-md mb-4"
-            >
-              <option value="left">Izquierda (flota a la izquierda del texto)</option>
-              <option value="center">Centro (en el medio, sin flotar)</option>
-              <option value="right">Derecha (flota a la derecha del texto)</option>
-              <option value="justify">Justificado (ancho completo, sin flotar)</option>
-            </select>
-            <div className="flex justify-end space-x-2">
-              <button
-                onClick={() => setShowImageModal(false)}
-                className="px-4 py-2 bg-gray-300 rounded-md"
-              >
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[100] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-gray-100">
+              <h5 className="text-xl font-bold text-gray-800">{isEditingImage ? 'Editar Imagen' : 'Insertar Imagen'}</h5>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-400 uppercase">URL de la imagen</label>
+                <input
+                  type="text"
+                  name="url"
+                  value={imageData.url}
+                  onChange={handleImageDataChange}
+                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#5a3e36] outline-none"
+                  placeholder="https://ejemplo.com/foto.jpg"
+                  disabled={isEditingImage}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-400 uppercase">Ancho</label>
+                  <input
+                    type="text"
+                    name="width"
+                    value={imageData.width}
+                    onChange={handleImageDataChange}
+                    placeholder="300px o 50%"
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-400 uppercase">Alto</label>
+                  <input
+                    type="text"
+                    name="height"
+                    value={imageData.height}
+                    onChange={handleImageDataChange}
+                    placeholder="200px o auto"
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-400 uppercase">Alineación</label>
+                <select
+                  name="align"
+                  value={imageData.align}
+                  onChange={handleImageDataChange}
+                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none"
+                >
+                  <option value="left">Izquierda (flota a la izquierda del texto)</option>
+                  <option value="center">Centro (en el medio, sin flotar)</option>
+                  <option value="right">Derecha (flota a la derecha del texto)</option>
+                  <option value="justify">Justificado (ancho completo, sin flotar)</option>
+                </select>
+              </div>
+            </div>
+            <div className="p-6 bg-gray-50 flex justify-end gap-3">
+              <button onClick={() => setShowImageModal(false)} className="px-5 py-2 text-gray-500 font-semibold hover:text-gray-700">
                 Cancelar
               </button>
-              <button
-                onClick={handleImageModalSubmit}
-                className="px-4 py-2 bg-[#5a3e36] text-white rounded-md"
-              >
+              <button onClick={handleImageModalSubmit} className="px-6 py-2 bg-[#5a3e36] text-white font-bold rounded-lg shadow-md hover:bg-[#462f29]">
                 {isEditingImage ? 'Actualizar' : 'Insertar'}
               </button>
             </div>
           </div>
         </div>
       )}
+      <style jsx global>{`
+        .modern-quill-editor .ql-toolbar.ql-snow {
+          border: none;
+          border-bottom: 1px solid #f3f4f6;
+          padding: 12px;
+        }
+        .modern-quill-editor .ql-container.ql-snow {
+          border: none;
+          min-height: 300px;
+          font-family: inherit;
+          font-size: 1rem;
+        }
+        .ql-editor.ql-blank::before {
+          color: #d1d5db;
+          font-style: normal;
+        }
+        .ql-snow .ql-stroke { stroke: #5a3e36; }
+        .ql-snow .ql-fill { fill: #5a3e36; }
+        .ql-snow .ql-picker { color: #5a3e36; font-weight: 600; }
+      `}</style>
     </div>
   );
 }
