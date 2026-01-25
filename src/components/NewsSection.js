@@ -152,6 +152,7 @@ export default function NewsSection({ className }) {
                 cuerpo: String(item["Contenido de la noticia"] ?? ""),
                 fecha: formatDate(String(item["Fecha"] ?? "")),
                 fechaIso: parseDateIso(String(item["Fecha"] ?? "")),
+                photo: String(item["Photo"] ?? ""),
                 timestamp: new Date(parseDateIso(String(item["Fecha"] ?? ""))).getTime()
               }))
               .sort((a, b) => b.timestamp - a.timestamp);
@@ -271,7 +272,7 @@ export default function NewsSection({ className }) {
             <div className="lg:col-span-7 flex flex-col gap-8">
               <div className="overflow-hidden rounded-sm bg-gray-100 aspect-video">
                 <img 
-                  src="https://www.revistacienciasestudiantes.com/team.jpg" 
+                  src={featured.photo ? `data:image/jpeg;base64,${featured.photo}` : "https://www.revistacienciasestudiantes.com/team.jpg"}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
                   alt="Featured"
                 />
@@ -310,6 +311,13 @@ export default function NewsSection({ className }) {
                 className="flex flex-col border-t border-gray-100 pt-6 group cursor-pointer"
                 onClick={() => openNews(item)}
               >
+                <div className="mb-3 h-32 bg-gray-100 rounded overflow-hidden">
+                  <img 
+                    src={item.photo ? `data:image/jpeg;base64,${item.photo}` : "https://via.placeholder.com/400x225?text=Imagen+Noticia"}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+                    alt={item.titulo}
+                  />
+                </div>
                 <time className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-3 block">
                   {item.fecha}
                 </time>
