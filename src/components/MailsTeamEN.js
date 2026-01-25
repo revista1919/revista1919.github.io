@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 import ReactQuill from 'react-quill';
+import { motion, AnimatePresence } from 'framer-motion';
 import 'react-quill/dist/quill.snow.css';
 
 const TEAM_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
@@ -18,6 +19,7 @@ export default function MailsTeam() {
   const [status, setStatus] = useState('');
   const [sending, setSending] = useState(false);
   const [manualEmail, setManualEmail] = useState('');
+  const [manualEmails, setManualEmails] = useState([]); // Added to track multiple manuals properly
 
   useEffect(() => {
     fetchTeam();
@@ -33,7 +35,7 @@ export default function MailsTeam() {
       const filteredTeam = parsed.filter(member => {
         if (!member['Rol en la Revista']) return false;
         const roles = member['Rol en la Revista'].split(';').map(role => role.trim());
-        return roles.some(role => ['Revisor', 'Editor de Sección', 'Editor en Jefe'].includes(role));
+        return roles.some(role => ['Revisor', 'Editor de Sección', 'Editor en Jefe', 'Director General'].includes(role));
       });
       const director = parsed.find(member => 
         member['Rol en la Revista']?.split(';').map(role => role.trim()).includes('Director General')
@@ -49,8 +51,13 @@ export default function MailsTeam() {
   };
 
   const toggleSelectAll = () => {
-    setSelectAll(!selectAll);
-    setSelected(!selectAll ? team.map(member => member.Correo) : manualEmail ? [manualEmail] : []);
+    const newSelectAll = !selectAll;
+    setSelectAll(newSelectAll);
+    if (newSelectAll) {
+      setSelected([...team.map(member => member.Correo), ...manualEmails]);
+    } else {
+      setSelected(manualEmails); // Preserve manuals when deselecting all team
+    }
   };
 
   const toggleSelect = (email) => {
@@ -61,15 +68,17 @@ export default function MailsTeam() {
 
   const addManualEmail = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!manualEmail.trim() || !emailRegex.test(manualEmail)) {
+    const trimmed = manualEmail.trim();
+    if (!trimmed || !emailRegex.test(trimmed)) {
       setStatus('❌ Please enter a valid email address');
       return;
     }
-    if (selected.includes(manualEmail)) {
+    if (selected.includes(trimmed) || manualEmails.includes(trimmed)) {
       setStatus('❌ Email already added');
       return;
     }
-    setSelected(prev => [...prev, manualEmail]);
+    setManualEmails(prev => [...prev, trimmed]);
+    setSelected(prev => [...prev, trimmed]);
     setManualEmail('');
     setStatus('✅ Email added manually');
   };
@@ -84,54 +93,50 @@ export default function MailsTeam() {
       return;
     }
     setSending(true);
-    try {
-      const formattedBody = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body { margin: 0; padding: 0; background-color: #f4f4f4; }
-            .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); overflow: hidden; }
-            .header { background: linear-gradient(135deg, #1e3a8a, #3b82f6); padding: 20px; text-align: center; }
-            .header h1 { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 24px; color: #ffffff; margin: 0; font-weight: 500; letter-spacing: 1px; }
-            .subheader { background-color: #f8fafc; padding: 10px 20px; border-bottom: 1px solid #e2e8f0; }
-            .subheader p { font-family: 'Georgia', serif; font-size: 14px; color: #475569; margin: 0; }
-            .content { font-family: 'Georgia', serif; padding: 30px; color: #1f2937; font-size: 16px; line-height: 1.7; }
-            .content p { margin: 10px 0; }
-            .content a { color: #2563eb; text-decoration: none; font-weight: 500; }
-            .content a:hover { text-decoration: underline; }
-            .signature { margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 15px; }
-            .signature p { font-family: 'Georgia', serif; font-size: 14px; color: #1f2937; margin: 5px 0; }
-            .signature .title { font-weight: bold; }
-            .footer { background-color: #1e3a8a; padding: 15px; text-align: center; }
-            .footer p { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 12px; color: #ffffff; margin: 0; opacity: 0.8; }
-          </style>
-        </head>
-        <body>
+    // TEMPLATE DE CORREO ESTILO "NATURE / ELSEVIER"
+    const formattedBody = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { margin: 0; padding: 0; background-color: #f9f9f9; -webkit-font-smoothing: antialiased; }
+          .wrapper { background-color: #f9f9f9; padding: 40px 10px; }
+          .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e5e7eb; border-top: 4px solid #007398; }
+          .header { padding: 30px 40px; text-align: center; border-bottom: 1px solid #f0f0f0; }
+          .journal-name { font-family: 'Times New Roman', Times, serif; font-size: 12px; text-transform: uppercase; letter-spacing: 3px; color: #666; margin-bottom: 10px; display: block; }
+          .subject-title { font-family: 'Times New Roman', Times, serif; font-size: 28px; color: #111; margin: 0; font-weight: normal; line-height: 1.2; }
+          .content { padding: 40px; font-family: 'Georgia', serif; font-size: 16px; line-height: 1.8; color: #333; }
+          .content a { color: #007398; text-decoration: none; border-bottom: 1px solid #007398; }
+          .signature-area { margin-top: 40px; padding-top: 20px; border-top: 1px solid #f0f0f0; font-style: italic; }
+          .footer { padding: 30px; background-color: #1a1a1a; text-align: center; }
+          .footer p { font-family: Arial, sans-serif; font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: 1px; margin: 0; }
+        </style>
+      </head>
+      <body>
+        <div class="wrapper">
           <div class="container">
             <div class="header">
-              <h1>${subject}</h1>
-            </div>
-            <div class="subheader">
-              <p>The National Review of Sciences for Students</p>
+              <span class="journal-name">The National Review of Sciences for Students</span>
+              <h1 class="subject-title">${subject}</h1>
             </div>
             <div class="content">
               ${body}
-              <div class="signature">
-                <p>Sincerely,</p>
-                <p class="title">General Director</p>
-                <p>${directorGeneral}</p>
-                <p>The National Review of Sciences for Students</p>
-                <p><a href="https://www.revistacienciasestudiantes.com/#/en">www.revistacienciasestudiantes.com</a></p>
+              <div class="signature-area">
+                <p>Cordially,<br>
+                <strong>${directorGeneral}</strong><br>
+                General Director<br>
+                <small style="text-transform: uppercase; font-style: normal; font-family: sans-serif; font-size: 10px; color: #888;">Editorial Body</small></p>
               </div>
             </div>
             <div class="footer">
-              <p>The National Review of Sciences for Students | &copy; ${new Date().getFullYear()}</p>
+              <p>&copy; ${new Date().getFullYear()} TNRS | Open Access to Science</p>
             </div>
           </div>
-        </body>
-        </html>
-      `;
+        </div>
+      </body>
+      </html>
+    `;
+    try {
       const base64Body = btoa(unescape(encodeURIComponent(formattedBody)));
       await fetch(TEAM_GAS_URL, {
         method: 'POST',
@@ -145,8 +150,8 @@ export default function MailsTeam() {
           htmlBody: base64Body,
         }),
       });
-      setStatus('✅ Email sent');
-      closeModal();
+      setStatus('✅ Communication sent successfully');
+      setTimeout(closeModal, 2000);
     } catch (err) {
       setStatus(`❌ Error: ${err.message}`);
     } finally {
@@ -161,6 +166,7 @@ export default function MailsTeam() {
     setSelectAll(true);
     setSelected(team.map(member => member.Correo));
     setManualEmail('');
+    setManualEmails([]);
     setStatus('');
   };
 
@@ -168,146 +174,160 @@ export default function MailsTeam() {
 
   return (
     <div className="mt-8">
+      {/* Botón Principal Estilo Académico */}
       <button
         onClick={() => setShowModal(true)}
         disabled={!TEAM_GAS_URL}
-        className={`px-4 py-2 rounded-md font-medium flex items-center space-x-2 transition-colors ${
-          TEAM_GAS_URL ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+        className={`group relative px-6 py-3 bg-white border border-gray-900 text-gray-900 text-[11px] font-bold uppercase tracking-[0.2em] hover:bg-gray-900 hover:text-white transition-all duration-300 rounded-sm ${
+          TEAM_GAS_URL ? '' : 'opacity-50 cursor-not-allowed'
         }`}
       >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        </svg>
-        <span>Send Email to Team</span>
+        <span className="flex items-center gap-3">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+          Draft Official Communication
+        </span>
       </button>
-
-      {showModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50" onClick={closeModal}>
-          <div 
-            className="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] flex flex-col" 
-            onClick={e => e.stopPropagation()}
-          >
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Send Email</h3>
-            <div className="flex-1 space-y-4 overflow-y-auto">
-              <div>
-                <div className="flex items-center space-x-3 mb-4">
-                  <input
-                    type="text"
-                    placeholder="Add email manually"
-                    value={manualEmail}
-                    onChange={e => setManualEmail(e.target.value)}
-                    className="flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                  <button
-                    onClick={addManualEmail}
-                    className="px-3 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-                  >
-                    Add
-                  </button>
+      <AnimatePresence>
+        {showModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={closeModal}
+            />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="relative bg-white w-full max-w-4xl shadow-2xl rounded-sm overflow-hidden flex flex-col max-h-[90vh]"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header Modal */}
+              <div className="bg-gray-50 border-b border-gray-100 px-8 py-4 flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg font-serif text-gray-900">New Editorial Communication</h3>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Internal Correspondence Management</p>
                 </div>
-                <div
-                  onClick={toggleSelectAll}
-                  className={`cursor-pointer px-4 py-2 border rounded-md flex items-center space-x-2 transition-colors ${
-                    selectAll ? 'bg-indigo-100 border-indigo-500' : 'bg-gray-100 border-gray-300'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectAll}
-                    onChange={toggleSelectAll}
-                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
-                  />
-                  <span className="text-sm font-medium text-gray-900">Send to all ({team.length})</span>
-                </div>
-                {!selectAll && (
-                  <div className="mt-2 max-h-48 overflow-y-auto border rounded-md p-3 bg-gray-50">
-                    {team.map((member, index) => {
-                      const roles = member['Rol en la Revista']?.split(';').map(role => role.trim()) || [];
-                      return (
-                        <div
-                          key={index}
-                          className="flex items-center space-x-3 py-2 border-b last:border-b-0 hover:bg-gray-100"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selected.includes(member.Correo)}
-                            onChange={() => toggleSelect(member.Correo)}
-                            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
-                          />
-                          {member.Imagen && (
-                            <img
-                              src={member.Imagen}
-                              alt={member.Nombre}
-                              className="w-10 h-10 rounded-full object-cover border border-gray-200"
-                              onError={(e) => (e.target.src = 'https://via.placeholder.com/40')}
+                <button onClick={closeModal} className="text-gray-400 hover:text-black transition-colors">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Panel Izquierdo: Configuración y Destinatarios */}
+                <div className="lg:col-span-5 space-y-6 border-r border-gray-100 pr-8">
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Selected Recipients</label>
+                    <div className="flex items-center justify-between mb-4 bg-[#f0f7f9] p-3 border border-[#007398]/20">
+                      <span className="text-xs font-serif italic text-gray-700">{selected.length} team members</span>
+                      <input
+                        type="checkbox" checked={selectAll}
+                        onChange={toggleSelectAll}
+                        className="accent-[#007398]"
+                      />
+                    </div>
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                      {team.map((member, i) => {
+                        const roles = member['Rol en la Revista']?.split(';').map(role => role.trim()) || [];
+                        return (
+                          <div key={i} className="flex items-center gap-3 p-2 hover:bg-gray-50 border-b border-gray-50 transition-colors">
+                            <input
+                              type="checkbox" checked={selected.includes(member.Correo)}
+                              onChange={() => toggleSelect(member.Correo)}
+                              className="accent-[#007398]"
                             />
-                          )}
-                          <div className="flex-1">
-                            <div className="text-sm font-medium text-gray-900">{member.Nombre}</div>
-                            <div className="text-xs text-gray-500">{roles.join(', ')}</div>
+                            {member.Imagen && (
+                              <img 
+                                src={member.Imagen} 
+                                alt={member.Nombre} 
+                                className="w-8 h-8 rounded-full grayscale object-cover border border-gray-200" 
+                                onError={(e) => (e.target.src = 'https://via.placeholder.com/40')}
+                              />
+                            )}
+                            <div className="overflow-hidden">
+                              <p className="text-[11px] font-bold text-gray-800 truncate">{member.Nombre}</p>
+                              <p className="text-[9px] text-[#007398] uppercase tracking-tighter truncate">{roles.join(', ')}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {manualEmails.map((email, i) => (
+                        <div key={`manual-${i}`} className="flex items-center gap-3 p-2 hover:bg-gray-50 border-b border-gray-50 transition-colors">
+                          <input
+                            type="checkbox" checked={selected.includes(email)}
+                            onChange={() => toggleSelect(email)}
+                            className="accent-[#007398]"
+                          />
+                          <div className="overflow-hidden">
+                            <p className="text-[11px] font-bold text-gray-800 truncate">{email}</p>
+                            <p className="text-[9px] text-[#007398] uppercase tracking-tighter truncate">Manual recipient</p>
                           </div>
                         </div>
-                      );
-                    })}
-                    {manualEmail && selected.includes(manualEmail) && (
-                      <div className="flex items-center space-x-3 py-2 border-b last:border-b-0 hover:bg-gray-100">
-                        <input
-                          type="checkbox"
-                          checked={selected.includes(manualEmail)}
-                          onChange={() => toggleSelect(manualEmail)}
-                          className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
-                        />
-                        <div className="flex-1">
-                          <div className="text-sm font-medium text-gray-900">{manualEmail}</div>
-                          <div className="text-xs text-gray-500">Manual recipient</div>
-                        </div>
-                      </div>
-                    )}
+                      ))}
+                    </div>
                   </div>
-                )}
+                  <div className="pt-4 border-t border-gray-100">
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Add External Email</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text" value={manualEmail} onChange={e => setManualEmail(e.target.value)}
+                        className="flex-1 px-3 py-2 text-xs border border-gray-200 focus:border-[#007398] outline-none transition-all rounded-sm"
+                        placeholder="example@university.edu"
+                      />
+                      <button onClick={addManualEmail} className="px-3 py-2 bg-gray-100 text-[10px] font-bold uppercase rounded-sm hover:bg-gray-200">Add</button>
+                    </div>
+                  </div>
+                </div>
+                {/* Panel Derecho: Editor */}
+                <div className="lg:col-span-7 space-y-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Subject of the Communication</label>
+                    <input
+                      type="text" value={subject} onChange={e => setSubject(e.target.value)}
+                      placeholder="E.g.: Call for Peer Review - Vol. 4"
+                      className="w-full px-4 py-3 text-sm font-serif border border-gray-200 focus:border-[#007398] outline-none transition-all rounded-sm bg-gray-50/30"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Message Body</label>
+                    <div className="quill-modern-wrapper">
+                      <ReactQuill
+                        value={body} onChange={setBody}
+                        modules={{
+                          toolbar: [
+                            [{ header: [1, 2, false] }],
+                            ['bold', 'italic', 'underline', 'strike', 'blockquote'],
+                            [{ list: 'ordered' }, { list: 'bullet' }],
+                            ['link', 'image'],
+                            ['clean']
+                          ]
+                        }}
+                        theme="snow"
+                        className="h-64 mb-12 font-serif text-lg"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
-              <input
-                type="text"
-                placeholder="Subject"
-                value={subject}
-                onChange={e => setSubject(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-              <ReactQuill
-                value={body}
-                onChange={setBody}
-                modules={{
-                  toolbar: [
-                    [{ header: [1, 2, false] }],
-                    ['bold', 'italic', 'underline', 'strike', 'blockquote'],
-                    [{ list: 'ordered' }, { list: 'bullet' }],
-                    ['link', 'image'],
-                    ['clean']
-                  ]
-                }}
-                theme="snow"
-                className="h-40 mb-4"
-              />
-            </div>
-            <div className="flex justify-end space-x-3 pt-4 border-t">
-              <button
-                onClick={closeModal}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={sendEmail}
-                disabled={sending}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
-              >
-                {sending ? 'Sending...' : 'Send'}
-              </button>
-            </div>
-            {status && <p className="text-sm text-gray-600 mt-2 text-center">{status}</p>}
+              {/* Footer Modal con Status */}
+              <div className="bg-gray-50 border-t border-gray-100 px-8 py-4 flex items-center justify-between">
+                <span className={`text-[11px] font-bold uppercase tracking-wider ${status.includes('✅') ? 'text-green-600' : status.includes('❌') ? 'text-red-600' : 'text-gray-400'}`}>
+                  {status || (sending ? 'Processing submission...' : 'Ready to transmit')}
+                </span>
+                <div className="flex gap-4">
+                  <button onClick={closeModal} className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest text-gray-500 hover:text-black">Discard</button>
+                  <button
+                    onClick={sendEmail} disabled={sending}
+                    className="px-8 py-2 bg-[#007398] text-white text-[10px] font-bold uppercase tracking-widest hover:bg-[#005a77] disabled:opacity-50 transition-all rounded-sm shadow-lg shadow-[#007398]/20"
+                  >
+                    {sending ? 'Sending...' : 'Issue Communication'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </div>
   );
 }
