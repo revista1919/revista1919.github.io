@@ -31,7 +31,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
       - name: Install dependencies
-        run: npm install
+        run: npm ci --include=optional
+        - name: Rebuild sharp for linux
+  run: npm rebuild sharp --force --arch=x64 --platform=linux
+
+
       - name: Debug secrets
         run: |
           echo "🔍 Debug secrets:"
