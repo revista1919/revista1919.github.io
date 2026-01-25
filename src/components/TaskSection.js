@@ -4,16 +4,21 @@ import ReactQuill from 'react-quill';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ClipboardList, CheckCircle2, Clock, Plus, User, Globe, Share2, X } from 'lucide-react';
 import 'react-quill/dist/quill.snow.css';
+
 // URLs de Configuración
 const USERS_CSV_URL =
   'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
+
 const TASKS_CSV_URL =
   'https://docs.google.com/spreadsheets/d/e/2PACX-1vSCEOtMwYPu0_kn1hmQi0qT6FZq6HRF09WtuDSqOxBNgMor_FyRRtc6_YVKHQQhWJCy-mIa2zwP6uAU/pub?output=csv';
+
 const TASK_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxMo7aV_vz_3mOCUWKpcqnWmassUdApD_KfAHROTdgd_MDDiaXikgVV0OZ5qVYmhZgd/exec';
+
 const AREAS = {
   RRSS: 'Redes Sociales',
   WEB: 'Desarrollo Web',
 };
+
 export default function ModernTaskSection({ user }) {
   const [users, setUsers] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -25,14 +30,16 @@ export default function ModernTaskSection({ user }) {
   const [selectedArea, setSelectedArea] = useState(AREAS.RRSS);
   const [selectedAssignee, setSelectedAssignee] = useState('');
   const [taskContent, setTaskContent] = useState('');
-  const [deadline, setDeadline] = useState('');
   const [commentContent, setCommentContent] = useState('');
+  const [deadline, setDeadline] = useState('');
   const [submitStatus, setSubmitStatus] = useState({ type: '', msg: '' });
   const [error, setError] = useState('');
+
   // --- Lógica de Carga y Datos ---
   useEffect(() => {
     loadData();
   }, []);
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -50,36 +57,17 @@ export default function ModernTaskSection({ user }) {
     }
     setLoading(false);
   };
+
   // --- Lógica de Negocio y Permisos ---
   const currentUserData = users.find((u) => u.Nombre === user.name);
   const roles = currentUserData?.['Rol en la Revista']?.split(';').map((r) => r.trim()) || [];
   const isDirector = roles.includes('Director General');
-  const director = useMemo(() => users.find((u) => u['Rol en la Revista']?.includes('Director General')), [users]);
-  const directorEmail = director?.Correo;
-  const directorName = director?.Nombre || user.name; // Fallback si no encontrado
+
   const filteredTasks = useMemo(() => {
     return tasks.reduce((acc, task, index) => {
       const areasConfig = [
-        {
-          key: 'Redes sociales',
-          name: task.Nombre,
-          completed: task['Cumplido 1'] === 'si',
-          comment: task['Comentario 1'],
-          assignDate: task['Assignment Date 1'],
-          deadline: task['Deadline 1'],
-          completeDate: task['Completion Date 1'],
-          area: AREAS.RRSS,
-        },
-        {
-          key: 'Desarrollo Web',
-          name: task['Nombre.1'],
-          completed: task['Cumplido 2'] === 'si',
-          comment: task['Comentario 2'],
-          assignDate: task['Assignment Date 2'],
-          deadline: task['Deadline 2'],
-          completeDate: task['Completion Date 2'],
-          area: AREAS.WEB,
-        },
+        { key: 'Redes sociales', name: task.Nombre, completed: task['Cumplido 1'] === 'si', comment: task['Comentario 1'], area: AREAS.RRSS },
+        { key: 'Desarrollo Web', name: task['Nombre.1'], completed: task['Cumplido 2'] === 'si', comment: task['Comentario 2'], area: AREAS.WEB },
       ];
       areasConfig.forEach((conf) => {
         if (task[conf.key] && (isDirector || conf.name === user.name || !conf.name)) {
@@ -90,9 +78,6 @@ export default function ModernTaskSection({ user }) {
             assignedName: conf.name || 'Equipo General',
             completed: conf.completed,
             comment: conf.comment,
-            assignDate: conf.assignDate,
-            deadline: conf.deadline,
-            completeDate: conf.completeDate,
             rowIndex: index,
           });
         }
@@ -100,30 +85,28 @@ export default function ModernTaskSection({ user }) {
       return acc;
     }, []);
   }, [tasks, user.name, isDirector]);
+
   const canCompleteTask = useCallback(
     (task) => {
       return !isDirector && (task.assignedName === user.name || task.assignedName === 'Equipo General');
     },
     [isDirector, user.name]
   );
-  // --- ENVÍO DE TAREA + NOTIFICACIÓN ---
+
+  // --- ENVÍO DE TAREA ---
   const handleAssignTask = async () => {
     if (!taskContent.trim()) {
       setSubmitStatus({ type: 'error', msg: 'La tarea no puede estar vacía' });
       return;
     }
-    setSubmitStatus({ type: 'info', msg: 'Procesando asignación y envío de notificación...' });
-    const assigneeObj = users.find((u) => u.Nombre === selectedAssignee);
-    const targetEmail = assigneeObj?.Correo || '';
+    setSubmitStatus({ type: 'info', msg: 'Procesando asignación...' });
     const encodedTask = btoa(unescape(encodeURIComponent(taskContent)));
     const payload = {
       action: 'assign',
       area: selectedArea,
       task: encodedTask,
       assignedTo: selectedAssignee,
-      deadline: deadline,
-      notifyEmail: targetEmail,
-      directorName: directorName,
+      plazo: deadline,
     };
     try {
       await fetch(TASK_SCRIPT_URL, {
@@ -131,12 +114,12 @@ export default function ModernTaskSection({ user }) {
         mode: 'no-cors',
         body: JSON.stringify(payload),
       });
-      setSubmitStatus({ type: 'success', msg: 'Tarea asignada. Se ha enviado un aviso por correo.' });
+      setSubmitStatus({ type: 'success', msg: 'Tarea asignada.' });
       setTimeout(() => {
         setShowAssignModal(false);
         setTaskContent('');
-        setDeadline('');
         setSelectedAssignee('');
+        setDeadline('');
         loadData();
         setSubmitStatus({ type: '', msg: '' });
       }, 2000);
@@ -144,23 +127,20 @@ export default function ModernTaskSection({ user }) {
       setSubmitStatus({ type: 'error', msg: 'Error en la conexión: ' + e.message });
     }
   };
-  // --- COMPLETAR TAREA + NOTIFICACIÓN ---
+
+  // --- COMPLETAR TAREA ---
   const handleCompleteTask = async () => {
     if (!commentContent.trim()) {
-      setSubmitStatus({ type: 'error', msg: 'El comentario no puede estar vacío' });
+      setSubmitStatus({ type: 'error', msg: 'El comentario no puede estar vacía' });
       return;
     }
-    setSubmitStatus({ type: 'info', msg: 'Procesando completado y envío de notificación...' });
+    setSubmitStatus({ type: 'info', msg: 'Procesando completado...' });
     const encodedComment = btoa(unescape(encodeURIComponent(commentContent)));
-    const encodedTask = btoa(unescape(encodeURIComponent(selectedTask.taskText))); // Ensure encoded
     const payload = {
       action: 'complete',
       area: selectedTask.area,
       row: selectedTask.rowIndex + 2,
       comment: encodedComment,
-      notifyEmail: directorEmail,
-      task: encodedTask,
-      assignedTo: user.name,
     };
     try {
       await fetch(TASK_SCRIPT_URL, {
@@ -168,7 +148,7 @@ export default function ModernTaskSection({ user }) {
         mode: 'no-cors',
         body: JSON.stringify(payload),
       });
-      setSubmitStatus({ type: 'success', msg: 'Tarea completada. Se ha enviado un aviso al director.' });
+      setSubmitStatus({ type: 'success', msg: 'Tarea completada.' });
       setTimeout(() => {
         setShowCompleteModal(false);
         setCommentContent('');
@@ -180,6 +160,7 @@ export default function ModernTaskSection({ user }) {
       setSubmitStatus({ type: 'error', msg: 'Error en la conexión: ' + e.message });
     }
   };
+
   const decodeBody = (encoded) => {
     if (!encoded) return '';
     try {
@@ -188,6 +169,7 @@ export default function ModernTaskSection({ user }) {
       return encoded;
     }
   };
+
   const quillModules = {
     toolbar: [
       ['bold', 'italic', 'underline', 'strike'],
@@ -196,6 +178,7 @@ export default function ModernTaskSection({ user }) {
       ['clean'],
     ],
   };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
@@ -204,7 +187,9 @@ export default function ModernTaskSection({ user }) {
       </div>
     );
   }
+
   if (error) return <div className="text-red-600 text-center p-4">{error}</div>;
+
   return (
     <div className="max-w-6xl mx-auto py-8 px-4 font-sans text-gray-900">
       {/* Header Estilo Editorial */}
@@ -222,6 +207,7 @@ export default function ModernTaskSection({ user }) {
           </button>
         )}
       </header>
+
       {/* Tabs Modernos */}
       <div className="flex gap-8 mb-8 border-b border-gray-100">
         {[
@@ -242,6 +228,7 @@ export default function ModernTaskSection({ user }) {
           </button>
         ))}
       </div>
+
       {/* Grid de Tareas */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <AnimatePresence mode="popLayout">
@@ -270,15 +257,6 @@ export default function ModernTaskSection({ user }) {
                 <div className="flex-1 font-serif text-sm leading-relaxed text-gray-700 mb-6 overflow-hidden">
                   <div dangerouslySetInnerHTML={{ __html: decodeBody(task.taskText) }} />
                 </div>
-                {task.assignDate && (
-                  <p className="text-[10px] text-gray-500 mb-1">Asignada el: {task.assignDate}</p>
-                )}
-                {task.deadline && (
-                  <p className="text-[10px] text-red-600 mb-1">Plazo: {task.deadline}</p>
-                )}
-                {task.completed && task.completeDate && (
-                  <p className="text-[10px] text-green-600 mb-1">Completada el: {task.completeDate}</p>
-                )}
                 {task.completed && task.comment && (
                   <div className="mt-4 pt-4 border-t border-gray-100">
                     <span className="text-[10px] uppercase tracking-wide text-gray-500 font-bold">Comentario:</span>
@@ -309,6 +287,7 @@ export default function ModernTaskSection({ user }) {
             ))}
         </AnimatePresence>
       </div>
+
       {/* Modal de Asignación */}
       <AnimatePresence>
         {showAssignModal && (
@@ -329,7 +308,7 @@ export default function ModernTaskSection({ user }) {
                 <X size={20} />
               </button>
               <h3 className="text-2xl font-serif mb-6">Asignar Nueva Tarea</h3>
-              <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="grid grid-cols-3 gap-4 mb-6">
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase text-gray-400 tracking-widest">Área</label>
                   <select
@@ -360,19 +339,19 @@ export default function ModernTaskSection({ user }) {
                       ))}
                   </select>
                 </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase text-gray-400 tracking-widest">Plazo (opcional)</label>
+                  <input
+                    type="date"
+                    value={deadline}
+                    onChange={(e) => setDeadline(e.target.value)}
+                    className="w-full border-b border-gray-200 py-2 focus:border-[#007398] outline-none text-sm transition-all"
+                  />
+                </div>
               </div>
-              <div className="mb-6">
-                <label className="block text-[10px] font-bold uppercase text-gray-400 tracking-widest mb-3">Plazo (opcional)</label>
-                <input
-                  type="date"
-                  value={deadline}
-                  onChange={(e) => setDeadline(e.target.value)}
-                  className="w-full border-b border-gray-200 py-2 focus:border-[#007398] outline-none text-sm transition-all"
-                />
-              </div>
-              <div className="mb-12">
+              <div className="mb-12"> {/* Increased margin-bottom */}
                 <label className="block text-[10px] font-bold uppercase text-gray-400 tracking-widest mb-3">Descripción</label>
-                <div className="h-48 border border-gray-100 rounded-sm">
+                <div className="h-40 border border-gray-100 rounded-sm"> {/* Reduced height */}
                   <ReactQuill
                     theme="snow"
                     value={taskContent}
@@ -383,34 +362,35 @@ export default function ModernTaskSection({ user }) {
                   />
                 </div>
               </div>
-              {submitStatus.msg && (
+              <div className="flex items-center justify-between pt-4"> {/* Added padding-top */}
                 <span
-                  className={`block mb-4 text-[10px] font-bold uppercase tracking-widest ${
+                  className={`text-[10px] font-bold uppercase tracking-widest ${
                     submitStatus.type === 'error' ? 'text-red-500' : submitStatus.type === 'success' ? 'text-green-500' : 'text-gray-400'
                   }`}
                 >
                   {submitStatus.msg}
                 </span>
-              )}
-              <div className="flex justify-end gap-4">
-                <button
-                  onClick={() => setShowAssignModal(false)}
-                  className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleAssignTask}
-                  disabled={!taskContent.trim()}
-                  className="bg-[#007398] text-white px-8 py-3 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-[#005a77] transition-all disabled:opacity-50"
-                >
-                  Asignar
-                </button>
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => setShowAssignModal(false)}
+                    className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleAssignTask}
+                    disabled={!taskContent.trim()}
+                    className="bg-[#007398] text-white px-8 py-3 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-[#005a77] transition-all disabled:opacity-50"
+                  >
+                    Asignar
+                  </button>
+                </div>
               </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
+
       {/* Modal de Completado */}
       <AnimatePresence>
         {showCompleteModal && (
@@ -435,15 +415,9 @@ export default function ModernTaskSection({ user }) {
                 <span className="block text-[10px] font-bold uppercase text-gray-400 tracking-widest mb-2">Descripción</span>
                 <div dangerouslySetInnerHTML={{ __html: decodeBody(selectedTask?.taskText) }} />
               </div>
-              {selectedTask?.assignDate && (
-                <p className="text-[10px] text-gray-500 mb-1">Asignada el: {selectedTask.assignDate}</p>
-              )}
-              {selectedTask?.deadline && (
-                <p className="text-[10px] text-red-600 mb-4">Plazo: {selectedTask.deadline}</p>
-              )}
-              <div className="mb-12">
+              <div className="mb-12"> {/* Increased margin-bottom */}
                 <label className="block text-[10px] font-bold uppercase text-gray-400 tracking-widest mb-3">Comentario</label>
-                <div className="h-48 border border-gray-100 rounded-sm">
+                <div className="h-40 border border-gray-100 rounded-sm"> {/* Reduced height */}
                   <ReactQuill
                     theme="snow"
                     value={commentContent}
@@ -454,29 +428,29 @@ export default function ModernTaskSection({ user }) {
                   />
                 </div>
               </div>
-              {submitStatus.msg && (
+              <div className="flex items-center justify-between pt-4"> {/* Added padding-top */}
                 <span
-                  className={`block mb-4 text-[10px] font-bold uppercase tracking-widest ${
+                  className={`text-[10px] font-bold uppercase tracking-widest ${
                     submitStatus.type === 'error' ? 'text-red-500' : submitStatus.type === 'success' ? 'text-green-500' : 'text-gray-400'
                   }`}
                 >
                   {submitStatus.msg}
                 </span>
-              )}
-              <div className="flex justify-end gap-4">
-                <button
-                  onClick={() => setShowCompleteModal(false)}
-                  className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleCompleteTask}
-                  disabled={!commentContent.trim()}
-                  className="bg-[#007398] text-white px-8 py-3 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-[#005a77] transition-all disabled:opacity-50"
-                >
-                  Completar
-                </button>
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => setShowCompleteModal(false)}
+                    className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleCompleteTask}
+                    disabled={!commentContent.trim()}
+                    className="bg-[#007398] text-white px-8 py-3 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-[#005a77] transition-all disabled:opacity-50"
+                  >
+                    Completar
+                  </button>
+                </div>
               </div>
             </motion.div>
           </motion.div>
