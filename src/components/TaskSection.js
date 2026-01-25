@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import Papa from 'papaparse';
 import ReactQuill from 'react-quill';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ClipboardList, CheckCircle2, Clock, Plus, User, Globe, Share2, X } from 'lucide-react';
+import { ClipboardList, CheckCircle2, Clock, Plus, User, Globe, Share2, X, Calendar } from 'lucide-react';
 import 'react-quill/dist/quill.snow.css';
 
 // URLs de Configuración
@@ -29,6 +29,7 @@ export default function ModernTaskSection({ user }) {
   const [selectedTask, setSelectedTask] = useState(null);
   const [selectedArea, setSelectedArea] = useState(AREAS.RRSS);
   const [selectedAssignee, setSelectedAssignee] = useState('');
+  const [selectedDeadline, setSelectedDeadline] = useState('');
   const [taskContent, setTaskContent] = useState('');
   const [commentContent, setCommentContent] = useState('');
   const [submitStatus, setSubmitStatus] = useState({ type: '', msg: '' });
@@ -68,8 +69,14 @@ export default function ModernTaskSection({ user }) {
   const filteredTasks = useMemo(() => {
     return tasks.reduce((acc, task, index) => {
       const areasConfig = [
-        { key: 'Redes sociales', name: task.Nombre, completed: task['Cumplido 1'] === 'si', comment: task['Comentario 1'], area: AREAS.RRSS },
-        { key: 'Desarrollo Web', name: task['Nombre.1'], completed: task['Cumplido 2'] === 'si', comment: task['Comentario 2'], area: AREAS.WEB },
+        { 
+          key: 'Redes sociales', name: task.Nombre, completed: task['Cumplido 1'] === 'si', comment: task['Comentario 1'], 
+          area: AREAS.RRSS, deadline: task['Plazo 1'], assignDate: task['Fecha Asignación 1'], completeDate: task['Fecha Cumplimiento 1']
+        },
+        { 
+          key: 'Desarrollo Web', name: task['Nombre.1'], completed: task['Cumplido 2'] === 'si', comment: task['Comentario 2'], 
+          area: AREAS.WEB, deadline: task['Plazo 2'], assignDate: task['Fecha Asignación 2'], completeDate: task['Fecha Cumplimiento 2']
+        },
       ];
       areasConfig.forEach((conf) => {
         if (task[conf.key] && (isDirector || conf.name === user.name || !conf.name)) {
@@ -80,6 +87,9 @@ export default function ModernTaskSection({ user }) {
             assignedName: conf.name || 'Equipo General',
             completed: conf.completed,
             comment: conf.comment,
+            deadline: conf.deadline,
+            assignDate: conf.assignDate,
+            completeDate: conf.completeDate,
             rowIndex: index,
           });
         }
@@ -110,20 +120,28 @@ export default function ModernTaskSection({ user }) {
       area: selectedArea,
       task: encodedTask,
       assignedTo: selectedAssignee,
+      plazo: selectedDeadline,
       notifyEmail: targetEmail,
       directorName: directorName,
     };
     try {
-      await fetch(TASK_SCRIPT_URL, {
+      const response = await fetch(TASK_SCRIPT_URL, {
         method: 'POST',
-        mode: 'no-cors',
+        mode: 'cors', // Cambiado a cors para leer respuesta
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      setSubmitStatus({ type: 'success', msg: 'Tarea asignada. Se ha enviado un aviso por correo.' });
+      const result = await response.json();
+      if (result.success) {
+        setSubmitStatus({ type: 'success', msg: 'Tarea asignada. Se ha enviado un aviso por correo.' });
+      } else {
+        setSubmitStatus({ type: 'error', msg: `Error: ${result.error}` });
+      }
       setTimeout(() => {
         setShowAssignModal(false);
         setTaskContent('');
         setSelectedAssignee('');
+        setSelectedDeadline('');
         loadData();
         setSubmitStatus({ type: '', msg: '' });
       }, 2000);
@@ -135,7 +153,7 @@ export default function ModernTaskSection({ user }) {
   // --- COMPLETAR TAREA + NOTIFICACIÓN ---
   const handleCompleteTask = async () => {
     if (!commentContent.trim()) {
-      setSubmitStatus({ type: 'error', msg: 'El comentario no puede estar vacía' });
+      setSubmitStatus({ type: 'error', msg: 'El comentario no puede estar vacío' });
       return;
     }
     setSubmitStatus({ type: 'info', msg: 'Procesando completado y envío de notificación...' });
@@ -146,16 +164,23 @@ export default function ModernTaskSection({ user }) {
       row: selectedTask.rowIndex + 2,
       comment: encodedComment,
       notifyEmail: directorEmail,
-      task: selectedTask.taskText, // Ya encoded
+      task: selectedTask.taskText, // ya encoded
       assignedTo: user.name,
+      directorName: directorName,
     };
     try {
-      await fetch(TASK_SCRIPT_URL, {
+      const response = await fetch(TASK_SCRIPT_URL, {
         method: 'POST',
-        mode: 'no-cors',
+        mode: 'cors',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      setSubmitStatus({ type: 'success', msg: 'Tarea completada. Se ha enviado un aviso al director.' });
+      const result = await response.json();
+      if (result.success) {
+        setSubmitStatus({ type: 'success', msg: 'Tarea completada. Se ha enviado un aviso al director.' });
+      } else {
+        setSubmitStatus({ type: 'error', msg: `Error: ${result.error}` });
+      }
       setTimeout(() => {
         setShowCompleteModal(false);
         setCommentContent('');
@@ -175,6 +200,12 @@ export default function ModernTaskSection({ user }) {
     } catch (e) {
       return encoded;
     }
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' });
   };
 
   const quillModules = {
@@ -264,6 +295,17 @@ export default function ModernTaskSection({ user }) {
                 <div className="flex-1 font-serif text-sm leading-relaxed text-gray-700 mb-6 overflow-hidden">
                   <div dangerouslySetInnerHTML={{ __html: decodeBody(task.taskText) }} />
                 </div>
+                {task.deadline && (
+                  <div className="flex items-center gap-2 mb-4 text-gray-600 text-sm">
+                    <Calendar size={14} />
+                    <span>Plazo: {formatDate(task.deadline)}</span>
+                  </div>
+                )}
+                {task.completed && task.completeDate && (
+                  <div className="text-gray-500 text-xs mb-4">
+                    Completado el: {formatDate(task.completeDate)}
+                  </div>
+                )}
                 {task.completed && task.comment && (
                   <div className="mt-4 pt-4 border-t border-gray-100">
                     <span className="text-[10px] uppercase tracking-wide text-gray-500 font-bold">Comentario:</span>
@@ -347,9 +389,18 @@ export default function ModernTaskSection({ user }) {
                   </select>
                 </div>
               </div>
+              <div className="mb-6 space-y-2">
+                <label className="text-[10px] font-bold uppercase text-gray-400 tracking-widest">Plazo (opcional)</label>
+                <input
+                  type="date"
+                  value={selectedDeadline}
+                  onChange={(e) => setSelectedDeadline(e.target.value)}
+                  className="w-full border-b border-gray-200 py-2 focus:border-[#007398] outline-none text-sm transition-all"
+                />
+              </div>
               <div className="mb-8">
                 <label className="block text-[10px] font-bold uppercase text-gray-400 tracking-widest mb-3">Descripción</label>
-                <div className="h-48 border border-gray-100 rounded-sm">
+                <div className="h-64 border border-gray-100 rounded-sm"> {/* Aumentado altura para evitar tapar botón */}
                   <ReactQuill
                     theme="snow"
                     value={taskContent}
@@ -413,9 +464,15 @@ export default function ModernTaskSection({ user }) {
                 <span className="block text-[10px] font-bold uppercase text-gray-400 tracking-widest mb-2">Descripción</span>
                 <div dangerouslySetInnerHTML={{ __html: decodeBody(selectedTask?.taskText) }} />
               </div>
+              {selectedTask?.deadline && (
+                <div className="flex items-center gap-2 mb-4 text-gray-600 text-sm">
+                  <Calendar size={14} />
+                  <span>Plazo: {formatDate(selectedTask.deadline)}</span>
+                </div>
+              )}
               <div className="mb-8">
                 <label className="block text-[10px] font-bold uppercase text-gray-400 tracking-widest mb-3">Comentario</label>
-                <div className="h-48 border border-gray-100 rounded-sm">
+                <div className="h-64 border border-gray-100 rounded-sm">
                   <ReactQuill
                     theme="snow"
                     value={commentContent}
