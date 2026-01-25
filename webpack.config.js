@@ -25,7 +25,7 @@ console.log('🔍 Webpack Environment Variables:', {
   'REACT_APP_VOLUMES_SCRIPT_URL': process.env.REACT_APP_VOLUMES_SCRIPT_URL ? `${process.env.REACT_APP_VOLUMES_SCRIPT_URL.slice(0, 40)}...` : 'MISSING', // ← AÑADIDO
   'REACT_APP_TEAM_SCRIPT_URL': process.env.REACT_APP_TEAM_SCRIPT_URL ? `${process.env.REACT_APP_TEAM_SCRIPT_URL.slice(0, 40)}...` : 'MISSING',
   'REACT_APP_APPLICATIONS_SCRIPT_URL': process.env.REACT_APP_APPLICATIONS_SCRIPT_URL ? `${process.env.REACT_APP_APPLICATIONS_SCRIPT_URL.slice(0, 40)}...` : 'MISSING',
-  'REACT_APP_GH_TOKEN': process.env.REACT_APP_GH_TOKEN ? 'PRESENT' : 'MISSING',
+  'REACT_APP_REBUILD_TOKEN': process.env.REACT_APP_REBUILD_TOKEN ? 'PRESENT' : 'MISSING',
   'REACT_APP_API_GEMINI': process.env.REACT_APP_API_GEMINI ? 'PRESENT' : 'MISSING',
   'NODE_ENV': process.env.NODE_ENV || 'development',
   'DEBUG': process.env.DEBUG || false,
@@ -40,7 +40,7 @@ const defineEnvVars = {
   'process.env.REACT_APP_VOLUMES_SCRIPT_URL': JSON.stringify(process.env.REACT_APP_VOLUMES_SCRIPT_URL || ''), // ← AÑADIDO
   'process.env.REACT_APP_TEAM_SCRIPT_URL': JSON.stringify(process.env.REACT_APP_TEAM_SCRIPT_URL || ''),
   'process.env.REACT_APP_APPLICATIONS_SCRIPT_URL': JSON.stringify(process.env.REACT_APP_APPLICATIONS_SCRIPT_URL || ''),
-  'process.env.REACT_APP_GH_TOKEN': JSON.stringify(process.env.REACT_APP_GH_TOKEN || ''),
+  'process.env.REACT_APP_REBUILD_TOKEN': JSON.stringify(process.env.REACT_APP_REBUILD_TOKEN || ''),
 
   'process.env.REACT_APP_USERS_CSV': JSON.stringify(process.env.REACT_APP_USERS_CSV || ''),
   'process.env.REACT_APP_FORM_CSV': JSON.stringify(process.env.REACT_APP_FORM_CSV || ''),

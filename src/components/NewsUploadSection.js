@@ -2,10 +2,11 @@ import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import ReactQuill, { Quill } from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import ImageResize from 'quill-image-resize-module-react';
+import { auth } from '../firebase';
 import { debounce } from 'lodash';
 // Registrar el módulo de resize
 Quill.register('modules/imageResize', ImageResize);
-const NEWS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxLlge7jy7WPz5z6NQ0n4v6Q5-7V3y-U1RYall6k1NNlS6kzY1cgiS-iQSWWBVG-ZoCHg/exec';
+const NEWS_SCRIPT_URL = 'https://southamerica-west1-usuarios-rnce.cloudfunctions.net/uploadNews';
 // --- LÓGICA DE NEGOCIO (MANTENIDA FIEL A TU REQUERIMIENTO) ---
 const base64EncodeUnicode = (str) => {
   const encoder = new TextEncoder();
@@ -271,6 +272,12 @@ export default function NewsUploadSection() {
     return null;
   };
   const handleSubmit = async () => {
+    const user = auth.currentUser;
+if (!user) {
+  setStatus({ type: 'error', msg: 'Debes estar logueado' });
+  return;
+}
+const token = await user.getIdToken();
     const validationError = validateInputs();
     if (validationError) {
       setStatus({ type: 'error', msg: validationError });
@@ -293,12 +300,15 @@ export default function NewsUploadSection() {
     const maxRetries = 3;
     while (attempt < maxRetries) {
       try {
-        await fetch(NEWS_SCRIPT_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
-        });
+        await fetch('https://southamerica-west1-usuarios-rnce.cloudfunctions.net/uploadNews', {
+  method: 'POST',
+  headers: { 
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  },
+  body: JSON.stringify(data),
+});
+
       
         setStatus({ type: 'success', msg: '¡Noticia publicada con éxito! 🎉' });
         setTitle('');

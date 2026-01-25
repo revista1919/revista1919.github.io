@@ -1,21 +1,27 @@
 const fs = require('fs');
 const path = require('path');
-const fetch = require('node-fetch').default;
 const Papa = require('papaparse');
-const articlesCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaLks9p32EM6-0VYy18AdREQwXdpeet1WHTA4H2-W2FX7HKe1HPSyApWadUw9sKHdVYQXL5tP6yDRs/pub?output=csv';
 const teamCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
-const newsCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKnN8qMJcBN8im9Q61o-qElx1jQp5NdS80_B-FakCHrPLXHlQ_FXZWT0o5GVVHAM26l9sjLxsTCNO8/pub?output=csv';
-const volumesCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTTs7eHa-_bbWkSzOxaM26oi79ioBYFyTcNB0EaEBt0VYWZeCZq2S4FUnaHXcB8lf2T78XhET9v5WTh/pub?output=csv'; // Nuevo
 const outputJson = path.join(__dirname, 'dist', 'articles.json');
-const volumesOutputJson = path.join(__dirname, 'dist', 'volumes.json'); // Nuevo
+const volumesOutputJson = path.join(__dirname, 'dist', 'volumes.json');
 const outputHtmlDir = path.join(__dirname, 'dist', 'articles');
-const volumesOutputHtmlDir = path.join(__dirname, 'dist', 'volumes'); // Nuevo
+const volumesOutputHtmlDir = path.join(__dirname, 'dist', 'volumes');
 const newsOutputHtmlDir = path.join(__dirname, 'dist', 'news');
 const teamOutputHtmlDir = path.join(__dirname, 'dist', 'team');
 const sectionsOutputDir = path.join(__dirname, 'dist', 'sections');
 const sitemapPath = path.join(__dirname, 'dist', 'sitemap.xml');
 const robotsPath = path.join(__dirname, 'dist', 'robots.txt');
 const domain = 'https://www.revistacienciasestudiantes.com';
+const admin = require('firebase-admin');
+const cheerio = require('cheerio');
+const sharp = require('sharp');
+const crypto = require('crypto');
+
+admin.initializeApp({
+  credential: admin.credential.cert('./serviceAccountKey.json')
+});
+const db = admin.firestore();
+
 function parseDateFlexible(dateStr) {
   if (!dateStr) return '';
   let date = new Date(dateStr);
@@ -29,6 +35,7 @@ function parseDateFlexible(dateStr) {
   }
   return dateStr;
 }
+
 function formatAuthorForCitation(author) {
   const parts = author.trim().split(' ');
   if (parts.length >= 2) {
@@ -38,6 +45,7 @@ function formatAuthorForCitation(author) {
   }
   return author;
 }
+
 function getAPAAuthor(author) {
   const parts = author.trim().split(/\s+/);
   if (parts.length < 2) return author;
@@ -45,6 +53,7 @@ function getAPAAuthor(author) {
   const initials = parts.map(n => n[0].toUpperCase() + '.').join(' ');
   return `${last}, ${initials}`;
 }
+
 function formatAuthorsAPA(authorsStr) {
   const authors = authorsStr.split(';').map(a => a.trim()).filter(Boolean);
   if (!authors.length) return '';
@@ -57,6 +66,7 @@ function formatAuthorsAPA(authorsStr) {
     return formatted.slice(0, -1).join(', ') + ', & ' + formatted[formatted.length - 1];
   }
 }
+
 function formatAuthorsChicagoOrMLA(authorsStr, language = 'es') {
   const authors = authorsStr.split(';').map(a => a.trim()).filter(Boolean);
   if (!authors.length) return '';
@@ -71,6 +81,7 @@ function formatAuthorsChicagoOrMLA(authorsStr, language = 'es') {
     return `${formatted[0]}, ${etal}`;
   }
 }
+
 function formatAuthorsDisplay(authorsStr, language = 'es') {
   const authors = authorsStr.split(';').map(a => a.trim()).filter(Boolean);
   if (!authors.length) return 'Autor desconocido';
@@ -83,6 +94,7 @@ function formatAuthorsDisplay(authorsStr, language = 'es') {
     return authors.slice(0, -1).join(', ') + `, ${connector} ` + authors[authors.length - 1];
   }
 }
+
 function generateSlug(name) {
   if (!name) return '';
   name = name.toLowerCase();
@@ -93,17 +105,20 @@ function generateSlug(name) {
   name = name.replace(/^-+|-+$/g, '');
   return name;
 }
+
 function isBase64(str) {
   if (!str) return false;
   const base64Regex = /^data:image\/(png|jpe?g|gif);base64,/;
   return base64Regex.test(str);
 }
+
 function getImageSrc(image) {
   if (!image) return '';
   if (isBase64(image)) return image;
   if (image.startsWith('http')) return image;
   return '';
 }
+
 const base64DecodeUnicode = (str) => {
   try {
     const binary = atob(str);
@@ -118,14 +133,42 @@ const base64DecodeUnicode = (str) => {
     return '';
   }
 };
+
+async function processImages(html, slug, lang) {
+  const $ = cheerio.load(html);
+  const images = $('img');
+  for (let i = 0; i < images.length; i++) {
+    const img = images[i];
+    const src = $(img).attr('src');
+    if (src && src.startsWith('data:image/')) {
+      const base64Data = src.split(';base64,').pop();
+      const buffer = Buffer.from(base64Data, 'base64');
+      const hash = crypto.createHash('md5').update(buffer).digest('hex').slice(0, 8);
+      const imgDir = path.join(__dirname, 'dist', 'images', 'news');
+      if (!fs.existsSync(imgDir)) fs.mkdirSync(imgDir, { recursive: true });
+      const imgPath = path.join(imgDir, `${slug}-${hash}-${lang}.webp`);
+      if (!fs.existsSync(imgPath)) {
+        await sharp(buffer)
+          .resize({ width: 800, withoutEnlargement: true })
+          .webp({ quality: 80 })
+          .toFile(imgPath);
+      }
+      $(img).attr('src', `/images/news/${slug}-${hash}-${lang}.webp`);
+    }
+  }
+  return $.html();
+}
+
 if (!fs.existsSync(outputHtmlDir)) fs.mkdirSync(outputHtmlDir, { recursive: true });
-if (!fs.existsSync(volumesOutputHtmlDir)) fs.mkdirSync(volumesOutputHtmlDir, { recursive: true }); // Nuevo
+if (!fs.existsSync(volumesOutputHtmlDir)) fs.mkdirSync(volumesOutputHtmlDir, { recursive: true });
 if (!fs.existsSync(newsOutputHtmlDir)) fs.mkdirSync(newsOutputHtmlDir, { recursive: true });
 if (!fs.existsSync(teamOutputHtmlDir)) fs.mkdirSync(teamOutputHtmlDir, { recursive: true });
 if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursive: true });
+if (!fs.existsSync(path.join(__dirname, 'dist', 'images', 'news'))) fs.mkdirSync(path.join(__dirname, 'dist', 'images', 'news'), { recursive: true });
+
 (async () => {
   try {
-    // Procesar equipo primero para obtener instituciones
+    // Procesar equipo primero para obtener instituciones (sigue de CSV)
     const teamRes = await fetch(teamCsvUrl);
     if (!teamRes.ok) throw new Error(`Error descargando CSV de equipo: ${teamRes.statusText}`);
     const teamCsvData = await teamRes.text();
@@ -136,42 +179,40 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
       const inst = (row['Institution'] || '').trim();
       if (name) authorToInstitution[name] = inst;
     });
-    // Procesar artículos
-    const articlesRes = await fetch(articlesCsvUrl);
-    if (!articlesRes.ok) throw new Error(`Error descargando CSV de artículos: ${articlesRes.statusText}`);
-    const articlesCsvData = await articlesRes.text();
-    const articlesParsed = Papa.parse(articlesCsvData, { header: true, skipEmptyLines: true });
-    const articles = articlesParsed.data.map(row => {
-      const autoresStr = row['Autor(es)'] || 'Autor desconocido';
+
+    // Procesar artículos desde Firestore
+    const articlesSnapshot = await db.collection('articles').get();
+    const articles = articlesSnapshot.docs.map(doc => {
+      const data = doc.data();
+      const autoresStr = data.autores || 'Autor desconocido';
       const institutions = autoresStr.split(';').map(a => {
         const name = a.trim();
         return authorToInstitution[name] || '';
       });
       return {
-      titulo: row['Título'] || 'Sin título',
-      autores: autoresStr,
-      institutions,
-      resumen: row['Resumen'] || 'Resumen no disponible',
-      englishAbstract: row['Abstract'] || 'English abstract not available',
-      fecha: parseDateFlexible(row['Fecha']),
-      volumen: row['Volumen'] || '',
-      numero: row['Número'] || '',
-      primeraPagina: row['Primera página'] || '',
-      ultimaPagina: row['Última página'] || '',
-      area: row['Área temática'] || '',
-      numeroArticulo: row['Número de artículo'] || '',
-      palabras_clave: row['Palabras clave']
-        ? row['Palabras clave'].split(/[;,]/).map(k => k.trim())
-        : [],
-      keywords_english: row['Keywords']
-        ? row['Keywords'].split(';').map(k => k.trim())
-        : [],
-      tipo: row['Tipo'] || '',
-      type: row['Type'] || ''
-    }});
+        titulo: data.titulo || 'Sin título',
+        autores: autoresStr,
+        institutions,
+        resumen: data.resumen || 'Resumen no disponible',
+        englishAbstract: data.abstract || 'English abstract not available',
+        fecha: parseDateFlexible(data.fecha),
+        volumen: data.volumen || '',
+        numero: data.numero || '',
+        primeraPagina: data.primeraPagina || '',
+        ultimaPagina: data.ultimaPagina || '',
+        area: data.area || '',
+        numeroArticulo: data.numeroArticulo || doc.id.slice(0, 5),
+        palabras_clave: data.palabras_clave || [],
+        keywords_english: data.keywords_english || [],
+        tipo: data.tipo || '',
+        type: data.type || '',
+        pdfUrl: data.pdfUrl || ''
+      };
+    });
     fs.writeFileSync(outputJson, JSON.stringify(articles, null, 2), 'utf8');
     console.log(`✅ Archivo generado: ${outputJson} (${articles.length} artículos)`);
-    // Crear mapa de autores a artículos (mismo)
+
+    // Crear mapa de autores a artículos
     let authorToArticles = {};
     articles.forEach(article => {
       const authors = article.autores.split(';').map(a => a.trim());
@@ -180,25 +221,25 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
         authorToArticles[auth].push(article);
       });
     });
+
     articles.forEach(article => {
-  const authorsList = article.autores.split(';').map(a => formatAuthorForCitation(a));
-  const authorMetaTags = authorsList.map(author => `<meta name="citation_author" content="${author}">`).join('\n');
-  const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
-  const pdfFileName = `Article-${articleSlug}.pdf`;
-  article.pdf = `${domain}/Articles/${pdfFileName}`;
-  const authorsArray = article.autores.split(';').map(a => a.trim()).filter(Boolean);
-  const authorsDisplayEs = authorsArray.map(auth => `<a href="/team/${generateSlug(auth)}.html" class="author-link" style="color: var(--primary-blue); text-decoration: none; cursor: pointer; font-weight: 500;">${auth}</a>`).join(', ');
-  const authorsDisplayEn = authorsArray.map(auth => `<a href="/team/${generateSlug(auth)}.EN.html" class="author-link" style="color: var(--primary-blue); text-decoration: none; cursor: pointer; font-weight: 500;">${auth}</a>`).join(', ');
-  const authorsAPA = formatAuthorsAPA(article.autores);
-  const authorsChicagoEs = formatAuthorsChicagoOrMLA(article.autores, 'es');
-  const authorsMLAEs = formatAuthorsChicagoOrMLA(article.autores, 'es');
-  const authorsChicagoEn = formatAuthorsChicagoOrMLA(article.autores, 'en');
-  const authorsMLAEn = formatAuthorsChicagoOrMLA(article.autores, 'en');
-  const year = new Date(article.fecha).getFullYear();
-  const tipoEs = article.tipo || 'Artículo de Investigación';
-  const typeEn = article.type || 'Research Article';
-  // Generar HTML en español
-  const htmlContentEs = `
+      const authorsList = article.autores.split(';').map(a => formatAuthorForCitation(a));
+      const authorMetaTags = authorsList.map(author => `<meta name="citation_author" content="${author}">`).join('\n');
+      const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
+      article.pdf = article.pdfUrl;
+      const authorsArray = article.autores.split(';').map(a => a.trim()).filter(Boolean);
+      const authorsDisplayEs = authorsArray.map(auth => `<a href="/team/${generateSlug(auth)}.html" class="author-link" style="color: var(--primary-blue); text-decoration: none; cursor: pointer; font-weight: 500;">${auth}</a>`).join(', ');
+      const authorsDisplayEn = authorsArray.map(auth => `<a href="/team/${generateSlug(auth)}.EN.html" class="author-link" style="color: var(--primary-blue); text-decoration: none; cursor: pointer; font-weight: 500;">${auth}</a>`).join(', ');
+      const authorsAPA = formatAuthorsAPA(article.autores);
+      const authorsChicagoEs = formatAuthorsChicagoOrMLA(article.autores, 'es');
+      const authorsMLAEs = formatAuthorsChicagoOrMLA(article.autores, 'es');
+      const authorsChicagoEn = formatAuthorsChicagoOrMLA(article.autores, 'en');
+      const authorsMLAEn = formatAuthorsChicagoOrMLA(article.autores, 'en');
+      const year = new Date(article.fecha).getFullYear();
+      const tipoEs = article.tipo || 'Artículo de Investigación';
+      const typeEn = article.type || 'Research Article';
+      // Generar HTML en español
+      const htmlContentEs = `
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -523,11 +564,12 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
 </body>
 </html>
 `.trim();
-  const filePathEs = path.join(outputHtmlDir, `article-${articleSlug}.html`);
-  fs.writeFileSync(filePathEs, htmlContentEs, 'utf8');
-  console.log(`Generado HTML de artículo en español: ${filePathEs}`);
-  // Generar HTML en inglés
-  const htmlContentEn = `
+      const filePathEs = path.join(outputHtmlDir, `article-${articleSlug}.html`);
+      fs.writeFileSync(filePathEs, htmlContentEs, 'utf8');
+      console.log(`Generado HTML de artículo en español: ${filePathEs}`);
+
+      // Generar HTML en inglés
+      const htmlContentEn = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -679,10 +721,11 @@ if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursi
 </body>
 </html>
 `.trim();
-  const filePathEn = path.join(outputHtmlDir, `article-${articleSlug}EN.html`);
-  fs.writeFileSync(filePathEn, htmlContentEn, 'utf8');
-  console.log(`Generado HTML de artículo en inglés: ${filePathEn}`);
-});
+      const filePathEn = path.join(outputHtmlDir, `article-${articleSlug}EN.html`);
+      fs.writeFileSync(filePathEn, htmlContentEn, 'utf8');
+      console.log(`Generado HTML de artículo en inglés: ${filePathEn}`);
+    });
+
     // Generar índice de artículos
     const articlesByYear = articles.reduce((acc, article) => {
       const year = new Date(article.fecha).getFullYear() || 'Sin fecha';
@@ -815,6 +858,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     const indexPath = path.join(outputHtmlDir, 'index.html');
     fs.writeFileSync(indexPath, indexContent, 'utf8');
     console.log(`Generado índice HTML de artículos: ${indexPath}`);
+
     // Generar índice de artículos en inglés
     let indexContentEn = `
 <!DOCTYPE html>
@@ -830,7 +874,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       --text-grey: #666666;
       --border: #e4e4e4;
     }
-    body { font-family: 'Noto Sans', sans-serif; line-height: 1.6; color: var(--text-dark); background-color: #f0f0f0; margin: 0; }
+    body { font-family: 'Noto Sans', sans-serif; line-height: 1.6; color: var(--text-dark); background-color: #f0f0f0; margin: 0; padding: 0; }
     .top-bar { background: white; border-bottom: 1px solid var(--border); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
     .journal-name { font-weight: bold; color: var(--primary-blue); text-decoration: none; font-size: 0.9rem; }
     .main-wrapper { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
@@ -884,35 +928,31 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     const indexPathEn = path.join(outputHtmlDir, 'index.EN.html');
     fs.writeFileSync(indexPathEn, indexContentEn, 'utf8');
     console.log(`Generado índice HTML de artículos (EN): ${indexPathEn}`);
-    // Nuevo: Procesar volúmenes
-    const volumesRes = await fetch(volumesCsvUrl);
-    if (!volumesRes.ok) throw new Error(`Error descargando CSV de volúmenes: ${volumesRes.statusText}`);
-    const volumesCsvData = await volumesRes.text();
-    const volumesParsed = Papa.parse(volumesCsvData, { header: true, skipEmptyLines: true });
-    const volumes = volumesParsed.data.map(row => ({
-      volumen: row['Volumen'] || '',
-      numero: row['Número'] || '',
-      fecha: parseDateFlexible(row['Fecha']),
-      titulo: row['Título'] || 'Sin título',
-      resumen: row['Resumen'] || 'Resumen no disponible',
-      abstract: row['Abstract'] || 'Abstract not available',
-      portada: getImageSrc(row['Portada']),
-      pdf: row['PDF'] || '',
-      area: row['Área temática'] || '',
-      palabras_clave: row['Palabras clave']
-        ? row['Palabras clave'].split(/[;,]/).map(k => k.trim())
-        : [],
-      keywords: row['Keywords']
-        ? row['Keywords'].split(';').map(k => k.trim())
-        : []
-    }));
+
+    // Procesar volúmenes desde Firestore
+    const volumesSnapshot = await db.collection('volumes').get();
+    const volumes = volumesSnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        volumen: data.volumen || '',
+        numero: data.numero || '',
+        fecha: parseDateFlexible(data.fecha),
+        titulo: data.titulo || 'Sin título',
+        resumen: data.resumen || 'Resumen no disponible',
+        abstract: data.abstract || 'Abstract not available',
+        portada: getImageSrc(data.portada),
+        pdf: data.pdf || '',
+        area: data.area || '',
+        palabras_clave: data.palabras_clave || [],
+        keywords: data.keywords || []
+      };
+    });
     fs.writeFileSync(volumesOutputJson, JSON.stringify(volumes, null, 2), 'utf8');
     console.log(`✅ Archivo generado: ${volumesOutputJson} (${volumes.length} volúmenes)`);
+
     volumes.forEach(volume => {
       const volumeSlug = `${volume.volumen}-${volume.numero}`;
-      const pdfTitleSlug = generateSlug(volume.titulo);
-      const pdfFileName = `Volume-${pdfTitleSlug}-${volume.numero}.pdf`;
-      volume.pdf = `${domain}/Volumes/${pdfFileName}`;
+      volume.pdfUrl = volume.pdf;
       const year = new Date(volume.fecha).getFullYear();
       // Generar HTML en español para volumen
       const htmlContentEs = `
@@ -926,7 +966,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
   <meta name="citation_journal_title" content="Revista Nacional de las Ciencias para Estudiantes">
   <meta name="citation_volume" content="${volume.volumen}">
   <meta name="citation_issue" content="${volume.numero}">
-  <meta name="citation_pdf_url" content="${volume.pdf}">
+  <meta name="citation_pdf_url" content="${volume.pdfUrl}">
   <meta name="citation_abstract_html_url" content="${domain}/volumes/volume-${volumeSlug}.html">
   <meta name="citation_abstract" content="${volume.resumen}">
   <meta name="citation_abstract" xml:lang="en" content="${volume.abstract}">
@@ -1151,7 +1191,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
           <li><a href="#license">Licencia</a></li>
         </ul>
         <div class="outline-title" style="margin-top:30px">Acciones</div>
-        <a href="${volume.pdf}" download class="btn btn-primary" style="width:100%; box-sizing:border-box; justify-content:center;">Descargar PDF</a>
+        <a href="${volume.pdfUrl}" download class="btn btn-primary" style="width:100%; box-sizing:border-box; justify-content:center;">Descargar PDF</a>
         <a href="/es/volume" class="btn btn-outline" style="width:100%; box-sizing:border-box; justify-content:center; margin-top:10px;">Volver a Volúmenes</a>
       </div>
     </aside>
@@ -1179,10 +1219,10 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       </section>
       <section id="preview" class="pdf-viewer-section">
         <h2>Visualización del PDF</h2>
-        <embed src="${volume.pdf}" type="application/pdf" class="pdf-preview" />
+        <embed src="${volume.pdfUrl}" type="application/pdf" class="pdf-preview" />
         <div class="action-buttons">
-          <a href="${volume.pdf}" target="_blank" class="btn btn-outline">Ver en pantalla completa</a>
-          <a href="${volume.pdf}" download class="btn btn-primary">Descargar volumen (PDF)</a>
+          <a href="${volume.pdfUrl}" target="_blank" class="btn btn-outline">Ver en pantalla completa</a>
+          <a href="${volume.pdfUrl}" download class="btn btn-primary">Descargar volumen (PDF)</a>
         </div>
       </section>
       <section id="license" style="margin-top:40px; font-size: 0.85rem; border-top: 1px solid #eee; padding-top:20px;">
@@ -1201,9 +1241,10 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
 </body>
 </html>
   `.trim();
-  const filePathEs = path.join(volumesOutputHtmlDir, `volume-${volumeSlug}.html`);
-  fs.writeFileSync(filePathEs, htmlContentEs, 'utf8');
-  console.log(`Generado HTML de volumen en español: ${filePathEs}`);
+      const filePathEs = path.join(volumesOutputHtmlDir, `volume-${volumeSlug}.html`);
+      fs.writeFileSync(filePathEs, htmlContentEs, 'utf8');
+      console.log(`Generado HTML de volumen en español: ${filePathEs}`);
+
       // Generar HTML en inglés para volumen
       const htmlContentEn = `
 <!DOCTYPE html>
@@ -1216,7 +1257,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
   <meta name="citation_journal_title" content="The National Review of Sciences for Students">
   <meta name="citation_volume" content="${volume.volumen}">
   <meta name="citation_issue" content="${volume.numero}">
-  <meta name="citation_pdf_url" content="${volume.pdf}">
+  <meta name="citation_pdf_url" content="${volume.pdfUrl}">
   <meta name="citation_abstract_html_url" content="${domain}/volumes/volume-${volumeSlug}EN.html">
   <meta name="citation_abstract" content="${volume.abstract}">
   <meta name="citation_keywords" content="${volume.keywords.join('; ')}">
@@ -1287,7 +1328,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
           <li><a href="#preview">PDF Preview</a></li>
           <li><a href="#license">License</a></li>
         </ul>
-        <a href="${volume.pdf}" download class="btn btn-primary" style="margin-top:20px; width:100%; box-sizing:border-box; justify-content:center;">Download PDF</a>
+        <a href="${volume.pdfUrl}" download class="btn btn-primary" style="margin-top:20px; width:100%; box-sizing:border-box; justify-content:center;">Download PDF</a>
         <a href="/en/volume" class="btn btn-outline" style="width:100%; box-sizing:border-box; justify-content:center; margin-top:10px;">Back to Volumes</a>
       </div>
     </aside>
@@ -1313,10 +1354,10 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       </section>
       <section id="preview" style="margin-top:50px;">
         <h2>PDF Preview</h2>
-        <embed src="${volume.pdf}" type="application/pdf" class="pdf-preview" />
+        <embed src="${volume.pdfUrl}" type="application/pdf" class="pdf-preview" />
         <div style="display:flex; gap:15px;">
-          <a href="${volume.pdf}" target="_blank" class="btn btn-outline">View Full Screen</a>
-          <a href="${volume.pdf}" download class="btn btn-primary">Download Volume (PDF)</a>
+          <a href="${volume.pdfUrl}" target="_blank" class="btn btn-outline">View Full Screen</a>
+          <a href="${volume.pdfUrl}" download class="btn btn-primary">Download Volume (PDF)</a>
         </div>
       </section>
       <section id="license" style="margin-top:40px; font-size: 0.85rem; border-top: 1px solid #eee; padding-top:20px;">
@@ -1339,6 +1380,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       fs.writeFileSync(filePathEn, htmlContentEn, 'utf8');
       console.log(`Generado HTML de volumen en inglés: ${filePathEn}`);
     });
+
     // Generar índice de volúmenes
     const volumesByYear = volumes.reduce((acc, volume) => {
       const year = new Date(volume.fecha).getFullYear() || 'Sin fecha';
@@ -1471,6 +1513,7 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
     const volumesIndexPath = path.join(volumesOutputHtmlDir, 'index.html');
     fs.writeFileSync(volumesIndexPath, volumesIndexContent, 'utf8');
     console.log(`Generado índice HTML de volúmenes: ${volumesIndexPath}`);
+
     let volumesIndexContentEn = `
 <!DOCTYPE html>
 <html lang="en">
@@ -1485,7 +1528,7 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
       --text-grey: #666666;
       --border: #e4e4e4;
     }
-    body { font-family: 'Noto Sans', sans-serif; line-height: 1.6; color: var(--text-dark); background-color: #f0f0f0; margin: 0; }
+    body { font-family: 'Noto Sans', sans-serif; line-height: 1.6; color: var(--text-dark); background-color: #f0f0f0; margin: 0; padding: 0; }
     .top-bar { background: white; border-bottom: 1px solid var(--border); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
     .journal-name { font-weight: bold; color: var(--primary-blue); text-decoration: none; font-size: 0.9rem; }
     .main-wrapper { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
@@ -1539,26 +1582,22 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
     const volumesIndexPathEn = path.join(volumesOutputHtmlDir, 'index.EN.html');
     fs.writeFileSync(volumesIndexPathEn, volumesIndexContentEn, 'utf8');
     console.log(`Generado índice HTML de volúmenes (EN): ${volumesIndexPathEn}`);
-    // Procesar noticias
-    const newsRes = await fetch(newsCsvUrl);
-    if (!newsRes.ok) throw new Error(`Error descargando CSV de noticias: ${newsRes.statusText}`);
-    const newsCsvData = await newsRes.text();
-    const newsParsed = Papa.parse(newsCsvData, { header: true, skipEmptyLines: true });
-    const newsItems = newsParsed.data
-      .filter(
-        (row) =>
-          (row["Título"] || "").trim() !== "" &&
-          (row["Contenido de la noticia"] || "").trim() !== ""
-      )
-      .map((row) => ({
-        titulo: String(row["Título"] ?? ""),
-        cuerpo: base64DecodeUnicode(String(row["Contenido de la noticia"] ?? "")),
-        fecha: parseDateFlexible(String(row["Fecha"] ?? "")),
-        title: String(row["Title"] ?? ""),
-        content: base64DecodeUnicode(String(row["Content of the new"] ?? "")),
-      }));
+
+    // Procesar noticias desde Firestore
+    const newsSnapshot = await db.collection('news').get();
+    const newsItems = newsSnapshot.docs.map(doc => doc.data()).map(item => ({
+      titulo: item.title_es || '',
+      cuerpo: item.body_es || '',  // base64
+      fecha: parseDateFlexible(item.timestamp_es),
+      title: item.title_en || '',
+      content: item.body_en || ''  // base64
+    }));
     for (const newsItem of newsItems) {
       const slug = generateSlug(`${newsItem.titulo} ${newsItem.fecha}`);
+      const cuerpoDecoded = base64DecodeUnicode(newsItem.cuerpo);
+      const contentDecoded = base64DecodeUnicode(newsItem.content);
+      const cuerpoProcessed = await processImages(cuerpoDecoded, slug, 'es');
+      const contentProcessed = await processImages(contentDecoded, slug, 'en');
       const esContent = `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1725,7 +1764,7 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
         <p class="date">Publicado el ${newsItem.fecha}</p>
       </header>
       <div class="content ql-editor">
-        ${newsItem.cuerpo}
+        ${cuerpoProcessed}
       </div>
     </main>
   </div>
@@ -1803,7 +1842,7 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
         <p class="date">Published on ${newsItem.fecha}</p>
       </header>
       <div class="content ql-editor">
-        ${newsItem.content}
+        ${contentProcessed}
       </div>
     </main>
   </div>
@@ -1820,6 +1859,7 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
       fs.writeFileSync(enPath, enContent, 'utf8');
       console.log(`Generado HTML de noticia (EN): ${enPath}`);
     }
+
     // Generar índice de noticias
     const newsByYear = newsItems.reduce((acc, item) => {
       const year = new Date(item.fecha).getFullYear() || 'Sin fecha';
@@ -1952,6 +1992,7 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
     const newsIndexPath = path.join(newsOutputHtmlDir, 'index.html');
     fs.writeFileSync(newsIndexPath, newsIndexContent, 'utf8');
     console.log(`Generado índice HTML de noticias: ${newsIndexPath}`);
+
     let newsIndexContentEn = `
 <!DOCTYPE html>
 <html lang="en">
@@ -1966,7 +2007,7 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
       --text-grey: #666666;
       --border: #e4e4e4;
     }
-    body { font-family: 'Noto Sans', sans-serif; line-height: 1.6; color: var(--text-dark); background-color: #f0f0f0; margin: 0; }
+    body { font-family: 'Noto Sans', sans-serif; line-height: 1.6; color: var(--text-dark); background-color: #f0f0f0; margin: 0; padding: 0; }
     .top-bar { background: white; border-bottom: 1px solid var(--border); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
     .journal-name { font-weight: bold; color: var(--primary-blue); text-decoration: none; font-size: 0.9rem; }
     .main-wrapper { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
@@ -2020,7 +2061,8 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
     const newsIndexPathEn = path.join(newsOutputHtmlDir, 'index.EN.html');
     fs.writeFileSync(newsIndexPathEn, newsIndexContentEn, 'utf8');
     console.log(`Generado índice HTML de noticias (EN): ${newsIndexPathEn}`);
-    // Procesar equipo
+
+    // Procesar equipo (sigue de CSV)
     const allMembers = teamParsed.data.filter(row => (row['Nombre'] || '').trim() !== '');
     for (const member of allMembers) {
       const rolesEs = (member['Rol en la Revista'] || '').split(';').map(r => r.trim()).filter(r => r);
