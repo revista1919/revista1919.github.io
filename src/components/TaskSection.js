@@ -4,21 +4,16 @@ import ReactQuill from 'react-quill';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ClipboardList, CheckCircle2, Clock, Plus, User, Globe, Share2, X } from 'lucide-react';
 import 'react-quill/dist/quill.snow.css';
-
 // URLs de Configuración
 const USERS_CSV_URL =
   'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
-
 const TASKS_CSV_URL =
   'https://docs.google.com/spreadsheets/d/e/2PACX-1vSCEOtMwYPu0_kn1hmQi0qT6FZq6HRF09WtuDSqOxBNgMor_FyRRtc6_YVKHQQhWJCy-mIa2zwP6uAU/pub?output=csv';
-
 const TASK_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxMo7aV_vz_3mOCUWKpcqnWmassUdApD_KfAHROTdgd_MDDiaXikgVV0OZ5qVYmhZgd/exec';
-
 const AREAS = {
   RRSS: 'Redes Sociales',
   WEB: 'Desarrollo Web',
 };
-
 export default function ModernTaskSection({ user }) {
   const [users, setUsers] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -34,12 +29,10 @@ export default function ModernTaskSection({ user }) {
   const [commentContent, setCommentContent] = useState('');
   const [submitStatus, setSubmitStatus] = useState({ type: '', msg: '' });
   const [error, setError] = useState('');
-
   // --- Lógica de Carga y Datos ---
   useEffect(() => {
     loadData();
   }, []);
-
   const loadData = async () => {
     setLoading(true);
     try {
@@ -57,7 +50,6 @@ export default function ModernTaskSection({ user }) {
     }
     setLoading(false);
   };
-
   // --- Lógica de Negocio y Permisos ---
   const currentUserData = users.find((u) => u.Nombre === user.name);
   const roles = currentUserData?.['Rol en la Revista']?.split(';').map((r) => r.trim()) || [];
@@ -65,7 +57,6 @@ export default function ModernTaskSection({ user }) {
   const director = useMemo(() => users.find((u) => u['Rol en la Revista']?.includes('Director General')), [users]);
   const directorEmail = director?.Correo;
   const directorName = director?.Nombre || user.name; // Fallback si no encontrado
-
   const filteredTasks = useMemo(() => {
     return tasks.reduce((acc, task, index) => {
       const areasConfig = [
@@ -109,14 +100,12 @@ export default function ModernTaskSection({ user }) {
       return acc;
     }, []);
   }, [tasks, user.name, isDirector]);
-
   const canCompleteTask = useCallback(
     (task) => {
       return !isDirector && (task.assignedName === user.name || task.assignedName === 'Equipo General');
     },
     [isDirector, user.name]
   );
-
   // --- ENVÍO DE TAREA + NOTIFICACIÓN ---
   const handleAssignTask = async () => {
     if (!taskContent.trim()) {
@@ -137,11 +126,18 @@ export default function ModernTaskSection({ user }) {
       directorName: directorName,
     };
     try {
-      await fetch(TASK_SCRIPT_URL, {
+      const response = await fetch(TASK_SCRIPT_URL, {
         method: 'POST',
-        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+      if (!response.ok) {
+        throw new Error(`Error en el servidor: ${response.status} - ${await response.text()}`);
+      }
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Error desconocido en el script');
+      }
       setSubmitStatus({ type: 'success', msg: 'Tarea asignada. Se ha enviado un aviso por correo.' });
       setTimeout(() => {
         setShowAssignModal(false);
@@ -152,10 +148,10 @@ export default function ModernTaskSection({ user }) {
         setSubmitStatus({ type: '', msg: '' });
       }, 2000);
     } catch (e) {
-      setSubmitStatus({ type: 'error', msg: 'Error en la conexión: ' + e.message });
+      console.error('Error en handleAssignTask:', e);
+      setSubmitStatus({ type: 'error', msg: 'Error en la conexión o procesamiento: ' + e.message });
     }
   };
-
   // --- COMPLETAR TAREA + NOTIFICACIÓN ---
   const handleCompleteTask = async () => {
     if (!commentContent.trim()) {
@@ -164,22 +160,27 @@ export default function ModernTaskSection({ user }) {
     }
     setSubmitStatus({ type: 'info', msg: 'Procesando completado y envío de notificación...' });
     const encodedComment = btoa(unescape(encodeURIComponent(commentContent)));
-    const encodedTask = btoa(unescape(encodeURIComponent(selectedTask.taskText))); // Ensure encoded
     const payload = {
       action: 'complete',
       area: selectedTask.area,
       row: selectedTask.rowIndex + 2,
       comment: encodedComment,
       notifyEmail: directorEmail,
-      task: encodedTask,
       assignedTo: user.name,
     };
     try {
-      await fetch(TASK_SCRIPT_URL, {
+      const response = await fetch(TASK_SCRIPT_URL, {
         method: 'POST',
-        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+      if (!response.ok) {
+        throw new Error(`Error en el servidor: ${response.status} - ${await response.text()}`);
+      }
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Error desconocido en el script');
+      }
       setSubmitStatus({ type: 'success', msg: 'Tarea completada. Se ha enviado un aviso al director.' });
       setTimeout(() => {
         setShowCompleteModal(false);
@@ -189,10 +190,10 @@ export default function ModernTaskSection({ user }) {
         setSubmitStatus({ type: '', msg: '' });
       }, 2000);
     } catch (e) {
-      setSubmitStatus({ type: 'error', msg: 'Error en la conexión: ' + e.message });
+      console.error('Error en handleCompleteTask:', e);
+      setSubmitStatus({ type: 'error', msg: 'Error en la conexión o procesamiento: ' + e.message });
     }
   };
-
   const decodeBody = (encoded) => {
     if (!encoded) return '';
     try {
@@ -201,7 +202,6 @@ export default function ModernTaskSection({ user }) {
       return encoded;
     }
   };
-
   const quillModules = {
     toolbar: [
       ['bold', 'italic', 'underline', 'strike'],
@@ -210,7 +210,6 @@ export default function ModernTaskSection({ user }) {
       ['clean'],
     ],
   };
-
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
@@ -219,9 +218,7 @@ export default function ModernTaskSection({ user }) {
       </div>
     );
   }
-
   if (error) return <div className="text-red-600 text-center p-4">{error}</div>;
-
   return (
     <div className="max-w-6xl mx-auto py-8 px-4 font-sans text-gray-900">
       {/* Header Estilo Editorial */}
@@ -239,7 +236,6 @@ export default function ModernTaskSection({ user }) {
           </button>
         )}
       </header>
-
       {/* Tabs Modernos */}
       <div className="flex gap-8 mb-8 border-b border-gray-100">
         {[
@@ -260,7 +256,6 @@ export default function ModernTaskSection({ user }) {
           </button>
         ))}
       </div>
-
       {/* Grid de Tareas */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <AnimatePresence mode="popLayout">
@@ -328,7 +323,6 @@ export default function ModernTaskSection({ user }) {
             ))}
         </AnimatePresence>
       </div>
-
       {/* Modal de Asignación */}
       <AnimatePresence>
         {showAssignModal && (
@@ -412,7 +406,7 @@ export default function ModernTaskSection({ user }) {
                   {submitStatus.msg}
                 </span>
               )}
-              <div className="flex justify-end gap-4">
+              <div className="sticky bottom-0 bg-white pt-4 -mx-8 px-8 border-t border-gray-100 flex justify-end gap-4">
                 <button
                   onClick={() => setShowAssignModal(false)}
                   className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-colors"
@@ -431,7 +425,6 @@ export default function ModernTaskSection({ user }) {
           </motion.div>
         )}
       </AnimatePresence>
-
       {/* Modal de Completado */}
       <AnimatePresence>
         {showCompleteModal && (
@@ -484,7 +477,7 @@ export default function ModernTaskSection({ user }) {
                   {submitStatus.msg}
                 </span>
               )}
-              <div className="flex justify-end gap-4">
+              <div className="sticky bottom-0 bg-white pt-4 -mx-8 px-8 border-t border-gray-100 flex justify-end gap-4">
                 <button
                   onClick={() => setShowCompleteModal(false)}
                   className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-colors"
