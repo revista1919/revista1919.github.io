@@ -1,28 +1,35 @@
 name: Deploy and Manage Articles
+
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
   repository_dispatch:
-    types: [rebuild]
+    types: [ rebuild ]
+
 permissions:
   contents: write
   pages: write
   id-token: write
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+
       - name: Cache node modules
         uses: actions/cache@v4
         with:
@@ -30,11 +37,12 @@ jobs:
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
+
       - name: Install dependencies
         run: npm ci --include=optional
-        
+
       - name: Rebuild sharp for linux
-          run: npm rebuild sharp --force --arch=x64 --platform=linux
+        run: npm rebuild sharp --force --arch=x64 --platform=linux
 
       - name: Debug secrets
         run: |
@@ -62,9 +70,11 @@ jobs:
           REBUILD_TOKEN: ${{ secrets.REBUILD_TOKEN }}
           API_GEMINI: ${{ secrets.API_GEMINI }}
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+
       - name: Build project
         run: |
           echo "🔨 Building with env vars..."
+
           echo "REACT_APP_ARTICULOS_SCRIPT_URL=${{ secrets.ARTICULOS_SCRIPT }}" > .env.local
           echo "REACT_APP_VOLUMES_SCRIPT_URL=${{ secrets.VOLUMES_SCRIPT_URL }}" >> .env.local
           echo "REACT_APP_TEAM_SCRIPT_URL=${{ secrets.TEAM_SCRIPT }}" >> .env.local
@@ -74,75 +84,82 @@ jobs:
           echo "REACT_APP_FORM_CSV=${{ secrets.FORM_CSV }}" >> .env.local
           echo "REACT_APP_FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }}" >> .env.local
           echo "REACT_APP_API_GEMINI=${{ secrets.API_GEMINI }}" >> .env.local
+
           echo "REACT_APP_FIREBASE_AUTH_DOMAIN=usuarios-rnce.firebaseapp.com" >> .env.local
           echo "REACT_APP_FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}" >> .env.local
           echo "REACT_APP_REBUILD_TOKEN=${{ secrets.REBUILD_TOKEN }}" >> .env.local
-
           echo "REACT_APP_FIREBASE_STORAGE_BUCKET=usuarios-rnce.firebasestorage.app" >> .env.local
           echo "REACT_APP_FIREBASE_MESSAGING_SENDER_ID=688242139131" >> .env.local
           echo "REACT_APP_FIREBASE_APP_ID=1:688242139131:web:3a98663545e73110c3f55e" >> .env.local
           echo "REACT_APP_FIREBASE_MEASUREMENT_ID=G-K90MKB7BDP" >> .env.local
+
           echo "NODE_ENV=production" >> .env.local
           echo "DEBUG=false" >> .env.local
-         
+
           echo "📝 .env.local creado:"
           cat .env.local
-         
+
           echo "🚀 Ejecutando build..."
           npm run build
         env:
           NODE_ENV: production
+
       - name: Verify build output
         run: |
           echo "📁 Listing dist directory contents:"
           ls -la dist/
-         
+
           echo "🔍 Checking for Firebase config in bundle:"
           if grep -r "REACT_APP_FIREBASE_API_KEY" dist/; then
             echo "✅ Firebase API key encontrada en bundle"
           else
             echo "⚠️ REACT_APP_FIREBASE_API_KEY no encontrada en bundle"
           fi
-         
+
           echo "🔍 Checking for Gemini API in bundle:"
           if grep -r "REACT_APP_API_GEMINI" dist/; then
             echo "✅ Gemini API key encontrada en bundle"
           else
             echo "⚠️ REACT_APP_API_GEMINI no encontrada en bundle"
           fi
-         
+
           echo "🔍 Checking for project ID:"
           if grep -r "usuarios-rnce" dist/; then
             echo "✅ Firebase project ID encontrado"
           else
             echo "⚠️ usuarios-rnce no encontrado en bundle"
           fi
-         
+
           echo "🔍 Checking for CSV URL:"
           if grep -r "REACT_APP_USERS_CSV" dist/; then
             echo "✅ CSV URL encontrada en bundle"
           else
             echo "⚠️ REACT_APP_USERS_CSV no encontrada en bundle"
           fi
+
           echo "🔍 Checking for VOLUME SCRIPT:"
           if grep -r "REACT_APP_VOLUMES_SCRIPT_URL" dist/; then
             echo "✅ URL URL encontrada en bundle"
           else
             echo "⚠️ REACT_APP_VOLUMES_SCRIPT_URL no encontrada en bundle"
           fi
-         
+
           echo "🔍 Checking for FORM_CSV URL:"
           if grep -r "REACT_APP_FORM_CSV" dist/; then
             echo "✅ FORM_CSV URL encontrada en bundle"
           else
             echo "⚠️ REACT_APP_FORM_CSV no encontrada en bundle"
           fi
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        
