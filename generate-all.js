@@ -21,48 +21,7 @@ admin.initializeApp({
   credential: admin.credential.cert('./serviceAccountKey.json')
 });
 const db = admin.firestore();
-function parseDateIso(raw) {
-  if (!raw) return '';
-  let parsedDate = new Date(raw);
-  if (isNaN(parsedDate.getTime())) {
-    const datePattern = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/;
-    const match = raw.match(datePattern);
-    if (match) {
-      const [, day, month, year] = match;
-      parsedDate = new Date(`${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`);
-    }
-  }
-  if (!isNaN(parsedDate.getTime())) {
-    return parsedDate.toISOString().split('T')[0];
-  }
-  return '';
-}
-function formatDate(raw) {
-  if (!raw) return "Sin fecha";
-  let parsedDate = new Date(raw);
-  if (isNaN(parsedDate.getTime())) {
-    const datePattern = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/;
-    const match = raw.match(datePattern);
-    if (match) {
-      const [, day, month, year] = match;
-      parsedDate = new Date(`${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`);
-    }
-  }
-  if (!isNaN(parsedDate.getTime())) {
-    try {
-      return parsedDate.toLocaleString("es-CL", {
-        timeZone: "America/Santiago",
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch {
-      return raw;
-    }
-  }
-}
+
 function parseDateFlexible(dateStr) {
   if (!dateStr) return '';
   let date = new Date(dateStr);
@@ -164,7 +123,7 @@ const base64DecodeUnicode = (str) => {
   try {
     const binary = atob(str);
     const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i = binary.length; i++) {
+    for (let i = 0; i < binary.length; i++) {
       bytes[i] = binary.charCodeAt(i);
     }
     const decoder = new TextDecoder();
@@ -174,27 +133,6 @@ const base64DecodeUnicode = (str) => {
     return '';
   }
 };
-async function loadArticlesFromJson() {
-  if (fs.existsSync(outputJson)) {
-    return JSON.parse(fs.readFileSync(outputJson, 'utf8'));
-  }
-  return [];
-}
-
-async function loadVolumesFromJson() {
-  if (fs.existsSync(volumesOutputJson)) {
-    return JSON.parse(fs.readFileSync(volumesOutputJson, 'utf8'));
-  }
-  return [];
-}
-
-async function loadNewsFromJson() {
-  const newsJsonPath = path.join(__dirname, 'dist', 'news.json');
-  if (fs.existsSync(newsJsonPath)) {
-    return JSON.parse(fs.readFileSync(newsJsonPath, 'utf8'));
-  }
-  return [];
-}
 
 async function processImages(html, slug, lang) {
   const $ = cheerio.load(html);
@@ -227,67 +165,81 @@ if (!fs.existsSync(newsOutputHtmlDir)) fs.mkdirSync(newsOutputHtmlDir, { recursi
 if (!fs.existsSync(teamOutputHtmlDir)) fs.mkdirSync(teamOutputHtmlDir, { recursive: true });
 if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursive: true });
 if (!fs.existsSync(path.join(__dirname, 'dist', 'images', 'news'))) fs.mkdirSync(path.join(__dirname, 'dist', 'images', 'news'), { recursive: true });
-async function generateArticles() {
-  // Procesar artículos desde Firestore
-  const articlesSnapshot = await db.collection('articles').get();
-  const articles = articlesSnapshot.docs.map(doc => {
-    const data = doc.data();
-    const autoresStr = data.autores || 'Autor desconocido';
-    const institutions = autoresStr.split(';').map(a => {
-      const name = a.trim();
-      return authorToInstitution[name] || '';
-    });
-    return {
-      titulo: data.titulo || 'Sin título',
-      autores: autoresStr,
-      institutions,
-      resumen: data.resumen || 'Resumen no disponible',
-      englishAbstract: data.abstract || 'English abstract not available',
-      fecha: parseDateFlexible(data.fecha),
-      volumen: data.volumen || '',
-      numero: data.numero || '',
-      primeraPagina: data.primeraPagina || '',
-      ultimaPagina: data.ultimaPagina || '',
-      area: data.area || '',
-      numeroArticulo: data.numeroArticulo || doc.id.slice(0, 5),
-      palabras_clave: data.palabras_clave || [],
-      keywords_english: data.keywords_english || [],
-      tipo: data.tipo || '',
-      type: data.type || '',
-      pdfUrl: data.pdfUrl || ''
-    };
-  });
-  fs.writeFileSync(outputJson, JSON.stringify(articles, null, 2), 'utf8');
-  console.log(`✅ Archivo generado: ${outputJson} (${articles.length} artículos)`);
 
-  // Crear mapa de autores a artículos
-  let authorToArticles = {};
-  articles.forEach(article => {
-    const authors = article.autores.split(';').map(a => a.trim());
-    authors.forEach(auth => {
-      if (!authorToArticles[auth]) authorToArticles[auth] = [];
-      authorToArticles[auth].push(article);
+(async () => {
+  try {
+    // Procesar equipo primero para obtener instituciones (sigue de CSV)
+    const teamRes = await fetch(teamCsvUrl);
+    if (!teamRes.ok) throw new Error(`Error descargando CSV de equipo: ${teamRes.statusText}`);
+    const teamCsvData = await teamRes.text();
+    const teamParsed = Papa.parse(teamCsvData, { header: true, skipEmptyLines: true });
+    const authorToInstitution = {};
+    teamParsed.data.forEach(row => {
+      const name = (row['Nombre'] || '').trim();
+      const inst = (row['Institution'] || '').trim();
+      if (name) authorToInstitution[name] = inst;
     });
-  });
 
-  articles.forEach(article => {
-    const authorsList = article.autores.split(';').map(a => formatAuthorForCitation(a));
-    const authorMetaTags = authorsList.map(author => `<meta name="citation_author" content="${author}">`).join('\n');
-    const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
-    article.pdf = article.pdfUrl;
-    const authorsArray = article.autores.split(';').map(a => a.trim()).filter(Boolean);
-    const authorsDisplayEs = authorsArray.map(auth => `<a href="/team/${generateSlug(auth)}.html" class="author-link" style="color: var(--primary-blue); text-decoration: none; cursor: pointer; font-weight: 500;">${auth}</a>`).join(', ');
-    const authorsDisplayEn = authorsArray.map(auth => `<a href="/team/${generateSlug(auth)}.EN.html" class="author-link" style="color: var(--primary-blue); text-decoration: none; cursor: pointer; font-weight: 500;">${auth}</a>`).join(', ');
-    const authorsAPA = formatAuthorsAPA(article.autores);
-    const authorsChicagoEs = formatAuthorsChicagoOrMLA(article.autores, 'es');
-    const authorsMLAEs = formatAuthorsChicagoOrMLA(article.autores, 'es');
-    const authorsChicagoEn = formatAuthorsChicagoOrMLA(article.autores, 'en');
-    const authorsMLAEn = formatAuthorsChicagoOrMLA(article.autores, 'en');
-    const year = new Date(article.fecha).getFullYear();
-    const tipoEs = article.tipo || 'Artículo de Investigación';
-    const typeEn = article.type || 'Research Article';
-    // Generar HTML en español
-    const htmlContentEs = `
+    // Procesar artículos desde Firestore
+    const articlesSnapshot = await db.collection('articles').get();
+    const articles = articlesSnapshot.docs.map(doc => {
+      const data = doc.data();
+      const autoresStr = data.autores || 'Autor desconocido';
+      const institutions = autoresStr.split(';').map(a => {
+        const name = a.trim();
+        return authorToInstitution[name] || '';
+      });
+      return {
+        titulo: data.titulo || 'Sin título',
+        autores: autoresStr,
+        institutions,
+        resumen: data.resumen || 'Resumen no disponible',
+        englishAbstract: data.abstract || 'English abstract not available',
+        fecha: parseDateFlexible(data.fecha),
+        volumen: data.volumen || '',
+        numero: data.numero || '',
+        primeraPagina: data.primeraPagina || '',
+        ultimaPagina: data.ultimaPagina || '',
+        area: data.area || '',
+        numeroArticulo: data.numeroArticulo || doc.id.slice(0, 5),
+        palabras_clave: data.palabras_clave || [],
+        keywords_english: data.keywords_english || [],
+        tipo: data.tipo || '',
+        type: data.type || '',
+        pdfUrl: data.pdfUrl || ''
+      };
+    });
+    fs.writeFileSync(outputJson, JSON.stringify(articles, null, 2), 'utf8');
+    console.log(`✅ Archivo generado: ${outputJson} (${articles.length} artículos)`);
+
+    // Crear mapa de autores a artículos
+    let authorToArticles = {};
+    articles.forEach(article => {
+      const authors = article.autores.split(';').map(a => a.trim());
+      authors.forEach(auth => {
+        if (!authorToArticles[auth]) authorToArticles[auth] = [];
+        authorToArticles[auth].push(article);
+      });
+    });
+
+    articles.forEach(article => {
+      const authorsList = article.autores.split(';').map(a => formatAuthorForCitation(a));
+      const authorMetaTags = authorsList.map(author => `<meta name="citation_author" content="${author}">`).join('\n');
+      const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
+      article.pdf = article.pdfUrl;
+      const authorsArray = article.autores.split(';').map(a => a.trim()).filter(Boolean);
+      const authorsDisplayEs = authorsArray.map(auth => `<a href="/team/${generateSlug(auth)}.html" class="author-link" style="color: var(--primary-blue); text-decoration: none; cursor: pointer; font-weight: 500;">${auth}</a>`).join(', ');
+      const authorsDisplayEn = authorsArray.map(auth => `<a href="/team/${generateSlug(auth)}.EN.html" class="author-link" style="color: var(--primary-blue); text-decoration: none; cursor: pointer; font-weight: 500;">${auth}</a>`).join(', ');
+      const authorsAPA = formatAuthorsAPA(article.autores);
+      const authorsChicagoEs = formatAuthorsChicagoOrMLA(article.autores, 'es');
+      const authorsMLAEs = formatAuthorsChicagoOrMLA(article.autores, 'es');
+      const authorsChicagoEn = formatAuthorsChicagoOrMLA(article.autores, 'en');
+      const authorsMLAEn = formatAuthorsChicagoOrMLA(article.autores, 'en');
+      const year = new Date(article.fecha).getFullYear();
+      const tipoEs = article.tipo || 'Artículo de Investigación';
+      const typeEn = article.type || 'Research Article';
+      // Generar HTML en español
+      const htmlContentEs = `
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -612,12 +564,12 @@ async function generateArticles() {
 </body>
 </html>
 `.trim();
-    const filePathEs = path.join(outputHtmlDir, `article-${articleSlug}.html`);
-    fs.writeFileSync(filePathEs, htmlContentEs, 'utf8');
-    console.log(`Generado HTML de artículo en español: ${filePathEs}`);
+      const filePathEs = path.join(outputHtmlDir, `article-${articleSlug}.html`);
+      fs.writeFileSync(filePathEs, htmlContentEs, 'utf8');
+      console.log(`Generado HTML de artículo en español: ${filePathEs}`);
 
-    // Generar HTML en inglés
-    const htmlContentEn = `
+      // Generar HTML en inglés
+      const htmlContentEn = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -769,19 +721,19 @@ async function generateArticles() {
 </body>
 </html>
 `.trim();
-    const filePathEn = path.join(outputHtmlDir, `article-${articleSlug}EN.html`);
-    fs.writeFileSync(filePathEn, htmlContentEn, 'utf8');
-    console.log(`Generado HTML de artículo en inglés: ${filePathEn}`);
-  });
+      const filePathEn = path.join(outputHtmlDir, `article-${articleSlug}EN.html`);
+      fs.writeFileSync(filePathEn, htmlContentEn, 'utf8');
+      console.log(`Generado HTML de artículo en inglés: ${filePathEn}`);
+    });
 
-  // Generar índice de artículos
-  const articlesByYear = articles.reduce((acc, article) => {
-    const year = new Date(article.fecha).getFullYear() || 'Sin fecha';
-    if (!acc[year]) acc[year] = [];
-    acc[year].push(article);
-    return acc;
-  }, {});
-  const indexContent = `
+    // Generar índice de artículos
+    const articlesByYear = articles.reduce((acc, article) => {
+      const year = new Date(article.fecha).getFullYear() || 'Sin fecha';
+      if (!acc[year]) acc[year] = [];
+      acc[year].push(article);
+      return acc;
+    }, {});
+    const indexContent = `
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -903,11 +855,12 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
 </body>
 </html>
     `.trim();
-  const indexPath = path.join(outputHtmlDir, 'index.html');
-  fs.writeFileSync(indexPath, indexContent, 'utf8');
-  console.log(`Generado índice HTML de artículos: ${indexPath}`);
+    const indexPath = path.join(outputHtmlDir, 'index.html');
+    fs.writeFileSync(indexPath, indexContent, 'utf8');
+    console.log(`Generado índice HTML de artículos: ${indexPath}`);
 
-  let indexContentEn = `
+    // Generar índice de artículos en inglés
+    let indexContentEn = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -972,38 +925,37 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
 </body>
 </html>
     `.trim();
-  const indexPathEn = path.join(outputHtmlDir, 'index.EN.html');
-  fs.writeFileSync(indexPathEn, indexContentEn, 'utf8');
-  console.log(`Generado índice HTML de artículos (EN): ${indexPathEn}`);
-}
-async function generateVolumes() {
-  // Procesar volúmenes desde Firestore
-  const volumesSnapshot = await db.collection('volumes').get();
-  const volumes = volumesSnapshot.docs.map(doc => {
-    const data = doc.data();
-    return {
-      volumen: data.volumen || '',
-      numero: data.numero || '',
-      fecha: parseDateFlexible(data.fecha),
-      titulo: data.titulo || 'Sin título',
-      resumen: data.resumen || 'Resumen no disponible',
-      abstract: data.abstract || 'Abstract not available',
-      portada: getImageSrc(data.portada),
-      pdf: data.pdf || '',
-      area: data.area || '',
-      palabras_clave: data.palabras_clave || [],
-      keywords: data.keywords || []
-    };
-  });
-  fs.writeFileSync(volumesOutputJson, JSON.stringify(volumes, null, 2), 'utf8');
-  console.log(`✅ Archivo generado: ${volumesOutputJson} (${volumes.length} volúmenes)`);
+    const indexPathEn = path.join(outputHtmlDir, 'index.EN.html');
+    fs.writeFileSync(indexPathEn, indexContentEn, 'utf8');
+    console.log(`Generado índice HTML de artículos (EN): ${indexPathEn}`);
 
-  volumes.forEach(volume => {
-    const volumeSlug = `${volume.volumen}-${volume.numero}`;
-    volume.pdfUrl = volume.pdf;
-    const year = new Date(volume.fecha).getFullYear();
-    // Generar HTML en español para volumen
-    const htmlContentEs = `
+    // Procesar volúmenes desde Firestore
+    const volumesSnapshot = await db.collection('volumes').get();
+    const volumes = volumesSnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        volumen: data.volumen || '',
+        numero: data.numero || '',
+        fecha: parseDateFlexible(data.fecha),
+        titulo: data.titulo || 'Sin título',
+        resumen: data.resumen || 'Resumen no disponible',
+        abstract: data.abstract || 'Abstract not available',
+        portada: getImageSrc(data.portada),
+        pdf: data.pdf || '',
+        area: data.area || '',
+        palabras_clave: data.palabras_clave || [],
+        keywords: data.keywords || []
+      };
+    });
+    fs.writeFileSync(volumesOutputJson, JSON.stringify(volumes, null, 2), 'utf8');
+    console.log(`✅ Archivo generado: ${volumesOutputJson} (${volumes.length} volúmenes)`);
+
+    volumes.forEach(volume => {
+      const volumeSlug = `${volume.volumen}-${volume.numero}`;
+      volume.pdfUrl = volume.pdf;
+      const year = new Date(volume.fecha).getFullYear();
+      // Generar HTML en español para volumen
+      const htmlContentEs = `
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1289,12 +1241,12 @@ async function generateVolumes() {
 </body>
 </html>
   `.trim();
-    const filePathEs = path.join(volumesOutputHtmlDir, `volume-${volumeSlug}.html`);
-    fs.writeFileSync(filePathEs, htmlContentEs, 'utf8');
-    console.log(`Generado HTML de volumen en español: ${filePathEs}`);
+      const filePathEs = path.join(volumesOutputHtmlDir, `volume-${volumeSlug}.html`);
+      fs.writeFileSync(filePathEs, htmlContentEs, 'utf8');
+      console.log(`Generado HTML de volumen en español: ${filePathEs}`);
 
-    // Generar HTML en inglés para volumen
-    const htmlContentEn = `
+      // Generar HTML en inglés para volumen
+      const htmlContentEn = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1424,19 +1376,19 @@ async function generateVolumes() {
 </body>
 </html>
   `.trim();
-    const filePathEn = path.join(volumesOutputHtmlDir, `volume-${volumeSlug}EN.html`);
-    fs.writeFileSync(filePathEn, htmlContentEn, 'utf8');
-    console.log(`Generado HTML de volumen en inglés: ${filePathEn}`);
-  });
+      const filePathEn = path.join(volumesOutputHtmlDir, `volume-${volumeSlug}EN.html`);
+      fs.writeFileSync(filePathEn, htmlContentEn, 'utf8');
+      console.log(`Generado HTML de volumen en inglés: ${filePathEn}`);
+    });
 
-  // Generar índice de volúmenes
-  const volumesByYear = volumes.reduce((acc, volume) => {
-    const year = new Date(volume.fecha).getFullYear() || 'Sin fecha';
-    if (!acc[year]) acc[year] = [];
-    acc[year].push(volume);
-    return acc;
-  }, {});
-  let volumesIndexContent = `
+    // Generar índice de volúmenes
+    const volumesByYear = volumes.reduce((acc, volume) => {
+      const year = new Date(volume.fecha).getFullYear() || 'Sin fecha';
+      if (!acc[year]) acc[year] = [];
+      acc[year].push(volume);
+      return acc;
+    }, {});
+    let volumesIndexContent = `
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1558,11 +1510,11 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
 </body>
 </html>
     `.trim();
-  const volumesIndexPath = path.join(volumesOutputHtmlDir, 'index.html');
-  fs.writeFileSync(volumesIndexPath, volumesIndexContent, 'utf8');
-  console.log(`Generado índice HTML de volúmenes: ${volumesIndexPath}`);
+    const volumesIndexPath = path.join(volumesOutputHtmlDir, 'index.html');
+    fs.writeFileSync(volumesIndexPath, volumesIndexContent, 'utf8');
+    console.log(`Generado índice HTML de volúmenes: ${volumesIndexPath}`);
 
-  let volumesIndexContentEn = `
+    let volumesIndexContentEn = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1627,11 +1579,12 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
 </body>
 </html>
     `.trim();
-  const volumesIndexPathEn = path.join(volumesOutputHtmlDir, 'index.EN.html');
-  fs.writeFileSync(volumesIndexPathEn, volumesIndexContentEn, 'utf8');
-  console.log(`Generado índice HTML de volúmenes (EN): ${volumesIndexPathEn}`);
-}
-async function generateNews() {
+    const volumesIndexPathEn = path.join(volumesOutputHtmlDir, 'index.EN.html');
+    fs.writeFileSync(volumesIndexPathEn, volumesIndexContentEn, 'utf8');
+    console.log(`Generado índice HTML de volúmenes (EN): ${volumesIndexPathEn}`);
+
+    // Procesar noticias desde Firestore
+    async function generateNews() {
   // Procesar noticias desde Firestore
   const newsSnapshot = await db.collection('news').get();
   const newsItems = newsSnapshot.docs.map(doc => doc.data()).map(item => ({
@@ -2128,59 +2081,36 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
   fs.writeFileSync(newsIndexPathEn, newsIndexContentEn, 'utf8');
   console.log(`Generado índice HTML de noticias (EN): ${newsIndexPathEn}`);
 }
-async function generateTeam(articles) {
-  // Procesar equipo desde CSV (aún no migrado a DB)
-  const teamRes = await fetch(teamCsvUrl);
-  if (!teamRes.ok) throw new Error(`Error descargando CSV de equipo: ${teamRes.statusText}`);
-  const teamCsvData = await teamRes.text();
-  const teamParsed = Papa.parse(teamCsvData, { header: true, skipEmptyLines: true });
-  const authorToInstitution = {};
-  teamParsed.data.forEach(row => {
-    const name = (row['Nombre'] || '').trim();
-    const inst = (row['Institution'] || '').trim();
-    if (name) authorToInstitution[name] = inst;
-  });
-
-  // Crear authorToArticles desde articles (dependencia)
-  let authorToArticles = {};
-  articles.forEach(article => {
-    const authors = article.autores.split(';').map(a => a.trim());
-    authors.forEach(auth => {
-      if (!authorToArticles[auth]) authorToArticles[auth] = [];
-      authorToArticles[auth].push(article);
-    });
-  });
-
-  // Procesar miembros
-  const allMembers = teamParsed.data.filter(row => (row['Nombre'] || '').trim() !== '');
-  for (const member of allMembers) {
-    const rolesEs = (member['Rol en la Revista'] || '').split(';').map(r => r.trim()).filter(r => r);
-    const rolesEnList = (member['Role in the Journal'] || '').split(';').map(r => r.trim()).filter(r => r);
-    const nombre = member['Nombre'] || 'Miembro desconocido';
-    const publishedArticles = authorToArticles[nombre] || [];
-    const isAuthor = publishedArticles.length > 0;
-    let filteredRolesEs = rolesEs;
-    let filteredRolesEn = rolesEnList;
-    if (rolesEs.length > 1) {
-      filteredRolesEs = rolesEs.filter(r => r.toLowerCase() !== 'autor');
-    }
-    if (rolesEnList.length > 1) {
-      filteredRolesEn = rolesEnList.filter(r => r.toLowerCase() !== 'author');
-    }
-    const rolesStr = filteredRolesEs.join(', ') || 'No especificado';
-    const rolesEn = filteredRolesEn.join(', ') || 'Not specified';
-    const slug = generateSlug(nombre);
-    const descripcion = member['Descripción'] || 'Información no disponible';
-    const description = member['Description'] || 'Information not available';
-    const areas = member['Áreas de interés'] || 'No especificadas';
-    const areasEn = member['Areas of interest'] || 'Not specified';
-    const areasList = areas.split(';').map(a => a.trim()).filter(a => a);
-    const areasListEn = areasEn.split(';').map(a => a.trim()).filter(a => a);
-    const imagen = getImageSrc(member['Imagen'] || '');
-    const institution = member['Institution'] || '';
-    const areasTagsHtml = areasList.length ? areasList.map(area => `<span class="keyword-tag">${area}</span>`).join('') : '<p>No especificadas</p>';
-    const areasTagsHtmlEn = areasListEn.length ? areasListEn.map(area => `<span class="keyword-tag">${area}</span>`).join('') : '<p>Not specified</p>';
-    const articlesSectionEs = isAuthor ? `
+ // Procesar equipo (sigue de CSV)
+    const allMembers = teamParsed.data.filter(row => (row['Nombre'] || '').trim() !== '');
+    for (const member of allMembers) {
+      const rolesEs = (member['Rol en la Revista'] || '').split(';').map(r => r.trim()).filter(r => r);
+      const rolesEnList = (member['Role in the Journal'] || '').split(';').map(r => r.trim()).filter(r => r);
+      const nombre = member['Nombre'] || 'Miembro desconocido';
+      const publishedArticles = authorToArticles[nombre] || [];
+      const isAuthor = publishedArticles.length > 0;
+      let filteredRolesEs = rolesEs;
+      let filteredRolesEn = rolesEnList;
+      if (rolesEs.length > 1) {
+        filteredRolesEs = rolesEs.filter(r => r.toLowerCase() !== 'autor');
+      }
+      if (rolesEnList.length > 1) {
+        filteredRolesEn = rolesEnList.filter(r => r.toLowerCase() !== 'author');
+      }
+      const rolesStr = filteredRolesEs.join(', ') || 'No especificado';
+      const rolesEn = filteredRolesEn.join(', ') || 'Not specified';
+      const slug = generateSlug(nombre);
+      const descripcion = member['Descripción'] || 'Información no disponible';
+      const description = member['Description'] || 'Information not available';
+      const areas = member['Áreas de interés'] || 'No especificadas';
+      const areasEn = member['Areas of interest'] || 'Not specified';
+      const areasList = areas.split(';').map(a => a.trim()).filter(a => a);
+      const areasListEn = areasEn.split(';').map(a => a.trim()).filter(a => a);
+      const imagen = getImageSrc(member['Imagen'] || '');
+      const institution = member['Institution'] || '';
+      const areasTagsHtml = areasList.length ? areasList.map(area => `<span class="keyword-tag">${area}</span>`).join('') : '<p>No especificadas</p>';
+      const areasTagsHtmlEn = areasListEn.length ? areasListEn.map(area => `<span class="keyword-tag">${area}</span>`).join('') : '<p>Not specified</p>';
+      const articlesSectionEs = isAuthor ? `
       <section id="articles" style="margin-top:50px;">
         <h2>Artículos Publicados</h2>
         <div>
@@ -2195,7 +2125,7 @@ async function generateTeam(articles) {
           }).join('')}
         </div>
       </section>` : '';
-    const articlesSectionEn = isAuthor ? `
+      const articlesSectionEn = isAuthor ? `
       <section id="articles" style="margin-top:50px;">
         <h2>Published Articles</h2>
         <div>
@@ -2210,9 +2140,9 @@ async function generateTeam(articles) {
           }).join('')}
         </div>
       </section>` : '';
-    const institutionHtmlEs = institution ? `<div style="font-size: 0.9rem; color: var(--text-grey); margin-top:10px;">${institution}</div>` : '';
-    const institutionHtmlEn = institution ? `<div style="font-size: 0.9rem; color: var(--text-grey); margin-top:10px;">${institution}</div>` : '';
-    const esContent = `<!DOCTYPE html>
+      const institutionHtmlEs = institution ? `<div style="font-size: 0.9rem; color: var(--text-grey); margin-top:10px;">${institution}</div>` : '';
+      const institutionHtmlEn = institution ? `<div style="font-size: 0.9rem; color: var(--text-grey); margin-top:10px;">${institution}</div>` : '';
+      const esContent = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -2419,7 +2349,7 @@ async function generateTeam(articles) {
   </footer>
 </body>
 </html>`;
-    const enContent = `<!DOCTYPE html>
+      const enContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -2509,40 +2439,35 @@ async function generateTeam(articles) {
   </footer>
 </body>
 </html>`;
-    const esPath = path.join(teamOutputHtmlDir, `${slug}.html`);
-    fs.writeFileSync(esPath, esContent, 'utf8');
-    console.log(`Generado HTML de miembro (ES): ${esPath}`);
-    const enPath = path.join(teamOutputHtmlDir, `${slug}.EN.html`);
-    fs.writeFileSync(enPath, enContent, 'utf8');
-    console.log(`Generado HTML de miembro (EN): ${enPath}`);
-  }
-  return allMembers;  // Retorna para sitemap
-}
-async function generateSpaRoutes() {
-  console.log('🚀 Pre-renderizando las rutas de la aplicación...');
-  const appShellPath = path.join(__dirname, 'dist', 'index.html');
-  if (!fs.existsSync(appShellPath)) {
-    throw new Error('El archivo principal dist/index.html no se encontró. Asegúrate de compilar la aplicación primero.');
-  }
-  const appShellContent = fs.readFileSync(appShellPath, 'utf8');
-  const spaRoutes = [
-    '/es/about', '/es/guidelines', '/es/faq', '/es/article', '/es/submit', '/es/team', '/es/new', '/es/login', '/es/admin', '/es/volume',
-    '/en/about', '/en/guidelines', '/en/faq', '/en/article', '/en/submit', '/en/team', '/en/new', '/en/login', '/en/admin', '/en/volume'
-  ];
-  spaRoutes.forEach(route => {
-    const routePath = path.join(__dirname, 'dist', route);
-    if (!fs.existsSync(routePath)) {
-      fs.mkdirSync(routePath, { recursive: true });
+      const esPath = path.join(teamOutputHtmlDir, `${slug}.html`);
+      fs.writeFileSync(esPath, esContent, 'utf8');
+      console.log(`Generado HTML de miembro (ES): ${esPath}`);
+      const enPath = path.join(teamOutputHtmlDir, `${slug}.EN.html`);
+      fs.writeFileSync(enPath, enContent, 'utf8');
+      console.log(`Generado HTML de miembro (EN): ${enPath}`);
     }
-    const indexPath = path.join(routePath, 'index.html');
-    fs.writeFileSync(indexPath, appShellContent, 'utf8');
-  });
-  console.log(`✅ ${spaRoutes.length} rutas de la aplicación pre-renderizadas.`);
-  return spaRoutes;  // Retorna para sitemap
-}
-async function generateSitemapAndRobots(articles, volumes, newsItems, allMembers, spaRoutes) {
-  // Generar sitemap
-  const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
+    // Pre-renderizar rutas de la SPA
+    console.log('🚀 Pre-renderizando las rutas de la aplicación...');
+    const appShellPath = path.join(__dirname, 'dist', 'index.html');
+    if (!fs.existsSync(appShellPath)) {
+      throw new Error('El archivo principal dist/index.html no se encontró. Asegúrate de compilar la aplicación primero.');
+    }
+    const appShellContent = fs.readFileSync(appShellPath, 'utf8');
+    const spaRoutes = [
+      '/es/about', '/es/guidelines', '/es/faq', '/es/article', '/es/submit', '/es/team', '/es/new', '/es/login', '/es/admin', '/es/volume',
+      '/en/about', '/en/guidelines', '/en/faq', '/en/article', '/en/submit', '/en/team', '/en/new', '/en/login', '/en/admin', '/en/volume'
+    ];
+    spaRoutes.forEach(route => {
+      const routePath = path.join(__dirname, 'dist', route);
+      if (!fs.existsSync(routePath)) {
+        fs.mkdirSync(routePath, { recursive: true });
+      }
+      const indexPath = path.join(routePath, 'index.html');
+      fs.writeFileSync(indexPath, appShellContent, 'utf8');
+    });
+    console.log(`✅ ${spaRoutes.length} rutas de la aplicación pre-renderizadas.`);
+    // Generar sitemap
+    const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
 <!-- Created for Revista Nacional de las Ciencias para Estudiantes -->
 <url>
@@ -2632,8 +2557,8 @@ ${volumes.map(volume => {
   <priority>0.9</priority>
 </url>
 ${newsItems.map(item => {
-  const slug = generateSlug(item.titulo + ' ' + item.fecha);
-  return `
+      const slug = generateSlug(item.titulo + ' ' + item.fecha);
+      return `
 <url>
   <loc>${domain}/news/${slug}.html</loc>
   <lastmod>${item.fecha}</lastmod>
@@ -2646,12 +2571,12 @@ ${newsItems.map(item => {
   <changefreq>monthly</changefreq>
   <priority>0.8</priority>
 </url>`;
-}).join('')}
+    }).join('')}
 ${allMembers.map(member => {
-  const roles = (member['Rol en la Revista'] || '').split(';').map(r => r.trim());
-  if (roles.includes('Institución Colaboradora')) return '';
-  const slug = generateSlug(member['Nombre']);
-  return `
+      const roles = (member['Rol en la Revista'] || '').split(';').map(r => r.trim());
+      if (roles.includes('Institución Colaboradora')) return '';
+      const slug = generateSlug(member['Nombre']);
+      return `
 <url>
   <loc>${domain}/team/${slug}.html</loc>
   <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
@@ -2664,7 +2589,7 @@ ${allMembers.map(member => {
   <changefreq>monthly</changefreq>
   <priority>0.7</priority>
 </url>`;
-}).join('')}
+    }).join('')}
 ${spaRoutes.map(route => `
 <url>
   <loc>${domain}${route}/</loc>
@@ -2673,11 +2598,10 @@ ${spaRoutes.map(route => `
   <priority>0.9</priority>
 </url>`).join('')}
 </urlset>`.replace(/^\s*\n/gm, '');
-  fs.writeFileSync(sitemapPath, sitemapContent, 'utf8');
-  console.log(`Generado sitemap: ${sitemapPath}`);
-
-  // Generar robots.txt
-  const robotsContent = `User-agent: *
+    fs.writeFileSync(sitemapPath, sitemapContent, 'utf8');
+    console.log(`Generado sitemap: ${sitemapPath}`);
+    // Generar robots.txt
+    const robotsContent = `User-agent: *
 Allow: /
 Disallow: /search
 Disallow: /login
@@ -2687,59 +2611,8 @@ Disallow: /cart
 Disallow: /api/
 Sitemap: ${domain}/sitemap.xml
     `.trim();
-  fs.writeFileSync(robotsPath, robotsContent, 'utf8');
-  console.log(`Generado robots.txt: ${robotsPath}`);
-}
-// Main execution
-// Main execution
-(async () => {
-  try {
-    const rebuildType = process.env.REBUILD_TYPE || 'all';
-    console.log(`🔄 Rebuild type: ${rebuildType}`);
-
-    let articles = [];
-    let volumes = [];
-    let newsItems = [];
-    let allMembers = [];
-    let spaRoutes = [];
-
-    // Cargar o generar según type
-    if (rebuildType === 'all' || rebuildType === 'articles' || rebuildType === 'team' || rebuildType === 'sitemap') {
-      articles = (rebuildType === 'all' || rebuildType === 'articles' || rebuildType === 'team') ? await generateArticles() : await loadArticlesFromJson();
-    }
-
-    if (rebuildType === 'all' || rebuildType === 'volumes' || rebuildType === 'sitemap') {
-      volumes = (rebuildType === 'all' || rebuildType === 'volumes') ? await generateVolumes() : await loadVolumesFromJson();
-    }
-
-    if (rebuildType === 'all' || rebuildType === 'news' || rebuildType === 'sitemap') {
-      newsItems = (rebuildType === 'all' || rebuildType === 'news') ? await generateNews() : await loadNewsFromJson();
-    }
-
-    if (rebuildType === 'all' || rebuildType === 'team' || rebuildType === 'sitemap') {
-      // Team siempre necesita CSV fresh, pero usa articles cargados/generados
-      const teamRes = await fetch(teamCsvUrl);
-      if (!teamRes.ok) throw new Error(`Error descargando CSV de equipo: ${teamRes.statusText}`);
-      const teamCsvData = await teamRes.text();
-      const teamParsed = Papa.parse(teamCsvData, { header: true, skipEmptyLines: true });
-      authorToInstitution = {};
-      teamParsed.data.forEach(row => {
-        const name = (row['Nombre'] || '').trim();
-        const inst = (row['Institution'] || '').trim();
-        if (name) authorToInstitution[name] = inst;
-      });
-      allMembers = teamParsed.data;
-      await generateTeam(articles);
-    }
-
-    if (rebuildType === 'all' || rebuildType === 'spa' || rebuildType === 'sitemap') {
-      spaRoutes = await generateSpaRoutes();
-    }
-
-    if (rebuildType === 'all' || rebuildType === 'sitemap') {
-      await generateSitemapAndRobots(articles, volumes, newsItems, allMembers, spaRoutes);
-    }
-
+    fs.writeFileSync(robotsPath, robotsContent, 'utf8');
+    console.log(`Generado robots.txt: ${robotsPath}`);
     console.log('🎉 ¡Proceso completado con éxito!');
   } catch (err) {
     console.error('❌ Error:', err);
