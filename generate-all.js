@@ -21,7 +21,48 @@ admin.initializeApp({
   credential: admin.credential.cert('./serviceAccountKey.json')
 });
 const db = admin.firestore();
-
+function parseDateIso(raw) {
+  if (!raw) return '';
+  let parsedDate = new Date(raw);
+  if (isNaN(parsedDate.getTime())) {
+    const datePattern = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/;
+    const match = raw.match(datePattern);
+    if (match) {
+      const [, day, month, year] = match;
+      parsedDate = new Date(`${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`);
+    }
+  }
+  if (!isNaN(parsedDate.getTime())) {
+    return parsedDate.toISOString().split('T')[0];
+  }
+  return '';
+}
+function formatDate(raw) {
+  if (!raw) return "Sin fecha";
+  let parsedDate = new Date(raw);
+  if (isNaN(parsedDate.getTime())) {
+    const datePattern = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/;
+    const match = raw.match(datePattern);
+    if (match) {
+      const [, day, month, year] = match;
+      parsedDate = new Date(`${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`);
+    }
+  }
+  if (!isNaN(parsedDate.getTime())) {
+    try {
+      return parsedDate.toLocaleString("es-CL", {
+        timeZone: "America/Santiago",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return raw;
+    }
+  }
+}
 function parseDateFlexible(dateStr) {
   if (!dateStr) return '';
   let date = new Date(dateStr);
@@ -1574,18 +1615,17 @@ async function generateNews() {
   const newsSnapshot = await db.collection('news').get();
   const newsItems = newsSnapshot.docs.map(doc => doc.data()).map(item => ({
     titulo: item.title_es || '',
-    cuerpo: item.body_es || '',  // base64
+    cuerpo: item.body_es || '', // base64
     fecha: parseDateFlexible(item.timestamp_es),
     title: item.title_en || '',
-    content: item.body_en || '',  // base64
-    photo: item.photo || ''  // base64 o ''
+    content: item.body_en || '', // base64
+    photo: item.photo || '' // ahora URL como string
   }));
   for (const newsItem of newsItems) {
     const slug = generateSlug(`${newsItem.titulo} ${newsItem.fecha}`);
     const cuerpoDecoded = base64DecodeUnicode(newsItem.cuerpo);
     const contentDecoded = base64DecodeUnicode(newsItem.content);
-    const cuerpoProcessed = await processImages(cuerpoDecoded, slug, 'es');
-    const contentProcessed = await processImages(contentDecoded, slug, 'en');
+    // No procesar imágenes: usar directamente (asumiendo URLs externas)
     const esContent = `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1752,7 +1792,7 @@ async function generateNews() {
         <p class="date">Publicado el ${newsItem.fecha}</p>
       </header>
       <div class="content ql-editor">
-        ${cuerpoProcessed}
+        ${cuerpoDecoded}
       </div>
     </main>
   </div>
@@ -1830,7 +1870,7 @@ async function generateNews() {
         <p class="date">Published on ${newsItem.fecha}</p>
       </header>
       <div class="content ql-editor">
-        ${contentProcessed}
+        ${contentDecoded}
       </div>
     </main>
   </div>
@@ -1850,24 +1890,22 @@ async function generateNews() {
   // Generar news.json
   const newsJsonPath = path.join(__dirname, 'dist', 'news.json');
   const newsForJson = newsItems.map(item => {
-    const fechaIso = parseDateFlexible(item.fecha);  // Ajusta a tu función parseDateIso si es diferente
+    const fechaIso = parseDateFlexible(item.fecha); // Ajusta a tu función parseDateIso si es diferente
     const slug = generateSlug(`${item.titulo} ${fechaIso}`);
     return {
       titulo: item.titulo,
       cuerpo: item.cuerpo,
       title: item.title,
       content: item.content,
-      fecha: formatDate(item.fecha),  // Ajusta a tu función formatDate
+      fecha: formatDate(item.fecha), // Ajusta a tu función formatDate
       fechaIso: fechaIso,
       photo: item.photo,
       timestamp: new Date(fechaIso).getTime(),
       slug: slug
     };
   }).sort((a, b) => b.timestamp - a.timestamp);
-
   fs.writeFileSync(newsJsonPath, JSON.stringify(newsForJson, null, 2), 'utf8');
   console.log(`✅ Archivo generado: ${newsJsonPath} (${newsForJson.length} noticias)`);
-
   // Generar índice de noticias
   const newsByYear = newsItems.reduce((acc, item) => {
     const year = new Date(item.fecha).getFullYear() || 'Sin fecha';
@@ -2000,7 +2038,6 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
   const newsIndexPath = path.join(newsOutputHtmlDir, 'index.html');
   fs.writeFileSync(newsIndexPath, newsIndexContent, 'utf8');
   console.log(`Generado índice HTML de noticias: ${newsIndexPath}`);
-
   let newsIndexContentEn = `
 <!DOCTYPE html>
 <html lang="en">
@@ -2025,7 +2062,7 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
     ul { list-style: none; padding: 0; }
     a { color: var(--primary-blue); text-decoration: none; }
     footer { text-align: center; padding: 40px; color: var(--text-grey); font-size: 0.8rem; }
-    @media (max-width: 900px) { .article-container { padding: 20px; } 
+    @media (max-width: 900px) { .article-container { padding: 20px; }
       h1, h2, p, .content {
         word-break: break-word;
         overflow-wrap: break-word;
@@ -2069,6 +2106,395 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
   const newsIndexPathEn = path.join(newsOutputHtmlDir, 'index.EN.html');
   fs.writeFileSync(newsIndexPathEn, newsIndexContentEn, 'utf8');
   console.log(`Generado índice HTML de noticias (EN): ${newsIndexPathEn}`);
+}
+async function generateTeam(articles) {
+  // Procesar equipo desde CSV (aún no migrado a DB)
+  const teamRes = await fetch(teamCsvUrl);
+  if (!teamRes.ok) throw new Error(`Error descargando CSV de equipo: ${teamRes.statusText}`);
+  const teamCsvData = await teamRes.text();
+  const teamParsed = Papa.parse(teamCsvData, { header: true, skipEmptyLines: true });
+  const authorToInstitution = {};
+  teamParsed.data.forEach(row => {
+    const name = (row['Nombre'] || '').trim();
+    const inst = (row['Institution'] || '').trim();
+    if (name) authorToInstitution[name] = inst;
+  });
+
+  // Crear authorToArticles desde articles (dependencia)
+  let authorToArticles = {};
+  articles.forEach(article => {
+    const authors = article.autores.split(';').map(a => a.trim());
+    authors.forEach(auth => {
+      if (!authorToArticles[auth]) authorToArticles[auth] = [];
+      authorToArticles[auth].push(article);
+    });
+  });
+
+  // Procesar miembros
+  const allMembers = teamParsed.data.filter(row => (row['Nombre'] || '').trim() !== '');
+  for (const member of allMembers) {
+    const rolesEs = (member['Rol en la Revista'] || '').split(';').map(r => r.trim()).filter(r => r);
+    const rolesEnList = (member['Role in the Journal'] || '').split(';').map(r => r.trim()).filter(r => r);
+    const nombre = member['Nombre'] || 'Miembro desconocido';
+    const publishedArticles = authorToArticles[nombre] || [];
+    const isAuthor = publishedArticles.length > 0;
+    let filteredRolesEs = rolesEs;
+    let filteredRolesEn = rolesEnList;
+    if (rolesEs.length > 1) {
+      filteredRolesEs = rolesEs.filter(r => r.toLowerCase() !== 'autor');
+    }
+    if (rolesEnList.length > 1) {
+      filteredRolesEn = rolesEnList.filter(r => r.toLowerCase() !== 'author');
+    }
+    const rolesStr = filteredRolesEs.join(', ') || 'No especificado';
+    const rolesEn = filteredRolesEn.join(', ') || 'Not specified';
+    const slug = generateSlug(nombre);
+    const descripcion = member['Descripción'] || 'Información no disponible';
+    const description = member['Description'] || 'Information not available';
+    const areas = member['Áreas de interés'] || 'No especificadas';
+    const areasEn = member['Areas of interest'] || 'Not specified';
+    const areasList = areas.split(';').map(a => a.trim()).filter(a => a);
+    const areasListEn = areasEn.split(';').map(a => a.trim()).filter(a => a);
+    const imagen = getImageSrc(member['Imagen'] || '');
+    const institution = member['Institution'] || '';
+    const areasTagsHtml = areasList.length ? areasList.map(area => `<span class="keyword-tag">${area}</span>`).join('') : '<p>No especificadas</p>';
+    const areasTagsHtmlEn = areasListEn.length ? areasListEn.map(area => `<span class="keyword-tag">${area}</span>`).join('') : '<p>Not specified</p>';
+    const articlesSectionEs = isAuthor ? `
+      <section id="articles" style="margin-top:50px;">
+        <h2>Artículos Publicados</h2>
+        <div>
+          ${publishedArticles.map(article => {
+            const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
+            return `
+            <div style="margin-bottom:20px; padding:15px; background:#f9f9f9; border-radius:4px;">
+              <h3 style="font-size:1.2rem; margin:0 0 5px 0;"><a href="/articles/article-${articleSlug}.html" style="color:var(--primary-blue); text-decoration:none;">${article.titulo}</a></h3>
+              <p style="font-size:0.9rem; color:var(--text-grey); margin:0;">${article.autores} (Vol. ${article.volumen}, Núm. ${article.numero}, ${article.fecha})</p>
+            </div>
+            `;
+          }).join('')}
+        </div>
+      </section>` : '';
+    const articlesSectionEn = isAuthor ? `
+      <section id="articles" style="margin-top:50px;">
+        <h2>Published Articles</h2>
+        <div>
+          ${publishedArticles.map(article => {
+            const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
+            return `
+            <div style="margin-bottom:20px; padding:15px; background:#f9f9f9; border-radius:4px;">
+              <h3 style="font-size:1.2rem; margin:0 0 5px 0;"><a href="/articles/article-${articleSlug}EN.html" style="color:var(--primary-blue); text-decoration:none;">${article.titulo}</a></h3>
+              <p style="font-size:0.9rem; color:var(--text-grey); margin:0;">${article.autores} (Vol. ${article.volumen}, Issue ${article.numero}, ${article.fecha})</p>
+            </div>
+            `;
+          }).join('')}
+        </div>
+      </section>` : '';
+    const institutionHtmlEs = institution ? `<div style="font-size: 0.9rem; color: var(--text-grey); margin-top:10px;">${institution}</div>` : '';
+    const institutionHtmlEn = institution ? `<div style="font-size: 0.9rem; color: var(--text-grey); margin-top:10px;">${institution}</div>` : '';
+    const esContent = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="${descripcion.substring(0, 160)}...">
+  <meta name="keywords" content="${areas}, ${rolesStr}, Revista Nacional de las Ciencias para Estudiantes">
+  <meta name="author" content="${nombre}">
+  <title>${nombre} - Equipo de Revista Nacional de las Ciencias para Estudiantes</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-blue: #007398;
+      --text-dark: #333333;
+      --text-grey: #666666;
+      --border: #e4e4e4;
+      --bg-light: #fdfdfd;
+    }
+    body {
+      font-family: 'Noto Sans', sans-serif;
+      line-height: 1.6;
+      color: var(--text-dark);
+      background-color: #f0f0f0;
+      margin: 0;
+      padding: 0;
+    }
+    .top-bar {
+      background: white;
+      border-bottom: 1px solid var(--border);
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .journal-name {
+      font-weight: bold;
+      color: var(--primary-blue);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .main-wrapper {
+      max-width: 1200px;
+      margin: 20px auto;
+      display: grid;
+      grid-template-columns: 250px 1fr;
+      gap: 30px;
+      padding: 0 20px;
+    }
+    aside {
+      font-size: 0.9rem;
+    }
+    .outline-box {
+      position: sticky;
+      top: 20px;
+    }
+    .outline-title {
+      font-weight: bold;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+      margin-bottom: 15px;
+      text-transform: uppercase;
+      font-size: 0.8rem;
+      letter-spacing: 1px;
+    }
+    .outline-list {
+      list-style: none;
+      padding: 0;
+    }
+    .outline-list li {
+      margin-bottom: 10px;
+    }
+    .outline-list a {
+      color: var(--primary-blue);
+      text-decoration: none;
+    }
+    .article-container {
+      background: white;
+      padding: 40px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      border-radius: 2px;
+    }
+    header {
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+    }
+    .profile-header {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .profile-img {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1px solid var(--border);
+    }
+    .profile-img-fallback {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background: #f9f9f9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      color: var(--text-grey);
+    }
+    h1 {
+      font-family: 'Noto Serif', serif;
+      font-size: 2.2rem;
+      margin: 0;
+      line-height: 1.2;
+      color: #000;
+    }
+    .role {
+      font-size: 1.1rem;
+      color: var(--primary-blue);
+      margin: 5px 0;
+    }
+    h2 {
+      font-family: 'Noto Sans', sans-serif;
+      font-size: 1.4rem;
+      color: var(--text-dark);
+      margin-top: 40px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 5px;
+    }
+    p {
+      font-family: 'Noto Serif', serif;
+      font-size: 1.05rem;
+      text-align: justify;
+    }
+    .keywords-box {
+      background: #f9f9f9;
+      padding: 15px;
+      border-radius: 4px;
+      margin: 20px 0;
+    }
+    .keyword-tag {
+      display: inline-block;
+      margin-right: 15px;
+      font-size: 0.9rem;
+      color: var(--primary-blue);
+    }
+    footer {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-grey);
+      font-size: 0.8rem;
+    }
+    @media (max-width: 900px) {
+      .main-wrapper { grid-template-columns: 1fr; }
+      aside { display: none; }
+      .article-container { padding: 20px; }
+      .profile-header { flex-direction: column; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <a href="/" class="journal-name">REVISTA NACIONAL DE LAS CIENCIAS PARA ESTUDIANTES</a>
+  </div>
+  <div class="main-wrapper">
+    <aside>
+      <div class="outline-box">
+        <div class="outline-title">Contenido</div>
+        <ul class="outline-list">
+          <li><a href="#descripcion">Descripción</a></li>
+          <li><a href="#areas">Áreas de interés</a></li>
+          ${isAuthor ? '<li><a href="#articles">Artículos Publicados</a></li>' : ''}
+        </ul>
+        <div class="outline-title" style="margin-top:30px">Acciones</div>
+        <a href="/es/team" class="btn btn-outline" style="width:100%; box-sizing:border-box; justify-content:center;">Volver a Equipo</a>
+      </div>
+    </aside>
+    <main class="article-container">
+      <header>
+        <div class="profile-header">
+          <div>
+            ${imagen ? `<img src="${imagen}" alt="Foto de ${nombre}" class="profile-img">` : `<div class="profile-img-fallback">Sin Imagen</div>`}
+          </div>
+          <div>
+            <h1>${nombre}</h1>
+            <div class="role">${rolesStr}</div>
+            ${institutionHtmlEs}
+          </div>
+        </div>
+      </header>
+      <section id="descripcion">
+        <h2>Descripción</h2>
+        <p>${descripcion}</p>
+      </section>
+      <section id="areas" class="keywords-box">
+        <h2>Áreas de interés</h2>
+        ${areasTagsHtml}
+      </section>
+      ${articlesSectionEs}
+    </main>
+  </div>
+  <footer>
+    <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes.</p>
+    <p><a href="/es/team" style="color:var(--primary-blue)">Volver a Equipo</a> | <a href="/" style="color:var(--primary-blue)">Volver al inicio</a></p>
+  </footer>
+</body>
+</html>`;
+    const enContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="${description.substring(0, 160)}...">
+  <meta name="keywords" content="${areasEn}, ${rolesEn}, The National Review of Sciences for Students">
+  <meta name="author" content="${nombre}">
+  <title>${nombre} - Team of The National Review of Sciences for Students</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-blue: #007398;
+      --text-dark: #333333;
+      --text-grey: #666666;
+      --border: #e4e4e4;
+    }
+    body { font-family: 'Noto Sans', sans-serif; line-height: 1.6; color: var(--text-dark); background-color: #f0f0f0; margin: 0; }
+    .top-bar { background: white; border-bottom: 1px solid var(--border); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
+    .journal-name { font-weight: bold; color: var(--primary-blue); text-decoration: none; font-size: 0.9rem; }
+    .main-wrapper { max-width: 1200px; margin: 20px auto; display: grid; grid-template-columns: 250px 1fr; gap: 30px; padding: 0 20px; }
+    aside { font-size: 0.9rem; }
+    .outline-box { position: sticky; top: 20px; }
+    .outline-title { font-weight: bold; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 15px; text-transform: uppercase; font-size: 0.8rem; }
+    .outline-list { list-style: none; padding: 0; }
+    .outline-list a { color: var(--primary-blue); text-decoration: none; }
+    .article-container { background: white; padding: 40px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    header { border-bottom: 1px solid var(--border); margin-bottom: 30px; padding-bottom: 20px; }
+    .profile-header { display: flex; align-items: center; gap: 20px; }
+    .profile-img { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border); }
+    .profile-img-fallback { width: 100px; height: 100px; border-radius: 50%; background: #f9f9f9; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: var(--text-grey); }
+    h1 { font-family: 'Noto Serif', serif; font-size: 2.2rem; margin: 0; color: #000; }
+    .role { font-size: 1.1rem; color: var(--primary-blue); margin: 5px 0; }
+    h2 { font-family: 'Noto Sans', sans-serif; font-size: 1.4rem; color: var(--text-dark); margin-top: 40px; border-bottom: 1px solid #eee; }
+    p { font-family: 'Noto Serif', serif; font-size: 1.05rem; text-align: justify; }
+    .keywords-box { background: #f9f9f9; padding: 15px; border-radius: 4px; margin: 20px 0; }
+    .keyword-tag { display: inline-block; margin-right: 15px; font-size: 0.9rem; color: var(--primary-blue); }
+    footer { text-align: center; padding: 40px; color: var(--text-grey); font-size: 0.8rem; }
+    .btn-outline { border: 1px solid var(--primary-blue); color: var(--primary-blue); padding: 12px 24px; border-radius: 2px; text-decoration: none; font-weight: bold; display: inline-flex; align-items: center; transition: 0.2s; }
+    .btn-outline:hover { background: #f0f7f9; }
+    @media (max-width: 900px) { .main-wrapper { grid-template-columns: 1fr; } aside { display: none; } .article-container { padding: 20px; } .profile-header { flex-direction: column; text-align: center; } }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <a href="/" class="journal-name">THE NATIONAL REVIEW OF SCIENCES FOR STUDENTS</a>
+  </div>
+  <div class="main-wrapper">
+    <aside>
+      <div class="outline-box">
+        <div class="outline-title">Outline</div>
+        <ul class="outline-list">
+          <li><a href="#description">Description</a></li>
+          <li><a href="#areas">Areas of Interest</a></li>
+          ${isAuthor ? '<li><a href="#articles">Published Articles</a></li>' : ''}
+        </ul>
+        <div class="outline-title" style="margin-top:30px">Actions</div>
+        <a href="/en/team" class="btn-outline" style="width:100%; box-sizing:border-box; justify-content:center;">Back to Team</a>
+      </div>
+    </aside>
+    <main class="article-container">
+      <header>
+        <div class="profile-header">
+          <div>
+            ${imagen ? `<img src="${imagen}" alt="Photo of ${nombre}" class="profile-img">` : `<div class="profile-img-fallback">No Image</div>`}
+          </div>
+          <div>
+            <h1>${nombre}</h1>
+            <div class="role">${rolesEn}</div>
+            ${institutionHtmlEn}
+          </div>
+        </div>
+      </header>
+      <section id="description">
+        <h2>Description</h2>
+        <p>${description}</p>
+      </section>
+      <section id="areas" class="keywords-box">
+        <h2>Areas of Interest</h2>
+        ${areasTagsHtmlEn}
+      </section>
+      ${articlesSectionEn}
+    </main>
+  </div>
+  <footer>
+    <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students.</p>
+    <p><a href="/en/team" style="color:var(--primary-blue)">Back to Team</a> | <a href="/" style="color:var(--primary-blue)">Back to home</a></p>
+  </footer>
+</body>
+</html>`;
+    const esPath = path.join(teamOutputHtmlDir, `${slug}.html`);
+    fs.writeFileSync(esPath, esContent, 'utf8');
+    console.log(`Generado HTML de miembro (ES): ${esPath}`);
+    const enPath = path.join(teamOutputHtmlDir, `${slug}.EN.html`);
+    fs.writeFileSync(enPath, enContent, 'utf8');
+    console.log(`Generado HTML de miembro (EN): ${enPath}`);
+  }
 }
 async function generateSitemapAndRobots(articles, volumes, newsItems, allMembers) {
   // Generar sitemap

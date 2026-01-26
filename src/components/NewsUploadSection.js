@@ -294,7 +294,7 @@ const token = await user.getIdToken();
     const data = {
       title: sanitizeInput(title.trim()),
       body: encodedBody,
-      photo: photo ? photo.split(',')[1] : '',
+      photo: sanitizeInput(photo.trim()), // Ahora es URL como string
     };
     let attempt = 0;
     const maxRetries = 3;
@@ -373,16 +373,6 @@ const token = await user.getIdToken();
     const { name, value } = e.target;
     setImageData((prev) => ({ ...prev, [name]: value }));
   };
-  const handlePhotoChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setPhoto(event.target.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
   return (
     <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 transition-all">
       {/* Header */}
@@ -408,17 +398,21 @@ const token = await user.getIdToken();
             disabled={isLoading}
           />
         </div>
-        {/* Foto de portada */}
+        {/* Foto de portada (modificado a URL) */}
         <div className="space-y-1">
-          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Foto de portada (miniatura)</label>
+          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">URL de la foto de portada (miniatura)</label>
           <input
-            type="file"
-            accept="image/*"
-            onChange={handlePhotoChange}
+            type="text"
+            value={photo}
+            onChange={(e) => setPhoto(e.target.value)}
             className="w-full px-5 py-3 border-2 border-gray-100 rounded-xl focus:border-[#5a3e36] focus:ring-0 transition-all outline-none"
+            placeholder="Pega el link de la imagen (ej: https://i.postimg.cc/xxx.jpg)"
             disabled={isLoading}
           />
-          {photo && <p className="text-sm text-gray-500 mt-1">Imagen seleccionada: {photo.substring(0, 50)}...</p>}
+          <p className="text-sm text-gray-500 mt-1">
+            Sube la imagen a <a href="https://postimages.org/es/" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">PostImages.org</a> y pega el link directo aquí.
+          </p>
+          {photo && <p className="text-sm text-gray-500 mt-1">URL ingresada: {photo.substring(0, 50)}...</p>}
         </div>
         {/* Editor Quill */}
         <div className="space-y-1">
