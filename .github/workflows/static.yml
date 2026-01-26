@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [ main ]
   repository_dispatch:
-    types: [ rebuild ]
+    types: [ rebuild, rebuild-articles, rebuild-volumes, rebuild-news, rebuild-team ]  # ← AÑADIDO tipos parciales
 
 permissions:
   contents: write
@@ -76,6 +76,14 @@ jobs:
           REBUILD_TOKEN: ${{ secrets.REBUILD_TOKEN }}
           API_GEMINI: ${{ secrets.API_GEMINI }}
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+
+      - name: Set REBUILD_TYPE based on event_type
+        run: |
+          EVENT_TYPE="${{ github.event.client_payload.event_type || 'rebuild' }}"
+          REBUILD_TYPE="${EVENT_TYPE#rebuild-}"  # Remueve 'rebuild-' prefix, si es 'rebuild' queda vacío -> all
+          if [ -z "$REBUILD_TYPE" ]; then REBUILD_TYPE="all"; fi
+          echo "REBUILD_TYPE=$REBUILD_TYPE" >> $GITHUB_ENV
+          echo "🔍 REBUILD_TYPE set to: $REBUILD_TYPE"
 
       - name: Build project
         run: |

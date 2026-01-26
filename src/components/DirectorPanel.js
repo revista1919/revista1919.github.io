@@ -22,7 +22,7 @@ const toBase64 = (file) =>
     reader.onload = () => resolve(reader.result.split(',')[1]);
     reader.onerror = (error) => reject(error);
   });
-const triggerRebuild = async () => {
+const triggerRebuild = async (type = 'all') => {
   const token = await auth.currentUser.getIdToken();
   const url = REBUILD_URL;
   const response = await fetch(url, {
@@ -32,7 +32,7 @@ const triggerRebuild = async () => {
       Accept: 'application/vnd.github.v3+json',
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ event_type: 'rebuild' }),
+    body: JSON.stringify({ event_type: `rebuild-${type}` }),  // ← MODIFICADO para partial
   });
   if (!response.ok) {
     const errorText = await response.text();
@@ -87,6 +87,8 @@ export default function DirectorPanel({ user }) {
   const [uploading, setUploading] = useState(false);
   const [volumeUploading, setVolumeUploading] = useState(false);
   const [hasAccess, setHasAccess] = useState(false);
+  const [rebuildStatus, setRebuildStatus] = useState('');  // ← AÑADIDO para rebuilds
+
   useEffect(() => {
     if (user && user.role && user.role.includes('Director General')) {
       setHasAccess(true);
@@ -219,7 +221,7 @@ export default function DirectorPanel({ user }) {
         throw new Error(errText);
       }
       closeFunc();
-      await triggerRebuild();
+      await triggerRebuild(isVolume ? 'volumes' : 'articles');  // ← MODIFICADO: rebuild partial después de edit/add/delete
       setS('✅ Operación completada');
     } catch (err) {
       setS(`❌ Error: ${err.message}`);
@@ -247,7 +249,7 @@ export default function DirectorPanel({ user }) {
         const errText = await response.text();
         throw new Error(errText);
       }
-      await triggerRebuild();
+      await triggerRebuild(isVolume ? 'volumes' : 'articles');  // ← MODIFICADO: partial rebuild
       setS('✅ Eliminado');
     } catch (err) {
       setS(`❌ Error: ${err.message}`);
@@ -295,13 +297,13 @@ export default function DirectorPanel({ user }) {
     setEditingVolume(null);
     resetVolumeForm();
   };
-  const handleRebuild = async () => {
+  const handleRebuild = async (type) => {
     try {
-      setStatus('Iniciando rebuild...');
-      await triggerRebuild();
-      setStatus('✅ Rebuild iniciado');
+      setRebuildStatus(`Iniciando rebuild ${type}...`);
+      await triggerRebuild(type);
+      setRebuildStatus(`✅ Rebuild ${type} iniciado`);
     } catch (err) {
-      setStatus(`❌ Error: ${err.message}`);
+      setRebuildStatus(`❌ Error: ${err.message}`);
     }
   };
   return (
@@ -309,7 +311,14 @@ export default function DirectorPanel({ user }) {
       <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Panel del Director</h1>
-          <button onClick={handleRebuild} className="mt-4 bg-green-600 text-white px-4 py-2 rounded">Rebuild Site</button>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button onClick={() => handleRebuild('all')} className="bg-green-600 text-white px-4 py-2 rounded">Full Rebuild</button>
+            <button onClick={() => handleRebuild('articles')} className="bg-blue-600 text-white px-4 py-2 rounded">Rebuild Articles</button>
+            <button onClick={() => handleRebuild('volumes')} className="bg-blue-600 text-white px-4 py-2 rounded">Rebuild Volumes</button>
+            <button onClick={() => handleRebuild('news')} className="bg-blue-600 text-white px-4 py-2 rounded">Rebuild News</button>
+            <button onClick={() => handleRebuild('team')} className="bg-blue-600 text-white px-4 py-2 rounded">Rebuild Team</button>
+          </div>
+          {rebuildStatus && <div className="mt-2 p-2 bg-blue-100 text-blue-800 rounded">{rebuildStatus}</div>}
         </div>
         {status && <div className="mb-4 p-2 bg-blue-100 text-blue-800 rounded">{status}</div>}
         {volumeStatus && <div className="mb-4 p-2 bg-blue-100 text-blue-800 rounded">{volumeStatus}</div>}
@@ -317,7 +326,7 @@ export default function DirectorPanel({ user }) {
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="px-6 py-5 border-b border-gray-200">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-2 sm:space-y-0">
-              <h2 className="text-lg font-medium text-gray-900">Artículos ({articles.length})</h2>
+              <h2 className="text-lg font-medium text-gray-900">Artículos (${articles.length})</h2>
               <button
                 onClick={() => setShowAddModal(true)}
                 className="px-4 py-2 rounded-md font-medium flex items-center space-x-2 transition-colors bg-blue-600 text-white hover:bg-blue-700 shadow-sm"
@@ -374,7 +383,7 @@ export default function DirectorPanel({ user }) {
                         </div>
                         <div className="ml-4 flex-shrink-0 flex items-center space-x-2">
                           <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                            #{numeroArticulo}
+                            #${numeroArticulo}
                           </span>
                           <svg
                             className={`w-4 h-4 text-gray-400 transition-transform ${
@@ -873,7 +882,7 @@ export default function DirectorPanel({ user }) {
         <div className="bg-white rounded-lg shadow-sm overflow-hidden mt-8">
           <div className="px-6 py-5 border-b border-gray-200">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-2 sm:space-y-0">
-              <h2 className="text-lg font-medium text-gray-900">Volúmenes ({volumes.length})</h2>
+              <h2 className="text-lg font-medium text-gray-900">Volúmenes (${volumes.length})</h2>
               <button
                 onClick={() => setShowAddVolumeModal(true)}
                 className="px-4 py-2 rounded-md font-medium flex items-center space-x-2 transition-colors bg-blue-600 text-white hover:bg-blue-700 shadow-sm"
@@ -923,12 +932,12 @@ export default function DirectorPanel({ user }) {
                           {volume.titulo}
                         </h3>
                         <p className="mt-1 text-sm text-gray-500 truncate" title={volume.volumen}>
-                          Volumen {volume.volumen}, Número {volume.numero}
+                          Volumen ${volume.volumen}, Número ${volume.numero}
                         </p>
                       </div>
                       <div className="ml-4 flex-shrink-0 flex items-center space-x-2">
                         <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                          #{volume.numero}
+                          #${volume.numero}
                         </span>
                         <svg
                           className={`w-4 h-4 text-gray-400 transition-transform ${
