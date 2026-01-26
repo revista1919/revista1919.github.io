@@ -284,6 +284,15 @@ async function translateHtmlFragmentWithSplit(html, source, target, apiKey) {
 exports.uploadNews = onRequest(
   { secrets: [GEMINI_API_KEY] },
   async (req, res) => {
+    // ===================== CORS =====================
+res.set("Access-Control-Allow-Origin", "*");
+res.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+if (req.method === "OPTIONS") {
+  return res.status(204).send("");
+}
+
     if (req.method !== "POST")
       return res.status(405).json({ error: "Method not allowed" });
 
@@ -336,6 +345,15 @@ exports.uploadNews = onRequest(
 /* ===================== MANAGE ARTICLES ===================== */
 
 exports.manageArticles = onRequest(async (req, res) => {
+  // ===================== CORS =====================
+res.set("Access-Control-Allow-Origin", "*");
+res.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+if (req.method === "OPTIONS") {
+  return res.status(204).send("");
+}
+
   if (req.method !== "POST")
     return res.status(405).json({ error: "Method not allowed" });
 
@@ -446,6 +464,15 @@ exports.manageArticles = onRequest(async (req, res) => {
 /* ===================== MANAGE VOLUMES ===================== */
 
 exports.manageVolumes = onRequest(async (req, res) => {
+  // ===================== CORS =====================
+res.set("Access-Control-Allow-Origin", "*");
+res.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+if (req.method === "OPTIONS") {
+  return res.status(204).send("");
+}
+
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
