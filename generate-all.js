@@ -1601,6 +1601,27 @@ async function generateNews() {
     const cuerpoDecoded = base64DecodeUnicode(newsItem.cuerpo);
     const contentDecoded = base64DecodeUnicode(newsItem.content);
     // No procesar imágenes: usar directamente (asumiendo URLs externas)
+    const headerImageHtml = newsItem.photo
+      ? `<div class="hero-header" style="background-image: url('${newsItem.photo}')">
+            <div class="hero-overlay">
+              <div class="hero-content">
+                <span class="kicker">Noticias Académicas</span>
+                <h1>${newsItem.titulo}</h1>
+                <div class="hero-meta">
+                  <span class="author">Redacción Editorial</span> •
+                  <span class="date">${newsItem.fecha}</span>
+                </div>
+              </div>
+            </div>
+         </div>`
+      : `<div class="standard-header">
+            <span class="kicker">Noticias Académicas</span>
+            <h1>${newsItem.titulo}</h1>
+            <div class="hero-meta" style="color: #666">
+              <span class="author">Redacción Editorial</span> •
+              <span class="date">${newsItem.fecha}</span>
+            </div>
+         </div>`;
     const esContent = `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1609,140 +1630,166 @@ async function generateNews() {
   <meta name="description" content="${newsItem.titulo.substring(0, 160)}...">
   <meta name="keywords" content="noticias, revista ciencias estudiantes, ${newsItem.titulo.replace(/[^a-zA-Z0-9]/g, ' ').substring(0, 100)}">
   <title>${newsItem.titulo} - Noticias - Revista Nacional de las Ciencias para Estudiantes</title>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Lora:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --primary-blue: #007398;
-      --text-dark: #333333;
-      --text-grey: #666666;
-      --border: #e4e4e4;
+      --primary: #007398;
+      --nyt-black: #121212;
+      --nyt-grey: #666666;
+      --bg: #ffffff;
     }
     body {
-      font-family: 'Noto Sans', sans-serif;
-      line-height: 1.6;
-      color: var(--text-dark);
-      background-color: #f0f0f0;
       margin: 0;
       padding: 0;
+      font-family: 'Lora', serif;
+      color: var(--nyt-black);
+      background-color: var(--bg);
+      line-height: 1.8;
+      -webkit-font-smoothing: antialiased;
     }
-    .top-bar {
+    /* --- TOP BAR --- */
+    .nav-minimal {
+      border-bottom: 1px solid #eee;
+      padding: 15px 20px;
+      text-align: center;
       background: white;
-      border-bottom: 1px solid var(--border);
-      padding: 10px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .journal-name {
-      font-weight: bold;
-      color: var(--primary-blue);
-      text-decoration: none;
-      font-size: 0.9rem;
-    }
-    .main-wrapper {
-      max-width: 1200px;
-      margin: 20px auto;
-      display: grid;
-      grid-template-columns: 250px 1fr;
-      gap: 30px;
-      padding: 0 20px;
-    }
-    aside {
-      font-size: 0.9rem;
-    }
-    .outline-box {
       position: sticky;
-      top: 20px;
+      top: 0;
+      z-index: 100;
     }
-    .outline-title {
-      font-weight: bold;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 10px;
-      margin-bottom: 15px;
-      text-transform: uppercase;
-      font-size: 0.8rem;
-      letter-spacing: 1px;
-    }
-    .outline-list {
-      list-style: none;
-      padding: 0;
-    }
-    .outline-list li {
-      margin-bottom: 10px;
-    }
-    .outline-list a {
-      color: var(--primary-blue);
+    .nav-minimal a {
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      letter-spacing: 2px;
+      font-size: 11px;
       text-decoration: none;
+      color: var(--nyt-black);
+      text-transform: uppercase;
     }
-    .article-container {
-      background: white;
-      padding: 40px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-      border-radius: 2px;
+    /* --- HERO HEADER (NYT STYLE) --- */
+    .hero-header {
+      height: 70vh;
+      min-height: 400px;
+      background-size: cover;
+      background-position: center;
+      background-attachment: scroll;
+      position: relative;
+      display: flex;
+      align-items: flex-end;
+      color: white;
     }
-    header {
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 30px;
-      padding-bottom: 20px;
+    .hero-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.8) 100%);
+      display: flex;
+      align-items: flex-end;
+      padding: 60px 20px;
+    }
+    .hero-content, .standard-header {
+      max-width: 800px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    .standard-header {
+      padding: 80px 20px 40px;
+      text-align: center;
+    }
+    .kicker {
+      display: block;
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 12px;
+      letter-spacing: 3px;
+      color: var(--primary);
+      margin-bottom: 15px;
     }
     h1 {
-      font-family: 'Noto Serif', serif;
-      font-size: 2.2rem;
-      margin: 10px 0;
-      line-height: 1.2;
-      color: #000;
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2.5rem, 5vw, 4rem);
+      line-height: 1.1;
+      margin: 0 0 20px 0;
+      font-weight: 900;
     }
-    .date {
-      font-size: 0.85rem;
-      color: var(--text-grey);
-      margin: 10px 0;
+    .hero-meta {
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      opacity: 0.9;
     }
-    .content {
-      font-family: 'Noto Serif', serif;
-      font-size: 1.05rem;
-      text-align: justify;
+    /* --- CONTENT AREA --- */
+    .article-body {
+      max-width: 700px; /* Ancho de lectura perfecto */
+      margin: 60px auto;
+      padding: 0 20px;
+      font-size: 1.2rem;
     }
-    .content p {
-      margin-bottom: 1.5rem;
+    .article-body p {
+      margin-bottom: 2rem;
     }
-    .content h2, .content h3 {
-      font-family: 'Noto Sans', sans-serif;
-      color: var(--text-dark);
-      margin-top: 40px;
-      border-bottom: 1px solid #eee;
-      padding-bottom: 5px;
+    /* Capitular (Drop Cap) - Muy New York Times */
+    .article-body > p:first-of-type::first-letter {
+      float: left;
+      font-size: 5rem;
+      line-height: 4rem;
+      padding-top: 4px;
+      padding-right: 8px;
+      padding-left: 3px;
+      font-family: 'Playfair Display', serif;
+      font-weight: 700;
     }
-    .content strong {
-      color: var(--primary-blue);
+    .article-body h2, .article-body h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem;
+      margin-top: 50px;
+      border-top: 1px solid #eee;
+      padding-top: 20px;
     }
-    .content a {
-      color: var(--primary-blue);
+    .article-body strong {
+      color: var(--primary);
+    }
+    .article-body a {
+      color: var(--primary);
       text-decoration: none;
     }
-    .content a:hover {
+    .article-body a:hover {
       text-decoration: underline;
     }
-    .content img {
+    .article-body img {
       max-width: 100%;
       height: auto;
       border-radius: 4px;
       margin: 1rem 0;
       box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
-    footer {
-      text-align: center;
-      padding: 40px;
-      color: var(--text-grey);
-      font-size: 0.8rem;
+    /* --- ASIDE / ACTIONS --- */
+    .back-nav {
+      max-width: 700px;
+      margin: 40px auto;
+      border-top: 1px solid var(--nyt-black);
+      padding-top: 20px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .back-nav a {
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: var(--nyt-black);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .back-nav a:hover { color: var(--primary); }
+    /* --- RESPONSIVE --- */
+    @media (max-width: 768px) {
+      .hero-header { height: 60vh; }
+      h1 { font-size: 2.2rem; }
+      .article-body { font-size: 1.1rem; }
+      .article-body > p:first-of-type::first-letter { font-size: 4rem; line-height: 3.2rem; }
     }
     @media (max-width: 900px) {
-      .main-wrapper { grid-template-columns: 1fr; }
-      aside { display: none; }
-      .article-container { padding: 20px; }
-      .content, .content p, .date { text-align: justify; }
-      h1, .content h2, .content h3 { text-align: left; }
-      header { text-align: left; }
-      h1, h2, p, .content {
+      h1, h2, p, .article-body {
         word-break: break-word;
         overflow-wrap: break-word;
         hyphens: auto;
@@ -1751,32 +1798,48 @@ async function generateNews() {
   </style>
 </head>
 <body>
-  <div class="top-bar">
-    <a href="/" class="journal-name">REVISTA NACIONAL DE LAS CIENCIAS PARA ESTUDIANTES</a>
-  </div>
-  <div class="main-wrapper">
-    <aside>
-      <div class="outline-box">
-        <div class="outline-title">Acciones</div>
-        <a href="/es/new" class="btn btn-outline" style="width:100%; box-sizing:border-box; justify-content:center;">Volver a Noticias</a>
-      </div>
-    </aside>
-    <main class="article-container">
-      <header>
-        <h1>${newsItem.titulo}</h1>
-        <p class="date">Publicado el ${newsItem.fecha}</p>
-      </header>
-      <div class="content ql-editor">
-        ${cuerpoDecoded}
-      </div>
-    </main>
-  </div>
-  <footer>
-    <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes.</p>
-    <p><a href="/es/new" style="color:var(--primary-blue)">Volver a Noticias</a> | <a href="/" style="color:var(--primary-blue)">Volver al inicio</a></p>
+  <nav class="nav-minimal">
+    <a href="/">Revista Nacional de las Ciencias para Estudiantes</a>
+  </nav>
+  <header>
+    ${headerImageHtml}
+  </header>
+  <main class="article-body">
+    <article class="ql-editor">
+      ${cuerpoDecoded}
+    </article>
+    <div class="back-nav">
+      <a href="/es/new">← Volver a Noticias</a>
+      <a href="/">Ir al inicio</a>
+    </div>
+  </main>
+  <footer style="padding: 60px 20px; border-top: 1px solid #eee; text-align: center; color: #999; font-size: 12px; font-family: 'Inter', sans-serif;">
+    &copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes.
+    <br>Excelencia en Divulgación Científica Estudiantil.
   </footer>
 </body>
 </html>`;
+    const headerImageHtmlEn = newsItem.photo
+      ? `<div class="hero-header" style="background-image: url('${newsItem.photo}')">
+            <div class="hero-overlay">
+              <div class="hero-content">
+                <span class="kicker">Academic News</span>
+                <h1>${newsItem.title}</h1>
+                <div class="hero-meta">
+                  <span class="author">Editorial Staff</span> •
+                  <span class="date">${newsItem.fecha}</span>
+                </div>
+              </div>
+            </div>
+         </div>`
+      : `<div class="standard-header">
+            <span class="kicker">Academic News</span>
+            <h1>${newsItem.title}</h1>
+            <div class="hero-meta" style="color: #666">
+              <span class="author">Editorial Staff</span> •
+              <span class="date">${newsItem.fecha}</span>
+            </div>
+         </div>`;
     const enContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1785,42 +1848,166 @@ async function generateNews() {
   <meta name="description" content="${newsItem.title.substring(0, 160)}...">
   <meta name="keywords" content="news, student science journal, ${newsItem.title.replace(/[^a-zA-Z0-9]/g, ' ').substring(0, 100)}">
   <title>${newsItem.title} - News - The National Review of Sciences for Students</title>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Lora:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --primary-blue: #007398;
-      --text-dark: #333333;
-      --text-grey: #666666;
-      --border: #e4e4e4;
+      --primary: #007398;
+      --nyt-black: #121212;
+      --nyt-grey: #666666;
+      --bg: #ffffff;
     }
-    body { font-family: 'Noto Sans', sans-serif; line-height: 1.6; color: var(--text-dark); background-color: #f0f0f0; margin: 0; padding: 0; }
-    .top-bar { background: white; border-bottom: 1px solid var(--border); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
-    .journal-name { font-weight: bold; color: var(--primary-blue); text-decoration: none; font-size: 0.9rem; }
-    .main-wrapper { max-width: 1200px; margin: 20px auto; display: grid; grid-template-columns: 250px 1fr; gap: 30px; padding: 0 20px; }
-    aside { font-size: 0.9rem; }
-    .outline-box { position: sticky; top: 20px; }
-    .outline-title { font-weight: bold; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 15px; text-transform: uppercase; font-size: 0.8rem; }
-    .outline-list { list-style: none; padding: 0; }
-    .outline-list a { color: var(--primary-blue); text-decoration: none; }
-    .article-container { background: white; padding: 40px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    header { border-bottom: 1px solid var(--border); margin-bottom: 30px; padding-bottom: 20px; }
-    h1 { font-family: 'Noto Serif', serif; font-size: 2.2rem; margin: 10px 0; color: #000; }
-    .date { font-size: 0.85rem; color: var(--text-grey); margin: 10px 0; }
-    .content { font-family: 'Noto Serif', serif; font-size: 1.05rem; text-align: justify; }
-    .content p { margin-bottom: 1.5rem; }
-    .content h2, .content h3 { font-family: 'Noto Sans', sans-serif; color: var(--text-dark); margin-top: 40px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-    .content strong { color: var(--primary-blue); }
-    .content a { color: var(--primary-blue); text-decoration: none; }
-    .content a:hover { text-decoration: underline; }
-    .content img { max-width: 100%; height: auto; border-radius: 4px; margin: 1rem 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    footer { text-align: center; padding: 40px; color: var(--text-grey); font-size: 0.8rem; }
-    .btn-outline { border: 1px solid var(--primary-blue); color: var(--primary-blue); padding: 12px 24px; border-radius: 2px; text-decoration: none; font-weight: bold; display: inline-flex; align-items: center; transition: 0.2s; }
-    .btn-outline:hover { background: #f0f7f9; }
-    @media (max-width: 900px) { .main-wrapper { grid-template-columns: 1fr; } aside { display: none; } .article-container { padding: 20px; }
-      .content, .content p, .date { text-align: justify; }
-      h1, .content h2, .content h3 { text-align: left; }
-      header { text-align: left; }
-      h1, h2, p, .content {
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Lora', serif;
+      color: var(--nyt-black);
+      background-color: var(--bg);
+      line-height: 1.8;
+      -webkit-font-smoothing: antialiased;
+    }
+    /* --- TOP BAR --- */
+    .nav-minimal {
+      border-bottom: 1px solid #eee;
+      padding: 15px 20px;
+      text-align: center;
+      background: white;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .nav-minimal a {
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      letter-spacing: 2px;
+      font-size: 11px;
+      text-decoration: none;
+      color: var(--nyt-black);
+      text-transform: uppercase;
+    }
+    /* --- HERO HEADER (NYT STYLE) --- */
+    .hero-header {
+      height: 70vh;
+      min-height: 400px;
+      background-size: cover;
+      background-position: center;
+      background-attachment: scroll;
+      position: relative;
+      display: flex;
+      align-items: flex-end;
+      color: white;
+    }
+    .hero-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.8) 100%);
+      display: flex;
+      align-items: flex-end;
+      padding: 60px 20px;
+    }
+    .hero-content, .standard-header {
+      max-width: 800px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    .standard-header {
+      padding: 80px 20px 40px;
+      text-align: center;
+    }
+    .kicker {
+      display: block;
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 12px;
+      letter-spacing: 3px;
+      color: var(--primary);
+      margin-bottom: 15px;
+    }
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2.5rem, 5vw, 4rem);
+      line-height: 1.1;
+      margin: 0 0 20px 0;
+      font-weight: 900;
+    }
+    .hero-meta {
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      opacity: 0.9;
+    }
+    /* --- CONTENT AREA --- */
+    .article-body {
+      max-width: 700px; /* Ancho de lectura perfecto */
+      margin: 60px auto;
+      padding: 0 20px;
+      font-size: 1.2rem;
+    }
+    .article-body p {
+      margin-bottom: 2rem;
+    }
+    /* Capitular (Drop Cap) - Muy New York Times */
+    .article-body > p:first-of-type::first-letter {
+      float: left;
+      font-size: 5rem;
+      line-height: 4rem;
+      padding-top: 4px;
+      padding-right: 8px;
+      padding-left: 3px;
+      font-family: 'Playfair Display', serif;
+      font-weight: 700;
+    }
+    .article-body h2, .article-body h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem;
+      margin-top: 50px;
+      border-top: 1px solid #eee;
+      padding-top: 20px;
+    }
+    .article-body strong {
+      color: var(--primary);
+    }
+    .article-body a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+    .article-body a:hover {
+      text-decoration: underline;
+    }
+    .article-body img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+      margin: 1rem 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    /* --- ASIDE / ACTIONS --- */
+    .back-nav {
+      max-width: 700px;
+      margin: 40px auto;
+      border-top: 1px solid var(--nyt-black);
+      padding-top: 20px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .back-nav a {
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: var(--nyt-black);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .back-nav a:hover { color: var(--primary); }
+    /* --- RESPONSIVE --- */
+    @media (max-width: 768px) {
+      .hero-header { height: 60vh; }
+      h1 { font-size: 2.2rem; }
+      .article-body { font-size: 1.1rem; }
+      .article-body > p:first-of-type::first-letter { font-size: 4rem; line-height: 3.2rem; }
+    }
+    @media (max-width: 900px) {
+      h1, h2, p, .article-body {
         word-break: break-word;
         overflow-wrap: break-word;
         hyphens: auto;
@@ -1829,29 +2016,24 @@ async function generateNews() {
   </style>
 </head>
 <body>
-  <div class="top-bar">
-    <a href="/" class="journal-name">THE NATIONAL REVIEW OF SCIENCES FOR STUDENTS</a>
-  </div>
-  <div class="main-wrapper">
-    <aside>
-      <div class="outline-box">
-        <div class="outline-title">Actions</div>
-        <a href="/en/new" class="btn-outline" style="width:100%; box-sizing:border-box; justify-content:center;">Back to News</a>
-      </div>
-    </aside>
-    <main class="article-container">
-      <header>
-        <h1>${newsItem.title}</h1>
-        <p class="date">Published on ${newsItem.fecha}</p>
-      </header>
-      <div class="content ql-editor">
-        ${contentDecoded}
-      </div>
-    </main>
-  </div>
-  <footer>
-    <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students.</p>
-    <p><a href="/en/new" style="color:var(--primary-blue)">Back to News</a> | <a href="/" style="color:var(--primary-blue)">Back to home</a></p>
+  <nav class="nav-minimal">
+    <a href="/">The National Review of Sciences for Students</a>
+  </nav>
+  <header>
+    ${headerImageHtmlEn}
+  </header>
+  <main class="article-body">
+    <article class="ql-editor">
+      ${contentDecoded}
+    </article>
+    <div class="back-nav">
+      <a href="/en/new">← Back to News</a>
+      <a href="/">Go to home</a>
+    </div>
+  </main>
+  <footer style="padding: 60px 20px; border-top: 1px solid #eee; text-align: center; color: #999; font-size: 12px; font-family: 'Inter', sans-serif;">
+    &copy; ${new Date().getFullYear()} The National Review of Sciences for Students.
+    <br>Excellence in Student Scientific Outreach.
   </footer>
 </body>
 </html>`;
@@ -1893,84 +2075,116 @@ async function generateNews() {
 <html lang="es">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Índice de Noticias - Revista Nacional de las Ciencias para Estudiantes</title>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Lora:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --primary-blue: #007398;
-      --text-dark: #333333;
-      --text-grey: #666666;
-      --border: #e4e4e4;
-      --bg-light: #fdfdfd;
+      --primary: #007398;
+      --nyt-black: #121212;
+      --nyt-grey: #666666;
+      --bg: #ffffff;
     }
     body {
-      font-family: 'Noto Sans', sans-serif;
-      line-height: 1.6;
-      color: var(--text-dark);
-      background-color: #f0f0f0;
       margin: 0;
       padding: 0;
+      font-family: 'Lora', serif;
+      color: var(--nyt-black);
+      background-color: var(--bg);
+      line-height: 1.8;
+      -webkit-font-smoothing: antialiased;
     }
-    .top-bar {
+    /* --- TOP BAR --- */
+    .nav-minimal {
+      border-bottom: 1px solid #eee;
+      padding: 15px 20px;
+      text-align: center;
       background: white;
-      border-bottom: 1px solid var(--border);
-      padding: 10px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
-    .journal-name {
-      font-weight: bold;
-      color: var(--primary-blue);
+    .nav-minimal a {
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      letter-spacing: 2px;
+      font-size: 11px;
       text-decoration: none;
-      font-size: 0.9rem;
+      color: var(--nyt-black);
+      text-transform: uppercase;
     }
-    .main-wrapper {
-      max-width: 1200px;
-      margin: 20px auto;
-      padding: 0 20px;
+    /* --- STANDARD HEADER --- */
+    .standard-header {
+      padding: 80px 20px 40px;
+      text-align: center;
+      max-width: 800px;
+      margin: 0 auto;
     }
-    .article-container {
-      background: white;
-      padding: 40px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-      border-radius: 2px;
+    .kicker {
+      display: block;
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 12px;
+      letter-spacing: 3px;
+      color: var(--primary);
+      margin-bottom: 15px;
     }
     h1 {
-      font-family: 'Noto Serif', serif;
-      font-size: 2.2rem;
-      margin: 10px 0;
-      line-height: 1.2;
-      color: #000;
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2.5rem, 5vw, 4rem);
+      line-height: 1.1;
+      margin: 0 0 20px 0;
+      font-weight: 900;
     }
-    h2 {
-      font-family: 'Noto Sans', sans-serif;
-      font-size: 1.4rem;
-      color: var(--text-dark);
-      margin-top: 40px;
-      border-bottom: 1px solid #eee;
-      padding-bottom: 5px;
+    /* --- CONTENT AREA --- */
+    .article-body {
+      max-width: 700px;
+      margin: 60px auto;
+      padding: 0 20px;
+      font-size: 1.2rem;
+    }
+    .article-body p {
+      margin-bottom: 2rem;
+    }
+    .article-body h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem;
+      margin-top: 50px;
+      border-top: 1px solid #eee;
+      padding-top: 20px;
     }
     ul {
       list-style: none;
       padding: 0;
     }
     li {
-      margin-bottom: 10px;
+      margin-bottom: 1.5rem;
+      font-size: 1.1rem;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 1rem;
     }
-    a {
-      color: var(--primary-blue);
+    li a {
+      color: var(--nyt-black);
       text-decoration: none;
+      font-weight: bold;
+      font-family: 'Inter', sans-serif;
     }
-    footer {
-      text-align: center;
-      padding: 40px;
-      color: var(--text-grey);
-      font-size: 0.8rem;
+    li a:hover {
+      color: var(--primary);
+    }
+    li span {
+      display: block;
+      font-size: 0.9rem;
+      color: var(--nyt-grey);
+    }
+    /* --- RESPONSIVE --- */
+    @media (max-width: 768px) {
+      h1 { font-size: 2.2rem; }
+      .article-body { font-size: 1.1rem; }
     }
     @media (max-width: 900px) {
-      .article-container { padding: 20px; }
-      h1, h2, p, .content {
+      h1, h2, p, .article-body {
         word-break: break-word;
         overflow-wrap: break-word;
         hyphens: auto;
@@ -1979,33 +2193,35 @@ async function generateNews() {
   </style>
 </head>
 <body>
-  <div class="top-bar">
-    <a href="/" class="journal-name">REVISTA NACIONAL DE LAS CIENCIAS PARA ESTUDIANTES</a>
-  </div>
-  <div class="main-wrapper">
-    <main class="article-container">
-      <h1>Índice de Noticias por Año</h1>
-      <p>Accede a las noticias por año de publicación.</p>
+  <nav class="nav-minimal">
+    <a href="/">Revista Nacional de las Ciencias para Estudiantes</a>
+  </nav>
+  <header class="standard-header">
+    <span class="kicker">Archivo</span>
+    <h1>Índice de Noticias por Año</h1>
+  </header>
+  <main class="article-body">
+    <p>Accede a las noticias por año de publicación.</p>
 ${Object.keys(newsByYear).sort().reverse().map(year => `
-      <section>
-        <h2>Año ${year}</h2>
-        <ul>
-          ${newsByYear[year].map(item => {
-            const slug = generateSlug(item.titulo + ' ' + item.fecha);
-            return `
-            <li>
-              <a href="/news/${slug}.html">${item.titulo}</a> (${item.fecha})
-            </li>
-          `;
-          }).join('')}
-        </ul>
-      </section>
+    <section>
+      <h2>Año ${year}</h2>
+      <ul>
+        ${newsByYear[year].map(item => {
+          const slug = generateSlug(item.titulo + ' ' + item.fecha);
+          return `
+          <li>
+            <a href="/news/${slug}.html">${item.titulo}</a>
+            <span>${item.fecha}</span>
+          </li>
+        `;
+        }).join('')}
+      </ul>
+    </section>
 `).join('')}
-    </main>
-  </div>
-  <footer>
-    <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes.</p>
-    <p><a href="/" style="color:var(--primary-blue)">Volver al inicio</a></p>
+  </main>
+  <footer style="padding: 60px 20px; border-top: 1px solid #eee; text-align: center; color: #999; font-size: 12px; font-family: 'Inter', sans-serif;">
+    &copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes.
+    <br>Excelencia en Divulgación Científica Estudiantil.
   </footer>
 </body>
 </html>
@@ -2018,27 +2234,116 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>News Index - The National Review of Sciences for Students</title>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Lora:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --primary-blue: #007398;
-      --text-dark: #333333;
-      --text-grey: #666666;
-      --border: #e4e4e4;
+      --primary: #007398;
+      --nyt-black: #121212;
+      --nyt-grey: #666666;
+      --bg: #ffffff;
     }
-    body { font-family: 'Noto Sans', sans-serif; line-height: 1.6; color: var(--text-dark); background-color: #f0f0f0; margin: 0; padding: 0; }
-    .top-bar { background: white; border-bottom: 1px solid var(--border); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
-    .journal-name { font-weight: bold; color: var(--primary-blue); text-decoration: none; font-size: 0.9rem; }
-    .main-wrapper { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
-    .article-container { background: white; padding: 40px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    h1 { font-family: 'Noto Serif', serif; font-size: 2.2rem; margin: 10px 0; color: #000; }
-    h2 { font-family: 'Noto Sans', sans-serif; font-size: 1.4rem; color: var(--text-dark); margin-top: 40px; border-bottom: 1px solid #eee; }
-    ul { list-style: none; padding: 0; }
-    a { color: var(--primary-blue); text-decoration: none; }
-    footer { text-align: center; padding: 40px; color: var(--text-grey); font-size: 0.8rem; }
-    @media (max-width: 900px) { .article-container { padding: 20px; }
-      h1, h2, p, .content {
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Lora', serif;
+      color: var(--nyt-black);
+      background-color: var(--bg);
+      line-height: 1.8;
+      -webkit-font-smoothing: antialiased;
+    }
+    /* --- TOP BAR --- */
+    .nav-minimal {
+      border-bottom: 1px solid #eee;
+      padding: 15px 20px;
+      text-align: center;
+      background: white;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .nav-minimal a {
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      letter-spacing: 2px;
+      font-size: 11px;
+      text-decoration: none;
+      color: var(--nyt-black);
+      text-transform: uppercase;
+    }
+    /* --- STANDARD HEADER --- */
+    .standard-header {
+      padding: 80px 20px 40px;
+      text-align: center;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .kicker {
+      display: block;
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 12px;
+      letter-spacing: 3px;
+      color: var(--primary);
+      margin-bottom: 15px;
+    }
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2.5rem, 5vw, 4rem);
+      line-height: 1.1;
+      margin: 0 0 20px 0;
+      font-weight: 900;
+    }
+    /* --- CONTENT AREA --- */
+    .article-body {
+      max-width: 700px;
+      margin: 60px auto;
+      padding: 0 20px;
+      font-size: 1.2rem;
+    }
+    .article-body p {
+      margin-bottom: 2rem;
+    }
+    .article-body h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem;
+      margin-top: 50px;
+      border-top: 1px solid #eee;
+      padding-top: 20px;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      margin-bottom: 1.5rem;
+      font-size: 1.1rem;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 1rem;
+    }
+    li a {
+      color: var(--nyt-black);
+      text-decoration: none;
+      font-weight: bold;
+      font-family: 'Inter', sans-serif;
+    }
+    li a:hover {
+      color: var(--primary);
+    }
+    li span {
+      display: block;
+      font-size: 0.9rem;
+      color: var(--nyt-grey);
+    }
+    /* --- RESPONSIVE --- */
+    @media (max-width: 768px) {
+      h1 { font-size: 2.2rem; }
+      .article-body { font-size: 1.1rem; }
+    }
+    @media (max-width: 900px) {
+      h1, h2, p, .article-body {
         word-break: break-word;
         overflow-wrap: break-word;
         hyphens: auto;
@@ -2047,33 +2352,35 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
   </style>
 </head>
 <body>
-  <div class="top-bar">
-    <a href="/" class="journal-name">THE NATIONAL REVIEW OF SCIENCES FOR STUDENTS</a>
-  </div>
-  <div class="main-wrapper">
-    <main class="article-container">
-      <h1>News Index by Year</h1>
-      <p>Access news by year of publication.</p>
+  <nav class="nav-minimal">
+    <a href="/">The National Review of Sciences for Students</a>
+  </nav>
+  <header class="standard-header">
+    <span class="kicker">Archive</span>
+    <h1>News Index by Year</h1>
+  </header>
+  <main class="article-body">
+    <p>Access news by year of publication.</p>
 ${Object.keys(newsByYear).sort().reverse().map(year => `
-      <section>
-        <h2>Year ${year}</h2>
-        <ul>
-          ${newsByYear[year].map(item => {
-            const slug = generateSlug(item.titulo + ' ' + item.fecha);
-            return `
-            <li>
-              <a href="/news/${slug}.EN.html">${item.title}</a> (${item.fecha})
-            </li>
-          `;
-          }).join('')}
-        </ul>
-      </section>
+    <section>
+      <h2>Year ${year}</h2>
+      <ul>
+        ${newsByYear[year].map(item => {
+          const slug = generateSlug(item.titulo + ' ' + item.fecha);
+          return `
+          <li>
+            <a href="/news/${slug}.EN.html">${item.title}</a>
+            <span>${item.fecha}</span>
+          </li>
+        `;
+        }).join('')}
+      </ul>
+    </section>
 `).join('')}
-    </main>
-  </div>
-  <footer>
-    <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students.</p>
-    <p><a href="/" style="color:var(--primary-blue)">Back to home</a></p>
+  </main>
+  <footer style="padding: 60px 20px; border-top: 1px solid #eee; text-align: center; color: #999; font-size: 12px; font-family: 'Inter', sans-serif;">
+    &copy; ${new Date().getFullYear()} The National Review of Sciences for Students.
+    <br>Excellence in Student Scientific Outreach.
   </footer>
 </body>
 </html>
