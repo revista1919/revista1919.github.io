@@ -1587,8 +1587,7 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
     async function generateNews() {
       
   // Procesar noticias desde Firestore
-  const newsSnapshot = await db.collection('news').get();
-let newsItems = newsSnapshot.docs.map(doc => doc.data()).map(item => ({
+  let newsItems = newsSnapshot.docs.map(doc => doc.data()).map(item => ({
     titulo: item.title_es || '',
     cuerpo: item.body_es || '', // base64
     fecha: parseDateFlexible(item.timestamp_es),
@@ -1596,6 +1595,8 @@ let newsItems = newsSnapshot.docs.map(doc => doc.data()).map(item => ({
     content: item.body_en || '', // base64
     photo: item.photo || '' // ahora URL como string
   }));
+  const newsSnapshot = await db.collection('news').get();
+
   for (const newsItem of newsItems) {
     const slug = generateSlug(`${newsItem.titulo} ${newsItem.fecha}`);
     const cuerpoDecoded = base64DecodeUnicode(newsItem.cuerpo);
