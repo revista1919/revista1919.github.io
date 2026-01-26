@@ -44,6 +44,12 @@ jobs:
       - name: Rebuild sharp for linux
         run: npm rebuild sharp --force --arch=x64 --platform=linux
 
+      - name: Create Firebase service account file
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT" > serviceAccountKey.json
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
       - name: Debug secrets
         run: |
           echo "🔍 Debug secrets:"
