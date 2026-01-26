@@ -300,7 +300,7 @@ const token = await user.getIdToken();
     const maxRetries = 3;
     while (attempt < maxRetries) {
       try {
-        await fetch('https://southamerica-west1-usuarios-rnce.cloudfunctions.net/uploadNews', {
+        await fetch('https://uploadnews-ggqsq2kkua-uc.a.run.app', {
   method: 'POST',
   headers: { 
     'Content-Type': 'application/json',
