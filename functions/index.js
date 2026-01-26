@@ -28,6 +28,12 @@ const USERS_CSV =
 
 /* ===================== UTILIDADES GENERALES ===================== */
 
+function applyCors(req, res) {
+  res.set("Access-Control-Allow-Origin", "https://www.revistacienciasestudiantes.com");
+  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+}
+
 function base64DecodeUnicode(str) {
   try {
     if (!str) return "";
@@ -282,8 +288,14 @@ async function translateHtmlFragmentWithSplit(html, source, target, apiKey) {
 /* ===================== UPLOAD NEWS (EXISTENTE) ===================== */
 
 exports.uploadNews = onRequest(
-  { secrets: [GEMINI_API_KEY], cors: true },
+  { secrets: [GEMINI_API_KEY] },
   async (req, res) => {
+    applyCors(req, res);
+
+    if (req.method === "OPTIONS") {
+      return res.status(204).send("");
+    }
+
     if (req.method !== "POST")
       return res.status(405).json({ error: "Method not allowed" });
 
@@ -336,8 +348,14 @@ exports.uploadNews = onRequest(
 /* ===================== MANAGE ARTICLES ===================== */
 
 exports.manageArticles = onRequest(
-  { secrets: [GH_TOKEN], cors: true },
+  { secrets: [GH_TOKEN] },
   async (req, res) => {
+    applyCors(req, res);
+
+    if (req.method === "OPTIONS") {
+      return res.status(204).send("");
+    }
+
     if (req.method !== "POST")
       return res.status(405).json({ error: "Method not allowed" });
 
@@ -447,8 +465,14 @@ exports.manageArticles = onRequest(
 /* ===================== MANAGE VOLUMES ===================== */
 
 exports.manageVolumes = onRequest(
-  { secrets: [GH_TOKEN], cors: true },
+  { secrets: [GH_TOKEN] },
   async (req, res) => {
+    applyCors(req, res);
+
+    if (req.method === "OPTIONS") {
+      return res.status(204).send("");
+    }
+
     if (req.method !== "POST") {
       return res.status(405).json({ error: "Method not allowed" });
     }
@@ -589,5 +613,50 @@ exports.manageVolumes = onRequest(
 
     /* ===================== FALLBACK ===================== */
     return res.status(400).json({ error: "Invalid action" });
+  },
+);
+
+/* ===================== TRIGGER REBUILD ===================== */
+
+exports.triggerRebuild = onRequest(
+  { secrets: [GH_TOKEN] },
+  async (req, res) => {
+    applyCors(req, res);
+
+    if (req.method === "OPTIONS") {
+      return res.status(204).send("");
+    }
+
+    if (req.method !== "POST") {
+      return res.status(405).json({ error: "Method not allowed" });
+    }
+
+    const token = req.headers.authorization?.split("Bearer ")[1];
+    if (!token) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    let user;
+    try {
+      user = await admin.auth().verifyIdToken(token);
+    } catch {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    try {
+      await validateRole(user.email, "Director General");
+    } catch (err) {
+      return res.status(403).json({ error: err.message });
+    }
+
+    const octokit = getOctokit();
+
+    await octokit.request("POST /repos/{owner}/{repo}/dispatches", {
+      owner: "revista1919",
+      repo: "revista1919.github.io",
+      event_type: "rebuild",
+    });
+
+    return res.json({ success: true });
   },
 );

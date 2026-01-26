@@ -8,6 +8,9 @@ const DOMAIN = 'https://www.revistacienciasestudiantes.com';
 const MANAGE_ARTICLES_URL =
   'https://managearticles-ggqsq2kkua-uc.a.run.app';
 const MANAGE_VOLUMES_URL = 'https://managevolumes-ggqsq2kkua-uc.a.run.app';
+const REBUILD_URL = 'https://triggerrebuild-ggqsq2kkua-uc.a.run.app';
+const REPO_OWNER = 'revista1919';
+const REPO_NAME = 'revista1919.github.io';
 const generateSlug = (name) => {
   if (!name) return '';
   return name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-').replace(/[^\w-]/g, '').replace(/-+/g, '-').replace(/^-+|-+$/g, '');
@@ -19,6 +22,23 @@ const toBase64 = (file) =>
     reader.onload = () => resolve(reader.result.split(',')[1]);
     reader.onerror = (error) => reject(error);
   });
+const triggerRebuild = async () => {
+  const token = await auth.currentUser.getIdToken();
+  const url = REBUILD_URL;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ event_type: 'rebuild' }),
+  });
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Rebuild failed: ${response.status} - ${errorText}`);
+  }
+};
 export default function DirectorPanel({ user }) {
   const [articles, setArticles] = useState([]);
   const [volumes, setVolumes] = useState([]);
@@ -199,6 +219,7 @@ export default function DirectorPanel({ user }) {
         throw new Error(errText);
       }
       closeFunc();
+      await triggerRebuild();
       setS('✅ Operación completada');
     } catch (err) {
       setS(`❌ Error: ${err.message}`);
@@ -226,6 +247,7 @@ export default function DirectorPanel({ user }) {
         const errText = await response.text();
         throw new Error(errText);
       }
+      await triggerRebuild();
       setS('✅ Eliminado');
     } catch (err) {
       setS(`❌ Error: ${err.message}`);
@@ -273,11 +295,21 @@ export default function DirectorPanel({ user }) {
     setEditingVolume(null);
     resetVolumeForm();
   };
+  const handleRebuild = async () => {
+    try {
+      setStatus('Iniciando rebuild...');
+      await triggerRebuild();
+      setStatus('✅ Rebuild iniciado');
+    } catch (err) {
+      setStatus(`❌ Error: ${err.message}`);
+    }
+  };
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Panel del Director</h1>
+          <button onClick={handleRebuild} className="mt-4 bg-green-600 text-white px-4 py-2 rounded">Rebuild Site</button>
         </div>
         {status && <div className="mb-4 p-2 bg-blue-100 text-blue-800 rounded">{status}</div>}
         {volumeStatus && <div className="mb-4 p-2 bg-blue-100 text-blue-800 rounded">{volumeStatus}</div>}
