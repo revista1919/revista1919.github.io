@@ -1583,11 +1583,12 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
     fs.writeFileSync(volumesIndexPathEn, volumesIndexContentEn, 'utf8');
     console.log(`Generado índice HTML de volúmenes (EN): ${volumesIndexPathEn}`);
 
-    // Procesar noticias desde Firestore
-    async function generateNews() {
-      
+let newsItems = [];  // Declarar fuera para acceso en sitemap
+
+async function generateNews() {
   // Procesar noticias desde Firestore
-  let newsItems = newsSnapshot.docs.map(doc => doc.data()).map(item => ({
+  const newsSnapshot = await db.collection('news').get();  // PRIMERO obtener el snapshot
+  newsItems = newsSnapshot.docs.map(doc => doc.data()).map(item => ({  // Asignar a la outer newsItems (sin let)
     titulo: item.title_es || '',
     cuerpo: item.body_es || '', // base64
     fecha: parseDateFlexible(item.timestamp_es),
@@ -1595,8 +1596,6 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
     content: item.body_en || '', // base64
     photo: item.photo || '' // ahora URL como string
   }));
-  const newsSnapshot = await db.collection('news').get();
-
   for (const newsItem of newsItems) {
     const slug = generateSlug(`${newsItem.titulo} ${newsItem.fecha}`);
     const cuerpoDecoded = base64DecodeUnicode(newsItem.cuerpo);
@@ -1873,7 +1872,7 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
       cuerpo: item.cuerpo,
       title: item.title,
       content: item.content,
-      fecha: formatDate(item.fecha), // Ajusta a tu función formatDate
+      fecha: parseDateFlexible(item.fecha), // Ajusta a tu función formatDate
       fechaIso: fechaIso,
       photo: item.photo,
       timestamp: new Date(fechaIso).getTime(),
@@ -2083,6 +2082,7 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
   fs.writeFileSync(newsIndexPathEn, newsIndexContentEn, 'utf8');
   console.log(`Generado índice HTML de noticias (EN): ${newsIndexPathEn}`);
 }
+await generateNews();
  // Procesar equipo (sigue de CSV)
     const allMembers = teamParsed.data.filter(row => (row['Nombre'] || '').trim() !== '');
     for (const member of allMembers) {
