@@ -4,21 +4,14 @@ import { collection, onSnapshot } from "firebase/firestore";
 import { db } from '../firebase';
 import Admissions from './Admissions';
 import MailsTeam from './MailsTeam';
-
 const DOMAIN = 'https://www.revistacienciasestudiantes.com';
 const MANAGE_ARTICLES_URL =
   'https://managearticles-ggqsq2kkua-uc.a.run.app';
 const MANAGE_VOLUMES_URL = 'https://managevolumes-ggqsq2kkua-uc.a.run.app';
-
-const REBUILD_TOKEN = process.env.REACT_APP_REBUILD_TOKEN || '';
-const REPO_OWNER = 'revista1919';
-const REPO_NAME = 'revista1919.github.io';
-
 const generateSlug = (name) => {
   if (!name) return '';
   return name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-').replace(/[^\w-]/g, '').replace(/-+/g, '-').replace(/^-+|-+$/g, '');
 };
-
 const toBase64 = (file) =>
   new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -26,25 +19,6 @@ const toBase64 = (file) =>
     reader.onload = () => resolve(reader.result.split(',')[1]);
     reader.onerror = (error) => reject(error);
   });
-
-const triggerRebuild = async () => {
-  if (!REBUILD_TOKEN) throw new Error('Rebuild token no disponible');
-  const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/dispatches`;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      Authorization: `token ${REBUILD_TOKEN}`,
-      Accept: 'application/vnd.github.v3+json',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ event_type: 'rebuild' }),
-  });
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Rebuild failed: ${response.status} - ${errorText}`);
-  }
-};
-
 export default function DirectorPanel({ user }) {
   const [articles, setArticles] = useState([]);
   const [volumes, setVolumes] = useState([]);
@@ -93,7 +67,6 @@ export default function DirectorPanel({ user }) {
   const [uploading, setUploading] = useState(false);
   const [volumeUploading, setVolumeUploading] = useState(false);
   const [hasAccess, setHasAccess] = useState(false);
-
   useEffect(() => {
     if (user && user.role && user.role.includes('Director General')) {
       setHasAccess(true);
@@ -101,10 +74,8 @@ export default function DirectorPanel({ user }) {
       setHasAccess(false);
     }
   }, [user]);
-
   useEffect(() => {
     if (!hasAccess) return;
-
     setLoading(true);
     const unsubscribeArticles = onSnapshot(collection(db, 'articles'), (snapshot) => {
       const arts = snapshot.docs.map((doc) => ({
@@ -114,7 +85,6 @@ export default function DirectorPanel({ user }) {
       setArticles(arts);
       setLoading(false);
     });
-
     setVolumeLoading(true);
     const unsubscribeVolumes = onSnapshot(collection(db, 'volumes'), (snapshot) => {
       const vols = snapshot.docs.map((doc) => ({
@@ -124,35 +94,27 @@ export default function DirectorPanel({ user }) {
       setVolumes(vols);
       setVolumeLoading(false);
     });
-
     return () => {
       unsubscribeArticles();
       unsubscribeVolumes();
     };
   }, [hasAccess]);
-
   if (!hasAccess) {
     return <div className="p-4 text-red-600">Acceso denegado. Solo para Director General.</div>;
   }
-
   if (loading || volumeLoading) return <div>Cargando...</div>;
-
   const toggleExpand = (id) => setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
   const toggleVolumeExpand = (id) => setVolumeExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
-
   const handleVolumeInputChange = (e) => {
     const { name, value } = e.target;
     setVolumeFormData((prev) => ({ ...prev, [name]: value }));
   };
-
   const handleFileChange = (e) => setFormData((prev) => ({ ...prev, pdfFile: e.target.files[0] }));
   const handleVolumeFileChange = (e) => setVolumeFormData((prev) => ({ ...prev, pdfFile: e.target.files[0] }));
-
   const resetForm = () => {
     setFormData({
       titulo: '',
@@ -172,7 +134,6 @@ export default function DirectorPanel({ user }) {
       pdfFile: null,
     });
   };
-
   const resetVolumeForm = () => {
     setVolumeFormData({
       volumen: '',
@@ -188,7 +149,6 @@ export default function DirectorPanel({ user }) {
       pdfFile: null,
     });
   };
-
   const handleSubmit = async (e, isVolume = false) => {
     e.preventDefault();
     const isEdit = isVolume ? !!editingVolume : !!editingArticle;
@@ -199,12 +159,10 @@ export default function DirectorPanel({ user }) {
     const url = isVolume ? MANAGE_VOLUMES_URL : MANAGE_ARTICLES_URL;
     const typeKey = isVolume ? 'volume' : 'article';
     const closeFunc = isVolume ? closeVolumeModals : closeModals;
-
     setU(true);
     try {
       const token = await auth.currentUser.getIdToken();
       const pdfBase64 = form.pdfFile ? await toBase64(form.pdfFile) : null;
-
       const dataObj = {
         titulo: form.titulo,
         autores: form.autores,
@@ -222,14 +180,12 @@ export default function DirectorPanel({ user }) {
         type: form.type || '',
         portada: form.portada,
       };
-
       const payload = {
         action: isEdit ? 'edit' : 'add',
         [typeKey]: dataObj,
         pdfBase64,
         id: isEdit ? editing.id : undefined,
       };
-
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -238,14 +194,11 @@ export default function DirectorPanel({ user }) {
         },
         body: JSON.stringify(payload),
       });
-
       if (!response.ok) {
         const errText = await response.text();
         throw new Error(errText);
       }
-
       closeFunc();
-      if (REBUILD_TOKEN) await triggerRebuild();
       setS('✅ Operación completada');
     } catch (err) {
       setS(`❌ Error: ${err.message}`);
@@ -253,14 +206,11 @@ export default function DirectorPanel({ user }) {
       setU(false);
     }
   };
-
   const handleVolumeSubmit = (e) => handleSubmit(e, true);
-
   const handleDelete = async (id, isVolume = false) => {
     if (!confirm('¿Eliminar?')) return;
     const setS = isVolume ? setVolumeStatus : setStatus;
     const url = isVolume ? MANAGE_VOLUMES_URL : MANAGE_ARTICLES_URL;
-
     try {
       setS('Eliminando...');
       const token = await auth.currentUser.getIdToken();
@@ -272,27 +222,21 @@ export default function DirectorPanel({ user }) {
         },
         body: JSON.stringify({ action: 'delete', id }),
       });
-
       if (!response.ok) {
         const errText = await response.text();
         throw new Error(errText);
       }
-
-      if (REBUILD_TOKEN) await triggerRebuild();
       setS('✅ Eliminado');
     } catch (err) {
       setS(`❌ Error: ${err.message}`);
     }
   };
-
   const handleArticleDelete = (id) => handleDelete(id);
   const handleVolumeDelete = (id) => handleDelete(id, true);
-
   const handleEdit = (item, isVolume = false) => {
     const setEditing = isVolume ? setEditingVolume : setEditingArticle;
     const setForm = isVolume ? setVolumeFormData : setFormData;
     const setShow = isVolume ? setShowEditVolumeModal : setShowEditModal;
-
     setEditing(item);
     const newForm = {
       titulo: item.titulo || '',
@@ -315,40 +259,25 @@ export default function DirectorPanel({ user }) {
     setForm(newForm);
     setShow(true);
   };
-
   const handleArticleEdit = (article) => handleEdit(article);
   const handleVolumeEdit = (volume) => handleEdit(volume, true);
-
   const closeModals = () => {
     setShowAddModal(false);
     setShowEditModal(false);
     setEditingArticle(null);
     resetForm();
   };
-
   const closeVolumeModals = () => {
     setShowAddVolumeModal(false);
     setShowEditVolumeModal(false);
     setEditingVolume(null);
     resetVolumeForm();
   };
-
-  const handleRebuild = async () => {
-    try {
-      setStatus('Iniciando rebuild...');
-      await triggerRebuild();
-      setStatus('✅ Rebuild iniciado');
-    } catch (err) {
-      setStatus(`❌ Error: ${err.message}`);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Panel del Director</h1>
-          <button onClick={handleRebuild} className="mt-4 bg-green-600 text-white px-4 py-2 rounded">Rebuild Site</button>
         </div>
         {status && <div className="mb-4 p-2 bg-blue-100 text-blue-800 rounded">{status}</div>}
         {volumeStatus && <div className="mb-4 p-2 bg-blue-100 text-blue-800 rounded">{volumeStatus}</div>}
