@@ -1587,7 +1587,7 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
     async function generateNews() {
   // Procesar noticias desde Firestore
   const newsSnapshot = await db.collection('news').get();
-  const newsItems = newsSnapshot.docs.map(doc => doc.data()).map(item => ({
+  let newsItems = newsSnapshot.docs.map(doc => doc.data()).map(item => ({
     titulo: item.title_es || '',
     cuerpo: item.body_es || '', // base64
     fecha: parseDateFlexible(item.timestamp_es),
