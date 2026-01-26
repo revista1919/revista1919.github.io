@@ -6,8 +6,11 @@ import Admissions from './Admissions';
 import MailsTeam from './MailsTeam';
 
 const DOMAIN = 'https://www.revistacienciasestudiantes.com';
-const MANAGE_ARTICLES_URL = 'southamerica-west1-usuarios-rnce.cloudfunctions.net/manageArticles'; // Reemplaza con tu URL real
-const MANAGE_VOLUMES_URL = 'southamerica-west1-usuarios-rnce.cloudfunctions.net/manageVolumes'; // Reemplaza con tu URL real
+const MANAGE_ARTICLES_URL =
+  'https://southamerica-west1-usuarios-rnce.cloudfunctions.net/manageArticles';
+
+const MANAGE_VOLUMES_URL =
+  'https://southamerica-west1-usuarios-rnce.cloudfunctions.net/manageVolumes';
 const REBUILD_TOKEN = process.env.REACT_APP_REBUILD_TOKEN || '';
 const REPO_OWNER = 'revista1919';
 const REPO_NAME = 'revista1919.github.io';
