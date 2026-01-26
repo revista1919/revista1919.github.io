@@ -90,40 +90,51 @@ function ArticleCard({ article }) {
   };
 
   /* --------------------------- CITAS COMPLETAS ---------------------------- */
-  const getChicagoText = () => {
+  const getChicago = () => {
     const authorsRaw = article?.autores || '';
     const authors = authorsRaw.split(';').map(a => a.trim()).filter(a => a);
     const title = article?.titulo || 'Sin título';
     const volume = article?.volumen || '';
     const number = article?.numero || '';
     const year = getYear(article?.fecha);
-    return `${chicagoAuthors(authors)}. "${title}." ${journal} ${volume}, no. ${number} (${year}): ${pages}.`;
+    const plain = `${chicagoAuthors(authors)}. "${title}." ${journal} ${volume}, no. ${number} (${year}): ${pages}.`;
+    const html = `${chicagoAuthors(authors)}. "${title}." <i>${journal}</i> ${volume}, no. ${number} (${year}): ${pages}.`;
+    return { plain, html };
   };
 
-  const getApaText = () => {
+  const getApa = () => {
     const authorsRaw = article?.autores || '';
     const authors = authorsRaw.split(';').map(a => a.trim()).filter(a => a);
     const title = article?.titulo || 'Sin título';
     const volume = article?.volumen || '';
     const number = article?.numero || '';
     const year = getYear(article?.fecha);
-    return `${apaAuthors(authors)} (${year}). ${title}. ${journal}, ${volume}(${number}), ${pages}.`;
+    const plain = `${apaAuthors(authors)} (${year}). ${title}. ${journal}, ${volume}(${number}), ${pages}.`;
+    const html = `${apaAuthors(authors)} (${year}). ${title}. <i>${journal}</i>, <i>${volume}</i>(${number}), ${pages}.`;
+    return { plain, html };
   };
 
-  const getMlaText = () => {
+  const getMla = () => {
     const authorsRaw = article?.autores || '';
     const authors = authorsRaw.split(';').map(a => a.trim()).filter(a => a);
     const title = article?.titulo || 'Sin título';
     const volume = article?.volumen || '';
     const number = article?.numero || '';
     const year = getYear(article?.fecha);
-    return `${mlaAuthors(authors)}. "${title}." ${journal}, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}.`;
+    const plain = `${mlaAuthors(authors)}. "${title}." ${journal}, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}.`;
+    const html = `${mlaAuthors(authors)}. "${title}." <i>${journal}</i>, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}.`;
+    return { plain, html };
   };
   /* ----------------------------------------------------------------------- */
 
-  const copyToClipboard = async (text, format) => {
+  const copyToClipboard = async (plain, html, format) => {
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/plain': new Blob([plain], { type: 'text/plain' }),
+          'text/html': new Blob([html], { type: 'text/html' }),
+        }),
+      ]);
       setCopiedFormat(format);
       setTimeout(() => setCopiedFormat(null), 2000);
     } catch (err) {
@@ -156,189 +167,181 @@ function ArticleCard({ article }) {
   /* --------------------------- RENDER PRINCIPAL --------------------------- */
   return (
     <motion.div
-      className="group relative bg-white border border-gray-200 rounded-sm p-6 mb-6 hover:shadow-md transition-all duration-300"
       layout
       onClick={toggleExpand}
-      role="button"
-      tabIndex={0}
-      aria-expanded={isExpanded}
-      aria-label={`Expandir artículo: ${article.titulo || 'Sin título'}`}
+      className={`group relative bg-white border border-gray-200 mb-4 md:mb-6 transition-all duration-300 cursor-pointer
+        ${isExpanded ? 'shadow-xl ring-1 ring-[#007398]/20' : 'hover:shadow-md'}`}
     >
-      {/* Indicador lateral Azul (estilo académico) */}
-      <div className={`absolute left-0 top-0 bottom-0 w-1 transition-colors ${isExpanded ? 'bg-[#007398]' : 'bg-gray-200 group-hover:bg-[#007398]'}`} />
-      <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-6">
-        <div className="flex-1">
-          {/* Metadatos superiores */}
-          <div className="flex flex-wrap items-center gap-3 mb-3 text-[10px] font-bold uppercase tracking-widest text-gray-500">
-            <span className="text-[#007398]">{article.area}</span>
-            <span>•</span>
-            <span>VOL. {article.volumen}</span>
-            <span>•</span>
-            <span>NO. {article.numero}</span>
-            <span>•</span>
-            <span>{tipo}</span>
+      {/* Indicador lateral de color */}
+      <div className={`absolute left-0 top-0 bottom-0 w-1 transition-colors
+        ${isExpanded ? 'bg-[#007398]' : 'bg-gray-100 group-hover:bg-[#007398]'}`}
+      />
+      <div className="p-4 md:p-6">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+         
+          <div className="flex-1">
+            {/* Metadatos: Más pequeños y elegantes en móvil */}
+            <div className="flex flex-wrap items-center gap-2 mb-2 text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-gray-500">
+              <span className="text-[#007398]">{article.area}</span>
+              <span className="hidden xs:inline">•</span>
+              <span className="bg-gray-100 px-1.5 py-0.5 rounded-sm">VOL. {article.volumen}</span>
+              <span className="bg-gray-100 px-1.5 py-0.5 rounded-sm">NO. {article.numero}</span>
+            </div>
+            {/* Título: Ajuste de tamaño responsivo */}
+            <h3 className={`font-serif font-bold text-black leading-tight mb-2 transition-colors group-hover:text-[#007398]
+              ${isExpanded ? 'text-xl md:text-2xl' : 'text-lg md:text-xl line-clamp-2 md:line-clamp-none'}`}>
+              {article.titulo}
+            </h3>
+            {/* Autores: Compactos */}
+            <div className="flex flex-wrap gap-x-2 text-xs md:text-sm mb-3">
+              {authorsArray.map((auth, i) => (
+                <span
+                  key={i}
+                  onClick={(e) => { e.stopPropagation(); handleAuthorClick(auth); }}
+                  className="text-[#007398] hover:underline cursor-pointer font-medium"
+                >
+                  {auth}{i < authorsArray.length - 1 ? ',' : ''}
+                </span>
+              ))}
+            </div>
+            {/* Resumen corto: Se oculta si está expandido para no repetir con el completo */}
+            {!isExpanded && (
+              <p className="text-xs md:text-sm text-gray-500 italic line-clamp-2">
+                {article.resumen}
+              </p>
+            )}
           </div>
-          {/* Título - Usando Serif como en el HTML */}
-          <h3
-            className="text-xl md:text-2xl font-serif font-bold text-black leading-tight mb-3 cursor-pointer hover:text-[#007398] transition-colors"
-          >
-            {article.titulo}
-          </h3>
-          {/* Autores */}
-          <div className="flex flex-wrap gap-x-2 text-sm mb-4">
-            {authorsArray.map((auth, i) => (
-              <span
-                key={i}
-                onClick={(e) => { e.stopPropagation(); handleAuthorClick(auth); }}
-                className="text-[#007398] hover:underline cursor-pointer font-medium"
-              >
-                {auth}{i < authorsArray.length - 1 ? ',' : ''}
-              </span>
-            ))}
+          {/* Botones de acción: En móvil son una fila compacta al final o al lado */}
+          <div className="flex flex-row md:flex-col gap-2 md:min-w-[110px]" onClick={(e) => e.stopPropagation()}>
+            <a
+              href={pdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-3 py-2 bg-[#007398] text-white text-[10px] font-bold rounded-sm hover:bg-[#005a77] transition-all"
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              PDF
+            </a>
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="flex-1 md:flex-none px-3 py-2 border border-gray-300 text-gray-700 text-[10px] font-bold rounded-sm hover:bg-gray-50"
+            >
+              {isExpanded ? 'CERRAR' : 'DETALLES'}
+            </button>
           </div>
-          {/* Abstract corto (siempre visible) */}
-          <p className="text-sm text-gray-600 leading-relaxed line-clamp-2 mb-4 italic">
-            {article.resumen}
-          </p>
         </div>
-        {/* Botones de acción principales */}
-        <div className="flex md:flex-col gap-2 min-w-[120px]">
-          {pdfUrl ? (
-  <a
-    href={pdfUrl}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="flex items-center justify-center gap-2 px-4 py-2 bg-[#007398] text-white text-xs font-bold rounded-sm hover:bg-[#005a77] transition-all"
-    onClick={(e) => e.stopPropagation()}
-  >
-    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-    </svg>
-    PDF
-  </a>
-) : (
-  <div className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-300 text-gray-600 text-xs font-bold rounded-sm cursor-not-allowed">
-    PDF no disponible
-  </div>
-)}
-
-          <button
-            onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }}
-            className="px-4 py-2 border border-[#007398] text-[#007398] text-xs font-bold rounded-sm hover:bg-gray-50 transition-all"
-          >
-            {isExpanded ? 'CERRAR' : 'DETALLES'}
-          </button>
-        </div>
-      </div>
-      {/* Contenido Expandible */}
-      <AnimatePresence>
-        {isExpanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
-          >
-            <div className="mt-6 pt-6 border-t border-gray-100 space-y-6">
-              {/* Información General */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-[#333]">
-                <div>
-                  <p className="mb-1"><strong className="text-gray-900">Publicado:</strong> {parseDateFlexible(article.fecha)}</p>
-                  <p><strong className="text-gray-900">Páginas:</strong> {pages}</p>
+        {/* Contenido Expandible: Optimizado para scroll móvil */}
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="mt-5 pt-5 border-t border-gray-100 space-y-5">
+               
+                {/* Info rápida en Grid 2 columnas incluso en móvil */}
+                <div className="grid grid-cols-2 gap-4 text-[11px] md:text-sm">
+                  <div className="bg-gray-50 p-2 rounded">
+                    <span className="block text-gray-400 uppercase text-[9px] font-bold">Publicado</span>
+                    <span className="font-medium">{parseDateFlexible(article.fecha)}</span>
+                  </div>
+                  <div className="bg-gray-50 p-2 rounded">
+                    <span className="block text-gray-400 uppercase text-[9px] font-bold">Páginas</span>
+                    <span className="font-medium">{pages}</span>
+                  </div>
                 </div>
+                {/* Abstract con tipografía legible */}
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Resumen</h4>
+                    <p className="text-sm md:text-base text-gray-800 leading-relaxed font-serif text-justify">
+                      {article.resumen}
+                    </p>
+                  </div>
+                  {article.englishAbstract && (
+                    <div className="border-l-2 border-blue-100 pl-4 py-1">
+                      <button
+                        onClick={() => setShowEnglishAbstract(!showEnglishAbstract)}
+                        className="text-[#007398] text-[10px] font-bold uppercase tracking-tighter"
+                      >
+                        {showEnglishAbstract ? '↓ Ocultar Abstract' : '→ Read English Abstract'}
+                      </button>
+                      {showEnglishAbstract && (
+                        <p className="mt-2 text-sm text-gray-600 italic font-serif leading-relaxed">
+                          {article.englishAbstract}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {/* Palabras Clave */}
                 <div>
-                  {/* Palabras Clave - Ahora elegantes en azul oscuro/gris */}
-                  <strong className="text-gray-900 block mb-2">Palabras Clave:</strong>
-                  <div className="flex flex-wrap gap-2">
+                  <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Palabras Clave</h4>
+                  <div className="flex flex-wrap gap-1.5">
                     {article.palabras_clave?.map((kw, idx) => (
-                      <span key={idx} className="bg-gray-100 text-[#333] border border-gray-200 text-[11px] px-2 py-0.5 rounded-sm">
-                        {kw}
+                      <span key={idx} className="bg-white border border-gray-200 text-[10px] px-2 py-0.5 text-gray-600 italic">
+                        #{kw}
                       </span>
                     ))}
                   </div>
                 </div>
-              </div>
-              {/* Abstracts */}
-              <div className="space-y-4">
-                <div className="bg-gray-50 p-4 rounded-sm">
-                  <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-2">Resumen Completo</h4>
-                  <p className="text-sm text-[#333] leading-relaxed text-justify font-serif">{article.resumen || 'Resumen no disponible'}</p>
-                </div>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setShowEnglishAbstract(!showEnglishAbstract); }}
-                  className="text-[#007398] text-xs font-bold hover:underline"
-                >
-                  {showEnglishAbstract ? '↓ OCULTAR ABSTRACT (EN)' : '→ VER ABSTRACT (ENGLISH)'}
-                </button>
-                {showEnglishAbstract && (
-                  <div className="bg-[#f0f7f9] p-4 rounded-sm border-l-2 border-[#007398]">
-                    <p className="text-sm text-[#333] italic leading-relaxed font-serif">{article.englishAbstract || 'No English abstract available.'}</p>
+                {/* Footer de Acciones Secundarias */}
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 border-t border-gray-50">
+                  <div className="flex gap-4">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setShowCitations(!showCitations); }}
+                      className="text-[10px] font-bold text-gray-500 hover:text-[#007398] flex items-center gap-1"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+                      CITAR
+                    </button>
+                    <a
+                      href={htmlUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] font-bold text-[#007398] flex items-center gap-1"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                      VER FULL-TEXT
+                    </a>
                   </div>
+                </div>
+                {/* Sección de Citas optimizada para móvil */}
+                {showCitations && (
+                  <motion.div
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    className="bg-gray-900 text-gray-300 p-4 rounded-sm text-[11px] space-y-4 font-mono"
+                  >
+                    {[
+                      { label: 'APA', ...getApa() },
+                      { label: 'MLA', ...getMla() },
+                      { label: 'Chicago', ...getChicago() }
+                    ].map((cite) => (
+                      <div key={cite.label} className="flex flex-col gap-2 border-b border-gray-800 pb-2 last:border-0">
+                        <div className="flex justify-between">
+                          <span className="text-white font-bold">{cite.label}</span>
+                          <button
+                            onClick={() => copyToClipboard(cite.plain, cite.html, cite.label)}
+                            className="text-[#007398] uppercase text-[9px] font-black"
+                          >
+                            {copiedFormat === cite.label ? 'Copiado' : 'Copiar'}
+                          </button>
+                        </div>
+                        <p className="leading-tight opacity-80" dangerouslySetInnerHTML={{ __html: cite.html }} />
+                      </div>
+                    ))}
+                  </motion.div>
                 )}
               </div>
-              {/* Footer de la Card con Citas */}
-              <div className="flex flex-wrap gap-3 pt-4">
-                <button
-                  onClick={(e) => { e.stopPropagation(); setShowCitations(!showCitations); }}
-                  className="text-xs font-bold text-gray-500 hover:text-black flex items-center gap-1"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
-                  CITAR ARTÍCULO
-                </button>
-                <a
-                  href={htmlUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs font-bold text-[#007398] hover:underline flex items-center gap-1"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                  VER PÁGINA COMPLETA
-                </a>
-              </div>
-              {/* Sección de Citas Estilo Académico */}
-              {showCitations && (
-                <div className="bg-gray-50 border border-gray-200 p-4 text-[12px] space-y-3">
-                  <div className="flex justify-between items-start gap-4">
-                    <p className="leading-relaxed">
-                      <strong>APA:</strong> {getApaText()}
-                    </p>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); copyToClipboard(getApaText(), 'APA'); }}
-                      className="text-[#007398] font-bold"
-                    >
-                      {copiedFormat === 'APA' ? 'COPIADO' : 'COPIAR'}
-                    </button>
-                  </div>
-                  <div className="flex justify-between items-start gap-4">
-                    <p className="leading-relaxed">
-                      <strong>MLA:</strong> {getMlaText()}
-                    </p>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); copyToClipboard(getMlaText(), 'MLA'); }}
-                      className="text-[#007398] font-bold"
-                    >
-                      {copiedFormat === 'MLA' ? 'COPIADO' : 'COPIAR'}
-                    </button>
-                  </div>
-                  <div className="flex justify-between items-start gap-4">
-                    <p className="leading-relaxed">
-                      <strong>Chicago:</strong> {getChicagoText()}
-                    </p>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); copyToClipboard(getChicagoText(), 'Chicago'); }}
-                      className="text-[#007398] font-bold"
-                    >
-                      {copiedFormat === 'Chicago' ? 'COPIADO' : 'COPIAR'}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </motion.div>
   );
 }
