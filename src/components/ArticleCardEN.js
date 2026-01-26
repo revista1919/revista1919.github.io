@@ -83,7 +83,7 @@ function ArticleCardEN({ article }) {
   const handleAuthorClick = (authorName) => {
     if (!authorName) return;
     const slug = generateSlug(authorName);
-    window.location.href = `/team/${slug}EN.html`;
+    window.location.href = `/team/${slug}.EN.html`;
   };
 
   /* --------------------------- FULL CITATIONS ---------------------------- */

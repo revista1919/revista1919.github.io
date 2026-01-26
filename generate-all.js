@@ -2420,37 +2420,41 @@ await generateNews();
       const areasTagsHtml = areasList.length ? areasList.map(area => `<span class="keyword-tag">${area}</span>`).join('') : '<p>No especificadas</p>';
       const areasTagsHtmlEn = areasListEn.length ? areasListEn.map(area => `<span class="keyword-tag">${area}</span>`).join('') : '<p>Not specified</p>';
       const articlesSectionEs = isAuthor ? `
-      <section id="articles" style="margin-top:50px;">
-        <h2>Artículos Publicados</h2>
-        <div>
-          ${publishedArticles.map(article => {
-            const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
-            return `
-            <div style="margin-bottom:20px; padding:15px; background:#f9f9f9; border-radius:4px;">
-              <h3 style="font-size:1.2rem; margin:0 0 5px 0;"><a href="/articles/article-${articleSlug}.html" style="color:var(--primary-blue); text-decoration:none;">${article.titulo}</a></h3>
-              <p style="font-size:0.9rem; color:var(--text-grey); margin:0;">${article.autores} (Vol. ${article.volumen}, Núm. ${article.numero}, ${article.fecha})</p>
+    <section id="articles">
+      <h2 class="section-title">Publicaciones en la Revista</h2>
+      <div>
+        ${publishedArticles.map(article => {
+          const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
+          return `
+          <div class="article-item">
+            <a href="/articles/article-${articleSlug}.html" class="article-link">${article.titulo}</a>
+            <div class="article-meta">
+              Vol. ${article.volumen}, Núm. ${article.numero} • ${article.fecha}
             </div>
-            `;
-          }).join('')}
-        </div>
-      </section>` : '';
+          </div>
+          `;
+        }).join('')}
+      </div>
+    </section>` : '';
       const articlesSectionEn = isAuthor ? `
-      <section id="articles" style="margin-top:50px;">
-        <h2>Published Articles</h2>
-        <div>
-          ${publishedArticles.map(article => {
-            const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
-            return `
-            <div style="margin-bottom:20px; padding:15px; background:#f9f9f9; border-radius:4px;">
-              <h3 style="font-size:1.2rem; margin:0 0 5px 0;"><a href="/articles/article-${articleSlug}EN.html" style="color:var(--primary-blue); text-decoration:none;">${article.titulo}</a></h3>
-              <p style="font-size:0.9rem; color:var(--text-grey); margin:0;">${article.autores} (Vol. ${article.volumen}, Issue ${article.numero}, ${article.fecha})</p>
+    <section id="articles">
+      <h2 class="section-title">Publications in the Journal</h2>
+      <div>
+        ${publishedArticles.map(article => {
+          const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
+          return `
+          <div class="article-item">
+            <a href="/articles/article-${articleSlug}EN.html" class="article-link">${article.title || article.titulo}</a>
+            <div class="article-meta">
+              Vol. ${article.volumen}, Issue ${article.numero} • ${article.fecha}
             </div>
-            `;
-          }).join('')}
-        </div>
-      </section>` : '';
-      const institutionHtmlEs = institution ? `<div style="font-size: 0.9rem; color: var(--text-grey); margin-top:10px;">${institution}</div>` : '';
-      const institutionHtmlEn = institution ? `<div style="font-size: 0.9rem; color: var(--text-grey); margin-top:10px;">${institution}</div>` : '';
+          </div>
+          `;
+        }).join('')}
+      </div>
+    </section>` : '';
+      const institutionHtmlEs = institution ? `<div class="profile-inst">${institution}</div>` : '';
+      const institutionHtmlEn = institution ? `<div class="profile-inst">${institution}</div>` : '';
       const esContent = `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -2460,202 +2464,229 @@ await generateNews();
   <meta name="keywords" content="${areas}, ${rolesStr}, Revista Nacional de las Ciencias para Estudiantes">
   <meta name="author" content="${nombre}">
   <title>${nombre} - Equipo de Revista Nacional de las Ciencias para Estudiantes</title>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Lora:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --primary-blue: #007398;
-      --text-dark: #333333;
-      --text-grey: #666666;
-      --border: #e4e4e4;
-      --bg-light: #fdfdfd;
+      --primary: #007398;
+      --text: #1a1a1a;
+      --grey: #555555;
+      --light-grey: #f5f5f5;
+      --border: #e0e0e0;
     }
+
     body {
-      font-family: 'Noto Sans', sans-serif;
-      line-height: 1.6;
-      color: var(--text-dark);
-      background-color: #f0f0f0;
       margin: 0;
-      padding: 0;
+      font-family: 'Lora', serif;
+      color: var(--text);
+      background-color: #fff;
+      line-height: 1.7;
     }
-    .top-bar {
-      background: white;
+
+    /* Navegación Minimalista */
+    .top-nav {
+      padding: 20px;
+      text-align: center;
       border-bottom: 1px solid var(--border);
-      padding: 10px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .journal-name {
-      font-weight: bold;
-      color: var(--primary-blue);
-      text-decoration: none;
-      font-size: 0.9rem;
-    }
-    .main-wrapper {
-      max-width: 1200px;
-      margin: 20px auto;
-      display: grid;
-      grid-template-columns: 250px 1fr;
-      gap: 30px;
-      padding: 0 20px;
-    }
-    aside {
-      font-size: 0.9rem;
-    }
-    .outline-box {
-      position: sticky;
-      top: 20px;
-    }
-    .outline-title {
-      font-weight: bold;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 10px;
-      margin-bottom: 15px;
+      font-family: 'Inter', sans-serif;
       text-transform: uppercase;
-      font-size: 0.8rem;
-      letter-spacing: 1px;
+      letter-spacing: 2px;
+      font-size: 11px;
     }
-    .outline-list {
-      list-style: none;
-      padding: 0;
-    }
-    .outline-list li {
-      margin-bottom: 10px;
-    }
-    .outline-list a {
-      color: var(--primary-blue);
-      text-decoration: none;
-    }
-    .article-container {
-      background: white;
-      padding: 40px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-      border-radius: 2px;
-    }
-    header {
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 30px;
-      padding-bottom: 20px;
-    }
-    .profile-header {
-      display: flex;
+    .top-nav a { text-decoration: none; color: var(--text); font-weight: 700; }
+
+    /* Cabecera de Perfil */
+    .profile-hero {
+      max-width: 900px;
+      margin: 60px auto;
+      padding: 0 20px;
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 50px;
       align-items: center;
-      gap: 20px;
+    }
+
+    .img-container {
+      position: relative;
     }
     .profile-img {
-      width: 100px;
-      height: 100px;
-      border-radius: 50%;
+      width: 220px;
+      height: 220px;
       object-fit: cover;
-      border: 1px solid var(--border);
+      filter: grayscale(20%);
+      border-radius: 2px; /* Cuadrado editorial, no circular */
+      box-shadow: 20px 20px 0px var(--light-grey);
     }
-    .profile-img-fallback {
-      width: 100px;
-      height: 100px;
-      border-radius: 50%;
-      background: #f9f9f9;
+    .no-img {
+      width: 220px;
+      height: 220px;
+      background: var(--light-grey);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.8rem;
-      color: var(--text-grey);
+      font-family: 'Inter', sans-serif;
+      color: #999;
+      font-size: 12px;
+      text-transform: uppercase;
     }
-    h1 {
-      font-family: 'Noto Serif', serif;
-      font-size: 2.2rem;
+
+    .profile-info h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 3.5rem;
       margin: 0;
-      line-height: 1.2;
-      color: #000;
+      line-height: 1;
+      font-weight: 900;
     }
-    .role {
-      font-size: 1.1rem;
-      color: var(--primary-blue);
-      margin: 5px 0;
+    .profile-role {
+      font-family: 'Inter', sans-serif;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-top: 15px;
+      display: block;
     }
-    h2 {
-      font-family: 'Noto Sans', sans-serif;
-      font-size: 1.4rem;
-      color: var(--text-dark);
-      margin-top: 40px;
-      border-bottom: 1px solid #eee;
-      padding-bottom: 5px;
+    .profile-inst {
+      font-family: 'Inter', sans-serif;
+      color: var(--grey);
+      font-size: 14px;
+      margin-top: 5px;
     }
-    p {
-      font-family: 'Noto Serif', serif;
-      font-size: 1.05rem;
-      text-align: justify;
+
+    /* Secciones de Contenido */
+    .container {
+      max-width: 800px;
+      margin: 0 auto 100px;
+      padding: 0 20px;
     }
-    .keywords-box {
-      background: #f9f9f9;
-      padding: 15px;
-      border-radius: 4px;
-      margin: 20px 0;
+
+    .section-title {
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      border-bottom: 1px solid var(--text);
+      padding-bottom: 10px;
+      margin: 60px 0 30px;
+      color: var(--text);
+    }
+
+    .bio-text { font-size: 1.15rem; }
+
+    /* Tags de Áreas */
+    .tags-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
     }
     .keyword-tag {
-      display: inline-block;
-      margin-right: 15px;
-      font-size: 0.9rem;
-      color: var(--primary-blue);
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      background: var(--light-grey);
+      padding: 6px 15px;
+      border-radius: 20px;
+      color: var(--text);
+      font-weight: 600;
     }
-    footer {
+
+    /* Lista de Artículos Estilo Bibliográfico */
+    .article-item {
+      margin-bottom: 25px;
+      padding-left: 20px;
+      border-left: 2px solid var(--light-grey);
+      transition: border-color 0.3s;
+    }
+    .article-item:hover { border-left-color: var(--primary); }
+    
+    .article-link {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.3rem;
+      color: var(--text);
+      text-decoration: none;
+      display: block;
+      line-height: 1.3;
+    }
+    .article-meta {
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      color: var(--grey);
+      margin-top: 5px;
+    }
+
+    .footer-nav {
       text-align: center;
-      padding: 40px;
-      color: var(--text-grey);
-      font-size: 0.8rem;
+      padding: 60px 20px;
+      background: var(--light-grey);
+      margin-top: 100px;
+    }
+    .footer-nav a {
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      text-decoration: none;
+      color: var(--primary);
+      font-weight: 700;
+      margin: 0 15px;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 768px) {
+      .profile-hero {
+        grid-template-columns: 1fr;
+        text-align: center;
+        margin-top: 30px;
+      }
+      .profile-img, .no-img { margin: 0 auto; width: 180px; height: 180px; }
+      .profile-info h1 { font-size: 2.5rem; }
+      .section-title { text-align: center; }
     }
     @media (max-width: 900px) {
-      .main-wrapper { grid-template-columns: 1fr; }
-      aside { display: none; }
-      .article-container { padding: 20px; }
-      .profile-header { flex-direction: column; text-align: center; }
+      h1, h2, p, .bio-text {
+        word-break: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="top-bar">
-    <a href="/" class="journal-name">REVISTA NACIONAL DE LAS CIENCIAS PARA ESTUDIANTES</a>
-  </div>
-  <div class="main-wrapper">
-    <aside>
-      <div class="outline-box">
-        <div class="outline-title">Contenido</div>
-        <ul class="outline-list">
-          <li><a href="#descripcion">Descripción</a></li>
-          <li><a href="#areas">Áreas de interés</a></li>
-          ${isAuthor ? '<li><a href="#articles">Artículos Publicados</a></li>' : ''}
-        </ul>
-        <div class="outline-title" style="margin-top:30px">Acciones</div>
-        <a href="/es/team" class="btn btn-outline" style="width:100%; box-sizing:border-box; justify-content:center;">Volver a Equipo</a>
-      </div>
-    </aside>
-    <main class="article-container">
-      <header>
-        <div class="profile-header">
-          <div>
-            ${imagen ? `<img src="${imagen}" alt="Foto de ${nombre}" class="profile-img">` : `<div class="profile-img-fallback">Sin Imagen</div>`}
-          </div>
-          <div>
-            <h1>${nombre}</h1>
-            <div class="role">${rolesStr}</div>
-            ${institutionHtmlEs}
-          </div>
-        </div>
-      </header>
-      <section id="descripcion">
-        <h2>Descripción</h2>
-        <p>${descripcion}</p>
-      </section>
-      <section id="areas" class="keywords-box">
-        <h2>Áreas de interés</h2>
+
+  <nav class="top-nav">
+    <a href="/">Revista Nacional de las Ciencias para Estudiantes</a>
+  </nav>
+
+  <header class="profile-hero">
+    <div class="img-container">
+      ${imagen ? `<img src="${imagen}" alt="${nombre}" class="profile-img">` : `<div class="no-img">Sin Imagen</div>`}
+    </div>
+    <div class="profile-info">
+      <span class="profile-role">${rolesStr}</span>
+      <h1>${nombre}</h1>
+      ${institutionHtmlEs}
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="descripcion">
+      <h2 class="section-title">Sobre el autor</h2>
+      <div class="bio-text">${descripcion}</div>
+    </section>
+
+    <section id="areas">
+      <h2 class="section-title">Líneas de Investigación</h2>
+      <div class="tags-container">
         ${areasTagsHtml}
-      </section>
-      ${articlesSectionEs}
-    </main>
-  </div>
-  <footer>
-    <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes.</p>
-    <p><a href="/es/team" style="color:var(--primary-blue)">Volver a Equipo</a> | <a href="/" style="color:var(--primary-blue)">Volver al inicio</a></p>
+      </div>
+    </section>
+
+    ${articlesSectionEs}
+  </main>
+
+  <footer class="footer-nav">
+    <a href="/es/team">← Equipo Editorial</a>
+    <a href="/">Inicio</a>
   </footer>
+
 </body>
 </html>`;
       const enContent = `<!DOCTYPE html>
@@ -2667,85 +2698,229 @@ await generateNews();
   <meta name="keywords" content="${areasEn}, ${rolesEn}, The National Review of Sciences for Students">
   <meta name="author" content="${nombre}">
   <title>${nombre} - Team of The National Review of Sciences for Students</title>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Lora:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --primary-blue: #007398;
-      --text-dark: #333333;
-      --text-grey: #666666;
-      --border: #e4e4e4;
+      --primary: #007398;
+      --text: #1a1a1a;
+      --grey: #555555;
+      --light-grey: #f5f5f5;
+      --border: #e0e0e0;
     }
-    body { font-family: 'Noto Sans', sans-serif; line-height: 1.6; color: var(--text-dark); background-color: #f0f0f0; margin: 0; }
-    .top-bar { background: white; border-bottom: 1px solid var(--border); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
-    .journal-name { font-weight: bold; color: var(--primary-blue); text-decoration: none; font-size: 0.9rem; }
-    .main-wrapper { max-width: 1200px; margin: 20px auto; display: grid; grid-template-columns: 250px 1fr; gap: 30px; padding: 0 20px; }
-    aside { font-size: 0.9rem; }
-    .outline-box { position: sticky; top: 20px; }
-    .outline-title { font-weight: bold; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 15px; text-transform: uppercase; font-size: 0.8rem; }
-    .outline-list { list-style: none; padding: 0; }
-    .outline-list a { color: var(--primary-blue); text-decoration: none; }
-    .article-container { background: white; padding: 40px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    header { border-bottom: 1px solid var(--border); margin-bottom: 30px; padding-bottom: 20px; }
-    .profile-header { display: flex; align-items: center; gap: 20px; }
-    .profile-img { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border); }
-    .profile-img-fallback { width: 100px; height: 100px; border-radius: 50%; background: #f9f9f9; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: var(--text-grey); }
-    h1 { font-family: 'Noto Serif', serif; font-size: 2.2rem; margin: 0; color: #000; }
-    .role { font-size: 1.1rem; color: var(--primary-blue); margin: 5px 0; }
-    h2 { font-family: 'Noto Sans', sans-serif; font-size: 1.4rem; color: var(--text-dark); margin-top: 40px; border-bottom: 1px solid #eee; }
-    p { font-family: 'Noto Serif', serif; font-size: 1.05rem; text-align: justify; }
-    .keywords-box { background: #f9f9f9; padding: 15px; border-radius: 4px; margin: 20px 0; }
-    .keyword-tag { display: inline-block; margin-right: 15px; font-size: 0.9rem; color: var(--primary-blue); }
-    footer { text-align: center; padding: 40px; color: var(--text-grey); font-size: 0.8rem; }
-    .btn-outline { border: 1px solid var(--primary-blue); color: var(--primary-blue); padding: 12px 24px; border-radius: 2px; text-decoration: none; font-weight: bold; display: inline-flex; align-items: center; transition: 0.2s; }
-    .btn-outline:hover { background: #f0f7f9; }
-    @media (max-width: 900px) { .main-wrapper { grid-template-columns: 1fr; } aside { display: none; } .article-container { padding: 20px; } .profile-header { flex-direction: column; text-align: center; } }
+
+    body {
+      margin: 0;
+      font-family: 'Lora', serif;
+      color: var(--text);
+      background-color: #fff;
+      line-height: 1.7;
+    }
+
+    /* Navegación Minimalista */
+    .top-nav {
+      padding: 20px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+      font-family: 'Inter', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-size: 11px;
+    }
+    .top-nav a { text-decoration: none; color: var(--text); font-weight: 700; }
+
+    /* Cabecera de Perfil */
+    .profile-hero {
+      max-width: 900px;
+      margin: 60px auto;
+      padding: 0 20px;
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 50px;
+      align-items: center;
+    }
+
+    .img-container {
+      position: relative;
+    }
+    .profile-img {
+      width: 220px;
+      height: 220px;
+      object-fit: cover;
+      filter: grayscale(20%);
+      border-radius: 2px; /* Cuadrado editorial, no circular */
+      box-shadow: 20px 20px 0px var(--light-grey);
+    }
+    .no-img {
+      width: 220px;
+      height: 220px;
+      background: var(--light-grey);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Inter', sans-serif;
+      color: #999;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    .profile-info h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 3.5rem;
+      margin: 0;
+      line-height: 1;
+      font-weight: 900;
+    }
+    .profile-role {
+      font-family: 'Inter', sans-serif;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-top: 15px;
+      display: block;
+    }
+    .profile-inst {
+      font-family: 'Inter', sans-serif;
+      color: var(--grey);
+      font-size: 14px;
+      margin-top: 5px;
+    }
+
+    /* Secciones de Contenido */
+    .container {
+      max-width: 800px;
+      margin: 0 auto 100px;
+      padding: 0 20px;
+    }
+
+    .section-title {
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      border-bottom: 1px solid var(--text);
+      padding-bottom: 10px;
+      margin: 60px 0 30px;
+      color: var(--text);
+    }
+
+    .bio-text { font-size: 1.15rem; }
+
+    /* Tags de Áreas */
+    .tags-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .keyword-tag {
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      background: var(--light-grey);
+      padding: 6px 15px;
+      border-radius: 20px;
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* Lista de Artículos Estilo Bibliográfico */
+    .article-item {
+      margin-bottom: 25px;
+      padding-left: 20px;
+      border-left: 2px solid var(--light-grey);
+      transition: border-color 0.3s;
+    }
+    .article-item:hover { border-left-color: var(--primary); }
+    
+    .article-link {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.3rem;
+      color: var(--text);
+      text-decoration: none;
+      display: block;
+      line-height: 1.3;
+    }
+    .article-meta {
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      color: var(--grey);
+      margin-top: 5px;
+    }
+
+    .footer-nav {
+      text-align: center;
+      padding: 60px 20px;
+      background: var(--light-grey);
+      margin-top: 100px;
+    }
+    .footer-nav a {
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      text-decoration: none;
+      color: var(--primary);
+      font-weight: 700;
+      margin: 0 15px;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 768px) {
+      .profile-hero {
+        grid-template-columns: 1fr;
+        text-align: center;
+        margin-top: 30px;
+      }
+      .profile-img, .no-img { margin: 0 auto; width: 180px; height: 180px; }
+      .profile-info h1 { font-size: 2.5rem; }
+      .section-title { text-align: center; }
+    }
+    @media (max-width: 900px) {
+      h1, h2, p, .bio-text {
+        word-break: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="top-bar">
-    <a href="/" class="journal-name">THE NATIONAL REVIEW OF SCIENCES FOR STUDENTS</a>
-  </div>
-  <div class="main-wrapper">
-    <aside>
-      <div class="outline-box">
-        <div class="outline-title">Outline</div>
-        <ul class="outline-list">
-          <li><a href="#description">Description</a></li>
-          <li><a href="#areas">Areas of Interest</a></li>
-          ${isAuthor ? '<li><a href="#articles">Published Articles</a></li>' : ''}
-        </ul>
-        <div class="outline-title" style="margin-top:30px">Actions</div>
-        <a href="/en/team" class="btn-outline" style="width:100%; box-sizing:border-box; justify-content:center;">Back to Team</a>
-      </div>
-    </aside>
-    <main class="article-container">
-      <header>
-        <div class="profile-header">
-          <div>
-            ${imagen ? `<img src="${imagen}" alt="Photo of ${nombre}" class="profile-img">` : `<div class="profile-img-fallback">No Image</div>`}
-          </div>
-          <div>
-            <h1>${nombre}</h1>
-            <div class="role">${rolesEn}</div>
-            ${institutionHtmlEn}
-          </div>
-        </div>
-      </header>
-      <section id="description">
-        <h2>Description</h2>
-        <p>${description}</p>
-      </section>
-      <section id="areas" class="keywords-box">
-        <h2>Areas of Interest</h2>
+
+  <nav class="top-nav">
+    <a href="/">The National Review of Sciences for Students</a>
+  </nav>
+
+  <header class="profile-hero">
+    <div class="img-container">
+      ${imagen ? `<img src="${imagen}" alt="${nombre}" class="profile-img">` : `<div class="no-img">No Image</div>`}
+    </div>
+    <div class="profile-info">
+      <span class="profile-role">${rolesEn}</span>
+      <h1>${nombre}</h1>
+      ${institutionHtmlEn}
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="description">
+      <h2 class="section-title">About the Author</h2>
+      <div class="bio-text">${description}</div>
+    </section>
+
+    <section id="areas">
+      <h2 class="section-title">Research Areas</h2>
+      <div class="tags-container">
         ${areasTagsHtmlEn}
-      </section>
-      ${articlesSectionEn}
-    </main>
-  </div>
-  <footer>
-    <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students.</p>
-    <p><a href="/en/team" style="color:var(--primary-blue)">Back to Team</a> | <a href="/" style="color:var(--primary-blue)">Back to home</a></p>
+      </div>
+    </section>
+
+    ${articlesSectionEn}
+  </main>
+
+  <footer class="footer-nav">
+    <a href="/en/team">← Editorial Team</a>
+    <a href="/">Home</a>
   </footer>
+
 </body>
 </html>`;
       const esPath = path.join(teamOutputHtmlDir, `${slug}.html`);

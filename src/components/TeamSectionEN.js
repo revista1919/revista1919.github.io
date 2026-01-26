@@ -90,7 +90,7 @@ function TeamSectionEN({ setActiveTab }) {
   const handleMemberClick = (memberName) => {
     if (!memberName) return;
     const slug = generateSlug(memberName);
-    window.location.href = `/team/${slug}EN.html`;
+    window.location.href = `/team/${slug}.EN.html`;
   };
 
   return (
