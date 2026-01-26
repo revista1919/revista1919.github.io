@@ -257,7 +257,7 @@ export default function NewsSection({ className }) {
             <div className="lg:col-span-7 flex flex-col gap-8">
               <div className="overflow-hidden rounded-sm bg-gray-100 aspect-video">
                 <img
-                  src={featured.photo ? `data:image/jpeg;base64,${featured.photo}` : "https://www.revistacienciasestudiantes.com/team.jpg"}
+                  src={featured.photo ? featured.photo : "https://www.revistacienciasestudiantes.com/team.jpg"}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                   alt="Featured"
                 />
@@ -298,7 +298,7 @@ export default function NewsSection({ className }) {
               >
                 <div className="mb-3 h-32 bg-gray-100 rounded overflow-hidden">
                   <img
-                    src={item.photo ? `data:image/jpeg;base64,${item.photo}` : "https://via.placeholder.com/400x225?text=Imagen+Noticia"}
+                    src={item.photo ? item.photo : "https://via.placeholder.com/400x225?text=Imagen+Noticia"}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                     alt={item.titulo}
                   />
