@@ -6,7 +6,7 @@ import { auth } from '../firebase';
 import { debounce } from 'lodash';
 // Registrar el módulo de resize
 Quill.register('modules/imageResize', ImageResize);
-const NEWS_SCRIPT_URL = 'https://southamerica-west1-usuarios-rnce.cloudfunctions.net/uploadNews';
+const NEWS_SCRIPT_URL = 'https://uploadnews-ggqsq2kkua-uc.a.run.app';
 // --- LÓGICA DE NEGOCIO (MANTENIDA FIEL A TU REQUERIMIENTO) ---
 const base64EncodeUnicode = (str) => {
   const encoder = new TextEncoder();
