@@ -2391,71 +2391,77 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
 }
 await generateNews();
  // Procesar equipo (sigue de CSV)
-    const allMembers = teamParsed.data.filter(row => (row['Nombre'] || '').trim() !== '');
-    for (const member of allMembers) {
-      const rolesEs = (member['Rol en la Revista'] || '').split(';').map(r => r.trim()).filter(r => r);
-      const rolesEnList = (member['Role in the Journal'] || '').split(';').map(r => r.trim()).filter(r => r);
-      const nombre = member['Nombre'] || 'Miembro desconocido';
-      const publishedArticles = authorToArticles[nombre] || [];
-      const isAuthor = publishedArticles.length > 0;
-      let filteredRolesEs = rolesEs;
-      let filteredRolesEn = rolesEnList;
-      if (rolesEs.length > 1) {
-        filteredRolesEs = rolesEs.filter(r => r.toLowerCase() !== 'autor');
-      }
-      if (rolesEnList.length > 1) {
-        filteredRolesEn = rolesEnList.filter(r => r.toLowerCase() !== 'author');
-      }
-      const rolesStr = filteredRolesEs.join(', ') || 'No especificado';
-      const rolesEn = filteredRolesEn.join(', ') || 'Not specified';
-      const slug = generateSlug(nombre);
-      const descripcion = member['Descripción'] || 'Información no disponible';
-      const description = member['Description'] || 'Information not available';
-      const areas = member['Áreas de interés'] || 'No especificadas';
-      const areasEn = member['Areas of interest'] || 'Not specified';
-      const areasList = areas.split(';').map(a => a.trim()).filter(a => a);
-      const areasListEn = areasEn.split(';').map(a => a.trim()).filter(a => a);
-      const imagen = getImageSrc(member['Imagen'] || '');
-      const institution = member['Institution'] || '';
-      const areasTagsHtml = areasList.length ? areasList.map(area => `<span class="keyword-tag">${area}</span>`).join('') : '<p>No especificadas</p>';
-      const areasTagsHtmlEn = areasListEn.length ? areasListEn.map(area => `<span class="keyword-tag">${area}</span>`).join('') : '<p>Not specified</p>';
-      const articlesSectionEs = isAuthor ? `
-    <section id="articles">
-      <h2 class="section-title">Publicaciones en la Revista</h2>
-      <div>
-        ${publishedArticles.map(article => {
-          const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
-          return `
-          <div class="article-item">
-            <a href="/articles/article-${articleSlug}.html" class="article-link">${article.titulo}</a>
-            <div class="article-meta">
-              Vol. ${article.volumen}, Núm. ${article.numero} • ${article.fecha}
-            </div>
-          </div>
-          `;
-        }).join('')}
+   const allMembers = teamParsed.data.filter(row => (row['Nombre'] || '').trim() !== '');
+for (const member of allMembers) {
+  const rolesEs = (member['Rol en la Revista'] || '').split(';').map(r => r.trim()).filter(r => r);
+  const rolesEnList = (member['Role in the Journal'] || '').split(';').map(r => r.trim()).filter(r => r);
+  const nombre = member['Nombre'] || 'Miembro desconocido';
+  const publishedArticles = authorToArticles[nombre] || [];
+  const isAuthor = publishedArticles.length > 0;
+  let filteredRolesEs = rolesEs;
+  let filteredRolesEn = rolesEnList;
+  if (rolesEs.length > 1) {
+    filteredRolesEs = rolesEs.filter(r => r.toLowerCase() !== 'autor');
+  }
+  if (rolesEnList.length > 1) {
+    filteredRolesEn = rolesEnList.filter(r => r.toLowerCase() !== 'author');
+  }
+  const rolesStr = filteredRolesEs.join(', ') || 'No especificado';
+  const rolesEn = filteredRolesEn.join(', ') || 'Not specified';
+  const slug = generateSlug(nombre);
+  const descripcion = member['Descripción'] || 'Información no disponible';
+  const description = member['Description'] || 'Information not available';
+  const areas = member['Áreas de interés'] || 'No especificadas';
+  const areasEn = member['Areas of interest'] || 'Not specified';
+  const areasList = areas.split(';').map(a => a.trim()).filter(a => a);
+  const areasListEn = areasEn.split(';').map(a => a.trim()).filter(a => a);
+  const imagen = getImageSrc(member['Imagen'] || '');
+  const institution = member['Institution'] || '';
+  const isOnlyAuthorEs = rolesEs.length === 1 && rolesEs[0].toLowerCase() === 'autor';
+  const isOnlyAuthorEn = rolesEnList.length === 1 && rolesEnList[0].toLowerCase() === 'author';
+  const bioTitleEs = isOnlyAuthorEs ? 'Sobre el autor' : 'Perfil';
+  const areasTitleEs = isOnlyAuthorEs ? 'Líneas de Investigación' : 'Áreas de Interés';
+  const bioTitleEn = isOnlyAuthorEn ? 'About the Author' : 'Profile';
+  const areasTitleEn = isOnlyAuthorEn ? 'Research Areas' : 'Areas of Interest';
+  const areasTagsHtml = areasList.length ? areasList.map(area => `<span class="keyword-tag">${area}</span>`).join('') : '<p>No especificadas</p>';
+  const areasTagsHtmlEn = areasListEn.length ? areasListEn.map(area => `<span class="keyword-tag">${area}</span>`).join('') : '<p>Not specified</p>';
+  const articlesSectionEs = isAuthor ? `
+<section id="articles">
+  <h2 class="section-title">Publicaciones en la Revista</h2>
+  <div>
+    ${publishedArticles.map(article => {
+      const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
+      return `
+      <div class="article-item">
+        <a href="/articles/article-${articleSlug}.html" class="article-link">${article.titulo}</a>
+        <div class="article-meta">
+          Vol. ${article.volumen}, Núm. ${article.numero} • ${article.fecha}
+        </div>
       </div>
-    </section>` : '';
-      const articlesSectionEn = isAuthor ? `
-    <section id="articles">
-      <h2 class="section-title">Publications in the Journal</h2>
-      <div>
-        ${publishedArticles.map(article => {
-          const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
-          return `
-          <div class="article-item">
-            <a href="/articles/article-${articleSlug}EN.html" class="article-link">${article.title || article.titulo}</a>
-            <div class="article-meta">
-              Vol. ${article.volumen}, Issue ${article.numero} • ${article.fecha}
-            </div>
-          </div>
-          `;
-        }).join('')}
+      `;
+    }).join('')}
+  </div>
+</section>` : '';
+  const articlesSectionEn = isAuthor ? `
+<section id="articles">
+  <h2 class="section-title">Publications in the Journal</h2>
+  <div>
+    ${publishedArticles.map(article => {
+      const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
+      return `
+      <div class="article-item">
+        <a href="/articles/article-${articleSlug}EN.html" class="article-link">${article.title || article.titulo}</a>
+        <div class="article-meta">
+          Vol. ${article.volumen}, Issue ${article.numero} • ${article.fecha}
+        </div>
       </div>
-    </section>` : '';
-      const institutionHtmlEs = institution ? `<div class="profile-inst">${institution}</div>` : '';
-      const institutionHtmlEn = institution ? `<div class="profile-inst">${institution}</div>` : '';
-      const esContent = `<!DOCTYPE html>
+      `;
+    }).join('')}
+  </div>
+</section>` : '';
+  const institutionHtmlEs = institution ? `<div class="profile-inst">${institution}</div>` : '';
+  const institutionHtmlEn = institution ? `<div class="profile-inst">${institution}</div>` : '';
+  const esContent = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -2473,7 +2479,6 @@ await generateNews();
       --light-grey: #f5f5f5;
       --border: #e0e0e0;
     }
-
     body {
       margin: 0;
       font-family: 'Lora', serif;
@@ -2481,7 +2486,6 @@ await generateNews();
       background-color: #fff;
       line-height: 1.7;
     }
-
     /* Navegación Minimalista */
     .top-nav {
       padding: 20px;
@@ -2493,7 +2497,6 @@ await generateNews();
       font-size: 11px;
     }
     .top-nav a { text-decoration: none; color: var(--text); font-weight: 700; }
-
     /* Cabecera de Perfil */
     .profile-hero {
       max-width: 900px;
@@ -2504,7 +2507,6 @@ await generateNews();
       gap: 50px;
       align-items: center;
     }
-
     .img-container {
       position: relative;
     }
@@ -2528,7 +2530,6 @@ await generateNews();
       font-size: 12px;
       text-transform: uppercase;
     }
-
     .profile-info h1 {
       font-family: 'Playfair Display', serif;
       font-size: 3.5rem;
@@ -2552,14 +2553,12 @@ await generateNews();
       font-size: 14px;
       margin-top: 5px;
     }
-
     /* Secciones de Contenido */
     .container {
       max-width: 800px;
       margin: 0 auto 100px;
       padding: 0 20px;
     }
-
     .section-title {
       font-family: 'Inter', sans-serif;
       font-size: 11px;
@@ -2571,9 +2570,7 @@ await generateNews();
       margin: 60px 0 30px;
       color: var(--text);
     }
-
     .bio-text { font-size: 1.15rem; }
-
     /* Tags de Áreas */
     .tags-container {
       display: flex;
@@ -2589,7 +2586,6 @@ await generateNews();
       color: var(--text);
       font-weight: 600;
     }
-
     /* Lista de Artículos Estilo Bibliográfico */
     .article-item {
       margin-bottom: 25px;
@@ -2598,7 +2594,7 @@ await generateNews();
       transition: border-color 0.3s;
     }
     .article-item:hover { border-left-color: var(--primary); }
-    
+   
     .article-link {
       font-family: 'Playfair Display', serif;
       font-size: 1.3rem;
@@ -2613,7 +2609,6 @@ await generateNews();
       color: var(--grey);
       margin-top: 5px;
     }
-
     .footer-nav {
       text-align: center;
       padding: 60px 20px;
@@ -2629,7 +2624,6 @@ await generateNews();
       margin: 0 15px;
       text-transform: uppercase;
     }
-
     @media (max-width: 768px) {
       .profile-hero {
         grid-template-columns: 1fr;
@@ -2650,11 +2644,9 @@ await generateNews();
   </style>
 </head>
 <body>
-
   <nav class="top-nav">
     <a href="/">Revista Nacional de las Ciencias para Estudiantes</a>
   </nav>
-
   <header class="profile-hero">
     <div class="img-container">
       ${imagen ? `<img src="${imagen}" alt="${nombre}" class="profile-img">` : `<div class="no-img">Sin Imagen</div>`}
@@ -2665,31 +2657,26 @@ await generateNews();
       ${institutionHtmlEs}
     </div>
   </header>
-
   <main class="container">
     <section id="descripcion">
-      <h2 class="section-title">Sobre el autor</h2>
+      <h2 class="section-title">${bioTitleEs}</h2>
       <div class="bio-text">${descripcion}</div>
     </section>
-
     <section id="areas">
-      <h2 class="section-title">Líneas de Investigación</h2>
+      <h2 class="section-title">${areasTitleEs}</h2>
       <div class="tags-container">
         ${areasTagsHtml}
       </div>
     </section>
-
     ${articlesSectionEs}
   </main>
-
   <footer class="footer-nav">
     <a href="/es/team">← Equipo Editorial</a>
     <a href="/">Inicio</a>
   </footer>
-
 </body>
 </html>`;
-      const enContent = `<!DOCTYPE html>
+  const enContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -2707,7 +2694,6 @@ await generateNews();
       --light-grey: #f5f5f5;
       --border: #e0e0e0;
     }
-
     body {
       margin: 0;
       font-family: 'Lora', serif;
@@ -2715,7 +2701,6 @@ await generateNews();
       background-color: #fff;
       line-height: 1.7;
     }
-
     /* Navegación Minimalista */
     .top-nav {
       padding: 20px;
@@ -2727,7 +2712,6 @@ await generateNews();
       font-size: 11px;
     }
     .top-nav a { text-decoration: none; color: var(--text); font-weight: 700; }
-
     /* Cabecera de Perfil */
     .profile-hero {
       max-width: 900px;
@@ -2738,7 +2722,6 @@ await generateNews();
       gap: 50px;
       align-items: center;
     }
-
     .img-container {
       position: relative;
     }
@@ -2762,7 +2745,6 @@ await generateNews();
       font-size: 12px;
       text-transform: uppercase;
     }
-
     .profile-info h1 {
       font-family: 'Playfair Display', serif;
       font-size: 3.5rem;
@@ -2786,14 +2768,12 @@ await generateNews();
       font-size: 14px;
       margin-top: 5px;
     }
-
     /* Secciones de Contenido */
     .container {
       max-width: 800px;
       margin: 0 auto 100px;
       padding: 0 20px;
     }
-
     .section-title {
       font-family: 'Inter', sans-serif;
       font-size: 11px;
@@ -2805,9 +2785,7 @@ await generateNews();
       margin: 60px 0 30px;
       color: var(--text);
     }
-
     .bio-text { font-size: 1.15rem; }
-
     /* Tags de Áreas */
     .tags-container {
       display: flex;
@@ -2823,7 +2801,6 @@ await generateNews();
       color: var(--text);
       font-weight: 600;
     }
-
     /* Lista de Artículos Estilo Bibliográfico */
     .article-item {
       margin-bottom: 25px;
@@ -2832,7 +2809,7 @@ await generateNews();
       transition: border-color 0.3s;
     }
     .article-item:hover { border-left-color: var(--primary); }
-    
+   
     .article-link {
       font-family: 'Playfair Display', serif;
       font-size: 1.3rem;
@@ -2847,7 +2824,6 @@ await generateNews();
       color: var(--grey);
       margin-top: 5px;
     }
-
     .footer-nav {
       text-align: center;
       padding: 60px 20px;
@@ -2863,7 +2839,6 @@ await generateNews();
       margin: 0 15px;
       text-transform: uppercase;
     }
-
     @media (max-width: 768px) {
       .profile-hero {
         grid-template-columns: 1fr;
@@ -2884,11 +2859,9 @@ await generateNews();
   </style>
 </head>
 <body>
-
   <nav class="top-nav">
     <a href="/">The National Review of Sciences for Students</a>
   </nav>
-
   <header class="profile-hero">
     <div class="img-container">
       ${imagen ? `<img src="${imagen}" alt="${nombre}" class="profile-img">` : `<div class="no-img">No Image</div>`}
@@ -2899,37 +2872,33 @@ await generateNews();
       ${institutionHtmlEn}
     </div>
   </header>
-
   <main class="container">
     <section id="description">
-      <h2 class="section-title">About the Author</h2>
+      <h2 class="section-title">${bioTitleEn}</h2>
       <div class="bio-text">${description}</div>
     </section>
-
     <section id="areas">
-      <h2 class="section-title">Research Areas</h2>
+      <h2 class="section-title">${areasTitleEn}</h2>
       <div class="tags-container">
         ${areasTagsHtmlEn}
       </div>
     </section>
-
     ${articlesSectionEn}
   </main>
-
   <footer class="footer-nav">
     <a href="/en/team">← Editorial Team</a>
     <a href="/">Home</a>
   </footer>
-
 </body>
 </html>`;
-      const esPath = path.join(teamOutputHtmlDir, `${slug}.html`);
-      fs.writeFileSync(esPath, esContent, 'utf8');
-      console.log(`Generado HTML de miembro (ES): ${esPath}`);
-      const enPath = path.join(teamOutputHtmlDir, `${slug}.EN.html`);
-      fs.writeFileSync(enPath, enContent, 'utf8');
-      console.log(`Generado HTML de miembro (EN): ${enPath}`);
-    }
+  const esPath = path.join(teamOutputHtmlDir, `${slug}.html`);
+  fs.writeFileSync(esPath, esContent, 'utf8');
+  console.log(`Generado HTML de miembro (ES): ${esPath}`);
+  const enPath = path.join(teamOutputHtmlDir, `${slug}.EN.html`);
+  fs.writeFileSync(enPath, enContent, 'utf8');
+  console.log(`Generado HTML de miembro (EN): ${enPath}`);
+}
+
     // Pre-renderizar rutas de la SPA
     console.log('🚀 Pre-renderizando las rutas de la aplicación...');
     const appShellPath = path.join(__dirname, 'dist', 'index.html');

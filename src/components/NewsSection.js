@@ -245,83 +245,114 @@ export default function NewsSection({ className }) {
         />
       </div>
       {/* --- GRID EDITORIAL SIMÉTRICO --- */}
-      <div className="flex flex-col gap-12">
-        {/* 1. ARTÍCULO DESTACADO (Más Reciente) */}
-        {featured && (
-          <motion.article
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="grid grid-cols-1 lg:grid-cols-12 gap-8 pb-12 border-b border-gray-100 group cursor-pointer"
-            onClick={() => openNews(featured)}
-          >
-            <div className="lg:col-span-7 flex flex-col gap-8">
-              <div className="overflow-hidden rounded-sm bg-gray-100 aspect-video">
-                <img
-                  src={featured.photo ? featured.photo : "https://www.revistacienciasestudiantes.com/team.jpg"}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                  alt="Featured"
-                />
-              </div>
-              {welcomeNote && welcomeNote.fechaIso !== featured.fechaIso && (
-                <div className="group/welcome cursor-pointer" onClick={(e) => { e.stopPropagation(); openNews(welcomeNote); }}>
-                  <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-600 mb-4 block">Nota Editorial</span>
-                  <h3 className="text-4xl font-serif font-bold leading-tight group-hover/welcome:text-blue-600 transition-colors">
-                    {welcomeNote.titulo}
-                  </h3>
-                </div>
-              )}
-            </div>
-            <div className="lg:col-span-5 flex flex-col justify-center">
-              <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-600 mb-4 block">Última Actualización</span>
-              <h3 className="text-4xl font-serif font-bold leading-tight mb-4 group-hover:text-blue-600 transition-colors">
-                {featured.titulo}
-              </h3>
-              <div className="text-gray-600 font-serif text-lg mb-6 line-clamp-3 italic">
-                {decodeBody(featured.cuerpo, true)}
-              </div>
-              <time className="text-xs font-mono text-gray-400">{featured.fecha}</time>
-            </div>
-          </motion.article>
-        )}
-        {/* 2. GRID DE NOTICIAS RESTANTES (Simetría Perfecta) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-16">
-          <AnimatePresence>
-            {listNews.map((item, idx) => (
-              <motion.article
-                key={idx}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: idx * 0.1 }}
-                className="flex flex-col border-t border-gray-100 pt-6 group cursor-pointer"
-                onClick={() => openNews(item)}
-              >
-                <div className="mb-3 h-32 bg-gray-100 rounded overflow-hidden">
-                  <img
-                    src={item.photo ? item.photo : "https://via.placeholder.com/400x225?text=Imagen+Noticia"}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                    alt={item.titulo}
-                  />
-                </div>
-                <time className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-3 block">
-                  {item.fecha}
-                </time>
-                <h4 className="text-xl font-serif font-bold leading-snug mb-3 group-hover:underline decoration-blue-200">
-                  {item.titulo}
-                </h4>
-                <div className="text-sm text-gray-500 line-clamp-3 leading-relaxed mb-4 italic">
-                  {decodeBody(item.cuerpo, true)}
-                </div>
-                <div className="mt-auto pt-4 flex justify-end border-t border-gray-50">
-                  <span className="text-[10px] font-black uppercase tracking-widest group-hover:text-blue-600 transition-colors">
-                    Leer Nota →
-                  </span>
-                </div>
-              </motion.article>
-            ))}
-          </AnimatePresence>
+<div className="flex flex-col gap-12">
+  {/* 1. ARTÍCULO DESTACADO (Más Reciente) */}
+  {featured && (
+    <motion.article
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="grid grid-cols-1 lg:grid-cols-12 gap-8 pb-12 border-b border-gray-100 group cursor-pointer"
+      onClick={() => openNews(featured)}
+    >
+      {/* Lado Izquierdo: Imagen (En móvil va arriba) */}
+      <div className="lg:col-span-7 flex flex-col gap-6">
+        <div className="overflow-hidden rounded-sm bg-gray-100 aspect-video md:aspect-auto md:h-[400px]">
+          <img
+            src={featured.photo ? featured.photo : "https://www.revistacienciasestudiantes.com/team.jpg"}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+            alt="Featured"
+          />
         </div>
+        
+        {/* NOTA EDITORIAL: Solo visible en Desktop aquí, o rediseñada para móvil */}
+        {welcomeNote && welcomeNote.fechaIso !== featured.fechaIso && (
+          <div 
+            className="hidden lg:block group/welcome border-t pt-6" 
+            onClick={(e) => { e.stopPropagation(); openNews(welcomeNote); }}
+          >
+            <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-600 mb-2 block">Nota Editorial</span>
+            <h3 className="text-3xl font-serif font-bold leading-tight group-hover/welcome:text-blue-600 transition-colors">
+              {welcomeNote.titulo}
+            </h3>
+            <p className="text-sm text-gray-500 mt-2 font-serif italic">Seguir leyendo →</p>
+          </div>
+        )}
       </div>
+
+      {/* Lado Derecho: Texto de la noticia destacada */}
+      <div className="lg:col-span-5 flex flex-col justify-center">
+        <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-600 mb-4 block">Última Actualización</span>
+        <h3 className="text-3xl md:text-4xl font-serif font-bold leading-tight mb-4 group-hover:text-blue-600 transition-colors">
+          {featured.titulo}
+        </h3>
+        <div className="text-gray-600 font-serif text-lg mb-6 line-clamp-4 md:line-clamp-6 italic">
+          {decodeBody(featured.cuerpo, true)}
+        </div>
+        <time className="text-xs font-mono text-gray-400">{featured.fecha}</time>
+      </div>
+
+      {/* NOTA EDITORIAL PARA MÓVIL: Aparece después del texto de la destacada con un diseño de "tarjeta" */}
+      {welcomeNote && welcomeNote.fechaIso !== featured.fechaIso && (
+        <div 
+          className="lg:hidden bg-blue-50 p-6 -mx-4 border-y border-blue-100" 
+          onClick={(e) => { e.stopPropagation(); openNews(welcomeNote); }}
+        >
+          <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-600 mb-2 block">Nota Editorial</span>
+          <h3 className="text-2xl font-serif font-bold leading-tight">
+            {welcomeNote.titulo}
+          </h3>
+          <p className="text-blue-700 text-xs font-bold uppercase tracking-widest mt-4">Leer mensaje del editor →</p>
+        </div>
+      )}
+    </motion.article>
+  )}
+
+  {/* 2. GRID DE NOTICIAS RESTANTES */}
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-12 md:gap-y-16">
+    <AnimatePresence>
+      {listNews.map((item, idx) => (
+        <motion.article
+          key={idx}
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: idx * 0.1 }}
+          className="flex flex-col border-t border-gray-100 pt-6 group cursor-pointer"
+          onClick={() => openNews(item)}
+        >
+          {/* En móvil, ponemos la imagen al lado del título o la hacemos más pequeña para ahorrar scroll */}
+          <div className="flex flex-row md:flex-col gap-4">
+            <div className="w-1/3 md:w-full h-24 md:h-48 bg-gray-100 rounded-sm overflow-hidden flex-shrink-0">
+              <img
+                src={item.photo ? item.photo : "https://via.placeholder.com/400x225?text=RNCE"}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                alt={item.titulo}
+              />
+            </div>
+            <div className="flex flex-col flex-1">
+              <time className="text-[9px] font-bold text-blue-600 uppercase tracking-widest mb-1 md:mb-3 block">
+                {item.fecha.split(',')[0]} {/* Solo fecha, sin hora en móvil para limpiar */}
+              </time>
+              <h4 className="text-lg md:text-xl font-serif font-bold leading-snug mb-2 group-hover:underline decoration-blue-200">
+                {item.titulo}
+              </h4>
+              {/* El resumen solo se ve en tablets/desktop para evitar un scroll infinito en celular */}
+              <div className="hidden md:block text-sm text-gray-500 line-clamp-3 leading-relaxed mb-4 italic">
+                {decodeBody(item.cuerpo, true)}
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-auto pt-4 hidden md:flex justify-end border-t border-gray-50">
+            <span className="text-[10px] font-black uppercase tracking-widest group-hover:text-blue-600 transition-colors">
+              Leer Nota →
+            </span>
+          </div>
+        </motion.article>
+      ))}
+    </AnimatePresence>
+  </div>
+</div>
       {filteredNews.length === 0 && (
         <p className="text-center text-gray-600 col-span-full mt-8">
           No se encontraron noticias.
