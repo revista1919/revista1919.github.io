@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { auth, db } from '../firebase';
+import { auth } from '../firebase';
+import { collection, onSnapshot } from "firebase/firestore";
+import { db } from '../firebase';
 import Admissions from './Admissions';
 import MailsTeam from './MailsTeam';
 
 const DOMAIN = 'https://www.revistacienciasestudiantes.com';
-const MANAGE_ARTICLES_URL = 'https://southamerica-west1-usuarios-rnce.cloudfunctions.net/manageArticles'; // Reemplaza con tu URL real
-const MANAGE_VOLUMES_URL = 'https://southamerica-west1-usuarios-rnce.cloudfunctions.net/manageVolumes'; // Reemplaza con tu URL real
+const MANAGE_ARTICLES_URL = 'https://TU_REGION-TU_PROJECT.cloudfunctions.net/manageArticles'; // Reemplaza con tu URL real
+const MANAGE_VOLUMES_URL = 'https://TU_REGION-TU_PROJECT.cloudfunctions.net/manageVolumes'; // Reemplaza con tu URL real
 const REBUILD_TOKEN = process.env.REACT_APP_REBUILD_TOKEN || '';
 const REPO_OWNER = 'revista1919';
 const REPO_NAME = 'revista1919.github.io';
@@ -102,7 +104,7 @@ export default function DirectorPanel({ user }) {
     if (!hasAccess) return;
 
     setLoading(true);
-    const unsubscribeArticles = db.collection('articles').onSnapshot((snapshot) => {
+    const unsubscribeArticles = onSnapshot(collection(db, 'articles'), (snapshot) => {
       const arts = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
@@ -112,7 +114,7 @@ export default function DirectorPanel({ user }) {
     });
 
     setVolumeLoading(true);
-    const unsubscribeVolumes = db.collection('volumes').onSnapshot((snapshot) => {
+    const unsubscribeVolumes = onSnapshot(collection(db, 'volumes'), (snapshot) => {
       const vols = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
