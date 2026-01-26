@@ -43,7 +43,7 @@ async function migrateArticles() {
         keywords_english: row['Keywords'] ? row['Keywords'].split(';').map(k => k.trim()).filter(k => k) : [],
         tipo: row['Tipo'] || '',
         type: row['Type'] || '',
-        pdfUrl: row['PDF'] || '',
+        pdfUrl: row['URL_PDF'] || '',
         role: 'Director General'  // Default for security
       };
       await db.collection('articles').add(data);
