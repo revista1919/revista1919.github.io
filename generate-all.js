@@ -858,27 +858,6 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     const indexPath = path.join(outputHtmlDir, 'index.html');
     fs.writeFileSync(indexPath, indexContent, 'utf8');
     console.log(`Generado índice HTML de artículos: ${indexPath}`);
-function parseDateIso(dateStr) {
-  if (!dateStr) return null;
-
-  // Si ya es ISO
-  if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
-    return dateStr;
-  }
-
-  // Formato esperado: DD-MM-YYYY o DD/MM/YYYY
-  const parts = dateStr.split(/[-/]/);
-  if (parts.length === 3) {
-    const [day, month, year] = parts;
-    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-  }
-
-  // Último recurso
-  const d = new Date(dateStr);
-  if (!isNaN(d)) return d.toISOString().split('T')[0];
-
-  return null;
-}
 
     // Generar índice de artículos en inglés
     let indexContentEn = `
@@ -1606,7 +1585,7 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
 
     // Procesar noticias desde Firestore
     const newsSnapshot = await db.collection('news').get();
-    let newsItems = newsSnapshot.docs.map(doc => doc.data()).map(item => ({
+    const newsItems = newsSnapshot.docs.map(doc => doc.data()).map(item => ({
       titulo: item.title_es || '',
       cuerpo: item.body_es || '',  // base64
       fecha: parseDateFlexible(item.timestamp_es),
@@ -1881,6 +1860,49 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
       console.log(`Generado HTML de noticia (EN): ${enPath}`);
     }
 // Agregar photo al map de newsItems (si no lo tienes, agrégalo aquí)
+function parseDateIso(raw) {
+  if (!raw) return '';
+  let parsedDate = new Date(raw);
+  if (isNaN(parsedDate.getTime())) {
+    const datePattern = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/;
+    const match = raw.match(datePattern);
+    if (match) {
+      const [, day, month, year] = match;
+      parsedDate = new Date(`${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`);
+    }
+  }
+  if (!isNaN(parsedDate.getTime())) {
+    return parsedDate.toISOString().split('T')[0];
+  }
+  return '';
+}
+function formatDate(raw) {
+  if (!raw) return "Sin fecha";
+  let parsedDate = new Date(raw);
+  if (isNaN(parsedDate.getTime())) {
+    const datePattern = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/;
+    const match = raw.match(datePattern);
+    if (match) {
+      const [, day, month, year] = match;
+      parsedDate = new Date(`${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`);
+    }
+  }
+  if (!isNaN(parsedDate.getTime())) {
+    try {
+      return parsedDate.toLocaleString("es-CL", {
+        timeZone: "America/Santiago",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return raw;
+    }
+  }
+  return raw;
+}
 newsItems = newsItems.map(item => ({
   ...item,
   photo: item.photo || ''  // Asume photo es base64 desde DB, o vacío si no existe
