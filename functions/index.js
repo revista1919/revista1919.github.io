@@ -282,17 +282,8 @@ async function translateHtmlFragmentWithSplit(html, source, target, apiKey) {
 /* ===================== UPLOAD NEWS (EXISTENTE) ===================== */
 
 exports.uploadNews = onRequest(
-  { secrets: [GEMINI_API_KEY] },
+  { secrets: [GEMINI_API_KEY], cors: true },
   async (req, res) => {
-    // ===================== CORS =====================
-res.set("Access-Control-Allow-Origin", "*");
-res.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
-
-if (req.method === "OPTIONS") {
-  return res.status(204).send("");
-}
-
     if (req.method !== "POST")
       return res.status(405).json({ error: "Method not allowed" });
 
@@ -344,273 +335,259 @@ if (req.method === "OPTIONS") {
 
 /* ===================== MANAGE ARTICLES ===================== */
 
-exports.manageArticles = onRequest(async (req, res) => {
-  // ===================== CORS =====================
-res.set("Access-Control-Allow-Origin", "*");
-res.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+exports.manageArticles = onRequest(
+  { secrets: [GH_TOKEN], cors: true },
+  async (req, res) => {
+    if (req.method !== "POST")
+      return res.status(405).json({ error: "Method not allowed" });
 
-if (req.method === "OPTIONS") {
-  return res.status(204).send("");
-}
+    const token = req.headers.authorization?.split("Bearer ")[1];
+    if (!token) return res.status(401).json({ error: "Unauthorized" });
 
-  if (req.method !== "POST")
-    return res.status(405).json({ error: "Method not allowed" });
-
-  const token = req.headers.authorization?.split("Bearer ")[1];
-  if (!token) return res.status(401).json({ error: "Unauthorized" });
-
-  let user;
-  try {
-    user = await admin.auth().verifyIdToken(token);
-  } catch {
-    return res.status(401).json({ error: "Invalid token" });
-  }
-
-  try {
-    await validateRole(user.email, "Director General");
-  } catch (err) {
-    return res.status(403).json({ error: err.message });
-  }
-
-  const { action, article, pdfBase64, id } = req.body;
-  const db = admin.firestore();
-  const ref = db.collection("articles");
-
-  if (action === "add") {
-    const docRef = await ref.add({
-      ...article,
-      pdfUrl: "",
-      role: "Director General",
-    });
-
-    if (pdfBase64) {
-      const slug = generateSlug(article.titulo);
-      const fileName = `Article-${slug}-${docRef.id.slice(0, 5)}.pdf`;
-
-      await uploadPDFToRepo(
-        pdfBase64,
-        fileName,
-        "Add article PDF",
-        "Articles",
-      );
-
-      await docRef.update({
-        pdfUrl: `${DOMAIN}/Articles/${fileName}`,
-      });
+    let user;
+    try {
+      user = await admin.auth().verifyIdToken(token);
+    } catch {
+      return res.status(401).json({ error: "Invalid token" });
     }
 
-    return res.json({ success: true });
-  }
+    try {
+      await validateRole(user.email, "Director General");
+    } catch (err) {
+      return res.status(403).json({ error: err.message });
+    }
 
-  if (action === "edit") {
-    const doc = await ref.doc(id).get();
-    if (!doc.exists)
-      return res.status(404).json({ error: "Not found" });
+    const { action, article, pdfBase64, id } = req.body;
+    const db = admin.firestore();
+    const ref = db.collection("articles");
 
-    await ref.doc(id).update(article);
+    if (action === "add") {
+      const docRef = await ref.add({
+        ...article,
+        pdfUrl: "",
+        role: "Director General",
+      });
 
-    if (pdfBase64) {
-      const old = doc.data();
-      if (old.pdfUrl) {
+      if (pdfBase64) {
+        const slug = generateSlug(article.titulo);
+        const fileName = `Article-${slug}-${docRef.id.slice(0, 5)}.pdf`;
+
+        await uploadPDFToRepo(
+          pdfBase64,
+          fileName,
+          "Add article PDF",
+          "Articles",
+        );
+
+        await docRef.update({
+          pdfUrl: `${DOMAIN}/Articles/${fileName}`,
+        });
+      }
+
+      return res.json({ success: true });
+    }
+
+    if (action === "edit") {
+      const doc = await ref.doc(id).get();
+      if (!doc.exists)
+        return res.status(404).json({ error: "Not found" });
+
+      await ref.doc(id).update(article);
+
+      if (pdfBase64) {
+        const old = doc.data();
+        if (old.pdfUrl) {
+          await deletePDFFromRepo(
+            old.pdfUrl.split("/").pop(),
+            "Delete old PDF",
+            "Articles",
+          );
+        }
+
+        const slug = generateSlug(article.titulo);
+        const fileName = `Article-${slug}-${id.slice(0, 5)}.pdf`;
+
+        await uploadPDFToRepo(
+          pdfBase64,
+          fileName,
+          "Update article PDF",
+          "Articles",
+        );
+
+        await ref.doc(id).update({
+          pdfUrl: `${DOMAIN}/Articles/${fileName}`,
+        });
+      }
+
+      return res.json({ success: true });
+    }
+
+    if (action === "delete") {
+      const doc = await ref.doc(id).get();
+      if (!doc.exists)
+        return res.status(404).json({ error: "Not found" });
+
+      const data = doc.data();
+      if (data.pdfUrl) {
         await deletePDFFromRepo(
-          old.pdfUrl.split("/").pop(),
-          "Delete old PDF",
+          data.pdfUrl.split("/").pop(),
+          "Delete article PDF",
           "Articles",
         );
       }
 
-      const slug = generateSlug(article.titulo);
-      const fileName = `Article-${slug}-${id.slice(0, 5)}.pdf`;
+      await ref.doc(id).delete();
+      return res.json({ success: true });
+    }
 
-      await uploadPDFToRepo(
-        pdfBase64,
-        fileName,
-        "Update article PDF",
-        "Articles",
-      );
+    res.status(400).json({ error: "Invalid action" });
+  },
+);
+
+/* ===================== MANAGE VOLUMES ===================== */
+
+exports.manageVolumes = onRequest(
+  { secrets: [GH_TOKEN], cors: true },
+  async (req, res) => {
+    if (req.method !== "POST") {
+      return res.status(405).json({ error: "Method not allowed" });
+    }
+
+    /* ---------- Auth ---------- */
+    const token = req.headers.authorization?.split("Bearer ")[1];
+    if (!token) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    let user;
+    try {
+      user = await admin.auth().verifyIdToken(token);
+    } catch {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    /* ---------- Rol ---------- */
+    try {
+      await validateRole(user.email, "Director General");
+    } catch (err) {
+      return res.status(403).json({ error: err.message });
+    }
+
+    /* ---------- Data ---------- */
+    const { action, volume, pdfBase64, id } = req.body;
+    if (!action) {
+      return res.status(400).json({ error: "Missing action" });
+    }
+
+    const db = admin.firestore();
+    const ref = db.collection("volumes");
+
+    /* ===================== ADD ===================== */
+    if (action === "add") {
+      if (!volume?.titulo) {
+        return res.status(400).json({ error: "Missing volume data" });
+      }
+
+      const docRef = await ref.add({
+        ...volume,
+        pdf: "",
+        role: "Director General",
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      if (pdfBase64) {
+        const slug = generateSlug(volume.titulo);
+        const fileName = `Volume-${slug}-${docRef.id.slice(0, 5)}.pdf`;
+
+        await uploadPDFToRepo(
+          pdfBase64,
+          fileName,
+          "Add volume PDF",
+          "Volumes",
+        );
+
+        await docRef.update({
+          pdf: `${DOMAIN}/Volumes/${fileName}`,
+        });
+      }
+
+      return res.json({ success: true });
+    }
+
+    /* ===================== EDIT ===================== */
+    if (action === "edit") {
+      if (!id) {
+        return res.status(400).json({ error: "Missing volume id" });
+      }
+
+      const docSnap = await ref.doc(id).get();
+      if (!docSnap.exists) {
+        return res.status(404).json({ error: "Volume not found" });
+      }
 
       await ref.doc(id).update({
-        pdfUrl: `${DOMAIN}/Articles/${fileName}`,
+        ...volume,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
+
+      if (pdfBase64) {
+        const oldData = docSnap.data();
+
+        if (oldData.pdf) {
+          const oldFileName = oldData.pdf.split("/").pop();
+          await deletePDFFromRepo(
+            oldFileName,
+            "Delete old volume PDF",
+            "Volumes",
+          );
+        }
+
+        const slug = generateSlug(volume.titulo || oldData.titulo);
+        const fileName = `Volume-${slug}-${id.slice(0, 5)}.pdf`;
+
+        await uploadPDFToRepo(
+          pdfBase64,
+          fileName,
+          "Update volume PDF",
+          "Volumes",
+        );
+
+        await ref.doc(id).update({
+          pdf: `${DOMAIN}/Volumes/${fileName}`,
+        });
+      }
+
+      return res.json({ success: true });
     }
 
-    return res.json({ success: true });
-  }
+    /* ===================== DELETE ===================== */
+    if (action === "delete") {
+      if (!id) {
+        return res.status(400).json({ error: "Missing volume id" });
+      }
 
-  if (action === "delete") {
-    const doc = await ref.doc(id).get();
-    if (!doc.exists)
-      return res.status(404).json({ error: "Not found" });
+      const docSnap = await ref.doc(id).get();
+      if (!docSnap.exists) {
+        return res.status(404).json({ error: "Volume not found" });
+      }
 
-    const data = doc.data();
-    if (data.pdfUrl) {
-      await deletePDFFromRepo(
-        data.pdfUrl.split("/").pop(),
-        "Delete article PDF",
-        "Articles",
-      );
-    }
+      const data = docSnap.data();
 
-    await ref.doc(id).delete();
-    return res.json({ success: true });
-  }
-
-  res.status(400).json({ error: "Invalid action" });
-});
-
-/* ===================== MANAGE VOLUMES ===================== */
-
-/* ===================== MANAGE VOLUMES ===================== */
-
-exports.manageVolumes = onRequest(async (req, res) => {
-  // ===================== CORS =====================
-res.set("Access-Control-Allow-Origin", "*");
-res.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
-
-if (req.method === "OPTIONS") {
-  return res.status(204).send("");
-}
-
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
-
-  /* ---------- Auth ---------- */
-  const token = req.headers.authorization?.split("Bearer ")[1];
-  if (!token) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
-  let user;
-  try {
-    user = await admin.auth().verifyIdToken(token);
-  } catch {
-    return res.status(401).json({ error: "Invalid token" });
-  }
-
-  /* ---------- Rol ---------- */
-  try {
-    await validateRole(user.email, "Director General");
-  } catch (err) {
-    return res.status(403).json({ error: err.message });
-  }
-
-  /* ---------- Data ---------- */
-  const { action, volume, pdfBase64, id } = req.body;
-  if (!action) {
-    return res.status(400).json({ error: "Missing action" });
-  }
-
-  const db = admin.firestore();
-  const ref = db.collection("volumes");
-
-  /* ===================== ADD ===================== */
-  if (action === "add") {
-    if (!volume?.titulo) {
-      return res.status(400).json({ error: "Missing volume data" });
-    }
-
-    const docRef = await ref.add({
-      ...volume,
-      pdf: "",
-      role: "Director General",
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    if (pdfBase64) {
-      const slug = generateSlug(volume.titulo);
-      const fileName = `Volume-${slug}-${docRef.id.slice(0, 5)}.pdf`;
-
-      await uploadPDFToRepo(
-        pdfBase64,
-        fileName,
-        "Add volume PDF",
-        "Volumes",
-      );
-
-      await docRef.update({
-        pdf: `${DOMAIN}/Volumes/${fileName}`,
-      });
-    }
-
-    return res.json({ success: true });
-  }
-
-  /* ===================== EDIT ===================== */
-  if (action === "edit") {
-    if (!id) {
-      return res.status(400).json({ error: "Missing volume id" });
-    }
-
-    const docSnap = await ref.doc(id).get();
-    if (!docSnap.exists) {
-      return res.status(404).json({ error: "Volume not found" });
-    }
-
-    await ref.doc(id).update({
-      ...volume,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    if (pdfBase64) {
-      const oldData = docSnap.data();
-
-      if (oldData.pdf) {
-        const oldFileName = oldData.pdf.split("/").pop();
+      if (data.pdf) {
+        const fileName = data.pdf.split("/").pop();
         await deletePDFFromRepo(
-          oldFileName,
-          "Delete old volume PDF",
+          fileName,
+          "Delete volume PDF",
           "Volumes",
         );
       }
 
-      const slug = generateSlug(volume.titulo || oldData.titulo);
-      const fileName = `Volume-${slug}-${id.slice(0, 5)}.pdf`;
+      await ref.doc(id).delete();
 
-      await uploadPDFToRepo(
-        pdfBase64,
-        fileName,
-        "Update volume PDF",
-        "Volumes",
-      );
-
-      await ref.doc(id).update({
-        pdf: `${DOMAIN}/Volumes/${fileName}`,
-      });
+      return res.json({ success: true });
     }
 
-    return res.json({ success: true });
-  }
-
-  /* ===================== DELETE ===================== */
-  if (action === "delete") {
-    if (!id) {
-      return res.status(400).json({ error: "Missing volume id" });
-    }
-
-    const docSnap = await ref.doc(id).get();
-    if (!docSnap.exists) {
-      return res.status(404).json({ error: "Volume not found" });
-    }
-
-    const data = docSnap.data();
-
-    if (data.pdf) {
-      const fileName = data.pdf.split("/").pop();
-      await deletePDFFromRepo(
-        fileName,
-        "Delete volume PDF",
-        "Volumes",
-      );
-    }
-
-    await ref.doc(id).delete();
-
-    return res.json({ success: true });
-  }
-
-  /* ===================== FALLBACK ===================== */
-  return res.status(400).json({ error: "Invalid action" });
-});
+    /* ===================== FALLBACK ===================== */
+    return res.status(400).json({ error: "Invalid action" });
+  },
+);
