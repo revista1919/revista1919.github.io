@@ -183,6 +183,11 @@ const defineEnvVars = {
   },
 }),
 
+new webpack.ProvidePlugin({
+  process: 'process/browser',
+}),
+
+
 
       ...(isProduction ? [
         new webpack.BannerPlugin({
