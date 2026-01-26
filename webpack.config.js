@@ -184,7 +184,7 @@ const defineEnvVars = {
 }),
 
 new webpack.ProvidePlugin({
-  process: 'process/browser',
+  process: 'process/browser.js',
 }),
 
 
@@ -210,7 +210,7 @@ new webpack.ProvidePlugin({
         "fs": false,
         "path": false,
         "crypto": false,
-        "process": require.resolve("process/browser"),
+        "process": require.resolve("process/browser.js"),
         "util": false,
         "stream": false,
         "buffer": require.resolve("buffer/"),
