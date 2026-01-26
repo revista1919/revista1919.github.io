@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from "react";
-import Papa from "papaparse";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from 'react-i18next';
-const NEWS_CSV =
-  "https://docs.google.com/spreadsheets/d/e/2PACX-1vQKnN8qMJcBN8im9Q61o-qElx1jQp5NdS80_B-FakCHrPLXHlQ_FXZWT0o5GVVHAM26l9sjLxsTCNO8/pub?output=csv";
+const NEWS_JSON = "/news.json";
 const base64DecodeUnicode = (str) => {
   try {
     const binary = atob(str);
@@ -127,46 +125,34 @@ export default function NewsSection({ className }) {
   useEffect(() => {
     const fetchNews = async () => {
       try {
-        const response = await fetch(NEWS_CSV, { cache: "no-store" });
-        if (!response.ok) throw new Error("Error al cargar el archivo CSV");
-        const csvText = await response.text();
-        Papa.parse(csvText, {
-          header: true,
-          skipEmptyLines: true,
-          delimiter: ",",
-          transform: (value) => (typeof value === "string" ? value.trim() : value),
-          complete: ({ data }) => {
-            if (!data || data.length === 0) {
-              setError("CSV vacío o sin formato válido");
-              setLoading(false);
-              return;
-            }
-            const validNews = data
-              .filter(
-                (item) =>
-                  (item["Título"] || "").trim() !== "" &&
-                  (item["Contenido de la noticia"] || "").trim() !== ""
-              )
-              .map((item) => ({
-                titulo: String(item["Título"] ?? ""),
-                cuerpo: String(item["Contenido de la noticia"] ?? ""),
-                fecha: formatDate(String(item["Fecha"] ?? "")),
-                fechaIso: parseDateIso(String(item["Fecha"] ?? "")),
-                photo: String(item["Photo"] ?? ""),
-                timestamp: new Date(parseDateIso(String(item["Fecha"] ?? ""))).getTime()
-              }))
-              .sort((a, b) => b.timestamp - a.timestamp);
-            const foundWelcome = validNews.find(n => n.fechaIso === '2025-09-15');
-            setWelcomeNote(foundWelcome);
-            setNews(validNews);
-            setLoading(false);
-          },
-          error: (err) => {
-            console.error("Error al parsear CSV:", err);
-            setError("Error al cargar noticias");
-            setLoading(false);
-          },
-        });
+        const response = await fetch(NEWS_JSON, { cache: "no-store" });
+        if (!response.ok) throw new Error("Error al cargar el archivo JSON");
+        const data = await response.json();
+        if (!data || data.length === 0) {
+          setError("JSON vacío o sin formato válido");
+          setLoading(false);
+          return;
+        }
+        const validNews = data
+          .filter(
+            (item) =>
+              (item["titulo"] || "").trim() !== "" &&
+              (item["cuerpo"] || "").trim() !== ""
+          )
+          .map((item) => ({
+            titulo: String(item["titulo"] ?? ""),
+            cuerpo: String(item["cuerpo"] ?? ""),
+            fecha: String(item["fecha"] ?? ""),
+            fechaIso: String(item["fechaIso"] ?? ""),
+            photo: String(item["photo"] ?? ""),
+            timestamp: item["timestamp"],
+            slug: String(item["slug"] ?? ""),
+          }))
+          .sort((a, b) => b.timestamp - a.timestamp);
+        const foundWelcome = validNews.find(n => n.fechaIso === '2025-09-15');
+        setWelcomeNote(foundWelcome);
+        setNews(validNews);
+        setLoading(false);
       } catch (err) {
         console.error("Error al cargar noticias:", err);
         setError("Error al conectar con el servidor");
@@ -199,8 +185,7 @@ export default function NewsSection({ className }) {
   );
   const loadMoreNews = () => setVisibleNews((prev) => prev + 6);
   const openNews = (item) => {
-    const slug = generateSlug(`${item.titulo} ${item.fechaIso}`);
-    window.location.href = `/news/${slug}.html`;
+    window.location.href = `/news/${item.slug}.html`;
   };
   const featured = filteredNews[0];
   const listNews = filteredNews.slice(1, visibleNews);
@@ -271,9 +256,9 @@ export default function NewsSection({ className }) {
           >
             <div className="lg:col-span-7 flex flex-col gap-8">
               <div className="overflow-hidden rounded-sm bg-gray-100 aspect-video">
-                <img 
+                <img
                   src={featured.photo ? `data:image/jpeg;base64,${featured.photo}` : "https://www.revistacienciasestudiantes.com/team.jpg"}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                   alt="Featured"
                 />
               </div>
@@ -312,9 +297,9 @@ export default function NewsSection({ className }) {
                 onClick={() => openNews(item)}
               >
                 <div className="mb-3 h-32 bg-gray-100 rounded overflow-hidden">
-                  <img 
+                  <img
                     src={item.photo ? `data:image/jpeg;base64,${item.photo}` : "https://via.placeholder.com/400x225?text=Imagen+Noticia"}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                     alt={item.titulo}
                   />
                 </div>

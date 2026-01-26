@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
-import Papa from "papaparse";
 import { motion, AnimatePresence } from "framer-motion";
-const NEWS_CSV =
-  "https://docs.google.com/spreadsheets/d/e/2PACX-1vQKnN8qMJcBN8im9Q61o-qElx1jQp5NdS80_B-FakCHrPLXHlQ_FXZWT0o5GVVHAM26l9sjLxsTCNO8/pub?output=csv";
+const NEWS_JSON = "/news.json";
 const DOMAIN = "https://www.revistacienciasestudiantes.com";
 const base64DecodeUnicode = (str) => {
   try {
@@ -95,7 +93,7 @@ function truncateHTML(html, maxLength = 200) {
 function decodeBody(body, truncate = false) {
   if (!body) return <p className="text-gray-800">No content available.</p>;
   try {
-    let html = body;
+    let html = base64DecodeUnicode(body);
     if (truncate) {
       html = truncateHTML(html, 200);
     }
@@ -127,71 +125,34 @@ export default function NewsSectionEN({ className }) {
   useEffect(() => {
     const fetchNews = async () => {
       try {
-        const response = await fetch(NEWS_CSV, { cache: "no-store" });
-        if (!response.ok) throw new Error("Error loading CSV file");
-        const csvText = await response.text();
-        Papa.parse(csvText, {
-          header: true,
-          skipEmptyLines: true,
-          delimiter: ",",
-          transform: (value) => (typeof value === "string" ? value.trim() : value),
-          complete: async ({ data }) => {
-            if (!data || data.length === 0) {
-              setError("CSV is empty or has invalid format");
-              setLoading(false);
-              return;
-            }
-            const validNews = await Promise.all(
-              data
-                .filter(
-                  (item) =>
-                    (item["Título"] || "").trim() !== "" &&
-                    (item["Contenido de la noticia"] || "").trim() !== ""
-                )
-                .map(async (item) => {
-                  const spanishTitle = String(item["Título"] ?? "");
-                  const fecha = String(item["Fecha"] ?? "");
-                  const fechaIso = parseDateIso(fecha);
-                  const slug = generateSlug(`${spanishTitle} ${fechaIso}`);
-                  const htmlUrl = `${DOMAIN}/news/${slug}.EN.html`;
-                  let title = spanishTitle; // Fallback to Spanish title
-                  let body = base64DecodeUnicode(String(item["Contenido de la noticia"] ?? "")); // Fallback to CSV content
-                  try {
-                    const htmlResponse = await fetch(htmlUrl);
-                    if (!htmlResponse.ok) throw new Error(`Failed to fetch HTML: ${htmlUrl}`);
-                    const htmlText = await htmlResponse.text();
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(htmlText, "text/html");
-                    const titleElement = doc.querySelector("h1");
-                    const contentDiv = doc.querySelector(".content.ql-editor");
-                    title = titleElement ? titleElement.textContent : spanishTitle;
-                    body = contentDiv ? contentDiv.innerHTML : body;
-                  } catch (err) {
-                    console.error(`Error fetching HTML for ${slug}:`, err);
-                  }
-                  return {
-                    titulo: title,
-                    cuerpo: body,
-                    fecha: formatDate(fecha),
-                    fechaIso,
-                    photo: String(item["Photo"] ?? ""),
-                    slug,
-                    timestamp: new Date(fechaIso).getTime()
-                  };
-                })
-            );
-            const sortedNews = validNews.sort((a, b) => b.timestamp - a.timestamp);
-            const foundWelcome = sortedNews.find(n => n.fechaIso === '2025-09-15');
-            setWelcomeNote(foundWelcome);
-            setNews(sortedNews);
-            setLoading(false);
-          },
-          error: (err) => {
-            console.error("Error parsing CSV:", err);
-            setError("Error loading news");
-            setLoading(false);
-          },
-        });
+        const response = await fetch(NEWS_JSON, { cache: "no-store" });
+        if (!response.ok) throw new Error("Error loading JSON file");
+        const data = await response.json();
+        if (!data || data.length === 0) {
+          setError("JSON is empty or has invalid format");
+          setLoading(false);
+          return;
+        }
+        const validNews = data
+          .filter(
+            (item) =>
+              (item["title"] || "").trim() !== "" &&
+              (item["content"] || "").trim() !== ""
+          )
+          .map((item) => ({
+            titulo: String(item["title"] ?? ""),
+            cuerpo: String(item["content"] ?? ""),
+            fecha: String(item["fecha"] ?? ""),
+            fechaIso: String(item["fechaIso"] ?? ""),
+            photo: String(item["photo"] ?? ""),
+            slug: String(item["slug"] ?? ""),
+            timestamp: item["timestamp"]
+          }))
+          .sort((a, b) => b.timestamp - a.timestamp);
+        const foundWelcome = validNews.find(n => n.fechaIso === '2025-09-15');
+        setWelcomeNote(foundWelcome);
+        setNews(validNews);
+        setLoading(false);
       } catch (err) {
         console.error("Error loading news:", err);
         setError("Error connecting to server");
@@ -295,9 +256,9 @@ export default function NewsSectionEN({ className }) {
           >
             <div className="lg:col-span-7 flex flex-col gap-8">
               <div className="overflow-hidden rounded-sm bg-gray-100 aspect-video">
-                <img 
+                <img
                   src={featured.photo ? `data:image/jpeg;base64,${featured.photo}` : "https://www.revistacienciasestudiantes.com/team.jpg"}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                   alt="Featured"
                 />
               </div>
@@ -336,9 +297,9 @@ export default function NewsSectionEN({ className }) {
                 onClick={() => openNews(item)}
               >
                 <div className="mb-3 h-32 bg-gray-100 rounded overflow-hidden">
-                  <img 
+                  <img
                     src={item.photo ? `data:image/jpeg;base64,${item.photo}` : "https://via.placeholder.com/400x225?text=News+Image"}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                     alt={item.titulo}
                   />
                 </div>

@@ -1859,7 +1859,32 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
       fs.writeFileSync(enPath, enContent, 'utf8');
       console.log(`Generado HTML de noticia (EN): ${enPath}`);
     }
+// Agregar photo al map de newsItems (si no lo tienes, agrégalo aquí)
+newsItems = newsItems.map(item => ({
+  ...item,
+  photo: item.photo || ''  // Asume photo es base64 desde DB, o vacío si no existe
+}));
 
+// Generar news.json
+const newsJsonPath = path.join(__dirname, 'dist', 'news.json');
+const newsForJson = newsItems.map(item => {
+  const fechaIso = parseDateIso(item.fecha);  // Usa tu función existente
+  const slug = generateSlug(`${item.titulo} ${fechaIso}`);
+  return {
+    titulo: item.titulo,
+    cuerpo: item.cuerpo,
+    title: item.title,
+    content: item.content,
+    fecha: formatDate(item.fecha),  // Formateada para display
+    fechaIso: fechaIso,
+    photo: item.photo,  // base64 o ''
+    timestamp: new Date(fechaIso).getTime(),
+    slug: slug
+  };
+}).sort((a, b) => b.timestamp - a.timestamp);  // Orden descendente por timestamp
+
+fs.writeFileSync(newsJsonPath, JSON.stringify(newsForJson, null, 2), 'utf8');
+console.log(`✅ Archivo generado: ${newsJsonPath} (${newsForJson.length} noticias)`);
     // Generar índice de noticias
     const newsByYear = newsItems.reduce((acc, item) => {
       const year = new Date(item.fecha).getFullYear() || 'Sin fecha';

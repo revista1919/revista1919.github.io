@@ -7,7 +7,7 @@ const { setGlobalOptions } = require("firebase-functions/v2");
 const { defineSecret } = require("firebase-functions/params");
 
 const admin = require("firebase-admin");
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { GoogleGenAI } = require("@google/genai");
 const { Octokit } = require("@octokit/rest");
 const Papa = require("papaparse");
 
@@ -29,9 +29,10 @@ const USERS_CSV =
 /* ===================== UTILIDADES GENERALES ===================== */
 
 function applyCors(req, res) {
-  res.set("Access-Control-Allow-Origin", "https://www.revistacienciasestudiantes.com");
+  res.set("Access-Control-Allow-Origin", DOMAIN);
   res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.set("Access-Control-Max-Age", "3600");
 }
 
 function base64DecodeUnicode(str) {
@@ -151,11 +152,16 @@ async function deletePDFFromRepo(fileName, message, repo) {
 async function callGemini(prompt, temperature, apiKey) {
   if (!apiKey) throw new Error("GEMINI_API_KEY not configured");
 
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const ai = new GoogleGenAI({ apiKey });
 
-  const result = await model.generateContent({
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
+  const result = await ai.models.generateContent({
+    model: "gemini-2.0-flash",
+    contents: [
+      {
+        role: "user",
+        text: prompt,
+      },
+    ],
     generationConfig: {
       temperature,
       topP: 0.8,
@@ -163,7 +169,8 @@ async function callGemini(prompt, temperature, apiKey) {
     },
   });
 
-  let text = result.response.text().trim();
+  let text = result.text?.trim() || "";
+
   if (text.startsWith("```")) {
     text = text
       .replace(/^```(?:html)?\n?/, "")
@@ -303,68 +310,9 @@ exports.uploadNews = onRequest(
     if (!idToken)
       return res.status(401).json({ error: "Unauthorized" });
 
-    try {
-      await admin.auth().verifyIdToken(idToken);
-    } catch {
-      return res.status(401).json({ error: "Invalid token" });
-    }
-
-    const { title, body, language = "es" } = req.body;
-    if (!title || !body)
-      return res.status(400).json({ error: "Missing data" });
-
-    const apiKey = GEMINI_API_KEY.value();
-
-    const source = language.toLowerCase();
-    const target = source === "es" ? "en" : "es";
-
-    const titleSource = sanitizeInput(title);
-    const bodySource =
-      base64DecodeUnicode(body) || sanitizeInput(body);
-
-    const titleTarget = await translateText(
-      titleSource,
-      source,
-      target,
-      apiKey,
-    );
-
-    const bodyTarget = await translateHtmlFragmentWithSplit(
-      bodySource,
-      source,
-      target,
-      apiKey,
-    );
-
-    res.json({
-      success: true,
-      title_source: titleSource,
-      title_target: titleTarget,
-      body_target: bodyTarget,
-    });
-  },
-);
-
-/* ===================== MANAGE ARTICLES ===================== */
-
-exports.manageArticles = onRequest(
-  { secrets: [GH_TOKEN] },
-  async (req, res) => {
-    applyCors(req, res);
-
-    if (req.method === "OPTIONS") {
-      return res.status(204).send("");
-    }
-
-    if (req.method !== "POST")
-      return res.status(405).json({ error: "Method not allowed" });
-
-    const token = req.headers.authorization?.split("Bearer ")[1];
-    if (!token) return res.status(401).json({ error: "Unauthorized" });
-
     let user;
     try {
-      user = await admin.auth().verifyIdToken(token);
+      user = await admin.auth().verifyIdToken(idToken);
     } catch {
       return res.status(401).json({ error: "Invalid token" });
     }
@@ -374,6 +322,91 @@ exports.manageArticles = onRequest(
     } catch (err) {
       return res.status(403).json({ error: err.message });
     }
+
+    try {
+      const { title, body, photo, language = "es" } = req.body;
+      if (!title || !body)
+        return res.status(400).json({ error: "Missing data" });
+
+      const apiKey = GEMINI_API_KEY.value();
+
+      const source = language.toLowerCase();
+      const target = source === "es" ? "en" : "es";
+
+      const titleSource = sanitizeInput(title);
+      const bodySource =
+        base64DecodeUnicode(body) || sanitizeInput(body);
+
+      const titleTarget = await translateText(
+        titleSource,
+        source,
+        target,
+        apiKey,
+      );
+
+      const bodyTarget = await translateHtmlFragmentWithSplit(
+        bodySource,
+        source,
+        target,
+        apiKey,
+      );
+
+      // Guardar en Firestore
+      const db = admin.firestore();
+      const newsRef = db.collection("news");
+
+      const esTitle = source === "es" ? titleSource : titleTarget;
+      const enTitle = source === "es" ? titleTarget : titleSource;
+      const esBody = source === "es" ? bodySource : bodyTarget;
+      const enBody = source === "es" ? bodyTarget : bodySource;
+
+      const nowIso = new Date().toISOString();
+
+      const docData = {
+        title_es: esTitle,
+        title_en: enTitle,
+        body_es: Buffer.from(esBody).toString("base64"),
+        body_en: Buffer.from(enBody).toString("base64"),
+        photo: photo || "",
+        timestamp_es: nowIso,
+        timestamp_en: nowIso,
+      };
+
+      await newsRef.add(docData);
+
+      return res.json({
+        success: true,
+        title_source: titleSource,
+        title_target: titleTarget,
+        body_target: bodyTarget,
+      });
+    } catch (err) {
+      console.error("Error in uploadNews:", err);
+      return res.status(500).json({
+        error: "Internal server error",
+        message: err.message,
+      });
+    }
+  }
+);
+
+
+/* ===================== MANAGE ARTICLES ===================== */
+
+exports.manageArticles = onRequest(
+  { secrets: [GH_TOKEN] },
+  async (req, res) => {
+    applyCors(req, res);
+
+    if (req.method === "OPTIONS") return res.status(204).send("");
+    if (req.method !== "POST")
+      return res.status(405).json({ error: "Method not allowed" });
+
+    const token = req.headers.authorization?.split("Bearer ")[1];
+    if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+    const user = await admin.auth().verifyIdToken(token);
+    await validateRole(user.email, "Director General");
 
     const { action, article, pdfBase64, id } = req.body;
     const db = admin.firestore();
@@ -406,11 +439,13 @@ exports.manageArticles = onRequest(
     }
 
     if (action === "edit") {
-      const doc = await ref.doc(id).get();
+      const docRef = ref.doc(id);
+      const doc = await docRef.get();
+
       if (!doc.exists)
         return res.status(404).json({ error: "Not found" });
 
-      await ref.doc(id).update(article);
+      await docRef.update(article);
 
       if (pdfBase64) {
         const old = doc.data();
@@ -432,7 +467,7 @@ exports.manageArticles = onRequest(
           "Articles",
         );
 
-        await ref.doc(id).update({
+        await docRef.update({
           pdfUrl: `${DOMAIN}/Articles/${fileName}`,
         });
       }
@@ -441,7 +476,9 @@ exports.manageArticles = onRequest(
     }
 
     if (action === "delete") {
-      const doc = await ref.doc(id).get();
+      const docRef = ref.doc(id);
+      const doc = await docRef.get();
+
       if (!doc.exists)
         return res.status(404).json({ error: "Not found" });
 
@@ -454,7 +491,7 @@ exports.manageArticles = onRequest(
         );
       }
 
-      await ref.doc(id).delete();
+      await docRef.delete();
       return res.json({ success: true });
     }
 
