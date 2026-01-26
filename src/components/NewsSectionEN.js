@@ -162,12 +162,14 @@ export default function NewsSectionEN({ className }) {
     fetchNews();
   }, []);
   const handleSubmit = (e) => {
-    e.preventDefault();
-    setSubscribing(true);
-    const formData = new URLSearchParams();
-    formData.append("name", name);
-    formData.append("email", email);
-    fetch(scriptURL, { method: "POST", body: formData })
+  e.preventDefault();
+  setSubscribing(true);
+  const formData = new URLSearchParams();
+  formData.append("name", name);
+  formData.append("email", email);
+  formData.append("idiom", "en");   // 👈 añadido
+  fetch(scriptURL, { method: "POST", body: formData })
+
       .then((r) => r.text())
       .then(() => {
         setSubmitted(true);

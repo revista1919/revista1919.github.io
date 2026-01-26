@@ -7,11 +7,12 @@ function FooterEN() {
   const [submitted, setSubmitted] = useState(false);
   const scriptURL = "https://script.google.com/macros/s/AKfycbzyyR93tD85nPprIKAR_IDoWYBSAnlFwVes09rJgOM3KQsByg_MgzafWDK1BcFhfVJHew/exec";
   const handleSubmit = (e) => {
-    e.preventDefault();
-    const formData = new URLSearchParams();
-    formData.append('name', name);
-    formData.append('email', email);
-    fetch(scriptURL, { method: "POST", body: formData })
+  e.preventDefault();
+  const formData = new URLSearchParams();
+  formData.append('name', name);
+  formData.append('email', email);
+  formData.append('idiom', 'en');   // 👈 añadido
+  fetch(scriptURL, { method: "POST", body: formData })
       .then(r => r.text())
       .then(() => {
         setSubmitted(true);
