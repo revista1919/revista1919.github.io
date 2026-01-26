@@ -1,9 +1,8 @@
-
 import { initializeApp } from 'firebase/app';
 import { getAnalytics, isSupported } from 'firebase/analytics';
-import { 
-  getAuth, 
-  createUserWithEmailAndPassword, 
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
   onAuthStateChanged,
@@ -16,6 +15,7 @@ import {
   signInWithRedirect,
   getRedirectResult
 } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
 
 // Configuración de Firebase
 const firebaseConfig = {
@@ -28,19 +28,9 @@ const firebaseConfig = {
   measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID || "G-K90MKB7BDP"
 };
 
-// Debug: Log de configuración
-if (process.env.NODE_ENV === 'development') {
-  console.log('🔥 Firebase Config:', {
-    apiKey: firebaseConfig.apiKey ? 'CONFIGURED' : 'MISSING',
-    projectId: firebaseConfig.projectId,
-    authDomain: firebaseConfig.authDomain,
-  });
-}
-
 // Inicializar Firebase
 const app = initializeApp(firebaseConfig);
 
-// Inicializar Analytics solo si está soportado
 let analytics = null;
 isSupported().then((supported) => {
   if (supported) {
@@ -56,18 +46,20 @@ isSupported().then((supported) => {
 // Inicializar Auth
 export const auth = getAuth(app);
 
-// Inicializar Google Provider
-export const googleProvider = new GoogleAuthProvider();
-
 // Debug: Verificar auth
 if (process.env.NODE_ENV === 'development') {
   console.log('🔥 Auth inicializado:', !!auth);
   console.log('🔐 Google Provider inicializado:', !!googleProvider);
 }
 
-// Exportar funciones
-export { 
-  createUserWithEmailAndPassword, 
+export const db = getFirestore(app);
+
+// Inicializar Google Provider
+export const googleProvider = new GoogleAuthProvider();
+
+// Exportar funciones de Auth
+export {
+  createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
   onAuthStateChanged,
