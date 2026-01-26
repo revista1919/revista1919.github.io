@@ -174,6 +174,27 @@ const base64DecodeUnicode = (str) => {
     return '';
   }
 };
+async function loadArticlesFromJson() {
+  if (fs.existsSync(outputJson)) {
+    return JSON.parse(fs.readFileSync(outputJson, 'utf8'));
+  }
+  return [];
+}
+
+async function loadVolumesFromJson() {
+  if (fs.existsSync(volumesOutputJson)) {
+    return JSON.parse(fs.readFileSync(volumesOutputJson, 'utf8'));
+  }
+  return [];
+}
+
+async function loadNewsFromJson() {
+  const newsJsonPath = path.join(__dirname, 'dist', 'news.json');
+  if (fs.existsSync(newsJsonPath)) {
+    return JSON.parse(fs.readFileSync(newsJsonPath, 'utf8'));
+  }
+  return [];
+}
 
 async function processImages(html, slug, lang) {
   const $ = cheerio.load(html);
@@ -2495,8 +2516,31 @@ async function generateTeam(articles) {
     fs.writeFileSync(enPath, enContent, 'utf8');
     console.log(`Generado HTML de miembro (EN): ${enPath}`);
   }
+  return allMembers;  // Retorna para sitemap
 }
-async function generateSitemapAndRobots(articles, volumes, newsItems, allMembers) {
+async function generateSpaRoutes() {
+  console.log('🚀 Pre-renderizando las rutas de la aplicación...');
+  const appShellPath = path.join(__dirname, 'dist', 'index.html');
+  if (!fs.existsSync(appShellPath)) {
+    throw new Error('El archivo principal dist/index.html no se encontró. Asegúrate de compilar la aplicación primero.');
+  }
+  const appShellContent = fs.readFileSync(appShellPath, 'utf8');
+  const spaRoutes = [
+    '/es/about', '/es/guidelines', '/es/faq', '/es/article', '/es/submit', '/es/team', '/es/new', '/es/login', '/es/admin', '/es/volume',
+    '/en/about', '/en/guidelines', '/en/faq', '/en/article', '/en/submit', '/en/team', '/en/new', '/en/login', '/en/admin', '/en/volume'
+  ];
+  spaRoutes.forEach(route => {
+    const routePath = path.join(__dirname, 'dist', route);
+    if (!fs.existsSync(routePath)) {
+      fs.mkdirSync(routePath, { recursive: true });
+    }
+    const indexPath = path.join(routePath, 'index.html');
+    fs.writeFileSync(indexPath, appShellContent, 'utf8');
+  });
+  console.log(`✅ ${spaRoutes.length} rutas de la aplicación pre-renderizadas.`);
+  return spaRoutes;  // Retorna para sitemap
+}
+async function generateSitemapAndRobots(articles, volumes, newsItems, allMembers, spaRoutes) {
   // Generar sitemap
   const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
@@ -2647,6 +2691,7 @@ Sitemap: ${domain}/sitemap.xml
   console.log(`Generado robots.txt: ${robotsPath}`);
 }
 // Main execution
+// Main execution
 (async () => {
   try {
     const rebuildType = process.env.REBUILD_TYPE || 'all';
@@ -2656,9 +2701,23 @@ Sitemap: ${domain}/sitemap.xml
     let volumes = [];
     let newsItems = [];
     let allMembers = [];
+    let spaRoutes = [];
 
-    // Procesar equipo primero si necesario (para institutions y authorToArticles)
-    if (rebuildType === 'all' || rebuildType === 'articles' || rebuildType === 'team') {
+    // Cargar o generar según type
+    if (rebuildType === 'all' || rebuildType === 'articles' || rebuildType === 'team' || rebuildType === 'sitemap') {
+      articles = (rebuildType === 'all' || rebuildType === 'articles' || rebuildType === 'team') ? await generateArticles() : await loadArticlesFromJson();
+    }
+
+    if (rebuildType === 'all' || rebuildType === 'volumes' || rebuildType === 'sitemap') {
+      volumes = (rebuildType === 'all' || rebuildType === 'volumes') ? await generateVolumes() : await loadVolumesFromJson();
+    }
+
+    if (rebuildType === 'all' || rebuildType === 'news' || rebuildType === 'sitemap') {
+      newsItems = (rebuildType === 'all' || rebuildType === 'news') ? await generateNews() : await loadNewsFromJson();
+    }
+
+    if (rebuildType === 'all' || rebuildType === 'team' || rebuildType === 'sitemap') {
+      // Team siempre necesita CSV fresh, pero usa articles cargados/generados
       const teamRes = await fetch(teamCsvUrl);
       if (!teamRes.ok) throw new Error(`Error descargando CSV de equipo: ${teamRes.statusText}`);
       const teamCsvData = await teamRes.text();
@@ -2670,30 +2729,15 @@ Sitemap: ${domain}/sitemap.xml
         if (name) authorToInstitution[name] = inst;
       });
       allMembers = teamParsed.data;
-    }
-
-    if (rebuildType === 'all' || rebuildType === 'articles' || rebuildType === 'team') {
-      articles = await generateArticles();
-    }
-
-    if (rebuildType === 'all' || rebuildType === 'volumes') {
-      volumes = await generateVolumes();
-    }
-
-    if (rebuildType === 'all' || rebuildType === 'news') {
-      newsItems = await generateNews();
-    }
-
-    if (rebuildType === 'all' || rebuildType === 'team') {
       await generateTeam(articles);
     }
 
-    if (rebuildType === 'all' || rebuildType === 'spa') {
-      await generateSpaRoutes();
+    if (rebuildType === 'all' || rebuildType === 'spa' || rebuildType === 'sitemap') {
+      spaRoutes = await generateSpaRoutes();
     }
 
     if (rebuildType === 'all' || rebuildType === 'sitemap') {
-      await generateSitemapAndRobots(articles, volumes, newsItems, allMembers);
+      await generateSitemapAndRobots(articles, volumes, newsItems, allMembers, spaRoutes);
     }
 
     console.log('🎉 ¡Proceso completado con éxito!');
