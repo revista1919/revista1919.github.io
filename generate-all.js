@@ -858,6 +858,27 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     const indexPath = path.join(outputHtmlDir, 'index.html');
     fs.writeFileSync(indexPath, indexContent, 'utf8');
     console.log(`Generado índice HTML de artículos: ${indexPath}`);
+function parseDateIso(dateStr) {
+  if (!dateStr) return null;
+
+  // Si ya es ISO
+  if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+    return dateStr;
+  }
+
+  // Formato esperado: DD-MM-YYYY o DD/MM/YYYY
+  const parts = dateStr.split(/[-/]/);
+  if (parts.length === 3) {
+    const [day, month, year] = parts;
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  }
+
+  // Último recurso
+  const d = new Date(dateStr);
+  if (!isNaN(d)) return d.toISOString().split('T')[0];
+
+  return null;
+}
 
     // Generar índice de artículos en inglés
     let indexContentEn = `
