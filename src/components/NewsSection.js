@@ -121,7 +121,7 @@ export default function NewsSection({ className }) {
   const [enviado, setEnviado] = useState(false);
   const [subscribing, setSubscribing] = useState(false);
   const scriptURL =
-    "https://script.google.com/macros/s/AKfycbzyyR93tD85nPprIKAR_IDoWYBSAnlFwVes09rJgOM3KQsByg_MgzafWDK1BcFhfVJHew/exec";
+    "https://script.google.com/macros/s/AKfycbyAmrjSmCkMTeLhzrLbtPd46hO9-uEenRPcD2B_Jp52g3GSEDYQr1SezZnC9WoWfBySng/exec";
   useEffect(() => {
     const fetchNews = async () => {
       try {

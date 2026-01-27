@@ -7,7 +7,7 @@ function NewsletterSection() {
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
 
-  const scriptURL = "https://script.google.com/macros/s/AKfycbzyyR93tD85nPprIKAR_IDoWYBSAnlFwVes09rJgOM3KQsByg_MgzafWDK1BcFhfVJHew/exec";
+  const scriptURL = "https://script.google.com/macros/s/AKfycbyAmrjSmCkMTeLhzrLbtPd46hO9-uEenRPcD2B_Jp52g3GSEDYQr1SezZnC9WoWfBySng/exec";
 
   const handleSubmit = (e) => {
     e.preventDefault();
