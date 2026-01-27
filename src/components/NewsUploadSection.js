@@ -21,6 +21,7 @@ const base64EncodeUnicode = (str) => {
 
 const sanitizeInput = (input) => {
   if (!input) return '';
+  // Mantenemos etiquetas estructurales pero eliminamos scripts y eventos maliciosos
   return input.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
                .replace(/on\w+="[^"]*"/gi, '')
                .replace(/\s+/g, ' ')
@@ -29,7 +30,7 @@ const sanitizeInput = (input) => {
 
 export default function NewsUploadSection() {
   const [title, setTitle] = useState('');
-  const [body, setBody] = useState(''); // Estado inmediato para evitar saltos de cursor
+  const [body, setBody] = useState(''); // ✅ Sincrónico para evitar saltos de cursor
   const [photo, setPhoto] = useState('');
   const [status, setStatus] = useState({ type: '', msg: '' });
   const [isLoading, setIsLoading] = useState(false);
@@ -43,7 +44,7 @@ export default function NewsUploadSection() {
   const [imageData, setImageData] = useState({ url: '', width: '', height: '', align: 'left' });
   const [editingRange, setEditingRange] = useState(null);
 
-  // --- PERSISTENCIA LOCAL Y CLEANUP ---
+  // --- PERSISTENCIA Y CLEANUP ---
   useEffect(() => {
     const savedDraft = localStorage.getItem('newsDraftES');
     if (savedDraft) {
@@ -54,22 +55,82 @@ export default function NewsUploadSection() {
   }, []);
 
   const debouncedSaveDraft = useMemo(() => 
-    debounce((titleVal, bodyVal) => {
-      localStorage.setItem('newsDraftES', JSON.stringify({ title: titleVal, body: bodyVal }));
+    debounce((t, b) => {
+      localStorage.setItem('newsDraftES', JSON.stringify({ title: t, body: b }));
     }, 1000), []);
 
   useEffect(() => {
     debouncedSaveDraft(title, body);
   }, [title, body, debouncedSaveDraft]);
 
-  // Solución ✅ 4: Limpiar debounce al desmontar
   useEffect(() => {
-    return () => debouncedSaveDraft.cancel();
+    return () => debouncedSaveDraft.cancel(); // ✅ Prevención de memory leak
   }, [debouncedSaveDraft]);
 
   const clearDraft = () => localStorage.removeItem('newsDraftES');
 
-  // --- LÓGICA DE BOTONES DE EDICIÓN DE IMAGEN ---
+  // --- CONFIGURACIÓN DE BARRA DE HERRAMIENTAS Y MÓDULOS ---
+  const modules = useMemo(() => ({
+    toolbar: {
+      container: [
+        [{ 'header': [2, 3, false] }], // ✅ Soporte para títulos H2 y H3
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+        ['link', 'image', 'blockquote'],
+        [{ 'align': ['', 'center', 'right', 'justify'] }],
+        ['clean']
+      ],
+      handlers: {
+        image: function() {
+          setIsEditingImage(false);
+          setImageData({ url: '', width: '', height: '', align: 'left' });
+          setEditingRange(null);
+          setShowImageModal(true);
+        }
+      }
+    },
+    imageResize: {
+      parchment: Quill.import('parchment'),
+      modules: ['Resize', 'DisplaySize', 'Toolbar'],
+    },
+    keyboard: {
+      bindings: {
+        deleteImage: {
+          key: ['Delete', 'Backspace'],
+          handler: function(range) {
+            if (!range) return true;
+            const editor = this.quill;
+            const imageResize = editor.getModule('imageResize');
+            let isImage = false;
+            let deleteIndex = range.index;
+            let deleteLength = range.length || 1; // ✅ Borrado corregido
+
+            if (range.length === 0) {
+              if (this.key === 'Backspace') {
+                const [prevLeaf] = editor.getLeaf(range.index - 1);
+                if (prevLeaf?.domNode?.tagName === 'IMG') { isImage = true; deleteIndex = range.index - 1; }
+              } else if (this.key === 'Delete') {
+                const [nextLeaf] = editor.getLeaf(range.index);
+                if (nextLeaf?.domNode?.tagName === 'IMG') isImage = true;
+              }
+            } else {
+              const [leaf] = editor.getLeaf(range.index);
+              if (leaf?.domNode?.tagName === 'IMG') isImage = true;
+            }
+
+            if (isImage) {
+              if (imageResize) imageResize.hide();
+              editor.deleteText(deleteIndex, deleteLength, Quill.sources.USER);
+              return false;
+            }
+            return true;
+          },
+        },
+      },
+    },
+  }), []);
+
+  // --- INYECCIÓN DE BOTONES CUSTOM EN EL RESIZE ---
   useEffect(() => {
     if (!quillRef.current) return;
     const editor = quillRef.current.getEditor();
@@ -82,13 +143,13 @@ export default function NewsUploadSection() {
         if (imageResize.toolbar.querySelector('.ql-custom-group')) return;
         const buttonContainer = document.createElement('span');
         buttonContainer.className = 'ql-formats ql-custom-group';
-        buttonContainer.style.cssText = "border-left: 1px solid #ccc; margin-left: 8px; padding-left: 8px; display: flex; gap: 4px;";
+        buttonContainer.style.cssText = "border-left: 1px solid #ccc; margin-left: 8px; padding-left: 8px; display: flex; align-items: center; gap: 4px;";
       
         buttonContainer.innerHTML = `
-          <button type="button" class="ql-delete-image" style="color: #ef4444; width: 24px; height: 24px;">
+          <button type="button" class="ql-delete-image" style="color: #ef4444; width: 24px; height: 24px; cursor: pointer;">
             <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
           </button>
-          <button type="button" class="ql-edit-image" style="color: #3b82f6; width: 24px; height: 24px;">
+          <button type="button" class="ql-edit-image" style="color: #3b82f6; width: 24px; height: 24px; cursor: pointer;">
             <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
           </button>
         `;
@@ -97,7 +158,6 @@ export default function NewsUploadSection() {
         buttonContainer.querySelector('.ql-delete-image').onclick = () => {
           const range = editor.getSelection();
           if (range) {
-            // Solución ✅ 2: Borrar con el length correcto
             editor.deleteText(range.index, range.length || 1, Quill.sources.USER);
             imageResize.hide();
           }
@@ -130,68 +190,7 @@ export default function NewsUploadSection() {
     addButtons();
   }, []);
 
-  // --- CONFIGURACIÓN DE MÓDULOS ---
-  const modules = useMemo(() => ({
-    toolbar: {
-      container: [
-        ['bold', 'italic', 'underline', 'strike'],
-        [{ 'size': ['small', false, 'large', 'huge'] }],
-        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-        ['link', 'image', 'blockquote'],
-        [{ 'align': ['', 'center', 'right', 'justify'] }],
-        ['clean']
-      ],
-      handlers: {
-        image: function() {
-          setIsEditingImage(false);
-          setImageData({ url: '', width: '', height: '', align: 'left' });
-          setEditingRange(null);
-          setShowImageModal(true);
-        }
-      }
-    },
-    imageResize: {
-      parchment: Quill.import('parchment'),
-      modules: ['Resize', 'DisplaySize', 'Toolbar'],
-    },
-    keyboard: {
-      bindings: {
-        deleteImage: {
-          key: ['Delete', 'Backspace'],
-          handler: function(range) {
-            if (!range) return true; // Solución ✅ seguridad range null
-            const editor = this.quill;
-            const imageResize = editor.getModule('imageResize');
-            let isImage = false;
-            let deleteIndex = range.index;
-            let deleteLength = range.length || 1;
-
-            if (range.length === 0) {
-              if (this.key === 'Backspace') {
-                const [prevLeaf] = editor.getLeaf(range.index - 1);
-                if (prevLeaf?.domNode?.tagName === 'IMG') { isImage = true; deleteIndex = range.index - 1; }
-              } else if (this.key === 'Delete') {
-                const [nextLeaf] = editor.getLeaf(range.index);
-                if (nextLeaf?.domNode?.tagName === 'IMG') isImage = true;
-              }
-            } else {
-              const [leaf] = editor.getLeaf(range.index);
-              if (leaf?.domNode?.tagName === 'IMG') isImage = true;
-            }
-
-            if (isImage) {
-              if (imageResize) imageResize.hide();
-              editor.deleteText(deleteIndex, deleteLength, Quill.sources.USER);
-              return false;
-            }
-            return true;
-          },
-        },
-      },
-    },
-  }), []);
-
-  // --- LÓGICA DE PROCESAMIENTO FINAL ---
+  // --- PROCESAMIENTO EDITORIAL (ESTILOS ARTICLE) ---
   const encodeBody = (html) => {
     try {
       if (!html || html.trim() === '') return '';
@@ -199,34 +198,39 @@ export default function NewsUploadSection() {
     
       const tempDiv = document.createElement('div');
       tempDiv.innerHTML = cleanedHtml;
+
+      // ✅ Procesamiento de Imágenes con estilos embebidos y alineación real
       const images = tempDiv.querySelectorAll('img');
-    
       images.forEach((img) => {
         let align = 'left';
-        // Solución ✅ 3: Uso correcto de Quill.find y getIndex
-        const blot = Quill.find(img);
+        const blot = Quill.find(img); // ✅ API correcta
         if (blot && editorRef.current) {
-          try {
-            const imgIndex = editorRef.current.getIndex(blot);
-            align = editorRef.current.getFormat(imgIndex, 1).align || 'left';
-          } catch (e) { console.error("Error al obtener index", e); }
+          const imgIndex = editorRef.current.getIndex(blot);
+          align = editorRef.current.getFormat(imgIndex, 1).align || 'left';
         }
       
-        let style = 'max-width:100%;height:auto;border-radius:12px;margin:20px 0;display:block;';
-        if (align === 'center') style += 'margin-left:auto;margin-right:auto;';
-        else if (align === 'right') style += 'float:right;margin-left:20px;';
+        let style = 'max-width:100%; height:auto; border-radius:10px; margin:2rem 0; display:block;';
+        if (align === 'center') style += 'margin-left:auto; margin-right:auto;';
+        else if (align === 'right') style += 'float:right; margin-left:1.5rem; margin-bottom:1rem;';
         else if (align === 'justify') style += 'width:100%;';
-        else style += 'float:left;margin-right:20px;';
+        else style += 'float:left; margin-right:1.5rem; margin-bottom:1rem;';
       
         if (img.style.width) style += `width:${img.style.width};`;
         if (img.style.height) style += `height:${img.style.height};`;
       
         img.setAttribute('style', style);
         img.setAttribute('loading', 'lazy');
-        img.setAttribute('alt', 'Imagen de la noticia'); // Solución ✅ 3 ALT
+        img.setAttribute('alt', 'Imagen de la noticia');
       });
 
-      return base64EncodeUnicode(tempDiv.innerHTML);
+      // ✅ Envolver en estructura de artículo
+      const finalHtml = `
+        <div class="article" style="line-height:1.6; color:#333; font-family: sans-serif;">
+          ${tempDiv.innerHTML}
+        </div>
+      `;
+
+      return base64EncodeUnicode(finalHtml);
     } catch (err) {
       return base64EncodeUnicode(html);
     }
@@ -234,43 +238,40 @@ export default function NewsUploadSection() {
 
   const handleSubmit = async () => {
     const user = auth.currentUser;
-    if (!user) return setStatus({ type: 'error', msg: 'Sesión no válida' });
-    if (!title.trim() || !body.trim()) return setStatus({ type: 'error', msg: 'Campos incompletos' });
+    if (!user) return setStatus({ type: 'error', msg: 'No autenticado' });
+    if (!title.trim() || !body.trim()) return setStatus({ type: 'error', msg: 'Título y cuerpo obligatorios' });
 
     setIsLoading(true);
-    const token = await user.getIdToken();
-    const encodedBody = encodeBody(body);
+    setStatus({ type: 'info', msg: 'Subiendo noticia...' });
 
-    const data = { title: sanitizeInput(title), body: encodedBody, photo: sanitizeInput(photo) };
+    try {
+      const token = await user.getIdToken();
+      const encodedBody = encodeBody(body);
+      const data = { title: sanitizeInput(title), body: encodedBody, photo: sanitizeInput(photo) };
 
-    let attempt = 0;
-    while (attempt < 3) {
-      try {
-        const res = await fetch(NEWS_SCRIPT_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify(data),
-        });
-        if (!res.ok) throw new Error();
-        setStatus({ type: 'success', msg: '¡Publicado con éxito! 🎉' });
-        setTitle(''); setBody(''); setPhoto('');
-        editorRef.current.setText('');
-        clearDraft();
-        setIsLoading(false);
-        return;
-      } catch {
-        attempt++;
-        await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt)));
-      }
+      const res = await fetch(NEWS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(data),
+      });
+
+      if (!res.ok) throw new Error();
+
+      setStatus({ type: 'success', msg: '¡Publicado con éxito!' });
+      setTitle(''); setBody(''); setPhoto('');
+      editorRef.current.setText('');
+      clearDraft();
+    } catch {
+      setStatus({ type: 'error', msg: 'Error al publicar' });
+    } finally {
+      setIsLoading(false);
     }
-    setStatus({ type: 'error', msg: 'Error de conexión tras 3 intentos' });
-    setIsLoading(false);
   };
 
   const handleImageModalSubmit = () => {
     const editor = editorRef.current;
     let { url, width, height, align } = imageData;
-    if (!url) return setStatus({ type: 'error', msg: 'URL requerida' });
+    if (!url) return;
 
     if (width && !width.match(/%|px$/)) width += 'px';
     if (height && !height.match(/%|px$/)) height += 'px';
@@ -300,74 +301,66 @@ export default function NewsUploadSection() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100 font-sans">
-      {/* Header UI Elegante */}
-      <div className="bg-gradient-to-r from-[#5a3e36] to-[#7d5a50] p-8 text-white flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-black tracking-tighter">REDACCIÓN PROFESIONAL</h2>
-          <p className="text-sm font-medium opacity-70">Control de calidad editorial v3.0</p>
-        </div>
-        <div className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/20">
-          <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" fill="none" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-        </div>
+    <div className="max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100 mt-10">
+      {/* Header UI */}
+      <div className="bg-[#5a3e36] p-10 text-white">
+        <h2 className="text-3xl font-black tracking-tight mb-1 uppercase">Editor de Artículos</h2>
+        <p className="text-sm opacity-60 font-medium">Formato editorial profesional habilitado</p>
       </div>
 
-      <div className="p-8 space-y-8">
+      <div className="p-10 space-y-10">
         {/* Título */}
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-[#5a3e36] uppercase tracking-[0.2em] ml-1">Título de Portada</label>
+          <label className="text-xs font-black text-[#5a3e36] uppercase tracking-widest ml-1">Título de la noticia</label>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full px-6 py-4 text-xl font-bold border-2 border-gray-50 rounded-2xl focus:border-[#5a3e36] focus:bg-white bg-gray-50 transition-all outline-none"
-            placeholder="¿Qué está pasando hoy?"
+            className="w-full px-8 py-5 text-2xl font-bold border-2 border-gray-50 rounded-2xl focus:border-[#5a3e36] bg-gray-50/50 outline-none transition-all placeholder-gray-300"
+            placeholder="Introduce el título..."
           />
         </div>
 
-        {/* Portada URL */}
+        {/* URL Portada */}
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-[#5a3e36] uppercase tracking-[0.2em] ml-1">Thumbnail (Direct Link)</label>
+          <label className="text-xs font-black text-[#5a3e36] uppercase tracking-widest ml-1">URL Foto de Portada</label>
           <input
             type="text"
             value={photo}
             onChange={(e) => setPhoto(e.target.value)}
-            className="w-full px-6 py-4 border-2 border-gray-50 rounded-2xl focus:border-[#5a3e36] bg-gray-50 outline-none transition-all"
-            placeholder="Pega la URL de tu imagen de portada..."
+            className="w-full px-8 py-5 border-2 border-gray-50 rounded-2xl focus:border-[#5a3e36] bg-gray-50/50 outline-none transition-all"
+            placeholder="Enlace de la imagen principal..."
           />
         </div>
 
-        {/* Editor ✅ Solución 1: onChange={setBody} directo */}
+        {/* Editor Quill */}
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-[#5a3e36] uppercase tracking-[0.2em] ml-1">Cuerpo Editorial</label>
-          <div className="rounded-2xl border-2 border-gray-50 focus-within:border-[#5a3e36] transition-all bg-gray-50 overflow-hidden">
+          <label className="text-xs font-black text-[#5a3e36] uppercase tracking-widest ml-1">Cuerpo del Artículo</label>
+          <div className="rounded-2xl border-2 border-gray-50 focus-within:border-[#5a3e36] overflow-hidden transition-all bg-gray-50/30">
             <ReactQuill
               ref={quillRef}
               value={body}
               onChange={setBody}
               modules={modules}
-              placeholder="Desarrolla la noticia aquí..."
-              className="modern-quill"
+              className="editorial-quill"
+              placeholder="Escribe tu historia aquí..."
             />
           </div>
         </div>
 
-        {/* Botonera */}
-        <div className="pt-4">
-          <button
-            onClick={handleSubmit}
-            disabled={isLoading}
-            className={`w-full py-5 text-white font-black rounded-2xl transition-all flex justify-center items-center gap-3 shadow-xl ${
-              isLoading ? 'bg-gray-400' : 'bg-[#5a3e36] hover:bg-[#462f29] hover:shadow-2xl active:scale-[0.99]'
-            }`}
-          >
-            {isLoading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : "PUBLICAR EN EL PORTAL"}
-          </button>
-        </div>
+        {/* Publicar */}
+        <button
+          onClick={handleSubmit}
+          disabled={isLoading}
+          className={`w-full py-6 text-white font-black rounded-2xl transition-all shadow-xl text-lg tracking-widest ${
+            isLoading ? 'bg-gray-400' : 'bg-[#5a3e36] hover:bg-[#462f29] active:scale-[0.99]'
+          }`}
+        >
+          {isLoading ? 'SUBIENDO...' : 'PUBLICAR ARTÍCULO'}
+        </button>
 
-        {/* Status Toast */}
         {status.msg && (
-          <div className={`p-5 rounded-2xl text-sm font-bold animate-in slide-in-from-bottom-5 duration-300 ${
+          <div className={`p-6 rounded-2xl text-center font-bold text-sm ${
             status.type === 'error' ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'
           }`}>
             {status.msg}
@@ -377,42 +370,42 @@ export default function NewsUploadSection() {
 
       {/* Modal Moderno */}
       {showImageModal && (
-        <div className="fixed inset-0 bg-[#5a3e36]/40 backdrop-blur-md flex justify-center items-center z-[999] p-6">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-white/20 animate-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-gray-50 bg-gray-50/50">
-              <h3 className="text-lg font-black text-[#5a3e36] tracking-tight">{isEditingImage ? 'AJUSTES DE IMAGEN' : 'NUEVA IMAGEN'}</h3>
+        <div className="fixed inset-0 bg-[#5a3e36]/60 backdrop-blur-sm flex justify-center items-center z-[999] p-6">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95">
+            <div className="p-8 border-b border-gray-50 bg-gray-50/50">
+              <h3 className="font-black text-[#5a3e36]">GESTIÓN DE IMAGEN</h3>
             </div>
-            <div className="p-8 space-y-5">
+            <div className="p-8 space-y-6">
               <input type="text" value={imageData.url} onChange={(e)=>setImageData({...imageData, url: e.target.value})} 
-                className="w-full p-4 bg-gray-50 border-2 border-transparent rounded-xl focus:border-[#5a3e36] outline-none font-medium" placeholder="URL de la imagen" disabled={isEditingImage} />
+                className="w-full p-4 bg-gray-50 border-2 border-transparent rounded-xl focus:border-[#5a3e36] outline-none" placeholder="URL de la imagen" disabled={isEditingImage} />
               <div className="grid grid-cols-2 gap-4">
-                <input type="text" placeholder="Ancho (auto/%)" value={imageData.width} onChange={(e)=>setImageData({...imageData, width: e.target.value})} className="p-4 bg-gray-50 border-2 border-transparent rounded-xl focus:border-[#5a3e36] outline-none" />
-                <input type="text" placeholder="Alto (auto)" value={imageData.height} onChange={(e)=>setImageData({...imageData, height: e.target.value})} className="p-4 bg-gray-50 border-2 border-transparent rounded-xl focus:border-[#5a3e36] outline-none" />
+                <input type="text" placeholder="Ancho" value={imageData.width} onChange={(e)=>setImageData({...imageData, width: e.target.value})} className="p-4 bg-gray-50 border rounded-xl outline-none" />
+                <input type="text" placeholder="Alto" value={imageData.height} onChange={(e)=>setImageData({...imageData, height: e.target.value})} className="p-4 bg-gray-50 border rounded-xl outline-none" />
               </div>
-              <select value={imageData.align} onChange={(e)=>setImageData({...imageData, align: e.target.value})} className="w-full p-4 bg-gray-50 border-2 border-transparent rounded-xl focus:border-[#5a3e36] outline-none font-bold">
-                <option value="left">Alineación: Izquierda</option>
-                <option value="center">Alineación: Centro</option>
-                <option value="right">Alineación: Derecha</option>
-                <option value="justify">Alineación: Justificado</option>
+              <select value={imageData.align} onChange={(e)=>setImageData({...imageData, align: e.target.value})} className="w-full p-4 bg-gray-50 border rounded-xl font-bold">
+                <option value="left">Izquierda</option>
+                <option value="center">Centro</option>
+                <option value="right">Derecha</option>
+                <option value="justify">Justificado (100%)</option>
               </select>
             </div>
-            <div className="p-6 bg-gray-50 flex justify-end gap-3">
-              <button onClick={() => setShowImageModal(false)} className="px-5 py-3 text-gray-400 font-bold hover:text-gray-600">DESCARTAR</button>
-              <button onClick={handleImageModalSubmit} className="px-8 py-3 bg-[#5a3e36] text-white rounded-xl font-black shadow-lg">CONFIRMAR</button>
+            <div className="p-8 bg-gray-50 flex justify-end gap-4">
+              <button onClick={() => setShowImageModal(false)} className="font-bold text-gray-400">CANCELAR</button>
+              <button onClick={handleImageModalSubmit} className="px-8 py-3 bg-[#5a3e36] text-white rounded-xl font-black">CONFIRMAR</button>
             </div>
           </div>
         </div>
       )}
 
       <style jsx global>{`
-        .modern-quill .ql-toolbar.ql-snow { border: none !important; padding: 20px; background: white; border-bottom: 2px solid #f9fafb !important; }
-        .modern-quill .ql-container.ql-snow { border: none !important; min-height: 400px; font-family: inherit; }
-        .modern-quill .ql-editor { padding: 30px; font-size: 1.15rem; line-height: 1.8; color: #374151; }
+        .editorial-quill .ql-toolbar.ql-snow { border: none; padding: 25px; background: white; border-bottom: 2px solid #f8f9fa; }
+        .editorial-quill .ql-container.ql-snow { border: none; min-height: 500px; font-family: 'Georgia', serif; }
+        .editorial-quill .ql-editor { padding: 40px; font-size: 1.2rem; line-height: 1.8; color: #2d3748; }
+        .editorial-quill .ql-editor h2 { margin-top: 2.5rem; font-weight: 800; color: #1a202c; }
+        .editorial-quill .ql-editor blockquote { border-left: 4px solid #5a3e36; background: #fdfaf9; padding: 20px 30px; font-style: italic; margin: 2rem 0; }
         .ql-snow .ql-stroke { stroke: #5a3e36 !important; stroke-width: 2px; }
         .ql-snow .ql-fill { fill: #5a3e36 !important; }
         .ql-snow .ql-picker { color: #5a3e36 !important; font-weight: bold; }
-        .ql-editor blockquote { border-left: 5px solid #5a3e36; background: #fdfaf9; padding: 20px 30px; font-style: italic; border-radius: 0 15px 15px 0; }
-        .ql-editor.ql-blank::before { color: #9ca3af; font-style: normal; opacity: 0.6; }
       `}</style>
     </div>
   );
