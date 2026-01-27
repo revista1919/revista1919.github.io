@@ -1666,6 +1666,14 @@ async function generateNews() {
       color: var(--nyt-black);
       text-transform: uppercase;
     }
+      .article blockquote {
+  border-left: 4px solid #5a3e36;
+  background: #fdfaf9;
+  padding: 20px 30px;
+  margin: 2rem 0;
+  font-style: italic;
+}
+
     /* --- HERO HEADER (NYT STYLE) --- */
     .hero-header {
       height: 70vh;
@@ -1875,6 +1883,14 @@ async function generateNews() {
       top: 0;
       z-index: 100;
     }
+      .article blockquote {
+  border-left: 4px solid #5a3e36;
+  background: #fdfaf9;
+  padding: 20px 30px;
+  margin: 2rem 0;
+  font-style: italic;
+}
+
     .nav-minimal a {
       font-family: 'Inter', sans-serif;
       font-weight: 700;
