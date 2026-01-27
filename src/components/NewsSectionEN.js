@@ -165,9 +165,9 @@ export default function NewsSectionEN({ className }) {
   e.preventDefault();
   setSubscribing(true);
   const formData = new URLSearchParams();
-  formData.append("name", name);
-  formData.append("email", email);
-  formData.append("idiom", "en");   // 👈 añadido
+  formData.append("nombre", name);
+  formData.append("correo", email);
+  formData.append("idiom", "en"); 
   fetch(scriptURL, { method: "POST", body: formData })
 
       .then((r) => r.text())
