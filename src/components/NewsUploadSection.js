@@ -398,15 +398,73 @@ export default function NewsUploadSection() {
       )}
 
       <style jsx global>{`
-        .editorial-quill .ql-toolbar.ql-snow { border: none; padding: 25px; background: white; border-bottom: 2px solid #f8f9fa; }
-        .editorial-quill .ql-container.ql-snow { border: none; min-height: 500px; font-family: 'Georgia', serif; }
-        .editorial-quill .ql-editor { padding: 40px; font-size: 1.2rem; line-height: 1.8; color: #2d3748; }
-        .editorial-quill .ql-editor h2 { margin-top: 2.5rem; font-weight: 800; color: #1a202c; }
-        .editorial-quill .ql-editor blockquote { border-left: 4px solid #5a3e36; background: #fdfaf9; padding: 20px 30px; font-style: italic; margin: 2rem 0; }
-        .ql-snow .ql-stroke { stroke: #5a3e36 !important; stroke-width: 2px; }
-        .ql-snow .ql-fill { fill: #5a3e36 !important; }
-        .ql-snow .ql-picker { color: #5a3e36 !important; font-weight: bold; }
-      `}</style>
+  .editorial-quill .ql-toolbar.ql-snow {
+    border: none;
+    padding: 25px;
+    background: white;
+    border-bottom: 2px solid #f8f9fa;
+  }
+
+  .editorial-quill .ql-container.ql-snow {
+    border: none;
+    min-height: 500px;
+  }
+
+  .editorial-quill .ql-editor {
+    padding: 40px;
+  }
+
+  /* ===================================================
+     Fallback tipográfico NO destructivo
+     solo si la plantilla NO define nada
+  =================================================== */
+
+  .editorial-quill .ql-editor {
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    color: inherit;
+  }
+
+  .editorial-quill .ql-editor h1,
+  .editorial-quill .ql-editor h2,
+  .editorial-quill .ql-editor h3,
+  .editorial-quill .ql-editor p {
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
+  }
+
+  /* ===================================================
+     ÚNICO estilo editorial propio: blockquote
+  =================================================== */
+
+  .editorial-quill .ql-editor blockquote {
+    border-left: 4px solid #5a3e36;
+    background: #fdfaf9;
+    padding: 20px 30px;
+    margin: 2rem 0;
+  }
+
+  /* ===================================================
+     Toolbar
+  =================================================== */
+
+  .ql-snow .ql-stroke {
+    stroke: #5a3e36 !important;
+    stroke-width: 2px;
+  }
+
+  .ql-snow .ql-fill {
+    fill: #5a3e36 !important;
+  }
+
+  .ql-snow .ql-picker {
+    color: #5a3e36 !important;
+    font-weight: bold;
+  }
+`}</style>
+
     </div>
   );
 }
