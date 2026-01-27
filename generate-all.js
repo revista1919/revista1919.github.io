@@ -2391,6 +2391,15 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
 }
 await generateNews();
  // Procesar equipo (sigue de CSV)
+   const normalizeForEmail = str =>
+  str
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // quita acentos
+    .replace(/\s+/g, ".");
+
+const POSTAL_ADDRESS = "San Felipe, Valparaíso, Chile";
+
    const allMembers = teamParsed.data.filter(row => (row['Nombre'] || '').trim() !== '');
 for (const member of allMembers) {
   const rolesEs = (member['Rol en la Revista'] || '').split(';').map(r => r.trim()).filter(r => r);
@@ -2398,6 +2407,7 @@ for (const member of allMembers) {
   const nombre = member['Nombre'] || 'Miembro desconocido';
   const publishedArticles = authorToArticles[nombre] || [];
   const isAuthor = publishedArticles.length > 0;
+  
   let filteredRolesEs = rolesEs;
   let filteredRolesEn = rolesEnList;
   if (rolesEs.length > 1) {
@@ -2425,6 +2435,14 @@ for (const member of allMembers) {
   const areasTitleEn = isOnlyAuthorEn ? 'Research Areas' : 'Areas of Interest';
   const areasTagsHtml = areasList.length ? areasList.map(area => `<span class="keyword-tag">${area}</span>`).join('') : '<p>No especificadas</p>';
   const areasTagsHtmlEn = areasListEn.length ? areasListEn.map(area => `<span class="keyword-tag">${area}</span>`).join('') : '<p>Not specified</p>';
+  const isEditorEnJefe =
+  rolesEs.some(r => r.toLowerCase() === "editor en jefe") ||
+  rolesEnList.some(r => r.toLowerCase() === "editor-in-chief");
+
+const institutionalEmail = isEditorEnJefe
+  ? `${normalizeForEmail(nombre)}@revistacienciasestudiantes.com`
+  : "";
+
   const articlesSectionEs = isAuthor ? `
 <section id="articles">
   <h2 class="section-title">Publicaciones en la Revista</h2>
@@ -2459,8 +2477,29 @@ for (const member of allMembers) {
     }).join('')}
   </div>
 </section>` : '';
-  const institutionHtmlEs = institution ? `<div class="profile-inst">${institution}</div>` : '';
-  const institutionHtmlEn = institution ? `<div class="profile-inst">${institution}</div>` : '';
+  const editorExtras = isEditorEnJefe
+  ? `
+    <div class="profile-inst">
+      <a href="mailto:${institutionalEmail}" style="color:inherit;text-decoration:none;">
+        ${institutionalEmail}
+      </a>
+    </div>
+    <div class="profile-inst">${POSTAL_ADDRESS}</div>
+  `
+  : "";
+
+
+const institutionHtmlEs = `
+  ${institution ? `<div class="profile-inst">${institution}</div>` : ""}
+  ${editorExtras}
+`;
+
+const institutionHtmlEn = `
+  ${institution ? `<div class="profile-inst">${institution}</div>` : ""}
+  ${editorExtras}
+`;
+
+
   const esContent = `<!DOCTYPE html>
 <html lang="es">
 <head>
