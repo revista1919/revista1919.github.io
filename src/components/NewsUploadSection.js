@@ -225,10 +225,11 @@ export default function NewsUploadSection() {
 
       // ✅ Envolver en estructura de artículo
       const finalHtml = `
-        <div class="article" style="line-height:1.6; color:#333; font-family: sans-serif;">
-          ${tempDiv.innerHTML}
-        </div>
-      `;
+  <div class="article">
+    ${tempDiv.innerHTML}
+  </div>
+`;
+
 
       return base64EncodeUnicode(finalHtml);
     } catch (err) {
