@@ -932,40 +932,51 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     // Procesar volúmenes desde Firestore
     // Bloque completo de volúmenes en generate_all (del (async () => { try { ... } } ))
     // Procesar volúmenes desde Firestore
-    const volumesSnapshot = await db.collection('volumes').get();
-    const volumes = volumesSnapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        volumen: data.volumen || '',
-        numero: data.numero || '',
-        fecha: parseDateFlexible(data.fecha),
-        titulo: data.titulo || 'Sin título',
-        englishTitulo: data.englishTitulo || data.titulo || 'No title',
-        issn: data.issn || '',
-        editorial: data.editorial || '',
-        englishEditorial: data.englishEditorial || '',
-        portada: getImageSrc(data.portada),
-        pdf: data.pdf || '',
-      };
-    });
-    fs.writeFileSync(volumesOutputJson, JSON.stringify(volumes, null, 2), 'utf8');
-    console.log(`✅ Archivo generado: ${volumesOutputJson} (${volumes.length} volúmenes)`);
-
-    volumes.forEach(volume => {
-      const volumeSlug = `${volume.volumen}-${volume.numero}`;
-      volume.pdfUrl = volume.pdf;
-      const year = new Date(volume.fecha).getFullYear();
-      const volumeArticles = articles.filter(a => a.volumen === volume.volumen && a.numero === volume.numero);
-      const tocEs = volumeArticles.map(a => {
-        const slug = `${generateSlug(a.titulo)}-${a.numeroArticulo}`;
-        return `<li><a href="/articles/article-${slug}.html" style="color: var(--primary-blue);">${a.titulo}</a> - ${formatAuthorsDisplay(a.autores, 'es')} (pp. ${a.primeraPagina}-${a.ultimaPagina})</li>`;
-      }).join('');
-      const tocEn = volumeArticles.map(a => {
-        const slug = `${generateSlug(a.titulo)}-${a.numeroArticulo}`;
-        return `<li><a href="/articles/article-${slug}EN.html" style="color: var(--primary-blue);">${a.titulo}</a> - ${formatAuthorsDisplay(a.autores, 'en')} (pp. ${a.primeraPagina}-${a.ultimaPagina})</li>`;
-      }).join('');
-      // Generar HTML en español para volumen
-      const htmlContentEs = `
+    // Procesar volúmenes desde Firestore
+const volumesSnapshot = await db.collection('volumes').get();
+const volumes = volumesSnapshot.docs.map(doc => {
+  const data = doc.data();
+  return {
+    volumen: data.volumen || '',
+    numero: data.numero || '',
+    fecha: parseDateFlexible(data.fecha),
+    titulo: data.titulo || 'Sin título',
+    englishTitulo: data.englishTitulo || data.titulo || 'No title',
+    issn: data.issn || '',
+    editorial: data.editorial || '',
+    englishEditorial: data.englishEditorial || '',
+    portada: getImageSrc(data.portada),
+    pdf: data.pdf || '',
+  };
+});
+fs.writeFileSync(volumesOutputJson, JSON.stringify(volumes, null, 2), 'utf8');
+console.log(`✅ Archivo generado: ${volumesOutputJson} (${volumes.length} volúmenes)`);
+volumes.forEach(volume => {
+  const volumeSlug = `${volume.volumen}-${volume.numero}`;
+  volume.pdfUrl = volume.pdf;
+  const year = new Date(volume.fecha).getFullYear();
+  const volumeArticles = articles.filter(a => a.volumen === volume.volumen && a.numero === volume.numero)
+    .sort((a, b) => parseInt(a.primeraPagina) - parseInt(b.primeraPagina));
+  const tocEs = volumeArticles.map(a => {
+    const slug = `${generateSlug(a.titulo)}-${a.numeroArticulo}`;
+    return `
+      <div class="article-item">
+        <a href="/articles/article-${slug}.html" class="article-title">${a.titulo}</a>
+        <span class="article-authors">${formatAuthorsDisplay(a.autores, 'es')} (pp. ${a.primeraPagina}-${a.ultimaPagina})</span>
+      </div>
+    `;
+  }).join('');
+  const tocEn = volumeArticles.map(a => {
+    const slug = `${generateSlug(a.titulo)}-${a.numeroArticulo}`;
+    return `
+      <div class="article-item">
+        <a href="/articles/article-${slug}EN.html" class="article-title">${a.titulo}</a>
+        <span class="article-authors">${formatAuthorsDisplay(a.autores, 'en')} (pp. ${a.primeraPagina}-${a.ultimaPagina})</span>
+      </div>
+    `;
+  }).join('');
+  // Generar HTML en español para volumen
+  const htmlContentEs = `
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -981,320 +992,192 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
   <meta name="citation_language" content="es">
   <meta name="description" content="${volume.editorial ? volume.editorial.substring(0, 160) + '...' : ''}">
   <title>${volume.titulo} - Revista Nacional de las Ciencias para Estudiantes</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --primary-blue: #007398;
-      --deep-navy: #0a2540;
-      --text-main: #1a1a1a;
-      --text-muted: #64748b;
-      --bg-body: #f8fafc;
-      --accent: #e2e8f0;
+      --journal-blue: #005587;
+      --text-dark: #222222;
+      --text-light: #555555;
+      --border-color: #e0e0e0;
+      --bg-soft: #fcfcfc;
+      --accent-gold: #a68966;
     }
-
     body {
-      font-family: 'Inter', sans-serif;
-      line-height: 1.6;
-      color: var(--text-main);
-      background-color: var(--bg-body);
+      font-family: 'Inter', -apple-system, sans-serif;
+      line-height: 1.7;
+      color: var(--text-dark);
+      background-color: #fff;
       margin: 0;
-      padding: 0;
     }
-
-    /* Navegación Superior */
-    .nav-header {
-      background: white;
-      padding: 0.75rem 2rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid var(--accent);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    .nav-logo {
-      font-weight: 700;
-      color: var(--primary-blue);
-      text-decoration: none;
-      font-size: 0.8rem;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-    }
-
-    /* Hero Section - Portada */
-    .volume-hero {
-      background: var(--deep-navy);
-      color: white;
-      padding: 4rem 2rem;
+    .masthead {
+      border-bottom: 4px solid var(--text-dark);
+      padding: 1.5rem 2rem;
       text-align: center;
+      background: white;
     }
-
-    .volume-hero h1 {
-      font-family: 'Playfair Display', serif;
-      font-size: 3rem;
-      max-width: 900px;
-      margin: 0 auto 1.5rem auto;
-      line-height: 1.1;
+    .journal-name {
+      font-family: 'Libre Baskerville', serif;
+      font-size: 1.8rem;
+      text-transform: uppercase;
+      letter-spacing: -0.5px;
+      margin: 0;
+      color: var(--text-dark);
+      text-decoration: none;
     }
-
-    .volume-hero .dates {
-      font-size: 1rem;
-      color: #94a3b8;
+    .issue-meta {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-light);
+      text-transform: uppercase;
+      margin-top: 0.5rem;
+      letter-spacing: 1px;
     }
-
-    /* Layout Principal */
-    .content-grid {
-      max-width: 1100px;
-      margin: -3rem auto 3rem auto;
+    .hero-section {
+      max-width: 1200px;
+      margin: 3rem auto;
+      padding: 4rem 2rem;
+      text-align: left;
+      background-image: url('https://images.unsplash.com/photo-1614850523011-8f49ffc73908');
+      background-size: cover;
+      background-position: center;
+      color: white;
+    }
+    .hero-section h1 {
+      font-family: 'Libre Baskerville', serif;
+      font-size: 2.8rem;
+      line-height: 1.2;
+      margin-bottom: 1rem;
+      color: white;
+    }
+    .hero-details {
+      font-size: 0.95rem;
+      color: #eeeeee;
+      border-top: 1px solid rgba(255,255,255,0.3);
+      border-bottom: 1px solid rgba(255,255,255,0.3);
+      padding: 1rem 0;
+      display: flex;
+      gap: 2rem;
+    }
+    .main-grid {
+      max-width: 1200px;
+      margin: 0 auto 5rem;
       display: grid;
-      grid-template-columns: 280px 1fr;
-      gap: 2.5rem;
-      padding: 0 1.5rem;
+      grid-template-columns: 1fr 320px;
+      gap: 4rem;
+      padding: 0 2rem;
     }
-
-    /* Sidebar Estilizada */
-    aside {
+    section { margin-bottom: 4rem; }
+    h2 {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--journal-blue);
+      border-bottom: 1px solid var(--journal-blue);
+      padding-bottom: 0.5rem;
+      margin-bottom: 2rem;
+    }
+    .editorial-box {
+      font-family: 'Libre Baskerville', serif;
+      font-size: 1.15rem;
+      color: #333;
+      padding-right: 2rem;
+      border-left: 2px solid var(--accent-gold);
+      padding-left: 2rem;
+      font-style: italic;
+    }
+    .article-item {
+      padding: 1.5rem 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .article-item:last-child { border: none; }
+    .article-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--journal-blue);
+      display: block;
+      margin-bottom: 0.5rem;
+      text-decoration: none;
+    }
+    .article-title:hover { text-decoration: underline; }
+    .article-authors {
+      font-size: 0.9rem;
+      color: var(--text-light);
+      font-style: italic;
+    }
+    .sidebar {
       position: sticky;
-      top: 5rem;
+      top: 2rem;
       height: fit-content;
     }
-
-    .sidebar-card {
-      background: white;
-      border-radius: 8px;
+    .card {
+      background: var(--bg-soft);
+      border: 1px solid var(--border-color);
       padding: 1.5rem;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-      border: 1px solid var(--accent);
+      margin-bottom: 1.5rem;
     }
-
-    .sidebar-title {
+    .card-title {
       font-weight: 700;
       font-size: 0.75rem;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--text-muted);
       margin-bottom: 1rem;
-      border-bottom: 1px solid var(--accent);
-      padding-bottom: 0.5rem;
-    }
-
-    .nav-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-
-    .nav-list li {
-      margin-bottom: 10px;
-    }
-
-    .nav-list li a {
       display: block;
-      padding: 8px 0;
-      color: var(--text-main);
-      text-decoration: none;
-      font-size: 0.9rem;
-      transition: color 0.2s;
     }
-
-    .nav-list li a:hover {
-      color: var(--primary-blue);
-    }
-
-    /* Contenedor del Cuerpo */
-    .main-content {
-      background: white;
-      border-radius: 8px;
-      padding: 3rem;
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-      border: 1px solid var(--accent);
-    }
-
-    section {
-      margin-bottom: 4rem;
-    }
-
-    h2 {
-      font-family: 'Playfair Display', serif;
-      font-size: 1.8rem;
-      color: var(--deep-navy);
-      border-left: 4px solid var(--primary-blue);
-      padding-left: 1rem;
-      margin-bottom: 1.5rem;
-    }
-
-    /* Estilo Editorial */
-    .editorial-text {
-      font-family: 'Playfair Display', serif;
-      font-size: 1.2rem;
-      line-height: 1.8;
-      color: #334155;
-      font-style: italic;
-      background: #fdfdfd;
-      padding: 2rem;
-      border-radius: 4px;
-    }
-
-    /* Estilo Tabla de Contenidos */
-    .toc-list {
-      list-style: none;
-      padding: 0;
-    }
-
-    .toc-list li {
-      padding: 1.5rem 0;
-      border-bottom: 1px solid #f1f5f9;
-    }
-
-    .toc-list li:last-child {
-      border: none;
-    }
-
-    /* PDF Viewer */
-    .viewer-box {
-      background: #f1f5f9;
-      padding: 1rem;
-      border-radius: 6px;
-      margin-top: 1rem;
-    }
-
-    .pdf-frame {
-      width: 100%;
-      height: 700px;
-      border: 1px solid #cbd5e1;
-      background: white;
-    }
-
-    /* Botones */
-    .btn-group {
-      display: flex;
-      gap: 1rem;
-      margin-top: 1.5rem;
-      flex-wrap: wrap;
-      justify-content: flex-start;
-    }
-
-    .btn {
-      padding: 0.75rem 1.5rem;
-      font-size: 0.85rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.025em;
-      border-radius: 4px;
-      text-decoration: none;
-      transition: all 0.2s;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .btn-filled {
-      background: var(--primary-blue);
+    .btn-primary {
+      background: var(--journal-blue);
       color: white;
-    }
-
-    .btn-filled:hover { background: #005a77; transform: translateY(-1px); }
-
-    .btn-ghost {
-      border: 1px solid var(--primary-blue);
-      color: var(--primary-blue);
-    }
-
-    .btn-ghost:hover { background: #f0f9ff; }
-
-    footer {
-      background: var(--deep-navy);
-      color: #94a3b8;
-      padding: 3rem 1.5rem;
       text-align: center;
+      display: block;
+      padding: 0.8rem;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+      transition: background 0.2s;
+    }
+    .btn-primary:hover { background: #003d60; }
+    .btn-outline {
+      border: 1px solid var(--border-color);
+      color: var(--text-dark);
+      text-align: center;
+      display: block;
+      padding: 0.8rem;
+      text-decoration: none;
       font-size: 0.9rem;
     }
-
-    footer a { color: white; text-decoration: none; margin: 0 10px; }
-
-    /* Móvil */
+    .pdf-container {
+      background: #eee;
+      border: 1px solid var(--border-color);
+      padding: 10px;
+    }
     @media (max-width: 900px) {
-      .content-grid { grid-template-columns: 1fr; margin-top: 1.5rem; }
-      aside { display: none; }
-      .volume-hero h1 { font-size: 2rem; }
-      .main-content { padding: 1.5rem; }
-      .journal-meta, .article-info-row, .authors, .keywords-box, .btn-group {
-        justify-content: flex-start;
-        text-align: left;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.5rem;
-      }
-      .keywords-box {
-        text-align: left;
-      }
-      .keyword-tag {
-        margin: 0.25rem 0;
-        display: inline-block;
-      }
-      p {
-        text-align: justify;
-      }
-      h1, h2 {
-        text-align: left;
-      }
-      .citation-card p {
-        text-align: justify;
-        word-break: break-word;
-        overflow-wrap: break-word;
-      }
-      header {
-        text-align: left;
-      }
-      h1, h2, p, .content {
-        word-break: break-word;
-        overflow-wrap: break-word;
-        hyphens: auto;
-      }
+      .main-grid { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .hero-section h1 { font-size: 2rem; }
     }
   </style>
 </head>
 <body>
-
-  <nav class="nav-header">
-    <a href="/" class="nav-logo">Revista Nacional de las Ciencias para Estudiantes</a>
-    <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">
-      VOLUMEN ${volume.volumen} • NÚMERO ${volume.numero}
-    </div>
-  </nav>
-
-  <header class="volume-hero">
-    <h1>${volume.titulo}</h1>
-    <div class="dates">
-      Publicado: ${volume.fecha} ${volume.issn ? `• ISSN: ${volume.issn}` : ''}
+  <header class="masthead">
+    <a href="/" class="journal-name">Revista Nacional de las Ciencias para Estudiantes</a>
+    <div class="issue-meta">
+      Vol. ${volume.volumen}, No. ${volume.numero} • ${volume.fecha}
     </div>
   </header>
-
-  <div class="content-grid">
-    <aside>
-      <div class="sidebar-card">
-        <div class="sidebar-title">Contenido</div>
-        <ul class="nav-list">
-          ${volume.editorial ? '<li><a href="#editorial">Nota Editorial</a></li>' : ''}
-          ${volume.englishEditorial ? '<li><a href="#englishEditorial">Editorial</a></li>' : ''}
-          <li><a href="#toc">Tabla de Contenidos</a></li>
-          <li><a href="#preview">Visualización PDF</a></li>
-          <li><a href="#license">Licencia</a></li>
-        </ul>
-        
-        <div class="sidebar-title" style="margin-top: 2rem;">Acciones</div>
-        <a href="${volume.pdfUrl}" download class="btn btn-filled" style="width: 100%; box-sizing: border-box; margin-bottom: 10px;">Descargar PDF</a>
-        <a href="/es/volume" class="btn btn-ghost" style="width: 100%; box-sizing: border-box;">Volver a Volúmenes</a>
-      </div>
-    </aside>
-
-    <main class="main-content">
+  <article class="hero-section">
+    <h1>${volume.titulo}</h1>
+    <div class="hero-details">
+      <span><strong>Publicado:</strong> ${volume.fecha}</span>
+      ${volume.issn ? `<span><strong>ISSN:</strong> ${volume.issn}</span>` : ''}
+      <span><strong>Idioma:</strong> Español/Inglés</span>
+    </div>
+  </article>
+  <div class="main-grid">
+    <main>
       ${volume.editorial ? `
         <section id="editorial">
           <h2>Nota Editorial</h2>
-          <div class="editorial-text">
+          <div class="editorial-box">
             ${volume.editorial}
           </div>
         </section>
@@ -1302,60 +1185,61 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       ${volume.englishEditorial ? `
         <section id="englishEditorial">
           <h2>Editorial Note</h2>
-          <div class="editorial-text">
+          <div class="editorial-box">
             ${volume.englishEditorial}
           </div>
         </section>
       ` : ''}
       <section id="toc">
-        <h2>Tabla de Contenidos</h2>
-        <div style="margin-top: 2rem;">
-          <ul class="toc-list">
-            ${tocEs || '<li style="color: var(--text-muted);">No hay artículos disponibles para este volumen.</li>'}
-          </ul>
+        <h2>Contenido del Volumen</h2>
+        <div class="toc-wrapper">
+          ${tocEs || '<p style="color: var(--text-light);">No hay artículos disponibles.</p>'}
         </div>
       </section>
-
       <section id="preview">
-        <h2>Visualización del PDF</h2>
-        <div class="viewer-box">
-          <embed src="${volume.pdfUrl}" type="application/pdf" class="pdf-frame" />
-          <div class="btn-group">
-            <a href="${volume.pdfUrl}" target="_blank" class="btn btn-ghost">Ver en pantalla completa</a>
-            <a href="${volume.pdfUrl}" download class="btn btn-filled">Descargar volumen (PDF)</a>
-          </div>
+        <h2>Visualización Completa</h2>
+        <div class="pdf-container">
+          <embed src="${volume.pdfUrl}" type="application/pdf" width="100%" height="800px" />
         </div>
       </section>
-
-      <section id="license" style="border-top: 1px solid var(--accent); padding-top: 2rem;">
-        <div style="display: flex; align-items: flex-start; gap: 1rem;">
-          <img src="https://mirrors.creativecommons.org/presskit/buttons/88x31/png/by.png" alt="CC BY 4.0" style="width: 80px; opacity: 0.8;">
-          <div style="font-size: 0.8rem; color: var(--text-muted);">
-            Este volumen se publica bajo licencia <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Atribución 4.0 (CC BY 4.0)</a>.
-            Usted es libre de compartir y adaptar el material siempre que se otorgue el crédito apropiado.
-          </div>
+      <section id="license">
+        <div style="display: flex; gap: 1.5rem; align-items: center; border-top: 1px solid var(--border-color); padding-top: 2rem;">
+          <img src="https://mirrors.creativecommons.org/presskit/buttons/88x31/png/by.png" width="88" alt="CC BY">
+          <p style="font-size: 0.85rem; color: var(--text-light); margin: 0;">
+            Este trabajo está bajo una licencia de Creative Commons Atribución 4.0 Internacional.
+            Permite la copia y redistribución del material en cualquier medio o formato.
+          </p>
         </div>
       </section>
     </main>
+    <aside class="sidebar">
+      <div class="card">
+        <span class="card-title">Acceso Rápido</span>
+        <a href="${volume.pdfUrl}" download class="btn-primary">Descargar PDF Completo</a>
+        <a href="#toc" class="btn-outline">Explorar Artículos</a>
+      </div>
+      <div class="card">
+        <span class="card-title">Navegación</span>
+        <nav style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.9rem;">
+          <a href="/es/volume" style="color: var(--journal-blue); text-decoration: none;">← Volver al Archivo</a>
+          <a href="#editorial" style="color: var(--text-dark); text-decoration: none;">Nota Editorial</a>
+          <a href="#preview" style="color: var(--text-dark); text-decoration: none;">Vista Previa</a>
+        </nav>
+      </div>
+    </aside>
   </div>
-
-  <footer>
-    <p style="color: white; font-weight: 700; margin-bottom: 0.5rem;">Revista Nacional de las Ciencias para Estudiantes</p>
-    <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes.</p>
-    <div style="margin-top: 1.5rem;">
-      <a href="/es/volume" >Volver al catálogo</a> | <a href="/">Volver al inicio</a>
-    </div>
+  <footer style="background: #f8f8f8; border-top: 1px solid var(--border-color); padding: 4rem 2rem; text-align: center;">
+    <p style="font-family: 'Libre Baskerville', serif; margin-bottom: 1rem;">Revista Nacional de las Ciencias para Estudiantes</p>
+    <p style="font-size: 0.8rem; color: var(--text-light);">© ${new Date().getFullYear()} — Una revista por y para estudiantes</p>
   </footer>
-
 </body>
 </html>
-      `.trim();
-      const filePathEs = path.join(volumesOutputHtmlDir, `volume-${volumeSlug}.html`);
-      fs.writeFileSync(filePathEs, htmlContentEs, 'utf8');
-      console.log(`Generado HTML de volumen en español: ${filePathEs}`);
-
-      // Generar HTML en inglés para volumen
-      const htmlContentEn = `
+  `.trim();
+  const filePathEs = path.join(volumesOutputHtmlDir, `volume-${volumeSlug}.html`);
+  fs.writeFileSync(filePathEs, htmlContentEs, 'utf8');
+  console.log(`Generado HTML de volumen en español: ${filePathEs}`);
+  // Generar HTML en inglés para volumen
+  const htmlContentEn = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1371,320 +1255,192 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
   <meta name="citation_language" content="en">
   <meta name="description" content="${volume.englishEditorial ? volume.englishEditorial.substring(0, 160) + '...' : ''}">
   <title>${volume.englishTitulo} - The National Review of Sciences for Students</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --primary-blue: #007398;
-      --deep-navy: #0a2540;
-      --text-main: #1a1a1a;
-      --text-muted: #64748b;
-      --bg-body: #f8fafc;
-      --accent: #e2e8f0;
+      --journal-blue: #005587;
+      --text-dark: #222222;
+      --text-light: #555555;
+      --border-color: #e0e0e0;
+      --bg-soft: #fcfcfc;
+      --accent-gold: #a68966;
     }
-
     body {
-      font-family: 'Inter', sans-serif;
-      line-height: 1.6;
-      color: var(--text-main);
-      background-color: var(--bg-body);
+      font-family: 'Inter', -apple-system, sans-serif;
+      line-height: 1.7;
+      color: var(--text-dark);
+      background-color: #fff;
       margin: 0;
-      padding: 0;
     }
-
-    /* Navegación Superior */
-    .nav-header {
-      background: white;
-      padding: 0.75rem 2rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid var(--accent);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    .nav-logo {
-      font-weight: 700;
-      color: var(--primary-blue);
-      text-decoration: none;
-      font-size: 0.8rem;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-    }
-
-    /* Hero Section - Portada */
-    .volume-hero {
-      background: var(--deep-navy);
-      color: white;
-      padding: 4rem 2rem;
+    .masthead {
+      border-bottom: 4px solid var(--text-dark);
+      padding: 1.5rem 2rem;
       text-align: center;
+      background: white;
     }
-
-    .volume-hero h1 {
-      font-family: 'Playfair Display', serif;
-      font-size: 3rem;
-      max-width: 900px;
-      margin: 0 auto 1.5rem auto;
-      line-height: 1.1;
+    .journal-name {
+      font-family: 'Libre Baskerville', serif;
+      font-size: 1.8rem;
+      text-transform: uppercase;
+      letter-spacing: -0.5px;
+      margin: 0;
+      color: var(--text-dark);
+      text-decoration: none;
     }
-
-    .volume-hero .dates {
-      font-size: 1rem;
-      color: #94a3b8;
+    .issue-meta {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-light);
+      text-transform: uppercase;
+      margin-top: 0.5rem;
+      letter-spacing: 1px;
     }
-
-    /* Layout Principal */
-    .content-grid {
-      max-width: 1100px;
-      margin: -3rem auto 3rem auto;
+    .hero-section {
+      max-width: 1200px;
+      margin: 3rem auto;
+      padding: 4rem 2rem;
+      text-align: left;
+      background-image: url('https://images.unsplash.com/photo-1614850523011-8f49ffc73908');
+      background-size: cover;
+      background-position: center;
+      color: white;
+    }
+    .hero-section h1 {
+      font-family: 'Libre Baskerville', serif;
+      font-size: 2.8rem;
+      line-height: 1.2;
+      margin-bottom: 1rem;
+      color: white;
+    }
+    .hero-details {
+      font-size: 0.95rem;
+      color: #eeeeee;
+      border-top: 1px solid rgba(255,255,255,0.3);
+      border-bottom: 1px solid rgba(255,255,255,0.3);
+      padding: 1rem 0;
+      display: flex;
+      gap: 2rem;
+    }
+    .main-grid {
+      max-width: 1200px;
+      margin: 0 auto 5rem;
       display: grid;
-      grid-template-columns: 280px 1fr;
-      gap: 2.5rem;
-      padding: 0 1.5rem;
+      grid-template-columns: 1fr 320px;
+      gap: 4rem;
+      padding: 0 2rem;
     }
-
-    /* Sidebar Estilizada */
-    aside {
+    section { margin-bottom: 4rem; }
+    h2 {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--journal-blue);
+      border-bottom: 1px solid var(--journal-blue);
+      padding-bottom: 0.5rem;
+      margin-bottom: 2rem;
+    }
+    .editorial-box {
+      font-family: 'Libre Baskerville', serif;
+      font-size: 1.15rem;
+      color: #333;
+      padding-right: 2rem;
+      border-left: 2px solid var(--accent-gold);
+      padding-left: 2rem;
+      font-style: italic;
+    }
+    .article-item {
+      padding: 1.5rem 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .article-item:last-child { border: none; }
+    .article-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--journal-blue);
+      display: block;
+      margin-bottom: 0.5rem;
+      text-decoration: none;
+    }
+    .article-title:hover { text-decoration: underline; }
+    .article-authors {
+      font-size: 0.9rem;
+      color: var(--text-light);
+      font-style: italic;
+    }
+    .sidebar {
       position: sticky;
-      top: 5rem;
+      top: 2rem;
       height: fit-content;
     }
-
-    .sidebar-card {
-      background: white;
-      border-radius: 8px;
+    .card {
+      background: var(--bg-soft);
+      border: 1px solid var(--border-color);
       padding: 1.5rem;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-      border: 1px solid var(--accent);
+      margin-bottom: 1.5rem;
     }
-
-    .sidebar-title {
+    .card-title {
       font-weight: 700;
       font-size: 0.75rem;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--text-muted);
       margin-bottom: 1rem;
-      border-bottom: 1px solid var(--accent);
-      padding-bottom: 0.5rem;
-    }
-
-    .nav-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-
-    .nav-list li {
-      margin-bottom: 10px;
-    }
-
-    .nav-list li a {
       display: block;
-      padding: 8px 0;
-      color: var(--text-main);
-      text-decoration: none;
-      font-size: 0.9rem;
-      transition: color 0.2s;
     }
-
-    .nav-list li a:hover {
-      color: var(--primary-blue);
-    }
-
-    /* Contenedor del Cuerpo */
-    .main-content {
-      background: white;
-      border-radius: 8px;
-      padding: 3rem;
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-      border: 1px solid var(--accent);
-    }
-
-    section {
-      margin-bottom: 4rem;
-    }
-
-    h2 {
-      font-family: 'Playfair Display', serif;
-      font-size: 1.8rem;
-      color: var(--deep-navy);
-      border-left: 4px solid var(--primary-blue);
-      padding-left: 1rem;
-      margin-bottom: 1.5rem;
-    }
-
-    /* Estilo Editorial */
-    .editorial-text {
-      font-family: 'Playfair Display', serif;
-      font-size: 1.2rem;
-      line-height: 1.8;
-      color: #334155;
-      font-style: italic;
-      background: #fdfdfd;
-      padding: 2rem;
-      border-radius: 4px;
-    }
-
-    /* Estilo Tabla de Contenidos */
-    .toc-list {
-      list-style: none;
-      padding: 0;
-    }
-
-    .toc-list li {
-      padding: 1.5rem 0;
-      border-bottom: 1px solid #f1f5f9;
-    }
-
-    .toc-list li:last-child {
-      border: none;
-    }
-
-    /* PDF Viewer */
-    .viewer-box {
-      background: #f1f5f9;
-      padding: 1rem;
-      border-radius: 6px;
-      margin-top: 1rem;
-    }
-
-    .pdf-frame {
-      width: 100%;
-      height: 700px;
-      border: 1px solid #cbd5e1;
-      background: white;
-    }
-
-    /* Botones */
-    .btn-group {
-      display: flex;
-      gap: 1rem;
-      margin-top: 1.5rem;
-      flex-wrap: wrap;
-      justify-content: flex-start;
-    }
-
-    .btn {
-      padding: 0.75rem 1.5rem;
-      font-size: 0.85rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.025em;
-      border-radius: 4px;
-      text-decoration: none;
-      transition: all 0.2s;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .btn-filled {
-      background: var(--primary-blue);
+    .btn-primary {
+      background: var(--journal-blue);
       color: white;
-    }
-
-    .btn-filled:hover { background: #005a77; transform: translateY(-1px); }
-
-    .btn-ghost {
-      border: 1px solid var(--primary-blue);
-      color: var(--primary-blue);
-    }
-
-    .btn-ghost:hover { background: #f0f9ff; }
-
-    footer {
-      background: var(--deep-navy);
-      color: #94a3b8;
-      padding: 3rem 1.5rem;
       text-align: center;
+      display: block;
+      padding: 0.8rem;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+      transition: background 0.2s;
+    }
+    .btn-primary:hover { background: #003d60; }
+    .btn-outline {
+      border: 1px solid var(--border-color);
+      color: var(--text-dark);
+      text-align: center;
+      display: block;
+      padding: 0.8rem;
+      text-decoration: none;
       font-size: 0.9rem;
     }
-
-    footer a { color: white; text-decoration: none; margin: 0 10px; }
-
-    /* Móvil */
+    .pdf-container {
+      background: #eee;
+      border: 1px solid var(--border-color);
+      padding: 10px;
+    }
     @media (max-width: 900px) {
-      .content-grid { grid-template-columns: 1fr; margin-top: 1.5rem; }
-      aside { display: none; }
-      .volume-hero h1 { font-size: 2rem; }
-      .main-content { padding: 1.5rem; }
-      .journal-meta, .article-info-row, .authors, .keywords-box, .btn-group {
-        justify-content: flex-start;
-        text-align: left;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.5rem;
-      }
-      .keywords-box {
-        text-align: left;
-      }
-      .keyword-tag {
-        margin: 0.25rem 0;
-        display: inline-block;
-      }
-      p {
-        text-align: justify;
-      }
-      h1, h2 {
-        text-align: left;
-      }
-      .citation-card p {
-        text-align: justify;
-        word-break: break-word;
-        overflow-wrap: break-word;
-      }
-      header {
-        text-align: left;
-      }
-      h1, h2, p, .content {
-        word-break: break-word;
-        overflow-wrap: break-word;
-        hyphens: auto;
-      }
+      .main-grid { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .hero-section h1 { font-size: 2rem; }
     }
   </style>
 </head>
 <body>
-
-  <nav class="nav-header">
-    <a href="/" class="nav-logo">The National Review of Sciences for Students</a>
-    <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">
-      VOLUME ${volume.volumen} • ISSUE ${volume.numero}
-    </div>
-  </nav>
-
-  <header class="volume-hero">
-    <h1>${volume.englishTitulo}</h1>
-    <div class="dates">
-      Published: ${volume.fecha} ${volume.issn ? `• ISSN: ${volume.issn}` : ''}
+  <header class="masthead">
+    <a href="/" class="journal-name">The National Review of Sciences for Students</a>
+    <div class="issue-meta">
+      Vol. ${volume.volumen}, No. ${volume.numero} • ${volume.fecha}
     </div>
   </header>
-
-  <div class="content-grid">
-    <aside>
-      <div class="sidebar-card">
-        <div class="sidebar-title">Outline</div>
-        <ul class="nav-list">
-          ${volume.englishEditorial ? '<li><a href="#englishEditorial">Editorial Note</a></li>' : ''}
-          ${volume.editorial ? '<li><a href="#editorial">Nota Editorial</a></li>' : ''}
-          <li><a href="#toc">Table of Contents</a></li>
-          <li><a href="#preview">PDF Preview</a></li>
-          <li><a href="#license">License</a></li>
-        </ul>
-        
-        <div class="sidebar-title" style="margin-top: 2rem;">Actions</div>
-        <a href="${volume.pdfUrl}" download class="btn btn-filled" style="width: 100%; box-sizing: border-box; margin-bottom: 10px;">Download PDF</a>
-        <a href="/en/volume" class="btn btn-ghost" style="width: 100%; box-sizing: border-box;">Back to Volumes</a>
-      </div>
-    </aside>
-
-    <main class="main-content">
+  <article class="hero-section">
+    <h1>${volume.englishTitulo}</h1>
+    <div class="hero-details">
+      <span><strong>Published:</strong> ${volume.fecha}</span>
+      ${volume.issn ? `<span><strong>ISSN:</strong> ${volume.issn}</span>` : ''}
+      <span><strong>Language:</strong> Spanish/English</span>
+    </div>
+  </article>
+  <div class="main-grid">
+    <main>
       ${volume.englishEditorial ? `
         <section id="englishEditorial">
           <h2>Editorial Note</h2>
-          <div class="editorial-text">
+          <div class="editorial-box">
             ${volume.englishEditorial}
           </div>
         </section>
@@ -1692,67 +1448,68 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       ${volume.editorial ? `
         <section id="editorial">
           <h2>Nota Editorial (Spanish)</h2>
-          <div class="editorial-text">
+          <div class="editorial-box">
             ${volume.editorial}
           </div>
         </section>
       ` : ''}
       <section id="toc">
         <h2>Table of Contents</h2>
-        <div style="margin-top: 2rem;">
-          <ul class="toc-list">
-            ${tocEn || '<li style="color: var(--text-muted);">No articles available for this volume.</li>'}
-          </ul>
+        <div class="toc-wrapper">
+          ${tocEn || '<p style="color: var(--text-light);">No articles available.</p>'}
         </div>
       </section>
-
       <section id="preview">
-        <h2>PDF Preview</h2>
-        <div class="viewer-box">
-          <embed src="${volume.pdfUrl}" type="application/pdf" class="pdf-frame" />
-          <div class="btn-group">
-            <a href="${volume.pdfUrl}" target="_blank" class="btn btn-ghost">View Full Screen</a>
-            <a href="${volume.pdfUrl}" download class="btn btn-filled">Download Volume (PDF)</a>
-          </div>
+        <h2>Full Preview</h2>
+        <div class="pdf-container">
+          <embed src="${volume.pdfUrl}" type="application/pdf" width="100%" height="800px" />
         </div>
       </section>
-
-      <section id="license" style="border-top: 1px solid var(--accent); padding-top: 2rem;">
-        <div style="display: flex; align-items: flex-start; gap: 1rem;">
-          <img src="https://mirrors.creativecommons.org/presskit/buttons/88x31/png/by.png" alt="CC BY 4.0" style="width: 80px; opacity: 0.8;">
-          <div style="font-size: 0.8rem; color: var(--text-muted);">
-            This volume is published under a <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 (CC BY 4.0)</a> license.
-            You are free to share and adapt the material as long as appropriate credit is given.
-          </div>
+      <section id="license">
+        <div style="display: flex; gap: 1.5rem; align-items: center; border-top: 1px solid var(--border-color); padding-top: 2rem;">
+          <img src="https://mirrors.creativecommons.org/presskit/buttons/88x31/png/by.png" width="88" alt="CC BY">
+          <p style="font-size: 0.85rem; color: var(--text-light); margin: 0;">
+            This work is licensed under a Creative Commons Attribution 4.0 International License.
+            It allows copying and redistribution of the material in any medium or format.
+          </p>
         </div>
       </section>
     </main>
+    <aside class="sidebar">
+      <div class="card">
+        <span class="card-title">Quick Access</span>
+        <a href="${volume.pdfUrl}" download class="btn-primary">Download Full PDF</a>
+        <a href="#toc" class="btn-outline">Explore Articles</a>
+      </div>
+      <div class="card">
+        <span class="card-title">Navigation</span>
+        <nav style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.9rem;">
+          <a href="/en/volume" style="color: var(--journal-blue); text-decoration: none;">← Back to Archive</a>
+          <a href="#editorial" style="color: var(--text-dark); text-decoration: none;">Editorial Note</a>
+          <a href="#preview" style="color: var(--text-dark); text-decoration: none;">Preview</a>
+        </nav>
+      </div>
+    </aside>
   </div>
-
-  <footer>
-    <p style="color: white; font-weight: 700; margin-bottom: 0.5rem;">The National Review of Sciences for Students</p>
-    <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students.</p>
-    <div style="margin-top: 1.5rem;">
-      <a href="/en/volume" >Back to catalog</a> | <a href="/">Back to home</a>
-    </div>
+  <footer style="background: #f8f8f8; border-top: 1px solid var(--border-color); padding: 4rem 2rem; text-align: center;">
+    <p style="font-family: 'Libre Baskerville', serif; margin-bottom: 1rem;">The National Review of Sciences for Students</p>
+    <p style="font-size: 0.8rem; color: var(--text-light);">© ${new Date().getFullYear()} — A journal by and for students</p>
   </footer>
-
 </body>
 </html>
-      `.trim();
-      const filePathEn = path.join(volumesOutputHtmlDir, `volume-${volumeSlug}EN.html`);
-      fs.writeFileSync(filePathEn, htmlContentEn, 'utf8');
-      console.log(`Generado HTML de volumen en inglés: ${filePathEn}`);
-    });
-
-    // Generar índice de volúmenes
-    const volumesByYear = volumes.reduce((acc, volume) => {
-      const year = new Date(volume.fecha).getFullYear() || 'Sin fecha';
-      if (!acc[year]) acc[year] = [];
-      acc[year].push(volume);
-      return acc;
-    }, {});
-    let volumesIndexContent = `
+  `.trim();
+  const filePathEn = path.join(volumesOutputHtmlDir, `volume-${volumeSlug}EN.html`);
+  fs.writeFileSync(filePathEn, htmlContentEn, 'utf8');
+  console.log(`Generado HTML de volumen en inglés: ${filePathEn}`);
+});
+// Generar índice de volúmenes
+const volumesByYear = volumes.reduce((acc, volume) => {
+  const year = new Date(volume.fecha).getFullYear() || 'Sin fecha';
+  if (!acc[year]) acc[year] = [];
+  acc[year].push(volume);
+  return acc;
+}, {});
+let volumesIndexContent = `
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1769,7 +1526,6 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       --bg-body: #f8fafc;
       --accent: #e2e8f0;
     }
-
     body {
       font-family: 'Inter', sans-serif;
       line-height: 1.6;
@@ -1778,8 +1534,6 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       margin: 0;
       padding: 0;
     }
-
-    /* Navegación Superior */
     .nav-header {
       background: white;
       padding: 0.75rem 2rem;
@@ -1791,7 +1545,6 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       top: 0;
       z-index: 100;
     }
-
     .nav-logo {
       font-weight: 700;
       color: var(--primary-blue);
@@ -1800,8 +1553,6 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       letter-spacing: 0.1em;
       text-transform: uppercase;
     }
-
-    /* Layout Principal */
     .content-grid {
       max-width: 1100px;
       margin: 2rem auto 3rem auto;
@@ -1810,8 +1561,6 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       gap: 2.5rem;
       padding: 0 1.5rem;
     }
-
-    /* Contenedor del Cuerpo */
     .main-content {
       background: white;
       border-radius: 8px;
@@ -1819,7 +1568,6 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
       border: 1px solid var(--accent);
     }
-
     h1 {
       font-family: 'Playfair Display', serif;
       font-size: 3rem;
@@ -1827,7 +1575,6 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       margin: 0 auto 1.5rem auto;
       line-height: 1.1;
     }
-
     h2 {
       font-family: 'Playfair Display', serif;
       font-size: 1.8rem;
@@ -1836,32 +1583,26 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       padding-left: 1rem;
       margin-bottom: 1.5rem;
     }
-
     ul {
       list-style: none;
       padding: 0;
     }
-
     li {
       padding: 1.5rem 0;
       border-bottom: 1px solid #f1f5f9;
     }
-
     li:last-child {
       border: none;
     }
-
     a {
       color: var(--primary-blue);
       text-decoration: none;
       font-size: 0.9rem;
       transition: color 0.2s;
     }
-
     a:hover {
       color: #005a77;
     }
-
     footer {
       background: var(--deep-navy);
       color: #94a3b8;
@@ -1869,10 +1610,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       text-align: center;
       font-size: 0.9rem;
     }
-
     footer a { color: white; text-decoration: none; margin: 0 10px; }
-
-    /* Móvil */
     @media (max-width: 900px) {
       .main-content { padding: 1.5rem; }
       h1 { font-size: 2rem; }
@@ -1888,7 +1626,6 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
   <nav class="nav-header">
     <a href="/" class="nav-logo">Revista Nacional de las Ciencias para Estudiantes</a>
   </nav>
-
   <div class="content-grid">
     <main class="main-content">
       <h1>Índice de Volúmenes por Año</h1>
@@ -1918,12 +1655,11 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
   </footer>
 </body>
 </html>
-    `.trim();
-    const volumesIndexPath = path.join(volumesOutputHtmlDir, 'index.html');
-    fs.writeFileSync(volumesIndexPath, volumesIndexContent, 'utf8');
-    console.log(`Generado índice HTML de volúmenes: ${volumesIndexPath}`);
-
-    let volumesIndexContentEn = `
+  `.trim();
+const volumesIndexPath = path.join(volumesOutputHtmlDir, 'index.html');
+fs.writeFileSync(volumesIndexPath, volumesIndexContent, 'utf8');
+console.log(`Generado índice HTML de volúmenes: ${volumesIndexPath}`);
+let volumesIndexContentEn = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1940,7 +1676,6 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
       --bg-body: #f8fafc;
       --accent: #e2e8f0;
     }
-
     body {
       font-family: 'Inter', sans-serif;
       line-height: 1.6;
@@ -1949,8 +1684,6 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
       margin: 0;
       padding: 0;
     }
-
-    /* Navegación Superior */
     .nav-header {
       background: white;
       padding: 0.75rem 2rem;
@@ -1962,7 +1695,6 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
       top: 0;
       z-index: 100;
     }
-
     .nav-logo {
       font-weight: 700;
       color: var(--primary-blue);
@@ -1971,8 +1703,6 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
       letter-spacing: 0.1em;
       text-transform: uppercase;
     }
-
-    /* Layout Principal */
     .content-grid {
       max-width: 1100px;
       margin: 2rem auto 3rem auto;
@@ -1981,8 +1711,6 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
       gap: 2.5rem;
       padding: 0 1.5rem;
     }
-
-    /* Contenedor del Cuerpo */
     .main-content {
       background: white;
       border-radius: 8px;
@@ -1990,7 +1718,6 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
       box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
       border: 1px solid var(--accent);
     }
-
     h1 {
       font-family: 'Playfair Display', serif;
       font-size: 3rem;
@@ -1998,7 +1725,6 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
       margin: 0 auto 1.5rem auto;
       line-height: 1.1;
     }
-
     h2 {
       font-family: 'Playfair Display', serif;
       font-size: 1.8rem;
@@ -2007,32 +1733,26 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
       padding-left: 1rem;
       margin-bottom: 1.5rem;
     }
-
     ul {
       list-style: none;
       padding: 0;
     }
-
     li {
       padding: 1.5rem 0;
       border-bottom: 1px solid #f1f5f9;
     }
-
     li:last-child {
       border: none;
     }
-
     a {
       color: var(--primary-blue);
       text-decoration: none;
       font-size: 0.9rem;
       transition: color 0.2s;
     }
-
     a:hover {
       color: #005a77;
     }
-
     footer {
       background: var(--deep-navy);
       color: #94a3b8;
@@ -2040,10 +1760,7 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
       text-align: center;
       font-size: 0.9rem;
     }
-
     footer a { color: white; text-decoration: none; margin: 0 10px; }
-
-    /* Móvil */
     @media (max-width: 900px) {
       .main-content { padding: 1.5rem; }
       h1 { font-size: 2rem; }
@@ -2059,7 +1776,6 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
   <nav class="nav-header">
     <a href="/" class="nav-logo">The National Review of Sciences for Students</a>
   </nav>
-
   <div class="content-grid">
     <main class="main-content">
       <h1>Index of Volumes by Year</h1>
@@ -2089,10 +1805,10 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
   </footer>
 </body>
 </html>
-    `.trim();
-    const volumesIndexPathEn = path.join(volumesOutputHtmlDir, 'index.EN.html');
-    fs.writeFileSync(volumesIndexPathEn, volumesIndexContentEn, 'utf8');
-    console.log(`Generado índice HTML de volúmenes (EN): ${volumesIndexPathEn}`);
+  `.trim();
+const volumesIndexPathEn = path.join(volumesOutputHtmlDir, 'index.EN.html');
+fs.writeFileSync(volumesIndexPathEn, volumesIndexContentEn, 'utf8');
+console.log(`Generado índice HTML de volúmenes (EN): ${volumesIndexPathEn}`);
 let newsItems = [];  // Declarar fuera para acceso en sitemap
 
 async function generateNews() {
