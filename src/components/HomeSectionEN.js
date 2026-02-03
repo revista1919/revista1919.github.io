@@ -13,28 +13,28 @@ const HomeSection = ({ onOpenMenu }) => {
     {
       title: 'Articles',
       desc: 'Scientific articles written by students and peer-reviewed.',
-      path: '/article',
+      path: '/en/article',
       icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
       bgImage: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?q=80&w=773&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
     },
     {
       title: 'Volumes',
       desc: 'Collections of articles organized by edition.',
-      path: '/volume',
+      path: '/en/volume',
       icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10',
       bgImage: 'https://plus.unsplash.com/premium_photo-1677567996070-68fa4181775a?q=80&w=872&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
     },
     {
       title: 'Manuscripts',
       desc: 'Information for authors and the submission process.',
-      path: '/submit',
+      path: '/en/submit',
       icon: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12',
       bgImage: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?q=80&w=870&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
     },
     {
       title: 'News',
       desc: 'Announcements, activities, and updates from the student scientific community.',
-      path: '/new',
+      path: '/en/new',
       icon: 'M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z',
       bgImage: 'https://www.revistacienciasestudiantes.com/team.jpg'
     }
@@ -202,13 +202,13 @@ const HomeSection = ({ onOpenMenu }) => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <button
-                onClick={() => navigate('/article')}
+                onClick={() => navigate('/en/article')}
                 className="px-8 sm:px-10 py-4 bg-gray-900 text-white font-bold text-xs uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg hover:-translate-y-1 active:scale-95"
               >
                 View articles
               </button>
               <button
-                onClick={() => navigate('/about')}
+                onClick={() => navigate('/en/about')}
                 className="px-8 sm:px-10 py-4 border border-gray-200 text-gray-900 font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all active:scale-95"
               >
                 About the journal
