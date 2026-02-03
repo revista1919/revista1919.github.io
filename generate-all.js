@@ -933,6 +933,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     // Bloque completo de volúmenes en generate_all (del (async () => { try { ... } } ))
     // Procesar volúmenes desde Firestore
     // Procesar volúmenes desde Firestore
+// Procesar volúmenes desde Firestore
 const volumesSnapshot = await db.collection('volumes').get();
 const volumes = volumesSnapshot.docs.map(doc => {
   const data = doc.data();
@@ -1150,6 +1151,13 @@ volumes.forEach(volume => {
       border: 1px solid var(--border-color);
       padding: 10px;
     }
+    .action-buttons {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1.5rem;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+    }
     @media (max-width: 900px) {
       .main-grid { grid-template-columns: 1fr; }
       .sidebar { display: none; }
@@ -1201,12 +1209,16 @@ volumes.forEach(volume => {
         <div class="pdf-container">
           <embed src="${volume.pdfUrl}" type="application/pdf" width="100%" height="800px" />
         </div>
+        <div class="action-buttons">
+          <a href="${volume.pdfUrl}" target="_blank" class="btn-outline">Ver en pantalla completa</a>
+          <a href="${volume.pdfUrl}" download class="btn-primary">Descargar volumen (PDF)</a>
+        </div>
       </section>
       <section id="license">
         <div style="display: flex; gap: 1.5rem; align-items: center; border-top: 1px solid var(--border-color); padding-top: 2rem;">
           <img src="https://mirrors.creativecommons.org/presskit/buttons/88x31/png/by.png" width="88" alt="CC BY">
           <p style="font-size: 0.85rem; color: var(--text-light); margin: 0;">
-            Este trabajo está bajo una licencia de Creative Commons Atribución 4.0 Internacional.
+            Este trabajo está bajo una licencia <a href="https://creativecommons.org/licenses/by/4.0/" style="color: var(--journal-blue);">Creative Commons Atribución 4.0 Internacional</a>.
             Permite la copia y redistribución del material en cualquier medio o formato.
           </p>
         </div>
@@ -1413,6 +1425,13 @@ volumes.forEach(volume => {
       border: 1px solid var(--border-color);
       padding: 10px;
     }
+    .action-buttons {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1.5rem;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+    }
     @media (max-width: 900px) {
       .main-grid { grid-template-columns: 1fr; }
       .sidebar { display: none; }
@@ -1464,12 +1483,16 @@ volumes.forEach(volume => {
         <div class="pdf-container">
           <embed src="${volume.pdfUrl}" type="application/pdf" width="100%" height="800px" />
         </div>
+        <div class="action-buttons">
+          <a href="${volume.pdfUrl}" target="_blank" class="btn-outline">View Full Screen</a>
+          <a href="${volume.pdfUrl}" download class="btn-primary">Download Volume (PDF)</a>
+        </div>
       </section>
       <section id="license">
         <div style="display: flex; gap: 1.5rem; align-items: center; border-top: 1px solid var(--border-color); padding-top: 2rem;">
           <img src="https://mirrors.creativecommons.org/presskit/buttons/88x31/png/by.png" width="88" alt="CC BY">
           <p style="font-size: 0.85rem; color: var(--text-light); margin: 0;">
-            This work is licensed under a Creative Commons Attribution 4.0 International License.
+            This work is licensed under a <a href="https://creativecommons.org/licenses/by/4.0/" style="color: var(--journal-blue);">Creative Commons Attribution 4.0 International</a> License.
             It allows copying and redistribution of the material in any medium or format.
           </p>
         </div>
