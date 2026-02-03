@@ -9,115 +9,117 @@ function VolumeCard({ volume }) {
   const portada = volume.portada || '';
 
   return (
-    <div
-      className="group bg-white border border-gray-200 rounded-sm overflow-hidden transition-all duration-500 hover:border-gray-400 hover:shadow-xl cursor-pointer flex flex-col h-full"
+    <motion.div
+      layout
       onClick={() => setIsExpanded(!isExpanded)}
+      className="group relative bg-[#FCFCFA] border border-[#E5E5E1] rounded-sm overflow-hidden transition-all duration-700 hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] cursor-pointer flex flex-col h-full"
     >
-      {/* Encabezado Ceremonioso */}
-      <div className="pt-8 px-8 flex justify-between items-baseline">
-        <span className="text-[10px] uppercase tracking-[0.3em] font-bold text-[#007398]">
-          Volumen {volume.volumen || '—'}
-        </span>
-        <span className="text-[10px] text-gray-400 font-mono italic">
+      {/* Línea decorativa superior */}
+      <div className="h-1.5 w-full bg-[#007398] opacity-10 group-hover:opacity-100 transition-opacity duration-700" />
+      <div className="pt-10 px-10 flex justify-between items-center">
+        <div className="flex flex-col">
+          <span className="text-[9px] uppercase tracking-[0.4em] font-black text-[#007398] mb-1">
+            Revista Nacional de las Ciencias
+          </span>
+          <div className="h-[1px] w-8 bg-[#007398]/30 group-hover:w-full transition-all duration-700" />
+        </div>
+        <span className="text-[10px] text-gray-400 font-serif italic tracking-widest">
           {volume.fecha || 'Sin fecha'}
         </span>
       </div>
-      <div className="p-8 flex-grow flex flex-col">
-        {/* Título Estilo Editorial */}
-        <h2 className="text-2xl font-serif text-gray-900 leading-tight mb-6 group-hover:text-[#007398] transition-colors">
-          Número {volume.numero || 'N/A'}: {volume.titulo || 'Sin título registrado'}
-        </h2>
-        {/* Portada con marco de galería */}
+      <div className="p-10 flex-grow flex flex-col">
+        {/* Título */}
+        <div className="mb-8">
+          <span className="text-[11px] font-serif italic text-gray-500 block mb-2">Volumen {volume.volumen} — No. {volume.numero}</span>
+          <h2 className="text-3xl font-serif text-[#1a1a1a] leading-[1.1] group-hover:text-[#007398] transition-colors duration-500">
+            {volume.titulo || 'Sin título registrado'}
+          </h2>
+        </div>
+        {/* Portada */}
         {portada && (
-          <div className="relative p-2 border border-gray-100 bg-gray-50 mb-6 shadow-inner">
-            <div className="overflow-hidden aspect-[3/4]">
-              <img
-                src={portada}
-                alt={`Cubierta ${volume.titulo || 'Sin título'}`}
-                className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-700 scale-100 group-hover:scale-105"
-              />
+          <div className="relative group/img">
+            {/* Marco */}
+            <div className="relative p-3 bg-white border border-[#E5E5E1] shadow-sm transition-transform duration-700 group-hover:scale-[1.02]">
+              <div className="overflow-hidden aspect-[3/4] bg-gray-100 relative">
+                <img
+                  src={portada}
+                  alt={volume.titulo}
+                  className="w-full h-full object-cover mix-blend-multiply opacity-90 group-hover:opacity-100 group-hover:scale-110 transition-all duration-[1.5s] ease-in-out"
+                />
+                {/* Overlay de textura */}
+                <div className="absolute inset-0 pointer-events-none opacity-20 bg-[url('https://www.transparenttextures.com/patterns/paper-fibers.png')]" />
+              </div>
             </div>
-            {/* Sello de autenticidad visual */}
-            <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm p-2 text-[8px] uppercase tracking-tighter border border-gray-200">
-              Official Archive
+            {/* Sello */}
+            <div className="absolute -bottom-4 -right-4 w-16 h-16 border border-[#007398]/20 rounded-full flex items-center justify-center bg-white/80 backdrop-blur-md shadow-sm z-10 group-hover:rotate-12 transition-transform duration-1000">
+              <span className="text-[7px] font-bold text-[#007398] text-center leading-none uppercase tracking-tighter">
+                Archivo<br/>Oficial
+              </span>
             </div>
           </div>
         )}
-        {/* Resumen Introductorio */}
-        {!isExpanded && volume.resumen && (
-          <p className="text-gray-600 text-sm leading-relaxed line-clamp-3 font-serif italic border-l-2 border-gray-100 pl-4">
-            {volume.resumen}
-          </p>
-        )}
-        {/* Sección Expandible */}
+        {/* Sección expandible */}
         <AnimatePresence>
           {isExpanded && (
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="mt-10 space-y-8 border-t border-[#E5E5E1] pt-8"
             >
-              <div className="pt-4 space-y-4 border-t border-gray-100 mt-4">
-                <div className="text-sm text-gray-700 leading-relaxed">
-                  <h4 className="text-[10px] uppercase font-bold text-gray-400 mb-2 tracking-widest">Resumen Editorial</h4>
-                  {volume.resumen || 'Resumen no disponible'}
+              {volume.editorial && (
+                <div className="relative">
+                  <span className="absolute -left-4 top-0 text-2xl text-[#007398]/20 font-serif">“</span>
+                  <p className="text-sm text-gray-600 font-serif leading-relaxed italic px-2">
+                    {volume.editorial}
+                  </p>
                 </div>
-                <div className="text-sm text-gray-700 leading-relaxed">
-                  <h4 className="text-[10px] uppercase font-bold text-gray-400 mb-2 tracking-widest">Abstract</h4>
-                  {volume.abstract || 'Abstract no disponible'}
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold uppercase text-gray-400">Áreas:</span>
-                  <span className="text-xs text-[#007398] font-medium italic">{volume.area || 'No especificadas'}</span>
-                </div>
-                <div>
-                  <h4 className="text-[10px] uppercase font-bold text-gray-400 mb-2 tracking-widest">Palabras Clave</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {volume.palabras_clave?.length > 0 ? (
-                      volume.palabras_clave.map((kw, idx) => (
-                        <span key={idx} className="bg-[#007398]/10 text-[#007398] px-2 py-1 rounded text-xs font-medium">
-                          {kw}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-xs text-gray-500 italic">No disponibles</span>
-                    )}
-                  </div>
-                </div>
-                {/* Botones de Acción Minimalistas */}
-                <div className="grid grid-cols-1 gap-2 pt-6">
+              )}
+              <div className="grid grid-cols-1 gap-3">
+                <a
+                  href={htmlUrl}
+                  target="_blank"
+                  className="group/btn relative overflow-hidden py-4 border border-gray-900 text-gray-900 text-[10px] uppercase font-bold tracking-[0.3em] text-center transition-all hover:text-white"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <span className="relative z-10">Ver Contenidos</span>
+                  <div className="absolute inset-0 bg-gray-900 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-300" />
+                </a>
+                {pdfUrl && (
                   <a
-                    href={htmlUrl}
+                    href={pdfUrl}
                     target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full py-3 border border-[#007398] text-[#007398] text-[10px] uppercase font-bold tracking-[0.2em] text-center hover:bg-[#007398] hover:text-white transition-all"
+                    className="py-4 bg-[#007398] text-white text-[10px] uppercase font-bold tracking-[0.3em] text-center hover:bg-[#005a77] shadow-lg shadow-[#007398]/20 transition-all"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    Examinar Contenidos
+                    Descargar PDF
                   </a>
-                  {pdfUrl && (
-                    <a
-                      href={pdfUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full py-3 bg-gray-900 text-white text-[10px] uppercase font-bold tracking-[0.2em] text-center hover:bg-black transition-all"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      Descargar Edición Completa (PDF)
-                    </a>
-                  )}
-                </div>
+                )}
               </div>
+              {volume.issn && (
+                <div className="flex justify-center border-t border-gray-100 pt-4">
+                  <span className="text-[9px] font-mono text-gray-400 tracking-[0.5em]">ISSN {volume.issn}</span>
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
       </div>
-      {/* Footer de la Card (Indicador) */}
-      <div className="px-8 py-3 bg-gray-50 border-t border-gray-100 flex justify-center">
-        <div className={`w-2 h-2 rounded-full transition-all duration-300 ${isExpanded ? 'bg-[#007398] w-8' : 'bg-gray-300'}`}></div>
+      {/* Footer */}
+      <div className="px-10 py-6 bg-white flex justify-between items-center border-t border-[#E5E5E1]">
+         <div className="text-[9px] text-gray-400 uppercase tracking-widest font-medium">
+           {isExpanded ? 'Cerrar' : 'Ver Detalles'}
+         </div>
+         <motion.div
+           animate={{ rotate: isExpanded ? 180 : 0 }}
+           className="text-[#007398]"
+         >
+           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+             <path d="M7 13l5 5 5-5M7 6l5 5 5-5" />
+           </svg>
+         </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

@@ -1,3 +1,4 @@
+// DirectorPanel completo modificado
 import React, { useState, useEffect } from 'react';
 import { auth } from '../firebase';
 import { collection, onSnapshot } from "firebase/firestore";
@@ -74,12 +75,10 @@ export default function DirectorPanel({ user }) {
     numero: '',
     fecha: '',
     titulo: '',
-    resumen: '',
-    abstract: '',
+    issn: '',
+    editorial: '',
+    englishEditorial: '',
     portada: '',
-    area: '',
-    palabras_clave: '',
-    keywords: '',
     pdfFile: null,
   });
   const [status, setStatus] = useState('');
@@ -131,7 +130,17 @@ export default function DirectorPanel({ user }) {
   };
   const handleVolumeInputChange = (e) => {
     const { name, value } = e.target;
-    setVolumeFormData((prev) => ({ ...prev, [name]: value }));
+    setVolumeFormData((prev) => {
+      const newData = { ...prev, [name]: value };
+      // Auto-generar título si fecha y volumen están presentes
+      if (name === 'fecha' || name === 'volumen') {
+        const year = new Date(newData.fecha).getFullYear();
+        if (newData.volumen && year) {
+          newData.titulo = `Volumen ${newData.volumen} (${year})`;
+        }
+      }
+      return newData;
+    });
   };
   const handleFileChange = (e) => setFormData((prev) => ({ ...prev, pdfFile: e.target.files[0] }));
   const handleVolumeFileChange = (e) => setVolumeFormData((prev) => ({ ...prev, pdfFile: e.target.files[0] }));
@@ -160,12 +169,10 @@ export default function DirectorPanel({ user }) {
       numero: '',
       fecha: '',
       titulo: '',
-      resumen: '',
-      abstract: '',
+      issn: '',
+      editorial: '',
+      englishEditorial: '',
       portada: '',
-      area: '',
-      palabras_clave: '',
-      keywords: '',
       pdfFile: null,
     });
   };
@@ -183,23 +190,40 @@ export default function DirectorPanel({ user }) {
     try {
       const token = await auth.currentUser.getIdToken();
       const pdfBase64 = form.pdfFile ? await toBase64(form.pdfFile) : null;
-      const dataObj = {
-        titulo: form.titulo,
-        autores: form.autores,
-        resumen: form.resumen,
-        abstract: form.abstract,
-        fecha: form.fecha,
-        volumen: form.volumen,
-        numero: form.numero,
-        primeraPagina: form.primeraPagina,
-        ultimaPagina: form.ultimaPagina,
-        area: form.area,
-        palabras_clave: form.palabras_clave ? form.palabras_clave.split(';').map(k => k.trim()) : [],
-        keywords_english: form.keywords_english ? form.keywords_english.split(';').map(k => k.trim()) : [],
-        tipo: form.tipo || '',
-        type: form.type || '',
-        portada: form.portada,
-      };
+      let dataObj;
+      if (isVolume) {
+        const year = new Date(form.fecha).getFullYear();
+        const autoTituloEs = form.volumen && year ? `Volumen ${form.volumen} (${year})` : form.titulo;
+        const autoTituloEn = form.volumen && year ? `Volume ${form.volumen} (${year})` : form.titulo;
+        dataObj = {
+          titulo: autoTituloEs,
+          englishTitulo: autoTituloEn,
+          fecha: form.fecha, // ISO format from date input
+          volumen: form.volumen,
+          numero: form.numero,
+          portada: form.portada,
+          issn: form.issn || null,
+          editorial: form.editorial || null,
+          englishEditorial: form.englishEditorial || null,
+        };
+      } else {
+        dataObj = {
+          titulo: form.titulo,
+          autores: form.autores,
+          resumen: form.resumen,
+          abstract: form.abstract,
+          fecha: form.fecha,
+          volumen: form.volumen,
+          numero: form.numero,
+          primeraPagina: form.primeraPagina,
+          ultimaPagina: form.ultimaPagina,
+          area: form.area,
+          palabras_clave: form.palabras_clave ? form.palabras_clave.split(';').map(k => k.trim()) : [],
+          keywords_english: form.keywords_english ? form.keywords_english.split(';').map(k => k.trim()) : [],
+          tipo: form.tipo || '',
+          type: form.type || '',
+        };
+      }
       const payload = {
         action: isEdit ? 'edit' : 'add',
         [typeKey]: dataObj,
@@ -260,7 +284,17 @@ export default function DirectorPanel({ user }) {
     const setForm = isVolume ? setVolumeFormData : setFormData;
     const setShow = isVolume ? setShowEditVolumeModal : setShowEditModal;
     setEditing(item);
-    const newForm = {
+    const newForm = isVolume ? {
+      titulo: item.titulo || '',
+      fecha: item.fecha || '',
+      volumen: item.volumen || '',
+      numero: item.numero || '',
+      portada: item.portada || '',
+      issn: item.issn || '',
+      editorial: item.editorial || '',
+      englishEditorial: item.englishEditorial || '',
+      pdfFile: null,
+    } : {
       titulo: item.titulo || '',
       autores: item.autores || '',
       resumen: item.resumen || '',
@@ -275,7 +309,6 @@ export default function DirectorPanel({ user }) {
       keywords_english: item.keywords_english ? item.keywords_english.join('; ') : '',
       tipo: item.tipo || '',
       type: item.type || '',
-      portada: item.portada || '',
       pdfFile: null,
     };
     setForm(newForm);
@@ -945,22 +978,18 @@ export default function DirectorPanel({ user }) {
                     {volumeExpanded[volume.id] && (
                       <div className="px-6 pb-4 bg-gray-50">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <p className="text-gray-900 font-medium">Resumen</p>
-                            <p className="mt-1 text-gray-600">{volume.resumen || 'No disponible'}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-900 font-medium">Abstract</p>
-                            <p className="mt-1 text-gray-600">{volume.abstract || 'No disponible'}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-900 font-medium">Palabras Clave</p>
-                            <p className="mt-1 text-gray-600">{volume.palabras_clave?.join(', ') || 'No disponible'}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-900 font-medium">Keywords</p>
-                            <p className="mt-1 text-gray-600">{volume.keywords?.join(', ') || 'No disponible'}</p>
-                          </div>
+                          {volume.editorial && (
+                            <div>
+                              <p className="text-gray-900 font-medium">Nota Editorial</p>
+                              <p className="mt-1 text-gray-600">{volume.editorial || 'No disponible'}</p>
+                            </div>
+                          )}
+                          {volume.englishEditorial && (
+                            <div>
+                              <p className="text-gray-900 font-medium">English Editorial</p>
+                              <p className="mt-1 text-gray-600">{volume.englishEditorial || 'No disponible'}</p>
+                            </div>
+                          )}
                           <div className="md:col-span-2">
                             <p className="text-gray-900 font-medium">Detalles</p>
                             <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
@@ -976,10 +1005,12 @@ export default function DirectorPanel({ user }) {
                                 <p className="text-gray-500">Portada</p>
                                 <p className="font-medium">{volume.portada || 'N/A'}</p>
                               </div>
-                              <div>
-                                <p className="text-gray-500">Área</p>
-                                <p className="font-medium">{volume.area || 'N/A'}</p>
-                              </div>
+                              {volume.issn && (
+                                <div>
+                                  <p className="text-gray-500">ISSN</p>
+                                  <p className="font-medium">{volume.issn || 'N/A'}</p>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -1081,7 +1112,7 @@ export default function DirectorPanel({ user }) {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Título</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Título (auto-generado si vacío)</label>
                       <input
                         name="titulo"
                         value={volumeFormData.titulo}
@@ -1090,7 +1121,36 @@ export default function DirectorPanel({ user }) {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Portada (URL)</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">ISSN (opcional)</label>
+                      <input
+                        name="issn"
+                        value={volumeFormData.issn}
+                        onChange={handleVolumeInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Nota Editorial (opcional)</label>
+                      <textarea
+                        name="editorial"
+                        value={volumeFormData.editorial}
+                        onChange={handleVolumeInputChange}
+                        rows="3"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 resize-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">English Editorial (opcional)</label>
+                      <textarea
+                        name="englishEditorial"
+                        value={volumeFormData.englishEditorial}
+                        onChange={handleVolumeInputChange}
+                        rows="3"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 resize-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Portada (URL, opcional)</label>
                       <input
                         name="portada"
                         value={volumeFormData.portada}
@@ -1099,60 +1159,7 @@ export default function DirectorPanel({ user }) {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Área temática (separar con ;)
-                      </label>
-                      <input
-                        name="area"
-                        value={volumeFormData.area}
-                        onChange={handleVolumeInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Palabras clave (separar con ;)
-                      </label>
-                      <input
-                        name="palabras_clave"
-                        value={volumeFormData.palabras_clave}
-                        onChange={handleVolumeInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Keywords (separar con ;)
-                      </label>
-                      <input
-                        name="keywords"
-                        value={volumeFormData.keywords}
-                        onChange={handleVolumeInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Resumen</label>
-                      <textarea
-                        name="resumen"
-                        value={volumeFormData.resumen}
-                        onChange={handleVolumeInputChange}
-                        rows="3"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 resize-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Abstract</label>
-                      <textarea
-                        name="abstract"
-                        value={volumeFormData.abstract}
-                        onChange={handleVolumeInputChange}
-                        rows="3"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 resize-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Archivo PDF</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Archivo PDF (opcional)</label>
                       <input
                         type="file"
                         accept=".pdf"
@@ -1226,7 +1233,7 @@ export default function DirectorPanel({ user }) {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Título</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Título (auto-generado si vacío)</label>
                       <input
                         name="titulo"
                         value={volumeFormData.titulo}
@@ -1235,7 +1242,36 @@ export default function DirectorPanel({ user }) {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Portada (URL)</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">ISSN (opcional)</label>
+                      <input
+                        name="issn"
+                        value={volumeFormData.issn}
+                        onChange={handleVolumeInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Nota Editorial (opcional)</label>
+                      <textarea
+                        name="editorial"
+                        value={volumeFormData.editorial}
+                        onChange={handleVolumeInputChange}
+                        rows="3"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 resize-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">English Editorial (opcional)</label>
+                      <textarea
+                        name="englishEditorial"
+                        value={volumeFormData.englishEditorial}
+                        onChange={handleVolumeInputChange}
+                        rows="3"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 resize-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Portada (URL, opcional)</label>
                       <input
                         name="portada"
                         value={volumeFormData.portada}
@@ -1244,60 +1280,7 @@ export default function DirectorPanel({ user }) {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Área temática (separar con ;)
-                      </label>
-                      <input
-                        name="area"
-                        value={volumeFormData.area}
-                        onChange={handleVolumeInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Palabras clave (separar con ;)
-                      </label>
-                      <input
-                        name="palabras_clave"
-                        value={volumeFormData.palabras_clave}
-                        onChange={handleVolumeInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Keywords (separar con ;)
-                      </label>
-                      <input
-                        name="keywords"
-                        value={volumeFormData.keywords}
-                        onChange={handleVolumeInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Resumen</label>
-                      <textarea
-                        name="resumen"
-                        value={volumeFormData.resumen}
-                        onChange={handleVolumeInputChange}
-                        rows="3"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 resize-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Abstract</label>
-                      <textarea
-                        name="abstract"
-                        value={volumeFormData.abstract}
-                        onChange={handleVolumeInputChange}
-                        rows="3"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 resize-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Archivo PDF</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Archivo PDF (opcional)</label>
                       <input
                         type="file"
                         accept=".pdf"
