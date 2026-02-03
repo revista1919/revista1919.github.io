@@ -986,7 +986,7 @@ export default function DirectorPanel({ user }) {
                           )}
                           {volume.englishEditorial && (
                             <div>
-                              <p className="text-gray-900 font-medium">English Editorial</p>
+                              <p className="text-gray-900 font-medium">Editorial Note</p>
                               <p className="mt-1 text-gray-600">{volume.englishEditorial || 'No disponible'}</p>
                             </div>
                           )}
@@ -1140,7 +1140,7 @@ export default function DirectorPanel({ user }) {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">English Editorial (opcional)</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Editorial Note (opcional)</label>
                       <textarea
                         name="englishEditorial"
                         value={volumeFormData.englishEditorial}
@@ -1261,7 +1261,7 @@ export default function DirectorPanel({ user }) {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">English Editorial (opcional)</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Editorial Note (opcional)</label>
                       <textarea
                         name="englishEditorial"
                         value={volumeFormData.englishEditorial}

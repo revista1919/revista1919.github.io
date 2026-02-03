@@ -1278,7 +1278,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
         <div class="sidebar-title">Contenido</div>
         <ul class="nav-list">
           ${volume.editorial ? '<li><a href="#editorial">Nota Editorial</a></li>' : ''}
-          ${volume.englishEditorial ? '<li><a href="#englishEditorial">English Editorial</a></li>' : ''}
+          ${volume.englishEditorial ? '<li><a href="#englishEditorial">Editorial</a></li>' : ''}
           <li><a href="#toc">Tabla de Contenidos</a></li>
           <li><a href="#preview">Visualización PDF</a></li>
           <li><a href="#license">Licencia</a></li>
@@ -1301,7 +1301,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       ` : ''}
       ${volume.englishEditorial ? `
         <section id="englishEditorial">
-          <h2>English Editorial</h2>
+          <h2>Editorial Note</h2>
           <div class="editorial-text">
             ${volume.englishEditorial}
           </div>
@@ -1667,7 +1667,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
       <div class="sidebar-card">
         <div class="sidebar-title">Outline</div>
         <ul class="nav-list">
-          ${volume.englishEditorial ? '<li><a href="#englishEditorial">English Editorial</a></li>' : ''}
+          ${volume.englishEditorial ? '<li><a href="#englishEditorial">Editorial Note</a></li>' : ''}
           ${volume.editorial ? '<li><a href="#editorial">Nota Editorial</a></li>' : ''}
           <li><a href="#toc">Table of Contents</a></li>
           <li><a href="#preview">PDF Preview</a></li>
@@ -1683,7 +1683,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     <main class="main-content">
       ${volume.englishEditorial ? `
         <section id="englishEditorial">
-          <h2>English Editorial</h2>
+          <h2>Editorial Note</h2>
           <div class="editorial-text">
             ${volume.englishEditorial}
           </div>
