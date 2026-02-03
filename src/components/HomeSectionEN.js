@@ -1,10 +1,9 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useLanguage } from '../hooks/useLanguage';
 import logo from '../../public/logoEN.png';
+
 const HomeSection = ({ onOpenMenu }) => {
-  const navigate = useNavigate();
   const { switchLanguage, language } = useLanguage();
   const handleLanguageToggle = () => {
     switchLanguage(language === 'es' ? 'en' : 'es');
@@ -20,7 +19,7 @@ const HomeSection = ({ onOpenMenu }) => {
     {
       title: 'Volumes',
       desc: 'Collections of articles organized by edition.',
-      path: 'en/volume/',
+      path: '/en/volume/',
       icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10',
       bgImage: 'https://plus.unsplash.com/premium_photo-1677567996070-68fa4181775a?q=80&w=872&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
     },
@@ -34,14 +33,13 @@ const HomeSection = ({ onOpenMenu }) => {
     {
       title: 'News',
       desc: 'Announcements, activities, and updates from the student scientific community.',
-      path: '/en/news/',
+      path: '/en/new/',
       icon: 'M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z',
       bgImage: 'https://www.revistacienciasestudiantes.com/team.jpg'
     }
   ];
   const Card = ({ card, index }) => {
     const [imageLoaded, setImageLoaded] = React.useState(false);
-    const navigate = useNavigate();
     return (
       <motion.div
         key={card.path}
@@ -49,7 +47,7 @@ const HomeSection = ({ onOpenMenu }) => {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ delay: index * 0.1 }}
-        onClick={() => navigate(card.path)}
+        onClick={() => window.location.href = `https://www.revistacienciasestudiantes.com${card.path}`}
         className="group relative h-[350px] sm:h-[400px] flex flex-col justify-end p-6 sm:p-8 overflow-hidden rounded-2xl cursor-pointer bg-gray-100 transition-all shadow-sm hover:shadow-2xl"
       >
         {card.bgImage && (
@@ -91,17 +89,17 @@ const HomeSection = ({ onOpenMenu }) => {
     <div className="relative overflow-hidden bg-white">
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
         <motion.div
-          animate={{ 
+          animate={{
             scale: [1, 1.2, 1],
-            opacity: [0.1, 0.2, 0.1] 
+            opacity: [0.1, 0.2, 0.1]
           }}
           transition={{ duration: 8, repeat: Infinity }}
           className="absolute -top-20 -right-20 w-64 h-64 sm:w-96 sm:h-96 bg-blue-200 rounded-full blur-3xl"
         />
         <motion.div
-          animate={{ 
+          animate={{
             scale: [1, 1.3, 1],
-            opacity: [0.05, 0.15, 0.05] 
+            opacity: [0.05, 0.15, 0.05]
           }}
           transition={{ duration: 10, repeat: Infinity, delay: 1 }}
           className="absolute top-1/4 -left-20 w-72 h-72 bg-gray-200 rounded-full blur-3xl"
@@ -130,7 +128,7 @@ const HomeSection = ({ onOpenMenu }) => {
           {/* CENTER */}
           <div className="flex-shrink-0 px-4">
             <motion.div
-              onClick={() => navigate('/')}
+              onClick={() => window.location.href = 'https://www.revistacienciasestudiantes.com/'}
               className="cursor-pointer flex flex-col items-center"
               initial={{ y: -20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -186,7 +184,7 @@ const HomeSection = ({ onOpenMenu }) => {
                 </svg>
               </span>
             </h1>
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               className="block lg:hidden w-full aspect-video mb-8 rounded-2xl overflow-hidden shadow-xl"
@@ -202,13 +200,13 @@ const HomeSection = ({ onOpenMenu }) => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <button
-                onClick={() => navigate('/en/article/')}
+                onClick={() => window.location.href = 'https://www.revistacienciasestudiantes.com/en/article/'}
                 className="px-8 sm:px-10 py-4 bg-gray-900 text-white font-bold text-xs uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg hover:-translate-y-1 active:scale-95"
               >
                 View articles
               </button>
               <button
-                onClick={() => navigate('/en/about/')}
+                onClick={() => window.location.href = 'https://www.revistacienciasestudiantes.com/en/about/'}
                 className="px-8 sm:px-10 py-4 border border-gray-200 text-gray-900 font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all active:scale-95"
               >
                 About the journal
@@ -251,7 +249,7 @@ const HomeSection = ({ onOpenMenu }) => {
               We invite students interested in scientific communication to participate in the editorial project and in the different areas of work of the journal.
             </p>
             <button
-              onClick={() => navigate('/admin')}
+              onClick={() => window.location.href = 'https://www.revistacienciasestudiantes.com/admin'}
               className="px-10 sm:px-12 py-4 bg-white text-gray-900 text-xs font-bold uppercase tracking-[0.3em] hover:bg-blue-500 hover:text-white transition-all"
             >
               Learn about the call
