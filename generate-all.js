@@ -1244,7 +1244,7 @@ volumes.forEach(volume => {
   </div>
   <footer style="background: #f8f8f8; border-top: 1px solid var(--border-color); padding: 4rem 2rem; text-align: center;">
     <p style="font-family: 'Libre Baskerville', serif; margin-bottom: 1rem;">Revista Nacional de las Ciencias para Estudiantes</p>
-    p style="font-size: 0.8rem; color: var(--text-light);">ISSN 3087-2839</p>
+    <p style="font-size: 0.8rem; color: var(--text-light);">ISSN 3087-2839</p>
     <p style="font-size: 0.8rem; color: var(--text-light);">© ${new Date().getFullYear()} — Una revista por y para estudiantes</p>
   </footer>
 </body>
@@ -1520,7 +1520,7 @@ volumes.forEach(volume => {
   </div>
   <footer style="background: #f8f8f8; border-top: 1px solid var(--border-color); padding: 4rem 2rem; text-align: center;">
     <p style="font-family: 'Libre Baskerville', serif; margin-bottom: 1rem;">The National Review of Sciences for Students</p>
-    p style="font-size: 0.8rem; color: var(--text-light);">ISSN 3087-2839</p>
+    <p style="font-size: 0.8rem; color: var(--text-light);">ISSN 3087-2839</p>
     <p style="font-size: 0.8rem; color: var(--text-light);">© ${new Date().getFullYear()} — A journal by and for students</p>
   </footer>
 </body>
