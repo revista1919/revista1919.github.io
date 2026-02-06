@@ -307,6 +307,10 @@ function ArticleCardEN({ article }) {
                       VIEW FULL-TEXT
                     </a>
                   </div>
+                  
+                  {/* ISSN AGREGADO: Añadido permanentemente aquí como metadato en el footer de la tarjeta */}
+                  <span className="text-[9px] text-gray-400 uppercase tracking-widest">ISSN 3087-2839</span>
+
                 </div>
                 {/* Sección de Citas optimizada para móvil */}
                 {showCitations && (

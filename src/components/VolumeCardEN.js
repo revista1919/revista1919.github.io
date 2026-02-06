@@ -98,7 +98,7 @@ function VolumeCardEN({ volume }) {
               </div>
               {volume.issn && (
                 <div className="flex justify-center border-t border-gray-100 pt-4">
-                  <span className="text-[9px] font-mono text-gray-400 tracking-[0.5em]">ISSN {volume.issn}</span>
+                  <span className="text-[9px] font-mono text-gray-400 tracking-[0.5em]">ISSN 3087-2839</span>
                 </div>
               )}
             </motion.div>

@@ -175,7 +175,7 @@ const HomeSection = ({ onOpenMenu }) => {
             className="relative z-10"
           >
             <span className="text-[9px] sm:text-[10px] font-bold text-blue-600 uppercase tracking-[0.3em] mb-4 block text-center lg:text-left">
-              Revista Nacional de las Ciencias para Estudiantes
+              Revista Nacional de las Ciencias para Estudiantes · ISSN 3087-2839
             </span>
             <h1 className="text-4xl sm:text-5xl lg:text-7xl font-serif font-bold text-gray-900 leading-[1.1] mb-6 text-center lg:text-left">
               Un espacio para el <br className="hidden sm:block" />
@@ -262,4 +262,5 @@ const HomeSection = ({ onOpenMenu }) => {
     </div>
   );
 };
+
 export default HomeSection;

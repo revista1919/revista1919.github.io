@@ -125,8 +125,9 @@ function Footer() {
         </div>
         {/* Sección Inferior: Copyright */}
         <div className="pt-8 border-t border-gray-900 flex flex-col items-center gap-4">
+          {/* ISSN AGREGADO: Reemplazado "ISSN en trámite" por el permanente */}
           <p className="text-[9px] text-gray-600 uppercase tracking-[0.4em] text-center">
-            © 2026 Revista Nacional de las Ciencias para Estudiantes · ISSN en trámite. Todos los derechos reservados.
+            © 2026 Revista Nacional de las Ciencias para Estudiantes · ISSN 3087-2839. Todos los derechos reservados.
           </p>
           <div className="flex gap-4 text-[9px] text-gray-700 uppercase tracking-widest">
             <a href="#" className="hover:text-white transition-colors">Privacidad</a>

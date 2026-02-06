@@ -21,7 +21,10 @@ function VolumeCard({ volume }) {
           <span className="text-[9px] uppercase tracking-[0.4em] font-black text-[#007398] mb-1">
             Revista Nacional de las Ciencias
           </span>
-          <div className="h-[1px] w-8 bg-[#007398]/30 group-hover:w-full transition-all duration-700" />
+          <div className="flex items-center gap-2">  {/* ISSN AGREGADO: Integrado aquí permanentemente */}
+            <div className="h-[1px] w-8 bg-[#007398]/30 group-hover:w-full transition-all duration-700" />
+            <span className="text-[9px] font-mono text-gray-400 tracking-[0.5em]">ISSN 3087-2839</span>
+          </div>
         </div>
         <span className="text-[10px] text-gray-400 font-serif italic tracking-widest">
           {volume.fecha || 'Sin fecha'}
@@ -52,7 +55,7 @@ function VolumeCard({ volume }) {
             </div>
             {/* Sello */}
             <div className="absolute -bottom-4 -right-4 w-16 h-16 border border-[#007398]/20 rounded-full flex items-center justify-center bg-white/80 backdrop-blur-md shadow-sm z-10 group-hover:rotate-12 transition-transform duration-1000">
-              <span className="text-[7px] font-bold text-[#007398] text-center leading-none uppercase tracking-tighter">
+              <span className="text-[7px] text-[#007398] text-center leading-none uppercase tracking-tighter">
                 Archivo<br/>Oficial
               </span>
             </div>
@@ -96,11 +99,10 @@ function VolumeCard({ volume }) {
                   </a>
                 )}
               </div>
-              {volume.issn && (
-                <div className="flex justify-center border-t border-gray-100 pt-4">
-                  <span className="text-[9px] font-mono text-gray-400 tracking-[0.5em]">ISSN {volume.issn}</span>
-                </div>
-              )}
+              {/* ISSN AGREGADO: Hardcodeado permanentemente, sin condición */}
+              <div className="flex justify-center border-t border-gray-100 pt-4">
+                <span className="text-[9px] font-mono text-gray-400 tracking-[0.5em]">ISSN 3087-2839</span>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

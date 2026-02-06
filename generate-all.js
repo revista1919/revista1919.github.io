@@ -249,6 +249,7 @@ if (!fs.existsSync(path.join(__dirname, 'dist', 'images', 'news'))) fs.mkdirSync
   ${authorMetaTags}
   <meta name="citation_publication_date" content="${article.fecha}">
   <meta name="citation_journal_title" content="Revista Nacional de las Ciencias para Estudiantes">
+  <meta name="citation_issn" content="3087-2839">
   <meta name="citation_volume" content="${article.volumen}">
   <meta name="citation_issue" content="${article.numero}">
   <meta name="citation_firstpage" content="${article.primeraPagina}">
@@ -558,7 +559,7 @@ if (!fs.existsSync(path.join(__dirname, 'dist', 'images', 'news'))) fs.mkdirSync
     </main>
   </div>
   <footer>
-    <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes.</p>
+    <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes. ISSN 3087-2839</p>
     <p><a href="/es/article" style="color:var(--primary-blue)">Volver al catálogo</a> | <a href="/" style="color:var(--primary-blue)">Volver al inicio</a></p>
   </footer>
 </body>
@@ -578,7 +579,8 @@ if (!fs.existsSync(path.join(__dirname, 'dist', 'images', 'news'))) fs.mkdirSync
   <meta name="citation_title" content="${article.titulo}">
   ${authorMetaTags}
   <meta name="citation_publication_date" content="${article.fecha}">
-  <meta name="citation_journal_title" content="The National Review of Sciences for Students">
+  <meta name="citation_journal_title" content="Revista Nacional de las Ciencias para Estudiantes">
+  <meta name="citation_issn" content="3087-2839">
   <meta name="citation_volume" content="${article.volumen}">
   <meta name="citation_issue" content="${article.numero}">
   <meta name="citation_firstpage" content="${article.primeraPagina}">
@@ -715,7 +717,7 @@ if (!fs.existsSync(path.join(__dirname, 'dist', 'images', 'news'))) fs.mkdirSync
     </main>
   </div>
   <footer>
-    <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students.</p>
+    <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students. ISSN 3087-2839</p>
     <p><a href="/en/article" style="color:var(--primary-blue)">Back to catalog</a> | <a href="/" style="color:var(--primary-blue)">Back to home</a></p>
   </footer>
 </body>
@@ -849,7 +851,7 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
     </main>
   </div>
   <footer>
-    <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes.</p>
+    <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes. ISSN 3087-2839</p>
     <p><a href="/" style="color:var(--primary-blue)">Volver al inicio</a></p>
   </footer>
 </body>
@@ -918,8 +920,8 @@ ${Object.keys(articlesByYear).sort().reverse().map(year => `
 `).join('')}
     </main>
   </div>
-  <footer>
-    <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students.</p>
+  <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students. ISSN 3087-2839</p>
+    .</p>
     <p><a href="/" style="color:var(--primary-blue)">Back to home</a></p>
   </footer>
 </body>
@@ -943,7 +945,6 @@ const volumes = volumesSnapshot.docs.map(doc => {
     fecha: parseDateFlexible(data.fecha),
     titulo: data.titulo || 'Sin título',
     englishTitulo: data.englishTitulo || data.titulo || 'No title',
-    issn: data.issn || '',
     editorial: data.editorial || '',
     englishEditorial: data.englishEditorial || '',
     portada: getImageSrc(data.portada),
@@ -986,6 +987,7 @@ volumes.forEach(volume => {
   <meta name="citation_title" content="${volume.titulo}">
   <meta name="citation_publication_date" content="${volume.fecha}">
   <meta name="citation_journal_title" content="Revista Nacional de las Ciencias para Estudiantes">
+  <meta name="citation_issn" content="3087-2839">
   <meta name="citation_volume" content="${volume.volumen}">
   <meta name="citation_issue" content="${volume.numero}">
   <meta name="citation_pdf_url" content="${volume.pdfUrl}">
@@ -1176,7 +1178,7 @@ volumes.forEach(volume => {
     <h1>${volume.titulo}</h1>
     <div class="hero-details">
       <span><strong>Publicado:</strong> ${volume.fecha}</span>
-      ${volume.issn ? `<span><strong>ISSN:</strong> ${volume.issn}</span>` : ''}
+      <span><strong>ISSN:</strong> 3087-2839</span>
       <span><strong>Idioma:</strong> Español/Inglés</span>
     </div>
   </article>
@@ -1242,6 +1244,7 @@ volumes.forEach(volume => {
   </div>
   <footer style="background: #f8f8f8; border-top: 1px solid var(--border-color); padding: 4rem 2rem; text-align: center;">
     <p style="font-family: 'Libre Baskerville', serif; margin-bottom: 1rem;">Revista Nacional de las Ciencias para Estudiantes</p>
+    p style="font-size: 0.8rem; color: var(--text-light);">ISSN 3087-2839</p>
     <p style="font-size: 0.8rem; color: var(--text-light);">© ${new Date().getFullYear()} — Una revista por y para estudiantes</p>
   </footer>
 </body>
@@ -1259,7 +1262,8 @@ volumes.forEach(volume => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="citation_title" content="${volume.englishTitulo}">
   <meta name="citation_publication_date" content="${volume.fecha}">
-  <meta name="citation_journal_title" content="The National Review of Sciences for Students">
+  <meta name="citation_journal_title" content="Revista Nacional de las Ciencias para Estudiantes">
+  <meta name="citation_issn" content="3087-2839">
   <meta name="citation_volume" content="${volume.volumen}">
   <meta name="citation_issue" content="${volume.numero}">
   <meta name="citation_pdf_url" content="${volume.pdfUrl}">
@@ -1450,7 +1454,7 @@ volumes.forEach(volume => {
     <h1>${volume.englishTitulo}</h1>
     <div class="hero-details">
       <span><strong>Published:</strong> ${volume.fecha}</span>
-      ${volume.issn ? `<span><strong>ISSN:</strong> ${volume.issn}</span>` : ''}
+      <span><strong>ISSN:</strong> 3087-2839</span>
       <span><strong>Language:</strong> Spanish/English</span>
     </div>
   </article>
@@ -1516,6 +1520,7 @@ volumes.forEach(volume => {
   </div>
   <footer style="background: #f8f8f8; border-top: 1px solid var(--border-color); padding: 4rem 2rem; text-align: center;">
     <p style="font-family: 'Libre Baskerville', serif; margin-bottom: 1rem;">The National Review of Sciences for Students</p>
+    p style="font-size: 0.8rem; color: var(--text-light);">ISSN 3087-2839</p>
     <p style="font-size: 0.8rem; color: var(--text-light);">© ${new Date().getFullYear()} — A journal by and for students</p>
   </footer>
 </body>
@@ -1671,7 +1676,7 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
     </main>
   </div>
   <footer>
-    <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes.</p>
+    <p>&copy; ${new Date().getFullYear()} Revista Nacional de las Ciencias para Estudiantes. ISSN 3087-2839</p>
     <div style="margin-top: 1.5rem;">
       <a href="/" >Volver al inicio</a>
     </div>
@@ -1821,7 +1826,7 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
     </main>
   </div>
   <footer>
-    <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students.</p>
+    <p>&copy; ${new Date().getFullYear()} The National Review of Sciences for Students. ISSN 3087-2839</p>
     <div style="margin-top: 1.5rem;">
       <a href="/" >Back to home</a>
     </div>

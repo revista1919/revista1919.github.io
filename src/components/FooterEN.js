@@ -124,7 +124,7 @@ function FooterEN() {
         {/* Lower Section: Copyright */}
         <div className="pt-8 border-t border-gray-900 flex flex-col items-center gap-4">
           <p className="text-[9px] text-gray-600 uppercase tracking-[0.4em] text-center">
-            © 2026 National Review of Sciences for Students · ISSN pending. All rights reserved.
+            © 2026 National Review of Sciences for Students · ISSN 3087-2839. All rights reserved.
           </p>
           <div className="flex gap-4 text-[9px] text-gray-700 uppercase tracking-widest">
             <a href="#" className="hover:text-white transition-colors">Privacy</a>

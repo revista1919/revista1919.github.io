@@ -7,7 +7,7 @@ function FAQSection() {
     { q: "Use of AI?", a: "Prohibited. Any trace of AI generation will result in automatic rejection for academic ethics." },
     { q: "Response times?", a: "The review process takes between 1 and 3 weeks depending on the complexity of the area." },
     { q: "How is the review?", a: "Double Blind System: neither the author nor the reviewer know their identities to ensure impartiality." },
-    { q: "Publication and Indexing?", a: "Articles are indexed in Google Scholar and we are in the process of obtaining ISSN." },
+    { q: "Publication and Indexing?", a: "Articles are indexed in Google Scholar and we have ISSN: 3087-2839." },
     { q: "Submission format?", a: "Word files (.docx), following strictly the Chicago Style." }
   ];
 
