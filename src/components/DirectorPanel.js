@@ -1,4 +1,3 @@
-// DirectorPanel completo modificado
 import React, { useState, useEffect } from 'react';
 import { auth } from '../firebase';
 import { collection, onSnapshot } from "firebase/firestore";
@@ -6,8 +5,7 @@ import { db } from '../firebase';
 import Admissions from './Admissions';
 import MailsTeam from './MailsTeam';
 const DOMAIN = 'https://www.revistacienciasestudiantes.com';
-const MANAGE_ARTICLES_URL =
-  'https://managearticles-ggqsq2kkua-uc.a.run.app';
+const MANAGE_ARTICLES_URL = 'https://managearticles-ggqsq2kkua-uc.a.run.app';
 const MANAGE_VOLUMES_URL = 'https://managevolumes-ggqsq2kkua-uc.a.run.app';
 const REBUILD_URL = 'https://triggerrebuild-ggqsq2kkua-uc.a.run.app';
 const REPO_OWNER = 'revista1919';
@@ -65,6 +63,12 @@ export default function DirectorPanel({ user }) {
     keywords_english: '',
     tipo: '',
     type: '',
+    receivedDate: '',
+    acceptedDate: '',
+    conflicts: '',
+    conflictsEnglish: '',
+    funding: '',
+    fundingEnglish: '',
     pdfFile: null,
   });
   const [showAddVolumeModal, setShowAddVolumeModal] = useState(false);
@@ -118,8 +122,33 @@ export default function DirectorPanel({ user }) {
       unsubscribeVolumes();
     };
   }, [hasAccess]);
+  useEffect(() => {
+    if (showAddModal) {
+      const savedDraft = localStorage.getItem('draftNewArticle');
+      if (savedDraft) {
+        setFormData(JSON.parse(savedDraft));
+      }
+    }
+  }, [showAddModal]);
+  useEffect(() => {
+    if (showEditModal && editingArticle) {
+      const key = `draftEditArticle_${editingArticle.id}`;
+      const savedDraft = localStorage.getItem(key);
+      if (savedDraft) {
+        setFormData(JSON.parse(savedDraft));
+      }
+    }
+  }, [showEditModal, editingArticle]);
+  useEffect(() => {
+    if (showAddModal) {
+      localStorage.setItem('draftNewArticle', JSON.stringify(formData));
+    } else if (showEditModal && editingArticle) {
+      const key = `draftEditArticle_${editingArticle.id}`;
+      localStorage.setItem(key, JSON.stringify(formData));
+    }
+  }, [formData, showAddModal, showEditModal, editingArticle]);
   if (!hasAccess) {
-    return <div className="p-4 text-red-600">Acceso denegado. Solo para Director General.</div>;
+    return <div>Acceso denegado. Solo para Director General.</div>;
   }
   if (loading || volumeLoading) return <div>Cargando...</div>;
   const toggleExpand = (id) => setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -160,6 +189,12 @@ export default function DirectorPanel({ user }) {
       keywords_english: '',
       tipo: '',
       type: '',
+      receivedDate: '',
+      acceptedDate: '',
+      conflicts: '',
+      conflictsEnglish: '',
+      funding: '',
+      fundingEnglish: '',
       pdfFile: null,
     });
   };
@@ -222,6 +257,12 @@ export default function DirectorPanel({ user }) {
           keywords_english: form.keywords_english ? form.keywords_english.split(';').map(k => k.trim()) : [],
           tipo: form.tipo || '',
           type: form.type || '',
+          receivedDate: form.receivedDate || null,
+          acceptedDate: form.acceptedDate || null,
+          conflicts: form.conflicts || null,
+          conflictsEnglish: form.conflictsEnglish || null,
+          funding: form.funding || null,
+          fundingEnglish: form.fundingEnglish || null,
         };
       }
       const payload = {
@@ -241,6 +282,13 @@ export default function DirectorPanel({ user }) {
       if (!response.ok) {
         const errText = await response.text();
         throw new Error(errText);
+      }
+      if (!isVolume) {
+        if (!isEdit) {
+          localStorage.removeItem('draftNewArticle');
+        } else {
+          localStorage.removeItem(`draftEditArticle_${editing.id}`);
+        }
       }
       closeFunc();
       await triggerRebuild();
@@ -309,6 +357,12 @@ export default function DirectorPanel({ user }) {
       keywords_english: item.keywords_english ? item.keywords_english.join('; ') : '',
       tipo: item.tipo || '',
       type: item.type || '',
+      receivedDate: item.receivedDate || '',
+      acceptedDate: item.acceptedDate || '',
+      conflicts: item.conflicts || '',
+      conflictsEnglish: item.conflictsEnglish || '',
+      funding: item.funding || '',
+      fundingEnglish: item.fundingEnglish || '',
       pdfFile: null,
     };
     setForm(newForm);
@@ -337,15 +391,31 @@ export default function DirectorPanel({ user }) {
       setStatus(`❌ Error: ${err.message}`);
     }
   };
+  const formatDate = (dateStr) => {
+    if (!dateStr) return 'N/A';
+    return new Date(dateStr).toLocaleDateString('es-CL');
+  };
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Panel del Director</h1>
-          <button onClick={handleRebuild} className="mt-4 bg-green-600 text-white px-4 py-2 rounded">Rebuild Site</button>
+    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-8">
+          <div className="px-6 py-5 border-b border-gray-200">
+            <h1 className="text-2xl font-bold text-gray-900">Panel del Director</h1>
+          </div>
+          <div className="p-6">
+            <button
+              onClick={handleRebuild}
+              className="px-4 py-2 rounded-md font-medium flex items-center space-x-2 transition-colors bg-green-600 text-white hover:bg-green-700 shadow-sm"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A49.474 49.474 0 004 9m12 0c0 5.523-4.477 10-10 10S2 14.523 2 9m10 0V4" />
+              </svg>
+              <span>Rebuild Site</span>
+            </button>
+          </div>
         </div>
-        {status && <div className="mb-4 p-2 bg-blue-100 text-blue-800 rounded">{status}</div>}
-        {volumeStatus && <div className="mb-4 p-2 bg-blue-100 text-blue-800 rounded">{volumeStatus}</div>}
+        {status && <p className="mb-4 text-center text-sm font-medium">{status}</p>}
+        {volumeStatus && <p className="mb-4 text-center text-sm font-medium">{volumeStatus}</p>}
         {/* Sección Artículos */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="px-6 py-5 border-b border-gray-200">
@@ -410,9 +480,7 @@ export default function DirectorPanel({ user }) {
                             #{numeroArticulo}
                           </span>
                           <svg
-                            className={`w-4 h-4 text-gray-400 transition-transform ${
-                              expanded[article.id] ? 'rotate-180' : ''
-                            }`}
+                            className={`w-4 h-4 text-gray-400 transition-transform ${expanded[article.id] ? 'rotate-180' : ''}`}
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -426,11 +494,11 @@ export default function DirectorPanel({ user }) {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                             <div>
                               <p className="text-gray-900 font-medium">Resumen</p>
-                              <p className="mt-1 text-gray-600">{article.resumen || 'No disponible'}</p>
+                              <div className="mt-1 text-gray-600 whitespace-pre-line">{article.resumen || 'No disponible'}</div>
                             </div>
                             <div>
                               <p className="text-gray-900 font-medium">Abstract</p>
-                              <p className="mt-1 text-gray-600">{article.abstract || 'No disponible'}</p>
+                              <div className="mt-1 text-gray-600 whitespace-pre-line">{article.abstract || 'No disponible'}</div>
                             </div>
                             <div>
                               <p className="text-gray-900 font-medium">Palabras Clave</p>
@@ -445,7 +513,7 @@ export default function DirectorPanel({ user }) {
                               <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
                                 <div>
                                   <p className="text-gray-500">Fecha</p>
-                                  <p className="font-medium">{article.fecha || 'N/A'}</p>
+                                  <p className="font-medium">{formatDate(article.fecha)}</p>
                                 </div>
                                 <div>
                                   <p className="text-gray-500">Vol/Nº</p>
@@ -467,18 +535,48 @@ export default function DirectorPanel({ user }) {
                                   <p className="text-gray-500">Type</p>
                                   <p className="font-medium">{article.type || 'N/A'}</p>
                                 </div>
+                                <div>
+                                  <p className="text-gray-500">Fecha de Recepción</p>
+                                  <p className="font-medium">{formatDate(article.receivedDate)}</p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-500">Fecha de Aceptación</p>
+                                  <p className="font-medium">{formatDate(article.acceptedDate)}</p>
+                                </div>
                               </div>
                             </div>
+                            {article.conflicts && (
+                              <div>
+                                <p className="text-gray-900 font-medium">Conflictos de Interés</p>
+                                <div className="mt-1 text-gray-600 whitespace-pre-line">{article.conflicts}</div>
+                              </div>
+                            )}
+                            {article.conflictsEnglish && (
+                              <div>
+                                <p className="text-gray-900 font-medium">Conflicts of Interest</p>
+                                <div className="mt-1 text-gray-600 whitespace-pre-line">{article.conflictsEnglish}</div>
+                              </div>
+                            )}
+                            {article.funding && (
+                              <div>
+                                <p className="text-gray-900 font-medium">Financiación</p>
+                                <div className="mt-1 text-gray-600 whitespace-pre-line">{article.funding}</div>
+                              </div>
+                            )}
+                            {article.fundingEnglish && (
+                              <div>
+                                <p className="text-gray-900 font-medium">Funding</p>
+                                <div className="mt-1 text-gray-600 whitespace-pre-line">{article.fundingEnglish}</div>
+                              </div>
+                            )}
                           </div>
                           <div className="mt-4 pt-4 border-t border-gray-200">
                             <div className="flex justify-between items-center">
                               <a
-                                href={article.pdfUrl}
+                                href={article.pdf}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className={`inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md transition-colors ${
-                                  article.pdfUrl ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                }`}
+                                className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md transition-colors bg-blue-600 text-white hover:bg-blue-700"
                               >
                                 <svg
                                   className="w-4 h-4 mr-2"
@@ -660,26 +758,86 @@ export default function DirectorPanel({ user }) {
                         className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Recepción</label>
+                        <input
+                          name="receivedDate"
+                          type="date"
+                          value={formData.receivedDate}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Aceptación</label>
+                        <input
+                          name="acceptedDate"
+                          type="date"
+                          value={formData.acceptedDate}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Resumen</label>
                       <textarea
                         name="resumen"
                         value={formData.resumen}
                         onChange={handleInputChange}
-                        rows="3"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 resize-none"
+                        rows="6"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Abstract (English)
-                      </label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Abstract (English)</label>
                       <textarea
                         name="abstract"
                         value={formData.abstract}
                         onChange={handleInputChange}
+                        rows="6"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Conflictos de Interés (opcional)</label>
+                      <textarea
+                        name="conflicts"
+                        value={formData.conflicts}
+                        onChange={handleInputChange}
                         rows="3"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 resize-none"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Conflicts of Interest (opcional)</label>
+                      <textarea
+                        name="conflictsEnglish"
+                        value={formData.conflictsEnglish}
+                        onChange={handleInputChange}
+                        rows="3"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Financiación (opcional)</label>
+                      <textarea
+                        name="funding"
+                        value={formData.funding}
+                        onChange={handleInputChange}
+                        rows="3"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Funding (opcional)</label>
+                      <textarea
+                        name="fundingEnglish"
+                        value={formData.fundingEnglish}
+                        onChange={handleInputChange}
+                        rows="3"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
                     <div>
@@ -848,26 +1006,86 @@ export default function DirectorPanel({ user }) {
                         className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Recepción</label>
+                        <input
+                          name="receivedDate"
+                          type="date"
+                          value={formData.receivedDate}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Aceptación</label>
+                        <input
+                          name="acceptedDate"
+                          type="date"
+                          value={formData.acceptedDate}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Resumen</label>
                       <textarea
                         name="resumen"
                         value={formData.resumen}
                         onChange={handleInputChange}
-                        rows="3"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 resize-none"
+                        rows="6"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Abstract (English)
-                      </label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Abstract (English)</label>
                       <textarea
                         name="abstract"
                         value={formData.abstract}
                         onChange={handleInputChange}
+                        rows="6"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Conflictos de Interés (opcional)</label>
+                      <textarea
+                        name="conflicts"
+                        value={formData.conflicts}
+                        onChange={handleInputChange}
                         rows="3"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 resize-none"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Conflicts of Interest (opcional)</label>
+                      <textarea
+                        name="conflictsEnglish"
+                        value={formData.conflictsEnglish}
+                        onChange={handleInputChange}
+                        rows="3"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Financiación (opcional)</label>
+                      <textarea
+                        name="funding"
+                        value={formData.funding}
+                        onChange={handleInputChange}
+                        rows="3"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Funding (opcional)</label>
+                      <textarea
+                        name="fundingEnglish"
+                        value={formData.fundingEnglish}
+                        onChange={handleInputChange}
+                        rows="3"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
                     <div>
@@ -964,9 +1182,7 @@ export default function DirectorPanel({ user }) {
                           #{volume.numero}
                         </span>
                         <svg
-                          className={`w-4 h-4 text-gray-400 transition-transform ${
-                            volumeExpanded[volume.id] ? 'rotate-180' : ''
-                          }`}
+                          className={`w-4 h-4 text-gray-400 transition-transform ${volumeExpanded[volume.id] ? 'rotate-180' : ''}`}
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -995,7 +1211,7 @@ export default function DirectorPanel({ user }) {
                             <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
                               <div>
                                 <p className="text-gray-500">Fecha</p>
-                                <p className="font-medium">{volume.fecha || 'N/A'}</p>
+                                <p className="font-medium">{formatDate(volume.fecha)}</p>
                               </div>
                               <div>
                                 <p className="text-gray-500">Vol/Nº</p>
@@ -1020,9 +1236,7 @@ export default function DirectorPanel({ user }) {
                               href={volume.pdf}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className={`inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md transition-colors ${
-                                volume.pdf ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                              }`}
+                              className={`inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md transition-colors ${volume.pdf ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
                             >
                               <svg
                                 className="w-4 h-4 mr-2"
