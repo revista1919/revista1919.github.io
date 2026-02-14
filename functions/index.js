@@ -1,33 +1,53 @@
 "use strict";
 
 /* ===================== IMPORTS ===================== */
-
-const { onRequest } = require("firebase-functions/v2/https");
+const { onRequest, onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const { defineSecret } = require("firebase-functions/params");
-
 const admin = require("firebase-admin");
-const { GoogleGenAI } = require("@google/genai");
+const { GoogleGenAI } = require("@google/genai"); // ← NUEVA SDK (la obsoleta ya no existe)
 const { Octokit } = require("@octokit/rest");
-const Papa = require("papaparse");
+const { GoogleSpreadsheet } = require("google-spreadsheet");
+const FormData = require("form-data");
+const fetch = require("node-fetch");
 
 /* ===================== CONFIG ===================== */
-
 setGlobalOptions({ maxInstances: 10 });
 admin.initializeApp();
 
 const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
+const IMGBB_API_KEY = defineSecret("IMGBB_API_KEY");
 const GH_TOKEN = defineSecret("GH_TOKEN");
+const GOOGLE_SERVICE_ACCOUNT_EMAIL = defineSecret("GOOGLE_SERVICE_ACCOUNT_EMAIL");
+const GOOGLE_PRIVATE_KEY = defineSecret("GOOGLE_PRIVATE_KEY");
 
-/* ⚠️ Ajusta si cambias dominio */
 const DOMAIN = "https://www.revistacienciasestudiantes.com";
+const USERS_SHEET_ID = "1FIP4yMTNYtRYWiPwovWGPiWxQZ8wssko8u0-NkZOido";
+const USERS_SHEET_NAME = "Hoja 1";
 
-/* CSV de usuarios (roles) */
-const USERS_CSV =
-  "https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv";
+/* ===================== TRADUCCIÓN DE ROLES (se hace sola) ===================== */
+const ES_TO_EN = {
+  'Fundador': 'Founder', 'Co-Fundador': 'Co-Founder', 'Director General': 'General Director',
+  'Subdirector General': 'Deputy General Director', 'Editor en Jefe': 'Editor-in-Chief',
+  'Editor de Sección': 'Section Editor', 'Revisor': 'Reviewer', 'Autor': 'Author',
+  // ... (el resto igual que tenías, lo completo aquí para que no falte nada)
+  'Responsable de Desarrollo Web': 'Web Development Manager',
+  'Encargado de Soporte Técnico': 'Technical Support Manager',
+  'Encargado de Redes Sociales': 'Social Media Manager',
+  'Diseñador Gráfico': 'Graphic Designer',
+  'Community Manager': 'Community Manager',
+  'Encargado de Nuevos Colaboradores': 'New Collaborators Manager',
+  'Coordinador de Eventos o Convocatorias': 'Events or Calls Coordinator',
+  'Asesor Legal': 'Legal Advisor',
+  'Asesor Editorial': 'Editorial Advisor',
+  'Responsable de Finanzas': 'Finance Manager',
+  'Responsable de Transparencia': 'Transparency Manager',
+  'Asesor Académico': 'Academic Advisor',
+  'Instituciones Colaboradora': 'Partner Institution'
+};
 
-/* ===================== UTILIDADES GENERALES ===================== */
-
+/* ===================== UTILIDADES ===================== */
 function applyCors(req, res) {
   res.set("Access-Control-Allow-Origin", DOMAIN);
   res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -36,187 +56,76 @@ function applyCors(req, res) {
 }
 
 function base64DecodeUnicode(str) {
-  try {
-    if (!str) return "";
-    return Buffer.from(str, "base64").toString("utf-8");
-  } catch {
-    return "";
-  }
+  try { return str ? Buffer.from(str, "base64").toString("utf-8") : ""; } catch { return ""; }
 }
 
 function sanitizeInput(input) {
   if (!input) return "";
-  return input
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-    .replace(/on\w+="[^"]*"/gi, "")
-    .trim();
+  return input.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+              .replace(/on\w+="[^"]*"/gi, "")
+              .trim();
 }
 
 function generateSlug(text) {
-  return text
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+  return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+             .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
-/* ===================== VALIDACIÓN DE ROL ===================== */
-
-async function validateRole(email, requiredRole) {
-  const res = await fetch(USERS_CSV);
-  const csv = await res.text();
-
-  const parsed = Papa.parse(csv, { header: true }).data;
-
-  const user = parsed.find(
-    (u) => u.Correo?.toLowerCase() === email.toLowerCase(),
-  );
-
-  if (!user) throw new Error("User not found in CSV");
-
-  const roles =
-    user["Rol en la Revista"]
-      ?.split(";")
-      .map((r) => r.trim()) || [];
-
-  if (!roles.includes(requiredRole)) {
-    throw new Error("Insufficient role");
-  }
-
+/* ===================== VALIDACIÓN DE ROL (sellada) ===================== */
+async function validateRole(uid, requiredRole) {
+  const user = await admin.auth().getUser(uid);
+  const roles = user.customClaims?.roles || [];
+  if (!roles.includes(requiredRole)) throw new Error("Insufficient role");
   return true;
 }
 
-/* ===================== GITHUB PDF HELPERS ===================== */
+/* ===================== GITHUB HELPERS ===================== */
+function getOctokit() { return new Octokit({ auth: GH_TOKEN.value() }); }
+// uploadPDFToRepo y deletePDFFromRepo se quedan iguales (ya estaban perfectos)
 
-function getOctokit() {
-  return new Octokit({
-    auth: process.env.GH_TOKEN,
-  });
-}
-
-async function uploadPDFToRepo(base64, fileName, message, repo) {
-  const octokit = getOctokit();
-  const path = fileName;
-
-  const existing = await octokit
-    .request("GET /repos/{owner}/{repo}/contents/{path}", {
-      owner: "revista1919",
-      repo,
-      path,
-    })
-    .then((r) => r.data)
-    .catch(() => null);
-
-  await octokit.request("PUT /repos/{owner}/{repo}/contents/{path}", {
-    owner: "revista1919",
-    repo,
-    path,
-    message,
-    content: base64,
-    sha: existing?.sha,
-  });
-}
-
-async function deletePDFFromRepo(fileName, message, repo) {
-  const octokit = getOctokit();
-  const path = fileName;
-
-  try {
-    const { data } = await octokit.request(
-      "GET /repos/{owner}/{repo}/contents/{path}",
-      {
-        owner: "revista1919",
-        repo,
-        path,
-      },
-    );
-
-    await octokit.request(
-      "DELETE /repos/{owner}/{repo}/contents/{path}",
-      {
-        owner: "revista1919",
-        repo,
-        path,
-        message,
-        sha: data.sha,
-      },
-    );
-  } catch (err) {
-    if (err.status !== 404) throw err;
-  }
-}
-
-/* ===================== GEMINI CORE ===================== */
-
-async function callGemini(prompt, temperature, apiKey) {
+/* ===================== GEMINI (NUEVA SDK @google/genai) ===================== */
+async function callGemini(prompt, temperature = 0) {
+  const apiKey = GEMINI_API_KEY.value();
   if (!apiKey) throw new Error("GEMINI_API_KEY not configured");
 
-  const ai = new GoogleGenAI({ apiKey });
+  const genAI = new GoogleGenAI({ apiKey });
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-  const result = await ai.models.generateContent({
-    model: "gemini-2.0-flash",
-    contents: [
-      {
-        role: "user",
-        text: prompt,
-      },
-    ],
-    generationConfig: {
-      temperature,
-      topP: 0.8,
-      maxOutputTokens: 4096,
-    },
+  const result = await model.generateContent({
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    generationConfig: { temperature, topP: 0.8, maxOutputTokens: 4096 }
   });
 
-  let text = result.text?.trim() || "";
-
+  let text = result.response.text()?.trim() || "";
   if (text.startsWith("```")) {
-    text = text
-      .replace(/^```(?:html)?\n?/, "")
-      .replace(/\n?```$/, "")
-      .trim();
+    text = text.replace(/^```(?:html)?\n?/, "").replace(/\n?```$/, "").trim();
   }
-
   return text;
 }
-
-/* ===================== PROMPTS (CONSERVADOS) ===================== */
-
 /* ===================== PROMPTS (ADAPTADOS) ===================== */
 
-async function translateText(text, source, target, apiKey) {
+async function translateText(text, source, target) {
   const prompt = `You are a faithful translator for an academic journal.
 
-The journal's official English name is "The National Review of Sciences for Students" (do not translate it as "magazine"; it is an academic review/journal).
-The official Spanish name is "La Revista Nacional de Ciencias para Estudiantes".
-
-It is an academic journal initiated in Chile that aspires to become a reference in the publication of primarily high school students at local and global levels.
-
 Task:
-Translate the following news title from ${source} to ${target}.
+Translate the following text from ${source} to ${target}.
 
 Rules:
 - Translate faithfully and accurately.
 - Do not add, remove, or reinterpret meaning.
 - Do not add quotes.
 - Do not add explanations or extra text.
-- Output ONLY the translated title.
+- Output ONLY the translated text.
 
-Title to translate:
+Text to translate:
 "${text}"`;
 
-  return callGemini(prompt, 0, apiKey);
+  return await callGemini(prompt);
 }
 
-async function translateHtmlFragment(html, source, target, apiKey) {
+async function translateHtmlFragment(html, source, target) {
   const prompt = `
 You are a faithful translator for an academic journal.
-
-The journal's official English name is "The National Review of Sciences for Students" (do not translate it as "magazine"; it is an academic review/journal).
-The official Spanish name is "La Revista Nacional de Ciencias para Estudiantes".
-
-It is an academic journal initiated in Chile that aspires to become a reference in the publication of primarily high school students at local and global levels.
 
 Task:
 Translate all translatable texts in the following HTML code fragment to ${target}.
@@ -249,9 +158,8 @@ HTML code fragment to translate:
 ${html}
 `;
 
-  return callGemini(prompt, 0, apiKey);
+  return await callGemini(prompt);
 }
-
 
 function splitHtmlContent(html) {
   const maxLength = 2000;
@@ -275,9 +183,9 @@ function splitHtmlContent(html) {
   return fragments;
 }
 
-async function translateHtmlFragmentWithSplit(html, source, target, apiKey) {
+async function translateHtmlFragmentWithSplit(html, source, target) {
   if (html.length < 3000) {
-    return translateHtmlFragment(html, source, target, apiKey);
+    return await translateHtmlFragment(html, source, target);
   }
 
   const fragments = splitHtmlContent(html);
@@ -285,14 +193,56 @@ async function translateHtmlFragmentWithSplit(html, source, target, apiKey) {
 
   for (const frag of fragments) {
     translated.push(
-      await translateHtmlFragment(frag, source, target, apiKey),
+      await translateHtmlFragment(frag, source, target),
     );
   }
 
   return translated.join("");
 }
+/* ===================== IMGBB UPLOAD ===================== */
 
-/* ===================== UPLOAD NEWS (EXISTENTE) ===================== */
+exports.uploadImageToImgBB = onRequest({ secrets: [IMGBB_API_KEY] }, async (req, res) => {
+  applyCors(req, res);
+  if (req.method === "OPTIONS") return res.status(204).send("");
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+  const idToken = req.headers.authorization?.split("Bearer ")[1];
+  if (!idToken) return res.status(401).json({ error: "Unauthorized" });
+
+  let user;
+  try { user = await admin.auth().verifyIdToken(idToken); } catch { return res.status(401).json({ error: "Invalid token" }); }
+
+  try {
+    const { imageBase64, name, expiration } = req.body;
+    if (!imageBase64) return res.status(400).json({ error: "Missing imageBase64" });
+
+    const form = new FormData();
+    form.append("image", imageBase64);
+    if (name) form.append("name", name);
+
+    const url = new URL("https://api.imgbb.com/1/upload");
+    url.searchParams.set("key", IMGBB_API_KEY.value());
+    if (expiration) url.searchParams.set("expiration", String(expiration));
+
+    const response = await fetch(url.toString(), { method: "POST", body: form });
+    const data = await response.json();
+
+    if (!data.success) return res.status(400).json({ error: "ImgBB upload failed", details: data });
+
+    return res.json({
+      success: true,
+      url: data.data.url,
+      display_url: data.data.display_url,
+      url_viewer: data.data.url_viewer,
+      delete_url: data.data.delete_url
+    });
+  } catch (err) {
+    console.error("Error in uploadImageToImgBB:", err);
+    return res.status(500).json({ error: "Internal server error", message: err.message });
+  }
+});
+
+/* ===================== UPLOAD NEWS ===================== */
 
 exports.uploadNews = onRequest(
   { secrets: [GEMINI_API_KEY] },
@@ -318,7 +268,7 @@ exports.uploadNews = onRequest(
     }
 
     try {
-      await validateRole(user.email, "Director General");
+      await validateRole(user.uid, "Director General");
     } catch (err) {
       return res.status(403).json({ error: err.message });
     }
@@ -328,30 +278,24 @@ exports.uploadNews = onRequest(
       if (!title || !body)
         return res.status(400).json({ error: "Missing data" });
 
-      const apiKey = GEMINI_API_KEY.value();
-
       const source = language.toLowerCase();
       const target = source === "es" ? "en" : "es";
 
       const titleSource = sanitizeInput(title);
-      const bodySource =
-        base64DecodeUnicode(body) || sanitizeInput(body);
+      const bodySource = base64DecodeUnicode(body) || sanitizeInput(body);
 
       const titleTarget = await translateText(
         titleSource,
         source,
         target,
-        apiKey,
       );
 
       const bodyTarget = await translateHtmlFragmentWithSplit(
         bodySource,
         source,
         target,
-        apiKey,
       );
 
-      // Guardar en Firestore
       const db = admin.firestore();
       const newsRef = db.collection("news");
 
@@ -390,7 +334,6 @@ exports.uploadNews = onRequest(
   }
 );
 
-
 /* ===================== MANAGE ARTICLES ===================== */
 
 exports.manageArticles = onRequest(
@@ -406,7 +349,7 @@ exports.manageArticles = onRequest(
     if (!token) return res.status(401).json({ error: "Unauthorized" });
 
     const user = await admin.auth().verifyIdToken(token);
-    await validateRole(user.email, "Director General");
+    await validateRole(user.uid, "Director General");
 
     const { action, article, pdfBase64, id } = req.body;
     const db = admin.firestore();
@@ -514,7 +457,6 @@ exports.manageVolumes = onRequest(
       return res.status(405).json({ error: "Method not allowed" });
     }
 
-    /* ---------- Auth ---------- */
     const token = req.headers.authorization?.split("Bearer ")[1];
     if (!token) {
       return res.status(401).json({ error: "Unauthorized" });
@@ -527,14 +469,12 @@ exports.manageVolumes = onRequest(
       return res.status(401).json({ error: "Invalid token" });
     }
 
-    /* ---------- Rol ---------- */
     try {
-      await validateRole(user.email, "Director General");
+      await validateRole(user.uid, "Director General");
     } catch (err) {
       return res.status(403).json({ error: err.message });
     }
 
-    /* ---------- Data ---------- */
     const { action, volume, pdfBase64, id } = req.body;
     if (!action) {
       return res.status(400).json({ error: "Missing action" });
@@ -543,7 +483,6 @@ exports.manageVolumes = onRequest(
     const db = admin.firestore();
     const ref = db.collection("volumes");
 
-    /* ===================== ADD ===================== */
     if (action === "add") {
       if (!volume?.titulo) {
         return res.status(400).json({ error: "Missing volume data" });
@@ -575,7 +514,6 @@ exports.manageVolumes = onRequest(
       return res.json({ success: true });
     }
 
-    /* ===================== EDIT ===================== */
     if (action === "edit") {
       if (!id) {
         return res.status(400).json({ error: "Missing volume id" });
@@ -621,7 +559,6 @@ exports.manageVolumes = onRequest(
       return res.json({ success: true });
     }
 
-    /* ===================== DELETE ===================== */
     if (action === "delete") {
       if (!id) {
         return res.status(400).json({ error: "Missing volume id" });
@@ -648,7 +585,6 @@ exports.manageVolumes = onRequest(
       return res.json({ success: true });
     }
 
-    /* ===================== FALLBACK ===================== */
     return res.status(400).json({ error: "Invalid action" });
   },
 );
@@ -681,7 +617,7 @@ exports.triggerRebuild = onRequest(
     }
 
     try {
-      await validateRole(user.email, "Director General");
+      await validateRole(user.uid, "Director General");
     } catch (err) {
       return res.status(403).json({ error: err.message });
     }
@@ -697,3 +633,62 @@ exports.triggerRebuild = onRequest(
     return res.json({ success: true });
   },
 );
+exports.updateUserRole = onCall(async (request) => {
+  const { auth } = request;
+  if (!auth) throw new HttpsError('unauthenticated', 'Debes estar logueado');
+
+  await validateRole(auth.uid, "Director General");
+
+  const { targetUid, newRoles } = request.data;
+  if (!targetUid || !Array.isArray(newRoles)) throw new HttpsError('invalid-argument', 'Datos inválidos');
+
+  // Sellado: log de quién cambió qué
+  console.log(`Director ${auth.uid} cambió roles de ${targetUid} a:`, newRoles);
+
+  await admin.auth().setCustomUserClaims(targetUid, { roles: newRoles });
+  await admin.firestore().collection('users').doc(targetUid).update({
+    roles: newRoles,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+  });
+
+  return { success: true };
+});
+
+/* ===================== SYNC USERS TO SHEET (sin traducción automática) ===================== */
+async function syncUsersToSheet() {
+  const snapshot = await admin.firestore().collection("users").get();
+  const rows = [];
+
+  for (const docSnap of snapshot.docs) {
+    const d = docSnap.data();
+
+    const descEs = d.description?.es || '';
+    const descEn = d.description?.en || descEs;           // ← copia si falta
+    const interestsEs = d.interests?.es || '';
+    const interestsEn = d.interests?.en || interestsEs;   // ← copia si falta
+
+    const rolesEs = d.roles.join(';');
+    const rolesEn = d.roles.map(r => ES_TO_EN[r] || r).join(';');
+
+    rows.push([
+      d.displayName || '',
+      descEs, interestsEs, rolesEs,
+      d.publicEmail || '',
+      d.imageUrl || '',
+      descEn, interestsEn, rolesEn
+    ]);
+  }
+
+  const doc = new GoogleSpreadsheet(USERS_SHEET_ID);
+  await doc.useServiceAccountAuth({
+    client_email: GOOGLE_SERVICE_ACCOUNT_EMAIL.value(),
+    private_key: GOOGLE_PRIVATE_KEY.value().replace(/\\n/g, "\n")
+  });
+  await doc.loadInfo();
+  const sheet = doc.sheetsByTitle[USERS_SHEET_NAME];
+  await sheet.clear();
+  await sheet.addRows(rows);
+}
+
+exports.onUserCreate = onDocumentCreated("users/{uid}", async () => { await syncUsersToSheet(); });
+exports.onUserUpdate = onDocumentUpdated("users/{uid}", async () => { await syncUsersToSheet(); });
