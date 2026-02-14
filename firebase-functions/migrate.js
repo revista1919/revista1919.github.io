@@ -1,7 +1,7 @@
 const fs = require('fs');
 const Papa = require('papaparse');
 const admin = require('firebase-admin');
-const { v4: uuidv4 } = require('uuid'); // Para generar UIDs si no vienen
+const { v4: uuidv4 } = require('uuid'); // Para generar UIDs
 
 admin.initializeApp({
   credential: admin.credential.cert('./serviceAccountKey.json')
@@ -26,10 +26,11 @@ async function migrateUsers() {
     console.log(`Found ${parsed.length} users to migrate.`);
 
     for (const row of parsed) {
-      const uid = row['Correo'] ? undefined : uuidv4(); // Genera UID si quieres, o usa el correo
+      const uid = uuidv4(); // Siempre genera un UID único, sin usar el correo
       const now = new Date().toISOString();
 
       const data = {
+        uid, // Ahora siempre UUID
         createdAt: now,
         updatedAt: now,
         displayName: row['Nombre'] || '',
@@ -44,16 +45,15 @@ async function migrateUsers() {
           en: row['Description'] || ''
         },
         interests: {
-          es: row['Áreas de interés'] || '',
-          en: row['Areas of interest'] || ''
+          es: parseInterests(row['Áreas de interés']),
+          en: parseInterests(row['Areas of interest'])
         },
         roles: parseRoles(row['Rol en la Revista'] || row['Role in the Journal']),
-        social: {}, // Puedes agregar info si tienes links de redes
-        uid: uid || row['Correo'] || uuidv4()
+        social: {} // Puedes agregar info si tienes links de redes
       };
 
-      await db.collection('users').doc(data.uid).set(data);
-      console.log(`Migrated user: ${data.displayName}`);
+      await db.collection('users').doc(uid).set(data);
+      console.log(`Migrated user: ${data.displayName} (${uid})`);
     }
 
     console.log('Users migration complete.');

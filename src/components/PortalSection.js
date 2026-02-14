@@ -282,7 +282,71 @@ const AssignmentCard = ({ assignment, onClick, index }) => {
     </motion.div>
   );
 };
+/* ==================== NUEVO: COMPONENTE DE TAGS PARA INTERESES ==================== */
+const InterestsTags = ({ value = [], onChange, placeholder, lang }) => {
+  const [inputValue, setInputValue] = useState('');
 
+  const addTag = () => {
+    const trimmed = inputValue.trim();
+    if (trimmed && !value.includes(trimmed)) {
+      onChange([...value, trimmed]);
+      setInputValue('');
+    }
+  };
+
+  const removeTag = (index) => {
+    onChange(value.filter((_, i) => i !== index));
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addTag();
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Tags actuales */}
+      <div className="flex flex-wrap gap-2">
+        {value.map((tag, index) => (
+          <motion.div
+            key={index}
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="group bg-emerald-100 hover:bg-emerald-200 transition-colors text-emerald-800 text-sm font-medium px-4 py-2 rounded-2xl flex items-center gap-2 shadow-sm"
+          >
+            {tag}
+            <button
+              onClick={() => removeTag(index)}
+              className="text-emerald-600 hover:text-red-600 transition-colors"
+            >
+              <XMarkIcon className="w-4 h-4" />
+            </button>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Input + botón */}
+      <div className="flex gap-3">
+        <input
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          className="flex-1 p-5 bg-gray-50 border-0 rounded-3xl focus:ring-2 focus:ring-emerald-300 text-sm placeholder-gray-400"
+        />
+        <button
+          onClick={addTag}
+          className="px-8 bg-emerald-600 hover:bg-emerald-700 transition-all text-white font-semibold rounded-3xl flex items-center gap-2 shadow-lg shadow-emerald-200 active:scale-95"
+        >
+          <PlusIcon className="w-5 h-5" />
+          AÑADIR
+        </button>
+      </div>
+    </div>
+  );
+};
 const ProfileSection = ({ user }) => {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -293,8 +357,13 @@ const ProfileSection = ({ user }) => {
     lastName: user.lastName || '',
     descriptionEs: user.description?.es || '',
     descriptionEn: user.description?.en || '',
-    interestsEs: user.interests?.es || '',
-    interestsEn: user.interests?.en || '',
+    // Soporte para arrays (nuevo) y fallback para strings antiguos
+    interestsEs: Array.isArray(user.interests?.es) 
+      ? user.interests.es 
+      : (user.interests?.es ? user.interests.es.split(',').map(s => s.trim()).filter(Boolean) : []),
+    interestsEn: Array.isArray(user.interests?.en) 
+      ? user.interests.en 
+      : (user.interests?.en ? user.interests.en.split(',').map(s => s.trim()).filter(Boolean) : []),
     imageUrl: user.imageUrl || '',
     publicEmail: user.publicEmail || '',
     institution: user.institution || '',
@@ -315,6 +384,12 @@ const ProfileSection = ({ user }) => {
     }));
   };
 
+  const handleInterestsChange = (langKey, newInterests) => {
+    setForm(prev => ({
+      ...prev,
+      [langKey === 'es' ? 'interestsEs' : 'interestsEn']: newInterests
+    }));
+  };
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -359,17 +434,15 @@ const ProfileSection = ({ user }) => {
     if (!descEn) descEn = descEs;
     if (!descEs) descEs = descEn;
 
-    let interestsEs = form.interestsEs.trim();
-    let interestsEn = form.interestsEn.trim();
-    if (!interestsEn) interestsEn = interestsEs;
-    if (!interestsEs) interestsEs = interestsEn;
-
     await updateDoc(doc(db, 'users', user.uid), {
       firstName: form.firstName,
       lastName: form.lastName,
       displayName: `${form.firstName} ${form.lastName}`.trim(),
       description: { es: descEs, en: descEn },
-      interests: { es: interestsEs, en: interestsEn },
+      interests: { 
+        es: form.interestsEs, 
+        en: form.interestsEn 
+      },
       imageUrl: form.imageUrl,
       publicEmail: form.publicEmail,
       institution: form.institution,
@@ -382,149 +455,107 @@ const ProfileSection = ({ user }) => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-10">
-      {/* Encabezado con Avatar Premium */}
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-10 flex flex-col lg:flex-row items-center gap-10">
+    <div className="max-w-6xl mx-auto space-y-12">
+      {/* Encabezado Avatar */}
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-12 flex flex-col lg:flex-row items-center gap-12">
+        {/* ... mismo avatar premium ... */}
         <div className="relative group flex-shrink-0">
-          <div className="w-48 h-48 rounded-3xl overflow-hidden ring-8 ring-white shadow-2xl relative">
+          <div className="w-52 h-52 rounded-3xl overflow-hidden ring-8 ring-white shadow-2xl relative">
             {form.imageUrl ? (
-              <img 
-                src={form.imageUrl} 
-                className="object-cover w-full h-full" 
-                alt="Perfil" 
-              />
+              <img src={form.imageUrl} className="object-cover w-full h-full" alt="Perfil" />
             ) : (
               <div className="flex items-center justify-center w-full h-full bg-gradient-to-br from-gray-100 to-gray-50">
-                <UserIcon className="w-20 h-20 text-gray-300" />
+                <UserIcon className="w-24 h-24 text-gray-300" />
               </div>
             )}
 
             {uploading && (
               <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center">
-                <div className="w-10 h-10 border-4 border-white border-t-transparent rounded-full animate-spin mb-2" />
-                <span className="text-white text-xs font-medium tracking-widest">SUBIENDO...</span>
+                <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin mb-3" />
+                <span className="text-white text-sm font-medium tracking-widest">SUBIENDO...</span>
               </div>
             )}
 
             <label className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/50 transition-all duration-300 cursor-pointer rounded-3xl">
-              <CameraIcon className="w-9 h-9 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                disabled={uploading}
-                className="hidden"
-              />
+              <CameraIcon className="w-10 h-10 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+              <input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploading} className="hidden" />
             </label>
           </div>
         </div>
 
         <div className="flex-1 text-center lg:text-left">
-          <div className="flex items-center justify-center lg:justify-start gap-3 mb-2">
-            <h2 className="text-4xl font-serif font-bold text-gray-900">
-              {form.firstName || 'Tu'} {form.lastName || 'Nombre'}
-            </h2>
-            {form.orcid && (
-              <a href={`https://orcid.org/${form.orcid}`} target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:text-emerald-700 transition-colors">
-                <AcademicCapIcon className="w-6 h-6" />
-              </a>
-            )}
-          </div>
-          
-          <p className="text-lg text-gray-500 font-medium mb-4">{form.institution || 'Sin institución afiliada'}</p>
-          
-          <div className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 text-xs font-semibold uppercase tracking-widest px-5 py-2 rounded-2xl">
-            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-            MIEMBRO ACTIVO
-          </div>
+          <h2 className="text-4xl font-serif font-bold text-gray-900 mb-1">
+            {form.firstName} {form.lastName}
+          </h2>
+          <p className="text-xl text-gray-500 font-medium">{form.institution || 'Sin institución'}</p>
+          {form.orcid && (
+            <a href={`https://orcid.org/${form.orcid}`} target="_blank" className="text-emerald-600 hover:underline text-sm mt-2 inline-block">
+              ORCID • {form.orcid}
+            </a>
+          )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-        {/* Columna Izquierda: Biografía */}
-        <div className="lg:col-span-7 space-y-8">
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-10">
-            <div className="flex items-center justify-between mb-8">
-              <h3 className="font-serif text-2xl font-bold text-gray-900">Biografía e Intereses</h3>
-              
-              <div className="flex bg-gray-100 rounded-2xl p-1">
-                <button
-                  onClick={() => setLang('es')}
-                  className={`px-6 py-2 text-sm font-semibold rounded-xl transition-all ${lang === 'es' ? 'bg-white shadow-sm text-emerald-700' : 'text-gray-500 hover:text-gray-700'}`}
-                >
-                  ESPAÑOL
-                </button>
-                <button
-                  onClick={() => setLang('en')}
-                  className={`px-6 py-2 text-sm font-semibold rounded-xl transition-all ${lang === 'en' ? 'bg-white shadow-sm text-emerald-700' : 'text-gray-500 hover:text-gray-700'}`}
-                >
-                  ENGLISH
-                </button>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+        {/* Columna Izquierda */}
+        <div className="lg:col-span-7 space-y-10">
+          {/* Biografía */}
+          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-12">
+            <div className="flex justify-between items-center mb-10">
+              <h3 className="font-serif text-3xl font-bold text-gray-900">Biografía e Intereses</h3>
+              <div className="flex bg-gray-100 rounded-2xl p-1.5">
+                <button onClick={() => setLang('es')} className={`px-8 py-3 rounded-2xl text-sm font-semibold transition-all ${lang === 'es' ? 'bg-white shadow text-emerald-700' : 'text-gray-500'}`}>ESPAÑOL</button>
+                <button onClick={() => setLang('en')} className={`px-8 py-3 rounded-2xl text-sm font-semibold transition-all ${lang === 'en' ? 'bg-white shadow text-emerald-700' : 'text-gray-500'}`}>ENGLISH</button>
               </div>
             </div>
 
-            <div className="space-y-8">
+            <div className="space-y-10">
               <div>
-                <label className="block text-xs uppercase tracking-widest font-bold text-gray-400 mb-2">DESCRIPCIÓN</label>
+                <label className="block uppercase text-xs tracking-[2px] font-bold text-gray-400 mb-3">DESCRIPCIÓN</label>
                 <textarea
                   name={lang === 'es' ? 'descriptionEs' : 'descriptionEn'}
                   value={lang === 'es' ? form.descriptionEs : form.descriptionEn}
                   onChange={handleChange}
-                  placeholder={lang === 'es' ? 'Cuéntanos tu trayectoria académica y profesional...' : 'Tell us about your academic and professional journey...'}
-                  className="w-full h-48 p-6 bg-gray-50 border-0 rounded-3xl focus:ring-2 focus:ring-emerald-200 resize-y text-gray-700 leading-relaxed"
+                  className="w-full h-56 p-7 bg-gray-50 border-0 rounded-3xl focus:ring-2 focus:ring-emerald-200 resize-y leading-relaxed"
+                  placeholder={lang === 'es' ? 'Tu trayectoria académica y profesional...' : 'Your academic and professional journey...'}
                 />
               </div>
 
               <div>
-                <label className="block text-xs uppercase tracking-widest font-bold text-gray-400 mb-2">ÁREAS DE INTERÉS</label>
-                <input
-                  name={lang === 'es' ? 'interestsEs' : 'interestsEn'}
+                <label className="block uppercase text-xs tracking-[2px] font-bold text-gray-400 mb-3">ÁREAS DE INTERÉS</label>
+                <InterestsTags
                   value={lang === 'es' ? form.interestsEs : form.interestsEn}
-                  onChange={handleChange}
-                  placeholder={lang === 'es' ? 'Inteligencia Artificial, Ética, Medicina...' : 'Artificial Intelligence, Ethics, Medicine...'}
-                  className="w-full p-6 bg-gray-50 border-0 rounded-3xl focus:ring-2 focus:ring-emerald-200 text-gray-700"
+                  onChange={(newTags) => handleInterestsChange(lang, newTags)}
+                  placeholder={lang === 'es' ? 'Economía, IA, Historia...' : 'Economics, AI, History...'}
+                  lang={lang}
                 />
               </div>
             </div>
           </div>
 
-          {/* Institución y Correo */}
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-10">
-            <h3 className="font-serif text-2xl font-bold text-gray-900 mb-8">Afiliación Académica</h3>
-            
-            <div className="space-y-6">
+          {/* Afiliación */}
+          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-12">
+            <h3 className="font-serif text-3xl font-bold text-gray-900 mb-10">Afiliación Académica</h3>
+            <div className="space-y-8">
               <div>
-                <label className="block text-xs uppercase tracking-widest font-bold text-gray-400 mb-2">INSTITUCIÓN / AFILIACIÓN</label>
-                <input
-                  name="institution"
-                  value={form.institution}
-                  onChange={handleChange}
-                  className="w-full p-6 bg-gray-50 border-0 rounded-3xl focus:ring-2 focus:ring-emerald-200"
-                />
+                <label className="block uppercase text-xs tracking-[2px] font-bold text-gray-400 mb-3">INSTITUCIÓN</label>
+                <input name="institution" value={form.institution} onChange={handleChange} className="w-full p-7 bg-gray-50 border-0 rounded-3xl focus:ring-2 focus:ring-emerald-200" />
               </div>
-
               <div>
-                <label className="block text-xs uppercase tracking-widest font-bold text-gray-400 mb-2">CORREO PÚBLICO</label>
+                <label className="block uppercase text-xs tracking-[2px] font-bold text-gray-400 mb-3">CORREO PÚBLICO</label>
                 <div className="relative">
-                  <EnvelopeIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    name="publicEmail"
-                    value={form.publicEmail}
-                    onChange={handleChange}
-                    placeholder="correo@ejemplo.org"
-                    className="w-full pl-14 p-6 bg-gray-50 border-0 rounded-3xl focus:ring-2 focus:ring-emerald-200"
-                  />
+                  <EnvelopeIcon className="absolute left-7 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-400" />
+                  <input name="publicEmail" value={form.publicEmail} onChange={handleChange} className="w-full pl-16 p-7 bg-gray-50 border-0 rounded-3xl focus:ring-2 focus:ring-emerald-200" placeholder="tucorreo@ejemplo.org" />
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Columna Derecha: Redes y ORCID */}
-        <div className="lg:col-span-5 space-y-8">
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-10">
-            <h3 className="font-serif text-2xl font-bold text-gray-900 mb-8">Presencia Digital</h3>
-
+        {/* Columna Derecha */}
+        <div className="lg:col-span-5 space-y-10">
+          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-12">
+            <h3 className="font-serif text-3xl font-bold text-gray-900 mb-10">Presencia Digital</h3>
             <div className="space-y-6">
               {/* LinkedIn */}
               <div className="group flex items-center bg-gray-50 rounded-3xl border border-transparent focus-within:border-emerald-300 transition-all overflow-hidden">
@@ -986,18 +1017,30 @@ export default function PortalSection({ user, onLogout }) {
   }, [user]);
 
   // Snapshot de usuario en Firebase
+  // Snapshot de usuario (mejorado para effectiveName)
   useEffect(() => {
     if (!user?.uid) return;
     const unsub = onSnapshot(doc(db, 'users', user.uid), (snap) => {
       if (snap.exists()) {
         const data = snap.data();
-        setUserData({ ...user, ...data });
-        setEffectiveName(data.displayName || user.displayName || user.name || '');
+        const merged = { ...user, ...data };
+        setUserData(merged);
+        setEffectiveName(
+          merged.displayName || 
+          `${merged.firstName || ''} ${merged.lastName || ''}`.trim() || 
+          user.displayName || 
+          ''
+        );
+      } else {
+        // Fallback si el documento aún no existe (usuarios muy nuevos)
+        setUserData(user);
+        setEffectiveName(user.displayName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || '');
       }
     });
     return unsub;
   }, [user?.uid]);
 
+  
   // Snapshot de todos los usuarios (solo para Director)
   useEffect(() => {
     if (userData?.roles?.includes('Director General')) {
@@ -1009,20 +1052,13 @@ export default function PortalSection({ user, onLogout }) {
     }
   }, [userData?.roles]);
 
-  useEffect(() => {
-    const loadAssignments = async () => {
-      if (!userData) return;
-
-      if (!effectiveName) {
-        setLoadingUser(true);
-        return;
-      }
-
-      setLoadingUser(false);
-      await fetchAssignments();
-    };
-
-    loadAssignments();
+    useEffect(() => {
+    if (!userData || !effectiveName) {
+      setLoadingUser(true);
+      return;
+    }
+    setLoadingUser(false);
+    fetchAssignments();
   }, [userData, effectiveName]);
 
   const fetchRubrics = async () => {
@@ -1421,8 +1457,8 @@ export default function PortalSection({ user, onLogout }) {
     return (
       <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
         <div className="flex flex-col items-center">
-          <div className="w-16 h-16 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
-          <p className="mt-6 text-gray-500 font-medium">Cargando portal editorial...</p>
+          <div className="w-16 h-16 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin" />
+          <p className="mt-6 text-gray-500 font-medium tracking-wider">CARGANDO PORTAL EDITORIAL...</p>
         </div>
       </div>
     );
