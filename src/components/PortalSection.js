@@ -9,15 +9,20 @@ import TaskSection from './TaskSection';
 import AssignSection from './AssignSection';
 import DirectorPanel from './DirectorPanel';
 import Admissions from './Admissions';
-import { UserIcon, CameraIcon } from '@heroicons/react/24/outline';
+import { 
+  UserIcon, 
+  CameraIcon, 
+  LinkIcon,
+  AcademicCapIcon,
+  EnvelopeIcon
+} from '@heroicons/react/24/outline';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
-import { db, onSnapshot, query, collection, doc, updateDoc, uploadImageToImgBB, translateTextCF, updateRole } from '../firebase';
+import { db, onSnapshot, query, collection, doc, updateDoc, uploadImageToImgBB, updateRole } from '../firebase';
 
 const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
-const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?gid=0&output=csv';
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby2B1OUt3TMqaed6Vz-iamUPn4gHhKXG2RRxiy8Nt6u69Cg-2kSze2XQ-NywX5QrNfy/exec';
 const RUBRIC_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzehxU_O7GkzfiCqCsSdnFwvA_Mhtfr_vSZjqVsBo3yx8ZEpr9Qur4NHPI09tyH1AZe/exec';
 const RUBRIC_CSV1 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=0&single=true&output=csv';
@@ -97,7 +102,6 @@ const base64EncodeUnicode = (str) => {
   return btoa(binary);
 };
 
-
 const base64DecodeUnicode = (str) => {
   const binary = atob(str);
   const bytes = new Uint8Array(binary.length);
@@ -140,12 +144,11 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-
 const localizer = momentLocalizer(moment);
 
 function CalendarComponent({ events, onSelectEvent }) {
   return (
-    <div className="bg-white border border-gray-200 p-4 md:p-8 rounded-sm shadow-sm mb-6 overflow-hidden">
+    <div className="bg-white border border-gray-200 p-4 md:p-8 rounded-3xl shadow-sm mb-6 overflow-hidden">
       <h3 className="font-serif text-2xl font-bold text-gray-900 mb-4">Calendario de Plazos</h3>
       <div className="h-[400px] md:h-[600px]">
         <Calendar
@@ -158,7 +161,7 @@ function CalendarComponent({ events, onSelectEvent }) {
           views={['month', 'week', 'day', 'agenda']}
           popup
           selectable
-          className="rounded-lg border border-gray-200 overflow-hidden"
+          className="rounded-2xl border border-gray-100 overflow-hidden"
           messages={{
             next: "Siguiente",
             previous: "Anterior",
@@ -188,20 +191,20 @@ const RubricViewer = ({ roleKey, scores, onChange, readOnly = false }) => {
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-      className="bg-white border border-gray-200 rounded-lg overflow-hidden mb-8"
+      className="bg-white border border-gray-100 rounded-3xl overflow-hidden mb-8 shadow-sm"
     >
-      <div className="bg-gray-50 px-4 py-3 md:px-6 md:py-4 border-b border-gray-200 flex justify-between items-center">
+      <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
         <h5 className="font-serif text-lg font-bold text-gray-900 uppercase tracking-tight">
           Protocolo de Evaluación: {roleKey}
         </h5>
-        <div className="text-sm font-mono font-bold text-blue-700 bg-blue-50 px-3 py-1 rounded">
+        <div className="text-sm font-mono font-bold text-emerald-700 bg-emerald-50 px-4 py-1.5 rounded-2xl">
           SCORE: {total} / {max}
         </div>
       </div>
      
-      <div className="p-4 md:p-6 space-y-4 md:space-y-8">
+      <div className="p-6 space-y-8">
         {crits.map((c) => (
-          <div key={c.key} className="border-b border-gray-100 last:border-0 pb-6">
+          <div key={c.key} className="border-b border-gray-100 last:border-0 pb-8">
             <div className="flex justify-between items-start mb-4">
               <h6 className="font-sans font-bold text-xs uppercase tracking-widest text-gray-500 break-words">{c.name}</h6>
             </div>
@@ -211,19 +214,19 @@ const RubricViewer = ({ roleKey, scores, onChange, readOnly = false }) => {
                   key={val}
                   type="button"
                   onClick={() => !readOnly && onChange && onChange(c.key, parseInt(val))}
-                  className={`relative p-4 text-left border rounded-md transition-all duration-200 ${
+                  className={`relative p-5 text-left border rounded-2xl transition-all duration-200 group ${
                     scores[c.key] == val
-                    ? 'border-blue-600 bg-blue-50/50 ring-1 ring-blue-600'
-                    : 'border-gray-200 hover:border-gray-300 bg-white'
+                    ? 'border-emerald-600 bg-emerald-50 ring-1 ring-emerald-600'
+                    : 'border-gray-200 hover:border-emerald-300 bg-white'
                   } ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}
                 >
-                  <span className={`block text-xs font-bold mb-1 ${scores[c.key] == val ? 'text-blue-700' : 'text-gray-400'}`}>
+                  <span className={`block text-xs font-bold mb-2 ${scores[c.key] == val ? 'text-emerald-700' : 'text-gray-400'}`}>
                     NIVEL {val}
                   </span>
                   <p className="text-sm text-gray-800 leading-snug break-words">{info.label.split('=')[1]}</p>
                   {scores[c.key] == val && (
-                    <motion.div layoutId="check" className="absolute top-2 right-2 text-blue-600">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293l-4 4a1 1 0 01-1.414 0l-2-2a1 1 0 111.414-1.414L9 10.586l3.293-3.293a1 1 0 011.414 1.414z"/></svg>
+                    <motion.div layoutId="check" className="absolute top-4 right-4 text-emerald-600">
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293l-4 4a1 1 0 01-1.414 0l-2-2a1 1 0 111.414-1.414L9 10.586l3.293-3.293a1 1 0 011.414 1.414z"/></svg>
                     </motion.div>
                   )}
                 </button>
@@ -250,28 +253,28 @@ const AssignmentCard = ({ assignment, onClick, index }) => {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
-      whileHover={{ y: -4 }}
+      whileHover={{ y: -4, scale: 1.01 }}
       onClick={onClick}
-      className="group bg-white border border-gray-200 p-4 md:p-6 flex flex-col h-full hover:border-blue-400 transition-all cursor-pointer relative overflow-hidden"
+      className="group bg-white border border-gray-100 p-6 flex flex-col h-full hover:border-emerald-400 transition-all cursor-pointer relative overflow-hidden rounded-3xl shadow-sm"
     >
       <div className="flex justify-between items-start mb-4">
-        <span className="text-[10px] font-sans font-bold uppercase tracking-[0.2em] text-blue-600 break-words">
+        <span className="text-[10px] font-sans font-bold uppercase tracking-[0.2em] text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
           {role}
         </span>
-        <div className={`w-2 h-2 rounded-full ${isCompleted ? 'bg-green-500' : 'bg-amber-400 animate-pulse'}`} />
+        <div className={`w-3 h-3 rounded-full ${isCompleted ? 'bg-emerald-500' : 'bg-amber-400 animate-pulse'}`} />
       </div>
      
-      <h4 className="font-serif text-xl font-bold text-gray-900 group-hover:text-blue-800 transition-colors mb-4 line-clamp-2 break-words">
+      <h4 className="font-serif text-xl font-bold text-gray-900 group-hover:text-emerald-800 transition-colors mb-6 line-clamp-2 break-words leading-tight">
         {assignment['Nombre Artículo']}
       </h4>
-      <div className="mt-auto pt-4 border-t border-gray-50 space-y-2">
+      <div className="mt-auto pt-6 border-t border-gray-100 space-y-3">
         <div className="flex justify-between text-xs text-gray-500 font-sans">
           <span>PLAZO</span>
-          <span className="font-bold break-words">{assignment.Plazo ? new Date(assignment.Plazo).toLocaleDateString() : 'SIN FECHA'}</span>
+          <span className="font-bold text-gray-700 break-words">{assignment.Plazo ? new Date(assignment.Plazo).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) : 'SIN FECHA'}</span>
         </div>
         <div className="flex justify-between text-xs text-gray-500 font-sans">
           <span>ESTADO</span>
-          <span className={`font-bold break-words ${isCompleted ? 'text-green-700' : 'text-amber-700'}`}>
+          <span className={`font-bold break-words ${isCompleted ? 'text-emerald-700' : 'text-amber-700'}`}>
             {isCompleted ? 'FINALIZADO' : 'PENDIENTE'}
           </span>
         </div>
@@ -281,9 +284,9 @@ const AssignmentCard = ({ assignment, onClick, index }) => {
 };
 
 const ProfileSection = ({ user }) => {
-
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [lang, setLang] = useState('es');
 
   const [form, setForm] = useState({
     firstName: user.firstName || '',
@@ -295,54 +298,62 @@ const ProfileSection = ({ user }) => {
     imageUrl: user.imageUrl || '',
     publicEmail: user.publicEmail || '',
     institution: user.institution || '',
-    social: user.social || { linkedin: '', twitter: '', instagram: '', website: '' }
+    social: user.social || { linkedin: '', twitter: '', instagram: '', website: '' },
+    orcid: user.orcid || ''
   });
 
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
-  const handleSocialChange = (e) => setForm({ ...form, social: { ...form.social, [e.target.name]: e.target.value } });
-
-  const handleImageUpload = async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  // 🔒 Validación 5MB
-  if (file.size > 5 * 1024 * 1024) {
-    alert("La imagen no puede superar 5MB");
-    return;
-  }
-
-  setUploading(true);
-
-  const reader = new FileReader();
-
-  reader.onload = async () => {
-    try {
-      const result = await uploadImageToImgBB({
-        base64: reader.result,
-        fileName: file.name
-      });
-
-      setForm(prev => ({
-        ...prev,
-        imageUrl: result.url
-      }));
-
-    } catch (error) {
-      console.error(error);
-      alert("Error subiendo imagen");
-    } finally {
-      setUploading(false);
-    }
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm(prev => ({ ...prev, [name]: value }));
   };
 
-  reader.readAsDataURL(file);
-};
+  const handleSocialChange = (e) => {
+    const { name, value } = e.target;
+    setForm(prev => ({
+      ...prev,
+      social: { ...prev.social, [name]: value }
+    }));
+  };
 
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("La imagen no puede superar 5MB");
+      return;
+    }
+
+    setUploading(true);
+
+    const reader = new FileReader();
+
+    reader.onload = async () => {
+      try {
+        const result = await uploadImageToImgBB({
+          base64: reader.result,
+          fileName: file.name
+        });
+
+        setForm(prev => ({
+          ...prev,
+          imageUrl: result.url
+        }));
+
+      } catch (error) {
+        console.error(error);
+        alert("Error subiendo imagen");
+      } finally {
+        setUploading(false);
+      }
+    };
+
+    reader.readAsDataURL(file);
+  };
 
   const saveProfile = async () => {
     setSaving(true);
 
-    // Copia automática si falta el otro idioma
     let descEs = form.descriptionEs.trim();
     let descEn = form.descriptionEn.trim();
     if (!descEn) descEn = descEs;
@@ -356,13 +367,14 @@ const ProfileSection = ({ user }) => {
     await updateDoc(doc(db, 'users', user.uid), {
       firstName: form.firstName,
       lastName: form.lastName,
-      displayName: `${form.firstName} ${form.lastName}`,
+      displayName: `${form.firstName} ${form.lastName}`.trim(),
       description: { es: descEs, en: descEn },
       interests: { es: interestsEs, en: interestsEn },
       imageUrl: form.imageUrl,
       publicEmail: form.publicEmail,
       institution: form.institution,
       social: form.social,
+      orcid: form.orcid,
       updatedAt: new Date().toISOString()
     });
 
@@ -370,139 +382,382 @@ const ProfileSection = ({ user }) => {
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl p-10 max-w-3xl mx-auto">
-      <h3 className="text-2xl font-serif font-bold text-gray-900 mb-8">Mi Perfil</h3>
+    <div className="max-w-5xl mx-auto space-y-10">
+      {/* Encabezado con Avatar Premium */}
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-10 flex flex-col lg:flex-row items-center gap-10">
+        <div className="relative group flex-shrink-0">
+          <div className="w-48 h-48 rounded-3xl overflow-hidden ring-8 ring-white shadow-2xl relative">
+            {form.imageUrl ? (
+              <img 
+                src={form.imageUrl} 
+                className="object-cover w-full h-full" 
+                alt="Perfil" 
+              />
+            ) : (
+              <div className="flex items-center justify-center w-full h-full bg-gradient-to-br from-gray-100 to-gray-50">
+                <UserIcon className="w-20 h-20 text-gray-300" />
+              </div>
+            )}
 
-      {/* Imagen con ImgBB elegante */}
-<div className="flex flex-col items-center mb-10">
-  <label className={`cursor-pointer group ${uploading ? "pointer-events-none" : ""}`}>
-    <div className="w-48 h-48 rounded-3xl overflow-hidden border-4 border-white shadow-lg relative">
+            {uploading && (
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center">
+                <div className="w-10 h-10 border-4 border-white border-t-transparent rounded-full animate-spin mb-2" />
+                <span className="text-white text-xs font-medium tracking-widest">SUBIENDO...</span>
+              </div>
+            )}
 
-      {/* Imagen o placeholder */}
-      {form.imageUrl ? (
-        <img
-          src={form.imageUrl}
-          className="object-cover w-full h-full"
-          alt="Profile"
-        />
-      ) : (
-        <div className="flex items-center justify-center w-full h-full bg-gray-100">
-          <UserIcon className="w-16 h-16 text-gray-400" />
+            <label className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/50 transition-all duration-300 cursor-pointer rounded-3xl">
+              <CameraIcon className="w-9 h-9 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                disabled={uploading}
+                className="hidden"
+              />
+            </label>
+          </div>
         </div>
-      )}
 
-      {/* Hover overlay */}
-      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center rounded-3xl">
-        <CameraIcon className="w-10 h-10 text-white" />
-      </div>
-
-      {/* 🔥 Spinner overlay mientras sube */}
-      {uploading && (
-        <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center rounded-3xl z-20">
-          <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin mb-3"></div>
-          <span className="text-white text-sm font-medium tracking-wide">
-            Subiendo...
-          </span>
+        <div className="flex-1 text-center lg:text-left">
+          <div className="flex items-center justify-center lg:justify-start gap-3 mb-2">
+            <h2 className="text-4xl font-serif font-bold text-gray-900">
+              {form.firstName || 'Tu'} {form.lastName || 'Nombre'}
+            </h2>
+            {form.orcid && (
+              <a href={`https://orcid.org/${form.orcid}`} target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:text-emerald-700 transition-colors">
+                <AcademicCapIcon className="w-6 h-6" />
+              </a>
+            )}
+          </div>
+          
+          <p className="text-lg text-gray-500 font-medium mb-4">{form.institution || 'Sin institución afiliada'}</p>
+          
+          <div className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 text-xs font-semibold uppercase tracking-widest px-5 py-2 rounded-2xl">
+            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+            MIEMBRO ACTIVO
+          </div>
         </div>
-      )}
-
-    </div>
-
-    {/* Input oculto */}
-    <input
-      type="file"
-      accept="image/*"
-      onChange={handleImageUpload}
-      disabled={uploading}
-      className="hidden"
-    />
-  </label>
-</div>
-
-
-      {/* Campos básicos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <input name="firstName" value={form.firstName} onChange={handleChange} placeholder="Nombre" className="p-4 border rounded-2xl" />
-        <input name="lastName" value={form.lastName} onChange={handleChange} placeholder="Apellidos" className="p-4 border rounded-2xl" />
       </div>
 
-      {/* DESCRIPCIÓN BILINGÜE MANUAL */}
-      <div className="mt-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Descripción en Español (párrafos permitidos)</label>
-        <textarea name="descriptionEs" value={form.descriptionEs} onChange={handleChange} className="w-full p-4 border rounded-2xl h-32 whitespace-pre-wrap" />
-      </div>
-      <div className="mt-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Description in English (paragraphs allowed)</label>
-        <textarea name="descriptionEn" value={form.descriptionEn} onChange={handleChange} className="w-full p-4 border rounded-2xl h-32 whitespace-pre-wrap" />
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+        {/* Columna Izquierda: Biografía */}
+        <div className="lg:col-span-7 space-y-8">
+          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-10">
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="font-serif text-2xl font-bold text-gray-900">Biografía e Intereses</h3>
+              
+              <div className="flex bg-gray-100 rounded-2xl p-1">
+                <button
+                  onClick={() => setLang('es')}
+                  className={`px-6 py-2 text-sm font-semibold rounded-xl transition-all ${lang === 'es' ? 'bg-white shadow-sm text-emerald-700' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                  ESPAÑOL
+                </button>
+                <button
+                  onClick={() => setLang('en')}
+                  className={`px-6 py-2 text-sm font-semibold rounded-xl transition-all ${lang === 'en' ? 'bg-white shadow-sm text-emerald-700' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                  ENGLISH
+                </button>
+              </div>
+            </div>
 
-      {/* INTERESES BILINGÜES */}
-      <div className="mt-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Áreas de interés en Español (separadas por coma)</label>
-        <input name="interestsEs" value={form.interestsEs} onChange={handleChange} className="w-full p-4 border rounded-2xl" />
+            <div className="space-y-8">
+              <div>
+                <label className="block text-xs uppercase tracking-widest font-bold text-gray-400 mb-2">DESCRIPCIÓN</label>
+                <textarea
+                  name={lang === 'es' ? 'descriptionEs' : 'descriptionEn'}
+                  value={lang === 'es' ? form.descriptionEs : form.descriptionEn}
+                  onChange={handleChange}
+                  placeholder={lang === 'es' ? 'Cuéntanos tu trayectoria académica y profesional...' : 'Tell us about your academic and professional journey...'}
+                  className="w-full h-48 p-6 bg-gray-50 border-0 rounded-3xl focus:ring-2 focus:ring-emerald-200 resize-y text-gray-700 leading-relaxed"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs uppercase tracking-widest font-bold text-gray-400 mb-2">ÁREAS DE INTERÉS</label>
+                <input
+                  name={lang === 'es' ? 'interestsEs' : 'interestsEn'}
+                  value={lang === 'es' ? form.interestsEs : form.interestsEn}
+                  onChange={handleChange}
+                  placeholder={lang === 'es' ? 'Inteligencia Artificial, Ética, Medicina...' : 'Artificial Intelligence, Ethics, Medicine...'}
+                  className="w-full p-6 bg-gray-50 border-0 rounded-3xl focus:ring-2 focus:ring-emerald-200 text-gray-700"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Institución y Correo */}
+          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-10">
+            <h3 className="font-serif text-2xl font-bold text-gray-900 mb-8">Afiliación Académica</h3>
+            
+            <div className="space-y-6">
+              <div>
+                <label className="block text-xs uppercase tracking-widest font-bold text-gray-400 mb-2">INSTITUCIÓN / AFILIACIÓN</label>
+                <input
+                  name="institution"
+                  value={form.institution}
+                  onChange={handleChange}
+                  className="w-full p-6 bg-gray-50 border-0 rounded-3xl focus:ring-2 focus:ring-emerald-200"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs uppercase tracking-widest font-bold text-gray-400 mb-2">CORREO PÚBLICO</label>
+                <div className="relative">
+                  <EnvelopeIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    name="publicEmail"
+                    value={form.publicEmail}
+                    onChange={handleChange}
+                    placeholder="correo@ejemplo.org"
+                    className="w-full pl-14 p-6 bg-gray-50 border-0 rounded-3xl focus:ring-2 focus:ring-emerald-200"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Columna Derecha: Redes y ORCID */}
+        <div className="lg:col-span-5 space-y-8">
+          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-10">
+            <h3 className="font-serif text-2xl font-bold text-gray-900 mb-8">Presencia Digital</h3>
+
+            <div className="space-y-6">
+              {/* LinkedIn */}
+              <div className="group flex items-center bg-gray-50 rounded-3xl border border-transparent focus-within:border-emerald-300 transition-all overflow-hidden">
+                <div className="pl-6 pr-4 text-[#0A66C2] font-black text-xl">in</div>
+                <input
+                  name="linkedin"
+                  value={form.social.linkedin}
+                  onChange={handleSocialChange}
+                  placeholder="https://linkedin.com/in/..."
+                  className="bg-transparent border-0 flex-1 py-6 focus:ring-0 text-sm"
+                />
+              </div>
+
+              {/* Twitter / X */}
+              <div className="group flex items-center bg-gray-50 rounded-3xl border border-transparent focus-within:border-emerald-300 transition-all overflow-hidden">
+                <div className="pl-6 pr-4 text-black font-bold">𝕏</div>
+                <input
+                  name="twitter"
+                  value={form.social.twitter}
+                  onChange={handleSocialChange}
+                  placeholder="https://x.com/..."
+                  className="bg-transparent border-0 flex-1 py-6 focus:ring-0 text-sm"
+                />
+              </div>
+
+              {/* Instagram */}
+              <div className="group flex items-center bg-gray-50 rounded-3xl border border-transparent focus-within:border-emerald-300 transition-all overflow-hidden">
+                <div className="pl-6 pr-4 text-[#E4405F] text-xl">📷</div>
+                <input
+                  name="instagram"
+                  value={form.social.instagram}
+                  onChange={handleSocialChange}
+                  placeholder="https://instagram.com/..."
+                  className="bg-transparent border-0 flex-1 py-6 focus:ring-0 text-sm"
+                />
+              </div>
+
+              {/* Website */}
+              <div className="group flex items-center bg-gray-50 rounded-3xl border border-transparent focus-within:border-emerald-300 transition-all overflow-hidden">
+                <div className="pl-6 pr-4 text-gray-400"><LinkIcon className="w-6 h-6" /></div>
+                <input
+                  name="website"
+                  value={form.social.website}
+                  onChange={handleSocialChange}
+                  placeholder="https://tusitio.com"
+                  className="bg-transparent border-0 flex-1 py-6 focus:ring-0 text-sm"
+                />
+              </div>
+
+              {/* ORCID */}
+              <div className="group flex items-center bg-gray-50 rounded-3xl border border-transparent focus-within:border-emerald-300 transition-all overflow-hidden">
+                <div className="pl-6 pr-4 text-orange-600 font-mono font-bold text-xl">OR</div>
+                <input
+                  name="orcid"
+                  value={form.orcid}
+                  onChange={handleChange}
+                  placeholder="0000-0000-0000-0000"
+                  className="bg-transparent border-0 flex-1 py-6 focus:ring-0 text-sm font-mono"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Botón Guardar */}
+          <button
+            onClick={saveProfile}
+            disabled={saving}
+            className="w-full py-6 bg-gradient-to-r from-gray-900 to-black text-white rounded-3xl font-bold tracking-[0.08em] text-sm uppercase hover:from-emerald-600 hover:to-emerald-700 transition-all duration-300 shadow-xl shadow-gray-200 active:scale-[0.985] flex items-center justify-center gap-3"
+          >
+            {saving ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                GUARDANDO...
+              </>
+            ) : (
+              'GUARDAR PERFIL'
+            )}
+          </button>
+        </div>
       </div>
-      <div className="mt-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Areas of Interest in English (comma separated)</label>
-        <input name="interestsEn" value={form.interestsEn} onChange={handleChange} className="w-full p-4 border rounded-2xl" />
-      </div>
-      <div className="mt-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Institución / Afiliación</label>
-        <input name="institution" value={form.institution} onChange={handleChange} className="w-full p-4 border rounded-2xl" />
-      </div>
-      <input name="publicEmail" value={form.publicEmail} onChange={handleChange} placeholder="Correo público (opcional)" className="w-full p-4 border rounded-2xl mt-6" />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-        <input name="linkedin" value={form.social.linkedin} onChange={handleSocialChange} placeholder="LinkedIn" className="p-4 border rounded-2xl focus:border-blue-600" />
-        <input name="twitter" value={form.social.twitter} onChange={handleSocialChange} placeholder="Twitter" className="p-4 border rounded-2xl focus:border-blue-600" />
-        <input name="instagram" value={form.social.instagram} onChange={handleSocialChange} placeholder="Instagram" className="p-4 border rounded-2xl focus:border-blue-600" />
-        <input name="website" value={form.social.website} onChange={handleSocialChange} placeholder="Sitio web" className="p-4 border rounded-2xl focus:border-blue-600" />
-      </div>
-      <button onClick={saveProfile} disabled={saving} className="mt-10 w-full py-4 bg-black text-white rounded-2xl font-bold tracking-widest hover:bg-[#007398] transition-colors">
-        {saving ? 'Guardando...' : 'Guardar Cambios'}
-      </button>
     </div>
   );
 };
 
-const UserManagement = ({ users }) => {
-  const changeRole = async (uid, newRoles) => {
-    await updateRole({ targetUid: uid, newRoles });
+const UserManagement = ({ users: initialUsers }) => {
+  const [users, setUsers] = useState(initialUsers);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Sincronizar con prop inicial
+  useEffect(() => {
+    setUsers(initialUsers);
+  }, [initialUsers]);
+
+  const addRole = async (uid, role) => {
+    const user = users.find(u => u.id === uid);
+    if (!user || !role) return;
+    
+    const currentRoles = user.roles || [];
+    if (currentRoles.includes(role)) return;
+
+    const newRoles = [...currentRoles, role];
+    
+    try {
+      await updateRole({ targetUid: uid, newRoles });
+    } catch (err) {
+      console.error('Error al añadir rol:', err);
+    }
   };
 
+  const removeRole = async (uid, role) => {
+    const user = users.find(u => u.id === uid);
+    if (!user) return;
+    
+    const newRoles = (user.roles || []).filter(r => r !== role);
+    
+    try {
+      await updateRole({ targetUid: uid, newRoles });
+    } catch (err) {
+      console.error('Error al eliminar rol:', err);
+    }
+  };
+
+  const filteredUsers = users.filter(user => 
+    (user.displayName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (user.email || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
-    <div className="bg-white rounded-2xl shadow-xl p-10 max-w-6xl mx-auto">
-      <h3 className="text-2xl font-serif font-bold text-gray-900 mb-8">Gestión de Usuarios</h3>
-      <p className="text-gray-600 mb-6">Administra roles de usuarios de manera eficiente. Selecciona múltiples roles manteniendo Ctrl/Cmd.</p>
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
+    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-10 max-w-6xl mx-auto">
+      <div className="flex items-end justify-between mb-10">
+        <div>
+          <h3 className="text-3xl font-serif font-bold text-gray-900">Gestión de Usuarios</h3>
+          <p className="text-gray-500 mt-1">Administra roles y accesos del equipo editorial</p>
+        </div>
+        
+        <div className="relative w-80">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Buscar por nombre o correo..."
+            className="w-full pl-12 pr-6 py-4 bg-gray-50 border border-gray-200 rounded-2xl focus:border-emerald-400 focus:ring-0 text-sm"
+          />
+          <UserIcon className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-3xl border border-gray-100">
+        <table className="min-w-full divide-y divide-gray-100">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Roles</th>
+              <th className="px-8 py-5 text-left text-xs font-semibold text-gray-500 uppercase tracking-widest">Usuario</th>
+              <th className="px-8 py-5 text-left text-xs font-semibold text-gray-500 uppercase tracking-widest">Email</th>
+              <th className="px-8 py-5 text-left text-xs font-semibold text-gray-500 uppercase tracking-widest">Roles</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {users.map(user => (
-              <tr key={user.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{user.displayName}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-gray-500">{user.email}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <select 
-                    multiple 
-                    value={user.roles} 
-                    onChange={(e) => changeRole(user.id, Array.from(e.target.selectedOptions, option => option.value))} 
-                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    {ALL_ROLES.map(role => (
-                      <option key={role} value={role}>{role}</option>
+          <tbody className="divide-y divide-gray-100 bg-white">
+            {filteredUsers.map((user) => (
+              <tr key={user.id} className="hover:bg-emerald-50/50 transition-colors group">
+                <td className="px-8 py-6 whitespace-nowrap">
+                  <div className="flex items-center gap-4">
+                    {user.imageUrl ? (
+                      <img 
+                        src={user.imageUrl} 
+                        className="w-11 h-11 rounded-2xl object-cover ring-1 ring-gray-100" 
+                        alt={user.displayName} 
+                      />
+                    ) : (
+                      <div className="w-11 h-11 bg-gradient-to-br from-gray-100 to-gray-50 rounded-2xl flex items-center justify-center ring-1 ring-gray-100">
+                        <span className="text-xl font-serif font-bold text-gray-400">
+                          {user.displayName?.charAt(0) || 'U'}
+                        </span>
+                      </div>
+                    )}
+                    <div>
+                      <div className="font-semibold text-gray-900">{user.displayName || 'Sin nombre'}</div>
+                      <div className="text-xs text-gray-400 font-mono">ID: {user.id.slice(0, 8)}</div>
+                    </div>
+                  </div>
+                </td>
+                
+                <td className="px-8 py-6 whitespace-nowrap text-gray-600 font-medium text-sm">
+                  {user.email}
+                </td>
+
+                <td className="px-8 py-6">
+                  <div className="flex flex-wrap gap-2">
+                    {(user.roles || []).map(role => (
+                      <div 
+                        key={role}
+                        className="inline-flex items-center gap-2 bg-emerald-100 text-emerald-800 text-xs font-medium px-4 py-2 rounded-2xl group-hover:bg-emerald-200 transition-colors"
+                      >
+                        {role}
+                        <button
+                          onClick={() => removeRole(user.id, role)}
+                          className="text-emerald-600 hover:text-red-600 transition-colors font-bold text-base leading-none"
+                        >
+                          ×
+                        </button>
+                      </div>
                     ))}
-                  </select>
+
+                    {/* Selector de nuevo rol */}
+                    <div className="relative">
+                      <select
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            addRole(user.id, e.target.value);
+                            e.target.value = '';
+                          }
+                        }}
+                        className="appearance-none bg-transparent border border-dashed border-gray-300 hover:border-emerald-400 text-emerald-600 text-xs font-medium rounded-2xl px-4 py-2 cursor-pointer transition-all focus:outline-none focus:border-emerald-500"
+                        value=""
+                      >
+                        <option value="" disabled>+ Añadir rol</option>
+                        {ALL_ROLES.filter(r => !(user.roles || []).includes(r)).map(role => (
+                          <option key={role} value={role}>{role}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {filteredUsers.length === 0 && (
+        <div className="text-center py-20 text-gray-400">
+          No se encontraron usuarios con ese criterio de búsqueda.
+        </div>
+      )}
     </div>
   );
 };
@@ -533,6 +788,7 @@ export default function PortalSection({ user, onLogout }) {
   const feedbackQuillRefs = useRef({});
   const reportQuillRefs = useRef({});
   const [loadingUser, setLoadingUser] = useState(true);
+  
   // NUEVO: Datos en tiempo real desde Firebase
   const [userData, setUserData] = useState(user);
   const [users, setUsers] = useState([]);
@@ -734,8 +990,9 @@ export default function PortalSection({ user, onLogout }) {
     if (!user?.uid) return;
     const unsub = onSnapshot(doc(db, 'users', user.uid), (snap) => {
       if (snap.exists()) {
-        setUserData({ ...user, ...snap.data() });
-        setEffectiveName(snap.data().displayName || user.displayName || user.name || '');
+        const data = snap.data();
+        setUserData({ ...user, ...data });
+        setEffectiveName(data.displayName || user.displayName || user.name || '');
       }
     });
     return unsub;
@@ -752,38 +1009,10 @@ export default function PortalSection({ user, onLogout }) {
     }
   }, [userData?.roles]);
 
-  // Mapeo de correo → nombre real (mantengo por compatibilidad con CSV)
-  useEffect(() => {
-    const fetchUserMapping = async () => {
-      if (userData && userData.email && !userData.displayName) {
-        setError('Advertencia: Intentando mapear correo a nombre desde CSV...');
-        try {
-          const csvText = await fetchWithRetry(USERS_CSV);
-          Papa.parse(csvText, {
-            header: true,
-            skipEmptyLines: true,
-            complete: ({ data }) => {
-              const mapping = data.find(row => row['Correo']?.trim().toLowerCase() === userData.email.trim().toLowerCase());
-              if (mapping && mapping['Nombre']) {
-                setEffectiveName(mapping['Nombre'].trim());
-                setError('');
-              }
-            },
-            error: () => setError('Error al cargar mapeo de usuarios.')
-          });
-        } catch (err) {
-          console.error(err);
-        }
-      }
-    };
-    fetchUserMapping();
-  }, [userData]);
-
   useEffect(() => {
     const loadAssignments = async () => {
       if (!userData) return;
 
-      // Mientras se resuelve CSV de usuarios
       if (!effectiveName) {
         setLoadingUser(true);
         return;
@@ -1120,7 +1349,7 @@ export default function PortalSection({ user, onLogout }) {
         initial={{ opacity: 0, height: 0 }}
         animate={{ opacity: 1, height: 'auto' }}
         exit={{ opacity: 0, height: 0 }}
-        className="text-gray-800 bg-gray-50 p-4 rounded-md border border-gray-200 leading-relaxed break-words overflow-hidden font-sans text-sm"
+        className="text-gray-800 bg-gray-50 p-6 rounded-2xl border border-gray-100 leading-relaxed break-words overflow-hidden font-sans text-sm"
       >
         <div className="mb-4" dangerouslySetInnerHTML={{ __html: tutorialText }} />
       </motion.div>
@@ -1189,7 +1418,14 @@ export default function PortalSection({ user, onLogout }) {
   };
 
   if (loadingUser || loading) {
-    return <div className="text-center p-4">Cargando usuario y asignaciones...</div>;
+    return (
+      <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div className="w-16 h-16 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
+          <p className="mt-6 text-gray-500 font-medium">Cargando portal editorial...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!effectiveName) {
@@ -1245,7 +1481,7 @@ export default function PortalSection({ user, onLogout }) {
         </div>
         <button
           onClick={onLogout}
-          className="mt-4 md:mt-0 text-xs font-bold uppercase tracking-widest px-6 py-2 border border-gray-900 hover:bg-gray-900 hover:text-white transition-all"
+          className="mt-4 md:mt-0 text-xs font-bold uppercase tracking-widest px-6 py-2 border border-gray-900 hover:bg-gray-900 hover:text-white transition-all rounded-xl"
         >
           Cerrar Sesión
         </button>
@@ -1258,12 +1494,12 @@ export default function PortalSection({ user, onLogout }) {
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`pb-4 text-xs font-bold uppercase tracking-widest transition-all relative ${
-              activeTab === tab.id ? 'text-blue-700' : 'text-gray-400 hover:text-gray-600'
+              activeTab === tab.id ? 'text-emerald-700' : 'text-gray-400 hover:text-gray-600'
             }`}
           >
             {tab.label}
             {activeTab === tab.id && (
-              <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700" />
+              <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-700" />
             )}
           </button>
         ))}
@@ -1289,7 +1525,7 @@ export default function PortalSection({ user, onLogout }) {
                 <motion.div
                   initial={{ opacity: 0, y: -20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-red-100 text-red-700 p-6 rounded-md mb-8 font-sans text-sm break-words"
+                  className="bg-red-100 text-red-700 p-6 rounded-2xl mb-8 font-sans text-sm break-words"
                 >
                   {error}
                 </motion.div>
@@ -1300,14 +1536,14 @@ export default function PortalSection({ user, onLogout }) {
                   animate={{ opacity: 1 }}
                   className="flex justify-center items-center h-32"
                 >
-                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-600"></div>
                   <p className="ml-4 text-gray-600 font-sans text-sm break-words">Cargando asignaciones...</p>
                 </motion.div>
               ) : currentAssignments.length === 0 ? (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="text-center p-12 bg-white rounded-md border border-gray-200 shadow-sm"
+                  className="text-center p-12 bg-white rounded-3xl border border-gray-100 shadow-sm"
                 >
                   <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -1413,12 +1649,12 @@ export default function PortalSection({ user, onLogout }) {
             <div className="max-w-4xl mx-auto">
               <button
                 onClick={() => setSelectedAssignment(null)}
-                className="mb-8 font-sans font-bold text-xs uppercase tracking-widest flex items-center hover:text-blue-600"
+                className="mb-8 font-sans font-bold text-xs uppercase tracking-widest flex items-center hover:text-emerald-600 transition-colors"
               >
                 ← Volver al Portal
               </button>
               <header className="mb-12">
-                <span className="text-xs font-bold text-blue-600 tracking-[0.3em] uppercase break-words">{selectedAssignment.role}</span>
+                <span className="text-xs font-bold text-emerald-600 tracking-[0.3em] uppercase break-words">{selectedAssignment.role}</span>
                 <h2 className="font-serif text-4xl font-bold text-gray-900 mt-2 mb-4 leading-tight break-words">
                   {selectedAssignment['Nombre Artículo']}
                 </h2>
