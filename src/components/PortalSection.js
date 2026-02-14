@@ -98,6 +98,7 @@ const base64EncodeUnicode = (str) => {
   return btoa(binary);
 };
 
+
 const base64DecodeUnicode = (str) => {
   const binary = atob(str);
   const bytes = new Uint8Array(binary.length);
@@ -139,6 +140,7 @@ class ErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
+const [loadingUser, setLoadingUser] = useState(true);
 
 const localizer = momentLocalizer(moment);
 
@@ -767,14 +769,22 @@ export default function PortalSection({ user, onLogout }) {
     }
   };
 
-  useEffect(() => {
-    if (!userData || !effectiveName) {
-      setError('Usuario no definido');
-      setLoading(false);
+ useEffect(() => {
+  const loadAssignments = async () => {
+    if (!userData) return;
+
+    // Mientras se resuelve CSV de usuarios
+    if (!effectiveName) {
+      setLoadingUser(true);
       return;
     }
-    fetchAssignments();
-  }, [userData, effectiveName]);
+
+    setLoadingUser(false);
+    await fetchAssignments();
+  };
+
+  loadAssignments();
+}, [userData, effectiveName]);
 
   // Roles del usuario (ahora desde Firebase)
   const userRoles = userData?.roles || [];
@@ -957,6 +967,13 @@ export default function PortalSection({ user, onLogout }) {
     }, 300),
     []
   );
+if (loadingUser || loading) {
+  return <div className="text-center p-4">Cargando usuario y asignaciones...</div>;
+}
+
+if (!effectiveName) {
+  return <div className="text-red-600 text-center p-4">Usuario no definido</div>;
+}
 
   const debouncedSetReport = useCallback(
     (link) => debounce((value) => {
