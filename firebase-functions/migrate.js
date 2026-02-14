@@ -1,7 +1,7 @@
 const fs = require('fs');
 const Papa = require('papaparse');
 const admin = require('firebase-admin');
-const { v4: uuidv4 } = require('uuid'); // Para generar UIDs
+const { v4: uuidv4 } = require('uuid');
 
 admin.initializeApp({
   credential: admin.credential.cert('./serviceAccountKey.json')
@@ -9,6 +9,7 @@ admin.initializeApp({
 
 const db = admin.firestore();
 
+// Funciones para parsear intereses y roles
 function parseInterests(interestsStr) {
   if (!interestsStr) return [];
   return interestsStr.split(/[;,]/).map(i => i.trim()).filter(i => i);
@@ -19,18 +20,39 @@ function parseRoles(rolesStr) {
   return rolesStr.split(/[;,]/).map(r => r.trim()).filter(r => r);
 }
 
+// Función para listar todos los usuarios de Auth
+async function listAllAuthUsers() {
+  let users = [];
+  let result = await admin.auth().listUsers(1000);
+  users = users.concat(result.users);
+
+  while (result.pageToken) {
+    result = await admin.auth().listUsers(1000, result.pageToken);
+    users = users.concat(result.users);
+  }
+
+  return users;
+}
+
 async function migrateUsers() {
   try {
+    // Leer CSV
     const csvData = fs.readFileSync('users.csv', 'utf8');
     const parsed = Papa.parse(csvData, { header: true, skipEmptyLines: true }).data;
     console.log(`Found ${parsed.length} users to migrate.`);
 
+    // Obtener todos los usuarios de Auth
+    const authUsers = await listAllAuthUsers();
+
     for (const row of parsed) {
-      const uid = uuidv4(); // Siempre genera un UID único, sin usar el correo
+      // Buscar usuario en Auth por email
+      const userRecord = authUsers.find(u => u.email === row['Correo']);
+      const uid = userRecord ? userRecord.uid : uuidv4(); // Usar UID real o generar uno
+
       const now = new Date().toISOString();
 
       const data = {
-        uid, // Ahora siempre UUID
+        uid,
         createdAt: now,
         updatedAt: now,
         displayName: row['Nombre'] || '',
@@ -49,7 +71,7 @@ async function migrateUsers() {
           en: parseInterests(row['Areas of interest'])
         },
         roles: parseRoles(row['Rol en la Revista'] || row['Role in the Journal']),
-        social: {} // Puedes agregar info si tienes links de redes
+        social: {}
       };
 
       await db.collection('users').doc(uid).set(data);

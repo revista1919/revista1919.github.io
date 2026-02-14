@@ -14,7 +14,9 @@ import {
   CameraIcon, 
   LinkIcon,
   AcademicCapIcon,
-  EnvelopeIcon
+  EnvelopeIcon,
+  XMarkIcon,
+  PlusIcon
 } from '@heroicons/react/24/outline';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, momentLocalizer } from 'react-big-calendar';

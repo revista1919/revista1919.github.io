@@ -6,7 +6,7 @@ const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/
 const { setGlobalOptions } = require("firebase-functions/v2");
 const { defineSecret } = require("firebase-functions/params");
 const admin = require("firebase-admin");
-const { GoogleGenAI } = require("@google/genai"); // ← NUEVA SDK (la obsoleta ya no existe)
+const { GoogleGenAI } = require("@google/genai");
 const { Octokit } = require("@octokit/rest");
 const { GoogleSpreadsheet } = require("google-spreadsheet");
 const FormData = require("form-data");
@@ -23,15 +23,20 @@ const GOOGLE_SERVICE_ACCOUNT_EMAIL = defineSecret("GOOGLE_SERVICE_ACCOUNT_EMAIL"
 const GOOGLE_PRIVATE_KEY = defineSecret("GOOGLE_PRIVATE_KEY");
 
 const DOMAIN = "https://www.revistacienciasestudiantes.com";
+const ALLOWED_ORIGINS = [
+  DOMAIN,
+  "https://revistacienciasestudiantes.com", // Sin www
+  "http://localhost:3000", // Para desarrollo local
+  "http://localhost:5000" // Para emuladores de Firebase
+];
 const USERS_SHEET_ID = "1FIP4yMTNYtRYWiPwovWGPiWxQZ8wssko8u0-NkZOido";
 const USERS_SHEET_NAME = "Hoja 1";
 
-/* ===================== TRADUCCIÓN DE ROLES (se hace sola) ===================== */
+/* ===================== TRADUCCIÓN DE ROLES ===================== */
 const ES_TO_EN = {
   'Fundador': 'Founder', 'Co-Fundador': 'Co-Founder', 'Director General': 'General Director',
   'Subdirector General': 'Deputy General Director', 'Editor en Jefe': 'Editor-in-Chief',
   'Editor de Sección': 'Section Editor', 'Revisor': 'Reviewer', 'Autor': 'Author',
-  // ... (el resto igual que tenías, lo completo aquí para que no falte nada)
   'Responsable de Desarrollo Web': 'Web Development Manager',
   'Encargado de Soporte Técnico': 'Technical Support Manager',
   'Encargado de Redes Sociales': 'Social Media Manager',
@@ -49,10 +54,49 @@ const ES_TO_EN = {
 
 /* ===================== UTILIDADES ===================== */
 function applyCors(req, res) {
-  res.set("Access-Control-Allow-Origin", DOMAIN);
-  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  const origin = req.headers.origin;
+  
+  // Verificar si el origen está permitido
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.set("Access-Control-Allow-Origin", origin);
+  } else {
+    // Por defecto, permitir solo el dominio principal
+    res.set("Access-Control-Allow-Origin", DOMAIN);
+  }
+  
+  res.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+  res.set("Access-Control-Allow-Credentials", "true");
   res.set("Access-Control-Max-Age", "3600");
+  
+  // Para preflight requests
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return true;
+  }
+  return false;
+}
+
+// Middleware para verificar origen
+function validateOrigin(req) {
+  const origin = req.headers.origin;
+  const referer = req.headers.referer;
+  
+  // Permitir si es del dominio permitido
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    return true;
+  }
+  
+  // Verificar referer como fallback
+  if (referer) {
+    for (const allowed of ALLOWED_ORIGINS) {
+      if (referer.startsWith(allowed)) {
+        return true;
+      }
+    }
+  }
+  
+  return false;
 }
 
 function base64DecodeUnicode(str) {
@@ -71,7 +115,7 @@ function generateSlug(text) {
              .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
-/* ===================== VALIDACIÓN DE ROL (sellada) ===================== */
+/* ===================== VALIDACIÓN DE ROL ===================== */
 async function validateRole(uid, requiredRole) {
   const user = await admin.auth().getUser(uid);
   const roles = user.customClaims?.roles || [];
@@ -81,9 +125,46 @@ async function validateRole(uid, requiredRole) {
 
 /* ===================== GITHUB HELPERS ===================== */
 function getOctokit() { return new Octokit({ auth: GH_TOKEN.value() }); }
-// uploadPDFToRepo y deletePDFFromRepo se quedan iguales (ya estaban perfectos)
 
-/* ===================== GEMINI (NUEVA SDK @google/genai) ===================== */
+async function uploadPDFToRepo(pdfBase64, fileName, commitMessage, folder = "Articles") {
+  const octokit = getOctokit();
+  const content = pdfBase64.replace(/^data:application\/pdf;base64,/, "");
+  
+  await octokit.repos.createOrUpdateFileContents({
+    owner: "revista1919",
+    repo: "revista1919.github.io",
+    path: `${folder}/${fileName}`,
+    message: commitMessage,
+    content: content,
+    branch: "main"
+  });
+}
+
+async function deletePDFFromRepo(fileName, commitMessage, folder = "Articles") {
+  try {
+    const octokit = getOctokit();
+    
+    const { data } = await octokit.repos.getContent({
+      owner: "revista1919",
+      repo: "revista1919.github.io",
+      path: `${folder}/${fileName}`,
+      branch: "main"
+    });
+    
+    await octokit.repos.deleteFile({
+      owner: "revista1919",
+      repo: "revista1919.github.io",
+      path: `${folder}/${fileName}`,
+      message: commitMessage,
+      sha: data.sha,
+      branch: "main"
+    });
+  } catch (error) {
+    if (error.status !== 404) throw error;
+  }
+}
+
+/* ===================== GEMINI ===================== */
 async function callGemini(prompt, temperature = 0) {
   const apiKey = GEMINI_API_KEY.value();
   if (!apiKey) throw new Error("GEMINI_API_KEY not configured");
@@ -102,8 +183,8 @@ async function callGemini(prompt, temperature = 0) {
   }
   return text;
 }
-/* ===================== PROMPTS (ADAPTADOS) ===================== */
 
+/* ===================== PROMPTS ===================== */
 async function translateText(text, source, target) {
   const prompt = `You are a faithful translator for an academic journal.
 
@@ -199,11 +280,17 @@ async function translateHtmlFragmentWithSplit(html, source, target) {
 
   return translated.join("");
 }
-/* ===================== IMGBB UPLOAD ===================== */
 
+/* ===================== IMGBB UPLOAD ===================== */
 exports.uploadImageToImgBB = onRequest({ secrets: [IMGBB_API_KEY] }, async (req, res) => {
-  applyCors(req, res);
-  if (req.method === "OPTIONS") return res.status(204).send("");
+  // Aplicar CORS
+  if (applyCors(req, res)) return;
+  
+  // Validar origen
+  if (!validateOrigin(req)) {
+    return res.status(403).json({ error: "Origin not allowed" });
+  }
+
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   const idToken = req.headers.authorization?.split("Bearer ")[1];
@@ -243,14 +330,15 @@ exports.uploadImageToImgBB = onRequest({ secrets: [IMGBB_API_KEY] }, async (req,
 });
 
 /* ===================== UPLOAD NEWS ===================== */
-
 exports.uploadNews = onRequest(
   { secrets: [GEMINI_API_KEY] },
   async (req, res) => {
-    applyCors(req, res);
-
-    if (req.method === "OPTIONS") {
-      return res.status(204).send("");
+    // Aplicar CORS
+    if (applyCors(req, res)) return;
+    
+    // Validar origen
+    if (!validateOrigin(req)) {
+      return res.status(403).json({ error: "Origin not allowed" });
     }
 
     if (req.method !== "POST")
@@ -335,13 +423,17 @@ exports.uploadNews = onRequest(
 );
 
 /* ===================== MANAGE ARTICLES ===================== */
-
 exports.manageArticles = onRequest(
   { secrets: [GH_TOKEN] },
   async (req, res) => {
-    applyCors(req, res);
+    // Aplicar CORS
+    if (applyCors(req, res)) return;
+    
+    // Validar origen
+    if (!validateOrigin(req)) {
+      return res.status(403).json({ error: "Origin not allowed" });
+    }
 
-    if (req.method === "OPTIONS") return res.status(204).send("");
     if (req.method !== "POST")
       return res.status(405).json({ error: "Method not allowed" });
 
@@ -443,14 +535,15 @@ exports.manageArticles = onRequest(
 );
 
 /* ===================== MANAGE VOLUMES ===================== */
-
 exports.manageVolumes = onRequest(
   { secrets: [GH_TOKEN] },
   async (req, res) => {
-    applyCors(req, res);
-
-    if (req.method === "OPTIONS") {
-      return res.status(204).send("");
+    // Aplicar CORS
+    if (applyCors(req, res)) return;
+    
+    // Validar origen
+    if (!validateOrigin(req)) {
+      return res.status(403).json({ error: "Origin not allowed" });
     }
 
     if (req.method !== "POST") {
@@ -590,14 +683,15 @@ exports.manageVolumes = onRequest(
 );
 
 /* ===================== TRIGGER REBUILD ===================== */
-
 exports.triggerRebuild = onRequest(
   { secrets: [GH_TOKEN] },
   async (req, res) => {
-    applyCors(req, res);
-
-    if (req.method === "OPTIONS") {
-      return res.status(204).send("");
+    // Aplicar CORS
+    if (applyCors(req, res)) return;
+    
+    // Validar origen
+    if (!validateOrigin(req)) {
+      return res.status(403).json({ error: "Origin not allowed" });
     }
 
     if (req.method !== "POST") {
@@ -631,8 +725,10 @@ exports.triggerRebuild = onRequest(
     });
 
     return res.json({ success: true });
-  },
+  }
 );
+
+/* ===================== UPDATE USER ROLE (CALLABLE FUNCTION) ===================== */
 exports.updateUserRole = onCall(async (request) => {
   const { auth } = request;
   if (!auth) throw new HttpsError('unauthenticated', 'Debes estar logueado');
@@ -642,7 +738,7 @@ exports.updateUserRole = onCall(async (request) => {
   const { targetUid, newRoles } = request.data;
   if (!targetUid || !Array.isArray(newRoles)) throw new HttpsError('invalid-argument', 'Datos inválidos');
 
-  // Sellado: log de quién cambió qué
+  // Log de quién cambió qué
   console.log(`Director ${auth.uid} cambió roles de ${targetUid} a:`, newRoles);
 
   await admin.auth().setCustomUserClaims(targetUid, { roles: newRoles });
@@ -654,7 +750,7 @@ exports.updateUserRole = onCall(async (request) => {
   return { success: true };
 });
 
-/* ===================== SYNC USERS TO SHEET (sin traducción automática) ===================== */
+/* ===================== SYNC USERS TO SHEET ===================== */
 async function syncUsersToSheet() {
   const snapshot = await admin.firestore().collection("users").get();
   const rows = [];
@@ -663,9 +759,9 @@ async function syncUsersToSheet() {
     const d = docSnap.data();
 
     const descEs = d.description?.es || '';
-    const descEn = d.description?.en || descEs;           // ← copia si falta
+    const descEn = d.description?.en || descEs;
     const interestsEs = d.interests?.es || '';
-    const interestsEn = d.interests?.en || interestsEs;   // ← copia si falta
+    const interestsEn = d.interests?.en || interestsEs;
 
     const rolesEs = d.roles.join(';');
     const rolesEn = d.roles.map(r => ES_TO_EN[r] || r).join(';');
