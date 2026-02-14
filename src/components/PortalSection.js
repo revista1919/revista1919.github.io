@@ -129,16 +129,26 @@ const sanitizeInput = (input) => {
 };
 
 class ErrorBoundary extends React.Component {
-  state = { hasError: false };
+  state = { hasError: false, error: null, errorInfo: null };
   static getDerivedStateFromError(error) {
     return { hasError: true };
   }
   componentDidCatch(error, errorInfo) {
-    console.error('ErrorBoundary caught:', error, errorInfo);
+    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    this.setState({ error, errorInfo });
   }
   render() {
     if (this.state.hasError) {
-      return <div className="text-red-600 text-center p-4">Ocurrió un error. Por favor recargue la página.</div>;
+      return (
+        <div className="text-red-600 text-center p-4">
+          Ocurrió un error. Por favor recargue la página.
+          <details className="mt-2 text-sm">
+            <summary>Detalles del error</summary>
+            <pre>{this.state.error?.message}</pre>
+            <pre>{this.state.errorInfo?.componentStack}</pre>
+          </details>
+        </div>
+      );
     }
     return this.props.children;
   }
@@ -416,7 +426,7 @@ const ProfileSection = ({ user }) => {
         }));
 
       } catch (error) {
-        console.error(error);
+        console.error('Error uploading image:', error);
         alert("Error subiendo imagen");
       } finally {
         setUploading(false);
@@ -434,25 +444,36 @@ const ProfileSection = ({ user }) => {
     if (!descEn) descEn = descEs;
     if (!descEs) descEs = descEn;
 
-    await updateDoc(doc(db, 'users', user.uid), {
-      firstName: form.firstName,
-      lastName: form.lastName,
-      displayName: `${form.firstName} ${form.lastName}`.trim(),
-      description: { es: descEs, en: descEn },
-      interests: { 
-        es: form.interestsEs, 
-        en: form.interestsEn 
-      },
-      imageUrl: form.imageUrl,
-      publicEmail: form.publicEmail,
-      institution: form.institution,
-      social: form.social,
-      orcid: form.orcid,
-      updatedAt: new Date().toISOString()
-    });
-
-    setSaving(false);
+    try {
+      await updateDoc(doc(db, 'users', user.uid), {
+        firstName: form.firstName,
+        lastName: form.lastName,
+        displayName: `${form.firstName} ${form.lastName}`.trim(),
+        description: { es: descEs, en: descEn },
+        interests: { 
+          es: form.interestsEs, 
+          en: form.interestsEn 
+        },
+        imageUrl: form.imageUrl,
+        publicEmail: form.publicEmail,
+        institution: form.institution,
+        social: form.social,
+        orcid: form.orcid,
+        updatedAt: new Date().toISOString()
+      });
+      console.log('Profile saved successfully for user:', user.uid);
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      alert('Error al guardar perfil');
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (!user) {
+    console.warn('ProfileSection rendered without user data');
+    return <div>Cargando perfil...</div>;
+  }
 
   return (
     <div className="max-w-6xl mx-auto space-y-12">
@@ -660,6 +681,7 @@ const UserManagement = ({ users: initialUsers }) => {
     
     try {
       await updateRole({ targetUid: uid, newRoles });
+      console.log(`Role added: ${role} to user ${uid}`);
     } catch (err) {
       console.error('Error al añadir rol:', err);
     }
@@ -673,6 +695,7 @@ const UserManagement = ({ users: initialUsers }) => {
     
     try {
       await updateRole({ targetUid: uid, newRoles });
+      console.log(`Role removed: ${role} from user ${uid}`);
     } catch (err) {
       console.error('Error al eliminar rol:', err);
     }
@@ -682,6 +705,11 @@ const UserManagement = ({ users: initialUsers }) => {
     (user.displayName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (user.email || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (!users || users.length === 0) {
+    console.warn('UserManagement: No users data available');
+    return <div className="text-center py-20 text-gray-400">Cargando usuarios...</div>;
+  }
 
   return (
     <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-10 max-w-6xl mx-auto">
@@ -795,7 +823,8 @@ const UserManagement = ({ users: initialUsers }) => {
 
 export default function PortalSection({ user, onLogout }) {
   const [assignments, setAssignments] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [assignmentsFetched, setAssignmentsFetched] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState({});
   const [report, setReport] = useState({});
   const [vote, setVote] = useState({});
@@ -989,8 +1018,10 @@ export default function PortalSection({ user, onLogout }) {
 
   useEffect(() => {
     if (!user) {
+      console.log('User logged out or undefined, resetting states');
       setAssignments([]);
-      setLoading(true);
+      setAssignmentsFetched(false);
+      setLoading(false);
       setFeedback({});
       setReport({});
       setVote({});
@@ -1019,49 +1050,79 @@ export default function PortalSection({ user, onLogout }) {
   // Snapshot de usuario en Firebase
   // Snapshot de usuario (mejorado para effectiveName)
   useEffect(() => {
-    if (!user?.uid) return;
+    if (!user?.uid) {
+      console.warn('No user UID available for snapshot');
+      return;
+    }
+    console.log('Setting up user snapshot for UID:', user.uid);
     const unsub = onSnapshot(doc(db, 'users', user.uid), (snap) => {
       if (snap.exists()) {
         const data = snap.data();
         const merged = { ...user, ...data };
         setUserData(merged);
-        setEffectiveName(
-          merged.displayName || 
-          `${merged.firstName || ''} ${merged.lastName || ''}`.trim() || 
-          user.displayName || 
-          ''
-        );
+        const name = merged.displayName || 
+                     `${merged.firstName || ''} ${merged.lastName || ''}`.trim() || 
+                     user.displayName || 
+                     '';
+        setEffectiveName(name);
+        console.log('User data updated from snapshot:', name);
       } else {
         // Fallback si el documento aún no existe (usuarios muy nuevos)
         setUserData(user);
-        setEffectiveName(user.displayName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || '');
+        const name = user.displayName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || '';
+        setEffectiveName(name);
+        console.log('User document not found, using fallback:', name);
       }
+    }, (err) => {
+      console.error('Error in user snapshot:', err);
     });
-    return unsub;
+    return () => {
+      console.log('Unsubscribing user snapshot');
+      unsub();
+    };
   }, [user?.uid]);
 
   
   // Snapshot de todos los usuarios (solo para Director)
   useEffect(() => {
     if (userData?.roles?.includes('Director General')) {
+      console.log('Setting up users snapshot for Director');
       const q = query(collection(db, 'users'));
       const unsub = onSnapshot(q, (snap) => {
-        setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        const userList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setUsers(userList);
+        console.log('Users updated from snapshot:', userList.length);
+      }, (err) => {
+        console.error('Error in users snapshot:', err);
       });
-      return unsub;
+      return () => {
+        console.log('Unsubscribing users snapshot');
+        unsub();
+      };
     }
   }, [userData?.roles]);
 
-    useEffect(() => {
+  useEffect(() => {
     if (!userData || !effectiveName) {
       setLoadingUser(true);
+      console.log('Loading user: waiting for userData or effectiveName');
       return;
     }
     setLoadingUser(false);
-    fetchAssignments();
+    console.log('User loaded, effectiveName:', effectiveName);
   }, [userData, effectiveName]);
 
+  // Fetch assignments only when relevant tabs are active
+  useEffect(() => {
+    if (['assignments', 'completed', 'calendar'].includes(activeTab) && !assignmentsFetched && !loading) {
+      console.log('Fetching assignments for tab:', activeTab);
+      fetchAssignments();
+      setAssignmentsFetched(true);
+    }
+  }, [activeTab, assignmentsFetched, loading]);
+
   const fetchRubrics = async () => {
+    console.log('Fetching rubrics');
     try {
       const [csv1Text, csv2Text, csv3Text] = await Promise.all([
         fetch(RUBRIC_CSV1, { cache: 'no-store' }).then(r => r.text()),
@@ -1109,10 +1170,11 @@ export default function PortalSection({ user, onLogout }) {
           };
         }
       });
+      console.log('Rubrics fetched successfully');
       return { scoresMap1, scoresMap2, scoresMap3 };
     } catch (err) {
       console.error('Error fetching rubrics:', err);
-      return { scoresMap1: {}, scoresMap2: {}, scoresMap3: {} };
+      throw err;
     }
   };
 
@@ -1126,6 +1188,7 @@ export default function PortalSection({ user, onLogout }) {
         if (!response.ok) throw new Error(`HTTP error ${response.status}`);
         return response.text();
       } catch (err) {
+        console.warn(`Fetch retry ${i + 1} failed for ${url}:`, err);
         if (i === retries - 1) throw err;
         await new Promise((resolve) => setTimeout(resolve, 1000 * (i + 1)));
       }
@@ -1133,18 +1196,22 @@ export default function PortalSection({ user, onLogout }) {
   };
 
   const fetchAssignments = async () => {
+    console.log('Starting fetchAssignments for user:', effectiveName);
+    setLoading(true);
+    setError('');
     try {
-      setLoading(true);
       const [csvText, rubrics] = await Promise.all([
         fetchWithRetry(ASSIGNMENTS_CSV),
         fetchRubrics()
       ]);
+      console.log('CSV fetched, length:', csvText.length);
       Papa.parse(csvText, {
         header: true,
         skipEmptyLines: true,
         delimiter: ',',
         transform: (value) => value.trim(),
         complete: ({ data }) => {
+          console.log('Papa parse complete, rows:', data.length);
           const normalizedEffectiveName = effectiveName.trim().toLowerCase();
           const authorRows = data.filter(row => {
             const autores = row['Autor'] || '';
@@ -1153,6 +1220,7 @@ export default function PortalSection({ user, onLogout }) {
               .map(a => a.trim().toLowerCase())
               .includes(normalizedEffectiveName);
           });
+          console.log('Author rows found:', authorRows.length);
           const authorAssignments = authorRows.map(row => ({
             id: row['Nombre Artículo'],
             'Nombre Artículo': row['Nombre Artículo'] || 'Sin título',
@@ -1168,6 +1236,7 @@ export default function PortalSection({ user, onLogout }) {
                      row['Revisor 2']?.trim() === effectiveName ||
                      row['Editor']?.trim() === effectiveName;
             });
+          console.log('Reviewer rows found:', reviewerRows.length);
           const reviewerAssignments = reviewerRows.map(row => {
             const role = row['Revisor 1']?.trim() === effectiveName ? 'Revisor 1'
                       : row['Revisor 2']?.trim() === effectiveName ? 'Revisor 2'
@@ -1202,6 +1271,7 @@ export default function PortalSection({ user, onLogout }) {
             return assignment;
           });
           const parsedAssignments = [...reviewerAssignments, ...authorAssignments];
+          console.log('Total assignments:', parsedAssignments.length);
           setAssignments(parsedAssignments);
           parsedAssignments.forEach(assignment => {
             if (assignment.role !== 'Autor') {
@@ -1222,10 +1292,8 @@ export default function PortalSection({ user, onLogout }) {
               resource: ass,
             }));
           setCalendarEvents(events);
+          console.log('Calendar events set:', events.length);
           setLoading(false);
-          if (parsedAssignments.length === 0 && !loading) {
-            setError(`No se encontraron asignaciones para '${effectiveName}'.`);
-          }
         },
         error: (err) => {
           console.error('Error al parsear CSV:', err);
@@ -1238,6 +1306,13 @@ export default function PortalSection({ user, onLogout }) {
       setError('Error al conectar al servidor');
       setLoading(false);
     }
+  };
+
+  const retryFetchAssignments = () => {
+    console.log('Retrying fetchAssignments');
+    setError('');
+    setLoading(true);
+    setAssignmentsFetched(false); // Allow refetch
   };
 
   const handleVote = (link, value) => {
@@ -1267,12 +1342,14 @@ export default function PortalSection({ user, onLogout }) {
   };
 
   const handleSubmitRubric = async (link, role) => {
+    console.log('Submitting rubric for link:', link, 'role:', role);
     const articleName = assignments.find(a => a['Link Artículo'] === link)['Nombre Artículo'];
     const rubric = rubricScores[link] || {};
     const requiredKeys = getRequiredKeys(role);
     const missingKeys = requiredKeys.filter(key => rubric[key] === undefined || rubric[key] === null || isNaN(rubric[key]));
     if (missingKeys.length > 0) {
       setRubricStatus((prev) => ({ ...prev, [link]: `Error: Rúbrica incompleta. Faltante o inválido: ${missingKeys.join(', ')}` }));
+      console.warn('Rubric incomplete:', missingKeys);
       return;
     }
     const rubricData = {
@@ -1293,9 +1370,10 @@ export default function PortalSection({ user, onLogout }) {
             body: JSON.stringify(rubricData),
           });
           success = true;
+          console.log('Rubric submitted successfully on attempt', attempt);
           break;
         } catch (err) {
-          console.warn(`Intento ${attempt} fallido para rúbrica:`, err);
+          console.warn(`Rubric submit attempt ${attempt} failed:`, err);
           if (attempt < 3) {
             await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
           }
@@ -1314,6 +1392,7 @@ export default function PortalSection({ user, onLogout }) {
   };
 
   const handleSubmit = async (link, role, feedbackText, reportText, voteValue) => {
+    console.log('Submitting data for link:', link, 'role:', role);
     const encodedFeedback = base64EncodeUnicode(sanitizeInput(feedbackText || ''));
     const encodedReport = base64EncodeUnicode(sanitizeInput(reportText || ''));
     const mainData = {
@@ -1336,9 +1415,10 @@ export default function PortalSection({ user, onLogout }) {
             body: JSON.stringify(mainData),
           });
           mainSuccess = true;
+          console.log('Data submitted successfully on attempt', attempt);
           break;
         } catch (err) {
-          console.warn(`Intento ${attempt} fallido para datos principales:`, err);
+          console.warn(`Data submit attempt ${attempt} failed:`, err);
           if (attempt < 3) {
             await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
           }
@@ -1453,7 +1533,8 @@ export default function PortalSection({ user, onLogout }) {
     }));
   };
 
-  if (loadingUser || loading) {
+  if (loadingUser) {
+    console.log('Showing loading spinner: loadingUser true');
     return (
       <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
         <div className="flex flex-col items-center">
@@ -1464,11 +1545,25 @@ export default function PortalSection({ user, onLogout }) {
     );
   }
 
+  if (loading && ['assignments', 'completed', 'calendar'].includes(activeTab)) {
+    console.log('Showing loading spinner: loading true for assignments tab');
+    return (
+      <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div className="w-16 h-16 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin" />
+          <p className="mt-6 text-gray-500 font-medium tracking-wider">CARGANDO ASIGNACIONES...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!effectiveName) {
+    console.error('No effectiveName, rendering error');
     return <div className="text-red-600 text-center p-4">Usuario no definido</div>;
   }
 
   if (!userData) {
+    console.warn('No userData, rendering loading');
     return (
       <motion.div
         initial={{ opacity: 0 }}
@@ -1564,6 +1659,12 @@ export default function PortalSection({ user, onLogout }) {
                   className="bg-red-100 text-red-700 p-6 rounded-2xl mb-8 font-sans text-sm break-words"
                 >
                   {error}
+                  <button 
+                    onClick={retryFetchAssignments}
+                    className="ml-4 text-blue-600 underline"
+                  >
+                    Reintentar
+                  </button>
                 </motion.div>
               )}
               {loading ? (
