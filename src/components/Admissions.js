@@ -3,12 +3,42 @@ import Papa from 'papaparse';
 import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '../firebase';
-import { useAuth } from '../context/AuthContext';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 
 const APPLICATIONS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSNuBETm7TapO6dakKBbkxlYTZctAGGEp4SnOyGowCYXfD_lAXHta8_LX5EPjy0xXw5fpKp3MPcRduK/pub?gid=2123840957&single=true&output=csv';
+useEffect(() => {
+  const auth = getAuth();
+
+  const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      setHasAccess(false);
+      setCheckingAuth(false);
+      return;
+    }
+
+    try {
+      const tokenResult = await user.getIdTokenResult(true);
+      const roles = tokenResult.claims.roles || [];
+
+      // 🔒 AQUÍ defines quién puede entrar
+      if (roles.includes('Director General')) {
+        setFirebaseUser(user);
+        setHasAccess(true);
+      } else {
+        setHasAccess(false);
+      }
+    } catch (error) {
+      console.error(error);
+      setHasAccess(false);
+    } finally {
+      setCheckingAuth(false);
+    }
+  });
+
+  return () => unsubscribe();
+}, []);
 
 export default function Admissions() {
-  const { user } = useAuth();
   const [applications, setApplications] = useState([]);
   const [teamMembers, setTeamMembers] = useState([]);
   const [teamEmails, setTeamEmails] = useState(new Set());
@@ -89,6 +119,10 @@ export default function Admissions() {
       const functions = getFunctions();
       const updateRoleCF = httpsCallable(functions, 'updateUserRole');
       await updateRoleCF({ targetUid: editingMember.uid, newRoles: editingMember.role.split(';').map(r => r.trim()) });
+      if (firebaseUser && firebaseUser.uid === editingMember.uid) {
+  await firebaseUser.getIdToken(true);
+}
+
       setStatus('✅ Miembro actualizado');
     } catch (err) {
       setStatus(`❌ Error: ${err.message}`);
@@ -136,6 +170,13 @@ export default function Admissions() {
       }),
     [teamMembers]
   );
+if (checkingAuth) {
+  return <div className="container">Verificando acceso...</div>;
+}
+
+if (!hasAccess) {
+  return <div className="container">No autorizado.</div>;
+}
 
   return (
     <div className="container">
