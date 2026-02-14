@@ -15,6 +15,7 @@ import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { db, onSnapshot, query, collection, doc, updateDoc, uploadImageToImgBB, translateTextCF, updateRole } from '../firebase';
+import { criteria } from './rubricCriteria';
 
 
 const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
@@ -295,6 +296,7 @@ const ProfileSection = ({ user }) => {
     interestsEn: user.interests?.en || '',
     imageUrl: user.imageUrl || '',
     publicEmail: user.publicEmail || '',
+    institution: user.institution || '',
     social: user.social || { linkedin: '', twitter: '', instagram: '', website: '' }
   });
 
@@ -361,6 +363,7 @@ const ProfileSection = ({ user }) => {
       interests: { es: interestsEs, en: interestsEn },
       imageUrl: form.imageUrl,
       publicEmail: form.publicEmail,
+      institution: form.institution,
       social: form.social,
       updatedAt: new Date().toISOString()
     });
@@ -444,6 +447,10 @@ const ProfileSection = ({ user }) => {
         <label className="block text-sm font-medium text-gray-700 mb-2">Areas of Interest in English (comma separated)</label>
         <input name="interestsEn" value={form.interestsEn} onChange={handleChange} className="w-full p-4 border rounded-2xl" />
       </div>
+      <div className="mt-6">
+        <label className="block text-sm font-medium text-gray-700 mb-2">Institución / Afiliación</label>
+        <input name="institution" value={form.institution} onChange={handleChange} className="w-full p-4 border rounded-2xl" />
+      </div>
       <input name="publicEmail" value={form.publicEmail} onChange={handleChange} placeholder="Correo público (opcional)" className="w-full p-4 border rounded-2xl mt-6" />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
         <input name="linkedin" value={form.social.linkedin} onChange={handleSocialChange} placeholder="LinkedIn" className="p-4 border rounded-2xl focus:border-blue-600" />
@@ -464,20 +471,40 @@ const UserManagement = ({ users }) => {
   };
 
   return (
-    <div className="space-y-4">
-      {users.map(user => (
-        <div key={user.id} className="bg-white p-6 rounded-2xl flex items-center justify-between border border-gray-100">
-          <div>
-            <p className="font-bold">{user.displayName}</p>
-            <p className="text-xs text-gray-500">{user.email}</p>
-          </div>
-          <select multiple value={user.roles} onChange={(e) => changeRole(user.id, Array.from(e.target.selectedOptions, option => option.value))} className="p-2 border rounded">
-            {ALL_ROLES.map(role => (
-              <option key={role} value={role}>{role}</option>
+    <div className="bg-white rounded-2xl shadow-xl p-10 max-w-6xl mx-auto">
+      <h3 className="text-2xl font-serif font-bold text-gray-900 mb-8">Gestión de Usuarios</h3>
+      <p className="text-gray-600 mb-6">Administra roles de usuarios de manera eficiente. Selecciona múltiples roles manteniendo Ctrl/Cmd.</p>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Roles</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {users.map(user => (
+              <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{user.displayName}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-gray-500">{user.email}</td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <select 
+                    multiple 
+                    value={user.roles} 
+                    onChange={(e) => changeRole(user.id, Array.from(e.target.selectedOptions, option => option.value))} 
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    {ALL_ROLES.map(role => (
+                      <option key={role} value={role}>{role}</option>
+                    ))}
+                  </select>
+                </td>
+              </tr>
             ))}
-          </select>
-        </div>
-      ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
@@ -507,14 +534,178 @@ export default function PortalSection({ user, onLogout }) {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const feedbackQuillRefs = useRef({});
   const reportQuillRefs = useRef({});
-const [loadingUser, setLoadingUser] = useState(true);
+  const [loadingUser, setLoadingUser] = useState(true);
   // NUEVO: Datos en tiempo real desde Firebase
   const [userData, setUserData] = useState(user);
   const [users, setUsers] = useState([]);
 
+  const debouncedSetFeedback = useCallback(
+    (link) => debounce((value) => {
+      setFeedback((prev) => ({ ...prev, [link]: value }));
+    }, 300),
+    []
+  );
+
+  const debouncedSetReport = useCallback(
+    (link) => debounce((value) => {
+      setReport((prev) => ({ ...prev, [link]: value }));
+    }, 300),
+    []
+  );
+
+  const modules = useMemo(() => ({
+    toolbar: {
+      container: [
+        ['bold', 'italic', 'underline', 'strike', 'blockquote'],
+        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+        ['link', 'image', 'custom-image'],
+        [{ 'align': ['', 'center', 'right', 'justify'] }],
+        [{ 'size': ['small', false, 'large'] }],
+        ['clean']
+      ],
+      handlers: {
+        'custom-image': (value, link) => {
+          setIsEditingImage((prev) => ({ ...prev, [link]: false }));
+          setImageData((prev) => ({ ...prev, [link]: { url: '', width: '', height: '', align: 'left' } }));
+          setShowImageModal((prev) => ({ ...prev, [link]: true }));
+        }
+      }
+    },
+    imageResize: {
+      parchment: ReactQuill.Quill.import('parchment'),
+      modules: ['Resize', 'DisplaySize'],
+      handleStyles: {
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        border: 'none',
+        color: 'white',
+      },
+      displayStyles: {
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        border: 'none',
+        color: 'white',
+      },
+    },
+    keyboard: {
+      bindings: {
+        deleteImage: {
+          key: ['Delete', 'Backspace'],
+          handler: function(range) {
+            if (!range) return true;
+            const editor = this.quill;
+            const imageResize = editor.getModule('imageResize');
+            let isImage = false;
+            let deleteIndex = range.index;
+            let deleteLength = 1;
+            if (range.length === 0) {
+              const [leaf] = editor.getLeaf(range.index);
+              if (leaf && leaf.domNode && leaf.domNode.tagName === 'IMG') {
+                isImage = true;
+              } else {
+                if (this.key === 'Backspace') {
+                  const [prevLeaf] = editor.getLeaf(range.index - 1);
+                  if (prevLeaf && prevLeaf.domNode && prevLeaf.domNode.tagName === 'IMG') {
+                    isImage = true;
+                    deleteIndex = range.index - 1;
+                  }
+                } else if (this.key === 'Delete') {
+                  const [nextLeaf] = editor.getLeaf(range.index);
+                  if (nextLeaf && nextLeaf.domNode && nextLeaf.domNode.tagName === 'IMG') {
+                    isImage = true;
+                    deleteIndex = range.index;
+                  }
+                }
+              }
+            } else if (range.length === 1) {
+              const [leaf] = editor.getLeaf(range.index);
+              if (leaf && leaf.domNode && leaf.domNode.tagName === 'IMG') {
+                isImage = true;
+              }
+            }
+            if (isImage) {
+              try {
+                if (imageResize) imageResize.hide();
+                editor.deleteText(deleteIndex, deleteLength, ReactQuill.Quill.sources.USER);
+                return false;
+              } catch (err) {
+                console.error('Error al eliminar imagen:', err);
+                return false;
+              }
+            }
+            return true;
+          },
+        },
+        enterAfterImage: {
+          key: 'Enter',
+          handler: function(range) {
+            if (!range) return true;
+            const editor = this.quill;
+            const [leaf] = editor.getLeaf(range.index);
+            if (leaf && leaf.domNode && leaf.domNode.tagName === 'IMG') {
+              try {
+                editor.insertText(range.index + 1, '\n', ReactQuill.Quill.sources.USER);
+                editor.setSelection(range.index + 2, ReactQuill.Quill.sources.SILENT);
+                return false;
+              } catch (err) {
+                console.error('Error al insertar nueva línea después de imagen:', err);
+                return false;
+              }
+            }
+            return true;
+          },
+        },
+      },
+    },
+  }), []);
+
+  const formats = useMemo(() => [
+    'bold', 'italic', 'underline', 'strike', 'blockquote',
+    'list', 'bullet',
+    'link', 'image',
+    'align',
+    'size'
+  ], []);
+
+  const userRoles = userData?.roles || [];
+  const isAuthor = assignments.some(a => a.role === 'Autor');
+  const isChief = userRoles.includes('Editor en Jefe');
+  const isDirector = userRoles.includes('Director General');
+  const isRrss = userRoles.includes('Encargado de Redes Sociales');
+  const isWebDev = userRoles.includes('Responsable de Desarrollo Web');
+  const canSeeCalendar = isChief || isDirector || isRrss || isWebDev || assignments.some(a => a.role !== 'Autor');
+
+  const pendingAssignments = useMemo(() =>
+    isAuthor
+      ? assignments.filter(a => !a.feedbackEditor || !['Aceptado', 'Rechazado'].includes(a.Estado))
+      : assignments.filter(a => !a.isCompleted),
+    [assignments, isAuthor]
+  );
+
+  const completedAssignments = useMemo(() =>
+    isAuthor
+      ? assignments.filter(a => a.feedbackEditor && ['Aceptado', 'Rechazado'].includes(a.Estado))
+      : assignments.filter(a => a.isCompleted),
+    [assignments, isAuthor]
+  );
+
+  const tabs = [
+    { id: 'profile', label: 'MI PERFIL' },
+    { id: 'assignments', label: 'MIS ASIGNACIONES' },
+    { id: 'completed', label: 'COMPLETADAS' },
+    { id: 'calendar', label: 'CALENDARIO ACADÉMICO', hidden: !canSeeCalendar },
+    { id: 'director', label: 'PANEL DIRECTIVO', hidden: !isDirector },
+    { id: 'chief', label: 'PANEL EDITOR JEFE', hidden: !isChief },
+    { id: 'tasks', label: 'MIS TAREAS', hidden: !isRrss && !isWebDev },
+    { id: 'news', label: 'PUBLICAR NOTICIAS', hidden: !isDirector },
+    { id: 'admissions', label: 'ADMISIONES', hidden: !isDirector },
+    { id: 'usermanagement', label: 'GESTIÓN DE USUARIOS', hidden: !isDirector }
+  ];
+
+  const currentAssignments = activeTab === 'assignments' ? pendingAssignments : completedAssignments;
+
   useEffect(() => {
     if (!user) {
       setAssignments([]);
+      setLoading(true);
       setFeedback({});
       setReport({});
       setVote({});
@@ -589,6 +780,23 @@ const [loadingUser, setLoadingUser] = useState(true);
     };
     fetchUserMapping();
   }, [userData]);
+
+  useEffect(() => {
+    const loadAssignments = async () => {
+      if (!userData) return;
+
+      // Mientras se resuelve CSV de usuarios
+      if (!effectiveName) {
+        setLoadingUser(true);
+        return;
+      }
+
+      setLoadingUser(false);
+      await fetchAssignments();
+    };
+
+    loadAssignments();
+  }, [userData, effectiveName]);
 
   const fetchRubrics = async () => {
     try {
@@ -769,46 +977,6 @@ const [loadingUser, setLoadingUser] = useState(true);
     }
   };
 
- useEffect(() => {
-  const loadAssignments = async () => {
-    if (!userData) return;
-
-    // Mientras se resuelve CSV de usuarios
-    if (!effectiveName) {
-      setLoadingUser(true);
-      return;
-    }
-
-    setLoadingUser(false);
-    await fetchAssignments();
-  };
-
-  loadAssignments();
-}, [userData, effectiveName]);
-
-  // Roles del usuario (ahora desde Firebase)
-  const userRoles = userData?.roles || [];
-  const isAuthor = assignments.some(a => a.role === 'Autor');
-  const isChief = userRoles.includes('Editor en Jefe');
-  const isDirector = userRoles.includes('Director General');
-  const isRrss = userRoles.includes('Encargado de Redes Sociales');
-  const isWebDev = userRoles.includes('Responsable de Desarrollo Web');
-  const canSeeCalendar = isChief || isDirector || isRrss || isWebDev || assignments.some(a => a.role !== 'Autor');
-
-  const pendingAssignments = useMemo(() =>
-    isAuthor
-      ? assignments.filter(a => !a.feedbackEditor || !['Aceptado', 'Rechazado'].includes(a.Estado))
-      : assignments.filter(a => !a.isCompleted),
-    [assignments, isAuthor]
-  );
-
-  const completedAssignments = useMemo(() =>
-    isAuthor
-      ? assignments.filter(a => a.feedbackEditor && ['Aceptado', 'Rechazado'].includes(a.Estado))
-      : assignments.filter(a => a.isCompleted),
-    [assignments, isAuthor]
-  );
-
   const handleVote = (link, value) => {
     setVote((prev) => ({ ...prev, [link]: value }));
   };
@@ -961,139 +1129,6 @@ const [loadingUser, setLoadingUser] = useState(true);
     );
   };
 
-  const debouncedSetFeedback = useCallback(
-    (link) => debounce((value) => {
-      setFeedback((prev) => ({ ...prev, [link]: value }));
-    }, 300),
-    []
-  );
-if (loadingUser || loading) {
-  return <div className="text-center p-4">Cargando usuario y asignaciones...</div>;
-}
-
-if (!effectiveName) {
-  return <div className="text-red-600 text-center p-4">Usuario no definido</div>;
-}
-
-  const debouncedSetReport = useCallback(
-    (link) => debounce((value) => {
-      setReport((prev) => ({ ...prev, [link]: value }));
-    }, 300),
-    []
-  );
-
-  const modules = useMemo(() => ({
-    toolbar: {
-      container: [
-        ['bold', 'italic', 'underline', 'strike', 'blockquote'],
-        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-        ['link', 'image', 'custom-image'],
-        [{ 'align': ['', 'center', 'right', 'justify'] }],
-        [{ 'size': ['small', false, 'large'] }],
-        ['clean']
-      ],
-      handlers: {
-        'custom-image': (value, link) => {
-          setIsEditingImage((prev) => ({ ...prev, [link]: false }));
-          setImageData((prev) => ({ ...prev, [link]: { url: '', width: '', height: '', align: 'left' } }));
-          setShowImageModal((prev) => ({ ...prev, [link]: true }));
-        }
-      }
-    },
-    imageResize: {
-      parchment: ReactQuill.Quill.import('parchment'),
-      modules: ['Resize', 'DisplaySize'],
-      handleStyles: {
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        border: 'none',
-        color: 'white',
-      },
-      displayStyles: {
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        border: 'none',
-        color: 'white',
-      },
-    },
-    keyboard: {
-      bindings: {
-        deleteImage: {
-          key: ['Delete', 'Backspace'],
-          handler: function(range) {
-            if (!range) return true;
-            const editor = this.quill;
-            const imageResize = editor.getModule('imageResize');
-            let isImage = false;
-            let deleteIndex = range.index;
-            let deleteLength = 1;
-            if (range.length === 0) {
-              const [leaf] = editor.getLeaf(range.index);
-              if (leaf && leaf.domNode && leaf.domNode.tagName === 'IMG') {
-                isImage = true;
-              } else {
-                if (this.key === 'Backspace') {
-                  const [prevLeaf] = editor.getLeaf(range.index - 1);
-                  if (prevLeaf && prevLeaf.domNode && prevLeaf.domNode.tagName === 'IMG') {
-                    isImage = true;
-                    deleteIndex = range.index - 1;
-                  }
-                } else if (this.key === 'Delete') {
-                  const [nextLeaf] = editor.getLeaf(range.index);
-                  if (nextLeaf && nextLeaf.domNode && nextLeaf.domNode.tagName === 'IMG') {
-                    isImage = true;
-                    deleteIndex = range.index;
-                  }
-                }
-              }
-            } else if (range.length === 1) {
-              const [leaf] = editor.getLeaf(range.index);
-              if (leaf && leaf.domNode && leaf.domNode.tagName === 'IMG') {
-                isImage = true;
-              }
-            }
-            if (isImage) {
-              try {
-                if (imageResize) imageResize.hide();
-                editor.deleteText(deleteIndex, deleteLength, ReactQuill.Quill.sources.USER);
-                return false;
-              } catch (err) {
-                console.error('Error al eliminar imagen:', err);
-                return false;
-              }
-            }
-            return true;
-          },
-        },
-        enterAfterImage: {
-          key: 'Enter',
-          handler: function(range) {
-            if (!range) return true;
-            const editor = this.quill;
-            const [leaf] = editor.getLeaf(range.index);
-            if (leaf && leaf.domNode && leaf.domNode.tagName === 'IMG') {
-              try {
-                editor.insertText(range.index + 1, '\n', ReactQuill.Quill.sources.USER);
-                editor.setSelection(range.index + 2, ReactQuill.Quill.sources.SILENT);
-                return false;
-              } catch (err) {
-                console.error('Error al insertar nueva línea después de imagen:', err);
-                return false;
-              }
-            }
-            return true;
-          },
-        },
-      },
-    },
-  }), []);
-
-  const formats = useMemo(() => [
-    'bold', 'italic', 'underline', 'strike', 'blockquote',
-    'list', 'bullet',
-    'link', 'image',
-    'align',
-    'size'
-  ], []);
-
   const decodeBody = (encoded) => {
     if (!encoded) return <p className="text-gray-600 font-sans text-sm break-words">No hay contenido disponible.</p>;
     try {
@@ -1155,20 +1190,13 @@ if (!effectiveName) {
     }));
   };
 
-  const tabs = [
-    { id: 'profile', label: 'MI PERFIL' },
-    { id: 'assignments', label: 'MIS ASIGNACIONES' },
-    { id: 'completed', label: 'COMPLETADAS' },
-    { id: 'calendar', label: 'CALENDARIO ACADÉMICO', hidden: !canSeeCalendar },
-    { id: 'director', label: 'PANEL DIRECTIVO', hidden: !isDirector },
-    { id: 'chief', label: 'PANEL EDITOR JEFE', hidden: !isChief },
-    { id: 'tasks', label: 'MIS TAREAS', hidden: !isRrss && !isWebDev },
-    { id: 'news', label: 'PUBLICAR NOTICIAS', hidden: !isDirector },
-    { id: 'admissions', label: 'ADMISIONES', hidden: !isDirector },
-    { id: 'usermanagement', label: 'GESTIÓN DE USUARIOS', hidden: !isDirector }
-  ];
+  if (loadingUser || loading) {
+    return <div className="text-center p-4">Cargando usuario y asignaciones...</div>;
+  }
 
-  const currentAssignments = activeTab === 'assignments' ? pendingAssignments : completedAssignments;
+  if (!effectiveName) {
+    return <div className="text-red-600 text-center p-4">Usuario no definido</div>;
+  }
 
   if (!userData) {
     return (
