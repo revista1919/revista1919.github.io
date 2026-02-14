@@ -5,40 +5,15 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '../firebase';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 
-const APPLICATIONS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSNuBETm7TapO6dakKBbkxlYTZctAGGEp4SnOyGowCYXfD_lAXHta8_LX5EPjy0xXw5fpKp3MPcRduK/pub?gid=2123840957&single=true&output=csv';
-useEffect(() => {
-  const auth = getAuth();
-
-  const unsubscribe = onAuthStateChanged(auth, async (user) => {
-    if (!user) {
-      setHasAccess(false);
-      setCheckingAuth(false);
-      return;
-    }
-
-    try {
-      const tokenResult = await user.getIdTokenResult(true);
-      const roles = tokenResult.claims.roles || [];
-
-      // 🔒 AQUÍ defines quién puede entrar
-      if (roles.includes('Director General')) {
-        setFirebaseUser(user);
-        setHasAccess(true);
-      } else {
-        setHasAccess(false);
-      }
-    } catch (error) {
-      console.error(error);
-      setHasAccess(false);
-    } finally {
-      setCheckingAuth(false);
-    }
-  });
-
-  return () => unsubscribe();
-}, []);
+const APPLICATIONS_CSV_URL =
+  'https://docs.google.com/spreadsheets/d/e/2PACX-1vSNuBETm7TapO6dakKBbkxlYTZctAGGEp4SnOyGowCYXfD_lAXHta8_LX5EPjy0xXw5fpKp3MPcRduK/pub?gid=2123840957&single=true&output=csv';
 
 export default function Admissions() {
+
+  const [firebaseUser, setFirebaseUser] = useState(null);
+  const [hasAccess, setHasAccess] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
   const [applications, setApplications] = useState([]);
   const [teamMembers, setTeamMembers] = useState([]);
   const [teamEmails, setTeamEmails] = useState(new Set());
@@ -49,6 +24,39 @@ export default function Admissions() {
   const [activeTab, setActiveTab] = useState('pending');
   const [editingMember, setEditingMember] = useState(null);
   const [showModal, setShowModal] = useState(false);
+
+  // 🔒 CONTROL DE ACCESO
+  useEffect(() => {
+    const auth = getAuth();
+
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        setHasAccess(false);
+        setCheckingAuth(false);
+        return;
+      }
+
+      try {
+        const tokenResult = await user.getIdTokenResult(true);
+        const roles = tokenResult.claims.roles || [];
+
+        if (roles.includes('Director General')) {
+          setFirebaseUser(user);
+          setHasAccess(true);
+        } else {
+          setHasAccess(false);
+        }
+      } catch (error) {
+        console.error(error);
+        setHasAccess(false);
+      } finally {
+        setCheckingAuth(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
 
   useEffect(() => {
     fetchApplications();
