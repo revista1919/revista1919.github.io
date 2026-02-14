@@ -1,5 +1,4 @@
 import { initializeApp } from 'firebase/app';
-import { getAnalytics, isSupported } from 'firebase/analytics';
 import {
   getAuth,
   createUserWithEmailAndPassword,
@@ -15,9 +14,22 @@ import {
   signInWithRedirect,
   getRedirectResult
 } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  onSnapshot,
+  query,
+  collection
+} from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
-// Configuración de Firebase
+/* ==============================
+   CONFIG
+============================== */
+
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY || "AIzaSyArr3LE_hQLZG0L5m9JND2OWVL8elnSyWk",
   authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || "usuarios-rnce.firebaseapp.com",
@@ -28,36 +40,74 @@ const firebaseConfig = {
   measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID || "G-K90MKB7BDP"
 };
 
-// Inicializar Firebase
+/* ==============================
+   INIT
+============================== */
+
 const app = initializeApp(firebaseConfig);
-
-let analytics = null;
-isSupported().then((supported) => {
-  if (supported) {
-    analytics = getAnalytics(app);
-    console.log('🔍 Analytics inicializado');
-  } else {
-    console.log('🔍 Analytics no soportado en este entorno');
-  }
-}).catch((err) => {
-  console.error('Error inicializando Analytics:', err);
-});
-
-// Inicializar Auth
 export const auth = getAuth(app);
-
-// Debug: Verificar auth
-if (process.env.NODE_ENV === 'development') {
-  console.log('🔥 Auth inicializado:', !!auth);
-  console.log('🔐 Google Provider inicializado:', !!googleProvider);
-}
-
 export const db = getFirestore(app);
+export const functions = getFunctions(app);
 
-// Inicializar Google Provider
+/* ==============================
+   GOOGLE PROVIDER
+============================== */
+
 export const googleProvider = new GoogleAuthProvider();
 
-// Exportar funciones de Auth
+/* ==============================
+   CLOUD FUNCTIONS (CALLABLE)
+============================== */
+
+export const translateTextCF = httpsCallable(functions, 'translateText');
+export const updateRole = httpsCallable(functions, 'updateRole');
+
+/* ==============================
+   🔥 HTTP FUNCTION – IMGBB UPLOAD
+============================== */
+
+const IMGBB_FUNCTION_URL =
+  "https://uploadimagetoimgbb-ggqsq2kkua-uc.a.run.app";
+
+export const uploadImageToImgBB = async ({ base64, fileName }) => {
+  const user = auth.currentUser;
+
+  if (!user) {
+    throw new Error("Usuario no autenticado");
+  }
+
+  const token = await user.getIdToken();
+
+  // Limpiar prefijo si viene como data:image/...;base64,xxxx
+  const cleanBase64 = base64.includes("base64,")
+    ? base64.split("base64,")[1]
+    : base64;
+
+  const response = await fetch(IMGBB_FUNCTION_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      imageBase64: cleanBase64,
+      name: fileName
+    })
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Error subiendo imagen");
+  }
+
+  return data;
+};
+
+/* ==============================
+   EXPORTS
+============================== */
+
 export {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -67,10 +117,16 @@ export {
   updateEmail,
   updatePassword,
   fetchSignInMethodsForEmail,
-  GoogleAuthProvider,
   signInWithPopup,
   signInWithRedirect,
-  getRedirectResult
+  getRedirectResult,
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  onSnapshot,
+  query,
+  collection
 };
 
 export default app;
