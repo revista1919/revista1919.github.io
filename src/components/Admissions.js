@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Papa from 'papaparse';
+import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { db } from '../firebase';
+import { useAuth } from '../context/AuthContext';
 
 const APPLICATIONS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSNuBETm7TapO6dakKBbkxlYTZctAGGEp4SnOyGowCYXfD_lAXHta8_LX5EPjy0xXw5fpKp3MPcRduK/pub?gid=2123840957&single=true&output=csv';
-const TEAM_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
-const TEAM_GAS_URL = process.env.REACT_APP_TEAM_SCRIPT_URL || '';
-const APPLICATIONS_GAS_URL = process.env.REACT_APP_APPLICATIONS_SCRIPT_URL || '';
 
 export default function Admissions() {
+  const { user } = useAuth();
   const [applications, setApplications] = useState([]);
   const [teamMembers, setTeamMembers] = useState([]);
   const [teamEmails, setTeamEmails] = useState(new Set());
@@ -14,36 +16,23 @@ export default function Admissions() {
   const [expandedApp, setExpandedApp] = useState(null);
   const [status, setStatus] = useState('');
   const [minimized, setMinimized] = useState(true);
-  const [sending, setSending] = useState(false);
   const [activeTab, setActiveTab] = useState('pending');
+  const [editingMember, setEditingMember] = useState(null);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     fetchApplications();
-    fetchTeam();
   }, []);
 
-  const fetchTeam = async () => {
-    try {
-      const response = await fetch(TEAM_CSV_URL, { cache: 'no-store' });
-      if (!response.ok) throw new Error('Failed to fetch team CSV');
-      const csvText = await response.text();
-      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
-      const validMembers = parsed.filter(row => row.Correo?.trim() || row['Correo electrónico']?.trim());
-      setTeamMembers(validMembers);
-      
-      // DEBUG: Log para ver headers y datos reales
-      console.log('Headers detectados:', Object.keys(validMembers[0] || {}));
-      console.log('Primeros miembros (con roles):', validMembers.slice(0, 3).map(m => ({ 
-        nombre: m.Nombre, 
-        rol: m['Rol en la Revista'] || m.Rol || 'Sin rol' 
-      })));
-      
-      const emails = new Set(validMembers.map(row => (row.Correo || row['Correo electrónico'])?.trim().toLowerCase()));
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'users'), (snap) => {
+      const members = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setTeamMembers(members);
+      const emails = new Set(members.map(m => m.email?.trim().toLowerCase()));
       setTeamEmails(emails);
-    } catch (err) {
-      setStatus(`Error fetching team: ${err.message}`);
-    }
-  };
+    });
+    return unsub;
+  }, []);
 
   const fetchApplications = async () => {
     try {
@@ -69,298 +58,43 @@ export default function Admissions() {
     setExpandedApp(expandedApp === id ? null : id);
   };
 
-  const sendPreselection = async (name, app) => {
-    if (!APPLICATIONS_GAS_URL) {
-      setStatus('❌ GAS URL no configurada');
+  const openEditModal = (member = {}) => {
+    setEditingMember({
+      uid: member.id || '',
+      name: member.displayName || '',
+      email: member.email || '',
+      role: (member.roles || []).join(';'),
+      descriptionEs: member.description?.es || '',
+      descriptionEn: member.description?.en || '',
+      interestsEs: member.interests?.es || '',
+      interestsEn: member.interests?.en || '',
+      imageUrl: member.imageUrl || ''
+    });
+    setShowModal(true);
+  };
+
+  const saveMember = async () => {
+    if (!editingMember.uid) {
+      setStatus('Adding new members not supported');
       return;
     }
-    if (!confirm(`¿Enviar correo de preselección a ${name}?`)) return;
-    setSending(true);
     try {
-      const language = app['¿Que idioma hablas?/What language do you speak?']?.toLowerCase().includes('english') ? 'en' : 'es';
-      await fetch(APPLICATIONS_GAS_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        redirect: 'follow',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'aceptar_postulante', name, language }),
+      await updateDoc(doc(db, 'users', editingMember.uid), {
+        displayName: editingMember.name,
+        roles: editingMember.role.split(';').map(r => r.trim()),
+        description: { es: editingMember.descriptionEs, en: editingMember.descriptionEn || editingMember.descriptionEs },
+        interests: { es: editingMember.interestsEs, en: editingMember.interestsEn || editingMember.interestsEs },
+        imageUrl: editingMember.imageUrl
       });
-      setStatus('✅ Preselección enviada');
+      const functions = getFunctions();
+      const updateRoleCF = httpsCallable(functions, 'updateUserRole');
+      await updateRoleCF({ targetUid: editingMember.uid, newRoles: editingMember.role.split(';').map(r => r.trim()) });
+      setStatus('✅ Miembro actualizado');
     } catch (err) {
       setStatus(`❌ Error: ${err.message}`);
     } finally {
-      setSending(false);
+      setShowModal(false);
     }
-  };
-
-  const acceptAndRequestData = async (app) => {
-    if (!TEAM_GAS_URL) {
-      setStatus('❌ GAS URL no configurada');
-      return;
-    }
-    if (!confirm(`¿Aceptar a ${app.Nombre} y solicitar datos?`)) return;
-    setSending(true);
-    try {
-      await fetch(TEAM_GAS_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        redirect: 'follow',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({
-          action: 'add_and_send_team_acceptance',
-          name: app.Nombre,
-          role: app['Cargo al que desea postular'],
-          email: app['Correo electrónico'],
-        }),
-      });
-      setStatus('✅ Aceptado y solicitud enviada');
-      fetchTeam();
-    } catch (err) {
-      setStatus(`❌ Error: ${err.message}`);
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const requestAuthorData = async (name) => {
-    if (!TEAM_GAS_URL) {
-      setStatus('❌ GAS URL no configurada');
-      return;
-    }
-    if (!confirm(`¿Solicitar datos a ${name}?`)) return;
-    setSending(true);
-    try {
-      await fetch(TEAM_GAS_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        redirect: 'follow',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({
-          action: 'solicitar_datos',
-          type: 'author',
-          name,
-        }),
-      });
-      setStatus('✅ Solicitud de datos enviada');
-    } catch (err) {
-      setStatus(`❌ Error: ${err.message}`);
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const openEditForm = (member = {}) => {
-    const formWindow = window.open('', '_blank');
-    formWindow.document.write(`
-      <!DOCTYPE html>
-      <html lang="es">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>${member.Correo ? 'Editar' : 'Agregar'} Miembro al Equipo</title>
-        <style>
-          body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-          }
-          .container {
-            max-width: 600px;
-            width: 100%;
-            margin: 20px;
-            padding: 24px;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-          }
-          h2 {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #1f2937;
-            text-align: center;
-            margin-bottom: 24px;
-          }
-          .form-group {
-            margin-bottom: 20px;
-          }
-          label {
-            display: block;
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: #374151;
-            margin-bottom: 8px;
-          }
-          input, textarea {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            font-size: 0.875rem;
-            color: #1f2937;
-            background: #f9fafb;
-            transition: border-color 0.3s, box-shadow 0.3s;
-          }
-          input:focus, textarea:focus {
-            outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-          }
-          textarea {
-            resize: vertical;
-            min-height: 100px;
-          }
-          .button-group {
-            display: flex;
-            justify-content: flex-end;
-            gap: 12px;
-            margin-top: 24px;
-          }
-          button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            font-size: 0.875rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 0.3s, transform 0.2s;
-          }
-          button[type="submit"] {
-            background: #3b82f6;
-            color: white;
-          }
-          button[type="button"] {
-            background: #e5e7eb;
-            color: #374151;
-          }
-          button:hover {
-            transform: translateY(-1px);
-          }
-          button[type="submit"]:hover {
-            background: #2563eb;
-          }
-          button[type="button"]:hover {
-            background: #d1d5db;
-          }
-          a {
-            color: #3b82f6;
-            text-decoration: none;
-          }
-          a:hover {
-            text-decoration: underline;
-          }
-          .help-text {
-            font-size: 0.75rem;
-            color: #6b7280;
-            margin-top: 8px;
-          }
-          @media (max-width: 640px) {
-            .container {
-              margin: 16px;
-              padding: 16px;
-            }
-            h2 {
-              font-size: 1.25rem;
-            }
-            input, textarea {
-              font-size: 0.8125rem;
-              padding: 10px;
-            }
-            button {
-              padding: 8px 16px;
-              font-size: 0.8125rem;
-            }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <h2>${member.Correo ? 'Editar' : 'Agregar'} Miembro al Equipo</h2>
-          <form id="teamForm" class="space-y-6">
-            <div class="form-group">
-              <label>Nombre</label>
-              <input type="text" name="name" value="${member.Nombre || ''}" required />
-            </div>
-            <div class="form-group">
-              <label>Correo</label>
-              <input type="email" name="email" value="${member.Correo || member['Correo electrónico'] || ''}" required />
-            </div>
-            <div class="form-group">
-              <label>Rol en la Revista</label>
-              <input type="text" name="role" value="${member['Rol en la Revista'] || member.Rol || member['Cargo al que desea postular'] || ''}" required />
-            </div>
-            <div class="form-group">
-              <label>Descripción</label>
-              <textarea
-                name="description"
-                placeholder="Ejemplo: Francisca Pérez es estudiante de Segundo Medio en el Liceo Nacional de Maipú, con intereses en matemáticas y química..."
-                required
-              >${member['Descripción'] || ''}</textarea>
-            </div>
-            <div class="form-group">
-              <label>Áreas de Interés</label>
-              <input
-                type="text"
-                name="interests"
-                placeholder="Ejemplo: Historia de las ideas, Física teórica, Divulgación científica"
-                required
-                value="${member['Áreas de interés'] || ''}"
-              />
-            </div>
-            <div class="form-group">
-              <label>Imagen (URL)</label>
-              <input
-                type="url"
-                name="image"
-                placeholder="Ingrese la URL de la imagen (subida por el administrador)"
-                value="${member.Imagen || ''}"
-              />
-              <p class="help-text">
-                Suba la imagen recibida por correo a <a href="https://postimages.org/es/" target="_blank">postimages.org</a> y pegue el enlace aquí.
-              </p>
-            </div>
-            <div class="button-group">
-              <button type="button" onclick="window.close()">Cancelar</button>
-              <button type="submit">Guardar</button>
-            </div>
-          </form>
-        </div>
-        <script>
-          document.getElementById('teamForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-            const data = {
-              name: formData.get('name'),
-              role: formData.get('role'),
-              email: formData.get('email'),
-              description: formData.get('description'),
-              interests: formData.get('interests'),
-              image: formData.get('image') || ''
-            };
-            const action = '${member.Correo || member['Correo electrónico'] ? 'update_team_member' : 'add_team_member'}';
-            data.action = action;
-            try {
-              await fetch('${TEAM_GAS_URL}', {
-                method: 'POST',
-                mode: 'no-cors',
-                redirect: 'follow',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(data)
-              });
-              alert('Miembro ' + (action === 'update_team_member' ? 'actualizado' : 'agregado') + ' exitosamente');
-              window.close();
-            } catch (err) {
-              alert('Error al ' + (action === 'update_team_member' ? 'actualizar' : 'agregar') + ' miembro: ' + err.message);
-            }
-          });
-        </script>
-      </body>
-      </html>
-    `);
   };
 
   const pendingApplications = useMemo(
@@ -388,9 +122,8 @@ export default function Admissions() {
   const teamMembersFiltered = useMemo(
     () =>
       teamMembers.filter(member => {
-        const rolValue = member['Rol en la Revista'] || member.Rol || ''; // Soporta ambos headers
-        const roles = rolValue ? rolValue.split(';').map(r => r.trim().toLowerCase()) : [];
-        return roles.length > 1 || (roles.length === 1 && roles[0] !== 'autor');
+        const roles = member.roles || [];
+        return roles.length > 1 || (roles.length === 1 && roles[0].toLowerCase() !== 'autor');
       }),
     [teamMembers]
   );
@@ -398,9 +131,8 @@ export default function Admissions() {
   const authorMembers = useMemo(
     () =>
       teamMembers.filter(member => {
-        const rolValue = member['Rol en la Revista'] || member.Rol || ''; // Soporta ambos
-        const roles = rolValue ? rolValue.split(';').map(r => r.trim().toLowerCase()) : [];
-        return roles.length === 1 && roles[0] === 'autor';
+        const roles = member.roles || [];
+        return roles.length === 1 && roles[0].toLowerCase() === 'autor';
       }),
     [teamMembers]
   );
@@ -457,14 +189,6 @@ export default function Admissions() {
                 </div>
               ) : activeTab === 'team' || activeTab === 'authors' ? (
                 <>
-                  <div className="p-4">
-                    <button
-                      onClick={() => openEditForm()}
-                      className="action-button action-add mb-4"
-                    >
-                      Agregar Nuevo Miembro
-                    </button>
-                  </div>
                   {(activeTab === 'team' ? teamMembersFiltered : authorMembers).length === 0 ? (
                     <div className="empty">No hay {activeTab === 'team' ? 'miembros en el equipo' : 'autores'}</div>
                   ) : (
@@ -472,16 +196,16 @@ export default function Admissions() {
                       <div key={index} className="application">
                         <div className="application-header" onClick={() => toggleExpandApp(`${activeTab}-${index}`)}>
                           <div className="flex items-center space-x-3">
-                            {member.Imagen && (
+                            {member.imageUrl && (
                               <img
-                                src={member.Imagen}
-                                alt={member.Nombre}
+                                src={member.imageUrl}
+                                alt={member.displayName}
                                 className="w-10 h-10 rounded-full object-cover"
                               />
                             )}
                             <div className="application-info">
-                              <h3 className="application-name">{member.Nombre}</h3>
-                              <p className="application-role">{member['Rol en la Revista'] || member.Rol || 'Sin rol'}</p>
+                              <h3 className="application-name">{member.displayName}</h3>
+                              <p className="application-role">{(member.roles || []).join(', ')}</p>
                             </div>
                           </div>
                           <svg
@@ -498,37 +222,28 @@ export default function Admissions() {
                             <div className="details-grid">
                               <div>
                                 <p className="details-label">Correo</p>
-                                <p className="details-value">{member.Correo || member['Correo electrónico']}</p>
+                                <p className="details-value">{member.email}</p>
                               </div>
                               <div>
                                 <p className="details-label">Descripción</p>
-                                <p className="details-value">{member['Descripción'] || ''}</p>
+                                <p className="details-value">{member.description?.es || ''}</p>
                               </div>
                               <div>
                                 <p className="details-label">Áreas de Interés</p>
-                                <p className="details-value">{member['Áreas de interés'] || ''}</p>
+                                <p className="details-value">{member.interests?.es || ''}</p>
                               </div>
                               <div>
                                 <p className="details-label">Imagen</p>
-                                <p className="details-value">{member.Imagen || ''}</p>
+                                <p className="details-value">{member.imageUrl || ''}</p>
                               </div>
                             </div>
                             <div className="actions mt-4">
                               <button
-                                onClick={() => openEditForm(member)}
+                                onClick={() => openEditModal(member)}
                                 className="action-button action-edit"
                               >
                                 Editar
                               </button>
-                              {activeTab === 'authors' && (
-                                <button
-                                  onClick={() => requestAuthorData(member.Nombre)}
-                                  disabled={sending || !TEAM_GAS_URL}
-                                  className="action-button action-request"
-                                >
-                                  Solicitar Datos
-                                </button>
-                              )}
                             </div>
                           </div>
                         )}
@@ -575,36 +290,6 @@ export default function Admissions() {
                             <p className="details-value">{app['Breve carta de motivación (por qué desea este cargo) y listado de logros. 250-500 palabras.']}</p>
                           </div>
                         </div>
-                        <div className="actions">
-                          <button
-                            onClick={() => sendPreselection(app.Nombre, app)}
-                            disabled={sending || !APPLICATIONS_GAS_URL || activeTab === 'archived'}
-                            className="action-button action-preselect"
-                          >
-                            Enviar Preselección
-                          </button>
-                          <button
-                            onClick={() => acceptAndRequestData(app)}
-                            disabled={sending || !TEAM_GAS_URL || activeTab === 'archived'}
-                            className="action-button action-accept"
-                          >
-                            Aceptar y Solicitar Datos
-                          </button>
-                          <button
-                            onClick={() => openEditForm({
-                              Nombre: app.Nombre,
-                              'Correo electrónico': app['Correo electrónico'],
-                              'Cargo al que desea postular': app['Cargo al que desea postular'],
-                              Descripción: '',
-                              'Áreas de interés': '',
-                              Imagen: '',
-                            })}
-                            disabled={sending || !TEAM_GAS_URL}
-                            className="action-button action-add"
-                          >
-                            Agregar al Equipo
-                          </button>
-                        </div>
                       </div>
                     )}
                   </div>
@@ -615,6 +300,90 @@ export default function Admissions() {
         )}
         {status && <div className="status">{status}</div>}
       </div>
+      {showModal && editingMember && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded-2xl w-full max-w-lg">
+            <h2 className="text-2xl font-bold mb-6">Editar Miembro</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block font-medium">Nombre</label>
+                <input
+                  type="text"
+                  value={editingMember.name}
+                  onChange={(e) => setEditingMember({ ...editingMember, name: e.target.value })}
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+              <div>
+                <label className="block font-medium">Correo</label>
+                <input
+                  type="email"
+                  value={editingMember.email}
+                  onChange={(e) => setEditingMember({ ...editingMember, email: e.target.value })}
+                  className="w-full p-2 border rounded"
+                  disabled
+                />
+              </div>
+              <div>
+                <label className="block font-medium">Rol (separados por ;)</label>
+                <input
+                  type="text"
+                  value={editingMember.role}
+                  onChange={(e) => setEditingMember({ ...editingMember, role: e.target.value })}
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+              <div>
+                <label className="block font-medium">Descripción (ES)</label>
+                <textarea
+                  value={editingMember.descriptionEs}
+                  onChange={(e) => setEditingMember({ ...editingMember, descriptionEs: e.target.value })}
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+              <div>
+                <label className="block font-medium">Descripción (EN)</label>
+                <textarea
+                  value={editingMember.descriptionEn}
+                  onChange={(e) => setEditingMember({ ...editingMember, descriptionEn: e.target.value })}
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+              <div>
+                <label className="block font-medium">Áreas de Interés (ES)</label>
+                <input
+                  type="text"
+                  value={editingMember.interestsEs}
+                  onChange={(e) => setEditingMember({ ...editingMember, interestsEs: e.target.value })}
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+              <div>
+                <label className="block font-medium">Áreas de Interés (EN)</label>
+                <input
+                  type="text"
+                  value={editingMember.interestsEn}
+                  onChange={(e) => setEditingMember({ ...editingMember, interestsEn: e.target.value })}
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+              <div>
+                <label className="block font-medium">Imagen (URL)</label>
+                <input
+                  type="url"
+                  value={editingMember.imageUrl}
+                  onChange={(e) => setEditingMember({ ...editingMember, imageUrl: e.target.value })}
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end space-x-4">
+              <button onClick={() => setShowModal(false)} className="bg-gray-300 px-6 py-3 rounded-xl">Cancelar</button>
+              <button onClick={saveMember} className="bg-blue-600 text-white px-6 py-3 rounded-xl">Guardar</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         .container {
