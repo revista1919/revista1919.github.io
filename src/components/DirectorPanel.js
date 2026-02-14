@@ -91,12 +91,20 @@ export default function DirectorPanel({ user }) {
   const [volumeUploading, setVolumeUploading] = useState(false);
   const [hasAccess, setHasAccess] = useState(false);
   useEffect(() => {
-    if (user && user.role && user.role.includes('Director General')) {
-      setHasAccess(true);
-    } else {
-      setHasAccess(false);
-    }
-  }, [user]);
+  if (!user) {
+    setHasAccess(false);
+    return;
+  }
+
+  const checkRole = async () => {
+    const tokenResult = await user.getIdTokenResult(true);
+    const roles = tokenResult.claims.roles || [];
+    setHasAccess(roles.includes('Director General'));
+  };
+
+  checkRole();
+}, [user]);
+
   useEffect(() => {
     if (!hasAccess) return;
     setLoading(true);
