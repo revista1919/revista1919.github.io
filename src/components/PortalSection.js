@@ -7,22 +7,81 @@ import { ReviewerWorkspace } from './Workspace';
 import NewsUploadSection from './NewsUploadSection';
 import TaskSection from './TaskSection';
 import AssignSection from './AssignSection';
-import { useTranslation } from 'react-i18next';
 import DirectorPanel from './DirectorPanel';
+import Admissions from './Admissions';
+import { UserIcon, CameraIcon } from '@heroicons/react/24/outline';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
+import { db, onSnapshot, query, collection, doc, updateDoc, uploadImageToImgBB, translateTextCF, updateRole } from '../firebase';
+
 
 const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
-const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?gid=0&output=csv'; // Ajusta el gid si es necesario para la hoja de usuarios/team
+const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?gid=0&output=csv';
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby2B1OUt3TMqaed6Vz-iamUPn4gHhKXG2RRxiy8Nt6u69Cg-2kSze2XQ-NywX5QrNfy/exec';
 const RUBRIC_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzehxU_O7GkzfiCqCsSdnFwvA_Mhtfr_vSZjqVsBo3yx8ZEpr9Qur4NHPI09tyH1AZe/exec';
 const RUBRIC_CSV1 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=0&single=true&output=csv';
 const RUBRIC_CSV2 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=1438370398&single=true&output=csv';
 const RUBRIC_CSV3 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=1972050001&single=true&output=csv';
 
+const ES_TO_EN = {
+  'Fundador': 'Founder',
+  'Co-Fundador': 'Co-Founder',
+  'Director General': 'General Director',
+  'Subdirector General': 'Deputy General Director',
+  'Editor en Jefe': 'Editor-in-Chief',
+  'Editor de Sección': 'Section Editor',
+  'Editora de Sección': 'Section Editor',
+  'Revisor': 'Reviewer',
+  'Revisor / Comité Editorial': 'Reviewer',
+  'Responsable de Desarrollo Web': 'Web Development Manager',
+  'Encargado de Soporte Técnico': 'Technical Support Manager',
+  'Encargado de Redes Sociales': 'Social Media Manager',
+  'Encargada de Redes Sociales': 'Social Media Manager',
+  'Diseñador Gráfico': 'Graphic Designer',
+  'Diseñadora Gráfica': 'Graphic Designer',
+  'Community Manager': 'Community Manager',
+  'Encargado de Nuevos Colaboradores': 'New Collaborators Manager',
+  'Encargada de Nuevos Colaboradores': 'New Collaborators Manager',
+  'Coordinador de Eventos o Convocatorias': 'Events or Calls Coordinator',
+  'Coordinadora de Eventos o Convocatorias': 'Events or Calls Coordinator',
+  'Asesor Legal': 'Legal Advisor',
+  'Asesora Legal': 'Legal Advisor',
+  'Asesor Editorial': 'Editorial Advisor',
+  'Asesora Editorial': 'Editorial Advisor',
+  'Responsable de Finanzas': 'Finance Manager',
+  'Responsable de Transparencia': 'Transparency Manager',
+  'Autor': 'Author',
+  'Asesor Académico': 'Academic Advisor',
+  'Instituciones Colaboradora': 'Partner Institution'
+};
 
+const EN_TO_ES = {
+  'Founder': 'Fundador',
+  'Co-Founder': 'Co-Fundador',
+  'General Director': 'Director General',
+  'Deputy General Director': 'Subdirector General',
+  'Editor-in-Chief': 'Editor en Jefe',
+  'Section Editor': 'Editor de Sección',
+  'Reviewer': 'Revisor',
+  'Web Development Manager': 'Responsable de Desarrollo Web',
+  'Technical Support Manager': 'Encargado de Soporte Técnico',
+  'Social Media Manager': 'Encargado de Redes Sociales',
+  'Graphic Designer': 'Diseñador Gráfico',
+  'New Collaborators Manager': 'Encargado de Nuevos Colaboradores',
+  'Events or Calls Coordinator': 'Coordinador de Eventos o Convocatorias',
+  'Legal Advisor': 'Asesor Legal',
+  'Editorial Advisor': 'Asesor Editorial',
+  'Finance Manager': 'Responsable de Finanzas',
+  'Transparency Manager': 'Responsable de Transparencia',
+  'Author': 'Autor',
+  'Partner Institution': 'Instituciones Colaboradora',
+  'Academic Advisor': 'Asesor Académico',
+  'Community Manager': 'Community Manager'
+};
+
+const ALL_ROLES = Object.keys(ES_TO_EN);
 
 const getDecisionText = (percent) => {
   if (percent >= 85) return 'Aceptar sin cambios.';
@@ -119,8 +178,7 @@ function CalendarComponent({ events, onSelectEvent }) {
   );
 }
 
-/** * DISEÑO MODERNIZADO: Rúbrica estilo formulario de revisión por pares
- */
+/** * DISEÑO MODERNIZADO: Rúbrica estilo formulario de revisión por pares */
 const RubricViewer = ({ roleKey, scores, onChange, readOnly = false }) => {
   const crits = criteria[roleKey];
   if (!crits) return null;
@@ -221,6 +279,207 @@ const AssignmentCard = ({ assignment, onClick, index }) => {
   );
 };
 
+const ProfileSection = ({ user }) => {
+
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const [form, setForm] = useState({
+    firstName: user.firstName || '',
+    lastName: user.lastName || '',
+    descriptionEs: user.description?.es || '',
+    descriptionEn: user.description?.en || '',
+    interestsEs: user.interests?.es || '',
+    interestsEn: user.interests?.en || '',
+    imageUrl: user.imageUrl || '',
+    publicEmail: user.publicEmail || '',
+    social: user.social || { linkedin: '', twitter: '', instagram: '', website: '' }
+  });
+
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const handleSocialChange = (e) => setForm({ ...form, social: { ...form.social, [e.target.name]: e.target.value } });
+
+  const handleImageUpload = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  // 🔒 Validación 5MB
+  if (file.size > 5 * 1024 * 1024) {
+    alert("La imagen no puede superar 5MB");
+    return;
+  }
+
+  setUploading(true);
+
+  const reader = new FileReader();
+
+  reader.onload = async () => {
+    try {
+      const result = await uploadImageToImgBB({
+        base64: reader.result,
+        fileName: file.name
+      });
+
+      setForm(prev => ({
+        ...prev,
+        imageUrl: result.url
+      }));
+
+    } catch (error) {
+      console.error(error);
+      alert("Error subiendo imagen");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  reader.readAsDataURL(file);
+};
+
+
+  const saveProfile = async () => {
+    setSaving(true);
+
+    // Copia automática si falta el otro idioma
+    let descEs = form.descriptionEs.trim();
+    let descEn = form.descriptionEn.trim();
+    if (!descEn) descEn = descEs;
+    if (!descEs) descEs = descEn;
+
+    let interestsEs = form.interestsEs.trim();
+    let interestsEn = form.interestsEn.trim();
+    if (!interestsEn) interestsEn = interestsEs;
+    if (!interestsEs) interestsEs = interestsEn;
+
+    await updateDoc(doc(db, 'users', user.uid), {
+      firstName: form.firstName,
+      lastName: form.lastName,
+      displayName: `${form.firstName} ${form.lastName}`,
+      description: { es: descEs, en: descEn },
+      interests: { es: interestsEs, en: interestsEn },
+      imageUrl: form.imageUrl,
+      publicEmail: form.publicEmail,
+      social: form.social,
+      updatedAt: new Date().toISOString()
+    });
+
+    setSaving(false);
+  };
+
+  return (
+    <div className="bg-white rounded-2xl shadow-xl p-10 max-w-3xl mx-auto">
+      <h3 className="text-2xl font-serif font-bold text-gray-900 mb-8">Mi Perfil</h3>
+
+      {/* Imagen con ImgBB elegante */}
+<div className="flex flex-col items-center mb-10">
+  <label className={`cursor-pointer group ${uploading ? "pointer-events-none" : ""}`}>
+    <div className="w-48 h-48 rounded-3xl overflow-hidden border-4 border-white shadow-lg relative">
+
+      {/* Imagen o placeholder */}
+      {form.imageUrl ? (
+        <img
+          src={form.imageUrl}
+          className="object-cover w-full h-full"
+          alt="Profile"
+        />
+      ) : (
+        <div className="flex items-center justify-center w-full h-full bg-gray-100">
+          <UserIcon className="w-16 h-16 text-gray-400" />
+        </div>
+      )}
+
+      {/* Hover overlay */}
+      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center rounded-3xl">
+        <CameraIcon className="w-10 h-10 text-white" />
+      </div>
+
+      {/* 🔥 Spinner overlay mientras sube */}
+      {uploading && (
+        <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center rounded-3xl z-20">
+          <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin mb-3"></div>
+          <span className="text-white text-sm font-medium tracking-wide">
+            Subiendo...
+          </span>
+        </div>
+      )}
+
+    </div>
+
+    {/* Input oculto */}
+    <input
+      type="file"
+      accept="image/*"
+      onChange={handleImageUpload}
+      disabled={uploading}
+      className="hidden"
+    />
+  </label>
+</div>
+
+
+      {/* Campos básicos */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <input name="firstName" value={form.firstName} onChange={handleChange} placeholder="Nombre" className="p-4 border rounded-2xl" />
+        <input name="lastName" value={form.lastName} onChange={handleChange} placeholder="Apellidos" className="p-4 border rounded-2xl" />
+      </div>
+
+      {/* DESCRIPCIÓN BILINGÜE MANUAL */}
+      <div className="mt-6">
+        <label className="block text-sm font-medium text-gray-700 mb-2">Descripción en Español (párrafos permitidos)</label>
+        <textarea name="descriptionEs" value={form.descriptionEs} onChange={handleChange} className="w-full p-4 border rounded-2xl h-32 whitespace-pre-wrap" />
+      </div>
+      <div className="mt-6">
+        <label className="block text-sm font-medium text-gray-700 mb-2">Description in English (paragraphs allowed)</label>
+        <textarea name="descriptionEn" value={form.descriptionEn} onChange={handleChange} className="w-full p-4 border rounded-2xl h-32 whitespace-pre-wrap" />
+      </div>
+
+      {/* INTERESES BILINGÜES */}
+      <div className="mt-6">
+        <label className="block text-sm font-medium text-gray-700 mb-2">Áreas de interés en Español (separadas por coma)</label>
+        <input name="interestsEs" value={form.interestsEs} onChange={handleChange} className="w-full p-4 border rounded-2xl" />
+      </div>
+      <div className="mt-6">
+        <label className="block text-sm font-medium text-gray-700 mb-2">Areas of Interest in English (comma separated)</label>
+        <input name="interestsEn" value={form.interestsEn} onChange={handleChange} className="w-full p-4 border rounded-2xl" />
+      </div>
+      <input name="publicEmail" value={form.publicEmail} onChange={handleChange} placeholder="Correo público (opcional)" className="w-full p-4 border rounded-2xl mt-6" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+        <input name="linkedin" value={form.social.linkedin} onChange={handleSocialChange} placeholder="LinkedIn" className="p-4 border rounded-2xl focus:border-blue-600" />
+        <input name="twitter" value={form.social.twitter} onChange={handleSocialChange} placeholder="Twitter" className="p-4 border rounded-2xl focus:border-blue-600" />
+        <input name="instagram" value={form.social.instagram} onChange={handleSocialChange} placeholder="Instagram" className="p-4 border rounded-2xl focus:border-blue-600" />
+        <input name="website" value={form.social.website} onChange={handleSocialChange} placeholder="Sitio web" className="p-4 border rounded-2xl focus:border-blue-600" />
+      </div>
+      <button onClick={saveProfile} disabled={saving} className="mt-10 w-full py-4 bg-black text-white rounded-2xl font-bold tracking-widest hover:bg-[#007398] transition-colors">
+        {saving ? 'Guardando...' : 'Guardar Cambios'}
+      </button>
+    </div>
+  );
+};
+
+const UserManagement = ({ users }) => {
+  const changeRole = async (uid, newRoles) => {
+    await updateRole({ targetUid: uid, newRoles });
+  };
+
+  return (
+    <div className="space-y-4">
+      {users.map(user => (
+        <div key={user.id} className="bg-white p-6 rounded-2xl flex items-center justify-between border border-gray-100">
+          <div>
+            <p className="font-bold">{user.displayName}</p>
+            <p className="text-xs text-gray-500">{user.email}</p>
+          </div>
+          <select multiple value={user.roles} onChange={(e) => changeRole(user.id, Array.from(e.target.selectedOptions, option => option.value))} className="p-2 border rounded">
+            {ALL_ROLES.map(role => (
+              <option key={role} value={role}>{role}</option>
+            ))}
+          </select>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 export default function PortalSection({ user, onLogout }) {
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -232,7 +491,7 @@ export default function PortalSection({ user, onLogout }) {
   const [submitStatus, setSubmitStatus] = useState({});
   const [rubricStatus, setRubricStatus] = useState({});
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState('assignments');
+  const [activeTab, setActiveTab] = useState('profile');
   const [showImageModal, setShowImageModal] = useState({});
   const [isEditingImage, setIsEditingImage] = useState({});
   const [imageData, setImageData] = useState({});
@@ -241,11 +500,15 @@ export default function PortalSection({ user, onLogout }) {
   const [expandedFeedback, setExpandedFeedback] = useState({});
   const [isDirectorPanelExpanded, setIsDirectorPanelExpanded] = useState(false);
   const [isChiefEditorPanelExpanded, setIsChiefEditorPanelExpanded] = useState(false);
-  const [effectiveName, setEffectiveName] = useState(user?.name || '');
+  const [effectiveName, setEffectiveName] = useState(user?.displayName || '');
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const feedbackQuillRefs = useRef({});
   const reportQuillRefs = useRef({});
+
+  // NUEVO: Datos en tiempo real desde Firebase
+  const [userData, setUserData] = useState(user);
+  const [users, setUsers] = useState([]);
 
   useEffect(() => {
     if (!user) {
@@ -258,7 +521,7 @@ export default function PortalSection({ user, onLogout }) {
       setSubmitStatus({});
       setRubricStatus({});
       setError('');
-      setActiveTab('assignments');
+      setActiveTab('profile');
       setShowImageModal({});
       setIsEditingImage({});
       setImageData({});
@@ -270,43 +533,60 @@ export default function PortalSection({ user, onLogout }) {
       setEffectiveName('');
       setCalendarEvents([]);
       setSelectedEvent(null);
+      setUserData(null);
+      setUsers([]);
     }
   }, [user]);
 
-  // Mapeo de correo → nombre real
+  // Snapshot de usuario en Firebase
+  useEffect(() => {
+    if (!user?.uid) return;
+    const unsub = onSnapshot(doc(db, 'users', user.uid), (snap) => {
+      if (snap.exists()) {
+        setUserData({ ...user, ...snap.data() });
+        setEffectiveName(snap.data().displayName || user.displayName || user.name || '');
+      }
+    });
+    return unsub;
+  }, [user?.uid]);
+
+  // Snapshot de todos los usuarios (solo para Director)
+  useEffect(() => {
+    if (userData?.roles?.includes('Director General')) {
+      const q = query(collection(db, 'users'));
+      const unsub = onSnapshot(q, (snap) => {
+        setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      });
+      return unsub;
+    }
+  }, [userData?.roles]);
+
+  // Mapeo de correo → nombre real (mantengo por compatibilidad con CSV)
   useEffect(() => {
     const fetchUserMapping = async () => {
-      if (user && user.name && user.name.includes('@')) {
-        setError('Advertencia: Tu nombre parece ser una dirección de correo electrónico. Intentando mapear al nombre real desde CSV...');
+      if (userData && userData.email && !userData.displayName) {
+        setError('Advertencia: Intentando mapear correo a nombre desde CSV...');
         try {
           const csvText = await fetchWithRetry(USERS_CSV);
           Papa.parse(csvText, {
             header: true,
             skipEmptyLines: true,
             complete: ({ data }) => {
-              const mapping = data.find(row => row['Correo']?.trim().toLowerCase() === user.name.trim().toLowerCase());
+              const mapping = data.find(row => row['Correo']?.trim().toLowerCase() === userData.email.trim().toLowerCase());
               if (mapping && mapping['Nombre']) {
                 setEffectiveName(mapping['Nombre'].trim());
                 setError('');
-              } else {
-                setError('No se encontró mapeo de correo a nombre. Por favor, contacta al administrador.');
               }
             },
-            error: (err) => {
-              console.error('Error parsing users CSV:', err);
-              setError('Error al cargar mapeo de usuarios.');
-            },
+            error: () => setError('Error al cargar mapeo de usuarios.')
           });
         } catch (err) {
-          console.error('Error fetching users CSV:', err);
-          setError('Error al conectar para mapeo de usuarios.');
+          console.error(err);
         }
-      } else if (user && user.name) {
-        setEffectiveName(user.name);
       }
     };
     fetchUserMapping();
-  }, [user]);
+  }, [userData]);
 
   const fetchRubrics = async () => {
     try {
@@ -393,7 +673,6 @@ export default function PortalSection({ user, onLogout }) {
         transform: (value) => value.trim(),
         complete: ({ data }) => {
           const normalizedEffectiveName = effectiveName.trim().toLowerCase();
-          // Fetch author assignments
           const authorRows = data.filter(row => {
             const autores = row['Autor'] || '';
             return autores
@@ -410,7 +689,6 @@ export default function PortalSection({ user, onLogout }) {
             isCompleted: !!row['Feedback 3'],
             Plazo: row['Plazo'] || null,
           }));
-          // Fetch reviewer/editor assignments
           const reviewerRows = data
             .filter(row => {
               return row['Revisor 1']?.trim() === effectiveName ||
@@ -450,10 +728,8 @@ export default function PortalSection({ user, onLogout }) {
             }
             return assignment;
           });
-          // Combine: reviewer/editor first, then author
           const parsedAssignments = [...reviewerAssignments, ...authorAssignments];
           setAssignments(parsedAssignments);
-          // Inicializar estados locales
           parsedAssignments.forEach(assignment => {
             if (assignment.role !== 'Autor') {
               const link = assignment['Link Artículo'];
@@ -463,7 +739,6 @@ export default function PortalSection({ user, onLogout }) {
               setRubricScores(prev => ({ ...prev, [link]: assignment.scores }));
             }
           });
-          // Eventos del calendario
           const events = parsedAssignments
             .filter(ass => ass.Plazo)
             .map(ass => ({
@@ -476,7 +751,7 @@ export default function PortalSection({ user, onLogout }) {
           setCalendarEvents(events);
           setLoading(false);
           if (parsedAssignments.length === 0 && !loading) {
-            setError(`No se encontraron asignaciones para '${effectiveName}'. Si esperas asignaciones, por favor verifica los detalles de tu cuenta o contacta al administrador.`);
+            setError(`No se encontraron asignaciones para '${effectiveName}'.`);
           }
         },
         error: (err) => {
@@ -493,22 +768,21 @@ export default function PortalSection({ user, onLogout }) {
   };
 
   useEffect(() => {
-    if (!user || !effectiveName || !user.role) {
-      setError('Usuario no definido o información incompleta');
+    if (!userData || !effectiveName) {
+      setError('Usuario no definido');
       setLoading(false);
       return;
     }
     fetchAssignments();
-  }, [user, effectiveName]);
+  }, [userData, effectiveName]);
 
-  // Roles del usuario
-  const userRoles = user?.role ? user.role.split(';').map(r => r.trim()) : [];
-  const isAuthor = assignments.length > 0 && assignments[0].role === 'Autor';
+  // Roles del usuario (ahora desde Firebase)
+  const userRoles = userData?.roles || [];
+  const isAuthor = assignments.some(a => a.role === 'Autor');
   const isChief = userRoles.includes('Editor en Jefe');
   const isDirector = userRoles.includes('Director General');
   const isRrss = userRoles.includes('Encargado de Redes Sociales');
   const isWebDev = userRoles.includes('Responsable de Desarrollo Web');
-  // Solo usuarios con rol superior a "Autor" ven el calendario
   const canSeeCalendar = isChief || isDirector || isRrss || isWebDev || assignments.some(a => a.role !== 'Autor');
 
   const pendingAssignments = useMemo(() =>
@@ -728,10 +1002,7 @@ export default function PortalSection({ user, onLogout }) {
         deleteImage: {
           key: ['Delete', 'Backspace'],
           handler: function(range) {
-            if (!range) {
-              console.log('No hay selección activa para eliminar');
-              return true;
-            }
+            if (!range) return true;
             const editor = this.quill;
             const imageResize = editor.getModule('imageResize');
             let isImage = false;
@@ -764,14 +1035,11 @@ export default function PortalSection({ user, onLogout }) {
             }
             if (isImage) {
               try {
-                if (imageResize) {
-                  imageResize.hide();
-                }
+                if (imageResize) imageResize.hide();
                 editor.deleteText(deleteIndex, deleteLength, ReactQuill.Quill.sources.USER);
                 return false;
               } catch (err) {
                 console.error('Error al eliminar imagen:', err);
-                setSubmitStatus((prev) => ({ ...prev, [link]: 'Error al eliminar imagen' }));
                 return false;
               }
             }
@@ -791,7 +1059,6 @@ export default function PortalSection({ user, onLogout }) {
                 return false;
               } catch (err) {
                 console.error('Error al insertar nueva línea después de imagen:', err);
-                setSubmitStatus((prev) => ({ ...prev, [link]: 'Error al agregar texto después de imagen' }));
                 return false;
               }
             }
@@ -801,34 +1068,6 @@ export default function PortalSection({ user, onLogout }) {
       },
     },
   }), []);
-
-  useEffect(() => {
-    const setupCustomButton = (quillRef, link, type) => {
-      if (quillRef.current) {
-        const editor = quillRef.current.getEditor();
-        const toolbar = editor.getModule('toolbar');
-        toolbar.addHandler('custom-image', () => {
-          setIsEditingImage((prev) => ({ ...prev, [link]: false }));
-          setImageData((prev) => ({ ...prev, [link]: { url: '', width: '', height: '', align: 'left' } }));
-          setShowImageModal((prev) => ({ ...prev, [link]: true }));
-        });
-        const button = document.createElement('button');
-        button.className = 'ql-custom-image';
-        button.innerHTML = '<svg viewBox="0 0 18 18"><rect class="ql-stroke" x="3" y="4" width="12" height="10" rx="2" ry="2"></rect></svg>';
-        button.title = 'Insertar Imagen Manualmente';
-        const toolbarElement = document.querySelector(`#${type}-${link} .ql-toolbar`);
-        if (toolbarElement && !toolbarElement.querySelector('.ql-custom-image')) {
-          toolbarElement.appendChild(button);
-        }
-      }
-    };
-    Object.keys(feedbackQuillRefs.current).forEach(link => {
-      setupCustomButton(feedbackQuillRefs.current[link], link, 'feedback');
-    });
-    Object.keys(reportQuillRefs.current).forEach(link => {
-      setupCustomButton(reportQuillRefs.current[link], link, 'report');
-    });
-  }, [feedbackQuillRefs.current, reportQuillRefs.current]);
 
   const formats = useMemo(() => [
     'bold', 'italic', 'underline', 'strike', 'blockquote',
@@ -899,9 +1138,8 @@ export default function PortalSection({ user, onLogout }) {
     }));
   };
 
-  
-
   const tabs = [
+    { id: 'profile', label: 'MI PERFIL' },
     { id: 'assignments', label: 'MIS ASIGNACIONES' },
     { id: 'completed', label: 'COMPLETADAS' },
     { id: 'calendar', label: 'CALENDARIO ACADÉMICO', hidden: !canSeeCalendar },
@@ -909,12 +1147,13 @@ export default function PortalSection({ user, onLogout }) {
     { id: 'chief', label: 'PANEL EDITOR JEFE', hidden: !isChief },
     { id: 'tasks', label: 'MIS TAREAS', hidden: !isRrss && !isWebDev },
     { id: 'news', label: 'PUBLICAR NOTICIAS', hidden: !isDirector },
+    { id: 'admissions', label: 'ADMISIONES', hidden: !isDirector },
+    { id: 'usermanagement', label: 'GESTIÓN DE USUARIOS', hidden: !isDirector }
   ];
 
   const currentAssignments = activeTab === 'assignments' ? pendingAssignments : completedAssignments;
 
-  if (!user || !effectiveName || !user.role) {
-    console.log('Usuario inválido:', user);
+  if (!userData) {
     return (
       <motion.div
         initial={{ opacity: 0 }}
@@ -922,18 +1161,7 @@ export default function PortalSection({ user, onLogout }) {
         className="min-h-screen bg-[#fafafa] p-4 md:p-8 flex items-center justify-center"
       >
         <div className="text-center text-gray-600 bg-white p-6 rounded-lg shadow-md">
-          <p className="text-lg font-sans mb-4">Error: Información del usuario incompleta. Por favor inicia sesión nuevamente.</p>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => {
-              console.log('Botón Cerrar Sesión clickeado en PortalSection');
-              onLogout();
-            }}
-            className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm font-sans font-bold uppercase tracking-widest"
-          >
-            Cerrar Sesión
-          </motion.button>
+          <p className="text-lg font-sans mb-4">Cargando datos del usuario...</p>
         </div>
       </motion.div>
     );
@@ -951,14 +1179,14 @@ export default function PortalSection({ user, onLogout }) {
             <p className="text-gray-500 font-sans tracking-widest uppercase text-xs break-words">
               Sesión activa:
             </p>
-            {user?.image ? (
+            {userData.imageUrl ? (
               <motion.img
                 initial={{ scale: 0.8 }}
                 animate={{ scale: 1 }}
-                src={user.image}
+                src={userData.imageUrl}
                 alt={`Perfil de ${effectiveName || 'Usuario'}`}
                 className="w-6 h-6 rounded-full object-cover border-2 border-gray-300"
-                onError={(e) => (e.target.style.display = 'none')} // Hide on error
+                onError={(e) => (e.target.style.display = 'none')}
               />
             ) : (
               <motion.div
@@ -979,6 +1207,7 @@ export default function PortalSection({ user, onLogout }) {
           Cerrar Sesión
         </button>
       </header>
+
       {/* Navegación Estilo Editorial */}
       <nav className="flex flex-wrap gap-4 md:gap-8 mb-12 border-b border-gray-200">
         {tabs.filter(t => !t.hidden).map(tab => (
@@ -996,9 +1225,19 @@ export default function PortalSection({ user, onLogout }) {
           </button>
         ))}
       </nav>
+
       <main>
         <AnimatePresence mode="wait">
-          {activeTab === 'assignments' || activeTab === 'completed' ? (
+          {activeTab === 'profile' && (
+            <motion.section
+              key="profile"
+              initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
+            >
+              <ProfileSection user={userData} />
+            </motion.section>
+          )}
+
+          {(activeTab === 'assignments' || activeTab === 'completed') && (
             <motion.section
               key="assignments"
               initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
@@ -1046,137 +1285,82 @@ export default function PortalSection({ user, onLogout }) {
                 </div>
               )}
             </motion.section>
-          ) : activeTab === 'calendar' ? (
-            <motion.div
+          )}
+
+          {activeTab === 'calendar' && (
+            <motion.section
               key="calendar"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              className="bg-white border border-gray-200 p-4 md:p-8 rounded-sm shadow-sm overflow-hidden"
+              initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
             >
               <CalendarComponent events={calendarEvents} onSelectEvent={(e) => setSelectedAssignment(e.resource)} />
-            </motion.div>
-          ) : activeTab === 'director' ? (
-            <motion.div
+            </motion.section>
+          )}
+
+          {activeTab === 'director' && (
+            <motion.section
               key="director"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              className="bg-white border border-gray-200 p-4 md:p-8 rounded-sm shadow-sm overflow-hidden"
+              initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
             >
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-serif text-2xl font-bold text-gray-900 break-words">Panel del Director General</h3>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setIsDirectorPanelExpanded(!isDirectorPanelExpanded)}
-                  className="bg-gray-200 text-gray-800 px-3 py-1 rounded-md hover:bg-gray-300 text-sm font-sans font-bold uppercase tracking-widest flex items-center space-x-2"
-                >
-                  <span>{isDirectorPanelExpanded ? 'Minimizar' : 'Expandir'}</span>
-                  <svg className={`w-4 h-4 transform ${isDirectorPanelExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </motion.button>
-              </div>
-              <AnimatePresence>
-                {isDirectorPanelExpanded && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="mt-4 space-y-6 overflow-hidden"
-                  >
-                    <DirectorPanel user={user} />
-                    <TaskSection user={user} />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              <div className="mt-4 flex space-x-4 flex-wrap gap-2">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => {
-                    console.log('Botón agregar artículo clickeado');
-                    document.dispatchEvent(new CustomEvent('openAddArticleModal'));
-                  }}
-                  className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors font-sans text-sm font-bold uppercase tracking-widest flex items-center space-x-2"
-                  style={{ display: 'inline-flex !important', visibility: 'visible !important' }}
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  <span>Agregar Artículo</span>
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => {
-                    console.log('Botón actualizar página clickeado');
-                    document.dispatchEvent(new CustomEvent('rebuildPage'));
-                  }}
-                  className="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 transition-colors font-sans text-sm font-bold uppercase tracking-widest flex items-center space-x-2"
-                  style={{ display: 'inline-flex !important', visibility: 'visible !important' }}
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  <span>Actualizar Página</span>
-                </motion.button>
-              </div>
-            </motion.div>
-          ) : activeTab === 'chief' ? (
-            <motion.div
+              <DirectorPanel 
+                user={userData} 
+                isExpanded={isDirectorPanelExpanded} 
+                onToggle={() => setIsDirectorPanelExpanded(!isDirectorPanelExpanded)} 
+              />
+            </motion.section>
+          )}
+
+          {activeTab === 'chief' && (
+            <motion.section
               key="chief"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              className="bg-white border border-gray-200 p-4 md:p-8 rounded-sm shadow-sm overflow-hidden"
+              initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
             >
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-serif text-2xl font-bold text-gray-900 break-words">Panel del Editor en Jefe</h3>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setIsChiefEditorPanelExpanded(!isChiefEditorPanelExpanded)}
-                  className="bg-gray-200 text-gray-800 px-3 py-1 rounded-md hover:bg-gray-300 text-sm font-sans font-bold uppercase tracking-widest flex items-center space-x-2"
-                >
-                  <span>{isChiefEditorPanelExpanded ? 'Minimizar' : 'Expandir'}</span>
-                  <svg className={`w-4 h-4 transform ${isChiefEditorPanelExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </motion.button>
-              </div>
-              <AnimatePresence>
-                {isChiefEditorPanelExpanded && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="mt-4 space-y-6 overflow-hidden"
-                  >
-                    <AssignSection user={user} />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          ) : activeTab === 'tasks' ? (
-            <motion.div
+              <AssignSection 
+                user={userData} 
+                isExpanded={isChiefEditorPanelExpanded} 
+                onToggle={() => setIsChiefEditorPanelExpanded(!isChiefEditorPanelExpanded)} 
+              />
+            </motion.section>
+          )}
+
+          {activeTab === 'tasks' && (
+            <motion.section
               key="tasks"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              className="bg-white border border-gray-200 p-4 md:p-8 rounded-sm shadow-sm overflow-hidden"
+              initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
             >
-              <h3 className="font-serif text-2xl font-bold text-gray-900 mb-4 break-words">Mis Tareas en {isRrss ? 'Redes Sociales' : 'Desarrollo Web'}</h3>
-              <TaskSection user={user} />
-            </motion.div>
-          ) : activeTab === 'news' ? (
-            <motion.div
+              <TaskSection user={userData} />
+            </motion.section>
+          )}
+
+          {activeTab === 'news' && (
+            <motion.section
               key="news"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              className="bg-white border border-gray-200 p-4 md:p-8 rounded-sm shadow-sm overflow-hidden"
+              initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
             >
-              <h3 className="font-serif text-2xl font-bold text-gray-900 mb-4 break-words">Publicar Noticias</h3>
               <NewsUploadSection />
-            </motion.div>
-          ) : null}
+            </motion.section>
+          )}
+
+          {activeTab === 'admissions' && (
+            <motion.section
+              key="admissions"
+              initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
+            >
+              <Admissions />
+            </motion.section>
+          )}
+
+          {activeTab === 'usermanagement' && (
+            <motion.section
+              key="usermanagement"
+              initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
+            >
+              <UserManagement users={users} />
+            </motion.section>
+          )}
         </AnimatePresence>
       </main>
-      {/* MODAL DE DETALLE (Overlay Editorial) */}
+
+      {/* MODAL DE DETALLE */}
       <AnimatePresence>
         {selectedAssignment && (
           <motion.div
@@ -1197,38 +1381,38 @@ export default function PortalSection({ user, onLogout }) {
                 </h2>
                 <div className="h-1 w-24 bg-gray-900" />
               </header>
-              {/* Renderizar Rúbrica y Formularios aquí con los nuevos componentes estilizados */}
+
               <ReviewerWorkspace 
-  assignment={selectedAssignment}
-  onClose={() => setSelectedAssignment(null)}
-  handleSubmitRubric={handleSubmitRubric}
-  handleSubmit={handleSubmit}
-  handleVote={handleVote}
-  rubricScores={rubricScores}
-  feedback={feedback}
-  report={report}
-  vote={vote}
-  rubricStatus={rubricStatus}
-  submitStatus={submitStatus}
-  isPending={isAuthor ? (!selectedAssignment.feedbackEditor || !['Aceptado', 'Rechazado'].includes(selectedAssignment.Estado)) : !selectedAssignment.isCompleted}
-  role={selectedAssignment.role}
-  link={selectedAssignment['Link Artículo']}
-  toggleTutorial={toggleTutorial}
-  tutorialVisible={tutorialVisible}
-  debouncedSetFeedback={debouncedSetFeedback}
-  debouncedSetReport={debouncedSetReport}
-  modules={modules}
-  formats={formats}
-  decodeBody={decodeBody}
-  showImageModal={showImageModal}
-  imageData={imageData}
-  isEditingImage={isEditingImage}
-  handleImageDataChange={handleImageDataChange}
-  handleImageModalSubmit={handleImageModalSubmit}
-  expandedFeedback={expandedFeedback}
-  toggleFeedback={toggleFeedback}
-  getDecisionText={getDecisionText}
-/>
+                assignment={selectedAssignment}
+                onClose={() => setSelectedAssignment(null)}
+                handleSubmitRubric={handleSubmitRubric}
+                handleSubmit={handleSubmit}
+                handleVote={handleVote}
+                rubricScores={rubricScores}
+                feedback={feedback}
+                report={report}
+                vote={vote}
+                rubricStatus={rubricStatus}
+                submitStatus={submitStatus}
+                isPending={activeTab === 'assignments'}
+                role={selectedAssignment.role}
+                link={selectedAssignment['Link Artículo']}
+                toggleTutorial={toggleTutorial}
+                tutorialVisible={tutorialVisible}
+                debouncedSetFeedback={debouncedSetFeedback}
+                debouncedSetReport={debouncedSetReport}
+                modules={modules}
+                formats={formats}
+                decodeBody={decodeBody}
+                showImageModal={showImageModal}
+                imageData={imageData}
+                isEditingImage={isEditingImage}
+                handleImageDataChange={handleImageDataChange}
+                handleImageModalSubmit={handleImageModalSubmit}
+                expandedFeedback={expandedFeedback}
+                toggleFeedback={toggleFeedback}
+                getDecisionText={getDecisionText}
+              />
             </div>
           </motion.div>
         )}
