@@ -1,59 +1,54 @@
 import React, { useState, useEffect } from 'react';
-import Papa from 'papaparse';
 import { motion, AnimatePresence } from 'framer-motion';
-import { EyeIcon, EyeSlashIcon, LockClosedIcon, UserIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
+import { EyeIcon, EyeSlashIcon, LockClosedIcon, ArrowRightOnRectangleIcon, UserIcon } from '@heroicons/react/24/outline';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
   onAuthStateChanged,
   signOut,
-  auth
+  auth,
+  db,
+  doc,
+  setDoc,
+  getDoc
 } from '../firebase';
-
-const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 
 export default function LoginSection({ onLogin }) {
   const [isLogin, setIsLogin] = useState(true);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
-  const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState({ email: '', password: '' });
+  const [errors, setErrors] = useState({ firstName: '', lastName: '', email: '', password: '' });
   const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
     if (!auth) {
-      console.error('Error: auth no está definido. Revisa firebase.js');
-      setMessage({ text: 'Error en la configuración. Contacta al equipo.', type: 'error' });
+      setMessage({ text: 'Error en configuración', type: 'error' });
       return;
     }
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const normalizedEmail = user.email.toLowerCase();
-        const csvUser = users.find(u =>
-          u.Correo?.toLowerCase() === normalizedEmail ||
-          u['E-mail']?.toLowerCase() === normalizedEmail
-        );
-
-        if (!csvUser) {
-          setMessage({ text: 'Este correo no está autorizado. ¿Eres autor o miembro del equipo? Si es así, contáctanos por correo.', type: 'error' });
-          await signOut(auth).catch((err) => console.error('Error al cerrar sesión:', err));
-          setCurrentUser(null);
-          return;
-        }
-
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
         const userData = {
           uid: user.uid,
           email: user.email,
-          name: csvUser?.Nombre || user.email,
-          role: csvUser?.['Rol en la Revista'] || 'Usuario'
+          firstName: userDoc.data()?.firstName || '',
+          lastName: userDoc.data()?.lastName || '',
+          displayName: userDoc.data()?.displayName || user.email,
+          roles: userDoc.data()?.roles || ['Autor'],
+          description: userDoc.data()?.description || { es: '', en: '' },
+          interests: userDoc.data()?.interests || { es: '', en: '' },
+          imageUrl: userDoc.data()?.imageUrl || '',
+          social: userDoc.data()?.social || {},
+          publicEmail: userDoc.data()?.publicEmail || null
         };
-
-        setMessage({ text: `¡Bienvenido, ${userData.name}!`, type: 'success' });
+        setMessage({ text: `¡Bienvenido, ${userData.displayName}!`, type: 'success' });
         setCurrentUser(userData);
         if (onLogin) onLogin(userData);
       } else {
@@ -63,52 +58,23 @@ export default function LoginSection({ onLogin }) {
     });
 
     return () => unsubscribe();
-  }, [onLogin, users]);
-
-  useEffect(() => {
-    const fetchUsers = async () => {
-      setIsLoading(true);
-      try {
-        const response = await fetch(USERS_CSV, { cache: 'no-store' });
-        if (!response.ok) throw new Error(`Error al cargar CSV: ${response.status}`);
-        
-        const csvText = await response.text();
-        Papa.parse(csvText, {
-          header: true,
-          skipEmptyLines: true,
-          delimiter: ',',
-          transform: (value) => value?.toString().trim(),
-          complete: ({ data }) => {
-            const validUsers = data.filter(user =>
-              user.Correo &&
-              typeof user.Correo === 'string' &&
-              user.Correo.includes('@') &&
-              user.Correo.includes('.')
-            );
-            setUsers(validUsers);
-            console.log(`✅ ${validUsers.length} usuarios autorizados cargados del CSV`);
-            setIsLoading(false);
-          },
-          error: (err) => {
-            console.error('Error CSV:', err);
-            setMessage({ text: 'Error al cargar la lista de usuarios', type: 'error' });
-            setIsLoading(false);
-          },
-        });
-      } catch (err) {
-        console.error('Error fetch:', err);
-        setMessage({ text: 'Error al cargar la lista de usuarios', type: 'error' });
-        setIsLoading(false);
-      }
-    };
-
-    fetchUsers();
-  }, []);
+  }, [onLogin]);
 
   const validateInputs = () => {
     let isValid = true;
-    const newErrors = { email: '', password: '' };
+    const newErrors = { firstName: '', lastName: '', email: '', password: '' };
     const normalizedEmail = email.trim().toLowerCase();
+
+    if (!isLogin) {
+      if (!firstName.trim()) {
+        newErrors.firstName = 'Nombre requerido';
+        isValid = false;
+      }
+      if (!lastName.trim()) {
+        newErrors.lastName = 'Apellidos requeridos';
+        isValid = false;
+      }
+    }
 
     if (!email) {
       newErrors.email = 'Correo requerido';
@@ -116,15 +82,6 @@ export default function LoginSection({ onLogin }) {
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       newErrors.email = 'Formato de correo inválido';
       isValid = false;
-    } else {
-      const userFromCSV = users.find(user =>
-        user.Correo?.trim().toLowerCase() === normalizedEmail ||
-        user['E-mail']?.trim().toLowerCase() === normalizedEmail
-      );
-      if (!userFromCSV) {
-        newErrors.email = 'Este correo no está autorizado';
-        isValid = false;
-      }
     }
 
     if (!password) {
@@ -149,34 +106,45 @@ export default function LoginSection({ onLogin }) {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
       const user = userCredential.user;
-      console.log('✅ Usuario creado:', user.uid);
-      setMessage({ text: `¡Contraseña creada para ${user.email}! Ahora inicia sesión.`, type: 'success' });
 
+      await setDoc(doc(db, 'users', user.uid), {
+        uid: user.uid,
+        email: user.email,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        displayName: `${firstName.trim()} ${lastName.trim()}`,
+        roles: ['Autor'],
+        description: { es: '', en: '' },
+        interests: { es: '', en: '' },
+        imageUrl: '',
+        social: {},
+        publicEmail: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+
+      setMessage({ text: '¡Cuenta creada! Ahora inicia sesión.', type: 'success' });
+      setIsLogin(true);
       setEmail('');
       setPassword('');
-      setIsLogin(true);
-      setErrors({ email: '', password: '' });
+      setFirstName('');
+      setLastName('');
+      setErrors({ firstName: '', lastName: '', email: '', password: '' });
     } catch (error) {
-      console.error('Error registro:', error.code, error.message);
       let errorText = 'Error al crear la cuenta';
-
       switch (error.code) {
         case 'auth/email-already-in-use':
-          errorText = 'Este correo ya está registrado. Intenta iniciar sesión o usa "Olvidé mi contraseña".';
+          errorText = 'Este correo ya está registrado.';
           break;
         case 'auth/weak-password':
-          errorText = 'Contraseña demasiado débil. Debe tener al menos 6 caracteres.';
+          errorText = 'Contraseña débil.';
           break;
         case 'auth/invalid-email':
           errorText = 'Correo inválido';
           break;
-        case 'auth/too-many-requests':
-          errorText = 'Demasiados intentos. Intenta de nuevo más tarde.';
-          break;
         default:
-          errorText = error.message || 'Error desconocido';
+          errorText = error.message;
       }
-
       setMessage({ text: errorText, type: 'error' });
     }
 
@@ -191,27 +159,9 @@ export default function LoginSection({ onLogin }) {
     const normalizedEmail = email.trim().toLowerCase();
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
-      const user = userCredential.user;
-
-      const csvUser = users.find(u =>
-        u.Correo?.toLowerCase() === user.email.toLowerCase() ||
-        u['E-mail']?.toLowerCase() === user.email.toLowerCase()
-      );
-
-      const userData = {
-        uid: user.uid,
-        email: user.email,
-        name: csvUser?.Nombre || user.email,
-        role: csvUser?.['Rol en la Revista'] || 'Usuario'
-      };
-
-      setMessage({ text: `¡Bienvenido, ${userData.name}!`, type: 'success' });
-      if (onLogin) onLogin(userData);
+      await signInWithEmailAndPassword(auth, normalizedEmail, password);
     } catch (error) {
-      console.error('Error login:', error.code, error.message);
       let errorText = 'Error al iniciar sesión';
-
       switch (error.code) {
         case 'auth/invalid-credential':
         case 'auth/wrong-password':
@@ -221,13 +171,9 @@ export default function LoginSection({ onLogin }) {
         case 'auth/invalid-email':
           errorText = 'Correo inválido';
           break;
-        case 'auth/too-many-requests':
-          errorText = 'Demasiados intentos. Intenta de nuevo más tarde.';
-          break;
         default:
-          errorText = error.message || 'Error desconocido';
+          errorText = error.message;
       }
-
       setMessage({ text: errorText, type: 'error' });
     }
 
@@ -240,45 +186,24 @@ export default function LoginSection({ onLogin }) {
       return;
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
-    const userFromCSV = users.find(user =>
-      user.Correo?.trim().toLowerCase() === normalizedEmail ||
-      user['E-mail']?.trim().toLowerCase() === normalizedEmail
-    );
-
-    if (!userFromCSV) {
-      setMessage({ text: 'Este correo no está autorizado en la lista', type: 'error' });
-      return;
-    }
-
     setIsLoading(true);
     setMessage({ text: '', type: '' });
 
     try {
-      await sendPasswordResetEmail(auth, normalizedEmail);
-      console.log('✅ Correo de recuperación enviado a:', normalizedEmail);
-      setMessage({ text: 'Revisa tu correo (incluyendo spam/basura) para restablecer tu contraseña. Puede tardar unos minutos.', type: 'success' });
+      await sendPasswordResetEmail(auth, email.trim().toLowerCase());
+      setMessage({ text: 'Correo de recuperación enviado. Revisa tu inbox (incluyendo spam).', type: 'success' });
     } catch (error) {
-      console.error('Error en olvido de contraseña:', error.code, error.message);
       let errorText = 'Error al enviar correo de recuperación';
-
       switch (error.code) {
         case 'auth/invalid-email':
           errorText = 'Formato de correo inválido';
           break;
         case 'auth/user-not-found':
-          errorText = 'No hay cuenta registrada con este correo. Usa "Crear Contraseña" primero.';
-          break;
-        case 'auth/too-many-requests':
-          errorText = 'Demasiados intentos. Espera 10-15 minutos.';
-          break;
-        case 'auth/missing-email':
-          errorText = 'Falta el correo';
+          errorText = 'No hay cuenta con este correo. Crea una cuenta primero.';
           break;
         default:
-          errorText += ` (${error.message})`;
+          errorText = error.message;
       }
-
       setMessage({ text: errorText, type: 'error' });
     } finally {
       setIsLoading(false);
@@ -288,14 +213,13 @@ export default function LoginSection({ onLogin }) {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      setMessage({ text: 'Sesión cerrada exitosamente', type: 'success' });
+      setMessage({ text: 'Sesión cerrada', type: 'success' });
       setCurrentUser(null);
       setEmail('');
       setPassword('');
       setIsLogin(true);
       if (onLogin) onLogin(null);
     } catch (error) {
-      console.error('Error al cerrar sesión:', error);
       setMessage({ text: 'Error al cerrar sesión', type: 'error' });
     }
   };
@@ -318,8 +242,8 @@ export default function LoginSection({ onLogin }) {
           </div>
           <div>
             <p className="text-[10px] uppercase tracking-[0.3em] font-bold text-[#007398] mb-1">Sesión Iniciada</p>
-            <h3 className="text-2xl font-serif font-bold text-gray-900">{currentUser.name}</h3>
-            <p className="text-sm text-gray-500 font-mono">{currentUser.role}</p>
+            <h3 className="text-2xl font-serif font-bold text-gray-900">{currentUser.displayName}</h3>
+            <p className="text-sm text-gray-500 font-mono">{currentUser.roles.join('; ')}</p>
           </div>
           <button
             onClick={handleLogout}
@@ -346,12 +270,12 @@ export default function LoginSection({ onLogin }) {
     );
   }
 
-  if (isLoading && users.length === 0) {
+  if (isLoading && !currentUser) {
     return (
       <div className="max-w-md mx-auto py-12 px-6">
         <div className="bg-white border-2 border-black p-8 text-center space-y-6">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#007398] mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando lista de usuarios...</p>
+          <p className="text-gray-600">Cargando...</p>
         </div>
       </div>
     );
@@ -374,18 +298,44 @@ export default function LoginSection({ onLogin }) {
           </p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-5">
+          {!isLogin && (
+            <>
+              <div>
+                <label className="text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-1.5 block">Nombre</label>
+                <input
+                  type="text"
+                  className="w-full bg-gray-50 border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:border-[#007398] focus:bg-white transition-all"
+                  placeholder="Tu nombre"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  disabled={isLoading}
+                />
+                {errors.firstName && <p className="mt-1 text-[11px] text-red-700">{errors.firstName}</p>}
+              </div>
+              <div>
+                <label className="text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-1.5 block">Apellidos</label>
+                <input
+                  type="text"
+                  className="w-full bg-gray-50 border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:border-[#007398] focus:bg-white transition-all"
+                  placeholder="Tus apellidos"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  disabled={isLoading}
+                />
+                {errors.lastName && <p className="mt-1 text-[11px] text-red-700">{errors.lastName}</p>}
+              </div>
+            </>
+          )}
           <div>
             <label className="text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-1.5 block">Correo</label>
-            <div className="relative">
-              <input
-                type="email"
-                className="w-full bg-gray-50 border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:border-[#007398] focus:bg-white transition-all"
-                placeholder="ejemplo@gmail.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={isLoading}
-              />
-            </div>
+            <input
+              type="email"
+              className="w-full bg-gray-50 border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:border-[#007398] focus:bg-white transition-all"
+              placeholder="ejemplo@gmail.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={isLoading}
+            />
             {errors.email && <p className="mt-1 text-[11px] text-red-700">{errors.email}</p>}
           </div>
           <div>
@@ -424,13 +374,13 @@ export default function LoginSection({ onLogin }) {
           </div>
           <button
             type="submit"
-            disabled={isLoading || users.length === 0}
+            disabled={isLoading}
             className="w-full bg-black text-white py-4 text-xs uppercase font-black tracking-[0.2em] hover:bg-[#007398] transition-colors flex items-center justify-center gap-3 disabled:bg-gray-400"
           >
             {isLoading ? (
               <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
             ) : (
-              <>{isLogin ? 'Iniciar Sesión' : 'Establecer Contraseña'}</>
+              <>{isLogin ? 'Iniciar Sesión' : 'Crear Cuenta'}</>
             )}
           </button>
         </form>
@@ -441,7 +391,7 @@ export default function LoginSection({ onLogin }) {
             disabled={isLoading}
           >
             {isLogin ? (
-              <>¿Es su primera vez? <span className="font-bold text-[#007398]">Cree su contraseña aquí</span></>
+              <>¿Es su primera vez? <span className="font-bold text-[#007398]">Cree su cuenta aquí</span></>
             ) : (
               <>¿Ya tiene cuenta? <span className="font-bold text-[#007398]">Inicie sesión</span></>
             )}
@@ -462,12 +412,6 @@ export default function LoginSection({ onLogin }) {
           )}
         </AnimatePresence>
       </motion.div>
-      <p className="mt-8 text-center text-[10px] text-gray-400 uppercase tracking-widest leading-loose">
-        Sistema de Gestión Editorial <br />
-        Solo para usuarios de la Revista.
-        {process.env.NODE_ENV === 'development' && <br />}
-        {process.env.NODE_ENV === 'development' && `${users.length} usuarios autorizados`}
-      </p>
     </div>
   );
 }
