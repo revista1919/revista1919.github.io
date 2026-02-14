@@ -95,14 +95,8 @@ export default function DirectorPanel({ user }) {
     setHasAccess(false);
     return;
   }
-
-  const checkRole = async () => {
-    const tokenResult = await user.getIdTokenResult(true);
-    const roles = tokenResult.claims.roles || [];
-    setHasAccess(roles.includes('Director General'));
-  };
-
-  checkRole();
+  const roles = user.roles || [];
+  setHasAccess(roles.includes('Director General'));
 }, [user]);
 
   useEffect(() => {
