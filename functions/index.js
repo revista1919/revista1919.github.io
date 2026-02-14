@@ -275,8 +275,7 @@ async function translateHtmlFragmentWithSplit(html, source, target) {
   return translated.join("");
 }
 
-/* ===================== IMGBB UPLOAD ===================== */
-// EN index.js - AÑADE ESTA FUNCIÓN
+/* ===================== IMGBB UPLOAD ===================== */// EN index.js - AÑADE ESTA FUNCIÓN
 exports.uploadImageToImgBBCallable = onCall(
   { secrets: [IMGBB_API_KEY] },
   async (request) => {

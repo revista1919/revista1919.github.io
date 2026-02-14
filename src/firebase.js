@@ -67,43 +67,27 @@ export const updateRole = httpsCallable(functions, 'updateRole');
 ============================== */
 
 const IMGBB_FUNCTION_URL =
-  "https://uploadimagetoimgbb-ggqsq2kkua-uc.a.run.app";
+  "https://uploadimagetoimgbbcallable-ggqsq2kkua-uc.a.run.app";
 
+// CAMBIA la función HTTP por callable
 export const uploadImageToImgBB = async ({ base64, fileName }) => {
   const user = auth.currentUser;
-
-  if (!user) {
-    throw new Error("Usuario no autenticado");
-  }
-
-  const token = await user.getIdToken();
-
-  // Limpiar prefijo si viene como data:image/...;base64,xxxx
+  if (!user) throw new Error("Usuario no autenticado");
+  
+  // Usar función callable en lugar de fetch
+  const uploadFunction = httpsCallable(functions, 'uploadImageToImgBBCallable');
+  
   const cleanBase64 = base64.includes("base64,")
     ? base64.split("base64,")[1]
     : base64;
-
-  const response = await fetch(IMGBB_FUNCTION_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`
-    },
-    body: JSON.stringify({
-      imageBase64: cleanBase64,
-      name: fileName
-    })
+  
+  const result = await uploadFunction({
+    imageBase64: cleanBase64,
+    name: fileName
   });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.error || "Error subiendo imagen");
-  }
-
-  return data;
+  
+  return result.data;
 };
-
 /* ==============================
    EXPORTS
 ============================== */
