@@ -140,7 +140,7 @@ class ErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
-const [loadingUser, setLoadingUser] = useState(true);
+
 
 const localizer = momentLocalizer(moment);
 
@@ -507,7 +507,7 @@ export default function PortalSection({ user, onLogout }) {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const feedbackQuillRefs = useRef({});
   const reportQuillRefs = useRef({});
-
+const [loadingUser, setLoadingUser] = useState(true);
   // NUEVO: Datos en tiempo real desde Firebase
   const [userData, setUserData] = useState(user);
   const [users, setUsers] = useState([]);
