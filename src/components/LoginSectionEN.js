@@ -1,59 +1,54 @@
 import React, { useState, useEffect } from 'react';
-import Papa from 'papaparse';
 import { motion, AnimatePresence } from 'framer-motion';
-import { EyeIcon, EyeSlashIcon, LockClosedIcon, UserIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
+import { EyeIcon, EyeSlashIcon, LockClosedIcon, ArrowRightOnRectangleIcon, UserIcon } from '@heroicons/react/24/outline';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
   onAuthStateChanged,
   signOut,
-  auth
+  auth,
+  db,
+  doc,
+  setDoc,
+  getDoc
 } from '../firebase';
-
-const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 
 export default function LoginSection({ onLogin }) {
   const [isLogin, setIsLogin] = useState(true);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
-  const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState({ email: '', password: '' });
+  const [errors, setErrors] = useState({ firstName: '', lastName: '', email: '', password: '' });
   const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
     if (!auth) {
-      console.error('Error: auth is not defined. Check firebase.js');
-      setMessage({ text: 'Configuration error. Contact the team.', type: 'error' });
+      setMessage({ text: 'Configuration error', type: 'error' });
       return;
     }
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const normalizedEmail = user.email.toLowerCase();
-        const csvUser = users.find(u =>
-          u.Correo?.toLowerCase() === normalizedEmail ||
-          u['E-mail']?.toLowerCase() === normalizedEmail
-        );
-
-        if (!csvUser) {
-          setMessage({ text: 'This email is not authorized. Are you an author or team member? If so, contact us by email.', type: 'error' });
-          await signOut(auth).catch((err) => console.error('Error signing out:', err));
-          setCurrentUser(null);
-          return;
-        }
-
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
         const userData = {
           uid: user.uid,
           email: user.email,
-          name: csvUser?.Nombre || user.email,
-          role: csvUser?.['Rol en la Revista'] || 'User'
+          firstName: userDoc.data()?.firstName || '',
+          lastName: userDoc.data()?.lastName || '',
+          displayName: userDoc.data()?.displayName || user.email,
+          roles: userDoc.data()?.roles || ['Author'],
+          description: userDoc.data()?.description || { es: '', en: '' },
+          interests: userDoc.data()?.interests || { es: '', en: '' },
+          imageUrl: userDoc.data()?.imageUrl || '',
+          social: userDoc.data()?.social || {},
+          publicEmail: userDoc.data()?.publicEmail || null
         };
-
-        setMessage({ text: `Welcome, ${userData.name}!`, type: 'success' });
+        setMessage({ text: `Welcome, ${userData.displayName}!`, type: 'success' });
         setCurrentUser(userData);
         if (onLogin) onLogin(userData);
       } else {
@@ -63,75 +58,37 @@ export default function LoginSection({ onLogin }) {
     });
 
     return () => unsubscribe();
-  }, [onLogin, users]);
-
-  useEffect(() => {
-    const fetchUsers = async () => {
-      setIsLoading(true);
-      try {
-        const response = await fetch(USERS_CSV, { cache: 'no-store' });
-        if (!response.ok) throw new Error(`Error loading CSV: ${response.status}`);
-        
-        const csvText = await response.text();
-        Papa.parse(csvText, {
-          header: true,
-          skipEmptyLines: true,
-          delimiter: ',',
-          transform: (value) => value?.toString().trim(),
-          complete: ({ data }) => {
-            const validUsers = data.filter(user =>
-              user.Correo &&
-              typeof user.Correo === 'string' &&
-              user.Correo.includes('@') &&
-              user.Correo.includes('.')
-            );
-            setUsers(validUsers);
-            console.log(`✅ ${validUsers.length} authorized users loaded from CSV`);
-            setIsLoading(false);
-          },
-          error: (err) => {
-            console.error('CSV Error:', err);
-            setMessage({ text: 'Error loading the user list', type: 'error' });
-            setIsLoading(false);
-          },
-        });
-      } catch (err) {
-        console.error('Fetch error:', err);
-        setMessage({ text: 'Error loading the user list', type: 'error' });
-        setIsLoading(false);
-      }
-    };
-
-    fetchUsers();
-  }, []);
+  }, [onLogin]);
 
   const validateInputs = () => {
     let isValid = true;
-    const newErrors = { email: '', password: '' };
+    const newErrors = { firstName: '', lastName: '', email: '', password: '' };
     const normalizedEmail = email.trim().toLowerCase();
 
-    if (!email) {
-      newErrors.email = 'Email is required';
-      isValid = false;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-      newErrors.email = 'Invalid email format';
-      isValid = false;
-    } else {
-      const userFromCSV = users.find(user =>
-        user.Correo?.trim().toLowerCase() === normalizedEmail ||
-        user['E-mail']?.trim().toLowerCase() === normalizedEmail
-      );
-      if (!userFromCSV) {
-        newErrors.email = 'This email is not authorized';
+    if (!isLogin) {
+      if (!firstName.trim()) {
+        newErrors.firstName = 'First name required';
+        isValid = false;
+      }
+      if (!lastName.trim()) {
+        newErrors.lastName = 'Last name required';
         isValid = false;
       }
     }
 
+    if (!email) {
+      newErrors.email = 'Email required';
+      isValid = false;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      newErrors.email = 'Invalid email format';
+      isValid = false;
+    }
+
     if (!password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = 'Password required';
       isValid = false;
     } else if (password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters long';
+      newErrors.password = 'Password must be at least 6 characters';
       isValid = false;
     }
 
@@ -149,34 +106,45 @@ export default function LoginSection({ onLogin }) {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
       const user = userCredential.user;
-      console.log('✅ User created:', user.uid);
-      setMessage({ text: `Password created for ${user.email}! You can now sign in.`, type: 'success' });
 
+      await setDoc(doc(db, 'users', user.uid), {
+        uid: user.uid,
+        email: user.email,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        displayName: `${firstName.trim()} ${lastName.trim()}`,
+        roles: ['Author'],
+        description: { es: '', en: '' },
+        interests: { es: '', en: '' },
+        imageUrl: '',
+        social: {},
+        publicEmail: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+
+      setMessage({ text: 'Account created! Now sign in.', type: 'success' });
+      setIsLogin(true);
       setEmail('');
       setPassword('');
-      setIsLogin(true);
-      setErrors({ email: '', password: '' });
+      setFirstName('');
+      setLastName('');
+      setErrors({ firstName: '', lastName: '', email: '', password: '' });
     } catch (error) {
-      console.error('Signup error:', error.code, error.message);
       let errorText = 'Error creating account';
-
       switch (error.code) {
         case 'auth/email-already-in-use':
-          errorText = 'This email is already registered. Try signing in or use "Forgot password".';
+          errorText = 'This email is already registered.';
           break;
         case 'auth/weak-password':
-          errorText = 'Password is too weak. It must be at least 6 characters.';
+          errorText = 'Weak password.';
           break;
         case 'auth/invalid-email':
           errorText = 'Invalid email';
           break;
-        case 'auth/too-many-requests':
-          errorText = 'Too many attempts. Try again later.';
-          break;
         default:
-          errorText = error.message || 'Unknown error';
+          errorText = error.message;
       }
-
       setMessage({ text: errorText, type: 'error' });
     }
 
@@ -191,27 +159,9 @@ export default function LoginSection({ onLogin }) {
     const normalizedEmail = email.trim().toLowerCase();
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
-      const user = userCredential.user;
-
-      const csvUser = users.find(u =>
-        u.Correo?.toLowerCase() === user.email.toLowerCase() ||
-        u['E-mail']?.toLowerCase() === user.email.toLowerCase()
-      );
-
-      const userData = {
-        uid: user.uid,
-        email: user.email,
-        name: csvUser?.Nombre || user.email,
-        role: csvUser?.['Rol en la Revista'] || 'User'
-      };
-
-      setMessage({ text: `Welcome, ${userData.name}!`, type: 'success' });
-      if (onLogin) onLogin(userData);
+      await signInWithEmailAndPassword(auth, normalizedEmail, password);
     } catch (error) {
-      console.error('Login error:', error.code, error.message);
       let errorText = 'Error signing in';
-
       switch (error.code) {
         case 'auth/invalid-credential':
         case 'auth/wrong-password':
@@ -221,13 +171,9 @@ export default function LoginSection({ onLogin }) {
         case 'auth/invalid-email':
           errorText = 'Invalid email';
           break;
-        case 'auth/too-many-requests':
-          errorText = 'Too many attempts. Try again later.';
-          break;
         default:
-          errorText = error.message || 'Unknown error';
+          errorText = error.message;
       }
-
       setMessage({ text: errorText, type: 'error' });
     }
 
@@ -240,45 +186,24 @@ export default function LoginSection({ onLogin }) {
       return;
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
-    const userFromCSV = users.find(user =>
-      user.Correo?.trim().toLowerCase() === normalizedEmail ||
-      user['E-mail']?.trim().toLowerCase() === normalizedEmail
-    );
-
-    if (!userFromCSV) {
-      setMessage({ text: 'This email is not authorized on the list', type: 'error' });
-      return;
-    }
-
     setIsLoading(true);
     setMessage({ text: '', type: '' });
 
     try {
-      await sendPasswordResetEmail(auth, normalizedEmail);
-      console.log('✅ Password reset email sent to:', normalizedEmail);
-      setMessage({ text: 'Check your email (including spam/junk) to reset your password. It may take a few minutes.', type: 'success' });
+      await sendPasswordResetEmail(auth, email.trim().toLowerCase());
+      setMessage({ text: 'Recovery email sent. Check your inbox (including spam).', type: 'success' });
     } catch (error) {
-      console.error('Forgot password error:', error.code, error.message);
-      let errorText = 'Error sending password reset email';
-
+      let errorText = 'Error sending recovery email';
       switch (error.code) {
         case 'auth/invalid-email':
           errorText = 'Invalid email format';
           break;
         case 'auth/user-not-found':
-          errorText = 'No account registered with this email. Use "Create Password" first.';
-          break;
-        case 'auth/too-many-requests':
-          errorText = 'Too many attempts. Wait 10–15 minutes.';
-          break;
-        case 'auth/missing-email':
-          errorText = 'Email is missing';
+          errorText = 'No account with this email. Create an account first.';
           break;
         default:
-          errorText += ` (${error.message})`;
+          errorText = error.message;
       }
-
       setMessage({ text: errorText, type: 'error' });
     } finally {
       setIsLoading(false);
@@ -288,14 +213,13 @@ export default function LoginSection({ onLogin }) {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      setMessage({ text: 'Successfully signed out', type: 'success' });
+      setMessage({ text: 'Session closed', type: 'success' });
       setCurrentUser(null);
       setEmail('');
       setPassword('');
       setIsLogin(true);
       if (onLogin) onLogin(null);
     } catch (error) {
-      console.error('Logout error:', error);
       setMessage({ text: 'Error signing out', type: 'error' });
     }
   };
@@ -317,9 +241,9 @@ export default function LoginSection({ onLogin }) {
             <UserIcon className="h-10 w-10 text-gray-400" />
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-[0.3em] font-bold text-[#007398] mb-1">Session Active</p>
-            <h3 className="text-2xl font-serif font-bold text-gray-900">{currentUser.name}</h3>
-            <p className="text-sm text-gray-500 font-mono">{currentUser.role}</p>
+            <p className="text-[10px] uppercase tracking-[0.3em] font-bold text-[#007398] mb-1">Active Session</p>
+            <h3 className="text-2xl font-serif font-bold text-gray-900">{currentUser.displayName}</h3>
+            <p className="text-sm text-gray-500 font-mono">{currentUser.roles.join('; ')}</p>
           </div>
           <button
             onClick={handleLogout}
@@ -346,12 +270,12 @@ export default function LoginSection({ onLogin }) {
     );
   }
 
-  if (isLoading && users.length === 0) {
+  if (isLoading && !currentUser) {
     return (
       <div className="max-w-md mx-auto py-12 px-6">
         <div className="bg-white border-2 border-black p-8 text-center space-y-6">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#007398] mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading user list...</p>
+          <p className="text-gray-600">Loading...</p>
         </div>
       </div>
     );
@@ -374,18 +298,44 @@ export default function LoginSection({ onLogin }) {
           </p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-5">
+          {!isLogin && (
+            <>
+              <div>
+                <label className="text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-1.5 block">First Name</label>
+                <input
+                  type="text"
+                  className="w-full bg-gray-50 border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:border-[#007398] focus:bg-white transition-all"
+                  placeholder="Your first name"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  disabled={isLoading}
+                />
+                {errors.firstName && <p className="mt-1 text-[11px] text-red-700">{errors.firstName}</p>}
+              </div>
+              <div>
+                <label className="text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-1.5 block">Last Name</label>
+                <input
+                  type="text"
+                  className="w-full bg-gray-50 border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:border-[#007398] focus:bg-white transition-all"
+                  placeholder="Your last name"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  disabled={isLoading}
+                />
+                {errors.lastName && <p className="mt-1 text-[11px] text-red-700">{errors.lastName}</p>}
+              </div>
+            </>
+          )}
           <div>
             <label className="text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-1.5 block">Email</label>
-            <div className="relative">
-              <input
-                type="email"
-                className="w-full bg-gray-50 border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:border-[#007398] focus:bg-white transition-all"
-                placeholder="example@gmail.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={isLoading}
-              />
-            </div>
+            <input
+              type="email"
+              className="w-full bg-gray-50 border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:border-[#007398] focus:bg-white transition-all"
+              placeholder="example@gmail.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={isLoading}
+            />
             {errors.email && <p className="mt-1 text-[11px] text-red-700">{errors.email}</p>}
           </div>
           <div>
@@ -424,13 +374,13 @@ export default function LoginSection({ onLogin }) {
           </div>
           <button
             type="submit"
-            disabled={isLoading || users.length === 0}
+            disabled={isLoading}
             className="w-full bg-black text-white py-4 text-xs uppercase font-black tracking-[0.2em] hover:bg-[#007398] transition-colors flex items-center justify-center gap-3 disabled:bg-gray-400"
           >
             {isLoading ? (
               <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
             ) : (
-              <>{isLogin ? 'Sign In' : 'Set Password'}</>
+              <>{isLogin ? 'Sign In' : 'Create Account'}</>
             )}
           </button>
         </form>
@@ -441,7 +391,7 @@ export default function LoginSection({ onLogin }) {
             disabled={isLoading}
           >
             {isLogin ? (
-              <>First time here? <span className="font-bold text-[#007398]">Create your password</span></>
+              <>First time here? <span className="font-bold text-[#007398]">Create your account</span></>
             ) : (
               <>Already have an account? <span className="font-bold text-[#007398]">Sign in</span></>
             )}
@@ -462,12 +412,6 @@ export default function LoginSection({ onLogin }) {
           )}
         </AnimatePresence>
       </motion.div>
-      <p className="mt-8 text-center text-[10px] text-gray-400 uppercase tracking-widest leading-loose">
-        Editorial Management System <br />
-        For journal users only.
-        {process.env.NODE_ENV === 'development' && <br />}
-        {process.env.NODE_ENV === 'development' && `${users.length} authorized users`}
-      </p>
     </div>
   );
 }
