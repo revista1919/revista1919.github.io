@@ -1,7 +1,6 @@
 const fs = require('fs');
 const path = require('path');
 const Papa = require('papaparse');
-const teamCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
 const outputJson = path.join(__dirname, 'dist', 'articles.json');
 const volumesOutputJson = path.join(__dirname, 'dist', 'volumes.json');
 const outputHtmlDir = path.join(__dirname, 'dist', 'articles');
@@ -179,16 +178,21 @@ function generateBibTeX(article) {
 (async () => {
   try {
     // Procesar equipo primero para obtener instituciones (sigue de CSV)
-    const teamRes = await fetch(teamCsvUrl);
-    if (!teamRes.ok) throw new Error(`Error descargando CSV de equipo: ${teamRes.statusText}`);
-    const teamCsvData = await teamRes.text();
-    const teamParsed = Papa.parse(teamCsvData, { header: true, skipEmptyLines: true });
-    const authorToInstitution = {};
-    teamParsed.data.forEach(row => {
-      const name = (row['Nombre'] || '').trim();
-      const inst = (row['Institution'] || '').trim();
-      if (name) authorToInstitution[name] = inst;
-    });
+    // Obtener Team.json
+const teamJsonUrl = 'https://www.revistacienciasestudiantes.com/team/Team.json';
+const teamRes = await fetch(teamJsonUrl);
+const teamData = await teamRes.json(); // array de usuarios
+
+// Construir mapas: nombre -> institución, nombre -> slug
+const authorToInstitution = {};
+const authorToSlug = {};
+teamData.forEach(user => {
+  const name = user.displayName || `${user.firstName} ${user.lastName}`.trim();
+  if (name) {
+    authorToInstitution[name] = user.institution || '';
+    authorToSlug[name] = user.slug;
+  }
+});
     // Procesar artículos desde Firestore
     const articlesSnapshot = await db.collection('articles').get();
     const articles = articlesSnapshot.docs.map(doc => {
@@ -241,7 +245,10 @@ function generateBibTeX(article) {
       const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
       article.pdf = article.pdfUrl;
       const authorsArray = article.autores.split(';').map(a => a.trim()).filter(Boolean);
-      const authorsDisplay = authorsArray.map(auth => `<a href="/team/${generateSlug(auth)}.html" class="author-link" style="color: var(--nature-blue); text-decoration: none; cursor: pointer; font-weight: 500;">${auth}</a>`).join(', ');
+      const authorsDisplay = authorsArray.map(auth => {
+  const slug = authorToSlug[auth] || generateSlug(auth); // fallback por si acaso
+  return `<a href="/team/${slug}.html" class="author-link">${auth}</a>`;
+}).join(', ');
       const authorsAPA = formatAuthorsAPA(article.autores);
       const authorsChicagoEs = formatAuthorsChicagoOrMLA(article.autores, 'es');
       const authorsMLAEs = formatAuthorsChicagoOrMLA(article.autores, 'es');
@@ -2671,553 +2678,7 @@ ${Object.keys(newsByYear).sort().reverse().map(year => `
 }
 await generateNews();
  // Procesar equipo (sigue de CSV)
-   const normalizeForEmail = str =>
-  str
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // quita acentos
-    .replace(/\s+/g, ".");
-
-const POSTAL_ADDRESS = "San Felipe, Valparaíso, Chile";
-
-   const allMembers = teamParsed.data.filter(row => (row['Nombre'] || '').trim() !== '');
-for (const member of allMembers) {
-  const rolesEs = (member['Rol en la Revista'] || '').split(';').map(r => r.trim()).filter(r => r);
-  const rolesEnList = (member['Role in the Journal'] || '').split(';').map(r => r.trim()).filter(r => r);
-  const nombre = member['Nombre'] || 'Miembro desconocido';
-  const publishedArticles = authorToArticles[nombre] || [];
-  const isAuthor = publishedArticles.length > 0;
-  
-  let filteredRolesEs = rolesEs;
-  let filteredRolesEn = rolesEnList;
-  if (rolesEs.length > 1) {
-    filteredRolesEs = rolesEs.filter(r => r.toLowerCase() !== 'autor');
-  }
-  if (rolesEnList.length > 1) {
-    filteredRolesEn = rolesEnList.filter(r => r.toLowerCase() !== 'author');
-  }
-  const rolesStr = filteredRolesEs.join(', ') || 'No especificado';
-  const rolesEn = filteredRolesEn.join(', ') || 'Not specified';
-  const slug = generateSlug(nombre);
-  const descripcion = member['Descripción'] || 'Información no disponible';
-  const description = member['Description'] || 'Information not available';
-  const areas = member['Áreas de interés'] || 'No especificadas';
-  const areasEn = member['Areas of interest'] || 'Not specified';
-  const areasList = areas.split(';').map(a => a.trim()).filter(a => a);
-  const areasListEn = areasEn.split(';').map(a => a.trim()).filter(a => a);
-  const imagen = getImageSrc(member['Imagen'] || '');
-  const institution = member['Institution'] || '';
-  const isOnlyAuthorEs = rolesEs.length === 1 && rolesEs[0].toLowerCase() === 'autor';
-  const isOnlyAuthorEn = rolesEnList.length === 1 && rolesEnList[0].toLowerCase() === 'author';
-  const bioTitleEs = isOnlyAuthorEs ? 'Sobre el autor' : 'Perfil';
-  const areasTitleEs = isOnlyAuthorEs ? 'Líneas de Investigación' : 'Áreas de Interés';
-  const bioTitleEn = isOnlyAuthorEn ? 'About the Author' : 'Profile';
-  const areasTitleEn = isOnlyAuthorEn ? 'Research Areas' : 'Areas of Interest';
-  const areasTagsHtml = areasList.length ? areasList.map(area => `<span class="keyword-tag">${area}</span>`).join('') : '<p>No especificadas</p>';
-  const areasTagsHtmlEn = areasListEn.length ? areasListEn.map(area => `<span class="keyword-tag">${area}</span>`).join('') : '<p>Not specified</p>';
-  const isEditorEnJefe =
-  rolesEs.some(r => r.toLowerCase() === "editor en jefe") ||
-  rolesEnList.some(r => r.toLowerCase() === "editor-in-chief");
-
-const institutionalEmail = isEditorEnJefe
-  ? `${normalizeForEmail(nombre)}@revistacienciasestudiantes.com`
-  : "";
-
-  const articlesSectionEs = isAuthor ? `
-<section id="articles">
-  <h2 class="section-title">Publicaciones en la Revista</h2>
-  <div>
-    ${publishedArticles.map(article => {
-      const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
-      return `
-      <div class="article-item">
-        <a href="/articles/article-${articleSlug}.html" class="article-link">${article.titulo}</a>
-        <div class="article-meta">
-          Vol. ${article.volumen}, Núm. ${article.numero} • ${article.fecha}
-        </div>
-      </div>
-      `;
-    }).join('')}
-  </div>
-</section>` : '';
-  const articlesSectionEn = isAuthor ? `
-<section id="articles">
-  <h2 class="section-title">Publications in the Journal</h2>
-  <div>
-    ${publishedArticles.map(article => {
-      const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
-      return `
-      <div class="article-item">
-        <a href="/articles/article-${articleSlug}EN.html" class="article-link">${article.title || article.titulo}</a>
-        <div class="article-meta">
-          Vol. ${article.volumen}, Issue ${article.numero} • ${article.fecha}
-        </div>
-      </div>
-      `;
-    }).join('')}
-  </div>
-</section>` : '';
-  const editorExtras = isEditorEnJefe
-  ? `
-    <div class="profile-inst">
-      <a href="mailto:${institutionalEmail}" style="color:inherit;text-decoration:none;">
-        ${institutionalEmail}
-      </a>
-    </div>
-    <div class="profile-inst">${POSTAL_ADDRESS}</div>
-  `
-  : "";
-
-
-const institutionHtmlEs = `
-  ${institution ? `<div class="profile-inst">${institution}</div>` : ""}
-  ${editorExtras}
-`;
-
-const institutionHtmlEn = `
-  ${institution ? `<div class="profile-inst">${institution}</div>` : ""}
-  ${editorExtras}
-`;
-
-
-  const esContent = `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="${descripcion.substring(0, 160)}...">
-  <meta name="keywords" content="${areas}, ${rolesStr}, Revista Nacional de las Ciencias para Estudiantes">
-  <meta name="author" content="${nombre}">
-  <title>${nombre} - Equipo de Revista Nacional de las Ciencias para Estudiantes</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Lora:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --primary: #007398;
-      --text: #1a1a1a;
-      --grey: #555555;
-      --light-grey: #f5f5f5;
-      --border: #e0e0e0;
-    }
-    body {
-      margin: 0;
-      font-family: 'Lora', serif;
-      color: var(--text);
-      background-color: #fff;
-      line-height: 1.7;
-    }
-    /* Navegación Minimalista */
-    .top-nav {
-      padding: 20px;
-      text-align: center;
-      border-bottom: 1px solid var(--border);
-      font-family: 'Inter', sans-serif;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      font-size: 11px;
-    }
-    .top-nav a { text-decoration: none; color: var(--text); font-weight: 700; }
-    /* Cabecera de Perfil */
-    .profile-hero {
-      max-width: 900px;
-      margin: 60px auto;
-      padding: 0 20px;
-      display: grid;
-      grid-template-columns: 220px 1fr;
-      gap: 50px;
-      align-items: center;
-    }
-    .img-container {
-      position: relative;
-    }
-    .profile-img {
-      width: 220px;
-      height: 220px;
-      object-fit: cover;
-      filter: grayscale(20%);
-      border-radius: 2px; /* Cuadrado editorial, no circular */
-      box-shadow: 20px 20px 0px var(--light-grey);
-    }
-    .no-img {
-      width: 220px;
-      height: 220px;
-      background: var(--light-grey);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: 'Inter', sans-serif;
-      color: #999;
-      font-size: 12px;
-      text-transform: uppercase;
-    }
-    .profile-info h1 {
-      font-family: 'Playfair Display', serif;
-      font-size: 3.5rem;
-      margin: 0;
-      line-height: 1;
-      font-weight: 900;
-    }
-    .profile-role {
-      font-family: 'Inter', sans-serif;
-      color: var(--primary);
-      text-transform: uppercase;
-      letter-spacing: 3px;
-      font-size: 13px;
-      font-weight: 700;
-      margin-top: 15px;
-      display: block;
-    }
-    .profile-inst {
-      font-family: 'Inter', sans-serif;
-      color: var(--grey);
-      font-size: 14px;
-      margin-top: 5px;
-    }
-    /* Secciones de Contenido */
-    .container {
-      max-width: 800px;
-      margin: 0 auto 100px;
-      padding: 0 20px;
-    }
-    .section-title {
-      font-family: 'Inter', sans-serif;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 3px;
-      border-bottom: 1px solid var(--text);
-      padding-bottom: 10px;
-      margin: 60px 0 30px;
-      color: var(--text);
-    }
-    .bio-text { font-size: 1.15rem; }
-    /* Tags de Áreas */
-    .tags-container {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    .keyword-tag {
-      font-family: 'Inter', sans-serif;
-      font-size: 12px;
-      background: var(--light-grey);
-      padding: 6px 15px;
-      border-radius: 20px;
-      color: var(--text);
-      font-weight: 600;
-    }
-    /* Lista de Artículos Estilo Bibliográfico */
-    .article-item {
-      margin-bottom: 25px;
-      padding-left: 20px;
-      border-left: 2px solid var(--light-grey);
-      transition: border-color 0.3s;
-    }
-    .article-item:hover { border-left-color: var(--primary); }
-   
-    .article-link {
-      font-family: 'Playfair Display', serif;
-      font-size: 1.3rem;
-      color: var(--text);
-      text-decoration: none;
-      display: block;
-      line-height: 1.3;
-    }
-    .article-meta {
-      font-family: 'Inter', sans-serif;
-      font-size: 12px;
-      color: var(--grey);
-      margin-top: 5px;
-    }
-    .footer-nav {
-      text-align: center;
-      padding: 60px 20px;
-      background: var(--light-grey);
-      margin-top: 100px;
-    }
-    .footer-nav a {
-      font-family: 'Inter', sans-serif;
-      font-size: 12px;
-      text-decoration: none;
-      color: var(--primary);
-      font-weight: 700;
-      margin: 0 15px;
-      text-transform: uppercase;
-    }
-    @media (max-width: 768px) {
-      .profile-hero {
-        grid-template-columns: 1fr;
-        text-align: center;
-        margin-top: 30px;
-      }
-      .profile-img, .no-img { margin: 0 auto; width: 180px; height: 180px; }
-      .profile-info h1 { font-size: 2.5rem; }
-      .section-title { text-align: center; }
-    }
-    @media (max-width: 900px) {
-      h1, h2, p, .bio-text {
-        word-break: break-word;
-        overflow-wrap: break-word;
-        hyphens: auto;
-      }
-    }
-  </style>
-</head>
-<body>
-  <nav class="top-nav">
-    <a href="/">Revista Nacional de las Ciencias para Estudiantes</a>
-  </nav>
-  <header class="profile-hero">
-    <div class="img-container">
-      ${imagen ? `<img src="${imagen}" alt="${nombre}" class="profile-img">` : `<div class="no-img">Sin Imagen</div>`}
-    </div>
-    <div class="profile-info">
-      <span class="profile-role">${rolesStr}</span>
-      <h1>${nombre}</h1>
-      ${institutionHtmlEs}
-    </div>
-  </header>
-  <main class="container">
-    <section id="descripcion">
-      <h2 class="section-title">${bioTitleEs}</h2>
-      <div class="bio-text">${descripcion}</div>
-    </section>
-    <section id="areas">
-      <h2 class="section-title">${areasTitleEs}</h2>
-      <div class="tags-container">
-        ${areasTagsHtml}
-      </div>
-    </section>
-    ${articlesSectionEs}
-  </main>
-  <footer class="footer-nav">
-    <a href="/es/team">← Equipo Editorial</a>
-    <a href="/">Inicio</a>
-  </footer>
-</body>
-</html>`;
-  const enContent = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="${description.substring(0, 160)}...">
-  <meta name="keywords" content="${areasEn}, ${rolesEn}, The National Review of Sciences for Students">
-  <meta name="author" content="${nombre}">
-  <title>${nombre} - Team of The National Review of Sciences for Students</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Lora:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --primary: #007398;
-      --text: #1a1a1a;
-      --grey: #555555;
-      --light-grey: #f5f5f5;
-      --border: #e0e0e0;
-    }
-    body {
-      margin: 0;
-      font-family: 'Lora', serif;
-      color: var(--text);
-      background-color: #fff;
-      line-height: 1.7;
-    }
-    /* Navegación Minimalista */
-    .top-nav {
-      padding: 20px;
-      text-align: center;
-      border-bottom: 1px solid var(--border);
-      font-family: 'Inter', sans-serif;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      font-size: 11px;
-    }
-    .top-nav a { text-decoration: none; color: var(--text); font-weight: 700; }
-    /* Cabecera de Perfil */
-    .profile-hero {
-      max-width: 900px;
-      margin: 60px auto;
-      padding: 0 20px;
-      display: grid;
-      grid-template-columns: 220px 1fr;
-      gap: 50px;
-      align-items: center;
-    }
-    .img-container {
-      position: relative;
-    }
-    .profile-img {
-      width: 220px;
-      height: 220px;
-      object-fit: cover;
-      filter: grayscale(20%);
-      border-radius: 2px; /* Cuadrado editorial, no circular */
-      box-shadow: 20px 20px 0px var(--light-grey);
-    }
-    .no-img {
-      width: 220px;
-      height: 220px;
-      background: var(--light-grey);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: 'Inter', sans-serif;
-      color: #999;
-      font-size: 12px;
-      text-transform: uppercase;
-    }
-    .profile-info h1 {
-      font-family: 'Playfair Display', serif;
-      font-size: 3.5rem;
-      margin: 0;
-      line-height: 1;
-      font-weight: 900;
-    }
-    .profile-role {
-      font-family: 'Inter', sans-serif;
-      color: var(--primary);
-      text-transform: uppercase;
-      letter-spacing: 3px;
-      font-size: 13px;
-      font-weight: 700;
-      margin-top: 15px;
-      display: block;
-    }
-    .profile-inst {
-      font-family: 'Inter', sans-serif;
-      color: var(--grey);
-      font-size: 14px;
-      margin-top: 5px;
-    }
-    /* Secciones de Contenido */
-    .container {
-      max-width: 800px;
-      margin: 0 auto 100px;
-      padding: 0 20px;
-    }
-    .section-title {
-      font-family: 'Inter', sans-serif;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 3px;
-      border-bottom: 1px solid var(--text);
-      padding-bottom: 10px;
-      margin: 60px 0 30px;
-      color: var(--text);
-    }
-    .bio-text { font-size: 1.15rem; }
-    /* Tags de Áreas */
-    .tags-container {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    .keyword-tag {
-      font-family: 'Inter', sans-serif;
-      font-size: 12px;
-      background: var(--light-grey);
-      padding: 6px 15px;
-      border-radius: 20px;
-      color: var(--text);
-      font-weight: 600;
-    }
-    /* Lista de Artículos Estilo Bibliográfico */
-    .article-item {
-      margin-bottom: 25px;
-      padding-left: 20px;
-      border-left: 2px solid var(--light-grey);
-      transition: border-color 0.3s;
-    }
-    .article-item:hover { border-left-color: var(--primary); }
-   
-    .article-link {
-      font-family: 'Playfair Display', serif;
-      font-size: 1.3rem;
-      color: var(--text);
-      text-decoration: none;
-      display: block;
-      line-height: 1.3;
-    }
-    .article-meta {
-      font-family: 'Inter', sans-serif;
-      font-size: 12px;
-      color: var(--grey);
-      margin-top: 5px;
-    }
-    .footer-nav {
-      text-align: center;
-      padding: 60px 20px;
-      background: var(--light-grey);
-      margin-top: 100px;
-    }
-    .footer-nav a {
-      font-family: 'Inter', sans-serif;
-      font-size: 12px;
-      text-decoration: none;
-      color: var(--primary);
-      font-weight: 700;
-      margin: 0 15px;
-      text-transform: uppercase;
-    }
-    @media (max-width: 768px) {
-      .profile-hero {
-        grid-template-columns: 1fr;
-        text-align: center;
-        margin-top: 30px;
-      }
-      .profile-img, .no-img { margin: 0 auto; width: 180px; height: 180px; }
-      .profile-info h1 { font-size: 2.5rem; }
-      .section-title { text-align: center; }
-    }
-    @media (max-width: 900px) {
-      h1, h2, p, .bio-text {
-        word-break: break-word;
-        overflow-wrap: break-word;
-        hyphens: auto;
-      }
-    }
-  </style>
-</head>
-<body>
-  <nav class="top-nav">
-    <a href="/">The National Review of Sciences for Students</a>
-  </nav>
-  <header class="profile-hero">
-    <div class="img-container">
-      ${imagen ? `<img src="${imagen}" alt="${nombre}" class="profile-img">` : `<div class="no-img">No Image</div>`}
-    </div>
-    <div class="profile-info">
-      <span class="profile-role">${rolesEn}</span>
-      <h1>${nombre}</h1>
-      ${institutionHtmlEn}
-    </div>
-  </header>
-  <main class="container">
-    <section id="description">
-      <h2 class="section-title">${bioTitleEn}</h2>
-      <div class="bio-text">${description}</div>
-    </section>
-    <section id="areas">
-      <h2 class="section-title">${areasTitleEn}</h2>
-      <div class="tags-container">
-        ${areasTagsHtmlEn}
-      </div>
-    </section>
-    ${articlesSectionEn}
-  </main>
-  <footer class="footer-nav">
-    <a href="/en/team">← Editorial Team</a>
-    <a href="/">Home</a>
-  </footer>
-</body>
-</html>`;
-  const esPath = path.join(teamOutputHtmlDir, `${slug}.html`);
-  fs.writeFileSync(esPath, esContent, 'utf8');
-  console.log(`Generado HTML de miembro (ES): ${esPath}`);
-  const enPath = path.join(teamOutputHtmlDir, `${slug}.EN.html`);
-  fs.writeFileSync(enPath, enContent, 'utf8');
-  console.log(`Generado HTML de miembro (EN): ${enPath}`);
-}
-
+ 
     // Pre-renderizar rutas de la SPA
     console.log('🚀 Pre-renderizando las rutas de la aplicación...');
     const appShellPath = path.join(__dirname, 'dist', 'index.html');
@@ -3344,24 +2805,22 @@ ${newsItems.map(item => {
   <priority>0.8</priority>
 </url>`;
     }).join('')}
-${allMembers.map(member => {
-      const roles = (member['Rol en la Revista'] || '').split(';').map(r => r.trim());
-      if (roles.includes('Institución Colaboradora')) return '';
-      const slug = generateSlug(member['Nombre']);
-      return `
+${teamData.map(member => {
+  if (member.roles.includes('Institución Colaboradora')) return '';
+  return `
 <url>
-  <loc>${domain}/team/${slug}.html</loc>
+  <loc>${domain}/team/${member.slug}.html</loc>
   <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.7</priority>
 </url>
 <url>
-  <loc>${domain}/team/${slug}.EN.html</loc>
+  <loc>${domain}/team/${member.slug}.EN.html</loc>
   <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.7</priority>
 </url>`;
-    }).join('')}
+}).join('')}
 ${spaRoutes.map(route => `
 <url>
   <loc>${domain}${route}/</loc>

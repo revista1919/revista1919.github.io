@@ -280,31 +280,30 @@ exports.uploadImageToImgBBCallable = onCall(
   { secrets: [IMGBB_API_KEY] },
   async (request) => {
     const { auth } = request;
+
+    // 🔐 Solo verificar que esté autenticado
     if (!auth) {
       throw new HttpsError('unauthenticated', 'Debes estar logueado');
     }
 
-    try {
-      await validateRole(auth.uid, "Director General");
-    } catch (err) {
-      throw new HttpsError('permission-denied', err.message);
-    }
-
     const { imageBase64, name, expiration } = request.data;
+
     if (!imageBase64) {
       throw new HttpsError('invalid-argument', 'Falta imageBase64');
     }
 
     try {
       const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, "");
-      
+
       const form = new FormData();
       form.append("image", cleanBase64);
       if (name) form.append("name", name);
 
       const url = new URL("https://api.imgbb.com/1/upload");
       url.searchParams.set("key", IMGBB_API_KEY.value());
-      if (expiration) url.searchParams.set("expiration", String(expiration));
+      if (expiration) {
+        url.searchParams.set("expiration", String(expiration));
+      }
 
       const response = await fetch(url.toString(), {
         method: "POST",
@@ -315,6 +314,7 @@ exports.uploadImageToImgBBCallable = onCall(
       const data = await response.json();
 
       if (!data.success) {
+        console.error("ImgBB error:", data);
         throw new HttpsError('internal', 'Error al subir a ImgBB');
       }
 
@@ -322,7 +322,8 @@ exports.uploadImageToImgBBCallable = onCall(
         success: true,
         url: data.data.url,
         display_url: data.data.display_url,
-        delete_url: data.data.delete_url
+        delete_url: data.data.delete_url,
+        uploadedBy: auth.uid
       };
 
     } catch (err) {
@@ -331,6 +332,7 @@ exports.uploadImageToImgBBCallable = onCall(
     }
   }
 );
+
 /* ===================== UPLOAD NEWS ===================== */
 exports.uploadNews = onRequest(
   { 
@@ -832,3 +834,95 @@ exports.healthCheck = onRequest(
     });
   }
 );
+
+exports.onUserChange = onDocumentUpdated(
+  { document: 'users/{userId}', secrets: [GH_TOKEN] },
+  async (event) => {
+    const octokit = new Octokit({ auth: GH_TOKEN.value() });
+    
+    await octokit.request('POST /repos/{owner}/{repo}/dispatches', {
+      owner: 'revista1919',
+      repo: 'team',
+      event_type: 'rebuild-team-user',
+      client_payload: {
+        uid: event.params.userId
+      }
+    });
+    
+    console.log(`🚀 Disparado rebuild para usuario ${event.params.userId}`);
+  }
+);
+
+// También escuchar creación de nuevos usuarios
+exports.onUserCreate = onDocumentCreated(
+  { document: 'users/{userId}', secrets: [GH_TOKEN] },
+  async (event) => {
+    const octokit = new Octokit({ auth: GH_TOKEN.value() });
+    
+    await octokit.request('POST /repos/{owner}/{repo}/dispatches', {
+      owner: 'revista1919',
+      repo: 'team',
+      event_type: 'rebuild-team-user',
+      client_payload: {
+        uid: event.params.userId
+      }
+    });
+    
+    console.log(`🚀 Nuevo usuario creado: ${event.params.userId}`);
+  }
+);
+/* ===================== UPDATE ROLE ===================== */
+exports.updateRole = onCall(async (request) => {
+  const { auth, data } = request;
+
+  // 🔐 Debe estar logueado
+  if (!auth) {
+    throw new HttpsError("unauthenticated", "Debes iniciar sesión");
+  }
+
+  const callerUid = auth.uid;
+
+  try {
+    // 👮 Verificar que quien llama sea Director General
+    const callerUser = await admin.auth().getUser(callerUid);
+    const callerRoles = callerUser.customClaims?.roles || [];
+
+    if (!callerRoles.includes("Director General")) {
+      throw new HttpsError(
+        "permission-denied",
+        "Solo Director General puede modificar roles"
+      );
+    }
+
+    const { targetUid, newRoles } = data;
+
+    // 🧪 Validaciones
+    if (!targetUid) {
+      throw new HttpsError("invalid-argument", "Falta targetUid");
+    }
+
+    if (!Array.isArray(newRoles)) {
+      throw new HttpsError("invalid-argument", "newRoles debe ser array");
+    }
+
+    // ✍️ Actualizar claims
+    await admin.auth().setCustomUserClaims(targetUid, {
+      roles: newRoles,
+    });
+
+    console.log(`Roles actualizados para ${targetUid}:`, newRoles);
+
+    return {
+      success: true,
+      targetUid,
+      roles: newRoles,
+    };
+
+  } catch (error) {
+    console.error("Error en updateRole:", error);
+
+    if (error instanceof HttpsError) throw error;
+
+    throw new HttpsError("internal", error.message);
+  }
+});
