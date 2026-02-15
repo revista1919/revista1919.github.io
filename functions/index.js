@@ -55,7 +55,7 @@ const ES_TO_EN = {
   'Responsable de Finanzas': 'Finance Manager',
   'Responsable de Transparencia': 'Transparency Manager',
   'Asesor Académico': 'Academic Advisor',
-  'Instituciones Colaboradora': 'Partner Institution'
+  'Institución Colaboradora': 'Partner Institution'
 };
 
 /* ===================== UTILIDADES ===================== */

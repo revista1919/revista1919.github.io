@@ -60,7 +60,7 @@ const ES_TO_EN = {
   'Responsable de Transparencia': 'Transparency Manager',
   'Autor': 'Author',
   'Asesor Académico': 'Academic Advisor',
-  'Instituciones Colaboradora': 'Partner Institution'
+  'Institución Colaboradora': 'Partner Institution'
 };
 
 const EN_TO_ES = {
@@ -82,7 +82,7 @@ const EN_TO_ES = {
   'Finance Manager': 'Responsable de Finanzas',
   'Transparency Manager': 'Responsable de Transparencia',
   'Author': 'Autor',
-  'Partner Institution': 'Instituciones Colaboradora',
+  'Partner Institution': 'Institución Colaboradora',
   'Academic Advisor': 'Asesor Académico',
   'Community Manager': 'Community Manager'
 };
