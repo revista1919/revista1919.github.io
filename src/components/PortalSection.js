@@ -340,17 +340,17 @@ const InterestsTags = ({ value = [], onChange, placeholder, lang }) => {
       </div>
 
       {/* Input + botón */}
-      <div className="flex gap-3">
+      <div className="flex flex-col sm:flex-row gap-3">
         <input
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="flex-1 p-5 bg-gray-50 border-0 rounded-3xl focus:ring-2 focus:ring-emerald-300 text-sm placeholder-gray-400"
+          className="flex-1 p-4 sm:p-5 bg-gray-50 border-0 rounded-2xl sm:rounded-3xl focus:ring-2 focus:ring-emerald-300 text-sm placeholder-gray-400"
         />
         <button
           onClick={addTag}
-          className="px-8 bg-emerald-600 hover:bg-emerald-700 transition-all text-white font-semibold rounded-3xl flex items-center gap-2 shadow-lg shadow-emerald-200 active:scale-95"
+          className="px-6 sm:px-8 py-4 sm:py-5 bg-emerald-600 hover:bg-emerald-700 transition-all text-white font-semibold rounded-2xl sm:rounded-3xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-200 active:scale-95"
         >
           <PlusIcon className="w-5 h-5" />
           AÑADIR
@@ -359,6 +359,8 @@ const InterestsTags = ({ value = [], onChange, placeholder, lang }) => {
     </div>
   );
 };
+
+// ==================== PERFIL (Totalmente Responsive) ====================
 const ProfileSection = ({ user }) => {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -474,78 +476,87 @@ const ProfileSection = ({ user }) => {
 
   if (!user) {
     console.warn('ProfileSection rendered without user data');
-    return <div>Cargando perfil...</div>;
+    return <div className="text-center p-8">Cargando perfil...</div>;
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-12">
-      {/* Encabezado Avatar */}
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-12 flex flex-col lg:flex-row items-center gap-12">
-        {/* ... mismo avatar premium ... */}
+    <div className="max-w-6xl mx-auto space-y-8 sm:space-y-12 px-2 sm:px-4">
+      {/* Encabezado Avatar - Totalmente Responsive */}
+      <div className="bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 p-6 sm:p-8 lg:p-12 flex flex-col lg:flex-row items-center gap-6 sm:gap-8 lg:gap-12">
         <div className="relative group flex-shrink-0">
-          <div className="w-52 h-52 rounded-3xl overflow-hidden ring-8 ring-white shadow-2xl relative">
+          <div className="w-36 h-36 sm:w-44 sm:h-44 lg:w-52 lg:h-52 rounded-2xl sm:rounded-3xl overflow-hidden ring-8 ring-white shadow-2xl relative">
             {form.imageUrl ? (
               <img src={form.imageUrl} className="object-cover w-full h-full" alt="Perfil" />
             ) : (
               <div className="flex items-center justify-center w-full h-full bg-gradient-to-br from-gray-100 to-gray-50">
-                <UserIcon className="w-24 h-24 text-gray-300" />
+                <UserIcon className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 text-gray-300" />
               </div>
             )}
 
             {uploading && (
               <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center">
-                <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin mb-3" />
-                <span className="text-white text-sm font-medium tracking-widest">SUBIENDO...</span>
+                <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-4 border-white border-t-transparent rounded-full animate-spin mb-2 sm:mb-3" />
+                <span className="text-white text-xs sm:text-sm font-medium tracking-widest">SUBIENDO...</span>
               </div>
             )}
 
-            <label className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/50 transition-all duration-300 cursor-pointer rounded-3xl">
-              <CameraIcon className="w-10 h-10 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+            <label className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/50 transition-all duration-300 cursor-pointer rounded-2xl sm:rounded-3xl">
+              <CameraIcon className="w-8 h-8 sm:w-10 sm:h-10 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
               <input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploading} className="hidden" />
             </label>
           </div>
         </div>
 
         <div className="flex-1 text-center lg:text-left">
-          <h2 className="text-4xl font-serif font-bold text-gray-900 mb-1">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold text-gray-900 mb-1 break-words">
             {form.firstName} {form.lastName}
           </h2>
-          <p className="text-xl text-gray-500 font-medium">{form.institution || 'Sin institución'}</p>
+          <p className="text-base sm:text-lg lg:text-xl text-gray-500 font-medium break-words">{form.institution || 'Sin institución'}</p>
           {form.orcid && (
-            <a href={`https://orcid.org/${form.orcid}`} target="_blank" className="text-emerald-600 hover:underline text-sm mt-2 inline-block">
+            <a href={`https://orcid.org/${form.orcid}`} target="_blank" className="text-emerald-600 hover:underline text-xs sm:text-sm mt-2 inline-block break-words">
               ORCID • {form.orcid}
             </a>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-12">
         {/* Columna Izquierda */}
-        <div className="lg:col-span-7 space-y-10">
+        <div className="lg:col-span-7 space-y-6 sm:space-y-8 lg:space-y-10">
           {/* Biografía */}
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-12">
-            <div className="flex justify-between items-center mb-10">
-              <h3 className="font-serif text-3xl font-bold text-gray-900">Biografía e Intereses</h3>
-              <div className="flex bg-gray-100 rounded-2xl p-1.5">
-                <button onClick={() => setLang('es')} className={`px-8 py-3 rounded-2xl text-sm font-semibold transition-all ${lang === 'es' ? 'bg-white shadow text-emerald-700' : 'text-gray-500'}`}>ESPAÑOL</button>
-                <button onClick={() => setLang('en')} className={`px-8 py-3 rounded-2xl text-sm font-semibold transition-all ${lang === 'en' ? 'bg-white shadow text-emerald-700' : 'text-gray-500'}`}>ENGLISH</button>
+          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 p-6 sm:p-8 lg:p-12">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8 lg:mb-10">
+              <h3 className="font-serif text-2xl sm:text-3xl font-bold text-gray-900">Biografía e Intereses</h3>
+              <div className="flex bg-gray-100 rounded-2xl p-1.5 w-full sm:w-auto">
+                <button 
+                  onClick={() => setLang('es')} 
+                  className={`flex-1 sm:flex-none px-4 sm:px-6 lg:px-8 py-2 sm:py-3 rounded-2xl text-xs sm:text-sm font-semibold transition-all ${lang === 'es' ? 'bg-white shadow text-emerald-700' : 'text-gray-500'}`}
+                >
+                  ESPAÑOL
+                </button>
+                <button 
+                  onClick={() => setLang('en')} 
+                  className={`flex-1 sm:flex-none px-4 sm:px-6 lg:px-8 py-2 sm:py-3 rounded-2xl text-xs sm:text-sm font-semibold transition-all ${lang === 'en' ? 'bg-white shadow text-emerald-700' : 'text-gray-500'}`}
+                >
+                  ENGLISH
+                </button>
               </div>
             </div>
 
-            <div className="space-y-10">
+            <div className="space-y-6 sm:space-y-8 lg:space-y-10">
               <div>
-                <label className="block uppercase text-xs tracking-[2px] font-bold text-gray-400 mb-3">DESCRIPCIÓN</label>
+                <label className="block uppercase text-xs tracking-[2px] font-bold text-gray-400 mb-2 sm:mb-3">DESCRIPCIÓN</label>
                 <textarea
                   name={lang === 'es' ? 'descriptionEs' : 'descriptionEn'}
                   value={lang === 'es' ? form.descriptionEs : form.descriptionEn}
                   onChange={handleChange}
-                  className="w-full h-56 p-7 bg-gray-50 border-0 rounded-3xl focus:ring-2 focus:ring-emerald-200 resize-y leading-relaxed"
+                  className="w-full h-40 sm:h-48 lg:h-56 p-4 sm:p-5 lg:p-7 bg-gray-50 border-0 rounded-2xl sm:rounded-3xl focus:ring-2 focus:ring-emerald-200 resize-y leading-relaxed text-sm sm:text-base"
                   placeholder={lang === 'es' ? 'Tu trayectoria académica y profesional...' : 'Your academic and professional journey...'}
                 />
               </div>
 
               <div>
-                <label className="block uppercase text-xs tracking-[2px] font-bold text-gray-400 mb-3">ÁREAS DE INTERÉS</label>
+                <label className="block uppercase text-xs tracking-[2px] font-bold text-gray-400 mb-2 sm:mb-3">ÁREAS DE INTERÉS</label>
                 <InterestsTags
                   value={lang === 'es' ? form.interestsEs : form.interestsEn}
                   onChange={(newTags) => handleInterestsChange(lang, newTags)}
@@ -557,18 +568,29 @@ const ProfileSection = ({ user }) => {
           </div>
 
           {/* Afiliación */}
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-12">
-            <h3 className="font-serif text-3xl font-bold text-gray-900 mb-10">Afiliación Académica</h3>
-            <div className="space-y-8">
+          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 p-6 sm:p-8 lg:p-12">
+            <h3 className="font-serif text-2xl sm:text-3xl font-bold text-gray-900 mb-6 sm:mb-8 lg:mb-10">Afiliación Académica</h3>
+            <div className="space-y-6 sm:space-y-8">
               <div>
-                <label className="block uppercase text-xs tracking-[2px] font-bold text-gray-400 mb-3">INSTITUCIÓN</label>
-                <input name="institution" value={form.institution} onChange={handleChange} className="w-full p-7 bg-gray-50 border-0 rounded-3xl focus:ring-2 focus:ring-emerald-200" />
+                <label className="block uppercase text-xs tracking-[2px] font-bold text-gray-400 mb-2 sm:mb-3">INSTITUCIÓN</label>
+                <input 
+                  name="institution" 
+                  value={form.institution} 
+                  onChange={handleChange} 
+                  className="w-full p-4 sm:p-5 lg:p-7 bg-gray-50 border-0 rounded-2xl sm:rounded-3xl focus:ring-2 focus:ring-emerald-200 text-sm sm:text-base" 
+                />
               </div>
               <div>
-                <label className="block uppercase text-xs tracking-[2px] font-bold text-gray-400 mb-3">CORREO PÚBLICO</label>
+                <label className="block uppercase text-xs tracking-[2px] font-bold text-gray-400 mb-2 sm:mb-3">CORREO PÚBLICO</label>
                 <div className="relative">
-                  <EnvelopeIcon className="absolute left-7 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-400" />
-                  <input name="publicEmail" value={form.publicEmail} onChange={handleChange} className="w-full pl-16 p-7 bg-gray-50 border-0 rounded-3xl focus:ring-2 focus:ring-emerald-200" placeholder="tucorreo@ejemplo.org" />
+                  <EnvelopeIcon className="absolute left-4 sm:left-5 lg:left-7 top-1/2 -translate-y-1/2 w-5 h-5 sm:w-6 sm:h-6 text-gray-400" />
+                  <input 
+                    name="publicEmail" 
+                    value={form.publicEmail} 
+                    onChange={handleChange} 
+                    className="w-full pl-12 sm:pl-14 lg:pl-16 p-4 sm:p-5 lg:p-7 bg-gray-50 border-0 rounded-2xl sm:rounded-3xl focus:ring-2 focus:ring-emerald-200 text-sm sm:text-base" 
+                    placeholder="tucorreo@ejemplo.org" 
+                  />
                 </div>
               </div>
             </div>
@@ -576,67 +598,69 @@ const ProfileSection = ({ user }) => {
         </div>
 
         {/* Columna Derecha */}
-        <div className="lg:col-span-5 space-y-10">
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-12">
-            <h3 className="font-serif text-3xl font-bold text-gray-900 mb-10">Presencia Digital</h3>
-            <div className="space-y-6">
+        <div className="lg:col-span-5 space-y-6 sm:space-y-8 lg:space-y-10">
+          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 p-6 sm:p-8 lg:p-12">
+            <h3 className="font-serif text-2xl sm:text-3xl font-bold text-gray-900 mb-6 sm:mb-8 lg:mb-10">Presencia Digital</h3>
+            <div className="space-y-4 sm:space-y-5 lg:space-y-6">
               {/* LinkedIn */}
-              <div className="group flex items-center bg-gray-50 rounded-3xl border border-transparent focus-within:border-emerald-300 transition-all overflow-hidden">
-                <div className="pl-6 pr-4 text-[#0A66C2] font-black text-xl">in</div>
+              <div className="group flex items-center bg-gray-50 rounded-2xl sm:rounded-3xl border border-transparent focus-within:border-emerald-300 transition-all overflow-hidden">
+                <div className="pl-4 sm:pl-5 lg:pl-6 pr-2 sm:pr-3 lg:pr-4 text-[#0A66C2] font-black text-lg sm:text-xl">in</div>
                 <input
                   name="linkedin"
                   value={form.social.linkedin}
                   onChange={handleSocialChange}
                   placeholder="https://linkedin.com/in/..."
-                  className="bg-transparent border-0 flex-1 py-6 focus:ring-0 text-sm"
+                  className="bg-transparent border-0 flex-1 py-4 sm:py-5 lg:py-6 focus:ring-0 text-xs sm:text-sm truncate"
                 />
               </div>
 
               {/* Twitter / X */}
-              <div className="group flex items-center bg-gray-50 rounded-3xl border border-transparent focus-within:border-emerald-300 transition-all overflow-hidden">
-                <div className="pl-6 pr-4 text-black font-bold">𝕏</div>
+              <div className="group flex items-center bg-gray-50 rounded-2xl sm:rounded-3xl border border-transparent focus-within:border-emerald-300 transition-all overflow-hidden">
+                <div className="pl-4 sm:pl-5 lg:pl-6 pr-2 sm:pr-3 lg:pr-4 text-black font-bold text-lg sm:text-xl">𝕏</div>
                 <input
                   name="twitter"
                   value={form.social.twitter}
                   onChange={handleSocialChange}
                   placeholder="https://x.com/..."
-                  className="bg-transparent border-0 flex-1 py-6 focus:ring-0 text-sm"
+                  className="bg-transparent border-0 flex-1 py-4 sm:py-5 lg:py-6 focus:ring-0 text-xs sm:text-sm truncate"
                 />
               </div>
 
               {/* Instagram */}
-              <div className="group flex items-center bg-gray-50 rounded-3xl border border-transparent focus-within:border-emerald-300 transition-all overflow-hidden">
-                <div className="pl-6 pr-4 text-[#E4405F] text-xl">📷</div>
+              <div className="group flex items-center bg-gray-50 rounded-2xl sm:rounded-3xl border border-transparent focus-within:border-emerald-300 transition-all overflow-hidden">
+                <div className="pl-4 sm:pl-5 lg:pl-6 pr-2 sm:pr-3 lg:pr-4 text-[#E4405F] text-lg sm:text-xl">📷</div>
                 <input
                   name="instagram"
                   value={form.social.instagram}
                   onChange={handleSocialChange}
                   placeholder="https://instagram.com/..."
-                  className="bg-transparent border-0 flex-1 py-6 focus:ring-0 text-sm"
+                  className="bg-transparent border-0 flex-1 py-4 sm:py-5 lg:py-6 focus:ring-0 text-xs sm:text-sm truncate"
                 />
               </div>
 
               {/* Website */}
-              <div className="group flex items-center bg-gray-50 rounded-3xl border border-transparent focus-within:border-emerald-300 transition-all overflow-hidden">
-                <div className="pl-6 pr-4 text-gray-400"><LinkIcon className="w-6 h-6" /></div>
+              <div className="group flex items-center bg-gray-50 rounded-2xl sm:rounded-3xl border border-transparent focus-within:border-emerald-300 transition-all overflow-hidden">
+                <div className="pl-4 sm:pl-5 lg:pl-6 pr-2 sm:pr-3 lg:pr-4 text-gray-400">
+                  <LinkIcon className="w-5 h-5 sm:w-6 sm:h-6" />
+                </div>
                 <input
                   name="website"
                   value={form.social.website}
                   onChange={handleSocialChange}
                   placeholder="https://tusitio.com"
-                  className="bg-transparent border-0 flex-1 py-6 focus:ring-0 text-sm"
+                  className="bg-transparent border-0 flex-1 py-4 sm:py-5 lg:py-6 focus:ring-0 text-xs sm:text-sm truncate"
                 />
               </div>
 
               {/* ORCID */}
-              <div className="group flex items-center bg-gray-50 rounded-3xl border border-transparent focus-within:border-emerald-300 transition-all overflow-hidden">
-                <div className="pl-6 pr-4 text-orange-600 font-mono font-bold text-xl">OR</div>
+              <div className="group flex items-center bg-gray-50 rounded-2xl sm:rounded-3xl border border-transparent focus-within:border-emerald-300 transition-all overflow-hidden">
+                <div className="pl-4 sm:pl-5 lg:pl-6 pr-2 sm:pr-3 lg:pr-4 text-orange-600 font-mono font-bold text-lg sm:text-xl">OR</div>
                 <input
                   name="orcid"
                   value={form.orcid}
                   onChange={handleChange}
                   placeholder="0000-0000-0000-0000"
-                  className="bg-transparent border-0 flex-1 py-6 focus:ring-0 text-sm font-mono"
+                  className="bg-transparent border-0 flex-1 py-4 sm:py-5 lg:py-6 focus:ring-0 text-xs sm:text-sm font-mono truncate"
                 />
               </div>
             </div>
@@ -646,11 +670,11 @@ const ProfileSection = ({ user }) => {
           <button
             onClick={saveProfile}
             disabled={saving}
-            className="w-full py-6 bg-gradient-to-r from-gray-900 to-black text-white rounded-3xl font-bold tracking-[0.08em] text-sm uppercase hover:from-emerald-600 hover:to-emerald-700 transition-all duration-300 shadow-xl shadow-gray-200 active:scale-[0.985] flex items-center justify-center gap-3"
+            className="w-full py-4 sm:py-5 lg:py-6 bg-gradient-to-r from-gray-900 to-black text-white rounded-2xl sm:rounded-3xl font-bold tracking-[0.08em] text-xs sm:text-sm uppercase hover:from-emerald-600 hover:to-emerald-700 transition-all duration-300 shadow-xl shadow-gray-200 active:scale-[0.985] flex items-center justify-center gap-2 sm:gap-3"
           >
             {saving ? (
               <>
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 GUARDANDO...
               </>
             ) : (
@@ -663,6 +687,7 @@ const ProfileSection = ({ user }) => {
   );
 };
 
+// ==================== GESTIÓN DE USUARIOS (Totalmente Responsive) ====================
 const UserManagement = ({ users: initialUsers }) => {
   const [users, setUsers] = useState(initialUsers);
   const [searchTerm, setSearchTerm] = useState('');
@@ -710,30 +735,101 @@ const UserManagement = ({ users: initialUsers }) => {
 
   if (!users || users.length === 0) {
     console.warn('UserManagement: No users data available');
-    return <div className="text-center py-20 text-gray-400">Cargando usuarios...</div>;
+    return <div className="text-center py-12 sm:py-20 text-gray-400">Cargando usuarios...</div>;
   }
 
   return (
-    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-10 max-w-6xl mx-auto">
-      <div className="flex items-end justify-between mb-10">
+    <div className="bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 p-4 sm:p-6 lg:p-10 max-w-6xl mx-auto">
+      <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 mb-6 sm:mb-8 lg:mb-10">
         <div>
-          <h3 className="text-3xl font-serif font-bold text-gray-900">Gestión de Usuarios</h3>
-          <p className="text-gray-500 mt-1">Administra roles y accesos del equipo editorial</p>
+          <h3 className="text-2xl sm:text-3xl font-serif font-bold text-gray-900">Gestión de Usuarios</h3>
+          <p className="text-sm sm:text-base text-gray-500 mt-1">Administra roles y accesos del equipo editorial</p>
         </div>
         
-        <div className="relative w-80">
+        <div className="relative w-full sm:w-64 lg:w-80">
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Buscar por nombre o correo..."
-            className="w-full pl-12 pr-6 py-4 bg-gray-50 border border-gray-200 rounded-2xl focus:border-emerald-400 focus:ring-0 text-sm"
+            placeholder="Buscar..."
+            className="w-full pl-10 pr-4 py-3 sm:py-4 bg-gray-50 border border-gray-200 rounded-xl sm:rounded-2xl focus:border-emerald-400 focus:ring-0 text-sm"
           />
-          <UserIcon className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-3xl border border-gray-100">
+      {/* Vista Móvil: Tarjetas */}
+      <div className="block lg:hidden space-y-4">
+        {filteredUsers.map((user) => (
+          <div key={user.id} className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+            <div className="flex items-center gap-3 mb-3">
+              {user.imageUrl ? (
+                <img 
+                  src={user.imageUrl} 
+                  className="w-10 h-10 rounded-xl object-cover ring-1 ring-gray-200" 
+                  alt={user.displayName} 
+                />
+              ) : (
+                <div className="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-50 rounded-xl flex items-center justify-center ring-1 ring-gray-200">
+                  <span className="text-lg font-serif font-bold text-gray-400">
+                    {user.displayName?.charAt(0) || 'U'}
+                  </span>
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-gray-900 text-base truncate">{user.displayName || 'Sin nombre'}</div>
+                <div className="text-xs text-gray-400 truncate">{user.email}</div>
+              </div>
+            </div>
+            
+            <div className="mb-3">
+              <div className="text-xs font-semibold text-gray-500 uppercase mb-2">Roles</div>
+              <div className="flex flex-wrap gap-2">
+                {(user.roles || []).map(role => (
+                  <div 
+                    key={role}
+                    className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-xs font-medium px-3 py-1.5 rounded-xl"
+                  >
+                    {role}
+                    <button
+                      onClick={() => removeRole(user.id, role)}
+                      className="text-emerald-600 hover:text-red-600 transition-colors font-bold text-base leading-none ml-1"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+
+                {/* Selector de nuevo rol */}
+                <div className="relative">
+                  <select
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        addRole(user.id, e.target.value);
+                        e.target.value = '';
+                      }
+                    }}
+                    className="appearance-none bg-transparent border border-dashed border-gray-300 hover:border-emerald-400 text-emerald-600 text-xs font-medium rounded-xl px-3 py-1.5 cursor-pointer transition-all focus:outline-none focus:border-emerald-500"
+                    value=""
+                  >
+                    <option value="" disabled>+ Añadir</option>
+                    {ALL_ROLES.filter(r => !(user.roles || []).includes(r)).map(role => (
+                      <option key={role} value={role}>{role}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            <div className="text-xs text-gray-400 font-mono">
+              ID: {user.id.slice(0, 8)}...
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Vista Desktop: Tabla */}
+      <div className="hidden lg:block overflow-hidden rounded-3xl border border-gray-100">
         <table className="min-w-full divide-y divide-gray-100">
           <thead className="bg-gray-50">
             <tr>
@@ -815,7 +911,7 @@ const UserManagement = ({ users: initialUsers }) => {
       </div>
 
       {filteredUsers.length === 0 && (
-        <div className="text-center py-20 text-gray-400">
+        <div className="text-center py-12 sm:py-20 text-gray-400">
           No se encontraron usuarios con ese criterio de búsqueda.
         </div>
       )}
@@ -1049,7 +1145,6 @@ export default function PortalSection({ user, onLogout }) {
     }
   }, [user]);
 
-  // Snapshot de usuario en Firebase
   // Snapshot de usuario (mejorado para effectiveName)
   useEffect(() => {
     if (!user?.uid) {
@@ -1582,12 +1677,12 @@ export default function PortalSection({ user, onLogout }) {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-12 bg-[#fafafa] min-h-screen">
       {/* Header del Portal */}
-      <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between border-b border-gray-900 pb-8">
+      <header className="mb-8 sm:mb-10 md:mb-12 flex flex-col md:flex-row md:items-end justify-between border-b border-gray-900 pb-6 md:pb-8">
         <div>
-          <h1 className="font-serif text-5xl font-bold text-gray-900 tracking-tighter mb-2 break-words">
+          <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 tracking-tighter mb-2 break-words">
             Portal Editorial
           </h1>
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 sm:space-x-3">
             <p className="text-gray-500 font-sans tracking-widest uppercase text-xs break-words">
               Sesión activa:
             </p>
@@ -1597,14 +1692,14 @@ export default function PortalSection({ user, onLogout }) {
                 animate={{ scale: 1 }}
                 src={userData.imageUrl}
                 alt={`Perfil de ${effectiveName || 'Usuario'}`}
-                className="w-6 h-6 rounded-full object-cover border-2 border-gray-300"
+                className="w-5 h-5 sm:w-6 sm:h-6 rounded-full object-cover border-2 border-gray-300"
                 onError={(e) => (e.target.style.display = 'none')}
               />
             ) : (
               <motion.div
                 initial={{ scale: 0.8 }}
                 animate={{ scale: 1 }}
-                className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center border-2 border-gray-300"
+                className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-gray-300 flex items-center justify-center border-2 border-gray-300"
               >
                 <span className="text-gray-600 text-xs font-sans">{effectiveName?.charAt(0) || 'U'}</span>
               </motion.div>
@@ -1614,19 +1709,19 @@ export default function PortalSection({ user, onLogout }) {
         </div>
         <button
           onClick={onLogout}
-          className="mt-4 md:mt-0 text-xs font-bold uppercase tracking-widest px-6 py-2 border border-gray-900 hover:bg-gray-900 hover:text-white transition-all rounded-xl"
+          className="mt-4 md:mt-0 text-xs font-bold uppercase tracking-widest px-5 sm:px-6 py-2 border border-gray-900 hover:bg-gray-900 hover:text-white transition-all rounded-xl"
         >
           Cerrar Sesión
         </button>
       </header>
 
-      {/* Navegación Estilo Editorial */}
-      <nav className="flex flex-wrap gap-4 md:gap-8 mb-12 border-b border-gray-200">
+      {/* Navegación Estilo Editorial - Scroll horizontal en móvil */}
+      <nav className="flex overflow-x-auto pb-2 mb-6 sm:mb-8 md:mb-12 border-b border-gray-200 gap-4 md:gap-8 whitespace-nowrap">
         {tabs.filter(t => !t.hidden).map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`pb-4 text-xs font-bold uppercase tracking-widest transition-all relative ${
+            className={`pb-3 md:pb-4 text-xs font-bold uppercase tracking-widest transition-all relative flex-shrink-0 ${
               activeTab === tab.id ? 'text-emerald-700' : 'text-gray-400 hover:text-gray-600'
             }`}
           >
@@ -1658,7 +1753,7 @@ export default function PortalSection({ user, onLogout }) {
                 <motion.div
                   initial={{ opacity: 0, y: -20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-red-100 text-red-700 p-6 rounded-2xl mb-8 font-sans text-sm break-words"
+                  className="bg-red-100 text-red-700 p-4 sm:p-6 rounded-xl sm:rounded-2xl mb-6 sm:mb-8 font-sans text-sm break-words"
                 >
                   {error}
                   <button 
@@ -1675,23 +1770,23 @@ export default function PortalSection({ user, onLogout }) {
                   animate={{ opacity: 1 }}
                   className="flex justify-center items-center h-32"
                 >
-                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-600"></div>
-                  <p className="ml-4 text-gray-600 font-sans text-sm break-words">Cargando asignaciones...</p>
+                  <div className="animate-spin rounded-full h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 border-t-2 border-b-2 border-emerald-600"></div>
+                  <p className="ml-3 sm:ml-4 text-sm sm:text-base text-gray-600 font-sans break-words">Cargando asignaciones...</p>
                 </motion.div>
               ) : currentAssignments.length === 0 ? (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="text-center p-12 bg-white rounded-3xl border border-gray-100 shadow-sm"
+                  className="text-center p-6 sm:p-8 md:p-12 bg-white rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm"
                 >
-                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                   </svg>
-                  <h3 className="mt-4 font-serif text-xl font-bold text-gray-900 break-words">No hay asignaciones {activeTab === 'assignments' ? 'pendientes' : 'completadas'} en este momento.</h3>
-                  <p className="mt-2 text-gray-600 font-sans text-sm break-words">Manténgase atento para nuevas oportunidades.</p>
+                  <h3 className="mt-3 sm:mt-4 font-serif text-lg sm:text-xl font-bold text-gray-900 break-words">No hay asignaciones {activeTab === 'assignments' ? 'pendientes' : 'completadas'} en este momento.</h3>
+                  <p className="mt-1 sm:mt-2 text-sm sm:text-base text-gray-600 font-sans break-words">Manténgase atento para nuevas oportunidades.</p>
                 </motion.div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
                   {currentAssignments.map((ass, idx) => (
                     <AssignmentCard
                       key={ass.id}
@@ -1783,21 +1878,21 @@ export default function PortalSection({ user, onLogout }) {
         {selectedAssignment && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-white/95 backdrop-blur-sm overflow-y-auto px-2 py-6 sm:px-4 sm:py-12"
+            className="fixed inset-0 z-50 bg-white/95 backdrop-blur-sm overflow-y-auto px-2 py-4 sm:px-4 sm:py-8 md:py-12"
           >
             <div className="max-w-4xl mx-auto">
               <button
                 onClick={() => setSelectedAssignment(null)}
-                className="mb-8 font-sans font-bold text-xs uppercase tracking-widest flex items-center hover:text-emerald-600 transition-colors"
+                className="mb-4 sm:mb-6 md:mb-8 font-sans font-bold text-xs uppercase tracking-widest flex items-center hover:text-emerald-600 transition-colors"
               >
                 ← Volver al Portal
               </button>
-              <header className="mb-12">
+              <header className="mb-6 sm:mb-8 md:mb-12">
                 <span className="text-xs font-bold text-emerald-600 tracking-[0.3em] uppercase break-words">{selectedAssignment.role}</span>
-                <h2 className="font-serif text-4xl font-bold text-gray-900 mt-2 mb-4 leading-tight break-words">
+                <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mt-2 mb-3 md:mb-4 leading-tight break-words">
                   {selectedAssignment['Nombre Artículo']}
                 </h2>
-                <div className="h-1 w-24 bg-gray-900" />
+                <div className="h-1 w-16 sm:w-20 md:w-24 bg-gray-900" />
               </header>
 
               <ReviewerWorkspace 
