@@ -9,82 +9,78 @@ admin.initializeApp({
 
 const db = admin.firestore();
 
-// Funciones para parsear intereses y roles
+const TARGET_EMAIL = 'lgvm3011@gmail.com';
+
+// ===================== helpers =====================
 function parseInterests(interestsStr) {
   if (!interestsStr) return [];
-  return interestsStr.split(/[;,]/).map(i => i.trim()).filter(i => i);
+  return interestsStr.split(/[;,]/).map(i => i.trim()).filter(Boolean);
 }
 
 function parseRoles(rolesStr) {
   if (!rolesStr) return [];
-  return rolesStr.split(/[;,]/).map(r => r.trim()).filter(r => r);
+  return rolesStr.split(/[;,]/).map(r => r.trim()).filter(Boolean);
 }
 
-// Función para listar todos los usuarios de Auth
-async function listAllAuthUsers() {
-  let users = [];
-  let result = await admin.auth().listUsers(1000);
-  users = users.concat(result.users);
-
-  while (result.pageToken) {
-    result = await admin.auth().listUsers(1000, result.pageToken);
-    users = users.concat(result.users);
-  }
-
-  return users;
-}
-
-async function migrateUsers() {
+// ===================== main =====================
+async function migrateSingleUser() {
   try {
-    // Leer CSV
     const csvData = fs.readFileSync('users.csv', 'utf8');
     const parsed = Papa.parse(csvData, { header: true, skipEmptyLines: true }).data;
-    console.log(`Found ${parsed.length} users to migrate.`);
 
-    // Obtener todos los usuarios de Auth
-    const authUsers = await listAllAuthUsers();
+    // Buscar SOLO la persona
+    const row = parsed.find(r => (r['Correo'] || '').trim().toLowerCase() === TARGET_EMAIL);
 
-    for (const row of parsed) {
-      // Buscar usuario en Auth por email
-      const userRecord = authUsers.find(u => u.email === row['Correo']);
-      const uid = userRecord ? userRecord.uid : uuidv4(); // Usar UID real o generar uno
-
-      const now = new Date().toISOString();
-
-      const data = {
-        uid,
-        createdAt: now,
-        updatedAt: now,
-        displayName: row['Nombre'] || '',
-        firstName: row['Nombre'] ? row['Nombre'].split(' ')[0] : '',
-        lastName: row['Nombre'] ? row['Nombre'].split(' ').slice(1).join(' ') : '',
-        email: row['Correo'] || '',
-        publicEmail: '',
-        imageUrl: row['Imagen'] || '',
-        institution: row['Institution'] || '',
-        description: {
-          es: row['Descripción'] || '',
-          en: row['Description'] || ''
-        },
-        interests: {
-          es: parseInterests(row['Áreas de interés']),
-          en: parseInterests(row['Areas of interest'])
-        },
-        roles: parseRoles(row['Rol en la Revista'] || row['Role in the Journal']),
-        social: {}
-      };
-
-      await db.collection('users').doc(uid).set(data);
-      console.log(`Migrated user: ${data.displayName} (${uid})`);
+    if (!row) {
+      console.log('User not found in CSV');
+      return;
     }
 
-    console.log('Users migration complete.');
+    // Buscar en Auth (mucho más rápido que listar todos)
+    let uid;
+    try {
+      const userRecord = await admin.auth().getUserByEmail(TARGET_EMAIL);
+      uid = userRecord.uid;
+      console.log('Found existing Auth user:', uid);
+    } catch (e) {
+      uid = uuidv4();
+      console.log('User not in Auth, generating uid:', uid);
+    }
+
+    const now = new Date().toISOString();
+
+    const data = {
+      uid,
+      createdAt: now,
+      updatedAt: now,
+      displayName: row['Nombre'] || '',
+      firstName: row['Nombre'] ? row['Nombre'].split(' ')[0] : '',
+      lastName: row['Nombre'] ? row['Nombre'].split(' ').slice(1).join(' ') : '',
+      email: row['Correo'] || '',
+      publicEmail: '',
+      imageUrl: row['Imagen'] || '',
+      institution: row['Institution'] || '',
+      description: {
+        es: row['Descripción'] || '',
+        en: row['Description'] || ''
+      },
+      interests: {
+        es: parseInterests(row['Áreas de interés']),
+        en: parseInterests(row['Areas of interest'])
+      },
+      roles: parseRoles(row['Rol en la Revista'] || row['Role in the Journal']),
+      social: {}
+    };
+
+    await db.collection('users').doc(uid).set(data, { merge: true });
+
+    console.log(`✅ Migrated: ${data.displayName} (${uid})`);
   } catch (err) {
-    console.error('Error migrating users:', err);
+    console.error('Error:', err);
   }
 }
 
 (async () => {
-  await migrateUsers();
+  await migrateSingleUser();
   process.exit(0);
 })();

@@ -872,6 +872,7 @@ exports.onUserCreate = onDocumentCreated(
   }
 );
 /* ===================== UPDATE ROLE ===================== */
+/* ===================== UPDATE ROLE (CALLABLE) ===================== */
 exports.updateRole = onCall(async (request) => {
   const { auth, data } = request;
 
@@ -883,7 +884,7 @@ exports.updateRole = onCall(async (request) => {
   const callerUid = auth.uid;
 
   try {
-    // 👮 Verificar que quien llama sea Director General
+    /* ===================== VALIDAR PERMISOS ===================== */
     const callerUser = await admin.auth().getUser(callerUid);
     const callerRoles = callerUser.customClaims?.roles || [];
 
@@ -894,24 +895,42 @@ exports.updateRole = onCall(async (request) => {
       );
     }
 
+    /* ===================== VALIDAR INPUT ===================== */
     const { targetUid, newRoles } = data;
 
-    // 🧪 Validaciones
     if (!targetUid) {
       throw new HttpsError("invalid-argument", "Falta targetUid");
     }
 
     if (!Array.isArray(newRoles)) {
-      throw new HttpsError("invalid-argument", "newRoles debe ser array");
+      throw new HttpsError("invalid-argument", "newRoles debe ser un array");
     }
 
-    // ✍️ Actualizar claims
+    /* ===================== ACTUALIZAR CLAIMS ===================== */
     await admin.auth().setCustomUserClaims(targetUid, {
       roles: newRoles,
     });
 
-    console.log(`Roles actualizados para ${targetUid}:`, newRoles);
+    /* ===================== ACTUALIZAR FIRESTORE ===================== */
+    await admin
+      .firestore()
+      .collection("users")
+      .doc(targetUid)
+      .set(
+        {
+          roles: newRoles,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedBy: callerUid,
+        },
+        { merge: true }
+      );
 
+    console.log(
+      `✅ ${callerUid} actualizó roles de ${targetUid}:`,
+      newRoles
+    );
+
+    /* ===================== RESPUESTA ===================== */
     return {
       success: true,
       targetUid,
@@ -919,7 +938,7 @@ exports.updateRole = onCall(async (request) => {
     };
 
   } catch (error) {
-    console.error("Error en updateRole:", error);
+    console.error("❌ Error en updateRole:", error);
 
     if (error instanceof HttpsError) throw error;
 
