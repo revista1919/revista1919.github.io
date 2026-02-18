@@ -487,7 +487,79 @@ const orcidSvg = `<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" 
       background: var(--border-color);
       border-radius: 4px;
     }
+/* === ESTILOS PARA TABLAS ACADÉMICAS ÉPICAS === */
+.table-responsive {
+  overflow-x: auto;
+  margin: 1.5em 0;
+  border-radius: 4px;
+}
 
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #ffffff;
+  font-size: 0.95em;
+  box-shadow: 0 2px 3px rgba(0,0,0,0.05);
+}
+
+/* Borde superior e inferior para el encabezado */
+thead tr {
+  border-top: 2px solid #2c3e50; /* Azul oscuro/negro para la línea superior */
+  border-bottom: 1px solid #7f8c8d; /* Gris para la línea inferior del encabezado */
+}
+
+/* Estilo para las celdas del encabezado */
+th {
+  background-color: #f8f9fa; /* Gris muy suave de fondo */
+  color: #1a2634;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 0.9em;
+  padding: 14px 10px;
+  text-align: center; /* CENTRADO */
+  vertical-align: middle;
+}
+
+/* Estilo para las celdas del cuerpo */
+td {
+  padding: 14px 10px;
+  text-align: center; /* CENTRADO */
+  vertical-align: middle;
+  border-bottom: 1px solid #e0e0e0; /* Línea horizontal suave entre filas */
+  word-break: break-word; /* ¡Evita desbordes! */
+}
+
+/* Eliminar el borde inferior de la última fila para que no quede uno extra */
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Borde inferior final para la tabla */
+tbody {
+  border-bottom: 2px solid #2c3e50; /* Mismo color que el borde superior */
+}
+
+/* Estilo para las listas dentro de las celdas (que queden alineadas a la izquierda) */
+td ol, td ul {
+  text-align: left;
+  margin: 0;
+  padding-left: 1.2em;
+}
+
+/* Estilo para la fuente (caption) de la tabla */
+caption {
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #1a2634;
+  background-color: #f0f3f5;
+  padding: 12px 10px;
+  caption-side: top; /* La leyenda arriba */
+  border: 1px solid #d0d7dd;
+  border-bottom: none; /* Para que se fusione con la tabla */
+  border-radius: 4px 4px 0 0;
+  letter-spacing: 0.02em;
+}
     .toc-title {
       font-size: 0.7rem;
       font-weight: 700;
@@ -1890,7 +1962,79 @@ const orcidSvg = `<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" 
     .reference-item a:hover {
       border-bottom: 1px solid #005a7d;
     }
+/* === ESTILOS PARA TABLAS ACADÉMICAS ÉPICAS === */
+.table-responsive {
+  overflow-x: auto;
+  margin: 1.5em 0;
+  border-radius: 4px;
+}
 
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #ffffff;
+  font-size: 0.95em;
+  box-shadow: 0 2px 3px rgba(0,0,0,0.05);
+}
+
+/* Borde superior e inferior para el encabezado */
+thead tr {
+  border-top: 2px solid #2c3e50; /* Azul oscuro/negro para la línea superior */
+  border-bottom: 1px solid #7f8c8d; /* Gris para la línea inferior del encabezado */
+}
+
+/* Estilo para las celdas del encabezado */
+th {
+  background-color: #f8f9fa; /* Gris muy suave de fondo */
+  color: #1a2634;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 0.9em;
+  padding: 14px 10px;
+  text-align: center; /* CENTRADO */
+  vertical-align: middle;
+}
+
+/* Estilo para las celdas del cuerpo */
+td {
+  padding: 14px 10px;
+  text-align: center; /* CENTRADO */
+  vertical-align: middle;
+  border-bottom: 1px solid #e0e0e0; /* Línea horizontal suave entre filas */
+  word-break: break-word; /* ¡Evita desbordes! */
+}
+
+/* Eliminar el borde inferior de la última fila para que no quede uno extra */
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Borde inferior final para la tabla */
+tbody {
+  border-bottom: 2px solid #2c3e50; /* Mismo color que el borde superior */
+}
+
+/* Estilo para las listas dentro de las celdas (que queden alineadas a la izquierda) */
+td ol, td ul {
+  text-align: left;
+  margin: 0;
+  padding-left: 1.2em;
+}
+
+/* Estilo para la fuente (caption) de la tabla */
+caption {
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #1a2634;
+  background-color: #f0f3f5;
+  padding: 12px 10px;
+  caption-side: top; /* La leyenda arriba */
+  border: 1px solid #d0d7dd;
+  border-bottom: none; /* Para que se fusione con la tabla */
+  border-radius: 4px 4px 0 0;
+  letter-spacing: 0.02em;
+}
     /* Right Sidebar with Tabs */
     .right-sidebar {
       position: sticky;
