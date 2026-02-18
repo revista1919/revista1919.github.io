@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacidad — Revista Nacional de las Ciencias para Estudiantes</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Lora:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;500;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --deep-navy: #001f3f; /* Azul Oxford */
+      --rich-black: #121212;
+      --soft-white: #fdfdfd;
+      --accent-gold: #c5a059; /* Opcional: para detalles mínimos de lujo */
+      --border-color: #e0e0e0;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--soft-white);
+      color: var(--rich-black);
+      font-family: 'Lora', serif;
+      line-height: 1.8;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* --- Navegación Minimalista --- */
+    .legal-nav {
+      padding: 30px 50px;
+      display: flex;
+      justify-content: center;
+      border-bottom: 1px solid var(--border-color);
+      background: white;
+    }
+
+    .legal-nav a {
+      font-family: 'Inter', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      font-size: 12px;
+      font-weight: 700;
+      text-decoration: none;
+      color: var(--deep-navy);
+      transition: opacity 0.3s;
+    }
+
+    /* --- Contenedor de Documento --- */
+    .document-wrapper {
+      max-width: 850px;
+      margin: 80px auto;
+      padding: 0 40px;
+    }
+
+    /* --- Cabecera Editorial --- */
+    .editorial-header {
+      text-align: center;
+      margin-bottom: 80px;
+    }
+
+    .kicker {
+      display: block;
+      font-family: 'Inter', sans-serif;
+      font-variant: all-small-caps;
+      letter-spacing: 4px;
+      color: var(--deep-navy);
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 15px;
+    }
+
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2.5rem, 5vw, 3.8rem);
+      font-weight: 900;
+      line-height: 1.1;
+      margin: 0;
+      color: var(--rich-black);
+    }
+
+    .meta-line {
+      margin-top: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #888;
+    }
+
+    .meta-line::before, .meta-line::after {
+      content: "";
+      height: 1px;
+      width: 50px;
+      background-color: var(--border-color);
+    }
+
+    /* --- Cuerpo del Contenido --- */
+    .legal-content {
+      font-size: 1.15rem;
+      color: #333;
+    }
+
+    .legal-content h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.8rem;
+      color: var(--deep-navy);
+      margin-top: 60px;
+      margin-bottom: 25px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 10px;
+    }
+
+    .legal-content h3 {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-top: 40px;
+      color: var(--rich-black);
+    }
+
+    .policy-section {
+      margin-bottom: 40px;
+    }
+
+    .legal-content p {
+      margin-bottom: 1.5rem;
+    }
+
+    /* Listas con estilo Nature */
+    .legal-content ul {
+      list-style: none;
+      padding-left: 0;
+    }
+
+    .legal-content li {
+      position: relative;
+      padding-left: 25px;
+      margin-bottom: 12px;
+    }
+
+    .legal-content li::before {
+      content: "—";
+      position: absolute;
+      left: 0;
+      color: var(--deep-navy);
+    }
+
+    /* --- Enlaces y Contacto --- */
+    a.legal-link {
+      color: var(--deep-navy);
+      text-decoration: none;
+      border-bottom: 1px solid var(--deep-navy);
+      padding-bottom: 2px;
+      transition: all 0.2s;
+    }
+
+    a.legal-link:hover {
+      background-color: var(--deep-navy);
+      color: white;
+    }
+
+    /* --- Footer Institucional --- */
+    .editorial-footer {
+      margin-top: 120px;
+      padding: 60px 20px;
+      border-top: 3px double var(--rich-black);
+      text-align: center;
+    }
+
+    .footer-logo {
+      font-family: 'Playfair Display', serif;
+      font-weight: 900;
+      font-size: 1.2rem;
+      letter-spacing: -0.5px;
+      color: var(--rich-black);
+      text-decoration: none;
+    }
+
+    .footer-creds {
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #999;
+      margin-top: 20px;
+    }
+
+    /* Impresión */
+    @media print {
+      body { background: white; }
+      .legal-nav { display: none; }
+      .document-wrapper { margin: 0 auto; width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="legal-nav">
+    <a href="/">The National Review of Sciences for Students</a>
+  </nav>
+
+  <main class="document-wrapper">
+    
+    <header class="editorial-header">
+      <span class="kicker">Privacidad & Protección de Datos</span>
+      <h1>Política de Privacidad</h1>
+      <div class="meta-line">Última actualización: 2026 • San Felipe, Chile</div>
+    </header>
+
+    <article class="legal-content">
+      <p>La <strong>Revista Nacional de las Ciencias para Estudiantes</strong> (ISSN 3087-2839), con domicilio en San Felipe, Chile, actúa como responsable del tratamiento de los datos personales de sus usuarios. Esta política detalla los principios que rigen la recopilación, uso y protección de la información en nuestra plataforma, en cumplimiento con la legislación chilena e inspirados en las mejores prácticas académicas internacionales.</p>
+
+      <h2>1. Datos que recopilamos</h2>
+      <div class="policy-section">
+        <p>En estricto apego a los principios de minimización de datos y transparencia, recopilamos exclusivamente la información que el usuario proporciona de manera voluntaria e inequívoca a través de nuestros formularios de registro, envío de artículos y contacto. Esta información se limita a:</p>
+        <ul>
+          <li><strong>Identidad:</strong> Nombre completo.</li>
+          <li><strong>Contacto:</strong> Correo electrónico.</li>
+          <li><strong>Información académica:</strong> Afiliación institucional, área de estudio y otra información académica relevante asociada al proceso de publicación.</li>
+          <li><strong>Datos de interacción:</strong> Información proporcionada en formularios de envío, registro o consulta.</li>
+        </ul>
+        <p>No recopilamos datos de navegación de forma encubierta, información biométrica, ni accedemos a archivos o datos privados del dispositivo del usuario fuera de los límites de la información conscientemente suministrada.</p>
+      </div>
+
+      <h2>2. Uso de la información</h2>
+      <div class="policy-section">
+        <p>La totalidad de los datos recopilados son utilizados de manera exclusiva para los fines académicos y operativos que definen nuestra misión institucional:</p>
+        <ul>
+          <li>Gestión, creación y administración de cuentas de usuario.</li>
+          <li>Gestión del proceso editorial, incluyendo el envío, revisión por pares y, en su caso, publicación de artículos.</li>
+          <li>Comunicación con autores, revisores y lectores para fines académicos y editoriales.</li>
+          <li>Envío del boletín informativo (newsletter) únicamente a quienes hayan otorgado su consentimiento expreso.</li>
+          <li>Garantizar el correcto funcionamiento técnico y la seguridad de la plataforma.</li>
+        </ul>
+        <p><strong>No vendemos, arrendamos, cedemos ni comercializamos datos personales bajo ninguna circunstancia.</strong> La dirección de correo electrónico del usuario se mantiene como información privada y confidencial, y solo será visible públicamente si el usuario así lo decide explícitamente en la configuración de su perfil.</p>
+      </div>
+
+      <h2>3. Menores de edad</h2>
+      <div class="policy-section">
+        <p>Para el envío de artículos por parte de autores menores de edad, se requiere de manera inexcusable el consentimiento informado de su representante legal (apoderado o tutor), el cual se formaliza mediante un formulario específico diseñado para tal efecto.</p>
+        <p>La Revista actúa de buena fe en la recepción de esta información y carece de medios para verificar de forma independiente la veracidad de la representación legal declarada. En consecuencia, la Revista no asume responsabilidad alguna por las declaraciones falsas o mendaces realizadas por los usuarios en este ámbito.</p>
+      </div>
+
+      <h2>4. Almacenamiento y seguridad</h2>
+      <div class="policy-section">
+        <p>La información es almacenada en infraestructuras tecnológicas que cumplen con altos estándares de seguridad, incluyendo los servicios proporcionados por <strong>Firebase (Google)</strong> y <strong>GitHub</strong>. Se implementan medidas técnicas y organizativas razonables para proteger los datos contra accesos no autorizados, pérdida o destrucción.</p>
+        <p>No obstante, y en un ejercicio de transparencia, la Revista reconoce que ningún sistema de transmisión o almacenamiento de datos en Internet es completamente infalible. Por lo tanto, la Revista no se responsabiliza por fallos técnicos, ataques externos (hacking) o cualquier otro evento de fuerza mayor que escape a su control razonable.</p>
+      </div>
+
+      <h2>5. Uso académico de los datos</h2>
+      <div class="policy-section">
+        <p>Al utilizar la plataforma y sus servicios, el usuario acepta expresamente que sus datos sean tratados para los procesos académicos y editoriales inherentes a la naturaleza de la Revista, tal como se describen en esta política.</p>
+      </div>
+
+      <h2>6. Derechos del usuario (ARCO)</h2>
+      <div class="policy-section">
+        <p>El usuario tiene derecho a solicitar en cualquier momento el acceso, rectificación, cancelación u oposición (derechos ARCO) respecto de sus datos personales. Para ejercer estos derechos, o para solicitar la eliminación de su cuenta y de la información asociada, el usuario debe contactar al Delegado de Protección de Datos a través del siguiente correo electrónico:</p>
+        <p style="text-align: center; margin-top: 40px;">
+          <a href="mailto:contact@revistacienciasestudiantes.com" class="legal-link">contact@revistacienciasestudiantes.com</a>
+        </p>
+      </div>
+    </article>
+
+    <footer class="editorial-footer">
+      <a href="/" class="footer-logo">R.N.C.E.</a>
+      <div class="footer-creds">
+        ISSN 3087-2839 • San Felipe, Chile<br>
+        Una revista por y para estudiantes
+      </div>
+    </footer>
+
+  </main>
+
+</body>
+</html>
