@@ -4,20 +4,23 @@ import { motion, AnimatePresence } from 'framer-motion';
 // Helper functions
 const getYear = (date) => {
   if (!date) return 'Desconocido';
-  const parsedDate = new Date(date);
-  return isNaN(parsedDate) ? 'Desconocido' : parsedDate.getFullYear();
+  // Forzar UTC para evitar desfase horario
+  const parsedDate = new Date(date + 'T12:00:00Z');
+  return isNaN(parsedDate) ? 'Desconocido' : parsedDate.getUTCFullYear();
 };
 
 const parseDateFlexible = (date) => {
   if (!date) return 'No disponible';
-  const parsedDate = new Date(date);
-  return isNaN(parsedDate)
-    ? date
-    : parsedDate.toLocaleDateString('es-ES', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
+  // Forzar UTC para evitar desfase horario
+  const parsedDate = new Date(date + 'T12:00:00Z');
+  if (isNaN(parsedDate)) return date;
+  
+  return parsedDate.toLocaleDateString('es-ES', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    timeZone: 'UTC' // Forzar UTC
+  });
 };
 
 // Slug generator (consistente con el script Node.js)
@@ -33,10 +36,69 @@ const generateSlug = (name) => {
 };
 
 /* -------------------------- FORMATOS DE AUTORES -------------------------- */
+// Obtener array de nombres de autores (para compatibilidad con funciones existentes)
+const getAuthorNames = (autores) => {
+  if (!autores) return [];
+  
+  // Si es string (formato antiguo), convertir a array
+  if (typeof autores === 'string') {
+    return autores.split(';').map(a => a.trim()).filter(a => a);
+  }
+  
+  // Si es array de objetos (nuevo formato)
+  if (Array.isArray(autores)) {
+    return autores.map(author => {
+      if (typeof author === 'string') return author;
+      if (author.name) return author.name;
+      if (author.firstName || author.lastName) {
+        return `${author.firstName || ''} ${author.lastName || ''}`.trim();
+      }
+      return '';
+    }).filter(Boolean);
+  }
+  
+  return [];
+};
+
+// Obtener array completo de objetos de autores
+const getAuthorsArray = (autores) => {
+  if (!autores) return [];
+  
+  // Si es string, convertir a objetos simples
+  if (typeof autores === 'string') {
+    return autores.split(';').map(a => ({ 
+      name: a.trim(),
+      authorId: null,
+      email: null,
+      institution: null,
+      orcid: null
+    }));
+  }
+  
+  // Si ya es array, devolverlo
+  if (Array.isArray(autores)) {
+    return autores.map(author => {
+      if (typeof author === 'string') {
+        return { 
+          name: author,
+          authorId: null,
+          email: null,
+          institution: null,
+          orcid: null
+        };
+      }
+      return author; // Ya es objeto
+    });
+  }
+  
+  return [];
+};
+
 const chicagoAuthors = (authors) => {
-  if (authors.length === 1) return authors[0];
-  if (authors.length === 2) return `${authors[0]} y ${authors[1]}`;
-  return `${authors[0]}, et al.`;
+  const names = getAuthorNames(authors);
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} y ${names[1]}`;
+  return `${names[0]}, et al.`;
 };
 
 const apaFormatName = (fullName) => {
@@ -48,24 +110,86 @@ const apaFormatName = (fullName) => {
 };
 
 const apaAuthors = (authors) => {
-  const formatted = authors.map(apaFormatName);
+  const names = getAuthorNames(authors);
+  const formatted = names.map(apaFormatName);
   if (formatted.length === 1) return formatted[0];
   if (formatted.length === 2) return `${formatted[0]} & ${formatted[1]}`;
   return formatted.slice(0, -1).join(', ') + ', & ' + formatted[formatted.length - 1];
 };
 
 const mlaAuthors = (authors) => {
-  if (authors.length === 1) return authors[0];
-  if (authors.length === 2) return `${authors[0]} y ${authors[1]}`;
-  return `${authors[0]}, et al.`;
+  const names = getAuthorNames(authors);
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} y ${names[1]}`;
+  return `${names[0]}, et al.`;
 };
 
 const formatAuthorsDisplay = (authors, language = 'es') => {
-  if (authors.length === 0) return 'Autor desconocido';
+  const names = getAuthorNames(authors);
+  if (names.length === 0) return 'Autor desconocido';
   const connector = language === 'es' ? 'y' : 'and';
-  if (authors.length === 1) return authors[0];
-  if (authors.length === 2) return `${authors[0]} ${connector} ${authors[1]}`;
-  return authors.slice(0, -1).join(', ') + `, ${connector} ` + authors[authors.length - 1];
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} ${connector} ${names[1]}`;
+  return names.slice(0, -1).join(', ') + `, ${connector} ` + names[names.length - 1];
+};
+
+// Renderizar autores con iconos (ORCID, email)
+const renderAuthorsWithIcons = (authors, language = 'es') => {
+  const authorsArray = getAuthorsArray(authors);
+  
+  return authorsArray.map((author, i) => {
+    const name = author.name || `${author.firstName || ''} ${author.lastName || ''}`.trim();
+    const slug = generateSlug(name);
+    
+    return (
+      <span key={i} className="inline-flex items-center gap-1">
+        <span
+          onClick={(e) => { e.stopPropagation(); window.location.href = `/team/${slug}.html`; }}
+          className="text-[#007398] hover:underline cursor-pointer font-medium"
+        >
+          {name}
+        </span>
+        
+        {/* ORCID Icon */}
+        {author.orcid && (
+          <a
+            href={`https://orcid.org/${author.orcid}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-block ml-0.5 text-[#A6CE39] hover:opacity-80"
+            title="ORCID"
+          >
+            <svg className="w-3.5 h-3.5" viewBox="0 0 256 256">
+              <circle cx="128" cy="128" r="120" fill="currentColor"/>
+              <g fill="#FFFFFF">
+                <rect x="71" y="78" width="17" height="102"/>
+                <circle cx="79.5" cy="56" r="11"/>
+                <path d="M103 78 v102 h41.5 c28.2 0 51-22.8 51-51 s-22.8-51-51-51 H103 zm17 17 h24.5 c18.8 0 34 15.2 34 34 s-15.2 34-34 34 H120 V95 z" fill-rule="evenodd"/>
+              </g>
+            </svg>
+          </a>
+        )}
+        
+        {/* Email Icon */}
+        {author.email && (
+          <a
+            href={`mailto:${author.email}`}
+            onClick={(e) => e.stopPropagation()}
+            className="inline-block ml-0.5 text-[#007398] hover:opacity-80"
+            title="Email"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+          </a>
+        )}
+        
+        {i < authorsArray.length - 1 && <span className="text-gray-400">,</span>}
+      </span>
+    );
+  });
 };
 /* -------------------------------------------------------------------------- */
 
@@ -97,37 +221,34 @@ function ArticleCard({ article }) {
   /* --------------------------- CITAS COMPLETAS ---------------------------- */
   const getChicago = () => {
     const authorsRaw = article?.autores || '';
-    const authors = authorsRaw.split(';').map(a => a.trim()).filter(a => a);
     const title = article?.titulo || 'Sin título';
     const volume = article?.volumen || '';
     const number = article?.numero || '';
     const year = getYear(article?.fecha);
-    const plain = `${chicagoAuthors(authors)}. "${title}." ${journal} ${volume}, no. ${number} (${year}): ${pages}.`;
-    const html = `${chicagoAuthors(authors)}. "${title}." <i>${journal}</i> ${volume}, no. ${number} (${year}): ${pages}.`;
+    const plain = `${chicagoAuthors(authorsRaw)}. "${title}." ${journal} ${volume}, no. ${number} (${year}): ${pages}.`;
+    const html = `${chicagoAuthors(authorsRaw)}. "${title}." <i>${journal}</i> ${volume}, no. ${number} (${year}): ${pages}.`;
     return { plain, html };
   };
 
   const getApa = () => {
     const authorsRaw = article?.autores || '';
-    const authors = authorsRaw.split(';').map(a => a.trim()).filter(a => a);
     const title = article?.titulo || 'Sin título';
     const volume = article?.volumen || '';
     const number = article?.numero || '';
     const year = getYear(article?.fecha);
-    const plain = `${apaAuthors(authors)} (${year}). ${title}. ${journal}, ${volume}(${number}), ${pages}.`;
-    const html = `${apaAuthors(authors)} (${year}). ${title}. <i>${journal}</i>, <i>${volume}</i>(${number}), ${pages}.`;
+    const plain = `${apaAuthors(authorsRaw)} (${year}). ${title}. ${journal}, ${volume}(${number}), ${pages}.`;
+    const html = `${apaAuthors(authorsRaw)} (${year}). ${title}. <i>${journal}</i>, <i>${volume}</i>(${number}), ${pages}.`;
     return { plain, html };
   };
 
   const getMla = () => {
     const authorsRaw = article?.autores || '';
-    const authors = authorsRaw.split(';').map(a => a.trim()).filter(a => a);
     const title = article?.titulo || 'Sin título';
     const volume = article?.volumen || '';
     const number = article?.numero || '';
     const year = getYear(article?.fecha);
-    const plain = `${mlaAuthors(authors)}. "${title}." ${journal}, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}.`;
-    const html = `${mlaAuthors(authors)}. "${title}." <i>${journal}</i>, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}.`;
+    const plain = `${mlaAuthors(authorsRaw)}. "${title}." ${journal}, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}.`;
+    const html = `${mlaAuthors(authorsRaw)}. "${title}." <i>${journal}</i>, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}.`;
     return { plain, html };
   };
   /* ----------------------------------------------------------------------- */
@@ -166,7 +287,7 @@ function ArticleCard({ article }) {
     );
   }
 
-  const authorsArray = (article?.autores || '').split(';').map(a => a.trim()).filter(a => a);
+  const authorsArray = getAuthorsArray(article?.autores);
   const tipo = article.tipo || 'Artículo de Investigación';
 
   // Determinar qué abstract mostrar
@@ -196,22 +317,22 @@ function ArticleCard({ article }) {
               <span className="bg-gray-100 px-1.5 py-0.5 rounded-sm">VOL. {article.volumen}</span>
               <span className="bg-gray-100 px-1.5 py-0.5 rounded-sm">NO. {article.numero}</span>
             </div>
-            {/* Título: Ajuste de tamaño responsivo */}
-            <h3 className={`font-serif font-bold text-black leading-tight mb-2 transition-colors group-hover:text-[#007398]
-              ${isExpanded ? 'text-xl md:text-2xl' : 'text-lg md:text-xl line-clamp-2 md:line-clamp-none'}`}>
-              {article.titulo}
-            </h3>
-            {/* Autores: Compactos */}
-            <div className="flex flex-wrap gap-x-2 text-xs md:text-sm mb-3">
-              {authorsArray.map((auth, i) => (
-                <span
-                  key={i}
-                  onClick={(e) => { e.stopPropagation(); handleAuthorClick(auth); }}
-                  className="text-[#007398] hover:underline cursor-pointer font-medium"
-                >
-                  {auth}{i < authorsArray.length - 1 ? ',' : ''}
-                </span>
-              ))}
+            {/* Título: Ajuste de tamaño responsivo - AHORA ES UN ENLACE */}
+            <a
+              href={htmlUrlEs}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="block"
+            >
+              <h3 className={`font-serif font-bold text-black leading-tight mb-2 transition-colors hover:text-[#007398]
+                ${isExpanded ? 'text-xl md:text-2xl' : 'text-lg md:text-xl line-clamp-2 md:line-clamp-none'}`}>
+                {article.titulo}
+              </h3>
+            </a>
+            {/* Autores: Compactos con iconos */}
+            <div className="flex flex-wrap items-center gap-x-1 text-xs md:text-sm mb-3">
+              {renderAuthorsWithIcons(article?.autores)}
             </div>
             {/* Resumen corto: Se oculta si está expandido para no repetir con el completo */}
             {!isExpanded && (
