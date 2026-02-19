@@ -1,6 +1,5 @@
-// App.js
+// AppEN.js
 import React, { useState, useEffect, useMemo } from 'react';
-import Papa from 'papaparse';
 import { auth } from './firebase';
 import {
   onAuthStateChanged,
@@ -28,10 +27,12 @@ import NewsSection from './components/NewsSectionEN';
 import HomeSectionEN from './components/HomeSectionEN';
 import './index.css';
 import { motion, AnimatePresence } from 'framer-motion';
-const USERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcXoR3CjwKFIXSuY5grX1VE2uPQB3jf4XjfQf6JWfX9zJNXV4zaWmDiF2kQXSK03qe2hQrUrVAhviz/pub?output=csv';
+
 const ARTICLES_JSON = '/articles.json';
 const VOLUMES_JSON = '/volumes.json';
+
 const isPrerendering = typeof navigator !== 'undefined' && navigator.userAgent.includes('ReactSnap');
+
 function AppEN() {
   const { cleanPath } = useLanguage();
   const [articles, setArticles] = useState([]);
@@ -60,43 +61,31 @@ function AppEN() {
   const [selectedVolumeNumber, setSelectedVolumeNumber] = useState('');
   const [volumeVolumes, setVolumeVolumes] = useState([]);
   const [volumeNumbers, setVolumeNumbers] = useState([]);
-  const fetchUserData = async (email) => {
-    try {
-      const response = await fetch(USERS_CSV, { cache: 'no-store' });
-      if (!response.ok) throw new Error(`Error loading CSV: ${response.status}`);
-      const csvText = await response.text();
-      const { data } = Papa.parse(csvText, {
-        header: true,
-        skipEmptyLines: true,
-        delimiter: ',',
-        transform: (value) => value?.toString().trim(),
-      });
-      const csvUser = data.find(
-        (u) =>
-          u.Correo?.toLowerCase() === email.toLowerCase() ||
-          u['E-mail']?.toLowerCase() === email.toLowerCase()
-      );
-      return {
-        name: csvUser?.Nombre || email,
-        role: csvUser?.['Rol en la Revista'] || 'User',
-        image: csvUser?.Imagen || '',
-      };
-    } catch (err) {
-      console.error('Error fetching user CSV:', err);
-      return { name: email, role: 'User', image: '' };
-    }
+
+  // Función para obtener datos del usuario desde Firebase/localStorage
+  const getUserData = (firebaseUser) => {
+    return {
+      uid: firebaseUser.uid,
+      email: firebaseUser.email,
+      name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+      role: 'User', // Default role
+      image: firebaseUser.photoURL || '',
+    };
   };
+
   useEffect(() => {
     if (isPrerendering) {
       setAuthLoading(false);
       return;
     }
+
     setPersistence(auth, browserLocalPersistence)
       .then(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
           if (firebaseUser) {
             const storedUser = JSON.parse(localStorage.getItem('userData'));
             let userData;
+
             if (
               storedUser &&
               storedUser.uid === firebaseUser.uid &&
@@ -104,14 +93,8 @@ function AppEN() {
             ) {
               userData = storedUser;
             } else {
-              const csvData = await fetchUserData(firebaseUser.email);
-              userData = {
-                uid: firebaseUser.uid,
-                email: firebaseUser.email,
-                name: csvData.name,
-                role: csvData.role,
-                image: csvData.image,
-              };
+              // Use Firebase data instead of CSV
+              userData = getUserData(firebaseUser);
               localStorage.setItem('userData', JSON.stringify(userData));
             }
             setUser(userData);
@@ -121,6 +104,7 @@ function AppEN() {
           }
           setAuthLoading(false);
         });
+
         return () => unsubscribe();
       })
       .catch((error) => {
@@ -128,6 +112,7 @@ function AppEN() {
         setAuthLoading(false);
       });
   }, []);
+
   useEffect(() => {
     const fetchArticles = async () => {
       try {
@@ -139,6 +124,7 @@ function AppEN() {
         const sortedData = data.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
         setArticles(sortedData);
         setFilteredArticles(sortedData);
+
         const allAreas = sortedData.flatMap((a) =>
           (a.area || '')
             .split(';')
@@ -147,14 +133,17 @@ function AppEN() {
         );
         const uniqueAreas = [...new Set(allAreas)].sort();
         setAreas(uniqueAreas);
+
         const uniqueVolumes = [...new Set(sortedData.map(a => safeString(a.volumen)))].filter(Boolean).sort((a, b) => {
           const getNum = str => parseInt(str.replace(/\D+/g, '')) || 0;
           return getNum(b) - getNum(a);
         });
+
         const uniqueNumbers = [...new Set(sortedData.map(a => safeString(a.numero)))].filter(Boolean).sort((a, b) => {
           const getNum = str => parseInt(str.replace(/\D+/g, '')) || 0;
           return getNum(b) - getNum(a);
         });
+
         setArticleVolumes(uniqueVolumes);
         setArticleNumbers(uniqueNumbers);
         setLoading(false);
@@ -163,8 +152,10 @@ function AppEN() {
         setLoading(false);
       }
     };
+
     fetchArticles();
   }, []);
+
   useEffect(() => {
     const fetchVolumes = async () => {
       try {
@@ -176,6 +167,7 @@ function AppEN() {
         const sortedData = data.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
         setVolumes(sortedData);
         setFilteredVolumes(sortedData);
+
         const allVolumeAreas = sortedData.flatMap((v) =>
           (v.area || '')
             .split(';')
@@ -184,14 +176,17 @@ function AppEN() {
         );
         const uniqueVolumeAreas = [...new Set(allVolumeAreas)].sort();
         setVolumeAreas(uniqueVolumeAreas);
+
         const uniqueVolumes = [...new Set(sortedData.map(v => safeString(v.volumen)))].filter(Boolean).sort((a, b) => {
           const getNum = str => parseInt(str.replace(/\D+/g, '')) || 0;
           return getNum(b) - getNum(a);
         });
+
         const uniqueNumbers = [...new Set(sortedData.map(v => safeString(v.numero)))].filter(Boolean).sort((a, b) => {
           const getNum = str => parseInt(str.replace(/\D+/g, '')) || 0;
           return getNum(b) - getNum(a);
         });
+
         setVolumeVolumes(uniqueVolumes);
         setVolumeNumbers(uniqueNumbers);
         setVolumeLoading(false);
@@ -200,19 +195,23 @@ function AppEN() {
         setVolumeLoading(false);
       }
     };
+
     fetchVolumes();
   }, []);
+
   const safeString = (val) => {
     if (val == null) return '';
     if (typeof val === 'string') return val;
     if (Array.isArray(val)) return val.join(', ');
     return String(val);
   };
+
   const normalizeNumberSearch = (term) => {
     if (!term) return '';
     const onlyNumbers = term.replace(/[^0-9]/g, '');
     return onlyNumbers || term.toLowerCase();
   };
+
   useEffect(() => {
     const lowerTerm = searchTerm.toLowerCase();
     const numericTerm = normalizeNumberSearch(searchTerm);
@@ -228,6 +227,7 @@ function AppEN() {
         safeString(article.fecha).toLowerCase().includes(lowerTerm) ||
         safeString(article.volumen).includes(numericTerm) ||
         safeString(article.numero).includes(numericTerm);
+
       const matchesArea =
         selectedArea === '' ||
         safeString(article.area)
@@ -235,17 +235,22 @@ function AppEN() {
           .split(';')
           .map((a) => a.trim())
           .some((a) => a === selectedArea.toLowerCase());
+
       const matchesVolume =
         selectedArticleVolume === '' ||
         safeString(article.volumen) === selectedArticleVolume;
+
       const matchesNumber =
         selectedArticleNumber === '' ||
         safeString(article.numero) === selectedArticleNumber;
+
       return matchesSearch && matchesArea && matchesVolume && matchesNumber;
     });
+
     setFilteredArticles(filtered);
     setVisibleArticles(6);
   }, [searchTerm, selectedArea, selectedArticleVolume, selectedArticleNumber, articles]);
+
   useEffect(() => {
     const lowerTerm = volumeSearchTerm.toLowerCase();
     const numericTerm = normalizeNumberSearch(volumeSearchTerm);
@@ -258,6 +263,7 @@ function AppEN() {
         safeString(volume.numero).toLowerCase().includes(lowerTerm) ||
         safeString(volume.volumen).includes(numericTerm) ||
         safeString(volume.numero).includes(numericTerm);
+
       const matchesArea =
         selectedVolumeArea === '' ||
         safeString(volume.area)
@@ -265,24 +271,31 @@ function AppEN() {
           .split(';')
           .map((a) => a.trim())
           .some((a) => a.toLowerCase() === selectedVolumeArea.toLowerCase());
+
       const matchesVolume =
         selectedVolumeVolume === '' ||
         safeString(volume.volumen) === selectedVolumeVolume;
+
       const matchesNumber =
         selectedVolumeNumber === '' ||
         safeString(volume.numero) === selectedVolumeNumber;
+
       return matchesSearch && matchesArea && matchesVolume && matchesNumber;
     });
+
     setFilteredVolumes(filtered);
   }, [volumeSearchTerm, selectedVolumeArea, selectedVolumeVolume, selectedVolumeNumber, volumes]);
+
   useEffect(() => {
     const rawPath = location.pathname.replace(/\/$/, '');
     const path = typeof cleanPath === 'function' ? cleanPath(rawPath) : rawPath;
+    
     if (path === '/article' || path === '/' || path === '') {
       const term = searchParams.get('article_search') ?? '';
       const area = searchParams.get('article_area') ?? '';
       const volume = searchParams.get('article_volume') ?? '';
       const number = searchParams.get('article_number') ?? '';
+      
       setSearchTerm(term);
       setSelectedArea(area);
       setSelectedArticleVolume(volume);
@@ -292,36 +305,42 @@ function AppEN() {
       const area = searchParams.get('volume_area') ?? '';
       const volume = searchParams.get('volume_volume') ?? '';
       const number = searchParams.get('volume_number') ?? '';
+      
       setVolumeSearchTerm(term);
       setSelectedVolumeArea(area);
       setSelectedVolumeVolume(volume);
       setSelectedVolumeNumber(number);
     }
   }, [location.pathname, searchParams, cleanPath]);
+
   const handleSearch = (term, area, volume, number) => {
     const params = new URLSearchParams();
     if (term) params.set('article_search', term);
     if (area) params.set('article_area', area);
     if (volume) params.set('article_volume', volume);
     if (number) params.set('article_number', number);
+    
     setSearchTerm(term);
     setSelectedArea(area);
     setSelectedArticleVolume(volume);
     setSelectedArticleNumber(number);
     setSearchParams(params);
   };
+
   const handleVolumeSearch = (term, area, volume, number) => {
     const params = new URLSearchParams();
     if (term) params.set('volume_search', term);
     if (area) params.set('volume_area', area);
     if (volume) params.set('volume_volume', volume);
     if (number) params.set('volume_number', number);
+    
     setVolumeSearchTerm(term);
     setSelectedVolumeArea(area);
     setSelectedVolumeVolume(volume);
     setSelectedVolumeNumber(number);
     setSearchParams(params);
   };
+
   const clearFilters = () => {
     setSearchTerm('');
     setSelectedArea('');
@@ -329,6 +348,7 @@ function AppEN() {
     setSelectedArticleNumber('');
     setSearchParams(new URLSearchParams());
   };
+
   const clearVolumeFilters = () => {
     setVolumeSearchTerm('');
     setSelectedVolumeArea('');
@@ -336,8 +356,10 @@ function AppEN() {
     setSelectedVolumeNumber('');
     setSearchParams(new URLSearchParams());
   };
+
   const loadMoreArticles = () => setVisibleArticles((prev) => prev + 6);
   const showLessArticles = () => setVisibleArticles(6);
+
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -347,6 +369,7 @@ function AppEN() {
       console.error('Error signing out:', error);
     }
   };
+
   const sections = useMemo(() => [
     {
       name: 'home',
@@ -574,6 +597,7 @@ function AppEN() {
       ),
     },
   ], [articles, filteredArticles, areas, searchTerm, selectedArea, selectedArticleVolume, selectedArticleNumber, articleVolumes, articleNumbers, volumes, filteredVolumes, volumeAreas, volumeSearchTerm, selectedVolumeArea, selectedVolumeVolume, selectedVolumeNumber, volumeVolumes, volumeNumbers, loading, volumeLoading, visibleArticles, user]);
+
   if (authLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-white">
@@ -587,15 +611,18 @@ function AppEN() {
       </div>
     );
   }
+
   const isLoginActive = location.pathname.includes('login');
   const rawPath = location.pathname.replace(/\/$/, '');
   const normalizedPath = typeof cleanPath === 'function' ? cleanPath(rawPath) : rawPath;
   const isHome = normalizedPath === '/' || normalizedPath === '' || rawPath === '/en';
+
   const framerItem = (delay) => ({
     initial: { opacity: 0, x: -20 },
     animate: { opacity: 1, x: 0 },
     transition: { delay: 0.1 * delay, duration: 0.3 }
   });
+
   return (
     <div className="min-h-screen bg-[#F9FAFB] flex flex-col font-sans text-gray-900">
       {!isHome && <Header onOpenMenu={() => setIsMenuOpen(true)} />}
@@ -668,18 +695,18 @@ function AppEN() {
                 {sections.map((section, index) => (
                   <motion.div key={section.name} {...framerItem(index)}>
                     <NavLink
-  to={section.path}
-  end={section.name === 'home'}
-  className={({ isActive }) =>
-    `block py-3 px-4 rounded-md ${
-      isActive
-        ? 'bg-blue-600 text-white'
-        : 'text-gray-700 hover:bg-gray-100'
-    }`
-  }
->
-  {section.label}
-</NavLink>
+                      to={section.path}
+                      end={section.name === 'home'}
+                      className={({ isActive }) =>
+                        `block py-3 px-4 rounded-md ${
+                          isActive
+                            ? 'bg-blue-600 text-white'
+                            : 'text-gray-700 hover:bg-gray-100'
+                        }`
+                      }
+                    >
+                      {section.label}
+                    </NavLink>
                   </motion.div>
                 ))}
               </div>
@@ -691,4 +718,5 @@ function AppEN() {
     </div>
   );
 }
+
 export default AppEN;

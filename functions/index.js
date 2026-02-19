@@ -443,6 +443,7 @@ exports.uploadNews = onRequest(
 
 /* ===================== MANAGE ARTICLES ===================== */
 /* ===================== MANAGE ARTICLES ===================== */
+/* ===================== MANAGE ARTICLES ===================== */
 exports.manageArticles = onRequest(
   { 
     secrets: [GH_TOKEN],
@@ -450,7 +451,7 @@ exports.manageArticles = onRequest(
     timeoutSeconds: 120
   },
   async (req, res) => {
-    // ========== 1. MANEJO CORS - PRIMERO SIEMPRE ==========
+    // ========== 1. MANEJO CORS ==========
     const origin = req.headers.origin;
     const ALLOWED_ORIGINS = [
       'https://www.revistacienciasestudiantes.com',
@@ -530,9 +531,167 @@ exports.manageArticles = onRequest(
 
       console.log(`[${requestId}] 📋 Acción: ${action}, ID: ${id || 'nuevo'}`);
 
-      const db = admin.firestore();
-      const ref = db.collection("articles");
-      const statsRef = db.collection('stats').doc('articles');
+      // ========== CONFIGURACIÓN GITHUB ==========
+      const octokit = getOctokit();
+      const REPO_OWNER = "revista1919";
+      const REPO_NAME = "articless"; // Repositorio donde está articles.json
+      const JSON_PATH = "articles.json";
+      const BRANCH = "main";
+
+      // ========== FUNCIONES AUXILIARES ==========
+      async function getCurrentArticlesJson() {
+        try {
+          const { data } = await octokit.repos.getContent({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            path: JSON_PATH,
+            ref: BRANCH
+          });
+          
+          const content = Buffer.from(data.content, 'base64').toString('utf8');
+          return {
+            articles: JSON.parse(content),
+            sha: data.sha
+          };
+        } catch (error) {
+          if (error.status === 404) {
+            // Si no existe, crear array vacío
+            return {
+              articles: [],
+              sha: null
+            };
+          }
+          throw error;
+        }
+      }
+
+      async function saveArticlesJson(articles, sha, commitMessage) {
+        const content = Buffer.from(JSON.stringify(articles, null, 2)).toString('base64');
+        
+        if (sha) {
+          // Actualizar archivo existente
+          await octokit.repos.createOrUpdateFileContents({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            path: JSON_PATH,
+            message: commitMessage,
+            content: content,
+            sha: sha,
+            branch: BRANCH
+          });
+        } else {
+          // Crear archivo nuevo
+          await octokit.repos.createOrUpdateFileContents({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            path: JSON_PATH,
+            message: commitMessage,
+            content: content,
+            branch: BRANCH
+          });
+        }
+      }
+
+      // ========== PROCESAR AUTORES CON SUS IDs ==========
+      function processAuthors(authorsInput) {
+        // authorsInput puede ser:
+        // 1. String "Nombre1 Apellido1;Nombre2 Apellido2"
+        // 2. Array de strings ["Nombre1 Apellido1", "Nombre2 Apellido2"]
+        // 3. Array de objetos [{ name: "...", authorId: "..." }, ...]
+        
+        let authorsArray = [];
+        
+        if (typeof authorsInput === 'string') {
+          // Caso 1: string separado por punto y coma
+          authorsArray = authorsInput.split(';').map(name => ({
+            name: name.trim(),
+            authorId: null
+          }));
+        } else if (Array.isArray(authorsInput)) {
+          if (authorsInput.length === 0) return [];
+          
+          if (typeof authorsInput[0] === 'string') {
+            // Caso 2: array de strings
+            authorsArray = authorsInput.map(name => ({
+              name: name.trim(),
+              authorId: null
+            }));
+          } else {
+            // Caso 3: array de objetos
+            authorsArray = authorsInput.map(a => ({
+              name: a.name || `${a.firstName || ''} ${a.lastName || ''}`.trim(),
+              authorId: a.authorId || a.uid || null,
+              email: a.email || null,
+              institution: a.institution || null,
+              orcid: a.orcid || null
+            }));
+          }
+        }
+        
+        return authorsArray;
+      }
+
+      // Función para generar slug para PDF
+      function generateSlug(text) {
+        if (!text) return '';
+        return text.toLowerCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+      }
+
+      // ========== SUBIR PDF A REPO ARTICLES ==========
+      async function uploadPDF(pdfBase64, fileName, commitMessage) {
+        const content = pdfBase64.replace(/^data:application\/pdf;base64,/, "");
+        
+        await octokit.repos.createOrUpdateFileContents({
+          owner: REPO_OWNER,
+          repo: REPO_NAME,
+          path: `pdfs/${fileName}`, // Guardamos PDFs en subcarpeta
+          message: commitMessage,
+          content: content,
+          branch: BRANCH
+        });
+        
+        return `https://${REPO_OWNER}.github.io/${REPO_NAME}/pdfs/${fileName}`;
+      }
+
+      async function deletePDF(fileName, commitMessage) {
+        try {
+          const { data } = await octokit.repos.getContent({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            path: `pdfs/${fileName}`,
+            branch: BRANCH
+          });
+          
+          await octokit.repos.deleteFile({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            path: `pdfs/${fileName}`,
+            message: commitMessage,
+            sha: data.sha,
+            branch: BRANCH
+          });
+        } catch (error) {
+          if (error.status !== 404) throw error;
+        }
+      }
+
+      // ========== OBTENER SIGUIENTE NÚMERO DE ARTÍCULO ==========
+      async function getNextArticleNumber(articles) {
+        if (articles.length === 0) return 1;
+        
+        const maxNumber = Math.max(...articles.map(a => a.numeroArticulo || 0));
+        return maxNumber + 1;
+      }
+
+      // ========== ACCIONES ==========
+      
+      // Obtener estado actual
+      const { articles: currentArticles, sha } = await getCurrentArticlesJson();
+      let updatedArticles = [...currentArticles];
+      let responseData = {};
 
       // ========== ACCIÓN: ADD ==========
       if (action === "add") {
@@ -542,45 +701,27 @@ exports.manageArticles = onRequest(
 
         console.log(`[${requestId}] 📝 Creando nuevo artículo: ${article.titulo}`);
 
-        // Obtener y incrementar el contador de artículos de forma atómica
-        let articleNumber;
+        // Procesar autores
+        const authorsArray = processAuthors(article.autores);
         
-        // Usar transacción para evitar condiciones de carrera
-        await db.runTransaction(async (transaction) => {
-          const statsDoc = await transaction.get(statsRef);
-          
-          if (!statsDoc.exists) {
-            // Primera vez: crear el documento con contador = 1
-            articleNumber = 1;
-            transaction.set(statsRef, { 
-              count: 1,
-              lastUpdated: admin.firestore.FieldValue.serverTimestamp()
-            });
-          } else {
-            // Incrementar contador
-            const currentCount = statsDoc.data().count || 0;
-            articleNumber = currentCount + 1;
-            transaction.update(statsRef, { 
-              count: articleNumber,
-              lastUpdated: admin.firestore.FieldValue.serverTimestamp()
-            });
-          }
-        });
-
-        console.log(`[${requestId}] 🔢 Número de artículo asignado: ${articleNumber}`);
-
-        // Crear documento en Firestore con el número de artículo
-        const docRef = await ref.add({
+        // Obtener siguiente número de artículo
+        const articleNumber = await getNextArticleNumber(currentArticles);
+        
+        // Preparar objeto de artículo
+        const newArticle = {
+          numeroArticulo: articleNumber,
           titulo: article.titulo,
           tituloEnglish: article.tituloEnglish || '',
-          autores: article.autores,
+          autores: authorsArray, // AHORA ES UN ARRAY DE OBJETOS
           resumen: article.resumen,
           abstract: article.abstract || '',
-          palabras_clave: article.palabras_clave || [],
-          keywords_english: article.keywords_english || [],
+          palabras_clave: Array.isArray(article.palabras_clave) ? article.palabras_clave : 
+                          (article.palabras_clave ? article.palabras_clave.split(';').map(k => k.trim()) : []),
+          keywords_english: Array.isArray(article.keywords_english) ? article.keywords_english :
+                           (article.keywords_english ? article.keywords_english.split(';').map(k => k.trim()) : []),
           area: article.area,
-          tipo: article.tipo,
-          type: article.type || '',
+          tipo: article.tipo || 'Artículo de Investigación',
+          type: article.type || 'Research Article',
           fecha: article.fecha,
           receivedDate: article.receivedDate || '',
           acceptedDate: article.acceptedDate || '',
@@ -599,73 +740,43 @@ exports.manageArticles = onRequest(
           dataAvailability: article.dataAvailability || '',
           dataAvailabilityEnglish: article.dataAvailabilityEnglish || '',
           submissionId: article.submissionId || '',
-          authorId: article.authorId || '',
           html_es: article.html_es || '',
           html_en: article.html_en || '',
           referencias: article.referencias || '',
           pdfUrl: "",
-          articleNumber: articleNumber, // Guardar el número de orden
-          role: "Director General",
-          createdBy: user.uid,
-          createdAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-
-        console.log(`[${requestId}] ✅ Artículo creado en Firestore: ${docRef.id} (N° ${articleNumber})`);
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          createdBy: user.uid
+        };
 
         // Subir PDF si existe
         if (pdfBase64) {
           try {
             const slug = generateSlug(article.titulo);
-            // Usar el número de artículo en lugar del ID truncado
             const fileName = `Article-${slug}-${articleNumber}.pdf`;
             
             console.log(`[${requestId}] 📤 Subiendo PDF: ${fileName}`);
             
-            await uploadPDFToRepo(
+            const pdfUrl = await uploadPDF(
               pdfBase64,
               fileName,
-              `Add article #${articleNumber}: ${article.titulo}`,
-              "Articles"
+              `Add PDF for article #${articleNumber}: ${article.titulo}`
             );
-
-            const pdfUrl = `${DOMAIN}/Articles/${fileName}`;
-            await docRef.update({ pdfUrl });
             
+            newArticle.pdfUrl = pdfUrl;
             console.log(`[${requestId}] ✅ PDF subido: ${pdfUrl}`);
           } catch (pdfError) {
             console.error(`[${requestId}] ❌ Error subiendo PDF:`, pdfError.message);
           }
         }
 
-        if (article.authorId) {
-          try {
-            await db.collection('users').doc(article.authorId).update({
-              articles: admin.firestore.FieldValue.arrayUnion(docRef.id)
-            });
-            console.log(`[${requestId}] ✅ Artículo vinculado a autor: ${article.authorId}`);
-          } catch (linkError) {
-            console.error(`[${requestId}] ⚠️ Error vinculando autor:`, linkError.message);
-          }
-        }
-
-        try {
-          const octokit = getOctokit();
-          await octokit.request("POST /repos/{owner}/{repo}/dispatches", {
-            owner: "revista1919",
-            repo: "revista1919.github.io",
-            event_type: "rebuild",
-          });
-          console.log(`[${requestId}] 🔄 Rebuild triggered`);
-        } catch (rebuildError) {
-          console.error(`[${requestId}] ⚠️ Error en rebuild:`, rebuildError.message);
-        }
-
-        return res.json({ 
-          success: true, 
-          id: docRef.id,
+        // Agregar a la lista
+        updatedArticles.push(newArticle);
+        responseData = { 
+          id: articleNumber.toString(),
           articleNumber: articleNumber,
           message: "Artículo creado exitosamente"
-        });
+        };
       }
 
       // ========== ACCIÓN: EDIT ==========
@@ -674,131 +785,121 @@ exports.manageArticles = onRequest(
           return res.status(400).json({ error: "ID de artículo requerido" });
         }
 
-        const docRef = ref.doc(id);
-        const doc = await docRef.get();
+        const articleNumber = parseInt(id);
+        const index = updatedArticles.findIndex(a => a.numeroArticulo === articleNumber);
         
-        if (!doc.exists) {
+        if (index === -1) {
           return res.status(404).json({ error: "Artículo no encontrado" });
         }
 
-        const oldData = doc.data();
-        // Conservar el número de artículo existente
-        const articleNumber = oldData.articleNumber;
-        
-        console.log(`[${requestId}] 📝 Editando artículo #${articleNumber}: ${oldData.titulo}`);
+        const oldArticle = updatedArticles[index];
+        console.log(`[${requestId}] 📝 Editando artículo #${articleNumber}: ${oldArticle.titulo}`);
 
-        // Actualizar Firestore (sin modificar articleNumber)
-        await docRef.update({
-          titulo: article.titulo,
-          tituloEnglish: article.tituloEnglish || '',
-          autores: article.autores,
-          resumen: article.resumen,
-          abstract: article.abstract || '',
-          palabras_clave: article.palabras_clave || [],
-          keywords_english: article.keywords_english || [],
-          area: article.area,
-          tipo: article.tipo,
-          type: article.type || '',
-          fecha: article.fecha,
-          receivedDate: article.receivedDate || '',
-          acceptedDate: article.acceptedDate || '',
-          volumen: article.volumen,
-          numero: article.numero,
-          primeraPagina: article.primeraPagina,
-          ultimaPagina: article.ultimaPagina,
-          conflicts: article.conflicts || 'Los autores declaran no tener conflictos de interés.',
-          conflictsEnglish: article.conflictsEnglish || 'The authors declare no conflicts of interest.',
-          funding: article.funding || 'No declarada',
-          fundingEnglish: article.fundingEnglish || 'Not declared',
-          acknowledgments: article.acknowledgments || '',
-          acknowledgmentsEnglish: article.acknowledgmentsEnglish || '',
-          authorCredits: article.authorCredits || '',
-          authorCreditsEnglish: article.authorCreditsEnglish || '',
-          dataAvailability: article.dataAvailability || '',
-          dataAvailabilityEnglish: article.dataAvailabilityEnglish || '',
-          submissionId: article.submissionId || '',
-          authorId: article.authorId || '',
-          html_es: article.html_es || '',
-          html_en: article.html_en || '',
-          referencias: article.referencias || '',
-          updatedBy: user.uid,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
+        // Procesar autores (preservar IDs existentes si no se proporcionan nuevos)
+        let authorsArray;
+        if (article.autores) {
+          authorsArray = processAuthors(article.autores);
+          
+          // Si los autores vienen como strings pero queremos preservar IDs antiguos
+          if (typeof article.autores === 'string' || 
+              (Array.isArray(article.autores) && typeof article.autores[0] === 'string')) {
+            
+            // Mapear nombres a IDs antiguos
+            const oldAuthorsMap = new Map(
+              (oldArticle.autores || []).map(a => [a.name, a.authorId])
+            );
+            
+            authorsArray = authorsArray.map(a => ({
+              ...a,
+              authorId: oldAuthorsMap.get(a.name) || a.authorId
+            }));
+          }
+        } else {
+          authorsArray = oldArticle.autores || [];
+        }
 
-        console.log(`[${requestId}] ✅ Artículo #${articleNumber} actualizado en Firestore`);
+        // Construir artículo actualizado
+        const updatedArticle = {
+          ...oldArticle,
+          titulo: article.titulo || oldArticle.titulo,
+          tituloEnglish: article.tituloEnglish !== undefined ? article.tituloEnglish : oldArticle.tituloEnglish,
+          autores: authorsArray,
+          resumen: article.resumen !== undefined ? article.resumen : oldArticle.resumen,
+          abstract: article.abstract !== undefined ? article.abstract : oldArticle.abstract,
+          palabras_clave: article.palabras_clave ? 
+            (Array.isArray(article.palabras_clave) ? article.palabras_clave : article.palabras_clave.split(';').map(k => k.trim())) 
+            : oldArticle.palabras_clave,
+          keywords_english: article.keywords_english ?
+            (Array.isArray(article.keywords_english) ? article.keywords_english : article.keywords_english.split(';').map(k => k.trim()))
+            : oldArticle.keywords_english,
+          area: article.area || oldArticle.area,
+          tipo: article.tipo || oldArticle.tipo,
+          type: article.type || oldArticle.type,
+          fecha: article.fecha || oldArticle.fecha,
+          receivedDate: article.receivedDate !== undefined ? article.receivedDate : oldArticle.receivedDate,
+          acceptedDate: article.acceptedDate !== undefined ? article.acceptedDate : oldArticle.acceptedDate,
+          volumen: article.volumen || oldArticle.volumen,
+          numero: article.numero || oldArticle.numero,
+          primeraPagina: article.primeraPagina || oldArticle.primeraPagina,
+          ultimaPagina: article.ultimaPagina || oldArticle.ultimaPagina,
+          conflicts: article.conflicts !== undefined ? article.conflicts : oldArticle.conflicts,
+          conflictsEnglish: article.conflictsEnglish !== undefined ? article.conflictsEnglish : oldArticle.conflictsEnglish,
+          funding: article.funding !== undefined ? article.funding : oldArticle.funding,
+          fundingEnglish: article.fundingEnglish !== undefined ? article.fundingEnglish : oldArticle.fundingEnglish,
+          acknowledgments: article.acknowledgments !== undefined ? article.acknowledgments : oldArticle.acknowledgments,
+          acknowledgmentsEnglish: article.acknowledgmentsEnglish !== undefined ? article.acknowledgmentsEnglish : oldArticle.acknowledgmentsEnglish,
+          authorCredits: article.authorCredits !== undefined ? article.authorCredits : oldArticle.authorCredits,
+          authorCreditsEnglish: article.authorCreditsEnglish !== undefined ? article.authorCreditsEnglish : oldArticle.authorCreditsEnglish,
+          dataAvailability: article.dataAvailability !== undefined ? article.dataAvailability : oldArticle.dataAvailability,
+          dataAvailabilityEnglish: article.dataAvailabilityEnglish !== undefined ? article.dataAvailabilityEnglish : oldArticle.dataAvailabilityEnglish,
+          submissionId: article.submissionId !== undefined ? article.submissionId : oldArticle.submissionId,
+          html_es: article.html_es !== undefined ? article.html_es : oldArticle.html_es,
+          html_en: article.html_en !== undefined ? article.html_en : oldArticle.html_en,
+          referencias: article.referencias !== undefined ? article.referencias : oldArticle.referencias,
+          updatedAt: new Date().toISOString(),
+          updatedBy: user.uid
+        };
 
         // Manejar PDF nuevo
         if (pdfBase64) {
           try {
             // Eliminar PDF anterior si existe
-            if (oldData.pdfUrl) {
-              const oldFileName = oldData.pdfUrl.split("/").pop();
+            if (oldArticle.pdfUrl) {
+              const oldFileName = oldArticle.pdfUrl.split('/').pop();
               console.log(`[${requestId}] 🗑️ Eliminando PDF anterior: ${oldFileName}`);
               
-              await deletePDFFromRepo(
+              await deletePDF(
                 oldFileName,
-                `Delete old PDF for article #${articleNumber}: ${article.titulo || oldData.titulo}`,
-                "Articles"
+                `Delete old PDF for article #${articleNumber}: ${updatedArticle.titulo}`
               );
             }
 
-            // Subir nuevo PDF con el MISMO número de artículo
-            const slug = generateSlug(article.titulo || oldData.titulo);
+            // Subir nuevo PDF
+            const slug = generateSlug(updatedArticle.titulo);
             const fileName = `Article-${slug}-${articleNumber}.pdf`;
             
             console.log(`[${requestId}] 📤 Subiendo nuevo PDF: ${fileName}`);
             
-            await uploadPDFToRepo(
+            const pdfUrl = await uploadPDF(
               pdfBase64,
               fileName,
-              `Update article #${articleNumber} PDF: ${article.titulo || oldData.titulo}`,
-              "Articles"
+              `Update PDF for article #${articleNumber}: ${updatedArticle.titulo}`
             );
-
-            const pdfUrl = `${DOMAIN}/Articles/${fileName}`;
-            await docRef.update({ pdfUrl });
             
+            updatedArticle.pdfUrl = pdfUrl;
             console.log(`[${requestId}] ✅ Nuevo PDF subido: ${pdfUrl}`);
           } catch (pdfError) {
             console.error(`[${requestId}] ❌ Error manejando PDF:`, pdfError.message);
           }
         }
 
-        if (article.authorId && article.authorId !== oldData.authorId) {
-          try {
-            if (oldData.authorId) {
-              await db.collection('users').doc(oldData.authorId).update({
-                articles: admin.firestore.FieldValue.arrayRemove(id)
-              });
-            }
-            
-            await db.collection('users').doc(article.authorId).update({
-              articles: admin.firestore.FieldValue.arrayUnion(id)
-            });
-            
-            console.log(`[${requestId}] ✅ Vínculo de autor actualizado`);
-          } catch (linkError) {
-            console.error(`[${requestId}] ⚠️ Error actualizando vínculo de autor:`, linkError.message);
-          }
-        }
-
-        try {
-          const octokit = getOctokit();
-          await octokit.request("POST /repos/{owner}/{repo}/dispatches", {
-            owner: "revista1919",
-            repo: "revista1919.github.io",
-            event_type: "rebuild",
-          });
-          console.log(`[${requestId}] 🔄 Rebuild triggered`);
-        } catch (rebuildError) {
-          console.error(`[${requestId}] ⚠️ Error en rebuild:`, rebuildError.message);
-        }
-
-        return res.json({ 
+        // Reemplazar en la lista
+        updatedArticles[index] = updatedArticle;
+        responseData = { 
           success: true,
           articleNumber: articleNumber,
           message: "Artículo actualizado exitosamente"
-        });
+        };
       }
 
       // ========== ACCIÓN: DELETE ==========
@@ -807,69 +908,71 @@ exports.manageArticles = onRequest(
           return res.status(400).json({ error: "ID de artículo requerido" });
         }
 
-        const docRef = ref.doc(id);
-        const doc = await docRef.get();
+        const articleNumber = parseInt(id);
+        const index = updatedArticles.findIndex(a => a.numeroArticulo === articleNumber);
         
-        if (!doc.exists) {
+        if (index === -1) {
           return res.status(404).json({ error: "Artículo no encontrado" });
         }
 
-        const data = doc.data();
-        const articleNumber = data.articleNumber;
-        
-        console.log(`[${requestId}] 🗑️ Eliminando artículo #${articleNumber}: ${data.titulo}`);
+        const articleToDelete = updatedArticles[index];
+        console.log(`[${requestId}] 🗑️ Eliminando artículo #${articleNumber}: ${articleToDelete.titulo}`);
 
         // Eliminar PDF si existe
-        if (data.pdfUrl) {
+        if (articleToDelete.pdfUrl) {
           try {
-            const fileName = data.pdfUrl.split("/").pop();
+            const fileName = articleToDelete.pdfUrl.split('/').pop();
             console.log(`[${requestId}] 🗑️ Eliminando PDF: ${fileName}`);
             
-            await deletePDFFromRepo(
+            await deletePDF(
               fileName,
-              `Delete article #${articleNumber} PDF: ${data.titulo}`,
-              "Articles"
+              `Delete PDF for article #${articleNumber}: ${articleToDelete.titulo}`
             );
           } catch (pdfError) {
             console.error(`[${requestId}] ⚠️ Error eliminando PDF:`, pdfError.message);
           }
         }
 
-        // Remover de autor si vinculado
-        if (data.authorId) {
-          try {
-            await db.collection('users').doc(data.authorId).update({
-              articles: admin.firestore.FieldValue.arrayRemove(id)
-            });
-            console.log(`[${requestId}] ✅ Artículo #${articleNumber} removido de autor: ${data.authorId}`);
-          } catch (linkError) {
-            console.error(`[${requestId}] ⚠️ Error removiendo vínculo de autor:`, linkError.message);
-          }
-        }
+        // Eliminar de la lista
+        updatedArticles.splice(index, 1);
+        responseData = { 
+          success: true,
+          articleNumber: articleNumber,
+          message: "Artículo eliminado exitosamente"
+        };
+      }
 
-        // Eliminar documento
-        await docRef.delete();
-        console.log(`[${requestId}] ✅ Artículo #${articleNumber} eliminado de Firestore`);
+      // ========== GUARDAR CAMBIOS ==========
+      if (action === "add" || action === "edit" || action === "delete") {
+        // Ordenar artículos por número
+        updatedArticles.sort((a, b) => (a.numeroArticulo || 0) - (b.numeroArticulo || 0));
+        
+        const commitMessage = `[${action}] Artículo ${action === 'add' ? 'agregado' : action === 'edit' ? 'actualizado' : 'eliminado'} #${responseData.articleNumber || ''} por ${user.email || user.uid}`;
+        
+        await saveArticlesJson(updatedArticles, sha, commitMessage);
+        console.log(`[${requestId}] ✅ articles.json actualizado en GitHub`);
 
-        // NOTA: NO decrementamos el contador para no reutilizar números
-        // Esto mantiene la integridad histórica de la numeración
-
+        // ========== TRIGGER REBUILD ==========
         try {
-          const octokit = getOctokit();
+          // Disparar rebuild del sitio principal
           await octokit.request("POST /repos/{owner}/{repo}/dispatches", {
             owner: "revista1919",
             repo: "revista1919.github.io",
-            event_type: "rebuild",
+            event_type: "rebuild-articles",
+            client_payload: {
+              action: action,
+              articleNumber: responseData.articleNumber,
+              triggeredBy: user.uid
+            }
           });
-          console.log(`[${requestId}] 🔄 Rebuild triggered`);
+          console.log(`[${requestId}] 🔄 Rebuild triggered for main site`);
         } catch (rebuildError) {
           console.error(`[${requestId}] ⚠️ Error en rebuild:`, rebuildError.message);
         }
 
         return res.json({ 
           success: true,
-          articleNumber: articleNumber,
-          message: "Artículo eliminado exitosamente"
+          ...responseData
         });
       }
 
