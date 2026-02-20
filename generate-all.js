@@ -1,12 +1,7 @@
+
 const fs = require('fs');
 const path = require('path');
 const Papa = require('papaparse');
-const admin = require('firebase-admin');
-const cheerio = require('cheerio');
-const sharp = require('sharp');
-const crypto = require('crypto');
-
-// --- Configuración Inicial ---
 const outputJson = path.join(__dirname, 'dist', 'articles.json');
 const volumesOutputJson = path.join(__dirname, 'dist', 'volumes.json');
 const outputHtmlDir = path.join(__dirname, 'dist', 'articles');
@@ -17,26 +12,15 @@ const sectionsOutputDir = path.join(__dirname, 'dist', 'sections');
 const sitemapPath = path.join(__dirname, 'dist', 'sitemap.xml');
 const robotsPath = path.join(__dirname, 'dist', 'robots.txt');
 const domain = 'https://www.revistacienciasestudiantes.com';
+const admin = require('firebase-admin');
+const cheerio = require('cheerio');
+const sharp = require('sharp');
+const crypto = require('crypto');
 
-// Inicializar Firebase Admin (solo si existe la clave)
-let db;
-try {
-  if (fs.existsSync('./serviceAccountKey.json')) {
-    admin.initializeApp({
-      credential: admin.credential.cert('./serviceAccountKey.json')
-    });
-    db = admin.firestore();
-    console.log('✅ Firebase inicializado.');
-  } else {
-    console.log('⚠️ Archivo serviceAccountKey.json no encontrado. Funciones de Firebase deshabilitadas.');
-    db = null;
-  }
-} catch (error) {
-  console.log('⚠️ Error al inicializar Firebase:', error.message);
-  db = null;
-}
-
-// --- Funciones de Utilidad (sin cambios, excepto las de autores) ---
+admin.initializeApp({
+  credential: admin.credential.cert('./serviceAccountKey.json')
+});
+const db = admin.firestore();
 
 function parseDateFlexible(dateStr) {
   if (!dateStr) return '';
@@ -54,115 +38,88 @@ function parseDateFlexible(dateStr) {
 
 function formatDateEs(dateStr) {
   if (!dateStr) return 'N/A';
-  try {
-    return new Date(dateStr).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  } catch {
-    return dateStr;
-  }
+  return new Date(dateStr).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
 function formatDateEn(dateStr) {
   if (!dateStr) return 'N/A';
-  try {
-    return new Date(dateStr).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
-  } catch {
-    return dateStr;
-  }
+  return new Date(dateStr).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
 }
 
-// === FUNCIONES CORREGIDAS PARA EL NUEVO FORMATO DE AUTORES (array de objetos) ===
+// FUNCIONES CORREGIDAS PARA MANEJAR EL ARRAY DE AUTORES
 
-/**
- * Obtiene un string con los nombres de los autores para mostrar.
- * Ejemplo: "José Ignacio Carter, José Antonio Fuentes y Tomás Ramírez"
- */
-function formatAuthorsDisplay(autoresArray, language = 'es') {
-  if (!autoresArray || !Array.isArray(autoresArray) || autoresArray.length === 0) {
-    return 'Autor desconocido';
+function getAuthorNamesArray(authors) {
+  if (!authors) return [];
+  if (Array.isArray(authors)) {
+    return authors.map(a => typeof a === 'string' ? a : (a.name || '')).filter(Boolean);
   }
-  
-  // Extraer los nombres
-  const names = autoresArray.map(a => a.name || '').filter(Boolean);
-  if (names.length === 0) return 'Autor desconocido';
-  
-  const connector = language === 'es' ? 'y' : 'and';
-  
-  if (names.length === 1) {
-    return names[0];
-  } else if (names.length === 2) {
-    return `${names[0]} ${connector} ${names[1]}`;
-  } else {
-    return names.slice(0, -1).join(', ') + `, ${connector} ` + names[names.length - 1];
+  if (typeof authors === 'string') {
+    return authors.split(';').map(a => a.trim()).filter(Boolean);
   }
+  return [];
 }
 
-/**
- * Formato para citas (Ej: "Carter, José Ignacio")
- */
-function formatAuthorForCitation(autorObj) {
-  if (!autorObj || !autorObj.name) return '';
-  const nameParts = autorObj.name.trim().split(/\s+/);
-  if (nameParts.length >= 2) {
-    const apellido = nameParts.pop();
-    const nombre = nameParts.join(' ');
+function formatAuthorForCitation(author) {
+  const parts = author.trim().split(' ');
+  if (parts.length >= 2) {
+    const apellido = parts.pop();
+    const nombre = parts.join(' ');
     return `${apellido}, ${nombre}`;
   }
-  return autorObj.name;
+  return author;
 }
 
-/**
- * Formato APA corto (Ej: "Carter, J. I.")
- */
-function getAPAAuthor(autorObj) {
-  if (!autorObj || !autorObj.name) return '';
-  const nameParts = autorObj.name.trim().split(/\s+/);
-  if (nameParts.length < 2) return autorObj.name;
-  const last = nameParts.pop();
-  const initials = nameParts.map(n => n[0].toUpperCase() + '.').join(' ');
+function getAPAAuthor(author) {
+  const parts = author.trim().split(/\s+/);
+  if (parts.length < 2) return author;
+  const last = parts.pop();
+  const initials = parts.map(n => n[0].toUpperCase() + '.').join(' ');
   return `${last}, ${initials}`;
 }
 
-/**
- * Formato APA completo para la lista de autores
- */
-function formatAuthorsAPA(autoresArray) {
-  if (!autoresArray || !Array.isArray(autoresArray) || autoresArray.length === 0) {
-    return '';
-  }
+function formatAuthorsAPA(authors) {
+  const authorNames = getAuthorNamesArray(authors);
+  if (!authorNames.length) return '';
   
-  const formatted = autoresArray.map(getAPAAuthor).filter(Boolean);
-  
+  const formatted = authorNames.map(getAPAAuthor);
   if (formatted.length === 1) {
     return formatted[0];
   } else if (formatted.length === 2) {
-    return formatted[0] + ' & ' + formatted[1];
+    return formatted[0] + ', & ' + formatted[1];
   } else {
-    return formatted.slice(0, -1).join(', ') + ' & ' + formatted[formatted.length - 1];
+    return formatted.slice(0, -1).join(', ') + ', & ' + formatted[formatted.length - 1];
   }
 }
 
-/**
- * Formato Chicago/MLA
- */
-function formatAuthorsChicagoOrMLA(autoresArray, language = 'es') {
-  if (!autoresArray || !Array.isArray(autoresArray) || autoresArray.length === 0) {
-    return '';
-  }
+function formatAuthorsChicagoOrMLA(authors, language = 'es') {
+  const authorNames = getAuthorNamesArray(authors);
+  if (!authorNames.length) return '';
   
-  const formatted = autoresArray.map(formatAuthorForCitation).filter(Boolean);
+  const formatted = authorNames.map(formatAuthorForCitation);
   const connector = language === 'es' ? 'y' : 'and';
   const etal = 'et al.';
-  
   if (formatted.length === 1) {
     return formatted[0];
   } else if (formatted.length === 2) {
-    return `${formatted[0]} ${connector} ${formatted[1]}`;
+    return `${formatted[0]}, ${connector} ${formatted[1]}`;
   } else {
-    return `${formatted[0]} ${etal}`;
+    return `${formatted[0]}, ${etal}`;
   }
 }
 
-// --- Funciones de utilidad general (sin cambios) ---
+function formatAuthorsDisplay(authors, language = 'es') {
+  const authorNames = getAuthorNamesArray(authors);
+  if (!authorNames.length) return 'Autor desconocido';
+  
+  const connector = language === 'es' ? 'y' : 'and';
+  if (authorNames.length === 1) {
+    return authorNames[0];
+  } else if (authorNames.length === 2) {
+    return `${authorNames[0]} ${connector} ${authorNames[1]}`;
+  } else {
+    return authorNames.slice(0, -1).join(', ') + `, ${connector} ` + authorNames[authorNames.length - 1];
+  }
+}
 
 function generateSlug(name) {
   if (!name) return '';
@@ -184,14 +141,19 @@ function isBase64(str) {
 function getImageSrc(image) {
   if (!image) return '';
   if (isBase64(image)) return image;
-  if (typeof image === 'string' && image.startsWith('http')) return image;
+  if (image.startsWith('http')) return image;
   return '';
 }
 
 const base64DecodeUnicode = (str) => {
-  if (!str) return '';
   try {
-    return Buffer.from(str, 'base64').toString('utf-8');
+    const binary = atob(str);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    const decoder = new TextDecoder();
+    return decoder.decode(bytes);
   } catch (err) {
     console.error('Error decoding Base64:', err);
     return '';
@@ -199,7 +161,6 @@ const base64DecodeUnicode = (str) => {
 };
 
 async function processImages(html, slug, lang) {
-  if (!html) return '';
   const $ = cheerio.load(html);
   const images = $('img');
   for (let i = 0; i < images.length; i++) {
@@ -224,134 +185,31 @@ async function processImages(html, slug, lang) {
   return $.html();
 }
 
-// SVG Open Access y ORCID (sin cambios)
-const oaSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 53" width="24" height="36" style="vertical-align:middle; margin-right:4px;">...</svg>`;
-const orcidSvg = `<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" width="16" height="16">...</svg>`;
+// Crear directorios necesarios
+if (!fs.existsSync(volumesOutputHtmlDir)) fs.mkdirSync(volumesOutputHtmlDir, { recursive: true });
+if (!fs.existsSync(newsOutputHtmlDir)) fs.mkdirSync(newsOutputHtmlDir, { recursive: true });
+if (!fs.existsSync(teamOutputHtmlDir)) fs.mkdirSync(teamOutputHtmlDir, { recursive: true });
+if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursive: true });
+if (!fs.existsSync(path.join(__dirname, 'dist', 'images', 'news'))) fs.mkdirSync(path.join(__dirname, 'dist', 'images', 'news'), { recursive: true });
 
-// --- FUNCIÓN PARA GENERAR HTML DE ARTÍCULO (NUEVA) ---
-function generateArticleHtml(article, lang) {
-  const isSpanish = lang === 'es';
-  const title = isSpanish ? article.titulo : (article.tituloEnglish || article.titulo);
-  const abstract = isSpanish ? article.resumen : article.abstract;
-  const authorsDisplay = formatAuthorsDisplay(article.autores, lang);
-  const authorsAPA = formatAuthorsAPA(article.autores);
-  const authorsChicago = formatAuthorsChicagoOrMLA(article.autores, lang);
-  const keywords = isSpanish ? article.palabras_clave : article.keywords_english;
-  const slug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
-  
-  // Construir lista de autores con afiliaciones para el HTML
-  const authorsList = article.autores.map(autor => {
-    let html = `<span class="author-name">${autor.name}</span>`;
-    if (autor.institution) {
-      html += `<span class="author-institution">, ${autor.institution}</span>`;
-    }
-    if (autor.authorId) {
-      html += ` <a href="https://orcid.org/${autor.authorId}" target="_blank" class="orcid-link">${orcidSvg}</a>`;
-    }
-    return `<li>${html}</li>`;
-  }).join('');
+// SVG Open Access exacto (no modificar)
+const oaSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 53" width="24" height="36" style="vertical-align:middle; margin-right:4px;">
+  <path fill="#F48120" d="M18 21.3c-8.7 0-15.8 7.1-15.8 15.8S9.3 52.9 18 52.9s15.8-7.1 15.8-15.8S26.7 21.3 18 21.3zm0 25.1c-5.1 0-9.3-4.2-9.3-9.3s4.2-9.3 9.3-9.3 9.3 4.2 9.3 9.3-4.2 9.3-9.3 9.3z"/>
+  <path fill="#F48120" d="M18 0c-7.5 0-13.6 6.1-13.6 13.6V23h6.5v-9.4c0-3.9 3.2-7.1 7.1-7.1s7.1 3.2 7.1 7.1V32h6.5V13.6C31.6 6.1 25.5 0 18 0z"/>
+  <circle fill="#F48120" cx="18" cy="37.1" r="4.8"/>
+</svg>`;
 
-  return `<!DOCTYPE html>
-<html lang="${lang}">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title} - ${isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students'}</title>
-  <!-- Metaetiquetas de citación -->
-  <meta name="citation_title" content="${title}">
-  <meta name="citation_author" content="${article.autores.map(a => a.name).join('; ')}">
-  <meta name="citation_publication_date" content="${article.fecha}">
-  <meta name="citation_journal_title" content="Revista Nacional de las Ciencias para Estudiantes">
-  <meta name="citation_issn" content="3087-2839">
-  <meta name="citation_volume" content="${article.volumen}">
-  <meta name="citation_issue" content="${article.numero}">
-  <meta name="citation_firstpage" content="${article.primeraPagina}">
-  <meta name="citation_lastpage" content="${article.ultimaPagina}">
-  <meta name="citation_pdf_url" content="${article.pdfUrl}">
-  <meta name="citation_abstract_html_url" content="${domain}/articles/article-${slug}${isSpanish ? '' : 'EN'}.html">
-  <meta name="citation_language" content="${lang}">
-  <meta name="citation_keywords" content="${keywords ? keywords.join('; ') : ''}">
-  <meta name="description" content="${abstract ? abstract.substring(0, 160) + '...' : ''}">
-  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-  <style>
-    /* Estilos (simplificados - puedes copiar los de tu versión anterior) */
-    body { font-family: 'Inter', sans-serif; line-height: 1.7; color: #222; margin: 0; }
-    .article-header { background: #f8f9fa; padding: 4rem 2rem; border-bottom: 1px solid #dee2e6; }
-    .article-container { max-width: 800px; margin: 0 auto; padding: 2rem; }
-    h1 { font-family: 'Libre Baskerville', serif; font-size: 2.5rem; margin-bottom: 1rem; }
-    .authors-list { list-style: none; padding: 0; margin: 2rem 0; }
-    .authors-list li { margin-bottom: 0.5rem; }
-    .author-name { font-weight: 600; }
-    .author-institution { color: #666; font-size: 0.9rem; }
-    .orcid-link { display: inline-block; margin-left: 0.5rem; vertical-align: middle; }
-    .keywords { margin: 2rem 0; padding: 1rem; background: #f1f3f5; border-radius: 4px; }
-    .btn { display: inline-block; padding: 0.8rem 1.5rem; background: #005587; color: white; text-decoration: none; border-radius: 4px; font-weight: 500; }
-    .btn:hover { background: #003d60; }
-    footer { background: #222; color: #fff; padding: 3rem; text-align: center; }
-  </style>
-</head>
-<body>
-  <header class="article-header">
-    <div class="article-container">
-      <p class="kicker">${isSpanish ? 'Artículo' : 'Article'} · Vol. ${article.volumen} Núm. ${article.numero} (${article.fecha})</p>
-      <h1>${title}</h1>
-      <ul class="authors-list">
-        ${authorsList}
-      </ul>
-      <div class="keywords">
-        <strong>${isSpanish ? 'Palabras clave:' : 'Keywords:'}</strong> ${keywords ? keywords.join(', ') : ''}
-      </div>
-      <div style="margin-top: 2rem;">
-        <a href="${article.pdfUrl}" class="btn" target="_blank">📥 ${isSpanish ? 'Descargar PDF' : 'Download PDF'}</a>
-      </div>
-    </div>
-  </header>
-  <main class="article-container">
-    <section class="abstract">
-      <h2>${isSpanish ? 'Resumen' : 'Abstract'}</h2>
-      <p>${abstract || ''}</p>
-    </section>
-    
-    ${article.html_es && isSpanish ? `<section class="content">${article.html_es}</section>` : ''}
-    ${article.html_en && !isSpanish ? `<section class="content">${article.html_en}</section>` : ''}
-    
-    <section class="citations" style="margin-top: 3rem; border-top: 1px solid #dee2e6; padding-top: 2rem;">
-      <h3>${isSpanish ? 'Cómo citar' : 'How to cite'}</h3>
-      <p><strong>APA:</strong> ${authorsAPA} (${new Date(article.fecha).getFullYear()}). ${title}. <em>Revista Nacional de las Ciencias para Estudiantes</em>, ${article.volumen}(${article.numero}), ${article.primeraPagina}-${article.ultimaPagina}.</p>
-      <p><strong>${isSpanish ? 'Chicago/MLA:' : 'Chicago/MLA:'}</strong> ${authorsChicago}. "${title}." <em>Revista Nacional de las Ciencias para Estudiantes</em> ${article.volumen}, no. ${article.numero} (${new Date(article.fecha).getFullYear()}): ${article.primeraPagina}-${article.ultimaPagina}.</p>
-    </section>
-  </main>
-  <footer>
-    <p>${isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students'} · ISSN 3087-2839</p>
-    <p>© ${new Date().getFullYear()}</p>
-  </footer>
-</body>
-</html>`;
-}
+// SVG ORCID exacto (no modificar)
+const orcidSvg = `<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" width="16" height="16"> <circle cx="128" cy="128" r="120" fill="#A6CE39"/> <g fill="#FFFFFF"> <rect x="71" y="78" width="17" height="102"/> <circle cx="79.5" cy="56" r="11"/> <path d="M103 78 v102 h41.5 c28.2 0 51-22.8 51-51 s-22.8-51-51-51 H103 zm17 17 h24.5 c18.8 0 34 15.2 34 34 s-15.2 34-34 34 H120 V95 z" fill-rule="evenodd"/> </g> </svg>`;
 
-// --- FUNCIÓN PRINCIPAL (async) ---
 (async () => {
   try {
-    // Crear directorios necesarios
-    if (!fs.existsSync(volumesOutputHtmlDir)) fs.mkdirSync(volumesOutputHtmlDir, { recursive: true });
-    if (!fs.existsSync(newsOutputHtmlDir)) fs.mkdirSync(newsOutputHtmlDir, { recursive: true });
-    if (!fs.existsSync(teamOutputHtmlDir)) fs.mkdirSync(teamOutputHtmlDir, { recursive: true });
-    if (!fs.existsSync(sectionsOutputDir)) fs.mkdirSync(sectionsOutputDir, { recursive: true });
-    if (!fs.existsSync(outputHtmlDir)) fs.mkdirSync(outputHtmlDir, { recursive: true });
-    if (!fs.existsSync(path.join(__dirname, 'dist', 'images', 'news'))) fs.mkdirSync(path.join(__dirname, 'dist', 'images', 'news'), { recursive: true });
-
-    // ==================== EQUIPO (desde Team.json) ====================
+    // ==================== EQUIPO ====================
     console.log('📥 Cargando team data...');
-    let teamData = [];
-    try {
-      const teamJsonUrl = 'https://www.revistacienciasestudiantes.com/team/Team.json';
-      const teamRes = await fetch(teamJsonUrl);
-      teamData = await teamRes.json();
-      console.log(`✅ Team data cargado: ${teamData.length} usuarios`);
-    } catch (e) {
-      console.log('⚠️ No se pudo cargar Team.json:', e.message);
-      teamData = [];
-    }
+    const teamJsonUrl = 'https://www.revistacienciasestudiantes.com/team/Team.json';
+    const teamRes = await fetch(teamJsonUrl);
+    const teamData = await teamRes.json();
+    console.log(`✅ Team data cargado: ${teamData.length} usuarios (incluye anónimos)`);
 
     const authorToInstitution = {};
     const authorToSlug = {};
@@ -360,7 +218,7 @@ function generateArticleHtml(article, lang) {
     const anonymousAuthors = {};
 
     teamData.forEach(user => {
-      const name = user.displayName || `${user.firstName || ''} ${user.lastName || ''}`.trim();
+      const name = user.displayName || `${user.firstName} ${user.lastName}`.trim();
       if (name) {
         authorToInstitution[name] = user.institution || '';
         authorToSlug[name] = user.slug;
@@ -368,166 +226,61 @@ function generateArticleHtml(article, lang) {
         authorToEmail[name] = user.publicEmail || '';
         if (user.isAnonymous) {
           anonymousAuthors[name] = true;
+          console.log(` 📌 Autor anónimo encontrado: ${name} -> /team/${user.slug}.html`);
         }
       }
     });
     console.log(`📊 Autores anónimos en team: ${Object.keys(anonymousAuthors).length}`);
 
-    // ==================== VOLÚMENES (desde Firebase) ====================
+    // ==================== VOLÚMENES ====================
     console.log('📥 Procesando volúmenes...');
-    let volumes = [];
-    if (db) {
-      try {
-        const volumesSnapshot = await db.collection('volumes').get();
-        volumes = volumesSnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            volumen: data.volumen || '',
-            numero: data.numero || '',
-            fecha: parseDateFlexible(data.fecha),
-            titulo: data.titulo || 'Sin título',
-            englishTitulo: data.englishTitulo || data.titulo || 'No title',
-            editorial: data.editorial || '',
-            englishEditorial: data.englishEditorial || '',
-            portada: getImageSrc(data.portada),
-            pdf: data.pdf || '',
-          };
-        });
-      } catch (e) {
-        console.log('⚠️ Error cargando volúmenes de Firebase:', e.message);
-      }
-    }
-    
+    const volumesSnapshot = await db.collection('volumes').get();
+    const volumes = volumesSnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        volumen: data.volumen || '',
+        numero: data.numero || '',
+        fecha: parseDateFlexible(data.fecha),
+        titulo: data.titulo || 'Sin título',
+        englishTitulo: data.englishTitulo || data.titulo || 'No title',
+        editorial: data.editorial || '',
+        englishEditorial: data.englishEditorial || '',
+        portada: getImageSrc(data.portada),
+        pdf: data.pdf || '',
+      };
+    });
+
     fs.writeFileSync(volumesOutputJson, JSON.stringify(volumes, null, 2), 'utf8');
     console.log(`✅ Archivo generado: ${volumesOutputJson} (${volumes.length} volúmenes)`);
 
-    // ==================== ARTÍCULOS (desde articles.json) - URL CORREGIDA ====================
+    // ==================== ARTÍCULOS ====================
+    // CORREGIDO: Usar la URL correcta para articles.json
     console.log('📥 Cargando artículos desde la URL pública...');
     let articles = [];
     try {
-      // ***** URL CORREGIDA *****
       const articlesRes = await fetch('https://www.revistacienciasestudiantes.com/articles.json');
       articles = await articlesRes.json();
-      console.log(`✅ Artículos cargados: ${articles.length}`);
+      console.log(`📚 Artículos cargados: ${articles.length}`);
       
-      // Guardar una copia local del JSON
+      // Guardar articles.json en dist para respaldo
       fs.writeFileSync(outputJson, JSON.stringify(articles, null, 2), 'utf8');
-      console.log(`✅ Archivo local guardado: ${outputJson}`);
-      
+      console.log(`✅ Archivo guardado: ${outputJson}`);
     } catch (e) {
-      console.log('⚠️ No se pudo cargar articles.json desde la URL. Intentando con archivo local...', e.message);
-      // Fallback: intentar cargar desde el archivo local
+      console.log('⚠️ No se pudo cargar articles.json desde la URL pública, usando archivo local si existe...');
       try {
+        // Intentar cargar desde archivo local como respaldo
         if (fs.existsSync(outputJson)) {
-          const localData = fs.readFileSync(outputJson, 'utf8');
-          articles = JSON.parse(localData);
-          console.log(`✅ Artículos cargados desde archivo local: ${articles.length}`);
+          articles = JSON.parse(fs.readFileSync(outputJson, 'utf8'));
+          console.log(`📚 Artículos cargados desde archivo local: ${articles.length}`);
         }
       } catch (localError) {
-        console.log('❌ No se pudo cargar articles.json ni local ni remotamente');
+        console.log('❌ No se pudo cargar articles.json desde ninguna fuente');
+        articles = [];
       }
     }
 
-    // ==================== GENERAR PÁGINAS DE ARTÍCULOS ====================
-    console.log('📄 Generando páginas HTML de artículos...');
-    let articleCounter = 0;
-    for (const article of articles) {
-      // Validar que el artículo tenga autores en el formato correcto
-      if (!article.autores || !Array.isArray(article.autores)) {
-        console.log(`⚠️ Artículo "${article.titulo}" no tiene autores en formato array. Se omitirá.`);
-        continue;
-      }
-      
-      const slug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
-      
-      // Versión en español
-      const esHtml = generateArticleHtml(article, 'es');
-      const esPath = path.join(outputHtmlDir, `article-${slug}.html`);
-      fs.writeFileSync(esPath, esHtml, 'utf8');
-      
-      // Versión en inglés
-      const enHtml = generateArticleHtml(article, 'en');
-      const enPath = path.join(outputHtmlDir, `article-${slug}EN.html`);
-      fs.writeFileSync(enPath, enHtml, 'utf8');
-      
-      articleCounter++;
-      if (articleCounter % 10 === 0) {
-        console.log(`  ... generados ${articleCounter} artículos`);
-      }
-    }
-    console.log(`✅ Páginas de artículos generadas: ${articleCounter * 2} (${articleCounter} en cada idioma)`);
-
-    // ==================== NOTICIAS (desde Firebase) ====================
-    console.log('📥 Procesando noticias...');
-    let newsItems = [];
-    if (db) {
-      try {
-        const newsSnapshot = await db.collection('news').get();
-        newsItems = newsSnapshot.docs.map(doc => doc.data()).map(item => ({
-          titulo: item.title_es || '',
-          cuerpo: item.body_es || '',
-          fecha: parseDateFlexible(item.timestamp_es),
-          title: item.title_en || '',
-          content: item.body_en || '',
-          photo: item.photo || ''
-        }));
-        
-        for (const newsItem of newsItems) {
-          if (!newsItem.titulo && !newsItem.title) continue;
-          
-          const slug = generateSlug(`${newsItem.titulo || newsItem.title} ${newsItem.fecha}`);
-          const cuerpoDecoded = base64DecodeUnicode(newsItem.cuerpo);
-          const contentDecoded = base64DecodeUnicode(newsItem.content);
-
-          const processedCuerpo = await processImages(cuerpoDecoded, slug, 'es');
-          const processedContent = await processImages(contentDecoded, slug, 'en');
-
-          // Versión español
-          const esContent = generateNewsHtml({
-            lang: 'es',
-            title: newsItem.titulo,
-            content: processedCuerpo,
-            fecha: newsItem.fecha,
-            photo: newsItem.photo,
-            slug
-          });
-
-          // Versión inglés
-          const enContent = generateNewsHtml({
-            lang: 'en',
-            title: newsItem.title,
-            content: processedContent,
-            fecha: newsItem.fecha,
-            photo: newsItem.photo,
-            slug
-          });
-
-          fs.writeFileSync(path.join(newsOutputHtmlDir, `${slug}.html`), esContent, 'utf8');
-          fs.writeFileSync(path.join(newsOutputHtmlDir, `${slug}.EN.html`), enContent, 'utf8');
-        }
-        
-        // Generar news.json
-        const newsForJson = newsItems.map(item => {
-          const fechaIso = parseDateFlexible(item.fecha);
-          const slug = generateSlug(`${item.titulo} ${fechaIso}`);
-          return {
-            ...item,
-            fechaIso,
-            timestamp: new Date(fechaIso).getTime(),
-            slug
-          };
-        }).sort((a, b) => b.timestamp - a.timestamp);
-        
-        fs.writeFileSync(path.join(__dirname, 'dist', 'news.json'), JSON.stringify(newsForJson, null, 2), 'utf8');
-        console.log(`✅ Noticias procesadas: ${newsItems.length}`);
-        
-      } catch (e) {
-        console.log('⚠️ Error procesando noticias:', e.message);
-      }
-    }
-
-    // ==================== VOLÚMENES HTML (TOCs) ====================
-    console.log('📄 Generando páginas HTML de volúmenes...');
+    // Generar HTMLs de volúmenes
+    console.log('📥 Generando páginas de volúmenes...');
     for (const volume of volumes) {
       const volumeSlug = `${volume.volumen}-${volume.numero}`;
       volume.pdfUrl = volume.pdf;
@@ -561,7 +314,7 @@ function generateArticleHtml(article, lang) {
         `;
       }).join('');
 
-      // Generar HTML español
+      // Generar HTML en español para volumen
       const htmlContentEs = generateVolumeHtml({
         lang: 'es',
         volume,
@@ -571,9 +324,12 @@ function generateArticleHtml(article, lang) {
         domain,
         oaSvg
       });
-      fs.writeFileSync(path.join(volumesOutputHtmlDir, `volume-${volumeSlug}.html`), htmlContentEs, 'utf8');
 
-      // Generar HTML inglés
+      const filePathEs = path.join(volumesOutputHtmlDir, `volume-${volumeSlug}.html`);
+      fs.writeFileSync(filePathEs, htmlContentEs, 'utf8');
+      console.log(`✅ Volumen español: volume-${volumeSlug}.html`);
+
+      // Generar HTML en inglés para volumen
       const htmlContentEn = generateVolumeHtml({
         lang: 'en',
         volume,
@@ -583,49 +339,51 @@ function generateArticleHtml(article, lang) {
         domain,
         oaSvg
       });
-      fs.writeFileSync(path.join(volumesOutputHtmlDir, `volume-${volumeSlug}EN.html`), htmlContentEn, 'utf8');
+
+      const filePathEn = path.join(volumesOutputHtmlDir, `volume-${volumeSlug}EN.html`);
+      fs.writeFileSync(filePathEn, htmlContentEn, 'utf8');
+      console.log(`✅ Volumen inglés: volume-${volumeSlug}EN.html`);
     }
-    
+
     // Generar índices de volúmenes
-    if (volumes.length > 0) {
-      generateVolumeIndexes(volumes);
-    }
+    generateVolumeIndexes(volumes);
+
+    // ==================== NOTICIAS ====================
+    let newsItems = [];
+    await generateNews();
 
     // ==================== RUTAS SPA ====================
-    console.log('🚀 Pre-renderizando rutas SPA...');
+    console.log('🚀 Pre-renderizando las rutas de la aplicación...');
     const appShellPath = path.join(__dirname, 'dist', 'index.html');
-    if (fs.existsSync(appShellPath)) {
-      const appShellContent = fs.readFileSync(appShellPath, 'utf8');
-      const spaRoutes = [
-        '/es/about', '/es/guidelines', '/es/faq', '/es/article', '/es/submit', 
-        '/es/team', '/es/new', '/es/login', '/es/admin', '/es/volume',
-        '/en/about', '/en/guidelines', '/en/faq', '/en/article', '/en/submit', 
-        '/en/team', '/en/new', '/en/login', '/en/admin', '/en/volume'
-      ];
-      spaRoutes.forEach(route => {
-        const routePath = path.join(__dirname, 'dist', route);
-        if (!fs.existsSync(routePath)) {
-          fs.mkdirSync(routePath, { recursive: true });
-        }
-        fs.writeFileSync(path.join(routePath, 'index.html'), appShellContent, 'utf8');
-      });
-      console.log(`✅ ${spaRoutes.length} rutas SPA pre-renderizadas`);
+    if (!fs.existsSync(appShellPath)) {
+      throw new Error('El archivo principal dist/index.html no se encontró. Asegúrate de compilar la aplicación primero.');
     }
+    const appShellContent = fs.readFileSync(appShellPath, 'utf8');
+    const spaRoutes = [
+      '/es/about', '/es/guidelines', '/es/faq', '/es/article', '/es/submit', '/es/team', '/es/new', '/es/login', '/es/admin', '/es/volume',
+      '/en/about', '/en/guidelines', '/en/faq', '/en/article', '/en/submit', '/en/team', '/en/new', '/en/login', '/en/admin', '/en/volume'
+    ];
+    spaRoutes.forEach(route => {
+      const routePath = path.join(__dirname, 'dist', route);
+      if (!fs.existsSync(routePath)) {
+        fs.mkdirSync(routePath, { recursive: true });
+      }
+      const indexPath = path.join(routePath, 'index.html');
+      fs.writeFileSync(indexPath, appShellContent, 'utf8');
+    });
+    console.log(`✅ ${spaRoutes.length} rutas de la aplicación pre-renderizadas.`);
 
     // ==================== SITEMAP Y ROBOTS ====================
-    console.log('🗺️ Generando sitemap y robots.txt...');
-    await generateSitemap(articles, volumes, newsItems, teamData);
+    await generateSitemap(articles, volumes, newsItems, teamData, spaRoutes);
     generateRobotsTxt();
 
     console.log('🎉 ¡Proceso completado con éxito!');
 
   } catch (err) {
-    console.error('❌ Error fatal:', err);
+    console.error('❌ Error:', err);
     process.exit(1);
   }
 })();
-
-    
 
 // ==================== FUNCIONES PARA VOLÚMENES ====================
 function generateVolumeHtml({ lang, volume, volumeSlug, toc, year, domain, oaSvg }) {
@@ -1860,7 +1618,7 @@ async function generateSitemap(articles, volumes, newsItems, teamData, spaRoutes
   <priority>0.8</priority>
 </url>
 <url>
-  <loc>${article.pdf}</loc>
+  <loc>${article.pdfUrl || article.pdf}</loc>
   <lastmod>${article.fecha}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.8</priority>
@@ -2002,4 +1760,4 @@ Sitemap: ${domain}/sitemap.xml
   
   fs.writeFileSync(robotsPath, robotsContent, 'utf8');
   console.log(`✅ robots.txt generado`);
-}
+      }
