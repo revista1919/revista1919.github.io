@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { auth, db } from '../firebase';
-import { collection, onSnapshot, query, where, getDocs, limit as firestoreLimit, doc, getDoc } from "firebase/firestore";
+import { collection, onSnapshot, query, where, getDocs, limit as firestoreLimit, doc as firestoreDoc, getDoc } from "firebase/firestore"; // Cambiado doc a firestoreDoc
 import Admissions from './Admissions';
 import MailsTeam from './MailsTeam';
 import ReactQuill from 'react-quill';
@@ -19,14 +19,14 @@ import {
 } from '@heroicons/react/24/outline';
 
 // --- Constantes de Configuración ---
-// --- Constantes de Configuración ---
 const DOMAIN = 'https://www.revistacienciasestudiantes.com';
 const ARTICLES_JSON_URL = `${DOMAIN}/articles.json`;
-const MANAGE_ARTICLES_URL = 'https://managearticles-ggqsq2kkua-uc.a.run.app/manageArticles';  // ← con slash al final
-const MANAGE_VOLUMES_URL = 'https://managevolumes-ggqsq2kkua-uc.a.run.app/';      // ← con slash al final
-const REBUILD_URL = 'https://triggerrebuild-ggqsq2kkua-uc.a.run.app/';            // ← con slash al final
+const MANAGE_ARTICLES_URL = 'https://managearticles-ggqsq2kkua-uc.a.run.app/manageArticles';
+const MANAGE_VOLUMES_URL = 'https://managevolumes-ggqsq2kkua-uc.a.run.app/';
+const REBUILD_URL = 'https://triggerrebuild-ggqsq2kkua-uc.a.run.app/';
 const REPO_OWNER = 'revista1919';
 const REPO_NAME = 'revista1919.github.io';
+
 const generateSlug = (name) => {
   if (!name) return '';
   return name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-').replace(/[^\w-]/g, '').replace(/-+/g, '-').replace(/^-+|-+$/g, '');
@@ -61,17 +61,16 @@ const initialAuthorState = {
   email: '',
   institution: '',
   orcid: '',
-  authorId: null, // Se llenará si el email coincide con un usuario registrado
+  authorId: null,
   isCorresponding: false,
-  // ... otros campos que quieras (contribución, etc.)
 };
 
 // --- ESTADOS INICIALES ---
 const initialArticleState = {
-  numeroArticulo: null, // Importante para editar
+  numeroArticulo: null,
   titulo: '',
   tituloEnglish: '',
-  autores: [], // <-- AHORA ES UN ARRAY DE OBJETOS
+  autores: [],
   resumen: '',
   abstract: '',
   palabras_clave: '',
@@ -97,7 +96,6 @@ const initialArticleState = {
   dataAvailability: '',
   dataAvailabilityEnglish: '',
   submissionId: '',
-  // authorId ya no va aquí, va por autor
   html_es: '',
   html_en: '',
   referencias: '',
@@ -136,8 +134,7 @@ export default function DirectorPanel({ user }) {
   const [showVolumeModal, setShowVolumeModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  // Modal de búsqueda de usuarios
-  const [showUserSearchModal, setShowUserSearchModal] = useState(false); // <-- NUEVO
+  const [showUserSearchModal, setShowUserSearchModal] = useState(false);
 
   // Forms
   const [articleForm, setArticleForm] = useState(initialArticleState);
@@ -146,7 +143,7 @@ export default function DirectorPanel({ user }) {
   // --- Lógica de Acceso y Datos ---
   const hasAccess = useMemo(() => user?.roles?.includes('Director General'), [user]);
 
-  // --- EFECTO PARA CARGAR ARTÍCULOS DESDE JSON (REEMPLAZA onSnapshot) ---
+  // --- EFECTO PARA CARGAR ARTÍCULOS DESDE JSON ---
   useEffect(() => {
     if (!hasAccess) return;
 
@@ -158,7 +155,6 @@ export default function DirectorPanel({ user }) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        // Asegurarse de que los autores sean un array de objetos, incluso si vienen como strings del JSON antiguo
         const processedArticles = data.map(article => ({
           ...article,
           autores: Array.isArray(article.autores) ? article.autores : 
@@ -175,7 +171,7 @@ export default function DirectorPanel({ user }) {
 
     fetchArticles();
 
-    // Volúmenes siguen en Firestore (no se mencionó cambiarlos)
+    // Volúmenes siguen en Firestore
     const unsubVolumes = onSnapshot(collection(db, 'volumes'), (snapshot) => {
       const vols = snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -189,7 +185,7 @@ export default function DirectorPanel({ user }) {
     };
   }, [hasAccess]);
 
-  // Persist drafts en localStorage (sin cambios)
+  // Persist drafts en localStorage
   useEffect(() => {
     if (showArticleModal && !editingItem) {
       const savedDraft = localStorage.getItem('draftNewArticle');
@@ -237,7 +233,7 @@ export default function DirectorPanel({ user }) {
     a.autores?.some(author => author.name?.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  // --- Handlers (triggerRebuild, handleRebuild sin cambios) ---
+  // --- Handlers (triggerRebuild, handleRebuild) ---
   const triggerRebuild = async () => {
     try {
       const token = await auth.currentUser.getIdToken();
@@ -266,7 +262,7 @@ export default function DirectorPanel({ user }) {
     }
   };
 
-  // --- NUEVA FUNCIÓN: Importar datos desde Submission ---
+  // --- FUNCIÓN CORREGIDA: Importar datos desde Submission ---
   const importFromSubmission = async (submissionId) => {
     if (!submissionId || submissionId.trim() === '') {
       setStatus({ type: 'error', msg: 'Por favor, ingresa un Submission ID.' });
@@ -277,8 +273,8 @@ export default function DirectorPanel({ user }) {
     setStatus({ type: 'info', msg: 'Buscando envío...' });
 
     try {
-      // 1. Buscar el documento en Firestore usando el submissionId (que es el ID del documento)
-      const submissionRef = doc(db, 'submissions', submissionId);
+      // Usar firestoreDoc en lugar de doc para evitar conflicto
+      const submissionRef = firestoreDoc(db, 'submissions', submissionId);
       const submissionSnap = await getDoc(submissionRef);
 
       if (!submissionSnap.exists()) {
@@ -289,25 +285,22 @@ export default function DirectorPanel({ user }) {
 
       const submissionData = submissionSnap.data();
 
-      // 2. Mapear los datos del envío al formulario, excluyendo título, abstract, etc.
       const importedAuthors = (submissionData.authors || []).map(author => ({
         name: `${author.firstName || ''} ${author.lastName || ''}`.trim(),
         email: author.email || '',
         institution: author.institution || '',
         orcid: author.orcid || '',
-        authorId: author.uid || null, // Si el autor ya tiene un UID en el sistema
+        authorId: author.uid || null,
         isCorresponding: author.isCorresponding || false,
       }));
 
-      // Actualizar el formulario con los datos importados
       setArticleForm(prev => ({
         ...prev,
         autores: importedAuthors.length > 0 ? importedAuthors : prev.autores,
         conflicts: submissionData.conflictOfInterest || prev.conflicts,
         funding: submissionData.funding?.sources || prev.funding,
         acknowledgments: submissionData.acknowledgments || prev.acknowledgments,
-        submissionId: submissionId, // Guardamos el ID para referencia
-        // NO tocamos título, resumen, keywords, etc.
+        submissionId: submissionId,
       }));
 
       setStatus({ type: 'success', msg: 'Datos del envío importados correctamente.' });
@@ -320,7 +313,7 @@ export default function DirectorPanel({ user }) {
     }
   };
 
-  // --- HANDLER GUARDAR ARTÍCULO (MODIFICADO) ---
+  // --- HANDLER GUARDAR ARTÍCULO ---
   const handleSaveArticle = async (e) => {
     e.preventDefault();
     setIsProcessing(true);
@@ -338,20 +331,18 @@ export default function DirectorPanel({ user }) {
         html_en = articleForm.html_en || '';
       }
 
-      // Preparar el array de autores en el formato exacto que espera el backend
       const autoresParaBackend = articleForm.autores.map(autor => ({
         name: autor.name,
-        authorId: autor.authorId, // Esto puede ser null o el UID
+        authorId: autor.authorId,
         email: autor.email,
         institution: autor.institution,
         orcid: autor.orcid,
-        // Incluir otros campos si el backend los soporta (isCorresponding, etc.)
       }));
 
       const articleData = {
         titulo: articleForm.titulo,
         tituloEnglish: articleForm.tituloEnglish,
-        autores: autoresParaBackend, // <-- AHORA ES UN ARRAY DE OBJETOS
+        autores: autoresParaBackend,
         resumen: articleForm.resumen,
         abstract: articleForm.abstract,
         palabras_clave: articleForm.palabras_clave ? articleForm.palabras_clave.split(';').map(k => k.trim()).filter(k => k) : [],
@@ -377,7 +368,6 @@ export default function DirectorPanel({ user }) {
         dataAvailability: articleForm.dataAvailability,
         dataAvailabilityEnglish: articleForm.dataAvailabilityEnglish,
         submissionId: articleForm.submissionId,
-        // authorId ya no va aquí
         html_es: html_es,
         html_en: html_en,
         referencias: articleForm.referencias,
@@ -387,7 +377,7 @@ export default function DirectorPanel({ user }) {
         action: editingItem ? 'edit' : 'add',
         article: articleData,
         pdfBase64,
-        id: editingItem?.numeroArticulo?.toString(), // Enviar el numeroArticulo como ID
+        id: editingItem?.numeroArticulo?.toString(),
       };
 
       const response = await fetch(MANAGE_ARTICLES_URL, {
@@ -404,7 +394,6 @@ export default function DirectorPanel({ user }) {
         throw new Error(errText);
       }
 
-      // Limpiar drafts
       if (!editingItem) {
         localStorage.removeItem('draftNewArticle');
       } else {
@@ -423,7 +412,6 @@ export default function DirectorPanel({ user }) {
   };
 
   const handleSaveVolume = async (e) => {
-    // (sin cambios, igual que en tu código original)
     e.preventDefault();
     setIsProcessing(true);
     setStatus(null);
@@ -487,7 +475,6 @@ export default function DirectorPanel({ user }) {
   };
 
   const handleDelete = async (id, type) => {
-    // (sin cambios, igual que en tu código original)
     if (!confirm(`¿Estás seguro de eliminar este ${type === 'article' ? 'artículo' : 'volumen'}?`)) return;
     
     try {
@@ -545,7 +532,7 @@ export default function DirectorPanel({ user }) {
 
   return (
     <div className="flex flex-col lg:flex-row min-h-screen bg-[#f4f7f9] text-[#1a1a1a]">
-      {/* Mobile Header (sin cambios) */}
+      {/* Mobile Header */}
       <div className="lg:hidden bg-[#001529] text-white p-4 flex justify-between items-center sticky top-0 z-30">
         <div>
           <h1 className="text-xl font-bold">RNCPE Admin</h1>
@@ -561,7 +548,7 @@ export default function DirectorPanel({ user }) {
         </button>
       </div>
 
-      {/* Mobile Menu (sin cambios) */}
+      {/* Mobile Menu */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div 
@@ -595,7 +582,6 @@ export default function DirectorPanel({ user }) {
                 icon={<InboxIcon />} 
                 label="Admisiones" 
               />
-              {/* <-- NUEVO ÍTEM EN MENÚ MÓVIL */}
               <SidebarItemMobile 
                 active={activeTab === 'usersearch'} 
                 onClick={() => { setActiveTab('usersearch'); setMobileMenuOpen(false); }}
@@ -612,7 +598,7 @@ export default function DirectorPanel({ user }) {
         )}
       </AnimatePresence>
 
-      {/* Desktop Sidebar (MODIFICADO: AÑADIDO BOTÓN USER SEARCH) */}
+      {/* Desktop Sidebar */}
       <aside className="hidden lg:flex w-64 bg-[#001529] text-white flex-col sticky h-screen top-0">
         <div className="p-6 border-b border-white/10">
           <h1 className="text-xl font-bold tracking-tight">RNCPE <span className="text-blue-400">Admin</span></h1>
@@ -624,7 +610,6 @@ export default function DirectorPanel({ user }) {
           <SidebarItem active={activeTab === 'volumes'} onClick={() => setActiveTab('volumes')} icon={<BookOpenIcon />} label="Volúmenes" />
           <SidebarItem active={activeTab === 'team'} onClick={() => setActiveTab('team')} icon={<UserGroupIcon />} label="Equipo / Mails" />
           <SidebarItem active={activeTab === 'admissions'} onClick={() => setActiveTab('admissions')} icon={<InboxIcon />} label="Admisiones" />
-          {/* <-- NUEVO BOTÓN EN SIDEBAR */}
           <SidebarItem active={activeTab === 'usersearch'} onClick={() => setActiveTab('usersearch')} icon={<MagnifyingGlassIcon />} label="Buscar Usuarios" />
         </nav>
 
@@ -637,13 +622,13 @@ export default function DirectorPanel({ user }) {
 
       {/* Main Content */}
       <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
-        {/* Header Bar (sin cambios) */}
+        {/* Header Bar */}
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
             <h2 className="text-2xl lg:text-3xl font-extrabold text-[#001529] font-serif">
               {activeTab === 'articles' ? 'Gestión Editorial' : 
                activeTab === 'volumes' ? 'Archivo de Volúmenes' : 
-               activeTab === 'usersearch' ? 'Buscador de Usuarios' : // <-- NUEVO TÍTULO
+               activeTab === 'usersearch' ? 'Buscador de Usuarios' :
                'Administración'}
             </h2>
             <p className="text-sm lg:text-base text-gray-500">Hola {user.displayName || 'Director'}, tienes {articles.length} artículos publicados.</p>
@@ -684,7 +669,7 @@ export default function DirectorPanel({ user }) {
           {status && <Notification status={status} clear={() => setStatus(null)} />}
         </AnimatePresence>
 
-        {/* Content Render (MODIFICADO: AÑADIDO CASO usersearch) */}
+        {/* Content Render */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 min-h-[60vh] overflow-hidden">
           {activeTab === 'articles' && (
             <ArticleList 
@@ -693,7 +678,6 @@ export default function DirectorPanel({ user }) {
               onToggleExpand={toggleArticleExpand}
               onEdit={(article) => { 
                 setEditingItem(article); 
-                // Asegurar que autores sea un array de objetos al editar
                 const autoresParaEdicion = Array.isArray(article.autores) ? article.autores : 
                                             (typeof article.autores === 'string' ? article.autores.split(';').map(name => ({ name: name.trim(), authorId: null })) : []);
                 setArticleForm({
@@ -740,7 +724,6 @@ export default function DirectorPanel({ user }) {
               <Admissions />
             </div>
           )}
-          {/* <-- NUEVO COMPONENTE DE BÚSQUEDA DE USUARIOS */}
           {activeTab === 'usersearch' && (
             <div className="p-4 lg:p-6">
               <UserSearch />
@@ -749,7 +732,7 @@ export default function DirectorPanel({ user }) {
         </div>
       </main>
 
-      {/* MODAL ARTÍCULOS (MODIFICADO: SE PASA LA FUNCIÓN DE IMPORTACIÓN) */}
+      {/* MODAL ARTÍCULOS */}
       <Modal 
         show={showArticleModal} 
         onClose={() => setShowArticleModal(false)}
@@ -760,12 +743,12 @@ export default function DirectorPanel({ user }) {
         <ArticleForm 
           formData={articleForm} 
           setFormData={setArticleForm} 
-          onImportFromSubmission={importFromSubmission} // <-- NUEVA PROP
+          onImportFromSubmission={importFromSubmission}
           isProcessing={isProcessing}
         />
       </Modal>
 
-      {/* MODAL VOLÚMENES (sin cambios) */}
+      {/* MODAL VOLÚMENES */}
       <Modal 
         show={showVolumeModal} 
         onClose={() => setShowVolumeModal(false)}
@@ -779,7 +762,7 @@ export default function DirectorPanel({ user }) {
   );
 }
 
-// --- COMPONENTE DE FORMULARIO DE ARTÍCULO (COMPLETAMENTE RENOVADO) ---
+// --- COMPONENTE DE FORMULARIO DE ARTÍCULO ---
 const ArticleForm = ({ formData, setFormData, onImportFromSubmission, isProcessing }) => {
   const [activeStep, setActiveStep] = useState(0);
   const [submissionIdInput, setSubmissionIdInput] = useState('');
@@ -799,7 +782,6 @@ const ArticleForm = ({ formData, setFormData, onImportFromSubmission, isProcessi
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // --- NUEVAS FUNCIONES PARA MANEJAR AUTORES ---
   const addAuthor = () => {
     setFormData(prev => ({
       ...prev,
@@ -818,21 +800,13 @@ const ArticleForm = ({ formData, setFormData, onImportFromSubmission, isProcessi
     setFormData(prev => {
       const updatedAutores = [...prev.autores];
       updatedAutores[index] = { ...updatedAutores[index], [field]: value };
-      
-      // Si estamos actualizando el email, buscar si ese email corresponde a un usuario registrado
-      if (field === 'email' && value) {
-        // Esta búsqueda se haría idealmente en un useEffect o llamando a una función
-        // Por simplicidad, aquí solo actualizamos el campo, la búsqueda de authorId
-        // se podría hacer en un paso separado o al guardar.
-      }
-      
       return { ...prev, autores: updatedAutores };
     });
   };
 
   return (
     <div className="flex flex-col h-[70vh] lg:h-[60vh]">
-      {/* Barra de importación de Submission ID (NUEVA) */}
+      {/* Barra de importación de Submission ID */}
       {!formData.submissionId && (
         <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200 flex flex-col sm:flex-row gap-2 items-center">
           <input
@@ -854,7 +828,7 @@ const ArticleForm = ({ formData, setFormData, onImportFromSubmission, isProcessi
         </div>
       )}
 
-      {/* Progress Steps (sin cambios) */}
+      {/* Progress Steps */}
       <div className="flex overflow-x-auto pb-2 mb-4 lg:mb-6 scrollbar-hide border-b border-gray-100">
         <div className="flex space-x-2 lg:space-x-0 lg:grid lg:grid-cols-7 lg:w-full">
           {steps.map((step) => (
@@ -894,7 +868,7 @@ const ArticleForm = ({ formData, setFormData, onImportFromSubmission, isProcessi
               onChange={handleChange} 
             />
 
-            {/* --- SECCIÓN DE AUTORES (NUEVA) --- */}
+            {/* SECCIÓN DE AUTORES */}
             <div className="space-y-3">
               <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">
                 Autores *
@@ -976,10 +950,8 @@ const ArticleForm = ({ formData, setFormData, onImportFromSubmission, isProcessi
           </div>
         )}
 
-        {/* Pasos 1 a 6 (sin cambios estructurales, pero asegúrate de que los nombres de campo coincidan) */}
         {activeStep === 1 && (
           <div className="space-y-4">
-            {/* ... (contenido sin cambios) ... */}
             <div className="grid grid-cols-2 gap-4">
               <Input label="Volumen" name="volumen" value={formData.volumen} onChange={handleChange} />
               <Input label="Número" name="numero" value={formData.numero} onChange={handleChange} />
@@ -1001,7 +973,6 @@ const ArticleForm = ({ formData, setFormData, onImportFromSubmission, isProcessi
 
         {activeStep === 2 && (
           <div className="space-y-6">
-            {/* ... (contenido sin cambios) ... */}
             <div className="flex space-x-2 mb-4">
               <button
                 onClick={() => setFormData({...formData, htmlMode: 'visual'})}
@@ -1116,7 +1087,6 @@ const ArticleForm = ({ formData, setFormData, onImportFromSubmission, isProcessi
 
         {activeStep === 5 && (
           <div className="space-y-4">
-            {/* ... (contenido sin cambios) ... */}
             <div>
               <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">
                 Palabras Clave (ES) * (separar con ;)
@@ -1226,7 +1196,6 @@ const ArticleForm = ({ formData, setFormData, onImportFromSubmission, isProcessi
 
         {activeStep === 6 && (
           <div className="space-y-6">
-            {/* ... (contenido sin cambios) ... */}
             <div className="p-6 border-2 border-dashed border-gray-200 rounded-2xl text-center">
               <DocumentIcon className="w-12 h-12 text-gray-300 mx-auto mb-4" />
               <p className="text-gray-500 mb-4">Sube el manuscrito final en formato PDF</p>
@@ -1334,13 +1303,12 @@ const ArticleForm = ({ formData, setFormData, onImportFromSubmission, isProcessi
                 onChange={handleChange}
                 placeholder="ID del envío"
               />
-              {/* El campo Author ID ya no es necesario a nivel de artículo */}
             </div>
           </div>
         )}
       </div>
 
-      {/* Step Navigation (sin cambios) */}
+      {/* Step Navigation */}
       <div className="flex justify-between mt-4 pt-4 border-t border-gray-100">
         <button
           type="button"
@@ -1363,7 +1331,7 @@ const ArticleForm = ({ formData, setFormData, onImportFromSubmission, isProcessi
   );
 };
 
-// --- NUEVO COMPONENTE: BÚSQUEDA DE USUARIOS ---
+// --- NUEVO COMPONENTE: BÚSQUEDA DE USUARIOS (CORREGIDO) ---
 const UserSearch = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -1380,39 +1348,33 @@ const UserSearch = () => {
 
     try {
       const usersRef = collection(db, 'users');
-      // Búsqueda por email (coincidencia exacta)
       const emailQuery = query(usersRef, where('email', '==', searchQuery.trim()), firestoreLimit(20));
       const emailSnapshot = await getDocs(emailQuery);
       
       let results = [];
-      emailSnapshot.forEach(doc => {
-        results.push({ id: doc.id, ...doc.data() });
+      emailSnapshot.forEach((docSnapshot) => { // Cambiado de doc a docSnapshot
+        results.push({ id: docSnapshot.id, ...docSnapshot.data() });
       });
 
-      // Si no hay resultados por email, intentar búsqueda por nombre (contiene)
       if (results.length === 0) {
-        // Firestore no soporta búsqueda por substring directamente, así que obtenemos algunos y filtramos
-        // Esto no es óptimo, pero sigue la directiva de minimizar cambios en backend
         const allUsersQuery = query(usersRef, firestoreLimit(100));
         const allSnapshot = await getDocs(allUsersQuery);
-        allSnapshot.forEach(doc => {
-          const userData = doc.data();
+        allSnapshot.forEach((docSnapshot) => { // Cambiado de doc a docSnapshot
+          const userData = docSnapshot.data();
           const fullName = `${userData.firstName || ''} ${userData.lastName || ''}`.toLowerCase();
           const displayName = userData.displayName?.toLowerCase() || '';
           const queryLower = searchQuery.toLowerCase();
           
           if (fullName.includes(queryLower) || displayName.includes(queryLower)) {
-            results.push({ id: doc.id, ...userData });
+            results.push({ id: docSnapshot.id, ...userData });
           }
         });
-        // Limitar resultados después del filtro
         results = results.slice(0, 20);
       }
 
       setSearchResults(results);
     } catch (error) {
       console.error("Error searching users:", error);
-      // Podrías mostrar un error con un estado local
     } finally {
       setIsSearching(false);
     }
@@ -1535,7 +1497,7 @@ const UserSearch = () => {
   );
 };
 
-// --- COMPONENTE VOLUME FORM (sin cambios, igual que en tu código original) ---
+// --- COMPONENTE VOLUME FORM ---
 const VolumeForm = ({ formData, setFormData }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -1637,7 +1599,7 @@ const VolumeForm = ({ formData, setFormData }) => {
   );
 };
 
-// --- COMPONENTES DE LISTA (ArticleList y VolumeList - sin cambios estructurales, solo ajuste en cómo se muestra autores) ---
+// --- COMPONENTES DE LISTA ---
 const ArticleList = ({ articles, expandedArticles, onToggleExpand, onEdit, onDelete, formatDate }) => (
   <div className="divide-y divide-gray-200">
     {articles.length === 0 ? (
@@ -1650,7 +1612,7 @@ const ArticleList = ({ articles, expandedArticles, onToggleExpand, onEdit, onDel
       <div className="max-h-[600px] overflow-y-auto">
         {articles.map((article) => (
           <motion.div
-            key={article.numeroArticulo || article.id} // Usar numeroArticulo si existe
+            key={article.numeroArticulo || article.id}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="hover:bg-gray-50 transition-colors"
@@ -1748,7 +1710,6 @@ const ArticleList = ({ articles, expandedArticles, onToggleExpand, onEdit, onDel
                         </div>
                       </div>
 
-                      {/* Detalle de autores en el expandido */}
                       {article.autores && article.autores.length > 0 && (
                         <div>
                           <h4 className="font-semibold text-gray-900 mb-2">Detalle de Autores</h4>
@@ -1977,7 +1938,7 @@ const VolumeList = ({ volumes, expandedVolumes, onToggleExpand, onEdit, onDelete
   </div>
 );
 
-// --- COMPONENTES ATÓMICOS (sin cambios) ---
+// --- COMPONENTES ATÓMICOS ---
 
 const Input = ({ label, ...props }) => (
   <div>
@@ -2093,7 +2054,7 @@ const SidebarItemMobile = ({ active, onClick, icon, label }) => (
   </button>
 );
 
-// --- LOADING & ACCESS COMPONENTS (sin cambios) ---
+// --- LOADING & ACCESS COMPONENTS ---
 const LoadingScreen = () => (
   <div className="min-h-screen flex items-center justify-center bg-white">
     <div className="flex flex-col items-center gap-4">
