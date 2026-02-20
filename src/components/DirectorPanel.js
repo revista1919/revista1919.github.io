@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { auth, db } from '../firebase';
-import { collection, onSnapshot, query, where, getDocs, limit as firestoreLimit } from "firebase/firestore";
+import { collection, onSnapshot, query, where, getDocs, limit as firestoreLimit, doc, getDoc } from "firebase/firestore";
 import Admissions from './Admissions';
 import MailsTeam from './MailsTeam';
 import ReactQuill from 'react-quill';
