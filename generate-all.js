@@ -239,7 +239,7 @@ const orcidSvg = `<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" 
     // Obtener artículos para los TOCs de volúmenes (desde el JSON público)
     let articles = [];
     try {
-      const articlesRes = await fetch('https://www.revistacienciasestudiantes.com/articles/articles.json');
+      const articlesRes = await fetch('https://www.revistacienciasestudiantes.com/articles.json');
       articles = await articlesRes.json();
       console.log(`📚 Artículos cargados para TOCs: ${articles.length}`);
     } catch (e) {
