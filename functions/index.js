@@ -289,7 +289,7 @@ Text to translate:
 
 async function translateHtmlFragment(html, source, target) {
   const prompt = `
-You are a faithful translator for an academic journal.
+You are a faithful translator for an academic journal, The National Review of Sciences for Students en inglés, y Revista Nacional de las Ciencias en español.
 
 Task:
 Translate all translatable texts in the following HTML code fragment to ${target}.
@@ -541,7 +541,12 @@ exports.manageArticles = onRequest(
     res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, Accept, X-Requested-With');
     res.set('Access-Control-Max-Age', '3600');
     res.set('Vary', 'Origin');
-
+// En manageArticles, justo después del bloque CORS
+console.log(`🔍 manageArticles - Request recibido:`);
+console.log(`🔍 Method: ${req.method}`);
+console.log(`🔍 Path: ${req.path}`);
+console.log(`🔍 Original URL: ${req.originalUrl}`);
+console.log(`🔍 Headers:`, req.headers);
     if (req.method === 'OPTIONS') {
       console.log('📡 Preflight OPTIONS request recibido');
       res.status(204).send('');

@@ -22,7 +22,7 @@ import {
 // --- Constantes de Configuración ---
 const DOMAIN = 'https://www.revistacienciasestudiantes.com';
 const ARTICLES_JSON_URL = `${DOMAIN}/articles.json`;
-const MANAGE_ARTICLES_URL = 'https://managearticles-ggqsq2kkua-uc.a.run.app/';  // ← con slash al final
+const MANAGE_ARTICLES_URL = 'https://managearticles-ggqsq2kkua-uc.a.run.app/manageArticles';  // ← con slash al final
 const MANAGE_VOLUMES_URL = 'https://managevolumes-ggqsq2kkua-uc.a.run.app/';      // ← con slash al final
 const REBUILD_URL = 'https://triggerrebuild-ggqsq2kkua-uc.a.run.app/';            // ← con slash al final
 const REPO_OWNER = 'revista1919';
