@@ -18,7 +18,7 @@ const HomeSection = ({ onOpenMenu }) => {
       bgImage: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?q=80&w=773&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
     },
     {
-      title: 'Volúmenes',
+      title: 'Números',
       desc: 'Compilaciones de artículos organizados por edición.',
       path: '/volume',
       icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10',
@@ -198,7 +198,7 @@ const HomeSection = ({ onOpenMenu }) => {
               />
             </motion.div>
             <p className="text-base sm:text-lg text-gray-600 mb-8 sm:mb-10 font-light leading-relaxed max-w-lg mx-auto lg:mx-0 text-center lg:text-left">
-              La Revista Nacional de las Ciencias para Estudiantes es una plataforma dedicada a la difusión de trabajos científicos desarrollados por estudiantes, promoviendo el aprendizaje y la discusión académica.
+              La Revista Nacional de las Ciencias para Estudiantes es una revista académica, siendo una plataforma que busca a la difusión de trabajos científicos desarrollados por estudiantes, promoviendo el aprendizaje y la discusión académica.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <button
