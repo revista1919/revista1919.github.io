@@ -3,29 +3,70 @@
 /* ===================== IMPORTS ===================== */
 const { onRequest, onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
-const { setGlobalOptions } = require("firebase-functions/v2");
+const { setGlobalOptions } = require("firebase-functions/v2"); // ← QUITAMOS onInit temporalmente
 
-// IMPORTANTE: Aumentamos el timeout y la memoria para evitar el error de carga
+// IMPORTANTE: Configuración global
 setGlobalOptions({
   region: "us-central1",
   maxInstances: 10,
-  timeoutSeconds: 120, // Aumentamos el timeout
-  memory: "512MiB" // Aumentamos la memoria
+  timeoutSeconds: 120,
+  memory: "512MiB"
 });
 
 const { defineSecret } = require("firebase-functions/params");
 const admin = require("firebase-admin");
-const { GoogleGenAI } = require("@google/genai");
-const { Octokit } = require("@octokit/rest");
-const FormData = require("form-data");
-const fetch = require("node-fetch");
-const { google } = require("googleapis");
-// Inicializar Firebase Admin
+
+// Inicializar Firebase Admin lo antes posible
 if (!admin.apps.length) {
-  admin.initializeApp();
+  try {
+    admin.initializeApp();
+    console.log("✅ Firebase Admin inicializado");
+  } catch (e) {
+    console.error("❌ Error inicializando Firebase Admin:", e.message);
+  }
 }
 
-/* ===================== CONFIG ===================== */
+// ==================== IMPORTACIONES DINÁMICAS ====================
+// Cargamos las dependencias pesadas de forma diferida para evitar fallos en el healthcheck
+let GoogleGenAI, Octokit, FormData, fetch, google, http, https;
+
+// Función para cargar dependencias bajo demanda
+async function loadDependencies() {
+  const modules = await Promise.allSettled([
+    import('@google/genai').then(m => m.GoogleGenAI),
+    import('@octokit/rest').then(m => m.Octokit),
+    import('form-data').then(m => m.default),
+    import('node-fetch').then(m => m.default),
+    import('googleapis').then(m => m.google),
+    import('http').then(m => m.default),
+    import('https').then(m => m.default)
+  ]);
+  
+  GoogleGenAI = modules[0].status === 'fulfilled' ? modules[0].value : null;
+  Octokit = modules[1].status === 'fulfilled' ? modules[1].value : null;
+  FormData = modules[2].status === 'fulfilled' ? modules[2].value : null;
+  fetch = modules[3].status === 'fulfilled' ? modules[3].value : null;
+  google = modules[4].status === 'fulfilled' ? modules[4].value : null;
+  http = modules[5].status === 'fulfilled' ? modules[5].value : null;
+  https = modules[6].status === 'fulfilled' ? modules[6].value : null;
+  
+  console.log("📦 Dependencias cargadas:", {
+    GoogleGenAI: !!GoogleGenAI,
+    Octokit: !!Octokit,
+    FormData: !!FormData,
+    fetch: !!fetch,
+    google: !!google,
+    http: !!http,
+    https: !!https
+  });
+}
+
+// Cargar dependencias inmediatamente pero sin bloquear el healthcheck
+loadDependencies().catch(err => {
+  console.error("❌ Error cargando dependencias:", err.message);
+});
+
+/* ===================== SECRETS ===================== */
 const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
 const IMGBB_API_KEY = defineSecret("IMGBB_API_KEY");
 const GH_TOKEN = defineSecret("GH_TOKEN");
@@ -33,7 +74,6 @@ const DRIVE_SERVICE_ACCOUNT = defineSecret("DRIVE_SERVICE_ACCOUNT");
 const OAUTH2_CLIENT_ID = defineSecret('OAUTH2_CLIENT_ID');
 const OAUTH2_CLIENT_SECRET = defineSecret('OAUTH2_CLIENT_SECRET');
 const OAUTH2_REFRESH_TOKEN = defineSecret('OAUTH2_REFRESH_TOKEN');
- // <-- NUEVO
 
 const DOMAIN = "https://www.revistacienciasestudiantes.com";
 const ALLOWED_ORIGINS = [
@@ -42,6 +82,24 @@ const ALLOWED_ORIGINS = [
   "http://localhost:3000",
   "http://localhost:5000"
 ];
+
+/* ===================== GLOBAL CONNECTION POOLING ===================== */
+// Agentes HTTP - se inicializarán cuando http/https estén disponibles
+let httpAgent = null;
+let httpsAgent = null;
+
+// Inicializar agentes cuando sea posible
+function initAgents() {
+  if (http && https && !httpAgent) {
+    httpAgent = new http.Agent({ keepAlive: true, maxSockets: 50 });
+    httpsAgent = new https.Agent({ keepAlive: true, maxSockets: 50 });
+    console.log("🌐 Agentes HTTP/HTTPS inicializados");
+  }
+}
+
+// Clientes cacheados
+let cachedOctokit = null;
+let cachedGenAI = null;
 
 /* ===================== TRADUCCIÓN DE ROLES ===================== */
 const ES_TO_EN = {
@@ -67,7 +125,6 @@ const ES_TO_EN = {
 function handleCors(req, res) {
   const origin = req.headers.origin;
   
-  // Configurar headers CORS
   if (origin && ALLOWED_ORIGINS.includes(origin)) {
     res.set("Access-Control-Allow-Origin", origin);
   } else {
@@ -77,10 +134,9 @@ function handleCors(req, res) {
   res.set("Access-Control-Allow-Credentials", "true");
   res.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   res.set("Access-Control-Allow-Headers", "Content-Type, Authorization, Origin, Accept");
-  res.set("Access-Control-Max-Age", "3600"); // Cache preflight por 1 hora
+  res.set("Access-Control-Max-Age", "3600");
   res.set("Vary", "Origin");
 
-  // Manejar preflight request
   if (req.method === "OPTIONS") {
     res.status(204).send("");
     return true;
@@ -133,8 +189,14 @@ async function validateRole(uid, requiredRole) {
 }
 
 /* ===================== GITHUB HELPERS ===================== */
-function getOctokit() { 
-  return new Octokit({ auth: GH_TOKEN.value() }); 
+function getOctokit() {
+  if (!Octokit) throw new Error("Octokit no está disponible");
+  if (!cachedOctokit) {
+    const token = GH_TOKEN.value();
+    if (!token) throw new Error("GH_TOKEN no configurado");
+    cachedOctokit = new Octokit({ auth: token });
+  }
+  return cachedOctokit;
 }
 
 async function uploadPDFToRepo(pdfBase64, fileName, commitMessage, folder = "Articles") {
@@ -176,15 +238,19 @@ async function deletePDFFromRepo(fileName, commitMessage, folder = "Articles") {
 }
 
 /* ===================== GEMINI ===================== */
-/* ===================== GEMINI CON CORRECCIÓN ===================== */
+async function getGenAI() {
+  if (!GoogleGenAI) throw new Error("GoogleGenAI no está disponible");
+  if (!cachedGenAI) {
+    const apiKey = GEMINI_API_KEY.value();
+    if (!apiKey) throw new Error("GEMINI_API_KEY no configurada");
+    cachedGenAI = new GoogleGenAI({ apiKey });
+  }
+  return cachedGenAI;
+}
+
 async function callGemini(prompt, temperature = 0) {
-  const apiKey = GEMINI_API_KEY.value();
-  if (!apiKey) throw new Error("GEMINI_API_KEY no configurada");
+  const ai = await getGenAI();
 
-  // ✅ CORRECCIÓN: Usar el nuevo SDK @google/genai correctamente
-  const ai = new GoogleGenAI({ apiKey });
-
-  // ✅ El método correcto es ai.models.generateContent
   const result = await ai.models.generateContent({
     model: "gemini-2.0-flash",
     contents: prompt,
@@ -194,10 +260,8 @@ async function callGemini(prompt, temperature = 0) {
     }
   });
 
-  // ✅ La respuesta también es diferente
   let text = result.text?.trim() || "";
   
-  // Limpiar si viene con markdown
   if (text.startsWith("```")) {
     text = text.replace(/^```(?:html)?\n?/, "").replace(/\n?```$/, "").trim();
   }
@@ -241,6 +305,7 @@ ${html}`;
 
   return await callGemini(prompt);
 }
+
 function splitHtmlContent(html) {
   const maxLength = 2000;
   const fragments = [];
@@ -280,13 +345,12 @@ async function translateHtmlFragmentWithSplit(html, source, target) {
   return translated.join("");
 }
 
-/* ===================== IMGBB UPLOAD ===================== */// EN index.js - AÑADE ESTA FUNCIÓN
+/* ===================== IMGBB UPLOAD ===================== */
 exports.uploadImageToImgBBCallable = onCall(
   { secrets: [IMGBB_API_KEY] },
   async (request) => {
     const { auth } = request;
 
-    // 🔐 Solo verificar que esté autenticado
     if (!auth) {
       throw new HttpsError('unauthenticated', 'Debes estar logueado');
     }
@@ -298,6 +362,14 @@ exports.uploadImageToImgBBCallable = onCall(
     }
 
     try {
+      // Cargar fetch y form-data bajo demanda
+      if (!fetch || !FormData) {
+        await loadDependencies();
+        if (!fetch || !FormData) {
+          throw new Error("Dependencias fetch/form-data no disponibles");
+        }
+      }
+
       const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, "");
 
       const form = new FormData();
@@ -310,10 +382,12 @@ exports.uploadImageToImgBBCallable = onCall(
         url.searchParams.set("expiration", String(expiration));
       }
 
+      initAgents();
       const response = await fetch(url.toString(), {
         method: "POST",
         body: form,
-        headers: form.getHeaders()
+        headers: form.getHeaders(),
+        agent: url.protocol === 'https:' && httpsAgent ? httpsAgent : httpAgent
       });
 
       const data = await response.json();
@@ -346,21 +420,17 @@ exports.uploadNews = onRequest(
     timeoutSeconds: 120
   },
   async (req, res) => {
-    // Manejar CORS
     if (handleCors(req, res)) return;
 
-    // Solo aceptar POST
     if (req.method !== "POST") {
       return res.status(405).json({ error: "Método no permitido" });
     }
 
-    // Validar origen
     if (!validateOrigin(req)) {
       return res.status(403).json({ error: "Origen no permitido" });
     }
 
     try {
-      // Verificar autenticación
       const idToken = req.headers.authorization?.split("Bearer ")[1];
       if (!idToken) {
         return res.status(401).json({ error: "No autorizado - Token requerido" });
@@ -374,32 +444,35 @@ exports.uploadNews = onRequest(
         return res.status(401).json({ error: "Token inválido" });
       }
 
-      // Validar rol - REQUERIDO para esta función
       try {
         await validateRole(user.uid, "Director General");
       } catch (roleError) {
         return res.status(403).json({ error: "Se requiere rol de Director General" });
       }
 
-      // Validar datos de entrada
       const { title, body, photo, language = "es" } = req.body;
       
       if (!title || !body) {
         return res.status(400).json({ error: "Faltan datos: title y body son requeridos" });
       }
 
-      // Procesar traducción
+      // Verificar que Gemini esté disponible
+      if (!GoogleGenAI) {
+        await loadDependencies();
+        if (!GoogleGenAI) {
+          return res.status(500).json({ error: "Servicio de traducción no disponible" });
+        }
+      }
+
       const source = language.toLowerCase();
       const target = source === "es" ? "en" : "es";
 
       const titleSource = sanitizeInput(title);
       const bodySource = base64DecodeUnicode(body) || sanitizeInput(body);
 
-      // Traducir título y cuerpo
       const titleTarget = await translateText(titleSource, source, target);
       const bodyTarget = await translateHtmlFragmentWithSplit(bodySource, source, target);
 
-      // Guardar en Firestore
       const db = admin.firestore();
       const newsRef = db.collection("news");
 
@@ -442,8 +515,6 @@ exports.uploadNews = onRequest(
 );
 
 /* ===================== MANAGE ARTICLES ===================== */
-/* ===================== MANAGE ARTICLES ===================== */
-/* ===================== MANAGE ARTICLES ===================== */
 exports.manageArticles = onRequest(
   { 
     secrets: [GH_TOKEN],
@@ -451,7 +522,6 @@ exports.manageArticles = onRequest(
     timeoutSeconds: 120
   },
   async (req, res) => {
-    // ========== 1. MANEJO CORS ==========
     const origin = req.headers.origin;
     const ALLOWED_ORIGINS = [
       'https://www.revistacienciasestudiantes.com',
@@ -495,6 +565,14 @@ exports.manageArticles = onRequest(
     console.log(`[${requestId}] 🚀 manageArticles - Iniciando petición`);
 
     try {
+      // Verificar que Octokit esté disponible
+      if (!Octokit) {
+        await loadDependencies();
+        if (!Octokit) {
+          return res.status(500).json({ error: "Servicio GitHub no disponible" });
+        }
+      }
+
       const authHeader = req.headers.authorization;
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
         console.warn(`[${requestId}] ⚠️ No autorizado - Token faltante`);
@@ -531,14 +609,12 @@ exports.manageArticles = onRequest(
 
       console.log(`[${requestId}] 📋 Acción: ${action}, ID: ${id || 'nuevo'}`);
 
-      // ========== CONFIGURACIÓN GITHUB ==========
       const octokit = getOctokit();
       const REPO_OWNER = "revista1919";
-      const REPO_NAME = "articless"; // Repositorio donde está articles.json
+      const REPO_NAME = "articless";
       const JSON_PATH = "articles.json";
       const BRANCH = "main";
 
-      // ========== FUNCIONES AUXILIARES ==========
       async function getCurrentArticlesJson() {
         try {
           const { data } = await octokit.repos.getContent({
@@ -555,7 +631,6 @@ exports.manageArticles = onRequest(
           };
         } catch (error) {
           if (error.status === 404) {
-            // Si no existe, crear array vacío
             return {
               articles: [],
               sha: null
@@ -569,7 +644,6 @@ exports.manageArticles = onRequest(
         const content = Buffer.from(JSON.stringify(articles, null, 2)).toString('base64');
         
         if (sha) {
-          // Actualizar archivo existente
           await octokit.repos.createOrUpdateFileContents({
             owner: REPO_OWNER,
             repo: REPO_NAME,
@@ -580,7 +654,6 @@ exports.manageArticles = onRequest(
             branch: BRANCH
           });
         } else {
-          // Crear archivo nuevo
           await octokit.repos.createOrUpdateFileContents({
             owner: REPO_OWNER,
             repo: REPO_NAME,
@@ -592,17 +665,10 @@ exports.manageArticles = onRequest(
         }
       }
 
-      // ========== PROCESAR AUTORES CON SUS IDs ==========
       function processAuthors(authorsInput) {
-        // authorsInput puede ser:
-        // 1. String "Nombre1 Apellido1;Nombre2 Apellido2"
-        // 2. Array de strings ["Nombre1 Apellido1", "Nombre2 Apellido2"]
-        // 3. Array de objetos [{ name: "...", authorId: "..." }, ...]
-        
         let authorsArray = [];
         
         if (typeof authorsInput === 'string') {
-          // Caso 1: string separado por punto y coma
           authorsArray = authorsInput.split(';').map(name => ({
             name: name.trim(),
             authorId: null
@@ -611,13 +677,11 @@ exports.manageArticles = onRequest(
           if (authorsInput.length === 0) return [];
           
           if (typeof authorsInput[0] === 'string') {
-            // Caso 2: array de strings
             authorsArray = authorsInput.map(name => ({
               name: name.trim(),
               authorId: null
             }));
           } else {
-            // Caso 3: array de objetos
             authorsArray = authorsInput.map(a => ({
               name: a.name || `${a.firstName || ''} ${a.lastName || ''}`.trim(),
               authorId: a.authorId || a.uid || null,
@@ -631,23 +695,13 @@ exports.manageArticles = onRequest(
         return authorsArray;
       }
 
-      // Función para generar slug para PDF
-      function generateSlug(text) {
-        if (!text) return '';
-        return text.toLowerCase()
-          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-+|-+$/g, '');
-      }
-
-      // ========== SUBIR PDF A REPO ARTICLES ==========
       async function uploadPDF(pdfBase64, fileName, commitMessage) {
         const content = pdfBase64.replace(/^data:application\/pdf;base64,/, "");
         
         await octokit.repos.createOrUpdateFileContents({
           owner: REPO_OWNER,
           repo: REPO_NAME,
-          path: `pdfs/${fileName}`, // Guardamos PDFs en subcarpeta
+          path: `pdfs/${fileName}`,
           message: commitMessage,
           content: content,
           branch: BRANCH
@@ -678,22 +732,16 @@ exports.manageArticles = onRequest(
         }
       }
 
-      // ========== OBTENER SIGUIENTE NÚMERO DE ARTÍCULO ==========
       async function getNextArticleNumber(articles) {
         if (articles.length === 0) return 1;
-        
         const maxNumber = Math.max(...articles.map(a => a.numeroArticulo || 0));
         return maxNumber + 1;
       }
 
-      // ========== ACCIONES ==========
-      
-      // Obtener estado actual
       const { articles: currentArticles, sha } = await getCurrentArticlesJson();
       let updatedArticles = [...currentArticles];
       let responseData = {};
 
-      // ========== ACCIÓN: ADD ==========
       if (action === "add") {
         if (!article?.titulo) {
           return res.status(400).json({ error: "Datos de artículo incompletos - título requerido" });
@@ -701,18 +749,14 @@ exports.manageArticles = onRequest(
 
         console.log(`[${requestId}] 📝 Creando nuevo artículo: ${article.titulo}`);
 
-        // Procesar autores
         const authorsArray = processAuthors(article.autores);
-        
-        // Obtener siguiente número de artículo
         const articleNumber = await getNextArticleNumber(currentArticles);
         
-        // Preparar objeto de artículo
         const newArticle = {
           numeroArticulo: articleNumber,
           titulo: article.titulo,
           tituloEnglish: article.tituloEnglish || '',
-          autores: authorsArray, // AHORA ES UN ARRAY DE OBJETOS
+          autores: authorsArray,
           resumen: article.resumen,
           abstract: article.abstract || '',
           palabras_clave: Array.isArray(article.palabras_clave) ? article.palabras_clave : 
@@ -749,7 +793,6 @@ exports.manageArticles = onRequest(
           createdBy: user.uid
         };
 
-        // Subir PDF si existe
         if (pdfBase64) {
           try {
             const slug = generateSlug(article.titulo);
@@ -770,7 +813,6 @@ exports.manageArticles = onRequest(
           }
         }
 
-        // Agregar a la lista
         updatedArticles.push(newArticle);
         responseData = { 
           id: articleNumber.toString(),
@@ -779,7 +821,6 @@ exports.manageArticles = onRequest(
         };
       }
 
-      // ========== ACCIÓN: EDIT ==========
       if (action === "edit") {
         if (!id) {
           return res.status(400).json({ error: "ID de artículo requerido" });
@@ -795,16 +836,13 @@ exports.manageArticles = onRequest(
         const oldArticle = updatedArticles[index];
         console.log(`[${requestId}] 📝 Editando artículo #${articleNumber}: ${oldArticle.titulo}`);
 
-        // Procesar autores (preservar IDs existentes si no se proporcionan nuevos)
         let authorsArray;
         if (article.autores) {
           authorsArray = processAuthors(article.autores);
           
-          // Si los autores vienen como strings pero queremos preservar IDs antiguos
           if (typeof article.autores === 'string' || 
               (Array.isArray(article.autores) && typeof article.autores[0] === 'string')) {
             
-            // Mapear nombres a IDs antiguos
             const oldAuthorsMap = new Map(
               (oldArticle.autores || []).map(a => [a.name, a.authorId])
             );
@@ -818,7 +856,6 @@ exports.manageArticles = onRequest(
           authorsArray = oldArticle.autores || [];
         }
 
-        // Construir artículo actualizado
         const updatedArticle = {
           ...oldArticle,
           titulo: article.titulo || oldArticle.titulo,
@@ -860,10 +897,8 @@ exports.manageArticles = onRequest(
           updatedBy: user.uid
         };
 
-        // Manejar PDF nuevo
         if (pdfBase64) {
           try {
-            // Eliminar PDF anterior si existe
             if (oldArticle.pdfUrl) {
               const oldFileName = oldArticle.pdfUrl.split('/').pop();
               console.log(`[${requestId}] 🗑️ Eliminando PDF anterior: ${oldFileName}`);
@@ -874,7 +909,6 @@ exports.manageArticles = onRequest(
               );
             }
 
-            // Subir nuevo PDF
             const slug = generateSlug(updatedArticle.titulo);
             const fileName = `Article-${slug}-${articleNumber}.pdf`;
             
@@ -893,7 +927,6 @@ exports.manageArticles = onRequest(
           }
         }
 
-        // Reemplazar en la lista
         updatedArticles[index] = updatedArticle;
         responseData = { 
           success: true,
@@ -902,7 +935,6 @@ exports.manageArticles = onRequest(
         };
       }
 
-      // ========== ACCIÓN: DELETE ==========
       if (action === "delete") {
         if (!id) {
           return res.status(400).json({ error: "ID de artículo requerido" });
@@ -918,7 +950,6 @@ exports.manageArticles = onRequest(
         const articleToDelete = updatedArticles[index];
         console.log(`[${requestId}] 🗑️ Eliminando artículo #${articleNumber}: ${articleToDelete.titulo}`);
 
-        // Eliminar PDF si existe
         if (articleToDelete.pdfUrl) {
           try {
             const fileName = articleToDelete.pdfUrl.split('/').pop();
@@ -933,7 +964,6 @@ exports.manageArticles = onRequest(
           }
         }
 
-        // Eliminar de la lista
         updatedArticles.splice(index, 1);
         responseData = { 
           success: true,
@@ -942,9 +972,7 @@ exports.manageArticles = onRequest(
         };
       }
 
-      // ========== GUARDAR CAMBIOS ==========
       if (action === "add" || action === "edit" || action === "delete") {
-        // Ordenar artículos por número
         updatedArticles.sort((a, b) => (a.numeroArticulo || 0) - (b.numeroArticulo || 0));
         
         const commitMessage = `[${action}] Artículo ${action === 'add' ? 'agregado' : action === 'edit' ? 'actualizado' : 'eliminado'} #${responseData.articleNumber || ''} por ${user.email || user.uid}`;
@@ -952,9 +980,7 @@ exports.manageArticles = onRequest(
         await saveArticlesJson(updatedArticles, sha, commitMessage);
         console.log(`[${requestId}] ✅ articles.json actualizado en GitHub`);
 
-        // ========== TRIGGER REBUILD ==========
         try {
-          // Disparar rebuild del sitio principal
           await octokit.request("POST /repos/{owner}/{repo}/dispatches", {
             owner: "revista1919",
             repo: "revista1919.github.io",
@@ -1003,6 +1029,7 @@ exports.manageArticles = onRequest(
     }
   }
 );
+
 /* ===================== MANAGE VOLUMES ===================== */
 exports.manageVolumes = onRequest(
   { 
@@ -1011,7 +1038,6 @@ exports.manageVolumes = onRequest(
     timeoutSeconds: 120
   },
   async (req, res) => {
-    // Manejar CORS
     if (handleCors(req, res)) return;
 
     if (req.method !== "POST") {
@@ -1023,6 +1049,14 @@ exports.manageVolumes = onRequest(
     }
 
     try {
+      // Verificar que Octokit esté disponible
+      if (!Octokit) {
+        await loadDependencies();
+        if (!Octokit) {
+          return res.status(500).json({ error: "Servicio GitHub no disponible" });
+        }
+      }
+
       const token = req.headers.authorization?.split("Bearer ")[1];
       if (!token) {
         return res.status(401).json({ error: "No autorizado" });
@@ -1162,7 +1196,6 @@ exports.triggerRebuild = onRequest(
     cors: true
   },
   async (req, res) => {
-    // Manejar CORS
     if (handleCors(req, res)) return;
 
     if (req.method !== "POST") {
@@ -1174,6 +1207,14 @@ exports.triggerRebuild = onRequest(
     }
 
     try {
+      // Verificar que Octokit esté disponible
+      if (!Octokit) {
+        await loadDependencies();
+        if (!Octokit) {
+          return res.status(500).json({ error: "Servicio GitHub no disponible" });
+        }
+      }
+
       const token = req.headers.authorization?.split("Bearer ")[1];
       if (!token) {
         return res.status(401).json({ error: "No autorizado" });
@@ -1221,7 +1262,6 @@ exports.updateUserRole = onCall(async (request) => {
   }
 
   try {
-    // Log de quién cambió qué
     console.log(`Director ${auth.uid} cambió roles de ${targetUid} a:`, newRoles);
 
     await admin.auth().setCustomUserClaims(targetUid, { roles: newRoles });
@@ -1256,46 +1296,69 @@ exports.healthCheck = onRequest(
 exports.onUserChange = onDocumentUpdated(
   { document: 'users/{userId}', secrets: [GH_TOKEN] },
   async (event) => {
-    const octokit = new Octokit({ auth: GH_TOKEN.value() });
-    
-    await octokit.request('POST /repos/{owner}/{repo}/dispatches', {
-      owner: 'revista1919',
-      repo: 'team',
-      event_type: 'rebuild-team-user',
-      client_payload: {
-        uid: event.params.userId
+    try {
+      // Verificar que Octokit esté disponible
+      if (!Octokit) {
+        await loadDependencies();
+        if (!Octokit) {
+          console.error("Octokit no disponible para onUserChange");
+          return;
+        }
       }
-    });
-    
-    console.log(`🚀 Disparado rebuild para usuario ${event.params.userId}`);
+
+      const octokit = getOctokit();
+      
+      await octokit.request('POST /repos/{owner}/{repo}/dispatches', {
+        owner: 'revista1919',
+        repo: 'team',
+        event_type: 'rebuild-team-user',
+        client_payload: {
+          uid: event.params.userId
+        }
+      });
+      
+      console.log(`🚀 Disparado rebuild para usuario ${event.params.userId}`);
+    } catch (error) {
+      console.error("Error en onUserChange:", error.message);
+    }
   }
 );
 
-// También escuchar creación de nuevos usuarios
 exports.onUserCreate = onDocumentCreated(
   { document: 'users/{userId}', secrets: [GH_TOKEN] },
   async (event) => {
-    const octokit = new Octokit({ auth: GH_TOKEN.value() });
-    
-    await octokit.request('POST /repos/{owner}/{repo}/dispatches', {
-      owner: 'revista1919',
-      repo: 'team',
-      event_type: 'rebuild-team-user',
-      client_payload: {
-        uid: event.params.userId
+    try {
+      // Verificar que Octokit esté disponible
+      if (!Octokit) {
+        await loadDependencies();
+        if (!Octokit) {
+          console.error("Octokit no disponible para onUserCreate");
+          return;
+        }
       }
-    });
-    
-    console.log(`🚀 Nuevo usuario creado: ${event.params.userId}`);
+
+      const octokit = getOctokit();
+      
+      await octokit.request('POST /repos/{owner}/{repo}/dispatches', {
+        owner: 'revista1919',
+        repo: 'team',
+        event_type: 'rebuild-team-user',
+        client_payload: {
+          uid: event.params.userId
+        }
+      });
+      
+      console.log(`🚀 Nuevo usuario creado: ${event.params.userId}`);
+    } catch (error) {
+      console.error("Error en onUserCreate:", error.message);
+    }
   }
 );
-/* ===================== UPDATE ROLE ===================== */
-/* ===================== UPDATE ROLE (CALLABLE) ===================== */
+
 /* ===================== UPDATE ROLE (CALLABLE) ===================== */
 exports.updateRole = onCall(async (request) => {
   const { auth, data } = request;
 
-  // 🔐 Debe estar logueado
   if (!auth) {
     throw new HttpsError("unauthenticated", "Debes iniciar sesión");
   }
@@ -1303,7 +1366,6 @@ exports.updateRole = onCall(async (request) => {
   const callerUid = auth.uid;
 
   try {
-    /* ===================== VALIDAR PERMISOS ===================== */
     const callerUser = await admin.auth().getUser(callerUid);
     const callerRoles = callerUser.customClaims?.roles || [];
 
@@ -1314,7 +1376,6 @@ exports.updateRole = onCall(async (request) => {
       );
     }
 
-    /* ===================== VALIDAR INPUT ===================== */
     const { targetUid, newRoles } = data;
 
     if (!targetUid) {
@@ -1325,12 +1386,10 @@ exports.updateRole = onCall(async (request) => {
       throw new HttpsError("invalid-argument", "newRoles debe ser un array");
     }
 
-    /* ===================== ACTUALIZAR CLAIMS ===================== */
     await admin.auth().setCustomUserClaims(targetUid, {
       roles: newRoles,
     });
 
-    /* ===================== ACTUALIZAR FIRESTORE ===================== */
     await admin
       .firestore()
       .collection("users")
@@ -1349,7 +1408,6 @@ exports.updateRole = onCall(async (request) => {
       newRoles
     );
 
-    /* ===================== RESPUESTA ===================== */
     return {
       success: true,
       targetUid,
@@ -1363,14 +1421,13 @@ exports.updateRole = onCall(async (request) => {
 
     throw new HttpsError("internal", error.message);
   }
-}); // 👈 CORREGIDO: Aquí se cierra correctamente la función updateRole
-/* ===================== DRIVE HELPERS ===================== */
-// ===================== CHECK ANONYMOUS PROFILE =====================
+});
+
+/* ===================== CHECK ANONYMOUS PROFILE ===================== */
 exports.checkAnonymousProfile = onCall(async (request) => {
   const { HttpsError } = require("firebase-functions/v2/https");
   
   try {
-    // Verificar autenticación
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'Debes iniciar sesión');
     }
@@ -1378,7 +1435,6 @@ exports.checkAnonymousProfile = onCall(async (request) => {
     const uid = request.auth.uid;
     const db = admin.firestore();
     
-    // Obtener email del usuario
     const userDoc = await db.collection('users').doc(uid).get();
     if (!userDoc.exists) {
       throw new HttpsError('not-found', 'Usuario no encontrado');
@@ -1389,8 +1445,6 @@ exports.checkAnonymousProfile = onCall(async (request) => {
       throw new HttpsError('failed-precondition', 'El usuario no tiene email');
     }
     
-    // Buscar submissions donde este email aparezca como autor
-    // pero SIN incluir usuarios que ya tienen UID (son registrados)
     const submissionsSnapshot = await db.collection('submissions')
       .where('status', 'in', ['published', 'accepted'])
       .get();
@@ -1402,18 +1456,14 @@ exports.checkAnonymousProfile = onCall(async (request) => {
       const data = doc.data();
       if (data.authors && Array.isArray(data.authors)) {
         data.authors.forEach(author => {
-          // Si el autor tiene UID, ya está registrado - ignorar
           if (author.uid) return;
           
-          // Comparar emails (case insensitive)
           if (author.email && author.email.toLowerCase() === userEmail.toLowerCase()) {
-            // Generar el mismo hash que usamos en build.js
             const claimHash = crypto.createHash('sha256')
               .update(author.email + '-revista-secret')
               .digest('hex')
               .substring(0, 16);
             
-            // Crear identificador único para este perfil anónimo
             const name = `${author.firstName || ''} ${author.lastName || ''}`.trim();
             const anonymousUid = `anon-${generateSlug(name)}-${Date.now().toString(36)}`;
             
@@ -1448,20 +1498,11 @@ exports.checkAnonymousProfile = onCall(async (request) => {
   }
 });
 
-// Helper para generar slug (copiar la misma función de build.js)
-function generateSlug(text) {
-  if (!text) return '';
-  return text.toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
-// ===================== CLAIM ANONYMOUS PROFILE =====================
+/* ===================== CLAIM ANONYMOUS PROFILE ===================== */
 exports.claimAnonymousProfile = onCall(
   { secrets: [GH_TOKEN] },
   async (request) => {
     const { HttpsError } = require("firebase-functions/v2/https");
-    const { Octokit } = require("@octokit/rest");
     
     try {
       if (!request.auth) {
@@ -1475,10 +1516,17 @@ exports.claimAnonymousProfile = onCall(
         throw new HttpsError('invalid-argument', 'Faltan datos');
       }
       
+      // Verificar que Octokit esté disponible
+      if (!Octokit) {
+        await loadDependencies();
+        if (!Octokit) {
+          throw new HttpsError('internal', 'Servicio GitHub no disponible');
+        }
+      }
+      
       const db = admin.firestore();
       const crypto = require('crypto');
       
-      // 1. Verificar que el usuario actual existe
       const userDoc = await db.collection('users').doc(uid).get();
       if (!userDoc.exists) {
         throw new HttpsError('not-found', 'Usuario no encontrado');
@@ -1491,7 +1539,6 @@ exports.claimAnonymousProfile = onCall(
         throw new HttpsError('failed-precondition', 'El usuario no tiene email');
       }
       
-      // 2. Verificar que el hash coincide
       const expectedHash = crypto.createHash('sha256')
         .update(userEmail + '-revista-secret')
         .digest('hex')
@@ -1501,7 +1548,6 @@ exports.claimAnonymousProfile = onCall(
         throw new HttpsError('permission-denied', 'Hash de verificación inválido');
       }
       
-      // 3. Buscar todas las submissions de este autor para actualizarlas
       const submissionsSnapshot = await db.collection('submissions')
         .where('status', 'in', ['published', 'accepted'])
         .get();
@@ -1515,7 +1561,6 @@ exports.claimAnonymousProfile = onCall(
         
         if (data.authors && Array.isArray(data.authors)) {
           const updatedAuthors = data.authors.map(author => {
-            // Si el email coincide y no tiene UID, asignarle el UID
             if (author.email && 
                 author.email.toLowerCase() === userEmail.toLowerCase() && 
                 !author.uid) {
@@ -1523,7 +1568,7 @@ exports.claimAnonymousProfile = onCall(
               articlesClaimed++;
               return {
                 ...author,
-                uid: uid, // Asignar el UID del usuario registrado
+                uid: uid,
                 claimedAt: new Date().toISOString()
               };
             }
@@ -1536,13 +1581,11 @@ exports.claimAnonymousProfile = onCall(
         }
       });
       
-      // 4. Guardar en el usuario que ha reclamado
       batch.update(db.collection('users').doc(uid), {
         claimedAnonymousUid: anonymousUid,
         claimedAnonymousName: anonymousName,
         claimedAt: admin.firestore.FieldValue.serverTimestamp(),
         articlesClaimed: articlesClaimed,
-        // Asegurar rol de Autor
         roles: admin.firestore.FieldValue.arrayUnion('Autor')
       });
       
@@ -1550,10 +1593,8 @@ exports.claimAnonymousProfile = onCall(
       
       console.log(`✅ Perfil reclamado: ${anonymousName} (${anonymousUid}) → ${uid} (${userEmail}) - ${articlesClaimed} artículos actualizados`);
       
-      // 5. Disparar rebuild del equipo y artículos
-      const octokit = new Octokit({ auth: GH_TOKEN.value() });
+      const octokit = getOctokit();
       
-      // Rebuild del equipo (para actualizar perfil)
       await octokit.request('POST /repos/{owner}/{repo}/dispatches', {
         owner: 'revista1919',
         repo: 'team',
@@ -1566,7 +1607,6 @@ exports.claimAnonymousProfile = onCall(
         }
       });
       
-      // Rebuild de artículos (para actualizar enlaces)
       await octokit.request('POST /repos/{owner}/{repo}/dispatches', {
         owner: 'revista1919',
         repo: 'revista1919.github.io',
@@ -1591,10 +1631,20 @@ exports.claimAnonymousProfile = onCall(
     }
   }
 );
+
+/* ===================== DRIVE HELPERS ===================== */
 async function getDriveClient() {
   console.log('🔧 Inicializando cliente de Drive...');
   
   try {
+    // Verificar que google esté disponible
+    if (!google) {
+      await loadDependencies();
+      if (!google) {
+        throw new Error('Google APIs no disponible');
+      }
+    }
+    
     const clientId = OAUTH2_CLIENT_ID.value();
     const clientSecret = OAUTH2_CLIENT_SECRET.value();
     const refreshToken = OAUTH2_REFRESH_TOKEN.value();
@@ -1629,23 +1679,7 @@ async function getDriveClient() {
   }
 }
 
-/**
- * Crea una carpeta en Google Drive
- * @param {google.drive} drive - Cliente de Drive inicializado
- * @param {string} folderName - Nombre de la carpeta
- * @param {string|null} parentId - ID de carpeta padre (opcional)
- * @returns {Promise<{id: string, webViewLink: string}>}
- */
-/**
- * Crea una carpeta en Google Drive
- * @param {google.drive} drive - Cliente de Drive inicializado
- * @param {string} folderName - Nombre de la carpeta
- * @param {string|null} parentId - ID de carpeta padre (opcional)
- * @returns {Promise<{id: string, webViewLink: string}>}
- */
 async function createDriveFolder(drive, folderName, parentId = null) {
-  const folderOpId = `folder-${Date.now()}`;
-  
   try {
     if (!folderName) throw new Error('folderName es requerido');
     if (!drive) throw new Error('Drive client no inicializado');
@@ -1678,30 +1712,18 @@ async function createDriveFolder(drive, folderName, parentId = null) {
   }
 }
 
-/**
- * Sube un archivo a Google Drive
- * @param {google.drive} drive - Cliente de Drive inicializado
- * @param {string} fileBase64 - Archivo en base64
- * @param {string} fileName - Nombre del archivo
- * @param {string} folderId - ID de la carpeta destino
- * @returns {Promise<{id: string, webViewLink: string}>}
- */
 async function uploadToDrive(drive, fileBase64, fileName, folderId) {
-  const uploadId = `upload-${Date.now()}`;
-  
   try {
     if (!fileBase64 || !fileName || !folderId) {
       throw new Error('Parámetros requeridos faltantes');
     }
     
-    // Limpiar base64
     if (fileBase64.includes('base64,')) {
       fileBase64 = fileBase64.split('base64,')[1];
     }
     
     const fileBuffer = Buffer.from(fileBase64, 'base64');
     
-    // Validar tamaño (máx 10MB)
     const maxSize = 10 * 1024 * 1024;
     if (fileBuffer.length > maxSize) {
       throw new Error(`Archivo demasiado grande: ${(fileBuffer.length / 1024 / 1024).toFixed(2)}MB`);
@@ -1736,7 +1758,6 @@ async function uploadToDrive(drive, fileBase64, fileName, folderId) {
       throw new Error('No se recibió ID del archivo');
     }
     
-    // Configurar permisos públicos
     try {
       await drive.permissions.create({
         fileId: response.data.id,
@@ -1759,15 +1780,6 @@ async function uploadToDrive(drive, fileBase64, fileName, folderId) {
   }
 }
 
-/* ===================== EMAIL HELPERS ===================== */
-
-/**
- * Encola un email para ser enviado vía extensión de Firebase
- * @param {string} to - Email destino
- * @param {string} subject - Asunto
- * @param {string} htmlBody - Cuerpo HTML
- * @returns {Promise<void>}
- */
 async function sendEmailViaExtension(to, subject, htmlBody) {
   try {
     if (!to || !subject || !htmlBody) {
@@ -1790,16 +1802,6 @@ async function sendEmailViaExtension(to, subject, htmlBody) {
   }
 }
 
-/**
- * Genera plantilla HTML para emails con diseño institucional
- * @param {string} title - Título del email
- * @param {string} greeting - Saludo personalizado
- * @param {string} body - Contenido principal
- * @param {string} signatureName - Nombre del firmante
- * @param {string} signatureTitle - Título del firmante
- * @param {string} lang - Idioma ('es' o 'en')
- * @returns {string} HTML completo
- */
 function getEmailTemplate(title, greeting, body, signatureName, signatureTitle, lang = 'es') {
   const journalName = lang === 'es' 
     ? 'Revista Nacional de las Ciencias para Estudiantes'
@@ -1876,13 +1878,6 @@ function getEmailTemplate(title, greeting, body, signatureName, signatureTitle, 
 </html>`;
 }
 
-/* ===================== VALIDATION HELPERS ===================== */
-
-/**
- * Valida que un archivo sea un documento Word válido
- * @param {string} base64Header - Primeros bytes en base64
- * @returns {boolean}
- */
 function isValidDocument(base64Header) {
   try {
     if (!base64Header || base64Header.length < 30) return false;
@@ -1899,11 +1894,6 @@ function isValidDocument(base64Header) {
   }
 }
 
-/**
- * Sanitiza texto para evitar XSS
- * @param {string} text 
- * @returns {string}
- */
 function sanitizeText(text) {
   if (!text) return '';
   return text
@@ -1916,11 +1906,6 @@ function sanitizeText(text) {
 }
 
 /* ===================== SUBMIT ARTICLE ===================== */
-
-/**
- * Función principal para envío de artículos
- * HTTP POST endpoint: /submitArticle
- */
 exports.submitArticle = onRequest(
   { 
     secrets: [OAUTH2_CLIENT_ID, OAUTH2_CLIENT_SECRET, OAUTH2_REFRESH_TOKEN],
@@ -1950,7 +1935,6 @@ exports.submitArticle = onRequest(
       const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
       const db = admin.firestore();
       
-      // Rate limiting simple
       const recentSubmissions = await db.collection('submissions')
         .where('ipAddress', '==', clientIp)
         .where('createdAt', '>', new Date(Date.now() - 60 * 60 * 1000))
@@ -1992,8 +1976,8 @@ exports.submitArticle = onRequest(
         minorAuthors, excludedReviewers,
         manuscriptBase64, manuscriptName,
         authorEmail, authorName,
-        articleType,          // ← NUEVO
-        acknowledgments       // ← NUEVO
+        articleType,
+        acknowledgments
       } = req.body;
 
       const requiredFields = { title, abstract, keywords, area, manuscriptBase64, authors, articleType };
@@ -2033,6 +2017,14 @@ exports.submitArticle = onRequest(
       const submissionId = `SUB-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
       console.log(`📄 Submission ID: ${submissionId}`);
 
+      // Verificar que google esté disponible
+      if (!google) {
+        await loadDependencies();
+        if (!google) {
+          return res.status(500).json({ error: 'Servicio Google Drive no disponible' });
+        }
+      }
+
       let drive;
       try {
         drive = await getDriveClient();
@@ -2068,43 +2060,40 @@ exports.submitArticle = onRequest(
           requestId
         });
       }
-// ================================================
-// NUEVO: Permisos SOLO para editores (restringido)
-// ================================================
-console.log('🔒 Configurando permisos restringidos para editores...');
 
-const editorSnapshotForPermissions = await db.collection('users')
-  .where('roles', 'array-contains-any', ['Director General', 'Editor en Jefe'])
-  .get();
+      console.log('🔒 Configurando permisos restringidos para editores...');
 
-const editorEmailsForPermissions = [];
-editorSnapshotForPermissions.forEach(doc => {
-  const data = doc.data();
-  if (data.email) editorEmailsForPermissions.push(data.email);
-});
+      const editorSnapshotForPermissions = await db.collection('users')
+        .where('roles', 'array-contains-any', ['Director General', 'Editor en Jefe'])
+        .get();
 
-// Fallback si no hay editores en la BD
-if (editorEmailsForPermissions.length === 0) {
-  editorEmailsForPermissions.push('contact@revistacienciasestudiantes.com');
-}
+      const editorEmailsForPermissions = [];
+      editorSnapshotForPermissions.forEach(doc => {
+        const data = doc.data();
+        if (data.email) editorEmailsForPermissions.push(data.email);
+      });
 
-for (const email of editorEmailsForPermissions) {
-  try {
-    await drive.permissions.create({
-      fileId: folder.id,
-      requestBody: {
-        role: 'writer',           // writer = pueden ver, comentar, mover, añadir archivos
-        type: 'user',
-        emailAddress: email
-      },
-      sendNotificationEmail: false   // sin spam
-    });
-    console.log(`✅ Permiso writer otorgado a editor: ${email}`);
-  } catch (permErr) {
-    console.error(`❌ Error permiso para ${email}:`, permErr.message);
-  }
-}
-// ================================================
+      if (editorEmailsForPermissions.length === 0) {
+        editorEmailsForPermissions.push('contact@revistacienciasestudiantes.com');
+      }
+
+      for (const email of editorEmailsForPermissions) {
+        try {
+          await drive.permissions.create({
+            fileId: folder.id,
+            requestBody: {
+              role: 'writer',
+              type: 'user',
+              emailAddress: email
+            },
+            sendNotificationEmail: false
+          });
+          console.log(`✅ Permiso writer otorgado a editor: ${email}`);
+        } catch (permErr) {
+          console.error(`❌ Error permiso para ${email}:`, permErr.message);
+        }
+      }
+
       const crypto = require('crypto');
       const fileBuffer = Buffer.from(manuscriptBase64, 'base64');
       const integrityHash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
@@ -2112,7 +2101,6 @@ for (const email of editorEmailsForPermissions) {
       const processedAuthors = [];
       const consentFiles = [];
 
-      // Procesar autores principales (incluye nueva contribución)
       for (const author of authors) {
         const authorData = {
           firstName: sanitizeText(author.firstName),
@@ -2120,7 +2108,7 @@ for (const email of editorEmailsForPermissions) {
           email: author.email,
           institution: sanitizeText(author.institution),
           orcid: author.orcid || null,
-          contribution: sanitizeText(author.contribution || ''),   // ← NUEVO
+          contribution: sanitizeText(author.contribution || ''),
           isMinor: Boolean(author.isMinor),
           guardianName: author.isMinor ? sanitizeText(author.guardianName) : null,
           isCorresponding: Boolean(author.isCorresponding)
@@ -2135,7 +2123,6 @@ for (const email of editorEmailsForPermissions) {
         processedAuthors.push(authorData);
       }
 
-      // PROCESAMIENTO DE CONSENTIMIENTOS DE MENORES (CORREGIDO - usa minorAuthors del frontend)
       if (Array.isArray(minorAuthors)) {
         for (const minor of minorAuthors) {
           if (minor.consentMethod === 'upload' && minor.consentFile?.data) {
@@ -2172,12 +2159,10 @@ for (const email of editorEmailsForPermissions) {
         }
       }
 
-      // Sanitizar minorAuthors (eliminar base64 grande antes de guardar en Firestore)
       const sanitizedMinorAuthors = (minorAuthors || []).map(m => ({
         name: sanitizeText(m.name),
         guardianName: sanitizeText(m.guardianName),
         consentMethod: m.consentMethod
-        // NO guardamos el base64 del archivo aquí
       }));
 
       const submissionData = {
@@ -2196,8 +2181,8 @@ for (const email of editorEmailsForPermissions) {
         area: sanitizeText(area),
         paperLanguage: paperLanguage === 'en' ? 'en' : 'es',
         
-        articleType: articleType ? sanitizeText(articleType) : null,           // ← NUEVO
-        acknowledgments: acknowledgments ? sanitizeText(acknowledgments) : '', // ← NUEVO
+        articleType: articleType ? sanitizeText(articleType) : null,
+        acknowledgments: acknowledgments ? sanitizeText(acknowledgments) : '',
         
         authors: processedAuthors,
         
@@ -2205,7 +2190,7 @@ for (const email of editorEmailsForPermissions) {
         conflictOfInterest: conflictOfInterest ? sanitizeText(conflictOfInterest) : '',
         
         hasMinorAuthors: processedAuthors.some(a => a.isMinor),
-        minorAuthors: sanitizedMinorAuthors,   // ← sanitizado
+        minorAuthors: sanitizedMinorAuthors,
         consentFiles,
         
         excludedReviewers: excludedReviewers 
@@ -2308,7 +2293,7 @@ for (const email of editorEmailsForPermissions) {
             <p><strong>Autor:</strong> ${sanitizeText(authorName)}</p>
             <p><strong>Email:</strong> ${authorEmailToUse}</p>
             <p><strong>Área:</strong> ${sanitizeText(area)}</p>
-            <p><strong>Tipo de artículo:</strong> ${articleType ? articleType.toUpperCase() : 'No especificado'}</p>  <!-- ← NUEVO -->
+            <p><strong>Tipo de artículo:</strong> ${articleType ? articleType.toUpperCase() : 'No especificado'}</p>
             <p><strong>Idioma:</strong> ${paperLanguage === 'es' ? 'Español' : 'Inglés'}</p>
             ${fundingInfo}
             <p><strong>Autores (${authors.length}):</strong><br>${authorsList}</p>
@@ -2466,11 +2451,6 @@ for (const email of editorEmailsForPermissions) {
 );
 
 /* ===================== GET USER SUBMISSIONS ===================== */
-
-/**
- * Obtiene todos los envíos del usuario autenticado
- * Callable function para llamar desde el frontend
- */
 exports.getUserSubmissions = onCall(async (request) => {
   const { HttpsError } = require("firebase-functions/v2/https");
   
@@ -2511,7 +2491,7 @@ exports.getUserSubmissions = onCall(async (request) => {
         createdAt: data.createdAt?.toDate()?.toISOString(),
         area: data.area,
         paperLanguage: data.paperLanguage,
-        articleType: data.articleType   // ← NUEVO
+        articleType: data.articleType
       });
       lastDocId = doc.id;
     });
@@ -2533,11 +2513,6 @@ exports.getUserSubmissions = onCall(async (request) => {
 });
 
 /* ===================== CHECK SUBMISSION STATUS ===================== */
-
-/**
- * Verifica el estado detallado de un envío específico
- * Callable function para llamar desde el frontend
- */
 exports.checkSubmissionStatus = onCall(async (request) => {
   const { HttpsError } = require("firebase-functions/v2/https");
   
@@ -2598,8 +2573,8 @@ exports.checkSubmissionStatus = onCall(async (request) => {
         keywords: submission.keywords,
         area: submission.area,
         paperLanguage: submission.paperLanguage,
-        articleType: submission.articleType,           // ← NUEVO
-        acknowledgments: submission.acknowledgments,   // ← NUEVO
+        articleType: submission.articleType,
+        acknowledgments: submission.acknowledgments,
         status: submission.status,
         currentRound: submission.currentRound,
         createdAt: submission.createdAt?.toDate()?.toISOString(),

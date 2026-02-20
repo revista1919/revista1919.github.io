@@ -19,14 +19,14 @@ import {
 } from '@heroicons/react/24/outline';
 
 // --- Constantes de Configuración ---
+// --- Constantes de Configuración ---
 const DOMAIN = 'https://www.revistacienciasestudiantes.com';
-const ARTICLES_JSON_URL = `${DOMAIN}/articles.json`; // <-- NUEVA URL
-const MANAGE_ARTICLES_URL = 'https://managearticles-ggqsq2kkua-uc.a.run.app';
-const MANAGE_VOLUMES_URL = 'https://managevolumes-ggqsq2kkua-uc.a.run.app';
-const REBUILD_URL = 'https://triggerrebuild-ggqsq2kkua-uc.a.run.app';
+const ARTICLES_JSON_URL = `${DOMAIN}/articles.json`;
+const MANAGE_ARTICLES_URL = 'https://managearticles-ggqsq2kkua-uc.a.run.app/';  // ← con slash al final
+const MANAGE_VOLUMES_URL = 'https://managevolumes-ggqsq2kkua-uc.a.run.app/';      // ← con slash al final
+const REBUILD_URL = 'https://triggerrebuild-ggqsq2kkua-uc.a.run.app/';            // ← con slash al final
 const REPO_OWNER = 'revista1919';
 const REPO_NAME = 'revista1919.github.io';
-
 const generateSlug = (name) => {
   if (!name) return '';
   return name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-').replace(/[^\w-]/g, '').replace(/-+/g, '-').replace(/^-+|-+$/g, '');
