@@ -31,41 +31,50 @@ if (!admin.apps.length) {
 let GoogleGenAI, Octokit, FormData, fetch, google, http, https;
 
 // Función para cargar dependencias bajo demanda
+// Función para cargar dependencias bajo demanda - VERSIÓN MEJORADA
 async function loadDependencies() {
-  const modules = await Promise.allSettled([
-    import('@google/genai').then(m => m.GoogleGenAI),
-    import('@octokit/rest').then(m => m.Octokit),
-    import('form-data').then(m => m.default),
-    import('node-fetch').then(m => m.default),
-    import('googleapis').then(m => m.google),
-    import('http').then(m => m.default),
-    import('https').then(m => m.default)
-  ]);
+  console.log("📦 Cargando dependencias...");
   
-  GoogleGenAI = modules[0].status === 'fulfilled' ? modules[0].value : null;
-  Octokit = modules[1].status === 'fulfilled' ? modules[1].value : null;
-  FormData = modules[2].status === 'fulfilled' ? modules[2].value : null;
-  fetch = modules[3].status === 'fulfilled' ? modules[3].value : null;
-  google = modules[4].status === 'fulfilled' ? modules[4].value : null;
-  http = modules[5].status === 'fulfilled' ? modules[5].value : null;
-  https = modules[6].status === 'fulfilled' ? modules[6].value : null;
-  
-  console.log("📦 Dependencias cargadas:", {
-    GoogleGenAI: !!GoogleGenAI,
-    Octokit: !!Octokit,
-    FormData: !!FormData,
-    fetch: !!fetch,
-    google: !!google,
-    http: !!http,
-    https: !!https
-  });
+  try {
+    const modules = await Promise.allSettled([
+      import('@google/genai').then(m => m.GoogleGenAI).catch(e => { console.error('Error cargando GoogleGenAI:', e.message); return null; }),
+      import('@octokit/rest').then(m => m.Octokit).catch(e => { console.error('Error cargando Octokit:', e.message); return null; }),
+      import('form-data').then(m => m.default).catch(e => { console.error('Error cargando FormData:', e.message); return null; }),
+      import('node-fetch').then(m => m.default).catch(e => { console.error('Error cargando fetch:', e.message); return null; }),
+      import('googleapis').then(m => m.google).catch(e => { console.error('Error cargando googleapis:', e.message); return null; }),
+      import('http').then(m => m.default).catch(e => { console.error('Error cargando http:', e.message); return null; }),
+      import('https').then(m => m.default).catch(e => { console.error('Error cargando https:', e.message); return null; })
+    ]);
+    
+    GoogleGenAI = modules[0].status === 'fulfilled' ? modules[0].value : null;
+    Octokit = modules[1].status === 'fulfilled' ? modules[1].value : null;
+    FormData = modules[2].status === 'fulfilled' ? modules[2].value : null;
+    fetch = modules[3].status === 'fulfilled' ? modules[3].value : null;
+    google = modules[4].status === 'fulfilled' ? modules[4].value : null;
+    http = modules[5].status === 'fulfilled' ? modules[5].value : null;
+    https = modules[6].status === 'fulfilled' ? modules[6].value : null;
+    
+    console.log("📦 Estado de dependencias:", {
+      GoogleGenAI: !!GoogleGenAI,
+      Octokit: !!Octokit,
+      FormData: !!FormData,
+      fetch: !!fetch,
+      google: !!google,
+      http: !!http,
+      https: !!https
+    });
+    
+    // Inicializar agentes si es posible
+    if (http && https && !httpAgent) {
+      initAgents();
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("❌ Error crítico cargando dependencias:", error);
+    return false;
+  }
 }
-
-// Cargar dependencias inmediatamente pero sin bloquear el healthcheck
-loadDependencies().catch(err => {
-  console.error("❌ Error cargando dependencias:", err.message);
-});
-
 /* ===================== SECRETS ===================== */
 const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
 const IMGBB_API_KEY = defineSecret("IMGBB_API_KEY");
@@ -1656,8 +1665,8 @@ exports.claimAnonymousProfile = onCall(
 );
 
 /* ===================== DRIVE HELPERS ===================== */
-async function getDriveClient() {
-  console.log('🔧 Inicializando cliente de Drive...');
+async function getDriveClient(requestId = 'unknown') {
+  console.log(`[${requestId}] 🔧 Inicializando cliente de Drive...`);
   
   try {
     // Verificar que google esté disponible
@@ -1689,10 +1698,11 @@ async function getDriveClient() {
     await oauth2Client.getAccessToken();
     const drive = google.drive({ version: 'v3', auth: oauth2Client });
     
+    console.log(`[${requestId}] ✅ Drive inicializado correctamente`);
     return drive;
     
   } catch (error) {
-    console.error('❌ Error inicializando Drive:', error.message);
+    console.error(`[${requestId}] ❌ Error inicializando Drive:`, error.message);
     
     if (error.message.includes('invalid_grant')) {
       throw new Error('Refresh token inválido o expirado');
@@ -1701,7 +1711,6 @@ async function getDriveClient() {
     throw new Error(`Failed to initialize Drive: ${error.message}`);
   }
 }
-
 async function createDriveFolder(drive, folderName, parentId = null) {
   try {
     if (!folderName) throw new Error('folderName es requerido');
@@ -1816,10 +1825,24 @@ async function sendEmailViaExtension(to, subject, htmlBody) {
         subject: subject,
         html: htmlBody
       },
+      // Agregar headers para desactivar tracking
+      headers: {
+        'X-Mailgun-Track': 'no',  // Para Mailgun
+        'X-SMTPAPI': JSON.stringify({  // Para SendGrid
+          filters: {
+            clicktrack: {
+              settings: {
+                enable: 0
+              }
+            }
+          }
+        })
+      },
       createdAt: admin.firestore.FieldValue.serverTimestamp()
     };
     
     await db.collection('mail').add(emailData);
+    console.log(`✅ Email encolado para: ${to}`);
   } catch (error) {
     console.error('❌ Error queueing email:', error.message);
   }
@@ -2041,22 +2064,48 @@ exports.submitArticle = onRequest(
       console.log(`📄 Submission ID: ${submissionId}`);
 
       // Verificar que google esté disponible
-      if (!google) {
-        await loadDependencies();
-        if (!google) {
-          return res.status(500).json({ error: 'Servicio Google Drive no disponible' });
-        }
-      }
+      // Verificar que google esté disponible
+// Verificar que google esté disponible - con reintentos
+let googleAvailable = false;
+let attempts = 0;
+const maxAttempts = 3;
 
-      let drive;
-      try {
-        drive = await getDriveClient();
-      } catch (driveError) {
-        return res.status(500).json({ 
-          error: 'Error en servicio de almacenamiento',
-          requestId
-        });
-      }
+while (!googleAvailable && attempts < maxAttempts) {
+  if (!google) {
+    console.log(`[${requestId}] ⏳ Intento ${attempts + 1}/${maxAttempts}: Cargando dependencias de Google Drive...`);
+    await loadDependencies();
+  }
+  
+  if (google) {
+    googleAvailable = true;
+    console.log(`[${requestId}] ✅ Google Drive disponible después de ${attempts + 1} intentos`);
+  } else {
+    attempts++;
+    if (attempts < maxAttempts) {
+      // Esperar 1 segundo antes de reintentar
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+}
+
+if (!googleAvailable) {
+  console.error(`[${requestId}] ❌ Google Drive no disponible después de ${maxAttempts} intentos`);
+  return res.status(500).json({ 
+    error: 'Servicio Google Drive no disponible',
+    requestId
+  });
+}
+      // En submitArticle, dentro del try principal
+let drive;
+try {
+  drive = await getDriveClient(requestId);  // <-- PASA requestId AQUÍ
+} catch (driveError) {
+  console.error(`[${requestId}] ❌ Error obteniendo cliente Drive:`, driveError);
+  return res.status(500).json({ 
+    error: 'Error en servicio de almacenamiento',
+    requestId
+  });
+}
 
       const safeTitle = title.substring(0, 30).replace(/[^a-zA-Z0-9]/g, '_');
       const folderName = `Submission_${submissionId}_${safeTitle}`;

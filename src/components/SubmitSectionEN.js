@@ -5,6 +5,10 @@ import { motion } from 'framer-motion';
 function SubmitSection() {
   const navigate = useNavigate();
 
+  const handleSubmitClick = () => {
+    navigate('/en/login');
+  };
+
   return (
     <motion.div
       className="max-w-5xl mx-auto mt-8 mb-16 px-4"
@@ -58,28 +62,74 @@ function SubmitSection() {
         </div>
       </div>
 
-      {/* Form Container */}
+      {/* New Submission Container */}
       <div className="bg-white border border-gray-200 shadow-sm rounded-sm overflow-hidden">
         <div className="bg-gray-900 py-3 px-6">
           <span className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.2em]">
-            Official Reception Portal
+            Manuscript Submission System
           </span>
         </div>
-        <div className="relative w-full h-[800px] bg-gray-50">
-          <iframe
-            src="https://docs.google.com/forms/d/e/1FAIpQLSf3oTgTOurPOKTmUeBMYxq1XtVLHkI6R0l9CoqFmMyLOlEefg/viewform?embedded=true"
-            className="absolute inset-0 w-full h-full"
-            frameBorder="0"
-            marginHeight="0"
-            marginWidth="0"
-          >
-            Loading form...
-          </iframe>
+        
+        <div className="p-12 text-center">
+          <div className="max-w-md mx-auto">
+            <svg 
+              className="w-16 h-16 mx-auto text-gray-400 mb-4" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={1.5} 
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" 
+              />
+            </svg>
+            
+            <h3 className="text-xl font-serif font-bold text-gray-900 mb-3">
+              Submit your manuscript through the portal
+            </h3>
+            
+            <p className="text-gray-600 mb-6">
+              To submit your manuscript, you must log in or create an account in our editorial system. Once inside, go to the "Submit Manuscript" tab to complete the process.
+            </p>
+
+            <div className="space-y-3">
+              <button
+                onClick={handleSubmitClick}
+                className="w-full bg-gray-900 text-white py-3 px-6 rounded-sm hover:bg-gray-800 transition-colors font-medium"
+              >
+                Log in or create account
+              </button>
+              
+              <p className="text-sm text-gray-500">
+                Already have an account?{' '}
+                <button
+                  onClick={handleSubmitClick}
+                  className="text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  Sign in now
+                </button>
+              </p>
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              <p className="text-xs text-gray-500">
+                Para envíos en español,{' '}
+                <a 
+                  href="/login" 
+                  className="text-blue-600 hover:text-blue-800"
+                >
+                  acceda al portal en español
+                </a>
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
       <footer className="mt-8 text-center text-xs text-gray-400">
-        If you experience technical difficulties with the form, contact editorial support.
+        Need help? Contact editorial support
       </footer>
     </motion.div>
   );

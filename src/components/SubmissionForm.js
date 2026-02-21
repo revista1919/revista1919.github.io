@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { auth } from '../firebase';
 import { useLanguage } from '../hooks/useLanguage';
 
-// Componente de Tooltip/Cápsula explicativa (modernizado, minimalista, con flecha)
+// Componente de Tooltip/Cápsula explicativa (estilo Oxford)
 const HelpCapsule = ({ text, textEn }) => {
   const [show, setShow] = useState(false);
   const { language } = useLanguage();
@@ -16,7 +16,7 @@ const HelpCapsule = ({ text, textEn }) => {
         onMouseEnter={() => setShow(true)}
         onMouseLeave={() => setShow(false)}
         onClick={() => setShow(!show)}
-        className="w-4 h-4 rounded-full border border-zinc-300 text-zinc-400 text-xs flex items-center justify-center hover:border-emerald-600 hover:text-emerald-600 hover:bg-emerald-50 transition-all duration-200"
+        className="w-4 h-4 rounded-full border border-zinc-300 text-zinc-400 text-xs flex items-center justify-center hover:border-[#0A1929] hover:text-[#0A1929] hover:bg-[#E5E9F0] transition-all duration-200 font-serif"
         aria-label="Ayuda"
       >
         i
@@ -27,9 +27,9 @@ const HelpCapsule = ({ text, textEn }) => {
             initial={{ opacity: 0, scale: 0.95, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 8 }}
-            className="absolute z-50 bottom-full mb-3 left-1/2 -translate-x-1/2 w-72 p-4 bg-zinc-900 text-white text-xs rounded-2xl shadow-2xl leading-relaxed"
+            className="absolute z-50 bottom-full mb-3 left-1/2 -translate-x-1/2 w-72 p-4 bg-[#0A1929] text-white text-xs rounded-2xl shadow-2xl leading-relaxed font-serif"
           >
-            <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-zinc-900" />
+            <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-[#0A1929]" />
             {displayText}
           </motion.div>
         )}
@@ -38,7 +38,7 @@ const HelpCapsule = ({ text, textEn }) => {
   );
 };
 
-// Componente para Keywords con chips (limpio y moderno)
+// Componente para Keywords con chips (estilo Oxford)
 const KeywordInput = ({ value, onChange, placeholder, label, helpText, helpTextEn }) => {
   const [inputValue, setInputValue] = useState('');
   const { language } = useLanguage();
@@ -67,7 +67,7 @@ const KeywordInput = ({ value, onChange, placeholder, label, helpText, helpTextE
 
   return (
     <div className="space-y-3">
-      <label className="block text-[10px] font-mono font-semibold uppercase tracking-[0.125em] text-zinc-500 flex items-center">
+      <label className="block text-[10px] font-mono font-semibold uppercase tracking-[0.125em] text-[#546E7A] flex items-center">
         {label}
         <HelpCapsule text={helpText} textEn={helpTextEn} />
       </label>
@@ -79,12 +79,12 @@ const KeywordInput = ({ value, onChange, placeholder, label, helpText, helpTextE
           onChange={(e) => setInputValue(e.target.value)}
           onKeyPress={handleKeyPress}
           placeholder={placeholder}
-          className="flex-1 p-3.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all"
+          className="flex-1 p-3.5 bg-white border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] focus:ring-1 focus:ring-[#0A1929] outline-none transition-all font-serif"
         />
         <button
           type="button"
           onClick={addKeyword}
-          className="px-5 py-3 bg-emerald-50 text-emerald-700 rounded-2xl text-sm font-medium hover:bg-emerald-100 transition-colors"
+          className="px-5 py-3 bg-[#E5E9F0] text-[#0A1929] rounded-2xl text-sm font-medium hover:bg-[#CCD4E0] transition-colors font-serif"
         >
           {isSpanish ? 'Agregar' : 'Add'}
         </button>
@@ -95,13 +95,13 @@ const KeywordInput = ({ value, onChange, placeholder, label, helpText, helpTextE
           {keywords.map((keyword, index) => (
             <span
               key={index}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-zinc-100 text-zinc-700 rounded-2xl text-xs font-medium"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#E5E9F0] text-[#0A1929] rounded-2xl text-xs font-medium font-serif"
             >
               {keyword}
               <button
                 type="button"
                 onClick={() => removeKeyword(index)}
-                className="text-zinc-400 hover:text-red-500 transition-colors"
+                className="text-[#546E7A] hover:text-[#B22234] transition-colors"
               >
                 ✕
               </button>
@@ -113,7 +113,7 @@ const KeywordInput = ({ value, onChange, placeholder, label, helpText, helpTextE
   );
 };
 
-// Componente para manejo de autores menores (CORREGIDO: ahora incluye guardianName, consentMethod controlado y validación completa)
+// Componente para manejo de autores menores
 const MinorConsentSection = ({ author, index, onUpdate }) => {
   const { language } = useLanguage();
   const isSpanish = language === 'es';
@@ -151,11 +151,11 @@ const MinorConsentSection = ({ author, index, onUpdate }) => {
       initial={{ opacity: 0, height: 0 }}
       animate={{ opacity: 1, height: 'auto' }}
       exit={{ opacity: 0, height: 0 }}
-      className="mt-6 pt-6 border-t border-zinc-200 space-y-5 bg-amber-50/50 rounded-2xl p-5"
+      className="mt-6 pt-6 border-t border-[#E0E7E9] space-y-5 bg-[#F5F7FA] rounded-2xl p-5"
     >
-      <div className="flex items-center gap-2 text-amber-800">
+      <div className="flex items-center gap-2 text-[#B22234]">
         <span className="text-lg">📋</span>
-        <p className="text-sm font-medium">
+        <p className="text-sm font-medium font-serif">
           {isSpanish
             ? 'Autor menor de edad: se requiere consentimiento legal'
             : 'Minor author: legal guardian consent required'}
@@ -164,21 +164,21 @@ const MinorConsentSection = ({ author, index, onUpdate }) => {
 
       {/* Nombre del tutor */}
       <div>
-        <label className="block text-xs font-medium text-zinc-600 mb-1.5">
+        <label className="block text-xs font-medium text-[#1A2B3C] mb-1.5 font-serif">
           {isSpanish ? 'Nombre completo del tutor legal *' : 'Legal guardian full name *'}
         </label>
         <input
           type="text"
           value={author.guardianName || ''}
           onChange={(e) => onUpdate(index, 'guardianName', e.target.value)}
-          className="w-full p-3.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:border-emerald-500 outline-none"
+          className="w-full p-3.5 bg-white border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif"
           placeholder={isSpanish ? 'Juan Pérez López' : 'John Doe Smith'}
         />
       </div>
 
       {/* Método de consentimiento */}
       <div className="space-y-4">
-        <p className="text-xs uppercase tracking-widest text-zinc-500 font-mono">Método de consentimiento</p>
+        <p className="text-xs uppercase tracking-widest text-[#546E7A] font-mono">Método de consentimiento</p>
 
         <label className="flex items-start gap-3 cursor-pointer">
           <input
@@ -187,18 +187,18 @@ const MinorConsentSection = ({ author, index, onUpdate }) => {
             value="email"
             checked={consentMethod === 'email'}
             onChange={() => handleConsentChange('email')}
-            className="mt-0.5 w-4 h-4 text-emerald-600"
+            className="mt-0.5 w-4 h-4 text-[#0A1929]"
           />
           <div>
-            <span className="text-sm text-zinc-700 block">
+            <span className="text-sm text-[#1A2B3C] block font-serif">
               {isSpanish ? 'Enviar por correo electrónico' : 'Send by email'}
             </span>
-            <span className="text-xs text-zinc-500">contact@revistacienciasestudiantes.com</span>
+            <span className="text-xs text-[#546E7A] font-serif">contact@revistacienciasestudiantes.com</span>
           </div>
         </label>
 
         {consentMethod === 'email' && (
-          <div className="ml-7 p-4 bg-white border border-zinc-100 rounded-xl text-xs text-zinc-600">
+          <div className="ml-7 p-4 bg-white border border-[#E0E7E9] rounded-xl text-xs text-[#1A2B3C] font-serif">
             {isSpanish ? (
               <>
                 <p className="font-medium mb-2">El correo debe contener:</p>
@@ -230,9 +230,9 @@ const MinorConsentSection = ({ author, index, onUpdate }) => {
             value="upload"
             checked={consentMethod === 'upload'}
             onChange={() => handleConsentChange('upload')}
-            className="mt-0.5 w-4 h-4 text-emerald-600"
+            className="mt-0.5 w-4 h-4 text-[#0A1929]"
           />
-          <span className="text-sm text-zinc-700">
+          <span className="text-sm text-[#1A2B3C] font-serif">
             {isSpanish ? 'Subir formulario firmado' : 'Upload signed form'}
           </span>
         </label>
@@ -243,7 +243,7 @@ const MinorConsentSection = ({ author, index, onUpdate }) => {
               href={consentUrls[language]}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-emerald-600 hover:text-emerald-700 text-sm underline-offset-4 hover:underline"
+              className="inline-flex items-center gap-2 text-[#0A1929] hover:text-[#B22234] text-sm underline-offset-4 hover:underline font-serif"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v-4m0 0l4 4m-4-4l4-4m12 4v4m0-4l-4 4m4-4l-4-4" />
@@ -255,11 +255,11 @@ const MinorConsentSection = ({ author, index, onUpdate }) => {
               type="file"
               accept=".pdf,.jpg,.jpeg,.png"
               onChange={handleFileUpload}
-              className="block w-full text-sm text-zinc-500 file:mr-4 file:py-3 file:px-6 file:rounded-2xl file:border-0 file:text-sm file:font-medium file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
+              className="block w-full text-sm text-[#546E7A] file:mr-4 file:py-3 file:px-6 file:rounded-2xl file:border-0 file:text-sm file:font-medium file:bg-[#E5E9F0] file:text-[#0A1929] hover:file:bg-[#CCD4E0] font-serif"
             />
 
             {author.consentFile && (
-              <div className="flex items-center gap-2 text-emerald-600 text-xs">
+              <div className="flex items-center gap-2 text-[#0A1929] text-xs font-serif">
                 <span>✅</span>
                 <span>{author.consentFile.name}</span>
               </div>
@@ -271,7 +271,7 @@ const MinorConsentSection = ({ author, index, onUpdate }) => {
   );
 };
 
-// Componente principal COMPLETO
+// Componente principal COMPLETO - ESTILO OXFORD
 export default function SubmissionForm({ user, onSuccess }) {
   const { language } = useLanguage();
   const isSpanish = language === 'es';
@@ -280,6 +280,7 @@ export default function SubmissionForm({ user, onSuccess }) {
   const [uploading, setUploading] = useState(false);
   const [submitStatus, setSubmitStatus] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [submissionId, setSubmissionId] = useState('');
 
   const [formData, setFormData] = useState({
     title: '',
@@ -315,6 +316,12 @@ export default function SubmissionForm({ user, onSuccess }) {
 
     conflictOfInterest: '',
 
+    // NUEVO: Disponibilidad de datos y código
+    dataAvailability: '',
+    dataAvailabilityEn: '',
+    codeAvailability: '',
+    codeAvailabilityEn: '',
+
     declarations: {
       original: false,
       notSubmitted: false,
@@ -330,7 +337,7 @@ export default function SubmissionForm({ user, onSuccess }) {
     manuscriptName: ''
   });
 
-  // Opciones de tipo de artículo (exhaustivo)
+  // Opciones de tipo de artículo
   const articleTypeOptions = {
     es: [
       { value: 'research', label: 'Artículo de Investigación Original' },
@@ -347,6 +354,22 @@ export default function SubmissionForm({ user, onSuccess }) {
       { value: 'case', label: 'Case Report' },
       { value: 'letter', label: 'Letter to the Editor' },
       { value: 'other', label: 'Other (specify)' }
+    ]
+  };
+
+  // Opciones para disponibilidad de datos y código
+  const availabilityOptions = {
+    es: [
+      { value: 'public_repo', label: 'Disponible en repositorio público (enlace en el manuscrito)' },
+      { value: 'upon_request', label: 'Disponible bajo solicitud razonable' },
+      { value: 'not_available', label: 'No disponible (especificar razón)' },
+      { value: 'supplementary', label: 'En material suplementario' }
+    ],
+    en: [
+      { value: 'public_repo', label: 'Available in public repository (link in manuscript)' },
+      { value: 'upon_request', label: 'Available upon reasonable request' },
+      { value: 'not_available', label: 'Not available (specify reason)' },
+      { value: 'supplementary', label: 'In supplementary material' }
     ]
   };
 
@@ -468,7 +491,7 @@ export default function SubmissionForm({ user, onSuccess }) {
 
   const allDeclarationsAccepted = () => Object.values(formData.declarations).every(Boolean);
 
-  // VALIDACIÓN MEJORADA (incluye menores correctamente)
+  // VALIDACIÓN MEJORADA (incluye disponibilidad de datos en step3)
   const validateStep = (step) => {
     switch (step) {
       case 1:
@@ -490,7 +513,10 @@ export default function SubmissionForm({ user, onSuccess }) {
           );
         return basicOk && minorsOk;
       case 3:
-        return allDeclarationsAccepted() && formData.manuscript;
+        // Validación incluye disponibilidad de datos
+        return allDeclarationsAccepted() && 
+               formData.manuscript && 
+               formData.dataAvailability.trim(); // Obligatorio declarar disponibilidad de datos
       default:
         return true;
     }
@@ -499,7 +525,7 @@ export default function SubmissionForm({ user, onSuccess }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateStep(3)) {
-      alert(isSpanish ? 'Completa todos los campos requeridos' : 'Complete all required fields');
+      alert(isSpanish ? 'Completa todos los campos requeridos, incluyendo disponibilidad de datos' : 'Complete all required fields, including data availability');
       return;
     }
 
@@ -527,6 +553,12 @@ export default function SubmissionForm({ user, onSuccess }) {
           paperLanguage: formData.paperLanguage,
           articleType: formData.articleType,
           acknowledgments: formData.acknowledgments,
+
+          // NUEVO: Disponibilidad de datos y código
+          dataAvailability: formData.dataAvailability,
+          dataAvailabilityEn: formData.dataAvailabilityEn,
+          codeAvailability: formData.codeAvailability,
+          codeAvailabilityEn: formData.codeAvailabilityEn,
 
           authors: formData.authors.map(a => ({
             firstName: a.firstName,
@@ -567,6 +599,7 @@ export default function SubmissionForm({ user, onSuccess }) {
       const result = await response.json();
 
       localStorage.removeItem('submissionFormDraft');
+      setSubmissionId(result.submissionId);
       setSubmitStatus(isSpanish ? '✅ Artículo enviado con éxito' : '✅ Article submitted successfully');
       setSubmitted(true);
 
@@ -593,31 +626,93 @@ export default function SubmissionForm({ user, onSuccess }) {
   const steps = [
     { id: 1, title: isSpanish ? 'INFORMACIÓN DEL ARTÍCULO' : 'ARTICLE INFORMATION' },
     { id: 2, title: isSpanish ? 'AUTORES Y ÉTICA' : 'AUTHORS & ETHICS' },
-    { id: 3, title: isSpanish ? 'DECLARACIONES Y ARCHIVO' : 'DECLARATIONS & FILE' }
+    { id: 3, title: isSpanish ? 'DATOS Y DECLARACIONES' : 'DATA & DECLARATIONS' }
   ];
 
-  // Pantalla de éxito final (el formulario "termina")
+  // Pantalla de éxito final (con información de carpetas)
   if (submitted) {
     return (
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="max-w-md mx-auto py-20 text-center"
+        className="max-w-2xl mx-auto py-16 px-4"
       >
-        <div className="mx-auto w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mb-8">
-          <span className="text-5xl">🎉</span>
+        <div className="bg-white border border-[#E0E7E9] shadow-2xl rounded-3xl overflow-hidden">
+          <div className="bg-[#0A1929] p-12 text-center">
+            <div className="mx-auto w-24 h-24 bg-[#E5E9F0] rounded-full flex items-center justify-center mb-6">
+              <span className="text-5xl">📮</span>
+            </div>
+            <h2 className="text-3xl font-light text-white mb-3 font-serif">
+              {isSpanish ? '¡Gracias por tu envío!' : 'Thank you for your submission!'}
+            </h2>
+            <p className="text-[#E0E7E9] font-serif">
+              {isSpanish
+                ? 'Tu artículo ha sido recibido y será revisado por el equipo editorial.'
+                : 'Your article has been received and will be reviewed by the editorial team.'}
+            </p>
+          </div>
+          
+          <div className="p-12 space-y-8">
+            <div className="bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl p-6">
+              <p className="text-xs font-mono text-[#546E7A] mb-2">SUBMISSION ID</p>
+              <p className="text-2xl font-serif text-[#0A1929] tracking-wider">{submissionId}</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Carpeta del autor (ya existe) */}
+              <div className="border border-[#E0E7E9] rounded-2xl p-6 hover:border-[#0A1929] transition-colors">
+                <div className="w-12 h-12 bg-[#E5E9F0] rounded-xl flex items-center justify-center mb-4">
+                  <span className="text-2xl">📁</span>
+                </div>
+                <h3 className="text-lg font-serif text-[#0A1929] mb-2">
+                  {isSpanish ? 'Tu carpeta personal' : 'Your personal folder'}
+                </h3>
+                <p className="text-sm text-[#546E7A] mb-4 font-serif">
+                  {isSpanish 
+                    ? 'Aquí puedes ver los documentos que subiste' 
+                    : 'Here you can view the documents you uploaded'}
+                </p>
+                <a 
+                  href={`https://drive.google.com/drive/folders/${submissionId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-[#0A1929] text-sm font-medium hover:text-[#B22234] transition-colors"
+                >
+                  {isSpanish ? 'Ver mis documentos' : 'View my documents'} →
+                </a>
+              </div>
+
+              {/* Carpeta editorial (nueva) */}
+              <div className="border border-[#E0E7E9] rounded-2xl p-6 hover:border-[#0A1929] transition-colors">
+                <div className="w-12 h-12 bg-[#E5E9F0] rounded-xl flex items-center justify-center mb-4">
+                  <span className="text-2xl">📋</span>
+                </div>
+                <h3 className="text-lg font-serif text-[#0A1929] mb-2">
+                  {isSpanish ? 'Seguimiento editorial' : 'Editorial tracking'}
+                </h3>
+                <p className="text-sm text-[#546E7A] mb-4 font-serif">
+                  {isSpanish 
+                    ? 'Aquí podrás ver el progreso de la revisión' 
+                    : 'Here you can track the review progress'}
+                </p>
+                <a 
+                  href={`/submission/${submissionId}`}
+                  className="inline-flex items-center gap-2 text-[#0A1929] text-sm font-medium hover:text-[#B22234] transition-colors"
+                >
+                  {isSpanish ? 'Ver estado' : 'Check status'} →
+                </a>
+              </div>
+            </div>
+
+            <div className="text-center pt-6 border-t border-[#E0E7E9]">
+              <p className="text-xs text-[#546E7A] font-serif">
+                {isSpanish 
+                  ? 'Recibirás un correo con los detalles del envío' 
+                  : 'You will receive an email with submission details'}
+              </p>
+            </div>
+          </div>
         </div>
-        <h2 className="text-3xl font-light text-zinc-900 mb-3">
-          {isSpanish ? '¡Gracias por tu envío!' : 'Thank you for your submission!'}
-        </h2>
-        <p className="text-zinc-600 mb-8">
-          {isSpanish
-            ? 'Tu artículo ha sido recibido y será revisado por el equipo editorial.'
-            : 'Your article has been received and will be reviewed by the editorial team.'}
-        </p>
-        <p className="text-xs text-zinc-500 font-mono">
-          {isSpanish ? 'ID de envío: ' : 'Submission ID: '} {submitStatus.includes('éxito') ? 'RECIBIDO' : ''}
-        </p>
       </motion.div>
     );
   }
@@ -628,35 +723,35 @@ export default function SubmissionForm({ user, onSuccess }) {
       animate={{ opacity: 1, y: 0 }}
       className="max-w-3xl mx-auto px-4 pb-20"
     >
-      <div className="bg-white border border-zinc-100 shadow-xl shadow-zinc-100/70 rounded-3xl overflow-hidden">
+      <div className="bg-white border border-[#E0E7E9] shadow-2xl shadow-[#0A1929]/5 rounded-3xl overflow-hidden">
 
-        {/* Header minimalista moderno */}
-        <div className="bg-zinc-50 border-b border-zinc-100 p-10 text-center">
+        {/* Header estilo Oxford */}
+        <div className="bg-[#0A1929] border-b border-[#1A2B3C] p-12 text-center">
           <div className="flex justify-center items-center gap-3 mb-4">
-            <div className="h-px w-8 bg-emerald-600" />
-            <span className="uppercase text-[10px] font-mono tracking-[0.2em] text-emerald-600">Revista Nacional de las Ciencias</span>
-            <div className="h-px w-8 bg-emerald-600" />
+            <div className="h-px w-8 bg-[#B22234]" />
+            <span className="uppercase text-[10px] font-mono tracking-[0.2em] text-[#E5E9F0]">Revista Nacional de las Ciencias</span>
+            <div className="h-px w-8 bg-[#B22234]" />
           </div>
-          <h1 className="font-serif text-4xl font-light tracking-tight text-zinc-900">
+          <h1 className="font-serif text-5xl font-light tracking-tight text-white">
             {isSpanish ? 'Envío de Manuscrito' : 'Manuscript Submission'}
           </h1>
-          <p className="text-zinc-500 text-sm mt-2">Sistema seguro • Borrador guardado automáticamente</p>
+          <p className="text-[#E0E7E9] text-sm mt-3 font-serif">Sistema seguro • Borrador guardado automáticamente</p>
         </div>
 
         {/* Stepper moderno */}
-        <div className="px-8 py-7 bg-white border-b border-zinc-100">
+        <div className="px-8 py-7 bg-white border-b border-[#E0E7E9]">
           <div className="flex justify-between items-center relative">
-            <div className="absolute top-5 left-0 w-full h-px bg-zinc-100 z-0" />
+            <div className="absolute top-5 left-0 w-full h-px bg-[#E0E7E9] z-0" />
             {steps.map((step, idx) => (
               <div key={step.id} className="relative z-10 flex flex-col items-center">
                 <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-mono text-base font-semibold transition-all shadow-sm
                   ${currentStep >= step.id
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-white border-2 border-zinc-200 text-zinc-400'}`}>
+                    ? 'bg-[#0A1929] text-white'
+                    : 'bg-white border-2 border-[#E0E7E9] text-[#546E7A]'}`}>
                   {step.id}
                 </div>
                 <span className={`mt-3 text-[10px] font-mono font-bold uppercase tracking-widest text-center max-w-[90px]
-                  ${currentStep >= step.id ? 'text-emerald-600' : 'text-zinc-400'}`}>
+                  ${currentStep >= step.id ? 'text-[#0A1929]' : 'text-[#546E7A]'}`}>
                   {step.title}
                 </span>
               </div>
@@ -678,7 +773,7 @@ export default function SubmissionForm({ user, onSuccess }) {
               >
                 {/* Título */}
                 <div>
-                  <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-zinc-500 mb-2">
+                  <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-2">
                     {isSpanish ? 'Título del artículo' : 'Article title'} *
                     <HelpCapsule text="Claro, conciso y representativo. Máximo 20 palabras." textEn="Clear, concise and representative. Max 20 words." />
                   </label>
@@ -688,13 +783,13 @@ export default function SubmissionForm({ user, onSuccess }) {
                     value={formData.title}
                     onChange={handleInputChange}
                     required
-                    className="w-full p-4 bg-zinc-50 border border-zinc-100 rounded-2xl text-lg font-serif focus:border-emerald-500 outline-none"
+                    className="w-full p-4 bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl text-lg font-serif focus:border-[#0A1929] outline-none"
                     placeholder={isSpanish ? 'Ejemplo: Impacto de la inteligencia artificial...' : 'Example: Impact of artificial intelligence...'}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-zinc-500 mb-2">
+                  <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-2">
                     {isSpanish ? 'Título en inglés (recomendado)' : 'English title (recommended)'}
                   </label>
                   <input
@@ -702,13 +797,13 @@ export default function SubmissionForm({ user, onSuccess }) {
                     name="titleEn"
                     value={formData.titleEn}
                     onChange={handleInputChange}
-                    className="w-full p-4 bg-zinc-50 border border-zinc-100 rounded-2xl text-lg font-serif focus:border-emerald-500 outline-none"
+                    className="w-full p-4 bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl text-lg font-serif focus:border-[#0A1929] outline-none"
                   />
                 </div>
 
                 {/* Resumen */}
                 <div>
-                  <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-zinc-500 mb-2">
+                  <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-2">
                     {isSpanish ? 'Resumen' : 'Abstract'} *
                     <HelpCapsule text="Máximo 250 palabras. Estructurado: introducción, métodos, resultados, conclusiones." textEn="Max 250 words. Structured: introduction, methods, results, conclusions." />
                   </label>
@@ -718,12 +813,12 @@ export default function SubmissionForm({ user, onSuccess }) {
                     onChange={handleInputChange}
                     required
                     rows={7}
-                    className="w-full p-4 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm focus:border-emerald-500 outline-none font-serif"
+                    className="w-full p-4 bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-zinc-500 mb-2">
+                  <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-2">
                     {isSpanish ? 'Abstract en inglés' : 'English abstract'}
                   </label>
                   <textarea
@@ -731,20 +826,20 @@ export default function SubmissionForm({ user, onSuccess }) {
                     value={formData.abstractEn}
                     onChange={handleInputChange}
                     rows={7}
-                    className="w-full p-4 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm focus:border-emerald-500 outline-none font-serif"
+                    className="w-full p-4 bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif"
                   />
                 </div>
 
                 {/* Tipo de artículo */}
                 <div>
-                  <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-zinc-500 mb-2">
+                  <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-2">
                     {isSpanish ? 'Tipo de artículo' : 'Article type'} *
                   </label>
                   <select
                     name="articleType"
                     value={formData.articleType}
                     onChange={handleInputChange}
-                    className="w-full p-4 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm focus:border-emerald-500 outline-none"
+                    className="w-full p-4 bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif"
                   >
                     <option value="">— Selecciona tipo —</option>
                     {articleTypeOptions[isSpanish ? 'es' : 'en'].map(opt => (
@@ -775,7 +870,7 @@ export default function SubmissionForm({ user, onSuccess }) {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div>
-                    <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-zinc-500 mb-2">
+                    <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-2">
                       {isSpanish ? 'Área temática' : 'Subject area'} *
                     </label>
                     <input
@@ -784,20 +879,20 @@ export default function SubmissionForm({ user, onSuccess }) {
                       value={formData.area}
                       onChange={handleInputChange}
                       required
-                      className="w-full p-4 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm focus:border-emerald-500 outline-none"
+                      className="w-full p-4 bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif"
                       placeholder={isSpanish ? 'Ciencias de la Educación' : 'Education Sciences'}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-zinc-500 mb-2">
+                    <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-2">
                       {isSpanish ? 'Idioma del manuscrito' : 'Manuscript language'} *
                     </label>
                     <select
                       name="paperLanguage"
                       value={formData.paperLanguage}
                       onChange={handleInputChange}
-                      className="w-full p-4 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm focus:border-emerald-500 outline-none"
+                      className="w-full p-4 bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif"
                     >
                       <option value="es">Español</option>
                       <option value="en">English</option>
@@ -818,7 +913,7 @@ export default function SubmissionForm({ user, onSuccess }) {
               >
                 {/* Autores */}
                 <div>
-                  <h3 className="font-serif text-2xl font-light text-zinc-900 mb-6 border-b border-zinc-100 pb-4">
+                  <h3 className="font-serif text-2xl font-light text-[#0A1929] mb-6 border-b border-[#E0E7E9] pb-4">
                     {isSpanish ? 'Autores' : 'Authors'}
                   </h3>
 
@@ -827,13 +922,13 @@ export default function SubmissionForm({ user, onSuccess }) {
                       key={index}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="mb-8 bg-white border border-zinc-100 rounded-3xl p-8 relative"
+                      className="mb-8 bg-white border border-[#E0E7E9] rounded-3xl p-8 relative"
                     >
                       {index > 0 && (
                         <button
                           type="button"
                           onClick={() => removeAuthor(index)}
-                          className="absolute top-6 right-6 text-zinc-400 hover:text-red-500"
+                          className="absolute top-6 right-6 text-[#546E7A] hover:text-[#B22234]"
                         >
                           ✕
                         </button>
@@ -841,46 +936,46 @@ export default function SubmissionForm({ user, onSuccess }) {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                          <label className="text-xs text-zinc-500 mb-1 block">Nombre *</label>
+                          <label className="text-xs text-[#546E7A] mb-1 block font-serif">Nombre *</label>
                           <input
                             type="text"
                             value={author.firstName}
                             onChange={(e) => handleAuthorChange(index, 'firstName', e.target.value)}
-                            className="w-full p-3.5 border border-zinc-200 rounded-2xl text-sm focus:border-emerald-500 outline-none"
+                            className="w-full p-3.5 border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif"
                           />
                         </div>
                         <div>
-                          <label className="text-xs text-zinc-500 mb-1 block">Apellido *</label>
+                          <label className="text-xs text-[#546E7A] mb-1 block font-serif">Apellido *</label>
                           <input
                             type="text"
                             value={author.lastName}
                             onChange={(e) => handleAuthorChange(index, 'lastName', e.target.value)}
-                            className="w-full p-3.5 border border-zinc-200 rounded-2xl text-sm focus:border-emerald-500 outline-none"
+                            className="w-full p-3.5 border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif"
                           />
                         </div>
 
                         <div className="md:col-span-2">
-                          <label className="text-xs text-zinc-500 mb-1 block">Correo electrónico *</label>
+                          <label className="text-xs text-[#546E7A] mb-1 block font-serif">Correo electrónico *</label>
                           <input
                             type="email"
                             value={author.email}
                             onChange={(e) => handleAuthorChange(index, 'email', e.target.value)}
-                            className="w-full p-3.5 border border-zinc-200 rounded-2xl text-sm focus:border-emerald-500 outline-none"
+                            className="w-full p-3.5 border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif"
                           />
                         </div>
 
                         <div className="md:col-span-2">
-                          <label className="text-xs text-zinc-500 mb-1 block">Institución / Afiliación *</label>
+                          <label className="text-xs text-[#546E7A] mb-1 block font-serif">Institución / Afiliación *</label>
                           <input
                             type="text"
                             value={author.institution}
                             onChange={(e) => handleAuthorChange(index, 'institution', e.target.value)}
-                            className="w-full p-3.5 border border-zinc-200 rounded-2xl text-sm focus:border-emerald-500 outline-none"
+                            className="w-full p-3.5 border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif"
                           />
                         </div>
 
                         <div className="md:col-span-2">
-                          <label className="text-xs text-zinc-500 mb-1 block flex items-center">
+                          <label className="text-xs text-[#546E7A] mb-1 block flex items-center font-serif">
                             ORCID
                             <HelpCapsule text="0000-0000-0000-0000" textEn="0000-0000-0000-0000" />
                           </label>
@@ -889,13 +984,13 @@ export default function SubmissionForm({ user, onSuccess }) {
                             value={author.orcid}
                             onChange={(e) => handleAuthorChange(index, 'orcid', e.target.value)}
                             placeholder="0000-0000-0000-0000"
-                            className="w-full p-3.5 border border-zinc-200 rounded-2xl text-sm font-mono focus:border-emerald-500 outline-none"
+                            className="w-full p-3.5 border border-[#E0E7E9] rounded-2xl text-sm font-mono focus:border-[#0A1929] outline-none"
                           />
                         </div>
 
                         {/* Contribución por autor */}
                         <div className="md:col-span-2">
-                          <label className="text-xs text-zinc-500 mb-1 block">
+                          <label className="text-xs text-[#546E7A] mb-1 block font-serif">
                             {isSpanish ? 'Contribución del autor (CRediT)' : 'Author contribution (CRediT)'}
                             <HelpCapsule
                               text="Describe el rol específico (Conceptualización, Metodología, Análisis, Escritura, etc.)"
@@ -906,14 +1001,14 @@ export default function SubmissionForm({ user, onSuccess }) {
                             value={author.contribution}
                             onChange={(e) => handleAuthorChange(index, 'contribution', e.target.value)}
                             rows={2}
-                            className="w-full p-3.5 border border-zinc-200 rounded-2xl text-sm focus:border-emerald-500 outline-none"
+                            className="w-full p-3.5 border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif"
                             placeholder={isSpanish ? 'Conceptualización, análisis de datos y redacción' : 'Conceptualization, data analysis and writing'}
                           />
                         </div>
                       </div>
 
                       {/* Menor de edad */}
-                      <div className="mt-8 border-t border-zinc-100 pt-6">
+                      <div className="mt-8 border-t border-[#E0E7E9] pt-6">
                         <label className="flex items-center gap-3 cursor-pointer">
                           <input
                             type="checkbox"
@@ -926,9 +1021,9 @@ export default function SubmissionForm({ user, onSuccess }) {
                                 handleAuthorChange(index, 'consentFile', null);
                               }
                             }}
-                            className="w-4 h-4 text-emerald-600"
+                            className="w-4 h-4 text-[#0A1929]"
                           />
-                          <span className="text-sm text-zinc-700">
+                          <span className="text-sm text-[#1A2B3C] font-serif">
                             {isSpanish ? 'Este autor es menor de edad' : 'This author is a minor'}
                           </span>
                         </label>
@@ -949,9 +1044,9 @@ export default function SubmissionForm({ user, onSuccess }) {
                             type="checkbox"
                             checked={author.isCorresponding}
                             onChange={(e) => handleAuthorChange(index, 'isCorresponding', e.target.checked)}
-                            className="w-4 h-4 text-emerald-600"
+                            className="w-4 h-4 text-[#0A1929]"
                           />
-                          <span className="text-sm text-zinc-700">
+                          <span className="text-sm text-[#1A2B3C] font-serif">
                             {isSpanish ? 'Autor de correspondencia' : 'Corresponding author'}
                           </span>
                         </label>
@@ -962,7 +1057,7 @@ export default function SubmissionForm({ user, onSuccess }) {
                   <button
                     type="button"
                     onClick={addAuthor}
-                    className="w-full py-5 border-2 border-dashed border-zinc-200 rounded-3xl text-zinc-500 hover:text-emerald-600 hover:border-emerald-300 flex items-center justify-center gap-3 transition-all"
+                    className="w-full py-5 border-2 border-dashed border-[#E0E7E9] rounded-3xl text-[#546E7A] hover:text-[#0A1929] hover:border-[#0A1929] flex items-center justify-center gap-3 transition-all font-serif"
                   >
                     <span className="text-2xl">+</span>
                     {isSpanish ? 'Agregar otro autor' : 'Add another author'}
@@ -971,7 +1066,7 @@ export default function SubmissionForm({ user, onSuccess }) {
 
                 {/* Financiación */}
                 <div className="space-y-6">
-                  <h3 className="font-serif text-2xl font-light text-zinc-900 border-b border-zinc-100 pb-4">
+                  <h3 className="font-serif text-2xl font-light text-[#0A1929] border-b border-[#E0E7E9] pb-4">
                     {isSpanish ? 'Financiación' : 'Funding'}
                   </h3>
                   <label className="flex items-center gap-3">
@@ -980,9 +1075,9 @@ export default function SubmissionForm({ user, onSuccess }) {
                       name="funding.hasFunding"
                       checked={formData.funding.hasFunding}
                       onChange={handleInputChange}
-                      className="w-4 h-4 text-emerald-600"
+                      className="w-4 h-4 text-[#0A1929]"
                     />
-                    <span className="text-sm text-zinc-700">
+                    <span className="text-sm text-[#1A2B3C] font-serif">
                       {isSpanish ? 'Este trabajo recibió financiación externa' : 'This work received external funding'}
                     </span>
                   </label>
@@ -990,24 +1085,24 @@ export default function SubmissionForm({ user, onSuccess }) {
                   {formData.funding.hasFunding && (
                     <div className="pl-8 space-y-6">
                       <div>
-                        <label className="text-xs text-zinc-500 mb-1 block">Fuentes</label>
+                        <label className="text-xs text-[#546E7A] mb-1 block font-serif">Fuentes</label>
                         <input
                           type="text"
                           name="funding.sources"
                           value={formData.funding.sources}
                           onChange={handleInputChange}
-                          className="w-full p-3.5 border border-zinc-200 rounded-2xl"
+                          className="w-full p-3.5 border border-[#E0E7E9] rounded-2xl font-serif"
                           placeholder={isSpanish ? 'FONDECYT, ANID...' : 'NSF, NIH...'}
                         />
                       </div>
                       <div>
-                        <label className="text-xs text-zinc-500 mb-1 block">Números de grant</label>
+                        <label className="text-xs text-[#546E7A] mb-1 block font-serif">Números de grant</label>
                         <input
                           type="text"
                           name="funding.grantNumbers"
                           value={formData.funding.grantNumbers}
                           onChange={handleInputChange}
-                          className="w-full p-3.5 border border-zinc-200 rounded-2xl"
+                          className="w-full p-3.5 border border-[#E0E7E9] rounded-2xl font-serif"
                           placeholder="123456, 789012"
                         />
                       </div>
@@ -1017,7 +1112,7 @@ export default function SubmissionForm({ user, onSuccess }) {
 
                 {/* Conflicto de intereses */}
                 <div>
-                  <h3 className="font-serif text-2xl font-light text-zinc-900 border-b border-zinc-100 pb-4 flex items-center gap-2">
+                  <h3 className="font-serif text-2xl font-light text-[#0A1929] border-b border-[#E0E7E9] pb-4 flex items-center gap-2">
                     {isSpanish ? 'Conflicto de intereses' : 'Conflict of interest'}
                     <HelpCapsule
                       text="Declara cualquier relación que pueda influir en la interpretación de los resultados."
@@ -1029,7 +1124,7 @@ export default function SubmissionForm({ user, onSuccess }) {
                     value={formData.conflictOfInterest}
                     onChange={handleInputChange}
                     rows={3}
-                    className="w-full p-4 border border-zinc-200 rounded-2xl text-sm mt-4"
+                    className="w-full p-4 border border-[#E0E7E9] rounded-2xl text-sm mt-4 font-serif"
                     placeholder={isSpanish ? 'Los autores declaran no tener conflictos de interés.' : 'The authors declare no conflicts of interest.'}
                   />
                 </div>
@@ -1045,9 +1140,77 @@ export default function SubmissionForm({ user, onSuccess }) {
                 exit={{ opacity: 0, x: -30 }}
                 className="space-y-14"
               >
+                {/* NUEVA SECCIÓN: DISPONIBILIDAD DE DATOS Y CÓDIGO */}
+                <div className="space-y-8">
+                  <h3 className="font-serif text-2xl font-light text-[#0A1929] border-b border-[#E0E7E9] pb-4">
+                    {isSpanish ? 'Disponibilidad de Datos y Código' : 'Data and Code Availability'}
+                  </h3>
+                  
+                  {/* Disponibilidad de datos */}
+                  <div>
+                    <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-3">
+                      {isSpanish ? 'Disponibilidad de los datos' : 'Data availability'} *
+                      <HelpCapsule
+                        text="Declara cómo se puede acceder a los datos que respaldan tu investigación"
+                        textEn="Declare how the data supporting your research can be accessed"
+                      />
+                    </label>
+                    <select
+                      name="dataAvailability"
+                      value={formData.dataAvailability}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full p-4 bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif mb-4"
+                    >
+                      <option value="">— {isSpanish ? 'Selecciona una opción' : 'Select an option'} —</option>
+                      {availabilityOptions[isSpanish ? 'es' : 'en'].map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                    <input
+                      type="text"
+                      name="dataAvailabilityEn"
+                      value={formData.dataAvailabilityEn}
+                      onChange={handleInputChange}
+                      placeholder={isSpanish ? 'Especificar en inglés (si aplica)' : 'Specify in English (if applicable)'}
+                      className="w-full p-4 bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif"
+                    />
+                  </div>
+
+                  {/* Disponibilidad de código */}
+                  <div>
+                    <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-3">
+                      {isSpanish ? 'Disponibilidad del código' : 'Code availability'}
+                      <HelpCapsule
+                        text="Declara si el código utilizado está disponible y cómo acceder a él"
+                        textEn="Declare if the code used is available and how to access it"
+                      />
+                    </label>
+                    <select
+                      name="codeAvailability"
+                      value={formData.codeAvailability}
+                      onChange={handleInputChange}
+                      className="w-full p-4 bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif mb-4"
+                    >
+                      <option value="">— {isSpanish ? 'Selecciona una opción (opcional)' : 'Select an option (optional)'} —</option>
+                      {availabilityOptions[isSpanish ? 'es' : 'en'].map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                    <input
+                      type="text"
+                      name="codeAvailabilityEn"
+                      value={formData.codeAvailabilityEn}
+                      onChange={handleInputChange}
+                      placeholder={isSpanish ? 'Especificar en inglés (si aplica)' : 'Specify in English (if applicable)'}
+                      className="w-full p-4 bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif"
+                    />
+                  </div>
+                </div>
+
                 {/* Declaraciones */}
                 <div>
-                  <h3 className="font-serif text-2xl font-light text-zinc-900 border-b border-zinc-100 pb-4">
+                  <h3 className="font-serif text-2xl font-light text-[#0A1929] border-b border-[#E0E7E9] pb-4">
                     {isSpanish ? 'Declaraciones obligatorias' : 'Mandatory declarations'}
                   </h3>
                   <div className="mt-8 space-y-5">
@@ -1064,9 +1227,9 @@ export default function SubmissionForm({ user, onSuccess }) {
                           type="checkbox"
                           checked={formData.declarations[d.key]}
                           onChange={() => handleDeclarationChange(d.key)}
-                          className="mt-1 w-5 h-5 text-emerald-600 rounded"
+                          className="mt-1 w-5 h-5 text-[#0A1929] rounded"
                         />
-                        <span className="text-sm text-zinc-700 group-hover:text-zinc-900">
+                        <span className="text-sm text-[#1A2B3C] group-hover:text-[#0A1929] font-serif">
                           {isSpanish ? d.text : d.textEn}
                         </span>
                       </label>
@@ -1075,17 +1238,17 @@ export default function SubmissionForm({ user, onSuccess }) {
                 </div>
 
                 {/* Licencia CC-BY */}
-                <div className="bg-emerald-50 border border-emerald-100 rounded-3xl p-8">
+                <div className="bg-[#E5E9F0] border border-[#0A1929] rounded-3xl p-8">
                   <label className="flex gap-4 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={formData.declarations.ccByLicense}
                       onChange={() => handleDeclarationChange('ccByLicense')}
-                      className="mt-1 w-5 h-5 text-emerald-600 rounded"
+                      className="mt-1 w-5 h-5 text-[#0A1929] rounded"
                     />
                     <div>
-                      <div className="font-medium text-emerald-800">Licencia Creative Commons CC-BY</div>
-                      <p className="text-xs text-emerald-700 mt-1">
+                      <div className="font-medium text-[#0A1929] font-serif">Licencia Creative Commons CC-BY</div>
+                      <p className="text-xs text-[#1A2B3C] mt-1 font-serif">
                         {isSpanish
                           ? 'Autorizo la publicación bajo licencia CC-BY (open access). No cedo derechos de autor.'
                           : 'I authorize publication under CC-BY license (open access). I do not transfer copyright.'}
@@ -1096,7 +1259,7 @@ export default function SubmissionForm({ user, onSuccess }) {
 
                 {/* Agradecimientos */}
                 <div>
-                  <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-zinc-500 mb-3">
+                  <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-3">
                     {isSpanish ? 'Agradecimientos' : 'Acknowledgments'} (opcional)
                     <HelpCapsule
                       text="Agradecimientos a personas o entidades que apoyaron el trabajo pero no cumplen criterios de autoría. NO incluir en el manuscrito anonimizado."
@@ -1108,14 +1271,14 @@ export default function SubmissionForm({ user, onSuccess }) {
                     value={formData.acknowledgments}
                     onChange={handleInputChange}
                     rows={4}
-                    className="w-full p-4 border border-zinc-200 rounded-2xl text-sm"
+                    className="w-full p-4 border border-[#E0E7E9] rounded-2xl text-sm font-serif"
                     placeholder={isSpanish ? 'Agradecemos a la Universidad X por el financiamiento...' : 'We thank University X for funding...'}
                   />
                 </div>
 
                 {/* Revisores excluidos */}
                 <div>
-                  <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-zinc-500 mb-3">
+                  <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-3">
                     {isSpanish ? 'Revisores sugeridos a excluir (opcional)' : 'Reviewers to exclude (optional)'}
                     <HelpCapsule
                       text="Nombres completos separados por punto y coma. No es una garantía absoluta."
@@ -1127,46 +1290,56 @@ export default function SubmissionForm({ user, onSuccess }) {
                     name="excludedReviewers"
                     value={formData.excludedReviewers}
                     onChange={handleInputChange}
-                    className="w-full p-4 border border-zinc-200 rounded-2xl text-sm"
+                    className="w-full p-4 border border-[#E0E7E9] rounded-2xl text-sm font-serif"
                     placeholder={isSpanish ? 'Dra. Ana López; Dr. Carlos Mendoza' : 'Dr. Jane Smith; Prof. Michael Brown'}
                   />
                 </div>
 
                 {/* Archivo manuscrito */}
                 <div>
-                  <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-zinc-500 mb-3">
+                  <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-3">
                     {isSpanish ? 'Manuscrito anonimizado' : 'Anonymized manuscript'} *
                     <HelpCapsule
                       text="Obligatorio: formato Word (.doc/.docx), máximo 10 MB, SIN nombres, afiliaciones ni agradecimientos."
                       textEn="Required: Word format (.doc/.docx), max 10 MB, WITHOUT names, affiliations or acknowledgments."
                     />
                   </label>
-                  <div className="border border-zinc-200 rounded-3xl p-8 bg-zinc-50">
+                  <div className="border border-[#E0E7E9] rounded-3xl p-8 bg-[#F5F7FA]">
                     <input
                       type="file"
                       accept=".doc,.docx"
                       onChange={handleFileChange}
-                      className="block w-full text-sm text-zinc-500 file:py-4 file:px-8 file:rounded-2xl file:border-0 file:bg-white file:text-emerald-700 file:font-medium"
+                      className="block w-full text-sm text-[#546E7A] file:py-4 file:px-8 file:rounded-2xl file:border-0 file:bg-white file:text-[#0A1929] file:font-medium font-serif"
                     />
                     {formData.manuscriptName && (
-                      <div className="mt-6 flex items-center gap-3 text-emerald-600 text-sm">
+                      <div className="mt-6 flex items-center gap-3 text-[#0A1929] text-sm font-serif">
                         <span>📄</span>
                         {formData.manuscriptName}
                       </div>
                     )}
                   </div>
                 </div>
+
+                {/* Nota sobre carpetas */}
+                <div className="bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl p-6">
+                  <p className="text-xs text-[#546E7A] font-serif flex items-center gap-2">
+                    <span className="text-lg">🔒</span>
+                    {isSpanish 
+                      ? 'Recibirás dos carpetas: una con tus documentos y otra para seguimiento editorial' 
+                      : 'You will receive two folders: one with your documents and one for editorial tracking'}
+                  </p>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
 
           {/* Navegación */}
-          <div className="flex justify-between items-center pt-8 border-t border-zinc-100">
+          <div className="flex justify-between items-center pt-8 border-t border-[#E0E7E9]">
             {currentStep > 1 && (
               <button
                 type="button"
                 onClick={prevStep}
-                className="px-7 py-3.5 text-sm font-medium text-zinc-500 hover:text-zinc-900 flex items-center gap-2 transition-colors"
+                className="px-7 py-3.5 text-sm font-medium text-[#546E7A] hover:text-[#0A1929] flex items-center gap-2 transition-colors font-serif"
               >
                 ← {isSpanish ? 'Anterior' : 'Previous'}
               </button>
@@ -1177,7 +1350,7 @@ export default function SubmissionForm({ user, onSuccess }) {
                 <button
                   type="button"
                   onClick={nextStep}
-                  className="px-10 py-4 bg-zinc-900 text-white rounded-2xl text-sm font-semibold hover:bg-emerald-600 transition-all flex items-center gap-3 shadow-lg"
+                  className="px-10 py-4 bg-[#0A1929] text-white rounded-2xl text-sm font-semibold hover:bg-[#B22234] transition-all flex items-center gap-3 shadow-lg font-serif"
                 >
                   {isSpanish ? 'Continuar' : 'Continue'}
                   <span>→</span>
@@ -1185,8 +1358,8 @@ export default function SubmissionForm({ user, onSuccess }) {
               ) : (
                 <button
                   type="submit"
-                  disabled={uploading || !allDeclarationsAccepted() || !formData.manuscript}
-                  className="px-12 py-4 bg-emerald-600 text-white rounded-2xl text-sm font-bold hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-3 shadow-xl"
+                  disabled={uploading || !allDeclarationsAccepted() || !formData.manuscript || !formData.dataAvailability}
+                  className="px-12 py-4 bg-[#0A1929] text-white rounded-2xl text-sm font-bold hover:bg-[#B22234] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-3 shadow-xl font-serif"
                 >
                   {uploading
                     ? (isSpanish ? 'Enviando...' : 'Submitting...')
@@ -1200,13 +1373,13 @@ export default function SubmissionForm({ user, onSuccess }) {
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="text-center text-sm font-medium mt-4"
+              className="text-center text-sm font-medium mt-4 font-serif"
             >
               {submitStatus}
             </motion.p>
           )}
 
-          <p className="text-center text-[10px] text-zinc-400 font-mono tracking-widest">
+          <p className="text-center text-[10px] text-[#546E7A] font-mono tracking-widest">
             ⏺ {isSpanish ? 'Borrador guardado automáticamente cada 30 segundos' : 'Draft auto-saved every 30 seconds'}
           </p>
         </form>
