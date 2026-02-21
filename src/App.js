@@ -64,12 +64,11 @@ function App() {
 
   // Función para obtener datos del usuario desde Firebase/ localStorage
   const getUserData = (firebaseUser) => {
-    // Por defecto, usar datos básicos del usuario de Firebase
     return {
       uid: firebaseUser.uid,
       email: firebaseUser.email,
       name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Usuario',
-      role: 'Usuario', // Rol por defecto
+      role: 'Usuario',
       image: firebaseUser.photoURL || '',
     };
   };
@@ -94,7 +93,6 @@ function App() {
             ) {
               userData = storedUser;
             } else {
-              // Usar datos básicos de Firebase en lugar del CSV
               userData = getUserData(firebaseUser);
               localStorage.setItem('userData', JSON.stringify(userData));
             }
@@ -113,6 +111,22 @@ function App() {
         setAuthLoading(false);
       });
   }, []);
+
+  // Función auxiliar para obtener texto de autores
+  const getAutoresText = (autores) => {
+    if (!autores) return '';
+    if (Array.isArray(autores)) {
+      return autores.map(a => a.name || '').join(', ');
+    }
+    return String(autores);
+  };
+
+  // Función auxiliar para obtener instituciones
+  const getInstitutionsText = (autores) => {
+    if (!autores || !Array.isArray(autores)) return '';
+    const institutions = autores.map(a => a.institution).filter(Boolean);
+    return [...new Set(institutions)].join(', ');
+  };
 
   useEffect(() => {
     const fetchArticles = async () => {
@@ -135,18 +149,26 @@ function App() {
         const uniqueAreas = [...new Set(allAreas)].sort();
         setAreas(uniqueAreas);
 
-        const uniqueVolumes = [...new Set(sortedData.map(a => safeString(a.volumen)))].filter(Boolean).sort((a, b) => {
-          const getNum = str => parseInt(str.replace(/\D+/g, '')) || 0;
-          return getNum(b) - getNum(a);
-        });
-
-        const uniqueNumbers = [...new Set(sortedData.map(a => safeString(a.numero)))].filter(Boolean).sort((a, b) => {
-          const getNum = str => parseInt(str.replace(/\D+/g, '')) || 0;
-          return getNum(b) - getNum(a);
-        });
-
+        // Obtener volúmenes únicos como números
+        const uniqueVolumes = [...new Set(sortedData.map(a => safeString(a.volumen)))]
+          .filter(Boolean)
+          .sort((a, b) => {
+            const numA = parseInt(a) || 0;
+            const numB = parseInt(b) || 0;
+            return numB - numA;
+          });
         setArticleVolumes(uniqueVolumes);
+
+        // Obtener números únicos
+        const uniqueNumbers = [...new Set(sortedData.map(a => safeString(a.numero)))]
+          .filter(Boolean)
+          .sort((a, b) => {
+            const numA = parseInt(a) || 0;
+            const numB = parseInt(b) || 0;
+            return numB - numA;
+          });
         setArticleNumbers(uniqueNumbers);
+
         setLoading(false);
       } catch (error) {
         console.error('Error fetching JSON:', error);
@@ -178,18 +200,24 @@ function App() {
         const uniqueVolumeAreas = [...new Set(allVolumeAreas)].sort();
         setVolumeAreas(uniqueVolumeAreas);
 
-        const uniqueVolumes = [...new Set(sortedData.map(v => safeString(v.volumen)))].filter(Boolean).sort((a, b) => {
-          const getNum = str => parseInt(str.replace(/\D+/g, '')) || 0;
-          return getNum(b) - getNum(a);
-        });
-
-        const uniqueNumbers = [...new Set(sortedData.map(v => safeString(v.numero)))].filter(Boolean).sort((a, b) => {
-          const getNum = str => parseInt(str.replace(/\D+/g, '')) || 0;
-          return getNum(b) - getNum(a);
-        });
-
+        const uniqueVolumes = [...new Set(sortedData.map(v => safeString(v.volumen)))]
+          .filter(Boolean)
+          .sort((a, b) => {
+            const numA = parseInt(a) || 0;
+            const numB = parseInt(b) || 0;
+            return numB - numA;
+          });
         setVolumeVolumes(uniqueVolumes);
+
+        const uniqueNumbers = [...new Set(sortedData.map(v => safeString(v.numero)))]
+          .filter(Boolean)
+          .sort((a, b) => {
+            const numA = parseInt(a) || 0;
+            const numB = parseInt(b) || 0;
+            return numB - numA;
+          });
         setVolumeNumbers(uniqueNumbers);
+
         setVolumeLoading(false);
       } catch (error) {
         console.error('Error fetching volumes JSON:', error);
@@ -216,13 +244,23 @@ function App() {
   useEffect(() => {
     const lowerTerm = searchTerm.toLowerCase();
     const numericTerm = normalizeNumberSearch(searchTerm);
+    
     const filtered = articles.filter((article) => {
+      // Manejo seguro de autores
+      const autoresText = getAutoresText(article.autores).toLowerCase();
+      const institucionesText = getInstitutionsText(article.autores).toLowerCase();
+      
+      // Manejo seguro de palabras clave
+      const keywordsText = Array.isArray(article.palabras_clave) 
+        ? article.palabras_clave.join(' ').toLowerCase()
+        : safeString(article.palabras_clave).toLowerCase();
+
       const matchesSearch =
         safeString(article.titulo).toLowerCase().includes(lowerTerm) ||
-        safeString(article.autores).toLowerCase().includes(lowerTerm) ||
+        autoresText.includes(lowerTerm) ||
         safeString(article.resumen).toLowerCase().includes(lowerTerm) ||
-        safeString(article.institutions).toLowerCase().includes(lowerTerm) ||
-        safeString(article.palabras_clave).toLowerCase().includes(lowerTerm) ||
+        institucionesText.includes(lowerTerm) ||
+        keywordsText.includes(lowerTerm) ||
         safeString(article.volumen).toLowerCase().includes(lowerTerm) ||
         safeString(article.numero).toLowerCase().includes(lowerTerm) ||
         safeString(article.fecha).toLowerCase().includes(lowerTerm) ||
@@ -255,11 +293,14 @@ function App() {
   useEffect(() => {
     const lowerTerm = volumeSearchTerm.toLowerCase();
     const numericTerm = normalizeNumberSearch(volumeSearchTerm);
+    
     const filtered = volumes.filter((volume) => {
       const matchesSearch =
         safeString(volume.titulo).toLowerCase().includes(lowerTerm) ||
         safeString(volume.resumen).toLowerCase().includes(lowerTerm) ||
-        safeString(volume.palabras_clave).toLowerCase().includes(lowerTerm) ||
+        (Array.isArray(volume.palabras_clave) 
+          ? volume.palabras_clave.join(' ').toLowerCase().includes(lowerTerm)
+          : safeString(volume.palabras_clave).toLowerCase().includes(lowerTerm)) ||
         safeString(volume.volumen).toLowerCase().includes(lowerTerm) ||
         safeString(volume.numero).toLowerCase().includes(lowerTerm) ||
         safeString(volume.volumen).includes(numericTerm) ||
@@ -315,11 +356,11 @@ function App() {
   }, [location.pathname, searchParams, cleanPath]);
 
   const handleSearch = (term, area, volume, number) => {
-    const params = new URLSearchParams();
-    if (term) params.set('article_search', term);
-    if (area) params.set('article_area', area);
-    if (volume) params.set('article_volume', volume);
-    if (number) params.set('article_number', number);
+    const params = new URLSearchParams(searchParams);
+    if (term) params.set('article_search', term); else params.delete('article_search');
+    if (area) params.set('article_area', area); else params.delete('article_area');
+    if (volume) params.set('article_volume', volume); else params.delete('article_volume');
+    if (number) params.set('article_number', number); else params.delete('article_number');
     
     setSearchTerm(term);
     setSelectedArea(area);
@@ -329,11 +370,11 @@ function App() {
   };
 
   const handleVolumeSearch = (term, area, volume, number) => {
-    const params = new URLSearchParams();
-    if (term) params.set('volume_search', term);
-    if (area) params.set('volume_area', area);
-    if (volume) params.set('volume_volume', volume);
-    if (number) params.set('volume_number', number);
+    const params = new URLSearchParams(searchParams);
+    if (term) params.set('volume_search', term); else params.delete('volume_search');
+    if (area) params.set('volume_area', area); else params.delete('volume_area');
+    if (volume) params.set('volume_volume', volume); else params.delete('volume_volume');
+    if (number) params.set('volume_number', number); else params.delete('volume_number');
     
     setVolumeSearchTerm(term);
     setSelectedVolumeArea(area);
@@ -347,7 +388,12 @@ function App() {
     setSelectedArea('');
     setSelectedArticleVolume('');
     setSelectedArticleNumber('');
-    setSearchParams(new URLSearchParams());
+    const params = new URLSearchParams(searchParams);
+    params.delete('article_search');
+    params.delete('article_area');
+    params.delete('article_volume');
+    params.delete('article_number');
+    setSearchParams(params);
   };
 
   const clearVolumeFilters = () => {
@@ -355,7 +401,12 @@ function App() {
     setSelectedVolumeArea('');
     setSelectedVolumeVolume('');
     setSelectedVolumeNumber('');
-    setSearchParams(new URLSearchParams());
+    const params = new URLSearchParams(searchParams);
+    params.delete('volume_search');
+    params.delete('volume_area');
+    params.delete('volume_volume');
+    params.delete('volume_number');
+    setSearchParams(params);
   };
 
   const loadMoreArticles = () => setVisibleArticles((prev) => prev + 6);
@@ -398,13 +449,15 @@ function App() {
             onSearch={handleSearch}
             clearFilters={clearFilters}
             placeholder="Buscar artículos..."
-            quickTags={['2025', 'Vol. 1', 'Número 1']}
+            quickTags={['2025', 'Vol. 1', 'Núm. 1']}
             selectedVolume={selectedArticleVolume}
             setSelectedVolume={setSelectedArticleVolume}
             volumesList={articleVolumes}
             selectedNumber={selectedArticleNumber}
             setSelectedNumber={setSelectedArticleNumber}
             numbersList={articleNumbers}
+            volumeLabel="Volumen"
+            numberLabel="Número"
           />
           <div className="articles mt-8">
             {loading ? (
@@ -426,7 +479,7 @@ function App() {
                 <div className="space-y-6">
                   {filteredArticles.slice(0, visibleArticles).map((article, index) => (
                     <motion.div
-                      key={article.titulo}
+                      key={article.titulo + index}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index % 6 * 0.05, duration: 0.3 }}
@@ -484,13 +537,15 @@ function App() {
             onSearch={handleVolumeSearch}
             clearFilters={clearVolumeFilters}
             placeholder="Buscar volúmenes..."
-            quickTags={['2025', 'Vol. 1', 'Número 1']}
+            quickTags={['2025', 'Vol. 1', 'Núm. 1']}
             selectedVolume={selectedVolumeVolume}
             setSelectedVolume={setSelectedVolumeVolume}
             volumesList={volumeVolumes}
             selectedNumber={selectedVolumeNumber}
             setSelectedNumber={setSelectedVolumeNumber}
             numbersList={volumeNumbers}
+            volumeLabel="Volumen"
+            numberLabel="Número"
           />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
             {volumeLoading ? (
@@ -510,7 +565,7 @@ function App() {
             ) : (
               filteredVolumes.map((volume, index) => (
                 <motion.div
-                  key={`${volume.volumen}-${volume.numero}`}
+                  key={`${volume.volumen}-${volume.numero}-${index}`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1, duration: 0.3 }}

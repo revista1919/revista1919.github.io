@@ -62,13 +62,12 @@ function AppEN() {
   const [volumeVolumes, setVolumeVolumes] = useState([]);
   const [volumeNumbers, setVolumeNumbers] = useState([]);
 
-  // Función para obtener datos del usuario desde Firebase/localStorage
   const getUserData = (firebaseUser) => {
     return {
       uid: firebaseUser.uid,
       email: firebaseUser.email,
       name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
-      role: 'User', // Default role
+      role: 'User',
       image: firebaseUser.photoURL || '',
     };
   };
@@ -93,7 +92,6 @@ function AppEN() {
             ) {
               userData = storedUser;
             } else {
-              // Use Firebase data instead of CSV
               userData = getUserData(firebaseUser);
               localStorage.setItem('userData', JSON.stringify(userData));
             }
@@ -112,6 +110,22 @@ function AppEN() {
         setAuthLoading(false);
       });
   }, []);
+
+  // Helper function to get authors text
+  const getAutoresText = (autores) => {
+    if (!autores) return '';
+    if (Array.isArray(autores)) {
+      return autores.map(a => a.name || '').join(', ');
+    }
+    return String(autores);
+  };
+
+  // Helper function to get institutions
+  const getInstitutionsText = (autores) => {
+    if (!autores || !Array.isArray(autores)) return '';
+    const institutions = autores.map(a => a.institution).filter(Boolean);
+    return [...new Set(institutions)].join(', ');
+  };
 
   useEffect(() => {
     const fetchArticles = async () => {
@@ -134,18 +148,24 @@ function AppEN() {
         const uniqueAreas = [...new Set(allAreas)].sort();
         setAreas(uniqueAreas);
 
-        const uniqueVolumes = [...new Set(sortedData.map(a => safeString(a.volumen)))].filter(Boolean).sort((a, b) => {
-          const getNum = str => parseInt(str.replace(/\D+/g, '')) || 0;
-          return getNum(b) - getNum(a);
-        });
-
-        const uniqueNumbers = [...new Set(sortedData.map(a => safeString(a.numero)))].filter(Boolean).sort((a, b) => {
-          const getNum = str => parseInt(str.replace(/\D+/g, '')) || 0;
-          return getNum(b) - getNum(a);
-        });
-
+        const uniqueVolumes = [...new Set(sortedData.map(a => safeString(a.volumen)))]
+          .filter(Boolean)
+          .sort((a, b) => {
+            const numA = parseInt(a) || 0;
+            const numB = parseInt(b) || 0;
+            return numB - numA;
+          });
         setArticleVolumes(uniqueVolumes);
+
+        const uniqueNumbers = [...new Set(sortedData.map(a => safeString(a.numero)))]
+          .filter(Boolean)
+          .sort((a, b) => {
+            const numA = parseInt(a) || 0;
+            const numB = parseInt(b) || 0;
+            return numB - numA;
+          });
         setArticleNumbers(uniqueNumbers);
+
         setLoading(false);
       } catch (error) {
         console.error('Error fetching JSON:', error);
@@ -177,18 +197,24 @@ function AppEN() {
         const uniqueVolumeAreas = [...new Set(allVolumeAreas)].sort();
         setVolumeAreas(uniqueVolumeAreas);
 
-        const uniqueVolumes = [...new Set(sortedData.map(v => safeString(v.volumen)))].filter(Boolean).sort((a, b) => {
-          const getNum = str => parseInt(str.replace(/\D+/g, '')) || 0;
-          return getNum(b) - getNum(a);
-        });
-
-        const uniqueNumbers = [...new Set(sortedData.map(v => safeString(v.numero)))].filter(Boolean).sort((a, b) => {
-          const getNum = str => parseInt(str.replace(/\D+/g, '')) || 0;
-          return getNum(b) - getNum(a);
-        });
-
+        const uniqueVolumes = [...new Set(sortedData.map(v => safeString(v.volumen)))]
+          .filter(Boolean)
+          .sort((a, b) => {
+            const numA = parseInt(a) || 0;
+            const numB = parseInt(b) || 0;
+            return numB - numA;
+          });
         setVolumeVolumes(uniqueVolumes);
+
+        const uniqueNumbers = [...new Set(sortedData.map(v => safeString(v.numero)))]
+          .filter(Boolean)
+          .sort((a, b) => {
+            const numA = parseInt(a) || 0;
+            const numB = parseInt(b) || 0;
+            return numB - numA;
+          });
         setVolumeNumbers(uniqueNumbers);
+
         setVolumeLoading(false);
       } catch (error) {
         console.error('Error fetching volumes JSON:', error);
@@ -215,13 +241,21 @@ function AppEN() {
   useEffect(() => {
     const lowerTerm = searchTerm.toLowerCase();
     const numericTerm = normalizeNumberSearch(searchTerm);
+    
     const filtered = articles.filter((article) => {
+      const autoresText = getAutoresText(article.autores).toLowerCase();
+      const institucionesText = getInstitutionsText(article.autores).toLowerCase();
+      
+      const keywordsText = Array.isArray(article.keywords_english) 
+        ? article.keywords_english.join(' ').toLowerCase()
+        : safeString(article.keywords_english).toLowerCase();
+
       const matchesSearch =
-        safeString(article.titulo).toLowerCase().includes(lowerTerm) ||
-        safeString(article.autores).toLowerCase().includes(lowerTerm) ||
-        safeString(article.englishAbstract).toLowerCase().includes(lowerTerm) ||
-        safeString(article.institutions).toLowerCase().includes(lowerTerm) ||
-        safeString(article.keywords_english).toLowerCase().includes(lowerTerm) ||
+        safeString(article.tituloEnglish || article.titulo).toLowerCase().includes(lowerTerm) ||
+        autoresText.includes(lowerTerm) ||
+        safeString(article.abstract || article.resumen).toLowerCase().includes(lowerTerm) ||
+        institucionesText.includes(lowerTerm) ||
+        keywordsText.includes(lowerTerm) ||
         safeString(article.volumen).toLowerCase().includes(lowerTerm) ||
         safeString(article.numero).toLowerCase().includes(lowerTerm) ||
         safeString(article.fecha).toLowerCase().includes(lowerTerm) ||
@@ -254,11 +288,14 @@ function AppEN() {
   useEffect(() => {
     const lowerTerm = volumeSearchTerm.toLowerCase();
     const numericTerm = normalizeNumberSearch(volumeSearchTerm);
+    
     const filtered = volumes.filter((volume) => {
       const matchesSearch =
         safeString(volume.titulo).toLowerCase().includes(lowerTerm) ||
         safeString(volume.abstract).toLowerCase().includes(lowerTerm) ||
-        safeString(volume.keywords).toLowerCase().includes(lowerTerm) ||
+        (Array.isArray(volume.keywords) 
+          ? volume.keywords.join(' ').toLowerCase().includes(lowerTerm)
+          : safeString(volume.keywords).toLowerCase().includes(lowerTerm)) ||
         safeString(volume.volumen).toLowerCase().includes(lowerTerm) ||
         safeString(volume.numero).toLowerCase().includes(lowerTerm) ||
         safeString(volume.volumen).includes(numericTerm) ||
@@ -290,7 +327,7 @@ function AppEN() {
     const rawPath = location.pathname.replace(/\/$/, '');
     const path = typeof cleanPath === 'function' ? cleanPath(rawPath) : rawPath;
     
-    if (path === '/article' || path === '/' || path === '') {
+    if (path === '/en/article' || path === '/en' || path === '/en/') {
       const term = searchParams.get('article_search') ?? '';
       const area = searchParams.get('article_area') ?? '';
       const volume = searchParams.get('article_volume') ?? '';
@@ -300,7 +337,7 @@ function AppEN() {
       setSelectedArea(area);
       setSelectedArticleVolume(volume);
       setSelectedArticleNumber(number);
-    } else if (path === '/volume') {
+    } else if (path === '/en/volume') {
       const term = searchParams.get('volume_search') ?? '';
       const area = searchParams.get('volume_area') ?? '';
       const volume = searchParams.get('volume_volume') ?? '';
@@ -314,11 +351,11 @@ function AppEN() {
   }, [location.pathname, searchParams, cleanPath]);
 
   const handleSearch = (term, area, volume, number) => {
-    const params = new URLSearchParams();
-    if (term) params.set('article_search', term);
-    if (area) params.set('article_area', area);
-    if (volume) params.set('article_volume', volume);
-    if (number) params.set('article_number', number);
+    const params = new URLSearchParams(searchParams);
+    if (term) params.set('article_search', term); else params.delete('article_search');
+    if (area) params.set('article_area', area); else params.delete('article_area');
+    if (volume) params.set('article_volume', volume); else params.delete('article_volume');
+    if (number) params.set('article_number', number); else params.delete('article_number');
     
     setSearchTerm(term);
     setSelectedArea(area);
@@ -328,11 +365,11 @@ function AppEN() {
   };
 
   const handleVolumeSearch = (term, area, volume, number) => {
-    const params = new URLSearchParams();
-    if (term) params.set('volume_search', term);
-    if (area) params.set('volume_area', area);
-    if (volume) params.set('volume_volume', volume);
-    if (number) params.set('volume_number', number);
+    const params = new URLSearchParams(searchParams);
+    if (term) params.set('volume_search', term); else params.delete('volume_search');
+    if (area) params.set('volume_area', area); else params.delete('volume_area');
+    if (volume) params.set('volume_volume', volume); else params.delete('volume_volume');
+    if (number) params.set('volume_number', number); else params.delete('volume_number');
     
     setVolumeSearchTerm(term);
     setSelectedVolumeArea(area);
@@ -346,7 +383,12 @@ function AppEN() {
     setSelectedArea('');
     setSelectedArticleVolume('');
     setSelectedArticleNumber('');
-    setSearchParams(new URLSearchParams());
+    const params = new URLSearchParams(searchParams);
+    params.delete('article_search');
+    params.delete('article_area');
+    params.delete('article_volume');
+    params.delete('article_number');
+    setSearchParams(params);
   };
 
   const clearVolumeFilters = () => {
@@ -354,7 +396,12 @@ function AppEN() {
     setSelectedVolumeArea('');
     setSelectedVolumeVolume('');
     setSelectedVolumeNumber('');
-    setSearchParams(new URLSearchParams());
+    const params = new URLSearchParams(searchParams);
+    params.delete('volume_search');
+    params.delete('volume_area');
+    params.delete('volume_volume');
+    params.delete('volume_number');
+    setSearchParams(params);
   };
 
   const loadMoreArticles = () => setVisibleArticles((prev) => prev + 6);
@@ -397,13 +444,15 @@ function AppEN() {
             onSearch={handleSearch}
             clearFilters={clearFilters}
             placeholder="Search articles..."
-            quickTags={['2025', 'Vol. 1', 'Issue 1']}
+            quickTags={['2025', 'Vol. 1', 'No. 1']}
             selectedVolume={selectedArticleVolume}
             setSelectedVolume={setSelectedArticleVolume}
             volumesList={articleVolumes}
             selectedNumber={selectedArticleNumber}
             setSelectedNumber={setSelectedArticleNumber}
             numbersList={articleNumbers}
+            volumeLabel="Volume"
+            numberLabel="Number"
           />
           <div className="articles mt-8">
             {loading ? (
@@ -422,11 +471,10 @@ function AppEN() {
               </div>
             ) : (
               <>
-                {/* Articles List */}
                 <div className="space-y-6">
                   {filteredArticles.slice(0, visibleArticles).map((article, index) => (
                     <motion.div
-                      key={article.titulo}
+                      key={article.titulo + index}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index % 6 * 0.05, duration: 0.3 }}
@@ -435,12 +483,10 @@ function AppEN() {
                     </motion.div>
                   ))}
                 </div>
-                {/* Enhanced Pagination Control Panel */}
                 <div className="mt-12 mb-8 flex flex-col items-center border-t border-gray-200 pt-8">
                   <p className="text-xs text-gray-500 uppercase tracking-widest font-bold mb-6">
                     Showing {Math.min(visibleArticles, filteredArticles.length)} of {filteredArticles.length} articles
                   </p>
-                
                   <div className="flex gap-4">
                     {filteredArticles.length > visibleArticles && (
                       <button
@@ -450,7 +496,6 @@ function AppEN() {
                         Load more records
                       </button>
                     )}
-                  
                     {visibleArticles > 6 && (
                       <button
                         className="px-8 py-3 border border-gray-300 text-gray-600 text-xs font-bold uppercase tracking-widest rounded-sm hover:bg-white hover:text-black transition-all"
@@ -487,13 +532,15 @@ function AppEN() {
             onSearch={handleVolumeSearch}
             clearFilters={clearVolumeFilters}
             placeholder="Search volumes..."
-            quickTags={['2025', 'Vol. 1', 'Issue 1']}
+            quickTags={['2025', 'Vol. 1', 'No. 1']}
             selectedVolume={selectedVolumeVolume}
             setSelectedVolume={setSelectedVolumeVolume}
             volumesList={volumeVolumes}
             selectedNumber={selectedVolumeNumber}
             setSelectedNumber={setSelectedVolumeNumber}
             numbersList={volumeNumbers}
+            volumeLabel="Volume"
+            numberLabel="Number"
           />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
             {volumeLoading ? (
@@ -513,7 +560,7 @@ function AppEN() {
             ) : (
               filteredVolumes.map((volume, index) => (
                 <motion.div
-                  key={`${volume.volumen}-${volume.numero}`}
+                  key={`${volume.volumen}-${volume.numero}-${index}`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1, duration: 0.3 }}
@@ -626,22 +673,16 @@ function AppEN() {
   return (
     <div className="min-h-screen bg-[#F9FAFB] flex flex-col font-sans text-gray-900">
       {!isHome && <Header onOpenMenu={() => setIsMenuOpen(true)} />}
-      <div
-        className={`container ${
-          user && isLoginActive
-            ? 'max-w-full px-0'
-            : 'mx-auto px-6 lg:px-8'
-        } flex-grow`}
-      >
-        <nav className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-4">
-            <Tabs sections={sections} />
-          </div>
-        </nav>
+      <nav className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4">
+          <Tabs sections={sections} />
+        </div>
+      </nav>
+      <main className="flex-grow">
         <AnimatePresence mode="wait">
-          <Routes key={location.key}>
+          <Routes location={location} key={location.key}>
             {sections.map((section) => (
-              <Route key={section.name} path={section.path.substring(3)} element={
+              <Route key={section.name} path={section.path} element={
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -659,7 +700,7 @@ function AppEN() {
             ))}
           </Routes>
         </AnimatePresence>
-      </div>
+      </main>
       <AnimatePresence>
         {isMenuOpen && (
           <>
