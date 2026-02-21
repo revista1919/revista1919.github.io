@@ -2562,11 +2562,10 @@ exports.submitArticle = onRequest(
             <li>Revisión por pares</li>
           </ol>
           
-          <p><strong>Tus carpetas en Google Drive:</strong></p>
-          <ul>
-            <li><a href="${authorFolder.webViewLink}">📁 Carpeta personal</a> (tus documentos originales)</li>
-            ${editorialFolder ? `<li><a href="${editorialFolder.webViewLink}">📋 Carpeta editorial</a> (seguimiento de revisión)</li>` : ''}
-          </ul>
+          <p><strong>Tus documentos:</strong></p>
+<ul>
+  <li><a href="${authorFolder.webViewLink}">📁 Carpeta personal</a> (tus documentos originales)</li>
+</ul>
           
           <p><em>Nota: Los plazos de revisión dependen de la disponibilidad de los revisores y de la complejidad del artículo, por lo que no son fijos. Te mantendremos informado de cualquier avance.</em></p>
           
