@@ -1326,15 +1326,6 @@ if (submitted) {
                   </div>
                 </div>
 
-                {/* Nota sobre carpetas */}
-                <div className="bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl p-6">
-                  <p className="text-xs text-[#546E7A] font-serif flex items-center gap-2">
-                    <span className="text-lg">🔒</span>
-                    {isSpanish 
-                      ? 'Recibirás dos carpetas: una con tus documentos y otra para seguimiento editorial' 
-                      : 'You will receive two folders: one with your documents and one for editorial tracking'}
-                  </p>
-                </div>
               </motion.div>
             )}
           </AnimatePresence>
