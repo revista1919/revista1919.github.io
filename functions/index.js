@@ -515,6 +515,7 @@ exports.uploadNews = onRequest(
 );
 
 /* ===================== MANAGE ARTICLES ===================== */
+/* ===================== MANAGE ARTICLES ===================== */
 exports.manageArticles = onRequest(
   { 
     secrets: [GH_TOKEN],
@@ -541,12 +542,14 @@ exports.manageArticles = onRequest(
     res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, Accept, X-Requested-With');
     res.set('Access-Control-Max-Age', '3600');
     res.set('Vary', 'Origin');
-// En manageArticles, justo después del bloque CORS
-console.log(`🔍 manageArticles - Request recibido:`);
-console.log(`🔍 Method: ${req.method}`);
-console.log(`🔍 Path: ${req.path}`);
-console.log(`🔍 Original URL: ${req.originalUrl}`);
-console.log(`🔍 Headers:`, req.headers);
+
+    // En manageArticles, justo después del bloque CORS
+    console.log(`🔍 manageArticles - Request recibido:`);
+    console.log(`🔍 Method: ${req.method}`);
+    console.log(`🔍 Path: ${req.path}`);
+    console.log(`🔍 Original URL: ${req.originalUrl}`);
+    console.log(`🔍 Headers:`, req.headers);
+    
     if (req.method === 'OPTIONS') {
       console.log('📡 Preflight OPTIONS request recibido');
       res.status(204).send('');
@@ -612,7 +615,7 @@ console.log(`🔍 Headers:`, req.headers);
         return res.status(400).json({ error: "Acción requerida (add/edit/delete)" });
       }
 
-      console.log(`[${requestId}] 📋 Acción: ${action}, ID: ${id || 'nuevo'}`);
+      console.log(`[${requestId}] 📋 Acción recibida: ${action}, ID: ${id || 'nuevo'}`); // <-- PUNTO 1
 
       const octokit = getOctokit();
       const REPO_OWNER = "revista1919";
@@ -826,15 +829,20 @@ console.log(`🔍 Headers:`, req.headers);
         };
       }
 
+      // --- BLOQUE EDIT ---
       if (action === "edit") {
+        console.log(`[${requestId}] 🟢 ENTRÓ al bloque EDIT`); // <-- PUNTO 2
+        
         if (!id) {
+          console.log(`[${requestId}] 🔴 EDIT falló: ID requerido`); // <-- PUNTO 4
           return res.status(400).json({ error: "ID de artículo requerido" });
         }
 
         const articleNumber = parseInt(id);
-        const index = updatedArticles.findIndex(a => a.numeroArticulo === articleNumber);
+        const index = updatedArticles.findIndex(a => String(a.numeroArticulo) === String(articleNumber));
         
         if (index === -1) {
+          console.log(`[${requestId}] 🔴 EDIT falló: Artículo #${articleNumber} no encontrado`); // <-- PUNTO 4
           return res.status(404).json({ error: "Artículo no encontrado" });
         }
 
@@ -938,6 +946,9 @@ console.log(`🔍 Headers:`, req.headers);
           articleNumber: articleNumber,
           message: "Artículo actualizado exitosamente"
         };
+        
+        console.log(`[${requestId}] 🟢 EDIT completado. Preparando respuesta exitosa...`); // <-- PUNTO 3
+        // La respuesta se envía FUERA de este bloque, pero el flujo continúa.
       }
 
       if (action === "delete") {
@@ -946,7 +957,7 @@ console.log(`🔍 Headers:`, req.headers);
         }
 
         const articleNumber = parseInt(id);
-        const index = updatedArticles.findIndex(a => a.numeroArticulo === articleNumber);
+        const index = updatedArticles.findIndex(a => String(a.numeroArticulo) === String(articleNumber));
         
         if (index === -1) {
           return res.status(404).json({ error: "Artículo no encontrado" });
@@ -977,7 +988,10 @@ console.log(`🔍 Headers:`, req.headers);
         };
       }
 
+      // --- RESPUESTA FINAL ---
       if (action === "add" || action === "edit" || action === "delete") {
+        console.log(`[${requestId}] 🟢 Entrando al bloque de guardado y respuesta final para acción: ${action}`); // <-- PUNTO 3 (alternativo)
+        
         updatedArticles.sort((a, b) => (a.numeroArticulo || 0) - (b.numeroArticulo || 0));
         
         const commitMessage = `[${action}] Artículo ${action === 'add' ? 'agregado' : action === 'edit' ? 'actualizado' : 'eliminado'} #${responseData.articleNumber || ''} por ${user.email || user.uid}`;
@@ -1001,12 +1015,16 @@ console.log(`🔍 Headers:`, req.headers);
           console.error(`[${requestId}] ⚠️ Error en rebuild:`, rebuildError.message);
         }
 
+        console.log(`[${requestId}] 🟢 A punto de enviar respuesta JSON exitosa.`); // <-- PUNTO 3 (clave)
+        
         return res.json({ 
           success: true,
           ...responseData
         });
       }
 
+      // --- SI LLEGAMOS AQUÍ, ACCIÓN NO VÁLIDA ---
+      console.log(`[${requestId}] 🔴 Acción inválida: "${action}" no fue capturada por ningún bloque.`); // <-- PUNTO 5
       return res.status(400).json({ error: "Acción inválida" });
 
     } catch (err) {

@@ -24,15 +24,29 @@ const parseDateFlexible = (date) => {
 };
 
 // Slug generator (consistente con el script Node.js)
+// Slug generator (CORREGIDO)
 const generateSlug = (name) => {
   if (!name) return '';
-  name = name.toLowerCase();
-  name = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  name = name.replace(/\s+/g, '-');
-  name = name.replace(/[^a-z0-9-]/g, '');
-  name = name.replace(/-+/g, '-');
-  name = name.replace(/^-+|-+$/g, '');
-  return name;
+  
+  // 1. Convertir a minúsculas
+  let slug = name.toLowerCase();
+  
+  // 2. Eliminar tildes (esto ya funciona bien)
+  slug = slug.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  
+  // 3. [NUEVO] Reemplazar puntos seguidos de letras o espacios por un guión
+  //    Esto convertirá "ee.uu" en "ee-uu"
+  slug = slug.replace(/\.(?=[a-z]|\s)/g, '-');
+  
+  // 4. Reemplazar cualquier otro carácter no deseado (incluyendo puntos sueltos restantes) por guiones
+  //    Ahora los puntos ya se procesaron, este paso se encarga del resto.
+  slug = slug.replace(/[^a-z0-9]+/g, '-');
+  
+  // 5. Eliminar guiones múltiples y guiones al principio o final
+  slug = slug.replace(/-+/g, '-');
+  slug = slug.replace(/^-+|-+$/g, '');
+  
+  return slug;
 };
 
 /* -------------------------- AUTHOR FORMATS -------------------------- */
