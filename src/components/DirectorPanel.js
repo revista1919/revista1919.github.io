@@ -194,46 +194,52 @@ export default function DirectorPanel({ user }) {
   }, [volumeForm, showVolumeModal, editingItem]);
 
   // --- EFECTO PARA CARGAR ARTÍCULOS DESDE JSON ---
-  useEffect(() => {
-    if (!hasAccess) return;
+  // --- EFECTO PARA CARGAR ARTÍCULOS DESDE JSON (CORREGIDO) ---
+useEffect(() => {
+  if (!hasAccess) return;
 
-    const fetchArticles = async () => {
-      setLoading(true);
-      try {
-        const response = await fetch(ARTICLES_JSON_URL);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        const processedArticles = data.map(article => ({
-          ...article,
-          autores: Array.isArray(article.autores) ? article.autores : 
-                   (typeof article.autores === 'string' ? article.autores.split(';').map(name => ({ name: name.trim(), authorId: null })) : [])
-        }));
-        setArticles(processedArticles);
-      } catch (error) {
-        console.error("Error fetching articles.json:", error);
-        setStatus({ type: 'error', msg: 'Error al cargar los artículos desde el JSON.' });
-      } finally {
-        setLoading(false);
+  const fetchArticles = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(ARTICLES_JSON_URL);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    };
-
-    fetchArticles();
-
-    // Volúmenes siguen en Firestore
-    const unsubVolumes = onSnapshot(collection(db, 'volumes'), (snapshot) => {
-      const vols = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
+      const data = await response.json();
+      const processedArticles = data.map(article => ({
+        ...article,
+        autores: Array.isArray(article.autores) ? article.autores : 
+                 (typeof article.autores === 'string' ? article.autores.split(';').map(name => ({ name: name.trim(), authorId: null })) : []),
+        // Asegurar que palabras_clave y keywords_english sean arrays
+        palabras_clave: Array.isArray(article.palabras_clave) ? article.palabras_clave : 
+                        (typeof article.palabras_clave === 'string' ? article.palabras_clave.split(';').map(k => k.trim()).filter(k => k) : []),
+        keywords_english: Array.isArray(article.keywords_english) ? article.keywords_english : 
+                          (typeof article.keywords_english === 'string' ? article.keywords_english.split(';').map(k => k.trim()).filter(k => k) : [])
       }));
-      setVolumes(vols);
-    });
+      setArticles(processedArticles);
+    } catch (error) {
+      console.error("Error fetching articles.json:", error);
+      setStatus({ type: 'error', msg: 'Error al cargar los artículos desde el JSON.' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return () => {
-      unsubVolumes();
-    };
-  }, [hasAccess]);
+  fetchArticles();
+
+  // Volúmenes siguen en Firestore
+  const unsubVolumes = onSnapshot(collection(db, 'volumes'), (snapshot) => {
+    const vols = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+    setVolumes(vols);
+  });
+
+  return () => {
+    unsubVolumes();
+  };
+}, [hasAccess]);
 
   // --- Filtrado ---
   const filteredArticles = articles.filter(a => 
@@ -321,103 +327,123 @@ export default function DirectorPanel({ user }) {
   };
 
   // --- HANDLER GUARDAR ARTÍCULO ---
-  const handleSaveArticle = async (e) => {
-    e.preventDefault();
-    setIsProcessing(true);
-    setStatus(null);
+// --- HANDLER GUARDAR ARTÍCULO (CORREGIDO) ---
+const handleSaveArticle = async (e) => {
+  e.preventDefault();
+  setIsProcessing(true);
+  setStatus(null);
 
-    try {
-      const token = await auth.currentUser.getIdToken();
-      const pdfBase64 = articleForm.pdfFile ? await toBase64(articleForm.pdfFile) : null;
-      
-      let html_es = articleForm.html_es;
-      let html_en = articleForm.html_en;
-      
-      if (articleForm.htmlMode === 'code') {
-        html_es = articleForm.html_es || '';
-        html_en = articleForm.html_en || '';
-      }
-
-      const autoresParaBackend = articleForm.autores.map(autor => ({
-        name: autor.name,
-        authorId: autor.authorId,
-        email: autor.email,
-        institution: autor.institution,
-        orcid: autor.orcid,
-      }));
-
-      const articleData = {
-        titulo: articleForm.titulo,
-        tituloEnglish: articleForm.tituloEnglish,
-        autores: autoresParaBackend,
-        resumen: articleForm.resumen,
-        abstract: articleForm.abstract,
-        palabras_clave: articleForm.palabras_clave ? articleForm.palabras_clave.split(';').map(k => k.trim()).filter(k => k) : [],
-        keywords_english: articleForm.keywords_english ? articleForm.keywords_english.split(';').map(k => k.trim()).filter(k => k) : [],
-        area: articleForm.area,
-        tipo: articleForm.tipo,
-        type: articleForm.type,
-        fecha: articleForm.fecha,
-        receivedDate: articleForm.receivedDate || null,
-        acceptedDate: articleForm.acceptedDate || null,
-        volumen: articleForm.volumen,
-        numero: articleForm.numero,
-        primeraPagina: articleForm.primeraPagina,
-        ultimaPagina: articleForm.ultimaPagina,
-        conflicts: articleForm.conflicts,
-        conflictsEnglish: articleForm.conflictsEnglish,
-        funding: articleForm.funding,
-        fundingEnglish: articleForm.fundingEnglish,
-        acknowledgments: articleForm.acknowledgments,
-        acknowledgmentsEnglish: articleForm.acknowledgmentsEnglish,
-        authorCredits: articleForm.authorCredits,
-        authorCreditsEnglish: articleForm.authorCreditsEnglish,
-        dataAvailability: articleForm.dataAvailability,
-        dataAvailabilityEnglish: articleForm.dataAvailabilityEnglish,
-        submissionId: articleForm.submissionId,
-        html_es: html_es,
-        html_en: html_en,
-        referencias: articleForm.referencias,
-      };
-
-      const payload = {
-        action: editingItem ? 'edit' : 'add',
-        article: articleData,
-        pdfBase64,
-        id: editingItem?.numeroArticulo?.toString(),
-      };
-
-      const response = await fetch(MANAGE_ARTICLES_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(errText);
-      }
-
-      // Limpiar localStorage SOLO después de guardar exitosamente
-      if (!editingItem) {
-        localStorage.removeItem('draftNewArticle');
-      }
-      // Para edición, no hay borrador que limpiar
-
-      setShowArticleModal(false);
-      resetForms();
-      await triggerRebuild();
-      setStatus({ type: 'success', msg: '✅ Artículo guardado exitosamente' });
-    } catch (err) {
-      setStatus({ type: 'error', msg: `❌ Error: ${err.message}` });
-    } finally {
-      setIsProcessing(false);
+  try {
+    const token = await auth.currentUser.getIdToken();
+    const pdfBase64 = articleForm.pdfFile ? await toBase64(articleForm.pdfFile) : null;
+    
+    let html_es = articleForm.html_es;
+    let html_en = articleForm.html_en;
+    
+    if (articleForm.htmlMode === 'code') {
+      html_es = articleForm.html_es || '';
+      html_en = articleForm.html_en || '';
     }
-  };
 
+    const autoresParaBackend = articleForm.autores.map(autor => ({
+      name: autor.name,
+      authorId: autor.authorId,
+      email: autor.email,
+      institution: autor.institution,
+      orcid: autor.orcid,
+    }));
+
+    // Procesar palabras_clave - manejar tanto string como array
+    let palabrasClaveArray = [];
+    if (articleForm.palabras_clave) {
+      if (Array.isArray(articleForm.palabras_clave)) {
+        palabrasClaveArray = articleForm.palabras_clave;
+      } else if (typeof articleForm.palabras_clave === 'string') {
+        palabrasClaveArray = articleForm.palabras_clave.split(';').map(k => k.trim()).filter(k => k);
+      }
+    }
+
+    // Procesar keywords_english - manejar tanto string como array
+    let keywordsArray = [];
+    if (articleForm.keywords_english) {
+      if (Array.isArray(articleForm.keywords_english)) {
+        keywordsArray = articleForm.keywords_english;
+      } else if (typeof articleForm.keywords_english === 'string') {
+        keywordsArray = articleForm.keywords_english.split(';').map(k => k.trim()).filter(k => k);
+      }
+    }
+
+    const articleData = {
+      titulo: articleForm.titulo,
+      tituloEnglish: articleForm.tituloEnglish,
+      autores: autoresParaBackend,
+      resumen: articleForm.resumen,
+      abstract: articleForm.abstract,
+      palabras_clave: palabrasClaveArray,
+      keywords_english: keywordsArray,
+      area: articleForm.area,
+      tipo: articleForm.tipo,
+      type: articleForm.type,
+      fecha: articleForm.fecha,
+      receivedDate: articleForm.receivedDate || null,
+      acceptedDate: articleForm.acceptedDate || null,
+      volumen: articleForm.volumen,
+      numero: articleForm.numero,
+      primeraPagina: articleForm.primeraPagina,
+      ultimaPagina: articleForm.ultimaPagina,
+      conflicts: articleForm.conflicts,
+      conflictsEnglish: articleForm.conflictsEnglish,
+      funding: articleForm.funding,
+      fundingEnglish: articleForm.fundingEnglish,
+      acknowledgments: articleForm.acknowledgments,
+      acknowledgmentsEnglish: articleForm.acknowledgmentsEnglish,
+      authorCredits: articleForm.authorCredits,
+      authorCreditsEnglish: articleForm.authorCreditsEnglish,
+      dataAvailability: articleForm.dataAvailability,
+      dataAvailabilityEnglish: articleForm.dataAvailabilityEnglish,
+      submissionId: articleForm.submissionId,
+      html_es: html_es,
+      html_en: html_en,
+      referencias: articleForm.referencias,
+    };
+
+    const payload = {
+      action: editingItem ? 'edit' : 'add',
+      article: articleData,
+      pdfBase64,
+      id: editingItem?.numeroArticulo?.toString(),
+    };
+
+    const response = await fetch(MANAGE_ARTICLES_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(errText);
+    }
+
+    // Limpiar localStorage SOLO después de guardar exitosamente
+    if (!editingItem) {
+      localStorage.removeItem('draftNewArticle');
+    }
+
+    setShowArticleModal(false);
+    resetForms();
+    await triggerRebuild();
+    setStatus({ type: 'success', msg: '✅ Artículo guardado exitosamente' });
+  } catch (err) {
+    console.error("Error saving article:", err);
+    setStatus({ type: 'error', msg: `❌ Error: ${err.message}` });
+  } finally {
+    setIsProcessing(false);
+  }
+};
   const handleSaveVolume = async (e) => {
     e.preventDefault();
     setIsProcessing(true);
@@ -682,23 +708,33 @@ export default function DirectorPanel({ user }) {
               articles={filteredArticles}
               expandedArticles={expandedArticles}
               onToggleExpand={toggleArticleExpand}
-              onEdit={(article) => { 
-                setEditingItem(article); 
-                const autoresParaEdicion = Array.isArray(article.autores) ? article.autores : 
-                                            (typeof article.autores === 'string' ? article.autores.split(';').map(name => ({ name: name.trim(), authorId: null })) : []);
-                setArticleForm({
-                  ...article,
-                  autores: autoresParaEdicion,
-                  palabras_clave: article.palabras_clave ? (Array.isArray(article.palabras_clave) ? article.palabras_clave.join('; ') : article.palabras_clave) : '',
-                  keywords_english: article.keywords_english ? (Array.isArray(article.keywords_english) ? article.keywords_english.join('; ') : article.keywords_english) : '',
-                  htmlMode: 'code',
-                  html_es: article.html_es || '',
-                  html_en: article.html_en || '',
-                  referencias: article.referencias || '',
-                  pdfFile: null,
-                }); 
-                setShowArticleModal(true); 
-              }}
+              // En la parte donde se configura la edición del artículo (dentro del onEdit)
+onEdit={(article) => { 
+  setEditingItem(article); 
+  const autoresParaEdicion = Array.isArray(article.autores) ? article.autores : 
+                              (typeof article.autores === 'string' ? article.autores.split(';').map(name => ({ name: name.trim(), authorId: null })) : []);
+  
+  // Función para convertir array a string con punto y coma si es necesario
+  const arrayToString = (value) => {
+    if (Array.isArray(value)) {
+      return value.join('; ');
+    }
+    return value || '';
+  };
+
+  setArticleForm({
+    ...article,
+    autores: autoresParaEdicion,
+    palabras_clave: arrayToString(article.palabras_clave),
+    keywords_english: arrayToString(article.keywords_english),
+    htmlMode: 'code',
+    html_es: article.html_es || '',
+    html_en: article.html_en || '',
+    referencias: article.referencias || '',
+    pdfFile: null,
+  }); 
+  setShowArticleModal(true); 
+}}
               onDelete={(id) => handleDelete(id, 'article')}
               formatDate={formatDate}
             />
