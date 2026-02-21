@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { auth, db } from '../firebase';
-import { collection, onSnapshot, query, where, getDocs, limit as firestoreLimit, doc as firestoreDoc, getDoc } from "firebase/firestore"; // Cambiado doc a firestoreDoc
+import { collection, onSnapshot, query, where, getDocs, limit as firestoreLimit, doc as firestoreDoc, getDoc } from "firebase/firestore";
 import Admissions from './Admissions';
 import MailsTeam from './MailsTeam';
 import ReactQuill from 'react-quill';
@@ -55,7 +55,7 @@ const quillModules = {
   ],
 };
 
-// --- NUEVA ESTRUCTURA PARA AUTORES ---
+// --- Estructura para Autores ---
 const initialAuthorState = {
   name: '',
   email: '',
@@ -65,7 +65,7 @@ const initialAuthorState = {
   isCorresponding: false,
 };
 
-// --- ESTADOS INICIALES ---
+// --- Estados Iniciales ---
 const initialArticleState = {
   numeroArticulo: null,
   titulo: '',
@@ -143,6 +143,56 @@ export default function DirectorPanel({ user }) {
   // --- Lógica de Acceso y Datos ---
   const hasAccess = useMemo(() => user?.roles?.includes('Director General'), [user]);
 
+  // --- Cargar borradores SOLO al abrir modal ---
+  useEffect(() => {
+    if (showArticleModal && !editingItem) {
+      const savedDraft = localStorage.getItem('draftNewArticle');
+      if (savedDraft) {
+        try {
+          setArticleForm(JSON.parse(savedDraft));
+        } catch (e) {
+          console.error("Error parsing draft:", e);
+        }
+      }
+    } else if (showArticleModal && editingItem) {
+      // Para edición, NO cargar borrador automáticamente
+      // Simplemente usamos los datos del artículo
+      setArticleForm(prev => ({
+        ...prev,
+        ...editingItem,
+        autores: Array.isArray(editingItem.autores) ? editingItem.autores : [],
+      }));
+    }
+  }, [showArticleModal, editingItem]);
+
+  useEffect(() => {
+    if (showVolumeModal && !editingItem) {
+      const savedDraft = localStorage.getItem('draftNewVolume');
+      if (savedDraft) {
+        try {
+          setVolumeForm(JSON.parse(savedDraft));
+        } catch (e) {
+          console.error("Error parsing draft:", e);
+        }
+      }
+    }
+  }, [showVolumeModal, editingItem]);
+
+  // --- Guardar borradores solo para nuevos, NO para edición ---
+  useEffect(() => {
+    if (showArticleModal && !editingItem) {
+      localStorage.setItem('draftNewArticle', JSON.stringify(articleForm));
+    } else if (showArticleModal && editingItem) {
+      // NO guardar borrador para ediciones
+    }
+  }, [articleForm, showArticleModal, editingItem]);
+
+  useEffect(() => {
+    if (showVolumeModal && !editingItem) {
+      localStorage.setItem('draftNewVolume', JSON.stringify(volumeForm));
+    }
+  }, [volumeForm, showVolumeModal, editingItem]);
+
   // --- EFECTO PARA CARGAR ARTÍCULOS DESDE JSON ---
   useEffect(() => {
     if (!hasAccess) return;
@@ -185,48 +235,6 @@ export default function DirectorPanel({ user }) {
     };
   }, [hasAccess]);
 
-  // Persist drafts en localStorage
-  useEffect(() => {
-    if (showArticleModal && !editingItem) {
-      const savedDraft = localStorage.getItem('draftNewArticle');
-      if (savedDraft) setArticleForm(JSON.parse(savedDraft));
-    }
-  }, [showArticleModal, editingItem]);
-
-  useEffect(() => {
-    if (showArticleModal && editingItem) {
-      const key = `draftEditArticle_${editingItem.id}`;
-      const savedDraft = localStorage.getItem(key);
-      if (savedDraft) setArticleForm(JSON.parse(savedDraft));
-    }
-  }, [showArticleModal, editingItem]);
-
-  useEffect(() => {
-    if (showVolumeModal && !editingItem) {
-      const savedDraft = localStorage.getItem('draftNewVolume');
-      if (savedDraft) setVolumeForm(JSON.parse(savedDraft));
-    }
-  }, [showVolumeModal, editingItem]);
-
-  // Save drafts
-  useEffect(() => {
-    if (showArticleModal && !editingItem) {
-      localStorage.setItem('draftNewArticle', JSON.stringify(articleForm));
-    } else if (showArticleModal && editingItem) {
-      const key = `draftEditArticle_${editingItem.id}`;
-      localStorage.setItem(key, JSON.stringify(articleForm));
-    }
-  }, [articleForm, showArticleModal, editingItem]);
-
-  useEffect(() => {
-    if (showVolumeModal && !editingItem) {
-      localStorage.setItem('draftNewVolume', JSON.stringify(volumeForm));
-    } else if (showVolumeModal && editingItem) {
-      const key = `draftEditVolume_${editingItem.id}`;
-      localStorage.setItem(key, JSON.stringify(volumeForm));
-    }
-  }, [volumeForm, showVolumeModal, editingItem]);
-
   // --- Filtrado ---
   const filteredArticles = articles.filter(a => 
     a.titulo?.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -262,7 +270,7 @@ export default function DirectorPanel({ user }) {
     }
   };
 
-  // --- FUNCIÓN CORREGIDA: Importar datos desde Submission ---
+  // --- FUNCIÓN: Importar datos desde Submission ---
   const importFromSubmission = async (submissionId) => {
     if (!submissionId || submissionId.trim() === '') {
       setStatus({ type: 'error', msg: 'Por favor, ingresa un Submission ID.' });
@@ -273,7 +281,6 @@ export default function DirectorPanel({ user }) {
     setStatus({ type: 'info', msg: 'Buscando envío...' });
 
     try {
-      // Usar firestoreDoc en lugar de doc para evitar conflicto
       const submissionRef = firestoreDoc(db, 'submissions', submissionId);
       const submissionSnap = await getDoc(submissionRef);
 
@@ -394,11 +401,11 @@ export default function DirectorPanel({ user }) {
         throw new Error(errText);
       }
 
+      // Limpiar localStorage SOLO después de guardar exitosamente
       if (!editingItem) {
         localStorage.removeItem('draftNewArticle');
-      } else {
-        localStorage.removeItem(`draftEditArticle_${editingItem.id}`);
       }
+      // Para edición, no hay borrador que limpiar
 
       setShowArticleModal(false);
       resetForms();
@@ -457,10 +464,9 @@ export default function DirectorPanel({ user }) {
         throw new Error(errText);
       }
 
+      // Limpiar localStorage SOLO después de guardar exitosamente
       if (!editingItem) {
         localStorage.removeItem('draftNewVolume');
-      } else {
-        localStorage.removeItem(`draftEditVolume_${editingItem.id}`);
       }
 
       setShowVolumeModal(false);
@@ -745,6 +751,7 @@ export default function DirectorPanel({ user }) {
           setFormData={setArticleForm} 
           onImportFromSubmission={importFromSubmission}
           isProcessing={isProcessing}
+          isEditing={!!editingItem}
         />
       </Modal>
 
@@ -756,14 +763,18 @@ export default function DirectorPanel({ user }) {
         isProcessing={isProcessing}
         onSave={handleSaveVolume}
       >
-        <VolumeForm formData={volumeForm} setFormData={setVolumeForm} />
+        <VolumeForm 
+          formData={volumeForm} 
+          setFormData={setVolumeForm}
+          isEditing={!!editingItem}
+        />
       </Modal>
     </div>
   );
 }
 
 // --- COMPONENTE DE FORMULARIO DE ARTÍCULO ---
-const ArticleForm = ({ formData, setFormData, onImportFromSubmission, isProcessing }) => {
+const ArticleForm = ({ formData, setFormData, onImportFromSubmission, isProcessing, isEditing }) => {
   const [activeStep, setActiveStep] = useState(0);
   const [submissionIdInput, setSubmissionIdInput] = useState('');
   
@@ -806,8 +817,8 @@ const ArticleForm = ({ formData, setFormData, onImportFromSubmission, isProcessi
 
   return (
     <div className="flex flex-col h-[70vh] lg:h-[60vh]">
-      {/* Barra de importación de Submission ID */}
-      {!formData.submissionId && (
+      {/* Barra de importación de Submission ID - Solo visible para nuevos artículos */}
+      {!isEditing && !formData.submissionId && (
         <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200 flex flex-col sm:flex-row gap-2 items-center">
           <input
             type="text"
@@ -914,7 +925,7 @@ const ArticleForm = ({ formData, setFormData, onImportFromSubmission, isProcessi
                       placeholder="0000-0002-1825-0097"
                     />
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                     <label className="flex items-center gap-2 text-sm">
                       <input
                         type="checkbox"
@@ -924,11 +935,16 @@ const ArticleForm = ({ formData, setFormData, onImportFromSubmission, isProcessi
                       />
                       Autor de Correspondencia
                     </label>
-                    {autor.authorId && (
-                      <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                        ID: {autor.authorId}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm font-medium text-gray-700">ID de Autor:</label>
+                      <input
+                        type="text"
+                        value={autor.authorId || ''}
+                        onChange={(e) => updateAuthor(index, 'authorId', e.target.value)}
+                        placeholder="Ingresar ID manualmente"
+                        className="px-2 py-1 border border-gray-300 rounded-md text-sm w-full sm:w-48"
+                      />
+                    </div>
                   </div>
                 </div>
               ))}
@@ -1331,7 +1347,7 @@ const ArticleForm = ({ formData, setFormData, onImportFromSubmission, isProcessi
   );
 };
 
-// --- NUEVO COMPONENTE: BÚSQUEDA DE USUARIOS (CORREGIDO) ---
+// --- COMPONENTE DE BÚSQUEDA DE USUARIOS ---
 const UserSearch = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -1352,14 +1368,14 @@ const UserSearch = () => {
       const emailSnapshot = await getDocs(emailQuery);
       
       let results = [];
-      emailSnapshot.forEach((docSnapshot) => { // Cambiado de doc a docSnapshot
+      emailSnapshot.forEach((docSnapshot) => {
         results.push({ id: docSnapshot.id, ...docSnapshot.data() });
       });
 
       if (results.length === 0) {
         const allUsersQuery = query(usersRef, firestoreLimit(100));
         const allSnapshot = await getDocs(allUsersQuery);
-        allSnapshot.forEach((docSnapshot) => { // Cambiado de doc a docSnapshot
+        allSnapshot.forEach((docSnapshot) => {
           const userData = docSnapshot.data();
           const fullName = `${userData.firstName || ''} ${userData.lastName || ''}`.toLowerCase();
           const displayName = userData.displayName?.toLowerCase() || '';
@@ -1498,7 +1514,7 @@ const UserSearch = () => {
 };
 
 // --- COMPONENTE VOLUME FORM ---
-const VolumeForm = ({ formData, setFormData }) => {
+const VolumeForm = ({ formData, setFormData, isEditing }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => {
