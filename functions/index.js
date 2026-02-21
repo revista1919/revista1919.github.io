@@ -1952,6 +1952,7 @@ function sanitizeText(text) {
 }
 
 /* ===================== SUBMIT ARTICLE ===================== */
+/* ===================== SUBMIT ARTICLE ===================== */
 exports.submitArticle = onRequest(
   { 
     secrets: [OAUTH2_CLIENT_ID, OAUTH2_CLIENT_SECRET, OAUTH2_REFRESH_TOKEN],
@@ -2015,6 +2016,7 @@ exports.submitArticle = onRequest(
         return res.status(403).json({ error: 'Cuenta bloqueada para envíos' });
       }
 
+      // --- NUEVO: Extraer campos de disponibilidad ---
       const {
         title, titleEn, abstract, abstractEn, 
         keywords, keywordsEn, area, paperLanguage = 'es',
@@ -2023,8 +2025,21 @@ exports.submitArticle = onRequest(
         manuscriptBase64, manuscriptName,
         authorEmail, authorName,
         articleType,
-        acknowledgments
+        acknowledgments,
+        // NUEVOS CAMPOS
+        dataAvailability,
+        dataAvailabilityEn,
+        codeAvailability,
+        codeAvailabilityEn
       } = req.body;
+
+      // NUEVO: Validar disponibilidad de datos (obligatorio)
+      if (!dataAvailability) {
+        return res.status(400).json({ 
+          error: 'Debes declarar la disponibilidad de los datos',
+          missingFields: ['dataAvailability']
+        });
+      }
 
       const requiredFields = { title, abstract, keywords, area, manuscriptBase64, authors, articleType };
       const missingFields = Object.entries(requiredFields)
@@ -2063,61 +2078,73 @@ exports.submitArticle = onRequest(
       const submissionId = `SUB-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
       console.log(`📄 Submission ID: ${submissionId}`);
 
-      // Verificar que google esté disponible
-      // Verificar que google esté disponible
-// Verificar que google esté disponible - con reintentos
-let googleAvailable = false;
-let attempts = 0;
-const maxAttempts = 3;
+      // Verificar que google esté disponible - con reintentos
+      let googleAvailable = false;
+      let attempts = 0;
+      const maxAttempts = 3;
 
-while (!googleAvailable && attempts < maxAttempts) {
-  if (!google) {
-    console.log(`[${requestId}] ⏳ Intento ${attempts + 1}/${maxAttempts}: Cargando dependencias de Google Drive...`);
-    await loadDependencies();
-  }
-  
-  if (google) {
-    googleAvailable = true;
-    console.log(`[${requestId}] ✅ Google Drive disponible después de ${attempts + 1} intentos`);
-  } else {
-    attempts++;
-    if (attempts < maxAttempts) {
-      // Esperar 1 segundo antes de reintentar
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-  }
-}
+      while (!googleAvailable && attempts < maxAttempts) {
+        if (!google) {
+          console.log(`[${requestId}] ⏳ Intento ${attempts + 1}/${maxAttempts}: Cargando dependencias de Google Drive...`);
+          await loadDependencies();
+        }
+        
+        if (google) {
+          googleAvailable = true;
+          console.log(`[${requestId}] ✅ Google Drive disponible después de ${attempts + 1} intentos`);
+        } else {
+          attempts++;
+          if (attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+      }
 
-if (!googleAvailable) {
-  console.error(`[${requestId}] ❌ Google Drive no disponible después de ${maxAttempts} intentos`);
-  return res.status(500).json({ 
-    error: 'Servicio Google Drive no disponible',
-    requestId
-  });
-}
-      // En submitArticle, dentro del try principal
-let drive;
-try {
-  drive = await getDriveClient(requestId);  // <-- PASA requestId AQUÍ
-} catch (driveError) {
-  console.error(`[${requestId}] ❌ Error obteniendo cliente Drive:`, driveError);
-  return res.status(500).json({ 
-    error: 'Error en servicio de almacenamiento',
-    requestId
-  });
-}
-
-      const safeTitle = title.substring(0, 30).replace(/[^a-zA-Z0-9]/g, '_');
-      const folderName = `Submission_${submissionId}_${safeTitle}`;
-
-      let folder;
-      try {
-        folder = await createDriveFolder(drive, folderName);
-      } catch (folderError) {
+      if (!googleAvailable) {
+        console.error(`[${requestId}] ❌ Google Drive no disponible después de ${maxAttempts} intentos`);
         return res.status(500).json({ 
-          error: 'Error creando carpeta en Drive',
+          error: 'Servicio Google Drive no disponible',
           requestId
         });
+      }
+
+      let drive;
+      try {
+        drive = await getDriveClient(requestId);
+      } catch (driveError) {
+        console.error(`[${requestId}] ❌ Error obteniendo cliente Drive:`, driveError);
+        return res.status(500).json({ 
+          error: 'Error en servicio de almacenamiento',
+          requestId
+        });
+      }
+
+      const safeTitle = title.substring(0, 30).replace(/[^a-zA-Z0-9]/g, '_');
+      
+      // --- MODIFICADO: Crear DOS carpetas ---
+      // Carpeta 1: Para el autor (documentos originales)
+      const authorFolderName = `AUTHOR_${submissionId}_${safeTitle}`;
+      let authorFolder;
+      try {
+        authorFolder = await createDriveFolder(drive, authorFolderName);
+        console.log(`✅ Carpeta de autor creada: ${authorFolderName} (${authorFolder.id})`);
+      } catch (folderError) {
+        return res.status(500).json({ 
+          error: 'Error creando carpeta de autor en Drive',
+          requestId
+        });
+      }
+
+      // Carpeta 2: Para editores (revisión editorial) - NUEVA
+      const editorialFolderName = `EDITORIAL_${submissionId}_${safeTitle}`;
+      let editorialFolder;
+      try {
+        editorialFolder = await createDriveFolder(drive, editorialFolderName);
+        console.log(`✅ Carpeta editorial creada: ${editorialFolderName} (${editorialFolder.id})`);
+      } catch (folderError) {
+        // Si falla la carpeta editorial, no detenemos el proceso pero registramos el error
+        console.error(`⚠️ Error creando carpeta editorial:`, folderError.message);
+        editorialFolder = null;
       }
 
       const fileExt = manuscriptName?.endsWith('.docx') ? '.docx' : '.doc';
@@ -2125,12 +2152,35 @@ try {
 
       let file;
       try {
-        file = await uploadToDrive(drive, manuscriptBase64, fileName, folder.id);
+        // Subir a la carpeta del autor
+        file = await uploadToDrive(drive, manuscriptBase64, fileName, authorFolder.id);
+        console.log(`✅ Archivo subido a carpeta de autor`);
       } catch (uploadError) {
         return res.status(500).json({ 
           error: 'Error subiendo archivo a Drive',
           requestId
         });
+      }
+
+      // Si hay carpeta editorial, crear un acceso directo simbólico o copiar referencia
+      if (editorialFolder) {
+        try {
+          // Crear un atajo (shortcut) en la carpeta editorial que apunte al archivo original
+          await drive.files.create({
+            resource: {
+              name: `[REF] ${fileName}`,
+              mimeType: 'application/vnd.google-apps.shortcut',
+              parents: [editorialFolder.id],
+              shortcutDetails: {
+                targetId: file.id
+              }
+            },
+            fields: 'id'
+          });
+          console.log(`✅ Acceso directo creado en carpeta editorial`);
+        } catch (shortcutError) {
+          console.error(`⚠️ Error creando acceso directo:`, shortcutError.message);
+        }
       }
 
       console.log('🔒 Configurando permisos restringidos para editores...');
@@ -2149,21 +2199,58 @@ try {
         editorEmailsForPermissions.push('contact@revistacienciasestudiantes.com');
       }
 
+      // --- MODIFICADO: Otorgar permisos a AMBAS carpetas ---
+      // Permisos para carpeta de autor (solo lectura para editores)
       for (const email of editorEmailsForPermissions) {
         try {
           await drive.permissions.create({
-            fileId: folder.id,
+            fileId: authorFolder.id,
             requestBody: {
-              role: 'writer',
+              role: 'reader',
               type: 'user',
               emailAddress: email
             },
             sendNotificationEmail: false
           });
-          console.log(`✅ Permiso writer otorgado a editor: ${email}`);
         } catch (permErr) {
-          console.error(`❌ Error permiso para ${email}:`, permErr.message);
+          console.error(`❌ Error permiso lectura para ${email} en carpeta autor:`, permErr.message);
         }
+      }
+
+      // Permisos para carpeta editorial (escritura para editores)
+      if (editorialFolder) {
+        for (const email of editorEmailsForPermissions) {
+          try {
+            await drive.permissions.create({
+              fileId: editorialFolder.id,
+              requestBody: {
+                role: 'writer',
+                type: 'user',
+                emailAddress: email
+              },
+              sendNotificationEmail: false
+            });
+            console.log(`✅ Permiso writer otorgado a editor: ${email} en carpeta editorial`);
+          } catch (permErr) {
+            console.error(`❌ Error permiso para ${email} en carpeta editorial:`, permErr.message);
+          }
+        }
+      }
+
+      // Permiso para el autor en su propia carpeta (escritura)
+      try {
+        await drive.permissions.create({
+          fileId: authorFolder.id,
+          requestBody: {
+            role: 'reader',
+            type: 'user',
+            emailAddress: decodedToken.email
+          },
+          sendNotificationEmail: false
+        });
+        console.log(`✅ Permiso writer otorgado a autor: ${decodedToken.email}`);
+      } catch (permErr) {
+        console.error(`❌ Error permiso para autor:`, permErr.message);
       }
 
       const crypto = require('crypto');
@@ -2200,11 +2287,12 @@ try {
           if (minor.consentMethod === 'upload' && minor.consentFile?.data) {
             try {
               const consentFileName = `CONSENT_${minor.name.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.pdf`;
+              // Subir consentimiento a la carpeta del autor
               const consentFile = await uploadToDrive(
                 drive, 
                 minor.consentFile.data, 
                 consentFileName, 
-                folder.id
+                authorFolder.id
               );
 
               consentFiles.push({
@@ -2237,6 +2325,7 @@ try {
         consentMethod: m.consentMethod
       }));
 
+      // --- MODIFICADO: Añadir nuevos campos a submissionData ---
       const submissionData = {
         submissionId,
         uid,
@@ -2255,6 +2344,12 @@ try {
         
         articleType: articleType ? sanitizeText(articleType) : null,
         acknowledgments: acknowledgments ? sanitizeText(acknowledgments) : '',
+        
+        // NUEVO: Disponibilidad de datos y código
+        dataAvailability: sanitizeText(dataAvailability),
+        dataAvailabilityEn: dataAvailabilityEn ? sanitizeText(dataAvailabilityEn) : null,
+        codeAvailability: codeAvailability ? sanitizeText(codeAvailability) : null,
+        codeAvailabilityEn: codeAvailabilityEn ? sanitizeText(codeAvailabilityEn) : null,
         
         authors: processedAuthors,
         
@@ -2275,8 +2370,11 @@ try {
         originalFileHash: integrityHash,
         originalFileSize: fileBuffer.length,
         
-        driveFolderId: folder.id,
-        driveFolderUrl: folder.webViewLink,
+        // MODIFICADO: Guardar AMBAS carpetas
+        driveFolderId: authorFolder.id,
+        driveFolderUrl: authorFolder.webViewLink,
+        editorialFolderId: editorialFolder ? editorialFolder.id : null,
+        editorialFolderUrl: editorialFolder ? editorialFolder.webViewLink : null,
         
         status: 'submitted',
         currentRound: 1,
@@ -2357,6 +2455,12 @@ try {
           ? `<p><strong>Financiación:</strong> ${funding.sources || 'Sí'}</p>`
           : '';
 
+        // NUEVO: Incluir disponibilidad en el email
+        const availabilityInfo = `
+          <p><strong>Disponibilidad de datos:</strong> ${dataAvailability}</p>
+          ${codeAvailability ? `<p><strong>Disponibilidad de código:</strong> ${codeAvailability}</p>` : ''}
+        `;
+
         const articleInfo = `
           <div class="highlight-box">
             <p class="article-title">"${sanitizeText(title)}"</p>
@@ -2368,12 +2472,14 @@ try {
             <p><strong>Tipo de artículo:</strong> ${articleType ? articleType.toUpperCase() : 'No especificado'}</p>
             <p><strong>Idioma:</strong> ${paperLanguage === 'es' ? 'Español' : 'Inglés'}</p>
             ${fundingInfo}
+            ${availabilityInfo}
             <p><strong>Autores (${authors.length}):</strong><br>${authorsList}</p>
           </div>
           
           <div class="button-container">
             <a href="https://www.revistacienciasestudiantes.com/es/login" class="btn">VER EN PORTAL</a>
-            <a href="${folder.webViewLink}" class="btn btn-secondary">CARPETA DRIVE</a>
+            <a href="${authorFolder.webViewLink}" class="btn btn-secondary">CARPETA AUTOR</a>
+            ${editorialFolder ? `<a href="${editorialFolder.webViewLink}" class="btn btn-secondary">CARPETA EDITORIAL</a>` : ''}
           </div>
           
           <p class="info-text">
@@ -2421,9 +2527,25 @@ try {
              </p>`;
       }
 
+      // NUEVO: Información de disponibilidad para el autor
+      const availabilityMessage = paperLanguage === 'es'
+        ? `
+          <div class="highlight-box" style="background-color: #f0f7ff; border-left-color: #0A1929;">
+            <p><strong>📊 Disponibilidad de datos:</strong> ${dataAvailability}</p>
+            ${codeAvailability ? `<p><strong>💻 Disponibilidad de código:</strong> ${codeAvailability}</p>` : ''}
+          </div>
+        `
+        : `
+          <div class="highlight-box" style="background-color: #f0f7ff; border-left-color: #0A1929;">
+            <p><strong>📊 Data availability:</strong> ${dataAvailability}</p>
+            ${codeAvailability ? `<p><strong>💻 Code availability:</strong> ${codeAvailability}</p>` : ''}
+          </div>
+        `;
+
       const authorBody = paperLanguage === 'es'
         ? `
           ${minorMessage}
+          ${availabilityMessage}
           
           <div class="highlight-box">
             <p class="article-title">"${sanitizeText(title)}"</p>
@@ -2440,6 +2562,12 @@ try {
             <li>Revisión por pares</li>
           </ol>
           
+          <p><strong>Tus carpetas en Google Drive:</strong></p>
+          <ul>
+            <li><a href="${authorFolder.webViewLink}">📁 Carpeta personal</a> (tus documentos originales)</li>
+            ${editorialFolder ? `<li><a href="${editorialFolder.webViewLink}">📋 Carpeta editorial</a> (seguimiento de revisión)</li>` : ''}
+          </ul>
+          
           <p><em>Nota: Los plazos de revisión dependen de la disponibilidad de los revisores y de la complejidad del artículo, por lo que no son fijos. Te mantendremos informado de cualquier avance.</em></p>
           
           <div class="button-container">
@@ -2448,6 +2576,7 @@ try {
         `
         : `
           ${minorMessage}
+          ${availabilityMessage}
           
           <div class="highlight-box">
             <p class="article-title">"${sanitizeText(title)}"</p>
@@ -2463,6 +2592,12 @@ try {
             <li>Reviewer assignment</li>
             <li>Peer review</li>
           </ol>
+          
+          <p><strong>Your Google Drive folders:</strong></p>
+          <ul>
+            <li><a href="${authorFolder.webViewLink}">📁 Personal folder</a> (your original documents)</li>
+            ${editorialFolder ? `<li><a href="${editorialFolder.webViewLink}">📋 Editorial folder</a> (review tracking)</li>` : ''}
+          </ul>
           
           <p><em>Note: Review timelines depend on reviewer availability and article complexity, so they are not fixed. We will keep you updated on any progress.</em></p>
           
@@ -2493,10 +2628,12 @@ try {
       const processingTime = Date.now() - startTime;
       console.log(`✅ Envío exitoso: ${submissionId} (${processingTime}ms)`);
 
+      // MODIFICADO: Devolver URLs de ambas carpetas
       return res.status(201).json({
         success: true,
         submissionId,
-        driveFolderUrl: folder.webViewLink,
+        driveFolderUrl: authorFolder.webViewLink,
+        editorialFolderUrl: editorialFolder ? editorialFolder.webViewLink : null,
         message: paperLanguage === 'es' 
           ? 'Artículo enviado correctamente'
           : 'Article submitted successfully',
@@ -2521,7 +2658,6 @@ try {
     }
   }
 );
-
 /* ===================== GET USER SUBMISSIONS ===================== */
 exports.getUserSubmissions = onCall(async (request) => {
   const { HttpsError } = require("firebase-functions/v2/https");

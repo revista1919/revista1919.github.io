@@ -281,6 +281,7 @@ export default function SubmissionForm({ user, onSuccess }) {
   const [submitStatus, setSubmitStatus] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [submissionId, setSubmissionId] = useState('');
+  const [driveFolderId, setDriveFolderId] = useState('');
 
   const [formData, setFormData] = useState({
     title: '',
@@ -600,6 +601,7 @@ export default function SubmissionForm({ user, onSuccess }) {
 
       localStorage.removeItem('submissionFormDraft');
       setSubmissionId(result.submissionId);
+      setDriveFolderId(result.driveFolderId); // NUEVO - guardar el ID de la carpeta
       setSubmitStatus(isSpanish ? '✅ Artículo enviado con éxito' : '✅ Article submitted successfully');
       setSubmitted(true);
 
@@ -630,93 +632,97 @@ export default function SubmissionForm({ user, onSuccess }) {
   ];
 
   // Pantalla de éxito final (con información de carpetas)
-  if (submitted) {
-    return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="max-w-2xl mx-auto py-16 px-4"
-      >
-        <div className="bg-white border border-[#E0E7E9] shadow-2xl rounded-3xl overflow-hidden">
-          <div className="bg-[#0A1929] p-12 text-center">
-            <div className="mx-auto w-24 h-24 bg-[#E5E9F0] rounded-full flex items-center justify-center mb-6">
-              <span className="text-5xl">📮</span>
-            </div>
-            <h2 className="text-3xl font-light text-white mb-3 font-serif">
-              {isSpanish ? '¡Gracias por tu envío!' : 'Thank you for your submission!'}
-            </h2>
-            <p className="text-[#E0E7E9] font-serif">
-              {isSpanish
-                ? 'Tu artículo ha sido recibido y será revisado por el equipo editorial.'
-                : 'Your article has been received and will be reviewed by the editorial team.'}
-            </p>
+  // Pantalla de éxito final (CORREGIDA)
+if (submitted) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="max-w-2xl mx-auto py-16 px-4"
+    >
+      <div className="bg-white border border-[#E0E7E9] shadow-2xl rounded-3xl overflow-hidden">
+        <div className="bg-[#0A1929] p-12 text-center">
+          <div className="mx-auto w-24 h-24 bg-[#E5E9F0] rounded-full flex items-center justify-center mb-6">
+            <span className="text-5xl">📮</span>
           </div>
-          
-          <div className="p-12 space-y-8">
-            <div className="bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl p-6">
-              <p className="text-xs font-mono text-[#546E7A] mb-2">SUBMISSION ID</p>
-              <p className="text-2xl font-serif text-[#0A1929] tracking-wider">{submissionId}</p>
-            </div>
+          <h2 className="text-3xl font-light text-white mb-3 font-serif">
+            {isSpanish ? '¡Gracias por tu envío!' : 'Thank you for your submission!'}
+          </h2>
+          <p className="text-[#E0E7E9] font-serif">
+            {isSpanish
+              ? 'Tu artículo ha sido recibido y será revisado por el equipo editorial.'
+              : 'Your article has been received and will be reviewed by the editorial team.'}
+          </p>
+        </div>
+        
+        <div className="p-12 space-y-8">
+          <div className="bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl p-6">
+            <p className="text-xs font-mono text-[#546E7A] mb-2">SUBMISSION ID</p>
+            <p className="text-2xl font-serif text-[#0A1929] tracking-wider">{submissionId}</p>
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Carpeta del autor (ya existe) */}
-              <div className="border border-[#E0E7E9] rounded-2xl p-6 hover:border-[#0A1929] transition-colors">
-                <div className="w-12 h-12 bg-[#E5E9F0] rounded-xl flex items-center justify-center mb-4">
-                  <span className="text-2xl">📁</span>
-                </div>
-                <h3 className="text-lg font-serif text-[#0A1929] mb-2">
-                  {isSpanish ? 'Tu carpeta personal' : 'Your personal folder'}
+          {/* SOLO UNA CARPETA - La del autor */}
+          <div className="border border-[#E0E7E9] rounded-2xl p-8 hover:border-[#0A1929] transition-colors">
+            <div className="flex items-start gap-6">
+              <div className="w-16 h-16 bg-[#E5E9F0] rounded-2xl flex items-center justify-center flex-shrink-0">
+                <span className="text-3xl">📁</span>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xl font-serif text-[#0A1929] mb-2">
+                  {isSpanish ? 'Tu carpeta de documentos' : 'Your documents folder'}
                 </h3>
                 <p className="text-sm text-[#546E7A] mb-4 font-serif">
                   {isSpanish 
-                    ? 'Aquí puedes ver los documentos que subiste' 
-                    : 'Here you can view the documents you uploaded'}
+                    ? 'Aquí puedes ver los documentos que subiste (solo lectura)' 
+                    : 'Here you can view the documents you uploaded (read-only)'}
                 </p>
                 <a 
-                  href={`https://drive.google.com/drive/folders/${submissionId}`}
+                  href={`https://drive.google.com/drive/folders/${driveFolderId}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 text-[#0A1929] text-sm font-medium hover:text-[#B22234] transition-colors"
                 >
-                  {isSpanish ? 'Ver mis documentos' : 'View my documents'} →
+                  {isSpanish ? 'Abrir en Google Drive' : 'Open in Google Drive'} →
                 </a>
               </div>
+            </div>
+          </div>
 
-              {/* Carpeta editorial (nueva) */}
-              <div className="border border-[#E0E7E9] rounded-2xl p-6 hover:border-[#0A1929] transition-colors">
-                <div className="w-12 h-12 bg-[#E5E9F0] rounded-xl flex items-center justify-center mb-4">
-                  <span className="text-2xl">📋</span>
-                </div>
-                <h3 className="text-lg font-serif text-[#0A1929] mb-2">
-                  {isSpanish ? 'Seguimiento editorial' : 'Editorial tracking'}
+          {/* Información sobre seguimiento - REEMPLAZADO */}
+          <div className="bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl p-8">
+            <div className="flex items-start gap-6">
+              <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center flex-shrink-0 border border-[#E0E7E9]">
+                <span className="text-3xl">📋</span>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xl font-serif text-[#0A1929] mb-2">
+                  {isSpanish ? 'Seguimiento del envío' : 'Submission tracking'}
                 </h3>
                 <p className="text-sm text-[#546E7A] mb-4 font-serif">
                   {isSpanish 
-                    ? 'Aquí podrás ver el progreso de la revisión' 
-                    : 'Here you can track the review progress'}
+                    ? 'Puedes ver el estado de tu artículo en la pestaña "Mis envíos" del portal' 
+                    : 'You can check your article status in the "My submissions" tab on the portal'}
                 </p>
-                <a 
-                  href={`/submission/${submissionId}`}
-                  className="inline-flex items-center gap-2 text-[#0A1929] text-sm font-medium hover:text-[#B22234] transition-colors"
-                >
-                  {isSpanish ? 'Ver estado' : 'Check status'} →
-                </a>
+                <div className="inline-flex items-center gap-2 text-sm text-[#0A1929] font-medium">
+                  <span className="text-[#B22234]">⬤</span>
+                  {isSpanish ? 'Estado actual: Recibido' : 'Current status: Received'}
+                </div>
               </div>
             </div>
+          </div>
 
-            <div className="text-center pt-6 border-t border-[#E0E7E9]">
-              <p className="text-xs text-[#546E7A] font-serif">
-                {isSpanish 
-                  ? 'Recibirás un correo con los detalles del envío' 
-                  : 'You will receive an email with submission details'}
-              </p>
-            </div>
+          <div className="text-center pt-6 border-t border-[#E0E7E9]">
+            <p className="text-xs text-[#546E7A] font-serif">
+              {isSpanish 
+                ? 'Recibirás un correo con los detalles del envío' 
+                : 'You will receive an email with submission details'}
+            </p>
           </div>
         </div>
-      </motion.div>
-    );
-  }
-
+      </div>
+    </motion.div>
+  );
+}
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
