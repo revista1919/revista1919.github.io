@@ -121,17 +121,28 @@ function formatAuthorsDisplay(authors, language = 'es') {
   }
 }
 
+// Reemplaza la función generateSlug actual con esta versión (IDÉNTICA a la de React)
 function generateSlug(name) {
   if (!name) return '';
-  name = name.toLowerCase();
-  name = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  name = name.replace(/\s+/g, '-');
-  name = name.replace(/[^a-z0-9-]/g, '');
-  name = name.replace(/-+/g, '-');
-  name = name.replace(/^-+|-+$/g, '');
-  return name;
+  
+  // 1. Convertir a minúsculas
+  let slug = name.toLowerCase();
+  
+  // 2. Eliminar tildes
+  slug = slug.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  
+  // 3. Reemplazar puntos seguidos de letras o espacios por un guión
+  slug = slug.replace(/\.(?=[a-z]|\s)/g, '-');
+  
+  // 4. Reemplazar cualquier otro carácter no deseado por guiones
+  slug = slug.replace(/[^a-z0-9]+/g, '-');
+  
+  // 5. Eliminar guiones múltiples y guiones al principio o final
+  slug = slug.replace(/-+/g, '-');
+  slug = slug.replace(/^-+|-+$/g, '');
+  
+  return slug;
 }
-
 function isBase64(str) {
   if (!str) return false;
   const base64Regex = /^data:image\/(png|jpe?g|gif);base64,/;
@@ -292,28 +303,30 @@ const orcidSvg = `<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" 
         String(a.numero) === String(volume.numero)
       ).sort((a, b) => parseInt(a.primeraPagina) - parseInt(b.primeraPagina));
 
-      const tocEs = volumeArticles.map(a => {
-        const slug = `${generateSlug(a.titulo)}-${a.numeroArticulo}`;
-        const authorsDisplay = formatAuthorsDisplay(a.autores, 'es');
-        return `
-          <div class="article-item">
-            <a href="/articles/article-${slug}.html" class="article-title">${a.titulo}</a>
-            <span class="article-authors">${authorsDisplay} (pp. ${a.primeraPagina}-${a.ultimaPagina})</span>
-          </div>
-        `;
-      }).join('');
+      // Busca esta sección en tu código donde generas tocEs y tocEn
+const tocEs = volumeArticles.map(a => {
+  // IMPORTANTE: El slug debe construirse IGUAL que en ArticleCard
+  const articleSlug = `${generateSlug(a.titulo)}-${a.numeroArticulo}`;
+  const authorsDisplay = formatAuthorsDisplay(a.autores, 'es');
+  return `
+    <div class="article-item">
+      <a href="/articles/article-${articleSlug}.html" class="article-title">${a.titulo}</a>
+      <span class="article-authors">${authorsDisplay} (pp. ${a.primeraPagina}-${a.ultimaPagina})</span>
+    </div>
+  `;
+}).join('');
 
-      const tocEn = volumeArticles.map(a => {
-        const slug = `${generateSlug(a.titulo)}-${a.numeroArticulo}`;
-        const authorsDisplay = formatAuthorsDisplay(a.autores, 'en');
-        return `
-          <div class="article-item">
-            <a href="/articles/article-${slug}EN.html" class="article-title">${a.titulo}</a>
-            <span class="article-authors">${authorsDisplay} (pp. ${a.primeraPagina}-${a.ultimaPagina})</span>
-          </div>
-        `;
-      }).join('');
-
+const tocEn = volumeArticles.map(a => {
+  // IGUAL para inglés
+  const articleSlug = `${generateSlug(a.titulo)}-${a.numeroArticulo}`;
+  const authorsDisplay = formatAuthorsDisplay(a.autores, 'en');
+  return `
+    <div class="article-item">
+      <a href="/articles/article-${articleSlug}EN.html" class="article-title">${a.titulo}</a>
+      <span class="article-authors">${authorsDisplay} (pp. ${a.primeraPagina}-${a.ultimaPagina})</span>
+    </div>
+  `;
+}).join('');
       // Generar HTML en español para volumen
       const htmlContentEs = generateVolumeHtml({
         lang: 'es',
