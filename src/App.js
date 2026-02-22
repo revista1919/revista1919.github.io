@@ -691,9 +691,8 @@ function App() {
       </nav>
       <main className="flex-grow">
         <AnimatePresence mode="wait">
-         {/* En App.js, reemplaza TODO el bloque <Routes> con esto */}
-<Routes location={location} key={location.key}>
-  {/* Ruta para revisores */}
+        <Routes location={location} key={location.key}>
+  {/* Ruta para revisores - disponible en español e inglés */}
   <Route path="/reviewer-response" element={
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -705,12 +704,12 @@ function App() {
       <ReviewerResponsePage />
     </motion.div>
   } />
-  
-  {/* Rutas de secciones en español - SIN el prefijo /es */}
+ 
+  {/* Rutas de secciones en español */}
   {sections.map(s => (
-    <Route 
-      key={s.path} 
-      path={s.path} 
+    <Route
+      key={s.path}
+      path={s.path}
       element={
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -725,10 +724,10 @@ function App() {
         >
           {s.component}
         </motion.div>
-      } 
+      }
     />
   ))}
-  
+ 
   {/* Ruta comodín para redirigir rutas no encontradas a / */}
   <Route path="*" element={<Navigate to="/" replace />} />
 </Routes>

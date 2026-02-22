@@ -681,13 +681,26 @@ function AppEN() {
       </nav>
       <main className="flex-grow">
         <AnimatePresence mode="wait">
-          {/* En AppEN.js, reemplaza TODO el bloque <Routes> con esto */}
+         
 <Routes location={location} key={location.key}>
-  {/* Rutas de secciones en inglés - CON el prefijo /en */}
+  {/* Ruta para revisores - disponible en inglés también */}
+  <Route path="/reviewer-response" element={
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.3 }}
+      className="container mx-auto px-6 lg:px-8 flex-grow"
+    >
+      <ReviewerResponsePage />
+    </motion.div>
+  } />
+  
+  {/* Rutas de secciones en inglés */}
   {sections.map(s => (
-    <Route 
-      key={s.name} 
-      path={s.path} 
+    <Route
+      key={s.name}
+      path={s.path.replace('/en', '')} // Importante: quita /en de la ruta porque ya estamos en el contexto /en
       element={
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -702,12 +715,12 @@ function AppEN() {
         >
           {s.component}
         </motion.div>
-      } 
+      }
     />
   ))}
-  
+ 
   {/* Ruta comodín para redirigir rutas no encontradas a /en */}
-  <Route path="*" element={<Navigate to="/en" replace />} />
+  <Route path="*" element={<Navigate to="/" replace />} />
 </Routes>
         </AnimatePresence>
       </main>

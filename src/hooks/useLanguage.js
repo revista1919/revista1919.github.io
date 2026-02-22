@@ -8,21 +8,36 @@ export const useLanguage = () => {
 
   const getLanguageFromPath = () => {
     if (pathname.startsWith('/en')) return 'en';
-    return 'es'; // Default: español (incluye /, /es, etc.)
+    return 'es'; // Default: español
   };
 
   const cleanPath = () => {
     const lang = getLanguageFromPath();
-    return pathname.replace(`/${lang}`, '');
+    // Si es español, quita /es o /es/ del path
+    if (lang === 'es') {
+      if (pathname === '/es' || pathname === '/es/') return '/';
+      return pathname.replace(/^\/es/, '') || '/';
+    }
+    // Si es inglés, quita /en del path
+    if (lang === 'en') {
+      return pathname.replace(/^\/en/, '') || '/';
+    }
+    return pathname;
   };
 
   const switchLanguage = (newLang) => {
     const currentCleanPath = cleanPath();
+    // Si la ruta limpia es '/', no agregues nada extra
     const basePath = currentCleanPath === '/' ? '' : currentCleanPath;
-    const newPath = newLang === 'en' ? `/en${basePath}` : `/es${basePath}`; // Usa /es para consistencia
     
-    // Navega usando el router (no pushState manual, y NO reload)
-    navigate(newPath, { replace: true }); // replace: true evita acumular historial
+    let newPath;
+    if (newLang === 'en') {
+      newPath = `/en${basePath}`;
+    } else {
+      newPath = basePath || '/'; // Español: sin prefijo o solo /
+    }
+    
+    navigate(newPath, { replace: true });
   };
 
   return {
