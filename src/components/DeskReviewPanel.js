@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../firebase';
-import { collection, query, where, orderBy, onSnapshot, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, getDocs, doc, getDoc } from 'firebase/firestore';
 import { useLanguage } from '../hooks/useLanguage';
 import { useEditorialReview } from '../hooks/useEditorialReview';
 import { useReviewerInvitation } from '../hooks/useReviewerInvitation';
@@ -10,6 +10,7 @@ import { useReviewerInvitation } from '../hooks/useReviewerInvitation';
 const DeskReviewPanel = ({ user }) => {
   const { language } = useLanguage();
   const isSpanish = language === 'es';
+  
   const [submissions, setSubmissions] = useState([]);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [activeReview, setActiveReview] = useState(null);
@@ -17,11 +18,13 @@ const DeskReviewPanel = ({ user }) => {
   const [internalComments, setInternalComments] = useState('');
   const [decision, setDecision] = useState('');
   const [isSavingDecision, setIsSavingDecision] = useState(false);
+  const [currentStep, setCurrentStep] = useState('decision'); // 'decision' o 'reviewers'
   
   // Estados para selección de revisores
   const [potentialReviewers, setPotentialReviewers] = useState([]);
   const [selectedReviewerId, setSelectedReviewerId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [assignedReviewers, setAssignedReviewers] = useState([]);
 
   const { loading: reviewLoading, error: reviewError, startDeskReview, submitDeskReviewDecision } = useEditorialReview(user);
   const { loading: inviteLoading, error: inviteError, sendInvitation } = useReviewerInvitation(user);
@@ -32,7 +35,7 @@ const DeskReviewPanel = ({ user }) => {
 
     const q = query(
       collection(db, 'submissions'),
-      where('status', 'in', ['submitted', 'in-editorial-review']),
+      where('status', 'in', ['submitted', 'in-editorial-review', 'in-reviewer-selection']),
       orderBy('createdAt', 'desc')
     );
 
@@ -48,6 +51,28 @@ const DeskReviewPanel = ({ user }) => {
 
     return () => unsubscribe();
   }, [user]);
+
+  // Cargar revisores asignados cuando hay un activeReview
+  useEffect(() => {
+    const loadAssignedReviewers = async () => {
+      if (!activeReview?.id) return;
+      
+      const q = query(
+        collection(db, 'reviewerInvitations'),
+        where('editorialReviewId', '==', activeReview.id),
+        where('round', '==', activeReview.round || 1)
+      );
+      
+      const snapshot = await getDocs(q);
+      const assignments = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setAssignedReviewers(assignments);
+    };
+
+    loadAssignedReviewers();
+  }, [activeReview]);
 
   // Cargar potenciales revisores
   useEffect(() => {
@@ -81,6 +106,7 @@ const DeskReviewPanel = ({ user }) => {
       setFeedback(result.data?.feedbackToAuthor || '');
       setInternalComments(result.data?.commentsToEditorial || '');
       setDecision(result.data?.decision || '');
+      setCurrentStep('decision');
     }
   };
 
@@ -98,12 +124,22 @@ const DeskReviewPanel = ({ user }) => {
     });
 
     if (result.success) {
-      alert(isSpanish ? 'Decisión guardada. El proceso continuará.' : 'Decision saved. The process will continue.');
-      setSelectedSubmission(null);
-      setActiveReview(null);
-      setFeedback('');
-      setInternalComments('');
-      setDecision('');
+      // Si la decisión es 'revision-required', pasamos al paso de selección de revisores
+      if (decision === 'revision-required') {
+        setCurrentStep('reviewers');
+        alert(isSpanish 
+          ? 'Decisión guardada. Ahora puedes asignar revisores.' 
+          : 'Decision saved. Now you can assign reviewers.');
+      } else {
+        // Para otras decisiones, limpiamos todo
+        alert(isSpanish ? 'Decisión guardada correctamente' : 'Decision saved successfully');
+        setSelectedSubmission(null);
+        setActiveReview(null);
+        setFeedback('');
+        setInternalComments('');
+        setDecision('');
+        setCurrentStep('decision');
+      }
     }
     setIsSavingDecision(false);
   };
@@ -129,11 +165,40 @@ const DeskReviewPanel = ({ user }) => {
       alert(isSpanish ? 'Invitación enviada' : 'Invitation sent');
       setSelectedReviewerId('');
       setSearchTerm('');
+      
+      // Recargar la lista de asignados
+      const q = query(
+        collection(db, 'reviewerInvitations'),
+        where('editorialReviewId', '==', activeReview.id)
+      );
+      const snapshot = await getDocs(q);
+      const assignments = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setAssignedReviewers(assignments);
     }
   };
 
-  // Filtrar revisores
-  const filteredReviewers = potentialReviewers.filter(reviewer => {
+  const getStatusBadge = (status) => {
+    const statusMap = {
+      'pending': { bg: 'bg-yellow-100', text: 'text-yellow-800', label: isSpanish ? 'Pendiente' : 'Pending' },
+      'accepted': { bg: 'bg-green-100', text: 'text-green-800', label: isSpanish ? 'Aceptada' : 'Accepted' },
+      'declined': { bg: 'bg-red-100', text: 'text-red-800', label: isSpanish ? 'Rechazada' : 'Declined' }
+    };
+    const style = statusMap[status] || statusMap.pending;
+    return (
+      <span className={`${style.bg} ${style.text} px-2 py-1 rounded-full text-xs font-['Lora']`}>
+        {style.label}
+      </span>
+    );
+  };
+
+  // Filtrar revisores (excluir ya invitados)
+  const invitedEmails = new Set(assignedReviewers.map(r => r.reviewerEmail));
+  const availableReviewers = potentialReviewers.filter(r => !invitedEmails.has(r.email));
+  
+  const filteredReviewers = availableReviewers.filter(reviewer => {
     const searchLower = searchTerm.toLowerCase();
     return (
       reviewer.displayName?.toLowerCase().includes(searchLower) ||
@@ -152,7 +217,7 @@ const DeskReviewPanel = ({ user }) => {
         {isSpanish ? 'Revisión Editorial' : 'Editorial Review'}
       </h2>
       <p className="text-[#5A6B7A] font-['Lora'] text-lg mb-8 border-b border-[#E5E9F0] pb-4">
-        {isSpanish ? 'Evaluación inicial de manuscritos (Desk Review)' : 'Initial manuscript evaluation (Desk Review)'}
+        {isSpanish ? 'Evaluación inicial de manuscritos' : 'Initial manuscript evaluation'}
       </p>
 
       {(reviewError || inviteError) && (
@@ -162,10 +227,10 @@ const DeskReviewPanel = ({ user }) => {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Lista de envíos pendientes - Estilo Oxford */}
+        {/* Lista de envíos */}
         <div className="lg:col-span-1 space-y-4">
           <h3 className="font-['Playfair_Display'] text-lg font-semibold text-[#0A1929] border-b-2 border-[#C0A86A] pb-2 mb-4">
-            {isSpanish ? 'Pendientes' : 'Pending'}
+            {isSpanish ? 'Envíos Pendientes' : 'Pending Submissions'}
           </h3>
           {submissions.length === 0 ? (
             <div className="bg-[#F5F7FA] rounded-xl p-8 text-center border border-[#E5E9F0]">
@@ -195,10 +260,12 @@ const DeskReviewPanel = ({ user }) => {
                     <span className={`px-2 py-1 rounded-full ${
                       sub.status === 'submitted' 
                         ? 'bg-[#E8F0FE] text-[#1E4A7A]' 
-                        : 'bg-[#FEF3C7] text-[#92400E]'
+                        : sub.status === 'in-reviewer-selection'
+                        ? 'bg-[#FEF3C7] text-[#92400E]'
+                        : 'bg-[#E8F0FE] text-[#1E4A7A]'
                     }`}>
-                      {sub.status === 'submitted' 
-                        ? (isSpanish ? 'Recibido' : 'Submitted')
+                      {sub.status === 'submitted' ? (isSpanish ? 'Recibido' : 'Submitted')
+                        : sub.status === 'in-reviewer-selection' ? (isSpanish ? 'Buscando revisores' : 'Finding reviewers')
                         : (isSpanish ? 'En revisión' : 'In review')}
                     </span>
                   </div>
@@ -208,22 +275,35 @@ const DeskReviewPanel = ({ user }) => {
           )}
         </div>
 
-        {/* Panel de revisión activa */}
+        {/* Panel de trabajo */}
         <div className="lg:col-span-2">
           {selectedSubmission && activeReview ? (
             <AnimatePresence mode="wait">
               <motion.div
-                key="review-active"
+                key={currentStep}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 className="space-y-6"
               >
-                {/* Cabecera del artículo - Estilo académico */}
+                {/* Cabecera común */}
                 <div className="bg-[#F5F7FA] rounded-xl p-6 border border-[#E5E9F0]">
-                  <h3 className="font-['Playfair_Display'] text-2xl font-bold text-[#0A1929] mb-2">
-                    {selectedSubmission.title}
-                  </h3>
+                  <div className="flex justify-between items-start mb-4">
+                    <h3 className="font-['Playfair_Display'] text-2xl font-bold text-[#0A1929]">
+                      {selectedSubmission.title}
+                    </h3>
+                    <div className="flex gap-2">
+                      <span className="px-3 py-1 bg-[#0A1929] text-white text-xs rounded-full font-['Lora']">
+                        {isSpanish ? 'Ronda' : 'Round'} {activeReview.round || 1}
+                      </span>
+                      {currentStep === 'reviewers' && (
+                        <span className="px-3 py-1 bg-[#C0A86A] text-white text-xs rounded-full font-['Lora']">
+                          {isSpanish ? 'Asignando revisores' : 'Assigning reviewers'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  
                   <div className="flex flex-wrap gap-4 text-sm text-[#5A6B7A] font-['Lora'] mb-4">
                     <span className="font-mono bg-white px-3 py-1 rounded-full border border-[#E5E9F0]">
                       {selectedSubmission.submissionId}
@@ -232,6 +312,7 @@ const DeskReviewPanel = ({ user }) => {
                       {selectedSubmission.area}
                     </span>
                   </div>
+                  
                   <a 
                     href={selectedSubmission.driveFolderUrl} 
                     target="_blank" 
@@ -245,165 +326,212 @@ const DeskReviewPanel = ({ user }) => {
                   </a>
                 </div>
 
-                {/* Formulario de decisión */}
-                <div className="space-y-6">
-                  <div>
-                    <label className="block font-['Playfair_Display'] font-semibold text-[#0A1929] mb-3">
-                      {isSpanish ? 'Decisión Editorial' : 'Editorial Decision'}
-                    </label>
-                    <div className="grid grid-cols-2 gap-3">
-                      {[
-                        { value: 'reject', label: isSpanish ? 'Rechazar' : 'Reject' },
-                        { value: 'minor-revision', label: isSpanish ? 'Revisión menor' : 'Minor revision' },
-                        { value: 'revision-required', label: isSpanish ? 'Enviar a revisión' : 'Send to review' },
-                        { value: 'accept', label: isSpanish ? 'Aceptar' : 'Accept' }
-                      ].map(opt => (
-                        <button
-                          key={opt.value}
-                          onClick={() => setDecision(opt.value)}
-                          className={`p-4 rounded-xl border-2 font-['Lora'] transition-all ${
-                            decision === opt.value
-                              ? 'border-[#C0A86A] bg-[#FBF9F3] text-[#0A1929]'
-                              : 'border-[#E5E9F0] hover:border-[#C0A86A] text-[#5A6B7A] hover:text-[#0A1929]'
-                          }`}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block font-['Playfair_Display'] font-semibold text-[#0A1929] mb-3">
-                      {isSpanish ? 'Feedback para el Autor' : 'Feedback to Author'}
-                    </label>
-                    <textarea
-                      value={feedback}
-                      onChange={(e) => setFeedback(e.target.value)}
-                      rows="6"
-                      className="w-full p-4 bg-[#F5F7FA] border border-[#E5E9F0] rounded-xl focus:ring-2 focus:ring-[#C0A86A] focus:border-transparent font-['Lora'] text-sm"
-                      placeholder={isSpanish ? 'Explica tu decisión al autor...' : 'Explain your decision to the author...'}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-['Playfair_Display'] font-semibold text-[#0A1929] mb-3">
-                      {isSpanish ? 'Comentarios Internos' : 'Internal Comments'}
-                    </label>
-                    <textarea
-                      value={internalComments}
-                      onChange={(e) => setInternalComments(e.target.value)}
-                      rows="4"
-                      className="w-full p-4 bg-[#F5F7FA] border border-[#E5E9F0] rounded-xl focus:ring-2 focus:ring-[#C0A86A] focus:border-transparent font-['Lora'] text-sm"
-                      placeholder={isSpanish ? 'Notas para el equipo editorial...' : 'Notes for the editorial team...'}
-                    />
-                  </div>
-
-                  <button
-                    onClick={handleSubmitDecision}
-                    disabled={reviewLoading || isSavingDecision || !decision}
-                    className="w-full py-4 bg-[#0A1929] hover:bg-[#1E2F40] text-white font-['Playfair_Display'] font-bold rounded-xl transition-all disabled:bg-[#E5E9F0] disabled:text-[#5A6B7A]"
-                  >
-                    {reviewLoading || isSavingDecision ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        {isSpanish ? 'GUARDANDO...' : 'SAVING...'}
-                      </span>
-                    ) : (
-                      isSpanish ? 'GUARDAR DECISIÓN' : 'SAVE DECISION'
-                    )}
-                  </button>
-                </div>
-
-                {/* Sección de invitación a revisores */}
-                {decision === 'revision-required' && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className="pt-6 border-t border-[#E5E9F0] space-y-6"
-                  >
-                    <h4 className="font-['Playfair_Display'] text-xl font-bold text-[#0A1929]">
-                      {isSpanish ? 'Seleccionar Revisor' : 'Select Reviewer'}
-                    </h4>
-
-                    {/* Buscador */}
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        placeholder={isSpanish ? 'Buscar por nombre, email o institución...' : 'Search by name, email or institution...'}
-                        className="w-full p-4 pl-12 bg-[#F5F7FA] border border-[#E5E9F0] rounded-xl focus:ring-2 focus:ring-[#C0A86A] focus:border-transparent font-['Lora']"
-                      />
-                      <svg className="w-5 h-5 text-[#5A6B7A] absolute left-4 top-1/2 transform -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                    </div>
-
-                    {/* Lista de revisores */}
-                    <div className="max-h-80 overflow-y-auto space-y-2 border border-[#E5E9F0] rounded-xl p-2">
-                      {filteredReviewers.length === 0 ? (
-                        <p className="text-center text-[#5A6B7A] py-8 font-['Lora'] italic">
-                          {isSpanish ? 'No hay revisores disponibles' : 'No reviewers available'}
-                        </p>
-                      ) : (
-                        filteredReviewers.map(reviewer => (
-                          <motion.div
-                            key={reviewer.id}
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            onClick={() => setSelectedReviewerId(reviewer.id)}
-                            className={`p-4 rounded-xl cursor-pointer transition-all ${
-                              selectedReviewerId === reviewer.id
-                                ? 'bg-[#FBF9F3] border-2 border-[#C0A86A]'
-                                : 'bg-[#F5F7FA] hover:bg-[#E8F0FE] border-2 border-transparent'
+                {/* PASO 1: TOMA DE DECISIÓN */}
+                {currentStep === 'decision' && (
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block font-['Playfair_Display'] font-semibold text-[#0A1929] mb-3">
+                        {isSpanish ? 'Decisión Editorial' : 'Editorial Decision'}
+                      </label>
+                      <div className="grid grid-cols-2 gap-3">
+                        {[
+                          { value: 'reject', label: isSpanish ? 'Rechazar' : 'Reject' },
+                          { value: 'minor-revision', label: isSpanish ? 'Revisión menor' : 'Minor revision' },
+                          { value: 'revision-required', label: isSpanish ? 'Enviar a revisión' : 'Send to review' },
+                          { value: 'accept', label: isSpanish ? 'Aceptar' : 'Accept' }
+                        ].map(opt => (
+                          <button
+                            key={opt.value}
+                            onClick={() => setDecision(opt.value)}
+                            className={`p-4 rounded-xl border-2 font-['Lora'] transition-all ${
+                              decision === opt.value
+                                ? 'border-[#C0A86A] bg-[#FBF9F3] text-[#0A1929]'
+                                : 'border-[#E5E9F0] hover:border-[#C0A86A] text-[#5A6B7A] hover:text-[#0A1929]'
                             }`}
                           >
-                            <div className="flex items-center gap-4">
-                              <div className="w-12 h-12 bg-[#0A1929] rounded-full flex items-center justify-center flex-shrink-0">
-                                <span className="text-xl font-['Playfair_Display'] font-bold text-white">
-                                  {reviewer.displayName?.charAt(0) || '?'}
-                                </span>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="font-['Playfair_Display'] font-bold text-[#0A1929] truncate">
-                                  {reviewer.displayName}
-                                </div>
-                                <div className="text-sm text-[#5A6B7A] font-['Lora'] truncate">
-                                  {reviewer.email}
-                                </div>
-                                {reviewer.institution && (
-                                  <div className="text-xs text-[#5A6B7A] mt-1 font-['Lora']">
-                                    {reviewer.institution}
-                                  </div>
-                                )}
-                              </div>
-                              {reviewer.roles?.includes('Editor de Sección') && (
-                                <span className="px-2 py-1 bg-[#C0A86A] text-white text-xs rounded-full font-['Lora']">
-                                  {isSpanish ? 'Editor' : 'Editor'}
-                                </span>
-                              )}
-                            </div>
-                          </motion.div>
-                        ))
-                      )}
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block font-['Playfair_Display'] font-semibold text-[#0A1929] mb-3">
+                        {isSpanish ? 'Feedback para el Autor' : 'Feedback to Author'}
+                      </label>
+                      <textarea
+                        value={feedback}
+                        onChange={(e) => setFeedback(e.target.value)}
+                        rows="6"
+                        className="w-full p-4 bg-[#F5F7FA] border border-[#E5E9F0] rounded-xl focus:ring-2 focus:ring-[#C0A86A] focus:border-transparent font-['Lora'] text-sm"
+                        placeholder={isSpanish ? 'Explica tu decisión al autor...' : 'Explain your decision to the author...'}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-['Playfair_Display'] font-semibold text-[#0A1929] mb-3">
+                        {isSpanish ? 'Comentarios Internos' : 'Internal Comments'}
+                      </label>
+                      <textarea
+                        value={internalComments}
+                        onChange={(e) => setInternalComments(e.target.value)}
+                        rows="4"
+                        className="w-full p-4 bg-[#F5F7FA] border border-[#E5E9F0] rounded-xl focus:ring-2 focus:ring-[#C0A86A] focus:border-transparent font-['Lora'] text-sm"
+                        placeholder={isSpanish ? 'Notas para el equipo editorial...' : 'Notes for the editorial team...'}
+                      />
                     </div>
 
                     <button
-                      onClick={handleSendInvitation}
-                      disabled={inviteLoading || !selectedReviewerId}
-                      className="w-full py-4 bg-[#C0A86A] hover:bg-[#A58D4F] text-white font-['Playfair_Display'] font-bold rounded-xl transition-all disabled:bg-[#E5E9F0] disabled:text-[#5A6B7A]"
+                      onClick={handleSubmitDecision}
+                      disabled={reviewLoading || isSavingDecision || !decision}
+                      className="w-full py-4 bg-[#0A1929] hover:bg-[#1E2F40] text-white font-['Playfair_Display'] font-bold rounded-xl transition-all disabled:bg-[#E5E9F0] disabled:text-[#5A6B7A]"
                     >
-                      {inviteLoading ? (
+                      {reviewLoading || isSavingDecision ? (
                         <span className="flex items-center justify-center gap-2">
                           <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          {isSpanish ? 'ENVIANDO...' : 'SENDING...'}
+                          {isSpanish ? 'GUARDANDO...' : 'SAVING...'}
                         </span>
                       ) : (
-                        isSpanish ? 'ENVIAR INVITACIÓN' : 'SEND INVITATION'
+                        isSpanish ? 'GUARDAR DECISIÓN' : 'SAVE DECISION'
                       )}
                     </button>
-                  </motion.div>
+                  </div>
+                )}
+
+                {/* PASO 2: ASIGNACIÓN DE REVISORES (después de "revision-required") */}
+                {currentStep === 'reviewers' && (
+                  <div className="space-y-6">
+                    {/* Decisión ya tomada - mostramos resumen */}
+                    <div className="bg-[#FBF9F3] border border-[#C0A86A] rounded-xl p-4">
+                      <p className="text-sm text-[#0A1929] font-['Lora']">
+                        <span className="font-bold">{isSpanish ? 'Decisión:' : 'Decision:'}</span>{' '}
+                        {isSpanish ? 'Enviar a revisión por pares' : 'Send to peer review'}
+                      </p>
+                      {feedback && (
+                        <p className="text-sm text-[#5A6B7A] mt-2 italic">
+                          "{feedback.substring(0, 100)}..."
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Revisores ya asignados */}
+                    {assignedReviewers.length > 0 && (
+                      <div>
+                        <h4 className="font-['Playfair_Display'] font-semibold text-[#0A1929] mb-3">
+                          {isSpanish ? 'Revisores invitados' : 'Invited reviewers'}
+                        </h4>
+                        <div className="space-y-2">
+                          {assignedReviewers.map(rev => (
+                            <div key={rev.id} className="flex items-center justify-between p-3 bg-[#F5F7FA] rounded-lg border border-[#E5E9F0]">
+                              <div>
+                                <p className="font-['Lora'] font-medium text-[#0A1929]">{rev.reviewerName || rev.reviewerEmail}</p>
+                                <p className="text-xs text-[#5A6B7A]">{rev.reviewerEmail}</p>
+                              </div>
+                              {getStatusBadge(rev.status)}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Buscador de nuevos revisores */}
+                    <div>
+                      <h4 className="font-['Playfair_Display'] font-semibold text-[#0A1929] mb-3">
+                        {isSpanish ? 'Agregar nuevo revisor' : 'Add new reviewer'}
+                      </h4>
+                      
+                      <div className="relative mb-4">
+                        <input
+                          type="text"
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          placeholder={isSpanish ? 'Buscar por nombre, email o institución...' : 'Search by name, email or institution...'}
+                          className="w-full p-4 pl-12 bg-[#F5F7FA] border border-[#E5E9F0] rounded-xl focus:ring-2 focus:ring-[#C0A86A] focus:border-transparent font-['Lora']"
+                        />
+                        <svg className="w-5 h-5 text-[#5A6B7A] absolute left-4 top-1/2 transform -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                      </div>
+
+                      {/* Lista de revisores disponibles */}
+                      <div className="max-h-80 overflow-y-auto space-y-2 border border-[#E5E9F0] rounded-xl p-2 mb-4">
+                        {filteredReviewers.length === 0 ? (
+                          <p className="text-center text-[#5A6B7A] py-8 font-['Lora'] italic">
+                            {searchTerm 
+                              ? (isSpanish ? 'No hay resultados' : 'No results')
+                              : (isSpanish ? 'No hay más revisores disponibles' : 'No more reviewers available')}
+                          </p>
+                        ) : (
+                          filteredReviewers.map(reviewer => (
+                            <motion.div
+                              key={reviewer.id}
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              onClick={() => setSelectedReviewerId(reviewer.id)}
+                              className={`p-4 rounded-xl cursor-pointer transition-all ${
+                                selectedReviewerId === reviewer.id
+                                  ? 'bg-[#FBF9F3] border-2 border-[#C0A86A]'
+                                  : 'bg-[#F5F7FA] hover:bg-[#E8F0FE] border-2 border-transparent'
+                              }`}
+                            >
+                              <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 bg-[#0A1929] rounded-full flex items-center justify-center flex-shrink-0">
+                                  <span className="text-xl font-['Playfair_Display'] font-bold text-white">
+                                    {reviewer.displayName?.charAt(0) || '?'}
+                                  </span>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-['Playfair_Display'] font-bold text-[#0A1929] truncate">
+                                    {reviewer.displayName}
+                                  </div>
+                                  <div className="text-sm text-[#5A6B7A] font-['Lora'] truncate">
+                                    {reviewer.email}
+                                  </div>
+                                  {reviewer.institution && (
+                                    <div className="text-xs text-[#5A6B7A] mt-1 font-['Lora']">
+                                      {reviewer.institution}
+                                    </div>
+                                  )}
+                                </div>
+                                {reviewer.roles?.includes('Editor de Sección') && (
+                                  <span className="px-2 py-1 bg-[#C0A86A] text-white text-xs rounded-full font-['Lora']">
+                                    {isSpanish ? 'Editor' : 'Editor'}
+                                  </span>
+                                )}
+                              </div>
+                            </motion.div>
+                          ))
+                        )}
+                      </div>
+
+                      <button
+                        onClick={handleSendInvitation}
+                        disabled={inviteLoading || !selectedReviewerId}
+                        className="w-full py-4 bg-[#C0A86A] hover:bg-[#A58D4F] text-white font-['Playfair_Display'] font-bold rounded-xl transition-all disabled:bg-[#E5E9F0] disabled:text-[#5A6B7A]"
+                      >
+                        {inviteLoading ? (
+                          <span className="flex items-center justify-center gap-2">
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            {isSpanish ? 'ENVIANDO...' : 'SENDING...'}
+                          </span>
+                        ) : (
+                          isSpanish ? 'ENVIAR INVITACIÓN' : 'SEND INVITATION'
+                        )}
+                      </button>
+
+                      {/* Botón para finalizar (opcional) */}
+                      <button
+                        onClick={() => {
+                          setSelectedSubmission(null);
+                          setActiveReview(null);
+                          setCurrentStep('decision');
+                        }}
+                        className="w-full mt-3 py-3 border-2 border-[#0A1929] text-[#0A1929] font-['Playfair_Display'] font-bold rounded-xl hover:bg-[#0A1929] hover:text-white transition-all"
+                      >
+                        {isSpanish ? 'FINALIZAR ASIGNACIÓN' : 'FINISH ASSIGNMENT'}
+                      </button>
+                    </div>
+                  </div>
                 )}
               </motion.div>
             </AnimatePresence>
