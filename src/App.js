@@ -26,6 +26,9 @@ import LoginSection from './components/LoginSection';
 import PortalSection from './components/PortalSection';
 import NewsSection from './components/NewsSection';
 import HomeSection from './components/HomeSection';
+// En AppEN.js, en la sección de imports, AÑADE:
+import { Routes, Route, useLocation, NavLink, useSearchParams, Navigate } from 'react-router-dom';
+//                                                              ^^^^^^^^
 import './index.css';
 import { motion, AnimatePresence } from 'framer-motion';
 
