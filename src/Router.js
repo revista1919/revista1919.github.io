@@ -1,6 +1,6 @@
 // src/Router.jsx
 import React from 'react';
-import { useLocation, Navigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import App from './App';
 import AppEN from './AppEN';
 import ReviewerResponsePage from './components/ReviewerResponsePage';
@@ -9,36 +9,25 @@ const Router = () => {
   const location = useLocation();
   const { pathname } = location;
 
-  // Si la ruta es /reviewer-response, mostrar directamente
-  if (pathname.includes('/reviewer-response')) {
+  // SI ES LA RUTA DE REVISOR, MOSTRAR DIRECTAMENTE SIN REDIRECCIONES
+  if (pathname === '/reviewer-response' || pathname.startsWith('/reviewer-response?')) {
     return <ReviewerResponsePage />;
   }
 
-  // Determina el idioma basado en la ruta
-  const isSpanish = pathname.startsWith('/es');
-  const isEnglish = pathname.startsWith('/en');
-  
-  // Si es la raíz, redirigir a español por defecto
-  if (pathname === '/' || pathname === '') {
-    return <Navigate to="/es" replace />;
-  }
+  // Determina el idioma basado en la ruta (código ORIGINAL que funcionaba)
+  const isSpanish = pathname.startsWith('/es') || !pathname.startsWith('/en');
+  const cleanPath = pathname.replace(/^\/(es|en)/, '');
 
-  // Si no tiene prefijo de idioma pero no es la raíz, redirigir a español
-  if (!isSpanish && !isEnglish && pathname !== '/') {
-    return <Navigate to={`/es${pathname}`} replace />;
+  // Actualiza la URL si es necesario para mantener consistencia
+  if (isSpanish && !pathname.startsWith('/es')) {
+    // Redirigir a /es si no tiene prefijo
+    window.history.replaceState(null, '', '/es' + cleanPath);
+    return null; // O puedes usar <Navigate to={`/es${cleanPath}`} />
   }
 
   console.log('Router - Current path:', pathname, 'Language:', isSpanish ? 'ES' : 'EN');
 
-  // Renderizar el componente apropiado según el prefijo
-  if (isSpanish) {
-    return <App />;
-  } else if (isEnglish) {
-    return <AppEN />;
-  }
-
-  // Fallback (no debería llegar aquí)
-  return <Navigate to="/es" replace />;
+  return isSpanish ? <App /> : <AppEN />;
 };
 
 export default Router;
