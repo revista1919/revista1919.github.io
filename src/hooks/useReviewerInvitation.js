@@ -74,6 +74,7 @@ export const useReviewerInvitation = (user) => {
 
       const invitationData = {
         editorialReviewId,
+        editorialTaskId,
         submissionId,
         round,
         reviewerEmail,

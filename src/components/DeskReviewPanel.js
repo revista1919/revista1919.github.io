@@ -1,8 +1,8 @@
-// src/components/DeskReviewPanel.js
+// src/components/DeskReviewPanel.js (ACTUALIZADO PARA EDITORES DE SECCIÓN)
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../firebase';
-import { collection, query, where, orderBy, onSnapshot, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, getDoc, updateDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import { useLanguage } from '../hooks/useLanguage';
 import { useEditorialReview } from '../hooks/useEditorialReview';
 import { useReviewerInvitation } from '../hooks/useReviewerInvitation';
@@ -11,9 +11,11 @@ const DeskReviewPanel = ({ user }) => {
   const { language } = useLanguage();
   const isSpanish = language === 'es';
   
-  const [submissions, setSubmissions] = useState([]);
+  // Estado para las TAREAS asignadas al editor actual
+  const [assignedTasks, setAssignedTasks] = useState([]);
+  const [selectedTask, setSelectedTask] = useState(null);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
-  const [activeReview, setActiveReview] = useState(null);
+  
   const [feedback, setFeedback] = useState('');
   const [internalComments, setInternalComments] = useState('');
   const [decision, setDecision] = useState('');
@@ -21,38 +23,52 @@ const DeskReviewPanel = ({ user }) => {
   const [currentStep, setCurrentStep] = useState('decision'); // 'decision' o 'reviewers'
   const [isLoadingReview, setIsLoadingReview] = useState(false);
   
-  // Estados para selección de revisores
+  // Estados para selección de revisores (se mantienen)
   const [potentialReviewers, setPotentialReviewers] = useState([]);
   const [selectedReviewerId, setSelectedReviewerId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [assignedReviewers, setAssignedReviewers] = useState([]);
 
-  const { loading: reviewLoading, error: reviewError, startDeskReview, submitDeskReviewDecision } = useEditorialReview(user);
+  const { loading: reviewLoading, error: reviewError, submitDeskReviewDecision } = useEditorialReview(user);
   const { loading: inviteLoading, error: inviteError, sendInvitation } = useReviewerInvitation(user);
 
-  // Escuchar envíos que necesitan revisión editorial
+  // Verificar permisos
+  const userRoles = user?.roles || [];
+  const hasPermission = userRoles.includes('Editor de Sección') || userRoles.includes('Director General');
+  
+  // Escuchar TAREAS asignadas a este editor
   useEffect(() => {
-    if (!user) return;
+    if (!user || !hasPermission) return;
 
     const q = query(
-      collection(db, 'submissions'),
-      where('status', 'in', ['submitted', 'in-editorial-review', 'in-reviewer-selection']),
-      orderBy('createdAt', 'desc')
+      collection(db, 'editorialTasks'),
+      where('assignedTo', '==', user.uid),
+      where('status', 'in', ['pending', 'in-progress']) // Tareas activas
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const subs = snapshot.docs.map(doc => ({
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const tasks = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate?.() || null
       }));
-      setSubmissions(subs);
+      
+      // Para cada tarea, obtener los datos del submission asociado
+      const tasksWithSubmissions = await Promise.all(tasks.map(async (task) => {
+        const submissionDoc = await getDoc(doc(db, 'submissions', task.submissionId));
+        return {
+          ...task,
+          submission: submissionDoc.exists() ? { id: submissionDoc.id, ...submissionDoc.data() } : null
+        };
+      }));
+      
+      setAssignedTasks(tasksWithSubmissions);
     }, (error) => {
-      console.error('Error listening to submissions:', error);
+      console.error('Error listening to editorial tasks:', error);
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user, hasPermission]);
 
   // Cargar potenciales revisores
   useEffect(() => {
@@ -78,128 +94,112 @@ const DeskReviewPanel = ({ user }) => {
     loadReviewers();
   }, []);
 
-  // Función para cargar una revisión completa por ID
-  const loadReviewById = async (submissionId, reviewId) => {
-    setIsLoadingReview(true);
-    try {
-      // Cargar el submission
-      const submissionDoc = await getDoc(doc(db, 'submissions', submissionId));
-      if (!submissionDoc.exists()) {
-        throw new Error('Submission not found');
-      }
-      const submissionData = { id: submissionDoc.id, ...submissionDoc.data() };
-      
-      // Cargar la revisión editorial
-      const reviewDoc = await getDoc(doc(db, 'editorialReviews', reviewId));
-      if (!reviewDoc.exists()) {
-        throw new Error('Review not found');
-      }
-      const reviewData = { id: reviewDoc.id, ...reviewDoc.data() };
-      
-      // Cargar revisores asignados
-      const reviewersQuery = query(
-        collection(db, 'reviewerInvitations'),
-        where('editorialReviewId', '==', reviewId)
-      );
-      const reviewersSnapshot = await getDocs(reviewersQuery);
-      const reviewers = reviewersSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      
-      // Actualizar todos los estados
-      setSelectedSubmission(submissionData);
-      setActiveReview(reviewData);
-      setAssignedReviewers(reviewers);
-      
-      // Si la revisión ya tiene una decisión
-      if (reviewData.decision) {
-        setDecision(reviewData.decision);
-        setFeedback(reviewData.feedbackToAuthor || '');
-        setInternalComments(reviewData.commentsToEditorial || '');
-        
-        // Si la decisión fue 'revision-required', mostrar paso de revisores
-        if (reviewData.decision === 'revision-required') {
-          setCurrentStep('reviewers');
-        } else {
-          setCurrentStep('decision');
-        }
-      }
-      
-    } catch (error) {
-      console.error('Error loading review:', error);
-    } finally {
-      setIsLoadingReview(false);
-    }
-  };
-
-  // Manejar selección de envío
-  const handleStartReview = async (submission) => {
-    // Verificar si ya existe una revisión editorial para este envío
-    const reviewsQuery = query(
-      collection(db, 'editorialReviews'),
-      where('submissionId', '==', submission.id),
-      where('round', '==', 1)
-    );
-    const reviewsSnapshot = await getDocs(reviewsQuery);
+  // Función para seleccionar una tarea y cargar su submission
+  const handleSelectTask = async (task) => {
+    setSelectedTask(task);
+    setSelectedSubmission(task.submission);
     
-    if (!reviewsSnapshot.empty) {
-      // Ya existe una revisión, cargarla
-      const existingReview = reviewsSnapshot.docs[0];
-      await loadReviewById(submission.id, existingReview.id);
-    } else {
-      // No existe, crear una nueva
-      const result = await startDeskReview(submission.id);
-      if (result.success) {
-        await loadReviewById(submission.id, result.reviewId);
-      }
-    }
-  };
-
-  // Cargar revisores asignados cuando cambia activeReview
-  useEffect(() => {
-    const loadAssignedReviewers = async () => {
-      if (!activeReview?.id) return;
+    // Si la tarea ya tiene una decisión guardada
+    if (task.decision) {
+      setDecision(task.decision);
+      setFeedback(task.feedbackToAuthor || '');
+      setInternalComments(task.commentsToEditorial || '');
       
+      if (task.decision === 'revision-required') {
+        setCurrentStep('reviewers');
+      } else {
+        setCurrentStep('decision');
+      }
+    } else {
+      // Reiniciar los campos si es una tarea nueva
+      setDecision('');
+      setFeedback('');
+      setInternalComments('');
+      setCurrentStep('decision');
+    }
+
+    // Cargar revisores ya asignados para esta tarea
+    if (task.id) {
       const q = query(
         collection(db, 'reviewerInvitations'),
-        where('editorialReviewId', '==', activeReview.id),
-        where('round', '==', activeReview.round || 1)
+        where('editorialTaskId', '==', task.id)
       );
-      
       const snapshot = await getDocs(q);
-      const assignments = snapshot.docs.map(doc => ({
+      const reviewers = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-      setAssignedReviewers(assignments);
-    };
-
-    loadAssignedReviewers();
-  }, [activeReview]);
+      setAssignedReviewers(reviewers);
+    }
+  };
 
   const handleSubmitDecision = async () => {
-    if (!activeReview || !decision) {
+    if (!selectedTask || !decision) {
       alert(isSpanish ? 'Debes seleccionar una decisión' : 'You must select a decision');
       return;
     }
 
     setIsSavingDecision(true);
-    const result = await submitDeskReviewDecision(activeReview.id, {
-      decision,
-      feedbackToAuthor: feedback,
-      commentsToEditorial: internalComments
-    });
 
-    if (result.success) {
-      // Recargar la revisión para obtener los datos actualizados
-      await loadReviewById(selectedSubmission.id, activeReview.id);
+    try {
+      // 1. Actualizar la TAREA (editorialTask) con la decisión
+      const taskRef = doc(db, 'editorialTasks', selectedTask.id);
+      await updateDoc(taskRef, {
+        decision,
+        feedbackToAuthor: feedback,
+        commentsToEditorial: internalComments,
+        status: 'completed', // La tarea se completa
+        completedAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+
+      // 2. Actualizar el SUBMISSION con el nuevo estado
+      const submissionRef = doc(db, 'submissions', selectedSubmission.id);
+      let newSubmissionStatus = '';
+      switch (decision) {
+        case 'reject': 
+          newSubmissionStatus = 'rejected'; 
+          break;
+        case 'minor-revision': 
+          newSubmissionStatus = 'minor-revision-required'; 
+          break;
+        case 'revision-required': 
+          newSubmissionStatus = 'in-reviewer-selection'; 
+          break;
+        case 'accept': 
+          newSubmissionStatus = 'accepted'; 
+          break;
+        default: 
+          newSubmissionStatus = 'desk-review';
+      }
+      
+      await updateDoc(submissionRef, {
+        status: newSubmissionStatus,
+        updatedAt: serverTimestamp()
+      });
+
+      // 3. Si la decisión fue 'revision-required', pasamos al paso de revisores
+      if (decision === 'revision-required') {
+        setCurrentStep('reviewers');
+      } else {
+        // Si no es revisión, limpiamos la selección después de un momento
+        setTimeout(() => {
+          setSelectedTask(null);
+          setSelectedSubmission(null);
+        }, 2000);
+      }
+
+      alert(isSpanish ? 'Decisión guardada exitosamente' : 'Decision saved successfully');
+    } catch (error) {
+      console.error('Error saving decision:', error);
+      alert(isSpanish ? 'Error al guardar la decisión' : 'Error saving decision');
+    } finally {
+      setIsSavingDecision(false);
     }
-    setIsSavingDecision(false);
   };
 
   const handleSendInvitation = async () => {
-    if (!activeReview || !selectedReviewerId) {
+    if (!selectedTask || !selectedReviewerId) {
       alert(isSpanish ? 'Selecciona un revisor' : 'Select a reviewer');
       return;
     }
@@ -207,9 +207,9 @@ const DeskReviewPanel = ({ user }) => {
     const reviewer = potentialReviewers.find(r => r.id === selectedReviewerId);
     
     const result = await sendInvitation({
-      editorialReviewId: activeReview.id,
+      editorialTaskId: selectedTask.id,
       submissionId: selectedSubmission.id,
-      round: activeReview.round || 1,
+      round: selectedTask.round || 1,
       reviewerEmail: reviewer.email,
       reviewerName: reviewer.displayName,
       reviewerUid: reviewer.id
@@ -223,14 +223,14 @@ const DeskReviewPanel = ({ user }) => {
       // Recargar la lista de asignados
       const q = query(
         collection(db, 'reviewerInvitations'),
-        where('editorialReviewId', '==', activeReview.id)
+        where('editorialTaskId', '==', selectedTask.id)
       );
       const snapshot = await getDocs(q);
-      const assignments = snapshot.docs.map(doc => ({
+      const reviewers = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-      setAssignedReviewers(assignments);
+      setAssignedReviewers(reviewers);
     }
   };
 
@@ -261,23 +261,9 @@ const DeskReviewPanel = ({ user }) => {
     );
   });
 
-  if (!user || (!user.roles?.includes('Director General') && !user.roles?.includes('Editor en Jefe'))) {
+  // Si no tiene permisos, no renderizar nada
+  if (!hasPermission) {
     return null;
-  }
-
-  if (isLoadingReview) {
-    return (
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 max-w-7xl mx-auto">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="w-12 h-12 border-4 border-[#C0A86A] border-t-[#0A1929] rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-[#5A6B7A] font-['Lora']">
-              {isSpanish ? 'Cargando revisión...' : 'Loading review...'}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
   }
 
   return (
@@ -286,7 +272,7 @@ const DeskReviewPanel = ({ user }) => {
         {isSpanish ? 'Revisión Editorial' : 'Editorial Review'}
       </h2>
       <p className="text-[#5A6B7A] font-['Lora'] text-lg mb-8 border-b border-[#E5E9F0] pb-4">
-        {isSpanish ? 'Evaluación inicial de manuscritos' : 'Initial manuscript evaluation'}
+        {isSpanish ? 'Evaluación de manuscritos asignados' : 'Evaluation of assigned manuscripts'}
       </p>
 
       {(reviewError || inviteError) && (
@@ -296,51 +282,54 @@ const DeskReviewPanel = ({ user }) => {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Lista de envíos */}
+        {/* Lista de tareas asignadas */}
         <div className="lg:col-span-1 space-y-4">
           <h3 className="font-['Playfair_Display'] text-lg font-semibold text-[#0A1929] border-b-2 border-[#C0A86A] pb-2 mb-4">
-            {isSpanish ? 'Envíos' : 'Submissions'}
+            {isSpanish ? 'Mis Tareas' : 'My Tasks'}
           </h3>
-          {submissions.length === 0 ? (
+          {assignedTasks.length === 0 ? (
             <div className="bg-[#F5F7FA] rounded-xl p-8 text-center border border-[#E5E9F0]">
               <p className="text-[#5A6B7A] font-['Lora'] italic">
-                {isSpanish ? 'No hay envíos' : 'No submissions'}
+                {isSpanish ? 'No tienes tareas pendientes' : 'No pending tasks'}
               </p>
             </div>
           ) : (
             <div className="space-y-3">
-              {submissions.map(sub => (
+              {assignedTasks.map(task => (
                 <motion.div
-                  key={sub.id}
+                  key={task.id}
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
-                  onClick={() => handleStartReview(sub)}
+                  onClick={() => handleSelectTask(task)}
                   className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                    selectedSubmission?.id === sub.id
+                    selectedTask?.id === task.id
                       ? 'border-[#C0A86A] bg-[#FBF9F3]'
                       : 'border-[#E5E9F0] hover:border-[#C0A86A] bg-white hover:shadow-md'
                   }`}
                 >
                   <h4 className="font-['Playfair_Display'] font-bold text-[#0A1929] mb-2 line-clamp-2">
-                    {sub.title}
+                    {task.submission?.title || 'Cargando...'}
                   </h4>
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-mono text-[#5A6B7A]">{sub.submissionId?.slice(0, 8)}</span>
-                    <span className={`px-2 py-1 rounded-full ${
-                      sub.status === 'submitted' 
-                        ? 'bg-[#E8F0FE] text-[#1E4A7A]' 
-                        : sub.status === 'in-reviewer-selection'
-                        ? 'bg-[#FEF3C7] text-[#92400E]'
-                        : sub.status === 'in-editorial-review'
-                        ? 'bg-[#E8F0FE] text-[#1E4A7A]'
-                        : 'bg-[#E8F0FE] text-[#1E4A7A]'
-                    }`}>
-                      {sub.status === 'submitted' ? (isSpanish ? 'Recibido' : 'Submitted')
-                        : sub.status === 'in-reviewer-selection' ? (isSpanish ? 'Buscando revisores' : 'Finding reviewers')
-                        : sub.status === 'in-editorial-review' ? (isSpanish ? 'En revisión editorial' : 'In editorial review')
-                        : (isSpanish ? 'En revisión' : 'In review')}
+                    <span className="font-mono text-[#5A6B7A]">
+                      {task.submission?.submissionId?.slice(0, 8) || 'Sin ID'}
+                    </span>
+                    <span className="px-2 py-1 bg-[#E8F0FE] text-[#1E4A7A] rounded-full">
+                      {task.submission?.area || 'Sin área'}
                     </span>
                   </div>
+                  {task.assignmentNotes && (
+                    <p className="text-xs text-[#C0A86A] mt-2 italic line-clamp-1">
+                      📝 {task.assignmentNotes}
+                    </p>
+                  )}
+                  {task.decision && (
+                    <div className="mt-2 text-xs">
+                      <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full">
+                        {isSpanish ? 'Decisión tomada' : 'Decision made'}
+                      </span>
+                    </div>
+                  )}
                 </motion.div>
               ))}
             </div>
@@ -349,7 +338,7 @@ const DeskReviewPanel = ({ user }) => {
 
         {/* Panel de trabajo */}
         <div className="lg:col-span-2">
-          {selectedSubmission && activeReview ? (
+          {selectedTask && selectedSubmission ? (
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentStep}
@@ -366,9 +355,9 @@ const DeskReviewPanel = ({ user }) => {
                     </h3>
                     <div className="flex gap-2">
                       <span className="px-3 py-1 bg-[#0A1929] text-white text-xs rounded-full font-['Lora']">
-                        {isSpanish ? 'Ronda' : 'Round'} {activeReview.round || 1}
+                        {isSpanish ? 'Ronda' : 'Round'} {selectedTask.round || 1}
                       </span>
-                      {activeReview.decision === 'revision-required' && (
+                      {selectedTask.decision === 'revision-required' && (
                         <span className="px-3 py-1 bg-[#C0A86A] text-white text-xs rounded-full font-['Lora']">
                           {isSpanish ? 'En revisión por pares' : 'In peer review'}
                         </span>
@@ -399,33 +388,24 @@ const DeskReviewPanel = ({ user }) => {
                 </div>
 
                 {/* Si ya hay una decisión tomada, mostramos el resumen */}
-                {activeReview.decision && activeReview.decision !== 'revision-required' && (
+                {selectedTask.decision && selectedTask.decision !== 'revision-required' && (
                   <div className="bg-[#FBF9F3] border border-[#C0A86A] rounded-xl p-4">
                     <p className="text-sm text-[#0A1929] font-['Lora']">
                       <span className="font-bold">{isSpanish ? 'Decisión:' : 'Decision:'}</span>{' '}
-                      {activeReview.decision === 'reject' && (isSpanish ? 'Rechazado' : 'Rejected')}
-                      {activeReview.decision === 'accept' && (isSpanish ? 'Aceptado' : 'Accepted')}
-                      {activeReview.decision === 'minor-revision' && (isSpanish ? 'Revisión menor' : 'Minor revision')}
+                      {selectedTask.decision === 'reject' && (isSpanish ? 'Rechazado' : 'Rejected')}
+                      {selectedTask.decision === 'accept' && (isSpanish ? 'Aceptado' : 'Accepted')}
+                      {selectedTask.decision === 'minor-revision' && (isSpanish ? 'Revisión menor' : 'Minor revision')}
                     </p>
-                    {activeReview.feedbackToAuthor && (
+                    {selectedTask.feedbackToAuthor && (
                       <p className="text-sm text-[#5A6B7A] mt-2 italic">
-                        "{activeReview.feedbackToAuthor}"
+                        "{selectedTask.feedbackToAuthor}"
                       </p>
                     )}
-                    <button
-                      onClick={() => {
-                        setSelectedSubmission(null);
-                        setActiveReview(null);
-                      }}
-                      className="mt-4 text-sm text-[#C0A86A] hover:text-[#A58D4F]"
-                    >
-                      ← {isSpanish ? 'Volver a la lista' : 'Back to list'}
-                    </button>
                   </div>
                 )}
 
                 {/* PASO 1: TOMA DE DECISIÓN (solo si no hay decisión) */}
-                {!activeReview.decision && currentStep === 'decision' && (
+                {!selectedTask.decision && currentStep === 'decision' && (
                   <div className="space-y-6">
                     <div>
                       <label className="block font-['Playfair_Display'] font-semibold text-[#0A1929] mb-3">
@@ -433,10 +413,10 @@ const DeskReviewPanel = ({ user }) => {
                       </label>
                       <div className="grid grid-cols-2 gap-3">
                         {[
-                          { value: 'reject', label: isSpanish ? 'Rechazar' : 'Reject' },
-                          { value: 'minor-revision', label: isSpanish ? 'Revisión menor' : 'Minor revision' },
-                          { value: 'revision-required', label: isSpanish ? 'Enviar a revisión' : 'Send to review' },
-                          { value: 'accept', label: isSpanish ? 'Aceptar' : 'Accept' }
+                          { value: 'reject', label: isSpanish ? 'Rechazar' : 'Reject', bg: 'bg-red-50 hover:bg-red-100' },
+                          { value: 'minor-revision', label: isSpanish ? 'Revisión menor' : 'Minor revision', bg: 'bg-yellow-50 hover:bg-yellow-100' },
+                          { value: 'revision-required', label: isSpanish ? 'Enviar a revisión' : 'Send to review', bg: 'bg-blue-50 hover:bg-blue-100' },
+                          { value: 'accept', label: isSpanish ? 'Aceptar' : 'Accept', bg: 'bg-green-50 hover:bg-green-100' }
                         ].map(opt => (
                           <button
                             key={opt.value}
@@ -444,7 +424,7 @@ const DeskReviewPanel = ({ user }) => {
                             className={`p-4 rounded-xl border-2 font-['Lora'] transition-all ${
                               decision === opt.value
                                 ? 'border-[#C0A86A] bg-[#FBF9F3] text-[#0A1929]'
-                                : 'border-[#E5E9F0] hover:border-[#C0A86A] text-[#5A6B7A] hover:text-[#0A1929]'
+                                : `border-[#E5E9F0] ${opt.bg} text-[#5A6B7A] hover:text-[#0A1929]`
                             }`}
                           >
                             {opt.label}
@@ -497,7 +477,7 @@ const DeskReviewPanel = ({ user }) => {
                 )}
 
                 {/* PASO 2: ASIGNACIÓN DE REVISORES (cuando la decisión es 'revision-required') */}
-                {(activeReview.decision === 'revision-required' || currentStep === 'reviewers') && (
+                {(selectedTask.decision === 'revision-required' || currentStep === 'reviewers') && (
                   <div className="space-y-6">
                     {/* Revisores ya asignados */}
                     {assignedReviewers.length > 0 && (
@@ -619,8 +599,8 @@ const DeskReviewPanel = ({ user }) => {
               </svg>
               <p className="text-[#5A6B7A] text-lg font-['Lora'] italic">
                 {isSpanish 
-                  ? 'Selecciona un envío para comenzar' 
-                  : 'Select a submission to start'}
+                  ? 'Selecciona una tarea para comenzar' 
+                  : 'Select a task to start'}
               </p>
             </motion.div>
           )}

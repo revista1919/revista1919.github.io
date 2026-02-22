@@ -5,6 +5,7 @@ import 'react-quill/dist/quill.snow.css';
 import { debounce } from 'lodash';
 import { ReviewerWorkspace } from './Workspace';
 import NewsUploadSection from './NewsUploadSection';
+import ArticleAssignmentPanel from './ArticleAssignmentPanel';
 import TaskSection from './TaskSection';
 import AssignSection from './AssignSection';
 import DirectorPanel from './DirectorPanel';
@@ -51,6 +52,7 @@ const ES_TO_EN = {
   'Encargado de Soporte Técnico': 'Technical Support Manager',
   'Encargado de Redes Sociales': 'Social Media Manager',
   'Encargada de Redes Sociales': 'Social Media Manager',
+  'Encargado de Asignación de Artículos': 'Article Assignment Manager',
   'Diseñador Gráfico': 'Graphic Designer',
   'Diseñadora Gráfica': 'Graphic Designer',
   'Community Manager': 'Community Manager',
@@ -88,6 +90,7 @@ const EN_TO_ES = {
   'Finance Manager': 'Responsable de Finanzas',
   'Transparency Manager': 'Responsable de Transparencia',
   'Author': 'Autor',
+  'Article Assignment Manager': 'Encargado de Asignación de Artículos',
   'Partner Institution': 'Institución Colaboradora',
   'Academic Advisor': 'Asesor Académico',
   'Community Manager': 'Community Manager'
@@ -1208,6 +1211,11 @@ export default function PortalSection({ user, onLogout }) {
     { id: 'profile', label: isSpanish ? 'MI PERFIL' : 'MY PROFILE' },
     { id: 'assignments', label: isSpanish ? 'MIS ASIGNACIONES' : 'MY ASSIGNMENTS' },
     { id: 'completed', label: isSpanish ? 'COMPLETADAS' : 'COMPLETED' },
+     { 
+    id: 'assignment', 
+    label: isSpanish ? 'ASIGNAR ARTÍCULOS' : 'ASSIGN ARTICLES', 
+    hidden: !userRoles.includes('Encargado de Asignación de Artículos') && !userRoles.includes('Director General') 
+  },
     { id: 'calendar', label: isSpanish ? 'CALENDARIO ACADÉMICO' : 'ACADEMIC CALENDAR', hidden: !canSeeCalendar },
     { id: 'submit', label: isSpanish ? 'ENVIAR MANUSCRITO' : 'SUBMIT MANUSCRIPT', hidden: !isAuthor },
     { id: 'director', label: isSpanish ? 'PANEL DIRECTIVO' : 'DIRECTOR PANEL', hidden: !isDirector },
@@ -2073,7 +2081,16 @@ export default function PortalSection({ user, onLogout }) {
               />
             </motion.section>
           )}
-          
+          {activeTab === 'assignment' && (
+  <motion.section
+    key="assignment"
+    initial={{ opacity: 0, x: -20 }} 
+    animate={{ opacity: 1, x: 0 }} 
+    exit={{ opacity: 0, x: 20 }}
+  >
+    <ArticleAssignmentPanel user={userData} />
+  </motion.section>
+)}
           {activeTab === 'calendar' && (
             <motion.section
               key="calendar"
@@ -2097,8 +2114,14 @@ export default function PortalSection({ user, onLogout }) {
       onToggle={() => setIsDirectorPanelExpanded(!isDirectorPanelExpanded)} 
     />
     
-    {/* NUEVO: Panel de Desk Review para Directores */}
-    <div className="mt-8">
+    {/* El Director también puede ver el panel de asignación y desk review */}
+    <div className="mt-8 space-y-8">
+      {/* Panel de Asignación (si el Director quiere actuar como encargado) */}
+      {(userRoles.includes('Encargado de Asignación de Artículos') || userRoles.includes('Director General')) && (
+        <ArticleAssignmentPanel user={userData} />
+      )}
+      
+      {/* Panel de Desk Review para Editores en Jefe/Directores */}
       <DeskReviewPanel user={userData} />
     </div>
   </motion.section>
@@ -2118,7 +2141,7 @@ export default function PortalSection({ user, onLogout }) {
       onToggle={() => setIsChiefEditorPanelExpanded(!isChiefEditorPanelExpanded)} 
     />
     
-    {/* NUEVO: Panel de Desk Review para Editores en Jefe */}
+    {/* Los Editores en Jefe también pueden ver sus tareas de desk review */}
     <div className="mt-8">
       <DeskReviewPanel user={userData} />
     </div>

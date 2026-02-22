@@ -127,6 +127,7 @@ const ES_TO_EN = {
   'Responsable de Finanzas': 'Finance Manager',
   'Responsable de Transparencia': 'Transparency Manager',
   'Asesor Académico': 'Academic Advisor',
+  'Encargado de Asignación de Artículos': 'Article Assignment Manager',
   'Institución Colaboradora': 'Partner Institution'
 };
 
@@ -2811,7 +2812,7 @@ exports.checkSubmissionStatus = onCall(async (request) => {
 exports.onEditorialReviewCreated = onDocumentCreated(
   {
     document: 'editorialReviews/{reviewId}',
-    secrets: [], // No necesita secretos por ahora
+    secrets: [],
     memory: '256MiB'
   },
   async (event) => {
@@ -2823,15 +2824,33 @@ exports.onEditorialReviewCreated = onDocumentCreated(
     try {
       const db = admin.firestore();
       const submissionRef = db.collection('submissions').doc(reviewData.submissionId);
+      const submissionSnap = await submissionRef.get();
+      
+      if (!submissionSnap.exists) {
+        console.error(`❌ Submission no encontrado: ${reviewData.submissionId}`);
+        return;
+      }
 
-      // Actualizar el estado del envío para indicar que está en revisión editorial
+      // Actualizar el estado del envío
       await submissionRef.update({
         status: 'in-editorial-review',
-        currentEditorialReviewId: reviewId, // Referencia a la revisión activa
+        currentEditorialReviewId: reviewId,
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
       });
 
-      console.log(`✅ [onEditorialReviewCreated] Estado de envío ${reviewData.submissionId} actualizado a 'in-editorial-review'`);
+      // --- NUEVO: Si hay una tarea asociada, actualizarla ---
+      if (reviewData.editorialTaskId) {
+        const taskRef = db.collection('editorialTasks').doc(reviewData.editorialTaskId);
+        await taskRef.update({
+          status: 'in-progress',
+          currentReviewId: reviewId,
+          startedAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        console.log(`✅ Tarea editorial ${reviewData.editorialTaskId} actualizada a 'in-progress'`);
+      }
+
+      console.log(`✅ Estado de envío ${reviewData.submissionId} actualizado a 'in-editorial-review'`);
 
     } catch (error) {
       console.error(`❌ [onEditorialReviewCreated] Error:`, error.message);
@@ -2839,7 +2858,6 @@ exports.onEditorialReviewCreated = onDocumentCreated(
     }
   }
 );
-
 /* ----------------------------------------------------------------------------
  * 2. TRIGGER: Cuando se ACTUALIZA una editorialReview (se guarda la decisión)
  * ----------------------------------------------------------------------------
@@ -2849,7 +2867,7 @@ exports.onEditorialReviewCreated = onDocumentCreated(
 exports.onEditorialReviewUpdated = onDocumentUpdated(
   {
     document: 'editorialReviews/{reviewId}',
-    secrets: [], // Si necesitas enviar emails aquí, añade secrets
+    secrets: [],
     memory: '256MiB'
   },
   async (event) => {
@@ -2857,7 +2875,7 @@ exports.onEditorialReviewUpdated = onDocumentUpdated(
     const afterData = event.data.after.data();
     const reviewId = event.params.reviewId;
 
-    // Solo proceder si la decisión ha cambiado y ahora NO es null (es decir, se acaba de tomar una decisión)
+    // Solo proceder si la decisión ha cambiado y ahora NO es null
     if (beforeData.decision === afterData.decision || afterData.decision === null) {
       return;
     }
@@ -2870,65 +2888,65 @@ exports.onEditorialReviewUpdated = onDocumentUpdated(
       const submissionSnap = await submissionRef.get();
 
       if (!submissionSnap.exists) {
-        console.error(`❌ [onEditorialReviewUpdated] Envío no encontrado: ${afterData.submissionId}`);
+        console.error(`❌ Envío no encontrado: ${afterData.submissionId}`);
         return;
       }
 
       const submissionData = submissionSnap.data();
-      // Dentro de onEditorialReviewUpdated, en la parte del switch...
+      
+      let newSubmissionStatus = 'submitted';
+      let emailHtml = '';
+      const lang = submissionData.paperLanguage || 'es';
+      const authorName = submissionData.authorName || 'Autor';
 
-let newSubmissionStatus = 'submitted';
-let emailHtml = ''; // Cambiamos de emailSubject/emailBody a una sola variable para el HTML
-const lang = submissionData.paperLanguage || 'es';
-const authorName = submissionData.authorName || 'Autor'; // <-- Obtener el nombre del autor
+      switch (afterData.decision) {
+        case 'reject':
+          newSubmissionStatus = 'rejected';
+          emailHtml = getRejectionEmailBody(afterData.feedbackToAuthor, submissionData.title, lang, authorName);
+          break;
+        case 'minor-revision':
+          newSubmissionStatus = 'minor-revision-required';
+          emailHtml = getRevisionEmailBody(afterData.feedbackToAuthor, submissionData.title, 'minor', lang, authorName);
+          break;
+        case 'revision-required':
+          newSubmissionStatus = 'in-reviewer-selection';
+          emailHtml = getPeerReviewStartEmailBody(submissionData.title, lang, authorName);
+          break;
+        case 'accept':
+          newSubmissionStatus = 'accepted';
+          emailHtml = getAcceptanceEmailBody(afterData.feedbackToAuthor, submissionData.title, lang, authorName);
+          break;
+        default:
+          console.warn(`⚠️ Decisión desconocida: ${afterData.decision}`);
+          return;
+      }
 
-switch (afterData.decision) {
-  case 'reject':
-    newSubmissionStatus = 'rejected';
-    // Llamamos a la función que AHORA devuelve el HTML completo
-    emailHtml = getRejectionEmailBody(afterData.feedbackToAuthor, submissionData.title, lang, authorName);
-    break;
-
-  case 'minor-revision':
-    newSubmissionStatus = 'minor-revision-required';
-    emailHtml = getRevisionEmailBody(afterData.feedbackToAuthor, submissionData.title, 'minor', lang, authorName);
-    break;
-
-  case 'revision-required':
-    newSubmissionStatus = 'in-reviewer-selection';
-    emailHtml = getPeerReviewStartEmailBody(submissionData.title, lang, authorName);
-    break;
-
-  case 'accept':
-    newSubmissionStatus = 'accepted';
-    emailHtml = getAcceptanceEmailBody(afterData.feedbackToAuthor, submissionData.title, lang, authorName);
-    break;
-
-  default:
-    console.warn(`⚠️ Decisión desconocida: ${afterData.decision}`);
-    return;
-}
-
+      // Actualizar el submission
       await submissionRef.update({
         status: newSubmissionStatus,
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        // Podrías mantener currentEditorialReviewId para referencia, o borrarlo: currentEditorialReviewId: null
       });
 
-// Enviar email al autor usando el HTML generado
-if (emailHtml && submissionData.authorEmail) {
+      // --- NUEVO: Actualizar la tarea editorial si existe ---
+      if (afterData.editorialTaskId) {
+        const taskRef = db.collection('editorialTasks').doc(afterData.editorialTaskId);
+        await taskRef.update({
+          status: 'completed',
+          decision: afterData.decision,
+          completedAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        console.log(`✅ Tarea editorial ${afterData.editorialTaskId} completada`);
+      }
 
-  const emailSubject = lang === 'es' ? 'Actualización sobre su envío' : 'Update on your submission';
-  
-  await sendEmailViaExtension(
-    submissionData.authorEmail,
-    emailSubject, // <-- Usamos un asunto genérico, el HTML ya tiene el título específico.
-    emailHtml
-  );
-  console.log(`✅ Email enviado a autor: ${submissionData.authorEmail}`);
-}
+      // Enviar email al autor
+      if (emailHtml && submissionData.authorEmail) {
+        const emailSubject = lang === 'es' ? 'Actualización sobre su envío' : 'Update on your submission';
+        await sendEmailViaExtension(submissionData.authorEmail, emailSubject, emailHtml);
+        console.log(`✅ Email enviado a autor: ${submissionData.authorEmail}`);
+      }
 
-      console.log(`✅ [onEditorialReviewUpdated] Envío ${afterData.submissionId} actualizado a estado: ${newSubmissionStatus}`);
+      console.log(`✅ Envío ${afterData.submissionId} actualizado a estado: ${newSubmissionStatus}`);
 
     } catch (error) {
       console.error(`❌ [onEditorialReviewUpdated] Error:`, error.message);
@@ -3284,3 +3302,430 @@ async function logSystemError(functionName, error, context = {}) {
     console.error('Error logging to Firestore:', logError);
   }
 }
+// EN EL ARCHIVO index.js DE FUNCTIONS
+
+/* ===================== SECTION EDITOR INVITATIONS ===================== */
+
+/**
+ * TRIGGER: Cuando se crea una invitación a Editor de Sección
+ */
+exports.onSectionEditorInvitationCreated = onDocumentCreated(
+  {
+    document: 'sectionEditorInvitations/{invitationId}',
+    secrets: [],
+    memory: '256MiB'
+  },
+  async (event) => {
+    const invitation = event.data.data();
+    const invitationId = event.params.invitationId;
+
+    console.log(`📧 [onSectionEditorInvitationCreated] Nueva invitación: ${invitationId} para ${invitation.editorEmail}`);
+
+    try {
+      const db = admin.firestore();
+
+      // Obtener datos del que invita
+      const inviterDoc = await db.collection('users').doc(invitation.invitedBy).get();
+      const inviterData = inviterDoc.data() || {};
+      
+      const lang = invitation.language || 'es';
+      const isSpanish = lang === 'es';
+
+      // Construir enlace de respuesta
+      const baseUrl = 'https://www.revistacienciasestudiantes.com';
+      const responseLink = `${baseUrl}/section-editor-response?hash=${invitation.inviteHash}&lang=${lang}`;
+
+      // Plantilla de email
+      const emailTitle = isSpanish
+        ? '📋 Invitación a Editor de Sección'
+        : '📋 Section Editor Invitation';
+
+      const emailGreeting = isSpanish
+        ? `Estimado/a ${invitation.editorName}:`
+        : `Dear ${invitation.editorName}:`;
+
+      const areaInfo = invitation.canHandleAllAreas
+        ? (isSpanish ? 'Todas las áreas de su especialidad' : 'All areas of your specialty')
+        : (isSpanish ? `Área específica: ${invitation.area}` : `Specific area: ${invitation.area}`);
+
+      const bodyContent = isSpanish
+        ? `
+          <p>Ha sido invitado/a a unirse al equipo editorial de la <strong>Revista Nacional de las Ciencias para Estudiantes</strong> como <strong>Editor de Sección</strong>.</p>
+          
+          <div class="highlight-box">
+            <p><strong>Área asignada:</strong> ${areaInfo}</p>
+            <p><strong>Invitado por:</strong> ${inviterData.displayName || inviterData.email || invitation.invitedByEmail}</p>
+          </div>
+          
+          <p>Como Editor de Sección, usted tendrá autonomía para:</p>
+          <ul>
+            <li>Realizar la revisión editorial inicial de los artículos en su área</li>
+            <li>Decidir sobre la aprobación, rechazo o envío a revisión por pares</li>
+            <li>Seleccionar y gestionar revisores</li>
+            <li>Tomar decisiones finales sobre los artículos de su sección</li>
+          </ul>
+          
+          <p>Para aceptar o rechazar esta invitación, haga clic en el siguiente enlace:</p>
+          
+          <div class="button-container">
+            <a href="${responseLink}" class="btn">RESPONDER INVITACIÓN</a>
+          </div>
+          
+          <p><strong>Plazo para responder:</strong> 7 días.</p>
+          <p class="info-text">Al aceptar, se le otorgarán los permisos necesarios en el sistema editorial.</p>
+        `
+        : `
+          <p>You have been invited to join the editorial team of <strong>The National Review of Sciences for Students</strong> as a <strong>Section Editor</strong>.</p>
+          
+          <div class="highlight-box">
+            <p><strong>Assigned area:</strong> ${areaInfo}</p>
+            <p><strong>Invited by:</strong> ${inviterData.displayName || inviterData.email || invitation.invitedByEmail}</p>
+          </div>
+          
+          <p>As Section Editor, you will have autonomy to:</p>
+          <ul>
+            <li>Perform initial editorial review of articles in your area</li>
+            <li>Decide on approval, rejection, or sending to peer review</li>
+            <li>Select and manage reviewers</li>
+            <li>Make final decisions on articles in your section</li>
+          </ul>
+          
+          <p>To accept or decline this invitation, please click the link below:</p>
+          
+          <div class="button-container">
+            <a href="${responseLink}" class="btn">RESPOND TO INVITATION</a>
+          </div>
+          
+          <p><strong>Response deadline:</strong> 7 days.</p>
+          <p class="info-text">By accepting, you will be granted the necessary permissions in the editorial system.</p>
+        `;
+
+      const htmlBody = getEmailTemplate(
+        emailTitle,
+        emailGreeting,
+        bodyContent,
+        isSpanish ? 'Equipo Editorial' : 'Editorial Team',
+        isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
+        lang
+      );
+
+      // Enviar email
+      await sendEmailViaExtension(
+        invitation.editorEmail,
+        isSpanish ? 'Invitación a Editor de Sección' : 'Section Editor Invitation',
+        htmlBody
+      );
+
+      console.log(`✅ Email enviado a: ${invitation.editorEmail}`);
+
+      // Actualizar que el email fue enviado
+      await event.data.ref.update({
+        emailSentAt: serverTimestamp()
+      });
+
+    } catch (error) {
+      console.error(`❌ Error:`, error.message);
+      await logSystemError('onSectionEditorInvitationCreated', error, { invitationId, ...invitation });
+    }
+  }
+);
+
+/**
+ * TRIGGER: Cuando se responde a una invitación de Editor de Sección
+ */
+exports.onSectionEditorInvitationUpdated = onDocumentUpdated(
+  {
+    document: 'sectionEditorInvitations/{invitationId}',
+    secrets: [],
+    memory: '256MiB'
+  },
+  async (event) => {
+    const beforeData = event.data.before.data();
+    const afterData = event.data.after.data();
+    const invitationId = event.params.invitationId;
+
+    // Solo si el estado cambió de 'pending'
+    if (beforeData.status !== 'pending' || afterData.status === 'pending') {
+      return;
+    }
+
+    console.log(`📝 [onSectionEditorInvitationUpdated] Invitación ${invitationId} respondida: ${afterData.status}`);
+
+    try {
+      const db = admin.firestore();
+
+      // Si ACEPTÓ
+      if (afterData.status === 'accepted') {
+        // 1. Crear asignación permanente
+        const assignmentData = {
+          area: afterData.area,
+          editorEmail: afterData.editorEmail,
+          editorName: afterData.editorName,
+          editorUid: afterData.editorUid || null,
+          canHandleAllAreas: afterData.canHandleAllAreas || false,
+          invitationId: invitationId,
+          status: 'active',
+          assignedAt: serverTimestamp(),
+          assignedBy: afterData.invitedBy,
+          // Estadísticas
+          articlesHandled: 0,
+          lastActivityAt: null
+        };
+
+        await addDoc(collection(db, 'sectionEditorAssignments'), assignmentData);
+
+        // 2. Si el editor tiene cuenta, actualizar sus claims
+        if (afterData.editorUid) {
+          try {
+            const userDoc = await db.collection('users').doc(afterData.editorUid).get();
+            const userData = userDoc.data() || {};
+            const currentRoles = userData.roles || [];
+            
+            // Añadir 'Editor de Sección' si no lo tiene
+            if (!currentRoles.includes('Editor de Sección')) {
+              const newRoles = [...currentRoles, 'Editor de Sección'];
+              
+              // Actualizar en Auth
+              await admin.auth().setCustomUserClaims(afterData.editorUid, { roles: newRoles });
+              
+              // Actualizar en Firestore
+              await db.collection('users').doc(afterData.editorUid).update({
+                roles: newRoles,
+                updatedAt: serverTimestamp(),
+                editorialArea: afterData.area,
+                editorialAssignmentId: invitationId
+              });
+              
+              console.log(`✅ Roles actualizados para ${afterData.editorUid}`);
+            }
+          } catch (roleError) {
+            console.error(`⚠️ Error actualizando roles:`, roleError.message);
+          }
+        }
+
+        // 3. Notificar al editor jefe que invitó
+        await sendSectionEditorAcceptedEmail(afterData);
+
+      } else if (afterData.status === 'declined') {
+        // Si rechazó, solo registrar
+        console.log(`ℹ️ Invitación rechazada por ${afterData.editorEmail}`);
+        
+        // Opcional: notificar al editor jefe
+        await sendSectionEditorDeclinedEmail(afterData);
+      }
+
+    } catch (error) {
+      console.error(`❌ Error:`, error.message);
+      await logSystemError('onSectionEditorInvitationUpdated', error, { invitationId, ...afterData });
+    }
+  }
+);
+
+// Funciones auxiliares para emails
+async function sendSectionEditorAcceptedEmail(invitation) {
+  const db = admin.firestore();
+  const inviterDoc = await db.collection('users').doc(invitation.invitedBy).get();
+  const inviterData = inviterDoc.data() || {};
+  
+  const lang = invitation.language || 'es';
+  const isSpanish = lang === 'es';
+
+  const emailTitle = isSpanish
+    ? '✅ Invitación aceptada - Editor de Sección'
+    : '✅ Invitation accepted - Section Editor';
+
+  const emailGreeting = isSpanish
+    ? `Estimado/a ${inviterData.displayName || 'Editor'}:`
+    : `Dear ${inviterData.displayName || 'Editor'}:`;
+
+  const bodyContent = isSpanish
+    ? `
+      <p>${invitation.editorName} (${invitation.editorEmail}) ha <strong>ACEPTADO</strong> su invitación para ser Editor de Sección.</p>
+      
+      <div class="highlight-box">
+        <p><strong>Área:</strong> ${invitation.area}</p>
+        <p><strong>Fecha de aceptación:</strong> ${new Date().toLocaleDateString('es-CL')}</p>
+      </div>
+      
+      <p>El editor ya tiene acceso al sistema editorial y puede comenzar a gestionar artículos en su área.</p>
+      
+      <div class="button-container">
+        <a href="https://www.revistacienciasestudiantes.com/es/login" class="btn">IR AL PORTAL</a>
+      </div>
+    `
+    : `
+      <p>${invitation.editorName} (${invitation.editorEmail}) has <strong>ACCEPTED</strong> your invitation to become a Section Editor.</p>
+      
+      <div class="highlight-box">
+        <p><strong>Area:</strong> ${invitation.area}</p>
+        <p><strong>Acceptance date:</strong> ${new Date().toLocaleDateString('en-US')}</p>
+      </div>
+      
+      <p>The editor now has access to the editorial system and can start managing articles in their area.</p>
+      
+      <div class="button-container">
+        <a href="https://www.revistacienciasestudiantes.com/en/login" class="btn">GO TO PORTAL</a>
+      </div>
+    `;
+
+  const htmlBody = getEmailTemplate(
+    emailTitle,
+    emailGreeting,
+    bodyContent,
+    isSpanish ? 'Sistema Editorial' : 'Editorial System',
+    isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
+    lang
+  );
+
+  await sendEmailViaExtension(invitation.invitedByEmail, emailTitle, htmlBody);
+}
+
+async function sendSectionEditorDeclinedEmail(invitation) {
+  const db = admin.firestore();
+  const inviterDoc = await db.collection('users').doc(invitation.invitedBy).get();
+  const inviterData = inviterDoc.data() || {};
+  
+  const lang = invitation.language || 'es';
+  const isSpanish = lang === 'es';
+
+  const emailTitle = isSpanish
+    ? '❌ Invitación rechazada - Editor de Sección'
+    : '❌ Invitation declined - Section Editor';
+
+  const emailGreeting = isSpanish
+    ? `Estimado/a ${inviterData.displayName || 'Editor'}:`
+    : `Dear ${inviterData.displayName || 'Editor'}:`;
+
+  const bodyContent = isSpanish
+    ? `
+      <p>${invitation.editorName} (${invitation.editorEmail}) ha <strong>RECHAZADO</strong> su invitación para ser Editor de Sección.</p>
+      
+      <div class="highlight-box">
+        <p><strong>Área:</strong> ${invitation.area}</p>
+        <p><strong>Fecha de rechazo:</strong> ${new Date().toLocaleDateString('es-CL')}</p>
+      </div>
+      
+      <p>Puede invitar a otro editor para esta área desde el panel editorial.</p>
+    `
+    : `
+      <p>${invitation.editorName} (${invitation.editorEmail}) has <strong>DECLINED</strong> your invitation to become a Section Editor.</p>
+      
+      <div class="highlight-box">
+        <p><strong>Area:</strong> ${invitation.area}</p>
+        <p><strong>Decline date:</strong> ${new Date().toLocaleDateString('en-US')}</p>
+      </div>
+      
+      <p>You can invite another editor for this area from the editorial panel.</p>
+    `;
+
+  const htmlBody = getEmailTemplate(
+    emailTitle,
+    emailGreeting,
+    bodyContent,
+    isSpanish ? 'Sistema Editorial' : 'Editorial System',
+    isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
+    lang
+  );
+
+  await sendEmailViaExtension(invitation.invitedByEmail, emailTitle, htmlBody);
+}
+/* ===================== EDITORIAL TASKS TRIGGERS ===================== */
+
+/**
+ * TRIGGER: Cuando se crea una nueva tarea editorial (asignación a Editor de Sección)
+ */
+exports.onEditorialTaskCreated = onDocumentCreated(
+  {
+    document: 'editorialTasks/{taskId}',
+    secrets: [], // Los emails se manejan con la extensión
+    memory: '256MiB'
+  },
+  async (event) => {
+    const task = event.data.data();
+    const taskId = event.params.taskId;
+
+    console.log(`📋 [onEditorialTaskCreated] Nueva tarea creada: ${taskId} para editor: ${task.assignedToEmail}`);
+
+    try {
+      const db = admin.firestore();
+
+      // Obtener datos completos del submission
+      const submissionDoc = await db.collection('submissions').doc(task.submissionId).get();
+      if (!submissionDoc.exists) {
+        console.error(`❌ Submission no encontrado: ${task.submissionId}`);
+        return;
+      }
+      const submission = submissionDoc.data();
+
+      // Obtener datos del que asignó
+      const assignerDoc = await db.collection('users').doc(task.assignedBy).get();
+      const assignerData = assignerDoc.data() || {};
+
+      const lang = submission.paperLanguage || 'es';
+      const isSpanish = lang === 'es';
+
+      // Construir email para el Editor de Sección
+      const emailTitle = isSpanish
+        ? '📋 Nueva tarea de revisión editorial asignada'
+        : '📋 New editorial review task assigned';
+
+      const emailGreeting = isSpanish
+        ? `Estimado/a ${task.assignedToName || 'Editor'}:`
+        : `Dear ${task.assignedToName || 'Editor'}:`;
+
+      const articleInfo = `
+        <div class="highlight-box">
+          <p class="article-title">"${submission.title}"</p>
+          <p><strong>${isSpanish ? 'ID:' : 'ID:'}</strong> ${submission.submissionId}</p>
+          <p><strong>${isSpanish ? 'Área:' : 'Area:'}</strong> ${submission.area}</p>
+          <p><strong>${isSpanish ? 'Autor:' : 'Author:'}</strong> ${submission.authorName}</p>
+          ${task.assignmentNotes ? `<p><strong>${isSpanish ? 'Notas:' : 'Notes:'}</strong> ${task.assignmentNotes}</p>` : ''}
+        </div>
+      `;
+
+      const bodyContent = isSpanish
+        ? `
+          <p>Se le ha asignado una nueva tarea de revisión editorial.</p>
+          ${articleInfo}
+          <p>Por favor, acceda al portal editorial para revisar el manuscrito y tomar una decisión.</p>
+          <div class="button-container">
+            <a href="https://www.revistacienciasestudiantes.com/es/login" class="btn">IR AL PORTAL</a>
+            <a href="${submission.driveFolderUrl}" class="btn btn-secondary">VER EN DRIVE</a>
+          </div>
+          <p><strong>Plazo sugerido:</strong> 7 días para la revisión editorial.</p>
+        `
+        : `
+          <p>A new editorial review task has been assigned to you.</p>
+          ${articleInfo}
+          <p>Please access the editorial portal to review the manuscript and make a decision.</p>
+          <div class="button-container">
+            <a href="https://www.revistacienciasestudiantes.com/en/login" class="btn">GO TO PORTAL</a>
+            <a href="${submission.driveFolderUrl}" class="btn btn-secondary">VIEW IN DRIVE</a>
+          </div>
+          <p><strong>Suggested deadline:</strong> 7 days for editorial review.</p>
+        `;
+
+      const htmlBody = getEmailTemplate(
+        emailTitle,
+        emailGreeting,
+        bodyContent,
+        isSpanish ? (assignerData.displayName || 'Recepción Editorial') : (assignerData.displayName || 'Editorial Reception'),
+        isSpanish ? 'Encargado de Asignación' : 'Assignment Manager',
+        lang
+      );
+
+      // Enviar email
+      await sendEmailViaExtension(task.assignedToEmail, emailTitle, htmlBody);
+      console.log(`✅ Email enviado a editor: ${task.assignedToEmail}`);
+
+      // Actualizar tarea con timestamp de notificación
+      await event.data.ref.update({
+        notificationSentAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+
+    } catch (error) {
+      console.error(`❌ Error en onEditorialTaskCreated:`, error.message);
+      await logSystemError('onEditorialTaskCreated', error, { taskId, ...task });
+    }
+  }
+);
