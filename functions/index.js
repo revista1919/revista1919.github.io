@@ -2875,59 +2875,58 @@ exports.onEditorialReviewUpdated = onDocumentUpdated(
       }
 
       const submissionData = submissionSnap.data();
-      let newSubmissionStatus = 'submitted'; // Valor por defecto (no debería ocurrir)
-      let emailSubject = '';
-      let emailBody = '';
-      const lang = submissionData.paperLanguage || 'es';
-      const isSpanish = lang === 'es';
+      // Dentro de onEditorialReviewUpdated, en la parte del switch...
 
-      // --- Mapear la decisión a un nuevo estado y preparar email para el autor ---
-      switch (afterData.decision) {
-        case 'reject':
-          newSubmissionStatus = 'rejected';
-          emailSubject = isSpanish ? 'Decisión editorial sobre su artículo' : 'Editorial decision on your manuscript';
-          emailBody = getRejectionEmailBody(afterData.feedbackToAuthor, submissionData.title, lang);
-          break;
+let newSubmissionStatus = 'submitted';
+let emailHtml = ''; // Cambiamos de emailSubject/emailBody a una sola variable para el HTML
+const lang = submissionData.paperLanguage || 'es';
+const authorName = submissionData.authorName || 'Autor'; // <-- Obtener el nombre del autor
 
-        case 'minor-revision':
-          newSubmissionStatus = 'minor-revision-required';
-          emailSubject = isSpanish ? 'Solicitud de revisión menor' : 'Minor revision requested';
-          emailBody = getRevisionEmailBody(afterData.feedbackToAuthor, submissionData.title, 'minor', lang);
-          break;
+switch (afterData.decision) {
+  case 'reject':
+    newSubmissionStatus = 'rejected';
+    // Llamamos a la función que AHORA devuelve el HTML completo
+    emailHtml = getRejectionEmailBody(afterData.feedbackToAuthor, submissionData.title, lang, authorName);
+    break;
 
-        case 'revision-required':
-          newSubmissionStatus = 'in-reviewer-selection'; // Nuevo estado: buscando revisores
-          emailSubject = isSpanish ? 'Su artículo ha pasado a revisión por pares' : 'Your manuscript has passed to peer review';
-          emailBody = getPeerReviewStartEmailBody(submissionData.title, lang);
-          break;
+  case 'minor-revision':
+    newSubmissionStatus = 'minor-revision-required';
+    emailHtml = getRevisionEmailBody(afterData.feedbackToAuthor, submissionData.title, 'minor', lang, authorName);
+    break;
 
-        case 'accept':
-          newSubmissionStatus = 'accepted';
-          emailSubject = isSpanish ? '¡Artículo aceptado!' : 'Article accepted!';
-          emailBody = getAcceptanceEmailBody(afterData.feedbackToAuthor, submissionData.title, lang);
-          break;
+  case 'revision-required':
+    newSubmissionStatus = 'in-reviewer-selection';
+    emailHtml = getPeerReviewStartEmailBody(submissionData.title, lang, authorName);
+    break;
 
-        default:
-          console.warn(`⚠️ [onEditorialReviewUpdated] Decisión desconocida: ${afterData.decision}`);
-          return;
-      }
+  case 'accept':
+    newSubmissionStatus = 'accepted';
+    emailHtml = getAcceptanceEmailBody(afterData.feedbackToAuthor, submissionData.title, lang, authorName);
+    break;
 
-      // Actualizar el estado del envío y limpiar la referencia a la revisión activa (opcional)
+  default:
+    console.warn(`⚠️ Decisión desconocida: ${afterData.decision}`);
+    return;
+}
+
       await submissionRef.update({
         status: newSubmissionStatus,
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
         // Podrías mantener currentEditorialReviewId para referencia, o borrarlo: currentEditorialReviewId: null
       });
 
-      // Enviar email al autor
-      if (emailSubject && emailBody && submissionData.authorEmail) {
-        await sendEmailViaExtension(
-          submissionData.authorEmail,
-          emailSubject,
-          emailBody
-        );
-        console.log(`✅ [onEditorialReviewUpdated] Email enviado a autor: ${submissionData.authorEmail}`);
-      }
+// Enviar email al autor usando el HTML generado
+if (emailHtml && submissionData.authorEmail) {
+
+  const emailSubject = lang === 'es' ? 'Actualización sobre su envío' : 'Update on your submission';
+  
+  await sendEmailViaExtension(
+    submissionData.authorEmail,
+    emailSubject, // <-- Usamos un asunto genérico, el HTML ya tiene el título específico.
+    emailHtml
+  );
+  console.log(`✅ Email enviado a autor: ${submissionData.authorEmail}`);
+}
 
       console.log(`✅ [onEditorialReviewUpdated] Envío ${afterData.submissionId} actualizado a estado: ${newSubmissionStatus}`);
 
@@ -3168,53 +3167,109 @@ async function sendReviewerAssignmentEmail(assignment) {
 }
 
 // Funciones para generar los cuerpos de los emails de decisión
-function getRejectionEmailBody(feedback, articleTitle, lang) {
+// ============================================================================
+// ============ FUNCIONES AUXILIARES PARA EMAILS (VERSIÓN CORREGIDA) =========
+// ============================================================================
+
+// --- Función CORREGIDA para Rechazo ---
+function getRejectionEmailBody(feedback, articleTitle, lang, authorName) {
   const isSpanish = lang === 'es';
-  return isSpanish
-    ? `<p>Lamentamos informarle que, tras la revisión editorial, su artículo "${articleTitle}" no ha sido aceptado para su publicación en nuestra revista.</p>
+  const greeting = isSpanish ? `Estimado/a ${authorName}:` : `Dear ${authorName}:`;
+  const title = isSpanish ? 'Decisión editorial sobre su artículo' : 'Editorial decision on your manuscript';
+
+  const bodyContent = isSpanish
+    ? `<p>Lamentamos informarle que, tras la revisión editorial, su artículo <strong>"${articleTitle}"</strong> no ha sido aceptado para su publicación en nuestra revista.</p>
        <p><strong>Feedback del editor:</strong></p>
        <div class="highlight-box">${feedback.replace(/\n/g, '<br>')}</div>
        <p>Le agradecemos por haber considerado nuestra revista para el envío de su trabajo y le animamos a enviar futuras investigaciones.</p>`
-    : `<p>We regret to inform you that, following editorial review, your manuscript "${articleTitle}" has not been accepted for publication in our journal.</p>
+    : `<p>We regret to inform you that, following editorial review, your manuscript <strong>"${articleTitle}"</strong> has not been accepted for publication in our journal.</p>
        <p><strong>Editor's feedback:</strong></p>
        <div class="highlight-box">${feedback.replace(/\n/g, '<br>')}</div>
        <p>Thank you for considering our journal for your work and we encourage you to submit future research.</p>`;
+
+  // Devolvemos el HTML completo usando la plantilla
+  return getEmailTemplate(
+    title,
+    greeting,
+    bodyContent,
+    isSpanish ? 'Equipo Editorial' : 'Editorial Team',
+    isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
+    lang
+  );
 }
 
-function getRevisionEmailBody(feedback, articleTitle, revisionType, lang) {
+// --- Función CORREGIDA para Solicitud de Revisión (menor o mayor)---
+function getRevisionEmailBody(feedback, articleTitle, revisionType, lang, authorName) {
   const isSpanish = lang === 'es';
   const typeText = revisionType === 'minor' ? (isSpanish ? 'menor' : 'minor') : (isSpanish ? 'mayor' : 'major');
-  return isSpanish
-    ? `<p>Su artículo "${articleTitle}" ha sido evaluado y se solicita una <strong>revisión ${typeText}</strong> antes de considerar su aceptación.</p>
+  const title = isSpanish ? 'Solicitud de revisión' : 'Revision requested';
+  const greeting = isSpanish ? `Estimado/a ${authorName}:` : `Dear ${authorName}:`;
+
+  const bodyContent = isSpanish
+    ? `<p>Su artículo <strong>"${articleTitle}"</strong> ha sido evaluado y se solicita una <strong>revisión ${typeText}</strong> antes de considerar su aceptación.</p>
        <p><strong>Comentarios del editor para la revisión:</strong></p>
        <div class="highlight-box">${feedback.replace(/\n/g, '<br>')}</div>
        <p>Por favor, realice los cambios solicitados y vuelva a enviar el manuscrito revisado a través de nuestro sistema.</p>`
-    : `<p>Your manuscript "${articleTitle}" has been evaluated and a <strong>${typeText} revision</strong> is requested before it can be considered for acceptance.</p>
+    : `<p>Your manuscript <strong>"${articleTitle}"</strong> has been evaluated and a <strong>${typeText} revision</strong> is requested before it can be considered for acceptance.</p>
        <p><strong>Editor's comments for revision:</strong></p>
        <div class="highlight-box">${feedback.replace(/\n/g, '<br>')}</div>
        <p>Please make the requested changes and resubmit the revised manuscript through our system.</p>`;
+
+  return getEmailTemplate(
+    title,
+    greeting,
+    bodyContent,
+    isSpanish ? 'Equipo Editorial' : 'Editorial Team',
+    isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
+    lang
+  );
 }
 
-function getPeerReviewStartEmailBody(articleTitle, lang) {
+// --- Función CORREGIDA para Inicio de Revisión por Pares ---
+function getPeerReviewStartEmailBody(articleTitle, lang, authorName) {
   const isSpanish = lang === 'es';
-  return isSpanish
-    ? `<p>Su artículo "${articleTitle}" ha superado la revisión editorial inicial y ha sido enviado a revisión por pares.</p>
+  const title = isSpanish ? 'Su artículo ha pasado a revisión por pares' : 'Your manuscript has passed to peer review';
+  const greeting = isSpanish ? `Estimado/a ${authorName}:` : `Dear ${authorName}:`;
+
+  const bodyContent = isSpanish
+    ? `<p>Su artículo <strong>"${articleTitle}"</strong> ha superado la revisión editorial inicial y ha sido enviado a revisión por pares.</p>
        <p>En breve, nuestro equipo editorial seleccionará revisores externos para evaluar su trabajo. Le notificaremos cuando tengamos noticias.</p>`
-    : `<p>Your manuscript "${articleTitle}" has passed the initial editorial review and has been sent for peer review.</p>
+    : `<p>Your manuscript <strong>"${articleTitle}"</strong> has passed the initial editorial review and has been sent for peer review.</p>
        <p>Shortly, our editorial team will select external reviewers to evaluate your work. We will notify you when we have news.</p>`;
+
+  return getEmailTemplate(
+    title,
+    greeting,
+    bodyContent,
+    isSpanish ? 'Equipo Editorial' : 'Editorial Team',
+    isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
+    lang
+  );
 }
 
-function getAcceptanceEmailBody(feedback, articleTitle, lang) {
+// --- Función CORREGIDA para Aceptación ---
+function getAcceptanceEmailBody(feedback, articleTitle, lang, authorName) {
   const isSpanish = lang === 'es';
-  return isSpanish
-    ? `<p>¡Nos complace informarle que su artículo "${articleTitle}" ha sido <strong>ACEPTADO</strong> para su publicación en la Revista Nacional de las Ciencias para Estudiantes!</p>
+  const title = isSpanish ? '¡Artículo aceptado!' : 'Article accepted!';
+  const greeting = isSpanish ? `Estimado/a ${authorName}:` : `Dear ${authorName}:`;
+
+  const bodyContent = isSpanish
+    ? `<p>¡Nos complace informarle que su artículo <strong>"${articleTitle}"</strong> ha sido <strong>ACEPTADO</strong> para su publicación en la Revista Nacional de las Ciencias para Estudiantes!</p>
        ${feedback ? `<p><strong>Comentarios finales del editor:</strong> ${feedback}</p>` : ''}
        <p>En los próximos días recibirá las instrucciones para la firma de la cesión de derechos y los pasos finales para la publicación.</p>`
-    : `<p>We are pleased to inform you that your manuscript "${articleTitle}" has been <strong>ACCEPTED</strong> for publication in The National Review of Sciences for Students!</p>
+    : `<p>We are pleased to inform you that your manuscript <strong>"${articleTitle}"</strong> has been <strong>ACCEPTED</strong> for publication in The National Review of Sciences for Students!</p>
        ${feedback ? `<p><strong>Final editor's comments:</strong> ${feedback}</p>` : ''}
        <p>In the coming days you will receive instructions for signing the copyright transfer and the final steps for publication.</p>`;
-}
 
+  return getEmailTemplate(
+    title,
+    greeting,
+    bodyContent,
+    isSpanish ? 'Equipo Editorial' : 'Editorial Team',
+    isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
+    lang
+  );
+}
 
 // Función auxiliar para loguear errores en Firestore
 async function logSystemError(functionName, error, context = {}) {
