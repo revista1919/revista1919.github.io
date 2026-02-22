@@ -1,5 +1,5 @@
 // src/Router.jsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useLocation, Navigate } from 'react-router-dom';
 import App from './App';
 import AppEN from './AppEN';
@@ -7,57 +7,61 @@ import ReviewerResponsePage from './components/ReviewerResponsePage';
 
 const Router = () => {
   const location = useLocation();
-  const { pathname } = location;
+  const { pathname, search } = location;
 
-  // --- 1. RUTA ESPECIAL (SIN REDIRECCIÓN DE IDIOMA) ---
-  // Si la ruta es /reviewer-response, mostramos el componente directamente.
-  // Esto permite que los enlaces en los emails funcionen sin importar el idioma.
+  // LOG 1: Ver qué está entrando al router
+  useEffect(() => {
+    console.log('🔥 ROUTER - Pathname actual:', pathname);
+    console.log('🔥 ROUTER - Search params:', search);
+    console.log('🔥 ROUTER - URL completa:', window.location.href);
+  }, [pathname, search]);
+
+  // CASO 1: Ruta especial de revisor
   if (pathname === '/reviewer-response') {
+    console.log('✅ ROUTER - Mostrando ReviewerResponsePage');
     return <ReviewerResponsePage />;
   }
 
-  // --- 2. DETECCIÓN DE IDIOMA ---
-  // Determinamos el idioma basado en el primer segmento de la ruta.
-  const isEnglish = pathname.startsWith('/en');
-  // Consideramos español si empieza con '/es' O si es la raíz '/' (que será español por defecto)
-  const isSpanish = pathname.startsWith('/es') || pathname === '/';
-
-  // --- 3. MANEJO DE LA RAÍZ ('/') ---
-  // Si estamos en la raíz, simplemente renderizamos la versión en español (<App />).
-  // Esto es consistente con la idea de que el español es el idioma por defecto.
+  // CASO 2: Ruta raíz (español por defecto)
   if (pathname === '/') {
+    console.log('✅ ROUTER - Raíz, mostrando App (español)');
     return <App />;
   }
 
-  // --- 4. LIMPIEZA DE LA RUTA PARA LOS COMPONENTES PRINCIPALES ---
-  // Eliminamos el prefijo de idioma (/es o /en) para pasarlo a App o AppEN.
-  // Esto permite que la lógica interna de esas apps funcione con rutas relativas.
-  const pathWithoutLang = pathname.replace(/^\/(es|en)/, '');
-
-  // --- 5. RENDERIZADO CONDICIONAL ---
-  if (isEnglish) {
-    // Renderizamos la versión en inglés. Le pasamos la ruta limpia a través de `key`
-    // para forzar un re-renderizado cuando cambie, pero la navegación interna
-    // de AppEN usará esta ruta limpia.
-    return <AppEN key={pathWithoutLang} />;
+  // CASO 3: Ruta que empieza con /en (INGLÉS)
+  if (pathname.startsWith('/en')) {
+    console.log('✅ ROUTER - Ruta inglesa detectada:', pathname);
+    
+    // Si es exactamente /en, mostrar AppEN con ruta limpia '/'
+    if (pathname === '/en') {
+      console.log('✅ ROUTER - Mostrando AppEN con path /');
+      return <AppEN key="/" />;
+    }
+    
+    // Para /en/algo, extraer la ruta sin el /en
+    const pathWithoutEn = pathname.replace('/en', '');
+    console.log('✅ ROUTER - Mostrando AppEN con path:', pathWithoutEn);
+    return <AppEN key={pathWithoutEn} />;
   }
 
-  if (isSpanish) {
-    // Renderizamos la versión en español, también con la ruta limpia.
-    return <App key={pathWithoutLang} />;
+  // CASO 4: Ruta que empieza con /es (ESPAÑOL)
+  if (pathname.startsWith('/es')) {
+    console.log('✅ ROUTER - Ruta española detectada:', pathname);
+    
+    // Si es exactamente /es, redirigir a raíz (esto puede ser opcional)
+    if (pathname === '/es') {
+      console.log('✅ ROUTER - Redirigiendo /es a /');
+      return <Navigate to="/" replace />;
+    }
+    
+    // Para /es/algo, extraer la ruta sin el /es
+    const pathWithoutEs = pathname.replace('/es', '');
+    console.log('✅ ROUTER - Mostrando App con path:', pathWithoutEs);
+    return <App key={pathWithoutEs} />;
   }
 
-  // --- 6. MANEJO DE ERROR 404 (REDIRECCIÓN INTELIGENTE) ---
-  // Si llegamos aquí, es porque la ruta no tiene un prefijo de idioma válido
-  // (ej: /ruta-invalida, /es, /en). Redirigimos a la versión en español por defecto.
-  // También manejamos el caso donde la ruta es solo '/es' o '/en' (sin nada después).
-  if (pathname === '/es' || pathname === '/en') {
-    // Redirigimos a la página de inicio en el idioma correspondiente.
-    return <Navigate to={pathname === '/es' ? '/' : '/en'} replace />;
-  }
-
-  // Para cualquier otra ruta no reconocida (ej: /pagina-que-no-existe), redirigimos a la raíz.
-  console.warn(`Ruta no encontrada: ${pathname}. Redirigiendo a /`);
+  // CASO 5: Cualquier otra ruta (404)
+  console.log('❌ ROUTER - Ruta no reconocida, redirigiendo a /');
   return <Navigate to="/" replace />;
 };
 
