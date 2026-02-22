@@ -17,17 +17,14 @@ export const useReviewerInvitation = (user) => {
   const { language } = useLanguage();
   const isSpanish = language === 'es';
 
-  /**
-   * Crea una invitación para un revisor.
-   * La Cloud Function `onReviewerInvitationCreated` enviará el email.
-   */
   const sendInvitation = useCallback(async ({
+    editorialTaskId,
     editorialReviewId,
     submissionId,
     round = 1,
     reviewerEmail,
     reviewerName,
-    reviewerUid = null, // Si el revisor tiene cuenta, pasar su UID
+    reviewerUid = null,
     expiresInDays = 7
   }) => {
     if (!user) {
@@ -39,27 +36,38 @@ export const useReviewerInvitation = (user) => {
     setError(null);
 
     try {
-      // Verificar permisos de editor
       const userRoles = user.roles || [];
-      const isEditor = userRoles.includes('Director General') || userRoles.includes('Editor en Jefe');
+      const isEditor = userRoles.includes('Director General') || userRoles.includes('Editor en Jefe') || userRoles.includes('Editor de Sección');
       if (!isEditor) {
         throw new Error(isSpanish ? 'No tienes permiso para invitar revisores' : 'You do not have permission to invite reviewers');
       }
 
-      // Validar email
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(reviewerEmail)) {
         throw new Error(isSpanish ? 'Email de revisor inválido' : 'Invalid reviewer email');
       }
 
-      // Verificar si ya se invitó a este revisor para esta ronda
       const invitationsRef = collection(db, 'reviewerInvitations');
-      const q = query(
-        invitationsRef,
-        where('editorialReviewId', '==', editorialReviewId),
-        where('reviewerEmail', '==', reviewerEmail),
-        where('round', '==', round)
-      );
+      let q;
+      
+      if (editorialReviewId) {
+        q = query(
+          invitationsRef,
+          where('editorialReviewId', '==', editorialReviewId),
+          where('reviewerEmail', '==', reviewerEmail),
+          where('round', '==', round)
+        );
+      } else if (editorialTaskId) {
+        q = query(
+          invitationsRef,
+          where('editorialTaskId', '==', editorialTaskId),
+          where('reviewerEmail', '==', reviewerEmail),
+          where('round', '==', round)
+        );
+      } else {
+        throw new Error(isSpanish ? 'Se requiere editorialReviewId o editorialTaskId' : 'editorialReviewId or editorialTaskId is required');
+      }
+
       const existingInvites = await getDocs(q);
 
       if (!existingInvites.empty) {
@@ -68,24 +76,24 @@ export const useReviewerInvitation = (user) => {
 
       const inviteHash = generateInviteHash();
 
-      // Calcular fecha de expiración
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + expiresInDays);
 
       const invitationData = {
-        editorialReviewId,
-        editorialTaskId,
+        editorialTaskId: editorialTaskId || null,
+        editorialReviewId: editorialReviewId || null,
         submissionId,
         round,
         reviewerEmail,
         reviewerName: reviewerName || '',
-        reviewerUid, // Puede ser null
+        reviewerUid,
         inviteHash,
         status: 'pending',
         conflictOfInterest: null,
-        expiresAt: expiresAt, // Firestore lo convertirá a Timestamp
+        expiresAt: expiresAt,
         createdAt: serverTimestamp(),
-        invitedBy: user.uid
+        invitedBy: user.uid,
+        invitedByEmail: user.email || ''
       };
 
       const docRef = await addDoc(collection(db, 'reviewerInvitations'), invitationData);
@@ -105,9 +113,6 @@ export const useReviewerInvitation = (user) => {
     }
   }, [user, isSpanish]);
 
-  /**
-   * Obtiene una invitación por su hash.
-   */
   const getInvitationByHash = useCallback(async (hash) => {
     setLoading(true);
     setError(null);
@@ -123,7 +128,6 @@ export const useReviewerInvitation = (user) => {
       const invitationDoc = querySnapshot.docs[0];
       const invitationData = invitationDoc.data();
 
-      // Verificar expiración
       const now = new Date();
       if (invitationData.expiresAt && invitationData.expiresAt.toDate() < now) {
         return { success: false, found: false, error: isSpanish ? 'Esta invitación ha expirado' : 'This invitation has expired' };
@@ -146,10 +150,6 @@ export const useReviewerInvitation = (user) => {
     }
   }, [isSpanish]);
 
-  /**
-   * Responde a una invitación (aceptar/rechazar).
-   * La Cloud Function `onReviewerInvitationUpdated` reaccionará a este cambio.
-   */
   const respondToInvitation = useCallback(async (invitationId, response) => {
     setLoading(true);
     setError(null);
@@ -167,16 +167,15 @@ export const useReviewerInvitation = (user) => {
         throw new Error(isSpanish ? 'Esta invitación ya ha sido procesada' : 'This invitation has already been processed');
       }
 
-      // Si el usuario está logueado, asociamos su UID a la invitación.
       const updatePayload = {
         status: accept ? 'accepted' : 'declined',
         conflictOfInterest: conflictOfInterest || null,
         respondedAt: serverTimestamp()
       };
 
-      // Si hay un usuario autenticado, guardamos su UID.
       if (user) {
         updatePayload.reviewerUid = user.uid;
+        updatePayload.reviewerEmail = user.email || invitationData.reviewerEmail;
       }
 
       await updateDoc(invitationRef, updatePayload);
