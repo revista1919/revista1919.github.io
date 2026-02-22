@@ -1,6 +1,6 @@
 // src/components/ReviewerResponsePage.js
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useLanguage } from '../hooks/useLanguage';
 import { useReviewerInvitation } from '../hooks/useReviewerInvitation';
@@ -8,9 +8,12 @@ import { db } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
 
 const ReviewerResponsePage = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const hash = searchParams.get('hash');
-  const { language } = useLanguage();
+  const urlLang = searchParams.get('lang') || 'es';
+  
+  const { language, setLanguage } = useLanguage();
   const isSpanish = language === 'es';
 
   const [invitation, setInvitation] = useState(null);
@@ -20,7 +23,22 @@ const ReviewerResponsePage = () => {
   const [conflict, setConflict] = useState('');
   const [responseSent, setResponseSent] = useState(false);
 
-  const { getInvitationByHash, respondToInvitation, loading: hookLoading } = useReviewerInvitation(null); // Pasamos null porque el user puede no estar logueado
+  const { getInvitationByHash, respondToInvitation, loading: hookLoading } = useReviewerInvitation(null);
+
+  // Sincronizar idioma de la URL con el hook
+  useEffect(() => {
+    if (urlLang && (urlLang === 'es' || urlLang === 'en')) {
+      setLanguage(urlLang);
+    }
+  }, [urlLang, setLanguage]);
+
+  const handleLanguageChange = (newLang) => {
+    setLanguage(newLang);
+    // Actualizar URL sin recargar
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set('lang', newLang);
+    setSearchParams(newParams);
+  };
 
   useEffect(() => {
     const loadInvitation = async () => {
@@ -48,7 +66,13 @@ const ReviewerResponsePage = () => {
   }, [hash, getInvitationByHash, isSpanish]);
 
   const handleAccept = async () => {
-    const result = await respondToInvitation(invitation.id, { accept: true, conflictOfInterest: conflict });
+    if (!invitation) return;
+    
+    const result = await respondToInvitation(invitation.id, { 
+      accept: true, 
+      conflictOfInterest: conflict 
+    });
+    
     if (result.success) {
       setResponseSent(true);
     } else {
@@ -57,7 +81,12 @@ const ReviewerResponsePage = () => {
   };
 
   const handleDecline = async () => {
-    const result = await respondToInvitation(invitation.id, { accept: false });
+    if (!invitation) return;
+    
+    const result = await respondToInvitation(invitation.id, { 
+      accept: false 
+    });
+    
     if (result.success) {
       setResponseSent(true);
     } else {
@@ -129,6 +158,28 @@ const ReviewerResponsePage = () => {
       className="min-h-screen bg-[#fafafa] py-12 px-4"
     >
       <div className="max-w-2xl mx-auto bg-white rounded-3xl shadow-sm border border-gray-100 p-8 md:p-12">
+        {/* Selector de idioma */}
+        <div className="flex justify-end mb-6">
+          <div className="flex bg-gray-100 rounded-2xl p-1.5">
+            <button
+              onClick={() => handleLanguageChange('es')}
+              className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+                language === 'es' ? 'bg-white shadow text-emerald-700' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              ESPAÑOL
+            </button>
+            <button
+              onClick={() => handleLanguageChange('en')}
+              className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+                language === 'en' ? 'bg-white shadow text-emerald-700' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              ENGLISH
+            </button>
+          </div>
+        </div>
+
         <h1 className="font-serif text-3xl font-bold text-gray-900 mb-2">
           {isSpanish ? 'Invitación a Revisión por Pares' : 'Peer Review Invitation'}
         </h1>

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../firebase';
-import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, getDocs } from 'firebase/firestore';
 import { useLanguage } from '../hooks/useLanguage';
 import { useEditorialReview } from '../hooks/useEditorialReview';
 import { useReviewerInvitation } from '../hooks/useReviewerInvitation';
@@ -16,8 +16,11 @@ const DeskReviewPanel = ({ user }) => {
   const [feedback, setFeedback] = useState('');
   const [internalComments, setInternalComments] = useState('');
   const [decision, setDecision] = useState('');
-  const [invitationEmail, setInvitationEmail] = useState('');
-  const [invitationName, setInvitationName] = useState('');
+  
+  // Nuevos estados para selección de revisores
+  const [potentialReviewers, setPotentialReviewers] = useState([]);
+  const [selectedReviewerId, setSelectedReviewerId] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const { loading: reviewLoading, error: reviewError, startDeskReview, submitDeskReviewDecision } = useEditorialReview(user);
   const { loading: inviteLoading, error: inviteError, sendInvitation } = useReviewerInvitation(user);
@@ -45,16 +48,35 @@ const DeskReviewPanel = ({ user }) => {
     return () => unsubscribe();
   }, [user]);
 
+  // Cargar potenciales revisores (usuarios con rol Revisor o Editor de Sección)
+  useEffect(() => {
+    const loadReviewers = async () => {
+      const usersRef = collection(db, 'users');
+      const q = query(
+        usersRef,
+        where('roles', 'array-contains-any', ['Revisor', 'Editor de Sección'])
+      );
+      
+      const snapshot = await getDocs(q);
+      const reviewers = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        displayName: doc.data().displayName || 
+          `${doc.data().firstName || ''} ${doc.data().lastName || ''}`.trim() ||
+          doc.data().email
+      }));
+      
+      setPotentialReviewers(reviewers);
+    };
+
+    loadReviewers();
+  }, []);
+
   const handleStartReview = async (submission) => {
     const result = await startDeskReview(submission.id);
     if (result.success) {
-      if (result.existing) {
-        setActiveReview({ id: result.reviewId, ...result.data });
-      } else {
-        setActiveReview({ id: result.reviewId, ...result.data });
-      }
+      setActiveReview({ id: result.reviewId, ...result.data });
       setSelectedSubmission(submission);
-      // Cargar datos existentes si los hay
       setFeedback(result.data?.feedbackToAuthor || '');
       setInternalComments(result.data?.commentsToEditorial || '');
       setDecision(result.data?.decision || '');
@@ -75,7 +97,6 @@ const DeskReviewPanel = ({ user }) => {
 
     if (result.success) {
       alert(isSpanish ? 'Decisión guardada correctamente' : 'Decision saved successfully');
-      // Limpiar selección
       setSelectedSubmission(null);
       setActiveReview(null);
       setFeedback('');
@@ -85,28 +106,39 @@ const DeskReviewPanel = ({ user }) => {
   };
 
   const handleSendInvitation = async () => {
-    if (!activeReview || !invitationEmail || !invitationName) {
-      alert(isSpanish ? 'Completa todos los campos del revisor' : 'Fill in all reviewer fields');
+    if (!activeReview || !selectedReviewerId) {
+      alert(isSpanish ? 'Selecciona un revisor' : 'Select a reviewer');
       return;
     }
 
+    const reviewer = potentialReviewers.find(r => r.id === selectedReviewerId);
+    
     const result = await sendInvitation({
       editorialReviewId: activeReview.id,
       submissionId: selectedSubmission.id,
       round: activeReview.round || 1,
-      reviewerEmail: invitationEmail,
-      reviewerName: invitationName
+      reviewerEmail: reviewer.email,
+      reviewerName: reviewer.displayName
     });
 
     if (result.success) {
       alert(isSpanish ? 'Invitación enviada' : 'Invitation sent');
-      setInvitationEmail('');
-      setInvitationName('');
+      setSelectedReviewerId('');
     }
   };
 
+  // Filtrar revisores por búsqueda
+  const filteredReviewers = potentialReviewers.filter(reviewer => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      reviewer.displayName?.toLowerCase().includes(searchLower) ||
+      reviewer.email?.toLowerCase().includes(searchLower) ||
+      reviewer.institution?.toLowerCase().includes(searchLower)
+    );
+  });
+
   if (!user || (!user.roles?.includes('Director General') && !user.roles?.includes('Editor en Jefe'))) {
-    return null; // No mostrar si no es editor
+    return null;
   }
 
   return (
@@ -257,7 +289,7 @@ const DeskReviewPanel = ({ user }) => {
                   </button>
                 </div>
 
-                {/* Sección de invitación a revisores (solo si la decisión es enviar a revisión) */}
+                {/* Sección de invitación a revisores (mejorada) */}
                 {decision === 'revision-required' && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
@@ -265,39 +297,80 @@ const DeskReviewPanel = ({ user }) => {
                     className="pt-8 border-t border-gray-200 space-y-6"
                   >
                     <h4 className="font-serif text-xl font-bold text-gray-900">
-                      {isSpanish ? 'Invitar a Revisor' : 'Invite Reviewer'}
+                      {isSpanish ? 'Seleccionar Revisor' : 'Select Reviewer'}
                     </h4>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">
-                          {isSpanish ? 'Email del Revisor' : 'Reviewer Email'}
-                        </label>
-                        <input
-                          type="email"
-                          value={invitationEmail}
-                          onChange={(e) => setInvitationEmail(e.target.value)}
-                          className="w-full p-4 bg-gray-50 border-0 rounded-2xl focus:ring-2 focus:ring-emerald-300"
-                          placeholder="revisor@email.com"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">
-                          {isSpanish ? 'Nombre del Revisor' : 'Reviewer Name'}
-                        </label>
-                        <input
-                          type="text"
-                          value={invitationName}
-                          onChange={(e) => setInvitationName(e.target.value)}
-                          className="w-full p-4 bg-gray-50 border-0 rounded-2xl focus:ring-2 focus:ring-emerald-300"
-                          placeholder={isSpanish ? 'Dr. Juan Pérez' : 'Dr. John Smith'}
-                        />
-                      </div>
+                    {/* Buscador de revisores */}
+                    <div>
+                      <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder={isSpanish ? 'Buscar por nombre, email o institución...' : 'Search by name, email or institution...'}
+                        className="w-full p-4 bg-gray-50 border-0 rounded-2xl focus:ring-2 focus:ring-emerald-300 text-sm"
+                      />
+                    </div>
+
+                    {/* Lista de revisores */}
+                    <div className="max-h-64 overflow-y-auto space-y-2 border border-gray-100 rounded-2xl p-2">
+                      {filteredReviewers.length === 0 ? (
+                        <p className="text-center text-gray-400 py-4">
+                          {isSpanish ? 'No hay revisores disponibles' : 'No reviewers available'}
+                        </p>
+                      ) : (
+                        filteredReviewers.map(reviewer => (
+                          <motion.div
+                            key={reviewer.id}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            onClick={() => setSelectedReviewerId(reviewer.id)}
+                            className={`p-4 rounded-xl cursor-pointer transition-all ${
+                              selectedReviewerId === reviewer.id
+                                ? 'bg-emerald-50 border-2 border-emerald-600'
+                                : 'bg-gray-50 hover:bg-gray-100 border-2 border-transparent'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              {reviewer.imageUrl ? (
+                                <img 
+                                  src={reviewer.imageUrl} 
+                                  className="w-10 h-10 rounded-full object-cover"
+                                  alt={reviewer.displayName}
+                                />
+                              ) : (
+                                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                                  <span className="text-lg font-serif font-bold text-gray-500">
+                                    {reviewer.displayName?.charAt(0) || '?'}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="flex-1">
+                                <div className="font-semibold text-gray-900">
+                                  {reviewer.displayName}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {reviewer.email}
+                                </div>
+                                {reviewer.institution && (
+                                  <div className="text-xs text-gray-400 mt-1">
+                                    {reviewer.institution}
+                                  </div>
+                                )}
+                              </div>
+                              {reviewer.roles?.includes('Editor de Sección') && (
+                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                                  {isSpanish ? 'Editor' : 'Editor'}
+                                </span>
+                              )}
+                            </div>
+                          </motion.div>
+                        ))
+                      )}
                     </div>
 
                     <button
                       onClick={handleSendInvitation}
-                      disabled={inviteLoading}
+                      disabled={inviteLoading || !selectedReviewerId}
                       className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl transition-all disabled:bg-emerald-300"
                     >
                       {inviteLoading ? (
