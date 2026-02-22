@@ -11,6 +11,7 @@ import { Routes, Route, useLocation, NavLink, useSearchParams } from 'react-rout
 import { useLanguage } from './hooks/useLanguage';
 import Header from './components/Header';
 import SearchAndFilters from './components/SearchAndFilters';
+import ReviewerResponsePage from './components/ReviewerResponsePage';
 import ArticleCard from './components/ArticleCard';
 import VolumeCard from './components/VolumeCard';
 import Tabs from './components/Tabs';
@@ -689,53 +690,67 @@ function App() {
       <main className="flex-grow">
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.key}>
-            {sections.flatMap(s => [
-              <Route key={s.path} path={s.path} element={
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.3 }}
-                  className={`container ${
-                    user && isLoginActive
-                      ? 'max-w-full px-0'
-                      : 'mx-auto px-6 lg:px-8'
-                  } flex-grow`}
-                >
-                  {s.component}
-                </motion.div>
-              } />,
-              s.path === '/' ? <Route key='/es' path='/es' element={
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.3 }}
-                  className={`container ${
-                    user && isLoginActive
-                      ? 'max-w-full px-0'
-                      : 'mx-auto px-6 lg:px-8'
-                  } flex-grow`}
-                >
-                  {s.component}
-                </motion.div>
-              } /> : <Route key={`/es${s.path}`} path={`/es${s.path}`} element={
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.3 }}
-                  className={`container ${
-                    user && isLoginActive
-                      ? 'max-w-full px-0'
-                      : 'mx-auto px-6 lg:px-8'
-                  } flex-grow`}
-                >
-                  {s.component}
-                </motion.div>
-              } />
-            ])}
-          </Routes>
+  {/* NUEVA RUTA PARA REVISORES - SIN AUTENTICACIÓN */}
+  <Route path="/reviewer-response" element={
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.3 }}
+      className="container mx-auto px-6 lg:px-8 flex-grow"
+    >
+      <ReviewerResponsePage />
+    </motion.div>
+  } />
+  
+  {/* Rutas existentes de secciones */}
+  {sections.flatMap(s => [
+    <Route key={s.path} path={s.path} element={
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.3 }}
+        className={`container ${
+          user && isLoginActive
+            ? 'max-w-full px-0'
+            : 'mx-auto px-6 lg:px-8'
+        } flex-grow`}
+      >
+        {s.component}
+      </motion.div>
+    } />,
+    s.path === '/' ? <Route key='/es' path='/es' element={
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.3 }}
+        className={`container ${
+          user && isLoginActive
+            ? 'max-w-full px-0'
+            : 'mx-auto px-6 lg:px-8'
+        } flex-grow`}
+      >
+        {s.component}
+      </motion.div>
+    } /> : <Route key={`/es${s.path}`} path={`/es${s.path}`} element={
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.3 }}
+        className={`container ${
+          user && isLoginActive
+            ? 'max-w-full px-0'
+            : 'mx-auto px-6 lg:px-8'
+        } flex-grow`}
+      >
+        {s.component}
+      </motion.div>
+    } />
+  ])}
+</Routes>
         </AnimatePresence>
       </main>
       <AnimatePresence>

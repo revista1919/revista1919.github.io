@@ -9,6 +9,7 @@ import TaskSection from './TaskSection';
 import AssignSection from './AssignSection';
 import DirectorPanel from './DirectorPanel';
 import Admissions from './Admissions';
+import DeskReviewPanel from './DeskReviewPanel';
 import { 
   UserIcon, 
   CameraIcon, 
@@ -2083,30 +2084,46 @@ export default function PortalSection({ user, onLogout }) {
           )}
 
           {activeTab === 'director' && (
-            <motion.section
-              key="director"
-              initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
-            >
-              <DirectorPanel 
-                user={userData} 
-                isExpanded={isDirectorPanelExpanded} 
-                onToggle={() => setIsDirectorPanelExpanded(!isDirectorPanelExpanded)} 
-              />
-            </motion.section>
-          )}
+  <motion.section
+    key="director"
+    initial={{ opacity: 0, x: -20 }} 
+    animate={{ opacity: 1, x: 0 }} 
+    exit={{ opacity: 0, x: 20 }}
+  >
+    {/* Panel Directivo existente */}
+    <DirectorPanel 
+      user={userData} 
+      isExpanded={isDirectorPanelExpanded} 
+      onToggle={() => setIsDirectorPanelExpanded(!isDirectorPanelExpanded)} 
+    />
+    
+    {/* NUEVO: Panel de Desk Review para Directores */}
+    <div className="mt-8">
+      <DeskReviewPanel user={userData} />
+    </div>
+  </motion.section>
+)}
 
           {activeTab === 'chief' && (
-            <motion.section
-              key="chief"
-              initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
-            >
-              <AssignSection 
-                user={userData} 
-                isExpanded={isChiefEditorPanelExpanded} 
-                onToggle={() => setIsChiefEditorPanelExpanded(!isChiefEditorPanelExpanded)} 
-              />
-            </motion.section>
-          )}
+  <motion.section
+    key="chief"
+    initial={{ opacity: 0, x: -20 }} 
+    animate={{ opacity: 1, x: 0 }} 
+    exit={{ opacity: 0, x: 20 }}
+  >
+    {/* Panel de Editor en Jefe existente */}
+    <AssignSection 
+      user={userData} 
+      isExpanded={isChiefEditorPanelExpanded} 
+      onToggle={() => setIsChiefEditorPanelExpanded(!isChiefEditorPanelExpanded)} 
+    />
+    
+    {/* NUEVO: Panel de Desk Review para Editores en Jefe */}
+    <div className="mt-8">
+      <DeskReviewPanel user={userData} />
+    </div>
+  </motion.section>
+)}
 
           {activeTab === 'tasks' && (
             <motion.section
