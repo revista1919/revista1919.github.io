@@ -1,13 +1,18 @@
-// src/hooks/useReviewerInvitation.js
 import { useState, useCallback } from 'react';
 import { db } from '../firebase';
 import { collection, addDoc, updateDoc, doc, serverTimestamp, getDoc, query, where, getDocs } from 'firebase/firestore';
 import { useLanguage } from './useLanguage';
-import crypto from 'crypto'; // Para generar hashes únicos
 
-// Función para generar un hash único (puedes usar una librería si prefieres)
+// Función para generar hash único en el navegador
 const generateInviteHash = () => {
-  return crypto.randomBytes(32).toString('hex');
+  // 20 bytes aleatorios (160 bits) es suficiente para invitaciones
+  const array = new Uint8Array(20);
+  window.crypto.getRandomValues(array);
+  
+  // Convertir a hexadecimal
+  return Array.from(array)
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
 };
 
 export const useReviewerInvitation = (user) => {
@@ -22,7 +27,7 @@ export const useReviewerInvitation = (user) => {
     round = 1, 
     reviewerEmail, 
     reviewerName,
-    expiresInDays = 7 // La invitación expira en 7 días por defecto
+    expiresInDays = 7
   }) => {
     if (!user) {
       setError(isSpanish ? 'Usuario no autenticado' : 'User not authenticated');
@@ -61,6 +66,8 @@ export const useReviewerInvitation = (user) => {
       }
 
       const inviteHash = generateInviteHash();
+      
+      // Calcular fecha de expiración (en el cliente por ahora)
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + expiresInDays);
 
@@ -74,23 +81,24 @@ export const useReviewerInvitation = (user) => {
         status: 'pending',
         conflictOfInterest: null,
         respondedAt: null,
-        expiresAt: serverTimestamp(expiresAt), // Necesitamos un timestamp de Firestore
+        expiresAt: expiresAt.toISOString(), // Guardar como string ISO por ahora
         createdAt: serverTimestamp(),
         invitedBy: user.uid
       };
 
       const docRef = await addDoc(collection(db, 'reviewerInvitations'), invitationData);
 
-      // Aquí se enviaría el email con el enlace de respuesta
-      // Ej: https://tusitio.com/reviewer-response?hash={inviteHash}
-      console.log(`[INVITE] Enlace de invitación generado: /reviewer-response?hash=${inviteHash}`);
+      // Log para pruebas - aquí irá el envío de email real después
+      const inviteLink = `/reviewer-response?hash=${inviteHash}&lang=${isSpanish ? 'es' : 'en'}`;
+      console.log(`[INVITE] Enlace de invitación generado: ${inviteLink}`);
+      console.log(`[INVITE] Email del revisor: ${reviewerEmail}`);
 
       setLoading(false);
       return { 
         success: true, 
         invitationId: docRef.id,
         inviteHash,
-        inviteLink: `/reviewer-response?hash=${inviteHash}&lang=${isSpanish ? 'es' : 'en'}`
+        inviteLink
       };
 
     } catch (err) {
@@ -100,7 +108,7 @@ export const useReviewerInvitation = (user) => {
       return { success: false, error: err.message };
     }
   }, [user, isSpanish]);
-
+  
   const getInvitationByHash = useCallback(async (hash) => {
     setLoading(true);
     setError(null);
