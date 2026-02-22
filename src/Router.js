@@ -9,32 +9,36 @@ const Router = () => {
   const location = useLocation();
   const { pathname } = location;
 
-  // NUEVO: Si la ruta es /reviewer-response, NO aplicar lógica de idioma
+  // Si la ruta es /reviewer-response, mostrar directamente
   if (pathname.includes('/reviewer-response')) {
-    console.log('Router - ReviewerResponsePage detected, bypassing language redirect');
     return <ReviewerResponsePage />;
   }
 
-  // Determina el idioma basado en la ruta (funcionalidad original)
-  const isSpanish = pathname.startsWith('/es') || !pathname.startsWith('/en');
-  const cleanPath = pathname.replace(/^\/(es|en)/, '');
-
-  // Actualiza la URL si es necesario para mantener consistencia (versión mejorada)
-  if (isSpanish && !pathname.startsWith('/es') && pathname !== '/') {
-    // Redirigir a /es si no tiene prefijo (excepto para la raíz)
-    console.log('Router - Redirecting to Spanish version:', `/es${cleanPath}`);
-    return <Navigate to={`/es${cleanPath}`} replace />;
+  // Determina el idioma basado en la ruta
+  const isSpanish = pathname.startsWith('/es');
+  const isEnglish = pathname.startsWith('/en');
+  
+  // Si es la raíz, redirigir a español por defecto
+  if (pathname === '/' || pathname === '') {
+    return <Navigate to="/es" replace />;
   }
 
-  // Manejo específico para la ruta /en (versión mejorada)
-  if (!isSpanish && pathname.startsWith('/en') && pathname === '/en') {
-    return <AppEN />;
+  // Si no tiene prefijo de idioma pero no es la raíz, redirigir a español
+  if (!isSpanish && !isEnglish && pathname !== '/') {
+    return <Navigate to={`/es${pathname}`} replace />;
   }
 
   console.log('Router - Current path:', pathname, 'Language:', isSpanish ? 'ES' : 'EN');
 
-  // Retorna el componente según el idioma (funcionalidad original)
-  return isSpanish ? <App /> : <AppEN />;
+  // Renderizar el componente apropiado según el prefijo
+  if (isSpanish) {
+    return <App />;
+  } else if (isEnglish) {
+    return <AppEN />;
+  }
+
+  // Fallback (no debería llegar aquí)
+  return <Navigate to="/es" replace />;
 };
 
 export default Router;
