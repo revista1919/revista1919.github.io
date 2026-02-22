@@ -680,25 +680,34 @@ function AppEN() {
       </nav>
       <main className="flex-grow">
         <AnimatePresence mode="wait">
-          <Routes location={location} key={location.key}>
-            {sections.map((section) => (
-              <Route key={section.name} path={section.path} element={
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.3 }}
-                  className={`container ${
-                    user && isLoginActive
-                      ? 'max-w-full px-0'
-                      : 'mx-auto px-6 lg:px-8'
-                  } flex-grow`}
-                >
-                  {section.component}
-                </motion.div>
-              } />
-            ))}
-          </Routes>
+          {/* En AppEN.js, reemplaza TODO el bloque <Routes> con esto */}
+<Routes location={location} key={location.key}>
+  {/* Rutas de secciones en inglés - CON el prefijo /en */}
+  {sections.map(s => (
+    <Route 
+      key={s.name} 
+      path={s.path} 
+      element={
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.3 }}
+          className={`container ${
+            user && isLoginActive
+              ? 'max-w-full px-0'
+              : 'mx-auto px-6 lg:px-8'
+          } flex-grow`}
+        >
+          {s.component}
+        </motion.div>
+      } 
+    />
+  ))}
+  
+  {/* Ruta comodín para redirigir rutas no encontradas a /en */}
+  <Route path="*" element={<Navigate to="/en" replace />} />
+</Routes>
         </AnimatePresence>
       </main>
       <AnimatePresence>

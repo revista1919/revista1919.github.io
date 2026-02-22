@@ -689,8 +689,9 @@ function App() {
       </nav>
       <main className="flex-grow">
         <AnimatePresence mode="wait">
-          <Routes location={location} key={location.key}>
-  {/* NUEVA RUTA PARA REVISORES - SIN AUTENTICACIÓN */}
+         {/* En App.js, reemplaza TODO el bloque <Routes> con esto */}
+<Routes location={location} key={location.key}>
+  {/* Ruta para revisores */}
   <Route path="/reviewer-response" element={
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -703,53 +704,31 @@ function App() {
     </motion.div>
   } />
   
-  {/* Rutas existentes de secciones */}
-  {sections.flatMap(s => [
-    <Route key={s.path} path={s.path} element={
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -10 }}
-        transition={{ duration: 0.3 }}
-        className={`container ${
-          user && isLoginActive
-            ? 'max-w-full px-0'
-            : 'mx-auto px-6 lg:px-8'
-        } flex-grow`}
-      >
-        {s.component}
-      </motion.div>
-    } />,
-    s.path === '/' ? <Route key='/es' path='/es' element={
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -10 }}
-        transition={{ duration: 0.3 }}
-        className={`container ${
-          user && isLoginActive
-            ? 'max-w-full px-0'
-            : 'mx-auto px-6 lg:px-8'
-        } flex-grow`}
-      >
-        {s.component}
-      </motion.div>
-    } /> : <Route key={`/es${s.path}`} path={`/es${s.path}`} element={
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -10 }}
-        transition={{ duration: 0.3 }}
-        className={`container ${
-          user && isLoginActive
-            ? 'max-w-full px-0'
-            : 'mx-auto px-6 lg:px-8'
-        } flex-grow`}
-      >
-        {s.component}
-      </motion.div>
-    } />
-  ])}
+  {/* Rutas de secciones en español - SIN el prefijo /es */}
+  {sections.map(s => (
+    <Route 
+      key={s.path} 
+      path={s.path} 
+      element={
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.3 }}
+          className={`container ${
+            user && isLoginActive
+              ? 'max-w-full px-0'
+              : 'mx-auto px-6 lg:px-8'
+          } flex-grow`}
+        >
+          {s.component}
+        </motion.div>
+      } 
+    />
+  ))}
+  
+  {/* Ruta comodín para redirigir rutas no encontradas a / */}
+  <Route path="*" element={<Navigate to="/" replace />} />
 </Routes>
         </AnimatePresence>
       </main>

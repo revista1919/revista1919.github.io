@@ -2810,10 +2810,11 @@ exports.checkSubmissionStatus = onCall(async (request) => {
 
 
 /* ===================== INVITATION EMAIL TRIGGER ===================== */
+/* ===================== INVITATION EMAIL TRIGGER ===================== */
 exports.onReviewerInvitationCreated = onDocumentCreated(
   { 
     document: 'reviewerInvitations/{invitationId}',
-    secrets: [], // No necesita secrets adicionales
+    secrets: [],
     memory: '256MiB'
   },
   async (event) => {
@@ -2825,7 +2826,7 @@ exports.onReviewerInvitationCreated = onDocumentCreated(
     try {
       const db = admin.firestore();
       
-      // Obtener detalles del submission para el email
+      // Obtener detalles del submission
       const submissionDoc = await db.collection('submissions').doc(invitation.submissionId).get();
       if (!submissionDoc.exists) {
         console.error(`❌ Submission no encontrado: ${invitation.submissionId}`);
@@ -2834,12 +2835,28 @@ exports.onReviewerInvitationCreated = onDocumentCreated(
       
       const submission = submissionDoc.data();
       
-      // Construir el enlace de respuesta
+      // Determinar idioma basado en el idioma del artículo o del revisor
+      // Prioridad: 1. Idioma del artículo, 2. Email del revisor (heurística), 3. Español por defecto
+      let lang = 'es';
+      
+      if (submission.paperLanguage) {
+        lang = submission.paperLanguage;
+      } else if (invitation.reviewerEmail && invitation.reviewerEmail.includes('.es')) {
+        lang = 'es';
+      } else if (invitation.reviewerEmail && invitation.reviewerEmail.includes('.cl')) {
+        lang = 'es';
+      } else if (invitation.reviewerEmail && !invitation.reviewerEmail.includes('.com')) {
+        // Si tiene dominio de país hispanohablante
+        const spanishDomains = ['.es', '.cl', '.ar', '.mx', '.co', '.pe', '.ve', '.ec', '.bo', '.uy', '.py'];
+        if (spanishDomains.some(domain => invitation.reviewerEmail.endsWith(domain))) {
+          lang = 'es';
+        }
+      }
+      
+      // Construir el enlace de respuesta con el idioma
       const baseUrl = 'https://www.revistacienciasestudiantes.com';
-      const lang = invitation.reviewerEmail.includes('.cl') ? 'es' : 'en'; // Heurística simple
       const inviteLink = `${baseUrl}/reviewer-response?hash=${invitation.inviteHash}&lang=${lang}`;
       
-      // Determinar idioma para el email
       const isSpanish = lang === 'es';
       
       // Construir el cuerpo del email
@@ -2855,7 +2872,7 @@ exports.onReviewerInvitationCreated = onDocumentCreated(
         <div class="highlight-box">
           <p class="article-title">"${submission.title}"</p>
           <p><strong>${isSpanish ? 'Área:' : 'Area:'}</strong> ${submission.area}</p>
-          <p><strong>${isSpanish ? 'Idioma:' : 'Language:'}</strong> ${submission.paperLanguage === 'es' ? 'Español' : 'English'}</p>
+          <p><strong>${isSpanish ? 'Idioma original:' : 'Original language:'}</strong> ${submission.paperLanguage === 'es' ? 'Español' : 'English'}</p>
           <p><strong>${isSpanish ? 'Resumen:' : 'Abstract:'}</strong> ${submission.abstract.substring(0, 200)}${submission.abstract.length > 200 ? '...' : ''}</p>
         </div>
       `;
@@ -2893,25 +2910,23 @@ exports.onReviewerInvitationCreated = onDocumentCreated(
         lang
       );
       
-      // Usar la función existente para encolar el email
       await sendEmailViaExtension(
         invitation.reviewerEmail,
         isSpanish ? 'Invitación a revisión por pares' : 'Peer Review Invitation',
         htmlBody
       );
       
-      console.log(`✅ Email de invitación encolado para: ${invitation.reviewerEmail}`);
+      console.log(`✅ Email de invitación encolado para: ${invitation.reviewerEmail} (idioma: ${lang})`);
       
-      // Opcional: actualizar la invitación para registrar que se envió el email
       await event.data.ref.update({
         emailSentAt: admin.firestore.FieldValue.serverTimestamp(),
-        inviteLink: inviteLink
+        inviteLink: inviteLink,
+        emailLanguage: lang
       });
       
     } catch (error) {
       console.error(`❌ Error en onReviewerInvitationCreated:`, error.message);
       
-      // Registrar el error para debugging
       await admin.firestore().collection('systemErrors').add({
         function: 'onReviewerInvitationCreated',
         invitationId: invitationId,
