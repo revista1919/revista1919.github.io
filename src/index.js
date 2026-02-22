@@ -13,9 +13,9 @@ const RouteHandler = () => {
     // Si hay una ruta guardada en sessionStorage y no estamos ya en esa ruta
     const redirectPath = sessionStorage.getItem('redirect');
     if (redirectPath && redirectPath !== location.pathname + location.search + location.hash) {
-      sessionStorage.removeItem('redirect');
-      window.location.replace(redirectPath);
-    }
+  sessionStorage.removeItem('redirect');
+  window.location.replace(redirectPath);  // <<< CORREGIDO
+}
   }, [location]);
 
   return (
