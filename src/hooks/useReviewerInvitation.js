@@ -90,7 +90,7 @@ export const useReviewerInvitation = (user) => {
         success: true, 
         invitationId: docRef.id,
         inviteHash,
-        inviteLink: `/reviewer-response?hash=${inviteHash}` // Ruta pública
+        inviteLink: `/reviewer-response?hash=${inviteHash}&lang=${isSpanish ? 'es' : 'en'}`
       };
 
     } catch (err) {
