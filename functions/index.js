@@ -2807,3 +2807,117 @@ exports.checkSubmissionStatus = onCall(async (request) => {
     throw new HttpsError('internal', error.message);
   }
 });
+
+
+/* ===================== INVITATION EMAIL TRIGGER ===================== */
+exports.onReviewerInvitationCreated = onDocumentCreated(
+  { 
+    document: 'reviewerInvitations/{invitationId}',
+    secrets: [], // No necesita secrets adicionales
+    memory: '256MiB'
+  },
+  async (event) => {
+    const invitation = event.data.data();
+    const invitationId = event.params.invitationId;
+    
+    console.log(`📧 Procesando nueva invitación: ${invitationId}`);
+    
+    try {
+      const db = admin.firestore();
+      
+      // Obtener detalles del submission para el email
+      const submissionDoc = await db.collection('submissions').doc(invitation.submissionId).get();
+      if (!submissionDoc.exists) {
+        console.error(`❌ Submission no encontrado: ${invitation.submissionId}`);
+        return;
+      }
+      
+      const submission = submissionDoc.data();
+      
+      // Construir el enlace de respuesta
+      const baseUrl = 'https://www.revistacienciasestudiantes.com';
+      const lang = invitation.reviewerEmail.includes('.cl') ? 'es' : 'en'; // Heurística simple
+      const inviteLink = `${baseUrl}/reviewer-response?hash=${invitation.inviteHash}&lang=${lang}`;
+      
+      // Determinar idioma para el email
+      const isSpanish = lang === 'es';
+      
+      // Construir el cuerpo del email
+      const emailTitle = isSpanish 
+        ? '📋 Invitación a revisión por pares'
+        : '📋 Peer Review Invitation';
+      
+      const emailGreeting = isSpanish
+        ? `Estimado/a ${invitation.reviewerName || 'colega'}:`
+        : `Dear ${invitation.reviewerName || 'colleague'}:`;
+      
+      const articleInfo = `
+        <div class="highlight-box">
+          <p class="article-title">"${submission.title}"</p>
+          <p><strong>${isSpanish ? 'Área:' : 'Area:'}</strong> ${submission.area}</p>
+          <p><strong>${isSpanish ? 'Idioma:' : 'Language:'}</strong> ${submission.paperLanguage === 'es' ? 'Español' : 'English'}</p>
+          <p><strong>${isSpanish ? 'Resumen:' : 'Abstract:'}</strong> ${submission.abstract.substring(0, 200)}${submission.abstract.length > 200 ? '...' : ''}</p>
+        </div>
+      `;
+      
+      const emailBody = isSpanish
+        ? `
+          <p>Has sido invitado/a a revisar el siguiente artículo para la Revista Nacional de las Ciencias para Estudiantes.</p>
+          ${articleInfo}
+          <p>Para aceptar o rechazar esta invitación, y declarar cualquier conflicto de interés, haz clic en el siguiente enlace:</p>
+          <div class="button-container">
+            <a href="${inviteLink}" class="btn">RESPONDER INVITACIÓN</a>
+          </div>
+          <p><strong>Plazo para responder:</strong> 7 días desde la recepción de este correo.</p>
+          <p>Si el enlace no funciona, copia y pega esta URL en tu navegador:</p>
+          <p style="word-break: break-all; font-size: 12px;">${inviteLink}</p>
+        `
+        : `
+          <p>You have been invited to review the following article for The National Review of Sciences for Students.</p>
+          ${articleInfo}
+          <p>To accept or decline this invitation, and to declare any conflict of interest, please click the link below:</p>
+          <div class="button-container">
+            <a href="${inviteLink}" class="btn">RESPOND TO INVITATION</a>
+          </div>
+          <p><strong>Response deadline:</strong> 7 days from receipt of this email.</p>
+          <p>If the link doesn't work, copy and paste this URL into your browser:</p>
+          <p style="word-break: break-all; font-size: 12px;">${inviteLink}</p>
+        `;
+      
+      const htmlBody = getEmailTemplate(
+        emailTitle,
+        emailGreeting,
+        emailBody,
+        isSpanish ? 'Equipo Editorial' : 'Editorial Team',
+        isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
+        lang
+      );
+      
+      // Usar la función existente para encolar el email
+      await sendEmailViaExtension(
+        invitation.reviewerEmail,
+        isSpanish ? 'Invitación a revisión por pares' : 'Peer Review Invitation',
+        htmlBody
+      );
+      
+      console.log(`✅ Email de invitación encolado para: ${invitation.reviewerEmail}`);
+      
+      // Opcional: actualizar la invitación para registrar que se envió el email
+      await event.data.ref.update({
+        emailSentAt: admin.firestore.FieldValue.serverTimestamp(),
+        inviteLink: inviteLink
+      });
+      
+    } catch (error) {
+      console.error(`❌ Error en onReviewerInvitationCreated:`, error.message);
+      
+      // Registrar el error para debugging
+      await admin.firestore().collection('systemErrors').add({
+        function: 'onReviewerInvitationCreated',
+        invitationId: invitationId,
+        error: { message: error.message, stack: error.stack },
+        timestamp: admin.firestore.FieldValue.serverTimestamp()
+      });
+    }
+  }
+);
