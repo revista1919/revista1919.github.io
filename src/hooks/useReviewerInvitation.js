@@ -1,18 +1,14 @@
+// src/hooks/useReviewerInvitation.js
 import { useState, useCallback } from 'react';
 import { db } from '../firebase';
-import { collection, addDoc, updateDoc, doc, serverTimestamp, getDoc, query, where, getDocs } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, doc, serverTimestamp, query, where, getDocs, getDoc } from 'firebase/firestore';
 import { useLanguage } from './useLanguage';
 
 // Función para generar hash único en el navegador
 const generateInviteHash = () => {
-  // 20 bytes aleatorios (160 bits) es suficiente para invitaciones
   const array = new Uint8Array(20);
   window.crypto.getRandomValues(array);
-  
-  // Convertir a hexadecimal
-  return Array.from(array)
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
+  return Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('');
 };
 
 export const useReviewerInvitation = (user) => {
@@ -21,12 +17,17 @@ export const useReviewerInvitation = (user) => {
   const { language } = useLanguage();
   const isSpanish = language === 'es';
 
-  const sendInvitation = useCallback(async ({ 
-    editorialReviewId, 
-    submissionId, 
-    round = 1, 
-    reviewerEmail, 
+  /**
+   * Crea una invitación para un revisor.
+   * La Cloud Function `onReviewerInvitationCreated` enviará el email.
+   */
+  const sendInvitation = useCallback(async ({
+    editorialReviewId,
+    submissionId,
+    round = 1,
+    reviewerEmail,
     reviewerName,
+    reviewerUid = null, // Si el revisor tiene cuenta, pasar su UID
     expiresInDays = 7
   }) => {
     if (!user) {
@@ -66,8 +67,8 @@ export const useReviewerInvitation = (user) => {
       }
 
       const inviteHash = generateInviteHash();
-      
-      // Calcular fecha de expiración (en el cliente por ahora)
+
+      // Calcular fecha de expiración
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + expiresInDays);
 
@@ -77,28 +78,22 @@ export const useReviewerInvitation = (user) => {
         round,
         reviewerEmail,
         reviewerName: reviewerName || '',
+        reviewerUid, // Puede ser null
         inviteHash,
         status: 'pending',
         conflictOfInterest: null,
-        respondedAt: null,
-        expiresAt: expiresAt.toISOString(), // Guardar como string ISO por ahora
+        expiresAt: expiresAt, // Firestore lo convertirá a Timestamp
         createdAt: serverTimestamp(),
         invitedBy: user.uid
       };
 
       const docRef = await addDoc(collection(db, 'reviewerInvitations'), invitationData);
 
-      // Log para pruebas - aquí irá el envío de email real después
-      const inviteLink = `/reviewer-response?hash=${inviteHash}&lang=${isSpanish ? 'es' : 'en'}`;
-      console.log(`[INVITE] Enlace de invitación generado: ${inviteLink}`);
-      console.log(`[INVITE] Email del revisor: ${reviewerEmail}`);
-
       setLoading(false);
-      return { 
-        success: true, 
+      return {
+        success: true,
         invitationId: docRef.id,
-        inviteHash,
-        inviteLink
+        inviteHash
       };
 
     } catch (err) {
@@ -108,7 +103,10 @@ export const useReviewerInvitation = (user) => {
       return { success: false, error: err.message };
     }
   }, [user, isSpanish]);
-  
+
+  /**
+   * Obtiene una invitación por su hash.
+   */
   const getInvitationByHash = useCallback(async (hash) => {
     setLoading(true);
     setError(null);
@@ -124,14 +122,17 @@ export const useReviewerInvitation = (user) => {
       const invitationDoc = querySnapshot.docs[0];
       const invitationData = invitationDoc.data();
 
-      // Verificar si la invitación ha expirado (necesitaríamos un cálculo con serverTimestamp)
-      // Esto es más fácil de hacer en el backend, pero podemos hacer una comprobación básica aquí si guardamos expiresAt como fecha.
+      // Verificar expiración
+      const now = new Date();
+      if (invitationData.expiresAt && invitationData.expiresAt.toDate() < now) {
+        return { success: false, found: false, error: isSpanish ? 'Esta invitación ha expirado' : 'This invitation has expired' };
+      }
 
-      return { 
-        success: true, 
+      return {
+        success: true,
         found: true,
         invitationId: invitationDoc.id,
-        data: invitationData 
+        data: { id: invitationDoc.id, ...invitationData }
       };
 
     } catch (err) {
@@ -144,6 +145,10 @@ export const useReviewerInvitation = (user) => {
     }
   }, [isSpanish]);
 
+  /**
+   * Responde a una invitación (aceptar/rechazar).
+   * La Cloud Function `onReviewerInvitationUpdated` reaccionará a este cambio.
+   */
   const respondToInvitation = useCallback(async (invitationId, response) => {
     setLoading(true);
     setError(null);
@@ -161,16 +166,22 @@ export const useReviewerInvitation = (user) => {
         throw new Error(isSpanish ? 'Esta invitación ya ha sido procesada' : 'This invitation has already been processed');
       }
 
-      const updateData = {
+      // Si el usuario está logueado, asociamos su UID a la invitación.
+      const updatePayload = {
         status: accept ? 'accepted' : 'declined',
         conflictOfInterest: conflictOfInterest || null,
         respondedAt: serverTimestamp()
       };
 
-      await updateDoc(invitationRef, updateData);
+      // Si hay un usuario autenticado, guardamos su UID.
+      if (user) {
+        updatePayload.reviewerUid = user.uid;
+      }
+
+      await updateDoc(invitationRef, updatePayload);
 
       setLoading(false);
-      return { success: true, newStatus: updateData.status };
+      return { success: true, newStatus: updatePayload.status };
 
     } catch (err) {
       console.error('Error responding to invitation:', err);
@@ -178,7 +189,7 @@ export const useReviewerInvitation = (user) => {
       setLoading(false);
       return { success: false, error: err.message };
     }
-  }, [isSpanish]);
+  }, [user, isSpanish]);
 
   return {
     loading,

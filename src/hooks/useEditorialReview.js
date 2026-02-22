@@ -10,6 +10,9 @@ export const useEditorialReview = (user) => {
   const { language } = useLanguage();
   const isSpanish = language === 'es';
 
+  /**
+   * Inicia una nueva revisión editorial (desk review)
+   */
   const startDeskReview = useCallback(async (submissionId) => {
     if (!user) {
       setError(isSpanish ? 'Usuario no autenticado' : 'User not authenticated');
@@ -20,7 +23,7 @@ export const useEditorialReview = (user) => {
     setError(null);
 
     try {
-      // Verificar que el usuario sea editor (Director o Editor en Jefe)
+      // Verificar permisos de editor
       const userRoles = user.roles || [];
       const isEditor = userRoles.includes('Director General') || userRoles.includes('Editor en Jefe');
       if (!isEditor) {
@@ -40,11 +43,12 @@ export const useEditorialReview = (user) => {
       if (!querySnapshot.empty) {
         // Ya existe una revisión en curso
         const existingReview = querySnapshot.docs[0];
-        return { 
-          success: true, 
-          existing: true, 
-          reviewId: existingReview.id, 
-          data: existingReview.data() 
+        setLoading(false);
+        return {
+          success: true,
+          existing: true,
+          reviewId: existingReview.id,
+          data: existingReview.data()
         };
       }
 
@@ -64,13 +68,6 @@ export const useEditorialReview = (user) => {
 
       const docRef = await addDoc(collection(db, 'editorialReviews'), newReview);
 
-      // Actualizar el estado del envío
-      const submissionRef = doc(db, 'submissions', submissionId);
-      await updateDoc(submissionRef, {
-        status: 'in-editorial-review',
-        updatedAt: serverTimestamp()
-      });
-
       setLoading(false);
       return { success: true, reviewId: docRef.id, data: newReview };
 
@@ -82,6 +79,10 @@ export const useEditorialReview = (user) => {
     }
   }, [user, isSpanish]);
 
+  /**
+   * Guarda la decisión de la revisión editorial.
+   * AHORA SOLO GUARDA EN FIRESTORE. La Cloud Function `onEditorialReviewUpdated` se encarga del resto.
+   */
   const submitDeskReviewDecision = useCallback(async (reviewId, decisionData) => {
     if (!user) {
       setError(isSpanish ? 'Usuario no autenticado' : 'User not authenticated');
@@ -100,32 +101,15 @@ export const useEditorialReview = (user) => {
       }
 
       const reviewData = reviewSnap.data();
+      // Verificar que el editor que guarda es el mismo que inició la revisión (o tiene permisos)
       if (reviewData.editorUid !== user.uid) {
         throw new Error(isSpanish ? 'No eres el editor asignado a esta revisión' : 'You are not the editor assigned to this review');
       }
 
       const { decision, feedbackToAuthor, commentsToEditorial } = decisionData;
-      let newSubmissionStatus = 'submitted'; // Por defecto
 
-      // Mapear la decisión al nuevo estado del envío
-      switch (decision) {
-        case 'reject':
-          newSubmissionStatus = 'rejected';
-          break;
-        case 'minor-revision':
-          newSubmissionStatus = 'revision-required';
-          break;
-        case 'revision-required':
-          newSubmissionStatus = 'in-reviewer-selection'; // Nuevo estado: buscando revisores
-          break;
-        case 'accept':
-          newSubmissionStatus = 'accepted';
-          break;
-        default:
-          newSubmissionStatus = 'in-editorial-review';
-      }
-
-      // Actualizar la revisión editorial
+      // Actualizar SOLO el documento de la revisión editorial en Firestore.
+      // ¡No actualizamos el estado del envío aquí! Eso lo hará la Cloud Function.
       await updateDoc(reviewRef, {
         decision,
         feedbackToAuthor: feedbackToAuthor || '',
@@ -135,18 +119,10 @@ export const useEditorialReview = (user) => {
         updatedAt: serverTimestamp()
       });
 
-      // Actualizar el estado del envío
-      const submissionRef = doc(db, 'submissions', reviewData.submissionId);
-      await updateDoc(submissionRef, {
-        status: newSubmissionStatus,
-        updatedAt: serverTimestamp()
-      });
-
       setLoading(false);
-      return { 
-        success: true, 
-        newSubmissionStatus,
-        submissionId: reviewData.submissionId
+      return {
+        success: true,
+        message: isSpanish ? 'Decisión guardada. Procesando...' : 'Decision saved. Processing...'
       };
 
     } catch (err) {

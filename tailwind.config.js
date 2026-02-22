@@ -5,3 +5,14 @@ module.exports = {
   },
   plugins: [],
 };
+// tailwind.config.js
+module.exports = {
+  theme: {
+    extend: {
+      fontFamily: {
+        'playfair': ['"Playfair Display"', 'serif'],
+        'lora': ['Lora', 'serif'],
+      },
+    },
+  },
+}

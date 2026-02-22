@@ -2808,76 +2808,191 @@ exports.checkSubmissionStatus = onCall(async (request) => {
   }
 });
 
+exports.onEditorialReviewCreated = onDocumentCreated(
+  {
+    document: 'editorialReviews/{reviewId}',
+    secrets: [], // No necesita secretos por ahora
+    memory: '256MiB'
+  },
+  async (event) => {
+    const reviewData = event.data.data();
+    const reviewId = event.params.reviewId;
 
-/* ===================== INVITATION EMAIL TRIGGER ===================== */
-/* ===================== INVITATION EMAIL TRIGGER ===================== */
+    console.log(`📝 [onEditorialReviewCreated] Nueva revisión editorial creada: ${reviewId} para envío: ${reviewData.submissionId}`);
+
+    try {
+      const db = admin.firestore();
+      const submissionRef = db.collection('submissions').doc(reviewData.submissionId);
+
+      // Actualizar el estado del envío para indicar que está en revisión editorial
+      await submissionRef.update({
+        status: 'in-editorial-review',
+        currentEditorialReviewId: reviewId, // Referencia a la revisión activa
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+
+      console.log(`✅ [onEditorialReviewCreated] Estado de envío ${reviewData.submissionId} actualizado a 'in-editorial-review'`);
+
+    } catch (error) {
+      console.error(`❌ [onEditorialReviewCreated] Error:`, error.message);
+      await logSystemError('onEditorialReviewCreated', error, { reviewId, ...reviewData });
+    }
+  }
+);
+
+/* ----------------------------------------------------------------------------
+ * 2. TRIGGER: Cuando se ACTUALIZA una editorialReview (se guarda la decisión)
+ * ----------------------------------------------------------------------------
+ * Esta función es la CLAVE. Cuando el editor guarda su decisión en Firestore,
+ * este trigger se activa, procesa la decisión y actualiza el estado del envío.
+ */
+exports.onEditorialReviewUpdated = onDocumentUpdated(
+  {
+    document: 'editorialReviews/{reviewId}',
+    secrets: [], // Si necesitas enviar emails aquí, añade secrets
+    memory: '256MiB'
+  },
+  async (event) => {
+    const beforeData = event.data.before.data();
+    const afterData = event.data.after.data();
+    const reviewId = event.params.reviewId;
+
+    // Solo proceder si la decisión ha cambiado y ahora NO es null (es decir, se acaba de tomar una decisión)
+    if (beforeData.decision === afterData.decision || afterData.decision === null) {
+      return;
+    }
+
+    console.log(`📝 [onEditorialReviewUpdated] Decisión tomada para revisión ${reviewId}: ${afterData.decision}`);
+
+    try {
+      const db = admin.firestore();
+      const submissionRef = db.collection('submissions').doc(afterData.submissionId);
+      const submissionSnap = await submissionRef.get();
+
+      if (!submissionSnap.exists) {
+        console.error(`❌ [onEditorialReviewUpdated] Envío no encontrado: ${afterData.submissionId}`);
+        return;
+      }
+
+      const submissionData = submissionSnap.data();
+      let newSubmissionStatus = 'submitted'; // Valor por defecto (no debería ocurrir)
+      let emailSubject = '';
+      let emailBody = '';
+      const lang = submissionData.paperLanguage || 'es';
+      const isSpanish = lang === 'es';
+
+      // --- Mapear la decisión a un nuevo estado y preparar email para el autor ---
+      switch (afterData.decision) {
+        case 'reject':
+          newSubmissionStatus = 'rejected';
+          emailSubject = isSpanish ? 'Decisión editorial sobre su artículo' : 'Editorial decision on your manuscript';
+          emailBody = getRejectionEmailBody(afterData.feedbackToAuthor, submissionData.title, lang);
+          break;
+
+        case 'minor-revision':
+          newSubmissionStatus = 'minor-revision-required';
+          emailSubject = isSpanish ? 'Solicitud de revisión menor' : 'Minor revision requested';
+          emailBody = getRevisionEmailBody(afterData.feedbackToAuthor, submissionData.title, 'minor', lang);
+          break;
+
+        case 'revision-required':
+          newSubmissionStatus = 'in-reviewer-selection'; // Nuevo estado: buscando revisores
+          emailSubject = isSpanish ? 'Su artículo ha pasado a revisión por pares' : 'Your manuscript has passed to peer review';
+          emailBody = getPeerReviewStartEmailBody(submissionData.title, lang);
+          break;
+
+        case 'accept':
+          newSubmissionStatus = 'accepted';
+          emailSubject = isSpanish ? '¡Artículo aceptado!' : 'Article accepted!';
+          emailBody = getAcceptanceEmailBody(afterData.feedbackToAuthor, submissionData.title, lang);
+          break;
+
+        default:
+          console.warn(`⚠️ [onEditorialReviewUpdated] Decisión desconocida: ${afterData.decision}`);
+          return;
+      }
+
+      // Actualizar el estado del envío y limpiar la referencia a la revisión activa (opcional)
+      await submissionRef.update({
+        status: newSubmissionStatus,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        // Podrías mantener currentEditorialReviewId para referencia, o borrarlo: currentEditorialReviewId: null
+      });
+
+      // Enviar email al autor
+      if (emailSubject && emailBody && submissionData.authorEmail) {
+        await sendEmailViaExtension(
+          submissionData.authorEmail,
+          emailSubject,
+          emailBody
+        );
+        console.log(`✅ [onEditorialReviewUpdated] Email enviado a autor: ${submissionData.authorEmail}`);
+      }
+
+      console.log(`✅ [onEditorialReviewUpdated] Envío ${afterData.submissionId} actualizado a estado: ${newSubmissionStatus}`);
+
+    } catch (error) {
+      console.error(`❌ [onEditorialReviewUpdated] Error:`, error.message);
+      await logSystemError('onEditorialReviewUpdated', error, { reviewId, ...afterData });
+    }
+  }
+);
+
+/* ----------------------------------------------------------------------------
+ * 3. TRIGGER: Cuando se CREA una nueva reviewerInvitation
+ * ----------------------------------------------------------------------------
+ * Esta función ya la tienes, pero la mejoramos para que sea más robusta
+ * y use la función de email mejorada.
+ */
 exports.onReviewerInvitationCreated = onDocumentCreated(
-  { 
+  {
     document: 'reviewerInvitations/{invitationId}',
-    secrets: [],
+    secrets: [], // Los emails se manejan con la extensión, no necesitan secret aquí
     memory: '256MiB'
   },
   async (event) => {
     const invitation = event.data.data();
     const invitationId = event.params.invitationId;
-    
-    console.log(`📧 Procesando nueva invitación: ${invitationId}`);
-    
+
+    console.log(`📧 [onReviewerInvitationCreated] Procesando nueva invitación: ${invitationId} para ${invitation.reviewerEmail}`);
+
     try {
       const db = admin.firestore();
-      
+
       // Obtener detalles del submission
       const submissionDoc = await db.collection('submissions').doc(invitation.submissionId).get();
       if (!submissionDoc.exists) {
-        console.error(`❌ Submission no encontrado: ${invitation.submissionId}`);
+        console.error(`❌ [onReviewerInvitationCreated] Submission no encontrado: ${invitation.submissionId}`);
         return;
       }
-      
       const submission = submissionDoc.data();
-      
-      // Determinar idioma basado en el idioma del artículo o del revisor
-      // Prioridad: 1. Idioma del artículo, 2. Email del revisor (heurística), 3. Español por defecto
-      let lang = 'es';
-      
-      if (submission.paperLanguage) {
-        lang = submission.paperLanguage;
-      } else if (invitation.reviewerEmail && invitation.reviewerEmail.includes('.es')) {
-        lang = 'es';
-      } else if (invitation.reviewerEmail && invitation.reviewerEmail.includes('.cl')) {
-        lang = 'es';
-      } else if (invitation.reviewerEmail && !invitation.reviewerEmail.includes('.com')) {
-        // Si tiene dominio de país hispanohablante
-        const spanishDomains = ['.es', '.cl', '.ar', '.mx', '.co', '.pe', '.ve', '.ec', '.bo', '.uy', '.py'];
-        if (spanishDomains.some(domain => invitation.reviewerEmail.endsWith(domain))) {
-          lang = 'es';
-        }
-      }
-      
-      // Construir el enlace de respuesta con el idioma
+
+      // Determinar idioma (usar el del artículo o 'es' por defecto)
+      const lang = submission.paperLanguage || 'es';
+      const isSpanish = lang === 'es';
+
+      // Construir el enlace de respuesta
       const baseUrl = 'https://www.revistacienciasestudiantes.com';
       const inviteLink = `${baseUrl}/reviewer-response?hash=${invitation.inviteHash}&lang=${lang}`;
-      
-      const isSpanish = lang === 'es';
-      
-      // Construir el cuerpo del email
-      const emailTitle = isSpanish 
+
+      // --- Construir el cuerpo del email (usando tu función getEmailTemplate) ---
+      const emailTitle = isSpanish
         ? '📋 Invitación a revisión por pares'
         : '📋 Peer Review Invitation';
-      
+
       const emailGreeting = isSpanish
         ? `Estimado/a ${invitation.reviewerName || 'colega'}:`
         : `Dear ${invitation.reviewerName || 'colleague'}:`;
-      
+
       const articleInfo = `
         <div class="highlight-box">
           <p class="article-title">"${submission.title}"</p>
           <p><strong>${isSpanish ? 'Área:' : 'Area:'}</strong> ${submission.area}</p>
-          <p><strong>${isSpanish ? 'Idioma original:' : 'Original language:'}</strong> ${submission.paperLanguage === 'es' ? 'Español' : 'English'}</p>
-          <p><strong>${isSpanish ? 'Resumen:' : 'Abstract:'}</strong> ${submission.abstract.substring(0, 200)}${submission.abstract.length > 200 ? '...' : ''}</p>
+          <p><strong>${isSpanish ? 'Resumen:' : 'Abstract:'}</strong> ${submission.abstract.substring(0, 250)}${submission.abstract.length > 250 ? '...' : ''}</p>
         </div>
       `;
-      
-      const emailBody = isSpanish
+
+      const emailBodyContent = isSpanish
         ? `
           <p>Has sido invitado/a a revisar el siguiente artículo para la Revista Nacional de las Ciencias para Estudiantes.</p>
           ${articleInfo}
@@ -2885,9 +3000,7 @@ exports.onReviewerInvitationCreated = onDocumentCreated(
           <div class="button-container">
             <a href="${inviteLink}" class="btn">RESPONDER INVITACIÓN</a>
           </div>
-          <p><strong>Plazo para responder:</strong> 7 días desde la recepción de este correo.</p>
-          <p>Si el enlace no funciona, copia y pega esta URL en tu navegador:</p>
-          <p style="word-break: break-all; font-size: 12px;">${inviteLink}</p>
+          <p><strong>Plazo para responder:</strong> 7 días.</p>
         `
         : `
           <p>You have been invited to review the following article for The National Review of Sciences for Students.</p>
@@ -2896,43 +3009,223 @@ exports.onReviewerInvitationCreated = onDocumentCreated(
           <div class="button-container">
             <a href="${inviteLink}" class="btn">RESPOND TO INVITATION</a>
           </div>
-          <p><strong>Response deadline:</strong> 7 days from receipt of this email.</p>
-          <p>If the link doesn't work, copy and paste this URL into your browser:</p>
-          <p style="word-break: break-all; font-size: 12px;">${inviteLink}</p>
+          <p><strong>Response deadline:</strong> 7 days.</p>
         `;
-      
+
       const htmlBody = getEmailTemplate(
         emailTitle,
         emailGreeting,
-        emailBody,
+        emailBodyContent,
         isSpanish ? 'Equipo Editorial' : 'Editorial Team',
         isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
         lang
       );
-      
+
+      // Encolar el email
       await sendEmailViaExtension(
         invitation.reviewerEmail,
         isSpanish ? 'Invitación a revisión por pares' : 'Peer Review Invitation',
         htmlBody
       );
-      
-      console.log(`✅ Email de invitación encolado para: ${invitation.reviewerEmail} (idioma: ${lang})`);
-      
+
+      console.log(`✅ [onReviewerInvitationCreated] Email encolado para: ${invitation.reviewerEmail}`);
+
+      // Marcar la invitación como enviada
       await event.data.ref.update({
         emailSentAt: admin.firestore.FieldValue.serverTimestamp(),
-        inviteLink: inviteLink,
-        emailLanguage: lang
+        inviteLink: inviteLink
       });
-      
+
     } catch (error) {
-      console.error(`❌ Error en onReviewerInvitationCreated:`, error.message);
-      
-      await admin.firestore().collection('systemErrors').add({
-        function: 'onReviewerInvitationCreated',
-        invitationId: invitationId,
-        error: { message: error.message, stack: error.stack },
-        timestamp: admin.firestore.FieldValue.serverTimestamp()
-      });
+      console.error(`❌ [onReviewerInvitationCreated] Error:`, error.message);
+      await logSystemError('onReviewerInvitationCreated', error, { invitationId, ...invitation });
     }
   }
 );
+
+/* ----------------------------------------------------------------------------
+ * 4. TRIGGER: Cuando un revisor RESPONDE a una invitación (se actualiza)
+ * ----------------------------------------------------------------------------
+ */
+exports.onReviewerInvitationUpdated = onDocumentUpdated(
+  {
+    document: 'reviewerInvitations/{invitationId}',
+    secrets: [],
+    memory: '256MiB'
+  },
+  async (event) => {
+    const beforeData = event.data.before.data();
+    const afterData = event.data.after.data();
+    const invitationId = event.params.invitationId;
+
+    // Solo proceder si el estado cambió de 'pending' a algo más
+    if (beforeData.status !== 'pending' || afterData.status === 'pending') {
+      return;
+    }
+
+    console.log(`📝 [onReviewerInvitationUpdated] Invitación ${invitationId} respondida. Nuevo estado: ${afterData.status}`);
+
+    try {
+      const db = admin.firestore();
+
+      // Si el revisor ACEPTÓ, crear una asignación (reviewerAssignment)
+      if (afterData.status === 'accepted') {
+        const assignmentData = {
+          submissionId: afterData.submissionId,
+          editorialReviewId: afterData.editorialReviewId,
+          round: afterData.round,
+          reviewerUid: afterData.reviewerUid, // <-- Esto debe ser llenado por el frontend al responder si el usuario está logueado, o ser null si es anónimo.
+          reviewerEmail: afterData.reviewerEmail,
+          reviewerName: afterData.reviewerName,
+          invitationId: invitationId,
+          status: 'pending', // Asignado, pero aún no ha enviado su revisión
+          conflictOfInterest: afterData.conflictOfInterest,
+          assignedAt: admin.firestore.FieldValue.serverTimestamp(),
+          dueDate: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000) // Plazo de 3 semanas
+        };
+
+        await db.collection('reviewerAssignments').add(assignmentData);
+        console.log(`✅ [onReviewerInvitationUpdated] Asignación creada para revisor ${afterData.reviewerEmail}`);
+
+        // Opcional: Enviar email al revisor con instrucciones y acceso al documento
+        // (Aquí podrías enviar otro email con el enlace al documento en Drive)
+        await sendReviewerAssignmentEmail(afterData);
+
+      } else if (afterData.status === 'declined') {
+        console.log(`ℹ️ [onReviewerInvitationUpdated] Revisor ${afterData.reviewerEmail} declinó la invitación.`);
+        // Opcional: Notificar al editor que la invitación fue declinada
+      }
+
+    } catch (error) {
+      console.error(`❌ [onReviewerInvitationUpdated] Error:`, error.message);
+      await logSystemError('onReviewerInvitationUpdated', error, { invitationId, ...afterData });
+    }
+  }
+);
+
+
+// ============================================================================
+// ==================== FUNCIONES AUXILIARES PARA EMAILS ====================
+// ============================================================================
+
+async function sendReviewerAssignmentEmail(assignment) {
+  // Esta función enviaría un email al revisor que aceptó, con el enlace al manuscrito.
+  // Necesitarías obtener la URL del driveFolder del submission.
+  const db = admin.firestore();
+  const submissionSnap = await db.collection('submissions').doc(assignment.submissionId).get();
+  if (!submissionSnap.exists) return;
+
+  const submission = submissionSnap.data();
+  const lang = submission.paperLanguage || 'es';
+  const isSpanish = lang === 'es';
+  const baseUrl = 'https://www.revistacienciasestudiantes.com';
+
+  const emailTitle = isSpanish ? 'Instrucciones para tu revisión' : 'Instructions for your review';
+  const emailGreeting = isSpanish ? `Estimado/a ${assignment.reviewerName}:` : `Dear ${assignment.reviewerName}:`;
+
+  const bodyContent = isSpanish
+    ? `
+      <p>Gracias por aceptar la invitación a revisar el siguiente artículo:</p>
+      <div class="highlight-box">
+        <p class="article-title">"${submission.title}"</p>
+      </div>
+      <p>Puedes acceder al manuscrito y a los materiales complementarios a través del siguiente enlace de Google Drive:</p>
+      <div class="button-container">
+        <a href="${submission.driveFolderUrl}" class="btn">VER MANUSCRITO EN DRIVE</a>
+      </div>
+      <p>Por favor, completa tu revisión antes de la fecha límite. Utiliza el siguiente enlace para enviar tu informe y recomendación:</p>
+       <div class="button-container">
+        <a href="${baseUrl}/reviewer-submission?assignmentId=${assignment.id}" class="btn btn-secondary">ENVIAR REVISIÓN</a>
+      </div>
+      <p>Recuerda que tu revisión debe ser confidencial y constructiva.</p>
+    `
+    : `
+      <p>Thank you for accepting the invitation to review the following article:</p>
+      <div class="highlight-box">
+        <p class="article-title">"${submission.title}"</p>
+      </div>
+      <p>You can access the manuscript and supplementary materials via this Google Drive link:</p>
+      <div class="button-container">
+        <a href="${submission.driveFolderUrl}" class="btn">VIEW MANUSCRIPT ON DRIVE</a>
+      </div>
+      <p>Please complete your review by the deadline. Use the following link to submit your report and recommendation:</p>
+      <div class="button-container">
+        <a href="${baseUrl}/reviewer-submission?assignmentId=${assignment.id}" class="btn btn-secondary">SUBMIT REVIEW</a>
+      </div>
+      <p>Remember that your review must be confidential and constructive.</p>
+    `;
+
+  const htmlBody = getEmailTemplate(
+    emailTitle,
+    emailGreeting,
+    bodyContent,
+    isSpanish ? 'Equipo Editorial' : 'Editorial Team',
+    isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
+    lang
+  );
+
+  await sendEmailViaExtension(assignment.reviewerEmail, emailTitle, htmlBody);
+}
+
+// Funciones para generar los cuerpos de los emails de decisión
+function getRejectionEmailBody(feedback, articleTitle, lang) {
+  const isSpanish = lang === 'es';
+  return isSpanish
+    ? `<p>Lamentamos informarle que, tras la revisión editorial, su artículo "${articleTitle}" no ha sido aceptado para su publicación en nuestra revista.</p>
+       <p><strong>Feedback del editor:</strong></p>
+       <div class="highlight-box">${feedback.replace(/\n/g, '<br>')}</div>
+       <p>Le agradecemos por haber considerado nuestra revista para el envío de su trabajo y le animamos a enviar futuras investigaciones.</p>`
+    : `<p>We regret to inform you that, following editorial review, your manuscript "${articleTitle}" has not been accepted for publication in our journal.</p>
+       <p><strong>Editor's feedback:</strong></p>
+       <div class="highlight-box">${feedback.replace(/\n/g, '<br>')}</div>
+       <p>Thank you for considering our journal for your work and we encourage you to submit future research.</p>`;
+}
+
+function getRevisionEmailBody(feedback, articleTitle, revisionType, lang) {
+  const isSpanish = lang === 'es';
+  const typeText = revisionType === 'minor' ? (isSpanish ? 'menor' : 'minor') : (isSpanish ? 'mayor' : 'major');
+  return isSpanish
+    ? `<p>Su artículo "${articleTitle}" ha sido evaluado y se solicita una <strong>revisión ${typeText}</strong> antes de considerar su aceptación.</p>
+       <p><strong>Comentarios del editor para la revisión:</strong></p>
+       <div class="highlight-box">${feedback.replace(/\n/g, '<br>')}</div>
+       <p>Por favor, realice los cambios solicitados y vuelva a enviar el manuscrito revisado a través de nuestro sistema.</p>`
+    : `<p>Your manuscript "${articleTitle}" has been evaluated and a <strong>${typeText} revision</strong> is requested before it can be considered for acceptance.</p>
+       <p><strong>Editor's comments for revision:</strong></p>
+       <div class="highlight-box">${feedback.replace(/\n/g, '<br>')}</div>
+       <p>Please make the requested changes and resubmit the revised manuscript through our system.</p>`;
+}
+
+function getPeerReviewStartEmailBody(articleTitle, lang) {
+  const isSpanish = lang === 'es';
+  return isSpanish
+    ? `<p>Su artículo "${articleTitle}" ha superado la revisión editorial inicial y ha sido enviado a revisión por pares.</p>
+       <p>En breve, nuestro equipo editorial seleccionará revisores externos para evaluar su trabajo. Le notificaremos cuando tengamos noticias.</p>`
+    : `<p>Your manuscript "${articleTitle}" has passed the initial editorial review and has been sent for peer review.</p>
+       <p>Shortly, our editorial team will select external reviewers to evaluate your work. We will notify you when we have news.</p>`;
+}
+
+function getAcceptanceEmailBody(feedback, articleTitle, lang) {
+  const isSpanish = lang === 'es';
+  return isSpanish
+    ? `<p>¡Nos complace informarle que su artículo "${articleTitle}" ha sido <strong>ACEPTADO</strong> para su publicación en la Revista Nacional de las Ciencias para Estudiantes!</p>
+       ${feedback ? `<p><strong>Comentarios finales del editor:</strong> ${feedback}</p>` : ''}
+       <p>En los próximos días recibirá las instrucciones para la firma de la cesión de derechos y los pasos finales para la publicación.</p>`
+    : `<p>We are pleased to inform you that your manuscript "${articleTitle}" has been <strong>ACCEPTED</strong> for publication in The National Review of Sciences for Students!</p>
+       ${feedback ? `<p><strong>Final editor's comments:</strong> ${feedback}</p>` : ''}
+       <p>In the coming days you will receive instructions for signing the copyright transfer and the final steps for publication.</p>`;
+}
+
+
+// Función auxiliar para loguear errores en Firestore
+async function logSystemError(functionName, error, context = {}) {
+  try {
+    await admin.firestore().collection('systemErrors').add({
+      function: functionName,
+      error: { message: error.message, stack: error.stack },
+      context: context,
+      timestamp: admin.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (logError) {
+    console.error('Error logging to Firestore:', logError);
+  }
+}
