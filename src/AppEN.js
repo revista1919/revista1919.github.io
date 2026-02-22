@@ -12,6 +12,7 @@ import Header from './components/HeaderEN';
 import SearchAndFilters from './components/SearchAndFiltersEN';
 import ArticleCard from './components/ArticleCardEN';
 import VolumeCard from './components/VolumeCardEN';
+import ReviewerResponsePage from './components/ReviewerResponsePage';
 import Tabs from './components/TabsEN';
 import SubmitSection from './components/SubmitSectionEN';
 import AdminSection from './components/AdminSectionEN';
