@@ -1,4 +1,3 @@
-// src/hooks/useReviewerAssignment.js (VERSIÓN CON MANEJO SEGURO DE FECHAS)
 import { useState, useCallback } from 'react';
 import { db } from '../firebase';
 import { 
@@ -12,7 +11,8 @@ import {
   getDocs, 
   getDoc, 
   orderBy,
-  limit 
+  limit,
+  writeBatch
 } from 'firebase/firestore';
 import { useLanguage } from './useLanguage';
 
@@ -33,7 +33,6 @@ export const useReviewerAssignment = (user) => {
       const snapshot = await getDocs(q);
       const assignments = snapshot.docs.map(doc => {
         const data = doc.data();
-        // Convertir dueDate a Date si es Timestamp
         return {
           id: doc.id,
           ...data,
@@ -56,7 +55,6 @@ export const useReviewerAssignment = (user) => {
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         const data = docSnap.data();
-        // Convertir dueDate a Date si es Timestamp
         return { 
           success: true, 
           assignment: { 
@@ -90,14 +88,12 @@ export const useReviewerAssignment = (user) => {
       for (const docSnap of snapshot.docs) {
         const assignmentData = docSnap.data();
         
-        // Convertir dueDate a Date si es Timestamp
         const assignment = { 
           id: docSnap.id, 
           ...assignmentData,
           dueDate: assignmentData.dueDate?.toDate ? assignmentData.dueDate.toDate() : assignmentData.dueDate
         };
         
-        // Obtener el submission asociado
         const submissionSnap = await getDoc(doc(db, 'submissions', assignment.submissionId));
         if (submissionSnap.exists()) {
           assignment.submission = { id: submissionSnap.id, ...submissionSnap.data() };
@@ -131,7 +127,12 @@ export const useReviewerAssignment = (user) => {
   const submitReview = useCallback(async (assignmentId, reviewData) => {
     setLoading(true);
     setError(null);
+    
     try {
+      if (!user) {
+        throw new Error(isSpanish ? 'Debes iniciar sesión' : 'You must be logged in');
+      }
+
       const assignmentRef = doc(db, 'reviewerAssignments', assignmentId);
       const assignmentSnap = await getDoc(assignmentRef);
       
@@ -141,7 +142,15 @@ export const useReviewerAssignment = (user) => {
 
       const assignment = assignmentSnap.data();
       
-      if (assignment.reviewerUid && assignment.reviewerUid !== user?.uid) {
+      const userEmail = user.email?.toLowerCase().trim();
+      const assignmentEmail = assignment.reviewerEmail?.toLowerCase().trim();
+      
+      const hasPermission = (
+        (assignment.reviewerUid && assignment.reviewerUid === user.uid) ||
+        (assignment.reviewerEmail && userEmail === assignmentEmail)
+      );
+      
+      if (!hasPermission) {
         throw new Error(isSpanish ? 'No tienes permiso para enviar esta revisión' : 'You do not have permission to submit this review');
       }
 
@@ -149,18 +158,20 @@ export const useReviewerAssignment = (user) => {
         throw new Error(isSpanish ? 'Esta revisión ya fue enviada' : 'This review has already been submitted');
       }
 
-      // Validar que todos los campos requeridos estén presentes
       const { scores, commentsToAuthor, commentsToEditor, recommendation } = reviewData;
       
       if (!scores || Object.keys(scores).length === 0) {
         throw new Error(isSpanish ? 'Debes completar la evaluación' : 'You must complete the evaluation');
       }
       
-      if (!commentsToAuthor || commentsToAuthor.replace(/<[^>]*>/g, '').trim() === '') {
+      const cleanCommentsToAuthor = commentsToAuthor?.replace(/<[^>]*>/g, '').trim() || '';
+      const cleanCommentsToEditor = commentsToEditor?.replace(/<[^>]*>/g, '').trim() || '';
+      
+      if (!cleanCommentsToAuthor) {
         throw new Error(isSpanish ? 'Los comentarios para el autor son requeridos' : 'Comments for author are required');
       }
       
-      if (!commentsToEditor || commentsToEditor.replace(/<[^>]*>/g, '').trim() === '') {
+      if (!cleanCommentsToEditor) {
         throw new Error(isSpanish ? 'Los comentarios confidenciales son requeridos' : 'Confidential comments are required');
       }
       
@@ -168,14 +179,18 @@ export const useReviewerAssignment = (user) => {
         throw new Error(isSpanish ? 'Debes seleccionar una recomendación' : 'You must select a recommendation');
       }
 
-      await updateDoc(assignmentRef, {
-        ...reviewData,
+      const batch = writeBatch(db);
+
+      batch.update(assignmentRef, {
+        scores,
+        commentsToAuthor,
+        commentsToEditor,
+        recommendation,
         status: 'submitted',
         submittedAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
 
-      // Actualizar el deadline asociado
       const deadlinesQuery = query(
         collection(db, 'deadlines'),
         where('targetId', '==', assignmentId),
@@ -186,13 +201,12 @@ export const useReviewerAssignment = (user) => {
       const deadlinesSnapshot = await getDocs(deadlinesQuery);
       
       if (!deadlinesSnapshot.empty) {
-        await updateDoc(doc(db, 'deadlines', deadlinesSnapshot.docs[0].id), {
+        batch.update(doc(db, 'deadlines', deadlinesSnapshot.docs[0].id), {
           status: 'completed',
           completedAt: serverTimestamp()
         });
       }
 
-      // Actualizar la tarea editorial
       const taskRef = doc(db, 'editorialTasks', assignment.editorialTaskId);
       const taskSnap = await getDoc(taskRef);
       
@@ -201,29 +215,74 @@ export const useReviewerAssignment = (user) => {
         const currentSubmitted = taskData.reviewsSubmitted || 0;
         const newSubmittedCount = currentSubmitted + 1;
         
-        await updateDoc(taskRef, {
+        const taskUpdates = {
           reviewsSubmitted: newSubmittedCount,
           updatedAt: serverTimestamp()
-        });
+        };
         
-        // Si ya se alcanzó el mínimo de revisiones, cambiar el estado de la tarea
         if (newSubmittedCount >= (taskData.requiredReviewers || 2)) {
-          await updateDoc(taskRef, {
-            status: 'awaiting-decision',
-            updatedAt: serverTimestamp()
-          });
+          taskUpdates.status = 'awaiting-decision';
         }
+        
+        batch.update(taskRef, taskUpdates);
       }
+
+      await batch.commit();
 
       return { success: true };
     } catch (err) {
       console.error('Error submitting review:', err);
-      setError(err.message);
+      
+      if (err.code === 'permission-denied') {
+        setError(isSpanish 
+          ? 'No tienes permisos para realizar esta acción' 
+          : 'You do not have permission to perform this action');
+      } else {
+        setError(err.message);
+      }
+      
       return { success: false, error: err.message };
     } finally {
       setLoading(false);
     }
   }, [user, isSpanish]);
+
+  const createReviewerAssignment = useCallback(async (assignmentData) => {
+    setLoading(true);
+    try {
+      const newAssignment = {
+        ...assignmentData,
+        status: 'pending',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+      
+      const docRef = await addDoc(collection(db, 'reviewerAssignments'), newAssignment);
+      return { success: true, id: docRef.id };
+    } catch (err) {
+      console.error('Error creating reviewer assignment:', err);
+      return { success: false, error: err.message };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const updateReviewerAssignment = useCallback(async (assignmentId, updateData) => {
+    setLoading(true);
+    try {
+      const assignmentRef = doc(db, 'reviewerAssignments', assignmentId);
+      await updateDoc(assignmentRef, {
+        ...updateData,
+        updatedAt: serverTimestamp()
+      });
+      return { success: true };
+    } catch (err) {
+      console.error('Error updating reviewer assignment:', err);
+      return { success: false, error: err.message };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   return {
     loading,
@@ -232,6 +291,8 @@ export const useReviewerAssignment = (user) => {
     getReviewerAssignmentById,
     getReviewerAssignmentsByEmail,
     autoSaveReview,
-    submitReview
+    submitReview,
+    createReviewerAssignment,
+    updateReviewerAssignment
   };
 };

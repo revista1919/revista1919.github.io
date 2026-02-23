@@ -244,9 +244,7 @@ export const useReviewerInvitation = () => { // <-- ELIMINADO: user como paráme
     }
   }, [isSpanish]);
 
-  // ==================== CORREGIDO: respondToInvitation ====================
-  // ==================== CORREGIDO: respondToInvitation ====================
-// ==================== CORREGIDO: respondToInvitation ====================
+ // ==================== CORREGIDO: respondToInvitation (VERSIÓN DEFINITIVA) ====================
 const respondToInvitation = useCallback(async (invitationId, response) => {
   setLoading(true);
   setError(null);
@@ -263,11 +261,7 @@ const respondToInvitation = useCallback(async (invitationId, response) => {
     const invitationData = invitationSnap.data();
     
     // Verificar expiración
-    let expiresAt = invitationData.expiresAt;
-    if (expiresAt && typeof expiresAt.toDate === 'function') {
-      expiresAt = expiresAt.toDate();
-    }
-    
+    const expiresAt = invitationData.expiresAt?.toDate?.() || invitationData.expiresAt;
     const now = new Date();
     if (expiresAt && expiresAt < now) {
       throw new Error(isSpanish ? 'Esta invitación ha expirado' : 'This invitation has expired');
@@ -277,30 +271,31 @@ const respondToInvitation = useCallback(async (invitationId, response) => {
       throw new Error(isSpanish ? 'Esta invitación ya ha sido procesada' : 'This invitation has already been processed');
     }
 
-    // --- CREACIÓN DEL PAYLOAD PARA ACTUALIZAR ---
+    // ===== PARTE CRÍTICA - CONSTRUIR EL PAYLOAD CORRECTAMENTE =====
     const updatePayload = {
       status: accept ? 'accepted' : 'declined',
-      conflictOfInterest: conflictOfInterest || null,
       respondedAt: serverTimestamp(),
+      // 👇👇👇 ESTO ES LO QUE FALTABA - INCLUIR EL INVITE HASH EXPLÍCITAMENTE 👇👇👇
+      inviteHash: invitationData.inviteHash
     };
 
-    // ¡IMPORTANTE! Incluir el inviteHash para que las reglas de seguridad
-    // (que comparan request.resource.data.inviteHash con resource.data.inviteHash)
-    // permitan la actualización cuando el usuario NO está autenticado.
-    // Esto es lo que faltaba para que la regla funcione.
-    updatePayload.inviteHash = invitationData.inviteHash;
+    // Solo agregar conflictOfInterest si existe y si aceptó
+    if (accept && conflictOfInterest) {
+      updatePayload.conflictOfInterest = conflictOfInterest;
+    }
 
-    // Si el usuario está autenticado (ej. un editor), guardar su UID
+    // Si el usuario está autenticado (por si acaso)
     if (user) {
       updatePayload.reviewerUid = user.uid;
       updatePayload.reviewerEmail = user.email || invitationData.reviewerEmail;
-      // Si es un usuario autenticado, no es necesario enviar el hash,
-      // pero enviarlo no hace daño. Lo dejamos para simplificar.
-    } else {
-      updatePayload.respondedAnonymously = true;
     }
 
-    // Actualizar la invitación en Firestore
+    console.log('📤 Enviando actualización a Firestore:', {
+      invitationId,
+      payload: updatePayload
+    });
+
+    // ¡IMPORTANTE! No usar merge: true, actualizar el documento directamente
     await updateDoc(invitationRef, updatePayload);
 
     console.log(`✅ Invitación ${invitationId} respondida: ${accept ? 'aceptada' : 'rechazada'}`);
@@ -317,8 +312,8 @@ const respondToInvitation = useCallback(async (invitationId, response) => {
     let errorMessage = err.message;
     if (err.code === 'permission-denied') {
       errorMessage = isSpanish 
-        ? 'No tienes permiso para responder esta invitación' 
-        : 'You do not have permission to respond to this invitation';
+        ? 'No tienes permiso para responder esta invitación. Por favor contacta al equipo editorial.' 
+        : 'You do not have permission to respond to this invitation. Please contact the editorial team.';
     }
     
     setError(errorMessage);

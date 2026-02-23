@@ -15,7 +15,8 @@
     "@octokit/rest": "^18.12.0",
     "cheerio": "^1.2.0",
     "crypto": "^1.0.1",
-    "firebase-admin": "^13.6.0",
+    "csv-parser": "^3.2.0",
+    "firebase-admin": "^13.6.1",
     "papaparse": "^5.5.3",
     "sharp": "^0.34.5"
   }
