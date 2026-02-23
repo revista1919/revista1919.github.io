@@ -1,4 +1,4 @@
-// src/components/ReviewerResponsePage.js
+// src/components/ReviewerResponsePage.js (VERSIÓN CORREGIDA)
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -23,7 +23,8 @@ const ReviewerResponsePage = () => {
   const [responseSent, setResponseSent] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { getInvitationByHash, respondToInvitation, loading: hookLoading } = useReviewerInvitation(null);
+  // --- CORREGIDO: No pasar null como argumento ---
+  const { getInvitationByHash, respondToInvitation, loading: hookLoading } = useReviewerInvitation();
 
   // Sincronizar idioma
   useEffect(() => {
@@ -50,21 +51,39 @@ const ReviewerResponsePage = () => {
       }
 
       try {
+        console.log('🔍 Cargando invitación con hash:', hash);
         const result = await getInvitationByHash(hash);
+        
         if (result?.success && result?.found) {
+          console.log('✅ Invitación encontrada:', result.data);
           setInvitation(result.data);
           
           if (result.data?.submissionId) {
-            const submissionDoc = await getDoc(doc(db, 'submissions', result.data.submissionId));
-            if (submissionDoc.exists()) {
-              setSubmission(submissionDoc.data());
+            try {
+              const submissionDoc = await getDoc(doc(db, 'submissions', result.data.submissionId));
+              if (submissionDoc.exists()) {
+                const submissionData = submissionDoc.data();
+                setSubmission({
+                  id: submissionDoc.id,
+                  title: submissionData.title,
+                  abstract: submissionData.abstract,
+                  area: submissionData.area,
+                  paperLanguage: submissionData.paperLanguage,
+                  driveFolderUrl: submissionData.driveFolderUrl,
+                  authors: submissionData.authors
+                });
+              }
+            } catch (subError) {
+              console.warn('⚠️ Error cargando submission:', subError);
+              // No detenemos el flujo principal
             }
           }
         } else {
+          console.log('❌ Invitación no encontrada:', result?.error);
           setError(result?.error || (isSpanish ? 'Invitación no encontrada' : 'Invitation not found'));
         }
       } catch (err) {
-        console.error('Error cargando invitación:', err);
+        console.error('❌ Error cargando invitación:', err);
         setError(isSpanish ? 'Error al cargar la invitación' : 'Error loading invitation');
       } finally {
         setLoading(false);
@@ -75,22 +94,31 @@ const ReviewerResponsePage = () => {
   }, [hash, getInvitationByHash, isSpanish]);
 
   const handleAccept = async () => {
-    if (!invitation?.id) return;
+    if (!invitation?.id) {
+      setError(isSpanish ? 'ID de invitación no válido' : 'Invalid invitation ID');
+      return;
+    }
     
     setIsSubmitting(true);
+    setError('');
+    
     try {
+      console.log('📝 Enviando respuesta ACEPTAR para invitación:', invitation.id);
+      
       const result = await respondToInvitation(invitation.id, { 
         accept: true, 
-        conflictOfInterest: conflict 
+        conflictOfInterest: conflict.trim() || (isSpanish ? 'Ninguno' : 'None')
       });
       
       if (result?.success) {
+        console.log('✅ Respuesta enviada correctamente');
         setResponseSent(true);
       } else {
+        console.log('❌ Error en respuesta:', result?.error);
         setError(result?.error || (isSpanish ? 'Error al procesar respuesta' : 'Error processing response'));
       }
     } catch (err) {
-      console.error('Error aceptando invitación:', err);
+      console.error('❌ Error aceptando invitación:', err);
       setError(isSpanish ? 'Error al aceptar la invitación' : 'Error accepting invitation');
     } finally {
       setIsSubmitting(false);
@@ -98,33 +126,45 @@ const ReviewerResponsePage = () => {
   };
 
   const handleDecline = async () => {
-    if (!invitation?.id) return;
+    if (!invitation?.id) {
+      setError(isSpanish ? 'ID de invitación no válido' : 'Invalid invitation ID');
+      return;
+    }
     
     setIsSubmitting(true);
+    setError('');
+    
     try {
+      console.log('📝 Enviando respuesta RECHAZAR para invitación:', invitation.id);
+      
       const result = await respondToInvitation(invitation.id, { 
         accept: false 
       });
       
       if (result?.success) {
+        console.log('✅ Respuesta enviada correctamente');
         setResponseSent(true);
       } else {
+        console.log('❌ Error en respuesta:', result?.error);
         setError(result?.error || (isSpanish ? 'Error al procesar respuesta' : 'Error processing response'));
       }
     } catch (err) {
-      console.error('Error rechazando invitación:', err);
+      console.error('❌ Error rechazando invitación:', err);
       setError(isSpanish ? 'Error al rechazar la invitación' : 'Error declining invitation');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (loading) {
+  // --- Renderizado condicional ---
+  if (loading || hookLoading) {
     return (
       <div className="min-h-screen bg-[#F5F7FA] flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-[#C0A86A] border-t-[#0A1929] rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-[#5A6B7A] font-['Lora']">{isSpanish ? 'Cargando invitación...' : 'Loading invitation...'}</p>
+          <p className="text-[#5A6B7A] font-['Lora']">
+            {isSpanish ? 'Cargando invitación...' : 'Loading invitation...'}
+          </p>
         </div>
       </div>
     );
@@ -157,7 +197,11 @@ const ReviewerResponsePage = () => {
   if (responseSent) {
     return (
       <div className="min-h-screen bg-[#F5F7FA] flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md text-center">
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="bg-white rounded-2xl shadow-xl p-8 max-w-md text-center"
+        >
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -170,6 +214,18 @@ const ReviewerResponsePage = () => {
             {isSpanish 
               ? 'Gracias por tu respuesta. El equipo editorial será notificado.'
               : 'Thank you for your response. The editorial team will be notified.'}
+          </p>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (!invitation) {
+    return (
+      <div className="min-h-screen bg-[#F5F7FA] flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md text-center">
+          <p className="text-[#5A6B7A] font-['Lora']">
+            {isSpanish ? 'Invitación no disponible' : 'Invitation not available'}
           </p>
         </div>
       </div>
@@ -286,6 +342,11 @@ const ReviewerResponsePage = () => {
                   ? 'Declara cualquier conflicto de interés (o escribe "Ninguno")' 
                   : 'Declare any conflict of interest (or write "None")'}
               />
+              <p className="text-xs text-[#5A6B7A] mt-2 font-['Lora']">
+                {isSpanish 
+                  ? 'Ejemplo: "Soy coinvestigador en el mismo proyecto" o "Ninguno"'
+                  : 'Example: "I am co-investigator in the same project" or "None"'}
+              </p>
             </div>
 
             {/* Botones de acción */}
@@ -293,7 +354,7 @@ const ReviewerResponsePage = () => {
               <button
                 onClick={handleAccept}
                 disabled={hookLoading || isSubmitting || !invitation}
-                className="py-4 bg-[#C0A86A] hover:bg-[#A58D4F] text-white font-['Playfair_Display'] font-bold rounded-xl transition-all disabled:bg-[#E5E9F0] disabled:text-[#5A6B7A]"
+                className="py-4 bg-[#C0A86A] hover:bg-[#A58D4F] text-white font-['Playfair_Display'] font-bold rounded-xl transition-all disabled:bg-[#E5E9F0] disabled:text-[#5A6B7A] disabled:cursor-not-allowed"
               >
                 {hookLoading || isSubmitting ? (
                   <span className="flex items-center justify-center gap-2">
@@ -307,7 +368,7 @@ const ReviewerResponsePage = () => {
               <button
                 onClick={handleDecline}
                 disabled={hookLoading || isSubmitting || !invitation}
-                className="py-4 border-2 border-[#0A1929] text-[#0A1929] font-['Playfair_Display'] font-bold rounded-xl hover:bg-[#0A1929] hover:text-white transition-all disabled:border-[#E5E9F0] disabled:text-[#5A6B7A] disabled:hover:bg-transparent"
+                className="py-4 border-2 border-[#0A1929] text-[#0A1929] font-['Playfair_Display'] font-bold rounded-xl hover:bg-[#0A1929] hover:text-white transition-all disabled:border-[#E5E9F0] disabled:text-[#5A6B7A] disabled:hover:bg-transparent disabled:cursor-not-allowed"
               >
                 {isSpanish ? 'RECHAZAR' : 'DECLINE'}
               </button>
@@ -319,6 +380,15 @@ const ReviewerResponsePage = () => {
                 ? 'Al aceptar, te comprometes a mantener la confidencialidad del manuscrito y a proporcionar una revisión objetiva y constructiva.'
                 : 'By accepting, you agree to maintain confidentiality and provide an objective and constructive review.'}
             </p>
+
+            {/* Información de expiración si existe */}
+            {invitation?.expiresAt && (
+              <p className="mt-4 text-xs text-[#C0A86A] text-center font-['Lora']">
+                {isSpanish 
+                  ? `Esta invitación expira el ${new Date(invitation.expiresAt).toLocaleDateString('es-CL')}`
+                  : `This invitation expires on ${new Date(invitation.expiresAt).toLocaleDateString('en-US')}`}
+              </p>
+            )}
           </div>
         </div>
       </div>
