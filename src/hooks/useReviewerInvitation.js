@@ -246,6 +246,7 @@ export const useReviewerInvitation = () => { // <-- ELIMINADO: user como paráme
 
   // ==================== CORREGIDO: respondToInvitation ====================
   // ==================== CORREGIDO: respondToInvitation ====================
+// ==================== CORREGIDO: respondToInvitation ====================
 const respondToInvitation = useCallback(async (invitationId, response) => {
   setLoading(true);
   setError(null);
@@ -276,23 +277,30 @@ const respondToInvitation = useCallback(async (invitationId, response) => {
       throw new Error(isSpanish ? 'Esta invitación ya ha sido procesada' : 'This invitation has already been processed');
     }
 
+    // --- CREACIÓN DEL PAYLOAD PARA ACTUALIZAR ---
     const updatePayload = {
       status: accept ? 'accepted' : 'declined',
       conflictOfInterest: conflictOfInterest || null,
       respondedAt: serverTimestamp(),
-      // --- ¡IMPORTANTE! Incluir el inviteHash para que las reglas permitan la actualización ---
-      inviteHash: invitationData.inviteHash
     };
 
-    // Si el usuario está autenticado, guardar su UID
+    // ¡IMPORTANTE! Incluir el inviteHash para que las reglas de seguridad
+    // (que comparan request.resource.data.inviteHash con resource.data.inviteHash)
+    // permitan la actualización cuando el usuario NO está autenticado.
+    // Esto es lo que faltaba para que la regla funcione.
+    updatePayload.inviteHash = invitationData.inviteHash;
+
+    // Si el usuario está autenticado (ej. un editor), guardar su UID
     if (user) {
       updatePayload.reviewerUid = user.uid;
       updatePayload.reviewerEmail = user.email || invitationData.reviewerEmail;
+      // Si es un usuario autenticado, no es necesario enviar el hash,
+      // pero enviarlo no hace daño. Lo dejamos para simplificar.
     } else {
       updatePayload.respondedAnonymously = true;
     }
 
-    // Actualizar la invitación
+    // Actualizar la invitación en Firestore
     await updateDoc(invitationRef, updatePayload);
 
     console.log(`✅ Invitación ${invitationId} respondida: ${accept ? 'aceptada' : 'rechazada'}`);
