@@ -1,15 +1,71 @@
 // src/components/DeskReviewTab.js
 import React, { useState } from 'react';
 import { useLanguage } from '../hooks/useLanguage';
+import { useEditorialReview } from '../hooks/useEditorialReview';
 
-export const DeskReviewTab = ({ task, user, onComplete, loading }) => {
+export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading }) => {
   const { language } = useLanguage();
   const isSpanish = language === 'es';
   const [decision, setDecision] = useState(task.deskReviewDecision || '');
   const [feedback, setFeedback] = useState(task.deskReviewFeedback || '');
   const [internalComments, setInternalComments] = useState(task.deskReviewComments || '');
   
+  // Usar el hook para manejar la revisión editorial
+  const { loading: hookLoading, error, submitDeskReviewDecision } = useEditorialReview(user);
+  
   const submission = task.submission || {};
+  
+  // Combinar el loading externo con el del hook
+  const isLoading = externalLoading || hookLoading;
+
+  // Función handleSubmit corregida
+  const handleSubmit = async () => {
+    try {
+      // Validar que hay una decisión seleccionada
+      if (!decision) {
+        alert(isSpanish ? 'Debes seleccionar una decisión' : 'You must select a decision');
+        return;
+      }
+
+      // Validar que hay un reviewId en el task
+      if (!task.reviewId) {
+        console.error('No reviewId found in task');
+        alert(isSpanish ? 'Error: ID de revisión no encontrado' : 'Error: Review ID not found');
+        return;
+      }
+
+      // Preparar los datos de la decisión
+      const decisionData = {
+        decision,
+        feedbackToAuthor: feedback,
+        commentsToEditorial: internalComments
+      };
+
+      // Enviar la decisión usando el hook
+      const result = await submitDeskReviewDecision(task.reviewId, decisionData);
+      
+      if (result.success) {
+        // Si hay una función onComplete, llamarla
+        if (onComplete) {
+          onComplete({
+            decision,
+            feedback,
+            internalComments,
+            reviewId: task.reviewId
+          });
+        }
+        
+        // Mostrar mensaje de éxito
+        alert(result.message || (isSpanish ? 'Decisión guardada exitosamente' : 'Decision saved successfully'));
+      } else {
+        // Mostrar error si algo salió mal
+        alert(result.error || (isSpanish ? 'Error al guardar la decisión' : 'Error saving decision'));
+      }
+    } catch (err) {
+      console.error('Error in handleSubmit:', err);
+      alert(isSpanish ? 'Error al procesar la solicitud' : 'Error processing request');
+    }
+  };
 
   // Función para formatear autores
   const formatAuthors = (authors) => {
@@ -22,20 +78,15 @@ export const DeskReviewTab = ({ task, user, onComplete, loading }) => {
     }).join('; ');
   };
 
-  // Función para renderizar arrays como lista
-  const renderList = (items) => {
-    if (!items || items.length === 0) return '—';
-    return (
-      <ul className="list-disc list-inside space-y-1">
-        {items.map((item, index) => (
-          <li key={index} className="text-[#0A1929]">{item}</li>
-        ))}
-      </ul>
-    );
-  };
-
   return (
     <div className="space-y-6">
+      {/* Mostrar error si existe */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      )}
+      
       {/* ENCABEZADO con título e IDs */}
       <div className="bg-gradient-to-r from-[#0A1929] to-[#1E2F40] text-white rounded-xl p-6">
         <div className="flex items-start justify-between">
@@ -227,7 +278,7 @@ export const DeskReviewTab = ({ task, user, onComplete, loading }) => {
         </div>
       </div>
 
-      {/* DECISIÓN EDITORIAL - (el resto del componente permanece igual) */}
+      {/* DECISIÓN EDITORIAL */}
       <div className="mt-8 pt-6 border-t-2 border-[#E5E9F0]">
         <label className="block font-['Playfair_Display'] font-semibold text-[#0A1929] mb-3">
           {isSpanish ? 'Decisión Editorial' : 'Editorial Decision'}
@@ -254,7 +305,7 @@ export const DeskReviewTab = ({ task, user, onComplete, loading }) => {
         </div>
       </div>
 
-      {/* Feedback y Comentarios - (se mantienen igual) */}
+      {/* Feedback y Comentarios */}
       <div>
         <label className="block font-['Playfair_Display'] font-semibold text-[#0A1929] mb-3">
           {isSpanish ? 'Feedback para el Autor' : 'Feedback to Author'}
@@ -283,10 +334,10 @@ export const DeskReviewTab = ({ task, user, onComplete, loading }) => {
 
       <button
         onClick={handleSubmit}
-        disabled={loading || !decision}
+        disabled={isLoading || !decision}
         className="w-full py-4 bg-[#0A1929] hover:bg-[#1E2F40] text-white font-['Playfair_Display'] font-bold rounded-xl transition-all disabled:bg-[#E5E9F0] disabled:text-[#5A6B7A]"
       >
-        {loading ? (
+        {isLoading ? (
           <span className="flex items-center justify-center gap-2">
             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
             {isSpanish ? 'GUARDANDO...' : 'SAVING...'}

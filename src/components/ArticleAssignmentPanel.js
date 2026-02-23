@@ -1,5 +1,5 @@
 // src/components/ArticleAssignmentPanel.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
@@ -18,7 +18,46 @@ const ArticleAssignmentPanel = ({ user }) => {
   const [isAssigning, setIsAssigning] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Estados para la verificación de requisitos
+  const [formChecklist, setFormChecklist] = useState({
+    hasAbstract: false,
+    hasKeywords: false,
+    hasConflictOfInterest: false,
+    hasFundingInfo: false,
+    hasAuthorInstitution: false,
+    hasOrcid: false,
+    hasDriveFiles: false,
+    isSpanishEnglish: false
+  });
+
   const { loading, error, getUnassignedSubmissions, getSectionEditors, assignToSectionEditor } = useArticleAssignment(user);
+
+  // CORRECCIÓN 1: Memoizar la función loadEditors
+  const loadEditors = useCallback(async () => {
+    const result = await getSectionEditors();
+    if (result.success) {
+      setSectionEditors(result.editors);
+    }
+  }, [getSectionEditors]); // getSectionEditors sigue siendo una dependencia
+
+  // CORRECCIÓN 2: Separar la carga de editores en un useEffect independiente
+  // con una referencia para evitar el bucle infinito
+  useEffect(() => {
+    let isMounted = true;
+    
+    const loadEditorsIfNeeded = async () => {
+      const result = await getSectionEditors();
+      if (isMounted && result.success) {
+        setSectionEditors(result.editors);
+      }
+    };
+    
+    loadEditorsIfNeeded();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, []); // <-- QUITAMOS getSectionEditors de las dependencias
 
   // Escuchar envíos no asignados (status 'submitted')
   useEffect(() => {
@@ -43,16 +82,22 @@ const ArticleAssignmentPanel = ({ user }) => {
     return () => unsubscribe();
   }, [user]);
 
-  // Cargar la lista de editores de sección al montar el componente
+  // Actualizar checklist cuando cambia el submission seleccionado
   useEffect(() => {
-    const loadEditors = async () => {
-      const result = await getSectionEditors();
-      if (result.success) {
-        setSectionEditors(result.editors);
-      }
-    };
-    loadEditors();
-  }, [getSectionEditors]);
+    if (selectedSubmission) {
+      const sub = selectedSubmission;
+      setFormChecklist({
+        hasAbstract: !!(sub.abstract || sub.abstractEn),
+        hasKeywords: !!(sub.keywords?.length > 0 || sub.keywordsEn?.length > 0),
+        hasConflictOfInterest: !!sub.conflictOfInterest,
+        hasFundingInfo: sub.funding ? true : false,
+        hasAuthorInstitution: !!(sub.authors?.[0]?.institution),
+        hasOrcid: !!(sub.authors?.[0]?.orcid),
+        hasDriveFiles: !!(sub.driveFolderUrl),
+        isSpanishEnglish: !!(sub.abstract && sub.abstractEn)
+      });
+    }
+  }, [selectedSubmission]);
 
   const handleAssign = async () => {
     if (!selectedSubmission || !selectedEditor) {

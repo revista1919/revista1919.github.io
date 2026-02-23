@@ -1,4 +1,4 @@
-// src/hooks/useArticleAssignment.js
+// src/hooks/useArticleAssignment.js (CORREGIDO)
 import { useState, useCallback } from 'react';
 import { db } from '../firebase';
 import { collection, addDoc, updateDoc, doc, serverTimestamp, query, where, getDocs, getDoc } from 'firebase/firestore';
@@ -53,23 +53,23 @@ export const useArticleAssignment = (user) => {
         assignedTo: sectionEditorUid,
         assignedToEmail: sectionEditorData.email,
         assignedToName: sectionEditorData.displayName || `${sectionEditorData.firstName || ''} ${sectionEditorData.lastName || ''}`.trim() || sectionEditorData.email,
-        status: 'pending', // pending, in-progress, completed
+        status: 'pending',
         assignmentNotes,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-        round: 1, // Siempre empezamos en ronda 1
+        round: 1,
       };
 
       const taskRef = await addDoc(collection(db, 'editorialTasks'), taskData);
 
-      // 2. Actualizar el estado del submission para que el Editor de Sección sepa que hay una tarea pendiente
+      // 2. Actualizar el estado del submission
       await updateDoc(submissionRef, {
-        status: 'desk-review', // Nuevo estado: esperando revisión del editor de sección
+        status: 'desk-review',
         currentEditorialTaskId: taskRef.id,
         updatedAt: serverTimestamp(),
       });
 
-      // 3. Opcional: Crear un registro de auditoría
+      // 3. Crear un registro de auditoría
       await addDoc(collection(db, 'submissions', submissionId, 'auditLogs'), {
         action: 'assigned_to_section_editor',
         by: user.uid,
@@ -105,7 +105,6 @@ export const useArticleAssignment = (user) => {
       const q = query(
         collection(db, 'submissions'),
         where('status', '==', 'submitted'),
-        // where('currentRound', '==', 1) // Podrías añadir esto si quieres solo la ronda 1
       );
       const snapshot = await getDocs(q);
       const submissions = snapshot.docs.map(doc => ({
@@ -121,7 +120,7 @@ export const useArticleAssignment = (user) => {
       setLoading(false);
       return { success: false, error: err.message };
     }
-  }, []);
+  }, []); // <-- Sin dependencias porque no usa nada externo
 
   /**
    * Obtiene la lista de Editores de Sección disponibles.
@@ -148,7 +147,7 @@ export const useArticleAssignment = (user) => {
       setLoading(false);
       return { success: false, error: err.message };
     }
-  }, []);
+  }, []); // <-- Sin dependencias porque no usa nada externo
 
   return {
     loading,
