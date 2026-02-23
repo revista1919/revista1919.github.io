@@ -8,6 +8,7 @@ import {
   signOut,
 } from 'firebase/auth';
 import { useLanguage } from './hooks/useLanguage';
+import ReviewerWorkspacePage from './components/ReviewerWorkspacePage';
 import Header from './components/Header';
 import SearchAndFilters from './components/SearchAndFilters';
 import ReviewerResponsePage from './components/ReviewerResponsePage';
@@ -691,46 +692,59 @@ function App() {
       </nav>
       <main className="flex-grow">
         <AnimatePresence mode="wait">
-        <Routes location={location} key={location.key}>
-  {/* Ruta para revisores - disponible en español e inglés */}
-  <Route path="/reviewer-response" element={
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      transition={{ duration: 0.3 }}
-      className="container mx-auto px-6 lg:px-8 flex-grow"
-    >
-      <ReviewerResponsePage />
-    </motion.div>
-  } />
- 
-  {/* Rutas de secciones en español */}
-  {sections.map(s => (
-    <Route
-      key={s.path}
-      path={s.path}
-      element={
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.3 }}
-          className={`container ${
-            user && isLoginActive
-              ? 'max-w-full px-0'
-              : 'mx-auto px-6 lg:px-8'
-          } flex-grow`}
-        >
-          {s.component}
-        </motion.div>
-      }
-    />
-  ))}
- 
-  {/* Ruta comodín para redirigir rutas no encontradas a / */}
-  <Route path="*" element={<Navigate to="/" replace />} />
-</Routes>
+          <Routes location={location} key={location.key}>
+            {/* Ruta para revisores - disponible en español e inglés */}
+            <Route path="/reviewer-response" element={
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+                className="container mx-auto px-6 lg:px-8 flex-grow"
+              >
+                <ReviewerResponsePage />
+              </motion.div>
+            } />
+
+            {/* NUEVA RUTA: Workspace del revisor */}
+            <Route path="/reviewer-workspace/:assignmentId" element={
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="flex-grow"
+              >
+                <ReviewerWorkspacePage />
+              </motion.div>
+            } />
+
+            {/* Rutas de secciones en español */}
+            {sections.map(s => (
+              <Route
+                key={s.path}
+                path={s.path}
+                element={
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.3 }}
+                    className={`container ${
+                      user && isLoginActive
+                        ? 'max-w-full px-0'
+                        : 'mx-auto px-6 lg:px-8'
+                    } flex-grow`}
+                  >
+                    {s.component}
+                  </motion.div>
+                }
+              />
+            ))}
+
+            {/* Ruta comodín para redirigir rutas no encontradas a / */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
         </AnimatePresence>
       </main>
       <AnimatePresence>

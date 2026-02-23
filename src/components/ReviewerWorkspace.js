@@ -1,4 +1,4 @@
-// src/components/ReviewerWorkspace.js (VERSIÓN COMPLETA)
+// src/components/ReviewerWorkspace.js (VERSIÓN CORREGIDA)
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactQuill from 'react-quill';
@@ -7,6 +7,7 @@ import { useLanguage } from '../hooks/useLanguage';
 import { useReviewerAssignment } from '../hooks/useReviewerAssignment';
 import { db } from '../firebase';
 import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { useAuth } from '../hooks/useAuth';
 
 const REVIEW_CRITERIA = {
   relevance: {
@@ -92,6 +93,7 @@ const RECOMMENDATION_OPTIONS = [
 
 export const ReviewerWorkspace = ({ assignmentId, onClose, readOnly = false }) => {
   const { language } = useLanguage();
+  const { user } = useAuth();
   const isSpanish = language === 'es';
   
   const [assignment, setAssignment] = useState(null);
@@ -106,7 +108,7 @@ export const ReviewerWorkspace = ({ assignmentId, onClose, readOnly = false }) =
   const [autoSaveStatus, setAutoSaveStatus] = useState('idle');
   const [validationErrors, setValidationErrors] = useState({});
 
-  const { getReviewerAssignmentById, submitReview, autoSaveReview } = useReviewerAssignment();
+  const { getReviewerAssignmentById, submitReview, autoSaveReview } = useReviewerAssignment(user);
 
   // Cargar datos y suscribirse a cambios en tiempo real
   useEffect(() => {
@@ -224,9 +226,9 @@ export const ReviewerWorkspace = ({ assignmentId, onClose, readOnly = false }) =
     
     if (result.success) {
       alert(isSpanish ? 'Revisión enviada con éxito' : 'Review submitted successfully');
-      onClose();
+      if (onClose) onClose();
     } else {
-      alert(isSpanish ? 'Error al enviar la revisión' : 'Error submitting review');
+      alert(isSpanish ? 'Error al enviar la revisión: ' + result.error : 'Error submitting review: ' + result.error);
     }
     setIsSubmitting(false);
   };
@@ -251,7 +253,7 @@ export const ReviewerWorkspace = ({ assignmentId, onClose, readOnly = false }) =
     if (commentsToEditor && commentsToEditor.replace(/<[^>]*>/g, '').trim() !== '') progress += 20;
     if (recommendation) progress += 20;
     
-    return progress;
+    return Math.min(progress, 100);
   };
 
   const getDaysRemaining = () => {
@@ -311,6 +313,11 @@ export const ReviewerWorkspace = ({ assignmentId, onClose, readOnly = false }) =
                     : (isSpanish ? 'Vencido' : 'Overdue')
                 )}
               </span>
+              {readOnly && (
+                <span className="ml-4 px-3 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                  {isSpanish ? 'Solo lectura' : 'Read-only'}
+                </span>
+              )}
             </div>
           </div>
         </div>
