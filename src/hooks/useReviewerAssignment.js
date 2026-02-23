@@ -1,7 +1,19 @@
-// src/hooks/useReviewerAssignment.js
+// src/hooks/useReviewerAssignment.js (VERSIÓN CORREGIDA - COMPLETA)
 import { useState, useCallback } from 'react';
 import { db } from '../firebase';
-import { collection, addDoc, updateDoc, doc, serverTimestamp, query, where, getDocs, getDoc, orderBy } from 'firebase/firestore';
+import { 
+  collection, 
+  addDoc, 
+  updateDoc, 
+  doc, 
+  serverTimestamp, 
+  query, 
+  where, 
+  getDocs, 
+  getDoc, 
+  orderBy,
+  limit 
+} from 'firebase/firestore';
 import { useLanguage } from './useLanguage';
 
 export const useReviewerAssignment = (user) => {
@@ -141,15 +153,19 @@ export const useReviewerAssignment = (user) => {
         updatedAt: serverTimestamp()
       });
 
+      // --- CORREGIDO: Usar sintaxis modular de Firebase v9 ---
       // Actualizar el deadline asociado
-      const deadlinesQuery = await db.collection('deadlines')
-        .where('targetId', '==', assignmentId)
-        .where('type', '==', 'review-submission')
-        .limit(1)
-        .get();
+      const deadlinesQuery = query(
+        collection(db, 'deadlines'),
+        where('targetId', '==', assignmentId),
+        where('type', '==', 'review-submission'),
+        limit(1)
+      );
       
-      if (!deadlinesQuery.empty) {
-        await deadlinesQuery.docs[0].ref.update({
+      const deadlinesSnapshot = await getDocs(deadlinesQuery);
+      
+      if (!deadlinesSnapshot.empty) {
+        await updateDoc(doc(db, 'deadlines', deadlinesSnapshot.docs[0].id), {
           status: 'completed',
           completedAt: serverTimestamp()
         });
