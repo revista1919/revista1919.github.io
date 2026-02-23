@@ -1,4 +1,4 @@
-// src/components/FinalDecisionTab.js
+// src/components/FinalDecisionTab.js (VERSIÓN MODIFICADA)
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '../hooks/useLanguage';
@@ -72,6 +72,74 @@ export const FinalDecisionTab = ({ task, reviewers, onSubmitDecision, loading: e
 
   return (
     <div className="space-y-6">
+      {/* ✅ NUEVO: Indicador de flujo cuando se solicitan revisiones */}
+      {(decision === 'major-revision' || decision === 'minor-revision') && (
+        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0">
+              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h4 className="font-bold text-blue-800 mb-1">
+                {isSpanish ? 'Flujo de revisiones solicitadas' : 'Revision request flow'}
+              </h4>
+              <p className="text-sm text-blue-700">
+                {isSpanish 
+                  ? 'Al guardar esta decisión, el estado del artículo cambiará a "revisions-requested". El autor recibirá una notificación y podrá subir una versión revisada. El sistema quedará en espera de la respuesta del autor.'
+                  : 'When saving this decision, the article status will change to "revisions-requested". The author will receive a notification and can upload a revised version. The system will await the author\'s response.'}
+              </p>
+              <div className="mt-3 flex items-center gap-2 text-sm">
+                <span className="bg-blue-200 text-blue-800 px-3 py-1 rounded-full font-medium">
+                  {isSpanish ? 'Estado actual:' : 'Current state:'} {task?.submission?.status || '—'}
+                </span>
+                <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+                <span className="bg-yellow-200 text-yellow-800 px-3 py-1 rounded-full font-medium">
+                  {isSpanish ? '→ revisions-requested' : '→ revisions-requested'}
+                </span>
+                <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+                <span className="bg-purple-200 text-purple-800 px-3 py-1 rounded-full font-medium">
+                  {isSpanish ? 'Esperando autor' : 'Awaiting author'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ NUEVO: Si el artículo ya está en espera de revisiones, mostrarlo */}
+      {task?.submission?.status === 'revisions-requested' && (
+        <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-lg">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0">
+              <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h4 className="font-bold text-yellow-800 mb-1">
+                {isSpanish ? '⏳ Esperando revisión del autor' : '⏳ Awaiting author revision'}
+              </h4>
+              <p className="text-sm text-yellow-700">
+                {isSpanish 
+                  ? 'Este artículo está actualmente en espera de que el autor suba una versión revisada. El sistema notificará automáticamente cuando se reciba la nueva versión.'
+                  : 'This article is currently awaiting the author to upload a revised version. The system will automatically notify when the new version is received.'}
+              </p>
+              {task.submissionRevision?.requestedAt && (
+                <p className="text-xs text-yellow-600 mt-2">
+                  {isSpanish ? 'Solicitado el:' : 'Requested on:'} {new Date(task.submissionRevision.requestedAt).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Resumen de revisiones */}
       <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
         <h4 className="font-['Playfair_Display'] font-bold text-[#0A1929] mb-3">
@@ -195,8 +263,8 @@ export const FinalDecisionTab = ({ task, reviewers, onSubmitDecision, loading: e
           rows="5"
           className="w-full p-4 bg-[#F5F7FA] border border-[#E5E9F0] rounded-xl focus:ring-2 focus:ring-[#C0A86A] focus:border-transparent font-['Lora'] text-sm"
           placeholder={isSpanish 
-            ? 'Sintetiza las revisiones y comunica tu decisión final al autor...' 
-            : 'Synthesize the reviews and communicate your final decision to the author...'}
+            ? 'Sintetiza las revisiones y comunica tu decisión final al autor. Si solicitas revisiones, sé específico sobre los cambios requeridos...' 
+            : 'Synthesize the reviews and communicate your final decision to the author. If requesting revisions, be specific about required changes...'}
           disabled={loading}
         />
       </div>
@@ -218,7 +286,11 @@ export const FinalDecisionTab = ({ task, reviewers, onSubmitDecision, loading: e
       <button
         onClick={handleSubmit}
         disabled={loading || !decision}
-        className="w-full py-4 bg-[#0A1929] hover:bg-[#1E2F40] text-white font-['Playfair_Display'] font-bold rounded-xl transition-all disabled:bg-[#E5E9F0] disabled:text-[#5A6B7A]"
+        className={`w-full py-4 font-['Playfair_Display'] font-bold rounded-xl transition-all ${
+          decision === 'major-revision' || decision === 'minor-revision'
+            ? 'bg-blue-600 hover:bg-blue-700 text-white'
+            : 'bg-[#0A1929] hover:bg-[#1E2F40] text-white'
+        } disabled:bg-[#E5E9F0] disabled:text-[#5A6B7A]`}
       >
         {loading ? (
           <span className="flex items-center justify-center gap-2">
@@ -226,7 +298,9 @@ export const FinalDecisionTab = ({ task, reviewers, onSubmitDecision, loading: e
             {isSpanish ? 'GUARDANDO DECISIÓN...' : 'SAVING DECISION...'}
           </span>
         ) : (
-          isSpanish ? 'GUARDAR DECISIÓN FINAL' : 'SAVE FINAL DECISION'
+          decision === 'major-revision' || decision === 'minor-revision'
+            ? (isSpanish ? 'SOLICITAR REVISIONES AL AUTOR' : 'REQUEST AUTHOR REVISIONS')
+            : (isSpanish ? 'GUARDAR DECISIÓN FINAL' : 'SAVE FINAL DECISION')
         )}
       </button>
     </div>

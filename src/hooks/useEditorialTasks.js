@@ -157,15 +157,14 @@ export const useEditorialTasks = (user) => {
       // Actualizar submission
       const submissionRef = doc(db, 'submissions', taskSnap.data().submissionId);
       let submissionStatus;
-      if (decision === 'accept') {
-        submissionStatus = 'accepted';
-      } else if (decision === 'reject') {
-        submissionStatus = 'rejected';
-      } else if (decision === 'major-revision') {
-        submissionStatus = 'major-revision-required';
-      } else if (decision === 'minor-revision') {
-        submissionStatus = 'minor-revision-required';
-      }
+if (decision === 'accept') {
+  submissionStatus = 'accepted';
+} else if (decision === 'reject') {
+  submissionStatus = 'rejected';
+} else if (decision === 'major-revision' || decision === 'minor-revision') {
+  // ✅ CAMBIO IMPORTANTE: Usar 'revisions-requested' en lugar de los estados específicos
+  submissionStatus = 'revisions-requested';
+}
 
       await updateDoc(submissionRef, {
         status: submissionStatus,

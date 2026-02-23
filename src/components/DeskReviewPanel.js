@@ -388,7 +388,25 @@ const DeskReviewPanel = ({ user }) => {
                   })}
                 </>
               )}
+// Dentro de DeskReviewPanel.js, en la sección pendingSubmissions.map
+// Busca donde se renderiza el badge de estado y añade esta condición
 
+<span className={`text-xs px-2 py-1 rounded-full ${
+  latestTask?.status === TASK_STATES.PENDING ? 'bg-yellow-100 text-yellow-700' :
+  latestTask?.status === TASK_STATES.DESK_REVIEW_IN_PROGRESS ? 'bg-blue-100 text-blue-700' :
+  latestTask?.status === TASK_STATES.REVIEWER_SELECTION ? 'bg-purple-100 text-purple-700' :
+  latestTask?.status === TASK_STATES.AWAITING_DECISION ? 'bg-green-100 text-green-700' :
+  // ✅ NUEVO: Estado de esperando revisión del autor
+  group.submission?.status === 'revisions-requested' ? 'bg-orange-100 text-orange-700 animate-pulse' :
+  'bg-gray-100 text-gray-700'
+}`}>
+  {latestTask?.status === TASK_STATES.PENDING && (isSpanish ? 'Pendiente' : 'Pending')}
+  {latestTask?.status === TASK_STATES.DESK_REVIEW_IN_PROGRESS && (isSpanish ? 'En revisión' : 'In review')}
+  {latestTask?.status === TASK_STATES.REVIEWER_SELECTION && (isSpanish ? 'Seleccionando revisores' : 'Selecting reviewers')}
+  {latestTask?.status === TASK_STATES.AWAITING_DECISION && (isSpanish ? 'Esperando decisión' : 'Awaiting decision')}
+  {/* ✅ NUEVO: */}
+  {group.submission?.status === 'revisions-requested' && (isSpanish ? '⏳ Esperando autor' : '⏳ Awaiting author')}
+</span>
               {/* Manuscritos Completados */}
               {completedSubmissions.length > 0 && (
                 <>
