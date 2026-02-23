@@ -13,9 +13,9 @@ export const TASK_STATES = {
   REVIEWS_COMPLETED: 'reviews-completed',
   AWAITING_DECISION: 'awaiting-decision',
   COMPLETED: 'completed',
-  REVISION_REQUESTED: 'revision-requested'
+  REVISION_REQUESTED: 'revision-requested', // Para cuando el autor debe corregir
+  AWAITING_AUTHOR_REVISION: 'awaiting-author-revision' // (Opcional, más claro)
 };
-
 export const useEditorialTasks = (user) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);

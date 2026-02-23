@@ -3113,215 +3113,7 @@ exports.checkSubmissionStatus = onCall(async (request) => {
   }
 });
 
-exports.onEditorialReviewCreated = onDocumentCreated(
-  {
-    document: 'editorialReviews/{reviewId}',
-    secrets: [],
-    memory: '256MiB'
-  },
-  async (event) => {
-    const reviewData = event.data.data();
-    const reviewId = event.params.reviewId;
 
-    console.log(`📝 [onEditorialReviewCreated] Nueva revisión editorial creada: ${reviewId} para envío: ${reviewData.submissionId}`);
-
-    try {
-      const db = admin.firestore();
-      const submissionRef = db.collection('submissions').doc(reviewData.submissionId);
-      const submissionSnap = await submissionRef.get();
-      
-      if (!submissionSnap.exists) {
-        console.error(`❌ Submission no encontrado: ${reviewData.submissionId}`);
-        return;
-      }
-
-      // Actualizar el estado del envío
-      await submissionRef.update({
-        status: 'in-editorial-review',
-        currentEditorialReviewId: reviewId,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      });
-
-      // --- NUEVO: Si hay una tarea asociada, actualizarla ---
-      if (reviewData.editorialTaskId) {
-        const taskRef = db.collection('editorialTasks').doc(reviewData.editorialTaskId);
-        await taskRef.update({
-          status: 'in-progress',
-          currentReviewId: reviewId,
-          startedAt: admin.firestore.FieldValue.serverTimestamp(),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-        console.log(`✅ Tarea editorial ${reviewData.editorialTaskId} actualizada a 'in-progress'`);
-      }
-
-      console.log(`✅ Estado de envío ${reviewData.submissionId} actualizado a 'in-editorial-review'`);
-
-    } catch (error) {
-      console.error(`❌ [onEditorialReviewCreated] Error:`, error.message);
-      await logSystemError('onEditorialReviewCreated', error, { reviewId, ...reviewData });
-    }
-  }
-);
-/* ----------------------------------------------------------------------------
- * 2. TRIGGER: Cuando se ACTUALIZA una editorialReview (se guarda la decisión)
- * ----------------------------------------------------------------------------
- * Esta función es la CLAVE. Cuando el editor guarda su decisión en Firestore,
- * este trigger se activa, procesa la decisión y actualiza el estado del envío.
- */
-/* ===================== ON EDITORIAL REVIEW UPDATED - VERSIÓN CORREGIDA ===================== */
-exports.onEditorialReviewUpdated = onDocumentUpdated(
-  {
-    document: 'editorialReviews/{reviewId}',
-    secrets: [],
-    memory: '256MiB'
-  },
-  async (event) => {
-    const beforeData = event.data.before.data();
-    const afterData = event.data.after.data();
-    const reviewId = event.params.reviewId;
-
-    // Solo proceder si la decisión ha cambiado y ahora NO es null
-    if (beforeData.decision === afterData.decision || afterData.decision === null) {
-      return;
-    }
-
-    console.log(`📝 [onEditorialReviewUpdated] Decisión tomada para revisión ${reviewId}: ${afterData.decision}`);
-
-    try {
-      const db = admin.firestore();
-      
-      // ===== 1. Obtener referencias =====
-      const submissionRef = db.collection('submissions').doc(afterData.submissionId);
-      const submissionSnap = await submissionRef.get();
-
-      if (!submissionSnap.exists) {
-        console.error(`❌ Envío no encontrado: ${afterData.submissionId}`);
-        return;
-      }
-
-      const submissionData = submissionSnap.data();
-      let taskRef = null;
-      let taskData = null;
-
-      // Si hay una tarea editorial asociada, obtenerla
-      if (afterData.editorialTaskId) {
-        taskRef = db.collection('editorialTasks').doc(afterData.editorialTaskId);
-        const taskSnap = await taskRef.get();
-        if (taskSnap.exists) {
-          taskData = taskSnap.data();
-        }
-      }
-
-      // ===== 2. Determinar nuevos estados según la decisión =====
-      let newTaskStatus = null;
-      let newSubmissionStatus = null;
-      let emailHtml = '';
-      const lang = submissionData.paperLanguage || 'es';
-      const authorName = submissionData.authorName || 'Autor';
-
-      switch (afterData.decision) {
-        case 'reject':
-          // Rechazo en desk review - proceso termina
-          newTaskStatus = 'completed';
-          newSubmissionStatus = 'rejected';
-          emailHtml = getRejectionEmailBody(afterData.feedbackToAuthor, submissionData.title, lang, authorName);
-          break;
-
-        case 'minor-revision':
-          // Si permitimos revisiones menores directamente desde desk review
-          newTaskStatus = 'completed';
-          newSubmissionStatus = 'minor-revision-required';
-          emailHtml = getRevisionEmailBody(afterData.feedbackToAuthor, submissionData.title, 'minor', lang, authorName);
-          break;
-
-        case 'revision-required':
-          // Pasa a revisión por pares - la tarea CONTINÚA
-          newTaskStatus = 'reviewer-selection'; // NO completada
-          newSubmissionStatus = 'in-reviewer-selection';
-          emailHtml = getPeerReviewStartEmailBody(submissionData.title, lang, authorName);
-          break;
-
-        case 'accept':
-          // Aceptado directamente desde desk review
-          newTaskStatus = 'completed';
-          newSubmissionStatus = 'accepted';
-          emailHtml = getAcceptanceEmailBody(afterData.feedbackToAuthor, submissionData.title, lang, authorName);
-          break;
-
-        default:
-          console.warn(`⚠️ Decisión desconocida: ${afterData.decision}`);
-          return;
-      }
-
-      // ===== 3. Actualizar el SUBMISSION =====
-      const submissionUpdateData = {
-        status: newSubmissionStatus,
-        deskReviewDecision: afterData.decision,
-        deskReviewFeedback: afterData.feedbackToAuthor || '',
-        deskReviewCompletedAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      };
-      
-      await submissionRef.update(submissionUpdateData);
-      console.log(`✅ Submission ${afterData.submissionId} actualizado a estado: ${newSubmissionStatus}`);
-
-      // ===== 4. Actualizar la TAREA EDITORIAL (si existe) =====
-      if (taskRef && newTaskStatus) {
-        const taskUpdateData = {
-          deskReviewDecision: afterData.decision,
-          deskReviewFeedback: afterData.feedbackToAuthor || '',
-          deskReviewComments: afterData.commentsToEditorial || '',
-          deskReviewCompletedAt: admin.firestore.FieldValue.serverTimestamp(),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        };
-
-        // Solo cambiar el estado si es diferente
-        if (newTaskStatus) {
-          taskUpdateData.status = newTaskStatus;
-        }
-
-        await taskRef.update(taskUpdateData);
-        console.log(`✅ Tarea editorial ${afterData.editorialTaskId} actualizada a estado: ${newTaskStatus}`);
-      }
-
-      // ===== 5. Enviar email al autor =====
-      if (emailHtml && submissionData.authorEmail) {
-        const emailSubject = lang === 'es' 
-          ? 'Actualización sobre su envío - Revista Nacional de las Ciencias' 
-          : 'Update on your submission - National Review of Sciences';
-        
-        await sendEmailViaExtension(submissionData.authorEmail, emailSubject, emailHtml);
-        console.log(`✅ Email enviado a autor: ${submissionData.authorEmail}`);
-      }
-
-      // ===== 6. Registrar en audit log =====
-      await db.collection('submissions').doc(afterData.submissionId)
-        .collection('auditLogs').add({
-          action: 'desk_review_completed',
-          decision: afterData.decision,
-          by: afterData.editorUid || 'system',
-          timestamp: admin.firestore.FieldValue.serverTimestamp()
-        });
-
-      console.log(`✅ Proceso completado para revisión ${reviewId}`);
-
-    } catch (error) {
-      console.error(`❌ [onEditorialReviewUpdated] Error:`, error.message);
-      console.error(error.stack);
-      await logSystemError('onEditorialReviewUpdated', error, { 
-        reviewId, 
-        submissionId: afterData?.submissionId,
-        decision: afterData?.decision 
-      });
-    }
-  }
-);
-/* ----------------------------------------------------------------------------
- * 3. TRIGGER: Cuando se CREA una nueva reviewerInvitation
- * ----------------------------------------------------------------------------
- * Esta función ya la tienes, pero la mejoramos para que sea más robusta
- * y use la función de email mejorada.
- */
 exports.onReviewerInvitationCreated = onDocumentCreated(
   {
     document: 'reviewerInvitations/{invitationId}',
@@ -3487,68 +3279,8 @@ exports.onReviewerInvitationUpdated = onDocumentUpdated(
   }
 );
 
-// ============================================================================
-// ==================== FUNCIONES AUXILIARES PARA EMAILS ====================
-// ============================================================================
 
-async function sendReviewerAssignmentEmail(assignment) {
-  // Esta función enviaría un email al revisor que aceptó, con el enlace al manuscrito.
-  // Necesitarías obtener la URL del driveFolder del submission.
-  const db = admin.firestore();
-  const submissionSnap = await db.collection('submissions').doc(assignment.submissionId).get();
-  if (!submissionSnap.exists) return;
 
-  const submission = submissionSnap.data();
-  const lang = submission.paperLanguage || 'es';
-  const isSpanish = lang === 'es';
-  const baseUrl = 'https://www.revistacienciasestudiantes.com';
-
-  const emailTitle = isSpanish ? 'Instrucciones para tu revisión' : 'Instructions for your review';
-  const emailGreeting = isSpanish ? `Estimado/a ${assignment.reviewerName}:` : `Dear ${assignment.reviewerName}:`;
-
-  const bodyContent = isSpanish
-    ? `
-      <p>Gracias por aceptar la invitación a revisar el siguiente artículo:</p>
-      <div class="highlight-box">
-        <p class="article-title">"${submission.title}"</p>
-      </div>
-      <p>Puedes acceder al manuscrito y a los materiales complementarios a través del siguiente enlace de Google Drive:</p>
-      <div class="button-container">
-        <a href="${submission.driveFolderUrl}" class="btn">VER MANUSCRITO EN DRIVE</a>
-      </div>
-      <p>Por favor, completa tu revisión antes de la fecha límite. Utiliza el siguiente enlace para enviar tu informe y recomendación:</p>
-       <div class="button-container">
-        <a href="${baseUrl}/reviewer-submission?assignmentId=${assignment.id}" class="btn btn-secondary">ENVIAR REVISIÓN</a>
-      </div>
-      <p>Recuerda que tu revisión debe ser confidencial y constructiva.</p>
-    `
-    : `
-      <p>Thank you for accepting the invitation to review the following article:</p>
-      <div class="highlight-box">
-        <p class="article-title">"${submission.title}"</p>
-      </div>
-      <p>You can access the manuscript and supplementary materials via this Google Drive link:</p>
-      <div class="button-container">
-        <a href="${submission.driveFolderUrl}" class="btn">VIEW MANUSCRIPT ON DRIVE</a>
-      </div>
-      <p>Please complete your review by the deadline. Use the following link to submit your report and recommendation:</p>
-      <div class="button-container">
-        <a href="${baseUrl}/reviewer-submission?assignmentId=${assignment.id}" class="btn btn-secondary">SUBMIT REVIEW</a>
-      </div>
-      <p>Remember that your review must be confidential and constructive.</p>
-    `;
-
-  const htmlBody = getEmailTemplate(
-    emailTitle,
-    emailGreeting,
-    bodyContent,
-    isSpanish ? 'Equipo Editorial' : 'Editorial Team',
-    isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
-    lang
-  );
-
-  await sendEmailViaExtension(assignment.reviewerEmail, emailTitle, htmlBody);
-}
 
 // Funciones para generar los cuerpos de los emails de decisión
 // ============================================================================
@@ -4400,6 +4132,7 @@ async function handleExpiredDeadline(deadline) {
  * VERSIÓN CORREGIDA de onEditorialReviewUpdated
  * Reemplaza la función existente con esta versión
  */
+// ===================== VERSIÓN CORREGIDA de onEditorialReviewUpdated =====================
 exports.onEditorialReviewUpdated = onDocumentUpdated(
   {
     document: 'editorialReviews/{reviewId}',
@@ -4436,23 +4169,27 @@ exports.onEditorialReviewUpdated = onDocumentUpdated(
       const lang = submissionData.paperLanguage || 'es';
       const authorName = submissionData.authorName || 'Autor';
 
+      // --- LÓGICA CORREGIDA ---
       switch (afterData.decision) {
         case 'reject':
           newSubmissionStatus = 'rejected';
-          newTaskStatus = 'completed';
+          newTaskStatus = 'completed'; // La tarea del editor termina aquí
           emailHtml = getRejectionEmailBody(afterData.feedbackToAuthor, submissionData.title, lang, authorName);
           break;
           
         case 'minor-revision':
-          // Esto no debería ocurrir en desk review, pero lo manejamos
-          newSubmissionStatus = 'minor-revision-required';
-          newTaskStatus = 'completed';
-          emailHtml = getRevisionEmailBody(afterData.feedbackToAuthor, submissionData.title, 'minor', lang, authorName);
+        case 'major-revision':
+          // ¡CORRECCIÓN! Si el editor pide cambios al autor, la tarea queda en espera.
+          newSubmissionStatus = 'revisions-requested';
+          newTaskStatus = 'awaiting-author-revision'; // La tarea espera la acción del autor
+          emailHtml = getRevisionEmailBody(afterData.feedbackToAuthor, submissionData.title, afterData.decision === 'minor-revision' ? 'minor' : 'major', lang, authorName);
           break;
           
-        case 'revision-required':
-          newSubmissionStatus = 'in-reviewer-selection';
-          newTaskStatus = 'reviewer-selection'; // ¡NO completada!
+        case 'revision-required': // Este es el caso para INICIAR REVISIÓN POR PARES
+          console.log(`🎯 Decisión 'revision-required' tomada. Iniciando selección de revisores.`);
+          newSubmissionStatus = 'in-reviewer-selection'; // Estado del artículo
+          newTaskStatus = 'reviewer-selection'; // <<<--- ¡¡ESTADO CORRECTO DE LA TAREA!!
+          // El email al autor es de "inicio de revisión por pares"
           emailHtml = getPeerReviewStartEmailBody(submissionData.title, lang, authorName);
           break;
           
@@ -4485,16 +4222,12 @@ exports.onEditorialReviewUpdated = onDocumentUpdated(
           deskReviewFeedback: afterData.feedbackToAuthor,
           deskReviewComments: afterData.commentsToEditorial || '',
           deskReviewCompletedAt: admin.firestore.FieldValue.serverTimestamp(),
+          status: newTaskStatus, // <<<--- AHORA SÍ SE ACTUALIZA EL ESTADO
           updatedAt: admin.firestore.FieldValue.serverTimestamp()
         };
         
-        // Solo cambiar el estado si es 'revision-required'
-        if (newTaskStatus) {
-          updateData.status = newTaskStatus;
-        }
-        
         await taskRef.update(updateData);
-        console.log(`✅ Tarea editorial ${afterData.editorialTaskId} actualizada a estado: ${newTaskStatus || 'sin cambio'}`);
+        console.log(`✅ Tarea editorial ${afterData.editorialTaskId} actualizada a estado: ${newTaskStatus}`);
       }
 
       // Enviar email al autor
@@ -4512,9 +4245,6 @@ exports.onEditorialReviewUpdated = onDocumentUpdated(
     }
   }
 );
-
-/* ===================== NUEVO: EMAIL PARA REVIEWER ASSIGNMENT ===================== */
-
 /**
  * 7. TRIGGER: Cuando se crea una reviewerAssignment (después de aceptar invitación)
  * Enviar email con instrucciones al revisor
@@ -5900,7 +5630,7 @@ exports.onAuthorRevisionSubmitted = onDocumentCreated(
       const submissionData = submissionSnap.data();
       const newRound = (submissionData.currentRound || 1) + 1;
 
-      console.log(`🎯 Creando automáticamente ronda ${newRound} para ${submissionId}`);
+      console.log(`🎯 Procesando revisión para ronda ${newRound} de ${submissionId}`);
 
       // ===== 1. ACTUALIZAR EL SUBMISSION =====
       await submissionRef.update({
@@ -5910,29 +5640,43 @@ exports.onAuthorRevisionSubmitted = onDocumentCreated(
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
       });
 
-      // ===== 2. ENCONTRAR AL EDITOR ASIGNADO ANTERIORMENTE =====
-      const tasksSnapshot = await db.collection('editorialTasks')
+      // ===== 2. BUSCAR LA TAREA PENDIENTE EN ESPERA DEL AUTOR =====
+      const pendingTaskSnapshot = await db.collection('editorialTasks')
         .where('submissionId', '==', submissionId)
+        .where('status', '==', 'awaiting-author-revision') // Buscar la tarea en espera
         .orderBy('createdAt', 'desc')
         .limit(1)
         .get();
 
-      let assignedTo = null;
-      let assignedToEmail = null;
-      let assignedToName = null;
+      let taskId, assignedTo, assignedToEmail, assignedToName, taskRef;
 
-      if (!tasksSnapshot.empty) {
-        const lastTask = tasksSnapshot.docs[0].data();
-        assignedTo = lastTask.assignedTo;
-        assignedToEmail = lastTask.assignedToEmail;
-        assignedToName = lastTask.assignedToName;
-        console.log(`👤 Editor anterior encontrado: ${assignedToEmail}`);
-      }
-
-      // Si no hay editor anterior, buscar uno por área
-      if (!assignedTo) {
-        console.log(`🔍 Buscando editor por área: ${submissionData.area}`);
+      if (!pendingTaskSnapshot.empty) {
+        // REACTIVAR la tarea existente
+        const existingTask = pendingTaskSnapshot.docs[0];
+        taskId = existingTask.id;
+        taskRef = existingTask.ref;
+        const taskData = existingTask.data();
         
+        assignedTo = taskData.assignedTo;
+        assignedToEmail = taskData.assignedToEmail;
+        assignedToName = taskData.assignedToName;
+
+        await taskRef.update({
+          status: 'in-progress', // La tarea vuelve a estar activa
+          round: newRound, // Actualizamos la ronda
+          // Resetear contadores para la nueva ronda
+          acceptedReviewers: 0,
+          reviewsSubmitted: 0,
+          reviewerIds: [], // Limpiar revisores anteriores para nueva ronda
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        
+        console.log(`✅ Tarea existente ${taskId} reactivada para ronda ${newRound}`);
+      } else {
+        // Fallback: Si no hay tarea en espera (ej. primera ronda), buscar un editor
+        console.log(`⚠️ No se encontró tarea en espera. Buscando editor para nueva tarea...`);
+        
+        // Buscar editor por área
         const sectionEditorSnapshot = await db.collection('users')
           .where('roles', 'array-contains', 'Editor de Sección')
           .where('editorialArea', '==', submissionData.area)
@@ -5957,16 +5701,55 @@ exports.onAuthorRevisionSubmitted = onDocumentCreated(
             assignedToName = chief.displayName || `${chief.firstName || ''} ${chief.lastName || ''}`.trim();
           }
         }
+
+        if (!assignedTo) {
+          assignedTo = 'system';
+          assignedToEmail = 'contact@revistacienciasestudiantes.com';
+          assignedToName = 'Editor Asignado';
+          console.log(`⚠️ No se encontró editor, asignando a contacto general`);
+        }
+
+        // Crear NUEVA tarea (solo como fallback)
+        const taskData = {
+          submissionId: submissionId,
+          submissionTitle: submissionData.title || 'Sin título',
+          round: newRound,
+          assignedTo: assignedTo,
+          assignedToEmail: assignedToEmail,
+          assignedToName: assignedToName,
+          assignedBy: 'system',
+          status: 'pending',
+          
+          // Datos de la versión anterior
+          previousVersions: {
+            versionId: versionId,
+            versionNumber: versionData.version || 0,
+            fileName: versionData.fileName || '',
+            fileUrl: versionData.fileUrl || '',
+            notes: versionData.notes || ''
+          },
+          
+          revisionNotes: versionData.notes || '',
+          
+          // Configuración de revisores
+          requiredReviewers: 2,
+          requiredReviews: 2,
+          acceptedReviewers: 0,
+          reviewsSubmitted: 0,
+          reviewerIds: [],
+          
+          // Fechas
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        };
+
+        const newTaskRef = await db.collection('editorialTasks').add(taskData);
+        taskId = newTaskRef.id;
+        taskRef = newTaskRef;
+        console.log(`✅ Nueva tarea editorial creada: ${taskId} para ronda ${newRound}`);
       }
 
-      if (!assignedTo) {
-        assignedTo = 'system';
-        assignedToEmail = 'contact@revistacienciasestudiantes.com';
-        assignedToName = 'Editor Asignado';
-        console.log(`⚠️ No se encontró editor, asignando a contacto general`);
-      }
-
-      // ===== 3. CREAR REGISTRO DE REVISIÓN EDITORIAL PRIMERO =====
+      // ===== 3. CREAR REGISTRO DE REVISIÓN EDITORIAL VINCULADO A LA TAREA =====
       const editorialReviewData = {
         submissionId: submissionId,
         round: newRound,
@@ -5974,89 +5757,53 @@ exports.onAuthorRevisionSubmitted = onDocumentCreated(
         editorUid: assignedTo,
         editorEmail: assignedToEmail,
         editorName: assignedToName,
+        editorialTaskId: taskId, // VINCULAR A LA TAREA CORRECTA
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
       };
 
       const editorialReviewRef = await db.collection('editorialReviews').add(editorialReviewData);
-      console.log(`✅ Registro editorial creado: ${editorialReviewRef.id}`);
+      console.log(`✅ Nuevo registro editorial creado: ${editorialReviewRef.id} para tarea ${taskId}`);
 
-      // ===== 4. CREAR NUEVA TAREA EDITORIAL CON EL editorialReviewId INCLUIDO =====
-      const taskData = {
-        submissionId: submissionId,
-        submissionTitle: submissionData.title || 'Sin título',
-        round: newRound,
-        assignedTo: assignedTo,
-        assignedToEmail: assignedToEmail,
-        assignedToName: assignedToName,
-        assignedBy: 'system',
-        status: 'pending', // Se actualizará a 'in-progress' cuando el editor empiece
-        
-        // ¡IMPORTANTE! Incluir el editorialReviewId directamente en la tarea
+      // ===== 4. ACTUALIZAR LA TAREA CON LA NUEVA REVIEW ID =====
+      await taskRef.update({
         editorialReviewId: editorialReviewRef.id,
-        currentReviewId: editorialReviewRef.id, // También este para compatibilidad
-        
-        // Datos de la versión anterior
-        previousVersions: {
-          versionId: versionId,
-          versionNumber: versionData.version || 0,
-          fileName: versionData.fileName || '',
-          fileUrl: versionData.fileUrl || '',
-          notes: versionData.notes || ''
-        },
-        
-        revisionNotes: versionData.notes || '',
-        
-        // Configuración de revisores
-        requiredReviewers: 2,
-        requiredReviews: 2,
-        acceptedReviewers: 0,
-        reviewsSubmitted: 0,
-        reviewerIds: [], // Array vacío para empezar
-        
-        // Fechas
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        currentReviewId: editorialReviewRef.id,
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      };
-
-      const taskRef = await db.collection('editorialTasks').add(taskData);
-      console.log(`✅ Nueva tarea editorial creada: ${taskRef.id} para ronda ${newRound}`);
-
-      // ===== 5. ACTUALIZAR LA REVISIÓN EDITORIAL CON EL TASK ID =====
-      await editorialReviewRef.update({
-        editorialTaskId: taskRef.id
       });
 
-      // ===== 6. ACTUALIZAR SUBMISSION CON REFERENCIAS =====
+      // ===== 5. ACTUALIZAR SUBMISSION CON REFERENCIAS =====
       await submissionRef.update({
-        currentEditorialTaskId: taskRef.id,
+        currentEditorialTaskId: taskId,
         currentEditorialReviewId: editorialReviewRef.id,
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
       });
 
-      // ===== 7. REGISTRAR EN AUDIT LOG =====
+      // ===== 6. REGISTRAR EN AUDIT LOG =====
       await db.collection('submissions').doc(submissionId)
         .collection('auditLogs').add({
-          action: 'new_round_auto_created',
+          action: pendingTaskSnapshot.empty ? 'new_round_created' : 'round_reactivated',
           round: newRound,
-          details: `Ronda ${newRound} creada automáticamente tras recibir revisión`,
-          taskId: taskRef.id,
+          details: pendingTaskSnapshot.empty 
+            ? `Ronda ${newRound} creada para nueva revisión` 
+            : `Ronda ${newRound} creada reactivando tarea ${taskId}`,
+          taskId: taskId,
           editorialReviewId: editorialReviewRef.id,
           versionId: versionId,
           assignedTo: assignedToEmail,
           timestamp: admin.firestore.FieldValue.serverTimestamp()
         });
 
-      // ===== 8. ENVIAR NOTIFICACIÓN AL EDITOR =====
+      // ===== 7. ENVIAR NOTIFICACIÓN AL EDITOR =====
       await sendNewRoundNotificationToEditor(
         submissionData,
-        taskData,
+        { ...(await taskRef.get()).data(), id: taskId },
         editorialReviewRef.id,
         versionData,
         newRound
       );
 
-      console.log(`🎉 Ronda ${newRound} creada exitosamente para ${submissionId}`);
+      console.log(`🎉 Ronda ${newRound} procesada exitosamente para ${submissionId} (tarea: ${taskId})`);
 
     } catch (error) {
       console.error(`❌ Error en onAuthorRevisionSubmitted:`, error.message);
@@ -6420,6 +6167,104 @@ exports.onArticleReadyForPublication = onDocumentUpdated(
     } catch (error) {
       console.error(`❌ Error en onArticleReadyForPublication:`, error.message);
       await logSystemError('onArticleReadyForPublication', error, { submissionId });
+    }
+  }
+);
+// ===================== ON REVIEW SUBMITTED - ACTUALIZAR SUBMISSION =====================
+// ===================== ON REVIEW SUBMITTED - VERSIÓN CORREGIDA =====================
+exports.onReviewerAssignmentSubmittedUpdateSubmission = onDocumentUpdated(
+  {
+    document: 'reviewerAssignments/{assignmentId}',
+    secrets: [],
+    memory: '256MiB'
+  },
+  async (event) => {
+    const beforeData = event.data.before.data();
+    const afterData = event.data.after.data();
+    const assignmentId = event.params.assignmentId;
+
+    // Solo cuando CAMBIA a 'submitted' (primera vez que se envía)
+    if (beforeData.status === afterData.status || afterData.status !== 'submitted') {
+      return;
+    }
+
+    console.log(`📝 [onReviewerAssignmentSubmittedUpdateSubmission] Revisión completada: ${assignmentId}`);
+
+    try {
+      const db = admin.firestore();
+      
+      // Los datos están DIRECTAMENTE en el documento
+      const assignment = afterData;
+      const submissionId = assignment.submissionId;
+      
+      if (!submissionId) {
+        console.error('❌ No submissionId en assignment');
+        return;
+      }
+
+      // ✅ EXTRAER DATOS DIRECTAMENTE DEL DOCUMENTO
+      const commentsToAuthor = assignment.commentsToAuthor || '';
+      const recommendation = assignment.recommendation || '';
+      const scores = assignment.scores || {};
+      const commentsToEditor = assignment.commentsToEditor || ''; // Solo para log
+      const submittedAt = assignment.submittedAt || admin.firestore.FieldValue.serverTimestamp();
+      const round = assignment.round || 1;
+
+      console.log('📊 Datos extraídos:', {
+        commentsToAuthor: commentsToAuthor ? commentsToAuthor.substring(0, 50) + '...' : '❌ Vacío',
+        recommendation: recommendation || '❌ Vacío',
+        scores: Object.keys(scores).length > 0 ? '✅' : '❌',
+        commentsToEditor: commentsToEditor ? '✅ (confidencial)' : '❌'
+      });
+
+      // Verificar que hay contenido real
+      if (!commentsToAuthor && !recommendation && Object.keys(scores).length === 0) {
+        console.log('⚠️ La revisión está completamente vacía, no se guardará');
+        return;
+      }
+
+      // Construir objeto ANÓNIMO para el autor (SIN datos del revisor)
+      const anonymousReview = {
+        commentsToAuthor: commentsToAuthor,
+        recommendation: recommendation,
+        scores: scores,
+        submittedAt: submittedAt,
+        round: round
+        // EXPLÍCITAMENTE NO INCLUIMOS:
+        // - reviewerEmail
+        // - reviewerName
+        // - reviewerUid
+        // - commentsToEditor (confidencial)
+        // - conflictOfInterest
+        // - invitationId
+      };
+
+      // Actualizar el submission
+      const submissionRef = db.collection('submissions').doc(submissionId);
+      
+      await submissionRef.update({
+        peerReviews: admin.firestore.FieldValue.arrayUnion(anonymousReview),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+
+      console.log(`✅ Revisión guardada en submission ${submissionId}`);
+
+      // Registrar en audit log
+      await db.collection('submissions').doc(submissionId)
+        .collection('auditLogs').add({
+          action: 'review_added_to_submission',
+          assignmentId: assignmentId,
+          reviewerEmail: assignment.reviewerEmail, // Solo para log interno
+          hasContent: !!(commentsToAuthor || recommendation),
+          timestamp: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+    } catch (error) {
+      console.error(`❌ Error:`, error.message);
+      console.error(error.stack);
+      await logSystemError('onReviewerAssignmentSubmittedUpdateSubmission', error, { 
+        assignmentId
+      });
     }
   }
 );

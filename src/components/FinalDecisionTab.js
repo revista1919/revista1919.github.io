@@ -2,21 +2,72 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '../hooks/useLanguage';
+import { useEditorialReview } from '../hooks/useEditorialReview';
+import { useAuth } from '../hooks/useAuth';
 
-export const FinalDecisionTab = ({ task, reviewers, onSubmitDecision, loading }) => {
+export const FinalDecisionTab = ({ task, reviewers, onSubmitDecision, loading: externalLoading }) => {
   const { language } = useLanguage();
+  const { user } = useAuth();
+  const { submitDeskReviewDecision, loading: hookLoading } = useEditorialReview(user);
   const isSpanish = language === 'es';
+  
   const [decision, setDecision] = useState('');
   const [feedback, setFeedback] = useState('');
   const [internalComments, setInternalComments] = useState('');
   const [selectedReview, setSelectedReview] = useState(null);
+  const [localLoading, setLocalLoading] = useState(false);
+
+  const loading = externalLoading || hookLoading || localLoading;
 
   const handleSubmit = async () => {
     if (!decision) {
       alert(isSpanish ? 'Selecciona una decisión' : 'Select a decision');
       return;
     }
-    await onSubmitDecision(task.id, { decision, feedbackToAuthor: feedback, commentsToEditorial: internalComments });
+
+    if (!task?.editorialReviewId) {
+      console.error('No editorialReviewId found in task:', task);
+      alert(isSpanish 
+        ? 'Error: No se encontró el ID de la revisión editorial' 
+        : 'Error: Editorial review ID not found');
+      return;
+    }
+
+    setLocalLoading(true);
+    try {
+      // Usar el hook useEditorialReview para enviar la decisión
+      const result = await submitDeskReviewDecision(task.editorialReviewId, {
+        decision,
+        feedbackToAuthor: feedback,
+        commentsToEditorial: internalComments,
+        submissionId: task.submissionId,
+        editorialTaskId: task.id
+      });
+
+      console.log('✅ Decisión guardada:', result);
+      
+      // Llamar al callback original por si es necesario
+      if (onSubmitDecision) {
+        await onSubmitDecision(task.id, { 
+          decision, 
+          feedbackToAuthor: feedback, 
+          commentsToEditorial: internalComments 
+        });
+      }
+
+      // Limpiar formulario
+      setDecision('');
+      setFeedback('');
+      setInternalComments('');
+      
+    } catch (error) {
+      console.error('❌ Error al guardar decisión:', error);
+      alert(isSpanish 
+        ? `Error al guardar la decisión: ${error.message}` 
+        : `Error saving decision: ${error.message}`);
+    } finally {
+      setLocalLoading(false);
+    }
   };
 
   return (
@@ -27,7 +78,7 @@ export const FinalDecisionTab = ({ task, reviewers, onSubmitDecision, loading })
           {isSpanish ? 'Resumen de Revisiones' : 'Review Summary'}
         </h4>
         <div className="space-y-3">
-          {reviewers.filter(r => r.status === 'submitted').map(r => (
+          {reviewers?.filter(r => r.status === 'submitted').map(r => (
             <div key={r.id} className="p-3 bg-white rounded-lg border border-yellow-100">
               <div className="flex justify-between items-start">
                 <div>
@@ -99,6 +150,11 @@ export const FinalDecisionTab = ({ task, reviewers, onSubmitDecision, loading })
               </AnimatePresence>
             </div>
           ))}
+          {(!reviewers || reviewers.filter(r => r.status === 'submitted').length === 0) && (
+            <p className="text-center text-[#5A6B7A] py-4">
+              {isSpanish ? 'No hay revisiones completadas aún' : 'No completed reviews yet'}
+            </p>
+          )}
         </div>
       </div>
 
@@ -141,6 +197,7 @@ export const FinalDecisionTab = ({ task, reviewers, onSubmitDecision, loading })
           placeholder={isSpanish 
             ? 'Sintetiza las revisiones y comunica tu decisión final al autor...' 
             : 'Synthesize the reviews and communicate your final decision to the author...'}
+          disabled={loading}
         />
       </div>
 
@@ -154,6 +211,7 @@ export const FinalDecisionTab = ({ task, reviewers, onSubmitDecision, loading })
           rows="3"
           className="w-full p-4 bg-[#F5F7FA] border border-[#E5E9F0] rounded-xl focus:ring-2 focus:ring-[#C0A86A] focus:border-transparent font-['Lora'] text-sm"
           placeholder={isSpanish ? 'Notas para el equipo editorial...' : 'Notes for the editorial team...'}
+          disabled={loading}
         />
       </div>
 
