@@ -3121,6 +3121,7 @@ exports.onReviewerInvitationCreated = onDocumentCreated(
  * 4. TRIGGER: Cuando un revisor RESPONDE a una invitación (se actualiza)
  * ----------------------------------------------------------------------------
  */
+// ===================== TRIGGER CORREGIDO =====================
 exports.onReviewerInvitationUpdated = onDocumentUpdated(
   {
     document: 'reviewerInvitations/{invitationId}',
@@ -3144,30 +3145,33 @@ exports.onReviewerInvitationUpdated = onDocumentUpdated(
 
       // Si el revisor ACEPTÓ, crear una asignación (reviewerAssignment)
       if (afterData.status === 'accepted') {
+        
+        // --- CORREGIDO: Calcular fecha límite como Timestamp de Firestore ---
+        const dueDate = new Date();
+        dueDate.setDate(dueDate.getDate() + 21); // 21 días desde ahora
+        
         const assignmentData = {
           submissionId: afterData.submissionId,
           editorialReviewId: afterData.editorialReviewId,
           round: afterData.round,
-          reviewerUid: afterData.reviewerUid, // <-- Esto debe ser llenado por el frontend al responder si el usuario está logueado, o ser null si es anónimo.
+          reviewerUid: afterData.reviewerUid,
           reviewerEmail: afterData.reviewerEmail,
           reviewerName: afterData.reviewerName,
           invitationId: invitationId,
-          status: 'pending', // Asignado, pero aún no ha enviado su revisión
+          status: 'pending',
           conflictOfInterest: afterData.conflictOfInterest,
           assignedAt: admin.firestore.FieldValue.serverTimestamp(),
-          dueDate: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000) // Plazo de 3 semanas
+          // --- CORREGIDO: Guardar como Timestamp de Firestore ---
+          dueDate: admin.firestore.Timestamp.fromDate(dueDate)
         };
 
         await db.collection('reviewerAssignments').add(assignmentData);
         console.log(`✅ [onReviewerInvitationUpdated] Asignación creada para revisor ${afterData.reviewerEmail}`);
 
-        // Opcional: Enviar email al revisor con instrucciones y acceso al documento
-        // (Aquí podrías enviar otro email con el enlace al documento en Drive)
         await sendReviewerAssignmentEmail(afterData);
 
       } else if (afterData.status === 'declined') {
         console.log(`ℹ️ [onReviewerInvitationUpdated] Revisor ${afterData.reviewerEmail} declinó la invitación.`);
-        // Opcional: Notificar al editor que la invitación fue declinada
       }
 
     } catch (error) {
@@ -3176,7 +3180,6 @@ exports.onReviewerInvitationUpdated = onDocumentUpdated(
     }
   }
 );
-
 
 // ============================================================================
 // ==================== FUNCIONES AUXILIARES PARA EMAILS ====================

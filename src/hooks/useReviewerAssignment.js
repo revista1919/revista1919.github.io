@@ -1,4 +1,4 @@
-// src/hooks/useReviewerAssignment.js (VERSIÓN CORREGIDA - COMPLETA)
+// src/hooks/useReviewerAssignment.js (VERSIÓN CON MANEJO SEGURO DE FECHAS)
 import { useState, useCallback } from 'react';
 import { db } from '../firebase';
 import { 
@@ -31,10 +31,15 @@ export const useReviewerAssignment = (user) => {
         orderBy('createdAt', 'desc')
       );
       const snapshot = await getDocs(q);
-      const assignments = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const assignments = snapshot.docs.map(doc => {
+        const data = doc.data();
+        // Convertir dueDate a Date si es Timestamp
+        return {
+          id: doc.id,
+          ...data,
+          dueDate: data.dueDate?.toDate ? data.dueDate.toDate() : data.dueDate
+        };
+      });
       return { success: true, assignments };
     } catch (err) {
       console.error('Error getting reviewer assignments:', err);
@@ -50,7 +55,16 @@ export const useReviewerAssignment = (user) => {
       const docRef = doc(db, 'reviewerAssignments', assignmentId);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
-        return { success: true, assignment: { id: docSnap.id, ...docSnap.data() } };
+        const data = docSnap.data();
+        // Convertir dueDate a Date si es Timestamp
+        return { 
+          success: true, 
+          assignment: { 
+            id: docSnap.id, 
+            ...data,
+            dueDate: data.dueDate?.toDate ? data.dueDate.toDate() : data.dueDate
+          } 
+        };
       } else {
         return { success: false, error: 'Assignment not found' };
       }
@@ -74,7 +88,15 @@ export const useReviewerAssignment = (user) => {
       const assignments = [];
       
       for (const docSnap of snapshot.docs) {
-        const assignment = { id: docSnap.id, ...docSnap.data() };
+        const assignmentData = docSnap.data();
+        
+        // Convertir dueDate a Date si es Timestamp
+        const assignment = { 
+          id: docSnap.id, 
+          ...assignmentData,
+          dueDate: assignmentData.dueDate?.toDate ? assignmentData.dueDate.toDate() : assignmentData.dueDate
+        };
+        
         // Obtener el submission asociado
         const submissionSnap = await getDoc(doc(db, 'submissions', assignment.submissionId));
         if (submissionSnap.exists()) {
@@ -153,7 +175,6 @@ export const useReviewerAssignment = (user) => {
         updatedAt: serverTimestamp()
       });
 
-      // --- CORREGIDO: Usar sintaxis modular de Firebase v9 ---
       // Actualizar el deadline asociado
       const deadlinesQuery = query(
         collection(db, 'deadlines'),
