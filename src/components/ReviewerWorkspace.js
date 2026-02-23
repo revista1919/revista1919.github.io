@@ -1,4 +1,3 @@
-// src/components/ReviewerWorkspace.js (VERSIÓN CORREGIDA)
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactQuill from 'react-quill';
@@ -6,7 +5,7 @@ import 'react-quill/dist/quill.snow.css';
 import { useLanguage } from '../hooks/useLanguage';
 import { useReviewerAssignment } from '../hooks/useReviewerAssignment';
 import { db } from '../firebase';
-import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, collection, query, where, getDocs } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
 
 const REVIEW_CRITERIA = {
@@ -132,15 +131,12 @@ export const ReviewerWorkspace = ({ assignmentId, onClose, readOnly = false }) =
         }
 
         // Cargar deadline
-        const deadlinesQuery = await db.collection('deadlines')
-          .where('targetId', '==', assignmentId)
-          .where('type', '==', 'review-submission')
-          .limit(1)
-          .get();
-        
-        if (!deadlinesQuery.empty) {
-          setDeadline(deadlinesQuery.docs[0].data());
-        }
+        const deadlinesQuery = query(
+  collection(db, 'deadlines'),
+  where('targetId', '==', assignmentId),
+  where('type', '==', 'review-submission')
+);
+const deadlinesSnapshot = await getDocs(deadlinesQuery);
       }
     };
 
