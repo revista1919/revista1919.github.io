@@ -1,10 +1,10 @@
-// src/components/AuthorSubmissionsPanel.js (VERSIÓN COMPLETA CON INTEGRACIÓN)
+// src/components/AuthorSubmissionsPanel.js (VERSIÓN CORREGIDA)
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { db, auth, submitRevision } from '../firebase'; // <-- IMPORTAMOS submitRevision
+import { db, auth, submitRevision } from '../firebase';
 import { collection, query, where, onSnapshot, doc, updateDoc, serverTimestamp, addDoc } from 'firebase/firestore';
 import { useLanguage } from '../hooks/useLanguage';
-import { AuthorMetadataResponseTab } from './AuthorMetadataResponseTab'; // <-- NUEVO IMPORT
+import { AuthorMetadataResponseTab } from './AuthorMetadataResponseTab';
 
 const SUBMISSION_STATES = {
   'submitted': { 
@@ -77,6 +77,16 @@ const SUBMISSION_STATES = {
       en: 'Reviews are complete. The editor will make a final decision soon'
     }
   },
+  'revisions-requested': { 
+    es: 'Revisiones solicitadas', 
+    en: 'Revisions requested',
+    color: 'bg-orange-100 text-orange-700',
+    icon: '📝',
+    description: { 
+      es: 'El editor ha solicitado cambios en tu artículo. Por favor, sube una versión revisada.',
+      en: 'The editor has requested changes to your article. Please upload a revised version.'
+    }
+  },
   'minor-revision-required': { 
     es: 'Revisiones menores requeridas', 
     en: 'Minor revisions required',
@@ -127,7 +137,7 @@ const SUBMISSION_STATES = {
       en: 'The article has not been accepted for publication'
     }
   },
-  'metadata_refinement_pending': { // <-- NUEVO ESTADO
+  'metadata_refinement_pending': {
     es: 'Revisando metadatos', 
     en: 'Reviewing metadata',
     color: 'bg-teal-100 text-teal-700',
@@ -413,7 +423,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
                       </p>
                     </div>
 
-                    {/* PROPUESTA DE REFINAMIENTO DE METADATOS - NUEVO */}
+                    {/* PROPUESTA DE REFINAMIENTO DE METADATOS */}
                     {sub.metadataRefinement?.status === 'pending-author' && (
                       <div className="mb-6">
                         <AuthorMetadataResponseTab
@@ -519,7 +529,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
                       </div>
                     )}
 
-                    {/* Historial de versiones de metadatos - NUEVO */}
+                    {/* Historial de versiones de metadatos */}
                     {sub.metadataVersions?.length > 0 && (
                       <div className="mb-6">
                         <h4 className="font-['Playfair_Display'] font-semibold text-[#0A1929] mb-3">
@@ -600,8 +610,9 @@ const AuthorSubmissionsPanel = ({ user }) => {
                       )}
                     </div>
 
-                    {/* Botón para subir revisión si es necesario */}
-                    {(sub.status === 'minor-revision-required' || 
+                    {/* Botón para subir revisión si es necesario - VERSIÓN CORREGIDA */}
+                    {(sub.status === 'revisions-requested' || 
+                      sub.status === 'minor-revision-required' || 
                       sub.status === 'major-revision-required' || 
                       sub.status === 'awaiting-revision') && (
                       <button
