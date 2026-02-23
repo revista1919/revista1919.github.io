@@ -28,11 +28,11 @@ export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading
       }
 
       // Validar que hay un reviewId en el task
-      if (!task.reviewId) {
-        console.error('No reviewId found in task');
-        alert(isSpanish ? 'Error: ID de revisión no encontrado' : 'Error: Review ID not found');
-        return;
-      }
+      if (!task.editorialReviewId) {
+  console.error('No editorialReviewId found in task');
+  alert(isSpanish ? 'Error: ID de revisión no encontrado' : 'Error: Review ID not found');
+  return;
+}
 
       // Preparar los datos de la decisión
       const decisionData = {
@@ -42,7 +42,7 @@ export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading
       };
 
       // Enviar la decisión usando el hook
-      const result = await submitDeskReviewDecision(task.reviewId, decisionData);
+      const result = await submitDeskReviewDecision(task.editorialReviewId, decisionData);
       
       if (result.success) {
         // Si hay una función onComplete, llamarla
@@ -51,7 +51,7 @@ export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading
             decision,
             feedback,
             internalComments,
-            reviewId: task.reviewId
+            reviewId: task.editorialReviewId
           });
         }
         
