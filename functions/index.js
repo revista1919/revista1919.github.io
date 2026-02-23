@@ -526,6 +526,7 @@ exports.uploadNews = onRequest(
 
 /* ===================== MANAGE ARTICLES ===================== */
 /* ===================== MANAGE ARTICLES ===================== */
+/* ===================== MANAGE ARTICLES COMPLETO CON HISTORIAL INMUTABLE Y RETRACTACIÓN (SIN DOI) ===================== */
 exports.manageArticles = onRequest(
   { 
     secrets: [GH_TOKEN],
@@ -553,7 +554,6 @@ exports.manageArticles = onRequest(
     res.set('Access-Control-Max-Age', '3600');
     res.set('Vary', 'Origin');
 
-    // En manageArticles, justo después del bloque CORS
     console.log(`🔍 manageArticles - Request recibido:`);
     console.log(`🔍 Method: ${req.method}`);
     console.log(`🔍 Path: ${req.path}`);
@@ -619,13 +619,13 @@ exports.manageArticles = onRequest(
         return res.status(403).json({ error: "Se requiere rol de Director General" });
       }
 
-      const { action, article, pdfBase64, id } = req.body;
+      const { action, article, pdfBase64, id, retractionReason } = req.body;
       
       if (!action) {
-        return res.status(400).json({ error: "Acción requerida (add/edit/delete)" });
+        return res.status(400).json({ error: "Acción requerida (add/edit/delete/retract/publish)" });
       }
 
-      console.log(`[${requestId}] 📋 Acción recibida: ${action}, ID: ${id || 'nuevo'}`); // <-- PUNTO 1
+      console.log(`[${requestId}] 📋 Acción recibida: ${action}, ID: ${id || 'nuevo'}`);
 
       const octokit = getOctokit();
       const REPO_OWNER = "revista1919";
@@ -760,6 +760,7 @@ exports.manageArticles = onRequest(
       let updatedArticles = [...currentArticles];
       let responseData = {};
 
+      // ===== ACCIÓN: ADD (CREAR ARTÍCULO) =====
       if (action === "add") {
         if (!article?.titulo) {
           return res.status(400).json({ error: "Datos de artículo incompletos - título requerido" });
@@ -808,7 +809,8 @@ exports.manageArticles = onRequest(
           pdfUrl: "",
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-          createdBy: user.uid
+          createdBy: user.uid,
+          status: "draft" // Estado inicial: borrador
         };
 
         if (pdfBase64) {
@@ -839,12 +841,12 @@ exports.manageArticles = onRequest(
         };
       }
 
-      // --- BLOQUE EDIT ---
+      // ===== ACCIÓN: EDIT (EDITAR ARTÍCULO) =====
       if (action === "edit") {
-        console.log(`[${requestId}] 🟢 ENTRÓ al bloque EDIT`); // <-- PUNTO 2
+        console.log(`[${requestId}] 🟢 ENTRÓ al bloque EDIT`);
         
         if (!id) {
-          console.log(`[${requestId}] 🔴 EDIT falló: ID requerido`); // <-- PUNTO 4
+          console.log(`[${requestId}] 🔴 EDIT falló: ID requerido`);
           return res.status(400).json({ error: "ID de artículo requerido" });
         }
 
@@ -852,7 +854,7 @@ exports.manageArticles = onRequest(
         const index = updatedArticles.findIndex(a => String(a.numeroArticulo) === String(articleNumber));
         
         if (index === -1) {
-          console.log(`[${requestId}] 🔴 EDIT falló: Artículo #${articleNumber} no encontrado`); // <-- PUNTO 4
+          console.log(`[${requestId}] 🔴 EDIT falló: Artículo #${articleNumber} no encontrado`);
           return res.status(404).json({ error: "Artículo no encontrado" });
         }
 
@@ -917,7 +919,8 @@ exports.manageArticles = onRequest(
           html_en: article.html_en !== undefined ? article.html_en : oldArticle.html_en,
           referencias: article.referencias !== undefined ? article.referencias : oldArticle.referencias,
           updatedAt: new Date().toISOString(),
-          updatedBy: user.uid
+          updatedBy: user.uid,
+          status: oldArticle.status || "draft"
         };
 
         if (pdfBase64) {
@@ -957,10 +960,10 @@ exports.manageArticles = onRequest(
           message: "Artículo actualizado exitosamente"
         };
         
-        console.log(`[${requestId}] 🟢 EDIT completado. Preparando respuesta exitosa...`); // <-- PUNTO 3
-        // La respuesta se envía FUERA de este bloque, pero el flujo continúa.
+        console.log(`[${requestId}] 🟢 EDIT completado. Preparando respuesta exitosa...`);
       }
 
+      // ===== ACCIÓN: DELETE (ELIMINAR ARTÍCULO) =====
       if (action === "delete") {
         if (!id) {
           return res.status(400).json({ error: "ID de artículo requerido" });
@@ -998,17 +1001,164 @@ exports.manageArticles = onRequest(
         };
       }
 
-      // --- RESPUESTA FINAL ---
-      if (action === "add" || action === "edit" || action === "delete") {
-        console.log(`[${requestId}] 🟢 Entrando al bloque de guardado y respuesta final para acción: ${action}`); // <-- PUNTO 3 (alternativo)
+      // ===== NUEVA ACCIÓN: PUBLISH (PUBLICAR ARTÍCULO - SIN DOI) =====
+      if (action === "publish") {
+        console.log(`[${requestId}] 🟢 ENTRÓ al bloque PUBLISH`);
+        
+        if (!id) {
+          return res.status(400).json({ error: "ID de artículo requerido" });
+        }
+
+        const articleNumber = parseInt(id);
+        const index = updatedArticles.findIndex(a => String(a.numeroArticulo) === String(articleNumber));
+        
+        if (index === -1) {
+          return res.status(404).json({ error: "Artículo no encontrado" });
+        }
+
+        const articleToPublish = updatedArticles[index];
+        console.log(`[${requestId}] 📝 Publicando artículo #${articleNumber}: ${articleToPublish.titulo}`);
+
+        // SOLO actualizar estado - SIN DOI
+        articleToPublish.status = "published";
+        articleToPublish.publishedAt = new Date().toISOString();
+        articleToPublish.updatedAt = new Date().toISOString();
+        articleToPublish.updatedBy = user.uid;
+        articleToPublish.publishedBy = user.uid;
+
+        updatedArticles[index] = articleToPublish;
+        responseData = { 
+          success: true,
+          articleNumber: articleNumber,
+          message: "Artículo publicado exitosamente"
+          // SIN DOI
+        };
+        
+        console.log(`[${requestId}] 🟢 PUBLISH completado.`);
+      }
+
+      // ===== NUEVA ACCIÓN: RETRACT (RETRACTAR ARTÍCULO - ELIMINA PERO GUARDA LOG) =====
+      if (action === "retract") {
+        console.log(`[${requestId}] 🟢 ENTRÓ al bloque RETRACT`);
+        
+        if (!id) {
+          return res.status(400).json({ error: "ID de artículo requerido" });
+        }
+
+        const articleNumber = parseInt(id);
+        const index = updatedArticles.findIndex(a => String(a.numeroArticulo) === String(articleNumber));
+        
+        if (index === -1) {
+          return res.status(404).json({ error: "Artículo no encontrado" });
+        }
+
+        const articleToRetract = { ...updatedArticles[index] }; // Copia para el log
+        console.log(`[${requestId}] 🔴 Retractando artículo #${articleNumber}: ${articleToRetract.titulo}`);
+
+        // 1. Eliminar PDF si existe
+        if (articleToRetract.pdfUrl) {
+          try {
+            const fileName = articleToRetract.pdfUrl.split('/').pop();
+            console.log(`[${requestId}] 🗑️ Eliminando PDF: ${fileName}`);
+            
+            await deletePDF(
+              fileName,
+              `Delete PDF for retracted article #${articleNumber}: ${articleToRetract.titulo}`
+            );
+          } catch (pdfError) {
+            console.error(`[${requestId}] ⚠️ Error eliminando PDF:`, pdfError.message);
+          }
+        }
+
+        // 2. Eliminar el artículo del array
+        updatedArticles.splice(index, 1);
+
+        // 3. Guardar LOG DE RETRACTACIÓN en Firestore
+        try {
+          console.log(`[${requestId}] 📦 Guardando log de retractación...`);
+          
+          const retractionLog = {
+            type: "ARTICLE_RETRACTION",
+            articleNumber: articleNumber,
+            article: articleToRetract,
+            retractionReason: retractionReason || "No se proporcionó razón",
+            retractedBy: user.uid,
+            retractedByEmail: user.email || 'unknown',
+            retractedAt: admin.firestore.FieldValue.serverTimestamp(),
+            requestId: requestId,
+            action: "retract"
+          };
+
+          await admin.firestore().collection('retractionLogs').add(retractionLog);
+          console.log(`[${requestId}] ✅ Log de retractación guardado`);
+          
+        } catch (logError) {
+          console.error(`[${requestId}] ⚠️ Error guardando log de retractación:`, logError.message);
+          // No fallamos la operación principal si el log falla
+        }
+
+        responseData = { 
+          success: true,
+          articleNumber: articleNumber,
+          message: "Artículo retractado y eliminado exitosamente",
+          retracted: true
+        };
+        
+        console.log(`[${requestId}] 🟢 RETRACT completado. Artículo eliminado y log guardado.`);
+      }
+
+      // ===== RESPUESTA FINAL Y GUARDADO PARA ACCIONES QUE MODIFICAN EL JSON =====
+      if (["add", "edit", "publish", "delete", "retract"].includes(action)) {
+        console.log(`[${requestId}] 🟢 Guardando cambios en GitHub para acción: ${action}`);
         
         updatedArticles.sort((a, b) => (a.numeroArticulo || 0) - (b.numeroArticulo || 0));
         
-        const commitMessage = `[${action}] Artículo ${action === 'add' ? 'agregado' : action === 'edit' ? 'actualizado' : 'eliminado'} #${responseData.articleNumber || ''} por ${user.email || user.uid}`;
+        let commitMessage;
+        if (action === "retract") {
+          commitMessage = `[RETRACT] Artículo retractado #${responseData.articleNumber} por ${user.email || user.uid}`;
+        } else {
+          commitMessage = `[${action}] Artículo ${action === 'add' ? 'agregado' : action === 'edit' ? 'actualizado' : action === 'publish' ? 'publicado' : 'eliminado'} #${responseData.articleNumber || ''} por ${user.email || user.uid}`;
+        }
         
         await saveArticlesJson(updatedArticles, sha, commitMessage);
         console.log(`[${requestId}] ✅ articles.json actualizado en GitHub`);
 
+        // ===== GENERAR HISTORIAL INMUTABLE (para acciones que finalizan/publican) =====
+        if (["add", "edit", "publish"].includes(action)) {
+          try {
+            console.log(`[${requestId}] 📦 Generando historial inmutable para artículo #${responseData.articleNumber}...`);
+            
+            // Buscar el artículo en el array actualizado
+            const targetArticle = updatedArticles.find(a => 
+              String(a.numeroArticulo) === String(responseData.articleNumber)
+            );
+            
+            if (targetArticle) {
+              const historyResult = await createImmutableArticleHistory(
+                targetArticle,
+                user,
+                action,
+                requestId
+              );
+              
+              console.log(`[${requestId}] ✅ Historial inmutable generado: ${historyResult.historyId}`);
+              console.log(`[${requestId}] 🔒 Hash: ${historyResult.hash}`);
+              
+              // Añadir info del historial a la respuesta
+              responseData.immutableHistory = {
+                id: historyResult.historyId,
+                hash: historyResult.hash,
+                createdAt: new Date().toISOString()
+              };
+            }
+          } catch (historyError) {
+            // No fallar la petición principal si el historial falla, pero loguearlo
+            console.error(`[${requestId}] ⚠️ Error generando historial inmutable:`, historyError.message);
+            responseData.immutableHistoryError = historyError.message;
+          }
+        }
+
+        // ===== TRIGGER REBUILD =====
         try {
           await octokit.request("POST /repos/{owner}/{repo}/dispatches", {
             owner: "revista1919",
@@ -1017,7 +1167,8 @@ exports.manageArticles = onRequest(
             client_payload: {
               action: action,
               articleNumber: responseData.articleNumber,
-              triggeredBy: user.uid
+              triggeredBy: user.uid,
+              immutableHistoryId: responseData.immutableHistory?.id
             }
           });
           console.log(`[${requestId}] 🔄 Rebuild triggered for main site`);
@@ -1025,7 +1176,7 @@ exports.manageArticles = onRequest(
           console.error(`[${requestId}] ⚠️ Error en rebuild:`, rebuildError.message);
         }
 
-        console.log(`[${requestId}] 🟢 A punto de enviar respuesta JSON exitosa.`); // <-- PUNTO 3 (clave)
+        console.log(`[${requestId}] 🟢 Enviando respuesta exitosa...`);
         
         return res.json({ 
           success: true,
@@ -1033,8 +1184,8 @@ exports.manageArticles = onRequest(
         });
       }
 
-      // --- SI LLEGAMOS AQUÍ, ACCIÓN NO VÁLIDA ---
-      console.log(`[${requestId}] 🔴 Acción inválida: "${action}" no fue capturada por ningún bloque.`); // <-- PUNTO 5
+      // Si llegamos aquí, acción no válida
+      console.log(`[${requestId}] 🔴 Acción inválida: "${action}"`);
       return res.status(400).json({ error: "Acción inválida" });
 
     } catch (err) {
@@ -1062,6 +1213,171 @@ exports.manageArticles = onRequest(
     }
   }
 );
+
+// ===================== FUNCIÓN AUXILIAR PARA CREAR HISTORIAL INMUTABLE (SIN DOI) =====================
+async function createImmutableArticleHistory(article, user, action, requestId) {
+  try {
+    const db = admin.firestore();
+    const crypto = require('crypto');
+    
+    console.log(`[${requestId}] 📦 Construyendo objeto de historial inmutable...`);
+    
+    // 1. Buscar si ya existe un historial para este artículo
+    const existingHistoryQuery = await db.collection('immutableHistories')
+      .where('articleNumber', '==', article.numeroArticulo)
+      .orderBy('control.createdAt', 'desc')
+      .limit(1)
+      .get();
+    
+    let previousHistoryId = null;
+    if (!existingHistoryQuery.empty) {
+      previousHistoryId = existingHistoryQuery.docs[0].id;
+      console.log(`[${requestId}] 📚 Versión anterior encontrada: ${previousHistoryId}`);
+    }
+    
+    // 2. Procesar autores para formato final
+    const processedAuthors = (article.autores || []).map(author => {
+      return {
+        name: author.name || `${author.firstName || ''} ${author.lastName || ''}`.trim(),
+        authorId: author.authorId || null,
+        email: author.email || null,
+        institution: author.institution || null,
+        orcid: author.orcid || null,
+        fullName: author.name || `${author.firstName || ''} ${author.lastName || ''}`.trim()
+      };
+    });
+    
+    // 3. Construir el objeto de historia (SIN DOI)
+    const immutableHistory = {
+      version: "1.0.0",
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdBy: user.uid,
+      createdByEmail: user.email || 'unknown',
+      createdByAction: action,
+      requestId: requestId,
+      
+      // Identificadores del artículo
+      articleNumber: article.numeroArticulo,
+      submissionId: article.submissionId || null,
+      
+      // METADATOS FINALES DEL ARTÍCULO (SIN DOI)
+      finalMetadata: {
+        title: article.titulo,
+        titleEn: article.tituloEnglish || '',
+        authors: processedAuthors,
+        abstract: article.resumen || '',
+        abstractEn: article.abstract || '',
+        keywords: article.palabras_clave || [],
+        keywordsEn: article.keywords_english || [],
+        area: article.area || '',
+        tipo: article.tipo || 'Artículo de Investigación',
+        type: article.type || 'Research Article',
+        fecha: article.fecha || '',
+        receivedDate: article.receivedDate || '',
+        acceptedDate: article.acceptedDate || '',
+        publication: {
+          volumen: article.volumen || '',
+          numero: article.numero || '',
+          primeraPagina: article.primeraPagina || '',
+          ultimaPagina: article.ultimaPagina || '',
+          pdfUrl: article.pdfUrl || ''
+          // SIN DOI
+        },
+        acknowledgments: article.acknowledgments || '',
+        acknowledgmentsEnglish: article.acknowledgmentsEnglish || '',
+        funding: article.funding || 'No declarada',
+        fundingEnglish: article.fundingEnglish || 'Not declared',
+        conflicts: article.conflicts || 'Los autores declaran no tener conflictos de interés.',
+        conflictsEnglish: article.conflictsEnglish || 'The authors declare no conflicts of interest.',
+        authorCredits: article.authorCredits || '',
+        authorCreditsEnglish: article.authorCreditsEnglish || '',
+        dataAvailability: article.dataAvailability || '',
+        dataAvailabilityEnglish: article.dataAvailabilityEnglish || '',
+        html_es: article.html_es || '',
+        html_en: article.html_en || '',
+        referencias: article.referencias || ''
+      },
+      
+      // INFORMACIÓN DE CONTROL
+      control: {
+        createdBy: user.uid,
+        createdByEmail: user.email,
+        createdAt: new Date().toISOString(),
+        lastAction: action,
+        previousHistoryId: previousHistoryId,
+        isLatest: true,
+        articleStatus: article.status || 'published'
+      },
+      
+      // HASH (se calculará después)
+      hash: null,
+      
+      previousVersions: previousHistoryId ? [previousHistoryId] : []
+    };
+    
+    // 4. Si existe un historial anterior, marcarlo como no latest
+    if (previousHistoryId) {
+      await db.collection('immutableHistories').doc(previousHistoryId).update({
+        'control.isLatest': false,
+        'control.supersededBy': null,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+    }
+    
+    // 5. Calcular hash SHA-256
+    const hashObj = { ...immutableHistory };
+    delete hashObj.hash;
+    delete hashObj.createdAt; // Excluir timestamp de Firebase del hash
+    
+    const hashString = JSON.stringify(hashObj, (key, value) => {
+      if (value && typeof value === 'object' && value.toDate) {
+        return value.toDate().toISOString();
+      }
+      return value;
+    });
+    
+    immutableHistory.hash = crypto
+      .createHash('sha256')
+      .update(hashString)
+      .digest('hex');
+    
+    // 6. Guardar en Firestore
+    let historyRef;
+    if (previousHistoryId) {
+      historyRef = await db.collection('immutableHistories').add(immutableHistory);
+      
+      // Actualizar el anterior con la referencia al nuevo
+      await db.collection('immutableHistories').doc(previousHistoryId).update({
+        'control.supersededBy': historyRef.id,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+    } else {
+      historyRef = await db.collection('immutableHistories').add(immutableHistory);
+    }
+    
+    console.log(`[${requestId}] ✅ Historial guardado con ID: ${historyRef.id}`);
+    
+    return {
+      historyId: historyRef.id,
+      hash: immutableHistory.hash,
+      articleNumber: article.numeroArticulo
+    };
+    
+  } catch (error) {
+    console.error(`[${requestId}] ❌ Error en createImmutableArticleHistory:`, error);
+    throw error;
+  }
+}
+
+// ===================== FUNCIÓN AUXILIAR PARA GENERAR SLUG =====================
+function generateSlug(text) {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .substring(0, 50);
+}
 
 /* ===================== MANAGE VOLUMES ===================== */
 exports.manageVolumes = onRequest(
@@ -5937,6 +6253,173 @@ exports.onEditorialReviewCreated = onDocumentCreated(
     } catch (error) {
       console.error(`❌ [onEditorialReviewCreated] Error:`, error.message);
       await logSystemError('onEditorialReviewCreated', error, { reviewId, ...reviewData });
+    }
+  }
+);
+// ===================== NOTIFICAR DIRECTOR CUANDO ARTÍCULO ESTÉ LISTO =====================
+exports.onArticleReadyForPublication = onDocumentUpdated(
+  {
+    document: 'submissions/{submissionId}',
+    secrets: [], // Usa la extensión de email
+    memory: '256MiB'
+  },
+  async (event) => {
+    const beforeData = event.data.before.data();
+    const afterData = event.data.after.data();
+    const submissionId = event.params.submissionId;
+
+    // Solo proceder si publicationReady cambió de false a true
+    if (beforeData.publicationReady === afterData.publicationReady || afterData.publicationReady !== true) {
+      return;
+    }
+
+    console.log(`📢 [onArticleReadyForPublication] Artículo ${submissionId} marcado como listo para publicación.`);
+
+    try {
+      const db = admin.firestore();
+
+      // 1. Obtener los emails de los Directores Generales
+      const directorsSnapshot = await db.collection('users')
+        .where('roles', 'array-contains', 'Director General')
+        .get();
+
+      const directorEmails = [];
+      directorsSnapshot.forEach(doc => {
+        const userData = doc.data();
+        if (userData.email) {
+          directorEmails.push({
+            email: userData.email,
+            name: userData.displayName || `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || 'Director'
+          });
+        }
+      });
+
+      if (directorEmails.length === 0) {
+        console.warn('⚠️ No se encontraron Directores Generales en la base de datos.');
+        // Fallback a un email de contacto
+        directorEmails.push({ email: 'contact@revistacienciasestudiantes.com', name: 'Director General' });
+      }
+
+      // 2. Obtener datos del artículo
+      const submission = afterData;
+      const lang = submission.paperLanguage || 'es';
+      const isSpanish = lang === 'es';
+
+      // 3. Construir el email
+      const emailTitle = isSpanish
+        ? `✅ Artículo listo para publicación: "${submission.title.substring(0, 60)}..."`
+        : `✅ Article ready for publication: "${submission.title.substring(0, 60)}..."`;
+
+      // Información de los metadatos finales
+      const finalMetadata = submission.currentMetadata || submission.originalSubmission || {};
+      
+      // Crear una lista de metadatos
+      const metadataList = `
+        <ul style="margin-top: 10px;">
+          <li><strong>Título:</strong> ${finalMetadata.title || 'N/A'}</li>
+          ${finalMetadata.titleEn ? `<li><strong>Title (EN):</strong> ${finalMetadata.titleEn}</li>` : ''}
+          <li><strong>Autores:</strong> ${finalMetadata.authors?.map(a => `${a.firstName} ${a.lastName}`).join('; ') || 'N/A'}</li>
+          <li><strong>Área:</strong> ${finalMetadata.area || 'N/A'}</li>
+          <li><strong>Palabras clave:</strong> ${finalMetadata.keywords?.join('; ') || 'N/A'}</li>
+        </ul>
+      `;
+
+      const bodyContent = isSpanish
+        ? `
+          <p>El artículo <strong>"${submission.title}"</strong> ha sido marcado como <strong>listo para publicación</strong> por el equipo editorial.</p>
+          
+          <div class="highlight-box">
+            <p class="article-title">"${submission.title}"</p>
+            <p><strong>ID del envío:</strong> ${submission.submissionId}</p>
+            <p><strong>Autor/a:</strong> ${submission.authorName || 'N/A'} (${submission.authorEmail || 'N/A'})</p>
+            <p><strong>Marcado por:</strong> ${afterData.publicationReadyBy || 'Sistema'}</p>
+            <p><strong>Fecha:</strong> ${afterData.publicationReadyAt?.toDate?.()?.toLocaleString('es-CL') || 'Fecha no disponible'}</p>
+          </div>
+          
+          <h3>📄 Metadatos finales:</h3>
+          ${metadataList}
+          
+          <h3>🔍 Acciones requeridas:</h3>
+          <ol>
+            <li>Revisar los metadatos finales del artículo.</li>
+            <li>Verificar que todos los documentos (manuscrito, figuras, etc.) estén en orden.</li>
+            <li>Proceder con la maquetación y asignación de DOI (si corresponde).</li>
+            <li>Programar la publicación en el próximo número/volumen.</li>
+          </ol>
+          
+          <div class="button-container">
+            <a href="https://www.revistacienciasestudiantes.com/${isSpanish ? 'es' : 'en'}/director/dashboard" class="btn">IR AL PANEL</a>
+            <a href="${submission.driveFolderUrl || '#'}" class="btn btn-secondary">VER CARPETA EN DRIVE</a>
+          </div>
+        `
+        : `
+          <p>The article <strong>"${submission.title}"</strong> has been marked as <strong>ready for publication</strong> by the editorial team.</p>
+          
+          <div class="highlight-box">
+            <p class="article-title">"${submission.title}"</p>
+            <p><strong>Submission ID:</strong> ${submission.submissionId}</p>
+            <p><strong>Author:</strong> ${submission.authorName || 'N/A'} (${submission.authorEmail || 'N/A'})</p>
+            <p><strong>Marked by:</strong> ${afterData.publicationReadyBy || 'System'}</p>
+            <p><strong>Date:</strong> ${afterData.publicationReadyAt?.toDate?.()?.toLocaleString('en-US') || 'Date not available'}</p>
+          </div>
+          
+          <h3>📄 Final metadata:</h3>
+          ${metadataList}
+          
+          <h3>🔍 Required actions:</h3>
+          <ol>
+            <li>Review the final article metadata.</li>
+            <li>Verify that all documents (manuscript, figures, etc.) are in order.</li>
+            <li>Proceed with layout and DOI assignment (if applicable).</li>
+            <li>Schedule publication in the next issue/volume.</li>
+          </ol>
+          
+          <div class="button-container">
+            <a href="https://www.revistacienciasestudiantes.com/${isSpanish ? 'es' : 'en'}/director/dashboard" class="btn">GO TO DASHBOARD</a>
+            <a href="${submission.driveFolderUrl || '#'}" class="btn btn-secondary">VIEW DRIVE FOLDER</a>
+          </div>
+        `;
+
+      const htmlBody = getEmailTemplate(
+        emailTitle,
+        isSpanish ? 'Estimado/a Director General:' : 'Dear General Director:',
+        bodyContent,
+        isSpanish ? 'Sistema Editorial' : 'Editorial System',
+        isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
+        isSpanish ? 'es' : 'en'
+      );
+
+      // 4. Enviar email a cada Director General
+      const emailPromises = directorEmails.map(director => {
+        const personalizedBody = htmlBody.replace(
+          isSpanish ? 'Estimado/a Director General:' : 'Dear General Director:',
+          isSpanish ? `Estimado/a ${director.name}:` : `Dear ${director.name}:`
+        );
+        
+        return sendEmailViaExtension(
+          director.email,
+          emailTitle,
+          personalizedBody
+        ).catch(err => {
+          console.error(`⚠️ Error enviando email a ${director.email}:`, err.message);
+        });
+      });
+
+      await Promise.allSettled(emailPromises);
+      console.log(`✅ Notificaciones enviadas a ${directorEmails.length} Directores Generales.`);
+
+      // 5. Registrar en audit log
+      await db.collection('submissions').doc(submissionId)
+        .collection('auditLogs').add({
+          action: 'director_notified_publication_ready',
+          notifiedEmails: directorEmails.map(d => d.email),
+          by: 'system',
+          timestamp: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+    } catch (error) {
+      console.error(`❌ Error en onArticleReadyForPublication:`, error.message);
+      await logSystemError('onArticleReadyForPublication', error, { submissionId });
     }
   }
 );

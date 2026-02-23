@@ -1,7 +1,7 @@
 // src/hooks/useMetadataRefinement.js
 import { useState, useCallback } from 'react';
 import { db } from '../firebase';
-import { doc, updateDoc, arrayUnion, serverTimestamp, getDoc, collection, addDoc } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, serverTimestamp, getDoc, collection, addDoc, writeBatch } from 'firebase/firestore';
 import { useLanguage } from './useLanguage';
 
 export const useMetadataRefinement = (user) => {
@@ -10,6 +10,7 @@ export const useMetadataRefinement = (user) => {
   const { language } = useLanguage();
   const isSpanish = language === 'es';
 
+  // 1. PROPOR CAMBIOS (Crea un nuevo documento en la subcolección)
   const proposeChanges = useCallback(async (submissionId, changes) => {
     if (!user) {
       setError(isSpanish ? 'Usuario no autenticado' : 'User not authenticated');
@@ -38,6 +39,9 @@ export const useMetadataRefinement = (user) => {
         throw new Error(isSpanish ? 'No tienes permiso para proponer cambios' : 'No permission to propose changes');
       }
 
+      // Crear la propuesta como un NUEVO DOCUMENTO en la subcolección
+      const proposalRef = doc(collection(db, 'submissions', submissionId, 'metadataProposals'));
+      
       const proposal = {
         proposedBy: user.uid,
         proposedByEmail: user.email,
@@ -49,17 +53,16 @@ export const useMetadataRefinement = (user) => {
           reason: c.reason,
           requiresAuthorConsent: c.requiresAuthorConsent !== false
         })),
-        status: 'pending-author',
+        status: 'pending-author', // Estado inicial
         authorResponse: null
       };
 
-      await updateDoc(submissionRef, {
-        'metadataRefinement': proposal,
-        updatedAt: serverTimestamp()
-      });
+      await setDoc(proposalRef, proposal);
 
+      // Log en auditLogs (opcional pero recomendado)
       await addDoc(collection(submissionRef, 'auditLogs'), {
         action: 'metadata_changes_proposed',
+        proposalId: proposalRef.id,
         changes: changes.map(c => ({ field: c.field, reason: c.reason })),
         by: user.uid,
         byEmail: user.email,
@@ -69,6 +72,7 @@ export const useMetadataRefinement = (user) => {
       setLoading(false);
       return { 
         success: true, 
+        proposalId: proposalRef.id,
         message: isSpanish ? 'Propuesta enviada al autor' : 'Proposal sent to author'
       };
 
@@ -80,7 +84,8 @@ export const useMetadataRefinement = (user) => {
     }
   }, [user, isSpanish]);
 
-  const respondToProposal = useCallback(async (submissionId, accepted, comments = '') => {
+  // 2. RESPONDER A PROPUESTA (Actualiza el documento de la propuesta)
+  const respondToProposal = useCallback(async (submissionId, proposalId, accepted, comments = '') => {
     if (!user) {
       setError(isSpanish ? 'Usuario no autenticado' : 'User not authenticated');
       return { success: false, error: 'No autenticado' };
@@ -90,21 +95,24 @@ export const useMetadataRefinement = (user) => {
     setError(null);
 
     try {
-      const submissionRef = doc(db, 'submissions', submissionId);
-      const submissionSnap = await getDoc(submissionRef);
+      const proposalRef = doc(db, 'submissions', submissionId, 'metadataProposals', proposalId);
+      const proposalSnap = await getDoc(proposalRef);
       
-      if (!submissionSnap.exists()) {
-        throw new Error(isSpanish ? 'Envío no encontrado' : 'Submission not found');
+      if (!proposalSnap.exists()) {
+        throw new Error(isSpanish ? 'Propuesta no encontrada' : 'Proposal not found');
       }
 
-      const submission = submissionSnap.data();
+      const proposal = proposalSnap.data();
       
-      if (submission.authorUID !== user.uid) {
+      // Verificar que sea el autor
+      const submissionRef = doc(db, 'submissions', submissionId);
+      const submissionSnap = await getDoc(submissionRef);
+      if (submissionSnap.data().authorUID !== user.uid) {
         throw new Error(isSpanish ? 'No eres el autor de este artículo' : 'You are not the author of this article');
       }
 
-      if (!submission.metadataRefinement || submission.metadataRefinement.status !== 'pending-author') {
-        throw new Error(isSpanish ? 'No hay propuesta pendiente' : 'No pending proposal');
+      if (proposal.status !== 'pending-author') {
+        throw new Error(isSpanish ? 'Esta propuesta ya no está pendiente' : 'This proposal is no longer pending');
       }
 
       const authorResponse = {
@@ -115,14 +123,14 @@ export const useMetadataRefinement = (user) => {
         respondedByEmail: user.email
       };
 
-      await updateDoc(submissionRef, {
-        'metadataRefinement.authorResponse': authorResponse,
-        'metadataRefinement.status': accepted ? 'pending-editor' : 'rejected',
-        updatedAt: serverTimestamp()
+      await updateDoc(proposalRef, {
+        authorResponse: authorResponse,
+        status: accepted ? 'approved' : 'rejected'
       });
 
       await addDoc(collection(submissionRef, 'auditLogs'), {
         action: accepted ? 'metadata_changes_accepted' : 'metadata_changes_rejected',
+        proposalId,
         comments,
         by: user.uid,
         byEmail: user.email,
@@ -140,7 +148,8 @@ export const useMetadataRefinement = (user) => {
     }
   }, [user, isSpanish]);
 
-  const applyApprovedChanges = useCallback(async (submissionId) => {
+  // 3. APLICAR CAMBIOS (Usa los cambios de una propuesta APROBADA)
+  const applyApprovedChanges = useCallback(async (submissionId, proposalId) => {
     if (!user) {
       setError(isSpanish ? 'Usuario no autenticado' : 'User not authenticated');
       return { success: false, error: 'No autenticado' };
@@ -151,19 +160,21 @@ export const useMetadataRefinement = (user) => {
 
     try {
       const submissionRef = doc(db, 'submissions', submissionId);
-      const submissionSnap = await getDoc(submissionRef);
+      const proposalRef = doc(db, 'submissions', submissionId, 'metadataProposals', proposalId);
       
-      if (!submissionSnap.exists()) {
-        throw new Error(isSpanish ? 'Envío no encontrado' : 'Submission not found');
+      const [submissionSnap, proposalSnap] = await Promise.all([
+        getDoc(submissionRef),
+        getDoc(proposalRef)
+      ]);
+      
+      if (!submissionSnap.exists() || !proposalSnap.exists()) {
+        throw new Error(isSpanish ? 'Envío o propuesta no encontrados' : 'Submission or proposal not found');
       }
 
       const submission = submissionSnap.data();
-      const proposal = submission.metadataRefinement;
+      const proposal = proposalSnap.data();
 
-      if (!proposal.authorResponse?.accepted) {
-        throw new Error(isSpanish ? 'El autor no ha aprobado los cambios' : 'Author has not approved the changes');
-      }
-
+      // Verificar permisos de editor
       const userRoles = user.roles || [];
       const isEditor = userRoles.includes('Director General') || 
                        userRoles.includes('Editor en Jefe') || 
@@ -173,46 +184,51 @@ export const useMetadataRefinement = (user) => {
         throw new Error(isSpanish ? 'No tienes permiso para aplicar cambios' : 'No permission to apply changes');
       }
 
-      const currentMetadata = submission.currentMetadata || submission.originalSubmission;
+      // Verificar que la propuesta esté aprobada
+      if (proposal.status !== 'approved') {
+        throw new Error(isSpanish ? 'Solo se pueden aplicar propuestas aprobadas' : 'Only approved proposals can be applied');
+      }
+
+      const currentMetadata = submission.currentMetadata || submission.originalSubmission || {};
       
-      // 🔥 SOLUCIÓN: Crear el objeto sin timestamp para arrayUnion
       const newVersion = {
         version: (submission.metadataVersions?.length || 0) + 1,
-        approvedBy: user.uid,
-        approvedByEmail: user.email,
-        approvedAt: new Date().toISOString(), // ✅ Usamos ISO string en lugar de serverTimestamp
+        appliedBy: user.uid,
+        appliedByEmail: user.email,
+        appliedAt: new Date().toISOString(),
+        proposalId: proposalId,
         changes: proposal.changes,
         data: { ...currentMetadata }
       };
 
-      // Aplicar los cambios aprobados
+      // Aplicar los cambios
       proposal.changes.forEach(change => {
-        if (change.requiresAuthorConsent !== false) {
-          newVersion.data[change.field] = change.proposedValue;
-        }
+        newVersion.data[change.field] = change.proposedValue;
       });
 
-      // 🔥 SOLUCIÓN: Dos operaciones separadas
-      // 1. Actualizar el documento principal (puede usar serverTimestamp)
-      await updateDoc(submissionRef, {
+      // Usar batch para operaciones atómicas
+      const batch = writeBatch(db);
+      
+      batch.update(submissionRef, {
         currentMetadata: newVersion.data,
-        'metadataRefinement.status': 'approved',
-        updatedAt: serverTimestamp() // ✅ OK aquí
+        updatedAt: serverTimestamp()
       });
-
-      // 2. Agregar la versión al array (usando el objeto ya preparado)
-      await updateDoc(submissionRef, {
-        metadataVersions: arrayUnion(newVersion) // ✅ newVersion ya tiene approvedAt como string
+      
+      batch.update(submissionRef, {
+        metadataVersions: arrayUnion(newVersion)
       });
+      
+      await batch.commit();
 
-      // 3. Registrar en auditLogs (puede usar serverTimestamp)
+      // Log en auditLogs
       await addDoc(collection(submissionRef, 'auditLogs'), {
         action: 'metadata_changes_applied',
+        proposalId,
         version: newVersion.version,
         changes: proposal.changes,
         by: user.uid,
         byEmail: user.email,
-        timestamp: serverTimestamp() // ✅ OK aquí
+        timestamp: serverTimestamp()
       });
 
       setLoading(false);
@@ -230,11 +246,69 @@ export const useMetadataRefinement = (user) => {
     }
   }, [user, isSpanish]);
 
+  // 4. MARCAR COMO LISTO PARA PUBLICACIÓN (NUEVA FUNCIÓN)
+  const markAsReadyForPublication = useCallback(async (submissionId) => {
+    if (!user) {
+      setError(isSpanish ? 'Usuario no autenticado' : 'User not authenticated');
+      return { success: false, error: 'No autenticado' };
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const submissionRef = doc(db, 'submissions', submissionId);
+      const submissionSnap = await getDoc(submissionRef);
+      
+      if (!submissionSnap.exists()) {
+        throw new Error(isSpanish ? 'Envío no encontrado' : 'Submission not found');
+      }
+
+      // Verificar permisos de editor
+      const userRoles = user.roles || [];
+      const isEditor = userRoles.includes('Director General') || 
+                       userRoles.includes('Editor en Jefe') || 
+                       userRoles.includes('Editor de Sección');
+      
+      if (!isEditor) {
+        throw new Error(isSpanish ? 'No tienes permiso para realizar esta acción' : 'No permission to perform this action');
+      }
+
+      // Actualizar el documento principal
+      await updateDoc(submissionRef, {
+        publicationReady: true,
+        publicationReadyAt: serverTimestamp(),
+        publicationReadyBy: user.uid,
+        updatedAt: serverTimestamp()
+      });
+
+      await addDoc(collection(submissionRef, 'auditLogs'), {
+        action: 'marked_ready_for_publication',
+        by: user.uid,
+        byEmail: user.email,
+        timestamp: serverTimestamp()
+      });
+
+      setLoading(false);
+      return { 
+        success: true, 
+        message: isSpanish ? 'Artículo marcado como listo para publicación' : 'Article marked as ready for publication'
+      };
+
+    } catch (err) {
+      console.error('Error marking as ready:', err);
+      setError(err.message);
+      setLoading(false);
+      return { success: false, error: err.message };
+    }
+  }, [user, isSpanish]);
+
   return {
     loading,
     error,
     proposeChanges,
     respondToProposal,
-    applyApprovedChanges
+    applyApprovedChanges,
+    markAsReadyForPublication // Exportamos la nueva función
   };
 };

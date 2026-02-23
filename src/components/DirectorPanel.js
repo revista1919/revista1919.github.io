@@ -1,7 +1,11 @@
+// DirectorPanel.js (Componente completo)
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { auth, db } from '../firebase';
-import { collection, onSnapshot, query, where, getDocs, limit as firestoreLimit, doc as firestoreDoc, getDoc } from "firebase/firestore";
+import { 
+  collection, onSnapshot, query, where, getDocs, 
+  limit as firestoreLimit, doc as firestoreDoc, getDoc 
+} from "firebase/firestore";
 import Admissions from './Admissions';
 import MailsTeam from './MailsTeam';
 import ReactQuill from 'react-quill';
@@ -135,6 +139,12 @@ export default function DirectorPanel({ user }) {
   const [editingItem, setEditingItem] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showUserSearchModal, setShowUserSearchModal] = useState(false);
+  
+  // Modal de búsqueda de submissions
+  const [showSubmissionSearch, setShowSubmissionSearch] = useState(false);
+  const [submissionSearchTerm, setSubmissionSearchTerm] = useState('');
+  const [readySubmissions, setReadySubmissions] = useState([]);
+  const [loadingSubmissions, setLoadingSubmissions] = useState(false);
 
   // Forms
   const [articleForm, setArticleForm] = useState(initialArticleState);
@@ -155,8 +165,6 @@ export default function DirectorPanel({ user }) {
         }
       }
     } else if (showArticleModal && editingItem) {
-      // Para edición, NO cargar borrador automáticamente
-      // Simplemente usamos los datos del artículo
       setArticleForm(prev => ({
         ...prev,
         ...editingItem,
@@ -182,8 +190,6 @@ export default function DirectorPanel({ user }) {
   useEffect(() => {
     if (showArticleModal && !editingItem) {
       localStorage.setItem('draftNewArticle', JSON.stringify(articleForm));
-    } else if (showArticleModal && editingItem) {
-      // NO guardar borrador para ediciones
     }
   }, [articleForm, showArticleModal, editingItem]);
 
@@ -194,54 +200,170 @@ export default function DirectorPanel({ user }) {
   }, [volumeForm, showVolumeModal, editingItem]);
 
   // --- EFECTO PARA CARGAR ARTÍCULOS DESDE JSON ---
-  // --- EFECTO PARA CARGAR ARTÍCULOS DESDE JSON (CORREGIDO) ---
-useEffect(() => {
-  if (!hasAccess) return;
+  useEffect(() => {
+    if (!hasAccess) return;
 
-  const fetchArticles = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(ARTICLES_JSON_URL);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+    const fetchArticles = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch(ARTICLES_JSON_URL);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        const processedArticles = data.map(article => ({
+          ...article,
+          autores: Array.isArray(article.autores) ? article.autores : 
+                   (typeof article.autores === 'string' ? article.autores.split(';').map(name => ({ name: name.trim(), authorId: null })) : []),
+          palabras_clave: Array.isArray(article.palabras_clave) ? article.palabras_clave : 
+                          (typeof article.palabras_clave === 'string' ? article.palabras_clave.split(';').map(k => k.trim()).filter(k => k) : []),
+          keywords_english: Array.isArray(article.keywords_english) ? article.keywords_english : 
+                            (typeof article.keywords_english === 'string' ? article.keywords_english.split(';').map(k => k.trim()).filter(k => k) : [])
+        }));
+        setArticles(processedArticles);
+      } catch (error) {
+        console.error("Error fetching articles.json:", error);
+        setStatus({ type: 'error', msg: 'Error al cargar los artículos desde el JSON.' });
+      } finally {
+        setLoading(false);
       }
-      const data = await response.json();
-      const processedArticles = data.map(article => ({
-        ...article,
-        autores: Array.isArray(article.autores) ? article.autores : 
-                 (typeof article.autores === 'string' ? article.autores.split(';').map(name => ({ name: name.trim(), authorId: null })) : []),
-        // Asegurar que palabras_clave y keywords_english sean arrays
-        palabras_clave: Array.isArray(article.palabras_clave) ? article.palabras_clave : 
-                        (typeof article.palabras_clave === 'string' ? article.palabras_clave.split(';').map(k => k.trim()).filter(k => k) : []),
-        keywords_english: Array.isArray(article.keywords_english) ? article.keywords_english : 
-                          (typeof article.keywords_english === 'string' ? article.keywords_english.split(';').map(k => k.trim()).filter(k => k) : [])
+    };
+
+    fetchArticles();
+
+    // Volúmenes siguen en Firestore
+    const unsubVolumes = onSnapshot(collection(db, 'volumes'), (snapshot) => {
+      const vols = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
       }));
-      setArticles(processedArticles);
+      setVolumes(vols);
+    });
+
+    return () => {
+      unsubVolumes();
+    };
+  }, [hasAccess]);
+
+  // --- Cargar submissions listos para publicación (publicationReady = true) ---
+  const loadReadySubmissions = async () => {
+    setLoadingSubmissions(true);
+    try {
+      const submissionsRef = collection(db, 'submissions');
+      const q = query(
+        submissionsRef, 
+        where('publicationReady', '==', true)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const submissions = [];
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        submissions.push({
+          id: doc.id,
+          title: data.title || 'Sin título',
+          submissionId: data.submissionId || doc.id,
+          authors: data.authors || [],
+          authorName: data.authorName || 'Autor no especificado',
+          currentMetadata: data.currentMetadata || data.originalSubmission || {},
+          paperLanguage: data.paperLanguage || 'es',
+          driveFolderUrl: data.driveFolderUrl || null,
+          updatedAt: data.updatedAt?.toDate?.() || new Date(),
+        });
+      });
+      
+      // Ordenar por fecha de actualización (más recientes primero)
+      submissions.sort((a, b) => b.updatedAt - a.updatedAt);
+      
+      setReadySubmissions(submissions);
     } catch (error) {
-      console.error("Error fetching articles.json:", error);
-      setStatus({ type: 'error', msg: 'Error al cargar los artículos desde el JSON.' });
+      console.error("Error loading ready submissions:", error);
+      setStatus({ type: 'error', msg: 'Error al cargar los envíos listos para publicación.' });
     } finally {
-      setLoading(false);
+      setLoadingSubmissions(false);
     }
   };
 
-  fetchArticles();
-
-  // Volúmenes siguen en Firestore
-  const unsubVolumes = onSnapshot(collection(db, 'volumes'), (snapshot) => {
-    const vols = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
-    setVolumes(vols);
-  });
-
-  return () => {
-    unsubVolumes();
+  // --- Abrir modal de búsqueda y cargar datos ---
+  const handleOpenSubmissionSearch = () => {
+    loadReadySubmissions();
+    setSubmissionSearchTerm('');
+    setShowSubmissionSearch(true);
   };
-}, [hasAccess]);
 
-  // --- Filtrado ---
+  // --- FUNCIÓN: Importar datos desde Submission (ahora con metadata final) ---
+  const importFromSubmission = async (submission) => {
+    if (!submission) return;
+
+    setIsProcessing(true);
+    setStatus({ type: 'info', msg: 'Importando datos del envío...' });
+
+    try {
+      // Usar currentMetadata si existe, sino originalSubmission, sino los datos principales
+      const metadata = submission.currentMetadata || submission;
+      
+      // Procesar autores
+      const importedAuthors = (metadata.authors || submission.authors || []).map(author => ({
+        name: author.name || `${author.firstName || ''} ${author.lastName || ''}`.trim(),
+        email: author.email || '',
+        institution: author.institution || '',
+        orcid: author.orcid || '',
+        authorId: author.uid || author.authorId || null,
+        isCorresponding: author.isCorresponding || false,
+      }));
+
+      // Procesar keywords (manejar arrays o strings)
+      const palabrasClave = metadata.keywords || metadata.palabras_clave || [];
+      const keywordsEnglish = metadata.keywordsEn || metadata.keywords_english || [];
+
+      setArticleForm(prev => ({
+        ...prev,
+        titulo: metadata.title || prev.titulo,
+        tituloEnglish: metadata.titleEn || prev.tituloEnglish,
+        autores: importedAuthors.length > 0 ? importedAuthors : prev.autores,
+        resumen: metadata.abstract || prev.resumen,
+        abstract: metadata.abstractEn || prev.abstract,
+        palabras_clave: Array.isArray(palabrasClave) ? palabrasClave.join('; ') : palabrasClave || '',
+        keywords_english: Array.isArray(keywordsEnglish) ? keywordsEnglish.join('; ') : keywordsEnglish || '',
+        area: metadata.area || prev.area,
+        tipo: metadata.articleType || metadata.tipo || prev.tipo,
+        type: metadata.type || prev.type,
+        acknowledgments: metadata.acknowledgments || prev.acknowledgments,
+        acknowledgmentsEnglish: metadata.acknowledgmentsEn || prev.acknowledgmentsEnglish,
+        conflicts: metadata.conflictOfInterest || metadata.conflicts || prev.conflicts,
+        conflictsEnglish: metadata.conflictsEnglish || prev.conflictsEnglish,
+        funding: metadata.funding?.sources || metadata.funding || prev.funding,
+        fundingEnglish: metadata.fundingEnglish || prev.fundingEnglish,
+        dataAvailability: metadata.dataAvailability || prev.dataAvailability,
+        dataAvailabilityEnglish: metadata.dataAvailabilityEn || prev.dataAvailabilityEnglish,
+        submissionId: submission.submissionId || submission.id,
+      }));
+
+      setStatus({ type: 'success', msg: '✅ Datos del envío importados correctamente.' });
+      setShowSubmissionSearch(false); // Cerrar modal de búsqueda
+      
+    } catch (error) {
+      console.error("Error importing submission:", error);
+      setStatus({ type: 'error', msg: `❌ Error al importar: ${error.message}` });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // --- FILTRAR submissions listos por título ---
+  const filteredReadySubmissions = useMemo(() => {
+    if (!submissionSearchTerm.trim()) return readySubmissions;
+    
+    const term = submissionSearchTerm.toLowerCase();
+    return readySubmissions.filter(sub => 
+      sub.title.toLowerCase().includes(term) ||
+      sub.submissionId.toLowerCase().includes(term) ||
+      sub.authorName.toLowerCase().includes(term)
+    );
+  }, [readySubmissions, submissionSearchTerm]);
+
+  // --- Filtrado de artículos publicados ---
   const filteredArticles = articles.filter(a => 
     a.titulo?.toLowerCase().includes(searchTerm.toLowerCase()) || 
     a.autores?.some(author => author.name?.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -276,174 +398,137 @@ useEffect(() => {
     }
   };
 
-  // --- FUNCIÓN: Importar datos desde Submission ---
-  const importFromSubmission = async (submissionId) => {
-    if (!submissionId || submissionId.trim() === '') {
-      setStatus({ type: 'error', msg: 'Por favor, ingresa un Submission ID.' });
-      return;
-    }
-
+  // --- HANDLER GUARDAR ARTÍCULO (con acción 'publish' para publicación) ---
+  const handleSaveArticle = async (e) => {
+    e.preventDefault();
     setIsProcessing(true);
-    setStatus({ type: 'info', msg: 'Buscando envío...' });
+    setStatus(null);
 
     try {
-      const submissionRef = firestoreDoc(db, 'submissions', submissionId);
-      const submissionSnap = await getDoc(submissionRef);
-
-      if (!submissionSnap.exists()) {
-        setStatus({ type: 'error', msg: 'No se encontró un envío con ese ID.' });
-        setIsProcessing(false);
-        return;
+      const token = await auth.currentUser.getIdToken();
+      const pdfBase64 = articleForm.pdfFile ? await toBase64(articleForm.pdfFile) : null;
+      
+      let html_es = articleForm.html_es;
+      let html_en = articleForm.html_en;
+      
+      if (articleForm.htmlMode === 'code') {
+        html_es = articleForm.html_es || '';
+        html_en = articleForm.html_en || '';
       }
 
-      const submissionData = submissionSnap.data();
-
-      const importedAuthors = (submissionData.authors || []).map(author => ({
-        name: `${author.firstName || ''} ${author.lastName || ''}`.trim(),
-        email: author.email || '',
-        institution: author.institution || '',
-        orcid: author.orcid || '',
-        authorId: author.uid || null,
-        isCorresponding: author.isCorresponding || false,
+      const autoresParaBackend = articleForm.autores.map(autor => ({
+        name: autor.name,
+        authorId: autor.authorId,
+        email: autor.email,
+        institution: autor.institution,
+        orcid: autor.orcid,
       }));
 
-      setArticleForm(prev => ({
-        ...prev,
-        autores: importedAuthors.length > 0 ? importedAuthors : prev.autores,
-        conflicts: submissionData.conflictOfInterest || prev.conflicts,
-        funding: submissionData.funding?.sources || prev.funding,
-        acknowledgments: submissionData.acknowledgments || prev.acknowledgments,
-        submissionId: submissionId,
-      }));
+      // Procesar palabras_clave - manejar tanto string como array
+      let palabrasClaveArray = [];
+      if (articleForm.palabras_clave) {
+        if (Array.isArray(articleForm.palabras_clave)) {
+          palabrasClaveArray = articleForm.palabras_clave;
+        } else if (typeof articleForm.palabras_clave === 'string') {
+          palabrasClaveArray = articleForm.palabras_clave.split(';').map(k => k.trim()).filter(k => k);
+        }
+      }
 
-      setStatus({ type: 'success', msg: 'Datos del envío importados correctamente.' });
+      // Procesar keywords_english - manejar tanto string como array
+      let keywordsArray = [];
+      if (articleForm.keywords_english) {
+        if (Array.isArray(articleForm.keywords_english)) {
+          keywordsArray = articleForm.keywords_english;
+        } else if (typeof articleForm.keywords_english === 'string') {
+          keywordsArray = articleForm.keywords_english.split(';').map(k => k.trim()).filter(k => k);
+        }
+      }
 
-    } catch (error) {
-      console.error("Error importing submission:", error);
-      setStatus({ type: 'error', msg: `Error al importar: ${error.message}` });
+      const articleData = {
+        titulo: articleForm.titulo,
+        tituloEnglish: articleForm.tituloEnglish,
+        autores: autoresParaBackend,
+        resumen: articleForm.resumen,
+        abstract: articleForm.abstract,
+        palabras_clave: palabrasClaveArray,
+        keywords_english: keywordsArray,
+        area: articleForm.area,
+        tipo: articleForm.tipo,
+        type: articleForm.type,
+        fecha: articleForm.fecha,
+        receivedDate: articleForm.receivedDate || null,
+        acceptedDate: articleForm.acceptedDate || null,
+        volumen: articleForm.volumen,
+        numero: articleForm.numero,
+        primeraPagina: articleForm.primeraPagina,
+        ultimaPagina: articleForm.ultimaPagina,
+        conflicts: articleForm.conflicts,
+        conflictsEnglish: articleForm.conflictsEnglish,
+        funding: articleForm.funding,
+        fundingEnglish: articleForm.fundingEnglish,
+        acknowledgments: articleForm.acknowledgments,
+        acknowledgmentsEnglish: articleForm.acknowledgmentsEnglish,
+        authorCredits: articleForm.authorCredits,
+        authorCreditsEnglish: articleForm.authorCreditsEnglish,
+        dataAvailability: articleForm.dataAvailability,
+        dataAvailabilityEnglish: articleForm.dataAvailabilityEnglish,
+        submissionId: articleForm.submissionId,
+        html_es: html_es,
+        html_en: html_en,
+        referencias: articleForm.referencias,
+      };
+
+      // Determinar acción: 'publish' si es un artículo nuevo desde submission, 'edit' si es edición
+      let action = 'edit';
+      if (!editingItem && articleForm.submissionId) {
+        action = 'publish'; // Publicar desde submission
+      } else if (!editingItem) {
+        action = 'add'; // Nuevo artículo sin submission
+      }
+
+      const payload = {
+        action: action,
+        article: articleData,
+        pdfBase64,
+        id: editingItem?.numeroArticulo?.toString(),
+      };
+
+      const response = await fetch(MANAGE_ARTICLES_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(errText);
+      }
+
+      // Limpiar localStorage SOLO después de guardar exitosamente
+      if (!editingItem) {
+        localStorage.removeItem('draftNewArticle');
+      }
+
+      setShowArticleModal(false);
+      resetForms();
+      await triggerRebuild();
+      
+      const successMsg = action === 'publish' 
+        ? '✅ Artículo publicado exitosamente' 
+        : '✅ Artículo guardado exitosamente';
+      setStatus({ type: 'success', msg: successMsg });
+      
+    } catch (err) {
+      console.error("Error saving article:", err);
+      setStatus({ type: 'error', msg: `❌ Error: ${err.message}` });
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // --- HANDLER GUARDAR ARTÍCULO ---
-// --- HANDLER GUARDAR ARTÍCULO (CORREGIDO) ---
-const handleSaveArticle = async (e) => {
-  e.preventDefault();
-  setIsProcessing(true);
-  setStatus(null);
-
-  try {
-    const token = await auth.currentUser.getIdToken();
-    const pdfBase64 = articleForm.pdfFile ? await toBase64(articleForm.pdfFile) : null;
-    
-    let html_es = articleForm.html_es;
-    let html_en = articleForm.html_en;
-    
-    if (articleForm.htmlMode === 'code') {
-      html_es = articleForm.html_es || '';
-      html_en = articleForm.html_en || '';
-    }
-
-    const autoresParaBackend = articleForm.autores.map(autor => ({
-      name: autor.name,
-      authorId: autor.authorId,
-      email: autor.email,
-      institution: autor.institution,
-      orcid: autor.orcid,
-    }));
-
-    // Procesar palabras_clave - manejar tanto string como array
-    let palabrasClaveArray = [];
-    if (articleForm.palabras_clave) {
-      if (Array.isArray(articleForm.palabras_clave)) {
-        palabrasClaveArray = articleForm.palabras_clave;
-      } else if (typeof articleForm.palabras_clave === 'string') {
-        palabrasClaveArray = articleForm.palabras_clave.split(';').map(k => k.trim()).filter(k => k);
-      }
-    }
-
-    // Procesar keywords_english - manejar tanto string como array
-    let keywordsArray = [];
-    if (articleForm.keywords_english) {
-      if (Array.isArray(articleForm.keywords_english)) {
-        keywordsArray = articleForm.keywords_english;
-      } else if (typeof articleForm.keywords_english === 'string') {
-        keywordsArray = articleForm.keywords_english.split(';').map(k => k.trim()).filter(k => k);
-      }
-    }
-
-    const articleData = {
-      titulo: articleForm.titulo,
-      tituloEnglish: articleForm.tituloEnglish,
-      autores: autoresParaBackend,
-      resumen: articleForm.resumen,
-      abstract: articleForm.abstract,
-      palabras_clave: palabrasClaveArray,
-      keywords_english: keywordsArray,
-      area: articleForm.area,
-      tipo: articleForm.tipo,
-      type: articleForm.type,
-      fecha: articleForm.fecha,
-      receivedDate: articleForm.receivedDate || null,
-      acceptedDate: articleForm.acceptedDate || null,
-      volumen: articleForm.volumen,
-      numero: articleForm.numero,
-      primeraPagina: articleForm.primeraPagina,
-      ultimaPagina: articleForm.ultimaPagina,
-      conflicts: articleForm.conflicts,
-      conflictsEnglish: articleForm.conflictsEnglish,
-      funding: articleForm.funding,
-      fundingEnglish: articleForm.fundingEnglish,
-      acknowledgments: articleForm.acknowledgments,
-      acknowledgmentsEnglish: articleForm.acknowledgmentsEnglish,
-      authorCredits: articleForm.authorCredits,
-      authorCreditsEnglish: articleForm.authorCreditsEnglish,
-      dataAvailability: articleForm.dataAvailability,
-      dataAvailabilityEnglish: articleForm.dataAvailabilityEnglish,
-      submissionId: articleForm.submissionId,
-      html_es: html_es,
-      html_en: html_en,
-      referencias: articleForm.referencias,
-    };
-
-    const payload = {
-      action: editingItem ? 'edit' : 'add',
-      article: articleData,
-      pdfBase64,
-      id: editingItem?.numeroArticulo?.toString(),
-    };
-
-    const response = await fetch(MANAGE_ARTICLES_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(errText);
-    }
-
-    // Limpiar localStorage SOLO después de guardar exitosamente
-    if (!editingItem) {
-      localStorage.removeItem('draftNewArticle');
-    }
-
-    setShowArticleModal(false);
-    resetForms();
-    await triggerRebuild();
-    setStatus({ type: 'success', msg: '✅ Artículo guardado exitosamente' });
-  } catch (err) {
-    console.error("Error saving article:", err);
-    setStatus({ type: 'error', msg: `❌ Error: ${err.message}` });
-  } finally {
-    setIsProcessing(false);
-  }
-};
   const handleSaveVolume = async (e) => {
     e.preventDefault();
     setIsProcessing(true);
@@ -490,7 +575,6 @@ const handleSaveArticle = async (e) => {
         throw new Error(errText);
       }
 
-      // Limpiar localStorage SOLO después de guardar exitosamente
       if (!editingItem) {
         localStorage.removeItem('draftNewVolume');
       }
@@ -678,12 +762,21 @@ const handleSaveArticle = async (e) => {
               />
             </div>
             {activeTab === 'articles' && (
-              <button 
-                onClick={() => { resetForms(); setShowArticleModal(true); }}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-full flex items-center justify-center gap-2 font-medium shadow-md transition-all active:scale-95 text-sm"
-              >
-                <PlusIcon className="w-5 h-5" /> Nuevo Artículo
-              </button>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => { resetForms(); setShowArticleModal(true); }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-full flex items-center justify-center gap-2 font-medium shadow-md transition-all active:scale-95 text-sm"
+                >
+                  <PlusIcon className="w-5 h-5" /> Nuevo
+                </button>
+                <button 
+                  onClick={handleOpenSubmissionSearch}
+                  className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-full flex items-center justify-center gap-2 font-medium shadow-md transition-all active:scale-95 text-sm"
+                  title="Publicar desde envío listo"
+                >
+                  <ArrowDownTrayIcon className="w-5 h-5" /> Publicar
+                </button>
+              </div>
             )}
             {activeTab === 'volumes' && (
               <button 
@@ -708,33 +801,31 @@ const handleSaveArticle = async (e) => {
               articles={filteredArticles}
               expandedArticles={expandedArticles}
               onToggleExpand={toggleArticleExpand}
-              // En la parte donde se configura la edición del artículo (dentro del onEdit)
-onEdit={(article) => { 
-  setEditingItem(article); 
-  const autoresParaEdicion = Array.isArray(article.autores) ? article.autores : 
-                              (typeof article.autores === 'string' ? article.autores.split(';').map(name => ({ name: name.trim(), authorId: null })) : []);
-  
-  // Función para convertir array a string con punto y coma si es necesario
-  const arrayToString = (value) => {
-    if (Array.isArray(value)) {
-      return value.join('; ');
-    }
-    return value || '';
-  };
+              onEdit={(article) => { 
+                setEditingItem(article); 
+                const autoresParaEdicion = Array.isArray(article.autores) ? article.autores : 
+                                            (typeof article.autores === 'string' ? article.autores.split(';').map(name => ({ name: name.trim(), authorId: null })) : []);
+                
+                const arrayToString = (value) => {
+                  if (Array.isArray(value)) {
+                    return value.join('; ');
+                  }
+                  return value || '';
+                };
 
-  setArticleForm({
-    ...article,
-    autores: autoresParaEdicion,
-    palabras_clave: arrayToString(article.palabras_clave),
-    keywords_english: arrayToString(article.keywords_english),
-    htmlMode: 'code',
-    html_es: article.html_es || '',
-    html_en: article.html_en || '',
-    referencias: article.referencias || '',
-    pdfFile: null,
-  }); 
-  setShowArticleModal(true); 
-}}
+                setArticleForm({
+                  ...article,
+                  autores: autoresParaEdicion,
+                  palabras_clave: arrayToString(article.palabras_clave),
+                  keywords_english: arrayToString(article.keywords_english),
+                  htmlMode: 'code',
+                  html_es: article.html_es || '',
+                  html_en: article.html_en || '',
+                  referencias: article.referencias || '',
+                  pdfFile: null,
+                }); 
+                setShowArticleModal(true); 
+              }}
               onDelete={(id) => handleDelete(id, 'article')}
               formatDate={formatDate}
             />
@@ -785,9 +876,29 @@ onEdit={(article) => {
         <ArticleForm 
           formData={articleForm} 
           setFormData={setArticleForm} 
-          onImportFromSubmission={importFromSubmission}
+          onImportFromSubmission={(submission) => importFromSubmission(submission)}
           isProcessing={isProcessing}
           isEditing={!!editingItem}
+          submissionId={articleForm.submissionId}
+        />
+      </Modal>
+
+      {/* MODAL DE BÚSQUEDA DE SUBMISSIONS */}
+      <Modal 
+        show={showSubmissionSearch} 
+        onClose={() => setShowSubmissionSearch(false)}
+        title="Seleccionar Envío Listo para Publicación"
+        isProcessing={loadingSubmissions}
+        onSave={() => {}} // No hay acción de guardar directa
+        hideSaveButton={true}
+      >
+        <SubmissionSearch 
+          submissions={filteredReadySubmissions}
+          searchTerm={submissionSearchTerm}
+          setSearchTerm={setSubmissionSearchTerm}
+          onSelect={importFromSubmission}
+          loading={loadingSubmissions}
+          onRefresh={loadReadySubmissions}
         />
       </Modal>
 
@@ -809,10 +920,100 @@ onEdit={(article) => {
   );
 }
 
-// --- COMPONENTE DE FORMULARIO DE ARTÍCULO ---
-const ArticleForm = ({ formData, setFormData, onImportFromSubmission, isProcessing, isEditing }) => {
+// --- NUEVO COMPONENTE: SubmissionSearch ---
+const SubmissionSearch = ({ submissions, searchTerm, setSearchTerm, onSelect, loading, onRefresh }) => {
+  return (
+    <div className="space-y-4 min-h-[400px] flex flex-col">
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Buscar por título, ID o autor..."
+            className="w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            autoFocus
+          />
+        </div>
+        <button
+          onClick={onRefresh}
+          disabled={loading}
+          className="px-4 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl flex items-center gap-2 text-gray-700 transition-colors"
+          title="Actualizar lista"
+        >
+          <ArrowPathIcon className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto border border-gray-200 rounded-xl bg-gray-50 p-2 min-h-[300px] max-h-[400px]">
+        {loading ? (
+          <div className="flex items-center justify-center h-full">
+            <ArrowPathIcon className="w-8 h-8 animate-spin text-blue-600" />
+          </div>
+        ) : submissions.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-gray-500">
+            <DocumentTextIcon className="w-12 h-12 text-gray-300 mb-2" />
+            <p>No hay envíos listos para publicación</p>
+            <p className="text-xs mt-1">Los artículos deben estar marcados como "Listos" por el editor</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {submissions.map((sub) => (
+              <motion.div
+                key={sub.id}
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-4 bg-white rounded-xl border border-gray-200 hover:border-blue-400 hover:shadow-md cursor-pointer transition-all"
+                onClick={() => onSelect(sub)}
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <h4 className="font-medium text-gray-900 flex-1">{sub.title}</h4>
+                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full ml-2">
+                    Listo
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
+                  <div>
+                    <span className="font-medium">ID:</span> {sub.submissionId}
+                  </div>
+                  <div>
+                    <span className="font-medium">Autor:</span> {sub.authorName}
+                  </div>
+                  <div>
+                    <span className="font-medium">Idioma:</span> {sub.paperLanguage === 'es' ? 'Español' : 'Inglés'}
+                  </div>
+                  <div>
+                    <span className="font-medium">Actualizado:</span> {sub.updatedAt.toLocaleDateString()}
+                  </div>
+                </div>
+                {sub.driveFolderUrl && (
+                  <a 
+                    href={sub.driveFolderUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="mt-2 text-xs text-blue-600 hover:underline flex items-center gap-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <DocumentIcon className="w-3 h-3" /> Ver carpeta en Drive
+                  </a>
+                )}
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <p className="text-xs text-gray-400 text-center">
+        Selecciona un envío para importar automáticamente todos los metadatos
+      </p>
+    </div>
+  );
+};
+
+// --- COMPONENTE DE FORMULARIO DE ARTÍCULO (MODIFICADO) ---
+const ArticleForm = ({ formData, setFormData, onImportFromSubmission, isProcessing, isEditing, submissionId }) => {
   const [activeStep, setActiveStep] = useState(0);
-  const [submissionIdInput, setSubmissionIdInput] = useState('');
   
   const steps = [
     { id: 0, name: 'Identidad', icon: '📋' },
@@ -853,25 +1054,13 @@ const ArticleForm = ({ formData, setFormData, onImportFromSubmission, isProcessi
 
   return (
     <div className="flex flex-col h-[70vh] lg:h-[60vh]">
-      {/* Barra de importación de Submission ID - Solo visible para nuevos artículos */}
-      {!isEditing && !formData.submissionId && (
-        <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200 flex flex-col sm:flex-row gap-2 items-center">
-          <input
-            type="text"
-            placeholder="Ingresa Submission ID para importar..."
-            className="flex-1 px-4 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-            value={submissionIdInput}
-            onChange={(e) => setSubmissionIdInput(e.target.value)}
-            disabled={isProcessing}
-          />
-          <button
-            onClick={() => onImportFromSubmission(submissionIdInput)}
-            disabled={isProcessing || !submissionIdInput.trim()}
-            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm whitespace-nowrap"
-          >
-            <ArrowDownTrayIcon className="w-4 h-4" />
-            Importar
-          </button>
+      {/* Indicador de Submission ID */}
+      {submissionId && (
+        <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200 flex items-center gap-2">
+          <CheckIcon className="w-5 h-5 text-green-600" />
+          <span className="text-sm text-green-700">
+            <strong>Submission ID:</strong> {submissionId}
+          </span>
         </div>
       )}
 
@@ -1010,7 +1199,6 @@ const ArticleForm = ({ formData, setFormData, onImportFromSubmission, isProcessi
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input label="Fecha Publicación" name="fecha" type="date" value={formData.fecha} onChange={handleChange} />
-              <Input label="DOI (Opcional)" name="doi" value={formData.doi} onChange={handleChange} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <Input label="Primera Página" name="primeraPagina" value={formData.primeraPagina} onChange={handleChange} />
@@ -1346,16 +1534,6 @@ const ArticleForm = ({ formData, setFormData, onImportFromSubmission, isProcessi
                 placeholder="Data availability statement..."
               />
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input 
-                label="Submission ID" 
-                name="submissionId" 
-                value={formData.submissionId} 
-                onChange={handleChange}
-                placeholder="ID del envío"
-              />
-            </div>
           </div>
         )}
       </div>
@@ -1687,6 +1865,11 @@ const ArticleList = ({ articles, expandedArticles, onToggleExpand, onEdit, onDel
                   <span className="px-2.5 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium hidden sm:inline-block">
                     {article.area}
                   </span>
+                  {article.status === 'published' && (
+                    <span className="px-2.5 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                      Publicado
+                    </span>
+                  )}
                 </div>
               </div>
               <ChevronDownIcon
@@ -2002,7 +2185,7 @@ const Input = ({ label, ...props }) => (
   </div>
 );
 
-const Modal = ({ show, onClose, title, children, onSave, isProcessing }) => (
+const Modal = ({ show, onClose, title, children, onSave, isProcessing, hideSaveButton = false }) => (
   <AnimatePresence>
     {show && (
       <div className="fixed inset-0 z-[1000] flex items-center justify-center p-2 lg:p-4">
@@ -2030,32 +2213,34 @@ const Modal = ({ show, onClose, title, children, onSave, isProcessing }) => (
             {children}
           </div>
           
-          <div className="px-4 lg:px-8 py-4 lg:py-6 bg-gray-50 border-t flex justify-end gap-3 sticky bottom-0">
-            <button 
-              onClick={onClose} 
-              className="px-4 lg:px-6 py-2 font-semibold text-gray-500 text-sm lg:text-base"
-              disabled={isProcessing}
-            >
-              Cancelar
-            </button>
-            <button 
-              onClick={onSave} 
-              disabled={isProcessing}
-              className="bg-blue-600 text-white px-6 lg:px-8 py-2 rounded-xl font-bold hover:bg-blue-700 shadow-lg flex items-center gap-2 disabled:opacity-50 text-sm lg:text-base"
-            >
-              {isProcessing ? (
-                <>
-                  <ArrowPathIcon className="w-4 h-4 lg:w-5 lg:h-5 animate-spin" />
-                  Procesando...
-                </>
-              ) : (
-                <>
-                  <CheckIcon className="w-4 h-4 lg:w-5 lg:h-5" />
-                  Guardar
-                </>
-              )}
-            </button>
-          </div>
+          {!hideSaveButton && (
+            <div className="px-4 lg:px-8 py-4 lg:py-6 bg-gray-50 border-t flex justify-end gap-3 sticky bottom-0">
+              <button 
+                onClick={onClose} 
+                className="px-4 lg:px-6 py-2 font-semibold text-gray-500 text-sm lg:text-base"
+                disabled={isProcessing}
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={onSave} 
+                disabled={isProcessing}
+                className="bg-blue-600 text-white px-6 lg:px-8 py-2 rounded-xl font-bold hover:bg-blue-700 shadow-lg flex items-center gap-2 disabled:opacity-50 text-sm lg:text-base"
+              >
+                {isProcessing ? (
+                  <>
+                    <ArrowPathIcon className="w-4 h-4 lg:w-5 lg:h-5 animate-spin" />
+                    Procesando...
+                  </>
+                ) : (
+                  <>
+                    <CheckIcon className="w-4 h-4 lg:w-5 lg:h-5" />
+                    Guardar
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </motion.div>
       </div>
     )}
