@@ -8,45 +8,227 @@ export const DeskReviewTab = ({ task, user, onComplete, loading }) => {
   const [decision, setDecision] = useState(task.deskReviewDecision || '');
   const [feedback, setFeedback] = useState(task.deskReviewFeedback || '');
   const [internalComments, setInternalComments] = useState(task.deskReviewComments || '');
+  
+  const submission = task.submission || {};
 
-  const handleSubmit = async () => {
-    if (!decision) {
-      alert(isSpanish ? 'Debes seleccionar una decisión' : 'You must select a decision');
-      return;
-    }
-    await onComplete(task.id, { decision, feedbackToAuthor: feedback, commentsToEditorial: internalComments });
+  // Función para formatear autores
+  const formatAuthors = (authors) => {
+    if (!authors || authors.length === 0) return '—';
+    return authors.map(author => {
+      const name = `${author.firstName || ''} ${author.lastName || ''}`.trim();
+      const affiliation = author.institution ? ` (${author.institution})` : '';
+      const corresponding = author.isCorresponding ? ' ✉️' : '';
+      return `${name}${affiliation}${corresponding}`;
+    }).join('; ');
+  };
+
+  // Función para renderizar arrays como lista
+  const renderList = (items) => {
+    if (!items || items.length === 0) return '—';
+    return (
+      <ul className="list-disc list-inside space-y-1">
+        {items.map((item, index) => (
+          <li key={index} className="text-[#0A1929]">{item}</li>
+        ))}
+      </ul>
+    );
   };
 
   return (
     <div className="space-y-6">
-      <div className="bg-[#F5F7FA] rounded-xl p-4 border border-[#E5E9F0]">
-        <h4 className="font-['Playfair_Display'] font-bold text-[#0A1929] mb-3">
-          {isSpanish ? 'Información del Artículo' : 'Article Information'}
-        </h4>
-        <div className="grid grid-cols-2 gap-4 text-sm">
+      {/* ENCABEZADO con título e IDs */}
+      <div className="bg-gradient-to-r from-[#0A1929] to-[#1E2F40] text-white rounded-xl p-6">
+        <div className="flex items-start justify-between">
           <div>
-            <span className="text-[#5A6B7A]">{isSpanish ? 'ID:' : 'ID:'}</span>
-            <span className="ml-2 font-mono text-[#0A1929]">{task.submission?.submissionId}</span>
+            <span className="inline-block px-3 py-1 bg-[#C0A86A] text-[#0A1929] text-xs font-bold rounded-full mb-3">
+              {submission.submissionId || 'Sin ID'}
+            </span>
+            <h2 className="font-['Playfair_Display'] text-2xl font-bold mb-2">
+              {isSpanish ? submission.title : submission.titleEn || submission.title}
+            </h2>
+            <p className="text-[#E5E9F0] text-sm">
+              {isSpanish ? 'Área:' : 'Area:'} {submission.area || '—'} • 
+              {isSpanish ? ' Estado:' : ' Status:'} {submission.status || '—'} • 
+              {isSpanish ? ' Ronda:' : ' Round:'} {submission.currentRound || 1}
+            </p>
           </div>
-          <div>
-            <span className="text-[#5A6B7A]">{isSpanish ? 'Área:' : 'Area:'}</span>
-            <span className="ml-2 text-[#0A1929]">{task.submission?.area}</span>
-          </div>
+          <a 
+            href={submission.driveFolderUrl} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg transition-colors text-sm whitespace-nowrap"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            {isSpanish ? 'Ver archivos en Drive' : 'View files in Drive'}
+          </a>
         </div>
-        <a 
-          href={task.submission?.driveFolderUrl} 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 mt-3 text-[#C0A86A] hover:text-[#A58D4F] text-sm transition-colors"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          {isSpanish ? 'Ver en Drive' : 'View in Drive'}
-        </a>
       </div>
 
-      <div>
+      {/* INFORMACIÓN DEL AUTOR PRINCIPAL */}
+      <div className="bg-[#F5F7FA] rounded-xl p-6 border border-[#E5E9F0]">
+        <h3 className="font-['Playfair_Display'] font-bold text-[#0A1929] text-lg mb-4 flex items-center gap-2">
+          <svg className="w-5 h-5 text-[#C0A86A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+          {isSpanish ? 'Autor Principal' : 'Corresponding Author'}
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs text-[#5A6B7A] uppercase tracking-wider mb-1">
+              {isSpanish ? 'Nombre' : 'Name'}
+            </label>
+            <p className="text-[#0A1929] font-medium">{submission.authorName || '—'}</p>
+          </div>
+          <div>
+            <label className="block text-xs text-[#5A6B7A] uppercase tracking-wider mb-1">
+              Email
+            </label>
+            <p className="text-[#0A1929] font-medium">{submission.authorEmail || '—'}</p>
+          </div>
+          <div>
+            <label className="block text-xs text-[#5A6B7A] uppercase tracking-wider mb-1">
+              ORCID
+            </label>
+            <p className="text-[#0A1929] font-medium">{submission.authors?.[0]?.orcid || '—'}</p>
+          </div>
+          <div>
+            <label className="block text-xs text-[#5A6B7A] uppercase tracking-wider mb-1">
+              {isSpanish ? 'Institución' : 'Institution'}
+            </label>
+            <p className="text-[#0A1929] font-medium">{submission.authors?.[0]?.institution || '—'}</p>
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-xs text-[#5A6B7A] uppercase tracking-wider mb-1">
+              {isSpanish ? 'Contribución' : 'Contribution'}
+            </label>
+            <p className="text-[#0A1929] font-medium">{submission.authors?.[0]?.contribution || '—'}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* LISTA COMPLETA DE AUTORES (si hay más de uno) */}
+      {submission.authors && submission.authors.length > 1 && (
+        <div className="bg-[#F5F7FA] rounded-xl p-6 border border-[#E5E9F0]">
+          <h3 className="font-['Playfair_Display'] font-bold text-[#0A1929] text-lg mb-4 flex items-center gap-2">
+            <svg className="w-5 h-5 text-[#C0A86A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+            {isSpanish ? 'Coautores' : 'Co-authors'} ({submission.authors.length - 1})
+          </h3>
+          <div className="space-y-3">
+            {submission.authors.slice(1).map((author, index) => (
+              <div key={index} className="bg-white rounded-lg p-4 border border-[#E5E9F0]">
+                <p className="font-medium text-[#0A1929]">
+                  {author.firstName} {author.lastName}
+                  {author.isCorresponding && <span className="ml-2 text-[#C0A86A]" title="Corresponding author">✉️</span>}
+                </p>
+                <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
+                  <p className="text-[#5A6B7A]">{author.institution || '—'}</p>
+                  <p className="text-[#5A6B7A]">{author.email || '—'}</p>
+                </div>
+                {author.contribution && (
+                  <p className="text-sm text-[#5A6B7A] mt-1">{author.contribution}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* RESUMEN (Abstract) - Bilingüe */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-[#F5F7FA] rounded-xl p-6 border border-[#E5E9F0]">
+          <h3 className="font-['Playfair_Display'] font-bold text-[#0A1929] text-lg mb-3 flex items-center gap-2">
+            <svg className="w-5 h-5 text-[#C0A86A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            {isSpanish ? 'Resumen' : 'Abstract'} (ES)
+          </h3>
+          <p className="text-[#0A1929] text-sm leading-relaxed whitespace-pre-wrap">
+            {submission.abstract || '—'}
+          </p>
+        </div>
+        <div className="bg-[#F5F7FA] rounded-xl p-6 border border-[#E5E9F0]">
+          <h3 className="font-['Playfair_Display'] font-bold text-[#0A1929] text-lg mb-3 flex items-center gap-2">
+            <svg className="w-5 h-5 text-[#C0A86A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            {isSpanish ? 'Resumen' : 'Abstract'} (EN)
+          </h3>
+          <p className="text-[#0A1929] text-sm leading-relaxed whitespace-pre-wrap">
+            {submission.abstractEn || submission.abstract || '—'}
+          </p>
+        </div>
+      </div>
+
+      {/* PALABRAS CLAVE Y FINANCIAMIENTO */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-[#F5F7FA] rounded-xl p-6 border border-[#E5E9F0]">
+          <h3 className="font-['Playfair_Display'] font-bold text-[#0A1929] text-lg mb-3 flex items-center gap-2">
+            <svg className="w-5 h-5 text-[#C0A86A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l5 5a2 2 0 01.586 1.414V19a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2z" />
+            </svg>
+            {isSpanish ? 'Palabras Clave' : 'Keywords'}
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {(isSpanish ? submission.keywords : submission.keywordsEn || submission.keywords)?.map((keyword, index) => (
+              <span key={index} className="px-3 py-1 bg-white border border-[#C0A86A] text-[#0A1929] rounded-full text-sm">
+                {keyword}
+              </span>
+            )) || '—'}
+          </div>
+        </div>
+        <div className="bg-[#F5F7FA] rounded-xl p-6 border border-[#E5E9F0]">
+          <h3 className="font-['Playfair_Display'] font-bold text-[#0A1929] text-lg mb-3 flex items-center gap-2">
+            <svg className="w-5 h-5 text-[#C0A86A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {isSpanish ? 'Financiamiento' : 'Funding'}
+          </h3>
+          {submission.funding?.hasFunding ? (
+            <div className="space-y-2">
+              <p className="text-[#0A1929] font-medium">{submission.funding.sources || '—'}</p>
+              <p className="text-sm text-[#5A6B7A]">Grant: {submission.funding.grantNumbers || '—'}</p>
+            </div>
+          ) : (
+            <p className="text-[#5A6B7A] italic">{isSpanish ? 'Sin financiamiento' : 'No funding'}</p>
+          )}
+        </div>
+      </div>
+
+      {/* CONFLICTO DE INTERESES Y DISPONIBILIDAD */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-[#F5F7FA] rounded-xl p-6 border border-[#E5E9F0]">
+          <h3 className="font-['Playfair_Display'] font-bold text-[#0A1929] text-lg mb-3 flex items-center gap-2">
+            <svg className="w-5 h-5 text-[#C0A86A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            {isSpanish ? 'Conflicto de Intereses' : 'Conflict of Interest'}
+          </h3>
+          <p className="text-[#0A1929]">{submission.conflictOfInterest || '—'}</p>
+        </div>
+        <div className="bg-[#F5F7FA] rounded-xl p-6 border border-[#E5E9F0]">
+          <h3 className="font-['Playfair_Display'] font-bold text-[#0A1929] text-lg mb-3 flex items-center gap-2">
+            <svg className="w-5 h-5 text-[#C0A86A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+            </svg>
+            {isSpanish ? 'Disponibilidad de Datos' : 'Data Availability'}
+          </h3>
+          <p className="text-[#0A1929]">
+            {isSpanish 
+              ? (submission.dataAvailability === 'available' ? 'Disponible' : 
+                 submission.dataAvailability === 'upon_request' ? 'Bajo solicitud' : 'No disponible')
+              : (submission.dataAvailability === 'available' ? 'Available' : 
+                 submission.dataAvailability === 'upon_request' ? 'Upon request' : 'Not available')
+            }
+          </p>
+        </div>
+      </div>
+
+      {/* DECISIÓN EDITORIAL - (el resto del componente permanece igual) */}
+      <div className="mt-8 pt-6 border-t-2 border-[#E5E9F0]">
         <label className="block font-['Playfair_Display'] font-semibold text-[#0A1929] mb-3">
           {isSpanish ? 'Decisión Editorial' : 'Editorial Decision'}
         </label>
@@ -72,6 +254,7 @@ export const DeskReviewTab = ({ task, user, onComplete, loading }) => {
         </div>
       </div>
 
+      {/* Feedback y Comentarios - (se mantienen igual) */}
       <div>
         <label className="block font-['Playfair_Display'] font-semibold text-[#0A1929] mb-3">
           {isSpanish ? 'Feedback para el Autor' : 'Feedback to Author'}

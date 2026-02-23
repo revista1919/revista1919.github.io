@@ -941,8 +941,6 @@ const tabs = [
   { id: 'news', label: isSpanish ? 'NOTICIAS' : 'NEWS', roles: ['Director General'] },
   { id: 'admissions', label: isSpanish ? 'ADMISIONES' : 'ADMISSIONS', roles: ['Director General'] },
   { id: 'usermanagement', label: isSpanish ? 'USUARIOS' : 'USERS', roles: ['Director General'] },
-  // NUEVA PESTAÑA PARA ARTÍCULOS ACEPTADOS
-  { id: 'accepted-articles', label: isSpanish ? 'ARTÍCULOS ACEPTADOS' : 'ACCEPTED ARTICLES', roles: ['Editor de Sección', 'Editor en Jefe', 'Director General'] }
 
   ].filter(tab => tab.roles.includes('any') || tab.roles.some(role => userRoles.includes(role)));
 
@@ -1327,16 +1325,7 @@ const tabs = [
           )}
 // En el main, dentro del AnimatePresence
 
-{activeTab === 'accepted-articles' && (
-  <motion.section
-    key="accepted-articles"
-    initial={{ opacity: 0, x: -20 }} 
-    animate={{ opacity: 1, x: 0 }} 
-    exit={{ opacity: 0, x: 20 }}
-  >
-    <AcceptedArticlesPanel user={userData} />
-  </motion.section>
-)}
+
           {/* DESK REVIEW */}
           {activeTab === 'deskreview' && (
             <motion.section
