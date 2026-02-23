@@ -59,25 +59,26 @@ const ReviewerResponsePage = () => {
           setInvitation(result.data);
           
           if (result.data?.submissionId) {
-            try {
-              const submissionDoc = await getDoc(doc(db, 'submissions', result.data.submissionId));
-              if (submissionDoc.exists()) {
-                const submissionData = submissionDoc.data();
-                setSubmission({
-                  id: submissionDoc.id,
-                  title: submissionData.title,
-                  abstract: submissionData.abstract,
-                  area: submissionData.area,
-                  paperLanguage: submissionData.paperLanguage,
-                  driveFolderUrl: submissionData.driveFolderUrl,
-                  authors: submissionData.authors
-                });
-              }
-            } catch (subError) {
-              console.warn('⚠️ Error cargando submission:', subError);
-              // No detenemos el flujo principal
-            }
-          }
+  try {
+    const submissionDoc = await getDoc(doc(db, 'submissions', result.data.submissionId));
+    if (submissionDoc.exists()) {
+      const submissionData = submissionDoc.data();
+      setSubmission({
+        id: submissionDoc.id,
+        title: submissionData.title,
+        abstract: submissionData.abstract,
+        area: submissionData.area,
+        paperLanguage: submissionData.paperLanguage,
+        driveFolderUrl: submissionData.driveFolderUrl,
+        authors: submissionData.authors
+      });
+    }
+  } catch (subError) {
+    console.warn('No se pudo cargar el submission (el revisor no tiene permisos para verlo)');
+    // No mostrar error al usuario, solo continuar
+  }
+}
+          
         } else {
           console.log('❌ Invitación no encontrada:', result?.error);
           setError(result?.error || (isSpanish ? 'Invitación no encontrada' : 'Invitation not found'));
