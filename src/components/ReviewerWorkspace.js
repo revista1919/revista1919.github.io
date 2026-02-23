@@ -386,13 +386,6 @@ export const ReviewerWorkspace = ({ assignmentId, onClose, readOnly = false }) =
               </div>
               
               <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-1">{isSpanish ? 'Autores' : 'Authors'}</h3>
-                <p className="text-gray-900">
-                  {submission.authors?.map(a => `${a.firstName} ${a.lastName}`).join(', ')}
-                </p>
-              </div>
-              
-              <div>
                 <h3 className="text-sm font-medium text-gray-500 mb-1">{isSpanish ? 'Área' : 'Area'}</h3>
                 <p className="text-gray-900">{submission.area}</p>
               </div>
