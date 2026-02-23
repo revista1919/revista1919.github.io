@@ -1,4 +1,4 @@
-// src/components/DeskReviewPanel.js (VERSIÓN MODIFICADA - AGRUPACIÓN POR SUBMISSION)
+// src/components/DeskReviewPanel.js (VERSIÓN CORREGIDA)
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../firebase';
@@ -17,8 +17,8 @@ const DeskReviewPanel = ({ user }) => {
   const isSpanish = language === 'es';
   
   const [assignedTasks, setAssignedTasks] = useState([]);
-  const [selectedSubmissionId, setSelectedSubmissionId] = useState(null); // Cambiamos a submissionId
-  const [selectedRound, setSelectedRound] = useState(1); // Para manejar la ronda seleccionada
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState(null);
+  const [selectedRound, setSelectedRound] = useState(1);
   const [activeTaskTab, setActiveTaskTab] = useState('deskReview');
   
   const [potentialReviewers, setPotentialReviewers] = useState([]);
@@ -78,7 +78,6 @@ const DeskReviewPanel = ({ user }) => {
           submission: task.submission,
           tasks: [],
           latestTask: null,
-          // Estados agregados
           hasPendingTasks: false,
           hasCompletedTasks: false,
           currentRound: 1
@@ -87,7 +86,7 @@ const DeskReviewPanel = ({ user }) => {
       
       grouped[subId].tasks.push(task);
       
-      // Ordenar tareas por round (asumiendo que tienen campo 'round')
+      // Ordenar tareas por round
       grouped[subId].tasks.sort((a, b) => (a.round || 1) - (b.round || 1));
       
       // Actualizar estados agregados
@@ -112,9 +111,8 @@ const DeskReviewPanel = ({ user }) => {
     const submission = groupedSubmissions.find(g => g.submissionId === selectedSubmissionId);
     if (!submission) return null;
     
-    // Buscar la tarea de la ronda seleccionada
     const task = submission.tasks.find(t => (t.round || 1) === selectedRound);
-    return task || submission.latestTask; // Fallback a la última tarea
+    return task || submission.latestTask;
   }, [selectedSubmissionId, selectedRound, groupedSubmissions]);
 
   // Cargar datos relacionados cuando cambia la tarea seleccionada
@@ -255,7 +253,6 @@ const DeskReviewPanel = ({ user }) => {
     );
   });
 
-  // Separar en pendientes y completados (a nivel de submission, no tarea)
   const pendingSubmissions = groupedSubmissions.filter(g => g.hasPendingTasks);
   const completedSubmissions = groupedSubmissions.filter(g => !g.hasPendingTasks && g.hasCompletedTasks);
 
@@ -362,12 +359,14 @@ const DeskReviewPanel = ({ user }) => {
                               latestTask?.status === TASK_STATES.DESK_REVIEW_IN_PROGRESS ? 'bg-blue-100 text-blue-700' :
                               latestTask?.status === TASK_STATES.REVIEWER_SELECTION ? 'bg-purple-100 text-purple-700' :
                               latestTask?.status === TASK_STATES.AWAITING_DECISION ? 'bg-green-100 text-green-700' :
+                              group.submission?.status === 'revisions-requested' ? 'bg-orange-100 text-orange-700 animate-pulse' :
                               'bg-gray-100 text-gray-700'
                             }`}>
                               {latestTask?.status === TASK_STATES.PENDING && (isSpanish ? 'Pendiente' : 'Pending')}
                               {latestTask?.status === TASK_STATES.DESK_REVIEW_IN_PROGRESS && (isSpanish ? 'En revisión' : 'In review')}
                               {latestTask?.status === TASK_STATES.REVIEWER_SELECTION && (isSpanish ? 'Seleccionando revisores' : 'Selecting reviewers')}
                               {latestTask?.status === TASK_STATES.AWAITING_DECISION && (isSpanish ? 'Esperando decisión' : 'Awaiting decision')}
+                              {group.submission?.status === 'revisions-requested' && (isSpanish ? '⏳ Esperando autor' : '⏳ Awaiting author')}
                             </span>
                           </div>
                           
@@ -388,25 +387,7 @@ const DeskReviewPanel = ({ user }) => {
                   })}
                 </>
               )}
-// Dentro de DeskReviewPanel.js, en la sección pendingSubmissions.map
-// Busca donde se renderiza el badge de estado y añade esta condición
 
-<span className={`text-xs px-2 py-1 rounded-full ${
-  latestTask?.status === TASK_STATES.PENDING ? 'bg-yellow-100 text-yellow-700' :
-  latestTask?.status === TASK_STATES.DESK_REVIEW_IN_PROGRESS ? 'bg-blue-100 text-blue-700' :
-  latestTask?.status === TASK_STATES.REVIEWER_SELECTION ? 'bg-purple-100 text-purple-700' :
-  latestTask?.status === TASK_STATES.AWAITING_DECISION ? 'bg-green-100 text-green-700' :
-  // ✅ NUEVO: Estado de esperando revisión del autor
-  group.submission?.status === 'revisions-requested' ? 'bg-orange-100 text-orange-700 animate-pulse' :
-  'bg-gray-100 text-gray-700'
-}`}>
-  {latestTask?.status === TASK_STATES.PENDING && (isSpanish ? 'Pendiente' : 'Pending')}
-  {latestTask?.status === TASK_STATES.DESK_REVIEW_IN_PROGRESS && (isSpanish ? 'En revisión' : 'In review')}
-  {latestTask?.status === TASK_STATES.REVIEWER_SELECTION && (isSpanish ? 'Seleccionando revisores' : 'Selecting reviewers')}
-  {latestTask?.status === TASK_STATES.AWAITING_DECISION && (isSpanish ? 'Esperando decisión' : 'Awaiting decision')}
-  {/* ✅ NUEVO: */}
-  {group.submission?.status === 'revisions-requested' && (isSpanish ? '⏳ Esperando autor' : '⏳ Awaiting author')}
-</span>
               {/* Manuscritos Completados */}
               {completedSubmissions.length > 0 && (
                 <>
@@ -423,7 +404,7 @@ const DeskReviewPanel = ({ user }) => {
                         animate={{ opacity: 1, x: 0 }}
                         onClick={() => {
                           setSelectedSubmissionId(group.submissionId);
-                          setSelectedRound(group.tasks.length); // Última ronda
+                          setSelectedRound(group.tasks.length);
                         }}
                         className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
                           isSelected
@@ -442,6 +423,11 @@ const DeskReviewPanel = ({ user }) => {
                           {group.submission?.status === 'accepted' && (
                             <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full">
                               {isSpanish ? 'ACEPTADO' : 'ACCEPTED'}
+                            </span>
+                          )}
+                          {group.submission?.status === 'revisions-requested' && (
+                            <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full animate-pulse">
+                              {isSpanish ? '⏳ ESPERANDO AUTOR' : '⏳ AWAITING AUTHOR'}
                             </span>
                           )}
                         </div>
@@ -467,11 +453,11 @@ const DeskReviewPanel = ({ user }) => {
           )}
         </div>
 
-        {/* Panel de trabajo */}
+        {/* Panel de trabajo - el resto del código se mantiene igual */}
         <div className="lg:col-span-2">
           {selectedTask ? (
             <div>
-              {/* Selector de rondas (solo si hay múltiples) */}
+              {/* Selector de rondas */}
               {groupedSubmissions.find(g => g.submissionId === selectedSubmissionId)?.tasks.length > 1 && (
                 <div className="mb-4 flex items-center gap-2 border-b border-gray-200 pb-2">
                   <span className="text-sm text-gray-600">
@@ -560,7 +546,7 @@ const DeskReviewPanel = ({ user }) => {
                 )}
               </div>
 
-              {/* Renderizar tabs */}
+              {/* Renderizar tabs - el resto igual */}
               {activeTaskTab === 'deskReview' && (
                 <DeskReviewTab
                   task={selectedTask}
@@ -597,9 +583,7 @@ const DeskReviewPanel = ({ user }) => {
                 <MetadataRefinementTab
                   submission={selectedTask.submission}
                   user={user}
-                  onComplete={() => {
-                    // Opcional: refrescar datos
-                  }}
+                  onComplete={() => {}}
                 />
               )}
             </div>
