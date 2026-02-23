@@ -1,9 +1,8 @@
+// src/components/PortalSection.js (VERSIÓN ACTUALIZADA - SIN LÓGICAS ANTIGUAS)
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import Papa from 'papaparse';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { debounce } from 'lodash';
-import { ReviewerWorkspace } from './Workspace';
+import { ReviewerWorkspace } from './ReviewerWorkspace';
 import NewsUploadSection from './NewsUploadSection';
 import ArticleAssignmentPanel from './ArticleAssignmentPanel';
 import TaskSection from './TaskSection';
@@ -11,11 +10,11 @@ import AssignSection from './AssignSection';
 import DirectorPanel from './DirectorPanel';
 import Admissions from './Admissions';
 import DeskReviewPanel from './DeskReviewPanel';
+import AuthorSubmissionsPanel from './AuthorSubmissionsPanel'; // <-- NUEVO
 import { 
   UserIcon, 
   CameraIcon, 
   LinkIcon,
-  AcademicCapIcon,
   EnvelopeIcon,
   XMarkIcon,
   PlusIcon
@@ -26,17 +25,14 @@ import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { db, onSnapshot, query, collection, doc, updateDoc, uploadImageToImgBB, updateRole } from '../firebase';
 import SubmissionForm from './SubmissionForm';
-import { useLanguage } from '../hooks/useLanguage'; // <--- IMPORTANTE: Importar el hook
+import { useLanguage } from '../hooks/useLanguage';
+import { useReviewerAssignment } from '../hooks/useReviewerAssignment';
 
 // <-- NUEVO: Importar funciones de reclamación
 import { checkAnonymousProfile, claimAnonymousProfile } from '../firebase';
 
-const ASSIGNMENTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_RFrrfaVQHftZUhvJ1LVz0i_Tju-6PlYI8tAu5hLNLN21u8M7KV-eiruomZEcMuc_sxLZ1rXBhX1O/pub?output=csv';
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby2B1OUt3TMqaed6Vz-iamUPn4gHhKXG2RRxiy8Nt6u69Cg-2kSze2XQ-NywX5QrNfy/exec';
-const RUBRIC_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzehxU_O7GkzfiCqCsSdnFwvA_Mhtfr_vSZjqVsBo3yx8ZEpr9Qur4NHPI09tyH1AZe/exec';
-const RUBRIC_CSV1 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=0&single=true&output=csv';
-const RUBRIC_CSV2 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=1438370398&single=true&output=csv';
-const RUBRIC_CSV3 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1BhqyalgqRIACNtlt1C0cDSBqBXCtPABA8WnXFOnbDXkLauCpLjelu9GHv7i1XLvPY346suLE9Lag/pub?gid=1972050001&single=true&output=csv';
+// ELIMINADO: Todas las constantes de CSV y scripts antiguos
+// ASSIGNMENTS_CSV, SCRIPT_URL, RUBRIC_SCRIPT_URL, etc. fueron eliminados
 
 const ES_TO_EN = {
   'Fundador': 'Founder',
@@ -98,13 +94,6 @@ const EN_TO_ES = {
 
 const ALL_ROLES = Object.keys(ES_TO_EN);
 
-const getDecisionText = (percent) => {
-  if (percent >= 85) return 'Aceptar sin cambios.';
-  if (percent >= 70) return 'Aceptar con cambios menores.';
-  if (percent >= 50) return 'Revisión mayor requerida antes de publicar.';
-  return 'Rechazar.';
-};
-
 const base64EncodeUnicode = (str) => {
   const encoder = new TextEncoder();
   const bytes = encoder.encode(str);
@@ -121,14 +110,6 @@ const base64DecodeUnicode = (str) => {
   }
   const decoder = new TextDecoder();
   return decoder.decode(bytes);
-};
-
-const safeDecodeUnicode = (str) => {
-  try {
-    return base64DecodeUnicode(str);
-  } catch {
-    return str;
-  }
 };
 
 const sanitizeInput = (input) => {
@@ -208,133 +189,7 @@ function CalendarComponent({ events, onSelectEvent }) {
   );
 }
 
-/** * DISEÑO MODERNIZADO: Rúbrica estilo formulario de revisión por pares */
-const RubricViewer = ({ roleKey, scores, onChange, readOnly = false }) => {
-  const { language } = useLanguage();
-  const isSpanish = language === 'es';
-  
-  const crits = criteria[roleKey];
-  if (!crits) return null;
-  const total = getTotal(scores, crits);
-  const max = crits.length * 2;
-  return (
-    <motion.div
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-      className="bg-white border border-gray-100 rounded-3xl overflow-hidden mb-8 shadow-sm"
-    >
-      <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-        <h5 className="font-serif text-lg font-bold text-gray-900 uppercase tracking-tight">
-          {isSpanish ? 'Protocolo de Evaluación:' : 'Evaluation Protocol:'} {roleKey}
-        </h5>
-        <div className="text-sm font-mono font-bold text-emerald-700 bg-emerald-50 px-4 py-1.5 rounded-2xl">
-          {isSpanish ? 'PUNTAJE:' : 'SCORE:'} {total} / {max}
-        </div>
-      </div>
-     
-      <div className="p-6 space-y-8">
-        {crits.map((c) => (
-          <div key={c.key} className="border-b border-gray-100 last:border-0 pb-8">
-            <div className="flex justify-between items-start mb-4">
-              <h6 className="font-sans font-bold text-xs uppercase tracking-widest text-gray-500 break-words">{c.name}</h6>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {Object.entries(c.levels).map(([val, info]) => (
-                <button
-                  key={val}
-                  type="button"
-                  onClick={() => !readOnly && onChange && onChange(c.key, parseInt(val))}
-                  className={`relative p-5 text-left border rounded-2xl transition-all duration-200 group ${
-                    scores[c.key] == val
-                    ? 'border-emerald-600 bg-emerald-50 ring-1 ring-emerald-600'
-                    : 'border-gray-200 hover:border-emerald-300 bg-white'
-                  } ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}
-                >
-                  <span className={`block text-xs font-bold mb-2 ${scores[c.key] == val ? 'text-emerald-700' : 'text-gray-400'}`}>
-                    {isSpanish ? 'NIVEL' : 'LEVEL'} {val}
-                  </span>
-                  <p className="text-sm text-gray-800 leading-snug break-words">{info.label.split('=')[1]}</p>
-                  {scores[c.key] == val && (
-                    <motion.div layoutId="check" className="absolute top-4 right-4 text-emerald-600">
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293l-4 4a1 1 0 01-1.414 0l-2-2a1 1 0 111.414-1.414L9 10.586l3.293-3.293a1 1 0 011.414 1.414z"/></svg>
-                    </motion.div>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </motion.div>
-  );
-};
-
-/**
- * TARJETA DE ASIGNACIÓN: Estilo Card Editorial
- */
-const AssignmentCard = ({ assignment, onClick, index }) => {
-  const { language } = useLanguage();
-  const isSpanish = language === 'es';
-  
-  const role = assignment.role;
-  const isAuthorCard = role === 'Autor';
-  const isCompleted = isAuthorCard
-    ? (assignment.feedbackEditor && ['Aceptado', 'Rechazado'].includes(assignment.Estado))
-    : assignment.isCompleted;
-  
-  // Traducir el rol para mostrarlo
-  const displayRole = (role) => {
-    if (!isSpanish) {
-      return ES_TO_EN[role] || role;
-    }
-    return role;
-  };
-  
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
-      whileHover={{ y: -4, scale: 1.01 }}
-      onClick={onClick}
-      className="group bg-white border border-gray-100 p-6 flex flex-col h-full hover:border-emerald-400 transition-all cursor-pointer relative overflow-hidden rounded-3xl shadow-sm"
-    >
-      <div className="flex justify-between items-start mb-4">
-        <span className="text-[10px] font-sans font-bold uppercase tracking-[0.2em] text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
-          {displayRole(role)}
-        </span>
-        <div className={`w-3 h-3 rounded-full ${isCompleted ? 'bg-emerald-500' : 'bg-amber-400 animate-pulse'}`} />
-      </div>
-     
-      <h4 className="font-serif text-xl font-bold text-gray-900 group-hover:text-emerald-800 transition-colors mb-6 line-clamp-2 break-words leading-tight">
-        {assignment['Nombre Artículo']}
-      </h4>
-      <div className="mt-auto pt-6 border-t border-gray-100 space-y-3">
-        <div className="flex justify-between text-xs text-gray-500 font-sans">
-          <span>{isSpanish ? 'PLAZO' : 'DEADLINE'}</span>
-          <span className="font-bold text-gray-700 break-words">
-            {assignment.Plazo 
-              ? new Date(assignment.Plazo).toLocaleDateString(isSpanish ? 'es-ES' : 'en-US', { 
-                  day: 'numeric', 
-                  month: 'short', 
-                  year: 'numeric' 
-                }) 
-              : (isSpanish ? 'SIN FECHA' : 'NO DATE')}
-          </span>
-        </div>
-        <div className="flex justify-between text-xs text-gray-500 font-sans">
-          <span>{isSpanish ? 'ESTADO' : 'STATUS'}</span>
-          <span className={`font-bold break-words ${isCompleted ? 'text-emerald-700' : 'text-amber-700'}`}>
-            {isCompleted 
-              ? (isSpanish ? 'FINALIZADO' : 'COMPLETED') 
-              : (isSpanish ? 'PENDIENTE' : 'PENDING')}
-          </span>
-        </div>
-      </div>
-    </motion.div>
-  );
-};
-
-/* ==================== NUEVO: COMPONENTE DE TAGS PARA INTERESES ==================== */
+// ==================== COMPONENTE DE TAGS PARA INTERESES ====================
 const InterestsTags = ({ value = [], onChange, placeholder }) => {
   const [inputValue, setInputValue] = useState('');
   const { language } = useLanguage();
@@ -361,7 +216,6 @@ const InterestsTags = ({ value = [], onChange, placeholder }) => {
 
   return (
     <div className="space-y-4">
-      {/* Tags actuales */}
       <div className="flex flex-wrap gap-2">
         {value.map((tag, index) => (
           <motion.div
@@ -381,7 +235,6 @@ const InterestsTags = ({ value = [], onChange, placeholder }) => {
         ))}
       </div>
 
-      {/* Input + botón */}
       <div className="flex flex-col sm:flex-row gap-3">
         <input
           value={inputValue}
@@ -402,7 +255,7 @@ const InterestsTags = ({ value = [], onChange, placeholder }) => {
   );
 };
 
-// ==================== PERFIL (Totalmente Responsive) ====================
+// ==================== PERFIL ====================
 const ProfileSection = ({ user }) => {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -414,7 +267,6 @@ const ProfileSection = ({ user }) => {
     lastName: user.lastName || '',
     descriptionEs: user.description?.es || '',
     descriptionEn: user.description?.en || '',
-    // Soporte para arrays (nuevo) y fallback para strings antiguos
     interestsEs: Array.isArray(user.interests?.es) 
       ? user.interests.es 
       : (user.interests?.es ? user.interests.es.split(',').map(s => s.trim()).filter(Boolean) : []),
@@ -525,7 +377,7 @@ const ProfileSection = ({ user }) => {
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 sm:space-y-12 px-2 sm:px-4">
-      {/* Encabezado Avatar - Totalmente Responsive */}
+      {/* Encabezado Avatar */}
       <div className="bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 p-6 sm:p-8 lg:p-12 flex flex-col lg:flex-row items-center gap-6 sm:gap-8 lg:gap-12">
         <div className="relative group flex-shrink-0">
           <div className="w-36 h-36 sm:w-44 sm:h-44 lg:w-52 lg:h-52 rounded-2xl sm:rounded-3xl overflow-hidden ring-8 ring-white shadow-2xl relative">
@@ -748,14 +600,13 @@ const ProfileSection = ({ user }) => {
   );
 };
 
-// ==================== GESTIÓN DE USUARIOS (Totalmente Responsive) ====================
+// ==================== GESTIÓN DE USUARIOS ====================
 const UserManagement = ({ users: initialUsers }) => {
   const [users, setUsers] = useState(initialUsers);
   const [searchTerm, setSearchTerm] = useState('');
   const { language } = useLanguage();
   const isSpanish = language === 'es';
 
-  // Sincronizar con prop inicial
   useEffect(() => {
     setUsers(initialUsers);
   }, [initialUsers]);
@@ -797,7 +648,6 @@ const UserManagement = ({ users: initialUsers }) => {
   );
 
   if (!users || users.length === 0) {
-    console.warn('UserManagement: No users data available');
     return <div className="text-center py-12 sm:py-20 text-gray-400">
       {isSpanish ? 'Cargando usuarios...' : 'Loading users...'}
     </div>;
@@ -859,7 +709,6 @@ const UserManagement = ({ users: initialUsers }) => {
               </div>
               <div className="flex flex-wrap gap-2">
                 {(user.roles || []).map(role => {
-                  // Mostrar rol traducido si estamos en inglés
                   const displayRole = !isSpanish ? (ES_TO_EN[role] || role) : role;
                   return (
                     <div 
@@ -877,7 +726,6 @@ const UserManagement = ({ users: initialUsers }) => {
                   );
                 })}
 
-                {/* Selector de nuevo rol */}
                 <div className="relative">
                   <select
                     onChange={(e) => {
@@ -975,7 +823,6 @@ const UserManagement = ({ users: initialUsers }) => {
                       );
                     })}
 
-                    {/* Selector de nuevo rol */}
                     <div className="relative">
                       <select
                         onChange={(e) => {
@@ -1018,162 +865,45 @@ const UserManagement = ({ users: initialUsers }) => {
 };
 
 export default function PortalSection({ user, onLogout }) {
-  const { language } = useLanguage(); // <--- Hook de idioma
+  const { language } = useLanguage();
   const isSpanish = language === 'es';
 
-  const [assignments, setAssignments] = useState([]);
-  const [assignmentsFetched, setAssignmentsFetched] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [feedback, setFeedback] = useState({});
-  const [report, setReport] = useState({});
-  const [vote, setVote] = useState({});
-  const [rubricScores, setRubricScores] = useState({});
-  const [tutorialVisible, setTutorialVisible] = useState({});
-  const [submitStatus, setSubmitStatus] = useState({});
-  const [rubricStatus, setRubricStatus] = useState({});
-  const [error, setError] = useState('');
+  // ELIMINADO: Todos los estados relacionados con CSV
+  // assignments, assignmentsFetched, feedback, report, vote, rubricScores, etc. eliminados
+
   const [activeTab, setActiveTab] = useState('profile');
-  const [showImageModal, setShowImageModal] = useState({});
-  const [isEditingImage, setIsEditingImage] = useState({});
-  const [imageData, setImageData] = useState({});
-  const [editingRange, setEditingRange] = useState({});
-  const [selectedAssignment, setSelectedAssignment] = useState(null);
-  const [expandedFeedback, setExpandedFeedback] = useState({});
   const [isDirectorPanelExpanded, setIsDirectorPanelExpanded] = useState(false);
   const [isChiefEditorPanelExpanded, setIsChiefEditorPanelExpanded] = useState(false);
   const [effectiveName, setEffectiveName] = useState(user?.displayName || '');
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const feedbackQuillRefs = useRef({});
-  const reportQuillRefs = useRef({});
   const [loadingUser, setLoadingUser] = useState(true);
   
-  // NUEVO: Datos en tiempo real desde Firebase
+  // Datos en tiempo real desde Firebase
   const [userData, setUserData] = useState(user);
   const [users, setUsers] = useState([]);
+  const [reviewerAssignments, setReviewerAssignments] = useState([]); // <-- NUEVO para revisores
 
-  // <-- NUEVO: Estados para reclamación de perfil
+  // Estados para reclamación de perfil
   const [showClaimModal, setShowClaimModal] = useState(false);
-  const [claimStatus, setClaimStatus] = useState('idle'); // 'idle', 'checking', 'available', 'claiming', 'success', 'error'
+  const [claimStatus, setClaimStatus] = useState('idle');
   const [anonymousProfile, setAnonymousProfile] = useState(null);
   const [claimError, setClaimError] = useState('');
 
-  const debouncedSetFeedback = useCallback(
-    (link) => debounce((value) => {
-      setFeedback((prev) => ({ ...prev, [link]: value }));
-    }, 300),
-    []
-  );
+  const { getReviewerAssignmentsByEmail } = useReviewerAssignment(user);
 
-  const debouncedSetReport = useCallback(
-    (link) => debounce((value) => {
-      setReport((prev) => ({ ...prev, [link]: value }));
-    }, 300),
-    []
-  );
-
+  // Módulos de Quill (se mantienen por si acaso)
   const modules = useMemo(() => ({
     toolbar: {
       container: [
         ['bold', 'italic', 'underline', 'strike', 'blockquote'],
         [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-        ['link', 'image', 'custom-image'],
+        ['link', 'image'],
         [{ 'align': ['', 'center', 'right', 'justify'] }],
         [{ 'size': ['small', false, 'large'] }],
         ['clean']
-      ],
-      handlers: {
-        'custom-image': (value, link) => {
-          setIsEditingImage((prev) => ({ ...prev, [link]: false }));
-          setImageData((prev) => ({ ...prev, [link]: { url: '', width: '', height: '', align: 'left' } }));
-          setShowImageModal((prev) => ({ ...prev, [link]: true }));
-        }
-      }
-    },
-    imageResize: {
-      parchment: ReactQuill.Quill.import('parchment'),
-      modules: ['Resize', 'DisplaySize'],
-      handleStyles: {
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        border: 'none',
-        color: 'white',
-      },
-      displayStyles: {
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        border: 'none',
-        color: 'white',
-      },
-    },
-    keyboard: {
-      bindings: {
-        deleteImage: {
-          key: ['Delete', 'Backspace'],
-          handler: function(range) {
-            if (!range) return true;
-            const editor = this.quill;
-            const imageResize = editor.getModule('imageResize');
-            let isImage = false;
-            let deleteIndex = range.index;
-            let deleteLength = 1;
-            if (range.length === 0) {
-              const [leaf] = editor.getLeaf(range.index);
-              if (leaf && leaf.domNode && leaf.domNode.tagName === 'IMG') {
-                isImage = true;
-              } else {
-                if (this.key === 'Backspace') {
-                  const [prevLeaf] = editor.getLeaf(range.index - 1);
-                  if (prevLeaf && prevLeaf.domNode && prevLeaf.domNode.tagName === 'IMG') {
-                    isImage = true;
-                    deleteIndex = range.index - 1;
-                  }
-                } else if (this.key === 'Delete') {
-                  const [nextLeaf] = editor.getLeaf(range.index);
-                  if (nextLeaf && nextLeaf.domNode && nextLeaf.domNode.tagName === 'IMG') {
-                    isImage = true;
-                    deleteIndex = range.index;
-                  }
-                }
-              }
-            } else if (range.length === 1) {
-              const [leaf] = editor.getLeaf(range.index);
-              if (leaf && leaf.domNode && leaf.domNode.tagName === 'IMG') {
-                isImage = true;
-              }
-            }
-            if (isImage) {
-              try {
-                if (imageResize) imageResize.hide();
-                editor.deleteText(deleteIndex, deleteLength, ReactQuill.Quill.sources.USER);
-                return false;
-              } catch (err) {
-                console.error('Error al eliminar imagen:', err);
-                return false;
-              }
-            }
-            return true;
-          },
-        },
-        enterAfterImage: {
-          key: 'Enter',
-          handler: function(range) {
-            if (!range) return true;
-            const editor = this.quill;
-            const [leaf] = editor.getLeaf(range.index);
-            if (leaf && leaf.domNode && leaf.domNode.tagName === 'IMG') {
-              try {
-                editor.insertText(range.index + 1, '\n', ReactQuill.Quill.sources.USER);
-                editor.setSelection(range.index + 2, ReactQuill.Quill.sources.SILENT);
-                return false;
-              } catch (err) {
-                console.error('Error al insertar nueva línea después de imagen:', err);
-                return false;
-              }
-            }
-            return true;
-          },
-        },
-      },
-    },
+      ]
+    }
   }), []);
 
   const formats = useMemo(() => [
@@ -1188,78 +918,30 @@ export default function PortalSection({ user, onLogout }) {
   const isAuthor = userRoles.includes('Autor');
   const isChief = userRoles.includes('Editor en Jefe');
   const isDirector = userRoles.includes('Director General');
+  const isSectionEditor = userRoles.includes('Editor de Sección');
+  const isReviewer = userRoles.includes('Revisor');
   const isRrss = userRoles.includes('Encargado de Redes Sociales');
   const isWebDev = userRoles.includes('Responsable de Desarrollo Web');
-  const canSeeCalendar = isChief || isDirector || isRrss || isWebDev || assignments.some(a => a.role !== 'Autor');
+  const isAssignmentManager = userRoles.includes('Encargado de Asignación de Artículos');
 
-  const pendingAssignments = useMemo(() =>
-    isAuthor
-      ? assignments.filter(a => !a.feedbackEditor || !['Aceptado', 'Rechazado'].includes(a.Estado))
-      : assignments.filter(a => !a.isCompleted),
-    [assignments, isAuthor]
-  );
-
-  const completedAssignments = useMemo(() =>
-    isAuthor
-      ? assignments.filter(a => a.feedbackEditor && ['Aceptado', 'Rechazado'].includes(a.Estado))
-      : assignments.filter(a => a.isCompleted),
-    [assignments, isAuthor]
-  );
-
-  // Pestañas con textos bilingües
+  // Pestañas actualizadas para el nuevo sistema
   const tabs = [
-    { id: 'profile', label: isSpanish ? 'MI PERFIL' : 'MY PROFILE' },
-    { id: 'assignments', label: isSpanish ? 'MIS ASIGNACIONES' : 'MY ASSIGNMENTS' },
-    { id: 'completed', label: isSpanish ? 'COMPLETADAS' : 'COMPLETED' },
-     { 
-    id: 'assignment', 
-    label: isSpanish ? 'ASIGNAR ARTÍCULOS' : 'ASSIGN ARTICLES', 
-    hidden: !userRoles.includes('Encargado de Asignación de Artículos') && !userRoles.includes('Director General') 
-  },
-    { id: 'calendar', label: isSpanish ? 'CALENDARIO ACADÉMICO' : 'ACADEMIC CALENDAR', hidden: !canSeeCalendar },
-    { id: 'submit', label: isSpanish ? 'ENVIAR MANUSCRITO' : 'SUBMIT MANUSCRIPT', hidden: !isAuthor },
-    { id: 'director', label: isSpanish ? 'PANEL DIRECTIVO' : 'DIRECTOR PANEL', hidden: !isDirector },
-    { id: 'chief', label: isSpanish ? 'PANEL EDITOR JEFE' : 'CHIEF EDITOR PANEL', hidden: !isChief },
-    { id: 'tasks', label: isSpanish ? 'MIS TAREAS' : 'MY TASKS', hidden: !isRrss && !isWebDev },
-    { id: 'news', label: isSpanish ? 'PUBLICAR NOTICIAS' : 'PUBLISH NEWS', hidden: !isDirector },
-    { id: 'admissions', label: isSpanish ? 'ADMISIONES' : 'ADMISSIONS', hidden: !isDirector },
-    { id: 'usermanagement', label: isSpanish ? 'GESTIÓN DE USUARIOS' : 'USER MANAGEMENT', hidden: !isDirector }
-  ];
+    { id: 'profile', label: isSpanish ? 'MI PERFIL' : 'MY PROFILE', roles: ['any'] },
+    { id: 'submissions', label: isSpanish ? 'MIS ENVÍOS' : 'MY SUBMISSIONS', roles: ['Autor'] }, // <-- NUEVO
+    { id: 'reviewer-tasks', label: isSpanish ? 'MIS REVISIONES' : 'MY REVIEWS', roles: ['Revisor'] }, // <-- NUEVO
+    { id: 'deskreview', label: isSpanish ? 'DESK REVIEW' : 'DESK REVIEW', roles: ['Editor de Sección', 'Editor en Jefe'] },
+    { id: 'assignment', label: isSpanish ? 'ASIGNAR ARTÍCULOS' : 'ASSIGN ARTICLES', roles: ['Encargado de Asignación de Artículos', 'Director General'] },
+    { id: 'calendar', label: isSpanish ? 'CALENDARIO' : 'CALENDAR', roles: ['Editor en Jefe', 'Director General', 'Encargado de Asignación de Artículos'] },
+    { id: 'submit', label: isSpanish ? 'ENVIAR MANUSCRITO' : 'SUBMIT MANUSCRIPT', roles: ['Autor'] },
+    { id: 'director', label: isSpanish ? 'PANEL DIRECTIVO' : 'DIRECTOR PANEL', roles: ['Director General'] },
+    { id: 'chief', label: isSpanish ? 'PANEL EDITOR JEFE' : 'CHIEF EDITOR PANEL', roles: ['Editor en Jefe'] },
+    { id: 'tasks', label: isSpanish ? 'TAREAS' : 'TASKS', roles: ['Encargado de Redes Sociales', 'Responsable de Desarrollo Web'] },
+    { id: 'news', label: isSpanish ? 'NOTICIAS' : 'NEWS', roles: ['Director General'] },
+    { id: 'admissions', label: isSpanish ? 'ADMISIONES' : 'ADMISSIONS', roles: ['Director General'] },
+    { id: 'usermanagement', label: isSpanish ? 'USUARIOS' : 'USERS', roles: ['Director General'] }
+  ].filter(tab => tab.roles.includes('any') || tab.roles.some(role => userRoles.includes(role)));
 
-  const currentAssignments = activeTab === 'assignments' ? pendingAssignments : completedAssignments;
-
-  useEffect(() => {
-    if (!user) {
-      console.log('User logged out or undefined, resetting states');
-      setAssignments([]);
-      setAssignmentsFetched(false);
-      setLoading(false);
-      setFeedback({});
-      setReport({});
-      setVote({});
-      setRubricScores({});
-      setTutorialVisible({});
-      setSubmitStatus({});
-      setRubricStatus({});
-      setError('');
-      setActiveTab('profile');
-      setShowImageModal({});
-      setIsEditingImage({});
-      setImageData({});
-      setEditingRange({});
-      setSelectedAssignment(null);
-      setExpandedFeedback({});
-      setIsDirectorPanelExpanded(false);
-      setIsChiefEditorPanelExpanded(false);
-      setEffectiveName('');
-      setCalendarEvents([]);
-      setSelectedEvent(null);
-      setUserData(null);
-      setUsers([]);
-    }
-  }, [user]);
-
-  // Snapshot de usuario (mejorado para effectiveName)
+  // Snapshot de usuario
   useEffect(() => {
     if (!user?.uid) {
       console.warn('No user UID available for snapshot');
@@ -1278,11 +960,9 @@ export default function PortalSection({ user, onLogout }) {
         setEffectiveName(name);
         console.log('User data updated from snapshot:', name);
       } else {
-        // Fallback si el documento aún no existe (usuarios muy nuevos)
         setUserData(user);
         const name = user.displayName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || '';
         setEffectiveName(name);
-        console.log('User document not found, using fallback:', name);
       }
     }, (err) => {
       console.error('Error in user snapshot:', err);
@@ -1293,7 +973,6 @@ export default function PortalSection({ user, onLogout }) {
     };
   }, [user?.uid]);
 
-  
   // Snapshot de todos los usuarios (solo para Director)
   useEffect(() => {
     if (userData?.roles?.includes('Director General')) {
@@ -1313,17 +992,53 @@ export default function PortalSection({ user, onLogout }) {
     }
   }, [userData?.roles]);
 
+  // Cargar asignaciones de revisor si el usuario es revisor
+  useEffect(() => {
+    if (isReviewer && user?.email) {
+      const loadReviewerAssignments = async () => {
+        const result = await getReviewerAssignmentsByEmail(user.email);
+        if (result.success) {
+          setReviewerAssignments(result.assignments);
+        }
+      };
+      loadReviewerAssignments();
+    }
+  }, [isReviewer, user?.email, getReviewerAssignmentsByEmail]);
+
+  // Cargar deadlines para el calendario
+  useEffect(() => {
+    const loadDeadlines = async () => {
+      if (!user) return;
+      const deadlinesQuery = query(collection(db, 'deadlines'));
+      const unsubscribe = onSnapshot(deadlinesQuery, (snapshot) => {
+        const events = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            title: data.type === 'reviewer-response' 
+              ? (isSpanish ? `Respuesta: ${data.reviewerName}` : `Response: ${data.reviewerName}`)
+              : (isSpanish ? `Revisión: ${data.reviewerName}` : `Review: ${data.reviewerName}`),
+            start: data.dueDate?.toDate(),
+            end: data.dueDate?.toDate(),
+            allDay: true,
+            resource: data
+          };
+        });
+        setCalendarEvents(events);
+      });
+      return () => unsubscribe();
+    };
+    loadDeadlines();
+  }, [user, isSpanish]);
+
   useEffect(() => {
     if (!userData || !effectiveName) {
       setLoadingUser(true);
-      console.log('Loading user: waiting for userData or effectiveName');
       return;
     }
     setLoadingUser(false);
-    console.log('User loaded, effectiveName:', effectiveName);
   }, [userData, effectiveName]);
 
-  // <-- NUEVO: Función para verificar perfil anónimo
+  // Función para verificar perfil anónimo
   const checkForAnonymousProfile = useCallback(async () => {
     if (!isAuthor || userData?.claimedAnonymousUid) {
       return;
@@ -1348,7 +1063,7 @@ export default function PortalSection({ user, onLogout }) {
     }
   }, [isAuthor, userData, isSpanish]);
 
-  // <-- NUEVO: Función para reclamar perfil
+  // Función para reclamar perfil
   const handleClaimProfile = useCallback(async () => {
     if (!anonymousProfile) return;
     
@@ -1365,7 +1080,6 @@ export default function PortalSection({ user, onLogout }) {
       if (result.success) {
         setClaimStatus('success');
         
-        // Actualizar userData localmente
         setUserData(prev => ({
           ...prev,
           claimedAnonymousUid: anonymousProfile.anonymousUid,
@@ -1373,7 +1087,6 @@ export default function PortalSection({ user, onLogout }) {
           articlesClaimed: result.articlesClaimed
         }));
         
-        // Cerrar modal después de 3 segundos
         setTimeout(() => {
           setShowClaimModal(false);
           setClaimStatus('idle');
@@ -1387,449 +1100,7 @@ export default function PortalSection({ user, onLogout }) {
     }
   }, [anonymousProfile, isSpanish]);
 
-  // Fetch assignments only when relevant tabs are active
-  useEffect(() => {
-    if (['assignments', 'completed', 'calendar'].includes(activeTab) && !assignmentsFetched && !loading) {
-      console.log('Fetching assignments for tab:', activeTab);
-      fetchAssignments();
-      setAssignmentsFetched(true);
-    }
-  }, [activeTab, assignmentsFetched, loading]);
-
-  const fetchRubrics = async () => {
-    console.log('Fetching rubrics');
-    try {
-      const [csv1Text, csv2Text, csv3Text] = await Promise.all([
-        fetch(RUBRIC_CSV1, { cache: 'no-store' }).then(r => r.text()),
-        fetch(RUBRIC_CSV2, { cache: 'no-store' }).then(r => r.text()),
-        fetch(RUBRIC_CSV3, { cache: 'no-store' }).then(r => r.text())
-      ]);
-      const parseData = (csvText) => Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
-      const data1 = parseData(csv1Text);
-      const scoresMap1 = {};
-      data1.forEach(row => {
-        const name = row['Nombre del Artículo']?.trim();
-        if (name) {
-          scoresMap1[name] = {
-            gramatica: parseInt(row['Gramática y ortografía']) || 0,
-            claridad: parseInt(row['Claridad y coherencia']) || 0,
-            estructura: parseInt(row['Estructura y organización']) || 0,
-            citacion: parseInt(row['Citación y referencias']) || 0
-          };
-        }
-      });
-      const data2 = parseData(csv2Text);
-      const scoresMap2 = {};
-      data2.forEach(row => {
-        const name = row['Nombre del Artículo']?.trim();
-        if (name) {
-          scoresMap2[name] = {
-            relevancia: parseInt(row['Relevancia del tema']) || 0,
-            rigor: parseInt(row['Rigor en el uso de fuentes']) || 0,
-            originalidad: parseInt(row['Originalidad y creatividad']) || 0,
-            argumentos: parseInt(row['Calidad de los argumentos']) || 0
-          };
-        }
-      });
-      const data3 = parseData(csv3Text);
-      const scoresMap3 = {};
-      data3.forEach(row => {
-        const name = row['Nombre del Artículo']?.trim();
-        if (name) {
-          scoresMap3[name] = {
-            modificaciones: parseInt(row['Grado de modificaciones']) || 0,
-            calidad: parseInt(row['Calidad final del texto']) || 0,
-            aporte: parseInt(row['Aporte global del ensayo']) || 0,
-            potencial: parseInt(row['Potencial motivador']) || 0,
-            decision: parseInt(row['Decisión final']) || 0
-          };
-        }
-      });
-      console.log('Rubrics fetched successfully');
-      return { scoresMap1, scoresMap2, scoresMap3 };
-    } catch (err) {
-      console.error('Error fetching rubrics:', err);
-      throw err;
-    }
-  };
-
-  const fetchWithRetry = async (url, retries = 3, timeout = 10000) => {
-    for (let i = 0; i < retries; i++) {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeout);
-        const response = await fetch(url, { signal: controller.signal, cache: 'no-store' });
-        clearTimeout(timeoutId);
-        if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-        return response.text();
-      } catch (err) {
-        console.warn(`Fetch retry ${i + 1} failed for ${url}:`, err);
-        if (i === retries - 1) throw err;
-        await new Promise((resolve) => setTimeout(resolve, 1000 * (i + 1)));
-      }
-    }
-  };
-
-  const fetchAssignments = async () => {
-    console.log('Starting fetchAssignments for user:', effectiveName);
-    setLoading(true);
-    setError('');
-    try {
-      const [csvText, rubrics] = await Promise.all([
-        fetchWithRetry(ASSIGNMENTS_CSV),
-        fetchRubrics()
-      ]);
-      console.log('CSV fetched, length:', csvText.length);
-      Papa.parse(csvText, {
-        header: true,
-        skipEmptyLines: true,
-        delimiter: ',',
-        transform: (value) => value.trim(),
-        complete: ({ data }) => {
-          console.log('Papa parse complete, rows:', data.length);
-          const normalizedEffectiveName = effectiveName.trim().toLowerCase();
-          const authorRows = data.filter(row => {
-            const autores = row['Autor'] || '';
-            return autores
-              .split(';')
-              .map(a => a.trim().toLowerCase())
-              .includes(normalizedEffectiveName);
-          });
-          console.log('Author rows found:', authorRows.length);
-          const authorAssignments = authorRows.map(row => ({
-            id: row['Nombre Artículo'],
-            'Nombre Artículo': row['Nombre Artículo'] || (isSpanish ? 'Sin título' : 'No title'),
-            Estado: row['Estado'],
-            role: 'Autor',
-            feedbackEditor: row['Feedback 3'] || (isSpanish ? 'No hay feedback del editor aún.' : 'No editor feedback yet.'),
-            isCompleted: !!row['Feedback 3'],
-            Plazo: row['Plazo'] || null,
-          }));
-          const reviewerRows = data
-            .filter(row => {
-              return row['Revisor 1']?.trim() === effectiveName ||
-                     row['Revisor 2']?.trim() === effectiveName ||
-                     row['Editor']?.trim() === effectiveName;
-            });
-          console.log('Reviewer rows found:', reviewerRows.length);
-          const reviewerAssignments = reviewerRows.map(row => {
-            const role = row['Revisor 1']?.trim() === effectiveName ? 'Revisor 1'
-                      : row['Revisor 2']?.trim() === effectiveName ? 'Revisor 2'
-                      : 'Editor';
-            const num = role === 'Revisor 1' ? 1 : role === 'Revisor 2' ? 2 : 3;
-            const assignment = {
-              id: row['Nombre Artículo'],
-              'Nombre Artículo': row['Nombre Artículo'] || (isSpanish ? 'Sin título' : 'No title'),
-              'Link Artículo': row['Link Artículo'],
-              Estado: row['Estado'],
-              role,
-              feedback: row[`Feedback ${num}`] || '',
-              report: row[`Informe ${num}`] || '',
-              vote: row[`Voto ${num}`] || '',
-              feedback1: row['Feedback 1'] || (isSpanish ? 'No hay feedback del Revisor 1.' : 'No feedback from Reviewer 1.'),
-              feedback2: row['Feedback 2'] || (isSpanish ? 'No hay feedback del Revisor 2.' : 'No feedback from Reviewer 2.'),
-              informe1: row['Informe 1'] || (isSpanish ? 'No hay informe del Revisor 1.' : 'No report from Reviewer 1.'),
-              informe2: row['Informe 2'] || (isSpanish ? 'No hay informe del Revisor 2.' : 'No report from Reviewer 2.'),
-              isCompleted: !!row[`Feedback ${num}`] && !!row[`Informe ${num}`] && !!row[`Voto ${num}`],
-              Plazo: row['Plazo'] || null,
-            };
-            const name = assignment.id;
-            if (role === 'Revisor 1') {
-              assignment.scores = rubrics.scoresMap1[name] || { gramatica: 0, claridad: 0, estructura: 0, citacion: 0 };
-            } else if (role === 'Revisor 2') {
-              assignment.scores = rubrics.scoresMap2[name] || { relevancia: 0, rigor: 0, originalidad: 0, argumentos: 0 };
-            } else {
-              assignment.rev1Scores = rubrics.scoresMap1[name] || { gramatica: 0, claridad: 0, estructura: 0, citacion: 0 };
-              assignment.rev2Scores = rubrics.scoresMap2[name] || { relevancia: 0, rigor: 0, originalidad: 0, argumentos: 0 };
-              assignment.scores = rubrics.scoresMap3[name] || { modificaciones: 0, calidad: 0, aporte: 0, potencial: 0, decision: 0 };
-            }
-            return assignment;
-          });
-          const parsedAssignments = [...reviewerAssignments, ...authorAssignments];
-          console.log('Total assignments:', parsedAssignments.length);
-          setAssignments(parsedAssignments);
-          parsedAssignments.forEach(assignment => {
-            if (assignment.role !== 'Autor') {
-              const link = assignment['Link Artículo'];
-              setVote(prev => ({ ...prev, [link]: assignment.vote }));
-              setFeedback(prev => ({ ...prev, [link]: safeDecodeUnicode(assignment.feedback) }));
-              setReport(prev => ({ ...prev, [link]: safeDecodeUnicode(assignment.report) }));
-              setRubricScores(prev => ({ ...prev, [link]: assignment.scores }));
-            }
-          });
-          const events = parsedAssignments
-            .filter(ass => ass.Plazo)
-            .map(ass => ({
-              title: `${ass['Nombre Artículo']} - ${ass.role}`,
-              start: new Date(ass.Plazo),
-              end: new Date(ass.Plazo),
-              allDay: true,
-              resource: ass,
-            }));
-          setCalendarEvents(events);
-          console.log('Calendar events set:', events.length);
-          setLoading(false);
-        },
-        error: (err) => {
-          console.error('Error al parsear CSV:', err);
-          setError(isSpanish ? 'Error al cargar asignaciones' : 'Error loading assignments');
-          setLoading(false);
-        },
-      });
-    } catch (err) {
-      console.error('Error al cargar asignaciones:', err);
-      setError(isSpanish ? 'Error al conectar al servidor' : 'Error connecting to server');
-      setLoading(false);
-    }
-  };
-
-  const retryFetchAssignments = () => {
-    console.log('Retrying fetchAssignments');
-    setError('');
-    setLoading(true);
-    setAssignmentsFetched(false); // Allow refetch
-  };
-
-  const handleVote = (link, value) => {
-    setVote((prev) => ({ ...prev, [link]: value }));
-  };
-
-  const handleRubricChange = (link, key, value) => {
-    setRubricScores((prev) => ({
-      ...prev,
-      [link]: { ...prev[link], [key]: value }
-    }));
-  };
-
-  const getRequiredKeys = (role) => {
-    switch (role) {
-      case 'Revisor 1': return ['gramatica', 'claridad', 'estructura', 'citacion'];
-      case 'Revisor 2': return ['relevancia', 'rigor', 'originalidad', 'argumentos'];
-      case 'Editor': return ['modificaciones', 'calidad', 'aporte', 'potencial', 'decision'];
-      default: return [];
-    }
-  };
-
-  const isRubricComplete = (link, role) => {
-    const rubric = rubricScores[link] || {};
-    const required = getRequiredKeys(role);
-    return required.every(key => rubric[key] !== undefined && rubric[key] !== null);
-  };
-
-  const handleSubmitRubric = async (link, role) => {
-    console.log('Submitting rubric for link:', link, 'role:', role);
-    const articleName = assignments.find(a => a['Link Artículo'] === link)['Nombre Artículo'];
-    const rubric = rubricScores[link] || {};
-    const requiredKeys = getRequiredKeys(role);
-    const missingKeys = requiredKeys.filter(key => rubric[key] === undefined || rubric[key] === null || isNaN(rubric[key]));
-    if (missingKeys.length > 0) {
-      setRubricStatus((prev) => ({ ...prev, [link]: isSpanish 
-        ? `Error: Rúbrica incompleta. Faltante o inválido: ${missingKeys.join(', ')}`
-        : `Error: Incomplete rubric. Missing or invalid: ${missingKeys.join(', ')}` }));
-      console.warn('Rubric incomplete:', missingKeys);
-      return;
-    }
-    const rubricData = {
-      articleName: articleName.trim(),
-      role,
-      rubric
-    };
-    try {
-      let success = false;
-      for (let attempt = 1; attempt <= 3; attempt++) {
-        try {
-          const response = await fetch(RUBRIC_SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(rubricData),
-          });
-          success = true;
-          console.log('Rubric submitted successfully on attempt', attempt);
-          break;
-        } catch (err) {
-          console.warn(`Rubric submit attempt ${attempt} failed:`, err);
-          if (attempt < 3) {
-            await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-          }
-        }
-      }
-      if (success) {
-        setRubricStatus((prev) => ({ ...prev, [link]: isSpanish ? 'Rúbrica enviada con éxito' : 'Rubric submitted successfully' }));
-        await fetchAssignments();
-      } else {
-        setRubricStatus((prev) => ({ ...prev, [link]: isSpanish 
-          ? 'Error al enviar rúbrica después de 3 intentos' 
-          : 'Error submitting rubric after 3 attempts' }));
-      }
-    } catch (err) {
-      console.error('Error general al enviar rúbrica:', err);
-      setRubricStatus((prev) => ({ ...prev, [link]: `Error: ${err.message}` }));
-    }
-  };
-
-  const handleSubmit = async (link, role, feedbackText, reportText, voteValue) => {
-    console.log('Submitting data for link:', link, 'role:', role);
-    const encodedFeedback = base64EncodeUnicode(sanitizeInput(feedbackText || ''));
-    const encodedReport = base64EncodeUnicode(sanitizeInput(reportText || ''));
-    const mainData = {
-      link,
-      role,
-      vote: voteValue || '',
-      feedback: encodedFeedback,
-      report: encodedReport,
-    };
-    try {
-      let mainSuccess = false;
-      for (let attempt = 1; attempt <= 3; attempt++) {
-        try {
-          const response = await fetch(SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(mainData),
-          });
-          mainSuccess = true;
-          console.log('Data submitted successfully on attempt', attempt);
-          break;
-        } catch (err) {
-          console.warn(`Data submit attempt ${attempt} failed:`, err);
-          if (attempt < 3) {
-            await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-          }
-        }
-      }
-      if (mainSuccess) {
-        setSubmitStatus((prev) => ({ ...prev, [link]: isSpanish ? 'Datos principales enviados con éxito' : 'Main data submitted successfully' }));
-        await fetchAssignments();
-      } else {
-        setSubmitStatus((prev) => ({ ...prev, [link]: isSpanish 
-          ? 'Error al enviar datos principales después de 3 intentos' 
-          : 'Error submitting main data after 3 attempts' }));
-      }
-    } catch (err) {
-      console.error('Error general al enviar datos principales:', err);
-      setSubmitStatus((prev) => ({ ...prev, [link]: `Error: ${err.message}` }));
-    }
-  };
-
-  const toggleTutorial = (link) => {
-    setTutorialVisible((prev) => ({ ...prev, [link]: !prev[link] }));
-  };
-
-  const toggleFeedback = (link, type) => {
-    setExpandedFeedback((prev) => ({
-      ...prev,
-      [link]: { ...prev[link], [type]: !prev[link]?.[type] }
-    }));
-  };
-
-  const getTutorialText = (role) => {
-    if (!isSpanish) {
-      // Versión en inglés
-      if (role === "Revisor 1") {
-        return 'As Reviewer 1, your role is to review technical aspects such as grammar, spelling, source citation, AI-generated content detection, logical coherence, and overall structure. Provide detailed comments in the Google Drive document to suggest improvements. Ensure the language is clear and academic. You must provide feedback to the author in the corresponding box. Additionally, submit a summarized report explaining your observations to guide the editor. Finally, in the vote box, enter "yes" if you approve the article, and "no" if you reject it.';
-      } else if (role === "Revisor 2") {
-        return 'As Reviewer 2, focus on substantive content: verify source accuracy, topic seriousness and originality, argument relevance, and contribution to the field. Evaluate if the article is innovative and well-supported. Leave comments in the Google Drive document. You must provide feedback to the author in the corresponding box. Additionally, submit a summarized report explaining your observations to guide the editor. Finally, in the vote box, enter "yes" if you approve the article, and "no" if you reject it.';
-      } else if (role === "Editor") {
-        return `As Editor, your responsibility is to review the reviewers' feedback and reports, integrate them with your own evaluation, and write a final sensitive and constructive feedback for the author. Edit the text directly if necessary and decide the article's final status. Use the Google Drive document for edits. You must provide feedback to the author synthesizing the reviewers' feedback. Your message must be precise and sensitive, without discouraging the author. Use the "sandwich" technique. If you don't know what it is, consult <a href="https://www.santanderopenacademy.com/en/blog/sandwich-technique.html" style="color: blue;">here</a>. Based on psychological studies indicating feedback improves performance in only 30% of cases if mishandled, ensure criticism is specific, actionable, and not diluted by positive comments to maximize effectiveness. Complement with the SBI model (Situation-Behavior-Impact) for clarity: describe the situation, observed behavior, and impact. Then, submit your report with changes made, which must be precise and academic. Finally, in the vote box, enter "yes" if you approve the article, and "no" if you reject it.`;
-      }
-    } else {
-      // Versión en español (original)
-      if (role === "Revisor 1") {
-        return 'Como Revisor 1, tu rol es revisar aspectos técnicos como gramática, ortografía, citación de fuentes, detección de contenido generado por IA, coherencia lógica y estructura general del artículo. Proporciona comentarios detallados en el documento de Google Drive para sugerir mejoras. Asegúrate de que el lenguaje sea claro y académico. Debes proporcionar feedback al autor en la caja correspondiente. Además, debes enviar un informe resumido explicando tus observaciones para guiar al editor. Finalmente, en la caja de voto, ingresa "si" si apruebas el artículo, y "no" si lo rechazas.';
-      } else if (role === "Revisor 2") {
-        return 'Como Revisor 2, enfócate en el contenido sustantivo: verifica la precisión de las fuentes, la seriedad y originalidad del tema, la relevancia de los argumentos y la contribución al campo de estudio. Evalúa si el artículo es innovador y bien respaldado. Deja comentarios en el documento de Google Drive. Debes proporcionar feedback al autor en la caja correspondiente. Además, debes enviar un informe resumido explicando tus observaciones para guiar al editor. Finalmente, en la caja de voto, ingresa "si" si apruebas el artículo, y "no" si lo rechazas.';
-      } else if (role === "Editor") {
-        return `Como Editor, tu responsabilidad es revisar el feedback y los informes de los revisores, integrarlos con tu propia evaluación, y escribir un feedback final sensible y constructivo para el autor. Edita el texto directamente si es necesario y decide el estado final del artículo. Usa el documento de Google Drive para ediciones. Debes proporcionar feedback al autor sintetizando el feedback de los revisores. Tu mensaje debe ser preciso y sensible, sin desanimar al autor. Para esto, usa la técnica "sandwich". Si no sabes qué es, consulta <a href="https://www.santanderopenacademy.com/es/blog/tecnica-sandwich.html" style="color: blue;">aquí</a>. Basado en estudios psicológicos, como aquellos que indican que el feedback mejora el rendimiento solo en el 30% de los casos si no se maneja bien, asegúrate de que la crítica sea específica, accionable y no diluida por comentarios positivos para maximizar la efectividad. Puedes complementar con el modelo SBI (Situación-Comportamiento-Impacto) para mayor claridad: describe la situación, el comportamiento observado y su impacto. Luego, envía tu informe con los cambios realizados, que debe ser preciso y académico. Finalmente, en la caja de voto, ingresa "si" si apruebas el artículo, y "no" si lo rechazas.`;
-      }
-    }
-    return "";
-  };
-
-  const Tutorial = ({ role }) => {
-    const tutorialText = getTutorialText(role);
-    return (
-      <motion.div
-        initial={{ opacity: 0, height: 0 }}
-        animate={{ opacity: 1, height: 'auto' }}
-        exit={{ opacity: 0, height: 0 }}
-        className="text-gray-800 bg-gray-50 p-6 rounded-2xl border border-gray-100 leading-relaxed break-words overflow-hidden font-sans text-sm"
-      >
-        <div className="mb-4" dangerouslySetInnerHTML={{ __html: tutorialText }} />
-      </motion.div>
-    );
-  };
-
-  const decodeBody = (encoded) => {
-    if (!encoded) return <p className="text-gray-600 font-sans text-sm break-words">
-      {isSpanish ? 'No hay contenido disponible.' : 'No content available.'}
-    </p>;
-    try {
-      const html = base64DecodeUnicode(encoded);
-      return <div className="ql-editor break-words leading-relaxed font-sans text-sm text-gray-800" dangerouslySetInnerHTML={{ __html: html }} />;
-    } catch (err) {
-      console.error('Error al decodificar contenido:', err);
-      return <div className="ql-editor break-words leading-relaxed font-sans text-sm text-gray-800" dangerouslySetInnerHTML={{ __html: encoded }} />;
-    }
-  };
-
-  const handleImageModalSubmit = (link) => {
-    const quillRef = feedbackQuillRefs.current[link] || reportQuillRefs.current[link];
-    if (!quillRef) return;
-    const editor = quillRef.getEditor();
-    let { url, width, height, align } = imageData[link] || {};
-    if (!url) {
-      setSubmitStatus((prev) => ({ ...prev, [link]: isSpanish ? 'La URL de la imagen es requerida.' : 'Image URL is required.' }));
-      return;
-    }
-    if (width && width !== 'auto' && !width.match(/%|px$/)) width += 'px';
-    if (height && height !== 'auto' && !height.match(/%|px$/)) height += 'px';
-    if (isEditingImage[link]) {
-      if (editingRange[link]) {
-        editor.setSelection(editingRange[link].index, 1, 'silent');
-        const [leaf] = editor.getLeaf(editingRange[link].index);
-        if (leaf && leaf.domNode.tagName === 'IMG') {
-          if (width) leaf.domNode.style.width = width;
-          if (height) leaf.domNode.style.height = height;
-          editor.format('align', align, 'user');
-        }
-        editor.blur();
-      }
-    } else {
-      const range = editor.getSelection() || { index: editor.getLength() };
-      editor.insertText(range.index, '\n', 'user');
-      editor.insertEmbed(range.index + 1, 'image', url, 'user');
-      editor.setSelection(range.index + 2, 'silent');
-      const [leaf] = editor.getLeaf(range.index + 1);
-      if (leaf && leaf.domNode.tagName === 'IMG') {
-        if (width) leaf.domNode.style.width = width;
-        if (height) leaf.domNode.style.height = height;
-        editor.setSelection(range.index + 1, 1, 'silent');
-        editor.format('align', align, 'user');
-        editor.setSelection(range.index + 2, 'silent');
-      }
-    }
-    setShowImageModal((prev) => ({ ...prev, [link]: false }));
-    setIsEditingImage((prev) => ({ ...prev, [link]: false }));
-    setImageData((prev) => ({ ...prev, [link]: { url: '', width: '', height: '', align: 'left' } }));
-    setEditingRange((prev) => ({ ...prev, [link]: null }));
-  };
-
-  const handleImageDataChange = (link, e) => {
-    const { name, value } = e.target;
-    setImageData((prev) => ({
-      ...prev,
-      [link]: { ...prev[link], [name]: value }
-    }));
-  };
-
   if (loadingUser) {
-    console.log('Showing loading spinner: loadingUser true');
     return (
       <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
         <div className="flex flex-col items-center">
@@ -1842,29 +1113,13 @@ export default function PortalSection({ user, onLogout }) {
     );
   }
 
-  if (loading && ['assignments', 'completed', 'calendar'].includes(activeTab)) {
-    console.log('Showing loading spinner: loading true for assignments tab');
-    return (
-      <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
-        <div className="flex flex-col items-center">
-          <div className="w-16 h-16 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin" />
-          <p className="mt-6 text-gray-500 font-medium tracking-wider">
-            {isSpanish ? 'CARGANDO ASIGNACIONES...' : 'LOADING ASSIGNMENTS...'}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   if (!effectiveName) {
-    console.error('No effectiveName, rendering error');
     return <div className="text-red-600 text-center p-4">
       {isSpanish ? 'Usuario no definido' : 'User not defined'}
     </div>;
   }
 
   if (!userData) {
-    console.warn('No userData, rendering loading');
     return (
       <motion.div
         initial={{ opacity: 0 }}
@@ -1921,9 +1176,9 @@ export default function PortalSection({ user, onLogout }) {
         </button>
       </header>
 
-      {/* Navegación Estilo Editorial - Scroll horizontal en móvil */}
+      {/* Navegación */}
       <nav className="flex overflow-x-auto pb-2 mb-6 sm:mb-8 md:mb-12 border-b border-gray-200 gap-4 md:gap-8 whitespace-nowrap">
-        {tabs.filter(t => !t.hidden).map(tab => (
+        {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
@@ -1941,6 +1196,7 @@ export default function PortalSection({ user, onLogout }) {
 
       <main>
         <AnimatePresence mode="wait">
+          {/* PERFIL */}
           {activeTab === 'profile' && (
             <motion.section
               key="profile"
@@ -1948,7 +1204,6 @@ export default function PortalSection({ user, onLogout }) {
             >
               <ProfileSection user={userData} />
               
-              {/* <-- NUEVO: Botón de reclamación después del perfil */}
               {isAuthor && !userData?.claimedAnonymousUid && (
                 <div className="mt-8 max-w-6xl mx-auto">
                   {claimStatus === 'idle' && (
@@ -2002,70 +1257,112 @@ export default function PortalSection({ user, onLogout }) {
             </motion.section>
           )}
 
-          {(activeTab === 'assignments' || activeTab === 'completed') && (
+          {/* MIS ENVÍOS (AUTOR) - NUEVO */}
+          {activeTab === 'submissions' && (
             <motion.section
-              key="assignments"
-              initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
+              key="submissions"
+              initial={{ opacity: 0, x: -20 }} 
+              animate={{ opacity: 1, x: 0 }} 
+              exit={{ opacity: 0, x: 20 }}
             >
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: -20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-red-100 text-red-700 p-4 sm:p-6 rounded-xl sm:rounded-2xl mb-6 sm:mb-8 font-sans text-sm break-words"
-                >
-                  {error}
-                  <button 
-                    onClick={retryFetchAssignments}
-                    className="ml-4 text-blue-600 underline"
-                  >
-                    {isSpanish ? 'Reintentar' : 'Retry'}
-                  </button>
-                </motion.div>
-              )}
-              {loading ? (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex justify-center items-center h-32"
-                >
-                  <div className="animate-spin rounded-full h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 border-t-2 border-b-2 border-emerald-600"></div>
-                  <p className="ml-3 sm:ml-4 text-sm sm:text-base text-gray-600 font-sans break-words">
-                    {isSpanish ? 'Cargando asignaciones...' : 'Loading assignments...'}
-                  </p>
-                </motion.div>
-              ) : currentAssignments.length === 0 ? (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="text-center p-6 sm:p-8 md:p-12 bg-white rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm"
-                >
-                  <svg className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
-                  <h3 className="mt-3 sm:mt-4 font-serif text-lg sm:text-xl font-bold text-gray-900 break-words">
-                    {isSpanish 
-                      ? `No hay asignaciones ${activeTab === 'assignments' ? 'pendientes' : 'completadas'} en este momento.`
-                      : `No ${activeTab === 'assignments' ? 'pending' : 'completed'} assignments at this time.`}
-                  </h3>
-                  <p className="mt-1 sm:mt-2 text-sm sm:text-base text-gray-600 font-sans break-words">
-                    {isSpanish ? 'Manténgase atento para nuevas oportunidades.' : 'Stay tuned for new opportunities.'}
-                  </p>
-                </motion.div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-                  {currentAssignments.map((ass, idx) => (
-                    <AssignmentCard
-                      key={ass.id}
-                      assignment={ass}
-                      index={idx}
-                      onClick={() => setSelectedAssignment(ass)}
-                    />
-                  ))}
-                </div>
-              )}
+              <AuthorSubmissionsPanel user={userData} />
             </motion.section>
           )}
-          
+
+          {/* MIS REVISIONES (REVISOR) - NUEVO */}
+          {activeTab === 'reviewer-tasks' && (
+            <motion.section
+              key="reviewer-tasks"
+              initial={{ opacity: 0, x: -20 }} 
+              animate={{ opacity: 1, x: 0 }} 
+              exit={{ opacity: 0, x: 20 }}
+            >
+              <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+                <h2 className="font-['Playfair_Display'] text-3xl font-bold text-[#0A1929] mb-6">
+                  {isSpanish ? 'Mis Revisiones Asignadas' : 'My Assigned Reviews'}
+                </h2>
+                {reviewerAssignments.length === 0 ? (
+                  <p className="text-gray-500 text-center py-12">
+                    {isSpanish ? 'No tienes revisiones pendientes' : 'You have no pending reviews'}
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {reviewerAssignments.map(assignment => (
+                      <div
+                        key={assignment.id}
+                        className="p-6 border border-gray-200 rounded-xl hover:shadow-md transition-shadow cursor-pointer"
+                        onClick={() => window.open(`/reviewer-workspace/${assignment.id}`, '_blank')}
+                      >
+                        <h3 className="font-bold text-lg text-[#0A1929] mb-2">
+                          {assignment.submission?.title}
+                        </h3>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">
+                            {isSpanish ? 'Estado:' : 'Status:'} 
+                            <span className={`ml-2 px-2 py-1 rounded-full ${
+                              assignment.status === 'submitted' ? 'bg-green-100 text-green-700' :
+                              assignment.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
+                              'bg-yellow-100 text-yellow-700'
+                            }`}>
+                              {assignment.status === 'submitted' && (isSpanish ? 'Enviada' : 'Submitted')}
+                              {assignment.status === 'in-progress' && (isSpanish ? 'En progreso' : 'In progress')}
+                              {assignment.status === 'pending' && (isSpanish ? 'Pendiente' : 'Pending')}
+                            </span>
+                          </span>
+                          <span className="text-gray-600">
+                            {isSpanish ? 'Ronda:' : 'Round:'} {assignment.round}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.section>
+          )}
+
+          {/* DESK REVIEW */}
+          {activeTab === 'deskreview' && (
+            <motion.section
+              key="deskreview"
+              initial={{ opacity: 0, x: -20 }} 
+              animate={{ opacity: 1, x: 0 }} 
+              exit={{ opacity: 0, x: 20 }}
+            >
+              <DeskReviewPanel user={userData} />
+            </motion.section>
+          )}
+
+          {/* ASIGNAR ARTÍCULOS */}
+          {activeTab === 'assignment' && (
+            <motion.section
+              key="assignment"
+              initial={{ opacity: 0, x: -20 }} 
+              animate={{ opacity: 1, x: 0 }} 
+              exit={{ opacity: 0, x: 20 }}
+            >
+              <ArticleAssignmentPanel user={userData} />
+            </motion.section>
+          )}
+
+          {/* CALENDARIO */}
+          {activeTab === 'calendar' && (
+            <motion.section
+              key="calendar"
+              initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
+            >
+              <CalendarComponent 
+                events={calendarEvents} 
+                onSelectEvent={(e) => {
+                  if (e.resource?.targetType === 'reviewerAssignment') {
+                    window.open(`/reviewer-workspace/${e.resource.targetId}`, '_blank');
+                  }
+                }} 
+              />
+            </motion.section>
+          )}
+
+          {/* ENVIAR MANUSCRITO */}
           {activeTab === 'submit' && (
             <motion.section
               key="submit"
@@ -2077,77 +1374,51 @@ export default function PortalSection({ user, onLogout }) {
                 user={userData} 
                 onSuccess={(submissionId) => {
                   console.log('Submission successful:', submissionId);
+                  setActiveTab('submissions');
                 }}
               />
             </motion.section>
           )}
-          {activeTab === 'assignment' && (
-  <motion.section
-    key="assignment"
-    initial={{ opacity: 0, x: -20 }} 
-    animate={{ opacity: 1, x: 0 }} 
-    exit={{ opacity: 0, x: 20 }}
-  >
-    <ArticleAssignmentPanel user={userData} />
-  </motion.section>
-)}
-          {activeTab === 'calendar' && (
+
+          {/* PANEL DIRECTIVO */}
+          {activeTab === 'director' && (
             <motion.section
-              key="calendar"
-              initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
+              key="director"
+              initial={{ opacity: 0, x: -20 }} 
+              animate={{ opacity: 1, x: 0 }} 
+              exit={{ opacity: 0, x: 20 }}
             >
-              <CalendarComponent events={calendarEvents} onSelectEvent={(e) => setSelectedAssignment(e.resource)} />
+              <DirectorPanel 
+                user={userData} 
+                isExpanded={isDirectorPanelExpanded} 
+                onToggle={() => setIsDirectorPanelExpanded(!isDirectorPanelExpanded)} 
+              />
+              
+              {(isAssignmentManager || isDirector) && (
+                <div className="mt-8">
+                  <ArticleAssignmentPanel user={userData} />
+                </div>
+              )}
             </motion.section>
           )}
 
-          {activeTab === 'director' && (
-  <motion.section
-    key="director"
-    initial={{ opacity: 0, x: -20 }} 
-    animate={{ opacity: 1, x: 0 }} 
-    exit={{ opacity: 0, x: 20 }}
-  >
-    {/* Panel Directivo existente */}
-    <DirectorPanel 
-      user={userData} 
-      isExpanded={isDirectorPanelExpanded} 
-      onToggle={() => setIsDirectorPanelExpanded(!isDirectorPanelExpanded)} 
-    />
-    
-    {/* El Director también puede ver el panel de asignación y desk review */}
-    <div className="mt-8 space-y-8">
-      {/* Panel de Asignación (si el Director quiere actuar como encargado) */}
-      {(userRoles.includes('Encargado de Asignación de Artículos') || userRoles.includes('Director General')) && (
-        <ArticleAssignmentPanel user={userData} />
-      )}
-      
-      {/* Panel de Desk Review para Editores en Jefe/Directores */}
-      <DeskReviewPanel user={userData} />
-    </div>
-  </motion.section>
-)}
-
+          {/* PANEL EDITOR JEFE */}
           {activeTab === 'chief' && (
-  <motion.section
-    key="chief"
-    initial={{ opacity: 0, x: -20 }} 
-    animate={{ opacity: 1, x: 0 }} 
-    exit={{ opacity: 0, x: 20 }}
-  >
-    {/* Panel de Editor en Jefe existente */}
-    <AssignSection 
-      user={userData} 
-      isExpanded={isChiefEditorPanelExpanded} 
-      onToggle={() => setIsChiefEditorPanelExpanded(!isChiefEditorPanelExpanded)} 
-    />
-    
-    {/* Los Editores en Jefe también pueden ver sus tareas de desk review */}
-    <div className="mt-8">
-      <DeskReviewPanel user={userData} />
-    </div>
-  </motion.section>
-)}
+            <motion.section
+              key="chief"
+              initial={{ opacity: 0, x: -20 }} 
+              animate={{ opacity: 1, x: 0 }} 
+              exit={{ opacity: 0, x: 20 }}
+            >
+              <AssignSection 
+                user={userData} 
+                isExpanded={isChiefEditorPanelExpanded} 
+                onToggle={() => setIsChiefEditorPanelExpanded(!isChiefEditorPanelExpanded)} 
+              />
+            </motion.section>
+          )}
 
+          {/* TAREAS */}
           {activeTab === 'tasks' && (
             <motion.section
               key="tasks"
@@ -2157,6 +1428,7 @@ export default function PortalSection({ user, onLogout }) {
             </motion.section>
           )}
 
+          {/* NOTICIAS */}
           {activeTab === 'news' && (
             <motion.section
               key="news"
@@ -2166,6 +1438,7 @@ export default function PortalSection({ user, onLogout }) {
             </motion.section>
           )}
 
+          {/* ADMISIONES */}
           {activeTab === 'admissions' && (
             <motion.section
               key="admissions"
@@ -2175,6 +1448,7 @@ export default function PortalSection({ user, onLogout }) {
             </motion.section>
           )}
 
+          {/* GESTIÓN DE USUARIOS */}
           {activeTab === 'usermanagement' && (
             <motion.section
               key="usermanagement"
@@ -2186,65 +1460,7 @@ export default function PortalSection({ user, onLogout }) {
         </AnimatePresence>
       </main>
 
-      {/* MODAL DE DETALLE */}
-      <AnimatePresence>
-        {selectedAssignment && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-white/95 backdrop-blur-sm overflow-y-auto px-2 py-4 sm:px-4 sm:py-8 md:py-12"
-          >
-            <div className="max-w-4xl mx-auto">
-              <button
-                onClick={() => setSelectedAssignment(null)}
-                className="mb-4 sm:mb-6 md:mb-8 font-sans font-bold text-xs uppercase tracking-widest flex items-center hover:text-emerald-600 transition-colors"
-              >
-                ← {isSpanish ? 'Volver al Portal' : 'Back to Portal'}
-              </button>
-              <header className="mb-6 sm:mb-8 md:mb-12">
-                <span className="text-xs font-bold text-emerald-600 tracking-[0.3em] uppercase break-words">{selectedAssignment.role}</span>
-                <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mt-2 mb-3 md:mb-4 leading-tight break-words">
-                  {selectedAssignment['Nombre Artículo']}
-                </h2>
-                <div className="h-1 w-16 sm:w-20 md:w-24 bg-gray-900" />
-              </header>
-
-              <ReviewerWorkspace 
-                assignment={selectedAssignment}
-                onClose={() => setSelectedAssignment(null)}
-                handleSubmitRubric={handleSubmitRubric}
-                handleSubmit={handleSubmit}
-                handleVote={handleVote}
-                rubricScores={rubricScores}
-                feedback={feedback}
-                report={report}
-                vote={vote}
-                rubricStatus={rubricStatus}
-                submitStatus={submitStatus}
-                isPending={activeTab === 'assignments'}
-                role={selectedAssignment.role}
-                link={selectedAssignment['Link Artículo']}
-                toggleTutorial={toggleTutorial}
-                tutorialVisible={tutorialVisible}
-                debouncedSetFeedback={debouncedSetFeedback}
-                debouncedSetReport={debouncedSetReport}
-                modules={modules}
-                formats={formats}
-                decodeBody={decodeBody}
-                showImageModal={showImageModal}
-                imageData={imageData}
-                isEditingImage={isEditingImage}
-                handleImageDataChange={handleImageDataChange}
-                handleImageModalSubmit={handleImageModalSubmit}
-                expandedFeedback={expandedFeedback}
-                toggleFeedback={toggleFeedback}
-                getDecisionText={getDecisionText}
-              />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* <-- NUEVO: MODAL DE RECLAMACIÓN DE PERFIL */}
+      {/* MODAL DE RECLAMACIÓN DE PERFIL */}
       <AnimatePresence>
         {showClaimModal && (
           <motion.div
