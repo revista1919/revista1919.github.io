@@ -1,4 +1,4 @@
-// src/components/ReviewerWorkspacePage.js
+// src/components/ReviewerWorkspacePage.js (VERSIÓN CORREGIDA - COMPLETA)
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -12,66 +12,105 @@ const ReviewerWorkspacePage = () => {
   const { assignmentId } = useParams();
   const navigate = useNavigate();
   const { language } = useLanguage();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [assignment, setAssignment] = useState(null);
+  const [permissions, setPermissions] = useState({ isEditor: false, isAssignedReviewer: false });
   const isSpanish = language === 'es';
 
   useEffect(() => {
+    let isMounted = true;
+
     const checkAccess = async () => {
-      if (!assignmentId) {
-        setError(isSpanish ? 'ID de asignación no válido' : 'Invalid assignment ID');
-        setLoading(false);
+      // --- Validación 1: Esperar a que el estado de autenticación esté listo ---
+      if (authLoading) {
+        // Aún estamos verificando la sesión, esperamos.
         return;
       }
 
+      // --- Validación 2: Usuario no autenticado ---
       if (!user) {
-        // Usuario no autenticado, redirigir al login
-        navigate('/login');
+        console.log('Usuario no autenticado, redirigiendo a /login');
+        navigate('/login', { replace: true });
+        return;
+      }
+
+      // --- Validación 3: ID de asignación válido ---
+      if (!assignmentId) {
+        if (isMounted) {
+          setError(isSpanish ? 'ID de asignación no válido' : 'Invalid assignment ID');
+          setLoading(false);
+        }
         return;
       }
 
       try {
-        // Obtener la asignación para verificar permisos
+        setLoading(true);
+        setError(null);
+        
+        // --- Paso 1: Obtener la asignación para verificar permisos ---
         const assignmentDoc = await getDoc(doc(db, 'reviewerAssignments', assignmentId));
         
         if (!assignmentDoc.exists()) {
-          setError(isSpanish ? 'Asignación no encontrada' : 'Assignment not found');
-          setLoading(false);
+          if (isMounted) {
+            setError(isSpanish ? 'Asignación no encontrada' : 'Assignment not found');
+            setLoading(false);
+          }
           return;
         }
 
-        const assignmentData = assignmentDoc.data();
-        setAssignment({ id: assignmentDoc.id, ...assignmentData });
+        const assignmentData = { id: assignmentDoc.id, ...assignmentDoc.data() };
+        
+        // --- Paso 2: Verificar permisos (con datos ya disponibles) ---
+        const userRoles = user.roles || [];
+        
+        const isAssignedReviewer = assignmentData.reviewerEmail?.toLowerCase() === user.email?.toLowerCase();
+        const isEditor = userRoles.includes('Director General') || 
+                         userRoles.includes('Editor en Jefe') || 
+                         userRoles.includes('Editor de Sección');
 
-        // Verificar que el usuario sea el revisor asignado
-        if (assignmentData.reviewerEmail !== user.email) {
-          // Verificar si es editor (puede ver en modo read-only)
-          const userRoles = user.roles || [];
-          const isEditor = userRoles.includes('Director General') || 
-                           userRoles.includes('Editor en Jefe') || 
-                           userRoles.includes('Editor de Sección');
-          
-          if (!isEditor) {
-            setError(isSpanish ? 'No tienes permiso para acceder a esta revisión' : 'You do not have permission to access this review');
-            setLoading(false);
-            return;
-          }
+        // Guardar permisos y asignación para el renderizado
+        if (isMounted) {
+          setAssignment(assignmentData);
+          setPermissions({ isEditor, isAssignedReviewer });
         }
 
-        setLoading(false);
+        // --- Paso 3: Validar si tiene permiso para continuar ---
+        if (!isAssignedReviewer && !isEditor) {
+          // No es el revisor asignado ni es editor, no tiene permiso.
+          if (isMounted) {
+            setError(isSpanish ? 'No tienes permiso para acceder a esta revisión' : 'You do not have permission to access this review');
+            setLoading(false);
+          }
+          return;
+        }
+
+        // Si todo está bien, se queda en loading false y muestra el componente.
+        if (isMounted) {
+          setLoading(false);
+        }
+
       } catch (err) {
         console.error('Error checking access:', err);
-        setError(isSpanish ? 'Error al verificar acceso' : 'Error checking access');
-        setLoading(false);
+        if (isMounted) {
+          setError(isSpanish ? 'Error al verificar acceso' : 'Error checking access');
+          setLoading(false);
+        }
       }
     };
 
     checkAccess();
-  }, [assignmentId, user, navigate, isSpanish]);
 
-  if (loading) {
+    return () => {
+      isMounted = false;
+    };
+  }, [assignmentId, user, authLoading, navigate, isSpanish]);
+
+  // --- Renderizado Condicional ---
+  
+  // 1. Cargando autenticación o datos principales
+  if (authLoading || loading) {
     return (
       <div className="fixed inset-0 bg-white z-50 flex items-center justify-center">
         <div className="text-center">
@@ -82,6 +121,7 @@ const ReviewerWorkspacePage = () => {
     );
   }
 
+  // 2. Error
   if (error) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center p-4">
@@ -108,19 +148,22 @@ const ReviewerWorkspacePage = () => {
     );
   }
 
-  // Verificar si el usuario es editor (vista read-only)
-  const userRoles = user?.roles || [];
-  const isEditor = userRoles.includes('Director General') || 
-                   userRoles.includes('Editor en Jefe') || 
-                   userRoles.includes('Editor de Sección');
-  
-  const isAssignedReviewer = assignment?.reviewerEmail === user?.email;
-  const readOnly = isEditor && !isAssignedReviewer;
+  // 3. Todo bien, renderizar el workspace. Si no hay asignación (por si acaso), mostrar error.
+  if (!assignment) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center p-4">
+        <p>{isSpanish ? 'Error al cargar la asignación.' : 'Error loading assignment.'}</p>
+      </div>
+    );
+  }
+
+  // Determinar el modo de solo lectura basado en los permisos guardados
+  const readOnly = permissions.isEditor && !permissions.isAssignedReviewer;
 
   return (
     <ReviewerWorkspace 
       assignmentId={assignmentId} 
-      onClose={() => navigate('/login')}
+      onClose={() => navigate('/')}
       readOnly={readOnly}
     />
   );
