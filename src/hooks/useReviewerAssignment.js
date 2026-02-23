@@ -112,11 +112,13 @@ export const useReviewerAssignment = (user) => {
 
   const autoSaveReview = useCallback(async (assignmentId, reviewData) => {
     try {
+      console.log('Auto-saving review for assignment:', assignmentId);
       const assignmentRef = doc(db, 'reviewerAssignments', assignmentId);
       await updateDoc(assignmentRef, {
         ...reviewData,
         lastAutoSave: serverTimestamp()
       });
+      console.log('Auto-save successful');
       return { success: true };
     } catch (err) {
       console.error('Error auto-saving review:', err);
@@ -129,6 +131,9 @@ export const useReviewerAssignment = (user) => {
     setError(null);
     
     try {
+      console.log('Starting submitReview for assignment:', assignmentId);
+      console.log('User:', user?.uid, user?.email);
+      
       if (!user) {
         throw new Error(isSpanish ? 'Debes iniciar sesión' : 'You must be logged in');
       }
@@ -141,6 +146,11 @@ export const useReviewerAssignment = (user) => {
       }
 
       const assignment = assignmentSnap.data();
+      console.log('Assignment data:', {
+        reviewerUid: assignment.reviewerUid,
+        reviewerEmail: assignment.reviewerEmail,
+        status: assignment.status
+      });
       
       const userEmail = user.email?.toLowerCase().trim();
       const assignmentEmail = assignment.reviewerEmail?.toLowerCase().trim();
@@ -149,6 +159,14 @@ export const useReviewerAssignment = (user) => {
         (assignment.reviewerUid && assignment.reviewerUid === user.uid) ||
         (assignment.reviewerEmail && userEmail === assignmentEmail)
       );
+      
+      console.log('Permission check:', {
+        hasPermission,
+        userUid: user.uid,
+        assignmentUid: assignment.reviewerUid,
+        userEmail,
+        assignmentEmail
+      });
       
       if (!hasPermission) {
         throw new Error(isSpanish ? 'No tienes permiso para enviar esta revisión' : 'You do not have permission to submit this review');
@@ -179,18 +197,27 @@ export const useReviewerAssignment = (user) => {
         throw new Error(isSpanish ? 'Debes seleccionar una recomendación' : 'You must select a recommendation');
       }
 
-      const batch = writeBatch(db);
+      console.log('Attempting to update assignment...');
+      
+      // Primero intentamos actualizar solo la asignación
+      try {
+        await updateDoc(assignmentRef, {
+          scores,
+          commentsToAuthor,
+          commentsToEditor,
+          recommendation,
+          status: 'submitted',
+          submittedAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+        console.log('Assignment update successful');
+      } catch (updateError) {
+        console.error('Assignment update failed:', updateError);
+        throw updateError;
+      }
 
-      batch.update(assignmentRef, {
-        scores,
-        commentsToAuthor,
-        commentsToEditor,
-        recommendation,
-        status: 'submitted',
-        submittedAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      });
-
+      // Luego actualizamos deadlines y tareas
+      console.log('Updating deadlines...');
       const deadlinesQuery = query(
         collection(db, 'deadlines'),
         where('targetId', '==', assignmentId),
@@ -201,12 +228,19 @@ export const useReviewerAssignment = (user) => {
       const deadlinesSnapshot = await getDocs(deadlinesQuery);
       
       if (!deadlinesSnapshot.empty) {
-        batch.update(doc(db, 'deadlines', deadlinesSnapshot.docs[0].id), {
-          status: 'completed',
-          completedAt: serverTimestamp()
-        });
+        try {
+          await updateDoc(doc(db, 'deadlines', deadlinesSnapshot.docs[0].id), {
+            status: 'completed',
+            completedAt: serverTimestamp()
+          });
+          console.log('Deadline update successful');
+        } catch (deadlineError) {
+          console.error('Deadline update failed:', deadlineError);
+          // No lanzamos error aquí, solo registramos
+        }
       }
 
+      console.log('Updating editorial task...');
       const taskRef = doc(db, 'editorialTasks', assignment.editorialTaskId);
       const taskSnap = await getDoc(taskRef);
       
@@ -224,10 +258,14 @@ export const useReviewerAssignment = (user) => {
           taskUpdates.status = 'awaiting-decision';
         }
         
-        batch.update(taskRef, taskUpdates);
+        try {
+          await updateDoc(taskRef, taskUpdates);
+          console.log('Task update successful');
+        } catch (taskError) {
+          console.error('Task update failed:', taskError);
+          // No lanzamos error aquí, solo registramos
+        }
       }
-
-      await batch.commit();
 
       return { success: true };
     } catch (err) {
@@ -235,8 +273,8 @@ export const useReviewerAssignment = (user) => {
       
       if (err.code === 'permission-denied') {
         setError(isSpanish 
-          ? 'No tienes permisos para realizar esta acción' 
-          : 'You do not have permission to perform this action');
+          ? 'No tienes permisos para realizar esta acción. Verifica que estás asignado como revisor.' 
+          : 'You do not have permission to perform this action. Verify you are assigned as a reviewer.');
       } else {
         setError(err.message);
       }
