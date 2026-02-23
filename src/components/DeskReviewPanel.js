@@ -123,37 +123,49 @@ const DeskReviewPanel = ({ user }) => {
     }
   };
 
-  const handleCompleteDeskReview = async (taskId, decisionData) => {
-    if (!selectedTask?.editorialReviewId) {
-      console.error('No se encontró editorialReviewId para esta tarea');
-      alert(isSpanish 
-        ? 'Error: No se pudo identificar la revisión editorial. Por favor, reinicia la tarea.' 
-        : 'Error: Could not identify the editorial review. Please restart the task.');
-      return;
-    }
+  // En DeskReviewPanel.js - modifica handleCompleteDeskReview
+const handleCompleteDeskReview = async (taskId, decisionData) => {
+  if (!selectedTask?.editorialReviewId) {
+    console.error('No se encontró editorialReviewId para esta tarea');
+    alert(isSpanish 
+      ? 'Error: No se pudo identificar la revisión editorial. Por favor, reinicia la tarea.' 
+      : 'Error: Could not identify the editorial review. Please restart the task.');
+    return;
+  }
 
-    const result = await submitDeskReviewDecision(selectedTask.editorialReviewId, decisionData);
-
-    if (result.success) {
-      setSelectedTask(prev => ({
-        ...prev,
-        deskReviewDecision: decisionData.decision,
-        deskReviewFeedback: decisionData.feedbackToAuthor,
-        deskReviewComments: decisionData.commentsToEditorial,
-        status: decisionData.decision === 'revision-required' 
-          ? TASK_STATES.REVIEWER_SELECTION 
-          : TASK_STATES.COMPLETED
-      }));
-
-      alert(isSpanish 
-        ? 'Decisión guardada correctamente. El sistema está procesando...' 
-        : 'Decision saved successfully. The system is processing...');
-    } else {
-      alert(isSpanish 
-        ? 'Error al guardar la decisión: ' + result.error 
-        : 'Error saving decision: ' + result.error);
-    }
+  // MAPEAR los campos al formato que espera submitDeskReviewDecision
+  const mappedDecisionData = {
+    decision: decisionData.decision,
+    feedbackToAuthor: decisionData.feedback,           // mapear feedback → feedbackToAuthor
+    commentsToEditorial: decisionData.internalComments  // mapear internalComments → commentsToEditorial
   };
+
+  console.log('Original decisionData:', decisionData);
+  console.log('Mapped decisionData:', mappedDecisionData);
+
+  const result = await submitDeskReviewDecision(selectedTask.editorialReviewId, mappedDecisionData);
+  //                                                                              ^ usar el mapeado
+
+  if (result.success) {
+    setSelectedTask(prev => ({
+      ...prev,
+      deskReviewDecision: decisionData.decision,
+      deskReviewFeedback: decisionData.feedback,           // ← también aquí
+      deskReviewComments: decisionData.internalComments,    // ← también aquí
+      status: decisionData.decision === 'revision-required' 
+        ? TASK_STATES.REVIEWER_SELECTION 
+        : TASK_STATES.COMPLETED
+    }));
+
+    alert(isSpanish 
+      ? 'Decisión guardada correctamente. El sistema está procesando...' 
+      : 'Decision saved successfully. The system is processing...');
+  } else {
+    alert(isSpanish 
+      ? 'Error al guardar la decisión: ' + result.error 
+      : 'Error saving decision: ' + result.error);
+  }
+};
 
   const handleSendInvitation = async () => {
     if (!selectedTask || !selectedReviewerId) {
