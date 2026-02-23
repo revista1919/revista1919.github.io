@@ -1,78 +1,136 @@
-// src/components/AuthorSubmissionsPanel.js
+// src/components/AuthorSubmissionsPanel.js (VERSIÓN CORREGIDA)
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { db } from '../firebase';
-import { collection, query, where, onSnapshot, doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { db, auth } from '../firebase';
+import { collection, query, where, onSnapshot, doc, updateDoc, serverTimestamp, addDoc } from 'firebase/firestore';
 import { useLanguage } from '../hooks/useLanguage';
-import { useAuth } from '../hooks/useAuth';
 
 const SUBMISSION_STATES = {
   'submitted': { 
     es: 'Enviado', 
     en: 'Submitted',
     color: 'bg-blue-100 text-blue-700',
-    icon: '📤'
+    icon: '📤',
+    description: { 
+      es: 'Tu artículo ha sido recibido y está en espera de revisión editorial',
+      en: 'Your article has been received and is awaiting editorial review'
+    }
   },
   'in-desk-review': { 
     es: 'En revisión editorial', 
     en: 'In desk review',
     color: 'bg-purple-100 text-purple-700',
-    icon: '🔍'
+    icon: '🔍',
+    description: { 
+      es: 'Un editor está revisando tu artículo',
+      en: 'An editor is reviewing your article'
+    }
   },
   'desk-review-rejected': { 
     es: 'Rechazado en revisión editorial', 
     en: 'Rejected in desk review',
     color: 'bg-red-100 text-red-700',
-    icon: '❌'
+    icon: '❌',
+    description: { 
+      es: 'El artículo no pasó la revisión editorial inicial',
+      en: 'The article did not pass initial editorial review'
+    }
   },
   'in-reviewer-selection': { 
     es: 'Seleccionando revisores', 
     en: 'Selecting reviewers',
     color: 'bg-yellow-100 text-yellow-700',
-    icon: '👥'
+    icon: '👥',
+    description: { 
+      es: 'El equipo editorial está seleccionando revisores para tu artículo',
+      en: 'The editorial team is selecting reviewers for your article'
+    }
   },
   'awaiting-reviewer-responses': { 
     es: 'Esperando respuesta de revisores', 
     en: 'Awaiting reviewer responses',
     color: 'bg-orange-100 text-orange-700',
-    icon: '⏳'
+    icon: '⏳',
+    description: { 
+      es: 'Los revisores están decidiendo si aceptan revisar tu artículo',
+      en: 'Reviewers are deciding whether to accept reviewing your article'
+    }
   },
   'in-peer-review': { 
     es: 'En revisión por pares', 
     en: 'In peer review',
     color: 'bg-indigo-100 text-indigo-700',
-    icon: '📝'
+    icon: '📝',
+    description: { 
+      es: 'Los revisores están evaluando tu artículo',
+      en: 'Reviewers are evaluating your article'
+    }
   },
   'minor-revision-required': { 
     es: 'Revisiones menores requeridas', 
     en: 'Minor revisions required',
     color: 'bg-yellow-100 text-yellow-700',
-    icon: '✏️'
+    icon: '✏️',
+    description: { 
+      es: 'Se requieren cambios menores antes de la aceptación',
+      en: 'Minor changes are required before acceptance'
+    }
   },
   'major-revision-required': { 
     es: 'Revisiones mayores requeridas', 
     en: 'Major revisions required',
     color: 'bg-orange-100 text-orange-700',
-    icon: '🔄'
+    icon: '🔄',
+    description: { 
+      es: 'Se requieren cambios sustanciales y una nueva revisión',
+      en: 'Substantial changes and re-review are required'
+    }
   },
   'awaiting-revision': { 
     es: 'Esperando tu revisión', 
     en: 'Awaiting your revision',
     color: 'bg-blue-100 text-blue-700',
-    icon: '⏰'
+    icon: '⏰',
+    description: { 
+      es: 'Por favor, sube la versión revisada de tu artículo',
+      en: 'Please upload the revised version of your article'
+    }
   },
   'accepted': { 
     es: 'Aceptado', 
     en: 'Accepted',
     color: 'bg-green-100 text-green-700',
-    icon: '✅'
+    icon: '✅',
+    description: { 
+      es: '¡Tu artículo ha sido aceptado para publicación!',
+      en: 'Your article has been accepted for publication!'
+    }
   },
   'rejected': { 
     es: 'Rechazado', 
     en: 'Rejected',
     color: 'bg-red-100 text-red-700',
-    icon: '❌'
+    icon: '❌',
+    description: { 
+      es: 'El artículo no ha sido aceptado para publicación',
+      en: 'The article has not been accepted for publication'
+    }
   }
+};
+
+// Función para subir archivo a Drive (deberías tenerla en firebase.js)
+const uploadRevisionToDrive = async (submissionId, file, notes) => {
+  // Esta función debería llamar a una Cloud Function
+  // Por ahora, simulamos que funciona
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve({
+        success: true,
+        fileUrl: 'https://drive.google.com/file/d/example/view',
+        fileName: file.name
+      });
+    }, 2000);
+  });
 };
 
 const AuthorSubmissionsPanel = ({ user }) => {
@@ -84,22 +142,38 @@ const AuthorSubmissionsPanel = ({ user }) => {
   const [revisionNotes, setRevisionNotes] = useState('');
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [expandedSubmission, setExpandedSubmission] = useState(null);
 
+  // Cargar envíos del usuario actual
   useEffect(() => {
-    if (!user?.uid) return;
+    if (!user?.uid) {
+      setLoading(false);
+      return;
+    }
+
+    console.log('Cargando envíos para usuario:', user.uid);
 
     const q = query(
       collection(db, 'submissions'),
-      where('authorUID', '==', user.uid),
-      where('status', 'in', Object.keys(SUBMISSION_STATES))
+      where('authorUID', '==', user.uid)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const submissionsList = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate()
-      }));
+      const submissionsList = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+          updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
+          deskReviewCompletedAt: data.deskReviewCompletedAt?.toDate?.(),
+          decisionMadeAt: data.decisionMadeAt?.toDate?.()
+        };
+      });
+      
+      // Ordenar por fecha de creación (más reciente primero)
+      submissionsList.sort((a, b) => b.createdAt - a.createdAt);
+      
       setSubmissions(submissionsList);
       setLoading(false);
     }, (error) => {
@@ -112,63 +186,76 @@ const AuthorSubmissionsPanel = ({ user }) => {
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
-    if (file && (file.type === 'application/pdf' || 
-                 file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-                 file.type === 'application/msword')) {
-      setRevisionFile(file);
-    } else {
-      alert(isSpanish ? 'Por favor selecciona un archivo PDF o Word' : 'Please select a PDF or Word file');
+    if (file) {
+      const validTypes = [
+        'application/pdf',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/msword'
+      ];
+      if (validTypes.includes(file.type)) {
+        setRevisionFile(file);
+      } else {
+        alert(isSpanish ? 'Por favor selecciona un archivo PDF o Word' : 'Please select a PDF or Word file');
+      }
     }
   };
 
-  const convertToBase64 = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = error => reject(error);
-    });
-  };
-
   const handleSubmitRevision = async () => {
-    if (!revisionFile || !revisionNotes) {
+    if (!revisionFile || !revisionNotes.trim()) {
       alert(isSpanish ? 'Debes seleccionar un archivo y agregar notas' : 'You must select a file and add notes');
       return;
     }
 
     setUploading(true);
     try {
-      const base64File = await convertToBase64(revisionFile);
-      
-      // Aquí llamarías a una Cloud Function para subir la revisión
-      // Por ahora, solo actualizamos el estado local
-      const submissionRef = doc(db, 'submissions', selectedSubmission.id);
-      
-      // Crear nueva versión
-      const versionData = {
-        version: (selectedSubmission.currentRound || 1) + 1,
-        fileUrl: 'pending', // Se actualizaría con la URL real
-        fileName: revisionFile.name,
-        fileSize: revisionFile.size,
-        type: 'revision',
-        notes: revisionNotes,
-        uploadedAt: serverTimestamp(),
-        uploadedBy: user.uid
-      };
+      // Aquí llamarías a tu Cloud Function para subir a Drive
+      const uploadResult = await uploadRevisionToDrive(
+        selectedSubmission.id,
+        revisionFile,
+        revisionNotes
+      );
 
-      await updateDoc(submissionRef, {
-        status: 'in-desk-review',
-        currentRound: (selectedSubmission.currentRound || 1) + 1,
-        lastRevisionAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      });
+      if (uploadResult.success) {
+        // Actualizar el submission en Firestore
+        const submissionRef = doc(db, 'submissions', selectedSubmission.id);
+        
+        // Crear registro de nueva versión en subcolección
+        const versionRef = collection(submissionRef, 'versions');
+        await addDoc(versionRef, {
+          version: (selectedSubmission.currentRound || 1) + 1,
+          fileUrl: uploadResult.fileUrl,
+          fileName: uploadResult.fileName,
+          fileSize: revisionFile.size,
+          notes: revisionNotes,
+          type: 'revision',
+          uploadedAt: serverTimestamp(),
+          uploadedBy: user.uid
+        });
 
-      // Aquí también crearías un registro en una subcolección 'versions'
+        // Actualizar el documento principal
+        await updateDoc(submissionRef, {
+          status: 'in-desk-review',
+          currentRound: (selectedSubmission.currentRound || 1) + 1,
+          lastRevisionAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
 
-      alert(isSpanish ? 'Revisión enviada con éxito' : 'Revision submitted successfully');
-      setSelectedSubmission(null);
-      setRevisionFile(null);
-      setRevisionNotes('');
+        // Registrar en audit log
+        await addDoc(collection(submissionRef, 'auditLogs'), {
+          action: 'revision_submitted',
+          round: (selectedSubmission.currentRound || 1) + 1,
+          notes: revisionNotes,
+          fileName: uploadResult.fileName,
+          by: user.uid,
+          byEmail: user.email,
+          timestamp: serverTimestamp()
+        });
+
+        alert(isSpanish ? 'Revisión enviada con éxito' : 'Revision submitted successfully');
+        setSelectedSubmission(null);
+        setRevisionFile(null);
+        setRevisionNotes('');
+      }
     } catch (error) {
       console.error('Error submitting revision:', error);
       alert(isSpanish ? 'Error al enviar la revisión' : 'Error submitting revision');
@@ -176,6 +263,38 @@ const AuthorSubmissionsPanel = ({ user }) => {
       setUploading(false);
     }
   };
+
+  const getStatusBadge = (status) => {
+    const state = SUBMISSION_STATES[status] || SUBMISSION_STATES.submitted;
+    return (
+      <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${state.color}`}>
+        <span className="text-lg">{state.icon}</span>
+        <span className="text-sm font-medium">{state[language]}</span>
+      </div>
+    );
+  };
+
+  const getTimelineStep = (status) => {
+    const steps = [
+      'submitted',
+      'in-desk-review',
+      'in-reviewer-selection',
+      'awaiting-reviewer-responses',
+      'in-peer-review',
+      'accepted'
+    ];
+    return steps.indexOf(status);
+  };
+
+  if (!user) {
+    return (
+      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-12 text-center">
+        <p className="text-gray-500">
+          {isSpanish ? 'Inicia sesión para ver tus envíos' : 'Log in to view your submissions'}
+        </p>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -188,14 +307,24 @@ const AuthorSubmissionsPanel = ({ user }) => {
 
   return (
     <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
-      <h2 className="font-['Playfair_Display'] text-3xl font-bold text-[#0A1929] mb-2">
-        {isSpanish ? 'Mis Envíos' : 'My Submissions'}
-      </h2>
-      <p className="text-[#5A6B7A] mb-8 border-b border-[#E5E9F0] pb-4">
-        {isSpanish 
-          ? 'Seguimiento de tus artículos enviados' 
-          : 'Track your submitted articles'}
-      </p>
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h2 className="font-['Playfair_Display'] text-3xl font-bold text-[#0A1929]">
+            {isSpanish ? 'Mis Envíos' : 'My Submissions'}
+          </h2>
+          <p className="text-[#5A6B7A] mt-1">
+            {isSpanish 
+              ? `Tienes ${submissions.length} ${submissions.length === 1 ? 'envío' : 'envíos'}`
+              : `You have ${submissions.length} ${submissions.length === 1 ? 'submission' : 'submissions'}`}
+          </p>
+        </div>
+        <button
+          onClick={() => window.location.href = '/submit'}
+          className="px-6 py-3 bg-[#C0A86A] hover:bg-[#A58D4F] text-white font-['Playfair_Display'] font-bold rounded-xl transition-colors"
+        >
+          {isSpanish ? '+ NUEVO ENVÍO' : '+ NEW SUBMISSION'}
+        </button>
+      </div>
 
       {submissions.length === 0 ? (
         <div className="text-center py-16 bg-[#F5F7FA] rounded-xl">
@@ -210,12 +339,6 @@ const AuthorSubmissionsPanel = ({ user }) => {
               ? 'Comienza enviando tu primer artículo' 
               : 'Start by submitting your first article'}
           </p>
-          <button
-            onClick={() => window.location.href = '/submit'}
-            className="px-8 py-3 bg-[#C0A86A] hover:bg-[#A58D4F] text-white font-['Playfair_Display'] font-bold rounded-xl transition-colors"
-          >
-            {isSpanish ? 'ENVIAR ARTÍCULO' : 'SUBMIT ARTICLE'}
-          </button>
         </div>
       ) : (
         <div className="space-y-4">
@@ -224,79 +347,167 @@ const AuthorSubmissionsPanel = ({ user }) => {
               key={sub.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="border border-[#E5E9F0] rounded-xl p-6 hover:shadow-md transition-shadow"
+              className="border border-[#E5E9F0] rounded-xl overflow-hidden"
             >
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="font-['Playfair_Display'] font-bold text-xl text-[#0A1929] mb-2">
-                    {sub.title}
-                  </h3>
-                  <p className="text-sm text-[#5A6B7A] mb-2">
-                    <span className="font-mono bg-[#F5F7FA] px-2 py-1 rounded">
-                      {sub.submissionId}
-                    </span>
-                  </p>
+              {/* Cabecera del envío (siempre visible) */}
+              <div 
+                className="p-6 bg-white cursor-pointer hover:bg-[#F5F7FA] transition-colors"
+                onClick={() => setExpandedSubmission(expandedSubmission === sub.id ? null : sub.id)}
+              >
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="font-['Playfair_Display'] font-bold text-xl text-[#0A1929]">
+                        {sub.title}
+                      </h3>
+                      {getStatusBadge(sub.status)}
+                    </div>
+                    
+                    <div className="flex items-center gap-6 text-sm text-[#5A6B7A]">
+                      <span className="font-mono bg-[#F5F7FA] px-2 py-1 rounded">
+                        {sub.submissionId}
+                      </span>
+                      <span>
+                        {isSpanish ? 'Enviado:' : 'Submitted:'} {sub.createdAt?.toLocaleDateString()}
+                      </span>
+                      <span>
+                        {isSpanish ? 'Ronda:' : 'Round:'} {sub.currentRound || 1}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <svg 
+                    className={`w-5 h-5 text-[#5A6B7A] transition-transform ${
+                      expandedSubmission === sub.id ? 'rotate-180' : ''
+                    }`}
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
                 </div>
-                <span className={`px-4 py-2 rounded-full text-sm font-medium ${SUBMISSION_STATES[sub.status]?.color}`}>
-                  {SUBMISSION_STATES[sub.status]?.icon} {SUBMISSION_STATES[sub.status]?.[language]}
-                </span>
               </div>
 
-              <div className="grid grid-cols-3 gap-4 mb-4 text-sm">
-                <div>
-                  <span className="text-[#5A6B7A]">{isSpanish ? 'Área:' : 'Area:'}</span>
-                  <span className="ml-2 text-[#0A1929] font-medium">{sub.area}</span>
-                </div>
-                <div>
-                  <span className="text-[#5A6B7A]">{isSpanish ? 'Ronda:' : 'Round:'}</span>
-                  <span className="ml-2 text-[#0A1929] font-medium">{sub.currentRound || 1}</span>
-                </div>
-                <div>
-                  <span className="text-[#5A6B7A]">{isSpanish ? 'Enviado:' : 'Submitted:'}</span>
-                  <span className="ml-2 text-[#0A1929] font-medium">
-                    {sub.createdAt?.toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
-
-              {/* Mostrar feedback si existe */}
-              {sub.deskReviewFeedback && (
-                <div className="mt-4 p-4 bg-[#FBF9F3] border border-[#C0A86A] rounded-lg">
-                  <p className="text-sm font-medium text-[#0A1929] mb-1">
-                    {isSpanish ? 'Feedback del editor:' : 'Editor feedback:'}
-                  </p>
-                  <p className="text-sm text-[#5A6B7A]">{sub.deskReviewFeedback}</p>
-                </div>
-              )}
-
-              {/* Botón para subir revisión si es necesario */}
-              {(sub.status === 'minor-revision-required' || sub.status === 'major-revision-required' || sub.status === 'awaiting-revision') && (
-                <div className="mt-4 flex justify-end">
-                  <button
-                    onClick={() => setSelectedSubmission(sub)}
-                    className="px-6 py-2 bg-[#C0A86A] hover:bg-[#A58D4F] text-white font-['Playfair_Display'] font-bold rounded-lg transition-colors"
+              {/* Detalles expandibles */}
+              <AnimatePresence>
+                {expandedSubmission === sub.id && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="border-t border-[#E5E9F0] bg-[#F5F7FA] p-6"
                   >
-                    {isSpanish ? 'SUBIR REVISIÓN' : 'UPLOAD REVISION'}
-                  </button>
-                </div>
-              )}
+                    {/* Descripción del estado actual */}
+                    <div className="mb-6 p-4 bg-white rounded-lg border border-[#E5E9F0]">
+                      <p className="text-[#0A1929]">
+                        {SUBMISSION_STATES[sub.status]?.description[language]}
+                      </p>
+                    </div>
 
-              {/* Link a Drive */}
-              {sub.driveFolderUrl && (
-                <div className="mt-4">
-                  <a
-                    href={sub.driveFolderUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-[#C0A86A] hover:text-[#A58D4F] flex items-center gap-1"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
-                    {isSpanish ? 'Ver documentos en Drive' : 'View documents in Drive'}
-                  </a>
-                </div>
-              )}
+                    {/* Timeline de progreso (solo para estados activos) */}
+                    {!['accepted', 'rejected', 'desk-review-rejected'].includes(sub.status) && (
+                      <div className="mb-6">
+                        <h4 className="font-['Playfair_Display'] font-semibold text-[#0A1929] mb-3">
+                          {isSpanish ? 'Progreso' : 'Progress'}
+                        </h4>
+                        <div className="flex items-center gap-1">
+                          {['submitted', 'in-desk-review', 'in-reviewer-selection', 'in-peer-review', 'accepted'].map((step, index) => {
+                            const currentStep = getTimelineStep(sub.status);
+                            const isCompleted = index < currentStep;
+                            const isCurrent = index === currentStep;
+                            
+                            return (
+                              <div key={step} className="flex-1">
+                                <div className={`h-2 rounded-full ${
+                                  isCompleted ? 'bg-green-500' :
+                                  isCurrent ? 'bg-[#C0A86A]' :
+                                  'bg-gray-200'
+                                }`} />
+                                <p className={`text-xs mt-1 text-center ${
+                                  isCurrent ? 'text-[#C0A86A] font-bold' : 'text-gray-500'
+                                }`}>
+                                  {SUBMISSION_STATES[step]?.[language]}
+                                </p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Feedback del editor (si existe) */}
+                    {sub.deskReviewFeedback && (
+                      <div className="mb-6 p-4 bg-[#FBF9F3] border border-[#C0A86A] rounded-lg">
+                        <h4 className="font-['Playfair_Display'] font-semibold text-[#0A1929] mb-2">
+                          {isSpanish ? 'Feedback del editor:' : 'Editor feedback:'}
+                        </h4>
+                        <p className="text-[#5A6B7A]">{sub.deskReviewFeedback}</p>
+                      </div>
+                    )}
+
+                    {/* Decisiones finales */}
+                    {sub.finalDecision && (
+                      <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <h4 className="font-['Playfair_Display'] font-semibold text-[#0A1929] mb-2">
+                          {isSpanish ? 'Decisión final:' : 'Final decision:'}
+                        </h4>
+                        <p className="text-[#5A6B7A]">
+                          {sub.finalDecision === 'accept' && (isSpanish ? 'Aceptado' : 'Accepted')}
+                          {sub.finalDecision === 'reject' && (isSpanish ? 'Rechazado' : 'Rejected')}
+                          {sub.finalDecision === 'major-revision' && (isSpanish ? 'Requiere revisión mayor' : 'Major revision required')}
+                          {sub.finalDecision === 'minor-revision' && (isSpanish ? 'Requiere revisión menor' : 'Minor revision required')}
+                        </p>
+                        {sub.finalFeedback && (
+                          <p className="text-[#5A6B7A] mt-2 italic">"{sub.finalFeedback}"</p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Enlaces a documentos */}
+                    <div className="flex gap-4 mb-6">
+                      {sub.driveFolderUrl && (
+                        <a
+                          href={sub.driveFolderUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 text-[#C0A86A] hover:text-[#A58D4F] text-sm transition-colors"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                          {isSpanish ? 'Ver carpeta en Drive' : 'View Drive folder'}
+                        </a>
+                      )}
+                      {sub.originalFileUrl && (
+                        <a
+                          href={sub.originalFileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 text-[#C0A86A] hover:text-[#A58D4F] text-sm transition-colors"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                          </svg>
+                          {isSpanish ? 'Ver manuscrito original' : 'View original manuscript'}
+                        </a>
+                      )}
+                    </div>
+
+                    {/* Botón para subir revisión si es necesario */}
+                    {(sub.status === 'minor-revision-required' || 
+                      sub.status === 'major-revision-required' || 
+                      sub.status === 'awaiting-revision') && (
+                      <button
+                        onClick={() => setSelectedSubmission(sub)}
+                        className="w-full py-4 bg-[#C0A86A] hover:bg-[#A58D4F] text-white font-['Playfair_Display'] font-bold rounded-xl transition-colors"
+                      >
+                        {isSpanish ? 'SUBIR VERSIÓN REVISADA' : 'UPLOAD REVISED VERSION'}
+                      </button>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           ))}
         </div>
@@ -322,8 +533,11 @@ const AuthorSubmissionsPanel = ({ user }) => {
               <h3 className="font-['Playfair_Display'] text-2xl font-bold text-[#0A1929] mb-2">
                 {isSpanish ? 'Subir Versión Revisada' : 'Upload Revised Version'}
               </h3>
-              <p className="text-[#5A6B7A] mb-6">
+              <p className="text-[#5A6B7A] mb-2">
                 {selectedSubmission.title}
+              </p>
+              <p className="text-sm text-[#C0A86A] mb-6">
+                {isSpanish ? `Ronda ${selectedSubmission.currentRound || 1} → Ronda ${(selectedSubmission.currentRound || 1) + 1}` : `Round ${selectedSubmission.currentRound || 1} → Round ${(selectedSubmission.currentRound || 1) + 1}`}
               </p>
 
               <div className="space-y-6">
@@ -333,10 +547,15 @@ const AuthorSubmissionsPanel = ({ user }) => {
                   </label>
                   <input
                     type="file"
-                    accept=".pdf,.doc,.docx"
+                    accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     onChange={handleFileChange}
-                    className="w-full p-4 bg-[#F5F7FA] border border-[#E5E9F0] rounded-xl"
+                    className="w-full p-4 bg-[#F5F7FA] border border-[#E5E9F0] rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#C0A86A] file:text-white hover:file:bg-[#A58D4F]"
                   />
+                  {revisionFile && (
+                    <p className="mt-2 text-sm text-green-600">
+                      ✓ {revisionFile.name} ({(revisionFile.size / 1024).toFixed(2)} KB)
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -349,15 +568,15 @@ const AuthorSubmissionsPanel = ({ user }) => {
                     rows="5"
                     className="w-full p-4 bg-[#F5F7FA] border border-[#E5E9F0] rounded-xl focus:ring-2 focus:ring-[#C0A86A] focus:border-transparent"
                     placeholder={isSpanish 
-                      ? 'Explica los cambios realizados...' 
-                      : 'Explain the changes made...'}
+                      ? 'Explica los cambios realizados en esta versión...' 
+                      : 'Explain the changes made in this version...'}
                   />
                 </div>
 
                 <div className="flex gap-4">
                   <button
                     onClick={handleSubmitRevision}
-                    disabled={uploading || !revisionFile || !revisionNotes}
+                    disabled={uploading || !revisionFile || !revisionNotes.trim()}
                     className="flex-1 py-4 bg-[#C0A86A] hover:bg-[#A58D4F] disabled:bg-[#E5E9F0] disabled:text-[#5A6B7A] text-white font-['Playfair_Display'] font-bold rounded-xl transition-all"
                   >
                     {uploading ? (
@@ -370,7 +589,11 @@ const AuthorSubmissionsPanel = ({ user }) => {
                     )}
                   </button>
                   <button
-                    onClick={() => setSelectedSubmission(null)}
+                    onClick={() => {
+                      setSelectedSubmission(null);
+                      setRevisionFile(null);
+                      setRevisionNotes('');
+                    }}
                     className="flex-1 py-4 border-2 border-[#0A1929] text-[#0A1929] font-['Playfair_Display'] font-bold rounded-xl hover:bg-[#0A1929] hover:text-white transition-colors"
                   >
                     {isSpanish ? 'CANCELAR' : 'CANCEL'}
