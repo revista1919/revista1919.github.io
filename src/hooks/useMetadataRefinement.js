@@ -175,35 +175,44 @@ export const useMetadataRefinement = (user) => {
 
       const currentMetadata = submission.currentMetadata || submission.originalSubmission;
       
+      // 🔥 SOLUCIÓN: Crear el objeto sin timestamp para arrayUnion
       const newVersion = {
         version: (submission.metadataVersions?.length || 0) + 1,
         approvedBy: user.uid,
         approvedByEmail: user.email,
-        approvedAt: serverTimestamp(),
+        approvedAt: new Date().toISOString(), // ✅ Usamos ISO string en lugar de serverTimestamp
         changes: proposal.changes,
         data: { ...currentMetadata }
       };
 
+      // Aplicar los cambios aprobados
       proposal.changes.forEach(change => {
         if (change.requiresAuthorConsent !== false) {
           newVersion.data[change.field] = change.proposedValue;
         }
       });
 
+      // 🔥 SOLUCIÓN: Dos operaciones separadas
+      // 1. Actualizar el documento principal (puede usar serverTimestamp)
       await updateDoc(submissionRef, {
-        metadataVersions: arrayUnion(newVersion),
         currentMetadata: newVersion.data,
         'metadataRefinement.status': 'approved',
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp() // ✅ OK aquí
       });
 
+      // 2. Agregar la versión al array (usando el objeto ya preparado)
+      await updateDoc(submissionRef, {
+        metadataVersions: arrayUnion(newVersion) // ✅ newVersion ya tiene approvedAt como string
+      });
+
+      // 3. Registrar en auditLogs (puede usar serverTimestamp)
       await addDoc(collection(submissionRef, 'auditLogs'), {
         action: 'metadata_changes_applied',
         version: newVersion.version,
         changes: proposal.changes,
         by: user.uid,
         byEmail: user.email,
-        timestamp: serverTimestamp()
+        timestamp: serverTimestamp() // ✅ OK aquí
       });
 
       setLoading(false);
