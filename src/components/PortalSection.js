@@ -925,20 +925,25 @@ export default function PortalSection({ user, onLogout }) {
   const isAssignmentManager = userRoles.includes('Encargado de Asignación de Artículos');
 
   // Pestañas actualizadas para el nuevo sistema
-  const tabs = [
-    { id: 'profile', label: isSpanish ? 'MI PERFIL' : 'MY PROFILE', roles: ['any'] },
-    { id: 'submissions', label: isSpanish ? 'MIS ENVÍOS' : 'MY SUBMISSIONS', roles: ['Autor'] }, // <-- NUEVO
-    { id: 'reviewer-tasks', label: isSpanish ? 'MIS REVISIONES' : 'MY REVIEWS', roles: ['Revisor'] }, // <-- NUEVO
-    { id: 'deskreview', label: isSpanish ? 'DESK REVIEW' : 'DESK REVIEW', roles: ['Editor de Sección', 'Editor en Jefe'] },
-    { id: 'assignment', label: isSpanish ? 'ASIGNAR ARTÍCULOS' : 'ASSIGN ARTICLES', roles: ['Encargado de Asignación de Artículos', 'Director General'] },
-    { id: 'calendar', label: isSpanish ? 'CALENDARIO' : 'CALENDAR', roles: ['Editor en Jefe', 'Director General', 'Encargado de Asignación de Artículos'] },
-    { id: 'submit', label: isSpanish ? 'ENVIAR MANUSCRITO' : 'SUBMIT MANUSCRIPT', roles: ['Autor'] },
-    { id: 'director', label: isSpanish ? 'PANEL DIRECTIVO' : 'DIRECTOR PANEL', roles: ['Director General'] },
-    { id: 'chief', label: isSpanish ? 'PANEL EDITOR JEFE' : 'CHIEF EDITOR PANEL', roles: ['Editor en Jefe'] },
-    { id: 'tasks', label: isSpanish ? 'TAREAS' : 'TASKS', roles: ['Encargado de Redes Sociales', 'Responsable de Desarrollo Web'] },
-    { id: 'news', label: isSpanish ? 'NOTICIAS' : 'NEWS', roles: ['Director General'] },
-    { id: 'admissions', label: isSpanish ? 'ADMISIONES' : 'ADMISSIONS', roles: ['Director General'] },
-    { id: 'usermanagement', label: isSpanish ? 'USUARIOS' : 'USERS', roles: ['Director General'] }
+// En PortalSection.js, dentro del array 'tabs'
+
+const tabs = [
+  { id: 'profile', label: isSpanish ? 'MI PERFIL' : 'MY PROFILE', roles: ['any'] },
+  { id: 'submissions', label: isSpanish ? 'MIS ENVÍOS' : 'MY SUBMISSIONS', roles: ['Autor'] },
+  { id: 'reviewer-tasks', label: isSpanish ? 'MIS REVISIONES' : 'MY REVIEWS', roles: ['Revisor'] },
+  { id: 'deskreview', label: isSpanish ? 'DESK REVIEW' : 'DESK REVIEW', roles: ['Editor de Sección', 'Editor en Jefe'] },
+  { id: 'assignment', label: isSpanish ? 'ASIGNAR ARTÍCULOS' : 'ASSIGN ARTICLES', roles: ['Encargado de Asignación de Artículos', 'Director General'] },
+  { id: 'calendar', label: isSpanish ? 'CALENDARIO' : 'CALENDAR', roles: ['Editor en Jefe', 'Director General', 'Encargado de Asignación de Artículos'] },
+  { id: 'submit', label: isSpanish ? 'ENVIAR MANUSCRITO' : 'SUBMIT MANUSCRIPT', roles: ['Autor'] },
+  { id: 'director', label: isSpanish ? 'PANEL DIRECTIVO' : 'DIRECTOR PANEL', roles: ['Director General'] },
+  { id: 'chief', label: isSpanish ? 'PANEL EDITOR JEFE' : 'CHIEF EDITOR PANEL', roles: ['Editor en Jefe'] },
+  { id: 'tasks', label: isSpanish ? 'TAREAS' : 'TASKS', roles: ['Encargado de Redes Sociales', 'Responsable de Desarrollo Web'] },
+  { id: 'news', label: isSpanish ? 'NOTICIAS' : 'NEWS', roles: ['Director General'] },
+  { id: 'admissions', label: isSpanish ? 'ADMISIONES' : 'ADMISSIONS', roles: ['Director General'] },
+  { id: 'usermanagement', label: isSpanish ? 'USUARIOS' : 'USERS', roles: ['Director General'] },
+  // NUEVA PESTAÑA PARA ARTÍCULOS ACEPTADOS
+  { id: 'accepted-articles', label: isSpanish ? 'ARTÍCULOS ACEPTADOS' : 'ACCEPTED ARTICLES', roles: ['Editor de Sección', 'Editor en Jefe', 'Director General'] }
+
   ].filter(tab => tab.roles.includes('any') || tab.roles.some(role => userRoles.includes(role)));
 
   // Snapshot de usuario
@@ -1320,7 +1325,18 @@ export default function PortalSection({ user, onLogout }) {
               </div>
             </motion.section>
           )}
+// En el main, dentro del AnimatePresence
 
+{activeTab === 'accepted-articles' && (
+  <motion.section
+    key="accepted-articles"
+    initial={{ opacity: 0, x: -20 }} 
+    animate={{ opacity: 1, x: 0 }} 
+    exit={{ opacity: 0, x: 20 }}
+  >
+    <AcceptedArticlesPanel user={userData} />
+  </motion.section>
+)}
           {/* DESK REVIEW */}
           {activeTab === 'deskreview' && (
             <motion.section

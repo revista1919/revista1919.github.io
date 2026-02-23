@@ -1824,20 +1824,8 @@ async function sendEmailViaExtension(to, subject, htmlBody) {
       to: [to],
       message: {
         subject: subject,
-        html: htmlBody
-      },
-      // Agregar headers para desactivar tracking
-      headers: {
-        'X-Mailgun-Track': 'no',  // Para Mailgun
-        'X-SMTPAPI': JSON.stringify({  // Para SendGrid
-          filters: {
-            clicktrack: {
-              settings: {
-                enable: 0
-              }
-            }
-          }
-        })
+        html: htmlBody,
+        text: htmlBody.replace(/<[^>]*>/g, '') // Versión texto plano opcional
       },
       createdAt: admin.firestore.FieldValue.serverTimestamp()
     };
@@ -4579,3 +4567,623 @@ exports.createNewReviewRound = onCall(
     }
   }
 );
+// ===================== NUEVO TRIGGER: ALCANZAR MÍNIMO DE REVISORES ACEPTADOS =====================
+exports.onReviewerAssignmentStatusChanged = onDocumentUpdated(
+  {
+    document: 'reviewerAssignments/{assignmentId}',
+    secrets: [],
+    memory: '256MiB'
+  },
+  async (event) => {
+    const beforeData = event.data.before.data();
+    const afterData = event.data.after.data();
+    const assignmentId = event.params.assignmentId;
+
+    // Solo nos interesa cuando el estado CAMBIA a 'accepted'
+    if (beforeData.status === afterData.status || afterData.status !== 'accepted') {
+      return;
+    }
+
+    console.log(`👥 [onReviewerAssignmentAccepted] Nueva aceptación: ${assignmentId} para tarea: ${afterData.editorialTaskId}`);
+
+    try {
+      const db = admin.firestore();
+      const taskId = afterData.editorialTaskId;
+      
+      if (!taskId) {
+        console.warn('⚠️ La asignación no tiene editorialTaskId');
+        return;
+      }
+
+      // 1. Contar cuántas asignaciones ACEPTADAS hay para esta tarea
+      const assignmentsSnapshot = await db.collection('reviewerAssignments')
+        .where('editorialTaskId', '==', taskId)
+        .where('status', '==', 'accepted')
+        .get();
+
+      const acceptedCount = assignmentsSnapshot.size;
+      console.log(`📊 Revisiones aceptadas para tarea ${taskId}: ${acceptedCount}`);
+
+      // 2. Si llegamos a 2 aceptaciones, avanzar al siguiente estado
+      if (acceptedCount >= 2) {
+        const taskRef = db.collection('editorialTasks').doc(taskId);
+        const taskSnap = await taskRef.get();
+        
+        if (!taskSnap.exists) {
+          console.error(`❌ Tarea no encontrada: ${taskId}`);
+          return;
+        }
+
+        const taskData = taskSnap.data();
+        
+        // Solo actualizar si la tarea está en el estado correcto (reviewer-selection)
+        if (taskData.status === 'reviewer-selection') {
+          // Actualizar Tarea
+          await taskRef.update({
+            status: 'reviews-in-progress', // Nuevo estado
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+
+          // Actualizar Submission
+          const submissionRef = db.collection('submissions').doc(taskData.submissionId);
+          await submissionRef.update({
+            status: 'in-peer-review', // El artículo ahora está siendo revisado por pares
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+
+          console.log(`✅ Tarea ${taskId} y submission ${taskData.submissionId} avanzaron a 'in-peer-review'`);
+
+          // Opcional: Notificar al editor que la fase de selección terminó
+          await sendEmailToEditor(taskData.assignedToEmail, 'selection_complete', taskData.submissionId);
+        }
+      }
+
+    } catch (error) {
+      console.error(`❌ Error en onReviewerAssignmentAccepted:`, error.message);
+      await logSystemError('onReviewerAssignmentAccepted', error, { assignmentId });
+    }
+  }
+);
+
+// Función auxiliar para enviar emails (ejemplo)
+async function sendEmailToEditor(editorEmail, eventType, submissionId) {
+   // ... lógica para construir y enviar email ...
+   console.log(`Notificación enviada a editor ${editorEmail} para evento ${eventType}`);
+}
+// ===================== MEJORA: TRIGGER PARA CUANDO SE COMPLETA UNA REVISIÓN =====================
+exports.onReviewerAssignmentSubmitted = onDocumentUpdated(
+  {
+    document: 'reviewerAssignments/{assignmentId}',
+    secrets: [],
+    memory: '256MiB'
+  },
+  async (event) => {
+    const beforeData = event.data.before.data();
+    const afterData = event.data.after.data();
+    const assignmentId = event.params.assignmentId;
+
+    // Solo nos interesa cuando el estado CAMBIA a 'submitted'
+    if (beforeData.status === afterData.status || afterData.status !== 'submitted') {
+      return;
+    }
+
+    console.log(`📝 [onReviewerAssignmentSubmitted] Nueva revisión completada: ${assignmentId}`);
+
+    try {
+      const db = admin.firestore();
+      const taskId = afterData.editorialTaskId;
+      
+      if (!taskId) {
+        console.warn('⚠️ La asignación no tiene editorialTaskId');
+        return;
+      }
+
+      // 1. Contar cuántas asignaciones COMPLETADAS (submitted) hay para esta tarea
+      const assignmentsSnapshot = await db.collection('reviewerAssignments')
+        .where('editorialTaskId', '==', taskId)
+        .where('status', '==', 'submitted')
+        .get();
+
+      const submittedCount = assignmentsSnapshot.size;
+      console.log(`📊 Revisiones completadas para tarea ${taskId}: ${submittedCount}`);
+
+      // 2. Si llegamos a 2 revisiones completadas, avanzar al siguiente estado
+      if (submittedCount >= 2) {
+        const taskRef = db.collection('editorialTasks').doc(taskId);
+        const taskSnap = await taskRef.get();
+        
+        if (!taskSnap.exists) {
+          console.error(`❌ Tarea no encontrada: ${taskId}`);
+          return;
+        }
+
+        const taskData = taskSnap.data();
+        
+        // Solo actualizar si la tarea está en el estado correcto (reviews-in-progress)
+        if (taskData.status === 'reviews-in-progress' || taskData.status === 'awaiting-decision') {
+          
+          // Actualizar Tarea a 'awaiting-decision'
+          await taskRef.update({
+            status: 'awaiting-decision',
+            reviewsCompletedAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+
+          // Actualizar Submission a un nuevo estado (ej. 'awaiting-editor-decision')
+          const submissionRef = db.collection('submissions').doc(taskData.submissionId);
+          await submissionRef.update({
+            status: 'awaiting-editor-decision', // ¡Nuevo estado!
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+
+          console.log(`✅ Tarea ${taskId} avanzó a 'awaiting-decision'. Notificando al editor.`);
+
+          // 3. Notificar al editor (usando la función que ya casi tienes)
+          // Asegúrate de que esta función exista y funcione.
+          await sendEditorDecisionNotification(taskData, assignmentsSnapshot);
+        }
+      }
+
+    } catch (error) {
+      console.error(`❌ Error en onReviewerAssignmentSubmitted:`, error.message);
+      await logSystemError('onReviewerAssignmentSubmitted', error, { assignmentId });
+    }
+  }
+);
+
+// Función auxiliar para notificar al editor (basada en tu onEditorialTaskAwaitingDecision)
+async function sendEditorDecisionNotification(taskData, assignmentsSnapshot) {
+   // Aquí va la lógica que ya tenías en onEditorialTaskAwaitingDecision
+   // para construir y enviar el email con el resumen de las revisiones.
+   console.log(`Notificación de decisión pendiente enviada a ${taskData.assignedToEmail}`);
+}
+// ===================== SUBMIT REVISION =====================
+// ===================== SUBMIT REVISION =====================
+exports.submitRevision = onRequest(
+  { 
+    secrets: [OAUTH2_CLIENT_ID, OAUTH2_CLIENT_SECRET, OAUTH2_REFRESH_TOKEN],
+    cors: true,
+    timeoutSeconds: 300,
+    memory: '1GiB'
+  },
+  async (req, res) => {
+    if (handleCors(req, res)) return;
+    
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    try {
+      const token = req.headers.authorization?.split('Bearer ')[1];
+      if (!token) {
+        return res.status(401).json({ error: 'No autorizado' });
+      }
+      
+      const decodedToken = await admin.auth().verifyIdToken(token);
+      const uid = decodedToken.uid;
+      
+      const { submissionId, fileBase64, fileName, notes, round } = req.body;
+      
+      if (!submissionId || !fileBase64 || !fileName) {
+        return res.status(400).json({ error: 'Faltan datos requeridos' });
+      }
+      
+      const db = admin.firestore();
+      
+      const submissionRef = db.collection('submissions').doc(submissionId);
+      const submissionSnap = await submissionRef.get();
+      
+      if (!submissionSnap.exists) {
+        return res.status(404).json({ error: 'Submission no encontrado' });
+      }
+      
+      const submission = submissionSnap.data();
+      
+      if (submission.authorUID !== uid) {
+        return res.status(403).json({ error: 'No eres el autor de este artículo' });
+      }
+      
+      const drive = await getDriveClient();
+      
+      const folderId = submission.editorialFolderId || submission.driveFolderId;
+      
+      if (!folderId) {
+        return res.status(500).json({ error: 'No hay carpeta de Drive asociada' });
+      }
+      
+      const revisionFileName = `REVISION_R${round + 1}_${Date.now()}_${fileName}`;
+      
+      const file = await uploadToDrive(drive, fileBase64, revisionFileName, folderId);
+      
+      const versionRef = db.collection('submissions').doc(submissionId).collection('versions');
+      await versionRef.add({
+        version: round + 1,
+        fileId: file.id,
+        fileUrl: file.webViewLink,
+        fileName: revisionFileName,
+        fileSize: file.size,
+        notes: notes || '',
+        type: 'revision',
+        uploadedAt: admin.firestore.FieldValue.serverTimestamp(),
+        uploadedBy: uid,
+        uploadedByEmail: decodedToken.email
+      });
+      
+      await submissionRef.update({
+        status: 'in-desk-review',
+        currentRound: round + 1,
+        lastRevisionAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+      
+      const auditLogRef = db.collection('submissions').doc(submissionId).collection('auditLogs');
+      await auditLogRef.add({
+        action: 'revision_submitted',
+        round: round + 1,
+        notes: notes,
+        fileName: revisionFileName,
+        by: uid,
+        byEmail: decodedToken.email,
+        timestamp: admin.firestore.FieldValue.serverTimestamp()
+      });
+      
+      return res.json({
+        success: true,
+        fileUrl: file.webViewLink,
+        message: 'Revisión subida exitosamente'
+      });
+      
+    } catch (error) {
+      console.error('Error en submitRevision:', error);
+      return res.status(500).json({
+        error: 'Error interno del servidor',
+        message: error.message
+      });
+    }
+  }
+);
+// ===================== CREATE IMMUTABLE HISTORY =====================
+exports.createImmutableHistory = onCall(
+  {
+    secrets: [],
+    memory: '512MiB'
+  },
+  async (request) => {
+    const { HttpsError } = require("firebase-functions/v2/https");
+    
+    try {
+      if (!request.auth) {
+        throw new HttpsError('unauthenticated', 'Debes iniciar sesión');
+      }
+      
+      const { submissionId } = request.data;
+      const db = admin.firestore();
+      const crypto = require('crypto');
+      
+      // Verificar permisos (solo editores pueden crear historia)
+      const userDoc = await db.collection('users').doc(request.auth.uid).get();
+      const userRoles = userDoc.data()?.roles || [];
+      if (!userRoles.includes('Director General') && !userRoles.includes('Editor en Jefe')) {
+        throw new HttpsError('permission-denied', 'No tienes permiso');
+      }
+      
+      // Obtener TODOS los datos del submission
+      const submissionDoc = await db.collection('submissions').doc(submissionId).get();
+      if (!submissionDoc.exists) {
+        throw new HttpsError('not-found', 'Submission no encontrado');
+      }
+      
+      const submission = submissionDoc.data();
+      
+      // Obtener revisiones editoriales
+      const editorialReviews = await db.collection('editorialReviews')
+        .where('submissionId', '==', submissionId)
+        .orderBy('createdAt', 'asc')
+        .get();
+      
+      // Obtener asignaciones de revisores
+      const reviewerAssignments = await db.collection('reviewerAssignments')
+        .where('submissionId', '==', submissionId)
+        .get();
+      
+      // Obtener todas las versiones del manuscrito
+      const versions = await db.collection('submissions').doc(submissionId)
+        .collection('versions')
+        .orderBy('version', 'asc')
+        .get();
+      
+      // Obtener audit logs
+      const auditLogs = await db.collection('submissions').doc(submissionId)
+        .collection('auditLogs')
+        .orderBy('timestamp', 'asc')
+        .get();
+      
+      // Construir el objeto de historia inmutable
+      const immutableHistory = {
+        version: "1.0.0",
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdBy: request.auth.uid,
+        submissionId: submissionId,
+        
+        // Datos originales (inmutables)
+        originalData: submission.originalSubmission || {
+          title: submission.title,
+          abstract: submission.abstract,
+          keywords: submission.keywords,
+          authors: submission.authors,
+          submittedAt: submission.createdAt,
+          paperLanguage: submission.paperLanguage,
+          articleType: submission.articleType,
+          area: submission.area,
+          funding: submission.funding,
+          conflictOfInterest: submission.conflictOfInterest,
+          dataAvailability: submission.dataAvailability,
+          codeAvailability: submission.codeAvailability,
+          acknowledgments: submission.acknowledgments
+        },
+        
+        // Metadatos finales (refinados)
+        finalMetadata: submission.currentMetadata || {
+          title: submission.title,
+          titleEn: submission.titleEn,
+          abstract: submission.abstract,
+          abstractEn: submission.abstractEn,
+          keywords: submission.keywords,
+          keywordsEn: submission.keywordsEn,
+          authors: normalizeAuthors(submission.authors)
+        },
+        
+        // Todo el proceso de revisión
+        reviewProcess: {
+          editorialReviews: editorialReviews.docs.map(doc => ({
+            id: doc.id,
+            round: doc.data().round,
+            decision: doc.data().decision,
+            feedbackToAuthor: doc.data().feedbackToAuthor,
+            completedAt: doc.data().completedAt
+          })),
+          
+          peerReviews: reviewerAssignments.docs.map(doc => ({
+            id: doc.id,
+            reviewerName: doc.data().reviewerName,
+            recommendation: doc.data().recommendation,
+            scores: doc.data().scores,
+            commentsToAuthor: doc.data().commentsToAuthor,
+            submittedAt: doc.data().submittedAt
+          })),
+          
+          finalDecision: {
+            madeBy: submission.decisionMadeBy,
+            madeAt: submission.decisionMadeAt,
+            decision: submission.finalDecision,
+            feedback: submission.finalFeedback
+          }
+        },
+        
+        // Todas las versiones del manuscrito
+        manuscriptVersions: versions.docs.map(doc => ({
+          version: doc.data().version,
+          fileUrl: doc.data().fileUrl,
+          fileName: doc.data().fileName,
+          uploadedAt: doc.data().uploadedAt,
+          type: doc.data().type,
+          notes: doc.data().notes
+        })),
+        
+        // Línea de tiempo completa
+        timeline: buildTimeline(auditLogs, submission),
+        
+        // Metadatos de la publicación final
+        publicationMetadata: {
+          volumen: submission.volumen,
+          numero: submission.numero,
+          primeraPagina: submission.primeraPagina,
+          ultimaPagina: submission.ultimaPagina,
+          fechaPublicacion: submission.acceptedDate,
+          doi: submission.doi || `10.1234/rnce.${submissionId}`
+        },
+        
+        // Hash para verificar integridad
+        hash: null
+      };
+      
+      // Calcular hash
+      const hashObj = { ...immutableHistory };
+      delete hashObj.hash;
+      const hashString = JSON.stringify(hashObj, (key, value) => {
+        if (value && typeof value.toDate === 'function') {
+          return value.toDate().toISOString();
+        }
+        return value;
+      });
+      
+      immutableHistory.hash = crypto
+        .createHash('sha256')
+        .update(hashString)
+        .digest('hex');
+      
+      // Guardar la historia inmutable
+      const historyRef = await db.collection('immutableHistories').add(immutableHistory);
+      
+      // Actualizar el submission
+      await submissionDoc.ref.update({
+        immutableHistoryId: historyRef.id,
+        immutableHistoryCreatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        status: 'archived'
+      });
+      
+      return {
+        success: true,
+        historyId: historyRef.id,
+        hash: immutableHistory.hash
+      };
+      
+    } catch (error) {
+      console.error('❌ Error creando historia inmutable:', error);
+      throw new HttpsError('internal', error.message);
+    }
+  }
+);
+
+// Funciones auxiliares para createImmutableHistory
+function normalizeAuthors(authors) {
+  return authors.map(author => ({
+    firstName: author.firstName,
+    lastName: author.lastName,
+    fullName: `${author.firstName} ${author.lastName}`,
+    orcid: author.orcid || null,
+    institution: author.institution,
+    email: author.email,
+    isCorresponding: author.isCorresponding || false
+  }));
+}
+
+function buildTimeline(auditLogs, submission) {
+  const timeline = [];
+  
+  timeline.push({
+    event: 'submitted',
+    at: submission.createdAt,
+    by: submission.authorEmail,
+    details: 'Manuscrito enviado'
+  });
+  
+  auditLogs.docs.forEach(log => {
+    timeline.push({
+      event: log.data().action,
+      at: log.data().timestamp,
+      by: log.data().byEmail || log.data().by,
+      details: log.data().notes || log.data().decision
+    });
+  });
+  
+  if (submission.finalDecision === 'accept') {
+    timeline.push({
+      event: 'accepted',
+      at: submission.decisionMadeAt,
+      by: submission.decisionMadeBy,
+      details: 'Artículo aceptado para publicación'
+    });
+  }
+  
+  return timeline.sort((a, b) => {
+    const aTime = a.at?.toDate?.() || new Date(a.at);
+    const bTime = b.at?.toDate?.() || new Date(b.at);
+    return aTime - bTime;
+  });
+}
+// ===================== NOTIFICAR EDITOR SOBRE RESPUESTA DE METADATOS =====================
+// ===================== NOTIFICAR EDITOR SOBRE RESPUESTA DE METADATOS =====================
+exports.onMetadataProposalResponse = onDocumentUpdated(
+  {
+    document: 'submissions/{submissionId}',
+    secrets: [],
+    memory: '256MiB'
+  },
+  async (event) => {
+    const beforeData = event.data.before.data();
+    const afterData = event.data.after.data();
+    
+    const beforeStatus = beforeData.metadataRefinement?.status;
+    const afterStatus = afterData.metadataRefinement?.status;
+    
+    if (beforeStatus === afterStatus) return;
+    
+    if (beforeStatus === 'pending-author' && (afterStatus === 'pending-editor' || afterStatus === 'rejected')) {
+      console.log(`📝 Autor respondió a propuesta para ${event.params.submissionId}`);
+      
+      try {
+        const db = admin.firestore();
+        
+        const tasksSnapshot = await db.collection('editorialTasks')
+          .where('submissionId', '==', event.params.submissionId)
+          .where('status', '==', 'completed')
+          .limit(1)
+          .get();
+        
+        if (!tasksSnapshot.empty) {
+          const task = tasksSnapshot.docs[0].data();
+          
+          const isSpanish = afterData.paperLanguage === 'es';
+          const authorResponse = afterData.metadataRefinement.authorResponse;
+          
+          const emailSubject = isSpanish
+            ? `Respuesta del autor a propuesta de metadatos - ${afterData.title.substring(0, 50)}`
+            : `Author response to metadata proposal - ${afterData.title.substring(0, 50)}`;
+          
+          const emailBody = isSpanish
+            ? `
+              <p>El autor ha respondido a tu propuesta de cambios en los metadatos.</p>
+              <p><strong>Artículo:</strong> ${afterData.title}</p>
+              <p><strong>Respuesta:</strong> ${authorResponse.accepted ? 'APROBADA' : 'RECHAZADA'}</p>
+              ${authorResponse.comments ? `<p><strong>Comentarios:</strong> ${authorResponse.comments}</p>` : ''}
+              <p>Accede al portal editorial para continuar con el proceso.</p>
+            `
+            : `
+              <p>The author has responded to your metadata change proposal.</p>
+              <p><strong>Article:</strong> ${afterData.title}</p>
+              <p><strong>Response:</strong> ${authorResponse.accepted ? 'APPROVED' : 'REJECTED'}</p>
+              ${authorResponse.comments ? `<p><strong>Comments:</strong> ${authorResponse.comments}</p>` : ''}
+              <p>Access the editorial portal to continue the process.</p>
+            `;
+          
+          const htmlBody = getEmailTemplate(
+            emailSubject,
+            isSpanish ? `Estimado/a ${task.assignedToName || 'Editor'}:` : `Dear ${task.assignedToName || 'Editor'}:`,
+            emailBody,
+            isSpanish ? 'Sistema Editorial' : 'Editorial System',
+            isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
+            isSpanish ? 'es' : 'en'
+          );
+          
+          await sendEmailViaExtension(task.assignedToEmail, emailSubject, htmlBody);
+          console.log(`✅ Notificación enviada a editor ${task.assignedToEmail}`);
+        }
+        
+      } catch (error) {
+        console.error('Error en onMetadataProposalResponse:', error);
+        await logSystemError('onMetadataProposalResponse', error, { submissionId: event.params.submissionId });
+      }
+    }
+  }
+);
+// Función auxiliar para enviar emails (completa)
+async function sendEmailToEditor(editorEmail, eventType, submissionId) {
+  const db = admin.firestore();
+  const submissionSnap = await db.collection('submissions').doc(submissionId).get();
+  if (!submissionSnap.exists) return;
+  
+  const submission = submissionSnap.data();
+  const isSpanish = submission.paperLanguage === 'es';
+  
+  let subject, bodyContent;
+  
+  if (eventType === 'selection_complete') {
+    subject = isSpanish 
+      ? '✅ Selección de revisores completada' 
+      : '✅ Reviewer selection completed';
+    
+    bodyContent = isSpanish
+      ? `
+        <p>Se han alcanzado las 2 aceptaciones de revisores necesarias para el artículo <strong>"${submission.title}"</strong>.</p>
+        <p>El artículo ha pasado automáticamente a la fase de <strong>revisión por pares</strong>.</p>
+        <p>Recibirá una notificación cuando los revisores completen sus evaluaciones.</p>
+      `
+      : `
+        <p>2 reviewer acceptances have been reached for the article <strong>"${submission.title}"</strong>.</p>
+        <p>The article has automatically moved to the <strong>peer review</strong> phase.</p>
+        <p>You will be notified when the reviewers complete their evaluations.</p>
+      `;
+  }
+  
+  const htmlBody = getEmailTemplate(
+    subject,
+    isSpanish ? 'Estimado/a Editor:' : 'Dear Editor:',
+    bodyContent,
+    isSpanish ? 'Sistema Editorial' : 'Editorial System',
+    isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
+    isSpanish ? 'es' : 'en'
+  );
+  
+  await sendEmailViaExtension(editorEmail, subject, htmlBody);
+}

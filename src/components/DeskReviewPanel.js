@@ -1,4 +1,4 @@
-// src/components/DeskReviewPanel.js (VERSIÓN CORREGIDA)
+// src/components/DeskReviewPanel.js (VERSIÓN ACTUALIZADA)
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { db } from '../firebase';
@@ -10,6 +10,7 @@ import { useEditorialTasks, TASK_STATES } from '../hooks/useEditorialTasks';
 import { DeskReviewTab } from './DeskReviewTab';
 import { ReviewerManagementTab } from './ReviewerManagementTab';
 import { FinalDecisionTab } from './FinalDecisionTab';
+import { MetadataRefinementTab } from './MetadataRefinementTab'; // <-- NUEVO
 
 const DeskReviewPanel = ({ user }) => {
   const { language } = useLanguage();
@@ -122,17 +123,12 @@ const DeskReviewPanel = ({ user }) => {
   const handleStartReview = async (taskId) => {
     const result = await startDeskReview(taskId);
     if (result.success) {
-      // Actualizar la lista de tareas
       const updated = await getMyTasks();
       if (updated.success) setAssignedTasks(updated.tasks);
     }
   };
 
-  /**
-   * CORREGIDO: Ahora guarda la decisión en Firestore usando submitDeskReviewDecision
-   */
   const handleCompleteDeskReview = async (taskId, decisionData) => {
-    // Verificar que tenemos el editorialReviewId
     if (!selectedTask?.editorialReviewId) {
       console.error('No se encontró editorialReviewId para esta tarea');
       alert(isSpanish 
@@ -141,23 +137,19 @@ const DeskReviewPanel = ({ user }) => {
       return;
     }
 
-    // Llamar al hook para guardar en Firestore
     const result = await submitDeskReviewDecision(selectedTask.editorialReviewId, decisionData);
 
     if (result.success) {
-      // Actualizar estado local para UI inmediata
       setSelectedTask(prev => ({
         ...prev,
         deskReviewDecision: decisionData.decision,
         deskReviewFeedback: decisionData.feedbackToAuthor,
         deskReviewComments: decisionData.commentsToEditorial,
-        // El estado real se actualizará vía onSnapshot cuando la Cloud Function procese
         status: decisionData.decision === 'revision-required' 
           ? TASK_STATES.REVIEWER_SELECTION 
           : TASK_STATES.COMPLETED
       }));
 
-      // Mostrar mensaje de éxito
       alert(isSpanish 
         ? 'Decisión guardada correctamente. El sistema está procesando...' 
         : 'Decision saved successfully. The system is processing...');
@@ -190,7 +182,6 @@ const DeskReviewPanel = ({ user }) => {
       setSelectedReviewerId('');
       setSearchTerm('');
       
-      // Recargar invitaciones
       const q = query(
         collection(db, 'reviewerInvitations'),
         where('editorialTaskId', '==', selectedTask.id)
@@ -208,7 +199,7 @@ const DeskReviewPanel = ({ user }) => {
     }
   };
 
-  // Filtrar revisores (excluir ya invitados)
+  // Filtrar revisores
   const invitedEmails = new Set(invitations.map(r => r.reviewerEmail));
   const availableReviewers = potentialReviewers.filter(r => !invitedEmails.has(r.email));
   
@@ -221,7 +212,6 @@ const DeskReviewPanel = ({ user }) => {
     );
   });
 
-  // Si no tiene permisos, no renderizar nada
   if (!hasPermission) {
     return null;
   }
@@ -284,12 +274,14 @@ const DeskReviewPanel = ({ user }) => {
                       task.status === TASK_STATES.DESK_REVIEW_IN_PROGRESS ? 'bg-blue-100 text-blue-700' :
                       task.status === TASK_STATES.REVIEWER_SELECTION ? 'bg-purple-100 text-purple-700' :
                       task.status === TASK_STATES.AWAITING_DECISION ? 'bg-green-100 text-green-700' :
+                      task.status === TASK_STATES.COMPLETED ? 'bg-gray-100 text-gray-700' :
                       'bg-gray-100 text-gray-700'
                     }`}>
                       {task.status === TASK_STATES.PENDING && (isSpanish ? 'Pendiente' : 'Pending')}
                       {task.status === TASK_STATES.DESK_REVIEW_IN_PROGRESS && (isSpanish ? 'En revisión' : 'In review')}
                       {task.status === TASK_STATES.REVIEWER_SELECTION && (isSpanish ? 'Seleccionando revisores' : 'Selecting reviewers')}
                       {task.status === TASK_STATES.AWAITING_DECISION && (isSpanish ? 'Esperando decisión' : 'Awaiting decision')}
+                      {task.status === TASK_STATES.COMPLETED && (isSpanish ? 'Completada' : 'Completed')}
                     </span>
                     {task.status === TASK_STATES.PENDING && (
                       <button
@@ -311,10 +303,10 @@ const DeskReviewPanel = ({ user }) => {
           {selectedTask ? (
             <div>
               {/* Tabs condicionales según el estado de la tarea */}
-              <div className="flex border-b border-gray-200 mb-6">
+              <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
                 <button
                   onClick={() => setActiveTaskTab('deskReview')}
-                  className={`px-4 py-2 font-medium text-sm transition-colors ${
+                  className={`px-4 py-2 font-medium text-sm transition-colors whitespace-nowrap ${
                     activeTaskTab === 'deskReview' 
                       ? 'text-[#C0A86A] border-b-2 border-[#C0A86A]' 
                       : 'text-[#5A6B7A] hover:text-[#0A1929]'
@@ -328,7 +320,7 @@ const DeskReviewPanel = ({ user }) => {
                   selectedTask.status === TASK_STATES.REVIEWS_IN_PROGRESS) && (
                   <button
                     onClick={() => setActiveTaskTab('reviewerManagement')}
-                    className={`px-4 py-2 font-medium text-sm transition-colors ${
+                    className={`px-4 py-2 font-medium text-sm transition-colors whitespace-nowrap ${
                       activeTaskTab === 'reviewerManagement' 
                         ? 'text-[#C0A86A] border-b-2 border-[#C0A86A]' 
                         : 'text-[#5A6B7A] hover:text-[#0A1929]'
@@ -341,13 +333,27 @@ const DeskReviewPanel = ({ user }) => {
                 {selectedTask.status === TASK_STATES.AWAITING_DECISION && (
                   <button
                     onClick={() => setActiveTaskTab('finalDecision')}
-                    className={`px-4 py-2 font-medium text-sm transition-colors ${
+                    className={`px-4 py-2 font-medium text-sm transition-colors whitespace-nowrap ${
                       activeTaskTab === 'finalDecision' 
                         ? 'text-[#C0A86A] border-b-2 border-[#C0A86A]' 
                         : 'text-[#5A6B7A] hover:text-[#0A1929]'
                     }`}
                   >
                     {isSpanish ? 'Decisión Final' : 'Final Decision'}
+                  </button>
+                )}
+
+                {/* NUEVA PESTAÑA: Refinamiento de Metadatos (solo si el artículo está aceptado) */}
+                {selectedTask.submission?.status === 'accepted' && (
+                  <button
+                    onClick={() => setActiveTaskTab('metadataRefinement')}
+                    className={`px-4 py-2 font-medium text-sm transition-colors whitespace-nowrap ${
+                      activeTaskTab === 'metadataRefinement' 
+                        ? 'text-[#C0A86A] border-b-2 border-[#C0A86A]' 
+                        : 'text-[#5A6B7A] hover:text-[#0A1929]'
+                    }`}
+                  >
+                    {isSpanish ? 'Refinar Metadatos' : 'Refine Metadata'}
                   </button>
                 )}
               </div>
@@ -382,6 +388,17 @@ const DeskReviewPanel = ({ user }) => {
                   reviewers={reviewers}
                   onSubmitDecision={handleFinalDecision}
                   loading={reviewLoading}
+                />
+              )}
+
+              {/* NUEVO TAB: Refinamiento de Metadatos */}
+              {activeTaskTab === 'metadataRefinement' && (
+                <MetadataRefinementTab
+                  submission={selectedTask.submission}
+                  user={user}
+                  onComplete={() => {
+                    // Opcional: refrescar datos
+                  }}
                 />
               )}
             </div>

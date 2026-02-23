@@ -119,7 +119,26 @@ export const submitArticle = async (data) => {
 /* ==============================
    EXPORTS
 ============================== */
-
+// ===================== SUBMIT REVISION =====================
+export const submitRevision = async (data) => {
+  const token = await auth.currentUser.getIdToken();
+  
+  const response = await fetch('https://submitrevision-ggqsq2kkua-uc.a.run.app', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(data)
+  });
+  
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(error);
+  }
+  
+  return response.json();
+};
 export {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
