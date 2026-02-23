@@ -1,3 +1,4 @@
+// src/components/ReviewerWorkspace.js (VERSIÓN CORREGIDA)
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactQuill from 'react-quill';
@@ -130,13 +131,17 @@ export const ReviewerWorkspace = ({ assignmentId, onClose, readOnly = false }) =
           setSubmission({ id: submissionDoc.id, ...submissionDoc.data() });
         }
 
-        // Cargar deadline
+        // Cargar deadline - CORREGIDO: usar query en lugar de db.collection
         const deadlinesQuery = query(
-  collection(db, 'deadlines'),
-  where('targetId', '==', assignmentId),
-  where('type', '==', 'review-submission')
-);
-const deadlinesSnapshot = await getDocs(deadlinesQuery);
+          collection(db, 'deadlines'),
+          where('targetId', '==', assignmentId),
+          where('type', '==', 'review-submission')
+        );
+        const deadlinesSnapshot = await getDocs(deadlinesQuery);
+        
+        if (!deadlinesSnapshot.empty) {
+          setDeadline(deadlinesSnapshot.docs[0].data());
+        }
       }
     };
 
