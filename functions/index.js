@@ -4,7 +4,7 @@
 const { onRequest, onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { setGlobalOptions } = require("firebase-functions/v2"); // ← QUITAMOS onInit temporalmente
-
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 // IMPORTANTE: Configuración global
 setGlobalOptions({
   region: "us-central1",

@@ -1,4 +1,4 @@
-// src/components/DeskReviewPanel.js (VERSIÓN FINAL COMPLETA)
+// src/components/DeskReviewPanel.js (VERSIÓN CORREGIDA)
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { db } from '../firebase';
@@ -128,18 +128,44 @@ const DeskReviewPanel = ({ user }) => {
     }
   };
 
+  /**
+   * CORREGIDO: Ahora guarda la decisión en Firestore usando submitDeskReviewDecision
+   */
   const handleCompleteDeskReview = async (taskId, decisionData) => {
-    // Esto debería actualizar la editorialReview y la tarea
-    // Por ahora, solo actualizamos localmente
-    setSelectedTask(prev => ({
-      ...prev,
-      deskReviewDecision: decisionData.decision,
-      deskReviewFeedback: decisionData.feedbackToAuthor,
-      deskReviewComments: decisionData.commentsToEditorial,
-      status: decisionData.decision === 'revision-required' 
-        ? TASK_STATES.REVIEWER_SELECTION 
-        : TASK_STATES.COMPLETED
-    }));
+    // Verificar que tenemos el editorialReviewId
+    if (!selectedTask?.editorialReviewId) {
+      console.error('No se encontró editorialReviewId para esta tarea');
+      alert(isSpanish 
+        ? 'Error: No se pudo identificar la revisión editorial. Por favor, reinicia la tarea.' 
+        : 'Error: Could not identify the editorial review. Please restart the task.');
+      return;
+    }
+
+    // Llamar al hook para guardar en Firestore
+    const result = await submitDeskReviewDecision(selectedTask.editorialReviewId, decisionData);
+
+    if (result.success) {
+      // Actualizar estado local para UI inmediata
+      setSelectedTask(prev => ({
+        ...prev,
+        deskReviewDecision: decisionData.decision,
+        deskReviewFeedback: decisionData.feedbackToAuthor,
+        deskReviewComments: decisionData.commentsToEditorial,
+        // El estado real se actualizará vía onSnapshot cuando la Cloud Function procese
+        status: decisionData.decision === 'revision-required' 
+          ? TASK_STATES.REVIEWER_SELECTION 
+          : TASK_STATES.COMPLETED
+      }));
+
+      // Mostrar mensaje de éxito
+      alert(isSpanish 
+        ? 'Decisión guardada correctamente. El sistema está procesando...' 
+        : 'Decision saved successfully. The system is processing...');
+    } else {
+      alert(isSpanish 
+        ? 'Error al guardar la decisión: ' + result.error 
+        : 'Error saving decision: ' + result.error);
+    }
   };
 
   const handleSendInvitation = async () => {

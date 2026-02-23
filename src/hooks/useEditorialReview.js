@@ -1,4 +1,4 @@
-// src/hooks/useEditorialReview.js
+// src/hooks/useEditorialReview.js (VERSIÓN VERIFICADA)
 import { useState, useCallback } from 'react';
 import { db } from '../firebase';
 import { collection, addDoc, updateDoc, doc, serverTimestamp, getDoc, query, where, getDocs } from 'firebase/firestore';
@@ -80,8 +80,8 @@ export const useEditorialReview = (user) => {
   }, [user, isSpanish]);
 
   /**
-   * Guarda la decisión de la revisión editorial.
-   * AHORA SOLO GUARDA EN FIRESTORE. La Cloud Function `onEditorialReviewUpdated` se encarga del resto.
+   * Guarda la decisión de la revisión editorial en Firestore.
+   * La Cloud Function `onEditorialReviewUpdated` se encarga del resto.
    */
   const submitDeskReviewDecision = useCallback(async (reviewId, decisionData) => {
     if (!user) {
@@ -101,12 +101,24 @@ export const useEditorialReview = (user) => {
       }
 
       const reviewData = reviewSnap.data();
+      
       // Verificar que el editor que guarda es el mismo que inició la revisión (o tiene permisos)
       if (reviewData.editorUid !== user.uid) {
-        throw new Error(isSpanish ? 'No eres el editor asignado a esta revisión' : 'You are not the editor assigned to this review');
+        // Podríamos permitir que Directores Generales también editen
+        const userRoles = user.roles || [];
+        const isGeneralDirector = userRoles.includes('Director General');
+        
+        if (!isGeneralDirector) {
+          throw new Error(isSpanish ? 'No eres el editor asignado a esta revisión' : 'You are not the editor assigned to this review');
+        }
       }
 
       const { decision, feedbackToAuthor, commentsToEditorial } = decisionData;
+
+      // Validar que se haya seleccionado una decisión
+      if (!decision) {
+        throw new Error(isSpanish ? 'Debes seleccionar una decisión' : 'You must select a decision');
+      }
 
       // Actualizar SOLO el documento de la revisión editorial en Firestore.
       // ¡No actualizamos el estado del envío aquí! Eso lo hará la Cloud Function.
@@ -137,6 +149,6 @@ export const useEditorialReview = (user) => {
     loading,
     error,
     startDeskReview,
-    submitDeskReviewDecision
+    submitDeskReviewDecision  // <--- AHORA SÍ ESTÁ EXPORTADA
   };
 };

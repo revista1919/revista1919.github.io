@@ -1,4 +1,4 @@
-// src/hooks/useEditorialTasks.js
+// src/hooks/useEditorialTasks.js (VERSIÓN VERIFICADA)
 import { useState, useCallback } from 'react';
 import { db } from '../firebase';
 import { collection, query, where, getDocs, getDoc, addDoc, updateDoc, doc, serverTimestamp, orderBy } from 'firebase/firestore';
@@ -100,6 +100,9 @@ export const useEditorialTasks = (user) => {
     }
   }, []);
 
+  /**
+   * Inicia la revisión editorial y GUARDA el ID de la review en la tarea
+   */
   const startDeskReview = useCallback(async (taskId) => {
     if (!user) return { success: false, error: 'No user' };
     setLoading(true);
@@ -109,10 +112,10 @@ export const useEditorialTasks = (user) => {
       if (!taskSnap.exists()) throw new Error('Task not found');
       if (taskSnap.data().assignedTo !== user.uid) throw new Error('Not authorized');
 
-      // Crear la editorialReview
+      // Crear la editorialReview (con editorialTaskId)
       const reviewData = {
         submissionId: taskSnap.data().submissionId,
-        editorialTaskId: taskId,
+        editorialTaskId: taskId,  // <--- GUARDAR EL ID DE LA TAREA EN LA REVIEW
         round: 1,
         status: 'in-progress',
         editorUid: user.uid,
@@ -124,10 +127,10 @@ export const useEditorialTasks = (user) => {
       };
       const reviewRef = await addDoc(collection(db, 'editorialReviews'), reviewData);
 
-      // Actualizar la tarea
+      // Actualizar la tarea con el ID de la review
       await updateDoc(taskRef, {
         status: TASK_STATES.DESK_REVIEW_IN_PROGRESS,
-        editorialReviewId: reviewRef.id,
+        editorialReviewId: reviewRef.id,  // <--- GUARDAR EL ID DE LA REVIEW EN LA TAREA
         updatedAt: serverTimestamp()
       });
 
