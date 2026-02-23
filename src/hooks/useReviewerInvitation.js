@@ -245,78 +245,79 @@ export const useReviewerInvitation = () => { // <-- ELIMINADO: user como paráme
   }, [isSpanish]);
 
   // ==================== CORREGIDO: respondToInvitation ====================
-  const respondToInvitation = useCallback(async (invitationId, response) => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const { accept, conflictOfInterest } = response;
-      const invitationRef = doc(db, 'reviewerInvitations', invitationId);
-      const invitationSnap = await getDoc(invitationRef);
+  // ==================== CORREGIDO: respondToInvitation ====================
+const respondToInvitation = useCallback(async (invitationId, response) => {
+  setLoading(true);
+  setError(null);
+  
+  try {
+    const { accept, conflictOfInterest } = response;
+    const invitationRef = doc(db, 'reviewerInvitations', invitationId);
+    const invitationSnap = await getDoc(invitationRef);
 
-      if (!invitationSnap.exists()) {
-        throw new Error(isSpanish ? 'Invitación no encontrada' : 'Invitation not found');
-      }
-
-      const invitationData = invitationSnap.data();
-      
-      // Verificar expiración nuevamente
-      let expiresAt = invitationData.expiresAt;
-      if (expiresAt && typeof expiresAt.toDate === 'function') {
-        expiresAt = expiresAt.toDate();
-      }
-      
-      const now = new Date();
-      if (expiresAt && expiresAt < now) {
-        throw new Error(isSpanish ? 'Esta invitación ha expirado' : 'This invitation has expired');
-      }
-
-      if (invitationData.status !== 'pending') {
-        throw new Error(isSpanish ? 'Esta invitación ya ha sido procesada' : 'This invitation has already been processed');
-      }
-
-      const updatePayload = {
-        status: accept ? 'accepted' : 'declined',
-        conflictOfInterest: conflictOfInterest || null,
-        respondedAt: serverTimestamp()
-      };
-
-      // Si el usuario está autenticado, guardar su UID
-      if (user) {
-        updatePayload.reviewerUid = user.uid;
-        updatePayload.reviewerEmail = user.email || invitationData.reviewerEmail;
-      } else {
-        // Si no está autenticado, al menos guardar que respondió anónimamente
-        updatePayload.respondedAnonymously = true;
-      }
-
-      // IMPORTANTE: Actualizar sin requerir autenticación (gracias a las reglas)
-      await updateDoc(invitationRef, updatePayload);
-
-      console.log(`✅ Invitación ${invitationId} respondida: ${accept ? 'aceptada' : 'rechazada'}`);
-
-      setLoading(false);
-      return { 
-        success: true, 
-        newStatus: updatePayload.status 
-      };
-
-    } catch (err) {
-      console.error('❌ Error responding to invitation:', err);
-      
-      let errorMessage = err.message;
-      if (err.code === 'permission-denied') {
-        errorMessage = isSpanish 
-          ? 'No tienes permiso para responder esta invitación' 
-          : 'You do not have permission to respond to this invitation';
-      }
-      
-      setError(errorMessage);
-      setLoading(false);
-      return { success: false, error: errorMessage };
+    if (!invitationSnap.exists()) {
+      throw new Error(isSpanish ? 'Invitación no encontrada' : 'Invitation not found');
     }
-  }, [user, isSpanish]);
 
+    const invitationData = invitationSnap.data();
+    
+    // Verificar expiración
+    let expiresAt = invitationData.expiresAt;
+    if (expiresAt && typeof expiresAt.toDate === 'function') {
+      expiresAt = expiresAt.toDate();
+    }
+    
+    const now = new Date();
+    if (expiresAt && expiresAt < now) {
+      throw new Error(isSpanish ? 'Esta invitación ha expirado' : 'This invitation has expired');
+    }
+
+    if (invitationData.status !== 'pending') {
+      throw new Error(isSpanish ? 'Esta invitación ya ha sido procesada' : 'This invitation has already been processed');
+    }
+
+    const updatePayload = {
+      status: accept ? 'accepted' : 'declined',
+      conflictOfInterest: conflictOfInterest || null,
+      respondedAt: serverTimestamp(),
+      // --- ¡IMPORTANTE! Incluir el inviteHash para que las reglas permitan la actualización ---
+      inviteHash: invitationData.inviteHash
+    };
+
+    // Si el usuario está autenticado, guardar su UID
+    if (user) {
+      updatePayload.reviewerUid = user.uid;
+      updatePayload.reviewerEmail = user.email || invitationData.reviewerEmail;
+    } else {
+      updatePayload.respondedAnonymously = true;
+    }
+
+    // Actualizar la invitación
+    await updateDoc(invitationRef, updatePayload);
+
+    console.log(`✅ Invitación ${invitationId} respondida: ${accept ? 'aceptada' : 'rechazada'}`);
+
+    setLoading(false);
+    return { 
+      success: true, 
+      newStatus: updatePayload.status 
+    };
+
+  } catch (err) {
+    console.error('❌ Error responding to invitation:', err);
+    
+    let errorMessage = err.message;
+    if (err.code === 'permission-denied') {
+      errorMessage = isSpanish 
+        ? 'No tienes permiso para responder esta invitación' 
+        : 'You do not have permission to respond to this invitation';
+    }
+    
+    setError(errorMessage);
+    setLoading(false);
+    return { success: false, error: errorMessage };
+  }
+}, [user, isSpanish]);
   // ==================== NUEVA FUNCIÓN: checkExistingResponse ====================
   const checkExistingResponse = useCallback(async (email, submissionId, round) => {
     setLoading(true);
