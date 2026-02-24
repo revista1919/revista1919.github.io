@@ -1,7 +1,7 @@
 // src/hooks/useMetadataRefinement.js
 import { useState, useCallback } from 'react';
 import { db } from '../firebase';
-import { doc, updateDoc, arrayUnion, serverTimestamp, getDoc, collection, addDoc, writeBatch } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, serverTimestamp, getDoc, collection, addDoc, writeBatch, setDoc } from 'firebase/firestore';
 import { useLanguage } from './useLanguage';
 
 export const useMetadataRefinement = (user) => {
@@ -59,7 +59,7 @@ export const useMetadataRefinement = (user) => {
 
       await setDoc(proposalRef, proposal);
 
-      // Log en auditLogs (opcional pero recomendado)
+      // Log en auditLogs
       await addDoc(collection(submissionRef, 'auditLogs'), {
         action: 'metadata_changes_proposed',
         proposalId: proposalRef.id,
@@ -107,6 +107,11 @@ export const useMetadataRefinement = (user) => {
       // Verificar que sea el autor
       const submissionRef = doc(db, 'submissions', submissionId);
       const submissionSnap = await getDoc(submissionRef);
+      
+      if (!submissionSnap.exists()) {
+        throw new Error(isSpanish ? 'Envío no encontrado' : 'Submission not found');
+      }
+      
       if (submissionSnap.data().authorUID !== user.uid) {
         throw new Error(isSpanish ? 'No eres el autor de este artículo' : 'You are not the author of this article');
       }
