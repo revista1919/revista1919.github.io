@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '../hooks/useLanguage';
 import { useMetadataRefinement } from '../hooks/useMetadataRefinement';
-import { doc, updateDoc, arrayUnion, serverTimestamp, getDoc, collection, addDoc, writeBatch, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 
 export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
@@ -13,7 +13,8 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
     loading, 
     proposeChanges, 
     applyApprovedChanges, 
-    markAsReadyForPublication
+    markAsReadyForPublication,
+    error: hookError
   } = useMetadataRefinement(user);
   
   const [proposedChanges, setProposedChanges] = useState([]);
@@ -21,10 +22,18 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
   const [fieldValue, setFieldValue] = useState('');
   const [fieldReason, setFieldReason] = useState('');
   const [requiresConsent, setRequiresConsent] = useState(true);
+  const [localError, setLocalError] = useState(null);
   
   // Estado para el historial de propuestas
   const [proposals, setProposals] = useState([]);
-  const [selectedProposal, setSelectedProposal] = useState(null);
+
+  // Mostrar errores del hook
+  useEffect(() => {
+    if (hookError) {
+      setLocalError(hookError);
+      setTimeout(() => setLocalError(null), 5000);
+    }
+  }, [hookError]);
 
   // Función para formatear valores (especialmente objetos como autores)
   const formatValue = (value) => {
@@ -35,13 +44,20 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
         if (value.length === 0) return '—';
         return value.map(author => {
           if (typeof author === 'object') {
-            return `${author.firstName || ''} ${author.lastName || ''}`.trim() || 'Autor sin nombre';
+            // Intenta formatear el autor de diferentes maneras
+            if (author.firstName && author.lastName) {
+              return `${author.lastName}, ${author.firstName}`;
+            } else if (author.name) {
+              return author.name;
+            } else {
+              return Object.values(author).join(' ') || 'Autor sin nombre';
+            }
           }
           return String(author);
-        }).join(', ');
+        }).join('; ');
       }
       // Si es un objeto simple
-      return JSON.stringify(value, null, 2);
+      return JSON.stringify(value);
     }
     return String(value);
   };
@@ -104,10 +120,13 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
         } : null
       }));
       setProposals(loadedProposals);
+    }, (error) => {
+      console.error('Error loading proposals:', error);
+      setLocalError(isSpanish ? 'Error al cargar propuestas' : 'Error loading proposals');
     });
 
     return () => unsubscribe();
-  }, [submission?.id]);
+  }, [submission?.id, isSpanish]);
 
   const handleAddChange = () => {
     if (!currentField || !fieldValue.trim() || !fieldReason.trim()) {
@@ -146,17 +165,25 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
       return;
     }
 
+    setLocalError(null);
     const result = await proposeChanges(submission.id, proposedChanges);
+    
     if (result.success) {
       setProposedChanges([]);
-      alert(isSpanish ? 'Propuesta enviada' : 'Proposal sent');
+      alert(isSpanish ? '✅ Propuesta enviada al autor' : '✅ Proposal sent to author');
+    } else {
+      setLocalError(result.error || (isSpanish ? 'Error al enviar propuesta' : 'Error sending proposal'));
     }
   };
 
   const handleApplyApprovedChanges = async (proposalId) => {
+    setLocalError(null);
     const result = await applyApprovedChanges(submission.id, proposalId);
+    
     if (result.success) {
-      alert(isSpanish ? 'Cambios aplicados' : 'Changes applied');
+      alert(isSpanish ? '✅ Cambios aplicados exitosamente' : '✅ Changes applied successfully');
+    } else {
+      setLocalError(result.error || (isSpanish ? 'Error al aplicar cambios' : 'Error applying changes'));
     }
   };
 
@@ -164,9 +191,15 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
     if (window.confirm(isSpanish 
       ? '¿Estás seguro de marcar este artículo como listo para publicación? El Director General será notificado.'
       : 'Are you sure you want to mark this article as ready for publication? The General Director will be notified.')) {
+      
+      setLocalError(null);
       const result = await markAsReadyForPublication(submission.id);
+      
       if (result.success) {
+        alert(isSpanish ? '✅ Artículo marcado como listo' : '✅ Article marked as ready');
         onComplete?.();
+      } else {
+        setLocalError(result.error || (isSpanish ? 'Error al marcar como listo' : 'Error marking as ready'));
       }
     }
   };
@@ -228,7 +261,14 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
         </p>
       </div>
 
-      {/* SECCIÓN NUEVA: Metadatos actuales (solo lectura) */}
+      {/* Mensaje de error */}
+      {localError && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4">
+          <p className="text-red-700 text-sm">❌ {localError}</p>
+        </div>
+      )}
+
+      {/* SECCIÓN: Metadatos actuales (solo lectura) */}
       <div className="bg-[#F5F7FA] rounded-xl p-6 border border-[#E5E9F0]">
         <h3 className="font-['Playfair_Display'] font-bold text-[#0A1929] text-lg mb-4">
           {isSpanish ? '📋 Metadatos actuales' : '📋 Current metadata'}
@@ -260,7 +300,7 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
           </div>
           <div className="md:col-span-2">
             <p className="text-xs text-[#5A6B7A] uppercase">Autores</p>
-            <p className="font-medium text-sm">{formatValue(submission.authors)}</p>
+            <p className="font-medium text-sm whitespace-pre-wrap">{formatValue(submission.authors)}</p>
           </div>
         </div>
       </div>
@@ -302,6 +342,7 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
                     <button
                       onClick={() => handleRemoveChange(idx)}
                       className="text-red-500 hover:text-red-700 ml-2 text-xl"
+                      title={isSpanish ? 'Eliminar' : 'Remove'}
                     >
                       ×
                     </button>
@@ -366,7 +407,9 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
                   />
                 )}
                 <p className="text-xs text-gray-500 mt-1">
-                  {isSpanish ? 'Para autores, usa el formato: Apellido, Nombre; Apellido2, Nombre2' : 'For authors, use format: LastName, FirstName; LastName2, FirstName2'}
+                  {isSpanish 
+                    ? 'Para autores, usa el formato: Apellido, Nombre; Apellido2, Nombre2' 
+                    : 'For authors, use format: LastName, FirstName; LastName2, FirstName2'}
                 </p>
               </div>
 
@@ -487,9 +530,16 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
                   <button
                     onClick={() => handleApplyApprovedChanges(proposal.id)}
                     disabled={loading}
-                    className="mt-3 w-full py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+                    className="mt-3 w-full py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors disabled:bg-gray-400"
                   >
-                    {isSpanish ? 'Aplicar estos cambios' : 'Apply these changes'}
+                    {loading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        {isSpanish ? 'APLICANDO...' : 'APPLYING...'}
+                      </span>
+                    ) : (
+                      isSpanish ? 'Aplicar estos cambios' : 'Apply these changes'
+                    )}
                   </button>
                 )}
               </div>
