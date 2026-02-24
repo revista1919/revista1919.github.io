@@ -1,4 +1,4 @@
-// DirectorPanel.js (Componente completo)
+// DirectorPanel.js (Componente completo - VERSIÓN CORREGIDA)
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { auth, db } from '../firebase';
@@ -59,7 +59,7 @@ const quillModules = {
   ],
 };
 
-// --- Estructura para Autores ---
+// --- Estructura para Autores (AHORA INCLUYE TODOS LOS CAMPOS) ---
 const initialAuthorState = {
   name: '',
   email: '',
@@ -292,7 +292,7 @@ export default function DirectorPanel({ user }) {
     setShowSubmissionSearch(true);
   };
 
-  // --- FUNCIÓN: Importar datos desde Submission (ahora con metadata final) ---
+  // --- FUNCIÓN: Importar datos desde Submission (AHORA SÍ COMPLETA) ---
   const importFromSubmission = async (submission) => {
     if (!submission) return;
 
@@ -300,10 +300,11 @@ export default function DirectorPanel({ user }) {
     setStatus({ type: 'info', msg: 'Importando datos del envío...' });
 
     try {
-      // Usar currentMetadata si existe, sino originalSubmission, sino los datos principales
+      // Usar currentMetadata si existe, sino los datos principales
       const metadata = submission.currentMetadata || submission;
       
-      // Procesar autores
+      // --- MAPEO COMPLETO DE CAMPOS ---
+      // Procesar autores con TODOS los detalles
       const importedAuthors = (metadata.authors || submission.authors || []).map(author => ({
         name: author.name || `${author.firstName || ''} ${author.lastName || ''}`.trim(),
         email: author.email || '',
@@ -317,30 +318,57 @@ export default function DirectorPanel({ user }) {
       const palabrasClave = metadata.keywords || metadata.palabras_clave || [];
       const keywordsEnglish = metadata.keywordsEn || metadata.keywords_english || [];
 
+      // Procesar funding (que puede ser un objeto con 'sources')
+      let fundingText = metadata.funding?.sources || metadata.funding || '';
+      let fundingEnglishText = metadata.fundingEnglish?.sources || metadata.fundingEnglish || '';
+
       setArticleForm(prev => ({
         ...prev,
+        // Títulos
         titulo: metadata.title || prev.titulo,
         tituloEnglish: metadata.titleEn || prev.tituloEnglish,
+        
+        // Autores (¡con todo!)
         autores: importedAuthors.length > 0 ? importedAuthors : prev.autores,
+        
+        // Resúmenes
         resumen: metadata.abstract || prev.resumen,
         abstract: metadata.abstractEn || prev.abstract,
+        
+        // Keywords
         palabras_clave: Array.isArray(palabrasClave) ? palabrasClave.join('; ') : palabrasClave || '',
         keywords_english: Array.isArray(keywordsEnglish) ? keywordsEnglish.join('; ') : keywordsEnglish || '',
+        
+        // Metadatos principales
         area: metadata.area || prev.area,
         tipo: metadata.articleType || metadata.tipo || prev.tipo,
         type: metadata.type || prev.type,
+        
+        // Agradecimientos
         acknowledgments: metadata.acknowledgments || prev.acknowledgments,
         acknowledgmentsEnglish: metadata.acknowledgmentsEn || prev.acknowledgmentsEnglish,
+        
+        // Conflictos de interés
         conflicts: metadata.conflictOfInterest || metadata.conflicts || prev.conflicts,
         conflictsEnglish: metadata.conflictsEnglish || prev.conflictsEnglish,
-        funding: metadata.funding?.sources || metadata.funding || prev.funding,
-        fundingEnglish: metadata.fundingEnglish || prev.fundingEnglish,
+        
+        // Financiación
+        funding: fundingText,
+        fundingEnglish: fundingEnglishText,
+        
+        // Disponibilidad de datos
         dataAvailability: metadata.dataAvailability || prev.dataAvailability,
         dataAvailabilityEnglish: metadata.dataAvailabilityEn || prev.dataAvailabilityEnglish,
+        
+        // Créditos de autores (CRediT)
+        authorCredits: metadata.authorCredits || metadata.credit || prev.authorCredits,
+        authorCreditsEnglish: metadata.authorCreditsEn || metadata.creditEn || prev.authorCreditsEnglish,
+        
+        // ID de la submission
         submissionId: submission.submissionId || submission.id,
       }));
 
-      setStatus({ type: 'success', msg: '✅ Datos del envío importados correctamente.' });
+      setStatus({ type: 'success', msg: '✅ Datos del envío importados correctamente. Ahora puedes editarlos si es necesario.' });
       setShowSubmissionSearch(false); // Cerrar modal de búsqueda
       
     } catch (error) {
@@ -398,7 +426,7 @@ export default function DirectorPanel({ user }) {
     }
   };
 
-  // --- HANDLER GUARDAR ARTÍCULO (con acción 'publish' para publicación) ---
+  // --- HANDLER GUARDAR ARTÍCULO (UNIFICADO: Guarda y Publica) ---
   const handleSaveArticle = async (e) => {
     e.preventDefault();
     setIsProcessing(true);
@@ -478,7 +506,10 @@ export default function DirectorPanel({ user }) {
         referencias: articleForm.referencias,
       };
 
-      // Determinar acción: 'publish' si es un artículo nuevo desde submission, 'edit' si es edición
+      // --- LÓGICA INTELIGENTE PARA LA ACCIÓN ---
+      // Si estamos editando un artículo existente, la acción es 'edit'
+      // Si es un artículo nuevo (sin editingItem) Y tiene submissionId, la acción es 'publish'
+      // Si es un artículo nuevo (sin editingItem) Y NO tiene submissionId, la acción es 'add'
       let action = 'edit';
       if (!editingItem && articleForm.submissionId) {
         action = 'publish'; // Publicar desde submission
@@ -507,7 +538,7 @@ export default function DirectorPanel({ user }) {
         throw new Error(errText);
       }
 
-      // Limpiar localStorage SOLO después de guardar exitosamente
+      // Limpiar localStorage SOLO después de guardar exitosamente un artículo nuevo
       if (!editingItem) {
         localStorage.removeItem('draftNewArticle');
       }
@@ -517,7 +548,7 @@ export default function DirectorPanel({ user }) {
       await triggerRebuild();
       
       const successMsg = action === 'publish' 
-        ? '✅ Artículo publicado exitosamente' 
+        ? '✅ Artículo publicado exitosamente desde el envío' 
         : '✅ Artículo guardado exitosamente';
       setStatus({ type: 'success', msg: successMsg });
       
@@ -772,9 +803,9 @@ export default function DirectorPanel({ user }) {
                 <button 
                   onClick={handleOpenSubmissionSearch}
                   className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-full flex items-center justify-center gap-2 font-medium shadow-md transition-all active:scale-95 text-sm"
-                  title="Publicar desde envío listo"
+                  title="Importar datos desde un envío listo"
                 >
-                  <ArrowDownTrayIcon className="w-5 h-5" /> Publicar
+                  <ArrowDownTrayIcon className="w-5 h-5" /> Subir Nuevo Artículo
                 </button>
               </div>
             )}
@@ -869,9 +900,10 @@ export default function DirectorPanel({ user }) {
       <Modal 
         show={showArticleModal} 
         onClose={() => setShowArticleModal(false)}
-        title={editingItem ? "Editar Artículo Académico" : "Publicar Nuevo Artículo"}
+        title={editingItem ? "Editar Artículo Académico" : (articleForm.submissionId ? "Publicar Artículo desde Envío" : "Crear Nuevo Artículo")}
         isProcessing={isProcessing}
         onSave={handleSaveArticle}
+        saveButtonText={editingItem ? "Guardar Cambios" : (articleForm.submissionId ? "Publicar Artículo" : "Guardar Artículo")}
       >
         <ArticleForm 
           formData={articleForm} 
@@ -1005,13 +1037,13 @@ const SubmissionSearch = ({ submissions, searchTerm, setSearchTerm, onSelect, lo
       </div>
 
       <p className="text-xs text-gray-400 text-center">
-        Selecciona un envío para importar automáticamente todos los metadatos
+        Selecciona un envío para importar automáticamente todos los metadatos. Luego podrás editarlos antes de publicar.
       </p>
     </div>
   );
 };
 
-// --- COMPONENTE DE FORMULARIO DE ARTÍCULO (MODIFICADO) ---
+// --- COMPONENTE DE FORMULARIO DE ARTÍCULO (MODIFICADO - SIN CAMBIOS DRÁSTICOS) ---
 const ArticleForm = ({ formData, setFormData, onImportFromSubmission, isProcessing, isEditing, submissionId }) => {
   const [activeStep, setActiveStep] = useState(0);
   
@@ -1059,7 +1091,7 @@ const ArticleForm = ({ formData, setFormData, onImportFromSubmission, isProcessi
         <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200 flex items-center gap-2">
           <CheckIcon className="w-5 h-5 text-green-600" />
           <span className="text-sm text-green-700">
-            <strong>Submission ID:</strong> {submissionId}
+            <strong>Envio ID:</strong> {submissionId} (Los datos han sido importados)
           </span>
         </div>
       )}
@@ -2185,7 +2217,7 @@ const Input = ({ label, ...props }) => (
   </div>
 );
 
-const Modal = ({ show, onClose, title, children, onSave, isProcessing, hideSaveButton = false }) => (
+const Modal = ({ show, onClose, title, children, onSave, isProcessing, hideSaveButton = false, saveButtonText = "Guardar" }) => (
   <AnimatePresence>
     {show && (
       <div className="fixed inset-0 z-[1000] flex items-center justify-center p-2 lg:p-4">
@@ -2235,7 +2267,7 @@ const Modal = ({ show, onClose, title, children, onSave, isProcessing, hideSaveB
                 ) : (
                   <>
                     <CheckIcon className="w-4 h-4 lg:w-5 lg:h-5" />
-                    Guardar
+                    {saveButtonText}
                   </>
                 )}
               </button>
