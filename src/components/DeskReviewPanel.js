@@ -173,33 +173,36 @@ const DeskReviewPanel = ({ user }) => {
     }
   };
 
-  const handleCompleteDeskReview = async (taskId, decisionData) => {
-    if (!selectedTask?.editorialReviewId) {
-      console.error('No se encontró editorialReviewId para esta tarea');
-      alert(isSpanish 
-        ? 'Error: No se pudo identificar la revisión editorial. Por favor, reinicia la tarea.' 
-        : 'Error: Could not identify the editorial review. Please restart the task.');
-      return;
-    }
+ const handleCompleteDeskReview = async (result) => {
+  // 'result' viene de DeskReviewTab.onComplete y contiene { decision, feedback, internalComments, reviewId }
+  
+  if (!selectedTask?.editorialReviewId) {
+    console.error('No se encontró editorialReviewId para esta tarea');
+    alert(isSpanish 
+      ? 'Error: No se pudo identificar la revisión editorial. Por favor, reinicia la tarea.' 
+      : 'Error: Could not identify the editorial review. Please restart the task.');
+    return;
+  }
 
-    const mappedDecisionData = {
-      decision: decisionData.decision,
-      feedbackToAuthor: decisionData.feedback,
-      commentsToEditorial: decisionData.internalComments
-    };
-
-    const result = await submitDeskReviewDecision(selectedTask.editorialReviewId, mappedDecisionData);
-
-    if (result.success) {
-      alert(isSpanish 
-        ? 'Decisión guardada correctamente. El sistema está procesando...' 
-        : 'Decision saved successfully. The system is processing...');
-    } else {
-      alert(isSpanish 
-        ? 'Error al guardar la decisión: ' + result.error 
-        : 'Error saving decision: ' + result.error);
-    }
+  // Mapear los datos que recibimos de DeskReviewTab al formato que espera submitDeskReviewDecision
+  const mappedDecisionData = {
+    decision: result.decision,
+    feedbackToAuthor: result.feedback,
+    commentsToEditorial: result.internalComments
   };
+
+  const submitResult = await submitDeskReviewDecision(selectedTask.editorialReviewId, mappedDecisionData);
+
+  if (submitResult.success) {
+    alert(isSpanish 
+      ? 'Decisión guardada correctamente. El sistema está procesando...' 
+      : 'Decision saved successfully. The system is processing...');
+  } else {
+    alert(isSpanish 
+      ? 'Error al guardar la decisión: ' + submitResult.error 
+      : 'Error saving decision: ' + submitResult.error);
+  }
+};
 
   const handleSendInvitation = async () => {
     if (!selectedTask || !selectedReviewerId) {
