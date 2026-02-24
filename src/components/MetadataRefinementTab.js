@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '../hooks/useLanguage';
 import { useMetadataRefinement } from '../hooks/useMetadataRefinement';
-import { doc, onSnapshot, collection, query, orderBy, getDocs } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, serverTimestamp, getDoc, collection, addDoc, writeBatch, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
 export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
