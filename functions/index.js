@@ -3217,68 +3217,108 @@ exports.onReviewerInvitationCreated = onDocumentCreated(
  * 4. TRIGGER: Cuando un revisor RESPONDE a una invitación (se actualiza)
  * ----------------------------------------------------------------------------
  */
-// ===================== TRIGGER CORREGIDO =====================
-// ===================== TRIGGER CORREGIDO =====================
+// ===================== TRIGGER CORREGIDO CON PERMISOS DE DRIVE =====================
 exports.onReviewerInvitationUpdated = onDocumentUpdated(
   {
     document: 'reviewerInvitations/{invitationId}',
-    secrets: [],
-    memory: '256MiB'
+    secrets: [OAUTH2_CLIENT_ID, OAUTH2_CLIENT_SECRET, OAUTH2_REFRESH_TOKEN], // AÑADE ESTOS SECRETS
+    memory: '512MiB' // Aumenta memoria para manejar Drive
   },
   async (event) => {
     const beforeData = event.data.before.data();
     const afterData = event.data.after.data();
     const invitationId = event.params.invitationId;
 
-    // Solo proceder si el estado cambió de 'pending' a algo más
-    if (beforeData.status !== 'pending' || afterData.status === 'pending') {
+    // Solo proceder si el estado cambió de 'pending' a 'accepted'
+    if (beforeData.status !== 'pending' || afterData.status !== 'accepted') {
       return;
     }
 
-    console.log(`📝 [onReviewerInvitationUpdated] Invitación ${invitationId} respondida. Nuevo estado: ${afterData.status}`);
+    console.log(`📝 [onReviewerInvitationUpdated] Invitación ${invitationId} ACEPTADA. Otorgando permisos...`);
 
     try {
       const db = admin.firestore();
 
-      // Si el revisor ACEPTÓ, crear una asignación (reviewerAssignment)
-      if (afterData.status === 'accepted') {
-        
-        // --- CORREGIDO: Calcular fecha límite como Timestamp de Firestore ---
-        const dueDate = new Date();
-        dueDate.setDate(dueDate.getDate() + 21); // 21 días desde ahora
-        
-        const assignmentData = {
-          submissionId: afterData.submissionId,
-          editorialReviewId: afterData.editorialReviewId,
-          // 🔥 CORRECCIÓN CLAVE: Agregar el editorialTaskId desde la invitación
-          editorialTaskId: afterData.editorialTaskId,  // ← ESTO ES LO QUE FALTA
-          round: afterData.round,
-          reviewerUid: afterData.reviewerUid,
-          reviewerEmail: afterData.reviewerEmail,
-          reviewerName: afterData.reviewerName,
-          invitationId: invitationId,
-          status: 'pending',
-          conflictOfInterest: afterData.conflictOfInterest,
-          assignedAt: admin.firestore.FieldValue.serverTimestamp(),
-          dueDate: admin.firestore.Timestamp.fromDate(dueDate)
-        };
+      // 1. Obtener el submission para conocer la carpeta editorial
+      const submissionDoc = await db.collection('submissions').doc(afterData.submissionId).get();
+      if (!submissionDoc.exists) {
+        console.error(`❌ Submission no encontrado: ${afterData.submissionId}`);
+        return;
+      }
+      const submission = submissionDoc.data();
 
-        await db.collection('reviewerAssignments').add(assignmentData);
-        console.log(`✅ [onReviewerInvitationUpdated] Asignación creada para revisor ${afterData.reviewerEmail} con editorialTaskId: ${afterData.editorialTaskId}`);
-
-        await sendReviewerAssignmentEmail(afterData);
-
-      } else if (afterData.status === 'declined') {
-        console.log(`ℹ️ [onReviewerInvitationUpdated] Revisor ${afterData.reviewerEmail} declinó la invitación.`);
+      // 2. Verificar que existe la carpeta editorial
+      if (!submission.editorialFolderId) {
+        console.error(`❌ El submission ${afterData.submissionId} no tiene editorialFolderId`);
+        return;
       }
 
+      // 3. Inicializar Drive (necesita los secrets)
+      const drive = await getDriveClient(`invitation-${invitationId}`);
+
+      // 4. OTORGAR PERMISOS AL REVISOR EN LA CARPETA EDITORIAL
+      console.log(`🔑 Otorgando permisos a ${afterData.reviewerEmail} en carpeta ${submission.editorialFolderId}`);
+      
+      try {
+        await drive.permissions.create({
+          fileId: submission.editorialFolderId,
+          requestBody: {
+            role: 'reader', // Permiso de solo lectura para revisores
+            type: 'user',
+            emailAddress: afterData.reviewerEmail
+          },
+          sendNotificationEmail: false // No enviar notificación de Drive para no confundir
+        });
+        console.log(`✅ Permisos otorgados exitosamente a ${afterData.reviewerEmail}`);
+      } catch (permError) {
+        console.error(`❌ Error otorgando permisos:`, permError.message);
+        // No detenemos el flujo, pero registramos el error
+        await logSystemError('drive_permission_error', permError, {
+          invitationId,
+          reviewerEmail: afterData.reviewerEmail,
+          folderId: submission.editorialFolderId
+        });
+      }
+
+      // 5. Crear la asignación (reviewerAssignment)
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + 21); // 21 días desde ahora
+
+      const assignmentData = {
+        submissionId: afterData.submissionId,
+        editorialReviewId: afterData.editorialReviewId,
+        editorialTaskId: afterData.editorialTaskId,
+        round: afterData.round,
+        reviewerUid: afterData.reviewerUid,
+        reviewerEmail: afterData.reviewerEmail,
+        reviewerName: afterData.reviewerName,
+        invitationId: invitationId,
+        status: 'pending',
+        conflictOfInterest: afterData.conflictOfInterest,
+        assignedAt: admin.firestore.FieldValue.serverTimestamp(),
+        dueDate: admin.firestore.Timestamp.fromDate(dueDate),
+        
+        // Guardar también la referencia a la carpeta editorial
+        driveFolderId: submission.editorialFolderId,
+        driveFolderUrl: submission.editorialFolderUrl
+      };
+
+      await db.collection('reviewerAssignments').add(assignmentData);
+      console.log(`✅ Asignación creada para revisor ${afterData.reviewerEmail}`);
+
+      // 6. Enviar email con instrucciones (incluyendo el enlace directo a Drive)
+      await sendReviewerAssignmentEmail({
+        ...afterData,
+        driveFolderUrl: submission.editorialFolderUrl,
+        submissionTitle: submission.title
+      });
+
     } catch (error) {
-      console.error(`❌ [onReviewerInvitationUpdated] Error:`, error.message);
+      console.error(`❌ Error en onReviewerInvitationUpdated:`, error.message);
       await logSystemError('onReviewerInvitationUpdated', error, { invitationId, ...afterData });
     }
   }
 );
-
 
 
 
@@ -4271,7 +4311,7 @@ exports.onReviewerAssignmentCreatedEmail = onDocumentCreated(
         return;
       }
       const submission = submissionDoc.data();
-      
+      const driveFolderUrl = assignment.driveFolderUrl || submission.editorialFolderUrl;
       const lang = submission.paperLanguage || 'es';
       const isSpanish = lang === 'es';
       const baseUrl = 'https://www.revistacienciasestudiantes.com';
@@ -4286,87 +4326,74 @@ exports.onReviewerAssignmentCreatedEmail = onDocumentCreated(
       const formattedDate = dueDate.toLocaleDateString(isSpanish ? 'es-CL' : 'en-US');
       
       const bodyContent = isSpanish
-        ? `
-          <p>Gracias por aceptar la invitación a revisar el siguiente artículo:</p>
-          
-          <div class="highlight-box">
-            <p class="article-title">"${submission.title}"</p>
-            <p><strong>Área:</strong> ${submission.area}</p>
-            <p><strong>ID:</strong> ${submission.submissionId}</p>
-          </div>
-          
-          <p><strong>Instrucciones:</strong></p>
-          <ol>
-            <li>Acceda al manuscrito completo en Google Drive usando el enlace abajo.</li>
-            <li>Utilice el espacio de trabajo en el portal para completar su evaluación.</li>
-            <li>Evalúe según los criterios establecidos (relevancia, metodología, claridad, originalidad).</li>
-            <li>Proporcione comentarios constructivos para el autor.</li>
-            <li>Incluya comentarios confidenciales para el editor si es necesario.</li>
-            <li>Seleccione su recomendación final.</li>
-          </ol>
-          
-          <div class="button-container">
-            <a href="${submission.driveFolderUrl}" class="btn">VER MANUSCRITO EN DRIVE</a>
-            <a href="${baseUrl}/reviewer-workspace/${assignmentId}" class="btn btn-secondary">IR AL ESPACIO DE TRABAJO</a>
-          </div>
-          
-          <p><strong>Fecha límite para enviar su revisión:</strong> ${formattedDate}</p>
-          
-          <p class="info-text">
-            <strong>Importante:</strong> Su revisión será confidencial. No comparta el manuscrito ni sus comentarios con terceros.
-          </p>
-        `
-        : `
-          <p>Thank you for accepting the invitation to review the following article:</p>
-          
-          <div class="highlight-box">
-            <p class="article-title">"${submission.title}"</p>
-            <p><strong>Area:</strong> ${submission.area}</p>
-            <p><strong>ID:</strong> ${submission.submissionId}</p>
-          </div>
-          
-          <p><strong>Instructions:</strong></p>
-          <ol>
-            <li>Access the full manuscript on Google Drive using the link below.</li>
-            <li>Use the workspace in the portal to complete your evaluation.</li>
-            <li>Evaluate according to established criteria (relevance, methodology, clarity, originality).</li>
-            <li>Provide constructive comments for the author.</li>
-            <li>Include confidential comments for the editor if necessary.</li>
-            <li>Select your final recommendation.</li>
-          </ol>
-          
-          <div class="button-container">
-            <a href="${submission.driveFolderUrl}" class="btn">VIEW MANUSCRIPT ON DRIVE</a>
-            <a href="${baseUrl}/reviewer-workspace/${assignmentId}" class="btn btn-secondary">GO TO WORKSPACE</a>
-          </div>
-          
-          <p><strong>Deadline to submit your review:</strong> ${formattedDate}</p>
-          
-          <p class="info-text">
-            <strong>Important:</strong> Your review is confidential. Do not share the manuscript or your comments with third parties.
-          </p>
-        `;
+    ? `
+      <p>Gracias por aceptar la invitación a revisar el siguiente artículo:</p>
+      <div class="highlight-box">
+        <p class="article-title">"${submission.title}"</p>
+      </div>
+      <p>Debes ingresar al portal para entrar al workspace y dejar tus revisiones</p>
+      <p><strong>Acceso al manuscrito:</strong></p>
+      <p>Ya tienes acceso a la carpeta de Google Drive con el manuscrito y materiales complementarios:</p>
+      <p>Puedes dejar comentarios en la carpeta. El editor los tomará en cuenta. Pero asegurate de incluirlos en tus comentarios al autor.</p>
+      <div class="button-container">
+        <a href="${driveFolderUrl}" class="btn">VER MANUSCRITO EN DRIVE</a>
+      </div>
       
-      const htmlBody = getEmailTemplate(
-        emailTitle,
-        emailGreeting,
-        bodyContent,
-        isSpanish ? 'Equipo Editorial' : 'Editorial Team',
-        isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
-        lang
-      );
+      <p>Por favor, completa tu revisión antes de la fecha límite. Utiliza el siguiente enlace para enviar tu informe:</p>
       
-      await sendEmailViaExtension(assignment.reviewerEmail, emailTitle, htmlBody);
-      console.log(`✅ Email de instrucciones enviado a ${assignment.reviewerEmail}`);
+      <div class="button-container">
+        <a href="${baseUrl}/reviewer-workspace/${assignment.id}" class="btn btn-secondary">ENVIAR REVISIÓN</a>
+      </div>
       
+      <p class="info-text">
+        <strong>Nota:</strong> Ya deberías tener acceso a la carpeta de Drive. Si no puedes acceder, 
+        <a href="mailto:contact@revistacienciasestudiantes.com">contáctanos</a>.
+      </p>
+    `
+    : `
+      <p>Thank you for accepting the invitation to review the following article:</p>
+      <div class="highlight-box">
+        <p class="article-title">"${submission.title}"</p>
+      </div>
+      <p>You must login in the portal in order to see the workspace and complete your assignment</p>
+      
+      <p><strong>Access to manuscript:</strong></p>
+      <p>You now have access to the Google Drive folder with the manuscript and supplementary materials:</p>
+      <p>You can leave comments in the document. The editor will consider them. But make sure to include them in your comments to the author.</p>
+      <div class="button-container">
+        <a href="${driveFolderUrl}" class="btn">VIEW MANUSCRIPT ON DRIVE</a>
+      </div>
+      
+      <p>Please complete your review by the deadline. Use the following link to submit your report:</p>
+      
+      <div class="button-container">
+        <a href="${baseUrl}/reviewer-workspace/${assignment.id}" class="btn btn-secondary">SUBMIT REVIEW</a>
+      </div>
+      
+      <p class="info-text">
+        <strong>Note:</strong> You should already have access to the Drive folder. If you cannot access it, 
+        <a href="mailto:contact@revistacienciasestudiantes.com">contact us</a>.
+      </p>
+    `;
+
+  const htmlBody = getEmailTemplate(
+    emailTitle,
+    emailGreeting,
+    bodyContent,
+    isSpanish ? 'Equipo Editorial' : 'Editorial Team',
+    isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
+    lang
+  );
+
+  await sendEmailViaExtension(assignment.reviewerEmail, emailTitle, htmlBody);
+
     } catch (error) {
       console.error(`❌ Error en onReviewerAssignmentCreatedEmail:`, error.message);
       await logSystemError('onReviewerAssignmentCreatedEmail', error, { assignmentId });
     }
   }
-);
 
-/* ===================== NUEVO: NOTIFICACIÓN CUANDO SE ALCANZA EL MÍNIMO DE REVISIONES ===================== */
+);
 
 /**
  * 8. TRIGGER: Cuando una editorialTask cambia a 'awaiting-decision'
@@ -5599,6 +5626,7 @@ async function sendEmailToEditor(editorEmail, eventType, submissionId) {
  * Automáticamente crea la siguiente ronda y notifica al editor
  */
 /* ===================== AUTO CREATE NEXT ROUND ON REVISION - VERSIÓN CORREGIDA ===================== */
+// ===================== AUTO CREATE NEXT ROUND ON REVISION - VERSIÓN CORREGIDA =====================
 exports.onAuthorRevisionSubmitted = onDocumentCreated(
   {
     document: 'submissions/{submissionId}/versions/{versionId}',
