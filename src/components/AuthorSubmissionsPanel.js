@@ -6,146 +6,100 @@ import { collection, query, where, onSnapshot, doc, updateDoc, serverTimestamp, 
 import { useLanguage } from '../hooks/useLanguage';
 import { AuthorMetadataResponseTab } from './AuthorMetadataResponseTab';
 
+// Paleta de colores Premium Oxford
+const COLORS = {
+  oxfordBlue: '#0A192F',
+  midnight: '#020617',
+  gold: '#C5A059',
+  goldHover: '#B08D48',
+  silver: '#E2E8F0',
+  textSlate: '#94A3B8'
+};
+
 const SUBMISSION_STATES = {
   'submitted': { 
-    es: 'Enviado', 
-    en: 'Submitted',
-    color: 'bg-blue-100 text-blue-700',
-    icon: '📤',
-    description: { 
-      es: 'Tu artículo ha sido recibido y está en espera de revisión editorial',
-      en: 'Your article has been received and is awaiting editorial review'
-    }
+    es: 'Recibido', en: 'Submitted',
+    color: 'bg-slate-800 text-slate-200 border-slate-700',
+    icon: '◈',
+    description: { es: 'Tu obra ha entrado en nuestros registros y espera revisión.', en: 'Your work has been registered and awaits review.' }
   },
   'in-desk-review': { 
-    es: 'En revisión editorial', 
-    en: 'In desk review',
-    color: 'bg-purple-100 text-purple-700',
-    icon: '🔍',
-    description: { 
-      es: 'Un editor está revisando tu artículo',
-      en: 'An editor is reviewing your article'
-    }
+    es: 'Revisión Editorial', en: 'Desk Review',
+    color: 'bg-blue-900/30 text-blue-300 border-blue-800',
+    icon: '✒',
+    description: { es: 'Un editor de mesa está evaluando la calidad inicial.', en: 'A desk editor is evaluating initial quality.' }
   },
   'desk-review-rejected': { 
-    es: 'Rechazado en revisión editorial', 
-    en: 'Rejected in desk review',
-    color: 'bg-red-100 text-red-700',
-    icon: '❌',
-    description: { 
-      es: 'El artículo no pasó la revisión editorial inicial',
-      en: 'The article did not pass initial editorial review'
-    }
+    es: 'No pasa Revisión Editorial', en: 'Desk Review Rejected',
+    color: 'bg-red-900/30 text-red-400 border-red-800',
+    icon: '✕',
+    description: { es: 'En esta ocasión no podemos proceder con la revisión.', en: 'On this occasion we cannot proceed with review.' }
   },
   'in-reviewer-selection': { 
-    es: 'Seleccionando revisores', 
-    en: 'Selecting reviewers',
-    color: 'bg-yellow-100 text-yellow-700',
-    icon: '👥',
-    description: { 
-      es: 'El equipo editorial está seleccionando revisores para tu artículo',
-      en: 'The editorial team is selecting reviewers for your article'
-    }
+    es: 'Seleccionando Pares', en: 'Selecting Reviewers',
+    color: 'bg-amber-900/20 text-amber-400 border-amber-800/50',
+    icon: '⚖',
+    description: { es: 'El equipo editorial está seleccionando revisores.', en: 'The editorial team is selecting reviewers.' }
   },
   'awaiting-reviewer-responses': { 
-    es: 'Esperando respuesta de revisores', 
-    en: 'Awaiting reviewer responses',
-    color: 'bg-orange-100 text-orange-700',
-    icon: '⏳',
-    description: { 
-      es: 'Los revisores están decidiendo si aceptan revisar tu artículo',
-      en: 'Reviewers are deciding whether to accept reviewing your article'
-    }
+    es: 'Esperando Respuesta', en: 'Awaiting Responses',
+    color: 'bg-orange-900/30 text-orange-400 border-orange-800',
+    icon: '⌛',
+    description: { es: 'Esperando confirmación de los revisores.', en: 'Waiting for reviewer confirmation.' }
   },
   'in-peer-review': { 
-    es: 'En revisión por pares', 
-    en: 'In peer review',
-    color: 'bg-indigo-100 text-indigo-700',
-    icon: '📝',
-    description: { 
-      es: 'Los revisores están evaluando tu artículo',
-      en: 'Reviewers are evaluating your article'
-    }
+    es: 'Revisión por Pares', en: 'Peer Review',
+    color: 'bg-amber-900/20 text-amber-400 border-amber-800/50',
+    icon: '⚖',
+    description: { es: 'Expertos en el área están analizando tu manuscrito.', en: 'Experts in the field are analyzing your manuscript.' }
   },
   'awaiting-editor-decision': {
-    es: 'Esperando decisión del editor', 
-    en: 'Awaiting editor decision',
-    color: 'bg-purple-100 text-purple-700',
-    icon: '⚖️',
-    description: { 
-      es: 'Las revisiones están completadas. El editor tomará una decisión final pronto',
-      en: 'Reviews are complete. The editor will make a final decision soon'
-    }
+    es: 'Esperando Decisión', en: 'Awaiting Decision',
+    color: 'bg-purple-900/30 text-purple-400 border-purple-800',
+    icon: '⚜',
+    description: { es: 'Las revisiones están completadas. El editor tomará una decisión final pronto.', en: 'Reviews are complete. The editor will make a final decision soon.' }
   },
   'revisions-requested': { 
-    es: 'Revisiones solicitadas', 
-    en: 'Revisions requested',
-    color: 'bg-orange-100 text-orange-700',
+    es: 'Revisiones Solicitadas', en: 'Revisions Requested',
+    color: 'bg-orange-900/30 text-orange-400 border-orange-800',
     icon: '📝',
-    description: { 
-      es: 'El editor ha solicitado cambios en tu artículo. Por favor, sube una versión revisada.',
-      en: 'The editor has requested changes to your article. Please upload a revised version.'
-    }
+    description: { es: 'Tu obra requiere ajustes para alcanzar la excelencia.', en: 'Your work requires adjustments to achieve excellence.' }
   },
   'minor-revision-required': { 
-    es: 'Revisiones menores requeridas', 
-    en: 'Minor revisions required',
-    color: 'bg-yellow-100 text-yellow-700',
-    icon: '✏️',
-    description: { 
-      es: 'Se requieren cambios menores antes de la aceptación',
-      en: 'Minor changes are required before acceptance'
-    }
+    es: 'Revisiones Menores', en: 'Minor Revisions',
+    color: 'bg-yellow-900/30 text-yellow-400 border-yellow-800',
+    icon: '✎',
+    description: { es: 'Se requieren cambios menores antes de la aceptación.', en: 'Minor changes are required before acceptance.' }
   },
   'major-revision-required': { 
-    es: 'Revisiones mayores requeridas', 
-    en: 'Major revisions required',
-    color: 'bg-orange-100 text-orange-700',
+    es: 'Revisiones Mayores', en: 'Major Revisions',
+    color: 'bg-orange-900/30 text-orange-400 border-orange-800',
     icon: '🔄',
-    description: { 
-      es: 'Se requieren cambios sustanciales y una nueva revisión',
-      en: 'Substantial changes and re-review are required'
-    }
+    description: { es: 'Se requieren cambios sustanciales y una nueva revisión.', en: 'Substantial changes and re-review are required.' }
   },
   'awaiting-revision': { 
-    es: 'Esperando tu revisión', 
-    en: 'Awaiting your revision',
-    color: 'bg-blue-100 text-blue-700',
-    icon: '⏰',
-    description: { 
-      es: 'Por favor, sube la versión revisada de tu artículo',
-      en: 'Please upload the revised version of your article'
-    }
+    es: 'Esperando tu Revisión', en: 'Awaiting Revision',
+    color: 'bg-blue-900/30 text-blue-300 border-blue-800',
+    icon: '⏳',
+    description: { es: 'Por favor, sube la versión revisada.', en: 'Please upload the revised version.' }
   },
   'accepted': { 
-    es: 'Aceptado', 
-    en: 'Accepted',
-    color: 'bg-green-100 text-green-700',
-    icon: '✅',
-    description: { 
-      es: '¡Tu artículo ha sido aceptado para publicación!',
-      en: 'Your article has been accepted for publication!'
-    }
+    es: 'Aceptado', en: 'Accepted',
+    color: 'bg-emerald-900/30 text-emerald-400 border-emerald-800',
+    icon: '★',
+    description: { es: 'Felicidades. Tu contribución ha sido aceptada.', en: 'Congratulations. Your contribution has been accepted.' }
   },
   'rejected': { 
-    es: 'Rechazado', 
-    en: 'Rejected',
-    color: 'bg-red-100 text-red-700',
-    icon: '❌',
-    description: { 
-      es: 'El artículo no ha sido aceptado para publicación',
-      en: 'The article has not been accepted for publication'
-    }
+    es: 'No aceptado', en: 'Rejected',
+    color: 'bg-red-900/30 text-red-400 border-red-800',
+    icon: '✕',
+    description: { es: 'En esta ocasión no podemos proceder con la publicación.', en: 'On this occasion we cannot proceed with publication.' }
   },
   'metadata_refinement_pending': {
-    es: 'Revisando metadatos', 
-    en: 'Reviewing metadata',
-    color: 'bg-teal-100 text-teal-700',
+    es: 'Revisando Metadatos', en: 'Reviewing Metadata',
+    color: 'bg-teal-900/30 text-teal-400 border-teal-800',
     icon: '📋',
-    description: { 
-      es: 'El editor ha propuesto cambios en los metadatos. Por favor, revísalos.',
-      en: 'The editor has proposed metadata changes. Please review them.'
-    }
+    description: { es: 'El editor ha propuesto cambios en los metadatos. Por favor, revísalos.', en: 'The editor has proposed metadata changes. Please review them.' }
   }
 };
 
@@ -445,28 +399,6 @@ const AuthorSubmissionsPanel = ({ user }) => {
     }
   };
 
-  const getStatusBadge = (status) => {
-    const state = SUBMISSION_STATES[status] || SUBMISSION_STATES.submitted;
-    return (
-      <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${state.color}`}>
-        <span className="text-lg">{state.icon}</span>
-        <span className="text-sm font-medium">{state[language]}</span>
-      </div>
-    );
-  };
-
-  const getTimelineStep = (status) => {
-    const steps = [
-      'submitted',
-      'in-desk-review',
-      'in-reviewer-selection',
-      'awaiting-reviewer-responses',
-      'in-peer-review',
-      'accepted'
-    ];
-    return steps.indexOf(status);
-  };
-
   // Verificar si hay propuestas pendientes (AHORA USA pendingProposals)
   const hasPendingMetadataProposals = (submission) => {
     const hasProposals = submission.pendingProposals?.length > 0;
@@ -481,7 +413,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
     if (process.env.NODE_ENV !== 'development') return null;
     
     return (
-      <div className="mb-6 p-4 bg-gray-900 text-green-400 rounded-lg font-mono text-xs overflow-auto max-h-60">
+      <div className="mb-6 p-4 bg-[#0A192F] text-green-400 rounded-sm font-mono text-xs overflow-auto max-h-60 border border-slate-800">
         <h4 className="font-bold text-white mb-2">🔧 DEBUG INFO</h4>
         <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
       </div>
@@ -490,474 +422,144 @@ const AuthorSubmissionsPanel = ({ user }) => {
 
   if (!user) {
     return (
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-12 text-center">
-        <p className="text-gray-500">
-          {isSpanish ? 'Inicia sesión para ver tus envíos' : 'Log in to view your submissions'}
-        </p>
+      <div className="max-w-6xl mx-auto p-6">
+        <div className="bg-[#0A192F]/30 border border-slate-800 p-12 text-center">
+          <p className="text-slate-400 font-serif italic">
+            {isSpanish ? 'Inicia sesión para ver tus envíos' : 'Log in to view your submissions'}
+          </p>
+        </div>
       </div>
     );
   }
 
   if (loading) {
     return (
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-12 text-center">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-emerald-200 border-t-emerald-600 mb-4"></div>
-        <p className="text-gray-500">{isSpanish ? 'Cargando tus envíos...' : 'Loading your submissions...'}</p>
+      <div className="max-w-6xl mx-auto p-6">
+        <div className="flex flex-col items-center justify-center p-20 space-y-4 bg-[#0A192F]/30 border border-slate-800">
+          <div className="w-12 h-12 border-4 border-[#C5A059]/20 border-t-[#C5A059] rounded-full animate-spin" />
+          <span className="font-serif italic text-slate-400">{isSpanish ? 'Consultando archivos...' : 'Consulting archives...'}</span>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+    <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-8 md:space-y-10">
       <DebugPanel />
       
-      <div className="flex justify-between items-center mb-6">
+      {/* Header Sección - Adaptado para móvil */}
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-slate-800 pb-6 md:pb-8 gap-4 sm:gap-0">
         <div>
-          <h2 className="font-['Playfair_Display'] text-3xl font-bold text-[#0A1929]">
-            {isSpanish ? 'Mis Envíos' : 'My Submissions'}
-          </h2>
-          <p className="text-[#5A6B7A] mt-1">
-            {isSpanish 
-              ? `Tienes ${submissions.length} ${submissions.length === 1 ? 'envío' : 'envíos'}`
-              : `You have ${submissions.length} ${submissions.length === 1 ? 'submission' : 'submissions'}`}
+          <h1 className="text-3xl md:text-4xl font-serif font-bold text-white tracking-tight italic">
+            {isSpanish ? 'Gabinete del Autor' : 'Author\'s Cabinet'}
+          </h1>
+          <p className="text-slate-500 mt-2 font-light tracking-widest uppercase text-[10px] md:text-xs">
+            {isSpanish ? 'Seguimiento de Manuscritos y Correspondencia' : 'Manuscript Tracking & Correspondence'}
           </p>
         </div>
         <button
           onClick={() => window.location.href = '/submit'}
-          className="px-6 py-3 bg-[#C0A86A] hover:bg-[#A58D4F] text-white font-['Playfair_Display'] font-bold rounded-xl transition-colors"
+          className="w-full sm:w-auto px-6 md:px-8 py-3 bg-[#C5A059] hover:bg-[#B08D48] text-[#0A192F] font-bold text-xs md:text-sm tracking-widest transition-all duration-300 shadow-lg shadow-black/20 text-center"
         >
-          {isSpanish ? '+ NUEVO ENVÍO' : '+ NEW SUBMISSION'}
+          {isSpanish ? 'NUEVO ENVÍO' : 'NEW SUBMISSION'}
         </button>
-      </div>
+      </header>
 
       {submissions.length === 0 ? (
-        <div className="text-center py-16 bg-[#F5F7FA] rounded-xl">
-          <svg className="w-20 h-20 text-[#C0A86A] mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          <h3 className="text-xl font-['Playfair_Display'] font-bold text-[#0A1929] mb-2">
-            {isSpanish ? 'No tienes envíos' : 'No submissions yet'}
-          </h3>
-          <p className="text-[#5A6B7A] mb-6">
-            {isSpanish 
-              ? 'Comienza enviando tu primer artículo' 
-              : 'Start by submitting your first article'}
+        <div className="text-center py-16 md:py-24 bg-[#0A192F]/30 border border-slate-800 rounded-sm">
+          <p className="font-serif italic text-slate-500 text-base md:text-lg">
+            {isSpanish ? 'No se encuentran obras registradas en su gabinete.' : 'No registered works found in your cabinet.'}
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {submissions.map(sub => (
-            <motion.div
+        <div className="grid gap-4 md:gap-6">
+          {submissions.map((sub) => (
+            <SubmissionCard 
               key={sub.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="border border-[#E5E9F0] rounded-xl overflow-hidden"
-            >
-              {/* Cabecera del envío (siempre visible) */}
-              <div 
-                className="p-6 bg-white cursor-pointer hover:bg-[#F5F7FA] transition-colors"
-                onClick={() => {
-                  console.log('📌 Expandiendo envío:', sub.id, sub.title);
-                  setExpandedSubmission(expandedSubmission === sub.id ? null : sub.id);
-                }}
-              >
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2 flex-wrap">
-                      <h3 className="font-['Playfair_Display'] font-bold text-xl text-[#0A1929]">
-                        {sub.title}
-                      </h3>
-                      {getStatusBadge(sub.status)}
-                      {hasPendingMetadataProposals(sub) && (
-                        <span className="bg-yellow-100 text-yellow-700 text-xs px-2 py-1 rounded-full animate-pulse">
-                          {isSpanish ? `✏️ ${sub.pendingProposals.length} pendiente(s)` : `✏️ ${sub.pendingProposals.length} pending`}
-                        </span>
-                      )}
-                    </div>
-                    
-                    <div className="flex items-center gap-6 text-sm text-[#5A6B7A] flex-wrap">
-                      <span className="font-mono bg-[#F5F7FA] px-2 py-1 rounded">
-                        {sub.submissionId}
-                      </span>
-                      <span>
-                        {isSpanish ? 'Enviado:' : 'Submitted:'} {sub.createdAt?.toLocaleDateString()}
-                      </span>
-                      <span>
-                        {isSpanish ? 'Ronda:' : 'Round:'} {sub.currentRound || 1}
-                      </span>
-                      {sub.pendingProposals?.length > 0 && (
-                        <span className="text-yellow-600 font-bold">
-                          {isSpanish ? `📋 ${sub.pendingProposals.length} propuesta(s)` : `📋 ${sub.pendingProposals.length} proposal(s)`}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <svg 
-                    className={`w-5 h-5 text-[#5A6B7A] transition-transform ${
-                      expandedSubmission === sub.id ? 'rotate-180' : ''
-                    }`}
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              </div>
-
-              {/* Detalles expandibles */}
-              <AnimatePresence>
-                {expandedSubmission === sub.id && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="border-t border-[#E5E9F0] bg-[#F5F7FA] p-6"
-                  >
-                    {/* Descripción del estado actual */}
-                    <div className="mb-6 p-4 bg-white rounded-lg border border-[#E5E9F0]">
-                      <p className="text-[#0A1929]">
-                        {SUBMISSION_STATES[sub.status]?.description[language]}
-                      </p>
-                    </div>
-
-                    {/* PROPUESTA DE REFINAMIENTO DE METADATOS - SIEMPRE RENDERIZADO */}
-                    <div className="mb-6">
-                      {console.log(`🎯 Renderizando AuthorMetadataResponseTab para ${sub.id} con ${sub.pendingProposals?.length || 0} propuestas`)}
-                      <AuthorMetadataResponseTab
-                        submission={sub}
-                        user={user}
-                        onResponded={() => {
-                          console.log('✅ Propuesta respondida para:', sub.id);
-                          // Opcional: recargar o mostrar mensaje
-                        }}
-                      />
-                    </div>
-
-                    {/* Timeline de progreso (solo para estados activos) */}
-                    {!['accepted', 'rejected', 'desk-review-rejected'].includes(sub.status) && (
-                      <div className="mb-6">
-                        <h4 className="font-['Playfair_Display'] font-semibold text-[#0A1929] mb-3">
-                          {isSpanish ? 'Progreso' : 'Progress'}
-                        </h4>
-                        <div className="flex items-center gap-1">
-                          {['submitted', 'in-desk-review', 'in-reviewer-selection', 'in-peer-review', 'accepted'].map((step, index) => {
-                            const currentStep = getTimelineStep(sub.status);
-                            const isCompleted = index < currentStep;
-                            const isCurrent = index === currentStep;
-                            
-                            return (
-                              <div key={step} className="flex-1">
-                                <div className={`h-2 rounded-full ${
-                                  isCompleted ? 'bg-green-500' :
-                                  isCurrent ? 'bg-[#C0A86A]' :
-                                  'bg-gray-200'
-                                }`} />
-                                <p className={`text-xs mt-1 text-center ${
-                                  isCurrent ? 'text-[#C0A86A] font-bold' : 'text-gray-500'
-                                }`}>
-                                  {SUBMISSION_STATES[step]?.[language]}
-                                </p>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Feedback del editor (si existe) */}
-                    {sub.deskReviewFeedback && (
-                      <div className="mb-6 p-4 bg-[#FBF9F3] border border-[#C0A86A] rounded-lg">
-                        <h4 className="font-['Playfair_Display'] font-semibold text-[#0A1929] mb-2">
-                          {isSpanish ? 'Feedback del editor:' : 'Editor feedback:'}
-                        </h4>
-                        <p className="text-[#5A6B7A]">{sub.deskReviewFeedback}</p>
-                      </div>
-                    )}
-
-                    {/* Revisiones de pares */}
-                    {sub.reviews && sub.reviews.length > 0 && (
-                      <div className="mb-6">
-                        <h4 className="font-['Playfair_Display'] font-semibold text-[#0A1929] mb-3">
-                          {isSpanish ? 'Revisiones recibidas' : 'Reviews received'}
-                        </h4>
-                        <div className="space-y-3">
-                          {sub.reviews.map((review, idx) => (
-                            <div key={review.id || idx} className="bg-white p-4 rounded-lg border border-gray-200">
-                              <div className="flex justify-between items-start mb-2">
-                                <span className="font-medium text-sm text-gray-500">
-                                  {isSpanish ? `Revisión ${idx + 1}` : `Review ${idx + 1}`}
-                                  {review.round && review.round > 1 && (
-                                    <span className="ml-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
-                                      {isSpanish ? `Ronda ${review.round}` : `Round ${review.round}`}
-                                    </span>
-                                  )}
-                                </span>
-                                <span className={`text-xs px-2 py-1 rounded-full ${
-                                  review.recommendation === 'accept' ? 'bg-green-100 text-green-700' :
-                                  review.recommendation === 'minor-revision' ? 'bg-blue-100 text-blue-700' :
-                                  review.recommendation === 'major-revision' ? 'bg-yellow-100 text-yellow-700' :
-                                  'bg-red-100 text-red-700'
-                                }`}>
-                                  {review.recommendation === 'accept' && (isSpanish ? 'Aceptar' : 'Accept')}
-                                  {review.recommendation === 'minor-revision' && (isSpanish ? 'Revisiones menores' : 'Minor revisions')}
-                                  {review.recommendation === 'major-revision' && (isSpanish ? 'Revisiones mayores' : 'Major revisions')}
-                                  {review.recommendation === 'reject' && (isSpanish ? 'Rechazar' : 'Reject')}
-                                </span>
-                              </div>
-                              
-                              {/* Puntuaciones si existen */}
-                              {review.scores && Object.keys(review.scores).length > 0 && (
-                                <div className="mb-3 flex flex-wrap gap-3 text-xs">
-                                  {Object.entries(review.scores).map(([key, value]) => (
-                                    <div key={key} className="bg-gray-50 px-2 py-1 rounded">
-                                      <span className="font-medium text-gray-600">
-                                        {key === 'originality' && (isSpanish ? 'Originalidad:' : 'Originality:')}
-                                        {key === 'methodology' && (isSpanish ? 'Metodología:' : 'Methodology:')}
-                                        {key === 'clarity' && (isSpanish ? 'Claridad:' : 'Clarity:')}
-                                        {key === 'relevance' && (isSpanish ? 'Relevancia:' : 'Relevance:')}
-                                        {key === 'overall' && (isSpanish ? 'General:' : 'Overall:')}
-                                        {!['originality','methodology','clarity','relevance','overall'].includes(key) && `${key}:`}
-                                      </span>{' '}
-                                      <span className="font-bold text-[#0A1929]">{value}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                              
-                              {/* Comentarios para el autor */}
-                              {review.commentsToAuthor && (
-                                <div className="text-sm text-gray-600 mt-2">
-                                  <p className="font-medium text-[#0A1929] mb-1">
-                                    {isSpanish ? 'Comentarios:' : 'Comments:'}
-                                  </p>
-                                  <div className="bg-gray-50 p-3 rounded-lg" 
-                                       dangerouslySetInnerHTML={{ __html: review.commentsToAuthor.replace(/\n/g, '<br/>') }} />
-                                </div>
-                              )}
-                              
-                              {/* Fecha de envío */}
-                              {review.submittedAt && (
-                                <p className="text-xs text-gray-400 mt-3">
-                                  {isSpanish ? 'Recibido:' : 'Received:'}{' '}
-                                  {review.submittedAt.toDate ? 
-                                    review.submittedAt.toDate().toLocaleDateString() : 
-                                    new Date(review.submittedAt).toLocaleDateString()}
-                                </p>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Decisiones finales */}
-                    {sub.finalDecision && (
-                      <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <h4 className="font-['Playfair_Display'] font-semibold text-[#0A1929] mb-2">
-                          {isSpanish ? 'Decisión final:' : 'Final decision:'}
-                        </h4>
-                        <p className="text-[#5A6B7A]">
-                          {sub.finalDecision === 'accept' && (isSpanish ? 'Aceptado' : 'Accepted')}
-                          {sub.finalDecision === 'reject' && (isSpanish ? 'Rechazado' : 'Rejected')}
-                          {sub.finalDecision === 'major-revision' && (isSpanish ? 'Requiere revisión mayor' : 'Major revision required')}
-                          {sub.finalDecision === 'minor-revision' && (isSpanish ? 'Requiere revisión menor' : 'Minor revision required')}
-                        </p>
-                        {sub.finalFeedback && (
-                          <p className="text-[#5A6B7A] mt-2 italic">"{sub.finalFeedback}"</p>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Historial de versiones de metadatos */}
-                    {sub.metadataVersions?.length > 0 && (
-                      <div className="mb-6">
-                        <h4 className="font-['Playfair_Display'] font-semibold text-[#0A1929] mb-3">
-                          {isSpanish ? 'Historial de metadatos' : 'Metadata history'}
-                        </h4>
-                        <div className="space-y-2">
-                          {sub.metadataVersions.map((version, idx) => (
-                            <div key={idx} className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                              <div className="flex justify-between items-center mb-2">
-                                <span className="font-medium">
-                                  {isSpanish ? `Versión ${version.version}` : `Version ${version.version}`}
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  {version.approvedAt?.toDate?.().toLocaleDateString()}
-                                </span>
-                              </div>
-                              {version.changes?.length > 0 && (
-                                <div className="text-sm">
-                                  <p className="text-gray-600 mb-1">
-                                    {isSpanish ? 'Cambios:' : 'Changes:'}
-                                  </p>
-                                  <ul className="list-disc list-inside text-xs">
-                                    {version.changes.map((change, i) => (
-                                      <li key={i}>
-                                        {change.field}: {JSON.stringify(change.proposedValue)}
-                                        {change.reason && ` (${change.reason})`}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Enlaces a documentos */}
-                    <div className="flex flex-wrap gap-4 mb-6">
-                      {sub.driveFolderUrl && (
-                        <a
-                          href={sub.driveFolderUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 text-[#C0A86A] hover:text-[#A58D4F] text-sm transition-colors"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                          </svg>
-                          {isSpanish ? 'Ver carpeta en Drive' : 'View Drive folder'}
-                        </a>
-                      )}
-                      {sub.originalFileUrl && (
-                        <a
-                          href={sub.originalFileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 text-[#C0A86A] hover:text-[#A58D4F] text-sm transition-colors"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                          </svg>
-                          {isSpanish ? 'Ver manuscrito original' : 'View original manuscript'}
-                        </a>
-                      )}
-                      {sub.immutableHistoryId && (
-                        <a
-                          href={`/history/${sub.immutableHistoryId}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 text-purple-600 hover:text-purple-800 text-sm transition-colors"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                          {isSpanish ? 'Ver historia inmutable' : 'View immutable history'}
-                        </a>
-                      )}
-                    </div>
-
-                    {/* Botón para subir revisión si es necesario */}
-                    {(sub.status === 'revisions-requested' || 
-                      sub.status === 'minor-revision-required' || 
-                      sub.status === 'major-revision-required' || 
-                      sub.status === 'awaiting-revision') && (
-                      <button
-                        onClick={() => {
-                          console.log('📤 Abriendo modal de revisión para:', sub.id);
-                          setSelectedSubmission(sub);
-                        }}
-                        className="w-full py-4 bg-[#C0A86A] hover:bg-[#A58D4F] text-white font-['Playfair_Display'] font-bold rounded-xl transition-colors"
-                      >
-                        {isSpanish ? 'SUBIR VERSIÓN REVISADA' : 'UPLOAD REVISED VERSION'}
-                      </button>
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
+              sub={sub}
+              isExpanded={expandedSubmission === sub.id}
+              onToggle={() => {
+                console.log('📌 Expandiendo envío:', sub.id, sub.title);
+                setExpandedSubmission(expandedSubmission === sub.id ? null : sub.id);
+              }}
+              language={language}
+              user={user}
+              onOpenRevision={() => {
+                console.log('📤 Abriendo modal de revisión para:', sub.id);
+                setSelectedSubmission(sub);
+              }}
+              hasPendingMetadata={hasPendingMetadataProposals(sub)}
+            />
           ))}
         </div>
       )}
 
-      {/* Modal para subir revisión */}
+      {/* Modal de Revisión (Premium Glassmorphism) - Adaptado para móvil */}
       <AnimatePresence>
         {selectedSubmission && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-4 bg-black/90 backdrop-blur-md"
             onClick={() => setSelectedSubmission(null)}
           >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-2xl max-w-2xl w-full p-8"
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-[#0A192F] border border-slate-800 p-5 md:p-8 max-w-2xl w-full shadow-2xl mx-3 md:mx-0 max-h-[90vh] overflow-y-auto"
               onClick={e => e.stopPropagation()}
             >
-              <h3 className="font-['Playfair_Display'] text-2xl font-bold text-[#0A1929] mb-2">
-                {isSpanish ? 'Subir Versión Revisada' : 'Upload Revised Version'}
-              </h3>
-              <p className="text-[#5A6B7A] mb-2">
-                {selectedSubmission.title}
-              </p>
-              <p className="text-sm text-[#C0A86A] mb-6">
-                {isSpanish ? `Ronda ${selectedSubmission.currentRound || 1} → Ronda ${(selectedSubmission.currentRound || 1) + 1}` : `Round ${selectedSubmission.currentRound || 1} → Round ${(selectedSubmission.currentRound || 1) + 1}`}
-              </p>
-
-              <div className="space-y-6">
-                <div>
-                  <label className="block font-['Playfair_Display'] font-semibold text-[#0A1929] mb-3">
-                    {isSpanish ? 'Archivo (PDF o Word)' : 'File (PDF or Word)'}
-                  </label>
-                  <input
-                    type="file"
+              <h3 className="text-xl md:text-2xl font-serif text-[#C5A059] mb-2 italic">{isSpanish ? 'Subir Versión Revisada' : 'Upload Revised Version'}</h3>
+              <p className="text-slate-400 text-xs md:text-sm mb-4 md:mb-6 uppercase tracking-wider break-words">Ref: {selectedSubmission.title}</p>
+              
+              <div className="space-y-4 md:space-y-6">
+                <div className="border-2 border-dashed border-slate-700 p-6 md:p-10 text-center hover:border-[#C5A059] transition-colors group">
+                  <input 
+                    type="file" 
+                    id="rev-file"
                     accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    onChange={handleFileChange}
-                    className="w-full p-4 bg-[#F5F7FA] border border-[#E5E9F0] rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#C0A86A] file:text-white hover:file:bg-[#A58D4F]"
+                    onChange={handleFileChange} 
+                    className="hidden" 
                   />
-                  {revisionFile && (
-                    <p className="mt-2 text-sm text-green-600">
-                      ✓ {revisionFile.name} ({(revisionFile.size / 1024).toFixed(2)} KB)
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block font-['Playfair_Display'] font-semibold text-[#0A1929] mb-3">
-                    {isSpanish ? 'Notas para el editor' : 'Notes for the editor'}
+                  <label htmlFor="rev-file" className="cursor-pointer block">
+                    <span className="block text-2xl md:text-3xl mb-2 group-hover:scale-110 transition-transform">📄</span>
+                    <span className="text-slate-300 font-medium text-sm md:text-base break-all">
+                      {revisionFile ? revisionFile.name : (isSpanish ? 'Click para seleccionar archivo (PDF/Word)' : 'Click to select file (PDF/Word)')}
+                    </span>
                   </label>
-                  <textarea
-                    value={revisionNotes}
-                    onChange={(e) => setRevisionNotes(e.target.value)}
-                    rows="5"
-                    className="w-full p-4 bg-[#F5F7FA] border border-[#E5E9F0] rounded-xl focus:ring-2 focus:ring-[#C0A86A] focus:border-transparent"
-                    placeholder={isSpanish 
-                      ? 'Explica los cambios realizados en esta versión...' 
-                      : 'Explain the changes made in this version...'}
-                  />
                 </div>
 
-                <div className="flex gap-4">
-                  <button
-                    onClick={handleSubmitRevision}
-                    disabled={uploading || !revisionFile || !revisionNotes.trim()}
-                    className="flex-1 py-4 bg-[#C0A86A] hover:bg-[#A58D4F] disabled:bg-[#E5E9F0] disabled:text-[#5A6B7A] text-white font-['Playfair_Display'] font-bold rounded-xl transition-all"
-                  >
-                    {uploading ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        {isSpanish ? 'SUBIENDO...' : 'UPLOADING...'}
-                      </span>
-                    ) : (
-                      isSpanish ? 'ENVIAR REVISIÓN' : 'SUBMIT REVISION'
-                    )}
-                  </button>
-                  <button
+                <textarea
+                  value={revisionNotes}
+                  onChange={(e) => setRevisionNotes(e.target.value)}
+                  placeholder={isSpanish ? "Notas para el editor sobre los cambios realizados..." : "Notes for the editor about the changes made..."}
+                  className="w-full bg-black/40 border border-slate-800 p-3 md:p-4 text-white placeholder-slate-600 focus:border-[#C5A059] outline-none h-24 md:h-32 transition-all text-sm"
+                />
+
+                <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 md:gap-4">
+                  <button 
                     onClick={() => {
                       setSelectedSubmission(null);
                       setRevisionFile(null);
                       setRevisionNotes('');
                     }}
-                    className="flex-1 py-4 border-2 border-[#0A1929] text-[#0A1929] font-['Playfair_Display'] font-bold rounded-xl hover:bg-[#0A1929] hover:text-white transition-colors"
+                    className="w-full sm:w-auto px-4 md:px-6 py-2 md:py-2 text-slate-500 hover:text-white transition-colors text-sm"
                   >
-                    {isSpanish ? 'CANCELAR' : 'CANCEL'}
+                    {isSpanish ? 'Cancelar' : 'Cancel'}
+                  </button>
+                  <button 
+                    disabled={uploading || !revisionFile || !revisionNotes.trim()}
+                    onClick={handleSubmitRevision}
+                    className="w-full sm:w-auto px-6 md:px-10 py-2 md:py-2 bg-[#C5A059] text-black font-bold disabled:opacity-30 disabled:cursor-not-allowed text-sm"
+                  >
+                    {uploading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                        {isSpanish ? 'Enviando...' : 'Sending...'}
+                      </span>
+                    ) : (isSpanish ? 'Enviar Revisión' : 'Submit Revision')}
                   </button>
                 </div>
               </div>
@@ -966,6 +568,282 @@ const AuthorSubmissionsPanel = ({ user }) => {
         )}
       </AnimatePresence>
     </div>
+  );
+};
+
+// Subcomponente: SubmissionCard - COMPLETAMENTE ADAPTADO PARA MÓVIL
+const SubmissionCard = ({ sub, isExpanded, onToggle, language, user, onOpenRevision, hasPendingMetadata }) => {
+  const isSpanish = language === 'es';
+  const state = SUBMISSION_STATES[sub.status] || SUBMISSION_STATES.submitted;
+
+  const getTimelineStep = (status) => {
+    const steps = [
+      'submitted',
+      'in-desk-review',
+      'in-reviewer-selection',
+      'awaiting-reviewer-responses',
+      'in-peer-review',
+      'accepted'
+    ];
+    return steps.indexOf(status);
+  };
+
+  return (
+    <motion.div 
+      layout
+      className={`group border transition-all duration-500 ${
+        isExpanded ? 'border-slate-700 bg-[#0A192F]' : 'border-slate-800 bg-black/40 hover:border-slate-600'
+      }`}
+    >
+      {/* Cabecera del envío - Adaptada para móvil */}
+      <div 
+        className="p-4 md:p-6 cursor-pointer flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4"
+        onClick={onToggle}
+      >
+        <div className="space-y-2 w-full sm:w-auto">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={`text-[10px] md:text-xs px-2 md:px-3 py-1 border rounded-full font-bold tracking-tighter uppercase ${state.color}`}>
+              {state.icon} {state[language]}
+            </span>
+            <span className="text-slate-600 font-mono text-[8px] md:text-[10px] tracking-widest">
+              {sub.id.substring(0,8).toUpperCase()}
+            </span>
+            {hasPendingMetadata && (
+              <span className="bg-teal-900/30 text-teal-400 border border-teal-800 text-[8px] md:text-[10px] px-2 py-1 rounded-full animate-pulse">
+                {isSpanish ? `📋 ${sub.pendingProposals.length} pendiente(s)` : `📋 ${sub.pendingProposals.length} pending`}
+              </span>
+            )}
+          </div>
+          <h2 className="text-lg md:text-xl font-serif text-slate-100 group-hover:text-[#C5A059] transition-colors duration-300 italic break-words pr-8 sm:pr-0">
+            {sub.title}
+          </h2>
+          <div className="flex items-center gap-3 text-xs text-slate-500 sm:hidden">
+            <span className="font-mono bg-black/40 px-2 py-1 rounded">
+              {sub.submissionId || sub.id.substring(0,6)}
+            </span>
+            <span>
+              {sub.createdAt?.toLocaleDateString?.() || new Date(sub.createdAt).toLocaleDateString()}
+            </span>
+          </div>
+        </div>
+        
+        <div className="flex items-center justify-between w-full sm:w-auto gap-4 sm:gap-6">
+          <div className="text-right hidden sm:block">
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest italic">{isSpanish ? 'Enviado' : 'Submitted'}</p>
+            <p className="text-sm text-slate-300 font-serif">{sub.createdAt?.toLocaleDateString?.() || new Date(sub.createdAt).toLocaleDateString()}</p>
+          </div>
+          <div className={`w-6 h-6 md:w-8 md:h-8 flex items-center justify-center rounded-full border border-slate-800 transition-transform duration-500 ${
+            isExpanded ? 'rotate-180 bg-slate-800' : ''
+          }`}>
+            <span className="text-slate-400 text-[10px] md:text-xs">▼</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Detalles expandibles */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden border-t border-slate-800"
+          >
+            <div className="p-4 md:p-8 space-y-6 md:space-y-8 bg-gradient-to-b from-[#0A192F] to-black">
+              
+              {/* Descripción del estado actual */}
+              <div className="p-4 bg-black/40 border-l-2 border-[#C5A059]">
+                <p className="text-slate-300 text-sm leading-relaxed">
+                  {state.description[language]}
+                </p>
+              </div>
+
+              {/* Timeline Épico - Adaptado para móvil (scroll horizontal si es necesario) */}
+              {!['accepted', 'rejected', 'desk-review-rejected'].includes(sub.status) && (
+                <div className="relative pt-8 pb-4 overflow-x-auto">
+                  <div className="absolute top-4 left-0 w-full h-[1px] bg-slate-800" />
+                  <div className="relative flex justify-between min-w-[500px] md:min-w-0 px-2">
+                    {['submitted', 'in-desk-review', 'in-reviewer-selection', 'in-peer-review', 'accepted'].map((step, idx) => {
+                      const currentIdx = getTimelineStep(sub.status);
+                      const isDone = idx <= currentIdx;
+                      return (
+                        <div key={step} className="flex flex-col items-center gap-2 relative z-10">
+                          <div className={`w-2 h-2 md:w-3 md:h-3 rounded-full border-2 transition-all duration-700 ${
+                            isDone ? 'bg-[#C5A059] border-[#C5A059] shadow-[0_0_10px_#C5A059]' : 'bg-black border-slate-700'
+                          }`} />
+                          <span className={`text-[8px] md:text-[10px] uppercase tracking-tighter font-bold whitespace-nowrap ${
+                            isDone ? 'text-slate-200' : 'text-slate-600'
+                          }`}>
+                            {SUBMISSION_STATES[step]?.[language]}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Contenido Dinámico - Stack en móvil, grid en desktop */}
+              <div className="grid md:grid-cols-2 gap-6 md:gap-8">
+                <div className="space-y-4">
+                  <h4 className="font-serif text-[#C5A059] italic border-b border-slate-800 pb-2 text-sm md:text-base">
+                    {isSpanish ? 'Estado de la Obra' : 'Manuscript Status'}
+                  </h4>
+                  
+                  {/* Feedback del editor (si existe) */}
+                  {sub.deskReviewFeedback && (
+                    <div className="p-4 bg-black/40 border-l-2 border-[#C5A059]">
+                      <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">
+                        {isSpanish ? 'Nota de la Editorial' : 'Editorial Note'}
+                      </p>
+                      <p className="text-slate-300 italic text-sm font-serif">"{sub.deskReviewFeedback}"</p>
+                    </div>
+                  )}
+
+                  {/* Botón de revisión */}
+                  {(sub.status === 'revisions-requested' || 
+                    sub.status === 'minor-revision-required' || 
+                    sub.status === 'major-revision-required' || 
+                    sub.status === 'awaiting-revision') && (
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); onOpenRevision(); }}
+                      className="w-full py-3 md:py-3 border border-[#C5A059] text-[#C5A059] hover:bg-[#C5A059] hover:text-black transition-all font-bold tracking-widest text-xs uppercase"
+                    >
+                      {isSpanish ? 'Subir Revisión Ahora' : 'Upload Revision Now'}
+                    </button>
+                  )}
+
+                  {/* Enlaces a documentos - Responsive */}
+                  <div className="flex flex-col sm:flex-row flex-wrap gap-3">
+                    {sub.driveFolderUrl && (
+                      <a
+                        href={sub.driveFolderUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-[#C5A059] hover:text-[#B08D48] text-xs transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                        {isSpanish ? 'Drive' : 'Drive'}
+                      </a>
+                    )}
+                    {sub.originalFileUrl && (
+                      <a
+                        href={sub.originalFileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-[#C5A059] hover:text-[#B08D48] text-xs transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                        {isSpanish ? 'Original' : 'Original'}
+                      </a>
+                    )}
+                    {sub.immutableHistoryId && (
+                      <a
+                        href={`/history/${sub.immutableHistoryId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300 text-xs transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        {isSpanish ? 'Historia' : 'History'}
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="font-serif text-[#C5A059] italic border-b border-slate-800 pb-2 text-sm md:text-base">
+                    {isSpanish ? 'Metadatos y Calidad' : 'Metadata & Quality'}
+                  </h4>
+                  <AuthorMetadataResponseTab submission={sub} user={user} />
+                </div>
+              </div>
+
+              {/* Revisiones de pares */}
+              {sub.reviews && sub.reviews.length > 0 && (
+                <div className="space-y-4">
+                  <h4 className="font-serif text-[#C5A059] italic border-b border-slate-800 pb-2 text-sm md:text-base">
+                    {isSpanish ? 'Revisiones Recibidas' : 'Reviews Received'}
+                  </h4>
+                  <div className="space-y-3">
+                    {sub.reviews.map((review, idx) => (
+                      <div key={review.id || idx} className="bg-black/40 p-4 border border-slate-800">
+                        <div className="flex flex-col sm:flex-row justify-between items-start gap-2 mb-3">
+                          <span className="text-xs text-slate-400">
+                            {isSpanish ? `Revisión ${idx + 1}` : `Review ${idx + 1}`}
+                            {review.round && review.round > 1 && (
+                              <span className="ml-2 text-[10px] bg-purple-900/30 text-purple-400 px-2 py-0.5 rounded-full">
+                                {isSpanish ? `Ronda ${review.round}` : `Round ${review.round}`}
+                              </span>
+                            )}
+                          </span>
+                          <span className={`text-[10px] px-2 py-1 rounded-full ${
+                            review.recommendation === 'accept' ? 'bg-emerald-900/30 text-emerald-400' :
+                            review.recommendation === 'minor-revision' ? 'bg-blue-900/30 text-blue-300' :
+                            review.recommendation === 'major-revision' ? 'bg-orange-900/30 text-orange-400' :
+                            'bg-red-900/30 text-red-400'
+                          }`}>
+                            {review.recommendation === 'accept' && (isSpanish ? 'Aceptar' : 'Accept')}
+                            {review.recommendation === 'minor-revision' && (isSpanish ? 'Menores' : 'Minor')}
+                            {review.recommendation === 'major-revision' && (isSpanish ? 'Mayores' : 'Major')}
+                            {review.recommendation === 'reject' && (isSpanish ? 'Rechazar' : 'Reject')}
+                          </span>
+                        </div>
+                        
+                        {/* Comentarios para el autor */}
+                        {review.commentsToAuthor && (
+                          <div className="text-sm text-slate-300 mt-2">
+                            <p className="font-medium text-[#C5A059] mb-1 text-xs">
+                              {isSpanish ? 'Comentarios:' : 'Comments:'}
+                            </p>
+                            <div className="bg-black/60 p-3 rounded-sm text-xs" 
+                                 dangerouslySetInnerHTML={{ __html: review.commentsToAuthor.replace(/\n/g, '<br/>') }} />
+                          </div>
+                        )}
+                        
+                        {/* Fecha de envío */}
+                        {review.submittedAt && (
+                          <p className="text-[10px] text-slate-500 mt-3">
+                            {isSpanish ? 'Recibido:' : 'Received:'}{' '}
+                            {review.submittedAt.toDate ? 
+                              review.submittedAt.toDate().toLocaleDateString() : 
+                              new Date(review.submittedAt).toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Decisiones finales */}
+              {sub.finalDecision && (
+                <div className="p-4 bg-blue-900/20 border border-blue-800">
+                  <h4 className="font-serif text-blue-400 italic mb-2 text-sm">
+                    {isSpanish ? 'Decisión final:' : 'Final decision:'}
+                  </h4>
+                  <p className="text-slate-300 text-sm">
+                    {sub.finalDecision === 'accept' && (isSpanish ? 'Aceptado' : 'Accepted')}
+                    {sub.finalDecision === 'reject' && (isSpanish ? 'Rechazado' : 'Rejected')}
+                    {sub.finalDecision === 'major-revision' && (isSpanish ? 'Requiere revisión mayor' : 'Major revision required')}
+                    {sub.finalDecision === 'minor-revision' && (isSpanish ? 'Requiere revisión menor' : 'Minor revision required')}
+                  </p>
+                  {sub.finalFeedback && (
+                    <p className="text-slate-400 mt-2 italic text-sm">"{sub.finalFeedback}"</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 };
 

@@ -1,9 +1,21 @@
-// src/components/AuthorMetadataResponseTab.js
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  CheckCircle, 
+  XCircle, 
+  MessageSquare, 
+  Info, 
+  History, 
+  ChevronRight,
+  AlertCircle,
+  Clock,
+  User,
+  ShieldCheck,
+  FileText
+} from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
 import { useMetadataRefinement } from '../hooks/useMetadataRefinement';
-import { doc, onSnapshot, collection, query, where, orderBy } from 'firebase/firestore';
+import { onSnapshot, collection, query, where, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 
 export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => {
@@ -15,61 +27,22 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
   const [selectedProposal, setSelectedProposal] = useState(null);
   const [responseComments, setResponseComments] = useState('');
   const [localError, setLocalError] = useState(null);
-  const [expandedProposal, setExpandedProposal] = useState(null);
   const [loadingProposals, setLoadingProposals] = useState(true);
-
-  // LOGS DE DEPURACIÓN
-  useEffect(() => {
-    console.log('🎯 [AuthorMetadataResponseTab] Montado para submission:', {
-      id: submission?.id,
-      title: submission?.title,
-      hasPendingProposals: submission?.pendingProposals?.length || 0,
-      user: user?.email
-    });
-  }, [submission?.id, submission?.title]);
 
   // Mostrar errores del hook
   useEffect(() => {
     if (hookError) {
-      console.error('❌ [AuthorMetadataResponseTab] Error del hook:', hookError);
       setLocalError(hookError);
       setTimeout(() => setLocalError(null), 5000);
     }
   }, [hookError]);
 
-  // Función para formatear valores (especialmente objetos como autores)
-  const formatValue = (value) => {
-    if (value === null || value === undefined) return '—';
-    if (typeof value === 'object') {
-      if (Array.isArray(value)) {
-        if (value.length === 0) return '—';
-        return value.map(author => {
-          if (typeof author === 'object') {
-            if (author.firstName && author.lastName) {
-              return `${author.lastName}, ${author.firstName}`;
-            } else if (author.name) {
-              return author.name;
-            } else {
-              return Object.values(author).join(' ') || 'Autor sin nombre';
-            }
-          }
-          return String(author);
-        }).join('; ');
-      }
-      return JSON.stringify(value);
-    }
-    return String(value);
-  };
-
   // Cargar propuestas pendientes para este artículo
   useEffect(() => {
     if (!submission?.id) {
-      console.log('⚠️ [AuthorMetadataResponseTab] No hay submission.id');
       setLoadingProposals(false);
       return;
     }
-
-    console.log('🔍 [AuthorMetadataResponseTab] Iniciando carga de propuestas para:', submission.id);
 
     const proposalsRef = collection(db, 'submissions', submission.id, 'metadataProposals');
     const q = query(
@@ -79,390 +52,341 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      console.log(`📥 [AuthorMetadataResponseTab] Recibidas ${snapshot.docs.length} propuestas pendientes`);
-      
-      const loadedProposals = snapshot.docs.map((doc, index) => {
-        const data = doc.data();
-        console.log(`  📄 Propuesta ${index + 1}:`, {
-          id: doc.id,
-          proposedBy: data.proposedByEmail,
-          proposedAt: data.proposedAt?.toDate?.() || data.proposedAt,
-          changesCount: data.changes?.length || 0,
-          fields: data.changes?.map(c => c.field).join(', ')
-        });
-        
-        return {
-          id: doc.id,
-          ...data,
-          proposedAt: data.proposedAt?.toDate?.() || null
-        };
-      });
+      const loadedProposals = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        proposedAt: doc.data().proposedAt?.toDate?.() || null
+      }));
       
       setPendingProposals(loadedProposals);
       setLoadingProposals(false);
       
-      // Seleccionar la primera propuesta pendiente por defecto
       if (loadedProposals.length > 0 && !selectedProposal) {
-        console.log('✅ Seleccionando primera propuesta por defecto:', loadedProposals[0].id);
         setSelectedProposal(loadedProposals[0]);
       }
-      
-      if (loadedProposals.length === 0) {
-        console.log('ℹ️ No hay propuestas pendientes para este artículo');
-      }
     }, (error) => {
-      console.error('❌ [AuthorMetadataResponseTab] Error loading pending proposals:', error);
       setLocalError(isSpanish ? 'Error al cargar propuestas' : 'Error loading proposals');
       setLoadingProposals(false);
     });
 
-    return () => {
-      console.log('🧹 [AuthorMetadataResponseTab] Limpiando listener de propuestas');
-      unsubscribe();
-    };
+    return () => unsubscribe();
   }, [submission?.id, isSpanish]);
 
-  const handleAccept = async () => {
-    if (!selectedProposal) {
-      console.warn('⚠️ [AuthorMetadataResponseTab] No hay propuesta seleccionada');
-      return;
+  const handleResponse = async (isAccepted) => {
+    if (!selectedProposal) return;
+    
+    if (!isAccepted && !responseComments.trim()) {
+      const confirmReject = window.confirm(
+        isSpanish 
+          ? '¿Deseas agregar un comentario para explicar el rechazo? Es altamente recomendado para el proceso editorial.'
+          : 'Would you like to add a comment to explain the rejection? It is highly recommended for the editorial process.'
+      );
+      if (!confirmReject) return;
     }
-    
-    console.log('✅ [AuthorMetadataResponseTab] Aceptando propuesta:', selectedProposal.id);
-    setLocalError(null);
-    
-    const result = await respondToProposal(submission.id, selectedProposal.id, true, responseComments);
-    
-    console.log('📬 [AuthorMetadataResponseTab] Resultado de accept:', result);
+
+    const result = await respondToProposal(submission.id, selectedProposal.id, isAccepted, responseComments);
     
     if (result.success) {
-      console.log('✅ Propuesta aceptada exitosamente');
       setResponseComments('');
       setSelectedProposal(null);
       onResponded?.();
     } else {
-      console.error('❌ Error al aceptar propuesta:', result.error);
-      setLocalError(result.error || (isSpanish ? 'Error al aceptar propuesta' : 'Error accepting proposal'));
+      setLocalError(result.error);
     }
   };
 
-  const handleReject = async () => {
-    if (!selectedProposal) {
-      console.warn('⚠️ [AuthorMetadataResponseTab] No hay propuesta seleccionada');
-      return;
+  const formatValue = (value) => {
+    if (value === null || value === undefined || value === '') return <span className="text-gray-400 italic">none</span>;
+    if (Array.isArray(value)) {
+      return value.map((v, i) => (
+        <span key={i} className="inline-block bg-slate-100 rounded px-2 py-0.5 m-0.5 border border-slate-200 text-xs sm:text-sm">
+          {typeof v === 'object' ? (v.lastName ? `${v.lastName}, ${v.firstName}` : JSON.stringify(v)) : String(v)}
+        </span>
+      ));
     }
-    
-    if (!responseComments.trim() && window.confirm(
-      isSpanish 
-        ? '¿Estás seguro de rechazar sin comentarios? Se recomienda proporcionar una explicación.'
-        : 'Are you sure you want to reject without comments? Providing an explanation is recommended.'
-    )) {
-      console.log('ℹ️ Rechazando sin comentarios');
-    } else if (!responseComments.trim()) {
-      console.log('ℹ️ Cancelado - se requieren comentarios');
-      return;
-    }
-    
-    console.log('❌ [AuthorMetadataResponseTab] Rechazando propuesta:', selectedProposal.id);
-    setLocalError(null);
-    
-    const result = await respondToProposal(submission.id, selectedProposal.id, false, responseComments);
-    
-    console.log('📬 [AuthorMetadataResponseTab] Resultado de reject:', result);
-    
-    if (result.success) {
-      console.log('✅ Propuesta rechazada exitosamente');
-      setResponseComments('');
-      setSelectedProposal(null);
-      onResponded?.();
-    } else {
-      console.error('❌ Error al rechazar propuesta:', result.error);
-      setLocalError(result.error || (isSpanish ? 'Error al rechazar propuesta' : 'Error rejecting proposal'));
-    }
+    return String(value);
   };
 
-  // Estado de carga
-  if (loadingProposals) {
-    return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="bg-gray-50 rounded-lg p-8 text-center border border-gray-200"
-      >
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-yellow-200 border-t-yellow-600 mb-4"></div>
-        <p className="text-gray-500">
-          {isSpanish ? 'Cargando propuestas...' : 'Loading proposals...'}
-        </p>
-      </motion.div>
-    );
-  }
-
-  // Si no hay propuestas pendientes
-  if (pendingProposals.length === 0) {
-    console.log('ℹ️ [AuthorMetadataResponseTab] Renderizando estado vacío');
-    return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="bg-gray-50 rounded-lg p-8 text-center border border-gray-200"
-      >
-        <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-        <p className="text-gray-500 text-lg">
-          {isSpanish 
-            ? 'No hay propuestas de cambio de metadatos pendientes.' 
-            : 'No pending metadata change proposals.'}
-        </p>
-        <p className="text-gray-400 text-sm mt-2">
-          {isSpanish
-            ? 'Los editores te notificarán cuando propongan cambios.'
-            : 'Editors will notify you when they propose changes.'}
-        </p>
-      </motion.div>
-    );
-  }
-
-  console.log(`🎨 [AuthorMetadataResponseTab] Renderizando con ${pendingProposals.length} propuestas`);
-  
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
+  const ChangeCard = ({ change, index }) => (
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-6"
+      transition={{ delay: index * 0.05 }}
+      className="group bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all border-l-4 border-l-indigo-500"
     >
-      {/* Banner COPE */}
-      <div className="bg-purple-50 border-l-4 border-purple-500 p-4">
-        <p className="text-purple-700 text-sm">
-          <strong>COPE Guidelines:</strong> {isSpanish 
-            ? 'Como autor, tienes derecho a revisar y aprobar cambios sustanciales en los metadatos de tu artículo.'
-            : 'As an author, you have the right to review and approve substantial changes to your article metadata.'}
-        </p>
-      </div>
-
-      {/* Mensaje de error */}
-      <AnimatePresence>
-        {localError && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="bg-red-50 border-l-4 border-red-500 p-4"
-          >
-            <p className="text-red-700 text-sm">❌ {localError}</p>
-          </motion.div>
+      <div className="p-3 sm:p-4 bg-slate-50/50 border-b border-slate-100 flex flex-wrap gap-2 justify-between items-center">
+        <span className="text-xs font-bold uppercase tracking-wider text-slate-500 break-words">
+          {change.field.replace(/([A-Z])/g, ' $1').trim()}
+        </span>
+        {change.requiresAuthorConsent && (
+          <span className="flex items-center gap-1 text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full uppercase whitespace-nowrap">
+            <ShieldCheck size={12} /> {isSpanish ? 'Requiere Consentimiento' : 'Requires Consent'}
+          </span>
         )}
-      </AnimatePresence>
-
-      {/* Selector de propuestas (si hay múltiples) */}
-      {pendingProposals.length > 1 && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <h4 className="font-medium text-yellow-800 mb-2">
-            {isSpanish ? 'Múltiples propuestas pendientes' : 'Multiple pending proposals'}
-          </h4>
-          <div className="flex flex-wrap gap-2">
-            {pendingProposals.map((prop) => (
-              <button
-                key={prop.id}
-                onClick={() => {
-                  console.log('🔄 Cambiando a propuesta:', prop.id);
-                  setSelectedProposal(prop);
-                  setResponseComments('');
-                }}
-                className={`px-3 py-1 rounded-full text-sm ${
-                  selectedProposal?.id === prop.id
-                    ? 'bg-yellow-600 text-white'
-                    : 'bg-white text-yellow-700 border border-yellow-300 hover:bg-yellow-50'
-                }`}
-              >
-                {prop.proposedAt?.toLocaleDateString?.() || 'Propuesta'}
-                <span className="ml-1 text-xs">
-                  ({prop.changes?.length || 0})
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Propuesta seleccionada */}
-      {selectedProposal && (
-        <motion.div
-          key={selectedProposal.id}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-6"
-        >
-          <div className="flex items-start justify-between mb-4">
-            <h3 className="text-xl font-bold text-yellow-800">
-              {isSpanish ? '📝 Propuesta de cambios en metadatos' : '📝 Metadata Change Proposal'}
-            </h3>
-            <span className="bg-yellow-200 text-yellow-800 px-3 py-1 rounded-full text-sm">
-              {isSpanish ? 'Requiere tu revisión' : 'Requires your review'}
-            </span>
+      </div>
+      
+      <div className="p-3 sm:p-5 space-y-4">
+        {/* Versión móvil: stacked */}
+        <div className="block md:hidden space-y-4">
+          <div className="space-y-1">
+            <span className="text-[10px] text-slate-400 uppercase font-semibold">{isSpanish ? 'Original' : 'Original'}</span>
+            <div className="p-3 bg-red-50/30 rounded-lg border border-red-100/50 text-slate-600 line-through decoration-red-300 text-xs sm:text-sm break-words">
+              {formatValue(change.currentValue)}
+            </div>
           </div>
           
-          <p className="text-yellow-700 mb-6">
-            {isSpanish 
-              ? 'El editor ha propuesto los siguientes cambios a los metadatos de tu artículo. Por favor, revísalos y acepta o rechaza según corresponda.'
-              : 'The editor has proposed the following changes to your article metadata. Please review and accept or reject accordingly.'}
-          </p>
-
-          {/* Metadatos de la propuesta */}
-          <div className="mb-4 text-sm bg-yellow-100 p-3 rounded-lg">
-            <p><strong>{isSpanish ? 'Propuesto por:' : 'Proposed by:'}</strong> {selectedProposal.proposedByEmail}</p>
-            <p><strong>{isSpanish ? 'Fecha:' : 'Date:'}</strong> {selectedProposal.proposedAt?.toLocaleString?.() || 'Fecha desconocida'}</p>
+          <div className="flex justify-center">
+            <ChevronRight className="text-slate-300 rotate-90" />
           </div>
 
-          <div className="space-y-4 mb-6">
-            {selectedProposal.changes?.map((change, idx) => (
-              <motion.div 
-                key={idx}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: idx * 0.1 }}
-                className="bg-white p-4 rounded-lg border border-yellow-200 hover:shadow-md transition-shadow"
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <p className="font-medium text-gray-700">
-                    {change.field}:
-                  </p>
-                  {change.requiresAuthorConsent && (
-                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
-                      {isSpanish ? 'Requiere consentimiento' : 'Requires consent'}
-                    </span>
-                  )}
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div className="bg-gray-50 p-3 rounded">
-                    <span className="text-gray-500 block mb-1 text-xs uppercase">
-                      {isSpanish ? 'Actual:' : 'Current:'}
-                    </span>
-                    <span className="line-through text-gray-600 font-mono text-sm break-words">
-                      {formatValue(change.currentValue)}
-                    </span>
-                  </div>
-                  <div className="bg-green-50 p-3 rounded">
-                    <span className="text-green-600 block mb-1 text-xs uppercase">
-                      {isSpanish ? 'Propuesto:' : 'Proposed:'}
-                    </span>
-                    <span className="text-green-700 font-mono text-sm break-words">
-                      {formatValue(change.proposedValue)}
-                    </span>
-                  </div>
-                </div>
-                
-                {change.reason && (
-                  <div className="mt-3 text-xs bg-blue-50 p-2 rounded">
-                    <strong className="text-blue-700 block mb-1">
-                      {isSpanish ? 'Razón del cambio:' : 'Reason for change:'}
-                    </strong>
-                    <p className="text-blue-600">{change.reason}</p>
-                  </div>
-                )}
-              </motion.div>
-            ))}
+          <div className="space-y-1">
+            <span className="text-[10px] text-emerald-600 uppercase font-semibold">{isSpanish ? 'Propuesto' : 'Proposed'}</span>
+            <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-100 text-emerald-900 font-medium text-xs sm:text-sm break-words">
+              {formatValue(change.proposedValue)}
+            </div>
+          </div>
+        </div>
+
+        {/* Versión desktop: grid */}
+        <div className="hidden md:grid md:grid-cols-[1fr,40px,1fr] gap-4 items-center">
+          <div className="space-y-1">
+            <span className="text-[10px] text-slate-400 uppercase font-semibold">{isSpanish ? 'Original' : 'Original'}</span>
+            <div className="p-3 bg-red-50/30 rounded-lg border border-red-100/50 text-slate-600 line-through decoration-red-300 text-sm break-words">
+              {formatValue(change.currentValue)}
+            </div>
           </div>
 
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              {isSpanish ? 'Tus comentarios (opcional)' : 'Your comments (optional)'}
-            </label>
-            <textarea
-              value={responseComments}
-              onChange={(e) => setResponseComments(e.target.value)}
-              rows={4}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400"
-              placeholder={isSpanish 
-                ? 'Si tienes alguna observación sobre los cambios propuestos, escríbela aquí...' 
-                : 'If you have any comments about the proposed changes, write them here...'}
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              {isSpanish 
-                ? '💡 Tus comentarios serán visibles para los editores.'
-                : '💡 Your comments will be visible to the editors.'}
+          <div className="flex justify-center">
+            <ChevronRight className="text-slate-300 group-hover:text-indigo-400 transition-colors" />
+          </div>
+
+          <div className="space-y-1">
+            <span className="text-[10px] text-emerald-600 uppercase font-semibold">{isSpanish ? 'Propuesto' : 'Proposed'}</span>
+            <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-100 text-emerald-900 font-medium text-sm break-words">
+              {formatValue(change.proposedValue)}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {change.reason && (
+        <div className="px-3 sm:px-5 pb-4">
+          <div className="flex gap-2 items-start bg-indigo-50/50 p-3 rounded-lg border border-indigo-100">
+            <Info size={16} className="text-indigo-500 mt-0.5 shrink-0" />
+            <p className="text-xs text-indigo-800 italic break-words">
+              <span className="font-semibold not-italic mr-1">{isSpanish ? 'Razón:' : 'Reason:'}</span>
+              "{change.reason}"
             </p>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-4">
-            <button
-              onClick={handleAccept}
-              disabled={loading}
-              className="flex-1 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 font-medium transition-colors"
-            >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  {isSpanish ? 'PROCESANDO...' : 'PROCESSING...'}
-                </span>
-              ) : (
-                <span className="flex items-center justify-center gap-2">
-                  <span>✅</span>
-                  {isSpanish ? 'ACEPTAR CAMBIOS' : 'ACCEPT CHANGES'}
-                </span>
-              )}
-            </button>
-            
-            <button
-              onClick={handleReject}
-              disabled={loading}
-              className="flex-1 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-400 font-medium transition-colors"
-            >
-              <span className="flex items-center justify-center gap-2">
-                <span>❌</span>
-                {isSpanish ? 'RECHAZAR' : 'REJECT'}
-              </span>
-            </button>
-          </div>
-
-          <p className="text-xs text-gray-500 text-center mt-4">
-            {isSpanish 
-              ? 'Al aceptar, autorizas los cambios propuestos. Al rechazar, puedes proporcionar comentarios para que el editor los revise.'
-              : 'By accepting, you authorize the proposed changes. By rejecting, you can provide comments for the editor to review.'}
-          </p>
-        </motion.div>
-      )}
-
-      {/* Historial de propuestas pendientes */}
-      {pendingProposals.length > 0 && (
-        <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
-          <h4 className="font-medium text-gray-700 mb-2">
-            {isSpanish ? '📋 Propuestas pendientes:' : '📋 Pending proposals:'}
-          </h4>
-          <div className="space-y-2">
-            {pendingProposals.map((prop) => (
-              <div 
-                key={prop.id}
-                className={`p-2 rounded text-sm cursor-pointer hover:bg-gray-100 transition-colors ${
-                  selectedProposal?.id === prop.id ? 'bg-yellow-100 border border-yellow-300' : ''
-                }`}
-                onClick={() => {
-                  console.log('🔄 Seleccionando propuesta:', prop.id);
-                  setSelectedProposal(prop);
-                  setResponseComments('');
-                }}
-              >
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">
-                    {isSpanish ? 'Propuesta del ' : 'Proposal from '}
-                    {prop.proposedAt?.toLocaleDateString?.() || 'fecha desconocida'}
-                  </span>
-                  <span className="text-xs bg-yellow-200 text-yellow-800 px-2 py-1 rounded">
-                    {prop.changes?.length || 0} {isSpanish ? 'cambios' : 'changes'}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  {isSpanish ? 'Por: ' : 'By: '}{prop.proposedByEmail}
-                </p>
-                <p className="text-xs text-gray-400 mt-1">
-                  {prop.changes?.map(c => c.field).join(', ')}
-                </p>
-              </div>
-            ))}
           </div>
         </div>
       )}
+    </motion.div>
+  );
+
+  if (loadingProposals) return (
+    <div className="flex flex-col items-center justify-center p-10 sm:p-20 space-y-4">
+      <div className="relative w-12 h-12">
+        <div className="absolute inset-0 border-4 border-indigo-100 rounded-full"></div>
+        <div className="absolute inset-0 border-4 border-indigo-600 rounded-full border-t-transparent animate-spin"></div>
+      </div>
+      <p className="text-slate-500 animate-pulse font-medium text-sm sm:text-base">
+        {isSpanish ? 'Sincronizando propuestas...' : 'Syncing proposals...'}
+      </p>
+    </div>
+  );
+
+  if (pendingProposals.length === 0) return (
+    <motion.div 
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+      className="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-8 sm:p-12 text-center"
+    >
+      <div className="bg-slate-50 w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+        <CheckCircle size={32} className="text-slate-300 sm:w-10 sm:h-10" />
+      </div>
+      <h3 className="text-lg sm:text-xl font-semibold text-slate-800 mb-2">
+        {isSpanish ? '¡Todo al día!' : 'Everything is up to date!'}
+      </h3>
+      <p className="text-sm sm:text-base text-slate-500 max-w-sm mx-auto">
+        {isSpanish 
+          ? 'No hay propuestas de cambios en los metadatos pendientes de tu revisión en este momento.' 
+          : 'There are no metadata change proposals pending your review at this time.'}
+      </p>
+    </motion.div>
+  );
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }} 
+      animate={{ opacity: 1, y: 0 }}
+      className="max-w-5xl mx-auto space-y-6 sm:space-y-8 pb-8 sm:pb-12 px-4 sm:px-0"
+    >
+      {/* Header - optimizado para móvil */}
+      <header className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start justify-between bg-gradient-to-br from-indigo-900 to-slate-900 rounded-xl sm:rounded-2xl p-5 sm:p-8 text-white shadow-xl relative overflow-hidden">
+        <div className="relative z-10 space-y-2 w-full sm:w-auto">
+          <div className="inline-flex items-center gap-2 bg-indigo-500/30 backdrop-blur-md px-3 py-1 rounded-full border border-indigo-400/30 text-[10px] sm:text-xs font-bold uppercase tracking-widest">
+            <ShieldCheck size={12} className="sm:w-3.5 sm:h-3.5" /> COPE Compliance
+          </div>
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-serif">
+            {isSpanish ? 'Revisión de Metadatos' : 'Metadata Review'}
+          </h2>
+          <p className="text-indigo-200 max-w-xl text-xs sm:text-sm leading-relaxed">
+            {isSpanish 
+              ? 'Como autor, tienes el control final sobre la integridad de tu artículo. Revisa cuidadosamente los cambios sugeridos por el equipo editorial.' 
+              : 'As an author, you have final control over your article\'s integrity. Carefully review the changes suggested by the editorial team.'}
+          </p>
+        </div>
+        <div className="relative z-10 bg-white/10 backdrop-blur-md rounded-xl p-3 sm:p-4 border border-white/20 w-full sm:w-auto sm:min-w-[200px]">
+          <div className="flex items-center gap-3">
+            <div className="bg-amber-400 p-1.5 sm:p-2 rounded-lg text-amber-900">
+              <Clock size={16} className="sm:w-5 sm:h-5" />
+            </div>
+            <div>
+              <p className="text-[8px] sm:text-[10px] text-indigo-300 uppercase font-bold tracking-tighter">Pendientes</p>
+              <p className="text-lg sm:text-xl font-bold">{pendingProposals.length}</p>
+            </div>
+          </div>
+          <p className="text-[9px] sm:text-[11px] text-indigo-200 italic mt-2">
+            {isSpanish ? 'Última actualización hoy' : 'Last updated today'}
+          </p>
+        </div>
+        <div className="absolute -right-10 -bottom-10 w-48 sm:w-64 h-48 sm:h-64 bg-indigo-500/10 rounded-full blur-3xl"></div>
+      </header>
+
+      {/* Proposal Selector - horizontal scroll en móvil */}
+      {pendingProposals.length > 1 && (
+        <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
+          {pendingProposals.map((prop, idx) => (
+            <button
+              key={prop.id}
+              onClick={() => setSelectedProposal(prop)}
+              className={`flex-shrink-0 flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-2 sm:py-3 rounded-xl transition-all border ${
+                selectedProposal?.id === prop.id 
+                ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200' 
+                : 'bg-white border-slate-200 text-slate-600 hover:border-indigo-300'
+              }`}
+            >
+              <History size={14} className="sm:w-4 sm:h-4" />
+              <div className="text-left">
+                <p className="text-[8px] sm:text-[10px] opacity-70 uppercase font-bold">{isSpanish ? 'Propuesta' : 'Proposal'} #{pendingProposals.length - idx}</p>
+                <p className="text-xs sm:text-sm font-semibold whitespace-nowrap">{prop.proposedAt?.toLocaleDateString()}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Main Review Area - stacked en móvil */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+        
+        {/* Left Col: Changes List */}
+        <div className="lg:col-span-2 space-y-4 sm:space-y-6">
+          <AnimatePresence mode="wait">
+            {selectedProposal && (
+              <motion.div
+                key={selectedProposal.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                className="space-y-4"
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm sm:text-base">
+                    <MessageSquare size={16} className="text-indigo-600 sm:w-5 sm:h-5" />
+                    {isSpanish ? 'Cambios Sugeridos' : 'Suggested Changes'} 
+                    <span className="bg-slate-200 text-slate-600 text-[10px] sm:text-xs px-2 py-0.5 rounded-full">
+                      {selectedProposal.changes?.length}
+                    </span>
+                  </h3>
+                </div>
+
+                <div className="space-y-3 sm:space-y-4">
+                  {selectedProposal.changes?.map((change, idx) => (
+                    <ChangeCard key={idx} change={change} index={idx} />
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Right Col: Actions & Feedback - sticky en desktop, normal en móvil */}
+        <div className="lg:col-span-1">
+          <div className="lg:sticky lg:top-6 space-y-4 sm:space-y-6">
+            <div className="bg-white border border-slate-200 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm">
+              <h4 className="font-bold text-slate-800 mb-3 sm:mb-4 flex items-center gap-2 text-xs sm:text-sm uppercase tracking-wider">
+                <User size={14} className="text-slate-400 sm:w-4 sm:h-4" />
+                {isSpanish ? 'Origen de Propuesta' : 'Proposal Source'}
+              </h4>
+              <div className="space-y-3 mb-4 sm:mb-6">
+                <div className="flex items-center gap-3 p-2 sm:p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold uppercase text-sm">
+                    {selectedProposal?.proposedByEmail?.charAt(0)}
+                  </div>
+                  <div className="overflow-hidden">
+                    <p className="text-xs sm:text-sm font-bold text-slate-700 truncate">{selectedProposal?.proposedByEmail}</p>
+                    <p className="text-[8px] sm:text-[10px] text-slate-500 uppercase">{isSpanish ? 'Editor Asignado' : 'Assigned Editor'}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <label className="block">
+                  <span className="text-xs font-bold text-slate-500 uppercase mb-2 block">{isSpanish ? 'Tus Comentarios' : 'Your Comments'}</span>
+                  <textarea
+                    value={responseComments}
+                    onChange={(e) => setResponseComments(e.target.value)}
+                    rows={4}
+                    className="w-full p-3 sm:p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-xs sm:text-sm"
+                    placeholder={isSpanish ? 'Opcional: Aclara dudas o justifica el rechazo...' : 'Optional: Clarify doubts or justify rejection...'}
+                  />
+                </label>
+
+                {localError && (
+                  <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                    className="flex items-center gap-2 p-2 sm:p-3 bg-rose-50 border border-rose-100 rounded-lg text-rose-600 text-[10px] sm:text-xs font-medium"
+                  >
+                    <AlertCircle size={12} className="sm:w-3.5 sm:h-3.5" /> {localError}
+                  </motion.div>
+                )}
+
+                <div className="grid grid-cols-1 gap-2 sm:gap-3">
+                  <button
+                    onClick={() => handleResponse(true)}
+                    disabled={loading}
+                    className="w-full py-3 sm:py-4 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white rounded-xl font-bold shadow-lg shadow-emerald-200 transition-all flex items-center justify-center gap-2 group text-sm sm:text-base"
+                  >
+                    {loading ? (
+                      <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <CheckCircle size={16} className="sm:w-5 sm:h-5 group-hover:scale-110 transition-transform" />
+                        {isSpanish ? 'ACEPTAR CAMBIOS' : 'ACCEPT CHANGES'}
+                      </>
+                    )}
+                  </button>
+                  
+                  <button
+                    onClick={() => handleResponse(false)}
+                    disabled={loading}
+                    className="w-full py-3 sm:py-4 bg-white hover:bg-rose-50 border border-slate-200 text-slate-600 hover:text-rose-600 hover:border-rose-200 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-sm sm:text-base"
+                  >
+                    <XCircle size={16} className="sm:w-5 sm:h-5" />
+                    {isSpanish ? 'RECHAZAR PROPUESTA' : 'REJECT PROPOSAL'}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-3 sm:p-4 bg-amber-50 border border-amber-100 rounded-xl">
+              <p className="text-[10px] sm:text-[11px] text-amber-800 leading-relaxed">
+                <strong>{isSpanish ? 'Importante:' : 'Note:'}</strong> {isSpanish 
+                  ? 'Al aceptar, los metadatos se actualizarán inmediatamente en la base de datos de producción.' 
+                  : 'Upon acceptance, metadata will be immediately updated in the production database.'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
     </motion.div>
   );
 };
