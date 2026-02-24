@@ -10,7 +10,7 @@ export const useMetadataRefinement = (user) => {
   const { language } = useLanguage();
   const isSpanish = language === 'es';
 
-  // 1. PROPOR CAMBIOS (Crea un nuevo documento en la subcolección)
+  // 1. PROPONER CAMBIOS (Crea un nuevo documento en la subcolección)
   const proposeChanges = useCallback(async (submissionId, changes) => {
     if (!user) {
       setError(isSpanish ? 'Usuario no autenticado' : 'User not authenticated');
@@ -246,7 +246,7 @@ export const useMetadataRefinement = (user) => {
     }
   }, [user, isSpanish]);
 
-  // 4. MARCAR COMO LISTO PARA PUBLICACIÓN (NUEVA FUNCIÓN)
+  // 4. MARCAR COMO LISTO PARA PUBLICACIÓN
   const markAsReadyForPublication = useCallback(async (submissionId) => {
     if (!user) {
       setError(isSpanish ? 'Usuario no autenticado' : 'User not authenticated');
@@ -309,6 +309,6 @@ export const useMetadataRefinement = (user) => {
     proposeChanges,
     respondToProposal,
     applyApprovedChanges,
-    markAsReadyForPublication // Exportamos la nueva función
+    markAsReadyForPublication
   };
 };

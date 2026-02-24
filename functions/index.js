@@ -5483,6 +5483,7 @@ async function sendEmailToEditor(editorEmail, eventType, submissionId) {
 // ===================== AUTO CREATE NEXT ROUND ON REVISION - VERSIÓN FINAL CORREGIDA =====================
 // ===================== AUTO CREATE NEXT ROUND ON REVISION - VERSIÓN CORREGIDA =====================
 // REEMPLAZA la función existente con esta.
+// ===================== AUTO CREATE NEXT ROUND ON REVISION - VERSIÓN CON NUEVA TAREA =====================
 exports.onAuthorRevisionSubmitted = onDocumentCreated(
   {
     document: 'submissions/{submissionId}/versions/{versionId}',
@@ -5516,115 +5517,147 @@ exports.onAuthorRevisionSubmitted = onDocumentCreated(
 
       console.log(`🎯 Procesando revisión para ronda ${newRound} de ${submissionId}`);
 
-      // ===== 1. ACTUALIZAR EL SUBMISSION =====
-      await submissionRef.update({
-        currentRound: newRound,
-        status: 'in-editorial-review',
-        lastRevisionAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      });
-
-      // ===== 2. BUSCAR LA TAREA PENDIENTE EN ESPERA DEL AUTOR =====
+      // ===== 1. BUSCAR LA TAREA PENDIENTE EN ESPERA DEL AUTOR (ronda anterior) =====
       const pendingTaskSnapshot = await db.collection('editorialTasks')
         .where('submissionId', '==', submissionId)
-        .where('status', '==', 'awaiting-author-revision') // Buscar la tarea en espera
+        .where('status', '==', 'awaiting-author-revision')
         .orderBy('createdAt', 'desc')
         .limit(1)
         .get();
 
-      let taskId, assignedTo, assignedToEmail, assignedToName, taskRef;
+      let oldTaskId = null;
+      let assignedTo, assignedToEmail, assignedToName;
 
-      if (!pendingTaskSnapshot.empty) {
-        // REACTIVAR la tarea existente
-        const existingTask = pendingTaskSnapshot.docs[0];
-        taskId = existingTask.id;
-        taskRef = existingTask.ref;
-        const taskData = existingTask.data();
-        
-        assignedTo = taskData.assignedTo;
-        assignedToEmail = taskData.assignedToEmail;
-        assignedToName = taskData.assignedToName;
-
-        await taskRef.update({
-          status: 'in-progress', // La tarea vuelve a estar activa
-          round: newRound, // Actualizamos la ronda
-          // Resetear contadores para la nueva ronda
-          acceptedReviewers: 0,
-          reviewsSubmitted: 0,
-          reviewerIds: [], // Limpiar revisores anteriores para nueva ronda
-          updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-        
-        console.log(`✅ Tarea existente ${taskId} reactivada para ronda ${newRound}`);
+      if (pendingTaskSnapshot.empty) {
+        // No debería pasar, pero por si acaso, intentamos obtener la última tarea de cualquier estado
+        console.log(`⚠️ No se encontró tarea en espera. Buscando la última tarea para obtener editor...`);
+        const lastTaskSnapshot = await db.collection('editorialTasks')
+          .where('submissionId', '==', submissionId)
+          .orderBy('createdAt', 'desc')
+          .limit(1)
+          .get();
+        if (lastTaskSnapshot.empty) {
+          console.error(`❌ No hay tareas previas para el envío ${submissionId}. No se puede asignar editor.`);
+          return;
+        }
+        const lastTask = lastTaskSnapshot.docs[0].data();
+        assignedTo = lastTask.assignedTo;
+        assignedToEmail = lastTask.assignedToEmail;
+        assignedToName = lastTask.assignedToName;
+        oldTaskId = lastTaskSnapshot.docs[0].id;
       } else {
-        // Este caso no debería ocurrir si el flujo es correcto, pero lo dejamos como fallback.
-        console.log(`⚠️ No se encontró tarea en espera. Buscando editor para nueva tarea...`);
-        // ... (código de fallback para crear una nueva tarea si es absolutamente necesario) ...
-        // [Mantén aquí tu lógica de fallback para crear una nueva tarea]
+        const oldTask = pendingTaskSnapshot.docs[0];
+        oldTaskId = oldTask.id;
+        const oldTaskData = oldTask.data();
+        assignedTo = oldTaskData.assignedTo;
+        assignedToEmail = oldTaskData.assignedToEmail;
+        assignedToName = oldTaskData.assignedToName;
       }
 
-      // ===== 3. CREAR REGISTRO DE REVISIÓN EDITORIAL VINCULADO A LA TAREA =====
+      // ===== 2. MARCAR LA TAREA ANTERIOR COMO COMPLETADA (si existe) =====
+      if (oldTaskId) {
+        await db.collection('editorialTasks').doc(oldTaskId).update({
+          status: 'completed',
+          completedAt: admin.firestore.FieldValue.serverTimestamp(),
+          nextTaskId: null, // Se actualizará después con el ID de la nueva tarea
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        console.log(`✅ Tarea anterior ${oldTaskId} marcada como completada.`);
+      }
+
+      // ===== 3. CREAR NUEVA TAREA EDITORIAL PARA LA NUEVA RONDA =====
+      const newTaskData = {
+        submissionId: submissionId,
+        submissionTitle: submissionData.title || 'Sin título',
+        round: newRound,
+        status: 'desk-review-in-progress', // La ponemos directamente en este estado para que el editor vea la pestaña de desk review
+        assignedTo: assignedTo,
+        assignedToEmail: assignedToEmail,
+        assignedToName: assignedToName,
+        assignedBy: assignedTo, // Asumimos que el mismo editor se asigna a sí mismo (o podría ser el sistema)
+        assignmentNotes: `Nueva ronda generada automáticamente tras recibir revisión del autor.`,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        // Inicializar contadores
+        acceptedReviewers: 0,
+        reviewsSubmitted: 0,
+        reviewerIds: []
+      };
+
+      const newTaskRef = await db.collection('editorialTasks').add(newTaskData);
+      const newTaskId = newTaskRef.id;
+      console.log(`✅ Nueva tarea creada: ${newTaskId} para ronda ${newRound}`);
+
+      // Actualizar la tarea anterior con el ID de la nueva (para trazabilidad)
+      if (oldTaskId) {
+        await db.collection('editorialTasks').doc(oldTaskId).update({
+          nextTaskId: newTaskId
+        });
+      }
+
+      // ===== 4. CREAR NUEVA REVISIÓN EDITORIAL VINCULADA A LA NUEVA TAREA =====
       const editorialReviewData = {
         submissionId: submissionId,
         round: newRound,
-        status: 'pending',
+        status: 'pending', // La revisión editorial empieza pendiente (aunque la tarea esté en desk-review-in-progress)
         editorUid: assignedTo,
         editorEmail: assignedToEmail,
         editorName: assignedToName,
-        editorialTaskId: taskId, // VINCULAR A LA TAREA CORRECTA
+        editorialTaskId: newTaskId,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
       };
 
       const editorialReviewRef = await db.collection('editorialReviews').add(editorialReviewData);
-      console.log(`✅ Nuevo registro editorial creado: ${editorialReviewRef.id} para tarea ${taskId}`);
+      console.log(`✅ Nueva revisión editorial creada: ${editorialReviewRef.id} para tarea ${newTaskId}`);
 
-      // ===== 4. ACTUALIZAR LA TAREA CON LA NUEVA REVIEW ID =====
-      await taskRef.update({
-  status: 'in-progress',
-  round: newRound,
-  acceptedReviewers: 0,
-  reviewsSubmitted: 0,
-  reviewerIds: [],
-  // 🔁 Limpiar campos de la decisión anterior
+      // ===== 5. ACTUALIZAR LA NUEVA TAREA CON EL ID DE LA REVIEW =====
+      await newTaskRef.update({
+        editorialReviewId: editorialReviewRef.id,
+        currentReviewId: editorialReviewRef.id
+      });
+
+      // ===== 6. ACTUALIZAR EL SUBMISSION CON LAS NUEVAS REFERENCIAS =====
+      await submissionRef.update({
+  currentRound: newRound,
+  status: 'in-editorial-review',
+  currentEditorialTaskId: newTaskId,
+  currentEditorialReviewId: editorialReviewRef.id,
+  lastRevisionAt: admin.firestore.FieldValue.serverTimestamp(),
+  updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  // Resetear campos de decisión (opcional pero recomendado)
   deskReviewDecision: null,
   deskReviewFeedback: '',
   deskReviewCompletedAt: null,
-  updatedAt: admin.firestore.FieldValue.serverTimestamp()
+  finalDecision: null,
+  finalFeedback: '',
+  decisionMadeAt: null,
+  decisionMadeBy: null
 });
-
-      // ===== 5. ACTUALIZAR SUBMISSION CON REFERENCIAS =====
-      await submissionRef.update({
-        currentEditorialTaskId: taskId,
-        currentEditorialReviewId: editorialReviewRef.id,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      });
-
-      // ===== 6. REGISTRAR EN AUDIT LOG =====
+      // ===== 7. REGISTRAR EN AUDIT LOG =====
       await db.collection('submissions').doc(submissionId)
         .collection('auditLogs').add({
-          action: pendingTaskSnapshot.empty ? 'new_round_created' : 'round_reactivated',
+          action: 'new_round_created_with_new_task',
           round: newRound,
-          details: pendingTaskSnapshot.empty 
-            ? `Ronda ${newRound} creada para nueva revisión` 
-            : `Ronda ${newRound} creada reactivando tarea ${taskId}`,
-          taskId: taskId,
+          details: `Ronda ${newRound} creada con nueva tarea ${newTaskId} y revisión ${editorialReviewRef.id}`,
+          oldTaskId: oldTaskId,
+          newTaskId: newTaskId,
           editorialReviewId: editorialReviewRef.id,
           versionId: versionId,
           assignedTo: assignedToEmail,
           timestamp: admin.firestore.FieldValue.serverTimestamp()
         });
 
-      // ===== 7. ENVIAR NOTIFICACIÓN AL EDITOR =====
+      // ===== 8. ENVIAR NOTIFICACIÓN AL EDITOR =====
       await sendNewRoundNotificationToEditor(
         submissionData,
-        { ...(await taskRef.get()).data(), id: taskId },
+        { ...newTaskData, id: newTaskId },
         editorialReviewRef.id,
         versionData,
         newRound
       );
 
-      console.log(`🎉 Ronda ${newRound} procesada exitosamente para ${submissionId} (tarea: ${taskId})`);
+      console.log(`🎉 Ronda ${newRound} creada exitosamente para ${submissionId} (nueva tarea: ${newTaskId})`);
 
     } catch (error) {
       console.error(`❌ Error en onAuthorRevisionSubmitted:`, error.message);

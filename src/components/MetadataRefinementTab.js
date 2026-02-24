@@ -13,7 +13,7 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
     loading, 
     proposeChanges, 
     applyApprovedChanges, 
-    markAsReadyForPublication  // Nueva función
+    markAsReadyForPublication
   } = useMetadataRefinement(user);
   
   const [proposedChanges, setProposedChanges] = useState([]);
@@ -25,6 +25,46 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
   // Estado para el historial de propuestas
   const [proposals, setProposals] = useState([]);
   const [selectedProposal, setSelectedProposal] = useState(null);
+
+  // Array de campos editables - ¡DEFINIDO CORRECTAMENTE!
+  const fields = [
+    { name: 'title', label: isSpanish ? 'Título' : 'Title', type: 'text', requiresConsent: true },
+    { name: 'titleEn', label: isSpanish ? 'Título (inglés)' : 'Title (English)', type: 'text', requiresConsent: true },
+    { name: 'abstract', label: isSpanish ? 'Resumen' : 'Abstract', type: 'textarea', requiresConsent: true },
+    { name: 'abstractEn', label: isSpanish ? 'Resumen (inglés)' : 'Abstract (English)', type: 'textarea', requiresConsent: true },
+    { name: 'keywords', label: isSpanish ? 'Palabras clave' : 'Keywords', type: 'text', requiresConsent: true },
+    { name: 'keywordsEn', label: isSpanish ? 'Palabras clave (inglés)' : 'Keywords (English)', type: 'text', requiresConsent: true },
+    { name: 'authors', label: isSpanish ? 'Autores' : 'Authors', type: 'textarea', requiresConsent: true },
+    { name: 'funding', label: isSpanish ? 'Financiamiento' : 'Funding', type: 'text', requiresConsent: false },
+    { name: 'conflictOfInterest', label: isSpanish ? 'Conflicto de intereses' : 'Conflict of interest', type: 'textarea', requiresConsent: false },
+    { name: 'dataAvailability', label: isSpanish ? 'Disponibilidad de datos' : 'Data availability', type: 'textarea', requiresConsent: false }
+  ];
+
+  // Función mejorada para obtener el valor actual
+  const getCurrentValue = (fieldName) => {
+    // 1. Buscar en metadata estructurada (si existe)
+    if (submission.currentMetadata && submission.currentMetadata[fieldName] !== undefined) {
+      return submission.currentMetadata[fieldName];
+    }
+    // 2. Buscar en originalSubmission (si existe)
+    if (submission.originalSubmission && submission.originalSubmission[fieldName] !== undefined) {
+      return submission.originalSubmission[fieldName];
+    }
+    // 3. Buscar directamente en el submission (campos raíz)
+    if (submission[fieldName] !== undefined) {
+      return submission[fieldName];
+    }
+    // 4. Si no se encuentra, retornar cadena vacía
+    return '';
+  };
+
+  // Debug: Mostrar estructura del submission en consola
+  useEffect(() => {
+    console.log('MetadataRefinementTab - submission:', submission);
+    console.log('currentMetadata:', submission.currentMetadata);
+    console.log('originalSubmission:', submission.originalSubmission);
+    console.log('Campos raíz disponibles:', Object.keys(submission));
+  }, [submission]);
 
   // Cargar historial de propuestas
   useEffect(() => {
@@ -49,12 +89,6 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
     return () => unsubscribe();
   }, [submission?.id]);
 
-  const fields = [ /* ... (tu array de fields, igual que antes) */ ];
-
-  const getCurrentValue = (fieldName) => {
-    return submission.currentMetadata?.[fieldName] || submission.originalSubmission?.[fieldName] || '';
-  };
-
   const handleAddChange = () => {
     if (!currentField || !fieldValue.trim() || !fieldReason.trim()) {
       alert(isSpanish ? 'Completa todos los campos' : 'Complete all fields');
@@ -71,7 +105,7 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
         currentValue,
         proposedValue: fieldValue,
         reason: fieldReason,
-        requiresAuthorConsent: requiresConsent && field.requiresConsent
+        requiresAuthorConsent: requiresConsent && (field?.requiresConsent || true)
       }
     ]);
 
@@ -121,13 +155,19 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
     const baseClasses = "px-2 py-1 text-xs rounded-full font-medium";
     
     if (proposal.status === 'pending-author') {
-      return <span className={`${baseClasses} bg-yellow-100 text-yellow-700`}>Pendiente de autor</span>;
+      return <span className={`${baseClasses} bg-yellow-100 text-yellow-700`}>
+        {isSpanish ? 'Pendiente de autor' : 'Pending author'}
+      </span>;
     }
     if (proposal.status === 'approved') {
-      return <span className={`${baseClasses} bg-green-100 text-green-700`}>Aprobada</span>;
+      return <span className={`${baseClasses} bg-green-100 text-green-700`}>
+        {isSpanish ? 'Aprobada' : 'Approved'}
+      </span>;
     }
     if (proposal.status === 'rejected') {
-      return <span className={`${baseClasses} bg-red-100 text-red-700`}>Rechazada</span>;
+      return <span className={`${baseClasses} bg-red-100 text-red-700`}>
+        {isSpanish ? 'Rechazada' : 'Rejected'}
+      </span>;
     }
     return null;
   };
@@ -168,6 +208,43 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
         </p>
       </div>
 
+      {/* SECCIÓN NUEVA: Metadatos actuales (solo lectura) */}
+      <div className="bg-[#F5F7FA] rounded-xl p-6 border border-[#E5E9F0]">
+        <h3 className="font-['Playfair_Display'] font-bold text-[#0A1929] text-lg mb-4">
+          {isSpanish ? '📋 Metadatos actuales' : '📋 Current metadata'}
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <p className="text-xs text-[#5A6B7A] uppercase">Título</p>
+            <p className="font-medium">{submission.title || '—'}</p>
+          </div>
+          <div>
+            <p className="text-xs text-[#5A6B7A] uppercase">Título (EN)</p>
+            <p className="font-medium">{submission.titleEn || '—'}</p>
+          </div>
+          <div className="md:col-span-2">
+            <p className="text-xs text-[#5A6B7A] uppercase">Resumen</p>
+            <p className="font-medium text-sm">{submission.abstract || '—'}</p>
+          </div>
+          <div className="md:col-span-2">
+            <p className="text-xs text-[#5A6B7A] uppercase">Resumen (EN)</p>
+            <p className="font-medium text-sm">{submission.abstractEn || '—'}</p>
+          </div>
+          <div>
+            <p className="text-xs text-[#5A6B7A] uppercase">Palabras clave</p>
+            <p className="font-medium">{submission.keywords || '—'}</p>
+          </div>
+          <div>
+            <p className="text-xs text-[#5A6B7A] uppercase">Palabras clave (EN)</p>
+            <p className="font-medium">{submission.keywordsEn || '—'}</p>
+          </div>
+          <div className="md:col-span-2">
+            <p className="text-xs text-[#5A6B7A] uppercase">Autores</p>
+            <p className="font-medium text-sm">{submission.authors || '—'}</p>
+          </div>
+        </div>
+      </div>
+
       {/* Formulario para nueva propuesta */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <h3 className="text-lg font-bold mb-4">
@@ -175,34 +252,41 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
         </h3>
         
         {/* Lista de cambios propuestos en esta sesión */}
-        {proposedChanges.length > 0 && (
-          <div className="bg-blue-50 rounded-lg p-4 mb-4">
-            <h4 className="font-bold mb-3">
-              {isSpanish ? 'Cambios a enviar:' : 'Changes to send:'}
-            </h4>
-            <div className="space-y-2">
-              {proposedChanges.map((change, idx) => (
-                <div key={idx} className="flex items-start justify-between bg-white p-3 rounded border border-blue-200">
-                  <div className="flex-1">
-                    <p className="font-medium">{change.field}</p>
-                    <p className="text-sm text-gray-600">
-                      <span className="line-through">{JSON.stringify(change.currentValue)}</span>
-                      {' → '}
-                      <span className="text-green-600">{JSON.stringify(change.proposedValue)}</span>
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">Razón: {change.reason}</p>
+        <AnimatePresence>
+          {proposedChanges.length > 0 && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="bg-blue-50 rounded-lg p-4 mb-4"
+            >
+              <h4 className="font-bold mb-3">
+                {isSpanish ? 'Cambios a enviar:' : 'Changes to send:'}
+              </h4>
+              <div className="space-y-2">
+                {proposedChanges.map((change, idx) => (
+                  <div key={idx} className="flex items-start justify-between bg-white p-3 rounded border border-blue-200">
+                    <div className="flex-1">
+                      <p className="font-medium">{fields.find(f => f.name === change.field)?.label || change.field}</p>
+                      <p className="text-sm text-gray-600">
+                        <span className="line-through">{JSON.stringify(change.currentValue)}</span>
+                        {' → '}
+                        <span className="text-green-600">{JSON.stringify(change.proposedValue)}</span>
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">Razón: {change.reason}</p>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveChange(idx)}
+                      className="text-red-500 hover:text-red-700 ml-2 text-xl"
+                    >
+                      ×
+                    </button>
                   </div>
-                  <button
-                    onClick={() => handleRemoveChange(idx)}
-                    className="text-red-500 hover:text-red-700 ml-2"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Formulario para agregar un cambio */}
         <div className="grid grid-cols-1 gap-4">
@@ -216,7 +300,7 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
                 setCurrentField(e.target.value);
                 setFieldValue(getCurrentValue(e.target.value));
               }}
-              className="w-full p-2 border rounded-lg"
+              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">{isSpanish ? 'Seleccionar...' : 'Select...'}</option>
               {fields.map(f => (
@@ -231,8 +315,8 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {isSpanish ? 'Valor actual' : 'Current value'}
                 </label>
-                <div className="p-2 bg-gray-100 rounded-lg text-sm">
-                  {JSON.stringify(getCurrentValue(currentField))}
+                <div className="p-2 bg-gray-100 rounded-lg text-sm font-mono">
+                  {getCurrentValue(currentField) || '—'}
                 </div>
               </div>
 
@@ -245,14 +329,14 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
                     value={fieldValue}
                     onChange={(e) => setFieldValue(e.target.value)}
                     rows={4}
-                    className="w-full p-2 border rounded-lg"
+                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 ) : (
                   <input
                     type="text"
                     value={fieldValue}
                     onChange={(e) => setFieldValue(e.target.value)}
-                    className="w-full p-2 border rounded-lg"
+                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 )}
               </div>
@@ -266,13 +350,26 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
                   onChange={(e) => setFieldReason(e.target.value)}
                   rows={2}
                   placeholder={isSpanish ? 'Explica por qué este cambio mejora el artículo...' : 'Explain why this change improves the article...'}
-                  className="w-full p-2 border rounded-lg"
+                  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="requiresConsent"
+                  checked={requiresConsent}
+                  onChange={(e) => setRequiresConsent(e.target.checked)}
+                  className="mr-2"
+                />
+                <label htmlFor="requiresConsent" className="text-sm text-gray-700">
+                  {isSpanish ? 'Este cambio requiere consentimiento del autor' : 'This change requires author consent'}
+                </label>
               </div>
 
               <button
                 onClick={handleAddChange}
-                className="py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 {isSpanish ? '➕ Agregar a propuesta' : '➕ Add to proposal'}
               </button>
@@ -282,20 +379,25 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
 
         {/* Botón para enviar propuesta */}
         {proposedChanges.length > 0 && (
-          <button
-            onClick={handleSubmitProposal}
-            disabled={loading}
-            className="w-full mt-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400"
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
           >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                {isSpanish ? 'ENVIANDO...' : 'SENDING...'}
-              </span>
-            ) : (
-              isSpanish ? '📨 ENVIAR PROPUESTA AL AUTOR' : '📨 SEND PROPOSAL TO AUTHOR'
-            )}
-          </button>
+            <button
+              onClick={handleSubmitProposal}
+              disabled={loading}
+              className="w-full mt-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 transition-colors font-bold"
+            >
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  {isSpanish ? 'ENVIANDO...' : 'SENDING...'}
+                </span>
+              ) : (
+                isSpanish ? '📨 ENVIAR PROPUESTA AL AUTOR' : '📨 SEND PROPOSAL TO AUTHOR'
+              )}
+            </button>
+          </motion.div>
         )}
       </div>
 
@@ -308,7 +410,7 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
           
           <div className="space-y-4">
             {proposals.map((proposal) => (
-              <div key={proposal.id} className="bg-white rounded-lg border p-4">
+              <div key={proposal.id} className="bg-white rounded-lg border p-4 hover:shadow-md transition-shadow">
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <p className="text-sm text-gray-500">
@@ -326,7 +428,10 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
                   {proposal.changes.map((change, idx) => (
                     <div key={idx} className="text-sm border-l-2 border-gray-200 pl-3">
                       <p className="font-medium">{change.field}</p>
-                      <p className="text-xs text-gray-500">{change.reason}</p>
+                      <p className="text-xs text-gray-600 mt-1">{change.reason}</p>
+                      {change.authorResponse && (
+                        <p className="text-xs mt-1 italic">"{change.authorResponse}"</p>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -351,7 +456,7 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
                   <button
                     onClick={() => handleApplyApprovedChanges(proposal.id)}
                     disabled={loading}
-                    className="mt-3 w-full py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                    className="mt-3 w-full py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
                   >
                     {isSpanish ? 'Aplicar estos cambios' : 'Apply these changes'}
                   </button>
@@ -367,7 +472,7 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
         <button
           onClick={handleMarkAsReady}
           disabled={loading}
-          className="w-full py-4 bg-green-700 text-white font-bold rounded-lg hover:bg-green-800 disabled:bg-gray-400 text-lg"
+          className="w-full py-4 bg-green-700 text-white font-bold rounded-lg hover:bg-green-800 disabled:bg-gray-400 text-lg transition-colors"
         >
           {loading ? (
             <span className="flex items-center justify-center gap-2">
