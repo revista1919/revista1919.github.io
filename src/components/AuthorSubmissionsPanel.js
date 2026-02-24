@@ -162,6 +162,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
 
   // Cargar envíos del usuario actual
   // ==================== REEMPLAZA TU useEffect COMPLETO con este ====================
+// ==================== useEffect CORREGIDO ====================
 useEffect(() => {
   if (!user?.uid) {
     setLoading(false);
@@ -178,27 +179,37 @@ useEffect(() => {
   // MAPA para almacenar los listeners de reseñas
   const reviewsListeners = new Map();
 
-  const unsubscribe = onSnapshot(q, async (snapshot) => {
-    // Primero, limpiamos listeners anteriores
-    reviewsListeners.forEach((unsub) => unsub());
-    reviewsListeners.clear();
-
-    const submissionsList = await Promise.all(snapshot.docs.map(async (doc) => {
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    // 1. PRIMERO: Crear la lista base de submissions
+    const baseSubmissionsList = snapshot.docs.map(doc => {
       const data = doc.data();
-      const submissionId = doc.id;
-      
-      // Crear objeto base
-      const submissionObj = {
-        id: submissionId,
+      return {
+        id: doc.id,
         ...data,
         createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
         updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
         deskReviewCompletedAt: data.deskReviewCompletedAt?.toDate?.(),
         decisionMadeAt: data.decisionMadeAt?.toDate?.(),
-        reviews: [] // Inicializar array vacío de reseñas
+        reviews: [] // Inicializar vacío
       };
+    });
 
-      // Escuchar la subcolección 'reviews' para este submission
+    // Ordenar por fecha
+    baseSubmissionsList.sort((a, b) => b.createdAt - a.createdAt);
+    
+    // 2. ACTUALIZAR EL ESTADO CON LA LISTA BASE
+    setSubmissions(baseSubmissionsList);
+    setLoading(false);
+
+    // 3. DESPUÉS: Configurar listeners para las reseñas de CADA submission
+    // Limpiar listeners anteriores
+    reviewsListeners.forEach((unsub) => unsub());
+    reviewsListeners.clear();
+
+    // Por cada submission, crear un listener para su subcolección 'reviews'
+    snapshot.docs.forEach(doc => {
+      const submissionId = doc.id;
+      
       const reviewsQuery = query(
         collection(db, 'submissions', submissionId, 'reviews')
       );
@@ -210,7 +221,7 @@ useEffect(() => {
           submittedAt: reviewDoc.data().submittedAt?.toDate?.() || reviewDoc.data().submittedAt
         }));
         
-        // Actualizar el estado submissions con las nuevas reseñas
+        // Actualizar SOLO el submission correspondiente
         setSubmissions(prevSubs => 
           prevSubs.map(sub => 
             sub.id === submissionId 
@@ -218,33 +229,36 @@ useEffect(() => {
               : sub
           )
         );
+        
+        console.log(`📬 Reviews actualizadas para ${submissionId}:`, reviews.length);
       }, (error) => {
         console.error(`Error loading reviews for ${submissionId}:`, error);
       });
 
-      // Guardar el listener para limpiarlo después
       reviewsListeners.set(submissionId, unsubscribeReviews);
-
-      return submissionObj;
-    }));
-
-    // Ordenar por fecha de creación
-    submissionsList.sort((a, b) => b.createdAt - a.createdAt);
-    
-    setSubmissions(submissionsList);
-    setLoading(false);
+    });
   }, (error) => {
     console.error('Error loading submissions:', error);
     setLoading(false);
   });
 
-  // Cleanup function
+  // Cleanup
   return () => {
     unsubscribe();
     reviewsListeners.forEach((unsub) => unsub());
     reviewsListeners.clear();
   };
 }, [user]);
+// AÑADE ESTO TEMPORALMENTE PARA DEPURAR (debajo de tu useEffect principal)
+useEffect(() => {
+  console.log('📊 Estado actual de submissions:');
+  submissions.forEach(sub => {
+    console.log(`- ${sub.id}: ${sub.reviews?.length || 0} reseñas`);
+    if (sub.reviews?.length > 0) {
+      console.log('  Primera reseña:', sub.reviews[0]);
+    }
+  });
+}, [submissions]);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
