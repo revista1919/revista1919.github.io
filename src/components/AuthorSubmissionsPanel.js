@@ -250,15 +250,7 @@ useEffect(() => {
   };
 }, [user]);
 // AÑADE ESTO TEMPORALMENTE PARA DEPURAR (debajo de tu useEffect principal)
-useEffect(() => {
-  console.log('📊 Estado actual de submissions:');
-  submissions.forEach(sub => {
-    console.log(`- ${sub.id}: ${sub.reviews?.length || 0} reseñas`);
-    if (sub.reviews?.length > 0) {
-      console.log('  Primera reseña:', sub.reviews[0]);
-    }
-  });
-}, [submissions]);
+
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];

@@ -1,14 +1,23 @@
 // src/components/DeskReviewTab.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../hooks/useLanguage';
 import { useEditorialReview } from '../hooks/useEditorialReview';
+import { doc, getDoc, collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { db } from '../firebase';
 
 export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading }) => {
   const { language } = useLanguage();
   const isSpanish = language === 'es';
-  const [decision, setDecision] = useState(task.deskReviewDecision || '');
-  const [feedback, setFeedback] = useState(task.deskReviewFeedback || '');
-  const [internalComments, setInternalComments] = useState(task.deskReviewComments || '');
+  
+  // Estados para el formulario
+  const [decision, setDecision] = useState('');
+  const [feedback, setFeedback] = useState('');
+  const [internalComments, setInternalComments] = useState('');
+  
+  // Estados para datos adicionales
+  const [editorialReview, setEditorialReview] = useState(null);
+  const [loadingReview, setLoadingReview] = useState(false);
+  const [latestRevisionUrl, setLatestRevisionUrl] = useState(null);
   
   // Usar el hook para manejar la revisión editorial
   const { loading: hookLoading, error, submitDeskReviewDecision } = useEditorialReview(user);
@@ -16,7 +25,50 @@ export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading
   const submission = task.submission || {};
   
   // Combinar el loading externo con el del hook
-  const isLoading = externalLoading || hookLoading;
+  const isLoading = externalLoading || hookLoading || loadingReview;
+
+  // Cargar la revisión editorial
+  useEffect(() => {
+    const loadEditorialReview = async () => {
+      if (!task.editorialReviewId) return;
+      setLoadingReview(true);
+      try {
+        const reviewSnap = await getDoc(doc(db, 'editorialReviews', task.editorialReviewId));
+        if (reviewSnap.exists()) {
+          const data = reviewSnap.data();
+          setEditorialReview(data);
+          // Inicializar el formulario con los datos de la review (si existen)
+          setDecision(data.decision || '');
+          setFeedback(data.feedbackToAuthor || '');
+          setInternalComments(data.commentsToEditorial || '');
+        }
+      } catch (error) {
+        console.error('Error loading editorial review:', error);
+      } finally {
+        setLoadingReview(false);
+      }
+    };
+    loadEditorialReview();
+  }, [task.editorialReviewId]);
+
+  // Cargar la última revisión del submission
+  useEffect(() => {
+    const fetchLatestRevision = async () => {
+      if (!task.submissionId) return;
+      try {
+        const versionsRef = collection(db, 'submissions', task.submissionId, 'versions');
+        const q = query(versionsRef, where('type', '==', 'revision'), orderBy('uploadedAt', 'desc'), limit(1));
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+          const data = snapshot.docs[0].data();
+          setLatestRevisionUrl(data.fileUrl);
+        }
+      } catch (error) {
+        console.error('Error fetching latest revision:', error);
+      }
+    };
+    fetchLatestRevision();
+  }, [task.submissionId]);
 
   // Función handleSubmit corregida
   const handleSubmit = async () => {
@@ -29,10 +81,10 @@ export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading
 
       // Validar que hay un reviewId en el task
       if (!task.editorialReviewId) {
-  console.error('No editorialReviewId found in task');
-  alert(isSpanish ? 'Error: ID de revisión no encontrado' : 'Error: Review ID not found');
-  return;
-}
+        console.error('No editorialReviewId found in task');
+        alert(isSpanish ? 'Error: ID de revisión no encontrado' : 'Error: Review ID not found');
+        return;
+      }
 
       // Preparar los datos de la decisión
       const decisionData = {
@@ -78,6 +130,20 @@ export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading
     }).join('; ');
   };
 
+  // Mostrar loader mientras se carga la revisión
+  if (loadingReview) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-[#C0A86A] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[#5A6B7A] font-['Lora']">
+            {isSpanish ? 'Cargando revisión editorial...' : 'Loading editorial review...'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Mostrar error si existe */}
@@ -103,17 +169,32 @@ export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading
               {isSpanish ? ' Ronda:' : ' Round:'} {submission.currentRound || 1}
             </p>
           </div>
-          <a 
-            href={submission.driveFolderUrl} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg transition-colors text-sm whitespace-nowrap"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            {isSpanish ? 'Ver archivos en Drive' : 'View files in Drive'}
-          </a>
+          <div className="flex gap-2">
+            {latestRevisionUrl && (
+              <a 
+                href={latestRevisionUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors text-sm whitespace-nowrap"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                {isSpanish ? 'Ver última revisión' : 'View latest revision'}
+              </a>
+            )}
+            <a 
+              href={submission.driveFolderUrl} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg transition-colors text-sm whitespace-nowrap"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              {isSpanish ? 'Ver archivos en Drive' : 'View files in Drive'}
+            </a>
+          </div>
         </div>
       </div>
 

@@ -4503,144 +4503,6 @@ exports.onEditorialTaskAwaitingDecision = onDocumentUpdated(
 
 /* ===================== NUEVO: MANEJO DE RONDAS MÚLTIPLES ===================== */
 
-/**
- * 9. FUNCIÓN: Crear una nueva ronda de revisión
- * (Puede ser llamada desde una Cloud Function o desde el frontend)
- */
-exports.createNewReviewRound = onCall(
-  {
-    secrets: [],
-    memory: '256MiB'
-  },
-  async (request) => {
-    const { HttpsError } = require("firebase-functions/v2/https");
-    
-    try {
-      if (!request.auth) {
-        throw new HttpsError('unauthenticated', 'Debes iniciar sesión');
-      }
-      
-      const { submissionId, roundNumber, revisionNotes } = request.data;
-      
-      if (!submissionId || !roundNumber) {
-        throw new HttpsError('invalid-argument', 'Faltan datos requeridos');
-      }
-      
-      const db = admin.firestore();
-      const uid = request.auth.uid;
-      
-      // Verificar permisos
-      const userDoc = await db.collection('users').doc(uid).get();
-      const userRoles = userDoc.data()?.roles || [];
-      const isEditor = userRoles.includes('Director General') || 
-                       userRoles.includes('Editor en Jefe') || 
-                       userRoles.includes('Editor de Sección');
-      
-      if (!isEditor) {
-        throw new HttpsError('permission-denied', 'No tienes permiso para crear nuevas rondas');
-      }
-      
-      // Obtener el submission
-      const submissionRef = db.collection('submissions').doc(submissionId);
-      const submissionSnap = await submissionRef.get();
-      
-      if (!submissionSnap.exists) {
-        throw new HttpsError('not-found', 'Submission no encontrado');
-      }
-      
-      const submission = submissionSnap.data();
-      
-      // Actualizar submission para nueva ronda
-      await submissionRef.update({
-        currentRound: roundNumber,
-        status: 'in-reviewer-selection',
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      });
-      
-      // Crear una nueva editorialTask para esta ronda
-      // (Aquí deberías determinar a qué editor asignarla)
-      const editorsSnapshot = await db.collection('users')
-        .where('roles', 'array-contains', 'Editor de Sección')
-        .where('editorialArea', '==', submission.area)
-        .limit(1)
-        .get();
-      
-      let assignedTo = null;
-      let assignedToEmail = null;
-      let assignedToName = null;
-      
-      if (!editorsSnapshot.empty) {
-        const editor = editorsSnapshot.docs[0].data();
-        assignedTo = editorsSnapshot.docs[0].id;
-        assignedToEmail = editor.email;
-        assignedToName = editor.displayName || `${editor.firstName || ''} ${editor.lastName || ''}`.trim();
-      }
-      
-      // Si no hay editor de sección, asignar al Editor en Jefe
-      if (!assignedTo) {
-        const chiefSnapshot = await db.collection('users')
-          .where('roles', 'array-contains', 'Editor en Jefe')
-          .limit(1)
-          .get();
-        
-        if (!chiefSnapshot.empty) {
-          const chief = chiefSnapshot.docs[0].data();
-          assignedTo = chiefSnapshot.docs[0].id;
-          assignedToEmail = chief.email;
-          assignedToName = chief.displayName || `${chief.firstName || ''} ${chief.lastName || ''}`.trim();
-        } else {
-          // Fallback
-          assignedTo = uid;
-          assignedToEmail = request.auth.token.email || '';
-          assignedToName = 'Editor';
-        }
-      }
-      
-      const taskData = {
-        submissionId: submissionId,
-        round: roundNumber,
-        assignedTo: assignedTo,
-        assignedToEmail: assignedToEmail,
-        assignedToName: assignedToName,
-        assignedBy: uid,
-        status: 'pending',
-        revisionNotes: revisionNotes || '',
-        requiredReviewers: 2,
-        reviewsSubmitted: 0,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      };
-      
-      const taskRef = await db.collection('editorialTasks').add(taskData);
-      
-      // Registrar en audit log
-      await db.collection('submissions').doc(submissionId)
-        .collection('auditLogs').add({
-          action: 'new_round_created',
-          round: roundNumber,
-          by: uid,
-          byEmail: request.auth.token.email || '',
-          taskId: taskRef.id,
-          notes: revisionNotes,
-          timestamp: admin.firestore.FieldValue.serverTimestamp()
-        });
-      
-      return {
-        success: true,
-        taskId: taskRef.id,
-        round: roundNumber,
-        message: `Nueva ronda ${roundNumber} creada exitosamente`
-      };
-      
-    } catch (error) {
-      console.error('❌ Error en createNewReviewRound:', error);
-      
-      if (error instanceof HttpsError) throw error;
-      throw new HttpsError('internal', error.message);
-    }
-  }
-);
-// ===================== NUEVO TRIGGER: ALCANZAR MÍNIMO DE REVISORES ACEPTADOS =====================
 // ===================== NUEVO TRIGGER: CUANDO SE CREAN DOCUMENTOS DE ASIGNACIÓN Y HAY MÍNIMO DOS =====================
 // REEMPLAZA la función 'onReviewerAssignmentStatusChanged' o 'onReviewerAssignmentAccepted' con esta.
 
@@ -5242,7 +5104,6 @@ exports.submitRevision = onRequest(
       
       await submissionRef.update({
         status: 'in-desk-review',
-        currentRound: round + 1,
         lastRevisionAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
       });
@@ -5618,13 +5479,8 @@ async function sendEmailToEditor(editorEmail, eventType, submissionId) {
   
   await sendEmailViaExtension(editorEmail, subject, htmlBody);
 }
-/* ===================== AUTO CREATE NEXT ROUND ON REVISION ===================== */
-/**
- * TRIGGER: Cuando se crea una nueva versión (el autor sube revisión)
- * Automáticamente crea la siguiente ronda y notifica al editor
- */
-/* ===================== AUTO CREATE NEXT ROUND ON REVISION - VERSIÓN CORREGIDA ===================== */
-// ===================== AUTO CREATE NEXT ROUND ON REVISION - VERSIÓN CORREGIDA =====================
+
+// ===================== AUTO CREATE NEXT ROUND ON REVISION - VERSIÓN FINAL CORREGIDA =====================
 // ===================== AUTO CREATE NEXT ROUND ON REVISION - VERSIÓN CORREGIDA =====================
 // REEMPLAZA la función existente con esta.
 exports.onAuthorRevisionSubmitted = onDocumentCreated(
@@ -5725,10 +5581,17 @@ exports.onAuthorRevisionSubmitted = onDocumentCreated(
 
       // ===== 4. ACTUALIZAR LA TAREA CON LA NUEVA REVIEW ID =====
       await taskRef.update({
-        editorialReviewId: editorialReviewRef.id,
-        currentReviewId: editorialReviewRef.id,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      });
+  status: 'in-progress',
+  round: newRound,
+  acceptedReviewers: 0,
+  reviewsSubmitted: 0,
+  reviewerIds: [],
+  // 🔁 Limpiar campos de la decisión anterior
+  deskReviewDecision: null,
+  deskReviewFeedback: '',
+  deskReviewCompletedAt: null,
+  updatedAt: admin.firestore.FieldValue.serverTimestamp()
+});
 
       // ===== 5. ACTUALIZAR SUBMISSION CON REFERENCIAS =====
       await submissionRef.update({
