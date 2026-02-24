@@ -26,7 +26,27 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
   const [proposals, setProposals] = useState([]);
   const [selectedProposal, setSelectedProposal] = useState(null);
 
-  // Array de campos editables - ¡DEFINIDO CORRECTAMENTE!
+  // Función para formatear valores (especialmente objetos como autores)
+  const formatValue = (value) => {
+    if (value === null || value === undefined) return '—';
+    if (typeof value === 'object') {
+      // Si es un array de autores
+      if (Array.isArray(value)) {
+        if (value.length === 0) return '—';
+        return value.map(author => {
+          if (typeof author === 'object') {
+            return `${author.firstName || ''} ${author.lastName || ''}`.trim() || 'Autor sin nombre';
+          }
+          return String(author);
+        }).join(', ');
+      }
+      // Si es un objeto simple
+      return JSON.stringify(value, null, 2);
+    }
+    return String(value);
+  };
+
+  // Array de campos editables
   const fields = [
     { name: 'title', label: isSpanish ? 'Título' : 'Title', type: 'text', requiresConsent: true },
     { name: 'titleEn', label: isSpanish ? 'Título (inglés)' : 'Title (English)', type: 'text', requiresConsent: true },
@@ -216,31 +236,31 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <p className="text-xs text-[#5A6B7A] uppercase">Título</p>
-            <p className="font-medium">{submission.title || '—'}</p>
+            <p className="font-medium">{formatValue(submission.title)}</p>
           </div>
           <div>
             <p className="text-xs text-[#5A6B7A] uppercase">Título (EN)</p>
-            <p className="font-medium">{submission.titleEn || '—'}</p>
+            <p className="font-medium">{formatValue(submission.titleEn)}</p>
           </div>
           <div className="md:col-span-2">
             <p className="text-xs text-[#5A6B7A] uppercase">Resumen</p>
-            <p className="font-medium text-sm">{submission.abstract || '—'}</p>
+            <p className="font-medium text-sm">{formatValue(submission.abstract)}</p>
           </div>
           <div className="md:col-span-2">
             <p className="text-xs text-[#5A6B7A] uppercase">Resumen (EN)</p>
-            <p className="font-medium text-sm">{submission.abstractEn || '—'}</p>
+            <p className="font-medium text-sm">{formatValue(submission.abstractEn)}</p>
           </div>
           <div>
             <p className="text-xs text-[#5A6B7A] uppercase">Palabras clave</p>
-            <p className="font-medium">{submission.keywords || '—'}</p>
+            <p className="font-medium">{formatValue(submission.keywords)}</p>
           </div>
           <div>
             <p className="text-xs text-[#5A6B7A] uppercase">Palabras clave (EN)</p>
-            <p className="font-medium">{submission.keywordsEn || '—'}</p>
+            <p className="font-medium">{formatValue(submission.keywordsEn)}</p>
           </div>
           <div className="md:col-span-2">
             <p className="text-xs text-[#5A6B7A] uppercase">Autores</p>
-            <p className="font-medium text-sm">{submission.authors || '—'}</p>
+            <p className="font-medium text-sm">{formatValue(submission.authors)}</p>
           </div>
         </div>
       </div>
@@ -268,11 +288,15 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
                   <div key={idx} className="flex items-start justify-between bg-white p-3 rounded border border-blue-200">
                     <div className="flex-1">
                       <p className="font-medium">{fields.find(f => f.name === change.field)?.label || change.field}</p>
-                      <p className="text-sm text-gray-600">
-                        <span className="line-through">{JSON.stringify(change.currentValue)}</span>
+                      <div className="text-sm text-gray-600">
+                        <div className="line-through text-gray-400">
+                          {formatValue(change.currentValue)}
+                        </div>
                         {' → '}
-                        <span className="text-green-600">{JSON.stringify(change.proposedValue)}</span>
-                      </p>
+                        <span className="text-green-600 font-medium">
+                          {formatValue(change.proposedValue)}
+                        </span>
+                      </div>
                       <p className="text-xs text-gray-500 mt-1">Razón: {change.reason}</p>
                     </div>
                     <button
@@ -316,7 +340,7 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
                   {isSpanish ? 'Valor actual' : 'Current value'}
                 </label>
                 <div className="p-2 bg-gray-100 rounded-lg text-sm font-mono">
-                  {getCurrentValue(currentField) || '—'}
+                  {formatValue(getCurrentValue(currentField))}
                 </div>
               </div>
 
@@ -329,16 +353,21 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
                     value={fieldValue}
                     onChange={(e) => setFieldValue(e.target.value)}
                     rows={4}
-                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
+                    placeholder={isSpanish ? 'Ingresa el nuevo valor...' : 'Enter the new value...'}
                   />
                 ) : (
                   <input
                     type="text"
                     value={fieldValue}
                     onChange={(e) => setFieldValue(e.target.value)}
-                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
+                    placeholder={isSpanish ? 'Ingresa el nuevo valor...' : 'Enter the new value...'}
                   />
                 )}
+                <p className="text-xs text-gray-500 mt-1">
+                  {isSpanish ? 'Para autores, usa el formato: Apellido, Nombre; Apellido2, Nombre2' : 'For authors, use format: LastName, FirstName; LastName2, FirstName2'}
+                </p>
               </div>
 
               <div>
@@ -428,10 +457,12 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
                   {proposal.changes.map((change, idx) => (
                     <div key={idx} className="text-sm border-l-2 border-gray-200 pl-3">
                       <p className="font-medium">{change.field}</p>
-                      <p className="text-xs text-gray-600 mt-1">{change.reason}</p>
-                      {change.authorResponse && (
-                        <p className="text-xs mt-1 italic">"{change.authorResponse}"</p>
-                      )}
+                      <div className="text-xs text-gray-600 mt-1">
+                        <span className="line-through text-gray-400">{formatValue(change.currentValue)}</span>
+                        {' → '}
+                        <span className="text-green-600">{formatValue(change.proposedValue)}</span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">{change.reason}</p>
                     </div>
                   ))}
                 </div>
