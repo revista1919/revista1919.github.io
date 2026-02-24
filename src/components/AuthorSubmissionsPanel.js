@@ -1,4 +1,4 @@
-// src/components/AuthorSubmissionsPanel.js (VERSIÓN CORREGIDA)
+// src/components/AuthorSubmissionsPanel.js
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db, auth, submitRevision } from '../firebase';
@@ -159,98 +159,213 @@ const AuthorSubmissionsPanel = ({ user }) => {
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [expandedSubmission, setExpandedSubmission] = useState(null);
+  const [debugInfo, setDebugInfo] = useState({});
 
-  // Cargar envíos del usuario actual
-  // ==================== REEMPLAZA TU useEffect COMPLETO con este ====================
-// ==================== useEffect CORREGIDO ====================
-useEffect(() => {
-  if (!user?.uid) {
-    setLoading(false);
-    return;
-  }
+  // LOG DE DEPURACIÓN: Verificar props iniciales
+  useEffect(() => {
+    console.log('🔍 [AuthorSubmissionsPanel] Montado con user:', user?.uid);
+    if (user) {
+      console.log('🔍 Email del usuario:', user.email);
+      console.log('🔍 Roles:', user.roles);
+    }
+  }, [user]);
 
-  console.log('Cargando envíos para usuario:', user.uid);
+  // Cargar envíos del usuario actual con LOGS EXTENSIVOS
+  useEffect(() => {
+    if (!user?.uid) {
+      console.log('⚠️ [AuthorSubmissionsPanel] No hay usuario autenticado');
+      setLoading(false);
+      return;
+    }
 
-  const q = query(
-    collection(db, 'submissions'),
-    where('authorUID', '==', user.uid)
-  );
+    console.log('🚀 [AuthorSubmissionsPanel] Iniciando carga de envíos para:', user.uid);
 
-  // MAPA para almacenar los listeners de reseñas
-  const reviewsListeners = new Map();
+    const q = query(
+      collection(db, 'submissions'),
+      where('authorUID', '==', user.uid)
+    );
 
-  const unsubscribe = onSnapshot(q, (snapshot) => {
-    // 1. PRIMERO: Crear la lista base de submissions
-    const baseSubmissionsList = snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        ...data,
-        createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
-        updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
-        deskReviewCompletedAt: data.deskReviewCompletedAt?.toDate?.(),
-        decisionMadeAt: data.decisionMadeAt?.toDate?.(),
-        reviews: [] // Inicializar vacío
-      };
-    });
+    // MAPAS para almacenar los listeners
+    const reviewsListeners = new Map();
+    const proposalsListeners = new Map();
 
-    // Ordenar por fecha
-    baseSubmissionsList.sort((a, b) => b.createdAt - a.createdAt);
-    
-    // 2. ACTUALIZAR EL ESTADO CON LA LISTA BASE
-    setSubmissions(baseSubmissionsList);
-    setLoading(false);
-
-    // 3. DESPUÉS: Configurar listeners para las reseñas de CADA submission
-    // Limpiar listeners anteriores
-    reviewsListeners.forEach((unsub) => unsub());
-    reviewsListeners.clear();
-
-    // Por cada submission, crear un listener para su subcolección 'reviews'
-    snapshot.docs.forEach(doc => {
-      const submissionId = doc.id;
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      console.log(`📥 [AuthorSubmissionsPanel] Recibidos ${snapshot.docs.length} envíos de Firestore`);
       
-      const reviewsQuery = query(
-        collection(db, 'submissions', submissionId, 'reviews')
-      );
-
-      const unsubscribeReviews = onSnapshot(reviewsQuery, (reviewsSnapshot) => {
-        const reviews = reviewsSnapshot.docs.map(reviewDoc => ({
-          id: reviewDoc.id,
-          ...reviewDoc.data(),
-          submittedAt: reviewDoc.data().submittedAt?.toDate?.() || reviewDoc.data().submittedAt
-        }));
-        
-        // Actualizar SOLO el submission correspondiente
-        setSubmissions(prevSubs => 
-          prevSubs.map(sub => 
-            sub.id === submissionId 
-              ? { ...sub, reviews: reviews }
-              : sub
-          )
-        );
-        
-        console.log(`📬 Reviews actualizadas para ${submissionId}:`, reviews.length);
-      }, (error) => {
-        console.error(`Error loading reviews for ${submissionId}:`, error);
+      // LOG DETALLADO: Cada envío recibido
+      snapshot.docs.forEach((doc, index) => {
+        const data = doc.data();
+        console.log(`  📄 Envío ${index + 1}:`, {
+          id: doc.id,
+          title: data.title,
+          status: data.status,
+          hasMetadataRefinement: !!data.metadataRefinement,
+          metadataRefinementStatus: data.metadataRefinement?.status,
+          authorUID: data.authorUID,
+          createdAt: data.createdAt?.toDate?.() || data.createdAt
+        });
       });
 
-      reviewsListeners.set(submissionId, unsubscribeReviews);
+      // 1. PRIMERO: Crear la lista base de submissions
+      const baseSubmissionsList = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+          updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
+          deskReviewCompletedAt: data.deskReviewCompletedAt?.toDate?.(),
+          decisionMadeAt: data.decisionMadeAt?.toDate?.(),
+          reviews: [], // Inicializar vacío
+          pendingProposals: [] // Inicializar vacío
+        };
+      });
+
+      // Ordenar por fecha
+      baseSubmissionsList.sort((a, b) => b.createdAt - a.createdAt);
+      
+      // 2. ACTUALIZAR EL ESTADO CON LA LISTA BASE
+      setSubmissions(baseSubmissionsList);
+      setLoading(false);
+
+      // 3. LOG: Verificar si hay metadataRefinement
+      baseSubmissionsList.forEach(sub => {
+        if (sub.metadataRefinement) {
+          console.log(`🔍 [MetadataRefinement] Envío ${sub.id} tiene metadataRefinement:`, sub.metadataRefinement);
+        } else {
+          console.log(`🔍 [MetadataRefinement] Envío ${sub.id} NO tiene campo metadataRefinement`);
+        }
+      });
+
+      // 4. CONFIGURAR LISTENERS PARA SUBCOLECCIONES
+      
+      // Limpiar listeners anteriores
+      reviewsListeners.forEach((unsub) => unsub());
+      reviewsListeners.clear();
+      proposalsListeners.forEach((unsub) => unsub());
+      proposalsListeners.clear();
+
+      // Por cada submission, crear listeners
+      snapshot.docs.forEach(doc => {
+        const submissionId = doc.id;
+        
+        console.log(`🔧 Configurando listeners para envío: ${submissionId}`);
+
+        // Listener para reviews
+        const reviewsQuery = query(
+          collection(db, 'submissions', submissionId, 'reviews')
+        );
+
+        const unsubscribeReviews = onSnapshot(reviewsQuery, (reviewsSnapshot) => {
+          console.log(`📬 [Reviews] ${reviewsSnapshot.docs.length} reviews cargadas para ${submissionId}`);
+          
+          const reviews = reviewsSnapshot.docs.map(reviewDoc => ({
+            id: reviewDoc.id,
+            ...reviewDoc.data(),
+            submittedAt: reviewDoc.data().submittedAt?.toDate?.() || reviewDoc.data().submittedAt
+          }));
+          
+          setSubmissions(prevSubs => 
+            prevSubs.map(sub => 
+              sub.id === submissionId 
+                ? { ...sub, reviews: reviews }
+                : sub
+            )
+          );
+        }, (error) => {
+          console.error(`❌ Error loading reviews for ${submissionId}:`, error);
+        });
+
+        reviewsListeners.set(submissionId, unsubscribeReviews);
+
+        // Listener para metadataProposals pendientes
+        const proposalsQuery = query(
+          collection(db, 'submissions', submissionId, 'metadataProposals'),
+          where('status', '==', 'pending-author')
+        );
+
+        const unsubscribeProposals = onSnapshot(proposalsQuery, (proposalsSnapshot) => {
+          const pendingCount = proposalsSnapshot.docs.length;
+          console.log(`📋 [MetadataProposals] ${pendingCount} propuestas pendientes para ${submissionId}`);
+          
+          // LOG DETALLADO: Cada propuesta
+          proposalsSnapshot.docs.forEach((propDoc, idx) => {
+            const propData = propDoc.data();
+            console.log(`  📝 Propuesta ${idx + 1}:`, {
+              id: propDoc.id,
+              proposedBy: propData.proposedBy,
+              proposedByEmail: propData.proposedByEmail,
+              proposedAt: propData.proposedAt?.toDate?.() || propData.proposedAt,
+              changesCount: propData.changes?.length || 0,
+              status: propData.status
+            });
+          });
+
+          const pendingProposals = proposalsSnapshot.docs.map(propDoc => ({
+            id: propDoc.id,
+            ...propDoc.data(),
+            proposedAt: propDoc.data().proposedAt?.toDate?.() || propDoc.data().proposedAt
+          }));
+          
+          setSubmissions(prevSubs => 
+            prevSubs.map(sub => 
+              sub.id === submissionId 
+                ? { ...sub, pendingProposals: pendingProposals }
+                : sub
+            )
+          );
+
+          // Actualizar debugInfo
+          setDebugInfo(prev => ({
+            ...prev,
+            [submissionId]: {
+              ...prev[submissionId],
+              pendingProposalsCount: pendingCount,
+              pendingProposals: pendingProposals.map(p => ({
+                id: p.id,
+                proposedBy: p.proposedByEmail,
+                changes: p.changes?.map(c => c.field)
+              }))
+            }
+          }));
+        }, (error) => {
+          console.error(`❌ Error loading proposals for ${submissionId}:`, error);
+        });
+
+        proposalsListeners.set(submissionId, unsubscribeProposals);
+      });
+    }, (error) => {
+      console.error('❌ Error loading submissions:', error);
+      setLoading(false);
     });
-  }, (error) => {
-    console.error('Error loading submissions:', error);
-    setLoading(false);
-  });
 
-  // Cleanup
-  return () => {
-    unsubscribe();
-    reviewsListeners.forEach((unsub) => unsub());
-    reviewsListeners.clear();
-  };
-}, [user]);
-// AÑADE ESTO TEMPORALMENTE PARA DEPURAR (debajo de tu useEffect principal)
+    // Cleanup
+    return () => {
+      console.log('🧹 [AuthorSubmissionsPanel] Limpiando listeners');
+      unsubscribe();
+      reviewsListeners.forEach((unsub) => unsub());
+      reviewsListeners.clear();
+      proposalsListeners.forEach((unsub) => unsub());
+      proposalsListeners.clear();
+    };
+  }, [user]);
 
+  // LOG DE DEPURACIÓN: Verificar estado de submissions cada vez que cambia
+  useEffect(() => {
+    console.log('🔄 [State] Submissions actualizadas:', submissions.length);
+    submissions.forEach(sub => {
+      const hasPending = sub.pendingProposals?.length > 0;
+      const hasMetadataField = !!sub.metadataRefinement;
+      console.log(`  📊 ${sub.title?.substring(0, 30)}...`, {
+        id: sub.id,
+        status: sub.status,
+        pendingProposals: sub.pendingProposals?.length || 0,
+        hasMetadataRefinementField: hasMetadataField,
+        metadataRefinementStatus: sub.metadataRefinement?.status,
+        mostrarTab: hasPending ? 'SÍ (por propuestas)' : 'NO'
+      });
+    });
+  }, [submissions]);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -262,13 +377,13 @@ useEffect(() => {
       ];
       if (validTypes.includes(file.type)) {
         setRevisionFile(file);
+        console.log('📁 Archivo seleccionado:', file.name, file.type, file.size);
       } else {
         alert(isSpanish ? 'Por favor selecciona un archivo PDF o Word' : 'Please select a PDF or Word file');
       }
     }
   };
 
-  // FUNCIÓN REAL PARA SUBIR REVISIÓN (NO SIMULACIÓN)
   const handleSubmitRevision = async () => {
     if (!revisionFile || !revisionNotes.trim()) {
       alert(isSpanish ? 'Debes seleccionar un archivo y agregar notas' : 'You must select a file and add notes');
@@ -276,16 +391,17 @@ useEffect(() => {
     }
 
     setUploading(true);
+    console.log('📤 Iniciando subida de revisión para:', selectedSubmission?.id);
+    
     try {
-      // Convertir archivo a base64
       const reader = new FileReader();
       
       const filePromise = new Promise((resolve, reject) => {
         reader.onload = async () => {
           try {
             const base64 = reader.result;
+            console.log('📄 Archivo convertido a base64, tamaño:', base64.length);
             
-            // Llamar a la Cloud Function submitRevision
             const result = await submitRevision({
               submissionId: selectedSubmission.id,
               fileBase64: base64,
@@ -294,8 +410,9 @@ useEffect(() => {
               round: selectedSubmission.currentRound || 1
             });
 
+            console.log('✅ Resultado de submitRevision:', result);
+
             if (result.success) {
-              // Actualizar el estado local
               alert(isSpanish ? 'Revisión enviada con éxito' : 'Revision submitted successfully');
               setSelectedSubmission(null);
               setRevisionFile(null);
@@ -306,18 +423,22 @@ useEffect(() => {
             
             resolve();
           } catch (error) {
+            console.error('❌ Error en proceso de subida:', error);
             reject(error);
           }
         };
         
-        reader.onerror = () => reject(new Error('Error leyendo archivo'));
+        reader.onerror = () => {
+          console.error('❌ Error leyendo archivo');
+          reject(new Error('Error leyendo archivo'));
+        };
         reader.readAsDataURL(revisionFile);
       });
 
       await filePromise;
 
     } catch (error) {
-      console.error('Error submitting revision:', error);
+      console.error('❌ Error submitting revision:', error);
       alert(isSpanish ? 'Error al enviar la revisión: ' + error.message : 'Error submitting revision: ' + error.message);
     } finally {
       setUploading(false);
@@ -346,9 +467,25 @@ useEffect(() => {
     return steps.indexOf(status);
   };
 
-  // Verificar si hay propuesta de metadatos pendiente
-  const hasPendingMetadataProposal = (submission) => {
-    return submission.metadataRefinement?.status === 'pending-author';
+  // Verificar si hay propuestas pendientes (AHORA USA pendingProposals)
+  const hasPendingMetadataProposals = (submission) => {
+    const hasProposals = submission.pendingProposals?.length > 0;
+    if (hasProposals) {
+      console.log(`✅ [hasPendingMetadataProposals] Envío ${submission.id} tiene ${submission.pendingProposals.length} propuestas`);
+    }
+    return hasProposals;
+  };
+
+  // Panel de depuración (solo visible en desarrollo)
+  const DebugPanel = () => {
+    if (process.env.NODE_ENV !== 'development') return null;
+    
+    return (
+      <div className="mb-6 p-4 bg-gray-900 text-green-400 rounded-lg font-mono text-xs overflow-auto max-h-60">
+        <h4 className="font-bold text-white mb-2">🔧 DEBUG INFO</h4>
+        <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
+      </div>
+    );
   };
 
   if (!user) {
@@ -372,6 +509,8 @@ useEffect(() => {
 
   return (
     <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+      <DebugPanel />
+      
       <div className="flex justify-between items-center mb-6">
         <div>
           <h2 className="font-['Playfair_Display'] text-3xl font-bold text-[#0A1929]">
@@ -417,23 +556,26 @@ useEffect(() => {
               {/* Cabecera del envío (siempre visible) */}
               <div 
                 className="p-6 bg-white cursor-pointer hover:bg-[#F5F7FA] transition-colors"
-                onClick={() => setExpandedSubmission(expandedSubmission === sub.id ? null : sub.id)}
+                onClick={() => {
+                  console.log('📌 Expandiendo envío:', sub.id, sub.title);
+                  setExpandedSubmission(expandedSubmission === sub.id ? null : sub.id);
+                }}
               >
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
+                    <div className="flex items-center gap-3 mb-2 flex-wrap">
                       <h3 className="font-['Playfair_Display'] font-bold text-xl text-[#0A1929]">
                         {sub.title}
                       </h3>
                       {getStatusBadge(sub.status)}
-                      {hasPendingMetadataProposal(sub) && (
+                      {hasPendingMetadataProposals(sub) && (
                         <span className="bg-yellow-100 text-yellow-700 text-xs px-2 py-1 rounded-full animate-pulse">
-                          {isSpanish ? '✏️ Pendiente de revisión' : '✏️ Pending review'}
+                          {isSpanish ? `✏️ ${sub.pendingProposals.length} pendiente(s)` : `✏️ ${sub.pendingProposals.length} pending`}
                         </span>
                       )}
                     </div>
                     
-                    <div className="flex items-center gap-6 text-sm text-[#5A6B7A]">
+                    <div className="flex items-center gap-6 text-sm text-[#5A6B7A] flex-wrap">
                       <span className="font-mono bg-[#F5F7FA] px-2 py-1 rounded">
                         {sub.submissionId}
                       </span>
@@ -443,6 +585,11 @@ useEffect(() => {
                       <span>
                         {isSpanish ? 'Ronda:' : 'Round:'} {sub.currentRound || 1}
                       </span>
+                      {sub.pendingProposals?.length > 0 && (
+                        <span className="text-yellow-600 font-bold">
+                          {isSpanish ? `📋 ${sub.pendingProposals.length} propuesta(s)` : `📋 ${sub.pendingProposals.length} proposal(s)`}
+                        </span>
+                      )}
                     </div>
                   </div>
                   
@@ -475,19 +622,18 @@ useEffect(() => {
                       </p>
                     </div>
 
-                    {/* PROPUESTA DE REFINAMIENTO DE METADATOS */}
-                    {sub.metadataRefinement?.status === 'pending-author' && (
-                      <div className="mb-6">
-                        <AuthorMetadataResponseTab
-                          submission={sub}
-                          user={user}
-                          onResponded={() => {
-                            // Opcional: hacer algo después de responder
-                            console.log('Propuesta respondida');
-                          }}
-                        />
-                      </div>
-                    )}
+                    {/* PROPUESTA DE REFINAMIENTO DE METADATOS - SIEMPRE RENDERIZADO */}
+                    <div className="mb-6">
+                      {console.log(`🎯 Renderizando AuthorMetadataResponseTab para ${sub.id} con ${sub.pendingProposals?.length || 0} propuestas`)}
+                      <AuthorMetadataResponseTab
+                        submission={sub}
+                        user={user}
+                        onResponded={() => {
+                          console.log('✅ Propuesta respondida para:', sub.id);
+                          // Opcional: recargar o mostrar mensaje
+                        }}
+                      />
+                    </div>
 
                     {/* Timeline de progreso (solo para estados activos) */}
                     {!['accepted', 'rejected', 'desk-review-rejected'].includes(sub.status) && (
@@ -530,83 +676,81 @@ useEffect(() => {
                       </div>
                     )}
 
-                   
-
-{/* Revisiones de pares - AHORA DESDE SUBCOLECCIÓN */}
-{sub.reviews && sub.reviews.length > 0 && (
-  <div className="mb-6">
-    <h4 className="font-['Playfair_Display'] font-semibold text-[#0A1929] mb-3">
-      {isSpanish ? 'Revisiones recibidas' : 'Reviews received'}
-    </h4>
-    <div className="space-y-3">
-      {sub.reviews.map((review, idx) => (
-        <div key={review.id || idx} className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="flex justify-between items-start mb-2">
-            <span className="font-medium text-sm text-gray-500">
-              {isSpanish ? `Revisión ${idx + 1}` : `Review ${idx + 1}`}
-              {review.round && review.round > 1 && (
-                <span className="ml-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
-                  {isSpanish ? `Ronda ${review.round}` : `Round ${review.round}`}
-                </span>
-              )}
-            </span>
-            <span className={`text-xs px-2 py-1 rounded-full ${
-              review.recommendation === 'accept' ? 'bg-green-100 text-green-700' :
-              review.recommendation === 'minor-revision' ? 'bg-blue-100 text-blue-700' :
-              review.recommendation === 'major-revision' ? 'bg-yellow-100 text-yellow-700' :
-              'bg-red-100 text-red-700'
-            }`}>
-              {review.recommendation === 'accept' && (isSpanish ? 'Aceptar' : 'Accept')}
-              {review.recommendation === 'minor-revision' && (isSpanish ? 'Revisiones menores' : 'Minor revisions')}
-              {review.recommendation === 'major-revision' && (isSpanish ? 'Revisiones mayores' : 'Major revisions')}
-              {review.recommendation === 'reject' && (isSpanish ? 'Rechazar' : 'Reject')}
-            </span>
-          </div>
-          
-          {/* Puntuaciones si existen */}
-          {review.scores && Object.keys(review.scores).length > 0 && (
-            <div className="mb-3 flex flex-wrap gap-3 text-xs">
-              {Object.entries(review.scores).map(([key, value]) => (
-                <div key={key} className="bg-gray-50 px-2 py-1 rounded">
-                  <span className="font-medium text-gray-600">
-                    {key === 'originality' && (isSpanish ? 'Originalidad:' : 'Originality:')}
-                    {key === 'methodology' && (isSpanish ? 'Metodología:' : 'Methodology:')}
-                    {key === 'clarity' && (isSpanish ? 'Claridad:' : 'Clarity:')}
-                    {key === 'relevance' && (isSpanish ? 'Relevancia:' : 'Relevance:')}
-                    {key === 'overall' && (isSpanish ? 'General:' : 'Overall:')}
-                    {!['originality','methodology','clarity','relevance','overall'].includes(key) && `${key}:`}
-                  </span>{' '}
-                  <span className="font-bold text-[#0A1929]">{value}</span>
-                </div>
-              ))}
-            </div>
-          )}
-          
-          {/* Comentarios para el autor */}
-          {review.commentsToAuthor && (
-            <div className="text-sm text-gray-600 mt-2">
-              <p className="font-medium text-[#0A1929] mb-1">
-                {isSpanish ? 'Comentarios:' : 'Comments:'}
-              </p>
-              <div className="bg-gray-50 p-3 rounded-lg" 
-                   dangerouslySetInnerHTML={{ __html: review.commentsToAuthor.replace(/\n/g, '<br/>') }} />
-            </div>
-          )}
-          
-          {/* Fecha de envío */}
-          {review.submittedAt && (
-            <p className="text-xs text-gray-400 mt-3">
-              {isSpanish ? 'Recibido:' : 'Received:'}{' '}
-              {review.submittedAt.toDate ? 
-                review.submittedAt.toDate().toLocaleDateString() : 
-                new Date(review.submittedAt).toLocaleDateString()}
-            </p>
-          )}
-        </div>
-      ))}
-    </div>
-  </div>
-)}
+                    {/* Revisiones de pares */}
+                    {sub.reviews && sub.reviews.length > 0 && (
+                      <div className="mb-6">
+                        <h4 className="font-['Playfair_Display'] font-semibold text-[#0A1929] mb-3">
+                          {isSpanish ? 'Revisiones recibidas' : 'Reviews received'}
+                        </h4>
+                        <div className="space-y-3">
+                          {sub.reviews.map((review, idx) => (
+                            <div key={review.id || idx} className="bg-white p-4 rounded-lg border border-gray-200">
+                              <div className="flex justify-between items-start mb-2">
+                                <span className="font-medium text-sm text-gray-500">
+                                  {isSpanish ? `Revisión ${idx + 1}` : `Review ${idx + 1}`}
+                                  {review.round && review.round > 1 && (
+                                    <span className="ml-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
+                                      {isSpanish ? `Ronda ${review.round}` : `Round ${review.round}`}
+                                    </span>
+                                  )}
+                                </span>
+                                <span className={`text-xs px-2 py-1 rounded-full ${
+                                  review.recommendation === 'accept' ? 'bg-green-100 text-green-700' :
+                                  review.recommendation === 'minor-revision' ? 'bg-blue-100 text-blue-700' :
+                                  review.recommendation === 'major-revision' ? 'bg-yellow-100 text-yellow-700' :
+                                  'bg-red-100 text-red-700'
+                                }`}>
+                                  {review.recommendation === 'accept' && (isSpanish ? 'Aceptar' : 'Accept')}
+                                  {review.recommendation === 'minor-revision' && (isSpanish ? 'Revisiones menores' : 'Minor revisions')}
+                                  {review.recommendation === 'major-revision' && (isSpanish ? 'Revisiones mayores' : 'Major revisions')}
+                                  {review.recommendation === 'reject' && (isSpanish ? 'Rechazar' : 'Reject')}
+                                </span>
+                              </div>
+                              
+                              {/* Puntuaciones si existen */}
+                              {review.scores && Object.keys(review.scores).length > 0 && (
+                                <div className="mb-3 flex flex-wrap gap-3 text-xs">
+                                  {Object.entries(review.scores).map(([key, value]) => (
+                                    <div key={key} className="bg-gray-50 px-2 py-1 rounded">
+                                      <span className="font-medium text-gray-600">
+                                        {key === 'originality' && (isSpanish ? 'Originalidad:' : 'Originality:')}
+                                        {key === 'methodology' && (isSpanish ? 'Metodología:' : 'Methodology:')}
+                                        {key === 'clarity' && (isSpanish ? 'Claridad:' : 'Clarity:')}
+                                        {key === 'relevance' && (isSpanish ? 'Relevancia:' : 'Relevance:')}
+                                        {key === 'overall' && (isSpanish ? 'General:' : 'Overall:')}
+                                        {!['originality','methodology','clarity','relevance','overall'].includes(key) && `${key}:`}
+                                      </span>{' '}
+                                      <span className="font-bold text-[#0A1929]">{value}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              
+                              {/* Comentarios para el autor */}
+                              {review.commentsToAuthor && (
+                                <div className="text-sm text-gray-600 mt-2">
+                                  <p className="font-medium text-[#0A1929] mb-1">
+                                    {isSpanish ? 'Comentarios:' : 'Comments:'}
+                                  </p>
+                                  <div className="bg-gray-50 p-3 rounded-lg" 
+                                       dangerouslySetInnerHTML={{ __html: review.commentsToAuthor.replace(/\n/g, '<br/>') }} />
+                                </div>
+                              )}
+                              
+                              {/* Fecha de envío */}
+                              {review.submittedAt && (
+                                <p className="text-xs text-gray-400 mt-3">
+                                  {isSpanish ? 'Recibido:' : 'Received:'}{' '}
+                                  {review.submittedAt.toDate ? 
+                                    review.submittedAt.toDate().toLocaleDateString() : 
+                                    new Date(review.submittedAt).toLocaleDateString()}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Decisiones finales */}
                     {sub.finalDecision && (
@@ -707,13 +851,16 @@ useEffect(() => {
                       )}
                     </div>
 
-                    {/* Botón para subir revisión si es necesario - VERSIÓN CORREGIDA */}
+                    {/* Botón para subir revisión si es necesario */}
                     {(sub.status === 'revisions-requested' || 
                       sub.status === 'minor-revision-required' || 
                       sub.status === 'major-revision-required' || 
                       sub.status === 'awaiting-revision') && (
                       <button
-                        onClick={() => setSelectedSubmission(sub)}
+                        onClick={() => {
+                          console.log('📤 Abriendo modal de revisión para:', sub.id);
+                          setSelectedSubmission(sub);
+                        }}
                         className="w-full py-4 bg-[#C0A86A] hover:bg-[#A58D4F] text-white font-['Playfair_Display'] font-bold rounded-xl transition-colors"
                       >
                         {isSpanish ? 'SUBIR VERSIÓN REVISADA' : 'UPLOAD REVISED VERSION'}

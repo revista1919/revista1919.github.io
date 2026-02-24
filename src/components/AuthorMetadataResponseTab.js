@@ -16,10 +16,22 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
   const [responseComments, setResponseComments] = useState('');
   const [localError, setLocalError] = useState(null);
   const [expandedProposal, setExpandedProposal] = useState(null);
+  const [loadingProposals, setLoadingProposals] = useState(true);
+
+  // LOGS DE DEPURACIÓN
+  useEffect(() => {
+    console.log('🎯 [AuthorMetadataResponseTab] Montado para submission:', {
+      id: submission?.id,
+      title: submission?.title,
+      hasPendingProposals: submission?.pendingProposals?.length || 0,
+      user: user?.email
+    });
+  }, [submission?.id, submission?.title]);
 
   // Mostrar errores del hook
   useEffect(() => {
     if (hookError) {
+      console.error('❌ [AuthorMetadataResponseTab] Error del hook:', hookError);
       setLocalError(hookError);
       setTimeout(() => setLocalError(null), 5000);
     }
@@ -29,12 +41,10 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
   const formatValue = (value) => {
     if (value === null || value === undefined) return '—';
     if (typeof value === 'object') {
-      // Si es un array de autores
       if (Array.isArray(value)) {
         if (value.length === 0) return '—';
         return value.map(author => {
           if (typeof author === 'object') {
-            // Intenta formatear el autor de diferentes maneras
             if (author.firstName && author.lastName) {
               return `${author.lastName}, ${author.firstName}`;
             } else if (author.name) {
@@ -46,7 +56,6 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
           return String(author);
         }).join('; ');
       }
-      // Si es un objeto simple
       return JSON.stringify(value);
     }
     return String(value);
@@ -54,7 +63,13 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
 
   // Cargar propuestas pendientes para este artículo
   useEffect(() => {
-    if (!submission?.id) return;
+    if (!submission?.id) {
+      console.log('⚠️ [AuthorMetadataResponseTab] No hay submission.id');
+      setLoadingProposals(false);
+      return;
+    }
+
+    console.log('🔍 [AuthorMetadataResponseTab] Iniciando carga de propuestas para:', submission.id);
 
     const proposalsRef = collection(db, 'submissions', submission.id, 'metadataProposals');
     const q = query(
@@ -64,67 +79,127 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const loadedProposals = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        proposedAt: doc.data().proposedAt?.toDate?.() || null
-      }));
+      console.log(`📥 [AuthorMetadataResponseTab] Recibidas ${snapshot.docs.length} propuestas pendientes`);
+      
+      const loadedProposals = snapshot.docs.map((doc, index) => {
+        const data = doc.data();
+        console.log(`  📄 Propuesta ${index + 1}:`, {
+          id: doc.id,
+          proposedBy: data.proposedByEmail,
+          proposedAt: data.proposedAt?.toDate?.() || data.proposedAt,
+          changesCount: data.changes?.length || 0,
+          fields: data.changes?.map(c => c.field).join(', ')
+        });
+        
+        return {
+          id: doc.id,
+          ...data,
+          proposedAt: data.proposedAt?.toDate?.() || null
+        };
+      });
+      
       setPendingProposals(loadedProposals);
+      setLoadingProposals(false);
       
       // Seleccionar la primera propuesta pendiente por defecto
       if (loadedProposals.length > 0 && !selectedProposal) {
+        console.log('✅ Seleccionando primera propuesta por defecto:', loadedProposals[0].id);
         setSelectedProposal(loadedProposals[0]);
       }
+      
+      if (loadedProposals.length === 0) {
+        console.log('ℹ️ No hay propuestas pendientes para este artículo');
+      }
     }, (error) => {
-      console.error('Error loading pending proposals:', error);
+      console.error('❌ [AuthorMetadataResponseTab] Error loading pending proposals:', error);
       setLocalError(isSpanish ? 'Error al cargar propuestas' : 'Error loading proposals');
+      setLoadingProposals(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      console.log('🧹 [AuthorMetadataResponseTab] Limpiando listener de propuestas');
+      unsubscribe();
+    };
   }, [submission?.id, isSpanish]);
 
   const handleAccept = async () => {
-    if (!selectedProposal) return;
+    if (!selectedProposal) {
+      console.warn('⚠️ [AuthorMetadataResponseTab] No hay propuesta seleccionada');
+      return;
+    }
     
+    console.log('✅ [AuthorMetadataResponseTab] Aceptando propuesta:', selectedProposal.id);
     setLocalError(null);
+    
     const result = await respondToProposal(submission.id, selectedProposal.id, true, responseComments);
     
+    console.log('📬 [AuthorMetadataResponseTab] Resultado de accept:', result);
+    
     if (result.success) {
+      console.log('✅ Propuesta aceptada exitosamente');
       setResponseComments('');
       setSelectedProposal(null);
       onResponded?.();
     } else {
+      console.error('❌ Error al aceptar propuesta:', result.error);
       setLocalError(result.error || (isSpanish ? 'Error al aceptar propuesta' : 'Error accepting proposal'));
     }
   };
 
   const handleReject = async () => {
-    if (!selectedProposal) return;
+    if (!selectedProposal) {
+      console.warn('⚠️ [AuthorMetadataResponseTab] No hay propuesta seleccionada');
+      return;
+    }
     
     if (!responseComments.trim() && window.confirm(
       isSpanish 
         ? '¿Estás seguro de rechazar sin comentarios? Se recomienda proporcionar una explicación.'
         : 'Are you sure you want to reject without comments? Providing an explanation is recommended.'
     )) {
-      // Proceder sin comentarios
+      console.log('ℹ️ Rechazando sin comentarios');
     } else if (!responseComments.trim()) {
-      return; // No proceder si no hay comentarios y el usuario canceló
+      console.log('ℹ️ Cancelado - se requieren comentarios');
+      return;
     }
     
+    console.log('❌ [AuthorMetadataResponseTab] Rechazando propuesta:', selectedProposal.id);
     setLocalError(null);
+    
     const result = await respondToProposal(submission.id, selectedProposal.id, false, responseComments);
     
+    console.log('📬 [AuthorMetadataResponseTab] Resultado de reject:', result);
+    
     if (result.success) {
+      console.log('✅ Propuesta rechazada exitosamente');
       setResponseComments('');
       setSelectedProposal(null);
       onResponded?.();
     } else {
+      console.error('❌ Error al rechazar propuesta:', result.error);
       setLocalError(result.error || (isSpanish ? 'Error al rechazar propuesta' : 'Error rejecting proposal'));
     }
   };
 
+  // Estado de carga
+  if (loadingProposals) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="bg-gray-50 rounded-lg p-8 text-center border border-gray-200"
+      >
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-yellow-200 border-t-yellow-600 mb-4"></div>
+        <p className="text-gray-500">
+          {isSpanish ? 'Cargando propuestas...' : 'Loading proposals...'}
+        </p>
+      </motion.div>
+    );
+  }
+
   // Si no hay propuestas pendientes
   if (pendingProposals.length === 0) {
+    console.log('ℹ️ [AuthorMetadataResponseTab] Renderizando estado vacío');
     return (
       <motion.div
         initial={{ opacity: 0 }}
@@ -148,6 +223,8 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
     );
   }
 
+  console.log(`🎨 [AuthorMetadataResponseTab] Renderizando con ${pendingProposals.length} propuestas`);
+  
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -183,11 +260,12 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
           <h4 className="font-medium text-yellow-800 mb-2">
             {isSpanish ? 'Múltiples propuestas pendientes' : 'Multiple pending proposals'}
           </h4>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {pendingProposals.map((prop) => (
               <button
                 key={prop.id}
                 onClick={() => {
+                  console.log('🔄 Cambiando a propuesta:', prop.id);
                   setSelectedProposal(prop);
                   setResponseComments('');
                 }}
@@ -198,6 +276,9 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
                 }`}
               >
                 {prop.proposedAt?.toLocaleDateString?.() || 'Propuesta'}
+                <span className="ml-1 text-xs">
+                  ({prop.changes?.length || 0})
+                </span>
               </button>
             ))}
           </div>
@@ -226,6 +307,12 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
               ? 'El editor ha propuesto los siguientes cambios a los metadatos de tu artículo. Por favor, revísalos y acepta o rechaza según corresponda.'
               : 'The editor has proposed the following changes to your article metadata. Please review and accept or reject accordingly.'}
           </p>
+
+          {/* Metadatos de la propuesta */}
+          <div className="mb-4 text-sm bg-yellow-100 p-3 rounded-lg">
+            <p><strong>{isSpanish ? 'Propuesto por:' : 'Proposed by:'}</strong> {selectedProposal.proposedByEmail}</p>
+            <p><strong>{isSpanish ? 'Fecha:' : 'Date:'}</strong> {selectedProposal.proposedAt?.toLocaleString?.() || 'Fecha desconocida'}</p>
+          </div>
 
           <div className="space-y-4 mb-6">
             {selectedProposal.changes?.map((change, idx) => (
@@ -337,7 +424,7 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
         </motion.div>
       )}
 
-      {/* Historial de propuestas respondidas */}
+      {/* Historial de propuestas pendientes */}
       {pendingProposals.length > 0 && (
         <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
           <h4 className="font-medium text-gray-700 mb-2">
@@ -351,6 +438,7 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
                   selectedProposal?.id === prop.id ? 'bg-yellow-100 border border-yellow-300' : ''
                 }`}
                 onClick={() => {
+                  console.log('🔄 Seleccionando propuesta:', prop.id);
                   setSelectedProposal(prop);
                   setResponseComments('');
                 }}
@@ -366,6 +454,9 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
                   {isSpanish ? 'Por: ' : 'By: '}{prop.proposedByEmail}
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {prop.changes?.map(c => c.field).join(', ')}
                 </p>
               </div>
             ))}
