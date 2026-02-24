@@ -161,44 +161,90 @@ const AuthorSubmissionsPanel = ({ user }) => {
   const [expandedSubmission, setExpandedSubmission] = useState(null);
 
   // Cargar envíos del usuario actual
-  useEffect(() => {
-    if (!user?.uid) {
-      setLoading(false);
-      return;
-    }
+  // ==================== REEMPLAZA TU useEffect COMPLETO con este ====================
+useEffect(() => {
+  if (!user?.uid) {
+    setLoading(false);
+    return;
+  }
 
-    console.log('Cargando envíos para usuario:', user.uid);
+  console.log('Cargando envíos para usuario:', user.uid);
 
-    const q = query(
-      collection(db, 'submissions'),
-      where('authorUID', '==', user.uid)
-    );
+  const q = query(
+    collection(db, 'submissions'),
+    where('authorUID', '==', user.uid)
+  );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const submissionsList = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
-          updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
-          deskReviewCompletedAt: data.deskReviewCompletedAt?.toDate?.(),
-          decisionMadeAt: data.decisionMadeAt?.toDate?.()
-        };
+  // MAPA para almacenar los listeners de reseñas
+  const reviewsListeners = new Map();
+
+  const unsubscribe = onSnapshot(q, async (snapshot) => {
+    // Primero, limpiamos listeners anteriores
+    reviewsListeners.forEach((unsub) => unsub());
+    reviewsListeners.clear();
+
+    const submissionsList = await Promise.all(snapshot.docs.map(async (doc) => {
+      const data = doc.data();
+      const submissionId = doc.id;
+      
+      // Crear objeto base
+      const submissionObj = {
+        id: submissionId,
+        ...data,
+        createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+        updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
+        deskReviewCompletedAt: data.deskReviewCompletedAt?.toDate?.(),
+        decisionMadeAt: data.decisionMadeAt?.toDate?.(),
+        reviews: [] // Inicializar array vacío de reseñas
+      };
+
+      // Escuchar la subcolección 'reviews' para este submission
+      const reviewsQuery = query(
+        collection(db, 'submissions', submissionId, 'reviews')
+      );
+
+      const unsubscribeReviews = onSnapshot(reviewsQuery, (reviewsSnapshot) => {
+        const reviews = reviewsSnapshot.docs.map(reviewDoc => ({
+          id: reviewDoc.id,
+          ...reviewDoc.data(),
+          submittedAt: reviewDoc.data().submittedAt?.toDate?.() || reviewDoc.data().submittedAt
+        }));
+        
+        // Actualizar el estado submissions con las nuevas reseñas
+        setSubmissions(prevSubs => 
+          prevSubs.map(sub => 
+            sub.id === submissionId 
+              ? { ...sub, reviews: reviews }
+              : sub
+          )
+        );
+      }, (error) => {
+        console.error(`Error loading reviews for ${submissionId}:`, error);
       });
-      
-      // Ordenar por fecha de creación (más reciente primero)
-      submissionsList.sort((a, b) => b.createdAt - a.createdAt);
-      
-      setSubmissions(submissionsList);
-      setLoading(false);
-    }, (error) => {
-      console.error('Error loading submissions:', error);
-      setLoading(false);
-    });
 
-    return () => unsubscribe();
-  }, [user]);
+      // Guardar el listener para limpiarlo después
+      reviewsListeners.set(submissionId, unsubscribeReviews);
+
+      return submissionObj;
+    }));
+
+    // Ordenar por fecha de creación
+    submissionsList.sort((a, b) => b.createdAt - a.createdAt);
+    
+    setSubmissions(submissionsList);
+    setLoading(false);
+  }, (error) => {
+    console.error('Error loading submissions:', error);
+    setLoading(false);
+  });
+
+  // Cleanup function
+  return () => {
+    unsubscribe();
+    reviewsListeners.forEach((unsub) => unsub());
+    reviewsListeners.clear();
+  };
+}, [user]);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -478,38 +524,83 @@ const AuthorSubmissionsPanel = ({ user }) => {
                       </div>
                     )}
 
-                    {/* Revisiones de pares (si existen) */}
-                    {sub.peerReviews && sub.peerReviews.length > 0 && (
-                      <div className="mb-6">
-                        <h4 className="font-['Playfair_Display'] font-semibold text-[#0A1929] mb-3">
-                          {isSpanish ? 'Revisiones recibidas' : 'Reviews received'}
-                        </h4>
-                        <div className="space-y-3">
-                          {sub.peerReviews.map((review, idx) => (
-                            <div key={idx} className="bg-white p-4 rounded-lg border border-gray-200">
-                              <div className="flex justify-between items-start mb-2">
-                                <span className="font-medium">Revisor {idx + 1}</span>
-                                <span className={`text-xs px-2 py-1 rounded-full ${
-                                  review.recommendation === 'accept' ? 'bg-green-100 text-green-700' :
-                                  review.recommendation === 'minor-revisions' ? 'bg-blue-100 text-blue-700' :
-                                  review.recommendation === 'major-revisions' ? 'bg-yellow-100 text-yellow-700' :
-                                  'bg-red-100 text-red-700'
-                                }`}>
-                                  {review.recommendation === 'accept' && (isSpanish ? 'Aceptar' : 'Accept')}
-                                  {review.recommendation === 'minor-revisions' && (isSpanish ? 'Revisiones menores' : 'Minor revisions')}
-                                  {review.recommendation === 'major-revisions' && (isSpanish ? 'Revisiones mayores' : 'Major revisions')}
-                                  {review.recommendation === 'reject' && (isSpanish ? 'Rechazar' : 'Reject')}
-                                </span>
-                              </div>
-                              {review.commentsToAuthor && (
-                                <div className="text-sm text-gray-600 mt-2" 
-                                     dangerouslySetInnerHTML={{ __html: review.commentsToAuthor }} />
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                   
+
+{/* Revisiones de pares - AHORA DESDE SUBCOLECCIÓN */}
+{sub.reviews && sub.reviews.length > 0 && (
+  <div className="mb-6">
+    <h4 className="font-['Playfair_Display'] font-semibold text-[#0A1929] mb-3">
+      {isSpanish ? 'Revisiones recibidas' : 'Reviews received'}
+    </h4>
+    <div className="space-y-3">
+      {sub.reviews.map((review, idx) => (
+        <div key={review.id || idx} className="bg-white p-4 rounded-lg border border-gray-200">
+          <div className="flex justify-between items-start mb-2">
+            <span className="font-medium text-sm text-gray-500">
+              {isSpanish ? `Revisión ${idx + 1}` : `Review ${idx + 1}`}
+              {review.round && review.round > 1 && (
+                <span className="ml-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
+                  {isSpanish ? `Ronda ${review.round}` : `Round ${review.round}`}
+                </span>
+              )}
+            </span>
+            <span className={`text-xs px-2 py-1 rounded-full ${
+              review.recommendation === 'accept' ? 'bg-green-100 text-green-700' :
+              review.recommendation === 'minor-revision' ? 'bg-blue-100 text-blue-700' :
+              review.recommendation === 'major-revision' ? 'bg-yellow-100 text-yellow-700' :
+              'bg-red-100 text-red-700'
+            }`}>
+              {review.recommendation === 'accept' && (isSpanish ? 'Aceptar' : 'Accept')}
+              {review.recommendation === 'minor-revision' && (isSpanish ? 'Revisiones menores' : 'Minor revisions')}
+              {review.recommendation === 'major-revision' && (isSpanish ? 'Revisiones mayores' : 'Major revisions')}
+              {review.recommendation === 'reject' && (isSpanish ? 'Rechazar' : 'Reject')}
+            </span>
+          </div>
+          
+          {/* Puntuaciones si existen */}
+          {review.scores && Object.keys(review.scores).length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-3 text-xs">
+              {Object.entries(review.scores).map(([key, value]) => (
+                <div key={key} className="bg-gray-50 px-2 py-1 rounded">
+                  <span className="font-medium text-gray-600">
+                    {key === 'originality' && (isSpanish ? 'Originalidad:' : 'Originality:')}
+                    {key === 'methodology' && (isSpanish ? 'Metodología:' : 'Methodology:')}
+                    {key === 'clarity' && (isSpanish ? 'Claridad:' : 'Clarity:')}
+                    {key === 'relevance' && (isSpanish ? 'Relevancia:' : 'Relevance:')}
+                    {key === 'overall' && (isSpanish ? 'General:' : 'Overall:')}
+                    {!['originality','methodology','clarity','relevance','overall'].includes(key) && `${key}:`}
+                  </span>{' '}
+                  <span className="font-bold text-[#0A1929]">{value}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {/* Comentarios para el autor */}
+          {review.commentsToAuthor && (
+            <div className="text-sm text-gray-600 mt-2">
+              <p className="font-medium text-[#0A1929] mb-1">
+                {isSpanish ? 'Comentarios:' : 'Comments:'}
+              </p>
+              <div className="bg-gray-50 p-3 rounded-lg" 
+                   dangerouslySetInnerHTML={{ __html: review.commentsToAuthor.replace(/\n/g, '<br/>') }} />
+            </div>
+          )}
+          
+          {/* Fecha de envío */}
+          {review.submittedAt && (
+            <p className="text-xs text-gray-400 mt-3">
+              {isSpanish ? 'Recibido:' : 'Received:'}{' '}
+              {review.submittedAt.toDate ? 
+                review.submittedAt.toDate().toLocaleDateString() : 
+                new Date(review.submittedAt).toLocaleDateString()}
+            </p>
+          )}
+        </div>
+      ))}
+    </div>
+  </div>
+)}
 
                     {/* Decisiones finales */}
                     {sub.finalDecision && (
