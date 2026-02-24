@@ -1,4 +1,4 @@
-// src/components/PortalSection.js (VERSIÓN ACTUALIZADA - SIN LÓGICAS ANTIGUAS)
+// src/components/PortalSection.js (VERSIÓN CON RUTAS)
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
@@ -10,7 +10,7 @@ import AssignSection from './AssignSection';
 import DirectorPanel from './DirectorPanel';
 import Admissions from './Admissions';
 import DeskReviewPanel from './DeskReviewPanel';
-import AuthorSubmissionsPanel from './AuthorSubmissionsPanel'; // <-- NUEVO
+import AuthorSubmissionsPanel from './AuthorSubmissionsPanel';
 import { 
   UserIcon, 
   CameraIcon, 
@@ -27,12 +27,10 @@ import { db, onSnapshot, query, collection, doc, updateDoc, uploadImageToImgBB, 
 import SubmissionForm from './SubmissionForm';
 import { useLanguage } from '../hooks/useLanguage';
 import { useReviewerAssignment } from '../hooks/useReviewerAssignment';
+import { useNavigate, useLocation } from 'react-router-dom'; // <-- NUEVO: Importar hooks de rutas
 
 // <-- NUEVO: Importar funciones de reclamación
 import { checkAnonymousProfile, claimAnonymousProfile } from '../firebase';
-
-// ELIMINADO: Todas las constantes de CSV y scripts antiguos
-// ASSIGNMENTS_CSV, SCRIPT_URL, RUBRIC_SCRIPT_URL, etc. fueron eliminados
 
 const ES_TO_EN = {
   'Fundador': 'Founder',
@@ -867,11 +865,21 @@ const UserManagement = ({ users: initialUsers }) => {
 export default function PortalSection({ user, onLogout }) {
   const { language } = useLanguage();
   const isSpanish = language === 'es';
+  const navigate = useNavigate(); // <-- NUEVO: Hook de navegación
+  const location = useLocation(); // <-- NUEVO: Hook de ubicación
 
   // ELIMINADO: Todos los estados relacionados con CSV
   // assignments, assignmentsFetched, feedback, report, vote, rubricScores, etc. eliminados
 
-  const [activeTab, setActiveTab] = useState('profile');
+  // <-- NUEVO: Obtener la pestaña activa desde la ruta
+  const getActiveTabFromPath = () => {
+    const path = location.pathname;
+    // Extraer el segmento después de /login/ o /es/login/
+    const match = path.match(/\/(?:es\/)?login\/([^/]+)/);
+    return match ? match[1] : 'profile';
+  };
+
+  const [activeTab, setActiveTab] = useState(getActiveTabFromPath());
   const [isDirectorPanelExpanded, setIsDirectorPanelExpanded] = useState(false);
   const [isChiefEditorPanelExpanded, setIsChiefEditorPanelExpanded] = useState(false);
   const [effectiveName, setEffectiveName] = useState(user?.displayName || '');
@@ -882,7 +890,7 @@ export default function PortalSection({ user, onLogout }) {
   // Datos en tiempo real desde Firebase
   const [userData, setUserData] = useState(user);
   const [users, setUsers] = useState([]);
-  const [reviewerAssignments, setReviewerAssignments] = useState([]); // <-- NUEVO para revisores
+  const [reviewerAssignments, setReviewerAssignments] = useState([]);
 
   // Estados para reclamación de perfil
   const [showClaimModal, setShowClaimModal] = useState(false);
@@ -924,25 +932,54 @@ export default function PortalSection({ user, onLogout }) {
   const isWebDev = userRoles.includes('Responsable de Desarrollo Web');
   const isAssignmentManager = userRoles.includes('Encargado de Asignación de Artículos');
 
+  // <-- NUEVO: Mapeo de IDs de pestañas a rutas
+  const tabRoutes = {
+    profile: '',
+    submissions: 'submissions',
+    'reviewer-tasks': 'reviewer-tasks',
+    deskreview: 'deskreview',
+    assignment: 'assignment',
+    calendar: 'calendar',
+    submit: 'submit',
+    director: 'director',
+    chief: 'chief',
+    tasks: 'tasks',
+    news: 'news',
+    admissions: 'admissions',
+    usermanagement: 'users'
+  };
+
   // Pestañas actualizadas para el nuevo sistema
-// En PortalSection.js, dentro del array 'tabs'
-
-const tabs = [
-  { id: 'profile', label: isSpanish ? 'MI PERFIL' : 'MY PROFILE', roles: ['any'] },
-  { id: 'submissions', label: isSpanish ? 'MIS ENVÍOS' : 'MY SUBMISSIONS', roles: ['Autor'] },
-  { id: 'reviewer-tasks', label: isSpanish ? 'MIS REVISIONES' : 'MY REVIEWS', roles: ['Revisor'] },
-  { id: 'deskreview', label: isSpanish ? 'DESK REVIEW' : 'DESK REVIEW', roles: ['Editor de Sección', 'Editor en Jefe'] },
-  { id: 'assignment', label: isSpanish ? 'ASIGNAR ARTÍCULOS' : 'ASSIGN ARTICLES', roles: ['Encargado de Asignación de Artículos', 'Director General'] },
-  { id: 'calendar', label: isSpanish ? 'CALENDARIO' : 'CALENDAR', roles: ['Editor en Jefe', 'Director General', 'Encargado de Asignación de Artículos'] },
-  { id: 'submit', label: isSpanish ? 'ENVIAR MANUSCRITO' : 'SUBMIT MANUSCRIPT', roles: ['Autor'] },
-  { id: 'director', label: isSpanish ? 'PANEL DIRECTIVO' : 'DIRECTOR PANEL', roles: ['Director General'] },
-  { id: 'chief', label: isSpanish ? 'PANEL EDITOR JEFE' : 'CHIEF EDITOR PANEL', roles: ['Editor en Jefe'] },
-  { id: 'tasks', label: isSpanish ? 'TAREAS' : 'TASKS', roles: ['Encargado de Redes Sociales', 'Responsable de Desarrollo Web'] },
-  { id: 'news', label: isSpanish ? 'NOTICIAS' : 'NEWS', roles: ['Director General'] },
-  { id: 'admissions', label: isSpanish ? 'ADMISIONES' : 'ADMISSIONS', roles: ['Director General'] },
-  { id: 'usermanagement', label: isSpanish ? 'USUARIOS' : 'USERS', roles: ['Director General'] },
-
+  const tabs = [
+    { id: 'profile', label: isSpanish ? 'MI PERFIL' : 'MY PROFILE', roles: ['any'], path: '' },
+    { id: 'submissions', label: isSpanish ? 'MIS ENVÍOS' : 'MY SUBMISSIONS', roles: ['Autor'], path: 'submissions' },
+    { id: 'reviewer-tasks', label: isSpanish ? 'MIS REVISIONES' : 'MY REVIEWS', roles: ['Revisor'], path: 'reviewer-tasks' },
+    { id: 'deskreview', label: isSpanish ? 'DESK REVIEW' : 'DESK REVIEW', roles: ['Editor de Sección', 'Editor en Jefe'], path: 'deskreview' },
+    { id: 'assignment', label: isSpanish ? 'ASIGNAR ARTÍCULOS' : 'ASSIGN ARTICLES', roles: ['Encargado de Asignación de Artículos', 'Director General'], path: 'assignment' },
+    { id: 'calendar', label: isSpanish ? 'CALENDARIO' : 'CALENDAR', roles: ['Editor en Jefe', 'Director General', 'Encargado de Asignación de Artículos'], path: 'calendar' },
+    { id: 'submit', label: isSpanish ? 'ENVIAR MANUSCRITO' : 'SUBMIT MANUSCRIPT', roles: ['Autor'], path: 'submit' },
+    { id: 'director', label: isSpanish ? 'PANEL DIRECTIVO' : 'DIRECTOR PANEL', roles: ['Director General'], path: 'director' },
+    { id: 'chief', label: isSpanish ? 'PANEL EDITOR JEFE' : 'CHIEF EDITOR PANEL', roles: ['Editor en Jefe'], path: 'chief' },
+    { id: 'tasks', label: isSpanish ? 'TAREAS' : 'TASKS', roles: ['Encargado de Redes Sociales', 'Responsable de Desarrollo Web'], path: 'tasks' },
+    { id: 'news', label: isSpanish ? 'NOTICIAS' : 'NEWS', roles: ['Director General'], path: 'news' },
+    { id: 'admissions', label: isSpanish ? 'ADMISIONES' : 'ADMISSIONS', roles: ['Director General'], path: 'admissions' },
+    { id: 'usermanagement', label: isSpanish ? 'USUARIOS' : 'USERS', roles: ['Director General'], path: 'users' },
   ].filter(tab => tab.roles.includes('any') || tab.roles.some(role => userRoles.includes(role)));
+
+  // <-- NUEVO: Sincronizar la ruta con la pestaña activa
+  useEffect(() => {
+    const pathTab = getActiveTabFromPath();
+    if (pathTab !== activeTab) {
+      setActiveTab(pathTab);
+    }
+  }, [location.pathname]);
+
+  // <-- NUEVO: Función para cambiar de pestaña y navegar
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    const route = tabRoutes[tabId] || '';
+    navigate(`/login/${route}`, { replace: true });
+  };
 
   // Snapshot de usuario
   useEffect(() => {
@@ -1184,7 +1221,7 @@ const tabs = [
         {tabs.map(tab => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => handleTabChange(tab.id)} // <-- NUEVO: Usar handleTabChange
             className={`pb-3 md:pb-4 text-xs font-bold uppercase tracking-widest transition-all relative flex-shrink-0 ${
               activeTab === tab.id ? 'text-emerald-700' : 'text-gray-400 hover:text-gray-600'
             }`}
@@ -1323,8 +1360,6 @@ const tabs = [
               </div>
             </motion.section>
           )}
-// En el main, dentro del AnimatePresence
-
 
           {/* DESK REVIEW */}
           {activeTab === 'deskreview' && (
@@ -1379,7 +1414,7 @@ const tabs = [
                 user={userData} 
                 onSuccess={(submissionId) => {
                   console.log('Submission successful:', submissionId);
-                  setActiveTab('submissions');
+                  handleTabChange('submissions'); // <-- NUEVO: Usar handleTabChange
                 }}
               />
             </motion.section>

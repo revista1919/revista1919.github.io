@@ -1,4 +1,4 @@
-// DirectorPanel.js (Componente completo - VERSIÓN CORREGIDA)
+// DirectorPanel.js (Componente completo - VERSIÓN REFACTORIZADA)
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { auth, db } from '../firebase';
@@ -19,7 +19,7 @@ import {
   XMarkIcon, ChevronRightIcon, MagnifyingGlassIcon, InboxIcon,
   UserGroupIcon, ChartBarIcon, CodeBracketIcon, PencilSquareIcon,
   GlobeAltIcon, PhotoIcon, ChevronDownIcon, UserIcon, EnvelopeIcon,
-  IdentificationIcon, AcademicCapIcon, ArrowDownTrayIcon
+  IdentificationIcon, AcademicCapIcon
 } from '@heroicons/react/24/outline';
 
 // --- Constantes de Configuración ---
@@ -28,8 +28,6 @@ const ARTICLES_JSON_URL = `${DOMAIN}/articles.json`;
 const MANAGE_ARTICLES_URL = 'https://managearticles-ggqsq2kkua-uc.a.run.app/manageArticles';
 const MANAGE_VOLUMES_URL = 'https://managevolumes-ggqsq2kkua-uc.a.run.app/';
 const REBUILD_URL = 'https://triggerrebuild-ggqsq2kkua-uc.a.run.app/';
-const REPO_OWNER = 'revista1919';
-const REPO_NAME = 'revista1919.github.io';
 
 const generateSlug = (name) => {
   if (!name) return '';
@@ -59,7 +57,7 @@ const quillModules = {
   ],
 };
 
-// --- Estructura para Autores (AHORA INCLUYE TODOS LOS CAMPOS) ---
+// --- Estructura para Autores ---
 const initialAuthorState = {
   name: '',
   email: '',
@@ -139,12 +137,6 @@ export default function DirectorPanel({ user }) {
   const [editingItem, setEditingItem] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showUserSearchModal, setShowUserSearchModal] = useState(false);
-  
-  // Modal de búsqueda de submissions
-  const [showSubmissionSearch, setShowSubmissionSearch] = useState(false);
-  const [submissionSearchTerm, setSubmissionSearchTerm] = useState('');
-  const [readySubmissions, setReadySubmissions] = useState([]);
-  const [loadingSubmissions, setLoadingSubmissions] = useState(false);
 
   // Forms
   const [articleForm, setArticleForm] = useState(initialArticleState);
@@ -245,54 +237,7 @@ export default function DirectorPanel({ user }) {
     };
   }, [hasAccess]);
 
-  // --- Cargar submissions listos para publicación (publicationReady = true) ---
-  const loadReadySubmissions = async () => {
-    setLoadingSubmissions(true);
-    try {
-      const submissionsRef = collection(db, 'submissions');
-      const q = query(
-        submissionsRef, 
-        where('publicationReady', '==', true)
-      );
-      
-      const querySnapshot = await getDocs(q);
-      const submissions = [];
-      
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        submissions.push({
-          id: doc.id,
-          title: data.title || 'Sin título',
-          submissionId: data.submissionId || doc.id,
-          authors: data.authors || [],
-          authorName: data.authorName || 'Autor no especificado',
-          currentMetadata: data.currentMetadata || data.originalSubmission || {},
-          paperLanguage: data.paperLanguage || 'es',
-          driveFolderUrl: data.driveFolderUrl || null,
-          updatedAt: data.updatedAt?.toDate?.() || new Date(),
-        });
-      });
-      
-      // Ordenar por fecha de actualización (más recientes primero)
-      submissions.sort((a, b) => b.updatedAt - a.updatedAt);
-      
-      setReadySubmissions(submissions);
-    } catch (error) {
-      console.error("Error loading ready submissions:", error);
-      setStatus({ type: 'error', msg: 'Error al cargar los envíos listos para publicación.' });
-    } finally {
-      setLoadingSubmissions(false);
-    }
-  };
-
-  // --- Abrir modal de búsqueda y cargar datos ---
-  const handleOpenSubmissionSearch = () => {
-    loadReadySubmissions();
-    setSubmissionSearchTerm('');
-    setShowSubmissionSearch(true);
-  };
-
-  // --- FUNCIÓN: Importar datos desde Submission (AHORA SÍ COMPLETA) ---
+  // --- FUNCIÓN: Importar datos desde Submission (con metadata final) ---
   const importFromSubmission = async (submission) => {
     if (!submission) return;
 
@@ -300,11 +245,10 @@ export default function DirectorPanel({ user }) {
     setStatus({ type: 'info', msg: 'Importando datos del envío...' });
 
     try {
-      // Usar currentMetadata si existe, sino los datos principales
+      // Usar currentMetadata si existe, sino originalSubmission, sino los datos principales
       const metadata = submission.currentMetadata || submission;
       
-      // --- MAPEO COMPLETO DE CAMPOS ---
-      // Procesar autores con TODOS los detalles
+      // Procesar autores
       const importedAuthors = (metadata.authors || submission.authors || []).map(author => ({
         name: author.name || `${author.firstName || ''} ${author.lastName || ''}`.trim(),
         email: author.email || '',
@@ -318,58 +262,30 @@ export default function DirectorPanel({ user }) {
       const palabrasClave = metadata.keywords || metadata.palabras_clave || [];
       const keywordsEnglish = metadata.keywordsEn || metadata.keywords_english || [];
 
-      // Procesar funding (que puede ser un objeto con 'sources')
-      let fundingText = metadata.funding?.sources || metadata.funding || '';
-      let fundingEnglishText = metadata.fundingEnglish?.sources || metadata.fundingEnglish || '';
-
       setArticleForm(prev => ({
         ...prev,
-        // Títulos
         titulo: metadata.title || prev.titulo,
         tituloEnglish: metadata.titleEn || prev.tituloEnglish,
-        
-        // Autores (¡con todo!)
         autores: importedAuthors.length > 0 ? importedAuthors : prev.autores,
-        
-        // Resúmenes
         resumen: metadata.abstract || prev.resumen,
         abstract: metadata.abstractEn || prev.abstract,
-        
-        // Keywords
         palabras_clave: Array.isArray(palabrasClave) ? palabrasClave.join('; ') : palabrasClave || '',
         keywords_english: Array.isArray(keywordsEnglish) ? keywordsEnglish.join('; ') : keywordsEnglish || '',
-        
-        // Metadatos principales
         area: metadata.area || prev.area,
         tipo: metadata.articleType || metadata.tipo || prev.tipo,
         type: metadata.type || prev.type,
-        
-        // Agradecimientos
         acknowledgments: metadata.acknowledgments || prev.acknowledgments,
         acknowledgmentsEnglish: metadata.acknowledgmentsEn || prev.acknowledgmentsEnglish,
-        
-        // Conflictos de interés
         conflicts: metadata.conflictOfInterest || metadata.conflicts || prev.conflicts,
         conflictsEnglish: metadata.conflictsEnglish || prev.conflictsEnglish,
-        
-        // Financiación
-        funding: fundingText,
-        fundingEnglish: fundingEnglishText,
-        
-        // Disponibilidad de datos
+        funding: metadata.funding?.sources || metadata.funding || prev.funding,
+        fundingEnglish: metadata.fundingEnglish || prev.fundingEnglish,
         dataAvailability: metadata.dataAvailability || prev.dataAvailability,
         dataAvailabilityEnglish: metadata.dataAvailabilityEn || prev.dataAvailabilityEnglish,
-        
-        // Créditos de autores (CRediT)
-        authorCredits: metadata.authorCredits || metadata.credit || prev.authorCredits,
-        authorCreditsEnglish: metadata.authorCreditsEn || metadata.creditEn || prev.authorCreditsEnglish,
-        
-        // ID de la submission
         submissionId: submission.submissionId || submission.id,
       }));
 
-      setStatus({ type: 'success', msg: '✅ Datos del envío importados correctamente. Ahora puedes editarlos si es necesario.' });
-      setShowSubmissionSearch(false); // Cerrar modal de búsqueda
+      setStatus({ type: 'success', msg: '✅ Datos del envío importados correctamente.' });
       
     } catch (error) {
       console.error("Error importing submission:", error);
@@ -378,18 +294,6 @@ export default function DirectorPanel({ user }) {
       setIsProcessing(false);
     }
   };
-
-  // --- FILTRAR submissions listos por título ---
-  const filteredReadySubmissions = useMemo(() => {
-    if (!submissionSearchTerm.trim()) return readySubmissions;
-    
-    const term = submissionSearchTerm.toLowerCase();
-    return readySubmissions.filter(sub => 
-      sub.title.toLowerCase().includes(term) ||
-      sub.submissionId.toLowerCase().includes(term) ||
-      sub.authorName.toLowerCase().includes(term)
-    );
-  }, [readySubmissions, submissionSearchTerm]);
 
   // --- Filtrado de artículos publicados ---
   const filteredArticles = articles.filter(a => 
@@ -426,7 +330,7 @@ export default function DirectorPanel({ user }) {
     }
   };
 
-  // --- HANDLER GUARDAR ARTÍCULO (UNIFICADO: Guarda y Publica) ---
+  // --- HANDLER GUARDAR ARTÍCULO ---
   const handleSaveArticle = async (e) => {
     e.preventDefault();
     setIsProcessing(true);
@@ -506,10 +410,7 @@ export default function DirectorPanel({ user }) {
         referencias: articleForm.referencias,
       };
 
-      // --- LÓGICA INTELIGENTE PARA LA ACCIÓN ---
-      // Si estamos editando un artículo existente, la acción es 'edit'
-      // Si es un artículo nuevo (sin editingItem) Y tiene submissionId, la acción es 'publish'
-      // Si es un artículo nuevo (sin editingItem) Y NO tiene submissionId, la acción es 'add'
+      // Determinar acción: 'publish' si es un artículo nuevo desde submission, 'edit' si es edición
       let action = 'edit';
       if (!editingItem && articleForm.submissionId) {
         action = 'publish'; // Publicar desde submission
@@ -538,7 +439,7 @@ export default function DirectorPanel({ user }) {
         throw new Error(errText);
       }
 
-      // Limpiar localStorage SOLO después de guardar exitosamente un artículo nuevo
+      // Limpiar localStorage SOLO después de guardar exitosamente
       if (!editingItem) {
         localStorage.removeItem('draftNewArticle');
       }
@@ -548,7 +449,7 @@ export default function DirectorPanel({ user }) {
       await triggerRebuild();
       
       const successMsg = action === 'publish' 
-        ? '✅ Artículo publicado exitosamente desde el envío' 
+        ? '✅ Artículo publicado exitosamente desde envío' 
         : '✅ Artículo guardado exitosamente';
       setStatus({ type: 'success', msg: successMsg });
       
@@ -793,21 +694,12 @@ export default function DirectorPanel({ user }) {
               />
             </div>
             {activeTab === 'articles' && (
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => { resetForms(); setShowArticleModal(true); }}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-full flex items-center justify-center gap-2 font-medium shadow-md transition-all active:scale-95 text-sm"
-                >
-                  <PlusIcon className="w-5 h-5" /> Nuevo
-                </button>
-                <button 
-                  onClick={handleOpenSubmissionSearch}
-                  className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-full flex items-center justify-center gap-2 font-medium shadow-md transition-all active:scale-95 text-sm"
-                  title="Importar datos desde un envío listo"
-                >
-                  <ArrowDownTrayIcon className="w-5 h-5" /> Subir Nuevo Artículo
-                </button>
-              </div>
+              <button 
+                onClick={() => { resetForms(); setShowArticleModal(true); }}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-full flex items-center justify-center gap-2 font-medium shadow-md transition-all active:scale-95 text-sm"
+              >
+                <PlusIcon className="w-5 h-5" /> Subir Nuevo Artículo
+              </button>
             )}
             {activeTab === 'volumes' && (
               <button 
@@ -900,10 +792,9 @@ export default function DirectorPanel({ user }) {
       <Modal 
         show={showArticleModal} 
         onClose={() => setShowArticleModal(false)}
-        title={editingItem ? "Editar Artículo Académico" : (articleForm.submissionId ? "Publicar Artículo desde Envío" : "Crear Nuevo Artículo")}
+        title={editingItem ? "Editar Artículo Académico" : "Subir Nuevo Artículo"}
         isProcessing={isProcessing}
         onSave={handleSaveArticle}
-        saveButtonText={editingItem ? "Guardar Cambios" : (articleForm.submissionId ? "Publicar Artículo" : "Guardar Artículo")}
       >
         <ArticleForm 
           formData={articleForm} 
@@ -912,25 +803,6 @@ export default function DirectorPanel({ user }) {
           isProcessing={isProcessing}
           isEditing={!!editingItem}
           submissionId={articleForm.submissionId}
-        />
-      </Modal>
-
-      {/* MODAL DE BÚSQUEDA DE SUBMISSIONS */}
-      <Modal 
-        show={showSubmissionSearch} 
-        onClose={() => setShowSubmissionSearch(false)}
-        title="Seleccionar Envío Listo para Publicación"
-        isProcessing={loadingSubmissions}
-        onSave={() => {}} // No hay acción de guardar directa
-        hideSaveButton={true}
-      >
-        <SubmissionSearch 
-          submissions={filteredReadySubmissions}
-          searchTerm={submissionSearchTerm}
-          setSearchTerm={setSubmissionSearchTerm}
-          onSelect={importFromSubmission}
-          loading={loadingSubmissions}
-          onRefresh={loadReadySubmissions}
         />
       </Modal>
 
@@ -952,100 +824,14 @@ export default function DirectorPanel({ user }) {
   );
 }
 
-// --- NUEVO COMPONENTE: SubmissionSearch ---
-const SubmissionSearch = ({ submissions, searchTerm, setSearchTerm, onSelect, loading, onRefresh }) => {
-  return (
-    <div className="space-y-4 min-h-[400px] flex flex-col">
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Buscar por título, ID o autor..."
-            className="w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            autoFocus
-          />
-        </div>
-        <button
-          onClick={onRefresh}
-          disabled={loading}
-          className="px-4 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl flex items-center gap-2 text-gray-700 transition-colors"
-          title="Actualizar lista"
-        >
-          <ArrowPathIcon className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-        </button>
-      </div>
-
-      <div className="flex-1 overflow-y-auto border border-gray-200 rounded-xl bg-gray-50 p-2 min-h-[300px] max-h-[400px]">
-        {loading ? (
-          <div className="flex items-center justify-center h-full">
-            <ArrowPathIcon className="w-8 h-8 animate-spin text-blue-600" />
-          </div>
-        ) : submissions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-500">
-            <DocumentTextIcon className="w-12 h-12 text-gray-300 mb-2" />
-            <p>No hay envíos listos para publicación</p>
-            <p className="text-xs mt-1">Los artículos deben estar marcados como "Listos" por el editor</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {submissions.map((sub) => (
-              <motion.div
-                key={sub.id}
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="p-4 bg-white rounded-xl border border-gray-200 hover:border-blue-400 hover:shadow-md cursor-pointer transition-all"
-                onClick={() => onSelect(sub)}
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <h4 className="font-medium text-gray-900 flex-1">{sub.title}</h4>
-                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full ml-2">
-                    Listo
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
-                  <div>
-                    <span className="font-medium">ID:</span> {sub.submissionId}
-                  </div>
-                  <div>
-                    <span className="font-medium">Autor:</span> {sub.authorName}
-                  </div>
-                  <div>
-                    <span className="font-medium">Idioma:</span> {sub.paperLanguage === 'es' ? 'Español' : 'Inglés'}
-                  </div>
-                  <div>
-                    <span className="font-medium">Actualizado:</span> {sub.updatedAt.toLocaleDateString()}
-                  </div>
-                </div>
-                {sub.driveFolderUrl && (
-                  <a 
-                    href={sub.driveFolderUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="mt-2 text-xs text-blue-600 hover:underline flex items-center gap-1"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <DocumentIcon className="w-3 h-3" /> Ver carpeta en Drive
-                  </a>
-                )}
-              </motion.div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <p className="text-xs text-gray-400 text-center">
-        Selecciona un envío para importar automáticamente todos los metadatos. Luego podrás editarlos antes de publicar.
-      </p>
-    </div>
-  );
-};
-
-// --- COMPONENTE DE FORMULARIO DE ARTÍCULO (MODIFICADO - SIN CAMBIOS DRÁSTICOS) ---
+// --- COMPONENTE DE FORMULARIO DE ARTÍCULO (VERSIÓN FINAL) ---
 const ArticleForm = ({ formData, setFormData, onImportFromSubmission, isProcessing, isEditing, submissionId }) => {
   const [activeStep, setActiveStep] = useState(0);
+  // Estados para el panel de importación
+  const [showImportPanel, setShowImportPanel] = useState(false);
+  const [submissions, setSubmissions] = useState([]);
+  const [loadingSubmissions, setLoadingSubmissions] = useState(false);
+  const [submissionSearchTerm, setSubmissionSearchTerm] = useState('');
   
   const steps = [
     { id: 0, name: 'Identidad', icon: '📋' },
@@ -1056,6 +842,54 @@ const ArticleForm = ({ formData, setFormData, onImportFromSubmission, isProcessi
     { id: 5, name: 'Metadatos', icon: '📎' },
     { id: 6, name: 'Archivos', icon: '📁' }
   ];
+
+  // --- FUNCIONES PARA CARGAR SUBMISSIONS ---
+  const loadReadySubmissions = async () => {
+    setLoadingSubmissions(true);
+    try {
+      const submissionsRef = collection(db, 'submissions');
+      const q = query(submissionsRef, where('publicationReady', '==', true));
+      const querySnapshot = await getDocs(q);
+      const subs = [];
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        subs.push({
+          id: doc.id,
+          title: data.title || 'Sin título',
+          submissionId: data.submissionId || doc.id,
+          authorName: data.authorName || 'Autor no especificado',
+          currentMetadata: data.currentMetadata || data.originalSubmission || {},
+          paperLanguage: data.paperLanguage || 'es',
+          driveFolderUrl: data.driveFolderUrl || null,
+          updatedAt: data.updatedAt?.toDate?.() || new Date(),
+        });
+      });
+      
+      subs.sort((a, b) => b.updatedAt - a.updatedAt);
+      setSubmissions(subs);
+    } catch (error) {
+      console.error("Error loading ready submissions:", error);
+    } finally {
+      setLoadingSubmissions(false);
+    }
+  };
+
+  const handleOpenImportPanel = () => {
+    loadReadySubmissions();
+    setSubmissionSearchTerm('');
+    setShowImportPanel(true);
+  };
+
+  const filteredSubmissions = useMemo(() => {
+    if (!submissionSearchTerm.trim()) return submissions;
+    const term = submissionSearchTerm.toLowerCase();
+    return submissions.filter(sub => 
+      sub.title.toLowerCase().includes(term) ||
+      sub.submissionId.toLowerCase().includes(term) ||
+      sub.authorName.toLowerCase().includes(term)
+    );
+  }, [submissions, submissionSearchTerm]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -1091,10 +925,100 @@ const ArticleForm = ({ formData, setFormData, onImportFromSubmission, isProcessi
         <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200 flex items-center gap-2">
           <CheckIcon className="w-5 h-5 text-green-600" />
           <span className="text-sm text-green-700">
-            <strong>Envio ID:</strong> {submissionId} (Los datos han sido importados)
+            <strong>Submission ID:</strong> {submissionId}
           </span>
         </div>
       )}
+
+      {/* BOTÓN DE IMPORTACIÓN - Solo para artículos nuevos */}
+      {!isEditing && (
+        <div className="mb-4">
+          <button
+            type="button"
+            onClick={handleOpenImportPanel}
+            className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl flex items-center justify-center gap-2 font-medium shadow-md transition-all active:scale-95 text-sm"
+          >
+            <ArrowPathIcon className="w-5 h-5" />
+            Importar todos los metadatos desde un envío listo
+          </button>
+        </div>
+      )}
+
+      {/* PANEL DE BÚSQUEDA DE SUBMISSIONS */}
+      <AnimatePresence>
+        {showImportPanel && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mb-6 p-4 border-2 border-purple-200 rounded-xl bg-purple-50 overflow-hidden"
+          >
+            <div className="flex justify-between items-center mb-3">
+              <h4 className="font-semibold text-purple-800">Seleccionar Envío Listo</h4>
+              <button 
+                onClick={() => setShowImportPanel(false)} 
+                className="p-1 hover:bg-purple-200 rounded-full transition-colors"
+              >
+                <XMarkIcon className="w-5 h-5 text-purple-600" />
+              </button>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="relative">
+                <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Buscar por título, ID o autor..."
+                  className="w-full pl-10 pr-4 py-2 bg-white border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-sm"
+                  value={submissionSearchTerm}
+                  onChange={(e) => setSubmissionSearchTerm(e.target.value)}
+                />
+              </div>
+
+              <div className="max-h-60 overflow-y-auto border border-purple-200 rounded-lg bg-white p-2 space-y-2">
+                {loadingSubmissions ? (
+                  <div className="flex justify-center p-4">
+                    <ArrowPathIcon className="w-6 h-6 animate-spin text-purple-600" />
+                  </div>
+                ) : filteredSubmissions.length === 0 ? (
+                  <p className="text-center text-gray-500 p-4 text-sm">No hay envíos listos para publicar</p>
+                ) : (
+                  filteredSubmissions.map((sub) => (
+                    <div
+                      key={sub.id}
+                      className="p-3 border border-gray-200 rounded-lg hover:border-purple-400 hover:shadow-sm cursor-pointer transition-all"
+                      onClick={() => {
+                        onImportFromSubmission(sub);
+                        setShowImportPanel(false); // Cerrar el panel al seleccionar
+                      }}
+                    >
+                      <p className="font-medium text-sm">{sub.title}</p>
+                      <div className="flex justify-between items-center mt-1">
+                        <p className="text-xs text-gray-500">ID: {sub.submissionId}</p>
+                        <p className="text-xs text-gray-500">Autor: {sub.authorName}</p>
+                      </div>
+                      {sub.driveFolderUrl && (
+                        <a 
+                          href={sub.driveFolderUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="mt-2 text-xs text-purple-600 hover:underline flex items-center gap-1"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <DocumentIcon className="w-3 h-3" /> Ver carpeta en Drive
+                        </a>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+              <p className="text-xs text-gray-500 text-center">
+                Los datos se importarán automáticamente y podrás editarlos antes de publicar
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Progress Steps */}
       <div className="flex overflow-x-auto pb-2 mb-4 lg:mb-6 scrollbar-hide border-b border-gray-100">
@@ -2217,7 +2141,7 @@ const Input = ({ label, ...props }) => (
   </div>
 );
 
-const Modal = ({ show, onClose, title, children, onSave, isProcessing, hideSaveButton = false, saveButtonText = "Guardar" }) => (
+const Modal = ({ show, onClose, title, children, onSave, isProcessing, hideSaveButton = false }) => (
   <AnimatePresence>
     {show && (
       <div className="fixed inset-0 z-[1000] flex items-center justify-center p-2 lg:p-4">
@@ -2267,7 +2191,7 @@ const Modal = ({ show, onClose, title, children, onSave, isProcessing, hideSaveB
                 ) : (
                   <>
                     <CheckIcon className="w-4 h-4 lg:w-5 lg:h-5" />
-                    {saveButtonText}
+                    Guardar
                   </>
                 )}
               </button>
