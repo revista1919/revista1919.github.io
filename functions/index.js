@@ -3123,10 +3123,7 @@ exports.onReviewerInvitationCreated = onDocumentCreated(
   async (event) => {
     const invitation = event.data.data();
     const invitationId = event.params.invitationId;
-  if (assignment.migrated === true) {
-      console.log(`📧 Documento migrado ignorado: ${assignmentId}`);
-      return;
-    }
+
     console.log(`📧 [onReviewerInvitationCreated] Procesando nueva invitación: ${invitationId} para ${invitation.reviewerEmail}`);
 
     try {
@@ -3231,10 +3228,7 @@ exports.onReviewerInvitationUpdated = onDocumentUpdated(
     const beforeData = event.data.before.data();
     const afterData = event.data.after.data();
     const invitationId = event.params.invitationId;
-  if (assignment.migrated === true) {
-      console.log(`📧 Documento migrado ignorado: ${assignmentId}`);
-      return;
-    }
+
     // Solo proceder si el estado cambió de 'pending' a 'accepted'
     if (beforeData.status !== 'pending' || afterData.status !== 'accepted') {
       return;
@@ -3462,10 +3456,7 @@ exports.onSectionEditorInvitationCreated = onDocumentCreated(
   async (event) => {
     const invitation = event.data.data();
     const invitationId = event.params.invitationId;
-  if (assignment.migrated === true) {
-      console.log(`📧 Documento migrado ignorado: ${assignmentId}`);
-      return;
-    }
+
     console.log(`📧 [onSectionEditorInvitationCreated] Nueva invitación: ${invitationId} para ${invitation.editorEmail}`);
 
     try {
@@ -3590,10 +3581,7 @@ exports.onSectionEditorInvitationUpdated = onDocumentUpdated(
     const beforeData = event.data.before.data();
     const afterData = event.data.after.data();
     const invitationId = event.params.invitationId;
-  if (assignment.migrated === true) {
-      console.log(`📧 Documento migrado ignorado: ${assignmentId}`);
-      return;
-    }
+
     // Solo si el estado cambió de 'pending'
     if (beforeData.status !== 'pending' || afterData.status === 'pending') {
       return;
@@ -3793,10 +3781,7 @@ exports.onEditorialTaskCreated = onDocumentCreated(
   async (event) => {
     const task = event.data.data();
     const taskId = event.params.taskId;
-  if (assignment.migrated === true) {
-      console.log(`📧 Documento migrado ignorado: ${assignmentId}`);
-      return;
-    }
+
     console.log(`📋 [onEditorialTaskCreated] Nueva tarea creada: ${taskId} para editor: ${task.assignedToEmail}`);
 
     try {
@@ -3896,10 +3881,7 @@ exports.onCreateReviewerInvitationDeadline = onDocumentCreated(
   async (event) => {
     const invitation = event.data.data();
     const invitationId = event.params.invitationId;
-  if (assignment.migrated === true) {
-      console.log(`📧 Documento migrado ignorado: ${assignmentId}`);
-      return;
-    }
+
     console.log(`⏰ [onCreateReviewerInvitationDeadline] Creando deadline para invitación ${invitationId}`);
 
     try {
@@ -3946,10 +3928,7 @@ exports.onReviewerInvitationAcceptedDeadline = onDocumentUpdated(
     const beforeData = event.data.before.data();
     const afterData = event.data.after.data();
     const invitationId = event.params.invitationId;
-  if (assignment.migrated === true) {
-      console.log(`📧 Documento migrado ignorado: ${assignmentId}`);
-      return;
-    }
+
     // Solo cuando pasa de 'pending' a 'accepted'
     if (beforeData.status !== 'pending' || afterData.status !== 'accepted') {
       return;
@@ -4012,10 +3991,7 @@ exports.onReviewerAssignmentCreatedDeadline = onDocumentCreated(
   async (event) => {
     const assignment = event.data.data();
     const assignmentId = event.params.assignmentId;
-  if (assignment.migrated === true) {
-      console.log(`📧 Documento migrado ignorado: ${assignmentId}`);
-      return;
-    }
+
     console.log(`⏰ [onReviewerAssignmentCreatedDeadline] Actualizando deadline para assignment ${assignmentId}`);
 
     try {
@@ -4209,10 +4185,7 @@ exports.onEditorialReviewUpdated = onDocumentUpdated(
     const beforeData = event.data.before.data();
     const afterData = event.data.after.data();
     const reviewId = event.params.reviewId;
-  if (assignment.migrated === true) {
-      console.log(`📧 Documento migrado ignorado: ${assignmentId}`);
-      return;
-    }
+
     // Solo proceder si la decisión ha cambiado y ahora NO es null
     if (beforeData.decision === afterData.decision || afterData.decision === null) {
       return;
@@ -4323,10 +4296,7 @@ exports.onReviewerAssignmentCreatedEmail = onDocumentCreated(
   async (event) => {
     const assignment = event.data.data();
     const assignmentId = event.params.assignmentId;
-  if (assignment.migrated === true) {
-      console.log(`📧 Documento migrado ignorado: ${assignmentId}`);
-      return;
-    }
+
     console.log(`📧 [onReviewerAssignmentCreatedEmail] Enviando instrucciones para asignación ${assignmentId}`);
 
     try {
@@ -4437,10 +4407,7 @@ exports.onEditorialTaskAwaitingDecision = onDocumentUpdated(
     const beforeData = event.data.before.data();
     const afterData = event.data.after.data();
     const taskId = event.params.taskId;
-  if (assignment.migrated === true) {
-      console.log(`📧 Documento migrado ignorado: ${assignmentId}`);
-      return;
-    }
+
     // Solo cuando pasa a 'awaiting-decision'
     if (beforeData.status === afterData.status || afterData.status !== 'awaiting-decision') {
       return;
@@ -4550,10 +4517,7 @@ exports.onReviewerAssignmentCreated = onDocumentCreated(
     // Datos de la nueva asignación que se acaba de crear (el revisor acaba de aceptar)
     const newAssignment = event.data.data();
     const newAssignmentId = event.params.assignmentId;
-  if (assignment.migrated === true) {
-      console.log(`📧 Documento migrado ignorado: ${assignmentId}`);
-      return;
-    }
+
     console.log(`🆕 [onReviewerAssignmentCreated] NUEVA ASIGNACIÓN CREADA (revisor aceptó): ${newAssignmentId}. Verificando si se alcanza el mínimo...`);
 
     // Como el documento SOLO se crea cuando acepta, no necesitamos verificar status.
@@ -4745,10 +4709,7 @@ exports.onReviewerAssignmentSubmitted = onDocumentUpdated(
     const beforeData = event.data.before.data();
     const afterData = event.data.after.data();
     const assignmentId = event.params.assignmentId;
-  if (assignment.migrated === true) {
-      console.log(`📧 Documento migrado ignorado: ${assignmentId}`);
-      return;
-    }
+
     // Solo nos interesa cuando el estado CAMBIA a 'submitted'
     if (beforeData.status === afterData.status || afterData.status !== 'submitted') {
       console.log(`⏭️ [onReviewerAssignmentSubmitted] No hay cambio a 'submitted' (estado actual: ${afterData.status}). Saliendo.`);
