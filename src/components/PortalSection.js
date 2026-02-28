@@ -1,4 +1,4 @@
-// src/components/PortalSection.js (VERSIÓN CON RUTAS)
+// src/components/PortalSection.js (VERSIÓN CORREGIDA - SIN ERROR 404)
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
@@ -28,9 +28,7 @@ import { db, onSnapshot, query, collection, doc, updateDoc, uploadImageToImgBB, 
 import SubmissionForm from './SubmissionForm';
 import { useLanguage } from '../hooks/useLanguage';
 import { useReviewerAssignment } from '../hooks/useReviewerAssignment';
-import { useNavigate, useLocation } from 'react-router-dom'; // <-- NUEVO: Importar hooks de rutas
-
-// <-- NUEVO: Importar funciones de reclamación
+import { useNavigate, useLocation } from 'react-router-dom';
 import { checkAnonymousProfile, claimAnonymousProfile } from '../firebase';
 
 const ES_TO_EN = {
@@ -866,13 +864,10 @@ const UserManagement = ({ users: initialUsers }) => {
 export default function PortalSection({ user, onLogout }) {
   const { language } = useLanguage();
   const isSpanish = language === 'es';
-  const navigate = useNavigate(); // <-- NUEVO: Hook de navegación
-  const location = useLocation(); // <-- NUEVO: Hook de ubicación
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  // ELIMINADO: Todos los estados relacionados con CSV
-  // assignments, assignmentsFetched, feedback, report, vote, rubricScores, etc. eliminados
-
-  // <-- NUEVO: Obtener la pestaña activa desde la ruta
+  // Obtener la pestaña activa desde la ruta
   const getActiveTabFromPath = () => {
     const path = location.pathname;
     // Extraer el segmento después de /login/ o /es/login/
@@ -933,7 +928,7 @@ export default function PortalSection({ user, onLogout }) {
   const isWebDev = userRoles.includes('Responsable de Desarrollo Web');
   const isAssignmentManager = userRoles.includes('Encargado de Asignación de Artículos');
 
-  // <-- NUEVO: Mapeo de IDs de pestañas a rutas
+  // Mapeo de IDs de pestañas a rutas
   const tabRoutes = {
     profile: '',
     submissions: 'submissions',
@@ -967,7 +962,7 @@ export default function PortalSection({ user, onLogout }) {
     { id: 'usermanagement', label: isSpanish ? 'USUARIOS' : 'USERS', roles: ['Director General'], path: 'users' },
   ].filter(tab => tab.roles.includes('any') || tab.roles.some(role => userRoles.includes(role)));
 
-  // <-- NUEVO: Sincronizar la ruta con la pestaña activa
+  // Sincronizar la ruta con la pestaña activa
   useEffect(() => {
     const pathTab = getActiveTabFromPath();
     if (pathTab !== activeTab) {
@@ -975,10 +970,16 @@ export default function PortalSection({ user, onLogout }) {
     }
   }, [location.pathname]);
 
-  // <-- NUEVO: Función para cambiar de pestaña y navegar
-  const handleTabChange = (tabId) => {
+  // Función para cambiar de pestaña y navegar (CORREGIDA)
+  const handleTabChange = (tabId, event) => {
+    // Prevenir cualquier comportamiento por defecto del navegador
+    if (event) {
+      event.preventDefault();
+    }
+    
     setActiveTab(tabId);
     const route = tabRoutes[tabId] || '';
+    // Usar navigate de React Router para navegación del lado del cliente
     navigate(`/login/${route}`, { replace: true });
   };
 
@@ -1141,6 +1142,13 @@ export default function PortalSection({ user, onLogout }) {
     }
   }, [anonymousProfile, isSpanish]);
 
+  // Función segura para abrir en nueva pestaña (CORREGIDA)
+  const openReviewerWorkspace = (assignmentId) => {
+    // Usar window.open de manera segura, pero solo cuando sea necesario
+    // Idealmente, deberías usar navigate de React Router
+    window.open(`/reviewer-workspace/${assignmentId}`, '_blank', 'noopener,noreferrer');
+  };
+
   if (loadingUser) {
     return (
       <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
@@ -1217,12 +1225,26 @@ export default function PortalSection({ user, onLogout }) {
         </button>
       </header>
 
-      {/* Navegación */}
+      {/* Panel de invitaciones para revisores - AHORA USANDO NAVIGATE EN LUGAR DE WINDOW.OPEN */}
+      {isReviewer && (
+        <ReviewerInvitationsPanel 
+          user={userData}
+          onAccept={(invitation) => {
+            // Usar setTimeout pero con navigate en lugar de window.open
+            setTimeout(() => {
+              navigate(`/reviewer-workspace/${invitation.submissionId}`);
+            }, 3000);
+          }}
+        />
+      )}
+
+      {/* Navegación - CORREGIDA con type="button" y preventDefault */}
       <nav className="flex overflow-x-auto pb-2 mb-6 sm:mb-8 md:mb-12 border-b border-gray-200 gap-4 md:gap-8 whitespace-nowrap">
         {tabs.map(tab => (
           <button
             key={tab.id}
-            onClick={() => handleTabChange(tab.id)} // <-- NUEVO: Usar handleTabChange
+            type="button" // <- IMPORTANTE: Especificar type="button"
+            onClick={(e) => handleTabChange(tab.id, e)} // <- Pasamos el evento
             className={`pb-3 md:pb-4 text-xs font-bold uppercase tracking-widest transition-all relative flex-shrink-0 ${
               activeTab === tab.id ? 'text-emerald-700' : 'text-gray-400 hover:text-gray-600'
             }`}
@@ -1298,7 +1320,7 @@ export default function PortalSection({ user, onLogout }) {
             </motion.section>
           )}
 
-          {/* MIS ENVÍOS (AUTOR) - NUEVO */}
+          {/* MIS ENVÍOS (AUTOR) */}
           {activeTab === 'submissions' && (
             <motion.section
               key="submissions"
@@ -1310,7 +1332,7 @@ export default function PortalSection({ user, onLogout }) {
             </motion.section>
           )}
 
-          {/* MIS REVISIONES (REVISOR) - NUEVO */}
+          {/* MIS REVISIONES (REVISOR) */}
           {activeTab === 'reviewer-tasks' && (
             <motion.section
               key="reviewer-tasks"
@@ -1332,7 +1354,7 @@ export default function PortalSection({ user, onLogout }) {
                       <div
                         key={assignment.id}
                         className="p-6 border border-gray-200 rounded-xl hover:shadow-md transition-shadow cursor-pointer"
-                        onClick={() => window.open(`/reviewer-workspace/${assignment.id}`, '_blank')}
+                        onClick={() => navigate(`/reviewer-workspace/${assignment.id}`)} // <- AHORA USA NAVIGATE
                       >
                         <h3 className="font-bold text-lg text-[#0A1929] mb-2">
                           {assignment.submission?.title}
@@ -1396,7 +1418,7 @@ export default function PortalSection({ user, onLogout }) {
                 events={calendarEvents} 
                 onSelectEvent={(e) => {
                   if (e.resource?.targetType === 'reviewerAssignment') {
-                    window.open(`/reviewer-workspace/${e.resource.targetId}`, '_blank');
+                    navigate(`/reviewer-workspace/${e.resource.targetId}`); // <- AHORA USA NAVIGATE
                   }
                 }} 
               />
@@ -1415,7 +1437,7 @@ export default function PortalSection({ user, onLogout }) {
                 user={userData} 
                 onSuccess={(submissionId) => {
                   console.log('Submission successful:', submissionId);
-                  handleTabChange('submissions'); // <-- NUEVO: Usar handleTabChange
+                  handleTabChange('submissions', null);
                 }}
               />
             </motion.section>
