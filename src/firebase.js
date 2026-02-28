@@ -61,7 +61,7 @@ export const googleProvider = new GoogleAuthProvider();
 
 export const translateTextCF = httpsCallable(functions, 'translateText');
 export const updateRole = httpsCallable(functions, 'updateRole');
-
+export const getUserInvitations = httpsCallable(functions, 'getUserInvitations');
 
 /* ==============================
    FUNCIONES DE RECLAMACIÓN DE PERFIL
