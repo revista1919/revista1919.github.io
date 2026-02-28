@@ -77,6 +77,7 @@ async function loadDependencies() {
 }
 /* ===================== SECRETS ===================== */
 const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
+const DEEPSEEK_API_KEY = defineSecret("OPENROUTER_API_KEY"); // NUEVO: Secret para DeepSeek
 const IMGBB_API_KEY = defineSecret("IMGBB_API_KEY");
 const GH_TOKEN = defineSecret("GH_TOKEN");
 const DRIVE_SERVICE_ACCOUNT = defineSecret("DRIVE_SERVICE_ACCOUNT");
@@ -109,6 +110,7 @@ function initAgents() {
 // Clientes cacheados
 let cachedOctokit = null;
 let cachedGenAI = null;
+let cachedDeepSeekFetch = null; // NUEVO: Cache para DeepSeek
 
 /* ===================== TRADUCCIÓN DE ROLES ===================== */
 const ES_TO_EN = {
@@ -247,7 +249,77 @@ async function deletePDFFromRepo(fileName, commitMessage, folder = "Articles") {
   }
 }
 
-/* ===================== GEMINI ===================== */
+/* ===================== DEEPSEEK (PRINCIPAL) ===================== */
+async function getDeepSeekFetch() {
+  if (!fetch) throw new Error("fetch no está disponible");
+  
+  if (!cachedDeepSeekFetch) {
+    const apiKey = DEEPSEEK_API_KEY.value();
+    if (!apiKey) throw new Error("DEEPSEEK_API_KEY no configurada");
+    
+    // Configurar fetch con los agentes HTTP/HTTPS
+    cachedDeepSeekFetch = async (url, options = {}) => {
+      const fetchOptions = {
+        ...options,
+        agent: url.startsWith('https') ? httpsAgent : httpAgent
+      };
+      return fetch(url, fetchOptions);
+    };
+  }
+  return cachedDeepSeekFetch;
+}
+
+async function callDeepSeek(prompt, temperature = 0) {
+  console.log("🤖 Intentando con DeepSeek (modelo: tngtech/deepseek-r1t2-chimera)");
+  
+  try {
+    const deepseekFetch = await getDeepSeekFetch();
+    const apiKey = DEEPSEEK_API_KEY.value();
+    
+    const response = await deepseekFetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://www.revistacienciasestudiantes.com",
+        "X-Title": "Revista Nacional de Ciencias para Estudiantes"
+      },
+      body: JSON.stringify({
+        model: "tngtech/deepseek-r1t2-chimera",
+        messages: [
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: temperature,
+        max_tokens: 4096
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`DeepSeek API error (${response.status}): ${errorText}`);
+    }
+
+    const data = await response.json();
+    let text = data.choices[0]?.message?.content?.trim() || "";
+    
+    // Limpiar marcadores de código si existen
+    if (text.startsWith("```")) {
+      text = text.replace(/^```(?:html)?\n?/, "").replace(/\n?```$/, "").trim();
+    }
+    
+    console.log("✅ DeepSeek respondió exitosamente");
+    return text;
+    
+  } catch (error) {
+    console.error("❌ Error con DeepSeek:", error.message);
+    throw error; // Re-lanzamos para que el fallback lo capture
+  }
+}
+
+/* ===================== GEMINI (FALLBACK) ===================== */
 async function getGenAI() {
   if (!GoogleGenAI) throw new Error("GoogleGenAI no está disponible");
   if (!cachedGenAI) {
@@ -258,30 +330,65 @@ async function getGenAI() {
   return cachedGenAI;
 }
 
+// Esta función ahora actúa como FALLBACK (mantenemos el nombre original para compatibilidad)
 async function callGemini(prompt, temperature = 0) {
-  const ai = await getGenAI();
+  console.log("⚠️ Usando Gemini como fallback");
+  
+  try {
+    const ai = await getGenAI();
 
-  const result = await ai.models.generateContent({
-    model: "gemini-2.0-flash",
-    contents: prompt,
-    config: {
-      temperature: temperature,
-      maxOutputTokens: 4096
+    const result = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: prompt,
+      config: {
+        temperature: temperature,
+        maxOutputTokens: 4096
+      }
+    });
+
+    let text = result.text?.trim() || "";
+    
+    if (text.startsWith("```")) {
+      text = text.replace(/^```(?:html)?\n?/, "").replace(/\n?```$/, "").trim();
     }
-  });
-
-  let text = result.text?.trim() || "";
-  
-  if (text.startsWith("```")) {
-    text = text.replace(/^```(?:html)?\n?/, "").replace(/\n?```$/, "").trim();
+    
+    console.log("✅ Gemini fallback respondió exitosamente");
+    return text;
+    
+  } catch (error) {
+    console.error("❌ Error incluso con Gemini fallback:", error.message);
+    throw new Error("Todos los servicios de IA fallaron");
   }
-  
-  return text;
 }
 
-/* ===================== FUNCIÓN DE TRADUCCIÓN ===================== */
+/* ===================== FUNCIÓN PRINCIPAL DE IA CON FALLBACK ===================== */
+async function callAIWithFallback(prompt, temperature = 0) {
+  console.log("🚀 Iniciando llamada a IA con fallback");
+  
+  // Intentar primero con DeepSeek
+  try {
+    const result = await callDeepSeek(prompt, temperature);
+    console.log("✅ Traducción completada con DeepSeek");
+    return result;
+  } catch (deepseekError) {
+    console.log("🔄 DeepSeek falló, intentando con Gemini fallback...", deepseekError.message);
+    
+    // Si DeepSeek falla, intentar con Gemini
+    try {
+      const result = await callGemini(prompt, temperature);
+      console.log("✅ Traducción completada con Gemini fallback");
+      return result;
+    } catch (geminiError) {
+      // Si ambos fallan, lanzar error
+      console.error("💥 Ambos servicios de IA fallaron");
+      throw new Error("No se pudo completar la operación con ningún servicio de IA");
+    }
+  }
+}
+
+/* ===================== FUNCIÓN DE TRADUCCIÓN (ACTUALIZADA CON FALLBACK) ===================== */
 async function translateText(text, source, target) {
-  const prompt = `You are a faithful translator for an academic journal.
+  const prompt = `You are a faithful translator for an academic journal. The National Review of Sciences for Students in English, and Revista Nacional de las Ciencias in Spanish.
 
 Task:
 Translate the following text from ${source} to ${target}.
@@ -294,7 +401,8 @@ Rules:
 Text to translate:
 "${text}"`;
 
-  return await callGemini(prompt);
+  // Usamos la función con fallback
+  return await callAIWithFallback(prompt);
 }
 
 async function translateHtmlFragment(html, source, target) {
@@ -307,13 +415,14 @@ The original language is ${source}.
 
 Rules:
 - Preserve ALL HTML structure exactly
-- Only translate user-facing text nodes
+- Only translate user-facing text nodes. Links of articles of the journal must include an "EN" before ".html" if the target lenguage is english, and include nothing if it is spanish.
 - Output ONLY the translated HTML fragment
 
 HTML code fragment to translate:
 ${html}`;
 
-  return await callGemini(prompt);
+  // Usamos la función con fallback
+  return await callAIWithFallback(prompt);
 }
 
 function splitHtmlContent(html) {
@@ -422,10 +531,10 @@ exports.uploadImageToImgBBCallable = onCall(
   }
 );
 
-/* ===================== UPLOAD NEWS ===================== */
+/* ===================== UPLOAD NEWS (ACTUALIZADO CON DEEPSEEK) ===================== */
 exports.uploadNews = onRequest(
   { 
-    secrets: [GEMINI_API_KEY],
+    secrets: [GEMINI_API_KEY, DEEPSEEK_API_KEY], // Añadido DEEPSEEK_API_KEY
     cors: true,
     timeoutSeconds: 120
   },
@@ -466,11 +575,11 @@ exports.uploadNews = onRequest(
         return res.status(400).json({ error: "Faltan datos: title y body son requeridos" });
       }
 
-      // Verificar que Gemini esté disponible
-      if (!GoogleGenAI) {
+      // Verificar que las dependencias estén cargadas
+      if (!GoogleGenAI || !fetch) {
         await loadDependencies();
-        if (!GoogleGenAI) {
-          return res.status(500).json({ error: "Servicio de traducción no disponible" });
+        if (!GoogleGenAI || !fetch) {
+          return res.status(500).json({ error: "Servicios de traducción no disponibles" });
         }
       }
 
@@ -480,7 +589,12 @@ exports.uploadNews = onRequest(
       const titleSource = sanitizeInput(title);
       const bodySource = base64DecodeUnicode(body) || sanitizeInput(body);
 
+      console.log("📝 Iniciando traducción con DeepSeek (fallback Gemini)");
+      
+      // Usar la función con fallback para el título
       const titleTarget = await translateText(titleSource, source, target);
+      
+      // Usar la función con fallback para el body
       const bodyTarget = await translateHtmlFragmentWithSplit(bodySource, source, target);
 
       const db = admin.firestore();
