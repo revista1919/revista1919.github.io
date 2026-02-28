@@ -6206,3 +6206,87 @@ exports.onReviewerAssignmentSubmittedUpdateSubmission = onDocumentUpdated(
     }
   }
 );
+// ===================== GET USER INVITATIONS =====================
+exports.getUserInvitations = onCall(
+  {
+    secrets: [], // No necesita secrets adicionales
+    memory: '256MiB'
+  },
+  async (request) => {
+    const { HttpsError } = require("firebase-functions/v2/https");
+    
+    try {
+      if (!request.auth) {
+        throw new HttpsError('unauthenticated', 'Debes iniciar sesión');
+      }
+      
+      const uid = request.auth.uid;
+      const db = admin.firestore();
+      
+      // Obtener email del usuario
+      const userDoc = await db.collection('users').doc(uid).get();
+      if (!userDoc.exists) {
+        throw new HttpsError('not-found', 'Usuario no encontrado');
+      }
+      
+      const userEmail = userDoc.data().email;
+      if (!userEmail) {
+        throw new HttpsError('failed-precondition', 'Usuario sin email');
+      }
+      
+      // Buscar invitaciones PENDIENTES para este email
+      const invitationsSnapshot = await db.collection('reviewerInvitations')
+        .where('reviewerEmail', '==', userEmail)
+        .where('status', '==', 'pending')
+        .orderBy('createdAt', 'desc')
+        .get();
+      
+      const invitations = [];
+      invitationsSnapshot.forEach(doc => {
+        const data = doc.data();
+        invitations.push({
+          id: doc.id,
+          submissionId: data.submissionId,
+          reviewerName: data.reviewerName,
+          invitedBy: data.invitedBy,
+          invitedByEmail: data.invitedByEmail,
+          round: data.round,
+          createdAt: data.createdAt?.toDate?.()?.toISOString(),
+          inviteHash: data.inviteHash, // Para el enlace si lo necesitas
+          // Incluir también el enlace por si quieres usarlo
+          responseLink: `https://www.revistacienciasestudiantes.com/reviewer-response?hash=${data.inviteHash}`
+        });
+      });
+      
+      // Obtener detalles de los submissions para mostrar títulos
+      const submissionsMap = {};
+      for (const inv of invitations) {
+        if (!submissionsMap[inv.submissionId]) {
+          const subDoc = await db.collection('submissions').doc(inv.submissionId).get();
+          if (subDoc.exists) {
+            submissionsMap[inv.submissionId] = {
+              title: subDoc.data().title,
+              area: subDoc.data().area
+            };
+          }
+        }
+      }
+      
+      // Combinar datos
+      const result = invitations.map(inv => ({
+        ...inv,
+        submission: submissionsMap[inv.submissionId] || { title: 'Artículo no encontrado' }
+      }));
+      
+      return {
+        success: true,
+        invitations: result,
+        count: result.length
+      };
+      
+    } catch (error) {
+      console.error('Error en getUserInvitations:', error);
+      throw new HttpsError('internal', error.message);
+    }
+  }
+);
