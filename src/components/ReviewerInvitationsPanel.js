@@ -93,38 +93,42 @@ export default function ReviewerInvitationsPanel({ user, onAccept }) {
     console.log('Retry:', isRetry ? `Attempt ${retryCount + 1}/${MAX_RETRY_ATTEMPTS}` : 'Initial load');
     
     try {
-      // Timeout para la petición
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Request timeout')), 15000)
-      );
-      
+      // Llamar a la función de Firebase
       const response = await getUserInvitations();
       console.log('📦 Raw response:', response);
       
-      // ✅ Firebase Callable Functions siempre envuelven en 'data'
-      const result = response.data || response;
+      // Firebase Callable Functions SIEMPRE devuelven { data: ... }
+      const result = response?.data || response;
       console.log('📦 Processed result:', result);
       
-      if (result && result.success) {
-        // Asegurar que invitations sea un array
-        const invitationsArray = Array.isArray(result.invitations) 
-          ? result.invitations 
-          : [];
+      // Verificar que tenemos una respuesta válida
+      if (!result) {
+        throw new Error('No se recibió respuesta del servidor');
+      }
+      
+      // Verificar si la operación fue exitosa
+      if (result.success === true) {
+        // Obtener el array de invitaciones
+        const invitationsArray = result.invitations || [];
         
-        console.log(`✅ Invitaciones válidas: ${invitationsArray.length}`);
+        // Validar que sea un array
+        if (!Array.isArray(invitationsArray)) {
+          console.warn('⚠️ invitations no es un array:', invitationsArray);
+          setInvitations([]);
+        } else {
+          // Validar cada invitación
+          const validInvitations = invitationsArray.filter(inv => {
+            const isValid = inv && inv.id && inv.submissionId;
+            if (!isValid) {
+              console.warn('⚠️ Invalid invitation skipped:', inv);
+            }
+            return isValid;
+          });
+          
+          console.log(`✅ Invitaciones válidas: ${validInvitations.length}/${invitationsArray.length}`);
+          setInvitations(validInvitations);
+        }
         
-        // Validar y normalizar invitaciones
-        const validInvitations = invitationsArray.filter(inv => {
-          const isValid = inv && inv.id && inv.submissionId;
-          if (!isValid) {
-            console.warn('⚠️ Invalid invitation skipped:', inv);
-          }
-          return isValid;
-        });
-        
-        console.log(`✅ Valid invitations: ${validInvitations.length}/${invitationsArray.length}`);
-        
-        setInvitations(validInvitations);
         setLastRefresh(new Date().toISOString());
         setRetryCount(0); // Resetear contador en éxito
         
@@ -156,33 +160,30 @@ export default function ReviewerInvitationsPanel({ user, onAccept }) {
           : 'Request is taking too long. Retrying...';
       } else if (err.message.includes('network') || err.message.includes('Failed to fetch')) {
         errorMessage = texts.networkError;
-      } else if (err.message.includes('permission') || err.message.includes('unauthenticated')) {
-        errorMessage = texts.sessionExpired;
-        shouldRetry = false;
-      } else if (err.code === 'permission-denied') {
+      } else if (err.message.includes('permission') || err.code === 'permission-denied') {
         errorMessage = texts.sessionExpired;
         shouldRetry = false;
       }
       
       setError(errorMessage);
       
-      // Sistema de reintentos
+      // Sistema de reintentos (solo para errores recuperables)
       if (shouldRetry && retryCount < MAX_RETRY_ATTEMPTS - 1) {
         console.log(`🔄 Scheduling retry ${retryCount + 1}/${MAX_RETRY_ATTEMPTS}...`);
         setRetryCount(prev => prev + 1);
         
+        // Backoff exponencial
+        const delay = RETRY_DELAY_MS * Math.pow(2, retryCount);
         setTimeout(() => {
           loadInvitations(true);
-        }, RETRY_DELAY_MS * (retryCount + 1)); // Backoff exponencial
-      } else if (retryCount >= MAX_RETRY_ATTEMPTS - 1) {
-        console.log('❌ Max retry attempts reached');
-        // Mantener el error, no reintentar más
+        }, delay);
       }
       
       // Guardar error en debug
       if (process.env.NODE_ENV === 'development') {
         setDebugInfo({
           error: err.message,
+          code: err.code,
           stack: err.stack,
           retryCount,
           timestamp: new Date().toISOString()
@@ -210,7 +211,7 @@ export default function ReviewerInvitationsPanel({ user, onAccept }) {
     return () => {
       mounted = false;
     };
-  }, [loadInvitations]); // Dependencia estable gracias a useCallback
+  }, [loadInvitations]);
 
   // Handler para respuesta a invitación
   const handleResponse = useCallback(async (invitationId, status, conflictOfInterest = '', responseComments = '') => {
@@ -292,7 +293,7 @@ export default function ReviewerInvitationsPanel({ user, onAccept }) {
       
       setError(errorMessage);
       
-      // Reintentar después de error
+      // Limpiar error después de 5 segundos
       setTimeout(() => {
         setError(null);
       }, 5000);
@@ -335,7 +336,7 @@ export default function ReviewerInvitationsPanel({ user, onAccept }) {
       try {
         await handleResponse(invitation.id, status, conflict, comments);
         if (status !== 'accepted') {
-          setShowForm(false); // Solo cerrar si no es aceptado (el aceptado redirige)
+          setShowForm(false); // Solo cerrar si no es aceptado
         }
       } catch (err) {
         setLocalError(err.message);
