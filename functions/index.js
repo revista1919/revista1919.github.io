@@ -6206,7 +6206,7 @@ exports.onReviewerAssignmentSubmittedUpdateSubmission = onDocumentUpdated(
     }
   }
 );
-// ===================== GET USER INVITATIONS =====================
+// ===================== GET USER INVITATIONS (VERSIÓN MEJORADA) =====================
 exports.getUserInvitations = onCall(
   {
     secrets: [], // No necesita secrets adicionales
@@ -6215,35 +6215,85 @@ exports.getUserInvitations = onCall(
   async (request) => {
     const { HttpsError } = require("firebase-functions/v2/https");
     
+    // --- LOG 1: Inicio de la función ---
+    console.log('📥 [getUserInvitations] Función invocada');
+    console.log('📥 Auth UID recibido:', request.auth?.uid);
+    
     try {
       if (!request.auth) {
+        console.error('❌ [getUserInvitations] No authenticated');
         throw new HttpsError('unauthenticated', 'Debes iniciar sesión');
       }
       
       const uid = request.auth.uid;
       const db = admin.firestore();
       
-      // Obtener email del usuario
+      // --- LOG 2: Buscando usuario por UID ---
+      console.log(`🔍 [getUserInvitations] Buscando usuario con UID: ${uid}`);
       const userDoc = await db.collection('users').doc(uid).get();
+      
       if (!userDoc.exists) {
-        throw new HttpsError('not-found', 'Usuario no encontrado');
+        // --- LOG 3: Usuario NO encontrado por UID ---
+        console.error(`❌ [getUserInvitations] Usuario NO encontrado con UID: ${uid}`);
+        
+        // 🚨 NUEVO: Intentar buscar por email como fallback
+        console.log(`🔍 [getUserInvitations] Buscando usuario por email usando el token...`);
+        
+        // Obtener el email del token decodificado
+        const userFromAuth = await admin.auth().getUser(uid);
+        const userEmail = userFromAuth.email;
+        
+        if (userEmail) {
+          console.log(`🔍 [getUserInvitations] Buscando en Firestore por email: ${userEmail}`);
+          const userQuery = await db.collection('users')
+            .where('email', '==', userEmail)
+            .limit(1)
+            .get();
+          
+          if (!userQuery.empty) {
+            const foundUser = userQuery.docs[0];
+            console.log(`✅ [getUserInvitations] Usuario encontrado por email con ID: ${foundUser.id}`);
+            
+            // Usar este documento para continuar
+            const userData = foundUser.data();
+            // ... (resto del código usando userData)
+          } else {
+            console.error(`❌ [getUserInvitations] Usuario tampoco encontrado por email: ${userEmail}`);
+            throw new HttpsError('not-found', 'Usuario no encontrado en Firestore');
+          }
+        } else {
+          throw new HttpsError('not-found', 'Usuario no encontrado en Firestore');
+        }
       }
       
-      const userEmail = userDoc.data().email;
+      // Si llegamos aquí, tenemos el userDoc
+      const userData = userDoc.data();
+      console.log('✅ [getUserInvitations] Usuario encontrado. Email:', userData?.email);
+      
+      const userEmail = userData.email;
       if (!userEmail) {
+        console.error('❌ [getUserInvitations] Usuario sin email en Firestore');
         throw new HttpsError('failed-precondition', 'Usuario sin email');
       }
       
-      // Buscar invitaciones PENDIENTES para este email
+      // --- LOG 4: Buscando invitaciones ---
+      console.log(`🔍 [getUserInvitations] Buscando invitaciones para email: ${userEmail}`);
+      
       const invitationsSnapshot = await db.collection('reviewerInvitations')
         .where('reviewerEmail', '==', userEmail)
         .where('status', '==', 'pending')
         .orderBy('createdAt', 'desc')
         .get();
       
+      console.log(`📊 [getUserInvitations] Invitaciones encontradas: ${invitationsSnapshot.size}`);
+      
       const invitations = [];
-      invitationsSnapshot.forEach(doc => {
+      const submissionsMap = {};
+      
+      for (const doc of invitationsSnapshot.docs) {
         const data = doc.data();
+        console.log(`   - Invitación ID: ${doc.id}, Submission: ${data.submissionId}`);
+        
         invitations.push({
           id: doc.id,
           submissionId: data.submissionId,
@@ -6252,31 +6302,36 @@ exports.getUserInvitations = onCall(
           invitedByEmail: data.invitedByEmail,
           round: data.round,
           createdAt: data.createdAt?.toDate?.()?.toISOString(),
-          inviteHash: data.inviteHash, // Para el enlace si lo necesitas
-          // Incluir también el enlace por si quieres usarlo
+          inviteHash: data.inviteHash,
           responseLink: `https://www.revistacienciasestudiantes.com/reviewer-response?hash=${data.inviteHash}`
         });
-      });
+        
+        submissionsMap[data.submissionId] = null;
+      }
       
-      // Obtener detalles de los submissions para mostrar títulos
-      const submissionsMap = {};
-      for (const inv of invitations) {
-        if (!submissionsMap[inv.submissionId]) {
-          const subDoc = await db.collection('submissions').doc(inv.submissionId).get();
-          if (subDoc.exists) {
-            submissionsMap[inv.submissionId] = {
-              title: subDoc.data().title,
-              area: subDoc.data().area
-            };
-          }
+      // --- LOG 5: Obteniendo detalles de submissions ---
+      console.log(`🔍 [getUserInvitations] Obteniendo detalles de ${Object.keys(submissionsMap).length} submissions`);
+      
+      for (const subId of Object.keys(submissionsMap)) {
+        const subDoc = await db.collection('submissions').doc(subId).get();
+        if (subDoc.exists) {
+          submissionsMap[subId] = {
+            title: subDoc.data().title,
+            area: subDoc.data().area
+          };
+          console.log(`   - Submission ${subId}: ${subDoc.data().title}`);
+        } else {
+          console.warn(`   ⚠️ Submission no encontrado: ${subId}`);
+          submissionsMap[subId] = { title: 'Artículo no encontrado' };
         }
       }
       
-      // Combinar datos
       const result = invitations.map(inv => ({
         ...inv,
         submission: submissionsMap[inv.submissionId] || { title: 'Artículo no encontrado' }
       }));
+      
+      console.log(`✅ [getUserInvitations] Éxito. Devolviendo ${result.length} invitaciones`);
       
       return {
         success: true,
@@ -6285,7 +6340,11 @@ exports.getUserInvitations = onCall(
       };
       
     } catch (error) {
-      console.error('Error en getUserInvitations:', error);
+      // --- LOG 6: Error capturado ---
+      console.error('❌ [getUserInvitations] Error:', error.message);
+      console.error('❌ Stack:', error.stack);
+      
+      if (error instanceof HttpsError) throw error;
       throw new HttpsError('internal', error.message);
     }
   }
