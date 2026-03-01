@@ -98,45 +98,49 @@ export default function ReviewerInvitationsPanel({ user, onAccept }) {
         setTimeout(() => reject(new Error('Request timeout')), 15000)
       );
       
-      const result = await Promise.race([
-        getUserInvitations(),
-        timeoutPromise
-      ]);
+      const response = await getUserInvitations();
+      console.log('📦 Raw response:', response);
       
-      console.log('API Response:', result);
+      // ✅ Firebase Callable Functions siempre envuelven en 'data'
+      const result = response.data || response;
+      console.log('📦 Processed result:', result);
       
-      // Validar estructura de respuesta
-      if (!result || typeof result !== 'object') {
-        throw new Error('Invalid response format');
-      }
-      
-      if (!result.success) {
-        throw new Error(result.error || texts.error);
-      }
-      
-      // Validar y normalizar invitaciones
-      const rawInvitations = result.invitations || [];
-      const validInvitations = rawInvitations.filter(inv => {
-        const isValid = inv && inv.id && inv.submissionId;
-        if (!isValid) {
-          console.warn('⚠️ Invalid invitation skipped:', inv);
-        }
-        return isValid;
-      });
-      
-      console.log(`✅ Valid invitations: ${validInvitations.length}/${rawInvitations.length}`);
-      
-      setInvitations(validInvitations);
-      setLastRefresh(new Date().toISOString());
-      setRetryCount(0); // Resetear contador en éxito
-      
-      // Guardar debug info en desarrollo
-      if (process.env.NODE_ENV === 'development') {
-        setDebugInfo({
-          raw: rawInvitations,
-          valid: validInvitations,
-          timestamp: new Date().toISOString()
+      if (result && result.success) {
+        // Asegurar que invitations sea un array
+        const invitationsArray = Array.isArray(result.invitations) 
+          ? result.invitations 
+          : [];
+        
+        console.log(`✅ Invitaciones válidas: ${invitationsArray.length}`);
+        
+        // Validar y normalizar invitaciones
+        const validInvitations = invitationsArray.filter(inv => {
+          const isValid = inv && inv.id && inv.submissionId;
+          if (!isValid) {
+            console.warn('⚠️ Invalid invitation skipped:', inv);
+          }
+          return isValid;
         });
+        
+        console.log(`✅ Valid invitations: ${validInvitations.length}/${invitationsArray.length}`);
+        
+        setInvitations(validInvitations);
+        setLastRefresh(new Date().toISOString());
+        setRetryCount(0); // Resetear contador en éxito
+        
+        // Guardar debug info en desarrollo
+        if (process.env.NODE_ENV === 'development') {
+          setDebugInfo({
+            raw: invitationsArray,
+            valid: validInvitations,
+            timestamp: new Date().toISOString()
+          });
+        }
+      } else {
+        // Si success es false, mostrar el error
+        const errorMsg = result?.error || texts.error;
+        console.error('❌ Error en respuesta:', result);
+        throw new Error(errorMsg);
       }
       
     } catch (err) {
