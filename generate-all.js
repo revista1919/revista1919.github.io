@@ -406,7 +406,7 @@ function generateVolumeHtml({ lang, volume, volumeSlug, toc, year, domain, oaSvg
   const editorial = isSpanish ? volume.editorial : volume.englishEditorial;
   const fecha = isSpanish ? formatDateEs(volume.fecha) : formatDateEn(volume.fecha);
 
-  return `<!DOCTYPE html>
+return `<!DOCTYPE html>
 <html lang="${lang}">
 <head>
   <meta charset="UTF-8">
@@ -420,65 +420,375 @@ function generateVolumeHtml({ lang, volume, volumeSlug, toc, year, domain, oaSvg
   <meta name="citation_pdf_url" content="${volume.pdfUrl}">
   <meta name="citation_abstract_html_url" content="${domain}/volumes/volume-${volumeSlug}${isSpanish ? '' : 'EN'}.html">
   <meta name="citation_language" content="${lang}">
-  <meta name="description" content="${editorial ? editorial.substring(0, 160) + '...' : ''}">
+  <meta name="description" content="${editorial ? editorial.replace(/<[^>]*>/g, '').substring(0, 160) + '...' : ''}">
   <title>${title} - ${isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students'}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,700&family=JetBrains+Mono&family=Lora:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
   <style>
     :root {
       --journal-blue: #005587;
+      --nature-blue: #005a7d;
+      --nature-blue-dark: #003e56;
+      --nature-black: #111111;
       --text-dark: #222222;
       --text-light: #555555;
-      --border-color: #e0e0e0;
-      --bg-soft: #fcfcfc;
+      --text-muted: #6b7280;
+      --border-color: #e5e7eb;
+      --bg-soft: #f8f9fa;
+      --bg-hover: #f3f4f6;
       --accent-gold: #a68966;
+      --accent: #c2410c;
+    }
+    * {
+      max-width: 100vw;
+      box-sizing: border-box;
     }
     body {
-      font-family: 'Inter', -apple-system, sans-serif;
+      font-family: 'Inter', sans-serif;
       line-height: 1.7;
       color: var(--text-dark);
       background-color: #fff;
       margin: 0;
+      overflow-x: hidden;
     }
-    .masthead {
-      border-bottom: 4px solid var(--text-dark);
-      padding: 1.5rem 2rem;
-      text-align: center;
-      background: white;
+
+    /* ===== HEADER UNIFICADO (EL MISMO EN TODAS LAS PÁGINAS) ===== */
+    .sd-header {
+      background: #fff;
+      border-bottom: 1px solid var(--border-color);
+      font-family: 'Inter', sans-serif;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      width: 100%;
     }
-    .journal-name {
-      font-family: 'Libre Baskerville', serif;
-      font-size: 1.8rem;
-      text-transform: uppercase;
-      letter-spacing: -0.5px;
-      margin: 0;
-      color: var(--text-dark);
+
+    .sd-header-top {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0.75rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 2rem;
+    }
+
+    .sd-journal-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
       text-decoration: none;
+      color: var(--nature-black);
     }
-    .issue-meta {
-      font-size: 0.85rem;
+
+    .sd-logo-img {
+      height: 42px;
+      width: auto;
+      display: block;
+      object-fit: contain;
+    }
+
+    .sd-journal-titles {
+      display: flex;
+      flex-direction: column;
+      border-left: 1px solid #e0e0e0;
+      padding-left: 15px;
+    }
+
+    .sd-journal-name {
       font-weight: 600;
-      color: var(--text-light);
-      text-transform: uppercase;
-      margin-top: 0.5rem;
-      letter-spacing: 1px;
+      font-size: 0.95rem;
+      line-height: 1.2;
     }
+
+    .sd-issn {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .sd-search-wrapper {
+      flex: 1;
+      max-width: 500px;
+    }
+
+    .sd-search-bar {
+      display: flex;
+      align-items: center;
+      background: #f0f2f4;
+      border-radius: 4px;
+      padding: 6px 12px;
+      border: 1px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .sd-search-bar:focus-within {
+      background: #fff;
+      border-color: var(--nature-blue);
+      box-shadow: 0 0 0 3px rgba(0, 90, 125, 0.1);
+    }
+
+    .sd-search-icon {
+      color: var(--text-muted);
+      margin-right: 8px;
+    }
+
+    .sd-search-bar input {
+      border: none;
+      background: transparent;
+      width: 100%;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.85rem;
+      outline: none;
+      color: var(--text-main);
+    }
+
+    .sd-user-nav {
+      display: flex;
+      gap: 1.5rem;
+      align-items: center;
+    }
+
+    .sd-nav-link {
+      text-decoration: none;
+      color: var(--text-main);
+      font-size: 0.85rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: color 0.2s;
+    }
+
+    .sd-nav-link:hover {
+      color: var(--nature-blue);
+    }
+
+    /* ===== MENÚ HAMBURGUESA PARA MÓVIL ===== */
+    .sd-mobile-controls {
+      display: none;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .sd-mobile-search-btn {
+      display: none;
+      background: none;
+      border: none;
+      padding: 8px;
+      cursor: pointer;
+      color: var(--text-main);
+    }
+
+    .sd-mobile-search-btn svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+
+    .sd-mobile-menu-btn {
+      display: none;
+      background: none;
+      border: none;
+      padding: 8px;
+      cursor: pointer;
+      color: var(--text-main);
+    }
+
+    .sd-mobile-menu-btn svg {
+      width: 24px;
+      height: 24px;
+      fill: currentColor;
+    }
+
+    .sd-mobile-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .sd-mobile-overlay.active {
+      display: block;
+      opacity: 1;
+    }
+
+    .sd-mobile-menu {
+      position: fixed;
+      top: 0;
+      right: -100%;
+      width: 85%;
+      max-width: 350px;
+      height: 100vh;
+      background: white;
+      z-index: 1000;
+      overflow-y: auto;
+      transition: right 0.3s ease;
+      box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sd-mobile-menu.active {
+      right: 0;
+    }
+
+    .sd-mobile-menu-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .sd-mobile-menu-title {
+      font-weight: 600;
+      color: var(--nature-blue);
+      font-size: 0.9rem;
+    }
+
+    .sd-mobile-close-btn {
+      background: none;
+      border: none;
+      padding: 8px;
+      cursor: pointer;
+      color: var(--text-main);
+    }
+
+    .sd-mobile-search {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .sd-mobile-search-bar {
+      display: flex;
+      align-items: center;
+      background: #f0f2f4;
+      border-radius: 4px;
+      padding: 8px 12px;
+      border: 1px solid transparent;
+    }
+
+    .sd-mobile-search-bar:focus-within {
+      border-color: var(--nature-blue);
+      background: #fff;
+    }
+
+    .sd-mobile-search-bar input {
+      border: none;
+      background: transparent;
+      width: 100%;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9rem;
+      outline: none;
+      margin-left: 8px;
+    }
+
+    .sd-mobile-nav {
+      flex: 1;
+      padding: 1rem 0;
+    }
+
+    .sd-mobile-nav-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .sd-mobile-nav-section-title {
+      padding: 0.5rem 1rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      background: var(--bg-soft);
+    }
+
+    .sd-mobile-nav-items {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .sd-mobile-nav-item {
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .sd-mobile-nav-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 1rem;
+      text-decoration: none;
+      color: var(--text-main);
+      font-size: 0.95rem;
+      transition: background 0.2s;
+    }
+
+    .sd-mobile-nav-link:hover {
+      background: var(--bg-hover);
+    }
+
+    .sd-mobile-nav-link svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+      color: var(--text-muted);
+    }
+
+    .sd-mobile-menu-footer {
+      padding: 1rem;
+      border-top: 1px solid var(--border-color);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    /* ===== HERO SECTION - IMAGEN A BORDE COMPLETO ===== */
     .hero-section {
-      max-width: 1200px;
-      margin: 3rem auto;
-      padding: 4rem 2rem;
-      text-align: left;
+      width: 100vw;
+      margin-left: calc(-50vw + 50%);
+      margin-right: calc(-50vw + 50%);
+      padding: 6rem 2rem;
       background-image: url('https://images.unsplash.com/photo-1614850523011-8f49ffc73908');
       background-size: cover;
       background-position: center;
       color: white;
+      position: relative;
     }
+
+    .hero-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(to right, rgba(0,0,0,0.7), rgba(0,0,0,0.3));
+      z-index: 1;
+    }
+
+    .hero-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 2;
+    }
+
     .hero-section h1 {
-      font-family: 'Libre Baskerville', serif;
-      font-size: 2.8rem;
+      font-family: 'Playfair Display', serif;
+      font-size: 3.2rem;
       line-height: 1.2;
-      margin-bottom: 1rem;
+      margin-bottom: 1.5rem;
       color: white;
+      max-width: 900px;
     }
+
     .hero-details {
       font-size: 0.95rem;
       color: #eeeeee;
@@ -487,7 +797,10 @@ function generateVolumeHtml({ lang, volume, volumeSlug, toc, year, domain, oaSvg
       padding: 1rem 0;
       display: flex;
       gap: 2rem;
+      flex-wrap: wrap;
     }
+
+    /* ===== MAIN CONTENT ===== */
     .main-grid {
       max-width: 1200px;
       margin: 0 auto 5rem;
@@ -496,7 +809,11 @@ function generateVolumeHtml({ lang, volume, volumeSlug, toc, year, domain, oaSvg
       gap: 4rem;
       padding: 0 2rem;
     }
-    section { margin-bottom: 4rem; }
+
+    section { 
+      margin-bottom: 4rem; 
+    }
+
     h2 {
       font-family: 'Inter', sans-serif;
       font-size: 0.85rem;
@@ -507,20 +824,43 @@ function generateVolumeHtml({ lang, volume, volumeSlug, toc, year, domain, oaSvg
       padding-bottom: 0.5rem;
       margin-bottom: 2rem;
     }
-    .editorial-box {
-      font-family: 'Libre Baskerville', serif;
+
+    /* ===== NOTA EDITORIAL CON PÁRRAFOS ===== */
+    .editorial-content {
+      font-family: 'Lora', serif;
       font-size: 1.15rem;
       color: #333;
       padding-right: 2rem;
       border-left: 2px solid var(--accent-gold);
       padding-left: 2rem;
+    }
+
+    .editorial-content p {
+      margin-bottom: 1.5rem;
+      line-height: 1.8;
+    }
+
+    .editorial-content p:last-child {
+      margin-bottom: 0;
+    }
+
+    .editorial-content em {
       font-style: italic;
     }
+
+    .editorial-content strong {
+      font-weight: 700;
+    }
+
     .article-item {
       padding: 1.5rem 0;
       border-bottom: 1px solid var(--border-color);
     }
-    .article-item:last-child { border: none; }
+
+    .article-item:last-child { 
+      border: none; 
+    }
+
     .article-title {
       font-size: 1.25rem;
       font-weight: 600;
@@ -529,30 +869,40 @@ function generateVolumeHtml({ lang, volume, volumeSlug, toc, year, domain, oaSvg
       margin-bottom: 0.5rem;
       text-decoration: none;
     }
-    .article-title:hover { text-decoration: underline; }
+
+    .article-title:hover { 
+      text-decoration: underline; 
+    }
+
     .article-authors {
       font-size: 0.9rem;
       color: var(--text-light);
       font-style: italic;
     }
+
     .sidebar {
       position: sticky;
-      top: 2rem;
+      top: 100px;
       height: fit-content;
     }
+
     .card {
       background: var(--bg-soft);
       border: 1px solid var(--border-color);
       padding: 1.5rem;
       margin-bottom: 1.5rem;
+      border-radius: 8px;
     }
+
     .card-title {
       font-weight: 700;
       font-size: 0.75rem;
       text-transform: uppercase;
       margin-bottom: 1rem;
       display: block;
+      color: var(--text-muted);
     }
+
     .btn-primary {
       background: var(--journal-blue);
       color: white;
@@ -564,8 +914,13 @@ function generateVolumeHtml({ lang, volume, volumeSlug, toc, year, domain, oaSvg
       font-size: 0.9rem;
       margin-bottom: 0.5rem;
       transition: background 0.2s;
+      border-radius: 4px;
     }
-    .btn-primary:hover { background: #003d60; }
+
+    .btn-primary:hover { 
+      background: #003d60; 
+    }
+
     .btn-outline {
       border: 1px solid var(--border-color);
       color: var(--text-dark);
@@ -574,12 +929,22 @@ function generateVolumeHtml({ lang, volume, volumeSlug, toc, year, domain, oaSvg
       padding: 0.8rem;
       text-decoration: none;
       font-size: 0.9rem;
+      border-radius: 4px;
+      transition: all 0.2s;
     }
+
+    .btn-outline:hover {
+      background: var(--bg-soft);
+      border-color: var(--journal-blue);
+    }
+
     .pdf-container {
       background: #eee;
       border: 1px solid var(--border-color);
       padding: 10px;
+      border-radius: 4px;
     }
+
     .action-buttons {
       display: flex;
       gap: 1rem;
@@ -587,44 +952,295 @@ function generateVolumeHtml({ lang, volume, volumeSlug, toc, year, domain, oaSvg
       flex-wrap: wrap;
       justify-content: flex-start;
     }
+
+    footer {
+      background: #f8f8f8;
+      border-top: 1px solid var(--border-color);
+      padding: 4rem 2rem;
+      text-align: center;
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* ===== RESPONSIVE ===== */
     @media (max-width: 900px) {
-      .main-grid { grid-template-columns: 1fr; }
-      .sidebar { display: none; }
-      .hero-section h1 { font-size: 2rem; }
+      .sd-header-top {
+        padding: 0.6rem 1.5rem;
+      }
+      
+      .sd-logo-img {
+        height: 36px;
+      }
+      
+      .sd-search-wrapper,
+      .sd-user-nav {
+        display: none;
+      }
+      
+      .sd-mobile-controls {
+        display: flex;
+      }
+      
+      .sd-mobile-search-btn,
+      .sd-mobile-menu-btn {
+        display: block;
+      }
+
+      .main-grid { 
+        grid-template-columns: 1fr; 
+      }
+      
+      .sidebar { 
+        display: none; 
+      }
+      
+      .hero-section h1 { 
+        font-size: 2.4rem; 
+      }
+      
+      .hero-section {
+        padding: 4rem 1.5rem;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .sd-header-top {
+        padding: 0.4rem 1rem;
+      }
+      
+      .sd-logo-img {
+        display: none;
+      }
+      
+      .sd-journal-titles {
+        border-left: none;
+        padding-left: 0;
+      }
+      
+      .sd-journal-name {
+        font-size: 0.75rem;
+        font-weight: 600;
+        max-width: 180px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      
+      .sd-issn {
+        font-size: 0.6rem;
+      }
+      
+      .sd-mobile-controls {
+        gap: 0.25rem;
+      }
+
+      .hero-section h1 { 
+        font-size: 1.8rem; 
+      }
+
+      .hero-section {
+        padding: 3rem 1rem;
+      }
+
+      .hero-details {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .main-grid {
+        padding: 0 1rem;
+      }
+
+      .editorial-content {
+        padding-left: 1rem;
+        font-size: 1rem;
+      }
+
+      .article-title {
+        font-size: 1.1rem;
+      }
+    }
+
+    @media (max-width: 400px) {
+      .sd-header-top {
+        padding: 0.3rem 0.75rem;
+      }
+      
+      .sd-journal-name {
+        font-size: 0.7rem;
+        max-width: 140px;
+      }
+      
+      .sd-issn {
+        display: none;
+      }
     }
   </style>
 </head>
 <body>
-  <header class="masthead">
-    <a href="/" class="journal-name">${isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students'}</a>
-    <div class="issue-meta">
-      ${isSpanish ? 'Vol.' : 'Vol.'} ${volume.volumen}, ${isSpanish ? 'Núm.' : 'No.'} ${volume.numero} • ${fecha}
+  <!-- HEADER UNIFICADO -->
+  <header class="sd-header">
+    <div class="sd-header-top">
+      <div class="sd-brand-container">
+        <a href="/" class="sd-journal-logo">
+          <img src="${isSpanish ? LOGO_ES : LOGO_EN}" alt="Logo" class="sd-logo-img">
+          <div class="sd-journal-titles">
+            <span class="sd-journal-name">${isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students'}</span>
+            <span class="sd-issn">ISSN: 3087-2839</span>
+          </div>
+        </a>
+      </div>
+      
+      <div class="sd-search-wrapper">
+        <form id="search-form" class="sd-search-bar" onsubmit="handleSearch(event)">
+          <svg class="sd-search-icon" viewBox="0 0 24 24" width="18" height="18">
+            <path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+          </svg>
+          <input type="text" id="search-input" placeholder="${isSpanish ? 'Buscar artículos, autores...' : 'Search articles, authors...'}" aria-label="Buscar">
+        </form>
+      </div>
+      
+      <div class="sd-user-nav">
+        <a href="${isSpanish ? '/submit' : '/en/submit'}" class="sd-nav-link">${isSpanish ? 'Envíos' : 'Submissions'}</a>
+        <a href="${isSpanish ? '/faq' : '/en/faq'}" class="sd-nav-link">${isSpanish ? 'Ayuda' : 'Help'}</a>
+        <a href="${isSpanish ? '/login' : '/en/login'}" class="sd-nav-link">
+          <svg viewBox="0 0 24 24" width="18" height="18">
+            <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+          </svg>
+          ${isSpanish ? 'Mi cuenta' : 'My account'}
+        </a>
+      </div>
+      
+      <div class="sd-mobile-controls">
+        <button class="sd-mobile-search-btn" onclick="toggleMobileSearch()" aria-label="Buscar">
+          <svg viewBox="0 0 24 24">
+            <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+          </svg>
+        </button>
+        <button class="sd-mobile-menu-btn" onclick="toggleMobileMenu()" aria-label="Menú">
+          <svg viewBox="0 0 24 24">
+            <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+          </svg>
+        </button>
+      </div>
     </div>
   </header>
-  <article class="hero-section">
-    <h1>${title}</h1>
-    <div class="hero-details">
-      <span><strong>${isSpanish ? 'Publicado:' : 'Published:'}</strong> ${fecha}</span>
-      <span><strong>ISSN:</strong> 3087-2839</span>
-      <span><strong>${isSpanish ? 'Idioma:' : 'Language:'}</strong> ${isSpanish ? 'Español/Inglés' : 'Spanish/English'}</span>
+
+  <!-- Overlay y menú móvil -->
+  <div class="sd-mobile-overlay" id="mobileOverlay" onclick="closeMobileMenu()"></div>
+  
+  <div class="sd-mobile-menu" id="mobileMenu">
+    <div class="sd-mobile-menu-header">
+      <span class="sd-mobile-menu-title">${isSpanish ? 'MENÚ' : 'MENU'}</span>
+      <button class="sd-mobile-close-btn" onclick="closeMobileMenu()">
+        <svg viewBox="0 0 24 24">
+          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+        </svg>
+      </button>
     </div>
-  </article>
+    
+    <div class="sd-mobile-search">
+      <form id="mobile-search-form" class="sd-mobile-search-bar" onsubmit="handleMobileSearch(event)">
+        <svg width="16" height="16" viewBox="0 0 24 24">
+          <path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+        </svg>
+        <input type="text" id="mobile-search-input" placeholder="${isSpanish ? 'Buscar artículos, autores...' : 'Search articles, authors...'}" aria-label="Buscar">
+      </form>
+    </div>
+    
+    <div class="sd-mobile-nav">
+      <div class="sd-mobile-nav-section">
+        <div class="sd-mobile-nav-section-title">${isSpanish ? 'NAVEGACIÓN' : 'NAVIGATION'}</div>
+        <ul class="sd-mobile-nav-items">
+          <li class="sd-mobile-nav-item">
+            <a href="#editorial" class="sd-mobile-nav-link" onclick="closeMobileMenu()">
+              <svg viewBox="0 0 24 24">
+                <path d="M4 6H20v2H4zM4 12H20v2H4zM4 18H20v2H4z"/>
+              </svg>
+              ${isSpanish ? 'Nota Editorial' : 'Editorial Note'}
+            </a>
+          </li>
+          <li class="sd-mobile-nav-item">
+            <a href="#toc" class="sd-mobile-nav-link" onclick="closeMobileMenu()">
+              <svg viewBox="0 0 24 24">
+                <path d="M4 6H20v2H4zM4 12H20v2H4zM4 18H20v2H4z"/>
+              </svg>
+              ${isSpanish ? 'Contenido' : 'Contents'}
+            </a>
+          </li>
+          <li class="sd-mobile-nav-item">
+            <a href="#preview" class="sd-mobile-nav-link" onclick="closeMobileMenu()">
+              <svg viewBox="0 0 24 24">
+                <path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4V4c0-1.1-.9-2-2-2z"/>
+              </svg>
+              ${isSpanish ? 'Vista Previa' : 'Preview'}
+            </a>
+          </li>
+        </ul>
+      </div>
+      
+      <div class="sd-mobile-nav-section">
+        <div class="sd-mobile-nav-section-title">${isSpanish ? 'MI CUENTA' : 'MY ACCOUNT'}</div>
+        <ul class="sd-mobile-nav-items">
+          <li class="sd-mobile-nav-item">
+            <a href="${isSpanish ? '/submit' : '/en/submit'}" class="sd-mobile-nav-link">
+              <svg viewBox="0 0 24 24">
+                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+              </svg>
+              ${isSpanish ? 'Envíos' : 'Submissions'}
+            </a>
+          </li>
+          <li class="sd-mobile-nav-item">
+            <a href="${isSpanish ? '/faq' : '/en/faq'}" class="sd-mobile-nav-link">
+              <svg viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2-7h-2v-2h2v2zm-4 0h-2v-2h2v2zm0-4h-2V6h2v2z"/>
+              </svg>
+              ${isSpanish ? 'Ayuda' : 'Help'}
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    
+    <div class="sd-mobile-menu-footer">
+      <div>ISSN: 3087-2839</div>
+      <div style="margin-top: 0.5rem; font-size: 0.7rem;">
+        &copy; ${new Date().getFullYear()} ${isSpanish ? 'RNCE' : 'TNRSFS'}
+      </div>
+    </div>
+  </div>
+
+  <!-- HERO SECTION - IMAGEN A BORDE COMPLETO -->
+  <div class="hero-section">
+    <div class="hero-content">
+      <h1>${title}</h1>
+      <div class="hero-details">
+        <span><strong>${isSpanish ? 'Publicado:' : 'Published:'}</strong> ${fecha}</span>
+        <span><strong>ISSN:</strong> 3087-2839</span>
+        <span><strong>${isSpanish ? 'Volumen:' : 'Volume:'}</strong> ${volume.volumen} • ${isSpanish ? 'Número:' : 'Issue:'} ${volume.numero}</span>
+        <span><strong>${isSpanish ? 'Idioma:' : 'Language:'}</strong> ${isSpanish ? 'Español/Inglés' : 'Spanish/English'}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTENIDO PRINCIPAL -->
   <div class="main-grid">
     <main>
       ${editorial ? `
         <section id="editorial">
           <h2>${isSpanish ? 'Nota Editorial' : 'Editorial Note'}</h2>
-          <div class="editorial-box">
-            ${editorial}
+          <div class="editorial-content">
+            ${editorial.split('\\n\\n').map(p => `<p>${p}</p>`).join('')}
           </div>
         </section>
       ` : ''}
+      
       <section id="toc">
         <h2>${isSpanish ? 'Contenido del Volumen' : 'Table of Contents'}</h2>
         <div class="toc-wrapper">
           ${toc || `<p style="color: var(--text-light);">${isSpanish ? 'No hay artículos disponibles.' : 'No articles available.'}</p>`}
         </div>
       </section>
+      
       <section id="preview">
         <h2>${isSpanish ? 'Visualización Completa' : 'Full Preview'}</h2>
         <div class="pdf-container">
@@ -635,8 +1251,9 @@ function generateVolumeHtml({ lang, volume, volumeSlug, toc, year, domain, oaSvg
           <a href="${volume.pdfUrl}" download class="btn-primary">${isSpanish ? 'Descargar volumen (PDF)' : 'Download Volume (PDF)'}</a>
         </div>
       </section>
+      
       <section id="license">
-        <div style="display: flex; gap: 1.5rem; align-items: center; border-top: 1px solid var(--border-color); padding-top: 2rem;">
+        <div style="display: flex; gap: 1.5rem; align-items: center; border-top: 1px solid var(--border-color); padding-top: 2rem; flex-wrap: wrap;">
           <img src="https://mirrors.creativecommons.org/presskit/buttons/88x31/png/by.png" width="88" alt="CC BY">
           <p style="font-size: 0.85rem; color: var(--text-light); margin: 0;">
             ${isSpanish 
@@ -646,12 +1263,14 @@ function generateVolumeHtml({ lang, volume, volumeSlug, toc, year, domain, oaSvg
         </div>
       </section>
     </main>
+    
     <aside class="sidebar">
       <div class="card">
         <span class="card-title">${isSpanish ? 'Acceso Rápido' : 'Quick Access'}</span>
         <a href="${volume.pdfUrl}" download class="btn-primary">${isSpanish ? 'Descargar PDF Completo' : 'Download Full PDF'}</a>
         <a href="#toc" class="btn-outline">${isSpanish ? 'Explorar Artículos' : 'Explore Articles'}</a>
       </div>
+      
       <div class="card">
         <span class="card-title">${isSpanish ? 'Navegación' : 'Navigation'}</span>
         <nav style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.9rem;">
@@ -662,11 +1281,95 @@ function generateVolumeHtml({ lang, volume, volumeSlug, toc, year, domain, oaSvg
       </div>
     </aside>
   </div>
-  <footer style="background: #f8f8f8; border-top: 1px solid var(--border-color); padding: 4rem 2rem; text-align: center;">
-    <p style="font-family: 'Libre Baskerville', serif; margin-bottom: 1rem;">${isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students'}</p>
+
+  <footer>
+    <p style="font-family: 'Playfair Display', serif; margin-bottom: 1rem;">${isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students'}</p>
     <p style="font-size: 0.8rem; color: var(--text-light);">ISSN 3087-2839</p>
     <p style="font-size: 0.8rem; color: var(--text-light);">© ${new Date().getFullYear()} — ${isSpanish ? 'Una revista por y para estudiantes' : 'A journal by and for students'}</p>
   </footer>
+
+  <script>
+    // Funciones del header unificado
+    function toggleMobileMenu() {
+      const menu = document.getElementById('mobileMenu');
+      const overlay = document.getElementById('mobileOverlay');
+      
+      menu.classList.toggle('active');
+      overlay.classList.toggle('active');
+      
+      if (menu.classList.contains('active')) {
+        document.body.style.overflow = 'hidden';
+      } else {
+        document.body.style.overflow = '';
+      }
+    }
+
+    function closeMobileMenu() {
+      const menu = document.getElementById('mobileMenu');
+      const overlay = document.getElementById('mobileOverlay');
+      
+      menu.classList.remove('active');
+      overlay.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    function toggleMobileSearch() {
+      const menu = document.getElementById('mobileMenu');
+      const overlay = document.getElementById('mobileOverlay');
+      
+      menu.classList.add('active');
+      overlay.classList.add('active');
+      document.body.style.overflow = 'hidden';
+      
+      setTimeout(() => {
+        const mobileSearchInput = document.getElementById('mobile-search-input');
+        if (mobileSearchInput) {
+          mobileSearchInput.focus();
+        }
+      }, 300);
+    }
+
+    function handleSearch(e) {
+      e.preventDefault();
+      const query = document.getElementById('search-input').value.trim();
+      if (query) {
+        const encodedQuery = encodeURIComponent(query).replace(/%20/g, '+');
+        window.location.href = '/article?article_search=' + encodedQuery;
+      }
+    }
+
+    function handleMobileSearch(e) {
+      e.preventDefault();
+      const query = document.getElementById('mobile-search-input').value.trim();
+      if (query) {
+        const encodedQuery = encodeURIComponent(query).replace(/%20/g, '+');
+        window.location.href = '/article?article_search=' + encodedQuery;
+      }
+    }
+
+    // Smooth scroll para enlaces internos
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+          const href = this.getAttribute('href');
+          if (href === '#') return;
+          
+          const target = document.querySelector(href);
+          if (target) {
+            e.preventDefault();
+            target.scrollIntoView({ behavior: 'smooth' });
+          }
+        });
+      });
+    });
+
+    // Cerrar menú con tecla Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeMobileMenu();
+      }
+    });
+  </script>
 </body>
 </html>`;
 }
