@@ -16,7 +16,11 @@ const admin = require('firebase-admin');
 const cheerio = require('cheerio');
 const sharp = require('sharp');
 const crypto = require('crypto');
-
+const DOMAIN = 'https://www.revistacienciasestudiantes.com';
+const JOURNAL_NAME_ES = 'Revista Nacional de las Ciencias para Estudiantes';
+const JOURNAL_NAME_EN = 'The National Review of Sciences for Students';
+const LOGO_ES = 'https://www.revistacienciasestudiantes.com/assets/logo.png';
+const LOGO_EN = 'https://www.revistacienciasestudiantes.com/logoEN.png';
 admin.initializeApp({
   credential: admin.credential.cert('./serviceAccountKey.json')
 });
