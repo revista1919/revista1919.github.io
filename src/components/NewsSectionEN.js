@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-const NEWS_JSON = "/news.json";
+const NEWS_JSON = "/news/news.json";
 const DOMAIN = "https://www.revistacienciasestudiantes.com";
 const base64DecodeUnicode = (str) => {
   try {

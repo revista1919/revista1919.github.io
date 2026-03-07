@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from 'react-i18next';
-const NEWS_JSON = "/news.json";
+const NEWS_JSON = "/news/news.json";
 const base64DecodeUnicode = (str) => {
   try {
     const binary = atob(str);

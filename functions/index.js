@@ -532,9 +532,10 @@ exports.uploadImageToImgBBCallable = onCall(
 );
 
 /* ===================== UPLOAD NEWS (ACTUALIZADO CON DEEPSEEK) ===================== */
+/* ===================== UPLOAD NEWS (ACTUALIZADO PARA GITHUB) ===================== */
 exports.uploadNews = onRequest(
   { 
-    secrets: [GEMINI_API_KEY, DEEPSEEK_API_KEY], // Añadido DEEPSEEK_API_KEY
+    secrets: [GEMINI_API_KEY, DEEPSEEK_API_KEY, GH_TOKEN], // Añadido GH_TOKEN
     cors: true,
     timeoutSeconds: 120
   },
@@ -549,7 +550,18 @@ exports.uploadNews = onRequest(
       return res.status(403).json({ error: "Origen no permitido" });
     }
 
+    const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    console.log(`[${requestId}] 🚀 uploadNews - Iniciando petición`);
+
     try {
+      // Verificar que Octokit esté disponible
+      if (!Octokit) {
+        await loadDependencies();
+        if (!Octokit) {
+          return res.status(500).json({ error: "Servicio GitHub no disponible" });
+        }
+      }
+
       const idToken = req.headers.authorization?.split("Bearer ")[1];
       if (!idToken) {
         return res.status(401).json({ error: "No autorizado - Token requerido" });
@@ -558,13 +570,15 @@ exports.uploadNews = onRequest(
       let user;
       try {
         user = await admin.auth().verifyIdToken(idToken);
+        console.log(`[${requestId}] ✅ Usuario autenticado: ${user.email || user.uid}`);
       } catch (authError) {
-        console.error("Error verificando token:", authError);
+        console.error(`[${requestId}] ❌ Error verificando token:`, authError.message);
         return res.status(401).json({ error: "Token inválido" });
       }
 
       try {
         await validateRole(user.uid, "Director General");
+        console.log(`[${requestId}] ✅ Rol verificado: Director General`);
       } catch (roleError) {
         return res.status(403).json({ error: "Se requiere rol de Director General" });
       }
@@ -575,7 +589,7 @@ exports.uploadNews = onRequest(
         return res.status(400).json({ error: "Faltan datos: title y body son requeridos" });
       }
 
-      // Verificar que las dependencias estén cargadas
+      // Verificar que las dependencias de traducción estén cargadas
       if (!GoogleGenAI || !fetch) {
         await loadDependencies();
         if (!GoogleGenAI || !fetch) {
@@ -589,7 +603,7 @@ exports.uploadNews = onRequest(
       const titleSource = sanitizeInput(title);
       const bodySource = base64DecodeUnicode(body) || sanitizeInput(body);
 
-      console.log("📝 Iniciando traducción con DeepSeek (fallback Gemini)");
+      console.log(`[${requestId}] 📝 Iniciando traducción con DeepSeek (fallback Gemini)`);
       
       // Usar la función con fallback para el título
       const titleTarget = await translateText(titleSource, source, target);
@@ -597,49 +611,158 @@ exports.uploadNews = onRequest(
       // Usar la función con fallback para el body
       const bodyTarget = await translateHtmlFragmentWithSplit(bodySource, source, target);
 
-      const db = admin.firestore();
-      const newsRef = db.collection("news");
+      // Preparar datos de la noticia
+      const now = new Date();
+      const fechaIso = now.toISOString().split('T')[0]; // YYYY-MM-DD
+      const timestamp = now.getTime();
+      
+      // Generar slug
+      const slug = generateSlug(titleSource);
+      const slugWithDate = `${slug}-${fechaIso}`;
 
-      const esTitle = source === "es" ? titleSource : titleTarget;
-      const enTitle = source === "es" ? titleTarget : titleSource;
-      const esBody = source === "es" ? bodySource : bodyTarget;
-      const enBody = source === "es" ? bodyTarget : bodySource;
-
-      const nowIso = new Date().toISOString();
-
-      const docData = {
-        title_es: esTitle,
-        title_en: enTitle,
-        body_es: Buffer.from(esBody).toString("base64"),
-        body_en: Buffer.from(enBody).toString("base64"),
+      // Crear objeto de noticia (mismo formato que el ejemplo)
+      const newsItem = {
+        titulo: source === "es" ? titleSource : titleTarget,
+        cuerpo: Buffer.from(source === "es" ? bodySource : bodyTarget).toString("base64"),
+        title: source === "es" ? titleTarget : titleSource,
+        content: Buffer.from(source === "es" ? bodyTarget : bodySource).toString("base64"),
+        fecha: fechaIso,
+        fechaIso: fechaIso,
         photo: photo || "",
-        timestamp_es: nowIso,
-        timestamp_en: nowIso,
-        createdBy: user.uid,
-        createdAt: admin.firestore.FieldValue.serverTimestamp()
+        timestamp: timestamp,
+        slug: slugWithDate
       };
 
-      const docRef = await newsRef.add(docData);
+      console.log(`[${requestId}] 📝 Noticia preparada: ${newsItem.titulo}`);
+
+      // Obtener Octokit y leer news.json actual
+      const octokit = getOctokit();
+      const REPO_OWNER = "revista1919";
+      const REPO_NAME = "news";
+      const JSON_PATH = "news.json";
+      const BRANCH = "main";
+
+      // Función para obtener el JSON actual
+      async function getCurrentNewsJson() {
+        try {
+          const { data } = await octokit.repos.getContent({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            path: JSON_PATH,
+            ref: BRANCH
+          });
+          
+          const content = Buffer.from(data.content, 'base64').toString('utf8');
+          return {
+            news: JSON.parse(content),
+            sha: data.sha
+          };
+        } catch (error) {
+          if (error.status === 404) {
+            // Si no existe, crear array vacío
+            return {
+              news: [],
+              sha: null
+            };
+          }
+          throw error;
+        }
+      }
+
+      // Función para guardar el JSON
+      async function saveNewsJson(news, sha, commitMessage) {
+        const content = Buffer.from(JSON.stringify(news, null, 2)).toString('base64');
+        
+        if (sha) {
+          await octokit.repos.createOrUpdateFileContents({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            path: JSON_PATH,
+            message: commitMessage,
+            content: content,
+            sha: sha,
+            branch: BRANCH
+          });
+        } else {
+          await octokit.repos.createOrUpdateFileContents({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            path: JSON_PATH,
+            message: commitMessage,
+            content: content,
+            branch: BRANCH
+          });
+        }
+      }
+
+      // Leer noticias actuales
+      const { news: currentNews, sha } = await getCurrentNewsJson();
+      
+      // Añadir nueva noticia al inicio (más reciente primero)
+      const updatedNews = [newsItem, ...currentNews];
+      
+      // Ordenar por timestamp descendente (por si acaso)
+      updatedNews.sort((a, b) => b.timestamp - a.timestamp);
+
+      // Guardar en GitHub
+      const commitMessage = `[ADD] Nueva noticia: ${newsItem.titulo} por ${user.email || user.uid}`;
+      await saveNewsJson(updatedNews, sha, commitMessage);
+      
+      console.log(`[${requestId}] ✅ Noticia guardada en GitHub. SHA actualizado: ${sha ? 'actualizado' : 'nuevo archivo'}`);
+
+      // Trigger rebuild para el sitio principal
+      try {
+        await octokit.request("POST /repos/{owner}/{repo}/dispatches", {
+          owner: "revista1919",
+          repo: "revista1919.github.io",
+          event_type: "rebuild-news",
+          client_payload: {
+            action: "add",
+            newsSlug: slugWithDate,
+            triggeredBy: user.uid
+          }
+        });
+        console.log(`[${requestId}] 🔄 Rebuild triggered for main site`);
+      } catch (rebuildError) {
+        console.error(`[${requestId}] ⚠️ Error en rebuild:`, rebuildError.message);
+        // No fallamos la petición principal si el rebuild falla
+      }
 
       return res.json({
         success: true,
-        id: docRef.id,
+        slug: slugWithDate,
+        timestamp: timestamp,
         title_source: titleSource,
-        title_target: titleTarget
+        title_target: titleTarget,
+        message: "Noticia publicada exitosamente"
       });
 
     } catch (err) {
-      console.error("Error en uploadNews:", err);
+      console.error(`[${requestId}] ❌ Error en uploadNews:`, err);
+      
+      // Registrar error en Firestore para debugging
+      try {
+        await admin.firestore().collection('systemErrors').add({
+          function: 'uploadNews',
+          error: { 
+            message: err.message, 
+            stack: err.stack,
+            requestId 
+          },
+          timestamp: admin.firestore.FieldValue.serverTimestamp()
+        });
+      } catch (logError) {
+        console.error('Error logging to Firestore:', logError);
+      }
+
       return res.status(500).json({
         error: "Error interno del servidor",
-        message: err.message
+        message: err.message,
+        requestId
       });
     }
   }
 );
-
-/* ===================== MANAGE ARTICLES ===================== */
-/* ===================== MANAGE ARTICLES ===================== */
 /* ===================== MANAGE ARTICLES COMPLETO CON HISTORIAL INMUTABLE Y RETRACTACIÓN (SIN DOI) ===================== */
 exports.manageArticles = onRequest(
   { 
