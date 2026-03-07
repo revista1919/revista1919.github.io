@@ -8,7 +8,7 @@
     "build": "dotenv -e .env -- webpack --mode production",
     "build:debug": "cross-env NODE_ENV=production DEBUG=true webpack --mode production --progress --verbose",
     "build:prerender": "npm run build && react-snap",
-    "generate-all": "node generate-all.cjs",
+    "generate-all": "node generate-all.js",
     "generate:articles": "cross-env REBUILD_TYPE=articles node generate-all.js",
     "generate:volumes": "cross-env REBUILD_TYPE=volumes node generate-all.js",
     "generate:news": "cross-env REBUILD_TYPE=news node generate-all.js",

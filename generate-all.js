@@ -293,7 +293,22 @@ const orcidSvg = `<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" 
         articles = [];
       }
     }
-
+    // ==================== NOTICIAS PARA SITEMAP ====================
+    let newsItems = [];
+    try {
+      console.log('🌐 Cargando noticias desde news.json...');
+      const newsJsonUrl = 'https://www.revistacienciasestudiantes.com/news/news.json';
+      const response = await fetch(newsJsonUrl);
+      
+      if (response.ok) {
+        newsItems = await response.json();
+        console.log(`✅ Noticias cargadas: ${newsItems.length} artículos`);
+      } else {
+        console.log(`⚠️ No se pudo obtener news.json (HTTP ${response.status})`);
+      }
+    } catch (err) {
+      console.error('❌ Error cargando noticias:', err.message);
+    }
     // Generar HTMLs de volúmenes
     console.log('📥 Generando páginas de volúmenes...');
     for (const volume of volumes) {
@@ -364,11 +379,6 @@ const tocEn = volumeArticles.map(a => {
 
     // Generar índices de volúmenes
     generateVolumeIndexes(volumes);
-
-    // ==================== NOTICIAS ====================
-    let newsItems = [];
-    await generateNews();
-
     // ==================== RUTAS SPA ====================
     console.log('🚀 Pre-renderizando las rutas de la aplicación...');
     const appShellPath = path.join(__dirname, 'dist', 'index.html');
@@ -1698,31 +1708,6 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
   console.log(`✅ Índice volúmenes inglés: ${volumesIndexPathEn}`);
 }
 
-// En tu script principal, después de generar las noticias (o antes del sitemap)
-// ==================== LEER NOTICIAS PARA SITEMAP ====================
-let newsItems = [];
-
-try {
-  // *** NUEVO: Leer el JSON directamente desde la URL pública ***
-  const newsJsonUrl = 'https://www.revistacienciasestudiantes.com/news/news.json';
-  
-  console.log(`🌐 Intentando cargar noticias desde: ${newsJsonUrl}`);
-  
-  const response = await fetch(newsJsonUrl); // Usando fetch nativo de Node 18+
-  
-  if (response.ok) {
-    newsItems = await response.json();
-    console.log(`✅ Noticias cargadas exitosamente desde la URL: ${newsItems.length} artículos`);
-  } else {
-    console.log(`⚠️ No se pudo obtener news.json (HTTP ${response.status})`);
-    // Aquí podrías tener un fallback si lo deseas
-    newsItems = [];
-  }
-  
-} catch (err) {
-  console.error('❌ Error cargando noticias desde la URL:', err.message);
-  newsItems = [];
-}
 
 // ==================== FUNCIONES PARA SITEMAP ====================
 async function generateSitemap(articles, volumes, newsItems, teamData, spaRoutes) {
