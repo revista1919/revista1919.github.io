@@ -1724,8 +1724,6 @@ try {
   newsItems = [];
 }
 
-// Luego, cuando llames a generateSitemap, pásale los newsItems
-await generateSitemap(articles, volumes, newsItems, teamData, spaRoutes);
 // ==================== FUNCIONES PARA SITEMAP ====================
 async function generateSitemap(articles, volumes, newsItems, teamData, spaRoutes) {
   const sitemapPath = path.join(__dirname, 'dist', 'sitemap.xml');
