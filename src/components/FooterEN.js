@@ -121,9 +121,26 @@ function FooterEN() {
               iconPath="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.508 17.308c-.221.362-.689.473-1.05.252-2.983-1.823-6.738-2.237-11.162-1.226-.411.094-.823-.162-.917-.573-.094-.412.162-.823.573-.917 4.847-1.108 8.995-.635 12.305 1.386.36.221.472.69.251 1.05zm1.47-3.255c-.278.452-.865.594-1.317.316-3.414-2.098-8.62-2.706-12.657-1.479-.508.154-1.04-.136-1.194-.644-.154-.508.136-1.04.644-1.194 4.613-1.399 10.366-.719 14.256 1.67.452.278.594.865.316 1.317zm.126-3.374C14.653 7.64 7.29 7.394 3.05 8.681c-.604.183-1.246-.166-1.429-.77-.183-.604.166-1.246.77-1.429 4.883-1.482 13.014-1.201 18.238 1.902.544.323.72 1.034.397 1.578-.323.544-1.034.72-1.578.397z"
             />
           </div>
+          
+          {/* MODIFIED SECTION: Contact with two links */}
           <div className="text-center md:text-right">
             <span className="text-[10px] uppercase tracking-[0.3em] text-gray-500 block mb-1">Official Contact</span>
-            <a href="mailto:contact@revistacienciasestudiantes.com" className="text-sm font-light hover:text-[#007398] transition-colors">
+            
+            {/* Desktop link (Gmail) - visible on md and up */}
+            <a 
+              href="https://mail.google.com/mail/?view=cm&fs=1&to=contact@revistacienciasestudiantes.com" 
+              target="_blank" 
+              rel="noopener"
+              className="text-sm font-light hover:text-[#007398] transition-colors hidden md:inline-block"
+            >
+              contact@revistacienciasestudiantes.com
+            </a>
+            
+            {/* Mobile link (mailto) - visible only on mobile */}
+            <a 
+              href="mailto:contact@revistacienciasestudiantes.com" 
+              className="text-sm font-light hover:text-[#007398] transition-colors md:hidden"
+            >
               contact@revistacienciasestudiantes.com
             </a>
           </div>
