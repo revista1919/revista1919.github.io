@@ -8,10 +8,16 @@ function VolumeCardEN({ volume }) {
   const htmlUrl = `/volumes/volume-${volume.volumen}-${volume.numero}EN.html`;
   const portada = volume.portada || '';
 
+  const handleCardClick = (e) => {
+    // Prevenir que el click en el título o imagen active el expandir/contraer
+    if (e.target.closest('a')) return;
+    setIsExpanded(!isExpanded);
+  };
+
   return (
     <motion.div
       layout
-      onClick={() => setIsExpanded(!isExpanded)}
+      onClick={handleCardClick}
       className="group relative bg-[#FCFCFA] border border-[#E5E5E1] rounded-sm overflow-hidden transition-all duration-700 hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] cursor-pointer flex flex-col h-full"
     >
       {/* Top decorative line */}
@@ -28,36 +34,56 @@ function VolumeCardEN({ volume }) {
         </span>
       </div>
       <div className="p-10 flex-grow flex flex-col">
-        {/* Title */}
+        {/* Title - Now clickable */}
         <div className="mb-8">
-          <span className="text-[11px] font-serif italic text-gray-500 block mb-2">Volume {volume.volumen} — No. {volume.numero}</span>
-          <h2 className="text-3xl font-serif text-[#1a1a1a] leading-[1.1] group-hover:text-[#007398] transition-colors duration-500">
-            {volume.englishTitulo || 'No title registered'}
-          </h2>
+          <span className="text-[11px] font-serif italic text-gray-500 block mb-2">
+            Volume {volume.volumen} — No. {volume.numero}
+          </span>
+          <a 
+            href={htmlUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="block no-underline"
+          >
+            <h2 className="text-3xl font-serif text-[#1a1a1a] leading-[1.1] hover:text-[#007398] transition-colors duration-500 cursor-pointer">
+              {volume.englishTitulo || 'No title registered'}
+            </h2>
+          </a>
         </div>
-        {/* Cover */}
+        
+        {/* Cover - Now clickable */}
         {portada && (
-          <div className="relative group/img">
-            {/* Frame */}
-            <div className="relative p-3 bg-white border border-[#E5E5E1] shadow-sm transition-transform duration-700 group-hover:scale-[1.02]">
-              <div className="overflow-hidden aspect-[3/4] bg-gray-100 relative">
-                <img
-                  src={portada}
-                  alt={volume.englishTitulo}
-                  className="w-full h-full object-cover mix-blend-multiply opacity-90 group-hover:opacity-100 group-hover:scale-110 transition-all duration-[1.5s] ease-in-out"
-                />
-                {/* Paper texture overlay */}
-                <div className="absolute inset-0 pointer-events-none opacity-20 bg-[url('https://www.transparenttextures.com/patterns/paper-fibers.png')]" />
+          <a 
+            href={htmlUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="block"
+          >
+            <div className="relative group/img">
+              {/* Frame */}
+              <div className="relative p-3 bg-white border border-[#E5E5E1] shadow-sm transition-transform duration-700 group-hover:scale-[1.02]">
+                <div className="overflow-hidden aspect-[3/4] bg-gray-100 relative">
+                  <img
+                    src={portada}
+                    alt={volume.englishTitulo}
+                    className="w-full h-full object-cover mix-blend-multiply opacity-90 group-hover:opacity-100 group-hover:scale-110 transition-all duration-[1.5s] ease-in-out"
+                  />
+                  {/* Paper texture overlay */}
+                  <div className="absolute inset-0 pointer-events-none opacity-20 bg-[url('https://www.transparenttextures.com/patterns/paper-fibers.png')]" />
+                </div>
+              </div>
+              {/* Seal */}
+              <div className="absolute -bottom-4 -right-4 w-16 h-16 border border-[#007398]/20 rounded-full flex items-center justify-center bg-white/80 backdrop-blur-md shadow-sm z-10 group-hover:rotate-12 transition-transform duration-1000">
+                <span className="text-[7px] font-bold text-[#007398] text-center leading-none uppercase tracking-tighter">
+                  Official<br/>Archive
+                </span>
               </div>
             </div>
-            {/* Seal */}
-            <div className="absolute -bottom-4 -right-4 w-16 h-16 border border-[#007398]/20 rounded-full flex items-center justify-center bg-white/80 backdrop-blur-md shadow-sm z-10 group-hover:rotate-12 transition-transform duration-1000">
-              <span className="text-[7px] font-bold text-[#007398] text-center leading-none uppercase tracking-tighter">
-                Official<br/>Archive
-              </span>
-            </div>
-          </div>
+          </a>
         )}
+        
         {/* Expandable section */}
         <AnimatePresence>
           {isExpanded && (
@@ -105,6 +131,7 @@ function VolumeCardEN({ volume }) {
           )}
         </AnimatePresence>
       </div>
+      
       {/* Footer */}
       <div className="px-10 py-6 bg-white flex justify-between items-center border-t border-[#E5E5E1]">
          <div className="text-[9px] text-gray-400 uppercase tracking-widest font-medium">

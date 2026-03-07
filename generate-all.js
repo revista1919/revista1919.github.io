@@ -427,6 +427,7 @@ return `<!DOCTYPE html>
   <meta name="description" content="${editorial ? editorial.replace(/<[^>]*>/g, '').substring(0, 160) + '...' : ''}">
   <title>${title} - ${isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students'}</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,700&family=JetBrains+Mono&family=Lora:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono&family=Lora:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
   <style>
     :root {
       --journal-blue: #005587;
@@ -785,7 +786,7 @@ return `<!DOCTYPE html>
     }
 
     .hero-section h1 {
-      font-family: 'Playfair Display', serif;
+      font-family: 'Libre Baskerville', serif;
       font-size: 3.2rem;
       line-height: 1.2;
       margin-bottom: 1.5rem;
@@ -962,7 +963,7 @@ return `<!DOCTYPE html>
       border-top: 1px solid var(--border-color);
       padding: 4rem 2rem;
       text-align: center;
-      font-family: 'Inter', sans-serif;
+      font-family: 'Libre Baskerville', serif;
     }
 
     /* ===== RESPONSIVE ===== */
