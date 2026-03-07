@@ -306,7 +306,7 @@ const orcidSvg = `<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" 
       // Busca esta sección en tu código donde generas tocEs y tocEn
 const tocEs = volumeArticles.map(a => {
   // IMPORTANTE: El slug debe construirse IGUAL que en ArticleCard
-  const articleSlug = `${generateSlug(a.titulo)}-${a.numeroArticulo}`;
+  const articleSlug = a.permalink || `${generateSlug(a.titulo)}-${a.numeroArticulo}`;
   const authorsDisplay = formatAuthorsDisplay(a.autores, 'es');
   return `
     <div class="article-item">
@@ -318,7 +318,7 @@ const tocEs = volumeArticles.map(a => {
 
 const tocEn = volumeArticles.map(a => {
   // IGUAL para inglés
-  const articleSlug = `${generateSlug(a.titulo)}-${a.numeroArticulo}`;
+  const articleSlug = a.permalink || `${generateSlug(a.titulo)}-${a.numeroArticulo}`;
   const authorsDisplay = formatAuthorsDisplay(a.autores, 'en');
   return `
     <div class="article-item">

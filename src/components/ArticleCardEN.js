@@ -207,7 +207,8 @@ function ArticleCardEN({ article }) {
 
   const journalDisplay = 'The National Review of Sciences for Students';
   const journalFormal = 'Revista Nacional de las Ciencias para Estudiantes';
-  const articleSlug = `${generateSlug(article?.titulo || '')}-${article?.numeroArticulo || ''}`;
+  // Usar permalink si existe, si no, generar el slug tradicional
+const articleSlug = article?.permalink || `${generateSlug(article?.titulo || '')}-${article?.numeroArticulo || ''}`;
   
   // Usar el pdfUrl directamente del artículo (tal como viene del JSON)
   const pdfUrl = article?.pdfUrl || article?.pdf || '';

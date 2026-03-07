@@ -215,7 +215,8 @@ function ArticleCard({ article }) {
   const [copiedFormat, setCopiedFormat] = useState(null);
 
   const journal = 'Revista Nacional de las Ciencias para Estudiantes';
-  const articleSlug = `${generateSlug(article?.titulo || '')}-${article?.numeroArticulo || ''}`;
+  // Usar permalink si existe, si no, generar el slug tradicional
+const articleSlug = article?.permalink || `${generateSlug(article?.titulo || '')}-${article?.numeroArticulo || ''}`;
   
   // Usar el pdfUrl directamente del artículo (tal como viene del JSON)
   const pdfUrl = article?.pdfUrl || article?.pdf || '';
