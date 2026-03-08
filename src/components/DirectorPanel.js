@@ -656,7 +656,7 @@ export default function DirectorPanel({ user }) {
               <SidebarItemMobile active={activeTab === 'team'} onClick={() => { setActiveTab('team'); setMobileMenuOpen(false); }} icon={<UserGroupIcon />} label="Equipo / Mails" />
               <SidebarItemMobile active={activeTab === 'admissions'} onClick={() => { setActiveTab('admissions'); setMobileMenuOpen(false); }} icon={<InboxIcon />} label="Admisiones" />
               <SidebarItemMobile active={activeTab === 'usersearch'} onClick={() => { setActiveTab('usersearch'); setMobileMenuOpen(false); }} icon={<MagnifyingGlassIcon />} label="Buscar Usuarios" />
-              
+              <SidebarItemMobile active={activeTab === 'images'} onClick={() => { setActiveTab('images'); setMobileMenuOpen(false); }} icon={<PhotoIcon />} label="Gestor de Imágenes" />
             </nav>
             <div className="absolute bottom-4 left-4 right-4">
               <button onClick={handleRebuild} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all font-medium text-sm shadow-lg">
@@ -676,6 +676,7 @@ export default function DirectorPanel({ user }) {
           <SidebarItem active={activeTab === 'articles'} onClick={() => setActiveTab('articles')} icon={<DocumentTextIcon />} label="Artículos" />
           <SidebarItem active={activeTab === 'volumes'} onClick={() => setActiveTab('volumes')} icon={<BookOpenIcon />} label="Volúmenes" />
           <SidebarItem active={activeTab === 'team'} onClick={() => setActiveTab('team')} icon={<UserGroupIcon />} label="Equipo / Mails" />
+          <SidebarItem active={activeTab === 'images'} onClick={() => setActiveTab('images')} icon={<PhotoIcon />} label="Gestor de Imágenes" />
           <SidebarItem active={activeTab === 'admissions'} onClick={() => setActiveTab('admissions')} icon={<InboxIcon />} label="Admisiones" />
           <SidebarItem active={activeTab === 'usersearch'} onClick={() => setActiveTab('usersearch')} icon={<MagnifyingGlassIcon />} label="Buscar Usuarios" />
         </nav>
@@ -767,6 +768,15 @@ export default function DirectorPanel({ user }) {
           {activeTab === 'team' && <div className="p-4 lg:p-6"><MailsTeam /></div>}
           {activeTab === 'admissions' && <div className="p-4 lg:p-6"><Admissions /></div>}
           {activeTab === 'usersearch' && <div className="p-4 lg:p-6"><UserSearch /></div>}
+          {activeTab === 'images' && (
+  <div className="p-4 lg:p-6">
+    <ImageManager
+      user={user}
+      onClose={() => {}} // onClose es opcional aquí, pero puedes dejarlo vacío o para limpiar algo
+      allowSelection={false} // Ponlo en 'true' si quieres poder seleccionar imágenes para un artículo
+    />
+  </div>
+)}
         </div>
       </main>
 
