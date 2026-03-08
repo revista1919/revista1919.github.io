@@ -36,8 +36,16 @@ const toBase64 = (file) =>
     reader.onerror = (error) => reject(error);
   });
 
-const formatFileSize = (bytes) => {
-  if (bytes === 0) return '0 Bytes';
+const formatFileSize = (size) => {
+  // Si ya viene formateado como "48K", devolverlo directamente
+  if (typeof size === 'string' && (size.includes('K') || size.includes('M'))) {
+    return size;
+  }
+  
+  // Si es número, formatearlo
+  const bytes = parseInt(size);
+  if (isNaN(bytes) || bytes === 0) return '0 Bytes';
+  
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -78,27 +86,31 @@ export default function ImageManager({ user, onClose, onImageSelect, allowSelect
   }, []);
 
   // ===== Función para cargar imágenes =====
-  // ===== Función para cargar imágenes desde el archivo list.json =====
-const loadImages = async () => {
-  setLoading(true);
-  try {
-    // Simplemente hacemos un GET al archivo JSON estático
-    const response = await fetch('https://www.revistacienciasestudiantes.com/images/list.json');
-    
-    if (!response.ok) throw new Error('Error al cargar el listado de imágenes');
-    
-    const data = await response.json();
-    
-    // La data ya es directamente el array de imágenes
-    setImages(data || []);
-    setStatus({ type: 'success', msg: `${data.length} imágenes cargadas` });
-  } catch (error) {
-    console.error('Error loading images:', error);
-    setStatus({ type: 'error', msg: 'Error al cargar imágenes' });
-  } finally {
-    setLoading(false);
-  }
-};
+  const loadImages = async () => {
+    setLoading(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch(MANAGE_IMAGES_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ action: 'list' })
+      });
+
+      if (!response.ok) throw new Error('Error al cargar imágenes');
+      
+      const data = await response.json();
+      setImages(data.images || []);
+      setStatus({ type: 'success', msg: `${data.total} imágenes cargadas` });
+    } catch (error) {
+      console.error('Error loading images:', error);
+      setStatus({ type: 'error', msg: 'Error al cargar imágenes' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // ===== Subir imagen =====
   const handleUpload = async (e) => {
