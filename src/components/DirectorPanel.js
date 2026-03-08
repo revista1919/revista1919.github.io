@@ -2,6 +2,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { auth, db } from '../firebase';
+import ImageManager from './ImageManager';
+import { PhotoIcon } from '@heroicons/react/24/outline';
 import { 
   collection, onSnapshot, query, where, getDocs, 
   limit as firestoreLimit, doc as firestoreDoc, getDoc 
@@ -138,6 +140,7 @@ export default function DirectorPanel({ user }) {
   // Modales
   const [showArticleModal, setShowArticleModal] = useState(false);
   const [showVolumeModal, setShowVolumeModal] = useState(false);
+  const [showImageModal, setShowImageModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   
@@ -654,6 +657,7 @@ export default function DirectorPanel({ user }) {
               <SidebarItemMobile active={activeTab === 'team'} onClick={() => { setActiveTab('team'); setMobileMenuOpen(false); }} icon={<UserGroupIcon />} label="Equipo / Mails" />
               <SidebarItemMobile active={activeTab === 'admissions'} onClick={() => { setActiveTab('admissions'); setMobileMenuOpen(false); }} icon={<InboxIcon />} label="Admisiones" />
               <SidebarItemMobile active={activeTab === 'usersearch'} onClick={() => { setActiveTab('usersearch'); setMobileMenuOpen(false); }} icon={<MagnifyingGlassIcon />} label="Buscar Usuarios" />
+              
             </nav>
             <div className="absolute bottom-4 left-4 right-4">
               <button onClick={handleRebuild} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all font-medium text-sm shadow-lg">
@@ -699,6 +703,14 @@ export default function DirectorPanel({ user }) {
               <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input type="text" placeholder="Buscar..." className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-full focus:ring-2 focus:ring-blue-500 outline-none shadow-sm text-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
+            {activeTab === 'images' && (
+              <button
+                onClick={() => setShowImageModal(true)}
+                className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2.5 rounded-full flex items-center justify-center gap-2 font-medium shadow-md transition-all active:scale-95 text-sm"
+              >
+                <PhotoIcon className="w-5 h-5" /> Gestionar Imágenes
+              </button>
+            )}
             {activeTab === 'articles' && (
               <button onClick={handleOpenSubmissionSelector} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-full flex items-center justify-center gap-2 font-medium shadow-md transition-all active:scale-95 text-sm">
                 <PlusIcon className="w-5 h-5" /> Subir nuevo
@@ -752,6 +764,7 @@ export default function DirectorPanel({ user }) {
               formatDate={formatDate}
             />
           )}
+          
           {activeTab === 'team' && <div className="p-4 lg:p-6"><MailsTeam /></div>}
           {activeTab === 'admissions' && <div className="p-4 lg:p-6"><Admissions /></div>}
           {activeTab === 'usersearch' && <div className="p-4 lg:p-6"><UserSearch /></div>}
@@ -821,6 +834,19 @@ export default function DirectorPanel({ user }) {
         onSave={handleSaveVolume}
       >
         <VolumeForm formData={volumeForm} setFormData={setVolumeForm} isEditing={!!editingItem} />
+      </Modal>
+       <Modal
+        show={showImageModal}
+        onClose={() => setShowImageModal(false)}
+        title="Gestor de Imágenes"
+        hideSaveButton={true}
+        size="xl"
+      >
+        <ImageManager
+          user={user}
+          onClose={() => setShowImageModal(false)}
+          allowSelection={false} // true si quieres poder seleccionar imágenes
+        />
       </Modal>
     </div>
   );

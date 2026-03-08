@@ -531,7 +531,390 @@ exports.uploadImageToImgBBCallable = onCall(
   }
 );
 
-/* ===================== UPLOAD NEWS (ACTUALIZADO CON DEEPSEEK) ===================== */
+// manageImages.js - Añadir a tus Cloud Functions
+
+/* ===================== MANAGE IMAGES ===================== */
+exports.manageImages = onRequest(
+  { 
+    secrets: [GH_TOKEN],
+    cors: true,
+    timeoutSeconds: 120,
+    memory: "1GiB" // Más memoria para procesar imágenes
+  },
+  async (req, res) => {
+    const origin = req.headers.origin;
+    const ALLOWED_ORIGINS = [
+      'https://www.revistacienciasestudiantes.com',
+      'https://revistacienciasestudiantes.com',
+      'http://localhost:3000',
+      'http://localhost:5000'
+    ];
+
+    // CORS handling
+    if (origin && ALLOWED_ORIGINS.includes(origin)) {
+      res.set('Access-Control-Allow-Origin', origin);
+    } else {
+      res.set('Access-Control-Allow-Origin', 'https://www.revistacienciasestudiantes.com');
+    }
+    
+    res.set('Access-Control-Allow-Credentials', 'true');
+    res.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, Accept');
+    res.set('Access-Control-Max-Age', '3600');
+    res.set('Vary', 'Origin');
+
+    if (req.method === 'OPTIONS') {
+      res.status(204).send('');
+      return;
+    }
+
+    if (req.method !== "POST") {
+      return res.status(405).json({ error: "Método no permitido" });
+    }
+
+    const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    console.log(`[${requestId}] 🖼️ manageImages - Iniciando petición`);
+
+    try {
+      // Verificar dependencias
+      if (!Octokit || !fetch) {
+        await loadDependencies();
+        if (!Octokit || !fetch) {
+          return res.status(500).json({ error: "Servicios no disponibles" });
+        }
+      }
+
+      // Autenticación
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: "No autorizado - Token requerido" });
+      }
+
+      const token = authHeader.split("Bearer ")[1];
+      let user;
+      try {
+        user = await admin.auth().verifyIdToken(token);
+        console.log(`[${requestId}] ✅ Usuario autenticado: ${user.email || user.uid}`);
+      } catch (authError) {
+        return res.status(401).json({ error: "Token inválido" });
+      }
+
+      // Validar rol (solo Directores pueden subir imágenes)
+      try {
+        await validateRole(user.uid, "Director General");
+        console.log(`[${requestId}] ✅ Rol verificado: Director General`);
+      } catch (roleError) {
+        return res.status(403).json({ error: "Se requiere rol de Director General" });
+      }
+
+      const { action, imageBase64, imageId, fileName } = req.body;
+      
+      if (!action) {
+        return res.status(400).json({ error: "Acción requerida (list/upload/replace/delete)" });
+      }
+
+      console.log(`[${requestId}] 📋 Acción: ${action}`);
+
+      const octokit = getOctokit();
+      const REPO_OWNER = "revista1919";
+      const REPO_NAME = "images";
+      const BRANCH = "main";
+      const BASE_URL = `https://${REPO_OWNER}.github.io/${REPO_NAME}`;
+
+      // ===== LISTAR IMÁGENES =====
+      if (action === "list") {
+        try {
+          const { data } = await octokit.repos.getContent({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            path: "",
+            ref: BRANCH
+          });
+
+          // Filtrar solo imágenes (webp, jpg, png, gif)
+          const images = data
+            .filter(item => {
+              const ext = item.name.split('.').pop().toLowerCase();
+              return item.type === 'file' && ['webp', 'jpg', 'jpeg', 'png', 'gif'].includes(ext);
+            })
+            .map(item => ({
+              id: item.name.replace(/\.[^/.]+$/, ""), // nombre sin extensión
+              name: item.name,
+              url: `${BASE_URL}/${item.name}`,
+              size: item.size,
+              sha: item.sha,
+              uploadedAt: new Date().toISOString(), // GitHub no da fecha, usamos actual
+              extension: item.name.split('.').pop().toLowerCase()
+            }))
+            .sort((a, b) => b.name.localeCompare(a.name)); // Más recientes primero
+
+          return res.json({
+            success: true,
+            images: images,
+            total: images.length
+          });
+        } catch (error) {
+          if (error.status === 404) {
+            return res.json({ success: true, images: [], total: 0 });
+          }
+          throw error;
+        }
+      }
+
+      // ===== SUBIR/REEMPLAZAR IMAGEN =====
+      if (action === "upload" || action === "replace") {
+        if (!imageBase64) {
+          return res.status(400).json({ error: "Falta imageBase64" });
+        }
+
+        // Procesar la imagen
+        try {
+          // 1. Generar ID único
+          const timestamp = Date.now();
+          const random = Math.random().toString(36).substring(2, 8);
+          const imageId = action === "replace" && req.body.imageId 
+            ? req.body.imageId 
+            : `img-${timestamp}-${random}`;
+
+          // 2. Decodificar base64
+          let base64Data = imageBase64;
+          if (base64Data.includes(',')) {
+            base64Data = base64Data.split(',')[1];
+          }
+
+          // 3. Determinar formato original
+          let originalExt = 'webp'; // por defecto
+          if (imageBase64.includes('image/jpeg') || imageBase64.includes('image/jpg')) {
+            originalExt = 'jpg';
+          } else if (imageBase64.includes('image/png')) {
+            originalExt = 'png';
+          } else if (imageBase64.includes('image/gif')) {
+            originalExt = 'gif';
+          }
+
+          // 4. Intentar convertir a WebP (si no es GIF)
+          let finalBase64 = base64Data;
+          let finalExt = originalExt;
+          let converted = false;
+
+          // Cargar sharp si está disponible
+          let sharp;
+          try {
+            sharp = require('sharp');
+          } catch (e) {
+            console.log(`[${requestId}] ⚠️ sharp no disponible, se mantendrá formato original`);
+          }
+
+          // Si tenemos sharp y no es GIF, convertir a WebP optimizado
+          if (sharp && originalExt !== 'gif') {
+            try {
+              const buffer = Buffer.from(base64Data, 'base64');
+              const webpBuffer = await sharp(buffer)
+                .webp({ quality: 80, effort: 4 }) // Calidad 80% para buen balance
+                .toBuffer();
+              finalBase64 = webpBuffer.toString('base64');
+              finalExt = 'webp';
+              converted = true;
+              console.log(`[${requestId}] ✅ Imagen convertida a WebP (optimizada)`);
+            } catch (sharpError) {
+              console.error(`[${requestId}] ⚠️ Error en conversión WebP:`, sharpError.message);
+              // Seguimos con formato original
+            }
+          }
+
+          // 5. Nombre del archivo
+          const fileName = action === "replace" && req.body.fileName 
+            ? req.body.fileName 
+            : `${imageId}.${finalExt}`;
+
+          // 6. Verificar si ya existe (para reemplazar)
+          let sha = null;
+          if (action === "replace") {
+            try {
+              const { data } = await octokit.repos.getContent({
+                owner: REPO_OWNER,
+                repo: REPO_NAME,
+                path: fileName,
+                ref: BRANCH
+              });
+              sha = data.sha;
+              console.log(`[${requestId}] 📝 Reemplazando imagen existente: ${fileName}`);
+            } catch (error) {
+              if (error.status !== 404) throw error;
+              // Si no existe, actuamos como upload normal
+              console.log(`[${requestId}] ⚠️ Imagen a reemplazar no encontrada, se creará nueva`);
+            }
+          }
+
+          // 7. Subir a GitHub
+          const commitMessage = action === "replace"
+            ? `[UPDATE] Imagen reemplazada: ${fileName} por ${user.email || user.uid}`
+            : `[ADD] Nueva imagen: ${fileName} por ${user.email || user.uid}`;
+
+          const uploadResponse = await octokit.repos.createOrUpdateFileContents({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            path: fileName,
+            message: commitMessage,
+            content: finalBase64,
+            sha: sha, // Si hay sha, reemplaza; si no, crea nuevo
+            branch: BRANCH
+          });
+
+          const imageUrl = `${BASE_URL}/${fileName}`;
+
+          console.log(`[${requestId}] ✅ Imagen guardada: ${fileName}`);
+
+          // 8. Trigger rebuild del sitio principal
+          try {
+            await octokit.request("POST /repos/{owner}/{repo}/dispatches", {
+              owner: "revista1919",
+              repo: "revista1919.github.io",
+              event_type: "rebuild-images",
+              client_payload: {
+                action: action,
+                imageId: imageId,
+                fileName: fileName,
+                triggeredBy: user.uid
+              }
+            });
+            console.log(`[${requestId}] 🔄 Rebuild triggered`);
+          } catch (rebuildError) {
+            console.error(`[${requestId}] ⚠️ Error en rebuild:`, rebuildError.message);
+          }
+
+          return res.json({
+            success: true,
+            imageId: imageId,
+            fileName: fileName,
+            url: imageUrl,
+            extension: finalExt,
+            converted: converted,
+            originalFormat: originalExt !== finalExt ? originalExt : null,
+            message: `Imagen ${action === 'replace' ? 'reemplazada' : 'subida'} exitosamente`
+          });
+
+        } catch (uploadError) {
+          console.error(`[${requestId}] ❌ Error en upload:`, uploadError);
+          throw uploadError;
+        }
+      }
+
+      // ===== ELIMINAR IMAGEN =====
+      if (action === "delete") {
+        if (!imageId && !fileName) {
+          return res.status(400).json({ error: "Se requiere imageId o fileName" });
+        }
+
+        // Buscar el archivo a eliminar
+        let fileToDelete = fileName;
+        if (!fileToDelete && imageId) {
+          try {
+            const { data } = await octokit.repos.getContent({
+              owner: REPO_OWNER,
+              repo: REPO_NAME,
+              path: "",
+              ref: BRANCH
+            });
+
+            // Buscar imagen que comience con imageId
+            const matchingFile = data.find(item => 
+              item.type === 'file' && item.name.startsWith(imageId)
+            );
+
+            if (!matchingFile) {
+              return res.status(404).json({ error: "Imagen no encontrada" });
+            }
+
+            fileToDelete = matchingFile.name;
+          } catch (error) {
+            return res.status(404).json({ error: "Error buscando la imagen" });
+          }
+        }
+
+        if (!fileToDelete) {
+          return res.status(400).json({ error: "No se pudo determinar el archivo a eliminar" });
+        }
+
+        try {
+          // Obtener SHA del archivo
+          const { data } = await octokit.repos.getContent({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            path: fileToDelete,
+            ref: BRANCH
+          });
+
+          // Eliminar archivo
+          await octokit.repos.deleteFile({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            path: fileToDelete,
+            message: `[DELETE] Imagen eliminada: ${fileToDelete} por ${user.email || user.uid}`,
+            sha: data.sha,
+            branch: BRANCH
+          });
+
+          console.log(`[${requestId}] ✅ Imagen eliminada: ${fileToDelete}`);
+
+          // Trigger rebuild
+          try {
+            await octokit.request("POST /repos/{owner}/{repo}/dispatches", {
+              owner: "revista1919",
+              repo: "revista1919.github.io",
+              event_type: "rebuild-images",
+              client_payload: {
+                action: "delete",
+                fileName: fileToDelete,
+                triggeredBy: user.uid
+              }
+            });
+          } catch (rebuildError) {
+            console.error(`[${requestId}] ⚠️ Error en rebuild:`, rebuildError.message);
+          }
+
+          return res.json({
+            success: true,
+            message: "Imagen eliminada exitosamente",
+            fileName: fileToDelete
+          });
+
+        } catch (error) {
+          if (error.status === 404) {
+            return res.status(404).json({ error: "Imagen no encontrada" });
+          }
+          throw error;
+        }
+      }
+
+      return res.status(400).json({ error: "Acción no válida" });
+
+    } catch (err) {
+      console.error(`[${requestId}] ❌ Error en manageImages:`, err);
+      
+      // Log error en Firestore
+      try {
+        await admin.firestore().collection('systemErrors').add({
+          function: 'manageImages',
+          error: { 
+            message: err.message, 
+            stack: err.stack,
+            requestId 
+          },
+          timestamp: admin.firestore.FieldValue.serverTimestamp()
+        });
+      } catch (logError) {
+        console.error('Error logging to Firestore:', logError);
+      }
+
+      return res.status(500).json({ 
+        error: "Error interno del servidor",
+        message: err.message,
+        requestId 
+      });
+    }
+  }
+);
 /* ===================== UPLOAD NEWS (ACTUALIZADO PARA GITHUB) ===================== */
 exports.uploadNews = onRequest(
   { 
