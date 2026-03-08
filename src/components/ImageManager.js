@@ -24,7 +24,7 @@ import {
 
 // ==================== CONFIGURACIÓN ====================
 const MANAGE_IMAGES_URL = 'https://manageimages-ggqsq2kkua-uc.a.run.app/manageImages'; // Ajusta la URL
-const BASE_IMAGE_URL = 'https://revista1919.github.io/images';
+const BASE_IMAGE_URL = 'https://www.revistacienciasestudiantes.com/images';
 const ITEMS_PER_PAGE = 12;
 
 // ==================== UTILIDADES ====================
@@ -78,31 +78,27 @@ export default function ImageManager({ user, onClose, onImageSelect, allowSelect
   }, []);
 
   // ===== Función para cargar imágenes =====
-  const loadImages = async () => {
-    setLoading(true);
-    try {
-      const token = await auth.currentUser.getIdToken();
-      const response = await fetch(MANAGE_IMAGES_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ action: 'list' })
-      });
-
-      if (!response.ok) throw new Error('Error al cargar imágenes');
-      
-      const data = await response.json();
-      setImages(data.images || []);
-      setStatus({ type: 'success', msg: `${data.total} imágenes cargadas` });
-    } catch (error) {
-      console.error('Error loading images:', error);
-      setStatus({ type: 'error', msg: 'Error al cargar imágenes' });
-    } finally {
-      setLoading(false);
-    }
-  };
+  // ===== Función para cargar imágenes desde el archivo list.json =====
+const loadImages = async () => {
+  setLoading(true);
+  try {
+    // Simplemente hacemos un GET al archivo JSON estático
+    const response = await fetch('https://www.revistacienciasestudiantes.com/images/list.json');
+    
+    if (!response.ok) throw new Error('Error al cargar el listado de imágenes');
+    
+    const data = await response.json();
+    
+    // La data ya es directamente el array de imágenes
+    setImages(data || []);
+    setStatus({ type: 'success', msg: `${data.length} imágenes cargadas` });
+  } catch (error) {
+    console.error('Error loading images:', error);
+    setStatus({ type: 'error', msg: 'Error al cargar imágenes' });
+  } finally {
+    setLoading(false);
+  }
+};
 
   // ===== Subir imagen =====
   const handleUpload = async (e) => {
