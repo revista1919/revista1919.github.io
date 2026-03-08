@@ -3,7 +3,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { auth, db } from '../firebase';
 import ImageManager from './ImageManager';
-import { PhotoIcon } from '@heroicons/react/24/outline';
 import { 
   collection, onSnapshot, query, where, getDocs, 
   limit as firestoreLimit, doc as firestoreDoc, getDoc 
