@@ -735,7 +735,7 @@ if (submitted) {
         <div className="bg-[#0A1929] border-b border-[#1A2B3C] p-12 text-center">
           <div className="flex justify-center items-center gap-3 mb-4">
             <div className="h-px w-8 bg-[#B22234]" />
-            <span className="uppercase text-[10px] font-mono tracking-[0.2em] text-[#E5E9F0]">Revista Nacional de las Ciencias</span>
+            <span className="uppercase text-[10px] font-mono tracking-[0.2em] text-[#E5E9F0]">Revista Nacional de las Ciencias para Estudiantes</span>
             <div className="h-px w-8 bg-[#B22234]" />
           </div>
           <h1 className="font-serif text-5xl font-light tracking-tight text-white">

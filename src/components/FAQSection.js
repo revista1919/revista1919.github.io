@@ -4,8 +4,8 @@ import { motion } from 'framer-motion';
 function FAQSection() {
   const faqs = [
     { q: "¿Quién puede publicar?", a: "Cualquier estudiante escolar o universitario del mundo." },
-    { q: "¿Uso de IA?", a: "Prohibido. Cualquier rastro de generación por IA resultará en rechazo automático por ética académica." },
-    { q: "¿Tiempos de respuesta?", a: "El proceso de revisión toma entre 1 y 3 semanas según la complejidad del área." },
+    { q: "¿Uso de IA?", a: "Se tolera el uso responsable de IA, siempre que se declare correctamente." },
+    { q: "¿Tiempos de respuesta?", a: "El proceso de revisión toma entre 1 y 5 semanas según la complejidad del área." },
     { q: "¿Cómo es la revisión?", a: "Sistema 'Doble Ciego': ni el autor ni el revisor conocen sus identidades para garantizar imparcialidad." },
     { q: "¿Publicación y Indexación?", a: "Los artículos se indexan en Google Académico y ya tenemos ISSN: 3087-2839." },
     { q: "¿Formato de envío?", a: "Archivos Word (.docx), siguiendo estrictamente el Estilo Chicago." }
