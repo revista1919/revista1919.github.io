@@ -261,6 +261,7 @@ const orcidSvg = `<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" 
         editorial: data.editorial || '',
         englishEditorial: data.englishEditorial || '',
         portada: getImageSrc(data.portada),
+        heroImage: data.heroImage || '',
         pdf: data.pdf || '',
       };
     });
@@ -1244,7 +1245,7 @@ return `<!DOCTYPE html>
         <section id="editorial">
           <h2>${isSpanish ? 'Nota Editorial' : 'Editorial Note'}</h2>
           <div class="editorial-content">
-            ${editorial.split('\\n\\n').map(p => `<p>${p}</p>`).join('')}
+            ${editorial ? editorial.split(/\n\s*\n/).map(p => `<p>${p.trim()}</p>`).join('') : ''}
           </div>
         </section>
       ` : ''}
