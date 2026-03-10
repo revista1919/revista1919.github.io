@@ -121,6 +121,7 @@ const initialVolumeState = {
   editorial: '',
   englishEditorial: '',
   portada: '',
+  heroImage: '',
   pdfFile: null,
   pdf: null,
 };
@@ -558,6 +559,7 @@ export default function DirectorPanel({ user }) {
         volumen: volumeForm.volumen,
         numero: volumeForm.numero,
         portada: volumeForm.portada,
+        heroImage: volumeForm.heroImage, 
         issn: volumeForm.issn || null,
         editorial: volumeForm.editorial || null,
         englishEditorial: volumeForm.englishEditorial || null,
@@ -1320,6 +1322,7 @@ const VolumeForm = ({ formData, setFormData, isEditing }) => {
       <Input label="Título del Volumen (EN)" name="englishTitulo" value={formData.englishTitulo} onChange={handleChange} placeholder="Ej: Volume 1 (2024)" />
       <Input label="ISSN" name="issn" value={formData.issn} onChange={handleChange} />
       <Input label="URL de Portada" name="portada" value={formData.portada} onChange={handleChange} />
+      <Input label="URL de Imagen Hero" name="heroImage" value={formData.heroImage} onChange={handleChange} placeholder="URL para la imagen de fondo del hero" />
       <div><label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Editorial Note (Español)</label><textarea className="w-full p-3 border rounded-xl h-24 outline-none focus:ring-2 focus:ring-blue-500 text-sm" name="editorial" value={formData.editorial} onChange={handleChange} placeholder="Nota editorial en español..." /></div>
       <div><label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Editorial Note (English)</label><textarea className="w-full p-3 border rounded-xl h-24 outline-none focus:ring-2 focus:ring-blue-500 text-sm" name="englishEditorial" value={formData.englishEditorial} onChange={handleChange} placeholder="Editorial note in English..." /></div>
       <div className="p-6 border-2 border-dashed border-gray-200 rounded-2xl text-center">
@@ -1458,6 +1461,12 @@ const VolumeList = ({ volumes, expandedVolumes, onToggleExpand, onEdit, onDelete
                       </div>
                     </div>
                     {volume.portada && <div className="lg:col-span-2"><h4 className="font-semibold text-gray-900 mb-2">Portada</h4><img src={volume.portada} alt={volume.titulo} className="max-h-48 rounded-lg shadow-md" /></div>}
+                    {volume.heroImage && (
+  <div className="lg:col-span-2">
+    <h4 className="font-semibold text-gray-900 mb-2">Imagen Hero</h4>
+    <img src={volume.heroImage} alt={`Hero de ${volume.titulo}`} className="max-h-48 rounded-lg shadow-md" />
+  </div>
+)}
                     <div className="lg:col-span-2 flex items-center justify-between pt-4 border-t border-gray-200">
                       {volume.pdf && <a href={volume.pdf} target="_blank" rel="noopener noreferrer" className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"><DocumentIcon className="w-4 h-4 mr-2" /> Ver PDF del Volumen</a>}
                       <div className="flex space-x-2 ml-auto">

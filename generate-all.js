@@ -1225,7 +1225,7 @@ return `<!DOCTYPE html>
   </div>
 
   <!-- HERO SECTION - IMAGEN A BORDE COMPLETO -->
-  <div class="hero-section">
+  <div class="hero-section" style="background-image: url('${volume.heroImage || 'https://images.unsplash.com/photo-1614850523011-8f49ffc73908'}');">
     <div class="hero-content">
       <h1>${title}</h1>
       <div class="hero-details">
