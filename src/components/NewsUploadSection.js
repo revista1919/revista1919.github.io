@@ -6,27 +6,18 @@ import { auth } from '../firebase';
 import { debounce } from 'lodash';
 
 // ===================================================
-// REGISTRO DE MÓDULOS ADICIONALES
+// REGISTRO DE MÓDULOS ADICIONALES (CORREGIDO)
 // ===================================================
 
-// Registrar módulos base
+// Registrar ImageResize
 Quill.register('modules/imageResize', ImageResize);
 
-// Importar y registrar módulos adicionales
-import 'quill-table-ui/dist/index.css';
-import QuillTableUI from 'quill-table-ui';
-import QuillTable from 'quill-table';
-
-// Módulos de matemáticas y fórmulas
+// Para matemáticas
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
-window.katex = katex; // Necesario para quill-math
+window.katex = katex; // Necesario para fórmulas
 
-// Registrar módulos de tabla
-Quill.register('modules/table', QuillTable);
-Quill.register('modules/table-ui', QuillTableUI);
-
-// Módulo de video mejorado
+// Video personalizado
 const BaseVideo = Quill.import('formats/video');
 class CustomVideo extends BaseVideo {
   static create(value) {
@@ -116,18 +107,12 @@ export default function NewsUploadSection() {
         [{ 'indent': '-1' }, { 'indent': '+1' }],
         [{ 'align': ['', 'center', 'right', 'justify'] }],
         
-        // TABLAS Y ESTRUCTURAS
+        // TABLAS - Versión simplificada
         ['table'], // Botón para crear tabla
-        [{ 'table-ui': ['insert-table', 'insert-row-above', 'insert-row-below', 
-                        'insert-column-left', 'insert-column-right', 
-                        'delete-row', 'delete-column', 'delete-table'] }],
         
         // FORMATOS ESPECIALES
         ['blockquote', 'code-block'],
         ['link', 'image', 'video', 'formula'],
-        
-        // MATEMÁTICAS
-        ['math'], // Botón para insertar fórmulas LaTeX
         
         // LIMPIEZA
         ['clean']
@@ -139,31 +124,49 @@ export default function NewsUploadSection() {
           setEditingRange(null);
           setShowImageModal(true);
         },
-        math: function() {
-          const mathText = prompt('Ingresa fórmula LaTeX:');
+        formula: function() {
+          const mathText = prompt('Ingresa fórmula LaTeX (ej: E = mc^2):');
           if (mathText) {
             const range = this.quill.getSelection();
             this.quill.insertEmbed(range.index, 'formula', mathText);
           }
         },
         table: function() {
-          // Handled by quill-table-ui
+          // Insertar tabla simple
+          const range = this.quill.getSelection();
+          if (range) {
+            const tableHTML = `
+              <table style="width:100%; border-collapse: collapse; margin: 1rem 0;">
+                <tbody>
+                  <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;"><br></td>
+                    <td style="border: 1px solid #ddd; padding: 8px;"><br></td>
+                    <td style="border: 1px solid #ddd; padding: 8px;"><br></td>
+                  </tr>
+                  <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;"><br></td>
+                    <td style="border: 1px solid #ddd; padding: 8px;"><br></td>
+                    <td style="border: 1px solid #ddd; padding: 8px;"><br></td>
+                  </tr>
+                  <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;"><br></td>
+                    <td style="border: 1px solid #ddd; padding: 8px;"><br></td>
+                    <td style="border: 1px solid #ddd; padding: 8px;"><br></td>
+                  </tr>
+                </tbody>
+              </table>
+            `;
+            this.quill.clipboard.dangerouslyPasteHTML(range.index, tableHTML);
+          }
         }
       }
     },
-    
-    // MÓDULOS DE TABLA
-    table: true,
-    'table-ui': true,
     
     // REDIMENSIONAMIENTO DE IMÁGENES
     imageResize: {
       parchment: Quill.import('parchment'),
       modules: ['Resize', 'DisplaySize', 'Toolbar'],
     },
-    
-    // SOPORTE PARA FÓRMULAS MATEMÁTICAS
-    formula: true,
     
     // CONFIGURACIÓN DE TECLADO
     keyboard: {
@@ -216,10 +219,9 @@ export default function NewsUploadSection() {
     'script',
     'list', 'bullet', 'indent',
     'align',
-    'table', 'table-ui',
+    'table',
     'blockquote', 'code-block',
-    'link', 'image', 'video', 'formula',
-    'math'
+    'link', 'image', 'video', 'formula'
   ];
 
   // --- INYECCIÓN DE BOTONES CUSTOM ---
@@ -428,9 +430,6 @@ export default function NewsUploadSection() {
     setShowImageModal(false);
   };
 
-  // Instalar dependencias necesarias:
-  // npm install quill-table quill-table-ui katex quill-math quill-image-resize-module-react
-
   return (
     <div className="max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100 mt-10">
       {/* Header UI */}
@@ -519,14 +518,14 @@ export default function NewsUploadSection() {
               <div className="grid grid-cols-2 gap-4">
                 <input 
                   type="text" 
-                  placeholder="Ancho" 
+                  placeholder="Ancho (ej: 300px o 50%)" 
                   value={imageData.width} 
                   onChange={(e)=>setImageData({...imageData, width: e.target.value})} 
                   className="p-4 bg-gray-50 border rounded-xl outline-none" 
                 />
                 <input 
                   type="text" 
-                  placeholder="Alto" 
+                  placeholder="Alto (ej: auto o 200px)" 
                   value={imageData.height} 
                   onChange={(e)=>setImageData({...imageData, height: e.target.value})} 
                   className="p-4 bg-gray-50 border rounded-xl outline-none" 
@@ -537,99 +536,133 @@ export default function NewsUploadSection() {
                 onChange={(e)=>setImageData({...imageData, align: e.target.value})} 
                 className="w-full p-4 bg-gray-50 border rounded-xl font-bold"
               >
-                <option value="left">Izquierda</option>
-                <option value="center">Centro</option>
-                <option value="right">Derecha</option>
-                <option value="justify">Justificado (100%)</option>
+                <option value="left">Izquierda (con texto alrededor)</option>
+                <option value="center">Centro (imagen sola)</option>
+                <option value="right">Derecha (con texto alrededor)</option>
+                <option value="justify">Ancho completo</option>
               </select>
             </div>
             <div className="p-8 bg-gray-50 flex justify-end gap-4">
-              <button onClick={() => setShowImageModal(false)} className="font-bold text-gray-400">CANCELAR</button>
-              <button onClick={handleImageModalSubmit} className="px-8 py-3 bg-[#5a3e36] text-white rounded-xl font-black">CONFIRMAR</button>
+              <button onClick={() => setShowImageModal(false)} className="font-bold text-gray-400 hover:text-gray-600 transition-colors">CANCELAR</button>
+              <button onClick={handleImageModalSubmit} className="px-8 py-3 bg-[#5a3e36] text-white rounded-xl font-black hover:bg-[#462f29] transition-all">CONFIRMAR</button>
             </div>
           </div>
         </div>
       )}
 
       <style jsx global>{`
-  .editorial-quill .ql-toolbar.ql-snow {
-    border: none;
-    padding: 25px;
-    background: white;
-    border-bottom: 2px solid #f8f9fa;
-    flex-wrap: wrap;
-  }
+        .editorial-quill .ql-toolbar.ql-snow {
+          border: none;
+          padding: 25px;
+          background: white;
+          border-bottom: 2px solid #f8f9fa;
+          flex-wrap: wrap;
+        }
 
-  .editorial-quill .ql-container.ql-snow {
-    border: none;
-    min-height: 500px;
-  }
+        .editorial-quill .ql-container.ql-snow {
+          border: none;
+          min-height: 500px;
+        }
 
-  .editorial-quill .ql-editor {
-    padding: 40px;
-  }
+        .editorial-quill .ql-editor {
+          padding: 40px;
+          font-size: 16px;
+          line-height: 1.8;
+        }
 
-  /* Estilos para tablas */
-  .editorial-quill .ql-editor table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 2rem 0;
-  }
+        /* Estilos para tablas */
+        .editorial-quill .ql-editor table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 2rem 0;
+        }
 
-  .editorial-quill .ql-editor td,
-  .editorial-quill .ql-editor th {
-    border: 1px solid #ddd;
-    padding: 12px;
-  }
+        .editorial-quill .ql-editor td,
+        .editorial-quill .ql-editor th {
+          border: 1px solid #ddd;
+          padding: 12px;
+        }
 
-  .editorial-quill .ql-editor th {
-    background-color: #f5f5f5;
-    font-weight: bold;
-  }
+        .editorial-quill .ql-editor th {
+          background-color: #f5f5f5;
+          font-weight: bold;
+        }
 
-  /* Estilos para videos */
-  .editorial-quill .ql-editor video {
-    max-width: 100%;
-    border-radius: 8px;
-    margin: 2rem 0;
-  }
+        /* Estilos para videos */
+        .editorial-quill .ql-editor video {
+          max-width: 100%;
+          border-radius: 8px;
+          margin: 2rem 0;
+        }
 
-  /* Estilos para fórmulas matemáticas */
-  .editorial-quill .ql-editor .ql-formula {
-    display: inline-block;
-    margin: 0 4px;
-  }
+        /* Estilos para fórmulas matemáticas */
+        .editorial-quill .ql-editor .ql-formula {
+          display: inline-block;
+          margin: 0 4px;
+        }
 
-  /* Blockquote */
-  .editorial-quill .ql-editor blockquote {
-    border-left: 4px solid #5a3e36;
-    background: #fdfaf9;
-    padding: 20px 30px;
-    margin: 2rem 0;
-  }
+        /* Blockquote */
+        .editorial-quill .ql-editor blockquote {
+          border-left: 4px solid #5a3e36;
+          background: #fdfaf9;
+          padding: 20px 30px;
+          margin: 2rem 0;
+          font-style: italic;
+          color: #4a5568;
+        }
 
-  /* Toolbar styling */
-  .ql-snow .ql-stroke {
-    stroke: #5a3e36 !important;
-    stroke-width: 2px;
-  }
+        /* Código */
+        .editorial-quill .ql-editor pre {
+          background: #2d3748;
+          color: #e2e8f0;
+          padding: 20px;
+          border-radius: 12px;
+          overflow-x: auto;
+          font-family: 'Courier New', monospace;
+          margin: 2rem 0;
+        }
 
-  .ql-snow .ql-fill {
-    fill: #5a3e36 !important;
-  }
+        /* Toolbar styling */
+        .ql-snow .ql-stroke {
+          stroke: #5a3e36 !important;
+          stroke-width: 2px;
+        }
 
-  .ql-snow .ql-picker {
-    color: #5a3e36 !important;
-    font-weight: bold;
-  }
+        .ql-snow .ql-fill {
+          fill: #5a3e36 !important;
+        }
 
-  /* Estilos específicos para botones de tabla */
-  .ql-snow .ql-table,
-  .ql-snow .ql-table-ui {
-    color: #5a3e36;
-  }
-`}</style>
+        .ql-snow .ql-picker {
+          color: #5a3e36 !important;
+          font-weight: bold;
+        }
 
+        .ql-snow .ql-picker-options {
+          border-color: #5a3e36 !important;
+        }
+
+        /* Hover effects */
+        .ql-snow .ql-picker:hover .ql-picker-label,
+        .ql-snow .ql-picker:hover .ql-picker-label svg {
+          color: #462f29 !important;
+          stroke: #462f29 !important;
+        }
+
+        .ql-snow .ql-active .ql-stroke {
+          stroke: #462f29 !important;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+          .editorial-quill .ql-editor {
+            padding: 20px;
+          }
+          
+          .editorial-quill .ql-toolbar.ql-snow {
+            padding: 15px;
+          }
+        }
+      `}</style>
     </div>
   );
 }
