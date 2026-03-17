@@ -6855,3 +6855,349 @@ exports.getUserInvitations = onCall(
     }
   }
 );
+// manageCollectionArticles.js (Cloud Function)
+exports.manageCollectionArticles = onRequest(
+  { 
+    secrets: [GH_TOKEN],
+    cors: true,
+    timeoutSeconds: 120
+  },
+  async (req, res) => {
+    // Configuración CORS (misma que en las otras funciones)
+    
+    if (req.method === 'OPTIONS') {
+      res.status(204).send('');
+      return;
+    }
+
+    if (req.method !== "POST") {
+      return res.status(405).json({ error: "Método no permitido" });
+    }
+
+    const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    try {
+      // Verificar autenticación
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: "No autorizado" });
+      }
+
+      const token = authHeader.split("Bearer ")[1];
+      const user = await admin.auth().verifyIdToken(token);
+      
+      await validateRole(user.uid, "Director General");
+
+      const { action, collection, article, id } = req.body;
+      
+      if (!action || !collection) {
+        return res.status(400).json({ error: "Acción y colección requeridas" });
+      }
+
+      const octokit = getOctokit();
+      const REPO_OWNER = "revista1919";
+      const REPO_NAME = "revista1919.github.io";
+      const METADATA_PATH = `collections/${collection}/metadata.json`;
+      const BRANCH = "main";
+
+      // Obtener metadata.json actual
+      async function getCurrentMetadata() {
+        try {
+          const { data } = await octokit.repos.getContent({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            path: METADATA_PATH,
+            ref: BRANCH
+          });
+          
+          const content = Buffer.from(data.content, 'base64').toString('utf8');
+          return {
+            articles: JSON.parse(content),
+            sha: data.sha
+          };
+        } catch (error) {
+          if (error.status === 404) {
+            return {
+              articles: [],
+              sha: null
+            };
+          }
+          throw error;
+        }
+      }
+
+      async function saveMetadata(articles, sha, commitMessage) {
+        const content = Buffer.from(JSON.stringify(articles, null, 2)).toString('base64');
+        
+        if (sha) {
+          await octokit.repos.createOrUpdateFileContents({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            path: METADATA_PATH,
+            message: commitMessage,
+            content: content,
+            sha: sha,
+            branch: BRANCH
+          });
+        } else {
+          await octokit.repos.createOrUpdateFileContents({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            path: METADATA_PATH,
+            message: commitMessage,
+            content: content,
+            branch: BRANCH
+          });
+        }
+      }
+
+      // Crear archivo HTML del artículo
+      async function createArticleHtml(article, collectionName) {
+        const htmlContent = `<!DOCTYPE html>
+<html lang="${article.idioma || 'es'}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${article['name-original']} - ${collectionName}</title>
+    <meta name="description" content="${article.abstract?.substring(0, 160)}">
+    <meta name="keywords" content="${article.keywords?.join(', ')}">
+    <meta name="author" content="${article.author?.map(a => a.name).join(', ')}">
+    <meta property="og:title" content="${article['name-original']}">
+    <meta property="og:description" content="${article.abstract?.substring(0, 160)}">
+    <meta property="og:type" content="article">
+    ${article.image ? `<meta property="og:image" content="${article.image}">` : ''}
+    <link rel="stylesheet" href="/css/article.css">
+</head>
+<body>
+    <article class="scientific-article">
+        <header>
+            <h1>${article['name-original']}</h1>
+            ${article['name-translated'] ? `<h2>${article['name-translated']}</h2>` : ''}
+            
+            <div class="authors">
+                ${article.author?.map(author => `
+                    <div class="author">
+                        <span class="name">${author.name}</span>
+                        ${author['birth-date'] ? `<span class="dates">(${author['birth-date']} - ${author['death-date'] || ''})</span>` : ''}
+                        ${author.bio ? `<p class="bio">${author.bio}</p>` : ''}
+                        ${author.link ? `<a href="${author.link}" target="_blank" rel="noopener">Ver biografía completa</a>` : ''}
+                    </div>
+                `).join('')}
+            </div>
+
+            <div class="metadata">
+                <time datetime="${article.date}">Publicado: ${article.date}</time>
+                ${article['original-date'] ? `<time datetime="${article['original-date']}">Original: ${article['original-date']}</time>` : ''}
+            </div>
+        </header>
+
+        ${article.abstract ? `
+            <section class="abstract">
+                <h3>Abstract</h3>
+                <p>${article.abstract}</p>
+            </section>
+        ` : ''}
+
+        ${article.html ? `
+            <section class="content">
+                ${article.html}
+            </section>
+        ` : ''}
+
+        ${article.references ? `
+            <section class="references">
+                <h3>References</h3>
+                ${article.references}
+            </section>
+        ` : ''}
+
+        ${article.appendix ? `
+            <section class="appendix">
+                <h3>Appendix</h3>
+                ${article.appendix}
+            </section>
+        ` : ''}
+
+        ${article['editorial-note'] ? `
+            <section class="editorial-note">
+                <h3>Editorial Note</h3>
+                ${article['editorial-note']}
+            </section>
+        ` : ''}
+
+        <footer>
+            <div class="keywords">
+                <strong>Keywords:</strong> ${article.keywords?.join(', ')}
+            </div>
+            <div class="areas">
+                <strong>Areas:</strong> ${article.area?.join(', ')}
+            </div>
+            ${article['pdf-url'] ? `
+                <div class="pdf-download">
+                    <a href="${article['pdf-url']}" download>Download PDF</a>
+                </div>
+            ` : ''}
+        </footer>
+    </article>
+</body>
+</html>`;
+
+        const htmlPath = `collections/${collection}/articles/${article.id}.html`;
+
+        try {
+          await octokit.repos.createOrUpdateFileContents({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            path: htmlPath,
+            message: `Add HTML for article ${article.id}`,
+            content: Buffer.from(htmlContent).toString('base64'),
+            branch: BRANCH
+          });
+        } catch (error) {
+          console.error('Error creating article HTML:', error);
+          throw error;
+        }
+      }
+
+      const { articles: currentArticles, sha } = await getCurrentMetadata();
+      let updatedArticles = [...currentArticles];
+      let responseData = {};
+
+      // ADD: Agregar artículo
+      if (action === "add") {
+        if (!article?.id || !article['name-original']) {
+          return res.status(400).json({ error: "ID y nombre original requeridos" });
+        }
+
+        // Verificar si ya existe
+        if (currentArticles.some(a => a.id === article.id)) {
+          return res.status(400).json({ error: "Ya existe un artículo con este ID" });
+        }
+
+        const newArticle = {
+          ...article,
+          createdAt: new Date().toISOString(),
+          createdBy: user.uid
+        };
+
+        updatedArticles.push(newArticle);
+
+        // Crear archivo HTML
+        await createArticleHtml(newArticle, collection);
+
+        responseData = {
+          success: true,
+          id: article.id,
+          message: "Artículo agregado exitosamente"
+        };
+      }
+
+      // EDIT: Editar artículo
+      if (action === "edit") {
+        if (!id) {
+          return res.status(400).json({ error: "ID de artículo requerido" });
+        }
+
+        const index = updatedArticles.findIndex(a => a.id === id);
+        if (index === -1) {
+          return res.status(404).json({ error: "Artículo no encontrado" });
+        }
+
+        const updatedArticle = {
+          ...updatedArticles[index],
+          ...article,
+          updatedAt: new Date().toISOString(),
+          updatedBy: user.uid
+        };
+
+        updatedArticles[index] = updatedArticle;
+
+        // Actualizar archivo HTML
+        await createArticleHtml(updatedArticle, collection);
+
+        responseData = {
+          success: true,
+          id: id,
+          message: "Artículo actualizado exitosamente"
+        };
+      }
+
+      // DELETE: Eliminar artículo
+      if (action === "delete") {
+        if (!id) {
+          return res.status(400).json({ error: "ID de artículo requerido" });
+        }
+
+        const index = updatedArticles.findIndex(a => a.id === id);
+        if (index === -1) {
+          return res.status(404).json({ error: "Artículo no encontrado" });
+        }
+
+        // Eliminar archivo HTML
+        try {
+          const { data } = await octokit.repos.getContent({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            path: `collections/${collection}/articles/${id}.html`,
+            ref: BRANCH
+          });
+
+          await octokit.repos.deleteFile({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            path: `collections/${collection}/articles/${id}.html`,
+            message: `Delete HTML for article ${id}`,
+            sha: data.sha,
+            branch: BRANCH
+          });
+        } catch (error) {
+          if (error.status !== 404) throw error;
+        }
+
+        updatedArticles.splice(index, 1);
+
+        responseData = {
+          success: true,
+          id: id,
+          message: "Artículo eliminado exitosamente"
+        };
+      }
+
+      if (["add", "edit", "delete"].includes(action)) {
+        await saveMetadata(
+          updatedArticles,
+          sha,
+          `[${action}] Artículo ${action === 'add' ? 'agregado' : action === 'edit' ? 'actualizado' : 'eliminado'} en colección ${collection} por ${user.email || user.uid}`
+        );
+
+        // Trigger rebuild
+        try {
+          await octokit.request("POST /repos/{owner}/{repo}/dispatches", {
+            owner: "revista1919",
+            repo: "revista1919.github.io",
+            event_type: "rebuild-collection-articles",
+            client_payload: {
+              action: action,
+              collection: collection,
+              articleId: id,
+              triggeredBy: user.uid
+            }
+          });
+        } catch (rebuildError) {
+          console.error("Error triggering rebuild:", rebuildError);
+        }
+
+        return res.json(responseData);
+      }
+
+      return res.status(400).json({ error: "Acción inválida" });
+
+    } catch (err) {
+      console.error(`[${requestId}] Error:`, err);
+      return res.status(500).json({ 
+        error: "Error interno del servidor",
+        message: err.message 
+      });
+    }
+  }
+);

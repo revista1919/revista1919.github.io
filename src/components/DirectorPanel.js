@@ -14,6 +14,7 @@ import 'react-quill/dist/quill.snow.css';
 import CodeMirror from '@uiw/react-codemirror';
 import { html } from '@codemirror/lang-html';
 import { oneDark } from '@codemirror/theme-one-dark';
+import CollectionManager from './CollectionManager';
 import {
   PlusIcon, PencilIcon, TrashIcon, CheckIcon, ExclamationTriangleIcon,
   DocumentTextIcon, ArrowPathIcon, BookOpenIcon, DocumentIcon,
@@ -659,6 +660,7 @@ export default function DirectorPanel({ user }) {
               <SidebarItemMobile active={activeTab === 'admissions'} onClick={() => { setActiveTab('admissions'); setMobileMenuOpen(false); }} icon={<InboxIcon />} label="Admisiones" />
               <SidebarItemMobile active={activeTab === 'usersearch'} onClick={() => { setActiveTab('usersearch'); setMobileMenuOpen(false); }} icon={<MagnifyingGlassIcon />} label="Buscar Usuarios" />
               <SidebarItemMobile active={activeTab === 'images'} onClick={() => { setActiveTab('images'); setMobileMenuOpen(false); }} icon={<PhotoIcon />} label="Gestor de Imágenes" />
+              <SidebarItemMobile active={activeTab === 'collections'} onClick={() => { setActiveTab('collections'); setMobileMenuOpen(false); }} icon={<FolderIcon />} label="Colecciones" />
             </nav>
             <div className="absolute bottom-4 left-4 right-4">
               <button onClick={handleRebuild} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all font-medium text-sm shadow-lg">
@@ -681,6 +683,7 @@ export default function DirectorPanel({ user }) {
           <SidebarItem active={activeTab === 'images'} onClick={() => setActiveTab('images')} icon={<PhotoIcon />} label="Gestor de Imágenes" />
           <SidebarItem active={activeTab === 'admissions'} onClick={() => setActiveTab('admissions')} icon={<InboxIcon />} label="Admisiones" />
           <SidebarItem active={activeTab === 'usersearch'} onClick={() => setActiveTab('usersearch')} icon={<MagnifyingGlassIcon />} label="Buscar Usuarios" />
+          <SidebarItem active={activeTab === 'collections'} onClick={() => setActiveTab('collections')} icon={<FolderIcon />} label="Colecciones" />
         </nav>
         <div className="p-4 border-t border-white/10">
           <button onClick={handleRebuild} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all font-medium text-sm shadow-lg">
@@ -723,6 +726,7 @@ export default function DirectorPanel({ user }) {
                 <PlusIcon className="w-5 h-5" /> Nuevo Volumen
               </button>
             )}
+            
           </div>
         </header>
 
@@ -766,6 +770,11 @@ export default function DirectorPanel({ user }) {
               formatDate={formatDate}
             />
           )}
+          {activeTab === 'collections' && (
+  <div className="p-4 lg:p-6">
+    <CollectionManager user={user} />
+  </div>
+)}
           
           {activeTab === 'team' && <div className="p-4 lg:p-6"><MailsTeam /></div>}
           {activeTab === 'admissions' && <div className="p-4 lg:p-6"><Admissions /></div>}
