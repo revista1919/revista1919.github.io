@@ -1,9 +1,10 @@
+// components/SingleCollectionView.jsx
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useLanguage } from '../hooks/useLanguage';
 import { useParams, useSearchParams } from 'react-router-dom';
 import CollectionArticleCard from './CollectionArticleCard';
-import useDebounce from '../hooks/useDebounce'; // Lo crearemos después
+import useDebounce from '../hooks/useDebounce';
 
 function SingleCollectionView() {
   const { language } = useLanguage();
@@ -16,28 +17,63 @@ function SingleCollectionView() {
   const [filteredArticles, setFilteredArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchInput, setSearchInput] = useState(''); // Para el input inmediato
+  const [searchInput, setSearchInput] = useState('');
   
-  // Debounce de 300ms para la búsqueda
   const debouncedSearch = useDebounce(searchInput, 300);
 
-  // URL del metadata.json
   const METADATA_URL = `/collections/${folderName}/metadata.json`;
 
   // Cargar metadata de la colección
   useEffect(() => {
     const fetchCollectionData = async () => {
       setLoading(true);
+      setError(null);
+      
       try {
+        // Cargar los artículos de la colección
         const response = await fetch(METADATA_URL);
         if (!response.ok) {
           throw new Error(`Error loading collection metadata: ${response.status}`);
         }
         const data = await response.json();
-        setArticles(data);
-        setFilteredArticles(data);
         
-        // También necesitamos cargar el collections.json para obtener el título real
+        // 🔥 CORRECCIÓN: Verificar la estructura de los datos
+        console.log('Datos recibidos:', data);
+        
+        let articlesArray = [];
+        
+        if (Array.isArray(data)) {
+          if (data.length > 0 && data[0].id) {
+            // Si es un array de artículos (estructura correcta)
+            articlesArray = data;
+          } else if (data.length === 1 && typeof data[0] === 'object' && !data[0].id) {
+            // Si es un array con un objeto que contiene múltiples artículos
+            // Buscar cualquier propiedad que pueda contener un array de artículos
+            const possibleArticles = Object.values(data[0]).find(val => Array.isArray(val));
+            if (possibleArticles) {
+              articlesArray = possibleArticles;
+            } else {
+              // Si no encontramos un array, asumimos que el objeto mismo es un artículo
+              articlesArray = data;
+            }
+          } else {
+            articlesArray = data;
+          }
+        } else if (data && typeof data === 'object') {
+          // Si es un objeto único, lo convertimos en array
+          articlesArray = [data];
+        } else {
+          articlesArray = [];
+        }
+        
+        // Filtrar para asegurar que solo guardamos objetos válidos con id
+        const validArticles = articlesArray.filter(article => article && article.id);
+        
+        console.log('Artículos procesados:', validArticles);
+        setArticles(validArticles);
+        setFilteredArticles(validArticles);
+        
+        // Cargar el collections.json para obtener el título real
         const collectionsResponse = await fetch('/collections/collections.json');
         if (collectionsResponse.ok) {
           const collectionsData = await collectionsResponse.json();
@@ -47,8 +83,10 @@ function SingleCollectionView() {
           setCollectionMeta(currentCollection || null);
         }
       } catch (err) {
-        console.error(err);
+        console.error('Error fetching collection:', err);
         setError(err.message);
+        setArticles([]);
+        setFilteredArticles([]);
       } finally {
         setLoading(false);
       }
@@ -57,7 +95,7 @@ function SingleCollectionView() {
     if (folderName) {
       fetchCollectionData();
     }
-  }, [folderName]);
+  }, [folderName, METADATA_URL]);
 
   // Leer el término de búsqueda de la URL al cargar
   useEffect(() => {
@@ -65,9 +103,14 @@ function SingleCollectionView() {
     setSearchInput(term);
   }, [searchParams]);
 
-  // Filtrar artículos SOLO cuando cambia el término con debounce
+  // Filtrar artículos cuando cambia el término con debounce
   useEffect(() => {
-    const lowerTerm = debouncedSearch.toLowerCase();
+    if (!articles.length) {
+      setFilteredArticles([]);
+      return;
+    }
+
+    const lowerTerm = debouncedSearch.toLowerCase().trim();
     
     if (!lowerTerm) {
       setFilteredArticles(articles);
@@ -75,16 +118,30 @@ function SingleCollectionView() {
     }
 
     const filtered = articles.filter((article) => {
-      const title = article.name?.[language] || article.name?.spanish || '';
-      const abstract = article.abstract?.[language] || article.abstract?.spanish || '';
+      // Búsqueda en múltiples campos con fallbacks
+      const title = article.name?.[language] || 
+                   article.name?.spanish || 
+                   article.name?.english || 
+                   '';
+      
+      const abstract = article.abstract?.[language] || 
+                      article.abstract?.spanish || 
+                      article.abstract?.english || 
+                      '';
+      
       const authors = article.author?.map(a => a.name).join(' ') || '';
-      const keywords = article.keywords?.[language]?.join(' ') || '';
+      
+      const keywords = article.keywords?.[language]?.join(' ') || 
+                      article.keywords?.spanish?.join(' ') || 
+                      article.keywords?.english?.join(' ') || 
+                      '';
 
       return (
         title.toLowerCase().includes(lowerTerm) ||
         abstract.toLowerCase().includes(lowerTerm) ||
         authors.toLowerCase().includes(lowerTerm) ||
-        keywords.toLowerCase().includes(lowerTerm)
+        keywords.toLowerCase().includes(lowerTerm) ||
+        article.id?.toLowerCase().includes(lowerTerm)
       );
     });
     
@@ -99,8 +156,8 @@ function SingleCollectionView() {
     } else {
       params.delete('collection_search');
     }
-    setSearchParams(params, { replace: true }); // replace: true evita que se acumulen en el historial
-  }, [debouncedSearch]);
+    setSearchParams(params, { replace: true });
+  }, [debouncedSearch, searchParams, setSearchParams]);
 
   const handleSearchChange = (e) => {
     setSearchInput(e.target.value);
@@ -110,13 +167,24 @@ function SingleCollectionView() {
     setSearchInput('');
   };
 
-  // Obtener el título localizado
   const getLocalizedTitle = () => {
     if (collectionMeta?.title) {
-      return collectionMeta.title[language] || collectionMeta.title.spanish || folderName?.replace(/-/g, ' ');
+      return collectionMeta.title[language] || 
+             collectionMeta.title.spanish || 
+             collectionMeta.title.english || 
+             folderName?.replace(/-/g, ' ');
     }
-    // Fallback al nombre de la carpeta formateado
-    return folderName?.replace(/-/g, ' ');
+    return folderName?.replace(/-/g, ' ') || '';
+  };
+
+  const getLocalizedDescription = () => {
+    if (collectionMeta?.description) {
+      return collectionMeta.description[language] || 
+             collectionMeta.description.spanish || 
+             collectionMeta.description.english || 
+             '';
+    }
+    return '';
   };
 
   if (loading) {
@@ -136,13 +204,19 @@ function SingleCollectionView() {
         <p className="text-lg text-red-600 font-serif italic">
           {isSpanish ? `Error al cargar: ${error}` : `Error loading: ${error}`}
         </p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="mt-4 px-4 py-2 bg-[#007398] text-white rounded-sm hover:bg-[#005a7a] transition-colors"
+        >
+          {isSpanish ? 'Reintentar' : 'Retry'}
+        </button>
       </div>
     );
   }
 
   return (
     <motion.div
-      className="py-8 max-w-4xl mx-auto"
+      className="py-8 max-w-4xl mx-auto px-4 sm:px-6"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
@@ -150,18 +224,20 @@ function SingleCollectionView() {
       <h1 className="text-3xl font-serif font-bold text-gray-900 mb-2">
         {getLocalizedTitle()}
       </h1>
-      {collectionMeta?.description && (
+      
+      {getLocalizedDescription() && (
         <p className="text-gray-600 mb-4">
-          {collectionMeta.description[language] || collectionMeta.description.spanish}
+          {getLocalizedDescription()}
         </p>
       )}
+      
       <p className="text-gray-500 text-sm mb-6 border-b pb-4">
         {isSpanish 
           ? `Explorando ${filteredArticles.length} artículos en esta colección.` 
           : `Exploring ${filteredArticles.length} articles in this collection.`}
       </p>
 
-      {/* Buscador con mejor UX */}
+      {/* Buscador */}
       <div className="mb-8">
         <div className="flex gap-2">
           <div className="flex-1 relative">
@@ -171,6 +247,7 @@ function SingleCollectionView() {
               onChange={handleSearchChange}
               placeholder={isSpanish ? "Buscar en esta colección..." : "Search in this collection..."}
               className="w-full p-3 pr-10 border border-gray-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-[#007398] font-serif"
+              disabled={articles.length === 0}
             />
             {searchInput && (
               <button
@@ -195,7 +272,6 @@ function SingleCollectionView() {
           )}
         </div>
         
-        {/* Feedback de resultados */}
         {filteredArticles.length > 0 && searchInput && (
           <p className="text-sm text-gray-500 mt-2">
             {isSpanish 
@@ -207,7 +283,15 @@ function SingleCollectionView() {
 
       {/* Lista de Artículos */}
       <div className="space-y-4">
-        {filteredArticles.length === 0 ? (
+        {!articles.length ? (
+          <div className="bg-white border border-gray-200 p-12 text-center rounded-sm">
+            <p className="text-lg text-gray-600 font-serif italic">
+              {isSpanish 
+                ? 'Esta colección no tiene artículos disponibles.' 
+                : 'This collection has no articles available.'}
+            </p>
+          </div>
+        ) : filteredArticles.length === 0 ? (
           <div className="bg-white border border-gray-200 p-12 text-center rounded-sm">
             <p className="text-lg text-gray-600 font-serif italic mb-4">
               {isSpanish 
@@ -226,7 +310,7 @@ function SingleCollectionView() {
         ) : (
           filteredArticles.map((article, index) => (
             <motion.div
-              key={article.id}
+              key={article.id || index}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05, duration: 0.3 }}
