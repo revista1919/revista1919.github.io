@@ -12,6 +12,7 @@ import MailsTeam from './MailsTeam';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import CodeMirror from '@uiw/react-codemirror';
+
 import { html } from '@codemirror/lang-html';
 import { oneDark } from '@codemirror/theme-one-dark';
 import CollectionManager from './CollectionManager';
@@ -21,9 +22,9 @@ import {
   XMarkIcon, ChevronRightIcon, MagnifyingGlassIcon, InboxIcon,
   UserGroupIcon, ChartBarIcon, CodeBracketIcon, PencilSquareIcon,
   GlobeAltIcon, PhotoIcon, ChevronDownIcon, UserIcon, EnvelopeIcon,
-  IdentificationIcon, AcademicCapIcon, ArrowDownTrayIcon, InformationCircleIcon
+  IdentificationIcon, AcademicCapIcon, ArrowDownTrayIcon, InformationCircleIcon,
+  FolderIcon  
 } from '@heroicons/react/24/outline';
-
 // --- Constantes de Configuración ---
 const DOMAIN = 'https://www.revistacienciasestudiantes.com';
 const ARTICLES_JSON_URL = `${DOMAIN}/articles.json`;

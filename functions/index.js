@@ -6855,7 +6855,6 @@ exports.getUserInvitations = onCall(
     }
   }
 );
-// manageCollectionArticles.js (Cloud Function)
 exports.manageCollectionArticles = onRequest(
   { 
     secrets: [GH_TOKEN],
@@ -6899,6 +6898,27 @@ exports.manageCollectionArticles = onRequest(
       const REPO_NAME = "revista1919.github.io";
       const METADATA_PATH = `collections/${collection}/metadata.json`;
       const BRANCH = "main";
+
+      // Validar estructura del artículo
+      function validateArticle(article) {
+        const required = ['id', 'name', 'author', 'date'];
+        const missing = required.filter(field => !article[field]);
+        
+        if (missing.length > 0) {
+          throw new Error(`Campos requeridos faltantes: ${missing.join(', ')}`);
+        }
+
+        // Validar estructura multilingüe básica
+        if (!article.name?.spanish) {
+          throw new Error('El campo name.spanish es requerido');
+        }
+
+        if (!Array.isArray(article.author) || article.author.length === 0) {
+          throw new Error('Debe haber al menos un autor');
+        }
+
+        return true;
+      }
 
       // Obtener metadata.json actual
       async function getCurrentMetadata() {
@@ -6951,122 +6971,16 @@ exports.manageCollectionArticles = onRequest(
         }
       }
 
-      // Crear archivo HTML del artículo
-      async function createArticleHtml(article, collectionName) {
-        const htmlContent = `<!DOCTYPE html>
-<html lang="${article.idioma || 'es'}">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${article['name-original']} - ${collectionName}</title>
-    <meta name="description" content="${article.abstract?.substring(0, 160)}">
-    <meta name="keywords" content="${article.keywords?.join(', ')}">
-    <meta name="author" content="${article.author?.map(a => a.name).join(', ')}">
-    <meta property="og:title" content="${article['name-original']}">
-    <meta property="og:description" content="${article.abstract?.substring(0, 160)}">
-    <meta property="og:type" content="article">
-    ${article.image ? `<meta property="og:image" content="${article.image}">` : ''}
-    <link rel="stylesheet" href="/css/article.css">
-</head>
-<body>
-    <article class="scientific-article">
-        <header>
-            <h1>${article['name-original']}</h1>
-            ${article['name-translated'] ? `<h2>${article['name-translated']}</h2>` : ''}
-            
-            <div class="authors">
-                ${article.author?.map(author => `
-                    <div class="author">
-                        <span class="name">${author.name}</span>
-                        ${author['birth-date'] ? `<span class="dates">(${author['birth-date']} - ${author['death-date'] || ''})</span>` : ''}
-                        ${author.bio ? `<p class="bio">${author.bio}</p>` : ''}
-                        ${author.link ? `<a href="${author.link}" target="_blank" rel="noopener">Ver biografía completa</a>` : ''}
-                    </div>
-                `).join('')}
-            </div>
-
-            <div class="metadata">
-                <time datetime="${article.date}">Publicado: ${article.date}</time>
-                ${article['original-date'] ? `<time datetime="${article['original-date']}">Original: ${article['original-date']}</time>` : ''}
-            </div>
-        </header>
-
-        ${article.abstract ? `
-            <section class="abstract">
-                <h3>Abstract</h3>
-                <p>${article.abstract}</p>
-            </section>
-        ` : ''}
-
-        ${article.html ? `
-            <section class="content">
-                ${article.html}
-            </section>
-        ` : ''}
-
-        ${article.references ? `
-            <section class="references">
-                <h3>References</h3>
-                ${article.references}
-            </section>
-        ` : ''}
-
-        ${article.appendix ? `
-            <section class="appendix">
-                <h3>Appendix</h3>
-                ${article.appendix}
-            </section>
-        ` : ''}
-
-        ${article['editorial-note'] ? `
-            <section class="editorial-note">
-                <h3>Editorial Note</h3>
-                ${article['editorial-note']}
-            </section>
-        ` : ''}
-
-        <footer>
-            <div class="keywords">
-                <strong>Keywords:</strong> ${article.keywords?.join(', ')}
-            </div>
-            <div class="areas">
-                <strong>Areas:</strong> ${article.area?.join(', ')}
-            </div>
-            ${article['pdf-url'] ? `
-                <div class="pdf-download">
-                    <a href="${article['pdf-url']}" download>Download PDF</a>
-                </div>
-            ` : ''}
-        </footer>
-    </article>
-</body>
-</html>`;
-
-        const htmlPath = `collections/${collection}/articles/${article.id}.html`;
-
-        try {
-          await octokit.repos.createOrUpdateFileContents({
-            owner: REPO_OWNER,
-            repo: REPO_NAME,
-            path: htmlPath,
-            message: `Add HTML for article ${article.id}`,
-            content: Buffer.from(htmlContent).toString('base64'),
-            branch: BRANCH
-          });
-        } catch (error) {
-          console.error('Error creating article HTML:', error);
-          throw error;
-        }
-      }
-
       const { articles: currentArticles, sha } = await getCurrentMetadata();
       let updatedArticles = [...currentArticles];
       let responseData = {};
 
       // ADD: Agregar artículo
       if (action === "add") {
-        if (!article?.id || !article['name-original']) {
-          return res.status(400).json({ error: "ID y nombre original requeridos" });
+        try {
+          validateArticle(article);
+        } catch (validationError) {
+          return res.status(400).json({ error: validationError.message });
         }
 
         // Verificar si ya existe
@@ -7076,14 +6990,15 @@ exports.manageCollectionArticles = onRequest(
 
         const newArticle = {
           ...article,
-          createdAt: new Date().toISOString(),
-          createdBy: user.uid
+          metadata: {
+            createdAt: new Date().toISOString(),
+            createdBy: user.uid,
+            createdByEmail: user.email || null,
+            version: "1.0.0"
+          }
         };
 
         updatedArticles.push(newArticle);
-
-        // Crear archivo HTML
-        await createArticleHtml(newArticle, collection);
 
         responseData = {
           success: true,
@@ -7103,17 +7018,21 @@ exports.manageCollectionArticles = onRequest(
           return res.status(404).json({ error: "Artículo no encontrado" });
         }
 
+        // Preservar metadatos de creación y agregar metadatos de edición
         const updatedArticle = {
           ...updatedArticles[index],
           ...article,
-          updatedAt: new Date().toISOString(),
-          updatedBy: user.uid
+          metadata: {
+            ...(updatedArticles[index].metadata || {}),
+            ...article.metadata,
+            updatedAt: new Date().toISOString(),
+            updatedBy: user.uid,
+            updatedByEmail: user.email || null,
+            updateCount: (updatedArticles[index].metadata?.updateCount || 0) + 1
+          }
         };
 
         updatedArticles[index] = updatedArticle;
-
-        // Actualizar archivo HTML
-        await createArticleHtml(updatedArticle, collection);
 
         responseData = {
           success: true,
@@ -7133,27 +7052,6 @@ exports.manageCollectionArticles = onRequest(
           return res.status(404).json({ error: "Artículo no encontrado" });
         }
 
-        // Eliminar archivo HTML
-        try {
-          const { data } = await octokit.repos.getContent({
-            owner: REPO_OWNER,
-            repo: REPO_NAME,
-            path: `collections/${collection}/articles/${id}.html`,
-            ref: BRANCH
-          });
-
-          await octokit.repos.deleteFile({
-            owner: REPO_OWNER,
-            repo: REPO_NAME,
-            path: `collections/${collection}/articles/${id}.html`,
-            message: `Delete HTML for article ${id}`,
-            sha: data.sha,
-            branch: BRANCH
-          });
-        } catch (error) {
-          if (error.status !== 404) throw error;
-        }
-
         updatedArticles.splice(index, 1);
 
         responseData = {
@@ -7170,17 +7068,705 @@ exports.manageCollectionArticles = onRequest(
           `[${action}] Artículo ${action === 'add' ? 'agregado' : action === 'edit' ? 'actualizado' : 'eliminado'} en colección ${collection} por ${user.email || user.uid}`
         );
 
+        // Trigger rebuild del sitio estático
+        try {
+          await octokit.request("POST /repos/{owner}/{repo}/dispatches", {
+            owner: "revista1919",
+            repo: "revista1919.github.io",
+            event_type: "rebuild-site",
+            client_payload: {
+              action: action,
+              collection: collection,
+              articleId: id || article?.id,
+              articleTitle: article?.name?.spanish || article?.['name-original'],
+              triggeredBy: user.uid,
+              triggeredByEmail: user.email,
+              timestamp: new Date().toISOString()
+            }
+          });
+          
+          console.log(`[${requestId}] Rebuild triggered successfully`);
+        } catch (rebuildError) {
+          console.error(`[${requestId}] Error triggering rebuild:`, rebuildError);
+          // No fallamos la petición principal si el rebuild falla
+        }
+
+        return res.json({
+          ...responseData,
+          rebuildTriggered: true
+        });
+      }
+
+      return res.status(400).json({ error: "Acción inválida" });
+
+    } catch (err) {
+      console.error(`[${requestId}] Error:`, err);
+      return res.status(500).json({ 
+        error: "Error interno del servidor",
+        message: err.message,
+        requestId: requestId
+      });
+    }
+  }
+);
+// manageCollections.js (Cloud Function) - VERSIÓN CORREGIDA
+exports.manageCollections = onRequest(
+  { 
+    secrets: [GH_TOKEN],
+    cors: true,
+    timeoutSeconds: 120
+  },
+  async (req, res) => {
+    // Configuración CORS (igual que en manageArticles)
+    const origin = req.headers.origin;
+    const ALLOWED_ORIGINS = [
+      'https://www.revistacienciasestudiantes.com',
+      'https://revistacienciasestudiantes.com',
+      'http://localhost:3000',
+      'http://localhost:5000'
+    ];
+
+    if (origin && ALLOWED_ORIGINS.includes(origin)) {
+      res.set('Access-Control-Allow-Origin', origin);
+    } else {
+      res.set('Access-Control-Allow-Origin', 'https://www.revistacienciasestudiantes.com');
+    }
+    
+    res.set('Access-Control-Allow-Credentials', 'true');
+    res.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, Accept, X-Requested-With');
+    res.set('Access-Control-Max-Age', '3600');
+    res.set('Vary', 'Origin');
+
+    if (req.method === 'OPTIONS') {
+      res.status(204).send('');
+      return;
+    }
+
+    if (req.method !== "POST") {
+      return res.status(405).json({ error: "Método no permitido" });
+    }
+
+    const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    console.log(`[${requestId}] 🚀 manageCollections - Iniciando`);
+
+    try {
+      // Verificar autenticación
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: "No autorizado" });
+      }
+
+      const token = authHeader.split("Bearer ")[1];
+      const user = await admin.auth().verifyIdToken(token);
+      
+      // Verificar rol
+      await validateRole(user.uid, "Director General");
+
+      const { action, collection, id } = req.body;
+      
+      if (!action) {
+        return res.status(400).json({ error: "Acción requerida" });
+      }
+
+      const octokit = getOctokit();
+      const REPO_OWNER = "revista1919";
+      const REPO_NAME = "revista1919.github.io";
+      const COLLECTIONS_JSON_PATH = "collections/collections.json";
+      const BRANCH = "main";
+
+      // 🔍 FUNCIÓN DE VALIDACIÓN DE ESTRUCTURA MULTILINGÜE
+      function validateCollection(collection) {
+        // Campos requeridos
+        if (!collection.id) {
+          throw new Error('El campo id es requerido');
+        }
+
+        // Validar título multilingüe
+        if (!collection.title || typeof collection.title !== 'object') {
+          throw new Error('El campo title debe ser un objeto con idiomas');
+        }
+        if (!collection.title.spanish && !collection.title.english) {
+          throw new Error('Debe haber al menos un idioma en title (spanish o english)');
+        }
+
+        // Validar descripción multilingüe
+        if (!collection.description || typeof collection.description !== 'object') {
+          throw new Error('El campo description debe ser un objeto con idiomas');
+        }
+        if (!collection.description.spanish && !collection.description.english) {
+          throw new Error('Debe haber al menos un idioma en description (spanish o english)');
+        }
+
+        // Validar carpet-name
+        if (!collection['carpet-name']) {
+          throw new Error('El campo carpet-name es requerido');
+        }
+
+        // Validar idiomas soportados
+        if (!Array.isArray(collection.languages) || collection.languages.length === 0) {
+          throw new Error('El campo languages debe ser un array con al menos un idioma');
+        }
+
+        // Validar idioma por defecto
+        if (!collection.defaultLanguage) {
+          throw new Error('El campo defaultLanguage es requerido');
+        }
+        if (!collection.languages.includes(collection.defaultLanguage)) {
+          throw new Error('defaultLanguage debe estar incluido en languages');
+        }
+
+        // Validar status
+        const validStatuses = ['active', 'inactive', 'archived'];
+        if (collection.status && !validStatuses.includes(collection.status)) {
+          throw new Error(`status debe ser uno de: ${validStatuses.join(', ')}`);
+        }
+
+        return true;
+      }
+
+      // Obtener collections.json actual
+      async function getCurrentCollectionsJson() {
+        try {
+          const { data } = await octokit.repos.getContent({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            path: COLLECTIONS_JSON_PATH,
+            ref: BRANCH
+          });
+          
+          const content = Buffer.from(data.content, 'base64').toString('utf8');
+          return {
+            collections: JSON.parse(content),
+            sha: data.sha
+          };
+        } catch (error) {
+          if (error.status === 404) {
+            return {
+              collections: [],
+              sha: null
+            };
+          }
+          throw error;
+        }
+      }
+
+      async function saveCollectionsJson(collections, sha, commitMessage) {
+        const content = Buffer.from(JSON.stringify(collections, null, 2)).toString('base64');
+        
+        if (sha) {
+          await octokit.repos.createOrUpdateFileContents({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            path: COLLECTIONS_JSON_PATH,
+            message: commitMessage,
+            content: content,
+            sha: sha,
+            branch: BRANCH
+          });
+        } else {
+          await octokit.repos.createOrUpdateFileContents({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            path: COLLECTIONS_JSON_PATH,
+            message: commitMessage,
+            content: content,
+            branch: BRANCH
+          });
+        }
+      }
+
+      // 📝 Crear archivos base de la colección con soporte multilingüe
+      async function createCollectionFiles(carpetName, collectionData) {
+        // Generador mejorado con soporte multilingüe
+        const generateJsContent = `// Generador para la colección: ${collectionData.title.spanish || collectionData.title.english}
+const fs = require('fs');
+const path = require('path');
+
+async function generateCollection() {
+  try {
+    // Leer metadata de artículos
+    const metadataPath = path.join(__dirname, 'metadata.json');
+    const articles = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+    
+    // Configuración de la colección
+    const collectionConfig = {
+      id: "${collectionData.id}",
+      title: ${JSON.stringify(collectionData.title, null, 2)},
+      description: ${JSON.stringify(collectionData.description, null, 2)},
+      languages: ${JSON.stringify(collectionData.languages)},
+      defaultLanguage: "${collectionData.defaultLanguage}",
+      image: "${collectionData.image || ''}",
+      status: "${collectionData.status || 'active'}"
+    };
+    
+    console.log(\`📚 Generando colección: \${collectionConfig.title[collectionConfig.defaultLanguage]}\`);
+    console.log(\`📄 Artículos a procesar: \${articles.length}\`);
+    console.log(\`🌐 Idiomas disponibles: \${collectionConfig.languages.join(', ')}\`);
+    
+    // Crear directorios necesarios
+    const articlesDir = path.join(__dirname, 'articles');
+    if (!fs.existsSync(articlesDir)) {
+      fs.mkdirSync(articlesDir, { recursive: true });
+    }
+    
+    // Directorios por idioma
+    collectionConfig.languages.forEach(lang => {
+      const langDir = path.join(articlesDir, lang);
+      if (!fs.existsSync(langDir)) {
+        fs.mkdirSync(langDir, { recursive: true });
+      }
+    });
+    
+    // Generar índice multilingüe
+    collectionConfig.languages.forEach(lang => {
+      const indexPath = path.join(__dirname, \`index.\${lang}.html\`);
+      const articlesInLang = articles.filter(a => 
+        !a.language || a.language === lang
+      );
+      
+      const indexContent = \`<!DOCTYPE html>
+<html lang="\${lang}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>\${collectionConfig.title[lang] || collectionConfig.title[collectionConfig.defaultLanguage]}</title>
+    <meta name="description" content="\${collectionConfig.description[lang] || collectionConfig.description[collectionConfig.defaultLanguage]}">
+    <meta property="og:title" content="\${collectionConfig.title[lang] || collectionConfig.title[collectionConfig.defaultLanguage]}">
+    <meta property="og:description" content="\${collectionConfig.description[lang] || collectionConfig.description[collectionConfig.defaultLanguage]}">
+    \${collectionConfig.image ? \`<meta property="og:image" content="\${collectionConfig.image}">\` : ''}
+    <link rel="stylesheet" href="/css/collection.css">
+</head>
+<body>
+    <main class="collection">
+        <header>
+            <h1>\${collectionConfig.title[lang] || collectionConfig.title[collectionConfig.defaultLanguage]}</h1>
+            <p class="description">\${collectionConfig.description[lang] || collectionConfig.description[collectionConfig.defaultLanguage]}</p>
+        </header>
+        
+        <section class="articles">
+            <h2>Artículos (\${articlesInLang.length})</h2>
+            <ul>
+                \${articlesInLang.map(article => {
+                  const title = article.name?.[lang] || 
+                               article.name?.spanish || 
+                               article['name-original'] || 
+                               'Sin título';
+                  return \`
+                    <li>
+                        <a href="./articles/\${lang}/\${article.id}.html">\${title}</a>
+                        \${article.author ? \`<span class="authors">por \${article.author.map(a => a.name).join(', ')}</span>\` : ''}
+                    </li>
+                  \`;
+                }).join('')}
+            </ul>
+        </section>
+        
+        <footer>
+            <div class="language-switcher">
+                \${collectionConfig.languages.map(l => 
+                  l === lang ? 
+                    \`<span class="current">\${l}</span>\` : 
+                    \`<a href="/collections/\${collectionConfig.id}/index.\${l}.html">\${l}</a>\`
+                ).join(' | ')}
+            </div>
+        </footer>
+    </main>
+</body>
+</html>\`;
+      
+      fs.writeFileSync(indexPath, indexContent);
+      console.log(\`✅ Índice generado para idioma: \${lang}\`);
+    });
+    
+    // Generar archivo de configuración para el generador
+    const configPath = path.join(__dirname, 'collection.config.json');
+    fs.writeFileSync(configPath, JSON.stringify(collectionConfig, null, 2));
+    
+    console.log('✅ Colección generada exitosamente');
+    
+  } catch (error) {
+    console.error('❌ Error generando colección:', error);
+    process.exit(1);
+  }
+}
+
+generateCollection();`;
+
+        const baseFiles = [
+          {
+            path: `collections/${carpetName}/metadata.json`,
+            content: JSON.stringify([], null, 2),
+            message: `Initialize metadata for collection ${carpetName}`
+          },
+          {
+            path: `collections/${carpetName}/collection.config.json`,
+            content: JSON.stringify({
+              id: collectionData.id,
+              title: collectionData.title,
+              description: collectionData.description,
+              languages: collectionData.languages,
+              defaultLanguage: collectionData.defaultLanguage,
+              image: collectionData.image || null,
+              status: collectionData.status || 'active',
+              createdAt: new Date().toISOString()
+            }, null, 2),
+            message: `Add collection config for ${carpetName}`
+          },
+          {
+            path: `collections/${carpetName}/generate.js`,
+            content: generateJsContent,
+            message: `Add generate.js for collection ${carpetName}`
+          }
+        ];
+
+        for (const file of baseFiles) {
+          try {
+            // Verificar si el archivo ya existe
+            try {
+              await octokit.repos.getContent({
+                owner: REPO_OWNER,
+                repo: REPO_NAME,
+                path: file.path,
+                ref: BRANCH
+              });
+              // Si existe, no lo creamos de nuevo
+              continue;
+            } catch (error) {
+              if (error.status !== 404) throw error;
+            }
+
+            // Crear archivo
+            await octokit.repos.createOrUpdateFileContents({
+              owner: REPO_OWNER,
+              repo: REPO_NAME,
+              path: file.path,
+              message: file.message,
+              content: Buffer.from(file.content).toString('base64'),
+              branch: BRANCH
+            });
+          } catch (error) {
+            console.error(`Error creating file ${file.path}:`, error);
+          }
+        }
+
+        // Crear directorios para artículos por idioma
+        for (const lang of collectionData.languages) {
+          try {
+            await octokit.repos.createOrUpdateFileContents({
+              owner: REPO_OWNER,
+              repo: REPO_NAME,
+              path: `collections/${carpetName}/articles/${lang}/.gitkeep`,
+              message: `Initialize articles directory for ${lang} in collection ${carpetName}`,
+              content: Buffer.from('').toString('base64'),
+              branch: BRANCH
+            });
+          } catch (error) {
+            console.error(`Error creating ${lang} articles directory:`, error);
+          }
+        }
+
+        // Crear directorio para PDFs por idioma
+        try {
+          await octokit.repos.createOrUpdateFileContents({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            path: `pdfs/${carpetName}/.gitkeep`,
+            message: `Initialize PDF directory for collection ${carpetName}`,
+            content: Buffer.from('').toString('base64'),
+            branch: BRANCH
+          });
+        } catch (error) {
+          console.error('Error creating PDF directory:', error);
+        }
+      }
+
+      // Eliminar archivos de la colección
+      async function deleteCollectionFiles(carpetName) {
+        try {
+          // Obtener todos los archivos de la colección
+          const { data } = await octokit.repos.getContent({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            path: `collections/${carpetName}`,
+            ref: BRANCH
+          });
+
+          // Eliminar cada archivo
+          for (const file of data) {
+            if (file.type === 'file') {
+              await octokit.repos.deleteFile({
+                owner: REPO_OWNER,
+                repo: REPO_NAME,
+                path: file.path,
+                message: `Delete collection file: ${file.path}`,
+                sha: file.sha,
+                branch: BRANCH
+              });
+            }
+          }
+
+          // Eliminar directorio de PDFs
+          try {
+            const { data: pdfData } = await octokit.repos.getContent({
+              owner: REPO_OWNER,
+              repo: REPO_NAME,
+              path: `pdfs/${carpetName}`,
+              ref: BRANCH
+            });
+
+            for (const file of pdfData) {
+              await octokit.repos.deleteFile({
+                owner: REPO_OWNER,
+                repo: REPO_NAME,
+                path: file.path,
+                message: `Delete PDF file: ${file.path}`,
+                sha: file.sha,
+                branch: BRANCH
+              });
+            }
+          } catch (error) {
+            if (error.status !== 404) throw error;
+          }
+        } catch (error) {
+          if (error.status !== 404) throw error;
+        }
+      }
+
+      // Actualizar package.json
+      async function updatePackageJson(carpetName, collectionData, action_type) {
+        try {
+          const { data } = await octokit.repos.getContent({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            path: 'package.json',
+            ref: BRANCH
+          });
+
+          const content = Buffer.from(data.content, 'base64').toString('utf8');
+          const packageJson = JSON.parse(content);
+          const sha = data.sha;
+
+          if (action_type === 'add' || action_type === 'edit') {
+            // Agregar scripts para la colección con soporte multilingüe
+            packageJson.scripts = {
+              ...packageJson.scripts,
+              [`generate:${carpetName}`]: `node collections/${carpetName}/generate.js`,
+              [`generate:${carpetName}:watch`]: `nodemon collections/${carpetName}/generate.js`,
+              [`clean:${carpetName}`]: `rm -rf collections/${carpetName}/articles/*.html collections/${carpetName}/articles/*/*.html`,
+              [`build:${carpetName}`]: `npm run clean:${carpetName} && npm run generate:${carpetName}`
+            };
+
+            // Actualizar scripts all
+            const allGenerateScripts = Object.keys(packageJson.scripts)
+              .filter(key => key.startsWith('generate:') && !key.includes('all') && !key.includes('watch'))
+              .map(key => `npm run ${key}`)
+              .join(' && ');
+
+            const allWatchScripts = Object.keys(packageJson.scripts)
+              .filter(key => key.includes('watch'))
+              .map(key => `"npm:${key}"`)
+              .join(', ');
+
+            packageJson.scripts['generate:all'] = allGenerateScripts;
+            packageJson.scripts['generate:all:watch'] = `concurrently ${allWatchScripts}`;
+            packageJson.scripts['clean:all'] = Object.keys(packageJson.scripts)
+              .filter(key => key.startsWith('clean:') && !key.includes('all'))
+              .map(key => `npm run ${key}`)
+              .join(' && ');
+            packageJson.scripts['build:all'] = `npm run clean:all && npm run generate:all`;
+
+          } else if (action_type === 'delete') {
+            // Eliminar scripts de la colección
+            delete packageJson.scripts[`generate:${carpetName}`];
+            delete packageJson.scripts[`generate:${carpetName}:watch`];
+            delete packageJson.scripts[`clean:${carpetName}`];
+            delete packageJson.scripts[`build:${carpetName}`];
+
+            // Actualizar scripts all
+            const remainingGenerateScripts = Object.keys(packageJson.scripts)
+              .filter(key => key.startsWith('generate:') && !key.includes('all') && !key.includes('watch'))
+              .map(key => `npm run ${key}`)
+              .join(' && ');
+
+            const remainingWatchScripts = Object.keys(packageJson.scripts)
+              .filter(key => key.includes('watch'))
+              .map(key => `"npm:${key}"`)
+              .join(', ');
+
+            if (remainingGenerateScripts) {
+              packageJson.scripts['generate:all'] = remainingGenerateScripts;
+              packageJson.scripts['generate:all:watch'] = `concurrently ${remainingWatchScripts}`;
+            } else {
+              delete packageJson.scripts['generate:all'];
+              delete packageJson.scripts['generate:all:watch'];
+            }
+
+            packageJson.scripts['clean:all'] = Object.keys(packageJson.scripts)
+              .filter(key => key.startsWith('clean:') && !key.includes('all'))
+              .map(key => `npm run ${key}`)
+              .join(' && ') || 'echo "No hay colecciones para limpiar"';
+            
+            packageJson.scripts['build:all'] = `npm run clean:all && npm run generate:all`;
+          }
+
+          // Guardar package.json actualizado
+          await octokit.repos.createOrUpdateFileContents({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            path: 'package.json',
+            message: `Update package.json for collection ${carpetName} (${action_type})`,
+            content: Buffer.from(JSON.stringify(packageJson, null, 2)).toString('base64'),
+            sha: sha,
+            branch: BRANCH
+          });
+
+        } catch (error) {
+          console.error('Error updating package.json:', error);
+          throw error;
+        }
+      }
+
+      const { collections: currentCollections, sha } = await getCurrentCollectionsJson();
+      let updatedCollections = [...currentCollections];
+      let responseData = {};
+
+      // ADD: Agregar nueva colección
+      if (action === "add") {
+        try {
+          validateCollection(collection);
+        } catch (validationError) {
+          return res.status(400).json({ error: validationError.message });
+        }
+
+        // Verificar si ya existe
+        if (currentCollections.some(c => c.id === collection.id)) {
+          return res.status(400).json({ error: "Ya existe una colección con este ID" });
+        }
+
+        // Usar carpet-name proporcionado o generarlo
+        const carpetName = collection['carpet-name'] || generateSlug(collection.id);
+        
+        const newCollection = {
+          ...collection,
+          'carpet-name': carpetName,
+          createdAt: new Date().toISOString(),
+          createdBy: user.uid,
+          createdByEmail: user.email || null,
+          status: collection.status || 'active'
+        };
+
+        updatedCollections.push(newCollection);
+
+        // Crear archivos de la colección
+        await createCollectionFiles(carpetName, newCollection);
+        
+        // Actualizar package.json
+        await updatePackageJson(carpetName, newCollection, 'add');
+
+        responseData = {
+          success: true,
+          id: collection.id,
+          carpetName: carpetName,
+          message: "Colección creada exitosamente"
+        };
+      }
+
+      // EDIT: Editar colección
+      if (action === "edit") {
+        if (!id) {
+          return res.status(400).json({ error: "ID de colección requerido" });
+        }
+
+        const index = updatedCollections.findIndex(c => c.id === id);
+        if (index === -1) {
+          return res.status(404).json({ error: "Colección no encontrada" });
+        }
+
+        // Validar datos actualizados
+        try {
+          validateCollection(collection);
+        } catch (validationError) {
+          return res.status(400).json({ error: validationError.message });
+        }
+
+        const oldCollection = updatedCollections[index];
+        const carpetName = collection['carpet-name'] || oldCollection['carpet-name'];
+
+        const updatedCollection = {
+          ...oldCollection,
+          ...collection,
+          'carpet-name': carpetName,
+          updatedAt: new Date().toISOString(),
+          updatedBy: user.uid,
+          updatedByEmail: user.email || null
+        };
+
+        updatedCollections[index] = updatedCollection;
+
+        // Si cambió el nombre de la carpeta, necesitamos mover los archivos
+        if (carpetName !== oldCollection['carpet-name']) {
+          console.log(`⚠️ Nota: El nombre de carpeta cambió de ${oldCollection['carpet-name']} a ${carpetName}`);
+          console.log('Se requiere migración manual de archivos');
+        }
+
+        responseData = {
+          success: true,
+          id: id,
+          message: "Colección actualizada exitosamente"
+        };
+      }
+
+      // DELETE: Eliminar colección
+      if (action === "delete") {
+        if (!id) {
+          return res.status(400).json({ error: "ID de colección requerido" });
+        }
+
+        const index = updatedCollections.findIndex(c => c.id === id);
+        if (index === -1) {
+          return res.status(404).json({ error: "Colección no encontrada" });
+        }
+
+        const collectionToDelete = updatedCollections[index];
+        
+        // Eliminar archivos de la colección
+        await deleteCollectionFiles(collectionToDelete['carpet-name']);
+        
+        // Actualizar package.json
+        await updatePackageJson(collectionToDelete['carpet-name'], collectionToDelete, 'delete');
+
+        updatedCollections.splice(index, 1);
+
+        responseData = {
+          success: true,
+          id: id,
+          message: "Colección eliminada exitosamente"
+        };
+      }
+
+      // Guardar collections.json actualizado
+      if (["add", "edit", "delete"].includes(action)) {
+        updatedCollections.sort((a, b) => a.id.localeCompare(b.id));
+        
+        await saveCollectionsJson(
+          updatedCollections, 
+          sha, 
+          `[${action}] Colección ${action === 'add' ? 'agregada' : action === 'edit' ? 'actualizada' : 'eliminada'} por ${user.email || user.uid}`
+        );
+
         // Trigger rebuild
         try {
           await octokit.request("POST /repos/{owner}/{repo}/dispatches", {
             owner: "revista1919",
             repo: "revista1919.github.io",
-            event_type: "rebuild-collection-articles",
+            event_type: "rebuild-collections",
             client_payload: {
               action: action,
-              collection: collection,
-              articleId: id,
-              triggeredBy: user.uid
+              collectionId: id || collection?.id,
+              triggeredBy: user.uid,
+              triggeredByEmail: user.email,
+              timestamp: new Date().toISOString()
             }
           });
         } catch (rebuildError) {
@@ -7196,7 +7782,8 @@ exports.manageCollectionArticles = onRequest(
       console.error(`[${requestId}] Error:`, err);
       return res.status(500).json({ 
         error: "Error interno del servidor",
-        message: err.message 
+        message: err.message,
+        requestId: requestId
       });
     }
   }

@@ -20,7 +20,7 @@ const COLLECTIONS_JSON_URL = `${DOMAIN}/collections/collections.json`;
 const REPO_OWNER = 'revista1919';
 const REPO_NAME = 'revista1919.github.io';
 const MANAGE_COLLECTIONS_URL = 'https://managecollections-ggqsq2kkua-uc.a.run.app/manageCollections';
-const MANAGE_ARTICLES_COLLECTION_URL = 'https://managecollectionarticles-ggqsq2kkua-uc.a.run.app/manageCollectionArticles';
+const MANAGE_ARTICLES_COLLECTION_URL = 'https://us-central1-usuarios-rnce.cloudfunctions.net/manageCollectionArticles';
 const REBUILD_URL = 'https://triggerrebuild-ggqsq2kkua-uc.a.run.app/';
 
 // Estados iniciales
