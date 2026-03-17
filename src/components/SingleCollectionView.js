@@ -37,41 +37,58 @@ function SingleCollectionView() {
         }
         const data = await response.json();
         
-        // 🔥 CORRECCIÓN: Verificar la estructura de los datos
         console.log('Datos recibidos:', data);
         
+        // 🔥 CORRECCIÓN: Tu metadata.json es un array con UN objeto
+        // que contiene TODOS los artículos como propiedades
         let articlesArray = [];
         
-        if (Array.isArray(data)) {
-          if (data.length > 0 && data[0].id) {
-            // Si es un array de artículos (estructura correcta)
-            articlesArray = data;
-          } else if (data.length === 1 && typeof data[0] === 'object' && !data[0].id) {
-            // Si es un array con un objeto que contiene múltiples artículos
-            // Buscar cualquier propiedad que pueda contener un array de artículos
-            const possibleArticles = Object.values(data[0]).find(val => Array.isArray(val));
-            if (possibleArticles) {
-              articlesArray = possibleArticles;
-            } else {
-              // Si no encontramos un array, asumimos que el objeto mismo es un artículo
-              articlesArray = data;
-            }
+        if (Array.isArray(data) && data.length === 1) {
+          // Caso: [{ id: "...", name: {...}, ... }] - un solo artículo
+          // O: [{...}] - objeto único con múltiples artículos anidados?
+          
+          const firstItem = data[0];
+          
+          // Verificar si el primer item tiene la estructura de un artículo
+          if (firstItem.id && firstItem.name) {
+            // Es un artículo individual
+            articlesArray = [firstItem];
           } else {
-            articlesArray = data;
+            // Es un objeto que puede contener múltiples artículos
+            // Buscamos cualquier propiedad que sea un array
+            const possibleArticlesArray = Object.values(firstItem).find(
+              val => Array.isArray(val) && val.length > 0 && val[0]?.id
+            );
+            
+            if (possibleArticlesArray) {
+              // Encontramos un array de artículos
+              articlesArray = possibleArticlesArray;
+            } else {
+              // Si no encontramos un array, intentamos con todas las propiedades
+              // que parezcan artículos individuales
+              articlesArray = Object.values(firstItem).filter(
+                val => val && typeof val === 'object' && val.id
+              );
+            }
           }
+        } else if (Array.isArray(data)) {
+          // Ya es un array de artículos
+          articlesArray = data.filter(item => item && item.id);
         } else if (data && typeof data === 'object') {
-          // Si es un objeto único, lo convertimos en array
-          articlesArray = [data];
-        } else {
-          articlesArray = [];
+          // Es un objeto único
+          if (data.id) {
+            articlesArray = [data];
+          } else {
+            // Buscar arrays dentro del objeto
+            articlesArray = Object.values(data).find(
+              val => Array.isArray(val) && val.length > 0 && val[0]?.id
+            ) || [];
+          }
         }
         
-        // Filtrar para asegurar que solo guardamos objetos válidos con id
-        const validArticles = articlesArray.filter(article => article && article.id);
-        
-        console.log('Artículos procesados:', validArticles);
-        setArticles(validArticles);
-        setFilteredArticles(validArticles);
+        console.log('Artículos procesados:', articlesArray);
+        setArticles(articlesArray);
+        setFilteredArticles(articlesArray);
         
         // Cargar el collections.json para obtener el título real
         const collectionsResponse = await fetch('/collections/collections.json');
@@ -95,7 +112,7 @@ function SingleCollectionView() {
     if (folderName) {
       fetchCollectionData();
     }
-  }, [folderName, METADATA_URL]);
+  }, [folderName]);
 
   // Leer el término de búsqueda de la URL al cargar
   useEffect(() => {
@@ -213,6 +230,9 @@ function SingleCollectionView() {
       </div>
     );
   }
+
+  console.log('Renderizando con artículos:', articles);
+  console.log('Artículos filtrados:', filteredArticles);
 
   return (
     <motion.div
