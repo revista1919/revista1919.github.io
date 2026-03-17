@@ -23,14 +23,12 @@ function SingleCollectionView() {
 
   const METADATA_URL = `/collections/${folderName}/metadata.json`;
 
-  // Cargar metadata de la colección
   useEffect(() => {
     const fetchCollectionData = async () => {
       setLoading(true);
       setError(null);
       
       try {
-        // Cargar los artículos de la colección
         const response = await fetch(METADATA_URL);
         if (!response.ok) {
           throw new Error(`Error loading collection metadata: ${response.status}`);
@@ -39,58 +37,21 @@ function SingleCollectionView() {
         
         console.log('Datos recibidos:', data);
         
-        // 🔥 CORRECCIÓN: Tu metadata.json es un array con UN objeto
-        // que contiene TODOS los artículos como propiedades
+        // Procesar los datos - en tu caso es un array con un objeto
         let articlesArray = [];
         
-        if (Array.isArray(data) && data.length === 1) {
-          // Caso: [{ id: "...", name: {...}, ... }] - un solo artículo
-          // O: [{...}] - objeto único con múltiples artículos anidados?
-          
-          const firstItem = data[0];
-          
-          // Verificar si el primer item tiene la estructura de un artículo
-          if (firstItem.id && firstItem.name) {
-            // Es un artículo individual
-            articlesArray = [firstItem];
-          } else {
-            // Es un objeto que puede contener múltiples artículos
-            // Buscamos cualquier propiedad que sea un array
-            const possibleArticlesArray = Object.values(firstItem).find(
-              val => Array.isArray(val) && val.length > 0 && val[0]?.id
-            );
-            
-            if (possibleArticlesArray) {
-              // Encontramos un array de artículos
-              articlesArray = possibleArticlesArray;
-            } else {
-              // Si no encontramos un array, intentamos con todas las propiedades
-              // que parezcan artículos individuales
-              articlesArray = Object.values(firstItem).filter(
-                val => val && typeof val === 'object' && val.id
-              );
-            }
-          }
-        } else if (Array.isArray(data)) {
-          // Ya es un array de artículos
+        if (Array.isArray(data)) {
+          // Tu caso: array con un objeto que es el artículo
           articlesArray = data.filter(item => item && item.id);
         } else if (data && typeof data === 'object') {
-          // Es un objeto único
-          if (data.id) {
-            articlesArray = [data];
-          } else {
-            // Buscar arrays dentro del objeto
-            articlesArray = Object.values(data).find(
-              val => Array.isArray(val) && val.length > 0 && val[0]?.id
-            ) || [];
-          }
+          articlesArray = data.id ? [data] : [];
         }
         
         console.log('Artículos procesados:', articlesArray);
         setArticles(articlesArray);
         setFilteredArticles(articlesArray);
         
-        // Cargar el collections.json para obtener el título real
+        // Cargar collections.json
         const collectionsResponse = await fetch('/collections/collections.json');
         if (collectionsResponse.ok) {
           const collectionsData = await collectionsResponse.json();
@@ -114,13 +75,11 @@ function SingleCollectionView() {
     }
   }, [folderName]);
 
-  // Leer el término de búsqueda de la URL al cargar
   useEffect(() => {
     const term = searchParams.get('collection_search') || '';
     setSearchInput(term);
   }, [searchParams]);
 
-  // Filtrar artículos cuando cambia el término con debounce
   useEffect(() => {
     if (!articles.length) {
       setFilteredArticles([]);
@@ -135,7 +94,6 @@ function SingleCollectionView() {
     }
 
     const filtered = articles.filter((article) => {
-      // Búsqueda en múltiples campos con fallbacks
       const title = article.name?.[language] || 
                    article.name?.spanish || 
                    article.name?.english || 
@@ -165,7 +123,6 @@ function SingleCollectionView() {
     setFilteredArticles(filtered);
   }, [debouncedSearch, articles, language]);
 
-  // Actualizar URL cuando cambia el término con debounce
   useEffect(() => {
     const params = new URLSearchParams(searchParams);
     if (debouncedSearch) {
@@ -204,6 +161,15 @@ function SingleCollectionView() {
     return '';
   };
 
+  // Debug: Verificar qué está pasando con CollectionArticleCard
+  console.log('Estado actual:', {
+    loading,
+    error,
+    articlesCount: articles.length,
+    filteredCount: filteredArticles.length,
+    firstArticle: articles[0]
+  });
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
@@ -231,9 +197,6 @@ function SingleCollectionView() {
     );
   }
 
-  console.log('Renderizando con artículos:', articles);
-  console.log('Artículos filtrados:', filteredArticles);
-
   return (
     <motion.div
       className="py-8 max-w-4xl mx-auto px-4 sm:px-6"
@@ -257,7 +220,6 @@ function SingleCollectionView() {
           : `Exploring ${filteredArticles.length} articles in this collection.`}
       </p>
 
-      {/* Buscador */}
       <div className="mb-8">
         <div className="flex gap-2">
           <div className="flex-1 relative">
@@ -281,24 +243,7 @@ function SingleCollectionView() {
               </button>
             )}
           </div>
-          {searchInput && searchInput !== debouncedSearch && (
-            <div className="flex items-center text-sm text-gray-500">
-              <svg className="animate-spin h-4 w-4 mr-1" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-              {isSpanish ? 'Buscando...' : 'Searching...'}
-            </div>
-          )}
         </div>
-        
-        {filteredArticles.length > 0 && searchInput && (
-          <p className="text-sm text-gray-500 mt-2">
-            {isSpanish 
-              ? `Se encontraron ${filteredArticles.length} resultados` 
-              : `Found ${filteredArticles.length} results`}
-          </p>
-        )}
       </div>
 
       {/* Lista de Artículos */}
@@ -328,19 +273,28 @@ function SingleCollectionView() {
             )}
           </div>
         ) : (
-          filteredArticles.map((article, index) => (
-            <motion.div
-              key={article.id || index}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05, duration: 0.3 }}
-            >
-              <CollectionArticleCard 
-                article={article} 
-                collectionFolder={folderName}
-              />
-            </motion.div>
-          ))
+          <div>
+            {/* DEBUG: Mostrar información del artículo */}
+            <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-sm">
+              <p className="font-bold">Debug: Artículo cargado</p>
+              <p>ID: {articles[0]?.id}</p>
+              <p>Título: {articles[0]?.name?.spanish}</p>
+            </div>
+            
+            {filteredArticles.map((article, index) => (
+              <motion.div
+                key={article.id || index}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05, duration: 0.3 }}
+              >
+                <CollectionArticleCard 
+                  article={article} 
+                  collectionFolder={folderName}
+                />
+              </motion.div>
+            ))}
+          </div>
         )}
       </div>
     </motion.div>
