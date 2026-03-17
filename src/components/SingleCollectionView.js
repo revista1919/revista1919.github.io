@@ -7,7 +7,7 @@ import CollectionArticleCard from './CollectionArticleCard';
 function SingleCollectionView() {
   const { language } = useLanguage();
   const isSpanish = language === 'es';
-  const { folderName } = useParams(); // Obtiene el nombre de la carpeta de la URL
+  const { folderName } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [collectionMeta, setCollectionMeta] = useState(null);
@@ -15,7 +15,8 @@ function SingleCollectionView() {
   const [filteredArticles, setFilteredArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchInput, setSearchInput] = useState(''); // Para el input controlado
+  const [searchTerm, setSearchTerm] = useState(''); // Para el término de búsqueda real
 
   // URL del metadata.json de esta colección
   const METADATA_URL = `/collections/${folderName}/metadata.json`;
@@ -32,6 +33,14 @@ function SingleCollectionView() {
         const data = await response.json();
         setArticles(data);
         setFilteredArticles(data);
+        
+        // Cargar metadata de la colección para obtener el título real
+        // Asumiendo que hay un archivo collection.json en la carpeta
+        const collectionResponse = await fetch(`/collections/${folderName}/collection.json`);
+        if (collectionResponse.ok) {
+          const collectionData = await collectionResponse.json();
+          setCollectionMeta(collectionData);
+        }
       } catch (err) {
         console.error(err);
         setError(err.message);
@@ -48,6 +57,7 @@ function SingleCollectionView() {
   // Leer el término de búsqueda de la URL al cargar
   useEffect(() => {
     const term = searchParams.get('collection_search') || '';
+    setSearchInput(term);
     setSearchTerm(term);
   }, [searchParams]);
 
@@ -55,8 +65,7 @@ function SingleCollectionView() {
   useEffect(() => {
     const lowerTerm = searchTerm.toLowerCase();
     const filtered = articles.filter((article) => {
-      // Buscar en título, autores, abstract, etc. en el idioma actual
-      const title = article.name?.[language] || article.name?.spanish || '';
+      const title = article.name?.[language] || article.title?.[language] || article.name?.spanish || article.title?.spanish || '';
       const abstract = article.abstract?.[language] || article.abstract?.spanish || '';
       const authors = article.author?.map(a => a.name).join(' ') || '';
       const keywords = article.keywords?.[language]?.join(' ') || '';
@@ -71,20 +80,40 @@ function SingleCollectionView() {
     setFilteredArticles(filtered);
   }, [searchTerm, articles, language]);
 
-  // Manejar la búsqueda y actualizar la URL
-  const handleSearch = (term) => {
-    setSearchTerm(term);
+  // Ejecutar búsqueda al hacer clic en el botón
+  const handleSearch = () => {
+    setSearchTerm(searchInput);
     const params = new URLSearchParams(searchParams);
-    if (term) {
-      params.set('collection_search', term);
+    if (searchInput.trim()) {
+      params.set('collection_search', searchInput.trim());
     } else {
       params.delete('collection_search');
     }
     setSearchParams(params);
   };
 
+  // Manejar tecla Enter en el input
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
   const clearSearch = () => {
-    handleSearch('');
+    setSearchInput('');
+    setSearchTerm('');
+    const params = new URLSearchParams(searchParams);
+    params.delete('collection_search');
+    setSearchParams(params);
+  };
+
+  // Obtener el título real de la colección
+  const getCollectionTitle = () => {
+    if (collectionMeta?.title) {
+      return collectionMeta.title[language] || collectionMeta.title.spanish || folderName?.replace(/-/g, ' ');
+    }
+    // Intentar parsear el folderName como fallback
+    return folderName?.replace(/-/g, ' ') || '';
   };
 
   if (loading) {
@@ -115,31 +144,52 @@ function SingleCollectionView() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <h1 className="text-3xl font-serif font-bold text-gray-900 mb-2 capitalize">
-        {folderName?.replace(/-/g, ' ')}
+      <h1 className="text-3xl font-serif font-bold text-gray-900 mb-2">
+        {getCollectionTitle()}
       </h1>
+      {collectionMeta?.description && (
+        <p className="text-gray-600 font-serif mb-2">
+          {collectionMeta.description[language] || collectionMeta.description.spanish}
+        </p>
+      )}
       <p className="text-gray-500 text-sm mb-6 border-b pb-4">
         {isSpanish 
-          ? `Explorando ${filteredArticles.length} artículos en esta colección.` 
-          : `Exploring ${filteredArticles.length} articles in this collection.`}
+          ? `${filteredArticles.length} artículo${filteredArticles.length !== 1 ? 's' : ''} en esta colección` 
+          : `${filteredArticles.length} article${filteredArticles.length !== 1 ? 's' : ''} in this collection`}
       </p>
 
-      {/* Buscador */}
-      <div className="mb-8 flex gap-2">
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => handleSearch(e.target.value)}
-          placeholder={isSpanish ? "Buscar en esta colección..." : "Search in this collection..."}
-          className="flex-1 p-3 border border-gray-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-[#007398] font-serif"
-        />
-        {searchTerm && (
+      {/* Buscador con mejor UX */}
+      <div className="mb-8">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder={isSpanish ? "Buscar en esta colección..." : "Search in this collection..."}
+            className="flex-1 p-3 border border-gray-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-[#007398] font-serif"
+          />
           <button
-            onClick={clearSearch}
-            className="px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-sm hover:bg-gray-50"
+            onClick={handleSearch}
+            className="px-6 py-2 bg-[#007398] text-white text-sm rounded-sm hover:bg-[#005d7a] transition-colors font-medium"
           >
-            {isSpanish ? 'Limpiar' : 'Clear'}
+            {isSpanish ? 'Buscar' : 'Search'}
           </button>
+          {searchTerm && (
+            <button
+              onClick={clearSearch}
+              className="px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-sm hover:bg-gray-50"
+            >
+              {isSpanish ? 'Limpiar' : 'Clear'}
+            </button>
+          )}
+        </div>
+        {searchTerm && (
+          <p className="text-sm text-gray-500 mt-2">
+            {isSpanish 
+              ? `Mostrando resultados para: "${searchTerm}"` 
+              : `Showing results for: "${searchTerm}"`}
+          </p>
         )}
       </div>
 
@@ -149,14 +199,22 @@ function SingleCollectionView() {
           <div className="bg-white border border-gray-200 p-12 text-center rounded-sm">
             <p className="text-lg text-gray-600 font-serif italic">
               {isSpanish 
-                ? '"No se han encontrado artículos para esta búsqueda."' 
-                : '"No articles found for this search."'}
+                ? 'No se encontraron artículos para esta búsqueda'
+                : 'No articles found for this search'}
             </p>
+            {searchTerm && (
+              <button
+                onClick={clearSearch}
+                className="mt-4 text-[#007398] hover:underline text-sm"
+              >
+                {isSpanish ? 'Ver todos los artículos' : 'View all articles'}
+              </button>
+            )}
           </div>
         ) : (
           filteredArticles.map((article, index) => (
             <motion.div
-              key={article.id}
+              key={article.id || index}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05, duration: 0.3 }}

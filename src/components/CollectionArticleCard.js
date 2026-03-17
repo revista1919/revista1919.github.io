@@ -2,10 +2,28 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useLanguage } from '../hooks/useLanguage';
 
-// Helper para obtener el año
+// Helper para obtener el año - VERSIÓN CORREGIDA
 const getYear = (date) => {
   if (!date) return 'Desconocido';
-  const parsedDate = new Date(date + 'T12:00:00Z');
+  
+  // Intentar parsear la fecha correctamente
+  let parsedDate;
+  
+  // Si viene en formato DD-MM-YYYY (como en tu JSON)
+  if (typeof date === 'string' && date.includes('-')) {
+    const parts = date.split('-');
+    if (parts.length === 3) {
+      // Asumiendo que viene como DD-MM-YYYY
+      const day = parts[0];
+      const month = parts[1] - 1; // Los meses en JS son 0-indexados
+      const year = parts[2];
+      parsedDate = new Date(Date.UTC(year, month, day));
+    }
+  } else {
+    // Intentar con el formato estándar
+    parsedDate = new Date(date + 'T12:00:00Z');
+  }
+  
   return isNaN(parsedDate) ? 'Desconocido' : parsedDate.getUTCFullYear();
 };
 
