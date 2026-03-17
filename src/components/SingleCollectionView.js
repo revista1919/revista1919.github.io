@@ -29,57 +29,98 @@ function SingleCollectionView() {
       setError(null);
       
       try {
+        console.log(`🔍 Intentando cargar: ${METADATA_URL}`);
         const response = await fetch(METADATA_URL);
+        
         if (!response.ok) {
-          throw new Error(`Error loading collection metadata: ${response.status}`);
+          throw new Error(`Error HTTP: ${response.status} - No se pudo cargar ${METADATA_URL}`);
         }
+        
         const data = await response.json();
-        
-        console.log('Datos recibidos:', data);
-        
-        // Procesar los datos - en tu caso es un array con un objeto
+        console.log('📦 Datos CRUDOS recibidos:', data);
+        console.log('📦 Tipo de dato recibido:', Array.isArray(data) ? 'Array' : typeof data);
+
+        // --- LÓGICA ROBUSTA PARA NORMALIZAR LOS ARTÍCULOS A UN ARRAY ---
         let articlesArray = [];
-        
+
         if (Array.isArray(data)) {
-          // Tu caso: array con un objeto que es el artículo
-          articlesArray = data.filter(item => item && item.id);
+          console.log('✅ Caso: Array detectado. Longitud:', data.length);
+          // Caso 1: Es un array. Filtramos elementos nulos y nos aseguramos que cada uno sea un objeto válido.
+          articlesArray = data.filter(item => item && typeof item === 'object');
+          console.log(`   Array filtrado (sin nulos): ${articlesArray.length} elementos.`);
         } else if (data && typeof data === 'object') {
-          articlesArray = data.id ? [data] : [];
+          console.log('✅ Caso: Objeto detectado.');
+          // Caso 2: Es un objeto solo. ¿Es el artículo en sí o es un objeto con los artículos dentro?
+          if (data.id) {
+            // Si tiene ID, probablemente es un artículo suelto. Lo metemos en un array.
+            console.log('   El objeto tiene ID, se trata como un único artículo.');
+            articlesArray = [data];
+          } else {
+            // Si no tiene ID, podría ser un objeto con una propiedad que contiene los artículos (ej. { articles: [...] })
+            console.warn('   El objeto no tiene ID. Buscando propiedades con arrays...');
+            // Intento 1: Buscar una propiedad común que pueda contener los artículos
+            const possibleArticleKeys = ['articles', 'items', 'data', 'docs'];
+            for (const key of possibleArticleKeys) {
+              if (data[key] && Array.isArray(data[key])) {
+                console.log(`   Encontrado array en propiedad "${key}". Usándolo.`);
+                articlesArray = data[key].filter(item => item && typeof item === 'object');
+                break;
+              }
+            }
+            // Si no encontró nada, articlesArray se queda como []
+          }
+        } else {
+          console.warn('⚠️ Datos vacíos o en formato no reconocido.');
         }
-        
-        console.log('Artículos procesados:', articlesArray);
+        // --- FIN DE LA LÓGICA ROBUSTA ---
+
+        console.log('🎯 Artículos NORMALIZADOS (articlesArray):', articlesArray);
+        console.log('🎯 Primer artículo (si existe):', articlesArray[0]);
+
+        // Actualizamos los estados
         setArticles(articlesArray);
         setFilteredArticles(articlesArray);
         
-        // Cargar collections.json
+        // Cargar collections.json (sin cambios)
+        console.log('📂 Intentando cargar collections.json');
         const collectionsResponse = await fetch('/collections/collections.json');
         if (collectionsResponse.ok) {
           const collectionsData = await collectionsResponse.json();
+          console.log('   collections.json cargado:', collectionsData);
           const currentCollection = collectionsData.find(
             col => col['carpet-name'] === folderName
           );
           setCollectionMeta(currentCollection || null);
+          console.log('   Metadatos de colección encontrados:', currentCollection);
+        } else {
+          console.warn('   No se pudo cargar collections.json');
         }
+
       } catch (err) {
-        console.error('Error fetching collection:', err);
+        console.error('❌ Error GORDO en fetchCollectionData:', err);
         setError(err.message);
         setArticles([]);
         setFilteredArticles([]);
       } finally {
         setLoading(false);
+        console.log('🏁 fetchCollectionData finalizado. loading = false');
       }
     };
 
     if (folderName) {
       fetchCollectionData();
+    } else {
+      console.warn('⚠️ No hay folderName en useParams');
     }
   }, [folderName]);
 
+  // Leer el término de búsqueda de la URL al cargar
   useEffect(() => {
     const term = searchParams.get('collection_search') || '';
     setSearchInput(term);
   }, [searchParams]);
 
+  // Efecto para filtrar artículos (usando debouncedSearch)
   useEffect(() => {
     if (!articles.length) {
       setFilteredArticles([]);
@@ -93,7 +134,11 @@ function SingleCollectionView() {
       return;
     }
 
+    console.log(`🔎 Filtrando por: "${lowerTerm}" en ${articles.length} artículos.`);
     const filtered = articles.filter((article) => {
+      // Asegurarse de que article existe y es un objeto
+      if (!article) return false;
+
       const title = article.name?.[language] || 
                    article.name?.spanish || 
                    article.name?.english || 
@@ -111,18 +156,21 @@ function SingleCollectionView() {
                       article.keywords?.english?.join(' ') || 
                       '';
 
-      return (
+      const result = (
         title.toLowerCase().includes(lowerTerm) ||
         abstract.toLowerCase().includes(lowerTerm) ||
         authors.toLowerCase().includes(lowerTerm) ||
         keywords.toLowerCase().includes(lowerTerm) ||
         article.id?.toLowerCase().includes(lowerTerm)
       );
+      return result;
     });
     
+    console.log(`   Resultado del filtro: ${filtered.length} artículos.`);
     setFilteredArticles(filtered);
   }, [debouncedSearch, articles, language]);
 
+  // Efecto para actualizar URL cuando cambia la búsqueda
   useEffect(() => {
     const params = new URLSearchParams(searchParams);
     if (debouncedSearch) {
@@ -161,15 +209,9 @@ function SingleCollectionView() {
     return '';
   };
 
-  // Debug: Verificar qué está pasando con CollectionArticleCard
-  console.log('Estado actual:', {
-    loading,
-    error,
-    articlesCount: articles.length,
-    filteredCount: filteredArticles.length,
-    firstArticle: articles[0]
-  });
+  console.log('🖥️ Renderizando SingleCollectionView. filteredArticles:', filteredArticles.length);
 
+  // --- SPINNER DE CARGA (LOADING) ---
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
@@ -181,6 +223,7 @@ function SingleCollectionView() {
     );
   }
 
+  // --- PANTALLA DE ERROR ---
   if (error) {
     return (
       <div className="bg-red-50 border border-red-200 p-8 text-center rounded-sm my-8">
@@ -197,6 +240,7 @@ function SingleCollectionView() {
     );
   }
 
+  // --- VISTA PRINCIPAL (CON ARTÍCULOS) ---
   return (
     <motion.div
       className="py-8 max-w-4xl mx-auto px-4 sm:px-6"
@@ -220,6 +264,7 @@ function SingleCollectionView() {
           : `Exploring ${filteredArticles.length} articles in this collection.`}
       </p>
 
+      {/* BUSCADOR */}
       <div className="mb-8">
         <div className="flex gap-2">
           <div className="flex-1 relative">
@@ -246,8 +291,9 @@ function SingleCollectionView() {
         </div>
       </div>
 
-      {/* Lista de Artículos */}
+      {/* LISTA DE ARTÍCULOS */}
       <div className="space-y-4">
+        {/* Caso: No hay artículos en la colección */}
         {!articles.length ? (
           <div className="bg-white border border-gray-200 p-12 text-center rounded-sm">
             <p className="text-lg text-gray-600 font-serif italic">
@@ -257,6 +303,7 @@ function SingleCollectionView() {
             </p>
           </div>
         ) : filteredArticles.length === 0 ? (
+          /* Caso: Hay artículos pero ninguno coincide con la búsqueda */
           <div className="bg-white border border-gray-200 p-12 text-center rounded-sm">
             <p className="text-lg text-gray-600 font-serif italic mb-4">
               {isSpanish 
@@ -273,12 +320,15 @@ function SingleCollectionView() {
             )}
           </div>
         ) : (
+          /* Caso: Hay artículos y se muestran */
           <div>
-            {/* DEBUG: Mostrar información del artículo */}
-            <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-sm">
-              <p className="font-bold">Debug: Artículo cargado</p>
-              <p>ID: {articles[0]?.id}</p>
-              <p>Título: {articles[0]?.name?.spanish}</p>
+            {/* Panel de Debug (opcional, lo puedes quitar cuando todo funcione) */}
+            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-sm text-xs">
+              <p className="font-bold">🔧 DEBUG: {filteredArticles.length} artículo(s) a renderizar</p>
+              <p>ID del primero: {filteredArticles[0]?.id}</p>
+              <p>Título (ES): {filteredArticles[0]?.name?.spanish}</p>
+              <p>Tipo de datos pasado a CollectionArticleCard: {typeof filteredArticles[0]}</p>
+              <p>¿Es un array? {Array.isArray(filteredArticles[0]) ? '⚠️ SÍ (error)' : '✅ No (bien)'}</p>
             </div>
             
             {filteredArticles.map((article, index) => (
