@@ -49,6 +49,10 @@ const initialArticleState = {
     spanish: '',
     english: ''
   },
+  'name-translated': {
+    spanish: '',
+    english: ''
+  },
   author: [],
   date: '',
   'original-date': '',
@@ -66,15 +70,24 @@ const initialArticleState = {
     spanish: '',
     english: ''
   },
-  references: '',
-  appendix: '',
-  'editorial-note': '',
+  references: {
+    spanish: '',
+    english: ''
+  },
+  appendix: {
+    spanish: '',
+    english: ''
+  },
+  'editorial-note': {
+    spanish: '',
+    english: ''
+  },
   'pdf-url': '',
   idioma: 'Latín',
   area: [],
   image: '',
   status: 'draft',
-  language: 'spanish' // Idioma del contenido principal
+  language: 'spanish'
 };
 const initialAuthorState = {
   name: '',
@@ -349,8 +362,12 @@ export default function CollectionManager({ user }) {
 
   // Eliminar artículo
   const handleDeleteArticle = async (article) => {
-    if (!confirm(`¿Estás seguro de eliminar el artículo "${article['name-original']}"?`)) return;
-    
+  const articleName = typeof article.name === 'string' 
+    ? article.name 
+    : article.name?.spanish || article.name?.english || 'este artículo';
+  
+  if (!confirm(`¿Estás seguro de eliminar el artículo "${articleName}"?`)) return;
+  
     setIsProcessing(true);
     try {
       const token = await auth.currentUser.getIdToken();
@@ -585,7 +602,9 @@ const CollectionItem = ({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-semibold text-[#001529]">
-  {typeof collection.title === 'string' ? collection.title : collection.title?.spanish}
+  {typeof collection.title === 'string' 
+    ? collection.title 
+    : collection.title?.spanish || collection.title?.english || 'Sin título'}
 </h3>
                 {collection.title?.english && (
                   <span className="text-sm text-gray-500">
@@ -597,8 +616,10 @@ const CollectionItem = ({
                 </span>
               </div>
               <p className="text-sm text-gray-600 line-clamp-1">
-                {typeof collection.description === 'string' ? collection.description : collection.description?.spanish}
-              </p>
+  {typeof collection.description === 'string' 
+    ? collection.description 
+    : collection.description?.spanish || collection.description?.english || ''}
+</p>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-xs bg-gray-100 px-2 py-1 rounded-full">
                   {collection['carpet-name']}
@@ -684,7 +705,23 @@ const CollectionItem = ({
 };
 
 // Componente de Item de Artículo
+// Componente de Item de Artículo - VERSIÓN CORREGIDA
 const ArticleItem = ({ article, expanded, onToggle, onEdit, onDelete }) => {
+  // Función helper para obtener el texto según el idioma
+  const getLocalizedText = (field, defaultLang = 'spanish') => {
+    if (!field) return '';
+    if (typeof field === 'string') return field;
+    return field[defaultLang] || field.spanish || field.english || '';
+  };
+
+  // Obtener el nombre del artículo (maneja tanto string como objeto)
+  const articleName = getLocalizedText(article.name);
+  
+  // Obtener el nombre traducido si existe como campo separado
+  const translatedName = article['name-translated'] 
+    ? getLocalizedText(article['name-translated']) 
+    : '';
+
   return (
     <div className="bg-white rounded-lg border border-gray-200 hover:shadow-sm transition-shadow">
       <div 
@@ -696,11 +733,13 @@ const ArticleItem = ({ article, expanded, onToggle, onEdit, onDelete }) => {
             <DocumentTextIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
             <div>
               <h4 className="font-medium text-gray-900">
-                {article['name-original']}
+                {articleName || 'Sin título'}
               </h4>
-              <p className="text-sm text-gray-500">
-                {article['name-translated']}
-              </p>
+              {translatedName && (
+                <p className="text-sm text-gray-500">
+                  {translatedName}
+                </p>
+              )}
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
                   {article.id}
@@ -779,7 +818,9 @@ const ArticleItem = ({ article, expanded, onToggle, onEdit, onDelete }) => {
               
               <div className="md:col-span-2">
                 <h5 className="font-semibold text-gray-700 mb-1">Abstract</h5>
-                <p className="text-gray-600 text-sm line-clamp-3">{article.abstract}</p>
+                <p className="text-gray-600 text-sm line-clamp-3">
+                  {getLocalizedText(article.abstract)}
+                </p>
               </div>
               
               <div>
@@ -801,7 +842,7 @@ const ArticleItem = ({ article, expanded, onToggle, onEdit, onDelete }) => {
               <div className="md:col-span-2">
                 <h5 className="font-semibold text-gray-700 mb-1">Keywords</h5>
                 <div className="flex flex-wrap gap-1">
-                  {article.keywords?.map((kw, idx) => (
+                  {article.keywords?.spanish?.map((kw, idx) => (
                     <span key={idx} className="px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-xs">
                       {kw}
                     </span>
@@ -815,7 +856,6 @@ const ArticleItem = ({ article, expanded, onToggle, onEdit, onDelete }) => {
     </div>
   );
 };
-
 // Badge de idiomas actualizado
 const LanguageBadge = ({ languages }) => {
   const config = {
