@@ -19,8 +19,8 @@ const DOMAIN = 'https://www.revistacienciasestudiantes.com';
 const COLLECTIONS_JSON_URL = `${DOMAIN}/collections/collections.json`;
 const REPO_OWNER = 'revista1919';
 const REPO_NAME = 'revista1919.github.io';
-const MANAGE_COLLECTIONS_URL = 'https://managecollections-ggqsq2kkua-uc.a.run.app/manageCollections';
-const MANAGE_ARTICLES_COLLECTION_URL = 'https://us-central1-usuarios-rnce.cloudfunctions.net/manageCollectionArticles';
+const MANAGE_COLLECTIONS_URL = 'https://us-central1-usuarios-rnce.cloudfunctions.net/manageCollections';
+const MANAGE_ARTICLES_COLLECTION_URL = 'https://managecollectionarticles-ggqsq2kkua-uc.a.run.app';
 const REBUILD_URL = 'https://triggerrebuild-ggqsq2kkua-uc.a.run.app/';
 
 // Estados iniciales
@@ -313,8 +313,7 @@ export default function CollectionManager({ user }) {
 
   // Eliminar colección
   const handleDeleteCollection = async (collection) => {
-    if (!confirm(`¿Estás seguro de eliminar la colección "${collection.title}"?`)) return;
-    
+    if (!confirm(`¿Estás seguro de eliminar la colección "${collection.title?.spanish || collection.title}"?`)) return;
     setIsProcessing(true);
     try {
       const token = await auth.currentUser.getIdToken();
@@ -397,11 +396,24 @@ export default function CollectionManager({ user }) {
   const toggleArticleExpand = (id) => 
     setExpandedArticles(prev => ({ ...prev, [id]: !prev[id] }));
 
-  // Filtrar colecciones
-  const filteredCollections = collections.filter(c => 
-    c.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.description?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+ // Filtrar colecciones - Versión corregida para estructura multilingüe
+const filteredCollections = collections.filter(c => {
+  // Buscar en título español
+  const titleSpanish = c.title?.spanish?.toLowerCase() || '';
+  // Buscar en título inglés (si existe)
+  const titleEnglish = c.title?.english?.toLowerCase() || '';
+  // Buscar en descripción español
+  const descSpanish = c.description?.spanish?.toLowerCase() || '';
+  // Buscar en descripción inglés (si existe)
+  const descEnglish = c.description?.english?.toLowerCase() || '';
+  
+  const searchLower = searchTerm.toLowerCase();
+  
+  return titleSpanish.includes(searchLower) ||
+         titleEnglish.includes(searchLower) ||
+         descSpanish.includes(searchLower) ||
+         descEnglish.includes(searchLower);
+});
 
   return (
     <div className="space-y-6">
@@ -573,8 +585,8 @@ const CollectionItem = ({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-semibold text-[#001529]">
-                  {collection.title?.spanish || collection.title}
-                </h3>
+  {collection.title?.spanish || collection.title}
+</h3>
                 {collection.title?.english && (
                   <span className="text-sm text-gray-500">
                     / {collection.title.english}
@@ -1060,8 +1072,8 @@ const ArticleModal = ({
         {/* Información de la colección */}
         <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
           <p className="text-sm text-blue-800">
-            <span className="font-medium">Colección:</span> {collection.title} ({collection.id})
-          </p>
+  <span className="font-medium">Colección:</span> {collection.title?.spanish || collection.title} ({collection.id})
+</p>
         </div>
 
         {/* Tabs */}
