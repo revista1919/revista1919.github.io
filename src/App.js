@@ -10,6 +10,8 @@ import {
 import { useLanguage } from './hooks/useLanguage';
 import ReviewerWorkspacePage from './components/ReviewerWorkspacePage';
 import Header from './components/Header';
+import CollectionView from './components/CollectionView';      // <--- NUEVO
+import SingleCollectionView from './components/SingleCollectionView';
 import SearchAndFilters from './components/SearchAndFilters';
 import ReviewerResponsePage from './components/ReviewerResponsePage';
 import ArticleCard from './components/ArticleCard';
@@ -582,6 +584,12 @@ function App() {
         </motion.div>
       ),
     },
+     {
+    name: 'collections',
+    label: 'Colecciones',
+    path: '/collection',
+    component: <CollectionView />,
+  },
     {
       name: 'submit',
       label: 'Enviar Artículo',
@@ -768,7 +776,17 @@ function App() {
                 )}
               </motion.div>
             } />
-            
+<Route path="/collection/:folderName" element={
+  <motion.div
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -10 }}
+    transition={{ duration: 0.3 }}
+    className="container mx-auto px-6 lg:px-8 flex-grow"
+  >
+    <SingleCollectionView />
+  </motion.div>
+} />
             <Route path="/login/chief" element={
               <motion.div
                 initial={{ opacity: 0, y: 10 }}

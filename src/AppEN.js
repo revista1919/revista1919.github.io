@@ -12,6 +12,8 @@ import Header from './components/HeaderEN';
 import SearchAndFilters from './components/SearchAndFiltersEN';
 import ArticleCard from './components/ArticleCardEN';
 import VolumeCard from './components/VolumeCardEN';
+import CollectionViewEN from './components/CollectionViewEN';      // <--- NUEVO
+import SingleCollectionViewEN from './components/SingleCollectionViewEN';
 import ReviewerResponsePage from './components/ReviewerResponsePage';
 import Tabs from './components/TabsEN';
 import SubmitSection from './components/SubmitSectionEN';
@@ -575,6 +577,12 @@ function AppEN() {
         </motion.div>
       ),
     },
+    { // <--- NUEVA SECCIÓN
+    name: 'collections',
+    label: 'Collections',
+    path: '/en/collection',
+    component: <CollectionViewEN />,
+    },
     {
       name: 'submit',
       label: 'Submit Article',
@@ -719,7 +727,17 @@ function AppEN() {
       }
     />
   ))}
- 
+ <Route path="/collection/:folderName" element={
+  <motion.div
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -10 }}
+    transition={{ duration: 0.3 }}
+    className="container mx-auto px-6 lg:px-8 flex-grow"
+  >
+    <SingleCollectionViewEN />
+  </motion.div>
+} />
   {/* Ruta comodín para redirigir rutas no encontradas a /en */}
   <Route path="*" element={<Navigate to="/" replace />} />
 </Routes>
