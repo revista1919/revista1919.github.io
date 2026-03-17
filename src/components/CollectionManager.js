@@ -313,7 +313,7 @@ export default function CollectionManager({ user }) {
 
   // Eliminar colección
   const handleDeleteCollection = async (collection) => {
-    if (!confirm(`¿Estás seguro de eliminar la colección "${collection.title?.spanish || collection.title}"?`)) return;
+    if (!confirm(`¿Estás seguro de eliminar la colección "${typeof collection.title === 'string' ? collection.title : collection.title?.spanish}"?`)) return;
     setIsProcessing(true);
     try {
       const token = await auth.currentUser.getIdToken();
@@ -578,14 +578,14 @@ const CollectionItem = ({
             {collection.image && (
               <img 
                 src={collection.image} 
-                alt={collection.title?.spanish || collection.title}
+                alt={typeof collection.title === 'string' ? collection.title : collection.title?.spanish || ''}
                 className="w-10 h-10 rounded-lg object-cover"
               />
             )}
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-semibold text-[#001529]">
-  {collection.title?.spanish || collection.title}
+  {typeof collection.title === 'string' ? collection.title : collection.title?.spanish}
 </h3>
                 {collection.title?.english && (
                   <span className="text-sm text-gray-500">
@@ -597,7 +597,7 @@ const CollectionItem = ({
                 </span>
               </div>
               <p className="text-sm text-gray-600 line-clamp-1">
-                {collection.description?.spanish || collection.description}
+                {typeof collection.description === 'string' ? collection.description : collection.description?.spanish}
               </p>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-xs bg-gray-100 px-2 py-1 rounded-full">
@@ -1072,7 +1072,7 @@ const ArticleModal = ({
         {/* Información de la colección */}
         <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
           <p className="text-sm text-blue-800">
-  <span className="font-medium">Colección:</span> {collection.title?.spanish || collection.title} ({collection.id})
+  <span className="font-medium">Colección:</span> {typeof collection.title === 'string' ? collection.title : collection.title?.spanish} ({collection.id})
 </p>
         </div>
 
