@@ -1,99 +1,65 @@
 // CollectionManager.js
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { auth, db } from '../firebase';
-import { 
-  collection, onSnapshot, query, where, getDocs,
-  doc as firestoreDoc, getDoc 
-} from "firebase/firestore";
+import { auth } from '../firebase';
 import {
   PlusIcon, PencilIcon, TrashIcon, CheckIcon, ExclamationTriangleIcon,
-  DocumentTextIcon, ArrowPathIcon, BookOpenIcon, DocumentIcon,
-  XMarkIcon, ChevronRightIcon, MagnifyingGlassIcon, PhotoIcon,
-  ChevronDownIcon, GlobeAltIcon, FolderIcon, CodeBracketIcon,
-  LanguageIcon, EyeIcon, EyeSlashIcon, CloudArrowUpIcon
+  DocumentTextIcon, ArrowPathIcon, FolderIcon,
+  XMarkIcon, ChevronDownIcon, MagnifyingGlassIcon,
+  ChevronRightIcon, LanguageIcon
 } from '@heroicons/react/24/outline';
 
-// Configuración
+// ============================================
+// CONFIGURACIÓN
+// ============================================
 const DOMAIN = 'https://www.revistacienciasestudiantes.com';
 const COLLECTIONS_JSON_URL = `${DOMAIN}/collections/collections.json`;
-const REPO_OWNER = 'revista1919';
-const REPO_NAME = 'revista1919.github.io';
 const MANAGE_COLLECTIONS_URL = 'https://us-central1-usuarios-rnce.cloudfunctions.net/manageCollections';
 const MANAGE_ARTICLES_COLLECTION_URL = 'https://managecollectionarticles-ggqsq2kkua-uc.a.run.app';
 const REBUILD_URL = 'https://triggerrebuild-ggqsq2kkua-uc.a.run.app/';
 
-// Estados iniciales
-// En initialCollectionState, cambia 'idiom' por:
+// ============================================
+// ESTADOS INICIALES (CORREGIDOS)
+// ============================================
 const initialCollectionState = {
   id: '',
-  title: {
-    spanish: '',
-    english: ''
-  },
-  description: {
-    spanish: '',
-    english: ''
-  },
+  title: { spanish: '', english: '' },
+  description: { spanish: '', english: '' },
   'carpet-name': '',
   image: '',
-  languages: ['spanish'], // Array de idiomas soportados
-  defaultLanguage: 'spanish', // Idioma por defecto
+  languages: ['spanish'],
+  defaultLanguage: 'spanish',
   status: 'active'
 };
 
-// En initialArticleState, actualiza los campos de texto:
+// ⚠️ ESTE ES EL ESTADO CORRECTO QUE COINCIDE CON TU JSON
 const initialArticleState = {
   id: '',
-  'name': {
-    spanish: '',
-    english: ''
-  },
-  'name-translated': {
-    spanish: '',
-    english: ''
-  },
+  name: { spanish: '', english: '' },
+  'name-translated': { spanish: '', english: '' },
   author: [],
   date: '',
   'original-date': '',
   editor: [],
   colaboradores: [],
-  abstract: {
-    spanish: '',
-    english: ''
-  },
-  keywords: {
-    spanish: [],
-    english: []
-  },
-  html: {
-    spanish: '',
-    english: ''
-  },
-  references: {
-    spanish: '',
-    english: ''
-  },
-  appendix: {
-    spanish: '',
-    english: ''
-  },
-  'editorial-note': {
-    spanish: '',
-    english: ''
-  },
+  abstract: { spanish: '', english: '' },
+  keywords: { spanish: [], english: [] },  // ¡OJO! Es un objeto con arrays
+  html: { spanish: '', english: '' },
+  references: { spanish: '', english: '' },
+  appendix: { spanish: '', english: '' },
+  'editorial-note': { spanish: '', english: '' },
   'pdf-url': '',
   idioma: 'Latín',
   area: [],
   image: '',
-  status: 'draft',
   language: 'spanish'
 };
+
 const initialAuthorState = {
   name: '',
   'birth-date': '',
   'death-date': '',
-  bio: '',
+  bio: { spanish: '', english: '' }, // La bio también puede ser bilingüe
   link: ''
 };
 
@@ -106,21 +72,16 @@ const initialEditorState = {
 
 const initialColaboradorState = {
   name: '',
-  role: '',
+  role: { spanish: '', english: '' }, // El rol también puede ser bilingüe
   uid: '',
   link: '',
   orcid: '',
   email: ''
 };
 
-const toBase64 = (file) =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result.split(',')[1]);
-    reader.onerror = (error) => reject(error);
-  });
-
+// ============================================
+// FUNCIONES UTILITARIAS
+// ============================================
 const generateSlug = (name) => {
   if (!name) return '';
   return name.toLowerCase()
@@ -132,7 +93,7 @@ const generateSlug = (name) => {
     .replace(/^-+|-+$/g, '');
 };
 
-const generateArticleId = (collectionId, date) => {
+const generateArticleId = (collectionId) => {
   const year = new Date().getFullYear();
   const month = String(new Date().getMonth() + 1).padStart(2, '0');
   const day = String(new Date().getDate()).padStart(2, '0');
@@ -140,6 +101,23 @@ const generateArticleId = (collectionId, date) => {
   return `${collectionId}-${year}${month}${day}-${random}`;
 };
 
+// Helper para obtener texto localizado de forma segura
+const getLocalizedText = (field, lang = 'spanish') => {
+  if (!field) return '';
+  if (typeof field === 'string') return field;
+  return field[lang] || field.spanish || field.english || '';
+};
+
+// Helper para arrays localizados (como keywords)
+const getLocalizedArray = (field, lang = 'spanish') => {
+  if (!field) return [];
+  if (Array.isArray(field)) return field;
+  return field[lang] || field.spanish || field.english || [];
+};
+
+// ============================================
+// COMPONENTE PRINCIPAL
+// ============================================
 export default function CollectionManager({ user }) {
   const [collections, setCollections] = useState([]);
   const [selectedCollection, setSelectedCollection] = useState(null);
@@ -161,14 +139,9 @@ export default function CollectionManager({ user }) {
   const [collectionForm, setCollectionForm] = useState(initialCollectionState);
   const [articleForm, setArticleForm] = useState(initialArticleState);
 
-  // Idiomas disponibles
-  const languages = [
-    { value: 'spanish', label: 'Español' },
-    { value: 'english', label: 'Inglés' },
-    { value: 'both', label: 'Bilingüe' }
-  ];
-
-  // Cargar colecciones
+  // ========================================
+  // CARGA DE DATOS
+  // ========================================
   useEffect(() => {
     const fetchCollections = async () => {
       setLoading(true);
@@ -180,7 +153,9 @@ export default function CollectionManager({ user }) {
         
         // Cargar artículos de cada colección
         data.forEach(collection => {
-          fetchCollectionArticles(collection['carpet-name']);
+          if (collection['carpet-name']) {
+            fetchCollectionArticles(collection['carpet-name']);
+          }
         });
       } catch (error) {
         console.error("Error fetching collections.json:", error);
@@ -190,10 +165,11 @@ export default function CollectionManager({ user }) {
       }
     };
 
-    fetchCollections();
-  }, []);
+    if (user) {
+      fetchCollections();
+    }
+  }, [user]);
 
-  // Cargar artículos de una colección específica
   const fetchCollectionArticles = async (carpetName) => {
     try {
       const response = await fetch(`${DOMAIN}/collections/${carpetName}/metadata.json`);
@@ -211,7 +187,9 @@ export default function CollectionManager({ user }) {
     }
   };
 
-  // Trigger rebuild
+  // ========================================
+  // FUNCIONES DE GUARDADO
+  // ========================================
   const triggerRebuild = async () => {
     try {
       const token = await auth.currentUser.getIdToken();
@@ -222,11 +200,11 @@ export default function CollectionManager({ user }) {
       });
       return response.ok;
     } catch (error) {
-      throw error;
+      console.error("Rebuild error:", error);
+      return false;
     }
   };
 
-  // Guardar colección
   const handleSaveCollection = async (e) => {
     e.preventDefault();
     setIsProcessing(true);
@@ -237,7 +215,7 @@ export default function CollectionManager({ user }) {
       
       const collectionData = {
         ...collectionForm,
-        'carpet-name': collectionForm['carpet-name'] || generateSlug(collectionForm.title)
+        'carpet-name': collectionForm['carpet-name'] || generateSlug(collectionForm.title.spanish || collectionForm.title.english)
       };
 
       const payload = {
@@ -261,12 +239,13 @@ export default function CollectionManager({ user }) {
       resetForms();
       await triggerRebuild();
       
-      // Recargar colecciones
+      setStatus({ type: 'success', msg: '✅ Colección guardada exitosamente' });
+      
+      // Recargar después de 2 segundos
       setTimeout(() => {
         window.location.reload();
       }, 2000);
       
-      setStatus({ type: 'success', msg: '✅ Colección guardada exitosamente' });
     } catch (err) {
       console.error("Error saving collection:", err);
       setStatus({ type: 'error', msg: `❌ Error: ${err.message}` });
@@ -275,7 +254,6 @@ export default function CollectionManager({ user }) {
     }
   };
 
-  // Guardar artículo de colección
   const handleSaveArticle = async (e) => {
     e.preventDefault();
     setIsProcessing(true);
@@ -284,10 +262,29 @@ export default function CollectionManager({ user }) {
     try {
       const token = await auth.currentUser.getIdToken();
       
-      // Generar ID automático si es nuevo
+      // Preparar el artículo para guardar
       let articleData = { ...articleForm };
+      
+      // Generar ID si es nuevo
       if (!editingArticle && !articleData.id) {
-        articleData.id = generateArticleId(selectedCollection.id, articleData.date);
+        articleData.id = generateArticleId(selectedCollection.id);
+      }
+
+      // Asegurar estructura correcta de campos bilingües
+      if (typeof articleData.abstract === 'string') {
+        articleData.abstract = { spanish: articleData.abstract, english: '' };
+      }
+      if (typeof articleData.html === 'string') {
+        articleData.html = { spanish: articleData.html, english: '' };
+      }
+      if (typeof articleData.references === 'string') {
+        articleData.references = { spanish: articleData.references, english: '' };
+      }
+      if (typeof articleData.appendix === 'string') {
+        articleData.appendix = { spanish: articleData.appendix, english: '' };
+      }
+      if (typeof articleData.keywords === 'string') {
+        articleData.keywords = { spanish: articleData.keywords.split(',').map(k => k.trim()), english: [] };
       }
 
       const payload = {
@@ -324,9 +321,16 @@ export default function CollectionManager({ user }) {
     }
   };
 
-  // Eliminar colección
+  // ========================================
+  // FUNCIONES DE ELIMINACIÓN
+  // ========================================
   const handleDeleteCollection = async (collection) => {
-    if (!confirm(`¿Estás seguro de eliminar la colección "${typeof collection.title === 'string' ? collection.title : collection.title?.spanish}"?`)) return;
+    const collectionName = typeof collection.title === 'string' 
+      ? collection.title 
+      : collection.title?.spanish || collection.title?.english;
+    
+    if (!confirm(`¿Estás seguro de eliminar la colección "${collectionName}"?`)) return;
+    
     setIsProcessing(true);
     try {
       const token = await auth.currentUser.getIdToken();
@@ -349,7 +353,6 @@ export default function CollectionManager({ user }) {
       await triggerRebuild();
       setStatus({ type: 'success', msg: '✅ Colección eliminada' });
       
-      // Recargar
       setTimeout(() => {
         window.location.reload();
       }, 2000);
@@ -360,14 +363,13 @@ export default function CollectionManager({ user }) {
     }
   };
 
-  // Eliminar artículo
   const handleDeleteArticle = async (article) => {
-  const articleName = typeof article.name === 'string' 
-    ? article.name 
-    : article.name?.spanish || article.name?.english || 'este artículo';
-  
-  if (!confirm(`¿Estás seguro de eliminar el artículo "${articleName}"?`)) return;
-  
+    const articleName = typeof article.name === 'string' 
+      ? article.name 
+      : article.name?.spanish || article.name?.english;
+    
+    if (!confirm(`¿Estás seguro de eliminar el artículo "${articleName}"?`)) return;
+    
     setIsProcessing(true);
     try {
       const token = await auth.currentUser.getIdToken();
@@ -388,10 +390,7 @@ export default function CollectionManager({ user }) {
       if (!response.ok) throw new Error(await response.text());
 
       await triggerRebuild();
-      
-      // Recargar artículos
       fetchCollectionArticles(selectedCollection['carpet-name']);
-      
       setStatus({ type: 'success', msg: '✅ Artículo eliminado' });
     } catch (err) {
       setStatus({ type: 'error', msg: `❌ Error: ${err.message}` });
@@ -400,6 +399,9 @@ export default function CollectionManager({ user }) {
     }
   };
 
+  // ========================================
+  // UTILIDADES
+  // ========================================
   const resetForms = () => {
     setCollectionForm(initialCollectionState);
     setArticleForm(initialArticleState);
@@ -413,25 +415,23 @@ export default function CollectionManager({ user }) {
   const toggleArticleExpand = (id) => 
     setExpandedArticles(prev => ({ ...prev, [id]: !prev[id] }));
 
- // Filtrar colecciones - Versión corregida para estructura multilingüe
-const filteredCollections = collections.filter(c => {
-  // Buscar en título español
-  const titleSpanish = c.title?.spanish?.toLowerCase() || '';
-  // Buscar en título inglés (si existe)
-  const titleEnglish = c.title?.english?.toLowerCase() || '';
-  // Buscar en descripción español
-  const descSpanish = c.description?.spanish?.toLowerCase() || '';
-  // Buscar en descripción inglés (si existe)
-  const descEnglish = c.description?.english?.toLowerCase() || '';
-  
-  const searchLower = searchTerm.toLowerCase();
-  
-  return titleSpanish.includes(searchLower) ||
-         titleEnglish.includes(searchLower) ||
-         descSpanish.includes(searchLower) ||
-         descEnglish.includes(searchLower);
-});
+  // Filtro de colecciones
+  const filteredCollections = collections.filter(c => {
+    const titleSpanish = c.title?.spanish?.toLowerCase() || '';
+    const titleEnglish = c.title?.english?.toLowerCase() || '';
+    const descSpanish = c.description?.spanish?.toLowerCase() || '';
+    const descEnglish = c.description?.english?.toLowerCase() || '';
+    const searchLower = searchTerm.toLowerCase();
+    
+    return titleSpanish.includes(searchLower) ||
+           titleEnglish.includes(searchLower) ||
+           descSpanish.includes(searchLower) ||
+           descEnglish.includes(searchLower);
+  });
 
+  // ========================================
+  // RENDER
+  // ========================================
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -544,7 +544,7 @@ const filteredCollections = collections.filter(c => {
         )}
       </div>
 
-      {/* Modal de Colección */}
+      {/* Modales */}
       <CollectionModal
         show={showCollectionModal}
         onClose={() => setShowCollectionModal(false)}
@@ -553,10 +553,8 @@ const filteredCollections = collections.filter(c => {
         onSave={handleSaveCollection}
         isProcessing={isProcessing}
         isEditing={!!editingCollection}
-        languages={languages}
       />
 
-      {/* Modal de Artículo */}
       {selectedCollection && (
         <ArticleModal
           show={showArticleModal}
@@ -573,15 +571,20 @@ const filteredCollections = collections.filter(c => {
   );
 }
 
-// Componente de Item de Colección actualizado
+// ============================================
+// COMPONENTE: CollectionItem
+// ============================================
 const CollectionItem = ({ 
   collection, articles, expanded, onToggle, onEdit, onDelete, 
   onAddArticle, onEditArticle, onDeleteArticle, expandedArticles, onToggleArticle 
 }) => {
-  const languages = [
-    { value: 'spanish', label: 'Español', flag: '🇪🇸' },
-    { value: 'english', label: 'English', flag: '🇬🇧' }
-  ];
+  const collectionTitle = typeof collection.title === 'string' 
+    ? collection.title 
+    : collection.title?.spanish || collection.title?.english;
+  
+  const collectionDesc = typeof collection.description === 'string'
+    ? collection.description
+    : collection.description?.spanish || collection.description?.english;
 
   return (
     <div className="hover:bg-gray-50 transition-colors">
@@ -595,38 +598,34 @@ const CollectionItem = ({
             {collection.image && (
               <img 
                 src={collection.image} 
-                alt={typeof collection.title === 'string' ? collection.title : collection.title?.spanish || ''}
+                alt={collectionTitle}
                 className="w-10 h-10 rounded-lg object-cover"
               />
             )}
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-lg font-semibold text-[#001529]">
-  {typeof collection.title === 'string' 
-    ? collection.title 
-    : collection.title?.spanish || collection.title?.english || 'Sin título'}
-</h3>
-                {collection.title?.english && (
+                  {collectionTitle}
+                </h3>
+                {collection.title?.english && collection.title.english !== collectionTitle && (
                   <span className="text-sm text-gray-500">
                     / {collection.title.english}
                   </span>
                 )}
-                <span className="ml-2 text-sm font-normal text-gray-500">
+                <span className="text-sm font-normal text-gray-500">
                   ({collection.id})
                 </span>
               </div>
               <p className="text-sm text-gray-600 line-clamp-1">
-  {typeof collection.description === 'string' 
-    ? collection.description 
-    : collection.description?.spanish || collection.description?.english || ''}
-</p>
-              <div className="flex items-center gap-2 mt-1">
+                {collectionDesc}
+              </p>
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <span className="text-xs bg-gray-100 px-2 py-1 rounded-full">
                   {collection['carpet-name']}
                 </span>
                 <LanguageBadge languages={collection.languages || ['spanish']} />
                 <span className="text-xs text-gray-500">
-                  {articles.length} artículos
+                  {articles.length} {articles.length === 1 ? 'artículo' : 'artículos'}
                 </span>
               </div>
             </div>
@@ -644,12 +643,14 @@ const CollectionItem = ({
           <button
             onClick={onEdit}
             className="p-2 text-yellow-600 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors"
+            title="Editar colección"
           >
             <PencilIcon className="w-5 h-5" />
           </button>
           <button
             onClick={onDelete}
             className="p-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+            title="Eliminar colección"
           >
             <TrashIcon className="w-5 h-5" />
           </button>
@@ -661,7 +662,7 @@ const CollectionItem = ({
         </div>
       </div>
 
-      {/* Artículos de la Colección - sin cambios */}
+      {/* Artículos de la Colección */}
       <AnimatePresence>
         {expanded && (
           <motion.div
@@ -704,23 +705,16 @@ const CollectionItem = ({
   );
 };
 
-// Componente de Item de Artículo
-// Componente de Item de Artículo - VERSIÓN CORREGIDA
+// ============================================
+// COMPONENTE: ArticleItem (CORREGIDO)
+// ============================================
 const ArticleItem = ({ article, expanded, onToggle, onEdit, onDelete }) => {
-  // Función helper para obtener el texto según el idioma
-  const getLocalizedText = (field, defaultLang = 'spanish') => {
-    if (!field) return '';
-    if (typeof field === 'string') return field;
-    return field[defaultLang] || field.spanish || field.english || '';
-  };
-
-  // Obtener el nombre del artículo (maneja tanto string como objeto)
+  // Obtener textos de forma segura
   const articleName = getLocalizedText(article.name);
-  
-  // Obtener el nombre traducido si existe como campo separado
-  const translatedName = article['name-translated'] 
-    ? getLocalizedText(article['name-translated']) 
-    : '';
+  const translatedName = getLocalizedText(article['name-translated']);
+  const abstract = getLocalizedText(article.abstract);
+  const authorName = article.author?.[0]?.name || 'Autor desconocido';
+  const keywords = getLocalizedArray(article.keywords);
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 hover:shadow-sm transition-shadow">
@@ -735,17 +729,17 @@ const ArticleItem = ({ article, expanded, onToggle, onEdit, onDelete }) => {
               <h4 className="font-medium text-gray-900">
                 {articleName || 'Sin título'}
               </h4>
-              {translatedName && (
+              {translatedName && translatedName !== articleName && (
                 <p className="text-sm text-gray-500">
                   {translatedName}
                 </p>
               )}
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
                   {article.id}
                 </span>
                 <span className="text-xs text-gray-500">
-                  {article.author?.[0]?.name}
+                  {authorName}
                 </span>
                 {article['pdf-url'] && (
                   <a
@@ -767,12 +761,14 @@ const ArticleItem = ({ article, expanded, onToggle, onEdit, onDelete }) => {
           <button
             onClick={onEdit}
             className="p-1.5 text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors"
+            title="Editar artículo"
           >
             <PencilIcon className="w-4 h-4" />
           </button>
           <button
             onClick={onDelete}
             className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            title="Eliminar artículo"
           >
             <TrashIcon className="w-4 h-4" />
           </button>
@@ -799,7 +795,8 @@ const ArticleItem = ({ article, expanded, onToggle, onEdit, onDelete }) => {
                   <div key={idx} className="text-gray-600">
                     {author.name}
                     {author.link && (
-                      <a href={author.link} target="_blank" rel="noopener noreferrer" className="ml-2 text-blue-600 text-xs">
+                      <a href={author.link} target="_blank" rel="noopener noreferrer" 
+                         className="ml-2 text-blue-600 text-xs hover:underline">
                         (bio)
                       </a>
                     )}
@@ -819,13 +816,13 @@ const ArticleItem = ({ article, expanded, onToggle, onEdit, onDelete }) => {
               <div className="md:col-span-2">
                 <h5 className="font-semibold text-gray-700 mb-1">Abstract</h5>
                 <p className="text-gray-600 text-sm line-clamp-3">
-                  {getLocalizedText(article.abstract)}
+                  {abstract || 'Sin abstract'}
                 </p>
               </div>
               
               <div>
                 <h5 className="font-semibold text-gray-700 mb-1">Fecha original</h5>
-                <p className="text-gray-600">{article['original-date']}</p>
+                <p className="text-gray-600">{article['original-date'] || 'No especificada'}</p>
               </div>
               
               <div>
@@ -842,7 +839,7 @@ const ArticleItem = ({ article, expanded, onToggle, onEdit, onDelete }) => {
               <div className="md:col-span-2">
                 <h5 className="font-semibold text-gray-700 mb-1">Keywords</h5>
                 <div className="flex flex-wrap gap-1">
-                  {article.keywords?.spanish?.map((kw, idx) => (
+                  {keywords.map((kw, idx) => (
                     <span key={idx} className="px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-xs">
                       {kw}
                     </span>
@@ -856,7 +853,10 @@ const ArticleItem = ({ article, expanded, onToggle, onEdit, onDelete }) => {
     </div>
   );
 };
-// Badge de idiomas actualizado
+
+// ============================================
+// COMPONENTE: LanguageBadge
+// ============================================
 const LanguageBadge = ({ languages }) => {
   const config = {
     spanish: { label: 'Español', bg: 'bg-green-100', text: 'text-green-700', short: 'ES' },
@@ -881,7 +881,6 @@ const LanguageBadge = ({ languages }) => {
     );
   }
 
-  // Mostrar banderas para múltiples idiomas
   return (
     <div className="flex gap-1">
       {languages.map(lang => (
@@ -897,11 +896,19 @@ const LanguageBadge = ({ languages }) => {
     </div>
   );
 };
-// Modal de Colección actualizado
+
+// ============================================
+// COMPONENTE: CollectionModal
+// ============================================
 const CollectionModal = ({ 
-  show, onClose, form, setForm, onSave, isProcessing, isEditing, languages 
+  show, onClose, form, setForm, onSave, isProcessing, isEditing 
 }) => {
   const [activeLang, setActiveLang] = useState('spanish');
+  
+  const languages = [
+    { value: 'spanish', label: 'Español' },
+    { value: 'english', label: 'Inglés' }
+  ];
 
   const handleTitleChange = (lang, value) => {
     setForm({
@@ -922,7 +929,6 @@ const CollectionModal = ({
     let newLangs;
     
     if (currentLangs.includes(langValue)) {
-      // No permitir eliminar el último idioma
       if (currentLangs.length === 1) return;
       newLangs = currentLangs.filter(l => l !== langValue);
     } else {
@@ -963,30 +969,27 @@ const CollectionModal = ({
           </div>
         </div>
 
-        {/* Selector de idioma para edición */}
-        {(form.languages?.length > 1 || isEditing) && (
-          <div className="flex gap-2 border-b border-gray-200 pb-2">
-            {form.languages?.map(lang => {
-              const langConfig = languages.find(l => l.value === lang);
-              return (
-                <button
-                  key={lang}
-                  type="button"
-                  onClick={() => setActiveLang(lang)}
-                  className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
-                    activeLang === lang
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {langConfig?.label || lang}
-                </button>
-              );
-            })}
-          </div>
-        )}
+        {/* Selector de idioma */}
+        <div className="flex gap-2 border-b border-gray-200 pb-2">
+          {(form.languages?.length > 0 ? form.languages : ['spanish']).map(lang => {
+            const langConfig = languages.find(l => l.value === lang);
+            return (
+              <button
+                key={lang}
+                type="button"
+                onClick={() => setActiveLang(lang)}
+                className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
+                  activeLang === lang
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {langConfig?.label || lang}
+              </button>
+            );
+          })}
+        </div>
 
-        {/* Campos bilingües */}
         <Input 
           label={`Título (${activeLang}) *`}
           value={form.title?.[activeLang] || ''}
@@ -1045,23 +1048,72 @@ const CollectionModal = ({
   );
 };
 
-// Modal de Artículo
+// ============================================
+// COMPONENTE: ArticleModal (COMPLETAMENTE REESCRITO)
+// ============================================
 const ArticleModal = ({ 
   show, onClose, form, setForm, onSave, isProcessing, isEditing, collection 
 }) => {
   const [activeTab, setActiveTab] = useState('basic');
+  const [activeLang, setActiveLang] = useState('spanish');
   
   const tabs = [
     { id: 'basic', label: 'Básico', icon: '📋' },
     { id: 'authors', label: 'Autores', icon: '👥' },
-    { id: 'editors', label: 'Editores', icon: '✏️' },
+    { id: 'editors', label: 'Editores/Colab', icon: '✏️' },
     { id: 'content', label: 'Contenido', icon: '📄' },
     { id: 'metadata', label: 'Metadatos', icon: '🏷️' }
   ];
 
-  const handleAuthorChange = (index, field, value) => {
+  const languages = [
+    { value: 'spanish', label: 'Español' },
+    { value: 'english', label: 'English' }
+  ];
+
+  // Handlers específicos para campos bilingües
+  const handleTextChange = (field, lang, value) => {
+    setForm({
+      ...form,
+      [field]: {
+        ...(form[field] || {}),
+        [lang]: value
+      }
+    });
+  };
+
+  const handleKeywordsChange = (lang, value) => {
+    const keywordsArray = value.split(',').map(k => k.trim()).filter(Boolean);
+    setForm({
+      ...form,
+      keywords: {
+        ...(form.keywords || {}),
+        [lang]: keywordsArray
+      }
+    });
+  };
+
+  const handleArrayChange = (field, value) => {
+    const array = value.split(',').map(item => item.trim()).filter(Boolean);
+    setForm({...form, [field]: array});
+  };
+
+  // Handlers para autores
+  const handleAuthorChange = (index, field, lang, value) => {
     const newAuthors = [...form.author];
-    newAuthors[index] = { ...newAuthors[index], [field]: value };
+    
+    // Si el campo es bilingüe (bio)
+    if (field === 'bio') {
+      newAuthors[index] = {
+        ...newAuthors[index],
+        bio: {
+          ...(newAuthors[index]?.bio || {}),
+          [lang]: value
+        }
+      };
+    } else {
+      newAuthors[index] = { ...newAuthors[index], [field]: value };
+    }
+    
     setForm({...form, author: newAuthors});
   };
 
@@ -1073,6 +1125,7 @@ const ArticleModal = ({
     setForm({...form, author: form.author.filter((_, i) => i !== index)});
   };
 
+  // Handlers para editores
   const handleEditorChange = (index, field, value) => {
     const newEditors = [...form.editor];
     newEditors[index] = { ...newEditors[index], [field]: value };
@@ -1087,9 +1140,22 @@ const ArticleModal = ({
     setForm({...form, editor: form.editor.filter((_, i) => i !== index)});
   };
 
-  const handleColaboradorChange = (index, field, value) => {
+  // Handlers para colaboradores
+  const handleColaboradorChange = (index, field, lang, value) => {
     const newColabs = [...form.colaboradores];
-    newColabs[index] = { ...newColabs[index], [field]: value };
+    
+    if (field === 'role') {
+      newColabs[index] = {
+        ...newColabs[index],
+        role: {
+          ...(newColabs[index]?.role || {}),
+          [lang]: value
+        }
+      };
+    } else {
+      newColabs[index] = { ...newColabs[index], [field]: value };
+    }
+    
     setForm({...form, colaboradores: newColabs});
   };
 
@@ -1100,6 +1166,11 @@ const ArticleModal = ({
   const removeColaborador = (index) => {
     setForm({...form, colaboradores: form.colaboradores.filter((_, i) => i !== index)});
   };
+
+  // Obtener el título de la colección
+  const collectionTitle = typeof collection.title === 'string' 
+    ? collection.title 
+    : collection.title?.spanish || collection.title?.english;
 
   return (
     <Modal 
@@ -1112,8 +1183,26 @@ const ArticleModal = ({
         {/* Información de la colección */}
         <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
           <p className="text-sm text-blue-800">
-  <span className="font-medium">Colección:</span> {typeof collection.title === 'string' ? collection.title : collection.title?.spanish} ({collection.id})
-</p>
+            <span className="font-medium">Colección:</span> {collectionTitle} ({collection.id})
+          </p>
+        </div>
+
+        {/* Selector de idioma para contenido bilingüe */}
+        <div className="flex gap-2 border-b border-gray-200 pb-2">
+          {languages.map(lang => (
+            <button
+              key={lang.value}
+              type="button"
+              onClick={() => setActiveLang(lang.value)}
+              className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
+                activeLang === lang.value
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              {lang.label}
+            </button>
+          ))}
         </div>
 
         {/* Tabs */}
@@ -1136,6 +1225,7 @@ const ArticleModal = ({
         </div>
 
         <div className="max-h-[60vh] overflow-y-auto pr-2">
+          {/* TAB: BÁSICO */}
           {activeTab === 'basic' && (
             <div className="space-y-4">
               <Input
@@ -1147,21 +1237,21 @@ const ArticleModal = ({
               />
               
               <Input
-                label="Nombre Original *"
-                value={form['name-original']}
-                onChange={(e) => setForm({...form, 'name-original': e.target.value})}
+                label={`Nombre Original (${activeLang}) *`}
+                value={getLocalizedText(form.name, activeLang)}
+                onChange={(e) => handleTextChange('name', activeLang, e.target.value)}
                 required
               />
               
               <Input
-                label="Nombre Traducido"
-                value={form['name-translated']}
-                onChange={(e) => setForm({...form, 'name-translated': e.target.value})}
+                label={`Nombre Traducido (${activeLang})`}
+                value={getLocalizedText(form['name-translated'], activeLang)}
+                onChange={(e) => handleTextChange('name-translated', activeLang, e.target.value)}
               />
               
               <div className="grid grid-cols-2 gap-4">
                 <Input
-                  label="Fecha"
+                  label="Fecha de publicación"
                   type="date"
                   value={form.date}
                   onChange={(e) => setForm({...form, date: e.target.value})}
@@ -1175,7 +1265,7 @@ const ArticleModal = ({
               </div>
               
               <Input
-                label="Idioma del texto"
+                label="Idioma del texto original"
                 value={form.idioma}
                 onChange={(e) => setForm({...form, idioma: e.target.value})}
                 placeholder="Ej: Latín"
@@ -1183,6 +1273,7 @@ const ArticleModal = ({
             </div>
           )}
 
+          {/* TAB: AUTORES */}
           {activeTab === 'authors' && (
             <div className="space-y-4">
               <div className="flex justify-between items-center">
@@ -1211,42 +1302,42 @@ const ArticleModal = ({
                   
                   <Input
                     label="Nombre *"
-                    value={author.name}
-                    onChange={(e) => handleAuthorChange(index, 'name', e.target.value)}
+                    value={author.name || ''}
+                    onChange={(e) => handleAuthorChange(index, 'name', null, e.target.value)}
                     required
                   />
                   
                   <div className="grid grid-cols-2 gap-4">
                     <Input
                       label="Fecha Nacimiento"
-                      value={author['birth-date']}
-                      onChange={(e) => handleAuthorChange(index, 'birth-date', e.target.value)}
+                      value={author['birth-date'] || ''}
+                      onChange={(e) => handleAuthorChange(index, 'birth-date', null, e.target.value)}
                       placeholder="dd-mm-yyyy"
                     />
                     <Input
                       label="Fecha Muerte"
-                      value={author['death-date']}
-                      onChange={(e) => handleAuthorChange(index, 'death-date', e.target.value)}
+                      value={author['death-date'] || ''}
+                      onChange={(e) => handleAuthorChange(index, 'death-date', null, e.target.value)}
                       placeholder="dd-mm-yyyy"
                     />
                   </div>
                   
                   <div>
                     <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">
-                      Biografía
+                      Biografía ({activeLang})
                     </label>
                     <textarea
-                      value={author.bio}
-                      onChange={(e) => handleAuthorChange(index, 'bio', e.target.value)}
+                      value={getLocalizedText(author.bio, activeLang)}
+                      onChange={(e) => handleAuthorChange(index, 'bio', activeLang, e.target.value)}
                       rows="2"
                       className="w-full px-4 py-2.5 bg-[#f8f9fa] border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
                     />
                   </div>
                   
                   <Input
-                    label="Link"
-                    value={author.link}
-                    onChange={(e) => handleAuthorChange(index, 'link', e.target.value)}
+                    label="Link (Wikipedia, etc.)"
+                    value={author.link || ''}
+                    onChange={(e) => handleAuthorChange(index, 'link', null, e.target.value)}
                     placeholder="https://..."
                   />
                 </div>
@@ -1255,9 +1346,14 @@ const ArticleModal = ({
               {form.author.length === 0 && (
                 <p className="text-center text-gray-500 py-4">No hay autores agregados</p>
               )}
+            </div>
+          )}
 
+          {/* TAB: EDITORES Y COLABORADORES */}
+          {activeTab === 'editors' && (
+            <div className="space-y-6">
               {/* Editores */}
-              <div className="mt-6">
+              <div>
                 <div className="flex justify-between items-center mb-4">
                   <h4 className="font-medium">Editores</h4>
                   <button
@@ -1284,27 +1380,27 @@ const ArticleModal = ({
                     
                     <Input
                       label="Nombre *"
-                      value={editor.name}
+                      value={editor.name || ''}
                       onChange={(e) => handleEditorChange(index, 'name', e.target.value)}
                       required
                     />
                     
                     <Input
                       label="Website"
-                      value={editor.website}
+                      value={editor.website || ''}
                       onChange={(e) => handleEditorChange(index, 'website', e.target.value)}
                     />
                     
                     <div className="grid grid-cols-2 gap-4">
                       <Input
                         label="ORCID"
-                        value={editor.orcid}
+                        value={editor.orcid || ''}
                         onChange={(e) => handleEditorChange(index, 'orcid', e.target.value)}
                       />
                       <Input
                         label="Email"
                         type="email"
-                        value={editor.email}
+                        value={editor.email || ''}
                         onChange={(e) => handleEditorChange(index, 'email', e.target.value)}
                       />
                     </div>
@@ -1313,7 +1409,7 @@ const ArticleModal = ({
               </div>
 
               {/* Colaboradores */}
-              <div className="mt-6">
+              <div>
                 <div className="flex justify-between items-center mb-4">
                   <h4 className="font-medium">Colaboradores</h4>
                   <button
@@ -1340,41 +1436,41 @@ const ArticleModal = ({
                     
                     <Input
                       label="Nombre *"
-                      value={colab.name}
-                      onChange={(e) => handleColaboradorChange(index, 'name', e.target.value)}
+                      value={colab.name || ''}
+                      onChange={(e) => handleColaboradorChange(index, 'name', null, e.target.value)}
                       required
                     />
                     
                     <Input
-                      label="Rol"
-                      value={colab.role}
-                      onChange={(e) => handleColaboradorChange(index, 'role', e.target.value)}
+                      label={`Rol (${activeLang})`}
+                      value={getLocalizedText(colab.role, activeLang)}
+                      onChange={(e) => handleColaboradorChange(index, 'role', activeLang, e.target.value)}
                     />
                     
                     <Input
                       label="UID"
-                      value={colab.uid}
-                      onChange={(e) => handleColaboradorChange(index, 'uid', e.target.value)}
+                      value={colab.uid || ''}
+                      onChange={(e) => handleColaboradorChange(index, 'uid', null, e.target.value)}
                     />
                     
                     <div className="grid grid-cols-2 gap-4">
                       <Input
                         label="ORCID"
-                        value={colab.orcid}
-                        onChange={(e) => handleColaboradorChange(index, 'orcid', e.target.value)}
+                        value={colab.orcid || ''}
+                        onChange={(e) => handleColaboradorChange(index, 'orcid', null, e.target.value)}
                       />
                       <Input
                         label="Email"
                         type="email"
-                        value={colab.email}
-                        onChange={(e) => handleColaboradorChange(index, 'email', e.target.value)}
+                        value={colab.email || ''}
+                        onChange={(e) => handleColaboradorChange(index, 'email', null, e.target.value)}
                       />
                     </div>
                     
                     <Input
                       label="Link"
-                      value={colab.link}
-                      onChange={(e) => handleColaboradorChange(index, 'link', e.target.value)}
+                      value={colab.link || ''}
+                      onChange={(e) => handleColaboradorChange(index, 'link', null, e.target.value)}
                     />
                   </div>
                 ))}
@@ -1382,15 +1478,16 @@ const ArticleModal = ({
             </div>
           )}
 
+          {/* TAB: CONTENIDO */}
           {activeTab === 'content' && (
             <div className="space-y-4">
               <div>
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">
-                  Abstract
+                  Abstract ({activeLang})
                 </label>
                 <textarea
-                  value={form.abstract}
-                  onChange={(e) => setForm({...form, abstract: e.target.value})}
+                  value={getLocalizedText(form.abstract, activeLang)}
+                  onChange={(e) => handleTextChange('abstract', activeLang, e.target.value)}
                   rows="6"
                   className="w-full px-4 py-2.5 bg-[#f8f9fa] border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm"
                   placeholder="Texto del abstract..."
@@ -1399,11 +1496,11 @@ const ArticleModal = ({
               
               <div>
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">
-                  HTML Content
+                  HTML Content ({activeLang})
                 </label>
                 <textarea
-                  value={form.html}
-                  onChange={(e) => setForm({...form, html: e.target.value})}
+                  value={getLocalizedText(form.html, activeLang)}
+                  onChange={(e) => handleTextChange('html', activeLang, e.target.value)}
                   rows="10"
                   className="w-full px-4 py-2.5 bg-[#f8f9fa] border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm"
                   placeholder="<h2>Capítulo I...</h2>"
@@ -1412,11 +1509,11 @@ const ArticleModal = ({
               
               <div>
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">
-                  References
+                  References ({activeLang})
                 </label>
                 <textarea
-                  value={form.references}
-                  onChange={(e) => setForm({...form, references: e.target.value})}
+                  value={getLocalizedText(form.references, activeLang)}
+                  onChange={(e) => handleTextChange('references', activeLang, e.target.value)}
                   rows="6"
                   className="w-full px-4 py-2.5 bg-[#f8f9fa] border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm"
                 />
@@ -1424,28 +1521,41 @@ const ArticleModal = ({
               
               <div>
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">
-                  Appendix
+                  Appendix ({activeLang})
                 </label>
                 <textarea
-                  value={form.appendix}
-                  onChange={(e) => setForm({...form, appendix: e.target.value})}
+                  value={getLocalizedText(form.appendix, activeLang)}
+                  onChange={(e) => handleTextChange('appendix', activeLang, e.target.value)}
                   rows="6"
+                  className="w-full px-4 py-2.5 bg-[#f8f9fa] border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">
+                  Nota Editorial ({activeLang})
+                </label>
+                <textarea
+                  value={getLocalizedText(form['editorial-note'], activeLang)}
+                  onChange={(e) => handleTextChange('editorial-note', activeLang, e.target.value)}
+                  rows="4"
                   className="w-full px-4 py-2.5 bg-[#f8f9fa] border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm"
                 />
               </div>
             </div>
           )}
 
+          {/* TAB: METADATOS */}
           {activeTab === 'metadata' && (
             <div className="space-y-4">
               <div>
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">
-                  Keywords (separar con comas)
+                  Keywords ({activeLang}) (separar con comas)
                 </label>
                 <input
                   type="text"
-                  value={form.keywords?.join(', ')}
-                  onChange={(e) => setForm({...form, keywords: e.target.value.split(',').map(k => k.trim()).filter(Boolean)})}
+                  value={(getLocalizedArray(form.keywords, activeLang) || []).join(', ')}
+                  onChange={(e) => handleKeywordsChange(activeLang, e.target.value)}
                   className="w-full px-4 py-2.5 bg-[#f8f9fa] border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
                   placeholder="Euler, matemáticas, física"
                 />
@@ -1457,31 +1567,23 @@ const ArticleModal = ({
                 </label>
                 <input
                   type="text"
-                  value={form.area?.join(', ')}
-                  onChange={(e) => setForm({...form, area: e.target.value.split(',').map(k => k.trim()).filter(Boolean)})}
+                  value={(form.area || []).join(', ')}
+                  onChange={(e) => handleArrayChange('area', e.target.value)}
                   className="w-full px-4 py-2.5 bg-[#f8f9fa] border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
                   placeholder="matemáticas, física"
                 />
               </div>
               
               <Input
-                label="Editorial Note"
-                value={form['editorial-note']}
-                onChange={(e) => setForm({...form, 'editorial-note': e.target.value})}
-                multiline
-                rows="3"
-              />
-              
-              <Input
                 label="PDF URL"
-                value={form['pdf-url']}
+                value={form['pdf-url'] || ''}
                 onChange={(e) => setForm({...form, 'pdf-url': e.target.value})}
                 placeholder="https://..."
               />
               
               <Input
                 label="Image URL"
-                value={form.image}
+                value={form.image || ''}
                 onChange={(e) => setForm({...form, image: e.target.value})}
               />
             </div>
@@ -1514,7 +1616,9 @@ const ArticleModal = ({
   );
 };
 
-// Componentes atómicos
+// ============================================
+// COMPONENTE: Input
+// ============================================
 const Input = ({ label, multiline, rows = 2, ...props }) => (
   <div>
     <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">
@@ -1535,6 +1639,9 @@ const Input = ({ label, multiline, rows = 2, ...props }) => (
   </div>
 );
 
+// ============================================
+// COMPONENTE: Modal
+// ============================================
 const Modal = ({ show, onClose, title, children, size = 'lg' }) => {
   const sizeClasses = {
     lg: 'max-w-4xl',
@@ -1573,5 +1680,3 @@ const Modal = ({ show, onClose, title, children, size = 'lg' }) => {
     </AnimatePresence>
   );
 };
-
-export { CollectionManager };
