@@ -14,9 +14,26 @@ function CollectionArticleCard({ article, collectionFolder }) {
   const isSpanish = language === 'es';
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Determinar qué versión del título y abstract mostrar
-  const title = article.name?.[language] || article.name?.spanish || 'Untitled';
-  const abstract = article.abstract?.[language] || article.abstract?.spanish || 'No abstract available.';
+  // Determinar el área (manejar array correctamente)
+  const area = article.area && article.area.length > 0 
+    ? article.area[0] 
+    : 'General';
+  
+  // Título traducido (para mostrar principal)
+  const translatedTitle = article['name-translated']?.[language] 
+    || article['name-translated']?.spanish 
+    || '';
+  
+  // Título original (en latín u otro idioma original)
+  const originalTitle = article.name?.spanish || article.name?.english || '';
+  
+  // Título a mostrar (si hay traducción, muestra la traducción)
+  const displayTitle = translatedTitle || originalTitle || 'Untitled';
+  
+  // Abstract
+  const abstract = article.abstract?.[language] 
+    || article.abstract?.spanish 
+    || 'No abstract available.';
   
   // URL del HTML del artículo (con o sin .EN)
   const htmlFileName = `${article.id}.html`;
@@ -50,7 +67,7 @@ function CollectionArticleCard({ article, collectionFolder }) {
           <div className="flex-1">
             {/* Metadatos simples */}
             <div className="flex flex-wrap items-center gap-2 mb-1 text-[9px] font-bold uppercase tracking-widest text-gray-500">
-              <span>{article.area?.[0] || 'General'}</span>
+              <span>{area}</span>
               {article['original-date'] && <span>• {getYear(article['original-date'])}</span>}
             </div>
             {/* Título como enlace */}
@@ -63,8 +80,14 @@ function CollectionArticleCard({ article, collectionFolder }) {
             >
               <h3 className={`font-serif font-bold text-black leading-tight mb-2 transition-colors hover:text-[#007398]
                 ${isExpanded ? 'text-lg' : 'text-base line-clamp-2'}`}>
-                {title}
+                {displayTitle}
               </h3>
+              {/* Mostrar título original debajo cuando está expandido */}
+              {isExpanded && originalTitle && originalTitle !== displayTitle && (
+                <p className="text-xs text-gray-400 italic mt-1">
+                  {originalTitle}
+                </p>
+              )}
             </a>
             {/* Autor(es) */}
             {article.author && article.author.length > 0 && (

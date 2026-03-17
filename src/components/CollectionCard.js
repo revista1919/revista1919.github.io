@@ -17,12 +17,28 @@ function CollectionCard({ collection }) {
 
     const langMap = { spanish: 'Español', english: 'English' };
     const availableLangs = collection.languages.map(langCode => langMap[langCode] || langCode).join(' · ');
-
-    // Si la colección no está en el idioma actual, añadir una advertencia
-    if (!collection.languages.includes(language)) {
-      const warning = isSpanish ? ' (Solo disponible en otros idiomas)' : ' (Only available in other languages)';
-      return <span className="text-amber-600 font-bold">{availableLangs}{warning}</span>;
+    
+    // Verificar si la colección está disponible en el idioma actual
+    const isAvailableInCurrentLang = collection.languages.includes(language);
+    
+    // Verificar si la colección es monolingüe (solo un idioma)
+    const isMonolingual = collection.languages.length === 1;
+    
+    if (isMonolingual) {
+      const onlyLang = collection.languages[0];
+      // Si el idioma único NO es el actual, mostrar advertencia
+      if (!isAvailableInCurrentLang) {
+        const warning = isSpanish 
+          ? ` (Solo disponible en ${langMap[onlyLang] || onlyLang})` 
+          : ` (Only available in ${langMap[onlyLang] || onlyLang})`;
+        return <span className="text-amber-600 font-bold">{availableLangs}{warning}</span>;
+      }
+      // Si el idioma único SÍ es el actual, mostrar solo los idiomas sin advertencia
+      return <span>{availableLangs}</span>;
     }
+    
+    // Si es bilingüe (tiene ambos idiomas), mostrar solo los idiomas sin advertencia
+    // Independientemente del idioma actual
     return <span>{availableLangs}</span>;
   };
 
