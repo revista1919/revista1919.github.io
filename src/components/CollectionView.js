@@ -129,21 +129,7 @@ function CollectionView() {
         ))}
       </div>
 
-      {/* NOTA AL PIE - SIN COMPONENTES ADICIONALES */}
-      {collections.length > 0 && (
-        <motion.footer 
-          className="mt-16 text-center border-t border-gray-200 pt-8"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.8 + (collections.length * 0.05), duration: 0.5 }}
-        >
-          <p className="font-sans text-[11px] text-gray-400 uppercase tracking-widest">
-            {isSpanish 
-              ? "Todas las traducciones y ediciones críticas están bajo licencia académica." 
-              : "All translations and critical editions are under academic license."}
-          </p>
-        </motion.footer>
-      )}
+     
     </motion.div>
   );
 }
