@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useLanguage } from '../hooks/useLanguage';
 import { useParams, useSearchParams } from 'react-router-dom';
@@ -15,42 +15,32 @@ function SingleCollectionView() {
   const [filteredArticles, setFilteredArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchInput, setSearchInput] = useState('');
-  const [activeSearchTerm, setActiveSearchTerm] = useState('');
-  
-  const inputRef = useRef(null);
+  const [searchInput, setSearchInput] = useState(''); // Para el input controlado
+  const [searchTerm, setSearchTerm] = useState(''); // Para el término de búsqueda real
 
-  // URLs
-  const COLLECTION_META_URL = `/collections/metadata.json`;
-  const ARTICLES_URL = `/collections/${folderName}/metadata.json`;
+  // URL del metadata.json de esta colección
+  const METADATA_URL = `/collections/${folderName}/metadata.json`;
 
-  // Cargar metadata de la colección y los artículos
+  // Cargar metadata de la colección
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchCollectionData = async () => {
       setLoading(true);
       try {
-        // Cargar metadata de todas las colecciones para encontrar el título correcto
-        const collectionResponse = await fetch(COLLECTION_META_URL);
-        if (!collectionResponse.ok) {
-          throw new Error(`Error loading collections metadata: ${collectionResponse.status}`);
+        const response = await fetch(METADATA_URL);
+        if (!response.ok) {
+          throw new Error(`Error loading collection metadata: ${response.status}`);
         }
-        const collectionsData = await collectionResponse.json();
+        const data = await response.json();
+        setArticles(data);
+        setFilteredArticles(data);
         
-        // Buscar la colección que coincida con el folderName
-        const currentCollection = collectionsData.find(
-          col => col['carpet-name'] === folderName
-        );
-        setCollectionMeta(currentCollection || null);
-
-        // Cargar artículos de la colección
-        const articlesResponse = await fetch(ARTICLES_URL);
-        if (!articlesResponse.ok) {
-          throw new Error(`Error loading articles: ${articlesResponse.status}`);
+        // Cargar metadata de la colección para obtener el título real
+        // Asumiendo que hay un archivo collection.json en la carpeta
+        const collectionResponse = await fetch(`/collections/${folderName}/collection.json`);
+        if (collectionResponse.ok) {
+          const collectionData = await collectionResponse.json();
+          setCollectionMeta(collectionData);
         }
-        const articlesData = await articlesResponse.json();
-        setArticles(articlesData);
-        setFilteredArticles(articlesData);
-
       } catch (err) {
         console.error(err);
         setError(err.message);
@@ -60,7 +50,7 @@ function SingleCollectionView() {
     };
 
     if (folderName) {
-      fetchData();
+      fetchCollectionData();
     }
   }, [folderName]);
 
@@ -68,19 +58,14 @@ function SingleCollectionView() {
   useEffect(() => {
     const term = searchParams.get('collection_search') || '';
     setSearchInput(term);
-    setActiveSearchTerm(term);
+    setSearchTerm(term);
   }, [searchParams]);
 
-  // Filtrar artículos cuando cambia activeSearchTerm
+  // Filtrar artículos cuando cambia el searchTerm
   useEffect(() => {
-    if (!activeSearchTerm.trim()) {
-      setFilteredArticles(articles);
-      return;
-    }
-
-    const lowerTerm = activeSearchTerm.toLowerCase();
+    const lowerTerm = searchTerm.toLowerCase();
     const filtered = articles.filter((article) => {
-      const title = article.name?.[language] || article.name?.spanish || '';
+      const title = article.name?.[language] || article.title?.[language] || article.name?.spanish || article.title?.spanish || '';
       const abstract = article.abstract?.[language] || article.abstract?.spanish || '';
       const authors = article.author?.map(a => a.name).join(' ') || '';
       const keywords = article.keywords?.[language]?.join(' ') || '';
@@ -93,21 +78,21 @@ function SingleCollectionView() {
       );
     });
     setFilteredArticles(filtered);
-  }, [activeSearchTerm, articles, language]);
+  }, [searchTerm, articles, language]);
 
-  // Manejar la búsqueda con el botón
+  // Ejecutar búsqueda al hacer clic en el botón
   const handleSearch = () => {
-    setActiveSearchTerm(searchInput);
+    setSearchTerm(searchInput);
     const params = new URLSearchParams(searchParams);
     if (searchInput.trim()) {
-      params.set('collection_search', searchInput);
+      params.set('collection_search', searchInput.trim());
     } else {
       params.delete('collection_search');
     }
     setSearchParams(params);
   };
 
-  // Manejar tecla Enter
+  // Manejar tecla Enter en el input
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
       handleSearch();
@@ -116,18 +101,18 @@ function SingleCollectionView() {
 
   const clearSearch = () => {
     setSearchInput('');
-    setActiveSearchTerm('');
+    setSearchTerm('');
     const params = new URLSearchParams(searchParams);
     params.delete('collection_search');
     setSearchParams(params);
-    inputRef.current?.focus();
   };
 
-  // Obtener el título correcto de la colección
+  // Obtener el título real de la colección
   const getCollectionTitle = () => {
     if (collectionMeta?.title) {
       return collectionMeta.title[language] || collectionMeta.title.spanish || folderName?.replace(/-/g, ' ');
     }
+    // Intentar parsear el folderName como fallback
     return folderName?.replace(/-/g, ' ') || '';
   };
 
@@ -162,85 +147,74 @@ function SingleCollectionView() {
       <h1 className="text-3xl font-serif font-bold text-gray-900 mb-2">
         {getCollectionTitle()}
       </h1>
-      
       {collectionMeta?.description && (
-        <p className="text-gray-600 text-sm mb-4">
+        <p className="text-gray-600 font-serif mb-2">
           {collectionMeta.description[language] || collectionMeta.description.spanish}
         </p>
       )}
-      
       <p className="text-gray-500 text-sm mb-6 border-b pb-4">
         {isSpanish 
-          ? `${filteredArticles.length} artículos en esta colección` 
-          : `${filteredArticles.length} articles in this collection`}
-        {activeSearchTerm && (
-          <span className="ml-1 text-[#007398]">
-            {isSpanish ? `• buscando: "${activeSearchTerm}"` : `• searching: "${activeSearchTerm}"`}
-          </span>
-        )}
+          ? `${filteredArticles.length} artículo${filteredArticles.length !== 1 ? 's' : ''} en esta colección` 
+          : `${filteredArticles.length} article${filteredArticles.length !== 1 ? 's' : ''} in this collection`}
       </p>
 
-      {/* Buscador con botón */}
+      {/* Buscador con mejor UX */}
       <div className="mb-8">
         <div className="flex gap-2">
-          <div className="flex-1 relative">
-            <input
-              ref={inputRef}
-              type="text"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder={isSpanish ? "Buscar en esta colección..." : "Search in this collection..."}
-              className="w-full p-3 border border-gray-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-[#007398] font-serif pr-10"
-              aria-label={isSpanish ? "Término de búsqueda" : "Search term"}
-            />
-            {searchInput && (
-              <button
-                onClick={clearSearch}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                aria-label={isSpanish ? "Limpiar búsqueda" : "Clear search"}
-              >
-                ×
-              </button>
-            )}
-          </div>
-          
+          <input
+            type="text"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder={isSpanish ? "Buscar en esta colección..." : "Search in this collection..."}
+            className="flex-1 p-3 border border-gray-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-[#007398] font-serif"
+          />
           <button
             onClick={handleSearch}
-            className="px-6 py-3 bg-[#007398] text-white text-sm rounded-sm hover:bg-[#005d7a] transition-colors duration-200 font-medium"
+            className="px-6 py-2 bg-[#007398] text-white text-sm rounded-sm hover:bg-[#005d7a] transition-colors font-medium"
           >
             {isSpanish ? 'Buscar' : 'Search'}
           </button>
+          {searchTerm && (
+            <button
+              onClick={clearSearch}
+              className="px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-sm hover:bg-gray-50"
+            >
+              {isSpanish ? 'Limpiar' : 'Clear'}
+            </button>
+          )}
         </div>
-        
-        {/* Sugerencia sutil */}
-        <p className="text-xs text-gray-400 mt-1 ml-1">
-          {isSpanish ? 'Presiona Enter o haz clic en Buscar' : 'Press Enter or click Search'}
-        </p>
+        {searchTerm && (
+          <p className="text-sm text-gray-500 mt-2">
+            {isSpanish 
+              ? `Mostrando resultados para: "${searchTerm}"` 
+              : `Showing results for: "${searchTerm}"`}
+          </p>
+        )}
       </div>
 
       {/* Lista de Artículos */}
       <div className="space-y-4">
         {filteredArticles.length === 0 ? (
           <div className="bg-white border border-gray-200 p-12 text-center rounded-sm">
-            <p className="text-lg text-gray-600 font-serif italic mb-2">
+            <p className="text-lg text-gray-600 font-serif italic">
               {isSpanish 
-                ? 'No se encontraron artículos para esta búsqueda' 
+                ? 'No se encontraron artículos para esta búsqueda'
                 : 'No articles found for this search'}
             </p>
-            {activeSearchTerm && (
+            {searchTerm && (
               <button
                 onClick={clearSearch}
-                className="text-[#007398] hover:underline text-sm"
+                className="mt-4 text-[#007398] hover:underline text-sm"
               >
-                {isSpanish ? 'Limpiar búsqueda' : 'Clear search'}
+                {isSpanish ? 'Ver todos los artículos' : 'View all articles'}
               </button>
             )}
           </div>
         ) : (
           filteredArticles.map((article, index) => (
             <motion.div
-              key={article.id}
+              key={article.id || index}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05, duration: 0.3 }}
