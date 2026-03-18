@@ -30,14 +30,25 @@ function CollectionArticleCard({ article, collectionFolder }) {
   // Obtener el año (CORREGIDO)
   const year = getYear(article['original-date']);
   
-  // Título traducido (para mostrar principal)
-  const translatedTitle = article['name-translated']?.[language] || '';
-  
   // Título original (en latín u otro idioma original)
   const originalTitle = article.name?.spanish || article.name?.english || '';
-  
-  // Título a mostrar (priorizar traducción, luego original)
-  const displayTitle = translatedTitle || originalTitle || 'Untitled';
+  const languageMap = {
+  es: 'spanish',
+  en: 'english'
+};
+
+const normalizedLang = languageMap[language] || 'spanish';
+
+// Traducción (evitando string vacío)
+const translatedTitleRaw = article['name-translated']?.[normalizedLang];
+const translatedTitle = translatedTitleRaw && translatedTitleRaw.trim() !== ''
+  ? translatedTitleRaw
+  : null;
+
+
+// Final
+const displayTitle = translatedTitle || originalTitle || 'Untitled';
+
   
   // Abstract
   const abstract = article.abstract?.[language] 
