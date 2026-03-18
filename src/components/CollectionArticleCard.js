@@ -2,29 +2,19 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useLanguage } from '../hooks/useLanguage';
 
-// Helper para obtener el año - VERSIÓN CORREGIDA
-const getYear = (date) => {
-  if (!date) return 'Desconocido';
+// Helper para obtener el año (CORREGIDO para formato DD-MM-YYYY)
+const getYear = (dateString) => {
+  if (!dateString) return null;
   
-  // Intentar parsear la fecha correctamente
-  let parsedDate;
-  
-  // Si viene en formato DD-MM-YYYY (como en tu JSON)
-  if (typeof date === 'string' && date.includes('-')) {
-    const parts = date.split('-');
-    if (parts.length === 3) {
-      // Asumiendo que viene como DD-MM-YYYY
-      const day = parts[0];
-      const month = parts[1] - 1; // Los meses en JS son 0-indexados
-      const year = parts[2];
-      parsedDate = new Date(Date.UTC(year, month, day));
-    }
-  } else {
-    // Intentar con el formato estándar
-    parsedDate = new Date(date + 'T12:00:00Z');
+  // Parsear fecha en formato DD-MM-YYYY
+  const parts = dateString.split('-');
+  if (parts.length === 3) {
+    const [day, month, year] = parts;
+    // Crear fecha en formato YYYY-MM-DD para evitar problemas de zona horaria
+    const parsedDate = new Date(`${year}-${month}-${day}T12:00:00Z`);
+    return isNaN(parsedDate) ? null : parsedDate.getUTCFullYear();
   }
-  
-  return isNaN(parsedDate) ? 'Desconocido' : parsedDate.getUTCFullYear();
+  return null;
 };
 
 function CollectionArticleCard({ article, collectionFolder }) {
@@ -34,18 +24,19 @@ function CollectionArticleCard({ article, collectionFolder }) {
 
   // Determinar el área (manejar array correctamente)
   const area = article.area && article.area.length > 0 
-    ? article.area[0] 
+    ? article.area[0].charAt(0).toUpperCase() + article.area[0].slice(1) // Capitalizar
     : 'General';
   
+  // Obtener el año (CORREGIDO)
+  const year = getYear(article['original-date']);
+  
   // Título traducido (para mostrar principal)
-  const translatedTitle = article['name-translated']?.[language] 
-    || article['name-translated']?.spanish 
-    || '';
+  const translatedTitle = article['name-translated']?.[language] || '';
   
   // Título original (en latín u otro idioma original)
   const originalTitle = article.name?.spanish || article.name?.english || '';
   
-  // Título a mostrar (si hay traducción, muestra la traducción)
+  // Título a mostrar (priorizar traducción, luego original)
   const displayTitle = translatedTitle || originalTitle || 'Untitled';
   
   // Abstract
@@ -53,11 +44,12 @@ function CollectionArticleCard({ article, collectionFolder }) {
     || article.abstract?.spanish 
     || 'No abstract available.';
   
-  // URL del HTML del artículo (con o sin .EN)
-  const htmlFileName = `${article.id}.html`;
-  const htmlUrl = language === 'en' && article.language === 'english' 
-    ? `/collections/${collectionFolder}/articles/${article.id}.EN.html` 
-    : `/collections/${collectionFolder}/articles/${htmlFileName}`;
+  // URL del HTML del artículo (CORREGIDO)
+  // Si el idioma de la interfaz es inglés Y el artículo está en inglés, usar .EN.html
+  // En tu JSON, article.language es "spanish", así que nunca usará .EN.html, pero lo dejamos para futuro
+  const isOriginalEnglish = article.language === 'english';
+  const htmlFileName = `${article.id}${language === 'en' && isOriginalEnglish ? '.EN' : ''}.html`;
+  const htmlUrl = `/collections/${collectionFolder}/articles/${htmlFileName}`;
 
   // URL del PDF (si existe)
   const pdfUrl = article['pdf-url'] || null;
@@ -83,10 +75,10 @@ function CollectionArticleCard({ article, collectionFolder }) {
       <div className="p-4 md:p-5">
         <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-3">
           <div className="flex-1">
-            {/* Metadatos simples */}
+            {/* Metadatos simples - AHORA EL AÑO APARECE CORRECTAMENTE */}
             <div className="flex flex-wrap items-center gap-2 mb-1 text-[9px] font-bold uppercase tracking-widest text-gray-500">
               <span>{area}</span>
-              {article['original-date'] && <span>• {getYear(article['original-date'])}</span>}
+              {year && <span>• {year}</span>}
             </div>
             {/* Título como enlace */}
             <a
@@ -146,6 +138,12 @@ function CollectionArticleCard({ article, collectionFolder }) {
         {/* Contenido Expandible */}
         {isExpanded && (
           <div className="mt-4 pt-4 border-t border-gray-100">
+            {/* MOSTRAR IDIOMA ORIGINAL (campo "idioma" del JSON) */}
+            {article.idioma && (
+              <div className="mb-3 text-xs text-gray-500">
+                <span className="font-bold">{isSpanish ? 'Idioma original:' : 'Original language:'}</span> {article.idioma}
+              </div>
+            )}
             {/* Abstract completo */}
             <div className="mb-3">
               <h4 className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">
@@ -158,10 +156,10 @@ function CollectionArticleCard({ article, collectionFolder }) {
             {/* Editores/Colaboradores */}
             {(article.editor || article.colaboradores) && (
               <div className="mb-3 text-xs text-gray-500">
-                {article.editor && (
+                {article.editor && article.editor.length > 0 && (
                   <p><span className="font-bold">{isSpanish ? 'Editores:' : 'Editors:'}</span> {article.editor.map(e => e.name).join(', ')}</p>
                 )}
-                {article.colaboradores && (
+                {article.colaboradores && article.colaboradores.length > 0 && (
                   <p className="mt-1"><span className="font-bold">{isSpanish ? 'Colaboradores:' : 'Contributors:'}</span> {article.colaboradores.map(c => c.name).join(', ')}</p>
                 )}
               </div>
