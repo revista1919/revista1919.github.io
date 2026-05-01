@@ -1622,40 +1622,195 @@ exports.manageArticles = onRequest(
       }
 
       // ===== NUEVA ACCIÓN: PUBLISH (PUBLICAR ARTÍCULO - SIN DOI) =====
-      if (action === "publish") {
-        console.log(`[${requestId}] 🟢 ENTRÓ al bloque PUBLISH`);
+      // ===== ACCIÓN: PUBLISH (PUBLICAR ARTÍCULO - CREA SI NO EXISTE) =====
+if (action === "publish") {
+  console.log(`[${requestId}] 🟢 ENTRÓ al bloque PUBLISH`);
+  
+  let articleNumber;
+  let existingArticle = null;
+  
+  // Verificar si el artículo ya existe (si se proporcionó ID)
+  if (id) {
+    articleNumber = parseInt(id);
+    const index = updatedArticles.findIndex(a => String(a.numeroArticulo) === String(articleNumber));
+    if (index !== -1) {
+      existingArticle = updatedArticles[index];
+      console.log(`[${requestId}] 📝 Editando y publicando artículo existente #${articleNumber}`);
+    }
+  }
+  
+  // Si NO existe el artículo (nuevo) o no se proporcionó ID, CREAR uno nuevo
+  if (!existingArticle) {
+    console.log(`[${requestId}] 📝 Creando NUEVO artículo para publicación inmediata`);
+    
+    // Validar datos mínimos
+    if (!article?.titulo) {
+      return res.status(400).json({ error: "Datos de artículo incompletos - título requerido" });
+    }
+    
+    const authorsArray = processAuthors(article.autores);
+    articleNumber = await getNextArticleNumber(currentArticles);
+    
+    // Crear nuevo artículo
+    const newArticle = {
+      numeroArticulo: articleNumber,
+      titulo: article.titulo,
+      tituloEnglish: article.tituloEnglish || '',
+      autores: authorsArray,
+      resumen: article.resumen || '',
+      abstract: article.abstract || '',
+      palabras_clave: Array.isArray(article.palabras_clave) ? article.palabras_clave : 
+                      (article.palabras_clave ? article.palabras_clave.split(';').map(k => k.trim()) : []),
+      keywords_english: Array.isArray(article.keywords_english) ? article.keywords_english :
+                       (article.keywords_english ? article.keywords_english.split(';').map(k => k.trim()) : []),
+      area: article.area || '',
+      tipo: article.tipo || 'Artículo de Investigación',
+      type: article.type || 'Research Article',
+      fecha: article.fecha || new Date().toISOString().split('T')[0],
+      receivedDate: article.receivedDate || '',
+      acceptedDate: article.acceptedDate || '',
+      volumen: article.volumen || '',
+      numero: article.numero || '',
+      primeraPagina: article.primeraPagina || '',
+      ultimaPagina: article.ultimaPagina || '',
+      conflicts: article.conflicts || 'Los autores declaran no tener conflictos de interés.',
+      conflictsEnglish: article.conflictsEnglish || 'The authors declare no conflicts of interest.',
+      funding: article.funding || 'No declarada',
+      fundingEnglish: article.fundingEnglish || 'Not declared',
+      acknowledgments: article.acknowledgments || '',
+      acknowledgmentsEnglish: article.acknowledgmentsEnglish || '',
+      authorCredits: article.authorCredits || '',
+      authorCreditsEnglish: article.authorCreditsEnglish || '',
+      dataAvailability: article.dataAvailability || '',
+      dataAvailabilityEnglish: article.dataAvailabilityEnglish || '',
+      submissionId: article.submissionId || '',
+      html_es: article.html_es || '',
+      html_en: article.html_en || '',
+      referencias: article.referencias || '',
+      pdfUrl: "",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      createdBy: user.uid,
+      status: "published", // ← DIRECTAMENTE PUBLICADO
+      publishedAt: new Date().toISOString(), // ← FECHA DE PUBLICACIÓN
+      publishedBy: user.uid
+    };
+    
+    // Subir PDF si existe
+    if (pdfBase64) {
+      try {
+        const slug = generateSlug(article.titulo);
+        const fileName = `Article-${slug}-${articleNumber}.pdf`;
         
-        if (!id) {
-          return res.status(400).json({ error: "ID de artículo requerido" });
-        }
-
-        const articleNumber = parseInt(id);
-        const index = updatedArticles.findIndex(a => String(a.numeroArticulo) === String(articleNumber));
+        console.log(`[${requestId}] 📤 Subiendo PDF: ${fileName}`);
         
-        if (index === -1) {
-          return res.status(404).json({ error: "Artículo no encontrado" });
-        }
-
-        const articleToPublish = updatedArticles[index];
-        console.log(`[${requestId}] 📝 Publicando artículo #${articleNumber}: ${articleToPublish.titulo}`);
-
-        // SOLO actualizar estado - SIN DOI
-        articleToPublish.status = "published";
-        articleToPublish.publishedAt = new Date().toISOString();
-        articleToPublish.updatedAt = new Date().toISOString();
-        articleToPublish.updatedBy = user.uid;
-        articleToPublish.publishedBy = user.uid;
-
-        updatedArticles[index] = articleToPublish;
-        responseData = { 
-          success: true,
-          articleNumber: articleNumber,
-          message: "Artículo publicado exitosamente"
-          // SIN DOI
-        };
+        const pdfUrl = await uploadPDF(
+          pdfBase64,
+          fileName,
+          `Add PDF for article #${articleNumber}: ${article.titulo}`
+        );
         
-        console.log(`[${requestId}] 🟢 PUBLISH completado.`);
+        newArticle.pdfUrl = pdfUrl;
+        console.log(`[${requestId}] ✅ PDF subido: ${pdfUrl}`);
+      } catch (pdfError) {
+        console.error(`[${requestId}] ❌ Error subiendo PDF:`, pdfError.message);
       }
+    }
+    
+    updatedArticles.push(newArticle);
+    responseData = { 
+      success: true,
+      articleNumber: articleNumber,
+      message: "Artículo publicado exitosamente",
+      isNew: true
+    };
+    
+  } else {
+    // Artículo existente - actualizar y publicar
+    console.log(`[${requestId}] 📝 Actualizando y publicando artículo existente #${articleNumber}`);
+    
+    const index = updatedArticles.findIndex(a => String(a.numeroArticulo) === String(articleNumber));
+    const oldArticle = updatedArticles[index];
+    
+    let authorsArray;
+    if (article.autores) {
+      authorsArray = processAuthors(article.autores);
+    } else {
+      authorsArray = oldArticle.autores || [];
+    }
+    
+    const updatedArticle = {
+      ...oldArticle,
+      titulo: article.titulo || oldArticle.titulo,
+      tituloEnglish: article.tituloEnglish !== undefined ? article.tituloEnglish : oldArticle.tituloEnglish,
+      autores: authorsArray,
+      resumen: article.resumen !== undefined ? article.resumen : oldArticle.resumen,
+      abstract: article.abstract !== undefined ? article.abstract : oldArticle.abstract,
+      palabras_clave: article.palabras_clave ? 
+        (Array.isArray(article.palabras_clave) ? article.palabras_clave : article.palabras_clave.split(';').map(k => k.trim())) 
+        : oldArticle.palabras_clave,
+      keywords_english: article.keywords_english ?
+        (Array.isArray(article.keywords_english) ? article.keywords_english : article.keywords_english.split(';').map(k => k.trim()))
+        : oldArticle.keywords_english,
+      area: article.area || oldArticle.area,
+      tipo: article.tipo || oldArticle.tipo,
+      type: article.type || oldArticle.type,
+      fecha: article.fecha || oldArticle.fecha,
+      receivedDate: article.receivedDate !== undefined ? article.receivedDate : oldArticle.receivedDate,
+      acceptedDate: article.acceptedDate !== undefined ? article.acceptedDate : oldArticle.acceptedDate,
+      volumen: article.volumen || oldArticle.volumen,
+      numero: article.numero || oldArticle.numero,
+      primeraPagina: article.primeraPagina || oldArticle.primeraPagina,
+      ultimaPagina: article.ultimaPagina || oldArticle.ultimaPagina,
+      conflicts: article.conflicts !== undefined ? article.conflicts : oldArticle.conflicts,
+      conflictsEnglish: article.conflictsEnglish !== undefined ? article.conflictsEnglish : oldArticle.conflictsEnglish,
+      funding: article.funding !== undefined ? article.funding : oldArticle.funding,
+      fundingEnglish: article.fundingEnglish !== undefined ? article.fundingEnglish : oldArticle.fundingEnglish,
+      acknowledgments: article.acknowledgments !== undefined ? article.acknowledgments : oldArticle.acknowledgments,
+      acknowledgmentsEnglish: article.acknowledgmentsEnglish !== undefined ? article.acknowledgmentsEnglish : oldArticle.acknowledgmentsEnglish,
+      authorCredits: article.authorCredits !== undefined ? article.authorCredits : oldArticle.authorCredits,
+      authorCreditsEnglish: article.authorCreditsEnglish !== undefined ? article.authorCreditsEnglish : oldArticle.authorCreditsEnglish,
+      dataAvailability: article.dataAvailability !== undefined ? article.dataAvailability : oldArticle.dataAvailability,
+      dataAvailabilityEnglish: article.dataAvailabilityEnglish !== undefined ? article.dataAvailabilityEnglish : oldArticle.dataAvailabilityEnglish,
+      submissionId: article.submissionId !== undefined ? article.submissionId : oldArticle.submissionId,
+      html_es: article.html_es !== undefined ? article.html_es : oldArticle.html_es,
+      html_en: article.html_en !== undefined ? article.html_en : oldArticle.html_en,
+      referencias: article.referencias !== undefined ? article.referencias : oldArticle.referencias,
+      updatedAt: new Date().toISOString(),
+      updatedBy: user.uid,
+      status: "published", // ← FORZAR ESTADO PUBLICADO
+      publishedAt: oldArticle.publishedAt || new Date().toISOString(), // Mantener fecha original si existe
+      publishedBy: user.uid
+    };
+    
+    // Manejar PDF si se subió uno nuevo
+    if (pdfBase64) {
+      try {
+        if (oldArticle.pdfUrl) {
+          const oldFileName = oldArticle.pdfUrl.split('/').pop();
+          await deletePDF(oldFileName, `Delete old PDF for article #${articleNumber}`);
+        }
+        
+        const slug = generateSlug(updatedArticle.titulo);
+        const fileName = `Article-${slug}-${articleNumber}.pdf`;
+        const pdfUrl = await uploadPDF(pdfBase64, fileName, `Update PDF for article #${articleNumber}`);
+        updatedArticle.pdfUrl = pdfUrl;
+      } catch (pdfError) {
+        console.error(`[${requestId}] ❌ Error manejando PDF:`, pdfError.message);
+      }
+    }
+    
+    updatedArticles[index] = updatedArticle;
+    responseData = { 
+      success: true,
+      articleNumber: articleNumber,
+      message: "Artículo actualizado y publicado exitosamente",
+      isNew: false
+    };
+  }
+  
+  console.log(`[${requestId}] 🟢 PUBLISH completado. Artículo #${articleNumber} publicado.`);
+}
 
       // ===== NUEVA ACCIÓN: RETRACT (RETRACTAR ARTÍCULO - ELIMINA PERO GUARDA LOG) =====
       if (action === "retract") {
