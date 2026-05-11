@@ -5,11 +5,11 @@ const { onRequest, onCall, HttpsError } = require("firebase-functions/v2/https")
 const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { setGlobalOptions } = require("firebase-functions/v2"); // ← QUITAMOS onInit temporalmente
 const { onSchedule } = require("firebase-functions/v2/scheduler");
-// IMPORTANTE: Configuración global
 setGlobalOptions({
   region: "us-central1",
   maxInstances: 10,
-  timeoutSeconds: 120,
+  minInstances: 0,        // ← CERO instancias en idle
+  timeoutSeconds: 540,    // ← 9 minutos (máximo permitido)
   memory: "512MiB"
 });
 
@@ -3890,12 +3890,37 @@ exports.checkSubmissionStatus = onCall(async (request) => {
 
 
 exports.onReviewerInvitationCreated = onDocumentCreated(
-  {
+  { 
     document: 'reviewerInvitations/{invitationId}',
-    secrets: [], // Los emails se manejan con la extensión, no necesitan secret aquí
-    memory: '256MiB'
+    timeoutSeconds: 540,
+    retry: true
   },
   async (event) => {
+    // ===== MANEJO DE COLD START =====
+    const startTime = Date.now();
+    console.log(`🚀 Función iniciada (cold start: ${startTime})`);
+    
+    // Si no hay dependencias, cargarlas con timeout
+    if (!dependenciesReady) {
+      console.log("⏳ Cold start detectado, cargando dependencias...");
+      
+      // Usar Promise.race para timeout
+      const loadPromise = loadDependencies();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Timeout cargando dependencias")), 30000)
+      );
+      
+      try {
+        await Promise.race([loadPromise, timeoutPromise]);
+        console.log(`✅ Dependencias cargadas en ${Date.now() - startTime}ms`);
+      } catch (error) {
+        console.error("❌ Error en cold start:", error);
+        // NO lanzar error, intentar de nuevo (Cloud Functions reintentará)
+        throw new Error(`Cold start failed: ${error.message}`);
+      }
+    }
+    
+    // Continuar con la lógica normal...
     const invitation = event.data.data();
     const invitationId = event.params.invitationId;
 
@@ -3987,7 +4012,142 @@ exports.onReviewerInvitationCreated = onDocumentCreated(
     }
   }
 );
-
+/**
+ * Envía email al revisor con instrucciones después de aceptar
+ */
+async function sendReviewerAssignmentEmail(data) {
+  try {
+    const db = admin.firestore();
+    
+    // Obtener datos del submission para más contexto
+    const submissionDoc = await db.collection('submissions').doc(data.submissionId).get();
+    const submission = submissionDoc.data();
+    
+    const isSpanish = submission?.paperLanguage === 'es';
+    const lang = isSpanish ? 'es' : 'en';
+    
+    const emailTitle = isSpanish
+      ? '✅ Has aceptado la invitación - Instrucciones para tu revisión'
+      : '✅ You have accepted the invitation - Instructions for your review';
+    
+    const emailGreeting = isSpanish
+      ? `Estimado/a ${data.reviewerName || 'revisor/a'}:`
+      : `Dear ${data.reviewerName || 'reviewer'}:`;
+    
+    const dueDate = data.dueDate?.toDate?.() || new Date(Date.now() + 21 * 24 * 60 * 60 * 1000);
+    const formattedDate = dueDate.toLocaleDateString(isSpanish ? 'es-CL' : 'en-US');
+    
+    const bodyContent = isSpanish
+      ? `
+        <p>Gracias por aceptar la revisión del siguiente artículo:</p>
+        
+        <div class="highlight-box">
+          <p class="article-title">"${(data.submissionTitle || submission?.title || 'Artículo').substring(0, 100)}"</p>
+          <p><strong>ID del envío:</strong> ${data.submissionId}</p>
+          <p><strong>Área:</strong> ${submission?.area || 'No especificada'}</p>
+        </div>
+        
+        <h3>📁 Acceso al manuscrito</h3>
+        <p>Ya tienes acceso a la carpeta de Google Drive con el manuscrito y materiales complementarios:</p>
+        
+        <div class="button-container">
+          <a href="${data.driveFolderUrl}" class="btn">VER MANUSCRITO EN DRIVE</a>
+        </div>
+        
+        <h3>📝 Instrucciones para tu revisión</h3>
+        <ol>
+          <li>Revisa el manuscrito y los materiales complementarios en la carpeta de Drive.</li>
+          <li>Puedes dejar comentarios directamente en el documento o en la carpeta.</li>
+          <li>Completa tu informe de revisión en nuestro portal editorial.</li>
+          <li>Asegúrate de incluir:
+            <ul>
+              <li>Comentarios para el autor (visibles)</li>
+              <li>Comentarios confidenciales para el editor (opcionales)</li>
+              <li>Una recomendación clara (aceptar/revisión menor/revisión mayor/rechazar)</li>
+            </ul>
+          </li>
+        </ol>
+        
+        <div class="highlight-box" style="background-color: #fff3cd; border-left-color: #ffc107;">
+          <p><strong>📅 Fecha límite:</strong> ${formattedDate}</p>
+          <p>Por favor, completa tu revisión antes de esta fecha para no retrasar el proceso editorial.</p>
+        </div>
+        
+        <div class="button-container">
+          <a href="https://www.revistacienciasestudiantes.com/${lang}/reviewer-workspace/${data.assignmentId || 'pending'}" class="btn btn-secondary">ENVIAR REVISIÓN</a>
+        </div>
+        
+        <p class="info-text">
+          <strong>¿Problemas de acceso?</strong> Si no puedes acceder a la carpeta de Drive o al portal, 
+          contacta a <a href="mailto:contact@revistacienciasestudiantes.com">contact@revistacienciasestudiantes.com</a>
+        </p>
+      `
+      : `
+        <p>Thank you for accepting the review of the following article:</p>
+        
+        <div class="highlight-box">
+          <p class="article-title">"${(data.submissionTitle || submission?.title || 'Article').substring(0, 100)}"</p>
+          <p><strong>Submission ID:</strong> ${data.submissionId}</p>
+          <p><strong>Area:</strong> ${submission?.area || 'Not specified'}</p>
+        </div>
+        
+        <h3>📁 Access to manuscript</h3>
+        <p>You now have access to the Google Drive folder with the manuscript and supplementary materials:</p>
+        
+        <div class="button-container">
+          <a href="${data.driveFolderUrl}" class="btn">VIEW MANUSCRIPT ON DRIVE</a>
+        </div>
+        
+        <h3>📝 Instructions for your review</h3>
+        <ol>
+          <li>Review the manuscript and supplementary materials in the Drive folder.</li>
+          <li>You can leave comments directly on the document or in the folder.</li>
+          <li>Complete your review report on our editorial portal.</li>
+          <li>Make sure to include:
+            <ul>
+              <li>Comments to the author (visible)</li>
+              <li>Confidential comments to the editor (optional)</li>
+              <li>A clear recommendation (accept/minor revision/major revision/reject)</li>
+            </ul>
+          </li>
+        </ol>
+        
+        <div class="highlight-box" style="background-color: #fff3cd; border-left-color: #ffc107;">
+          <p><strong>📅 Deadline:</strong> ${formattedDate}</p>
+          <p>Please complete your review before this date to avoid delaying the editorial process.</p>
+        </div>
+        
+        <div class="button-container">
+          <a href="https://www.revistacienciasestudiantes.com/${lang}/reviewer-workspace/${data.assignmentId || 'pending'}" class="btn btn-secondary">SUBMIT REVIEW</a>
+        </div>
+        
+        <p class="info-text">
+          <strong>Access issues?</strong> If you cannot access the Drive folder or the portal, 
+          contact us at <a href="mailto:contact@revistacienciasestudiantes.com">contact@revistacienciasestudiantes.com</a>
+        </p>
+      `;
+    
+    const htmlBody = getEmailTemplate(
+      emailTitle,
+      emailGreeting,
+      bodyContent,
+      isSpanish ? 'Equipo Editorial' : 'Editorial Team',
+      isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
+      lang
+    );
+    
+    await sendEmailViaExtension(data.reviewerEmail, emailTitle, htmlBody);
+    console.log(`✅ Email de instrucciones enviado a ${data.reviewerEmail}`);
+    
+    return true;
+    
+  } catch (error) {
+    console.error(`❌ Error en sendReviewerAssignmentEmail:`, error.message);
+    // No relanzamos el error para no interrumpir el flujo principal
+    await logSystemError('sendReviewerAssignmentEmail', error, { reviewerEmail: data?.reviewerEmail });
+    return false;
+  }
+}
 /* ----------------------------------------------------------------------------
  * 4. TRIGGER: Cuando un revisor RESPONDE a una invitación (se actualiza)
  * ----------------------------------------------------------------------------
