@@ -3888,266 +3888,429 @@ exports.checkSubmissionStatus = onCall(async (request) => {
   }
 });
 
-
-exports.onReviewerInvitationCreated = onDocumentCreated(
+/**
+ * 🔒 Maneja la creación de invitaciones de revisor con protecciones contra saturación
+ * Reemplaza a onReviewerInvitationCreated con mejores prácticas de resiliencia
+ */
+exports.handleReviewerInvitationCreated = onDocumentCreated(
   { 
     document: 'reviewerInvitations/{invitationId}',
     timeoutSeconds: 540,
-    retry: true
+    memory: '512MB',
+    retry: true,
+    maxRetrySeconds: 1800  // 30 minutos máximo de reintentos
   },
   async (event) => {
-    // ===== MANEJO DE COLD START =====
-    const startTime = Date.now();
-    console.log(`🚀 Función iniciada (cold start: ${startTime})`);
+    const functionStartTime = Date.now();
+    const FUNCTION_TIMEOUT_MS = 500000; // ~8.3 min, menor que los 540s de timeout
     
-    // Si no hay dependencias, cargarlas con timeout
-    if (!dependenciesReady) {
-      console.log("⏳ Cold start detectado, cargando dependencias...");
-      
-      // Usar Promise.race para timeout
-      const loadPromise = loadDependencies();
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Timeout cargando dependencias")), 30000)
-      );
-      
-      try {
-        await Promise.race([loadPromise, timeoutPromise]);
-        console.log(`✅ Dependencias cargadas en ${Date.now() - startTime}ms`);
-      } catch (error) {
-        console.error("❌ Error en cold start:", error);
-        // NO lanzar error, intentar de nuevo (Cloud Functions reintentará)
-        throw new Error(`Cold start failed: ${error.message}`);
-      }
+    console.log('='.repeat(60));
+    console.log(`🚀 [handleReviewerInvitationCreated] INICIO - ${new Date().toISOString()}`);
+    
+    // ===== PROTECCIÓN 1: Validación temprana =====
+    if (!event?.data?.data) {
+      console.error('❌ Evento inválido o sin datos');
+      return;
     }
-    
-    // Continuar con la lógica normal...
+
     const invitation = event.data.data();
     const invitationId = event.params.invitationId;
 
-    console.log(`📧 [onReviewerInvitationCreated] Procesando nueva invitación: ${invitationId} para ${invitation.reviewerEmail}`);
+    if (!invitation?.reviewerEmail || !invitation?.submissionId) {
+      console.error('❌ Datos de invitación incompletos:', { invitationId, ...invitation });
+      return;
+    }
 
-    try {
-      const db = admin.firestore();
+    console.log(`📧 Procesando invitación ${invitationId} para ${invitation.reviewerEmail}`);
 
-      // Obtener detalles del submission
-      const submissionDoc = await db.collection('submissions').doc(invitation.submissionId).get();
-      if (!submissionDoc.exists) {
-        console.error(`❌ [onReviewerInvitationCreated] Submission no encontrado: ${invitation.submissionId}`);
+    // ===== PROTECCIÓN 2: Circuit Breaker simple =====
+    const circuitBreakerKey = `invitation_processing_${invitationId}`;
+    if (isCircuitBroken(circuitBreakerKey)) {
+      console.warn(`⚠️ Circuito abierto para ${invitationId}, esperando reset...`);
+      await delay(5000);
+      if (isCircuitBroken(circuitBreakerKey)) {
+        console.error('❌ Circuito sigue abierto, abortando');
         return;
       }
-      const submission = submissionDoc.data();
+    }
 
-      // Determinar idioma (usar el del artículo o 'es' por defecto)
-      const lang = submission.paperLanguage || 'es';
-      const isSpanish = lang === 'es';
+    // ===== PROTECCIÓN 3: Timeout global de función =====
+    const functionTimeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('TIMEOUT_GLOBAL')), FUNCTION_TIMEOUT_MS)
+    );
 
-      // Construir el enlace de respuesta
-      const baseUrl = 'https://www.revistacienciasestudiantes.com';
-      const inviteLink = `${baseUrl}/reviewer-response?hash=${invitation.inviteHash}&lang=${lang}`;
-
-      // --- Construir el cuerpo del email (usando tu función getEmailTemplate) ---
-      const emailTitle = isSpanish
-        ? '📋 Invitación a revisión por pares'
-        : '📋 Peer Review Invitation';
-
-      const emailGreeting = isSpanish
-        ? `Estimado/a ${invitation.reviewerName || 'colega'}:`
-        : `Dear ${invitation.reviewerName || 'colleague'}:`;
-
-      const articleInfo = `
-        <div class="highlight-box">
-          <p class="article-title">"${submission.title}"</p>
-          <p><strong>${isSpanish ? 'Área:' : 'Area:'}</strong> ${submission.area}</p>
-          <p><strong>${isSpanish ? 'Resumen:' : 'Abstract:'}</strong> ${submission.abstract.substring(0, 250)}${submission.abstract.length > 250 ? '...' : ''}</p>
-        </div>
-      `;
-
-      const emailBodyContent = isSpanish
-        ? `
-          <p>Has sido invitado/a a revisar el siguiente artículo para la Revista Nacional de las Ciencias para Estudiantes.</p>
-          ${articleInfo}
-          <p>Para aceptar o rechazar esta invitación, y declarar cualquier conflicto de interés, haz clic en el siguiente enlace:</p>
-          <div class="button-container">
-            <a href="${inviteLink}" class="btn">RESPONDER INVITACIÓN</a>
-          </div>
-          <p><strong>Plazo para responder:</strong> 7 días.</p>
-        `
-        : `
-          <p>You have been invited to review the following article for The National Review of Sciences for Students.</p>
-          ${articleInfo}
-          <p>To accept or decline this invitation, and to declare any conflict of interest, please click the link below:</p>
-          <div class="button-container">
-            <a href="${inviteLink}" class="btn">RESPOND TO INVITATION</a>
-          </div>
-          <p><strong>Response deadline:</strong> 7 days.</p>
-        `;
-
-      const htmlBody = getEmailTemplate(
-        emailTitle,
-        emailGreeting,
-        emailBodyContent,
-        isSpanish ? 'Equipo Editorial' : 'Editorial Team',
-        isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
-        lang
-      );
-
-      // Encolar el email
-      await sendEmailViaExtension(
-        invitation.reviewerEmail,
-        isSpanish ? 'Invitación a revisión por pares' : 'Peer Review Invitation',
-        htmlBody
-      );
-
-      console.log(`✅ [onReviewerInvitationCreated] Email encolado para: ${invitation.reviewerEmail}`);
-
-      // Marcar la invitación como enviada
-      await event.data.ref.update({
-        emailSentAt: admin.firestore.FieldValue.serverTimestamp(),
-        inviteLink: inviteLink
-      });
-
+    try {
+      await Promise.race([
+        processInvitationSafe(event, invitation, invitationId, functionStartTime),
+        functionTimeout
+      ]);
+      
+      console.log(`✅ Invitación ${invitationId} procesada en ${Date.now() - functionStartTime}ms`);
+      
     } catch (error) {
-      console.error(`❌ [onReviewerInvitationCreated] Error:`, error.message);
-      await logSystemError('onReviewerInvitationCreated', error, { invitationId, ...invitation });
+      console.error('='.repeat(40));
+      console.error(`❌ Error procesando invitación ${invitationId}:`, error.message);
+      console.error('Stack:', error.stack?.substring(0, 500));
+      
+      // Registrar error pero no relanzar si ya marcamos como error
+      if (error.message !== 'TIMEOUT_GLOBAL') {
+        try {
+          await Promise.race([
+            logSystemError('handleReviewerInvitationCreated', error, { 
+              invitationId, 
+              duration: Date.now() - functionStartTime 
+            }),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('log_timeout')), 10000))
+          ]);
+        } catch (logError) {
+          console.error('❌ No se pudo registrar el error:', logError.message);
+        }
+        
+        // Marcar invitación como fallida para diagnóstico
+        try {
+          await Promise.race([
+            event.data.ref.update({
+              processingError: error.message,
+              failedAt: admin.firestore.FieldValue.serverTimestamp()
+            }),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('update_timeout')), 5000))
+          ]);
+        } catch (updateError) {
+          console.error('❌ No se pudo marcar error en documento:', updateError.message);
+        }
+      }
+    } finally {
+      console.log(`🏁 [handleReviewerInvitationCreated] FIN - ${Date.now() - functionStartTime}ms`);
+      console.log('='.repeat(60));
     }
   }
 );
+
 /**
- * Envía email al revisor con instrucciones después de aceptar
+ * Procesa la invitación con múltiples capas de protección
  */
-async function sendReviewerAssignmentEmail(data) {
+async function processInvitationSafe(event, invitation, invitationId, startTime) {
+  const STAGE_TIMEOUT_MS = 120000; // 2 minutos por etapa
+  
+  // ===== ETAPA 1: Carga de dependencias con cold start handling =====
+  console.log('📦 ETAPA 1: Verificando dependencias...');
+  await executeWithTimeout(
+    async () => {
+      if (!admin?.firestore) {
+        console.log('⏳ Cold start detectado, inicializando Firebase...');
+        
+        // Intentar inicializar con múltiples reintentos
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          try {
+            await initializeFirebaseSafe();
+            console.log(`✅ Firebase inicializado (intento ${attempt})`);
+            break;
+          } catch (initError) {
+            console.warn(`⚠️ Intento ${attempt}/3 falló:`, initError.message);
+            if (attempt === 3) throw initError;
+            await delay(2000 * attempt); // Backoff progresivo
+          }
+        }
+      }
+    },
+    STAGE_TIMEOUT_MS,
+    'ETAPA_1_TIMEOUT'
+  );
+
+  // ===== ETAPA 2: Obtención de datos del submission =====
+  console.log('📚 ETAPA 2: Obteniendo datos del submission...');
+  const submission = await executeWithTimeout(
+    async () => {
+      const db = admin.firestore();
+      
+      // Verificar conexión
+      await db.collection('_health_check').doc('ping').get().catch(() => {
+        throw new Error('Firebase no responde');
+      });
+      
+      const submissionRef = db.collection('submissions').doc(invitation.submissionId);
+      const submissionDoc = await submissionRef.get();
+      
+      if (!submissionDoc.exists) {
+        throw new Error(`Submission no encontrado: ${invitation.submissionId}`);
+      }
+      
+      return submissionDoc.data();
+    },
+    STAGE_TIMEOUT_MS,
+    'ETAPA_2_TIMEOUT'
+  );
+
+  // ===== ETAPA 3: Verificar y limpiar duplicados =====
+  console.log('🔍 ETAPA 3: Verificando duplicados...');
+  await executeWithTimeout(
+    async () => {
+      const db = admin.firestore();
+      
+      // Verificar si ya existe un email enviado para este hash en los últimos 5 minutos
+      const recentInvitations = await db.collection('reviewerInvitations')
+        .where('inviteHash', '==', invitation.inviteHash)
+        .where('emailSentAt', '>=', new Date(Date.now() - 5 * 60 * 1000))
+        .limit(2)
+        .get();
+      
+      if (recentInvitations.size > 1) {
+        console.warn('⚠️ Posible duplicado detectado, verificando...');
+        
+        // Si otro documento YA tiene emailSentAt, este es duplicado
+        const duplicate = recentInvitations.docs.find(doc => 
+          doc.id !== invitationId && doc.data().emailSentAt
+        );
+        
+        if (duplicate) {
+          console.warn(`⚠️ Email ya enviado en documento ${duplicate.id}, marcando como duplicado`);
+          await event.data.ref.update({
+            isDuplicate: true,
+            duplicateOf: duplicate.id,
+            reason: 'Email ya enviado en otro documento con mismo hash'
+          });
+          throw new Error('DUPLICADO_DETECTADO');
+        }
+      }
+      
+      console.log('✅ No se detectaron duplicados activos');
+    },
+    60000,
+    'ETAPA_3_TIMEOUT'
+  );
+
+  // ===== ETAPA 4: Construcción del email =====
+  console.log('📝 ETAPA 4: Construyendo email...');
+  const emailData = await executeWithTimeout(
+    async () => {
+      const lang = (submission.paperLanguage === 'en') ? 'en' : 'es';
+      const isSpanish = lang === 'es';
+      
+      const baseUrl = 'https://www.revistacienciasestudiantes.com';
+      const inviteLink = `${baseUrl}/reviewer-response?hash=${encodeURIComponent(invitation.inviteHash)}&lang=${lang}`;
+      
+      // Construir contenido del email
+      const emailContent = buildInvitationEmail(invitation, submission, inviteLink, isSpanish);
+      
+      return {
+        to: invitation.reviewerEmail,
+        subject: isSpanish ? '📋 Invitación a revisión por pares' : '📋 Peer Review Invitation',
+        html: emailContent,
+        metadata: {
+          invitationId,
+          submissionId: invitation.submissionId,
+          hash: invitation.inviteHash,
+          lang
+        }
+      };
+    },
+    30000,
+    'ETAPA_4_TIMEOUT'
+  );
+
+  // ===== ETAPA 5: Envío del email con reintentos =====
+  console.log('📨 ETAPA 5: Enviando email...');
+  await executeWithTimeout(
+    async () => {
+      // Reintentar envío hasta 3 veces
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          await sendEmailViaExtension(emailData.to, emailData.subject, emailData.html);
+          console.log(`✅ Email enviado (intento ${attempt})`);
+          break;
+        } catch (sendError) {
+          console.error(`❌ Intento ${attempt}/3 falló:`, sendError.message);
+          if (attempt === 3) throw sendError;
+          await delay(3000 * attempt * 2); // Backoff más agresivo
+        }
+      }
+    },
+    120000,
+    'ETAPA_5_TIMEOUT'
+  );
+
+  // ===== ETAPA 6: Actualización final del documento =====
+  console.log('💾 ETAPA 6: Actualizando documento...');
+  await executeWithTimeout(
+    async () => {
+      const db = admin.firestore();
+      const batch = db.batch();
+      
+      // Actualizar la invitación actual
+      const invitationRef = db.collection('reviewerInvitations').doc(invitationId);
+      batch.update(invitationRef, {
+        emailSentAt: admin.firestore.FieldValue.serverTimestamp(),
+        inviteLink: `${baseUrl}/reviewer-response?hash=${encodeURIComponent(invitation.inviteHash)}&lang=${submission.paperLanguage || 'es'}`,
+        processingTime: Date.now() - startTime,
+        status: 'email_sent'
+      });
+      
+      // Actualizar el submission para tracking
+      const submissionRef = db.collection('submissions').doc(invitation.submissionId);
+      batch.update(submissionRef, {
+        [`reviewers.${invitationId}.invitationSentAt`]: admin.firestore.FieldValue.serverTimestamp()
+      });
+      
+      await batch.commit();
+      console.log('✅ Documentos actualizados exitosamente');
+    },
+    30000,
+    'ETAPA_6_TIMEOUT'
+  );
+
+  console.log(`✅ Procesamiento completo en ${Date.now() - startTime}ms`);
+}
+
+/**
+ * Ejecuta una función con timeout y manejo de errores
+ */
+async function executeWithTimeout(fn, timeoutMs, errorCode) {
+  let timeoutHandle;
+  
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutHandle = setTimeout(() => {
+      reject(new Error(`${errorCode}: Timeout después de ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+
   try {
-    const db = admin.firestore();
-    
-    // Obtener datos del submission para más contexto
-    const submissionDoc = await db.collection('submissions').doc(data.submissionId).get();
-    const submission = submissionDoc.data();
-    
-    const isSpanish = submission?.paperLanguage === 'es';
-    const lang = isSpanish ? 'es' : 'en';
-    
-    const emailTitle = isSpanish
-      ? '✅ Has aceptado la invitación - Instrucciones para tu revisión'
-      : '✅ You have accepted the invitation - Instructions for your review';
-    
-    const emailGreeting = isSpanish
-      ? `Estimado/a ${data.reviewerName || 'revisor/a'}:`
-      : `Dear ${data.reviewerName || 'reviewer'}:`;
-    
-    const dueDate = data.dueDate?.toDate?.() || new Date(Date.now() + 21 * 24 * 60 * 60 * 1000);
-    const formattedDate = dueDate.toLocaleDateString(isSpanish ? 'es-CL' : 'en-US');
-    
-    const bodyContent = isSpanish
-      ? `
-        <p>Gracias por aceptar la revisión del siguiente artículo:</p>
-        
-        <div class="highlight-box">
-          <p class="article-title">"${(data.submissionTitle || submission?.title || 'Artículo').substring(0, 100)}"</p>
-          <p><strong>ID del envío:</strong> ${data.submissionId}</p>
-          <p><strong>Área:</strong> ${submission?.area || 'No especificada'}</p>
-        </div>
-        
-        <h3>📁 Acceso al manuscrito</h3>
-        <p>Ya tienes acceso a la carpeta de Google Drive con el manuscrito y materiales complementarios:</p>
-        
-        <div class="button-container">
-          <a href="${data.driveFolderUrl}" class="btn">VER MANUSCRITO EN DRIVE</a>
-        </div>
-        
-        <h3>📝 Instrucciones para tu revisión</h3>
-        <ol>
-          <li>Revisa el manuscrito y los materiales complementarios en la carpeta de Drive.</li>
-          <li>Puedes dejar comentarios directamente en el documento o en la carpeta.</li>
-          <li>Completa tu informe de revisión en nuestro portal editorial.</li>
-          <li>Asegúrate de incluir:
-            <ul>
-              <li>Comentarios para el autor (visibles)</li>
-              <li>Comentarios confidenciales para el editor (opcionales)</li>
-              <li>Una recomendación clara (aceptar/revisión menor/revisión mayor/rechazar)</li>
-            </ul>
-          </li>
-        </ol>
-        
-        <div class="highlight-box" style="background-color: #fff3cd; border-left-color: #ffc107;">
-          <p><strong>📅 Fecha límite:</strong> ${formattedDate}</p>
-          <p>Por favor, completa tu revisión antes de esta fecha para no retrasar el proceso editorial.</p>
-        </div>
-        
-        <div class="button-container">
-          <a href="https://www.revistacienciasestudiantes.com/${lang}/reviewer-workspace/${data.assignmentId || 'pending'}" class="btn btn-secondary">ENVIAR REVISIÓN</a>
-        </div>
-        
-        <p class="info-text">
-          <strong>¿Problemas de acceso?</strong> Si no puedes acceder a la carpeta de Drive o al portal, 
-          contacta a <a href="mailto:contact@revistacienciasestudiantes.com">contact@revistacienciasestudiantes.com</a>
-        </p>
-      `
-      : `
-        <p>Thank you for accepting the review of the following article:</p>
-        
-        <div class="highlight-box">
-          <p class="article-title">"${(data.submissionTitle || submission?.title || 'Article').substring(0, 100)}"</p>
-          <p><strong>Submission ID:</strong> ${data.submissionId}</p>
-          <p><strong>Area:</strong> ${submission?.area || 'Not specified'}</p>
-        </div>
-        
-        <h3>📁 Access to manuscript</h3>
-        <p>You now have access to the Google Drive folder with the manuscript and supplementary materials:</p>
-        
-        <div class="button-container">
-          <a href="${data.driveFolderUrl}" class="btn">VIEW MANUSCRIPT ON DRIVE</a>
-        </div>
-        
-        <h3>📝 Instructions for your review</h3>
-        <ol>
-          <li>Review the manuscript and supplementary materials in the Drive folder.</li>
-          <li>You can leave comments directly on the document or in the folder.</li>
-          <li>Complete your review report on our editorial portal.</li>
-          <li>Make sure to include:
-            <ul>
-              <li>Comments to the author (visible)</li>
-              <li>Confidential comments to the editor (optional)</li>
-              <li>A clear recommendation (accept/minor revision/major revision/reject)</li>
-            </ul>
-          </li>
-        </ol>
-        
-        <div class="highlight-box" style="background-color: #fff3cd; border-left-color: #ffc107;">
-          <p><strong>📅 Deadline:</strong> ${formattedDate}</p>
-          <p>Please complete your review before this date to avoid delaying the editorial process.</p>
-        </div>
-        
-        <div class="button-container">
-          <a href="https://www.revistacienciasestudiantes.com/${lang}/reviewer-workspace/${data.assignmentId || 'pending'}" class="btn btn-secondary">SUBMIT REVIEW</a>
-        </div>
-        
-        <p class="info-text">
-          <strong>Access issues?</strong> If you cannot access the Drive folder or the portal, 
-          contact us at <a href="mailto:contact@revistacienciasestudiantes.com">contact@revistacienciasestudiantes.com</a>
-        </p>
-      `;
-    
-    const htmlBody = getEmailTemplate(
-      emailTitle,
-      emailGreeting,
-      bodyContent,
-      isSpanish ? 'Equipo Editorial' : 'Editorial Team',
-      isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
-      lang
-    );
-    
-    await sendEmailViaExtension(data.reviewerEmail, emailTitle, htmlBody);
-    console.log(`✅ Email de instrucciones enviado a ${data.reviewerEmail}`);
-    
-    return true;
-    
+    const result = await Promise.race([fn(), timeoutPromise]);
+    clearTimeout(timeoutHandle);
+    return result;
   } catch (error) {
-    console.error(`❌ Error en sendReviewerAssignmentEmail:`, error.message);
-    // No relanzamos el error para no interrumpir el flujo principal
-    await logSystemError('sendReviewerAssignmentEmail', error, { reviewerEmail: data?.reviewerEmail });
-    return false;
+    clearTimeout(timeoutHandle);
+    console.error(`⏰ Error en ${errorCode}:`, error.message);
+    throw error;
   }
 }
+
+/**
+ * Circuit Breaker simple para prevenir procesamiento repetido
+ */
+const circuitBreakerState = new Map();
+
+function isCircuitBroken(key) {
+  const state = circuitBreakerState.get(key);
+  if (!state) return false;
+  
+  if (state.failures >= 3 && Date.now() - state.lastFailure < 60000) {
+    return true; // Circuito abierto por 1 minuto
+  }
+  
+  return false;
+}
+
+function recordCircuitFailure(key) {
+  const state = circuitBreakerState.get(key) || { failures: 0, lastFailure: 0 };
+  state.failures++;
+  state.lastFailure = Date.now();
+  circuitBreakerState.set(key, state);
+}
+
+function resetCircuitBreaker(key) {
+  circuitBreakerState.delete(key);
+}
+
+/**
+ * Inicializa Firebase de forma segura con reintentos
+ */
+async function initializeFirebaseSafe() {
+  return new Promise((resolve, reject) => {
+    try {
+      // Verificar si ya está inicializado
+      if (admin.apps.length) {
+        resolve();
+        return;
+      }
+      
+      // Inicializar con configuración verificada
+      admin.initializeApp();
+      
+      // Verificar que funcione
+      const db = admin.firestore();
+      db.collection('_health_check').doc('ping').get()
+        .then(() => resolve())
+        .catch(error => {
+          console.error('Error verificando Firebase:', error);
+          reject(error);
+        });
+      
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+/**
+ * Delay asíncrono
+ */
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Construye el HTML del email de invitación
+ */
+function buildInvitationEmail(invitation, submission, inviteLink, isSpanish) {
+  const emailTitle = isSpanish
+    ? '📋 Invitación a revisión por pares'
+    : '📋 Peer Review Invitation';
+
+  const emailGreeting = isSpanish
+    ? `Estimado/a ${invitation.reviewerName || 'colega'}:`
+    : `Dear ${invitation.reviewerName || 'colleague'}:`;
+
+  const articleInfo = `
+    <div class="highlight-box">
+      <p class="article-title">"${escapeHtml(submission.title || 'Sin título')}"</p>
+      <p><strong>${isSpanish ? 'Área:' : 'Area:'}</strong> ${escapeHtml(submission.area || 'No especificada')}</p>
+      <p><strong>${isSpanish ? 'Resumen:' : 'Abstract:'}</strong> ${escapeHtml((submission.abstract || '').substring(0, 250))}${(submission.abstract || '').length > 250 ? '...' : ''}</p>
+    </div>
+  `;
+
+  const emailBodyContent = isSpanish
+    ? `
+      <p>Has sido invitado/a a revisar el siguiente artículo para la Revista Nacional de las Ciencias para Estudiantes.</p>
+      ${articleInfo}
+      <p>Para aceptar o rechazar esta invitación, y declarar cualquier conflicto de interés, haz clic en el siguiente enlace:</p>
+      <div class="button-container">
+        <a href="${inviteLink}" class="btn">RESPONDER INVITACIÓN</a>
+      </div>
+      <p><strong>Plazo para responder:</strong> 7 días.</p>
+    `
+    : `
+      <p>You have been invited to review the following article for The National Review of Sciences for Students.</p>
+      ${articleInfo}
+      <p>To accept or decline this invitation, and to declare any conflict of interest, please click the link below:</p>
+      <div class="button-container">
+        <a href="${inviteLink}" class="btn">RESPOND TO INVITATION</a>
+      </div>
+      <p><strong>Response deadline:</strong> 7 days.</p>
+    `;
+
+  return getEmailTemplate(
+    emailTitle,
+    emailGreeting,
+    emailBodyContent,
+    isSpanish ? 'Equipo Editorial' : 'Editorial Team',
+    isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
+    isSpanish ? 'es' : 'en'
+  );
+}
+
+/**
+ * Escapa HTML para prevenir XSS
+ */
+function escapeHtml(text) {
+  if (!text) return '';
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 /* ----------------------------------------------------------------------------
  * 4. TRIGGER: Cuando un revisor RESPONDE a una invitación (se actualiza)
  * ----------------------------------------------------------------------------
