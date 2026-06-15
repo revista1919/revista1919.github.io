@@ -38,7 +38,7 @@ export const useReviewerInvitation = () => { // <-- ELIMINADO: user como paráme
     reviewerEmail,
     reviewerName,
     reviewerUid = null,
-    expiresInDays = 7
+    expiresInDays = 16
   }) => {
     if (!user) {
       setError(isSpanish ? 'Usuario no autenticado' : 'User not authenticated');
