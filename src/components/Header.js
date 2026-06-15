@@ -1,9 +1,11 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import logo from '../../public/logo.png';
 import { useLanguage } from '../hooks/useLanguage';
 
 function Header({ onOpenMenu }) {
+  const navigate = useNavigate();
   const { switchLanguage, language } = useLanguage();
 
   const handleLanguageToggle = () => {
@@ -11,64 +13,90 @@ function Header({ onOpenMenu }) {
   };
 
   return (
-    <motion.header
-      initial={{ opacity: 0, y: -50 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: 'easeOut' }}
-      className="text-white p-3 sm:p-6 mb-4 sm:mb-6 relative"
-      style={{ backgroundColor: 'rgb(44, 17, 21)' }}
-    >
-      <div className="container mx-auto flex flex-col sm:flex-row items-center justify-between relative">
-        <button
-          onClick={onOpenMenu}
-          className="absolute top-1 left-1 sm:static flex items-center justify-center w-8 h-8 focus:outline-none sm:mr-4"
-          aria-label="Abrir menú"
-        >
-          <div className="space-y-1">
-            <div className="w-5 h-0.5 bg-white rounded"></div>
-            <div className="w-5 h-0.5 bg-white rounded"></div>
-            <div className="w-5 h-0.5 bg-white rounded"></div>
-          </div>
-        </button>
-        <div className="flex flex-col items-center sm:flex-row sm:items-center mt-10 sm:mt-0">
-          <motion.img
-            src={logo}
-            alt="Revista Logo"
-            className="h-20 sm:h-24 lg:h-32 mb-2 sm:mb-0 sm:mr-5"
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.6, ease: 'easeOut' }}
-          />
-          <motion.h1
-            className="text-2xl sm:text-3xl lg:text-4xl font-bold italic font-serif text-center sm:text-left"
-            initial={{ x: -20, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ delay: 0.2, duration: 0.5, ease: 'easeOut' }}
-          >
-            Revista Nacional de las Ciencias para Estudiantes
-          </motion.h1>
-        </div>
-        <button
-          onClick={handleLanguageToggle}
-          className="absolute top-1 right-1 sm:static px-2 py-1 rounded-full text-xs font-medium transition-all duration-200 hover:bg-white hover:bg-opacity-10 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-20 z-10"
-          style={{ 
-            backgroundColor: 'rgba(255, 255, 255, 0.05)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+    <div className="relative bg-white">
+      {/* Fondos animados decorativos */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
+        <motion.div
+          animate={{ 
+            scale: [1, 1.2, 1],
+            opacity: [0.1, 0.2, 0.1] 
           }}
-          title={`Cambiar a ${language === 'es' ? 'Inglés' : 'Español'}`}
-        >
-          {language === 'es' ? 'EN' : 'ES'}
-        </button>
+          transition={{ duration: 8, repeat: Infinity }}
+          className="absolute -top-20 -right-20 w-64 h-64 sm:w-96 sm:h-96 bg-blue-200 rounded-full blur-3xl"
+        />
+        <motion.div
+          animate={{ 
+            scale: [1, 1.3, 1],
+            opacity: [0.05, 0.15, 0.05] 
+          }}
+          transition={{ duration: 10, repeat: Infinity, delay: 1 }}
+          className="absolute top-1/4 -left-20 w-72 h-72 bg-gray-200 rounded-full blur-3xl"
+        />
       </div>
-      <motion.p
-        className="text-cream-100 text-xs sm:text-sm italic font-serif text-center sm:absolute sm:bottom-2 sm:right-4 sm:text-right"
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.4, duration: 0.5, ease: 'easeOut' }}
-      >
-        Una revista por y para estudiantes
-      </motion.p>
-    </motion.header>
+
+      {/* Header principal */}
+      <div className="relative z-10 w-full px-4 pt-4 pb-2 sm:pt-6 sm:pb-4">
+        <div className="flex items-center justify-between relative">
+          {/* LADO IZQUIERDO - Botón menú */}
+          <div className="flex-1 flex justify-start">
+            <button
+              onClick={onOpenMenu}
+              className="group flex items-center gap-2 p-2 hover:bg-gray-50 rounded-lg transition-colors focus:outline-none"
+              aria-label="Abrir menú"
+            >
+              <div className="space-y-1.5">
+                <div className="w-5 h-0.5 bg-gray-900 rounded group-hover:w-6 transition-all"></div>
+                <div className="w-6 h-0.5 bg-gray-900 rounded"></div>
+                <div className="w-4 h-0.5 bg-gray-900 rounded group-hover:w-6 transition-all"></div>
+              </div>
+              <span className="hidden sm:block text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                Menú
+              </span>
+            </button>
+          </div>
+
+          {/* CENTRO - Logo */}
+          <div className="flex-shrink-0 px-4">
+            <motion.div
+              onClick={() => navigate('/')}
+              className="cursor-pointer flex flex-col items-center"
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.6 }}
+              whileHover={{ scale: 1.02 }}
+            >
+              <img
+                src={logo}
+                alt="Revista Logo"
+                className="h-12 sm:h-16 w-auto object-contain drop-shadow-sm"
+              />
+              <div className="h-px w-8 bg-blue-200 mt-2 hidden sm:block"></div>
+            </motion.div>
+          </div>
+
+          {/* LADO DERECHO - Selector de idioma */}
+          <div className="flex-1 flex justify-end">
+            <motion.button
+              onClick={handleLanguageToggle}
+              whileTap={{ scale: 0.95 }}
+              className="relative flex items-center bg-gray-100/80 backdrop-blur-sm border border-gray-200 p-1 rounded-full w-20 h-9 overflow-hidden shadow-sm"
+              title={`Cambiar a ${language === 'es' ? 'Inglés' : 'Español'}`}
+            >
+              <motion.div
+                className="absolute top-1 bottom-1 w-[34px] bg-white rounded-full shadow-md z-0"
+                initial={false}
+                animate={{ x: language === 'es' ? 0 : 38 }}
+                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              />
+              <div className="relative z-10 flex w-full justify-around items-center text-[10px] font-bold tracking-tighter">
+                <span className={language === 'es' ? 'text-blue-600' : 'text-gray-400'}>ES</span>
+                <span className={language === 'en' ? 'text-blue-600' : 'text-gray-400'}>EN</span>
+              </div>
+            </motion.button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
