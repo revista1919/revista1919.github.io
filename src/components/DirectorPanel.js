@@ -1578,6 +1578,7 @@ const LoadingScreen = () => (
   </div>
 );
 
+
 const AccessDenied = () => (
   <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
     <div className="text-center p-8 lg:p-12 bg-white rounded-3xl shadow-xl border border-gray-100 max-w-sm">
