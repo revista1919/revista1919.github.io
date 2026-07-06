@@ -1240,7 +1240,14 @@ exports.manageArticles = onRequest(
       }
 
       const { action, article, pdfBase64, id, retractionReason } = req.body;
-      
+      // 👇 AÑADE ESTO PARA DEPURAR
+console.log(`[${requestId}] 📝 Datos del artículo recibidos:`, {
+  titulo: article?.titulo,
+  doi: article?.doi, // 👈 VERIFICA QUE LLEGA
+  tieneDOI: article?.doi !== undefined,
+  doiTipo: typeof article?.doi,
+  doiValor: JSON.stringify(article?.doi)
+});
       if (!action) {
         return res.status(400).json({ error: "Acción requerida (add/edit/delete/retract/publish)" });
       }
