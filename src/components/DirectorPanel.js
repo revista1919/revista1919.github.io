@@ -1370,6 +1370,11 @@ const ArticleList = ({ articles, expandedArticles, onToggleExpand, onEdit, onDel
                 <div className="mt-2 flex items-center space-x-2">
                   <span className="px-2.5 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">Vol. {article.volumen} N° {article.numero}</span>
                   <span className="px-2.5 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium hidden sm:inline-block">{article.area}</span>
+                  {article.doi && (
+                    <span className="px-2.5 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium hidden sm:inline-block">
+                      DOI: {article.doi.substring(0, 20)}...
+                    </span>
+                  )}
                   {article.status === 'published' && <span className="px-2.5 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Publicado</span>}
                 </div>
               </div>
@@ -1379,6 +1384,7 @@ const ArticleList = ({ articles, expandedArticles, onToggleExpand, onEdit, onDel
               {expandedArticles[article.numeroArticulo] && (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="px-4 lg:px-6 pb-6 bg-gray-50">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 text-sm">
+                    {/* COLUMNA IZQUIERDA */}
                     <div className="space-y-4">
                       <div><h4 className="font-semibold text-gray-900 mb-2">Resumen</h4><div className="text-gray-700 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: article.resumen || 'No disponible' }} /></div>
                       <div><h4 className="font-semibold text-gray-900 mb-2">Abstract</h4><div className="text-gray-700 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: article.abstract || 'No disponible' }} /></div>
@@ -1386,15 +1392,19 @@ const ArticleList = ({ articles, expandedArticles, onToggleExpand, onEdit, onDel
                       <div><h4 className="font-semibold text-gray-900 mb-2">Keywords</h4><p className="text-gray-700">{article.keywords_english?.join(', ') || 'No disponible'}</p></div>
                       {article.referencias && <div><h4 className="font-semibold text-gray-900 mb-2">Referencias</h4><div className="text-gray-700 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: article.referencias }} /></div>}
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-  <div><p className="text-gray-500 text-xs">Fecha de publicación</p><p className="font-medium">{formatDate(article.fecha)}</p></div>
-  <div><p className="text-gray-500 text-xs">Volumen/Número</p><p className="font-medium">{article.volumen}/{article.numero}</p></div>
-  <div><p className="text-gray-500 text-xs">Páginas</p><p className="font-medium">{article.primeraPagina}-{article.ultimaPagina}</p></div>
-  <div><p className="text-gray-500 text-xs">Área</p><p className="font-medium">{article.area}</p></div>
-  <div><p className="text-gray-500 text-xs">Tipo</p><p className="font-medium">{article.tipo}</p></div>
-  <div><p className="text-gray-500 text-xs">Type</p><p className="font-medium">{article.type || 'N/A'}</p></div>
-  {article.doi && <div className="col-span-2"><p className="text-gray-500 text-xs">DOI</p><p className="font-medium"><a href={`https://doi.org/${article.doi}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{article.doi}</a></p></div>} {/* <-- AÑADE ESTO */}
-</div>
+
+                    {/* COLUMNA DERECHA */}
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div><p className="text-gray-500 text-xs">Fecha de publicación</p><p className="font-medium">{formatDate(article.fecha)}</p></div>
+                        <div><p className="text-gray-500 text-xs">Volumen/Número</p><p className="font-medium">{article.volumen}/{article.numero}</p></div>
+                        <div><p className="text-gray-500 text-xs">Páginas</p><p className="font-medium">{article.primeraPagina}-{article.ultimaPagina}</p></div>
+                        <div><p className="text-gray-500 text-xs">Área</p><p className="font-medium">{article.area}</p></div>
+                        <div><p className="text-gray-500 text-xs">Tipo</p><p className="font-medium">{article.tipo}</p></div>
+                        <div><p className="text-gray-500 text-xs">Type</p><p className="font-medium">{article.type || 'N/A'}</p></div>
+                        {article.doi && <div className="col-span-2"><p className="text-gray-500 text-xs">DOI</p><p className="font-medium"><a href={`https://doi.org/${article.doi}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{article.doi}</a></p></div>}
+                      </div>
+
                       {article.autores && article.autores.length > 0 && (
                         <div>
                           <h4 className="font-semibold text-gray-900 mb-2">Detalle de Autores</h4>
@@ -1434,7 +1444,6 @@ const ArticleList = ({ articles, expandedArticles, onToggleExpand, onEdit, onDel
     )}
   </div>
 );
-
 const VolumeList = ({ volumes, expandedVolumes, onToggleExpand, onEdit, onDelete, formatDate }) => (
   <div className="divide-y divide-gray-200">
     {volumes.length === 0 ? (
