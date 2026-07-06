@@ -2043,6 +2043,7 @@ async function createImmutableArticleHistory(article, user, action, requestId) {
       finalMetadata: {
         title: article.titulo,
         titleEn: article.tituloEnglish || '',
+        doi: article.doi || '',
         authors: processedAuthors,
         abstract: article.resumen || '',
         abstractEn: article.abstract || '',
