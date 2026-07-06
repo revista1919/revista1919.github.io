@@ -76,6 +76,7 @@ const initialAuthorState = {
 // --- Estados Iniciales ---
 const initialArticleState = {
   numeroArticulo: null,
+  doi: '',
   titulo: '',
   tituloEnglish: '',
   autores: [],
@@ -473,6 +474,7 @@ export default function DirectorPanel({ user }) {
       const articleData = {
         titulo: articleForm.titulo,
         tituloEnglish: articleForm.tituloEnglish,
+        doi: articleForm.doi,
         autores: autoresParaBackend,
         resumen: articleForm.resumen,
         abstract: articleForm.abstract,
@@ -1023,7 +1025,7 @@ const ArticleForm = ({ formData, setFormData, isProcessing, isEditing, submissio
           <div className="space-y-4">
             <Input label="Título Original (ES) *" name="titulo" value={formData.titulo} onChange={handleChange} required />
             <Input label="Título (EN)" name="tituloEnglish" value={formData.tituloEnglish} onChange={handleChange} />
-
+             <Input label="DOI" name="doi" value={formData.doi} onChange={handleChange} placeholder="10.1234/revista.2024.001" />
             {/* AUTORES */}
             <div className="space-y-3">
               <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Autores *</label>
@@ -1384,15 +1386,15 @@ const ArticleList = ({ articles, expandedArticles, onToggleExpand, onEdit, onDel
                       <div><h4 className="font-semibold text-gray-900 mb-2">Keywords</h4><p className="text-gray-700">{article.keywords_english?.join(', ') || 'No disponible'}</p></div>
                       {article.referencias && <div><h4 className="font-semibold text-gray-900 mb-2">Referencias</h4><div className="text-gray-700 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: article.referencias }} /></div>}
                     </div>
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div><p className="text-gray-500 text-xs">Fecha de publicación</p><p className="font-medium">{formatDate(article.fecha)}</p></div>
-                        <div><p className="text-gray-500 text-xs">Volumen/Número</p><p className="font-medium">{article.volumen}/{article.numero}</p></div>
-                        <div><p className="text-gray-500 text-xs">Páginas</p><p className="font-medium">{article.primeraPagina}-{article.ultimaPagina}</p></div>
-                        <div><p className="text-gray-500 text-xs">Área</p><p className="font-medium">{article.area}</p></div>
-                        <div><p className="text-gray-500 text-xs">Tipo</p><p className="font-medium">{article.tipo}</p></div>
-                        <div><p className="text-gray-500 text-xs">Type</p><p className="font-medium">{article.type || 'N/A'}</p></div>
-                      </div>
+                    <div className="grid grid-cols-2 gap-4">
+  <div><p className="text-gray-500 text-xs">Fecha de publicación</p><p className="font-medium">{formatDate(article.fecha)}</p></div>
+  <div><p className="text-gray-500 text-xs">Volumen/Número</p><p className="font-medium">{article.volumen}/{article.numero}</p></div>
+  <div><p className="text-gray-500 text-xs">Páginas</p><p className="font-medium">{article.primeraPagina}-{article.ultimaPagina}</p></div>
+  <div><p className="text-gray-500 text-xs">Área</p><p className="font-medium">{article.area}</p></div>
+  <div><p className="text-gray-500 text-xs">Tipo</p><p className="font-medium">{article.tipo}</p></div>
+  <div><p className="text-gray-500 text-xs">Type</p><p className="font-medium">{article.type || 'N/A'}</p></div>
+  {article.doi && <div className="col-span-2"><p className="text-gray-500 text-xs">DOI</p><p className="font-medium"><a href={`https://doi.org/${article.doi}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{article.doi}</a></p></div>} {/* <-- AÑADE ESTO */}
+</div>
                       {article.autores && article.autores.length > 0 && (
                         <div>
                           <h4 className="font-semibold text-gray-900 mb-2">Detalle de Autores</h4>
