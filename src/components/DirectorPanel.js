@@ -1025,7 +1025,15 @@ const ArticleForm = ({ formData, setFormData, isProcessing, isEditing, submissio
           <div className="space-y-4">
             <Input label="Título Original (ES) *" name="titulo" value={formData.titulo} onChange={handleChange} required />
             <Input label="Título (EN)" name="tituloEnglish" value={formData.tituloEnglish} onChange={handleChange} />
-             <Input label="DOI" name="doi" value={formData.doi} onChange={handleChange} placeholder="10.1234/revista.2024.001" />
+            <Input label="Título Original (ES) *" name="titulo" value={formData.titulo} onChange={handleChange} required />
+<Input label="Título (EN)" name="tituloEnglish" value={formData.tituloEnglish} onChange={handleChange} />
+<Input 
+  label="DOI" 
+  name="doi" 
+  value={formData.doi} 
+  onChange={handleChange} 
+  placeholder="10.1234/revista.2024.001" 
+/>
             {/* AUTORES */}
             <div className="space-y-3">
               <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Autores *</label>
@@ -1372,7 +1380,7 @@ const ArticleList = ({ articles, expandedArticles, onToggleExpand, onEdit, onDel
                   <span className="px-2.5 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium hidden sm:inline-block">{article.area}</span>
                   {article.doi && (
                     <span className="px-2.5 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium hidden sm:inline-block">
-                      DOI: {article.doi.substring(0, 20)}...
+                      DOI: {article.doi?.substring(0, 20) || article.doi}...
                     </span>
                   )}
                   {article.status === 'published' && <span className="px-2.5 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Publicado</span>}
