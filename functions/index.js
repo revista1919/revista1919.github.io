@@ -1395,6 +1395,7 @@ exports.manageArticles = onRequest(
           numeroArticulo: articleNumber,
           titulo: article.titulo,
           tituloEnglish: article.tituloEnglish || '',
+          doi: article.doi || '',
           autores: authorsArray,
           resumen: article.resumen,
           abstract: article.abstract || '',
@@ -1506,6 +1507,7 @@ exports.manageArticles = onRequest(
           titulo: article.titulo || oldArticle.titulo,
           tituloEnglish: article.tituloEnglish !== undefined ? article.tituloEnglish : oldArticle.tituloEnglish,
           autores: authorsArray,
+          doi: article.doi !== undefined ? article.doi : oldArticle.doi,
           resumen: article.resumen !== undefined ? article.resumen : oldArticle.resumen,
           abstract: article.abstract !== undefined ? article.abstract : oldArticle.abstract,
           palabras_clave: article.palabras_clave ? 
@@ -1654,6 +1656,7 @@ if (action === "publish") {
     // Crear nuevo artículo
     const newArticle = {
       numeroArticulo: articleNumber,
+      doi: article.doi || '',
       titulo: article.titulo,
       tituloEnglish: article.tituloEnglish || '',
       autores: authorsArray,
@@ -1743,6 +1746,7 @@ if (action === "publish") {
       ...oldArticle,
       titulo: article.titulo || oldArticle.titulo,
       tituloEnglish: article.tituloEnglish !== undefined ? article.tituloEnglish : oldArticle.tituloEnglish,
+      doi: article.doi !== undefined ? article.doi : oldArticle.doi,
       autores: authorsArray,
       resumen: article.resumen !== undefined ? article.resumen : oldArticle.resumen,
       abstract: article.abstract !== undefined ? article.abstract : oldArticle.abstract,
