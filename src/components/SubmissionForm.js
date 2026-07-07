@@ -1048,7 +1048,37 @@ export default function SubmissionForm({ user, onSuccess }) {
       }
     }
   }, []);
-
+// ============ DEBUG: Mostrar estado del paso 3 ============
+useEffect(() => {
+  if (currentStep === 3) {
+    console.log('═══════════════════════════════════');
+    console.log('🔍 DIAGNÓSTICO PASO 3:');
+    console.log('───────────────────────────────────');
+    console.log('📋 Declaraciones:', allDeclarationsAccepted() ? '✅ TODAS' : '❌ FALTAN');
+    
+    // Mostrar qué declaraciones faltan
+    const faltantes = Object.entries(formData.declarations)
+      .filter(([, v]) => !v)
+      .map(([k]) => k);
+    if (faltantes.length > 0) {
+      console.log('   Faltan:', faltantes.join(', '));
+    }
+    
+    console.log('📄 Manuscrito:', formData.manuscriptName || '❌ NO SUBIDO');
+    console.log('💾 Datos:', formData.dataAvailability || '❌ NO SELECCIONADO');
+    console.log('🏥 Ética requerida:', formData.requiresEthicsApproval);
+    if (formData.requiresEthicsApproval === 'yes') {
+      console.log('   Comité:', formData.ethicsCommitteeName || '❌ VACÍO');
+    }
+    console.log('🤖 IA usada:', formData.aiUsed);
+    if (formData.aiUsed === 'yes') {
+      console.log('   Herramientas:', formData.aiTools);
+    }
+    console.log('───────────────────────────────────');
+    console.log('🎯 isStepValid(3):', isStepValid(3));
+    console.log('═══════════════════════════════════');
+  }
+}, [currentStep, formData, formData.declarations]);
   // Guardar borrador automáticamente
   useEffect(() => {
     const interval = setInterval(() => {
@@ -2133,15 +2163,109 @@ const prevStep = () => {
 
             {/* PASO 3: DATOS, IA Y DECLARACIONES */}
             {currentStep === 3 && (
-              <motion.div
-                key="step3"
-                initial={{ opacity: 0, x: 30 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -30 }}
-                className="space-y-14"
-              >
-                {/* Uso de IA */}
-                <div className="space-y-6">
+  <motion.div
+    key="step3"
+    initial={{ opacity: 0, x: 30 }}
+    animate={{ opacity: 1, x: 0 }}
+    exit={{ opacity: 0, x: -30 }}
+    className="space-y-14"
+  >
+    {/* ============ PANEL DE DIAGNÓSTICO - PEGAR AQUÍ ============ */}
+    <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-400 rounded-2xl p-6 shadow-lg">
+      <div className="flex items-center gap-3 mb-4">
+        <span className="text-2xl">🔍</span>
+        <h4 className="font-bold text-amber-900 text-lg font-serif">
+          {isSpanish ? 'Diagnóstico del formulario' : 'Form diagnosis'}
+        </h4>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {/* Declaraciones */}
+        <div className={`p-3 rounded-xl ${allDeclarationsAccepted() ? 'bg-green-100 border border-green-300' : 'bg-red-100 border-2 border-red-400'}`}>
+          <p className="text-sm font-bold">
+            {allDeclarationsAccepted() ? '✅' : '❌'} 
+            {isSpanish ? 'Declaraciones (8/8)' : 'Declarations (8/8)'}
+          </p>
+          {!allDeclarationsAccepted() && (
+            <p className="text-xs text-red-700 mt-1">
+              {isSpanish ? 'Marca TODOS los checkboxes' : 'Check ALL checkboxes'}
+            </p>
+          )}
+        </div>
+
+        {/* Manuscrito */}
+        <div className={`p-3 rounded-xl ${formData.manuscriptName ? 'bg-green-100 border border-green-300' : 'bg-red-100 border-2 border-red-400'}`}>
+          <p className="text-sm font-bold">
+            {formData.manuscriptName ? '✅' : '❌'} 
+            {isSpanish ? 'Manuscrito subido' : 'Manuscript uploaded'}
+          </p>
+          {!formData.manuscriptName && (
+            <p className="text-xs text-red-700 mt-1">
+              {isSpanish ? 'Sube un archivo .doc o .docx' : 'Upload a .doc or .docx file'}
+            </p>
+          )}
+        </div>
+
+        {/* Disponibilidad de datos */}
+        <div className={`p-3 rounded-xl ${formData.dataAvailability ? 'bg-green-100 border border-green-300' : 'bg-red-100 border-2 border-red-400'}`}>
+          <p className="text-sm font-bold">
+            {formData.dataAvailability ? '✅' : '❌'} 
+            {isSpanish ? 'Disponibilidad de datos' : 'Data availability'}
+          </p>
+          {!formData.dataAvailability && (
+            <p className="text-xs text-red-700 mt-1">
+              {isSpanish ? 'Selecciona una opción del menú desplegable' : 'Select an option from the dropdown'}
+            </p>
+          )}
+        </div>
+
+        {/* Ética */}
+        {formData.requiresEthicsApproval === 'yes' && (
+          <div className={`p-3 rounded-xl ${formData.ethicsCommitteeName.trim() ? 'bg-green-100 border border-green-300' : 'bg-red-100 border-2 border-red-400'}`}>
+            <p className="text-sm font-bold">
+              {formData.ethicsCommitteeName.trim() ? '✅' : '❌'} 
+              {isSpanish ? 'Comité de ética' : 'Ethics committee'}
+            </p>
+            {!formData.ethicsCommitteeName.trim() && (
+              <p className="text-xs text-red-700 mt-1">
+                {isSpanish ? 'Escribe el nombre del comité' : 'Write the committee name'}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* IA */}
+        {formData.aiUsed === 'yes' && (
+          <div className={`p-3 rounded-xl ${formData.aiTools.some(t => t.name.trim() && t.purpose.trim()) ? 'bg-green-100 border border-green-300' : 'bg-red-100 border-2 border-red-400'}`}>
+            <p className="text-sm font-bold">
+              {formData.aiTools.some(t => t.name.trim() && t.purpose.trim()) ? '✅' : '❌'} 
+              {isSpanish ? 'Herramientas IA' : 'AI Tools'}
+            </p>
+            {!formData.aiTools.some(t => t.name.trim() && t.purpose.trim()) && (
+              <p className="text-xs text-red-700 mt-1">
+                {isSpanish ? 'Agrega nombre y propósito de la herramienta' : 'Add tool name and purpose'}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Estado final */}
+      <div className={`mt-4 p-4 rounded-xl text-center font-bold text-lg ${
+        isStepValid(3) 
+          ? 'bg-green-500 text-white' 
+          : 'bg-red-500 text-white animate-pulse'
+      }`}>
+        {isStepValid(3) 
+          ? (isSpanish ? '✅ FORMULARIO LISTO PARA ENVIAR' : '✅ FORM READY TO SUBMIT')
+          : (isSpanish ? '❌ COMPLETA LOS CAMPOS MARCADOS EN ROJO' : '❌ COMPLETE FIELDS MARKED IN RED')
+        }
+      </div>
+    </div>
+    {/* ============ FIN PANEL DE DIAGNÓSTICO ============ */}
+
+    {/* Uso de IA */}
+    <div className="space-y-6">
                   <h3 className="font-serif text-2xl font-light text-[#0A1929] border-b border-[#E0E7E9] pb-4">
                     {isSpanish ? 'Uso de Inteligencia Artificial (IA)' : 'Use of Artificial Intelligence (AI)'}
                   </h3>
@@ -2423,10 +2547,29 @@ const prevStep = () => {
                 </button>
               ) : (
                 <button
-                  type="submit"
-                  disabled={uploading || !isStepValid(3)}
-                  className="px-12 py-4 bg-[#0A1929] text-white rounded-2xl text-sm font-bold hover:bg-[#B22234] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-3 shadow-xl font-serif"
-                >
+  type="submit"
+  disabled={uploading || !isStepValid(3)}
+  title={
+    !isStepValid(3) 
+      ? (isSpanish ? 'Completa todos los campos requeridos' : 'Complete all required fields')
+      : (isSpanish ? 'Haz clic para enviar tu artículo' : 'Click to submit your article')
+  }
+  onClick={(e) => {
+    if (!isStepValid(3)) {
+      e.preventDefault();
+      // Mostrar alerta detallada de qué falta
+      const problemas = [];
+      if (!allDeclarationsAccepted()) problemas.push(isSpanish ? 'Declaraciones incompletas' : 'Incomplete declarations');
+      if (!formData.manuscriptName) problemas.push(isSpanish ? 'Manuscrito no subido' : 'Manuscript not uploaded');
+      if (!formData.dataAvailability) problemas.push(isSpanish ? 'Disponibilidad de datos no seleccionada' : 'Data availability not selected');
+      if (formData.requiresEthicsApproval === 'yes' && !formData.ethicsCommitteeName.trim()) problemas.push(isSpanish ? 'Comité de ética no especificado' : 'Ethics committee not specified');
+      if (formData.aiUsed === 'yes' && !formData.aiTools.some(t => t.name.trim() && t.purpose.trim())) problemas.push(isSpanish ? 'Herramientas IA no especificadas' : 'AI tools not specified');
+      
+      alert((isSpanish ? '❌ Faltan campos por completar:\n\n' : '❌ Missing fields:\n\n') + problemas.map(p => `• ${p}`).join('\n'));
+    }
+  }}
+  className="px-12 py-4 bg-[#0A1929] text-white rounded-2xl text-sm font-bold hover:bg-[#B22234] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-3 shadow-xl font-serif"
+>
                   {uploading
                     ? (isSpanish ? 'Enviando...' : 'Submitting...')
                     : (isSpanish ? 'ENVIAR PARA REVISIÓN' : 'SUBMIT FOR REVIEW')}
