@@ -19,13 +19,32 @@ function GuidelinesSection() {
             transition={{ duration: 0.5 }}
             className="lg:col-span-1"
           >
-            <h2 className="text-3xl font-serif font-bold mb-8">Normas Editoriales</h2>
+            <h2 className="text-3xl font-serif font-bold mb-8">Guía para Autores</h2>
+            
+            {/* Aviso de Políticas */}
+            <div className="bg-[#001f3f] text-white p-6 rounded-lg mb-8">
+              <p className="text-sm font-serif italic leading-relaxed mb-4">
+                El envío de un manuscrito implica la aceptación íntegra de nuestras Políticas Editoriales. 
+                Le instamos a leerlas detenidamente antes de preparar su contribución. El incumplimiento 
+                de cualquiera de sus disposiciones podrá dar lugar a la desestimación del envío.
+              </p>
+              <a 
+                href="https://www.revistacienciasestudiantes.com/policies.html" 
+                className="inline-block bg-white text-[#001f3f] px-6 py-3 text-[10px] uppercase font-bold tracking-[0.2em] hover:bg-[#c0a86a] hover:text-white transition-colors"
+              >
+                Leer Políticas Editoriales Completas →
+              </a>
+            </div>
+
             <ul className="space-y-6">
               {[
-                { label: 'Extensión', val: '1.000–10.000 palabras' },
-                { label: 'Formato', val: 'Word (.docx) anónimo' },
-                { label: 'Citación', val: 'Estilo Chicago (Exclusivo)', link: 'https://www.chicagomanualofstyle.org' },
-                { label: 'Idiomas', val: 'Español e Inglés' }
+                { label: 'Extensión', val: '1.000–10.000 palabras (incluyendo referencias)' },
+                { label: 'Formato', val: 'Microsoft Word (.docx). Documento anonimizado para revisión doble ciego.' },
+                { label: 'Citación', val: 'Chicago 17.ª ed. (Autor-Fecha)', link: 'https://www.chicagomanualofstyle.org/tools_citationguide/citation-guide-2.html' },
+                { label: 'Idiomas', val: 'Español e Inglés (título, resumen y palabras clave en ambos)' },
+                { label: 'Palabras clave', val: '2–6, con vocabulario controlado (JEL, MeSH, ACM, UNESCO)', link: 'https://www.revistacienciasestudiantes.com/policies.html#clasificacion' },
+                { label: 'Originalidad', val: 'Similitud máxima permitida: 15%' },
+                { label: 'Ética', val: 'Aprobación de comité cuando corresponda; declaración en el manuscrito.' }
               ].map((item, i) => (
                 <li key={i} className="border-b border-gray-200 pb-2">
                   <span className="text-[10px] uppercase font-black text-gray-400 block tracking-widest">{item.label}</span>
@@ -39,12 +58,113 @@ function GuidelinesSection() {
                 </li>
               ))}
             </ul>
-            <a href="https://www.revistacienciasestudiantes.com/policies.html" className="mt-8 inline-block bg-black text-white px-6 py-3 text-[10px] uppercase font-bold tracking-[0.2em] hover:bg-[#007398] transition-colors">
-              Políticas Completas
-            </a>
           </motion.div>
-          {/* Videos y Recursos */}
+
+          {/* Videos, Recursos y Guía de Citación */}
           <div className="lg:col-span-2 space-y-12">
+            
+            {/* Guía de Citación Chicago (Autor-Fecha) */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <h3 className="text-xs uppercase tracking-[0.3em] font-black text-gray-400 mb-6 italic underline">
+                Estilo de Citación: Chicago 17.ª ed. (Autor-Fecha)
+              </h3>
+              <p className="text-sm text-gray-600 mb-6 font-serif leading-relaxed">
+                La Revista exige el uso del sistema <strong>autor-fecha</strong> del <em>Chicago Manual of Style</em>, 
+                17.ª edición. Las citas se insertan en el texto entre paréntesis (Autor Año, página) y la lista 
+                completa de referencias se incluye al final del manuscrito bajo el título «Referencias». 
+                A continuación se presentan ejemplos de los tipos documentales más frecuentes, basados 
+                directamente en la guía oficial. Para casos no contemplados, consulte el manual completo 
+                en <a href="https://www.chicagomanualofstyle.org/tools_citationguide/citation-guide-2.html" target="_blank" rel="noopener noreferrer" className="text-[#007398] underline">Chicago Manual of Style Online</a>.
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Libro */}
+                <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-100">
+                  <h4 className="text-xs font-black uppercase tracking-widest text-[#001f3f] mb-3">Libro</h4>
+                  <p className="text-[11px] text-gray-500 mb-2 font-mono uppercase">Referencia</p>
+                  <p className="text-sm text-gray-800 mb-3 font-serif leading-relaxed">
+                    Binder, Amy J., y Jeffrey L. Kidder. 2022. <em>The Channels of Student Activism: How the Left and Right Are Winning (and Losing) in Campus Politics Today</em>. University of Chicago Press.
+                  </p>
+                  <p className="text-[11px] text-gray-500 mb-2 font-mono uppercase">En el texto</p>
+                  <p className="text-sm text-gray-800 font-serif">(Binder y Kidder 2022, 117–18)</p>
+                </div>
+
+                {/* Capítulo de libro editado */}
+                <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-100">
+                  <h4 className="text-xs font-black uppercase tracking-widest text-[#001f3f] mb-3">Capítulo de libro editado</h4>
+                  <p className="text-[11px] text-gray-500 mb-2 font-mono uppercase">Referencia</p>
+                  <p className="text-sm text-gray-800 mb-3 font-serif leading-relaxed">
+                    Doyle, Kathleen. 2023. «The Queen Mary Psalter». En <em>The Book by Design: The Remarkable Story of the World's Greatest Invention</em>, editado por P. J. M. Marks y Stephen Parkin. University of Chicago Press.
+                  </p>
+                  <p className="text-[11px] text-gray-500 mb-2 font-mono uppercase">En el texto</p>
+                  <p className="text-sm text-gray-800 font-serif">(Doyle 2023, 64)</p>
+                </div>
+
+                {/* Artículo de revista */}
+                <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-100">
+                  <h4 className="text-xs font-black uppercase tracking-widest text-[#001f3f] mb-3">Artículo de revista</h4>
+                  <p className="text-[11px] text-gray-500 mb-2 font-mono uppercase">Referencia</p>
+                  <p className="text-sm text-gray-800 mb-3 font-serif leading-relaxed">
+                    Dittmar, Emily L., y Douglas W. Schemske. 2023. «Temporal Variation in Selection Influences Microgeographic Local Adaptation». <em>American Naturalist</em> 202 (4): 471–85. https://doi.org/10.1086/725865.
+                  </p>
+                  <p className="text-[11px] text-gray-500 mb-2 font-mono uppercase">En el texto</p>
+                  <p className="text-sm text-gray-800 font-serif">(Dittmar y Schemske 2023, 480)</p>
+                  <p className="text-[11px] text-gray-400 mt-2">Para 3 o más autores: (Snyder et al. 2025, 9–10)</p>
+                </div>
+
+                {/* Tesis o disertación */}
+                <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-100">
+                  <h4 className="text-xs font-black uppercase tracking-widest text-[#001f3f] mb-3">Tesis o disertación</h4>
+                  <p className="text-[11px] text-gray-500 mb-2 font-mono uppercase">Referencia</p>
+                  <p className="text-sm text-gray-800 mb-3 font-serif leading-relaxed">
+                    Blajer de la Garza, Yuna. 2019. «A House Is Not a Home: Citizenship and Belonging in Contemporary Democracies». PhD diss., University of Chicago. ProQuest (13865986).
+                  </p>
+                  <p className="text-[11px] text-gray-500 mb-2 font-mono uppercase">En el texto</p>
+                  <p className="text-sm text-gray-800 font-serif">(Blajer de la Garza 2019, 66–67)</p>
+                </div>
+
+                {/* Página web */}
+                <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-100">
+                  <h4 className="text-xs font-black uppercase tracking-widest text-[#001f3f] mb-3">Página web</h4>
+                  <p className="text-[11px] text-gray-500 mb-2 font-mono uppercase">Referencia</p>
+                  <p className="text-sm text-gray-800 mb-3 font-serif leading-relaxed">
+                    Google. 2023. «Privacy Policy». Privacy & Terms. Effective November 15. https://policies.google.com/privacy.
+                  </p>
+                  <p className="text-[11px] text-gray-500 mb-2 font-mono uppercase">En el texto</p>
+                  <p className="text-sm text-gray-800 font-serif">(Google 2023)</p>
+                  <p className="text-[11px] text-gray-400 mt-2">Sin fecha: (Yale University n.d.) y añadir fecha de acceso.</p>
+                </div>
+
+                {/* Noticia o revista */}
+                <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-100">
+                  <h4 className="text-xs font-black uppercase tracking-widest text-[#001f3f] mb-3">Artículo de prensa o revista</h4>
+                  <p className="text-[11px] text-gray-500 mb-2 font-mono uppercase">Referencia</p>
+                  <p className="text-sm text-gray-800 mb-3 font-serif leading-relaxed">
+                    Blum, Dani. 2023. «Are Flax Seeds All That?» <em>New York Times</em>, December 13. https://www.nytimes.com/2023/12/13/well/eat/flax-seeds-benefits.html.
+                  </p>
+                  <p className="text-[11px] text-gray-500 mb-2 font-mono uppercase">En el texto</p>
+                  <p className="text-sm text-gray-800 font-serif">(Blum 2023)</p>
+                </div>
+              </div>
+              
+              <div className="mt-6 p-4 bg-[#f0f4f8] rounded-lg border-l-4 border-[#001f3f]">
+                <p className="text-xs text-gray-600 font-serif leading-relaxed">
+                  <strong>Nota importante:</strong> El lugar de publicación ya no es obligatorio para libros 
+                  (CMOS 14.30). Para artículos con más de seis autores, liste los tres primeros seguidos de 
+                  «et al.» en la referencia. En el texto, use «et al.» desde tres autores. 
+                  Las comunicaciones personales (correos, mensajes) se citan solo en el texto y no se incluyen 
+                  en las referencias. Para cualquier otro tipo documental, remítase a las 
+                  <a href="https://www.revistacienciasestudiantes.com/policies.html" target="_blank" rel="noopener noreferrer" className="text-[#007398] underline"> Políticas Editoriales completas</a> y al 
+                  <a href="https://www.chicagomanualofstyle.org/tools_citationguide/citation-guide-2.html" target="_blank" rel="noopener noreferrer" className="text-[#007398] underline"> manual oficial de Chicago</a>.
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Talleres Audiovisuales */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -60,6 +180,7 @@ function GuidelinesSection() {
                 </div>
               </div>
             </motion.div>
+
             {/* Academic Tools Highlight */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -82,6 +203,7 @@ function GuidelinesSection() {
                 </a>
               </div>
             </motion.div>
+
             {/* Recursos Recomendados */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}

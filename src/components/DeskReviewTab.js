@@ -160,7 +160,16 @@ export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading
     };
     return translations[value] || value || '—';
   };
-
+// Función para traducir el nombre del vocabulario
+const translateVocabulary = (value) => {
+    const translations = {
+        JEL: 'JEL Classification System',
+        MeSH: 'Medical Subject Headings',
+        ACM: 'ACM Computing Classification',
+        UNESCO: 'UNESCO Thesaurus',
+    };
+    return translations[value] || value || '—';
+};
   // Función para traducir tipo de artículo
   const translateArticleType = (value) => {
     const translations = {
@@ -398,54 +407,89 @@ export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading
           )}
 
           {/* RESUMEN BILINGÜE */}
-          <InfoBlock 
-            icon="📝" 
-            title={isSpanish ? 'Resumen / Abstract' : 'Abstract / Resumen'}
-          >
-            <div className="space-y-4">
-              <div>
-                <span className="inline-block px-2 py-0.5 bg-[#E5E9F0] text-[#0A1929] text-[10px] font-mono rounded mb-2">ES</span>
-                <p className="text-[#0A1929] text-sm leading-relaxed whitespace-pre-wrap font-['Lora']">
-                  {submission.abstract || '—'}
-                </p>
-              </div>
-              <div className="border-t border-[#E5E9F0] pt-4">
-                <span className="inline-block px-2 py-0.5 bg-[#E5E9F0] text-[#0A1929] text-[10px] font-mono rounded mb-2">EN</span>
-                <p className="text-[#0A1929] text-sm leading-relaxed whitespace-pre-wrap font-['Lora']">
-                  {submission.abstractEn || submission.abstract || '—'}
-                </p>
-              </div>
+          {/* PALABRAS CLAVE CON VOCABULARIO CONTROLADO */}
+<InfoBlock 
+    icon="🏷️" 
+    title={isSpanish ? 'Palabras Clave / Keywords' : 'Keywords / Palabras Clave'}
+>
+    <div className="space-y-4">
+        {/* Badge del vocabulario */}
+        {submission.keywordsVocabulario && (
+            <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#0A1929] text-white rounded-full text-[10px] font-mono uppercase tracking-wider">
+                    📚 {submission.keywordsVocabulario}
+                </span>
+                <span className="text-[10px] font-mono text-[#5A6B7A] uppercase tracking-wider">
+                    {isSpanish ? 'Vocabulario controlado' : 'Controlled vocabulary'}
+                </span>
             </div>
-          </InfoBlock>
-
-          {/* PALABRAS CLAVE BILINGÜE */}
-          <InfoBlock 
-            icon="🏷️" 
-            title={isSpanish ? 'Palabras Clave / Keywords' : 'Keywords / Palabras Clave'}
-          >
-            <div className="space-y-3">
-              <div>
-                <span className="inline-block px-2 py-0.5 bg-[#E5E9F0] text-[#0A1929] text-[10px] font-mono rounded mb-2">ES</span>
+        )}
+        
+        {/* Versión en español */}
+        <div>
+            <span className="inline-block px-2 py-0.5 bg-[#E5E9F0] text-[#0A1929] text-[10px] font-mono rounded mb-2">
+                ES {submission.keywordsRaw?.length ? `(${submission.keywordsRaw.length})` : ''}
+            </span>
+            {submission.keywordsRaw && submission.keywordsRaw.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
-                  {submission.keywords?.map((keyword, index) => (
-                    <span key={index} className="px-3 py-1 bg-white border border-[#C0A86A] text-[#0A1929] rounded-full text-xs font-['Lora']">
-                      {keyword}
-                    </span>
-                  )) || <span className="text-[#5A6B7A] text-sm italic font-['Lora']">—</span>}
+                    {submission.keywordsRaw.map((kw, index) => (
+                        <span 
+                            key={index} 
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border-2 border-[#C0A86A] text-[#0A1929] rounded-2xl text-xs shadow-sm"
+                        >
+                            <code className="text-[10px] font-mono bg-[#F0F4F8] px-1.5 py-0.5 rounded text-[#C0A86A] font-bold">
+                                {kw.code}
+                            </code>
+                            <span className="font-['Lora'] text-sm">{kw.term}</span>
+                        </span>
+                    ))}
                 </div>
-              </div>
-              <div className="border-t border-[#E5E9F0] pt-3">
-                <span className="inline-block px-2 py-0.5 bg-[#E5E9F0] text-[#0A1929] text-[10px] font-mono rounded mb-2">EN</span>
+            ) : (
+                <p className="text-[#5A6B7A] text-sm italic font-['Lora']">
+                    {isSpanish ? 'No especificadas' : 'Not specified'}
+                </p>
+            )}
+        </div>
+        
+        {/* Versión en inglés */}
+        {submission.keywordsRawEn && submission.keywordsRawEn.length > 0 && (
+            <div className="border-t border-[#E5E9F0] pt-3">
+                <span className="inline-block px-2 py-0.5 bg-[#E5E9F0] text-[#0A1929] text-[10px] font-mono rounded mb-2">
+                    EN ({submission.keywordsRawEn.length})
+                </span>
                 <div className="flex flex-wrap gap-2">
-                  {(submission.keywordsEn?.length > 0 ? submission.keywordsEn : submission.keywords)?.map((keyword, index) => (
-                    <span key={index} className="px-3 py-1 bg-white border border-[#C0A86A] text-[#0A1929] rounded-full text-xs font-['Lora']">
-                      {keyword}
-                    </span>
-                  )) || <span className="text-[#5A6B7A] text-sm italic font-['Lora']">—</span>}
+                    {submission.keywordsRawEn.map((kw, index) => (
+                        <span 
+                            key={index} 
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border-2 border-[#C0A86A]/50 text-[#0A1929] rounded-2xl text-xs shadow-sm"
+                        >
+                            <code className="text-[10px] font-mono bg-[#F0F4F8] px-1.5 py-0.5 rounded text-[#C0A86A] font-bold">
+                                {kw.code}
+                            </code>
+                            <span className="font-['Lora'] text-sm">{kw.term}</span>
+                        </span>
+                    ))}
                 </div>
-              </div>
             </div>
-          </InfoBlock>
+        )}
+        
+        {/* Fallback: keywords antiguas en formato string */}
+        {(!submission.keywordsRaw || submission.keywordsRaw.length === 0) && submission.keywords && submission.keywords.length > 0 && (
+            <div>
+                <span className="inline-block px-2 py-0.5 bg-[#E5E9F0] text-[#0A1929] text-[10px] font-mono rounded mb-2">
+                    ES (formato libre)
+                </span>
+                <div className="flex flex-wrap gap-2">
+                    {submission.keywords.map((keyword, index) => (
+                        <span key={index} className="px-3 py-1 bg-white border border-[#E5E9F0] text-[#0A1929] rounded-full text-xs font-['Lora']">
+                            {keyword}
+                        </span>
+                    ))}
+                </div>
+            </div>
+        )}
+    </div>
+</InfoBlock>
         </div>
 
         {/* COLUMNA DERECHA */}

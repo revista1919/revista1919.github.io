@@ -339,7 +339,648 @@ const AREAS_TEMATICAS = {
     "Ingeniería de Alimentos"
   ]
 };
+// Configuración de vocabularios controlados por área
+const VOCABULARIO_POR_AREA = {
+  // Ciencias Exactas y Naturales → MeSH
+  "Matemáticas": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D009369: Neoplasms",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca tu término en MeSH y copia el código (ej. D009369) y el descriptor exacto."
+  },
+  "Física": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D010825: Physics",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+  },
+  "Química": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D002621: Chemistry",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+  },
+  "Biología": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D001777: Biology",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+  },
+  "Geología": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D005811: Geology",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+  },
+  "Astronomía y Astrofísica": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D001260: Astronomy",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+  },
+  "Ciencias Ambientales y Ecología": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D004463: Ecology",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+  },
+  "Oceanografía": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D009791: Oceanography",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+  },
+  "Meteorología y Ciencias Atmosféricas": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D008795: Meteorology",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+  },
+  "Paleontología": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D010163: Paleontology",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+  },
 
+  // Ciencias de la Salud → MeSH
+  "Medicina General e Interna": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D008112: Internal Medicine",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+  },
+  "Salud Pública y Epidemiología": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D011635: Public Health",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+  },
+  "Enfermería": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D009729: Nursing",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+  },
+  "Nutrición y Dietética": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D009750: Nutritional Sciences",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+  },
+  "Farmacología y Farmacia": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D010597: Pharmacology",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+  },
+  "Odontología": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D003813: Dentistry",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+  },
+  "Kinesiología y Fisioterapia": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D026801: Physical Therapy Specialty",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+  },
+  "Tecnología Médica y Bioanálisis": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D008364: Medical Laboratory Science",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+  },
+  "Veterinaria": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D014730: Veterinary Medicine",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+  },
+
+  // Ingeniería y Tecnología → ACM
+  "Ingeniería Civil": {
+    vocabulario: "ACM",
+    nombre: "ACM Computing Classification System",
+    formato: "Código ACM: Término",
+    ejemplo: "CCS2012.10002944: Computing in civil engineering",
+    searchUrl: "https://dl.acm.org/ccs",
+    instrucciones: "Navega por la clasificación ACM y copia el código y descriptor más cercano a tu tema."
+  },
+  "Ingeniería Industrial y de Sistemas": {
+    vocabulario: "ACM",
+    nombre: "ACM Computing Classification System",
+    formato: "Código ACM: Término",
+    ejemplo: "CCS2012.10010405: Systems engineering",
+    searchUrl: "https://dl.acm.org/ccs",
+    instrucciones: "Navega por la clasificación ACM y copia el código y descriptor más cercano."
+  },
+  "Ingeniería Mecánica": {
+    vocabulario: "ACM",
+    nombre: "ACM Computing Classification System",
+    formato: "Código ACM: Término",
+    ejemplo: "CCS2012.10010405: Computer-aided engineering",
+    searchUrl: "https://dl.acm.org/ccs",
+    instrucciones: "Navega por la clasificación ACM y copia el código y descriptor más cercano."
+  },
+  "Ingeniería Eléctrica y Electrónica": {
+    vocabulario: "ACM",
+    nombre: "ACM Computing Classification System",
+    formato: "Código ACM: Término",
+    ejemplo: "CCS2012.10002726: Embedded systems",
+    searchUrl: "https://dl.acm.org/ccs",
+    instrucciones: "Navega por la clasificación ACM y copia el código y descriptor más cercano."
+  },
+  "Ingeniería Química y Biotecnología": {
+    vocabulario: "ACM",
+    nombre: "ACM Computing Classification System",
+    formato: "Código ACM: Término",
+    ejemplo: "CCS2012.10003041: Computational biology",
+    searchUrl: "https://dl.acm.org/ccs",
+    instrucciones: "Navega por la clasificación ACM y copia el código y descriptor más cercano."
+  },
+  "Ingeniería en Computación e Informática": {
+    vocabulario: "ACM",
+    nombre: "ACM Computing Classification System",
+    formato: "Código ACM: Término",
+    ejemplo: "CCS2012.10003116: Software engineering",
+    searchUrl: "https://dl.acm.org/ccs",
+    instrucciones: "Navega por la clasificación ACM y copia el código y descriptor más cercano."
+  },
+  "Ciencia de Datos e Inteligencia Artificial": {
+    vocabulario: "ACM",
+    nombre: "ACM Computing Classification System",
+    formato: "Código ACM: Término",
+    ejemplo: "CCS2012.10010179: Machine learning",
+    searchUrl: "https://dl.acm.org/ccs",
+    instrucciones: "Navega por la clasificación ACM y copia el código y descriptor más cercano."
+  },
+  "Robótica y Automatización": {
+    vocabulario: "ACM",
+    nombre: "ACM Computing Classification System",
+    formato: "Código ACM: Término",
+    ejemplo: "CCS2012.10010187: Robotics",
+    searchUrl: "https://dl.acm.org/ccs",
+    instrucciones: "Navega por la clasificación ACM y copia el código y descriptor más cercano."
+  },
+  "Ingeniería de Materiales y Nanotecnología": {
+    vocabulario: "ACM",
+    nombre: "ACM Computing Classification System",
+    formato: "Código ACM: Término",
+    ejemplo: "CCS2012.10003128: Nanotechnology",
+    searchUrl: "https://dl.acm.org/ccs",
+    instrucciones: "Navega por la clasificación ACM y copia el código y descriptor más cercano."
+  },
+  "Ingeniería Aeroespacial": {
+    vocabulario: "ACM",
+    nombre: "ACM Computing Classification System",
+    formato: "Código ACM: Término",
+    ejemplo: "CCS2012.10010535: Avionics",
+    searchUrl: "https://dl.acm.org/ccs",
+    instrucciones: "Navega por la clasificación ACM y copia el código y descriptor más cercano."
+  },
+  "Energías Renovables y Sostenibilidad": {
+    vocabulario: "ACM",
+    nombre: "ACM Computing Classification System",
+    formato: "Código ACM: Término",
+    ejemplo: "CCS2012.10003048: Green computing",
+    searchUrl: "https://dl.acm.org/ccs",
+    instrucciones: "Navega por la clasificación ACM y copia el código y descriptor más cercano."
+  },
+
+  // Ciencias Sociales → JEL
+  "Sociología": {
+    vocabulario: "JEL",
+    nombre: "JEL Classification System (Journal of Economic Literature)",
+    formato: "Código JEL: Término",
+    ejemplo: "Z13: Economic Sociology",
+    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
+    instrucciones: "Busca el código JEL que mejor describa tu tema. Ej: Z13 para sociología económica, I31 para bienestar general."
+  },
+  "Antropología y Arqueología": {
+    vocabulario: "JEL",
+    nombre: "JEL Classification System",
+    formato: "Código JEL: Término",
+    ejemplo: "Z19: Other Cultural Economics",
+    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
+    instrucciones: "Busca el código JEL más cercano a tu tema de antropología económica o cultural."
+  },
+  "Psicología": {
+    vocabulario: "JEL",
+    nombre: "JEL Classification System",
+    formato: "Código JEL: Término",
+    ejemplo: "D91: Micro-Based Behavioral Economics",
+    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
+    instrucciones: "Busca el código JEL más cercano. Usa D (Microeconomía) o I (Salud) para psicología."
+  },
+  "Economía y Negocios": {
+    vocabulario: "JEL",
+    nombre: "JEL Classification System",
+    formato: "Código JEL: Término",
+    ejemplo: "D00: General Economics",
+    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
+    instrucciones: "Selecciona los códigos JEL que mejor describan tu investigación económica."
+  },
+  "Ciencias Políticas y Relaciones Internacionales": {
+    vocabulario: "JEL",
+    nombre: "JEL Classification System",
+    formato: "Código JEL: Término",
+    ejemplo: "F50: International Relations",
+    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
+    instrucciones: "Busca códigos JEL en categorías F (Economía Internacional) o H (Economía Pública)."
+  },
+  "Derecho": {
+    vocabulario: "JEL",
+    nombre: "JEL Classification System",
+    formato: "Código JEL: Término",
+    ejemplo: "K00: Law and Economics",
+    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
+    instrucciones: "Usa la categoría K (Law and Economics) del sistema JEL."
+  },
+  "Geografía Humana y Ordenamiento Territorial": {
+    vocabulario: "JEL",
+    nombre: "JEL Classification System",
+    formato: "Código JEL: Término",
+    ejemplo: "R10: General Regional Economics",
+    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
+    instrucciones: "Usa categorías R (Economía Regional) o Q (Economía de Recursos)."
+  },
+  "Estudios de Género": {
+    vocabulario: "JEL",
+    nombre: "JEL Classification System",
+    formato: "Código JEL: Término",
+    ejemplo: "J16: Economics of Gender",
+    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
+    instrucciones: "Busca en categorías J (Economía Laboral) para estudios de género."
+  },
+  "Comunicación Social y Periodismo": {
+    vocabulario: "JEL",
+    nombre: "JEL Classification System",
+    formato: "Código JEL: Término",
+    ejemplo: "L82: Entertainment; Media",
+    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
+    instrucciones: "Busca en categoría L (Organización Industrial) para medios y comunicación."
+  },
+  "Educación y Pedagogía": {
+    vocabulario: "JEL",
+    nombre: "JEL Classification System",
+    formato: "Código JEL: Término",
+    ejemplo: "I20: Education and Research Institutions",
+    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
+    instrucciones: "Usa categoría I (Salud, Educación y Bienestar) del sistema JEL."
+  },
+  "Trabajo Social": {
+    vocabulario: "JEL",
+    nombre: "JEL Classification System",
+    formato: "Código JEL: Término",
+    ejemplo: "I38: Welfare, Well-Being, and Poverty",
+    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
+    instrucciones: "Busca en categorías I (Bienestar) o J (Economía Laboral)."
+  },
+
+  // Humanidades → UNESCO Thesaurus
+  "Historia": {
+    vocabulario: "UNESCO",
+    nombre: "UNESCO Thesaurus",
+    formato: "Código UNESCO: Término",
+    ejemplo: "6.25: Historia",
+    searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
+    instrucciones: "Navega por el tesauro de la UNESCO y copia el código numérico y el descriptor."
+  },
+  "Filosofía": {
+    vocabulario: "UNESCO",
+    nombre: "UNESCO Thesaurus",
+    formato: "Código UNESCO: Término",
+    ejemplo: "6.05: Filosofía",
+    searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
+    instrucciones: "Navega por el tesauro de la UNESCO y copia el código y descriptor."
+  },
+  "Lingüística y Filología": {
+    vocabulario: "UNESCO",
+    nombre: "UNESCO Thesaurus",
+    formato: "Código UNESCO: Término",
+    ejemplo: "6.10: Lingüística",
+    searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
+    instrucciones: "Navega por el tesauro de la UNESCO y copia el código y descriptor."
+  },
+  "Literatura": {
+    vocabulario: "UNESCO",
+    nombre: "UNESCO Thesaurus",
+    formato: "Código UNESCO: Término",
+    ejemplo: "6.15: Literatura",
+    searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
+    instrucciones: "Navega por el tesauro de la UNESCO y copia el código y descriptor."
+  },
+  "Estudios Clásicos": {
+    vocabulario: "UNESCO",
+    nombre: "UNESCO Thesaurus",
+    formato: "Código UNESCO: Término",
+    ejemplo: "6.20: Estudios Clásicos",
+    searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
+    instrucciones: "Navega por el tesauro de la UNESCO y copia el código y descriptor."
+  },
+  "Teología y Ciencias de la Religión": {
+    vocabulario: "UNESCO",
+    nombre: "UNESCO Thesaurus",
+    formato: "Código UNESCO: Término",
+    ejemplo: "6.30: Teología",
+    searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
+    instrucciones: "Navega por el tesauro de la UNESCO y copia el código y descriptor."
+  },
+  "Estudios Culturales": {
+    vocabulario: "UNESCO",
+    nombre: "UNESCO Thesaurus",
+    formato: "Código UNESCO: Término",
+    ejemplo: "6.35: Cultura",
+    searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
+    instrucciones: "Navega por el tesauro de la UNESCO y copia el código y descriptor."
+  },
+  "Arte, Música y Cine": {
+    vocabulario: "UNESCO",
+    nombre: "UNESCO Thesaurus",
+    formato: "Código UNESCO: Término",
+    ejemplo: "6.40: Arte",
+    searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
+    instrucciones: "Navega por el tesauro de la UNESCO y copia el código y descriptor."
+  },
+  "Arquitectura y Urbanismo": {
+    vocabulario: "UNESCO",
+    nombre: "UNESCO Thesaurus",
+    formato: "Código UNESCO: Término",
+    ejemplo: "6.45: Arquitectura",
+    searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
+    instrucciones: "Navega por el tesauro de la UNESCO y copia el código y descriptor."
+  },
+
+  // Ciencias Agropecuarias → MeSH
+  "Agronomía y Producción Agrícola": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D000383: Agriculture",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca tu término en MeSH. Usa también Agrovoc si es muy específico."
+  },
+  "Ciencias Forestales": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D005560: Forestry",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca tu término en MeSH y copia el código y descriptor."
+  },
+  "Acuicultura y Pesca": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D017742: Aquaculture",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca tu término en MeSH y copia el código y descriptor."
+  },
+  "Zootecnia y Producción Animal": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D000825: Animal Husbandry",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca tu término en MeSH y copia el código y descriptor."
+  },
+  "Ingeniería de Alimentos": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D005494: Food Technology",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca tu término en MeSH y copia el código y descriptor."
+  }
+};
+
+// Componente para palabras clave con vocabulario controlado
+const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language }) => {
+  const isSpanish = language === 'es';
+  const keywords = value || [];
+  const [newCode, setNewCode] = useState('');
+  const [newTerm, setNewTerm] = useState('');
+
+  const maxKeywords = 6;
+  const minKeywords = 2;
+
+  const addKeyword = () => {
+    const code = newCode.trim();
+    const term = newTerm.trim();
+    if (!code || !term) return;
+    if (keywords.length >= maxKeywords) return;
+    
+    // Verificar que el código no esté duplicado
+    if (keywords.some(k => k.code === code)) {
+      alert(isSpanish ? 'Este código ya existe en tus palabras clave.' : 'This code already exists in your keywords.');
+      return;
+    }
+
+    onChange([...keywords, { code, term }]);
+    setNewCode('');
+    setNewTerm('');
+  };
+
+  const removeKeyword = (index) => {
+    onChange(keywords.filter((_, i) => i !== index));
+  };
+
+  const handleCodeKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      document.getElementById('controlled-term-input')?.focus();
+    }
+  };
+
+  const handleTermKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addKeyword();
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Info del vocabulario */}
+      <div className="bg-[#F0F4F8] border border-[#C0A86A] rounded-2xl p-5 space-y-3">
+        <div className="flex items-start gap-3">
+          <span className="text-2xl">📚</span>
+          <div className="flex-1">
+            <h4 className="font-['Playfair_Display'] font-bold text-[#0A1929] text-base">
+              {vocabularyConfig.vocabulario}: {vocabularyConfig.nombre}
+            </h4>
+            <p className="text-[#5A6B7A] text-sm mt-1 font-['Lora']">
+              {vocabularyConfig.instrucciones}
+            </p>
+            <a
+              href={vocabularyConfig.searchUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 mt-2 text-[#0A1929] hover:text-[#C0A86A] text-sm font-medium transition-colors font-['Lora']"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+              {isSpanish ? 'Abrir buscador' : 'Open search'} →
+            </a>
+            <span className="text-[#5A6B7A] text-xs mx-2">·</span>
+<a
+  href={isSpanish ? 'https://www.revistacienciasestudiantes.com/policies.html#clasificacion' : 'https://www.revistacienciasestudiantes.com/policiesEN.html#classification'}
+  target="_blank"
+  rel="noopener noreferrer"
+  className="inline-flex items-center gap-1 text-[#0A1929] hover:text-[#C0A86A] text-xs font-medium transition-colors font-['Lora']"
+>
+  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+  </svg>
+  {isSpanish ? 'Ver políticas de keywords' : 'View keyword policies'} ↗
+</a>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl p-3 border border-[#E5E9F0]">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-[#5A6B7A]">
+            {isSpanish ? 'Formato esperado:' : 'Expected format:'}
+          </span>
+          <code className="ml-2 text-sm font-mono text-[#0A1929] bg-[#F5F7FA] px-2 py-0.5 rounded">
+            {vocabularyConfig.formato}
+          </code>
+          <span className="text-[#5A6B7A] text-sm mx-2">·</span>
+          <span className="text-[10px] font-mono uppercase tracking-wider text-[#5A6B7A]">
+            {isSpanish ? 'Ejemplo:' : 'Example:'}
+          </span>
+          <code className="ml-2 text-sm font-mono text-[#C0A86A] bg-[#F5F7FA] px-2 py-0.5 rounded">
+            {vocabularyConfig.ejemplo}
+          </code>
+        </div>
+      </div>
+
+      {/* Campos de entrada */}
+      <div className="flex gap-3">
+        <div className="w-1/3">
+          <label className="block text-[10px] font-mono font-semibold uppercase tracking-wider text-[#546E7A] mb-1.5">
+            {isSpanish ? 'Código' : 'Code'} *
+          </label>
+          <input
+            type="text"
+            value={newCode}
+            onChange={(e) => setNewCode(e.target.value)}
+            onKeyPress={handleCodeKeyPress}
+            placeholder={vocabularyConfig.vocabulario === 'JEL' ? 'B14' : vocabularyConfig.vocabulario === 'MeSH' ? 'D009369' : 'CCS2012.10010179'}
+            className="w-full p-3.5 bg-white border border-[#E0E7E9] rounded-2xl text-sm font-mono focus:border-[#0A1929] focus:ring-1 focus:ring-[#0A1929] outline-none transition-all"
+          />
+        </div>
+        <div className="flex-1">
+          <label className="block text-[10px] font-mono font-semibold uppercase tracking-wider text-[#546E7A] mb-1.5">
+            {isSpanish ? 'Término' : 'Term'} *
+          </label>
+          <input
+            id="controlled-term-input"
+            type="text"
+            value={newTerm}
+            onChange={(e) => setNewTerm(e.target.value)}
+            onKeyPress={handleTermKeyPress}
+            placeholder={vocabularyConfig.vocabulario === 'JEL' ? 'Marxism' : 'Neoplasms'}
+            className="w-full p-3.5 bg-white border border-[#E0E7E9] rounded-2xl text-sm font-['Lora'] focus:border-[#0A1929] focus:ring-1 focus:ring-[#0A1929] outline-none transition-all"
+          />
+        </div>
+        <div className="flex items-end">
+          <button
+            type="button"
+            onClick={addKeyword}
+            disabled={!newCode.trim() || !newTerm.trim() || keywords.length >= maxKeywords}
+            className="px-5 py-3.5 bg-[#E5E9F0] text-[#0A1929] rounded-2xl text-sm font-medium hover:bg-[#CCD4E0] transition-colors font-serif disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+          >
+            + {isSpanish ? 'Agregar' : 'Add'}
+          </button>
+        </div>
+      </div>
+
+      {/* Contador y validación */}
+      <div className="flex items-center justify-between">
+        <p className={`text-xs font-mono ${keywords.length < minKeywords ? 'text-[#B22234]' : 'text-[#5A6B7A]'}`}>
+          {isSpanish 
+            ? `${keywords.length} de ${minKeywords}-${maxKeywords} palabras clave requeridas`
+            : `${keywords.length} of ${minKeywords}-${maxKeywords} required keywords`
+          }
+          {keywords.length < minKeywords && (
+            <span className="ml-2">
+              {isSpanish ? `(mínimo ${minKeywords})` : `(minimum ${minKeywords})`}
+            </span>
+          )}
+        </p>
+        {keywords.length >= maxKeywords && (
+          <p className="text-xs text-[#C0A86A] font-mono">
+            {isSpanish ? 'Máximo alcanzado' : 'Maximum reached'}
+          </p>
+        )}
+      </div>
+
+      {/* Chips de palabras clave */}
+      {keywords.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {keywords.map((kw, index) => (
+            <span
+              key={index}
+              className="inline-flex items-center gap-2 px-3.5 py-2 bg-white border-2 border-[#C0A86A] text-[#0A1929] rounded-2xl text-sm font-medium shadow-sm"
+            >
+              <code className="text-xs font-mono bg-[#F0F4F8] px-1.5 py-0.5 rounded text-[#C0A86A]">
+                {kw.code}
+              </code>
+              <span className="font-['Lora']">{kw.term}</span>
+              <button
+                type="button"
+                onClick={() => removeKeyword(index)}
+                className="ml-1 text-[#546E7A] hover:text-[#B22234] transition-colors"
+              >
+                ✕
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 // Componente principal COMPLETO - ESTILO OXFORD
 export default function SubmissionForm({ user, onSuccess }) {
   const { language } = useLanguage();
@@ -357,8 +998,8 @@ export default function SubmissionForm({ user, onSuccess }) {
     titleEn: '',
     abstract: '',
     abstractEn: '',
-    keywords: '',
-    keywordsEn: '',
+    controlledKeywords: [],
+controlledKeywordsEn: [],
     area: '', // Ahora será un select
     paperLanguage: 'es',
     articleType: '',
@@ -589,11 +1230,12 @@ export default function SubmissionForm({ user, onSuccess }) {
   const validateStep = (step) => {
     switch (step) {
       case 1:
-        return formData.title.trim() &&
-               formData.abstract.trim() &&
-               formData.keywords.trim() &&
-               formData.area.trim() &&
-               formData.articleType;
+         return formData.title.trim() &&
+          formData.abstract.trim() &&
+          formData.controlledKeywords.length >= 2 && 
+          formData.controlledKeywords.length <= 6 &&
+          formData.area.trim() &&
+          formData.articleType;
       case 2:
         const basicOk = formData.authors.every(a =>
           a.firstName.trim() && a.lastName.trim() && a.email.trim() && a.institution.trim()
@@ -639,15 +1281,22 @@ export default function SubmissionForm({ user, onSuccess }) {
     try {
       const token = await auth.currentUser.getIdToken();
       const manuscriptBase64 = await toBase64(formData.manuscript);
+const keywordsSerialized = formData.controlledKeywords
+  .map(kw => `${kw.code}: ${kw.term}`)
+  .join('; ');
 
+const keywordsEnSerialized = formData.controlledKeywordsEn
+  .map(kw => `${kw.code}: ${kw.term}`)
+  .join('; ');
       // NUEVO CAMBIO: Construir el payload con los nuevos campos
       const payload = {
           title: formData.title,
           titleEn: formData.titleEn,
           abstract: formData.abstract,
           abstractEn: formData.abstractEn,
-          keywords: formData.keywords,
-          keywordsEn: formData.keywordsEn,
+          keywordsVocabulario: VOCABULARIO_POR_AREA[formData.area]?.vocabulario || 'unknown',
+keywordsRaw: formData.controlledKeywords,
+keywordsRawEn: formData.controlledKeywordsEn,
           area: formData.area,
           paperLanguage: formData.paperLanguage,
           articleType: formData.articleType,
@@ -751,6 +1400,53 @@ export default function SubmissionForm({ user, onSuccess }) {
         className="max-w-2xl mx-auto py-16 px-4"
       >
         <div className="bg-white border border-[#E0E7E9] shadow-2xl rounded-3xl overflow-hidden">
+          {/* BANNER DE POLÍTICAS Y GUÍAS - PERSISTENTE */}
+<div className="bg-[#001f3f] border-b border-[#c0a86a] px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+  <div className="flex items-center gap-3">
+    <svg className="w-5 h-5 text-[#c0a86a] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+    </svg>
+    <p className="text-white text-xs font-serif leading-relaxed">
+      {isSpanish
+        ? 'El envío de un manuscrito implica la aceptación íntegra de nuestras '
+        : 'Submitting a manuscript implies full acceptance of our '}
+      <a
+        href={isSpanish ? 'https://www.revistacienciasestudiantes.com/policies.html' : 'https://www.revistacienciasestudiantes.com/policiesEN.html'}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-[#c0a86a] underline hover:text-white transition-colors font-semibold"
+      >
+        {isSpanish ? 'Políticas Editoriales' : 'Editorial Policies'}
+      </a>
+      {isSpanish ? ' y nuestras ' : ' and our '}
+      <button
+        type="button"
+        onClick={() => window.open(isSpanish ? '/guidelines' : '/en/guidelines', '_blank')}
+        className="text-[#c0a86a] underline hover:text-white transition-colors font-semibold"
+      >
+        {isSpanish ? 'Directrices para Autores' : 'Author Guidelines'}
+      </button>
+      .
+    </p>
+  </div>
+  <div className="flex gap-3 flex-shrink-0">
+    <a
+      href={isSpanish ? 'https://www.revistacienciasestudiantes.com/policies.html' : 'https://www.revistacienciasestudiantes.com/policiesEN.html'}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-[10px] uppercase font-bold tracking-[0.15em] text-[#c0a86a] border border-[#c0a86a] px-4 py-2 rounded-sm hover:bg-[#c0a86a] hover:text-[#001f3f] transition-colors whitespace-nowrap"
+    >
+      {isSpanish ? 'Políticas' : 'Policies'} ↗
+    </a>
+    <button
+      type="button"
+      onClick={() => window.open(isSpanish ? '/guidelines' : '/en/guidelines', '_blank')}
+      className="text-[10px] uppercase font-bold tracking-[0.15em] text-white border border-white px-4 py-2 rounded-sm hover:bg-white hover:text-[#001f3f] transition-colors whitespace-nowrap"
+    >
+      {isSpanish ? 'Guías' : 'Guidelines'} ↗
+    </button>
+  </div>
+</div>
           <div className="bg-[#0A1929] p-12 text-center">
             <div className="mx-auto w-24 h-24 bg-[#E5E9F0] rounded-full flex items-center justify-center mb-6">
               <span className="text-5xl">📮</span>
@@ -849,7 +1545,28 @@ export default function SubmissionForm({ user, onSuccess }) {
           <h1 className="font-serif text-5xl font-light tracking-tight text-white">
             {isSpanish ? 'Envío de Manuscrito' : 'Manuscript Submission'}
           </h1>
-          <p className="text-[#E0E7E9] text-sm mt-3 font-serif">Sistema seguro • Borrador guardado automáticamente</p>
+          <p className="text-[#E0E7E9] text-sm mt-3 font-serif">
+  {isSpanish ? 'Sistema seguro • Borrador guardado automáticamente' : 'Secure system • Draft auto-saved'}
+</p>
+<p className="text-[#c0a86a] text-xs mt-2 font-serif">
+  {isSpanish ? 'Rige: ' : 'Governed by: '}
+  <a
+    href={isSpanish ? 'https://www.revistacienciasestudiantes.com/policies.html' : 'https://www.revistacienciasestudiantes.com/policiesEN.html'}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="underline hover:text-white transition-colors"
+  >
+    {isSpanish ? 'Políticas Editoriales' : 'Editorial Policies'}
+  </a>
+  {' · '}
+  <button
+    type="button"
+    onClick={() => window.open(isSpanish ? '/guidelines' : '/en/guidelines', '_blank')}
+    className="underline hover:text-white transition-colors"
+  >
+    {isSpanish ? 'Guía para Autores' : 'Author Guidelines'}
+  </button>
+</p>
         </div>
 
         <div className="px-8 py-7 bg-white border-b border-[#E0E7E9]">
@@ -961,25 +1678,20 @@ export default function SubmissionForm({ user, onSuccess }) {
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
                   </select>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <KeywordInput
-                    value={formData.keywords}
-                    onChange={(val) => setFormData(prev => ({ ...prev, keywords: val }))}
-                    label={isSpanish ? 'Palabras clave' : 'Keywords'}
-                    placeholder={isSpanish ? 'educación; inteligencia artificial' : 'education; artificial intelligence'}
-                    helpText="Mínimo 3, máximo 6. Separa con punto y coma."
-                    helpTextEn="Minimum 3, maximum 6. Separate with semicolon."
-                  />
-                  <KeywordInput
-                    value={formData.keywordsEn}
-                    onChange={(val) => setFormData(prev => ({ ...prev, keywordsEn: val }))}
-                    label={isSpanish ? 'Keywords en inglés' : 'English keywords'}
-                    placeholder="education; artificial intelligence"
-                    helpText="Recomendado para indexación internacional."
-                    helpTextEn="Recommended for international indexing."
-                  />
+                  <p className="text-[11px] text-[#546E7A] mt-2 font-serif leading-relaxed">
+  {isSpanish
+    ? 'Consulte la '
+    : 'Refer to the '}
+  <a
+    href={isSpanish ? 'https://www.revistacienciasestudiantes.com/policies.html#alcance' : 'https://www.revistacienciasestudiantes.com/policiesEN.html#scope'}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-[#0A1929] underline hover:text-[#B22234] transition-colors"
+  >
+    {isSpanish ? 'Sección 2.2 de las Políticas Editoriales' : 'Section 2.2 of the Editorial Policies'}
+  </a>
+  {isSpanish ? ' para una descripción detallada de cada tipología.' : ' for a detailed description of each typology.'}
+</p>
                 </div>
 
                 {/* NUEVO CAMBIO: Área temática ahora es un select obligatorio */}
@@ -1004,7 +1716,68 @@ export default function SubmissionForm({ user, onSuccess }) {
                       </optgroup>
                     ))}
                   </select>
+                  <p className="text-[11px] text-[#546E7A] mt-2 font-serif leading-relaxed">
+  {isSpanish
+    ? 'El área determina el vocabulario controlado para las palabras clave. Consulte la '
+    : 'The area determines the controlled vocabulary for keywords. See the '}
+  <a
+    href={isSpanish ? 'https://www.revistacienciasestudiantes.com/policies.html#clasificacion' : 'https://www.revistacienciasestudiantes.com/policiesEN.html#classification'}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-[#0A1929] underline hover:text-[#B22234] transition-colors"
+  >
+    {isSpanish ? 'Sección 2.5 de las Políticas' : 'Section 2.5 of the Policies'}
+  </a>
+  .
+</p>
                 </div>
+
+                {/* PALABRAS CLAVE CON VOCABULARIO CONTROLADO */}
+{formData.area && VOCABULARIO_POR_AREA[formData.area] ? (
+  <div className="space-y-8">
+    <div>
+      <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-3">
+        {isSpanish ? 'Palabras Clave' : 'Keywords'} *
+        <HelpCapsule
+          text={`Mínimo 2, máximo 6. Usa el vocabulario ${VOCABULARIO_POR_AREA[formData.area]?.vocabulario || 'controlado'} para esta área. Cada palabra debe tener un código y un término.`}
+          textEn={`Minimum 2, maximum 6. Use the ${VOCABULARIO_POR_AREA[formData.area]?.vocabulario || 'controlled'} vocabulary for this area. Each keyword must have a code and a term.`}
+        />
+      </label>
+      <ControlledKeywordInput
+        vocabularyConfig={VOCABULARIO_POR_AREA[formData.area]}
+        value={formData.controlledKeywords}
+        onChange={(val) => setFormData(prev => ({ ...prev, controlledKeywords: val }))}
+        language={language}
+      />
+    </div>
+    
+    <div>
+      <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-3">
+        {isSpanish ? 'Keywords en inglés' : 'English Keywords'}
+        <HelpCapsule
+          text="Traduce tus palabras clave al inglés usando el mismo formato y vocabulario."
+          textEn="Translate your keywords to English using the same format and vocabulary."
+        />
+      </label>
+      <ControlledKeywordInput
+        vocabularyConfig={VOCABULARIO_POR_AREA[formData.area]}
+        value={formData.controlledKeywordsEn}
+        onChange={(val) => setFormData(prev => ({ ...prev, controlledKeywordsEn: val }))}
+        language={language}
+      />
+    </div>
+  </div>
+) : (
+  <div className="bg-[#F5F7FA] rounded-2xl p-6 text-center border-2 border-dashed border-[#E0E7E9]">
+    <p className="text-[#5A6B7A] text-sm font-['Lora']">
+      {isSpanish 
+        ? 'Selecciona primero un área temática para configurar el vocabulario controlado.'
+        : 'Select a subject area first to configure the controlled vocabulary.'}
+    </p>
+  </div>
+)}
+
+                
 
                 <div>
                   <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-2">
@@ -1264,6 +2037,20 @@ export default function SubmissionForm({ user, onSuccess }) {
                     <option value="no">{isSpanish ? 'No, mi estudio está exento o no involucra sujetos humanos' : 'No, my study is exempt or does not involve human subjects'}</option>
                     <option value="yes">{isSpanish ? 'Sí, mi estudio requirió aprobación de un comité de ética' : 'Yes, my study required ethics committee approval'}</option>
                   </select>
+                  <p className="text-[11px] text-[#546E7A] mt-2 font-serif leading-relaxed">
+  {isSpanish
+    ? 'Consulte los criterios de exención y requisitos en la '
+    : 'See the exemption criteria and requirements in '}
+  <a
+    href={isSpanish ? 'https://www.revistacienciasestudiantes.com/policies.html#etica' : 'https://www.revistacienciasestudiantes.com/policiesEN.html#ethics'}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-[#0A1929] underline hover:text-[#B22234] transition-colors"
+  >
+    {isSpanish ? 'Sección 5.2 de las Políticas Editoriales' : 'Section 5.2 of the Editorial Policies'}
+  </a>
+  .
+</p>
 
                   {formData.requiresEthicsApproval === 'yes' && (
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
@@ -1311,6 +2098,20 @@ export default function SubmissionForm({ user, onSuccess }) {
                     <option value="no">{isSpanish ? 'No se utilizó IA en este trabajo' : 'AI was not used in this work'}</option>
                     <option value="yes">{isSpanish ? 'Sí, se utilizó IA en este trabajo' : 'Yes, AI was used in this work'}</option>
                   </select>
+                  <p className="text-[11px] text-[#546E7A] mt-2 font-serif leading-relaxed">
+  {isSpanish
+    ? 'La IA no puede ser autora ni citada como fuente. Consulte el '
+    : 'AI cannot be an author or cited as a source. See '}
+  <a
+    href={isSpanish ? 'https://www.revistacienciasestudiantes.com/policies.html#ia' : 'https://www.revistacienciasestudiantes.com/policiesEN.html#ai'}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-[#0A1929] underline hover:text-[#B22234] transition-colors"
+  >
+    {isSpanish ? 'Capítulo 7 de las Políticas' : 'Chapter 7 of the Policies'}
+  </a>
+  {isSpanish ? ' para los usos permitidos y prohibidos.' : ' for permitted and prohibited uses.'}
+</p>
 
                   {formData.aiUsed === 'yes' && (
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-4 border border-[#E0E7E9] rounded-2xl p-6 bg-[#F5F7FA]">
@@ -1360,6 +2161,20 @@ export default function SubmissionForm({ user, onSuccess }) {
                   <h3 className="font-serif text-2xl font-light text-[#0A1929] border-b border-[#E0E7E9] pb-4">
                     {isSpanish ? 'Disponibilidad de Datos y Código' : 'Data and Code Availability'}
                   </h3>
+                  <p className="text-[11px] text-[#546E7A] -mt-4 mb-6 font-serif leading-relaxed">
+  {isSpanish
+    ? 'Obligatorio según el '
+    : 'Mandatory as per '}
+  <a
+    href={isSpanish ? 'https://www.revistacienciasestudiantes.com/policies.html#datos' : 'https://www.revistacienciasestudiantes.com/policiesEN.html#data'}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-[#0A1929] underline hover:text-[#B22234] transition-colors"
+  >
+    {isSpanish ? 'Capítulo 8 de las Políticas Editoriales' : 'Chapter 8 of the Editorial Policies'}
+  </a>
+  .
+</p>
                   
                   <div>
                     <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-3">

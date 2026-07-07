@@ -3109,10 +3109,15 @@ exports.submitArticle = onRequest(
 
       // --- EXTRACCIÓN COMPLETA DE TODOS LOS CAMPOS ---
       const {
-        // Campos básicos del artículo
-        title, titleEn, abstract, abstractEn, 
-        keywords, keywordsEn, area, paperLanguage = 'es',
-        
+    // Campos básicos del artículo
+    title, titleEn, abstract, abstractEn, 
+    keywords, keywordsEn, area, paperLanguage = 'es',
+    
+    // NUEVO: Metadatos del vocabulario controlado
+    keywordsVocabulario,        // "JEL" | "MeSH" | "ACM" | "UNESCO"
+    keywordsRaw = [],           // [{code: "B14", term: "Marxism"}, ...]
+    keywordsRawEn = [],         // Versión en inglés
+    
         // Autores
         authors, 
         
@@ -3178,7 +3183,29 @@ exports.submitArticle = onRequest(
           missingFields: ['aiTools']
         });
       }
+// NUEVO: Validar palabras clave controladas (mínimo 2, máximo 6)
+if (!keywordsRaw || !Array.isArray(keywordsRaw) || keywordsRaw.length < 2) {
+    return res.status(400).json({
+        error: 'Debes incluir al menos 2 palabras clave con su código de vocabulario controlado',
+        missingFields: ['keywordsRaw']
+    });
+}
 
+if (keywordsRaw.length > 6) {
+    return res.status(400).json({
+        error: 'Máximo 6 palabras clave permitidas',
+        missingFields: ['keywordsRaw']
+    });
+}
+
+// Validar que cada keyword tenga code y term
+const invalidKeywords = keywordsRaw.filter(k => !k.code?.trim() || !k.term?.trim());
+if (invalidKeywords.length > 0) {
+    return res.status(400).json({
+        error: 'Cada palabra clave debe tener un código y un término',
+        missingFields: ['keywordsRaw']
+    });
+}
       const requiredFields = { title, abstract, keywords, area, manuscriptBase64, authors, articleType };
       const missingFields = Object.entries(requiredFields)
         .filter(([_, value]) => !value)
@@ -3495,8 +3522,20 @@ exports.submitArticle = onRequest(
         titleEn: titleEn ? sanitizeText(titleEn) : null,
         abstract: sanitizeText(abstract),
         abstractEn: abstractEn ? sanitizeText(abstractEn) : null,
-        keywords: keywords.split(';').map(k => sanitizeText(k.trim())).filter(Boolean),
-        keywordsEn: keywordsEn ? keywordsEn.split(';').map(k => sanitizeText(k.trim())).filter(Boolean) : [],
+        // NUEVO: Procesar palabras clave controladas
+keywords: keywords ? keywords.split(';').map(k => sanitizeText(k.trim())).filter(Boolean) : [],
+keywordsEn: keywordsEn ? keywordsEn.split(';').map(k => sanitizeText(k.trim())).filter(Boolean) : [],
+keywordsVocabulario: keywordsVocabulario ? sanitizeText(keywordsVocabulario) : 'unknown',
+keywordsRaw: keywordsRaw.map(k => ({
+    code: sanitizeText(k.code),
+    term: sanitizeText(k.term)
+})),
+keywordsRawEn: keywordsRawEn.length > 0 
+    ? keywordsRawEn.map(k => ({
+        code: sanitizeText(k.code),
+        term: sanitizeText(k.term)
+    }))
+    : [],
         area: sanitizeText(area),
         paperLanguage: paperLanguage === 'en' ? 'en' : 'es',
         
@@ -3604,7 +3643,9 @@ exports.submitArticle = onRequest(
             requiresEthicsApproval: Boolean(requiresEthicsApproval),
             hasMinorAuthors: processedAuthors.some(a => a.isMinor),
             dataAvailability,
-            codeAvailability: codeAvailability || null
+            codeAvailability: codeAvailability || null,
+            keywordsVocabulario: keywordsVocabulario || 'unknown',
+    keywordsCount: keywordsRaw.length
           }
         });
         
@@ -3660,7 +3701,12 @@ exports.submitArticle = onRequest(
         const ethicsInfo = requiresEthicsApproval
           ? `<p style="color: #0A1929;"><strong>✅ Aprobación ética:</strong> ${ethicsCommitteeName || 'Declarada'}</p>`
           : '';
-
+// NUEVO: Información de palabras clave
+const keywordsInfo = keywordsRaw.length > 0
+    ? `<p><strong>🏷️ Palabras clave (${keywordsVocabulario || 'Vocabulario'}):</strong><br>
+        ${keywordsRaw.map(k => `<code style="background:#f0f0f0;padding:1px 4px;border-radius:3px;">${sanitizeText(k.code)}</code> ${sanitizeText(k.term)}`).join('<br>')}
+      </p>`
+    : '';
         // NUEVO: Información de IA
         const aiInfo = aiUsed && processedAITools.length > 0
           ? `<p style="color: #0A1929;"><strong>🤖 IA utilizada:</strong> ${processedAITools.map(t => `${t.name} (${t.purpose})`).join(', ')}</p>`
@@ -3687,6 +3733,7 @@ exports.submitArticle = onRequest(
             ${ethicsInfo}
             ${aiInfo}
             ${availabilityInfo}
+            ${keywordsInfo}
             <p><strong>Autores (${processedAuthors.length}):</strong><br>${authorsList}</p>
           </div>
           
@@ -3741,7 +3788,12 @@ exports.submitArticle = onRequest(
                We have received the consent documents. They will be reviewed during the editorial process.
              </p>`;
       }
-
+// NUEVO: Información de palabras clave
+const keywordsInfo = keywordsRaw.length > 0
+    ? `<p><strong>🏷️ Palabras clave (${keywordsVocabulario || 'Vocabulario'}):</strong><br>
+        ${keywordsRaw.map(k => `<code style="background:#f0f0f0;padding:1px 4px;border-radius:3px;">${sanitizeText(k.code)}</code> ${sanitizeText(k.term)}`).join('<br>')}
+      </p>`
+    : '';
       // NUEVO: Información de disponibilidad para el autor
       const availabilityMessage = paperLanguage === 'es'
         ? `
@@ -3802,7 +3854,7 @@ exports.submitArticle = onRequest(
         : `
           ${minorMessage}
           ${availabilityMessage}
-          
+          ${keywordsInfo}
           <div class="highlight-box">
             <p class="article-title">"${sanitizeText(title)}"</p>
             <p><strong>Submission ID:</strong> ${submissionId}</p>
