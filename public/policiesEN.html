@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Article Submission Policies - The National Review of Sciences for Students</title>
+  <title>Editorial Policies · The National Review of Sciences for Students</title>
   <style>
     :root {
       --primary: #001f3f;
@@ -66,6 +66,15 @@
       padding-bottom: 10px;
       margin-top: 50px;
     }
+    h3 {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.8em;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: #444;
+      margin-top: 35px;
+      margin-bottom: 15px;
+    }
     p {
       margin-bottom: 25px;
       font-size: 1.05em;
@@ -97,6 +106,38 @@
       margin-bottom: 8px;
       color: var(--primary);
     }
+    .policy-section {
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 1px dotted var(--border);
+    }
+    .policy-section:last-child {
+      border-bottom: none;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 0.9em;
+    }
+    table th {
+      font-family: 'Inter', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-size: 0.7em;
+      color: var(--primary);
+      border-bottom: 2px solid var(--primary);
+      padding: 10px 8px;
+      text-align: left;
+    }
+    table td {
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    table tr:last-child td {
+      border-bottom: none;
+    }
     a {
       color: var(--primary);
       text-decoration: underline;
@@ -119,6 +160,20 @@
       letter-spacing: 0.2em;
       color: #999;
     }
+    .toc {
+      margin: 30px 0;
+      padding: 20px;
+      background-color: #fafafa;
+      border: 1px solid var(--border);
+    }
+    .toc ol {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.8em;
+      line-height: 2.2;
+    }
+    .toc a {
+      text-decoration: none;
+    }
     @media (max-width: 768px) {
       .page-wrapper { margin: 20px; padding: 30px; }
       .header h1 { font-size: 1.8em; }
@@ -129,55 +184,347 @@
   <div class="page-wrapper">
     <div class="header">
       <img src="logoEN.png" alt="Logo The National Review of Sciences for Students">
-      <h1>Article Submission Policies</h1>
-      <div class="document-meta">Editorial Protocol • San Felipe, Chile</div>
+      <h1>Editorial Policies</h1>
+      <div class="document-meta">Institutional Manual · Version 1.0, 2026 · San Felipe, Chile</div>
     </div>
 
-    <h2>01. Introduction</h2>
-    <p>This document establishes the regulatory framework for submitting manuscripts to the <em>National Review of Sciences for Students</em> (ISSN 3087-2839). "Submission" is defined as any transfer of intellectual material through our official channels, based in San Felipe, Chile.</p>
+    <div class="toc">
+      <p style="font-family: 'Inter', sans-serif; text-transform: uppercase; letter-spacing: 0.15em; font-size: 0.8em; font-weight: bold; margin-top: 0;">Table of Contents</p>
+      <ol>
+        <li><a href="#preamble">Preamble and Founding Principles</a></li>
+        <li><a href="#scope">Scope, Mission, and Manuscript Types</a></li>
+        <li><a href="#originality">Originality, Prior Publication, and Exclusivity</a></li>
+        <li><a href="#authorship">Authorship, Contributions, and CRediT</a></li>
+        <li><a href="#ethics">Research Ethics</a></li>
+        <li><a href="#conflicts">Conflicts of Interest and Funding</a></li>
+        <li><a href="#ai">Use of Artificial Intelligence</a></li>
+        <li><a href="#data">Open Data, Code, and Reproducibility</a></li>
+        <li><a href="#figures">Guidelines for Figures and Images</a></li>
+        <li><a href="#review">Peer Review Process</a></li>
+        <li><a href="#decisions">Editorial Decisions and Appeals</a></li>
+        <li><a href="#postpub">Corrections, Retractions, and Digital Preservation</a></li>
+        <li><a href="#copyright">Copyright and Licensing</a></li>
+        <li><a href="#final">Final Provisions</a></li>
+      </ol>
+    </div>
 
-    <h2>02. Clauses and Conditions</h2>
+    <h2 id="preamble">01. Preamble and Founding Principles</h2>
+    <p>The <strong>National Review of Sciences for Students</strong> (hereinafter, "the Journal"), ISSN 3087-2839, with its editorial seat in San Felipe, Chile, is a peer-reviewed, open-access, non-profit academic publication. Its founding purpose is to encourage, strengthen, and enhance the visibility of the scientific output of high school and university students. The Journal does not seek to position itself as an inaccessible realm of erudite specialization; rather, it aims to provide a rigorous, formative, and ethical first step in the academic publishing trajectory of young researchers.</p>
+    <p>This document establishes the normative and institutional framework governing all editorial processes. Compliance is binding upon editors, authors, reviewers, and administrative staff. The policies set forth herein are aligned, in spirit and in practice, with the guidelines of the <strong>Committee on Publication Ethics (COPE)</strong>, the <strong>CRediT (Contributor Roles Taxonomy)</strong>, the criteria of the <strong>International Committee of Medical Journal Editors (ICMJE)</strong> where applicable, and the principles of open access under the <strong>Creative Commons Attribution 4.0 International (CC BY 4.0)</strong> license.</p>
+    <p>The Journal is governed by the values of transparency, methodological rigor, fairness, confidentiality, diversity and inclusion, and unwavering respect for academic integrity. Every manuscript submitted for consideration shall be treated impartially, regardless of institutional affiliation, gender, ethnic origin, sexual orientation, religious beliefs, or political views of its authors.</p>
+
+    <h2 id="scope">02. Scope, Mission, and Manuscript Types</h2>
+    
+    <h3>2.1. Mission and Target Audience</h3>
+    <p>The Journal's primary mission is to provide a comprehensive academic experience, offering a rigorous publishing space that operates under the same standards of integrity as an established journal, while adapting its approach to the developmental stage of its authors. It is aimed primarily at secondary and higher education students wishing to begin their journey in scientific communication.</p>
+    
+    <h3>2.2. Accepted Manuscript Types</h3>
+    <p>The Journal accepts contributions in English and Spanish. Manuscripts are classified into the following typologies, organized by thematic sections on the publication platform. The Editorial Board assigns reviewers and editors based on their expertise in the corresponding disciplinary area.</p>
+    
     <div class="policy-list">
       <div class="policy-item">
-        <strong>Regulatory Adherence</strong>
-        Submitting the article implies full acceptance of the current <a href="/privacyEN.html">Privacy Policy</a> and <a href="/termsEN.html">Terms and Conditions</a> of the journal.
+        <strong>Original Research Articles</strong>
+        Papers presenting unpublished results from empirical or theoretical scientific research, structured under the IMRaD format (Introduction, Methods, Results, and Discussion) or its disciplinary equivalent. Contributions from both the natural and exact sciences and the humanities and social sciences are accepted.
       </div>
       <div class="policy-item">
-        <strong>Data Availability</strong>
-        The author accepts that the form information and the manuscript will be available to the journal for editorial processing and potential public publication under the <strong>Creative Commons CC-BY</strong> license.
+        <strong>Academic and Reflective Essays</strong>
+        Argumentative texts that develop an original thesis on a scientific, philosophical, or humanistic topic, supported by a critical review of the existing literature. An IMRaD structure is not required, but a rigorous critical apparatus is.
       </div>
       <div class="policy-item">
-        <strong>Round-Based Review Process</strong>
-        The author commits to actively participating in the peer review process, addressing observations and suggestions within the reasonable deadlines established by the editorial committee. Revisions must align with the timeline suggested by the journal to ensure process efficiency.
+        <strong>Systematic Reviews</strong>
+        Manuscripts that critically synthesize the available evidence on a specific research question, following an explicit, reproducible, and documented methodology of search, selection, quality assessment, and synthesis.
       </div>
       <div class="policy-item">
-        <strong>Right to Retraction</strong>
-        The author may request the retraction of their article at any stage prior to final publication. Once published, the retraction request will be evaluated by the editorial committee according to the Committee on Publication Ethics (COPE) guidelines.
+        <strong>Case Reports</strong>
+        Detailed presentations of one or several particular cases —clinical, experimental, field study, educational intervention, etc.— whose interest lies in their uniqueness, educational value, or potential to generate hypotheses.
       </div>
       <div class="policy-item">
-        <strong>Authorization for Minors</strong>
-        If the author is a minor, they declare having obtained express consent from their legal guardian through the authorization form available at <a href="/en/login">/en/login</a>. The journal may request proof of such authorization at any time.
-      </div>
-      <div class="policy-item">
-        <strong>Review Rights</strong>
-        The journal is granted a non-exclusive right to evaluation, correction, feedback, and issuance of technical reports.
-      </div>
-      <div class="policy-item">
-        <strong>Editorial Discretion</strong>
-        The submission process does not constitute a promise of publication. Final acceptance depends solely on the peer committee and editors.
-      </div>
-      <div class="policy-item">
-        <strong>Ethical Responsibility</strong>
-        The journal commits to rigorous review; the author assumes receiving professional criticism as part of academic growth.
-      </div>
-      <div class="policy-item">
-        <strong>Manuscript Iteration</strong>
-        There are no resubmission limits for rejected articles, as long as they incorporate significant improvements after feedback.
+        <strong>Book Reviews</strong>
+        A critical analysis of a recently published academic or popular science work of demonstrable relevance to the field of study.
       </div>
     </div>
 
-    <h2>03. Final Notes</h2>
-    <p>Non-compliance with any of these points empowers the journal to dismiss the submission immediately. Transparency, rigor, and academic ethics are the pillars of our institution.</p>
+    <h3>2.3. Manuscripts Derived from Prior Works</h3>
+    <p>Manuscripts derived from undergraduate or postgraduate theses, as well as from papers presented at conferences or symposia, are accepted, provided they strictly comply with the originality criteria set forth in Chapter 3.</p>
+
+    <h3>2.4. Express Exclusions</h3>
+    <p>The Journal does not accept preliminary working papers, preprints in an unfinished state, or technical reports not subjected to a formal research process. The Journal is a peer-reviewed publication venue, not a repository for non-refereed documents.</p>
+
+    <h2 id="originality">03. Originality, Prior Publication, and Exclusivity</h2>
+    
+    <h3>3.1. Unpublished Status</h3>
+    <p>Every submitted manuscript must constitute an original work. A work is considered unpublished when it has not been previously published, in whole or in substantial parts, in any other medium, whether print or electronic, bearing a persistent identification number (ISSN/ISBN). Publication in institutional or preprint repositories is not considered prior publication for these purposes, provided it is declared at the time of submission.</p>
+
+    <h3>3.2. Derived Content and Similarity Thresholds</h3>
+    <p>For manuscripts that extend or derive from prior works (theses, conference papers, reports), textual overlap with the original version shall not exceed <strong>15%</strong>. Consequently, at least <strong>85% of the content must be entirely new and originally written</strong>. Unjustified self-duplication of extensive passages —even with citation— may be considered self-plagiarism.</p>
+    <p>The Journal employs the tool <strong>PlagiarismGuard</strong>, a free and open-source software (MIT license) for detecting textual similarities. This tool processes documents client-side, without storing or transmitting texts to external servers, and consults sixteen open databases (OpenAlex, Semantic Scholar, arXiv, GitHub, among others). The editorial decision thresholds are as follows:</p>
+    
+    <table>
+      <thead>
+        <tr>
+          <th>Similarity Percentage</th>
+          <th>Editorial Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Less than 15%</td>
+          <td>Normal initiation of the peer review process.</td>
+        </tr>
+        <tr>
+          <td>15% – 25%</td>
+          <td>Rapid review by the Editorial Board to identify the nature and distribution of the overlap.</td>
+        </tr>
+        <tr>
+          <td>25% – 40%</td>
+          <td>Detailed editorial review. A written justification from the authors may be requested before deciding on peer review.</td>
+        </tr>
+        <tr>
+          <td>Greater than 40%</td>
+          <td>Immediate return for major clarifications or editorial rejection without review (<em>desk reject</em>).</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>3.3. Simultaneous Submission and Exclusivity Policy</h3>
+    <p>The simultaneous submission of the same manuscript to another journal while it is under review at the Journal is strictly prohibited. If a simultaneous submission is detected at any stage of the editorial process, the manuscript will be withdrawn immediately, the other publication involved will be notified, and the work will not be considered in the future. However, authors retain the right to submit other unpublished works subsequently.</p>
+
+    <h3>3.4. Secondary Publication and Re-editions</h3>
+    <p>Authors are free to publish their article in another medium subsequent to its appearance in the Journal, provided that the secondary publication: (a) complies with the CC BY 4.0 license; (b) fully cites the original source, including the DOI; and (c) is published in a medium that explicitly accepts the reproduction of previously published works. The Journal is developing a future editorial section, "Classics of Science," which will be governed by specific complementary policies and will publish authorized translations of historically high-impact articles.</p>
+
+    <h2 id="authorship">04. Authorship, Contributions, and CRediT</h2>
+    
+    <h3>4.1. Authorship Criteria</h3>
+    <p>The Journal adopts the authorship criteria of the <strong>International Committee of Medical Journal Editors (ICMJE)</strong>, endorsed by the <strong>Committee on Publication Ethics (COPE)</strong>. Authorship requires the simultaneous fulfillment of all four of the following conditions:</p>
+    <p>(1) Substantial contributions to the conception or design of the work; or to the acquisition, analysis, or interpretation of data.<br>
+    (2) Drafting the article or revising it critically for important intellectual content.<br>
+    (3) Final approval of the version to be published.<br>
+    (4) Agreement to be accountable for all aspects of the work, ensuring that questions related to the accuracy or integrity of any part of it are appropriately investigated and resolved.</p>
+    <p>All individuals who meet all four criteria must be listed as authors. Contributions that do not reach this threshold —such as specific technical assistance, routine data collection, funding, or general supervision— must be acknowledged in the "Acknowledgements" section, with the explicit consent of the person mentioned.</p>
+
+    <h3>4.2. Contributor Roles Taxonomy (CRediT)</h3>
+    <p>In the submission form, authors must specify their individual contribution using the <strong>CRediT</strong> taxonomy, indicating roles such as: Conceptualization, Data Curation, Formal Analysis, Funding Acquisition, Investigation, Methodology, Project Administration, Resources, Software, Supervision, Validation, Visualization, Writing – Original Draft, and Writing – Review & Editing. This statement will be published as part of the article.</p>
+
+    <h3>4.3. Corresponding Author</h3>
+    <p>For manuscripts with multiple authors, one person shall be designated as the <strong>corresponding author</strong>. Their responsibilities include: managing all correspondence with the Journal during the editorial and publication process; signing the publication agreement on behalf of all co-authors; ensuring that the contact details and affiliations of all authors are correct and up-to-date; and ensuring unanimous consensus on the order of appearance and the final version of the manuscript.</p>
+
+    <h3>4.4. Changes in Authorship During the Editorial Process</h3>
+    <p>Any modification to the list of authors —addition, removal, or reordering— after the initial submission will require, on a cumulative basis:</p>
+    <p>(a) A <strong>solid written justification</strong> addressed to the editor, explaining the scientific or technical reason for the change.<br>
+    (b) The <strong>unanimous written consent</strong> of all original and new authors, using the Journal's official form.<br>
+    (c) <strong>Proof that the added author fully meets</strong> all four ICMJE authorship criteria detailed in Section 4.1.</p>
+    <p>For the addition of an author at the resubmission stage following review, it must also be demonstrated that their contribution was substantial and directly related to addressing the reviewers' comments, detailing this contribution in the cover letter.</p>
+
+    <h3>4.5. Authorship Disputes</h3>
+    <p>If an authorship dispute arises at any stage, the editor will place the editorial process on hold (<em>on hold</em>) in accordance with COPE flowcharts. The authors' affiliated institution will be requested to investigate and issue an official ruling. Publication will not resume until the dispute is satisfactorily resolved. Should the dispute occur post-publication, a Correction (Corrigendum) will be published, or, in cases of fraud or irreconcilable lack of consensus, a formal Retraction of the article.</p>
+
+    <h2 id="ethics">05. Research Ethics</h2>
+    
+    <h3>5.1. General Principles</h3>
+    <p>All research published in the Journal must have been conducted in accordance with the highest ethical standards and in compliance with applicable national and international legislation. The Journal adheres to the principles of the <strong>Declaration of Helsinki</strong> (and its subsequent amendments) for research involving human subjects, and to international animal welfare guidelines recognized by the scientific community.</p>
+
+    <h3>5.2. Research Involving Human Subjects and Personal Data</h3>
+    <p><strong>Ethical approval.</strong> Approval from a research ethics committee (IRB) will be required only when the study involves direct interaction with human subjects, interventions, collection of identifiable personal data, human biological samples, or when local or institutional regulations explicitly require it.</p>
+    <p><strong>Exemptions.</strong> The following are exempt from ethical approval: literature reviews, theoretical essays, historical research, analyses of public and fully anonymized databases, and other studies without direct interaction with human subjects.</p>
+    <p><strong>Informed consent.</strong> When required, authors must declare in the manuscript that free, informed, and explicit consent was obtained from all participants. In the case of minors or persons lacking the capacity to consent, consent from the legal representative is required, and, where age and maturity permit, the participant's assent.</p>
+    <p><strong>Indigenous peoples and traditional communities.</strong> Research involving indigenous peoples or traditional communities must respect national legislation and applicable community norms, and must seek processes of prior, free, and informed consultation and consent that are culturally appropriate.</p>
+    <p><strong>Documentary evidence.</strong> It will suffice to indicate in the manuscript the name of the committee that granted approval, the approval number or code, and the date. The Journal may request the official certificate during the review process but will not require its mandatory upload at the initial submission stage.</p>
+
+    <h3>5.3. Animal Research</h3>
+    <p>Studies conducted on vertebrate animals or cephalopods must have been approved by the corresponding institutional animal ethics and welfare committee. Authors must declare compliance with current national legislation on animal protection and the <strong>3Rs</strong> principle (Replacement, Reduction, and Refinement).</p>
+
+    <h3>5.4. Mandatory Declaration</h3>
+    <p>All manuscripts requiring ethical approval must include, at the end of the text and before the references, a declaration containing: name of the committee, approval number, date, and, where applicable, confirmation of informed consent obtained.</p>
+
+    <h2 id="conflicts">06. Conflicts of Interest and Funding</h2>
+    
+    <h3>6.1. Definition and Scope</h3>
+    <p>In accordance with COPE, a <strong>conflict of interest</strong> is understood as any situation in which personal, academic, commercial, financial, institutional, or political interests may influence —or may reasonably be perceived as capable of influencing— unduly the process of evaluation, judgment, and publication of a scientific manuscript. Conflicts may be real, potential, or apparent, and all must be declared.</p>
+    
+    <h3>6.2. Categories of Conflict</h3>
+    <p><strong>Financial and commercial:</strong> fees, salaries, grants, consultancy payments, holding of shares or patents, or direct funding from entities with an interest in the subject matter of the study.<br>
+    <strong>Personal:</strong> family, kinship, or close friendship relationships with other authors, editors, or reviewers; acceptance of gifts, travel, or hospitality from interested organizations.<br>
+    <strong>Academic and professional:</strong> recent collaborations, professional disputes, direct competitive relationships, or belonging to the same institution at the time of evaluation.<br>
+    <strong>Ideological or political:</strong> personal convictions that prevent objective and impartial judgment of the work.</p>
+
+    <h3>6.3. Mandatory Declaration</h3>
+    <p>A complete declaration of conflicts of interest is <strong>mandatory</strong> for all authors, reviewers, and editors. Authors must include a declaration in the manuscript; reviewers, upon accepting the review invitation; and editors, by refraining from handling manuscripts in which a conflict exists.</p>
+
+    <h3>6.4. Procedure for Undisclosed Conflicts</h3>
+    <p>If an undisclosed conflict of interest is discovered during review, the editorial process will be suspended immediately, and formal explanations will be requested from the authors. If it is concluded that the omission was unintentional and does not affect the study's conclusions, a formal correction (<em>Corrigendum</em>) will be published. If the conflict compromised the study's validity or the omission was deliberate, a <strong>retraction</strong> of the article will proceed in accordance with Chapter 12.</p>
+
+    <h3>6.5. Funding Declaration</h3>
+    <p>Authors must mandatorily declare all sources of funding that supported the research, including institutional support. The official name of the funding agency and the grant identification code or number must be cited. If no funding was received, this must be explicitly stated using the phrase: "This research received no external funding."</p>
+
+    <h2 id="ai">07. Use of Artificial Intelligence</h2>
+    
+    <h3>7.1. General Principle</h3>
+    <p>The Journal recognizes the usefulness of artificial intelligence (AI) tools as technical assistants in the research and writing process. However, it unequivocally maintains that the intellectual, ethical, and legal responsibility for the content of a manuscript rests solely with the human authors. AI tools cannot be authors or co-authors, nor can they be cited as a source of knowledge.</p>
+
+    <h3>7.2. Permitted and Non-Permitted Uses</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Use</th>
+          <th>Policy</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Grammar, spelling, and style correction</td>
+          <td><strong>Permitted.</strong> No express declaration required.</td>
+        </tr>
+        <tr>
+          <td>Translation</td>
+          <td><strong>Permitted,</strong> provided the final result is subjected to rigorous human review and validation. Must be declared.</td>
+        </tr>
+        <tr>
+          <td>Summarizing literature or analyzing data</td>
+          <td><strong>Permitted,</strong> but the accuracy, integrity, and interpretation of the results are the exclusive responsibility of the authors. Must be declared.</td>
+        </tr>
+        <tr>
+          <td>Generation of figures, images, or illustrations</td>
+          <td><strong>Permitted as illustrative elements,</strong> but <strong>strictly prohibited</strong> for generating, altering, or simulating scientific evidence (micrographs, sample photographs, clinical images, observational records). Must be declared.</td>
+        </tr>
+        <tr>
+          <td>Writing substantial paragraphs of the manuscript</td>
+          <td><strong>Generally not permitted.</strong> Only accepted for refining or paraphrasing text previously drafted by the authors. If an excessive percentage of AI is detected through various verification platforms, and the Editorial Board deems that it compromises the intellectual originality of the work, the manuscript may be rejected.</td>
+        </tr>
+        <tr>
+          <td>Being cited as a source or listed as an author</td>
+          <td><strong>Prohibited.</strong> An AI cannot assume responsibility for the integrity of an academic work.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>7.3. Mandatory Declaration</h3>
+    <p>Authors must declare in the submission form the use of any AI tool (e.g., ChatGPT, Gemini, Claude, Copilot), specifying: name and version of the tool, specific purpose of its use, and the sections of the manuscript in which it was employed. Deliberate omission of this declaration will be considered an ethical breach and may result in the rejection of the manuscript or its retraction if already published.</p>
+
+    <h2 id="data">08. Open Data, Code, and Reproducibility</h2>
+    
+    <h3>8.1. Data Availability Statement</h3>
+    <p>All manuscripts must mandatorily include a <strong>Data Availability Statement</strong>, even in cases where there are no data to share or data cannot be made public. The Journal favors open access to underlying data as a guarantee of reproducibility and transparency.</p>
+    
+    <h3>8.2. Data Deposit</h3>
+    <p>Deposit of datasets in recognized, public, permanent repositories is recommended, preferably subject-specific (e.g., GenBank, Protein Data Bank) or, failing that, generalist ones such as <strong>Zenodo</strong>, <strong>Figshare</strong>, <strong>Open Science Framework (OSF)</strong>, or <strong>Dryad</strong>. Data must be deposited no later than the publication date of the article, and earlier deposit, before acceptance, is recommended to facilitate review.</p>
+    
+    <h3>8.3. Exceptions</h3>
+    <p>The modality "data available upon reasonable request" will be accepted only exceptionally and is subject to express justification by the authors. It will only be appropriate when legal, ethical (participant confidentiality, sensitive data), contractual, or intellectual property restrictions prevent public dissemination, or when disclosure could affect endangered species, archaeological heritage, public safety, or third-party rights.</p>
+
+    <h3>8.4. Code Sharing</h3>
+    <p>Deposit of computational code developed or used for the generation, processing, or analysis of results is strongly recommended, whenever necessary for the reproducibility of the research. Code may be deposited in public repositories such as <strong>GitHub</strong> (preferably archived via <strong>Zenodo</strong> for DOI acquisition), <strong>GitLab</strong>, or <strong>OSF</strong>. The use of standard open-source licenses is recommended (MIT, BSD 3-Clause, Apache 2.0, GNU GPL v3.0) according to the nature of the project and the authors' preferences.</p>
+
+    <h2 id="figures">09. Guidelines for Figures and Images</h2>
+    
+    <h3>9.1. Technical Requirements</h3>
+    <p>Figures must be submitted with a minimum resolution of <strong>300 dpi</strong> for photographs and bitmap images, and <strong>600 dpi</strong> —or, preferably, in vector format— for line graphs, schematics, and diagrams. Accepted formats are: PNG, TIFF, JPG/JPEG, PDF, and <strong>SVG</strong> (the latter being preferred for vector graphics as it maintains quality when scaled).</p>
+
+    <h3>9.2. Scientific Integrity of Images</h3>
+    <p>Only global, linear, and uniform adjustments of brightness, contrast, color balance, cropping, or sharpening are permitted, provided they do not alter, conceal, or distort the original scientific content. Any manipulation involving adding, removing, moving, cloning, or selectively modifying elements of an image constituting scientific evidence (electrophoresis gels, radiographs, micrographs, etc.) constitutes <strong>falsification</strong>. Such practices will result in immediate rejection and potential notification to the author's affiliated institution.</p>
+
+    <h3>9.3. AI-Generated Images</h3>
+    <p>Their use is governed by the provisions of Chapter 7. They must be expressly declared and may under no circumstances replace photographs or scientific observation records. The figure legend must explicitly state that it was generated by AI and for what purpose.</p>
+
+    <h3>9.4. Third-Party Material Copyright and Accessibility</h3>
+    <p>Authors are responsible for obtaining the necessary permissions or licenses to reproduce figures, images, or any graphic material for which they do not hold the copyright. The Journal may request documentary evidence of such authorizations. Furthermore, a brief alternative text (<em>alt-text</em>) will be requested for each figure intended for the digital version, to ensure accessibility for readers using assistive technologies.</p>
+
+    <h2 id="review">10. Peer Review Process</h2>
+    
+    <h3>10.1. Review Model</h3>
+    <p>The Journal operates a <strong>double-blind</strong> peer review system, in which both authors and reviewers are unaware of each other's identities. The process is managed entirely by the Editorial Board through the official platform.</p>
+
+    <h3>10.2. Selection and Role of Reviewers</h3>
+    <p>The editor responsible for the manuscript will select and invite a minimum of <strong>two external reviewers</strong> with experience or knowledge pertinent to the article's subject matter. Reviewers must:</p>
+    <p>(a) Declare any real, potential, or perceived conflict of interest that may compromise their impartiality.<br>
+    (b) Commit to maintaining the <strong>absolute confidentiality</strong> of the manuscript, and may not share, distribute, or use it for their own benefit or that of third parties prior to its publication.<br>
+    (c) Issue an objective, constructive, and well-founded report assessing the originality, methodological rigor, clarity of presentation, and relevance of the work.</p>
+
+    <h3>10.3. Use of Artificial Intelligence by Reviewers</h3>
+    <p>Reviewers may use AI tools as a support to improve the writing or organization of their reports. However, <strong>they may not, under any circumstances, delegate to such tools the critical reading of the manuscript, the scientific judgment, or the substantial drafting of the evaluation</strong>. The reviewer remains fully responsible for the content of their report. It is prohibited to upload the manuscript, or substantial parts thereof, to AI services that may retain, reuse, or train their models on such information, unless expressly authorized by the Journal and adequate confidentiality safeguards are in place.</p>
+
+    <h3>10.4. Deadlines and Commitments</h3>
+    <p>Reviewers commit to issuing their report within the deadlines established by the Journal. If a reviewer cannot meet the deadline or lacks the necessary expertise, they must decline the invitation as soon as possible. The obligation of confidentiality shall survive even after the conclusion of the editorial process.</p>
+
+    <h2 id="decisions">11. Editorial Decisions and Appeals</h2>
+    
+    <h3>11.1. Types of Decision</h3>
+    <p>Upon completion of the review process, the editor will issue one of the following reasoned decisions:</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Decision</th>
+          <th>Meaning</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Accept</strong></td>
+          <td>The manuscript is accepted for publication without further substantive changes.</td>
+        </tr>
+        <tr>
+          <td><strong>Revise and Resubmit (Minor Revision)</strong></td>
+          <td>Minor modifications are required that do not warrant a new round of external review.</td>
+        </tr>
+        <tr>
+          <td><strong>Revise and Resubmit (Major Revision)</strong></td>
+          <td>Substantial changes are required. The revised manuscript will be re-evaluated by the reviewers.</td>
+        </tr>
+        <tr>
+          <td><strong>Reject</strong></td>
+          <td>The manuscript does not meet the standards required for publication in the Journal.</td>
+        </tr>
+        <tr>
+          <td><strong>Desk Reject</strong></td>
+          <td>Initial rejection by the Editorial Board, without external review, for reasons of scope, format, originality, or failure to meet basic requirements.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>Final editorial changes —copyediting, typesetting, adaptation to the template— will be communicated to the authors transparently and within reasonable timeframes, requiring their approval before final publication.</p>
+
+    <h3>11.2. Appeals Against Editorial Decisions</h3>
+    <p>Authors may appeal an editorial rejection decision by means of a letter addressed to the Editor-in-Chief, within <strong>thirty (30) calendar days</strong> following notification of the decision. The appeal must:</p>
+    <p>(a) Be duly substantiated, specifically identifying the alleged procedural error, breach of editorial procedure, or manifestly incorrect interpretation of the manuscript.<br>
+    (b) Not constitute a mere expression of disagreement with the reviewers' scientific judgment.<br>
+    (c) Not be accompanied by a substantially modified version of the manuscript.</p>
+    <p>The appeal will be decided by the Editor-in-Chief, who may appoint another editor if they themselves were involved in the challenged decision. The decision on the appeal shall be <strong>final and unappealable</strong>. The appointment of a new reviewer will be exceptional and will only proceed when there are well-founded reasons to consider that the previous review was manifestly deficient, biased, or insufficient.</p>
+
+    <h2 id="postpub">12. Corrections, Retractions, and Digital Preservation</h2>
+    
+    <h3>12.1. Post-Publication Corrections</h3>
+    <p>The Journal will publish a correction linked to the original article via a reciprocal link when errors are detected that do not invalidate the work's conclusions. A distinction will be made between:</p>
+    <p><strong>Corrigendum:</strong> error attributable to the authors.<br>
+    <strong>Erratum:</strong> error introduced by the Journal during the editorial production process.</p>
+
+    <h3>12.2. Retractions</h3>
+    <p>The Journal will retract an article, following COPE flowcharts, when there is evidence of fabrication or falsification of data, improper image manipulation, plagiarism, unjustified duplicate publication, serious ethical violations, or any other conduct that substantially and irreparably compromises the reliability of the work. The retracted article will remain accessible but will be clearly identified with a "RETRACTED" watermark and accompanied by a detailed notice explaining the reasons for retraction.</p>
+
+    <h3>12.3. Expressions of Concern</h3>
+    <p>When there are reasonable indications of serious problems but the corresponding investigation has not yet concluded, the Journal will issue an <strong>Expression of Concern</strong>, which will be removed or replaced by a correction or retraction upon completion of the analysis.</p>
+
+    <h3>12.4. Digital Preservation</h3>
+    <p>The Journal guarantees long-term digital preservation through a redundancy strategy: published articles are preserved on the official website, in a public <strong>GitHub</strong> repository used for version control of published files, and in <strong>Zenodo</strong>, where a permanent copy is archived and the <strong>Digital Object Identifier (DOI)</strong> is managed. In the event of cessation of editorial activities, articles will remain accessible through Zenodo and any other repository where they have been deposited.</p>
+
+    <h2 id="copyright">13. Copyright and Licensing</h2>
+    
+    <h3>13.1. Ownership of Rights</h3>
+    <p><strong>Authors retain full copyright</strong> over their works. By accepting publication, they grant the Journal a <strong>non-exclusive, royalty-free, perpetual, and worldwide license</strong> to edit, publish, publicly communicate, preserve, disseminate, and assign a DOI to the article, as well as to keep it permanently available.</p>
+
+    <h3>13.2. Publication License</h3>
+    <p>All articles are published under the <strong>Creative Commons Attribution 4.0 International (CC BY 4.0)</strong> license, unless expressly stated otherwise when a legal or contractual obligation prevents it. This license allows anyone to share (copy and redistribute the material in any medium or format) and adapt (remix, transform, and build upon the material) for any purpose, even commercially, provided that appropriate credit is given to the authors and the original source of publication, an indication is given if changes were made, and a link to the license is provided.</p>
+
+    <h3>13.3. Self-Archiving</h3>
+    <p>Authors may deposit the final published version of the article (<em>version of record</em>) in institutional or subject repositories, personal web pages, academic networks, or any other medium, immediately after publication and <strong>without any embargo period</strong>, provided the full bibliographic reference and the DOI of the original publication are maintained.</p>
+
+    <h3>13.4. Persistent Identification</h3>
+    <p>Each accepted article will receive a <strong>DOI</strong> managed and preserved by Zenodo, which will uniquely and persistently identify it. The DOI will remain associated with the article's academic record even if it is corrected, retracted, or moved to a new technological infrastructure.</p>
+
+    <h2 id="final">14. Final Provisions</h2>
+    
+    <p>The Editorial Board reserves the right to interpret, update, and modify these editorial policies to adapt them to new academic standards, regulatory developments, or unforeseen requirements. Any substantial modification will be communicated to the academic community and published transparently on the Journal's official website, indicating the version and effective date.</p>
+
+    <p>Participation in any of the Journal's processes —as an author, reviewer, editor, or collaborator— implies full and unreserved acceptance of all policies contained in this manual. Ignorance of these rules does not exempt from compliance.</p>
+
+    <p>For any matters not provided for in this document, the guidelines of the <strong>Committee on Publication Ethics (COPE)</strong>, internationally accepted editorial practices and customs, and, ultimately, the legislation of the Republic of Chile shall apply supplementarily.</p>
 
     <div class="footer" id="footer">
       National Review of Sciences for Students · ISSN 3087-2839 <br>
