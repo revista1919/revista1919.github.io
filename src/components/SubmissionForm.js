@@ -1206,22 +1206,46 @@ useEffect(() => {
   };
 
   // Manejador de declaraciones
-  const handleDeclarationChange = (key) => {
-    setFormData(prev => ({
+// Versión blindada: actualiza directamente sin dependencia de estado previo complejo
+const handleDeclarationChange = (key) => {
+  setFormData(prev => {
+    const newDeclarations = { ...prev.declarations };
+    newDeclarations[key] = !newDeclarations[key];
+    
+    const newFormData = {
       ...prev,
-      declarations: {
-        ...prev.declarations,
-        [key]: !prev.declarations[key]
+      declarations: newDeclarations
+    };
+    
+    // Verificación de seguridad: forzar true/false explícito
+    Object.keys(newFormData.declarations).forEach(k => {
+      if (typeof newFormData.declarations[k] !== 'boolean') {
+        newFormData.declarations[k] = false;
       }
-    }));
-  };
+    });
+    
+    return newFormData;
+  });
+};
 
   // Verificar si todas las declaraciones están aceptadas
-  const allDeclarationsAccepted = () => Object.values(formData.declarations).every(Boolean);
+  // Versión blindada: verifica una por una, sin depender de Object.values
+const allDeclarationsAccepted = () => {
+  const d = formData.declarations;
+  return (
+    d.originalAndSimilarity === true &&
+    d.exclusiveSubmission === true &&
+    d.authorshipCriteria === true &&
+    d.dataAuthentic === true &&
+    d.informedConsent === true &&
+    d.aiDisclosure === true &&
+    d.conflicts === true &&
+    d.ccByLicense === true
+  );
+};
 
   // ============ FUNCIÓN DE VALIDACIÓN CORREGIDA ============
-  
- // ============ FUNCIÓN DE VALIDACIÓN CORREGIDA (SIN EFECTOS SECUNDARIOS) ============
+ 
 
 // Función pura para validar sin modificar estado (para usar en el renderizado)
 const isStepValid = (step) => {
@@ -2398,49 +2422,210 @@ const prevStep = () => {
                   </div>
                 </div>
 
-                {/* Declaraciones obligatorias */}
-                <div>
-                  <h3 className="font-serif text-2xl font-light text-[#0A1929] border-b border-[#E0E7E9] pb-4">
-                    {isSpanish ? 'Declaraciones obligatorias' : 'Mandatory declarations'}
-                  </h3>
-                  <div className="mt-8 space-y-5">
-                    {[
-                      { key: 'originalAndSimilarity', 
-                        text: 'El manuscrito es inédito y, en caso de derivar de un trabajo previo, la superposición textual no excede el 15% (Sección 3.2).', 
-                        textEn: 'The manuscript is unpublished and, if derived from previous work, the textual overlap does not exceed 15% (Section 3.2).' },
-                      { key: 'exclusiveSubmission', 
-                        text: 'El manuscrito no está siendo evaluado simultáneamente en otra revista (Sección 3.3).', 
-                        textEn: 'The manuscript is not being simultaneously evaluated in another journal (Section 3.3).' },
-                      { key: 'authorshipCriteria', 
-                        text: 'Todos los autores cumplen los 4 criterios de autoría del ICMJE y sus roles CRediT están declarados (Sección 4.1).', 
-                        textEn: 'All authors meet the 4 ICMJE authorship criteria and their CRediT roles are declared (Section 4.1).' },
-                      { key: 'dataAuthentic', 
-                        text: 'Los datos presentados son auténticos, no han sido manipulados y la investigación cumplió con los estándares éticos aplicables (Capítulo 5).', 
-                        textEn: 'The data presented are authentic, have not been manipulated, and the research complied with applicable ethical standards (Chapter 5).' },
-                      { key: 'informedConsent', 
-                        text: 'Se obtuvo el consentimiento/asentimiento informado cuando fue necesario y se declara en el manuscrito (Sección 5.2).', 
-                        textEn: 'Informed consent/assent was obtained when necessary and is declared in the manuscript (Section 5.2).' },
-                      { key: 'aiDisclosure', 
-                        text: 'El uso de cualquier herramienta de IA ha sido declarado en el formulario y en el manuscrito (Capítulo 7).', 
-                        textEn: 'The use of any AI tool has been declared in this form and in the manuscript (Chapter 7).' },
-                      { key: 'conflicts', 
-                        text: 'Todos los conflictos de interés (reales, potenciales o aparentes) están declarados en el formulario y en el manuscrito (Capítulo 6).', 
-                        textEn: 'All conflicts of interest (real, potential, or apparent) are declared in this form and in the manuscript (Chapter 6).' }
-                    ].map(d => (
-                      <label key={d.key} className="flex gap-4 cursor-pointer group">
-                        <input
-                          type="checkbox"
-                          checked={formData.declarations[d.key]}
-                          onChange={() => handleDeclarationChange(d.key)}
-                          className="mt-1 w-5 h-5 text-[#0A1929] rounded"
-                        />
-                        <span className="text-sm text-[#1A2B3C] group-hover:text-[#0A1929] font-serif">
-                          {isSpanish ? d.text : d.textEn}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
+                {/* DECLARACIONES OBLIGATORIAS - VERSIÓN BLINDADA */}
+<div>
+  <h3 className="font-serif text-2xl font-light text-[#0A1929] border-b border-[#E0E7E9] pb-4">
+    {isSpanish ? 'Declaraciones obligatorias' : 'Mandatory declarations'}
+  </h3>
+  <div className="mt-8 space-y-5">
+    {/* Declaración 1: Originalidad y similitud */}
+    <label className="flex gap-4 cursor-pointer group">
+      <input
+        type="checkbox"
+        checked={formData.declarations.originalAndSimilarity === true}
+        onChange={() => {
+          setFormData(prev => ({
+            ...prev,
+            declarations: {
+              ...prev.declarations,
+              originalAndSimilarity: !prev.declarations.originalAndSimilarity
+            }
+          }));
+          // Limpiar error de declaraciones si existe
+          setValidationErrors(prev => {
+            const newErrors = { ...prev };
+            delete newErrors.declarations;
+            return newErrors;
+          });
+        }}
+        className="mt-1 w-5 h-5 text-[#0A1929] rounded accent-[#0A1929]"
+      />
+      <span className="text-sm text-[#1A2B3C] group-hover:text-[#0A1929] font-serif">
+        {isSpanish 
+          ? 'El manuscrito es inédito y, en caso de derivar de un trabajo previo, la superposición textual no excede el 15% (Sección 3.2).' 
+          : 'The manuscript is unpublished and, if derived from previous work, the textual overlap does not exceed 15% (Section 3.2).'}
+      </span>
+    </label>
+
+    {/* Declaración 2: Envío exclusivo */}
+    <label className="flex gap-4 cursor-pointer group">
+      <input
+        type="checkbox"
+        checked={formData.declarations.exclusiveSubmission === true}
+        onChange={() => {
+          setFormData(prev => ({
+            ...prev,
+            declarations: {
+              ...prev.declarations,
+              exclusiveSubmission: !prev.declarations.exclusiveSubmission
+            }
+          }));
+          setValidationErrors(prev => {
+            const newErrors = { ...prev };
+            delete newErrors.declarations;
+            return newErrors;
+          });
+        }}
+        className="mt-1 w-5 h-5 text-[#0A1929] rounded accent-[#0A1929]"
+      />
+      <span className="text-sm text-[#1A2B3C] group-hover:text-[#0A1929] font-serif">
+        {isSpanish 
+          ? 'El manuscrito no está siendo evaluado simultáneamente en otra revista (Sección 3.3).' 
+          : 'The manuscript is not being simultaneously evaluated in another journal (Section 3.3).'}
+      </span>
+    </label>
+
+    {/* Declaración 3: Criterios de autoría */}
+    <label className="flex gap-4 cursor-pointer group">
+      <input
+        type="checkbox"
+        checked={formData.declarations.authorshipCriteria === true}
+        onChange={() => {
+          setFormData(prev => ({
+            ...prev,
+            declarations: {
+              ...prev.declarations,
+              authorshipCriteria: !prev.declarations.authorshipCriteria
+            }
+          }));
+          setValidationErrors(prev => {
+            const newErrors = { ...prev };
+            delete newErrors.declarations;
+            return newErrors;
+          });
+        }}
+        className="mt-1 w-5 h-5 text-[#0A1929] rounded accent-[#0A1929]"
+      />
+      <span className="text-sm text-[#1A2B3C] group-hover:text-[#0A1929] font-serif">
+        {isSpanish 
+          ? 'Todos los autores cumplen los 4 criterios de autoría del ICMJE y sus roles CRediT están declarados (Sección 4.1).' 
+          : 'All authors meet the 4 ICMJE authorship criteria and their CRediT roles are declared (Section 4.1).'}
+      </span>
+    </label>
+
+    {/* Declaración 4: Datos auténticos */}
+    <label className="flex gap-4 cursor-pointer group">
+      <input
+        type="checkbox"
+        checked={formData.declarations.dataAuthentic === true}
+        onChange={() => {
+          setFormData(prev => ({
+            ...prev,
+            declarations: {
+              ...prev.declarations,
+              dataAuthentic: !prev.declarations.dataAuthentic
+            }
+          }));
+          setValidationErrors(prev => {
+            const newErrors = { ...prev };
+            delete newErrors.declarations;
+            return newErrors;
+          });
+        }}
+        className="mt-1 w-5 h-5 text-[#0A1929] rounded accent-[#0A1929]"
+      />
+      <span className="text-sm text-[#1A2B3C] group-hover:text-[#0A1929] font-serif">
+        {isSpanish 
+          ? 'Los datos presentados son auténticos, no han sido manipulados y la investigación cumplió con los estándares éticos aplicables (Capítulo 5).' 
+          : 'The data presented are authentic, have not been manipulated, and the research complied with applicable ethical standards (Chapter 5).'}
+      </span>
+    </label>
+
+    {/* Declaración 5: Consentimiento informado */}
+    <label className="flex gap-4 cursor-pointer group">
+      <input
+        type="checkbox"
+        checked={formData.declarations.informedConsent === true}
+        onChange={() => {
+          setFormData(prev => ({
+            ...prev,
+            declarations: {
+              ...prev.declarations,
+              informedConsent: !prev.declarations.informedConsent
+            }
+          }));
+          setValidationErrors(prev => {
+            const newErrors = { ...prev };
+            delete newErrors.declarations;
+            return newErrors;
+          });
+        }}
+        className="mt-1 w-5 h-5 text-[#0A1929] rounded accent-[#0A1929]"
+      />
+      <span className="text-sm text-[#1A2B3C] group-hover:text-[#0A1929] font-serif">
+        {isSpanish 
+          ? 'Se obtuvo el consentimiento/asentimiento informado cuando fue necesario y se declara en el manuscrito (Sección 5.2).' 
+          : 'Informed consent/assent was obtained when necessary and is declared in the manuscript (Section 5.2).'}
+      </span>
+    </label>
+
+    {/* Declaración 6: Divulgación de IA */}
+    <label className="flex gap-4 cursor-pointer group">
+      <input
+        type="checkbox"
+        checked={formData.declarations.aiDisclosure === true}
+        onChange={() => {
+          setFormData(prev => ({
+            ...prev,
+            declarations: {
+              ...prev.declarations,
+              aiDisclosure: !prev.declarations.aiDisclosure
+            }
+          }));
+          setValidationErrors(prev => {
+            const newErrors = { ...prev };
+            delete newErrors.declarations;
+            return newErrors;
+          });
+        }}
+        className="mt-1 w-5 h-5 text-[#0A1929] rounded accent-[#0A1929]"
+      />
+      <span className="text-sm text-[#1A2B3C] group-hover:text-[#0A1929] font-serif">
+        {isSpanish 
+          ? 'El uso de cualquier herramienta de IA ha sido declarado en el formulario y en el manuscrito (Capítulo 7).' 
+          : 'The use of any AI tool has been declared in this form and in the manuscript (Chapter 7).'}
+      </span>
+    </label>
+
+    {/* Declaración 7: Conflictos de interés */}
+    <label className="flex gap-4 cursor-pointer group">
+      <input
+        type="checkbox"
+        checked={formData.declarations.conflicts === true}
+        onChange={() => {
+          setFormData(prev => ({
+            ...prev,
+            declarations: {
+              ...prev.declarations,
+              conflicts: !prev.declarations.conflicts
+            }
+          }));
+          setValidationErrors(prev => {
+            const newErrors = { ...prev };
+            delete newErrors.declarations;
+            return newErrors;
+          });
+        }}
+        className="mt-1 w-5 h-5 text-[#0A1929] rounded accent-[#0A1929]"
+      />
+      <span className="text-sm text-[#1A2B3C] group-hover:text-[#0A1929] font-serif">
+        {isSpanish 
+          ? 'Todos los conflictos de interés (reales, potenciales o aparentes) están declarados en el formulario y en el manuscrito (Capítulo 6).' 
+          : 'All conflicts of interest (real, potential, or apparent) are declared in this form and in the manuscript (Chapter 6).'}
+      </span>
+    </label>
+  </div>
+</div>
 
                 {/* Licencia CC-BY */}
                 <div className="bg-[#E5E9F0] border border-[#0A1929] rounded-3xl p-8">
@@ -2555,19 +2740,43 @@ const prevStep = () => {
       : (isSpanish ? 'Haz clic para enviar tu artículo' : 'Click to submit your article')
   }
   onClick={(e) => {
-    if (!isStepValid(3)) {
-      e.preventDefault();
-      // Mostrar alerta detallada de qué falta
-      const problemas = [];
-      if (!allDeclarationsAccepted()) problemas.push(isSpanish ? 'Declaraciones incompletas' : 'Incomplete declarations');
-      if (!formData.manuscriptName) problemas.push(isSpanish ? 'Manuscrito no subido' : 'Manuscript not uploaded');
-      if (!formData.dataAvailability) problemas.push(isSpanish ? 'Disponibilidad de datos no seleccionada' : 'Data availability not selected');
-      if (formData.requiresEthicsApproval === 'yes' && !formData.ethicsCommitteeName.trim()) problemas.push(isSpanish ? 'Comité de ética no especificado' : 'Ethics committee not specified');
-      if (formData.aiUsed === 'yes' && !formData.aiTools.some(t => t.name.trim() && t.purpose.trim())) problemas.push(isSpanish ? 'Herramientas IA no especificadas' : 'AI tools not specified');
-      
-      alert((isSpanish ? '❌ Faltan campos por completar:\n\n' : '❌ Missing fields:\n\n') + problemas.map(p => `• ${p}`).join('\n'));
-    }
-  }}
+  // VERIFICACIÓN REDUNDANTE ANTES DE ENVIAR
+  const d = formData.declarations;
+  const todasMarcadas = 
+    d.originalAndSimilarity === true &&
+    d.exclusiveSubmission === true &&
+    d.authorshipCriteria === true &&
+    d.dataAuthentic === true &&
+    d.informedConsent === true &&
+    d.aiDisclosure === true &&
+    d.conflicts === true &&
+    d.ccByLicense === true;
+  
+  if (!todasMarcadas) {
+    e.preventDefault();
+    
+    // Mostrar exactamente cuáles faltan
+    const faltantes = [];
+    if (!d.originalAndSimilarity) faltantes.push('Originalidad y similitud');
+    if (!d.exclusiveSubmission) faltantes.push('Envío exclusivo');
+    if (!d.authorshipCriteria) faltantes.push('Criterios de autoría');
+    if (!d.dataAuthentic) faltantes.push('Datos auténticos');
+    if (!d.informedConsent) faltantes.push('Consentimiento informado');
+    if (!d.aiDisclosure) faltantes.push('Divulgación de IA');
+    if (!d.conflicts) faltantes.push('Conflictos de interés');
+    if (!d.ccByLicense) faltantes.push('Licencia CC-BY');
+    
+    alert(
+      (isSpanish ? '❌ Faltan declaraciones por aceptar:\n\n' : '❌ Missing declarations:\n\n') + 
+      faltantes.map(f => `• ${f}`).join('\n')
+    );
+    
+    return;
+  }
+  
+  // Si llegamos aquí, todo está bien
+  console.log('✅ VERIFICACIÓN FINAL: Todas las declaraciones aceptadas');
+}}
   className="px-12 py-4 bg-[#0A1929] text-white rounded-2xl text-sm font-bold hover:bg-[#B22234] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-3 shadow-xl font-serif"
 >
                   {uploading
