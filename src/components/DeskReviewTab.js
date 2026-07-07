@@ -5,6 +5,45 @@ import { useEditorialReview } from '../hooks/useEditorialReview';
 import { doc, getDoc, collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 
+// Componente auxiliar para etiquetas de estado
+const StatusBadge = ({ condition, trueLabel, trueColor, falseLabel, falseColor }) => {
+  const isTrue = condition;
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+      isTrue ? trueColor : falseColor
+    }`}>
+      {isTrue ? '✓' : '—'} {isTrue ? trueLabel : falseLabel}
+    </span>
+  );
+};
+
+// Componente para cada bloque de información
+const InfoBlock = ({ icon, title, children, className = '' }) => (
+  <div className={`bg-white rounded-xl border border-[#E5E9F0] overflow-hidden ${className}`}>
+    <div className="bg-[#F5F7FA] px-5 py-3 border-b border-[#E5E9F0] flex items-center gap-2">
+      {icon && <span className="text-[#C0A86A]">{icon}</span>}
+      <h3 className="font-['Playfair_Display'] font-bold text-[#0A1929] text-sm uppercase tracking-wide">
+        {title}
+      </h3>
+    </div>
+    <div className="p-5">
+      {children}
+    </div>
+  </div>
+);
+
+// Campo individual dentro de un InfoBlock
+const InfoField = ({ label, value, className = '' }) => (
+  <div className={`${className}`}>
+    <label className="block text-[10px] font-mono font-semibold uppercase tracking-[0.1em] text-[#5A6B7A] mb-1">
+      {label}
+    </label>
+    <div className="text-[#0A1929] text-sm font-['Lora'] leading-relaxed">
+      {value || '—'}
+    </div>
+  </div>
+);
+
 export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading }) => {
   const { language } = useLanguage();
   const isSpanish = language === 'es';
@@ -37,7 +76,6 @@ export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading
         if (reviewSnap.exists()) {
           const data = reviewSnap.data();
           setEditorialReview(data);
-          // Inicializar el formulario con los datos de la review (si existen)
           setDecision(data.decision || '');
           setFeedback(data.feedbackToAuthor || '');
           setInternalComments(data.commentsToEditorial || '');
@@ -70,34 +108,29 @@ export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading
     fetchLatestRevision();
   }, [task.submissionId]);
 
-  // Función handleSubmit corregida
+  // Función handleSubmit
   const handleSubmit = async () => {
     try {
-      // Validar que hay una decisión seleccionada
       if (!decision) {
         alert(isSpanish ? 'Debes seleccionar una decisión' : 'You must select a decision');
         return;
       }
 
-      // Validar que hay un reviewId en el task
       if (!task.editorialReviewId) {
         console.error('No editorialReviewId found in task');
         alert(isSpanish ? 'Error: ID de revisión no encontrado' : 'Error: Review ID not found');
         return;
       }
 
-      // Preparar los datos de la decisión
       const decisionData = {
         decision,
         feedbackToAuthor: feedback,
         commentsToEditorial: internalComments
       };
 
-      // Enviar la decisión usando el hook
       const result = await submitDeskReviewDecision(task.editorialReviewId, decisionData);
       
       if (result.success) {
-        // Si hay una función onComplete, llamarla
         if (onComplete) {
           onComplete({
             decision,
@@ -106,11 +139,8 @@ export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading
             reviewId: task.editorialReviewId
           });
         }
-        
-        // Mostrar mensaje de éxito
         alert(result.message || (isSpanish ? 'Decisión guardada exitosamente' : 'Decision saved successfully'));
       } else {
-        // Mostrar error si algo salió mal
         alert(result.error || (isSpanish ? 'Error al guardar la decisión' : 'Error saving decision'));
       }
     } catch (err) {
@@ -119,16 +149,41 @@ export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading
     }
   };
 
-  // Función para formatear autores
-  const formatAuthors = (authors) => {
-    if (!authors || authors.length === 0) return '—';
-    return authors.map(author => {
-      const name = `${author.firstName || ''} ${author.lastName || ''}`.trim();
-      const affiliation = author.institution ? ` (${author.institution})` : '';
-      const corresponding = author.isCorresponding ? ' ✉️' : '';
-      return `${name}${affiliation}${corresponding}`;
-    }).join('; ');
+  // Función para traducir disponibilidad de datos
+  const translateAvailability = (value) => {
+    const translations = {
+      public_repo: isSpanish ? 'Repositorio público' : 'Public repository',
+      supplementary: isSpanish ? 'Material suplementario' : 'Supplementary material',
+      upon_request: isSpanish ? 'Bajo solicitud razonable' : 'Upon reasonable request',
+      not_available: isSpanish ? 'No disponible' : 'Not available',
+      not_applicable: isSpanish ? 'No aplica' : 'Not applicable',
+    };
+    return translations[value] || value || '—';
   };
+
+  // Función para traducir tipo de artículo
+  const translateArticleType = (value) => {
+    const translations = {
+      research: isSpanish ? 'Artículo de Investigación Original' : 'Original Research Article',
+      review: isSpanish ? 'Revisión Sistemática' : 'Systematic Review',
+      essay: isSpanish ? 'Ensayo Académico y Reflexivo' : 'Academic and Reflective Essay',
+      case: isSpanish ? 'Reporte de Caso' : 'Case Report',
+      book_review: isSpanish ? 'Reseña de Libros' : 'Book Review',
+    };
+    return translations[value] || value || '—';
+  };
+
+  // Datos derivados
+  const correspondingAuthor = submission.correspondingAuthor || 
+    (submission.authors && submission.authors.length > 0 ? submission.authors.find(a => a.isCorresponding) || submission.authors[0] : null);
+  
+  const minorAuthorsList = submission.authors?.filter(a => a.isMinor) || [];
+  const nonMinorAuthors = submission.authors?.filter(a => !a.isMinor) || [];
+  
+  const hasFunding = submission.funding?.hasFunding;
+  const aiUsed = submission.aiUsed;
+  const aiTools = submission.aiTools || [];
+  const requiresEthics = submission.requiresEthicsApproval;
 
   // Mostrar loader mientras se carga la revisión
   if (loadingReview) {
@@ -145,248 +200,573 @@ export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-8">
       {/* Mostrar error si existe */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg font-['Lora'] text-sm">
           {error}
         </div>
       )}
       
-      {/* ENCABEZADO con título e IDs */}
-      <div className="bg-gradient-to-r from-[#0A1929] to-[#1E2F40] text-white rounded-xl p-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <span className="inline-block px-3 py-1 bg-[#C0A86A] text-[#0A1929] text-xs font-bold rounded-full mb-3">
-              {submission.submissionId || 'Sin ID'}
-            </span>
-            <h2 className="font-['Playfair_Display'] text-2xl font-bold mb-2">
+      {/* ==================== ENCABEZADO PRINCIPAL ==================== */}
+      <div className="bg-gradient-to-r from-[#0A1929] to-[#1E2F40] text-white rounded-xl p-6 shadow-lg">
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+          <div className="flex-1">
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <span className="inline-block px-3 py-1 bg-[#C0A86A] text-[#0A1929] text-xs font-bold rounded-full font-mono">
+                {submission.submissionId || 'Sin ID'}
+              </span>
+              <span className="inline-block px-3 py-1 bg-white/15 text-white text-xs rounded-full font-mono">
+                {translateArticleType(submission.articleType)}
+              </span>
+              <span className="inline-block px-3 py-1 bg-white/10 text-white text-xs rounded-full font-mono">
+                {isSpanish ? 'Idioma:' : 'Language:'} {submission.paperLanguage === 'en' ? 'English' : 'Español'}
+              </span>
+              <span className="inline-block px-3 py-1 bg-white/10 text-white text-xs rounded-full font-mono">
+                {isSpanish ? 'Ronda:' : 'Round:'} {submission.currentRound || 1}
+              </span>
+            </div>
+            <h2 className="font-['Playfair_Display'] text-xl lg:text-2xl font-bold mb-2 leading-tight">
               {isSpanish ? submission.title : submission.titleEn || submission.title}
             </h2>
-            <p className="text-[#E5E9F0] text-sm">
-              {isSpanish ? 'Área:' : 'Area:'} {submission.area || '—'} • 
-              {isSpanish ? ' Estado:' : ' Status:'} {submission.status || '—'} • 
-              {isSpanish ? ' Ronda:' : ' Round:'} {submission.currentRound || 1}
-            </p>
+            {submission.titleEn && isSpanish && (
+              <p className="text-[#E5E9F0] text-sm italic mb-2 font-['Lora']">
+                EN: {submission.titleEn}
+              </p>
+            )}
+            <div className="flex flex-wrap gap-3 text-[#E5E9F0] text-sm mt-3">
+              <span className="flex items-center gap-1">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                {submission.area || '—'}
+              </span>
+              <span className="flex items-center gap-1">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {submission.status || '—'}
+              </span>
+              <span className="flex items-center gap-1">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {submission.createdAt?.toDate?.() 
+                  ? new Date(submission.createdAt.toDate()).toLocaleDateString(isSpanish ? 'es-CL' : 'en-US')
+                  : '—'}
+              </span>
+            </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            {submission.originalFileUrl && (
+              <a 
+                href={submission.originalFileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors text-sm whitespace-nowrap font-['Lora']"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                {isSpanish ? 'Manuscrito original' : 'Original manuscript'}
+              </a>
+            )}
             {latestRevisionUrl && (
               <a 
                 href={latestRevisionUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors text-sm whitespace-nowrap"
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors text-sm whitespace-nowrap font-['Lora']"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
-                {isSpanish ? 'Ver última revisión' : 'View latest revision'}
+                {isSpanish ? 'Última revisión' : 'Latest revision'}
               </a>
             )}
-            <a 
-              href={submission.driveFolderUrl} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg transition-colors text-sm whitespace-nowrap"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              {isSpanish ? 'Ver archivos en Drive' : 'View files in Drive'}
-            </a>
+            <div className="flex gap-1">
+              <a 
+                href={submission.driveFolderUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-lg transition-colors text-sm whitespace-nowrap font-['Lora']"
+                title={isSpanish ? 'Carpeta del autor' : 'Author folder'}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                </svg>
+                Autor
+              </a>
+              {submission.editorialFolderUrl && (
+                <a 
+                  href={submission.editorialFolderUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-lg transition-colors text-sm whitespace-nowrap font-['Lora']"
+                  title={isSpanish ? 'Carpeta editorial' : 'Editorial folder'}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Editorial
+                </a>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* INFORMACIÓN DEL AUTOR PRINCIPAL */}
-      <div className="bg-[#F5F7FA] rounded-xl p-6 border border-[#E5E9F0]">
-        <h3 className="font-['Playfair_Display'] font-bold text-[#0A1929] text-lg mb-4 flex items-center gap-2">
-          <svg className="w-5 h-5 text-[#C0A86A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-          </svg>
-          {isSpanish ? 'Autor Principal' : 'Corresponding Author'}
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs text-[#5A6B7A] uppercase tracking-wider mb-1">
-              {isSpanish ? 'Nombre' : 'Name'}
-            </label>
-            <p className="text-[#0A1929] font-medium">{submission.authorName || '—'}</p>
-          </div>
-          <div>
-            <label className="block text-xs text-[#5A6B7A] uppercase tracking-wider mb-1">
-              Email
-            </label>
-            <p className="text-[#0A1929] font-medium">{submission.authorEmail || '—'}</p>
-          </div>
-          <div>
-            <label className="block text-xs text-[#5A6B7A] uppercase tracking-wider mb-1">
-              ORCID
-            </label>
-            <p className="text-[#0A1929] font-medium">{submission.authors?.[0]?.orcid || '—'}</p>
-          </div>
-          <div>
-            <label className="block text-xs text-[#5A6B7A] uppercase tracking-wider mb-1">
-              {isSpanish ? 'Institución' : 'Institution'}
-            </label>
-            <p className="text-[#0A1929] font-medium">{submission.authors?.[0]?.institution || '—'}</p>
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-xs text-[#5A6B7A] uppercase tracking-wider mb-1">
-              {isSpanish ? 'Contribución' : 'Contribution'}
-            </label>
-            <p className="text-[#0A1929] font-medium">{submission.authors?.[0]?.contribution || '—'}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* LISTA COMPLETA DE AUTORES (si hay más de uno) */}
-      {submission.authors && submission.authors.length > 1 && (
-        <div className="bg-[#F5F7FA] rounded-xl p-6 border border-[#E5E9F0]">
-          <h3 className="font-['Playfair_Display'] font-bold text-[#0A1929] text-lg mb-4 flex items-center gap-2">
-            <svg className="w-5 h-5 text-[#C0A86A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
-            {isSpanish ? 'Coautores' : 'Co-authors'} ({submission.authors.length - 1})
-          </h3>
-          <div className="space-y-3">
-            {submission.authors.slice(1).map((author, index) => (
-              <div key={index} className="bg-white rounded-lg p-4 border border-[#E5E9F0]">
-                <p className="font-medium text-[#0A1929]">
-                  {author.firstName} {author.lastName}
-                  {author.isCorresponding && <span className="ml-2 text-[#C0A86A]" title="Corresponding author">✉️</span>}
-                </p>
-                <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
-                  <p className="text-[#5A6B7A]">{author.institution || '—'}</p>
-                  <p className="text-[#5A6B7A]">{author.email || '—'}</p>
+      {/* ==================== GRID DE 2 COLUMNAS ==================== */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        {/* COLUMNA IZQUIERDA */}
+        <div className="space-y-6">
+          
+          {/* AUTOR DE CORRESPONDENCIA */}
+          <InfoBlock 
+            icon="✉️" 
+            title={isSpanish ? 'Autor de Correspondencia' : 'Corresponding Author'}
+          >
+            {correspondingAuthor ? (
+              <div className="space-y-3">
+                <InfoField 
+                  label={isSpanish ? 'Nombre completo' : 'Full name'}
+                  value={`${correspondingAuthor.firstName || ''} ${correspondingAuthor.lastName || ''}`.trim()}
+                />
+                <InfoField label="Email" value={correspondingAuthor.email} />
+                <div className="grid grid-cols-2 gap-3">
+                  <InfoField label="ORCID" value={correspondingAuthor.orcid} />
+                  <InfoField 
+                    label={isSpanish ? 'Institución' : 'Institution'} 
+                    value={correspondingAuthor.institution} 
+                  />
                 </div>
-                {author.contribution && (
-                  <p className="text-sm text-[#5A6B7A] mt-1">{author.contribution}</p>
+                {correspondingAuthor.contribution && (
+                  <InfoField 
+                    label={isSpanish ? 'Contribución (CRediT)' : 'Contribution (CRediT)'} 
+                    value={correspondingAuthor.contribution} 
+                  />
                 )}
+              </div>
+            ) : (
+              <p className="text-[#5A6B7A] text-sm italic font-['Lora']">
+                {isSpanish ? 'No especificado' : 'Not specified'}
+              </p>
+            )}
+          </InfoBlock>
+
+          {/* COAUTORES (si hay más de uno) */}
+          {nonMinorAuthors.length > 1 && (
+            <InfoBlock 
+              icon="👥" 
+              title={`${isSpanish ? 'Coautores' : 'Co-authors'} (${nonMinorAuthors.length - 1})`}
+            >
+              <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+                {nonMinorAuthors.filter(a => !a.isCorresponding).map((author, index) => (
+                  <div key={index} className="bg-[#F5F7FA] rounded-lg p-4 border border-[#E5E9F0]">
+                    <div className="flex items-center gap-2 mb-2">
+                      <p className="font-medium text-[#0A1929] font-['Lora']">
+                        {author.firstName} {author.lastName}
+                      </p>
+                      {author.isCorresponding && (
+                        <span className="text-[#C0A86A] text-sm" title="Corresponding author">✉️</span>
+                      )}
+                      {author.isMinor && (
+                        <span className="text-[#B22234] text-sm" title="Minor author">👶</span>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <InfoField label="Email" value={author.email} />
+                      <InfoField label="ORCID" value={author.orcid} />
+                    </div>
+                    <InfoField 
+                      label={isSpanish ? 'Institución' : 'Institution'} 
+                      value={author.institution} 
+                      className="mt-2"
+                    />
+                    {author.contribution && (
+                      <InfoField 
+                        label={isSpanish ? 'Contribución (CRediT)' : 'Contribution (CRediT)'} 
+                        value={author.contribution} 
+                        className="mt-2"
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </InfoBlock>
+          )}
+
+          {/* RESUMEN BILINGÜE */}
+          <InfoBlock 
+            icon="📝" 
+            title={isSpanish ? 'Resumen / Abstract' : 'Abstract / Resumen'}
+          >
+            <div className="space-y-4">
+              <div>
+                <span className="inline-block px-2 py-0.5 bg-[#E5E9F0] text-[#0A1929] text-[10px] font-mono rounded mb-2">ES</span>
+                <p className="text-[#0A1929] text-sm leading-relaxed whitespace-pre-wrap font-['Lora']">
+                  {submission.abstract || '—'}
+                </p>
+              </div>
+              <div className="border-t border-[#E5E9F0] pt-4">
+                <span className="inline-block px-2 py-0.5 bg-[#E5E9F0] text-[#0A1929] text-[10px] font-mono rounded mb-2">EN</span>
+                <p className="text-[#0A1929] text-sm leading-relaxed whitespace-pre-wrap font-['Lora']">
+                  {submission.abstractEn || submission.abstract || '—'}
+                </p>
+              </div>
+            </div>
+          </InfoBlock>
+
+          {/* PALABRAS CLAVE BILINGÜE */}
+          <InfoBlock 
+            icon="🏷️" 
+            title={isSpanish ? 'Palabras Clave / Keywords' : 'Keywords / Palabras Clave'}
+          >
+            <div className="space-y-3">
+              <div>
+                <span className="inline-block px-2 py-0.5 bg-[#E5E9F0] text-[#0A1929] text-[10px] font-mono rounded mb-2">ES</span>
+                <div className="flex flex-wrap gap-2">
+                  {submission.keywords?.map((keyword, index) => (
+                    <span key={index} className="px-3 py-1 bg-white border border-[#C0A86A] text-[#0A1929] rounded-full text-xs font-['Lora']">
+                      {keyword}
+                    </span>
+                  )) || <span className="text-[#5A6B7A] text-sm italic font-['Lora']">—</span>}
+                </div>
+              </div>
+              <div className="border-t border-[#E5E9F0] pt-3">
+                <span className="inline-block px-2 py-0.5 bg-[#E5E9F0] text-[#0A1929] text-[10px] font-mono rounded mb-2">EN</span>
+                <div className="flex flex-wrap gap-2">
+                  {(submission.keywordsEn?.length > 0 ? submission.keywordsEn : submission.keywords)?.map((keyword, index) => (
+                    <span key={index} className="px-3 py-1 bg-white border border-[#C0A86A] text-[#0A1929] rounded-full text-xs font-['Lora']">
+                      {keyword}
+                    </span>
+                  )) || <span className="text-[#5A6B7A] text-sm italic font-['Lora']">—</span>}
+                </div>
+              </div>
+            </div>
+          </InfoBlock>
+        </div>
+
+        {/* COLUMNA DERECHA */}
+        <div className="space-y-6">
+          
+          {/* ÉTICA */}
+          <InfoBlock 
+            icon="⚖️" 
+            title={isSpanish ? 'Ética de la Investigación' : 'Research Ethics'}
+          >
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-[#0A1929] font-['Lora']">
+                  {isSpanish ? '¿Requiere aprobación ética?' : 'Requires ethics approval?'}
+                </span>
+                <StatusBadge 
+                  condition={requiresEthics}
+                  trueLabel={isSpanish ? 'Sí' : 'Yes'}
+                  trueColor="bg-yellow-100 text-yellow-800"
+                  falseLabel={isSpanish ? 'No / Exento' : 'No / Exempt'}
+                  falseColor="bg-green-100 text-green-800"
+                />
+              </div>
+              {requiresEthics && (
+                <InfoField 
+                  label={isSpanish ? 'Comité y código de aprobación' : 'Committee and approval code'}
+                  value={submission.ethicsCommitteeName}
+                />
+              )}
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-[#0A1929] font-['Lora']">
+                  {isSpanish ? '¿Incluye autores menores?' : 'Includes minor authors?'}
+                </span>
+                <StatusBadge 
+                  condition={submission.hasMinorAuthors}
+                  trueLabel={isSpanish ? 'Sí' : 'Yes'}
+                  trueColor="bg-orange-100 text-orange-800"
+                  falseLabel={isSpanish ? 'No' : 'No'}
+                  falseColor="bg-gray-100 text-gray-600"
+                />
+              </div>
+            </div>
+          </InfoBlock>
+
+          {/* AUTORES MENORES (si existen) */}
+          {minorAuthorsList.length > 0 && (
+            <InfoBlock 
+              icon="👶" 
+              title={`${isSpanish ? 'Autores Menores de Edad' : 'Minor Authors'} (${minorAuthorsList.length})`}
+            >
+              <div className="space-y-3">
+                {minorAuthorsList.map((author, index) => (
+                  <div key={index} className="bg-orange-50 rounded-lg p-4 border border-orange-200">
+                    <p className="font-medium text-[#0A1929] font-['Lora']">
+                      {author.firstName} {author.lastName}
+                    </p>
+                    <InfoField 
+                      label={isSpanish ? 'Tutor legal' : 'Legal guardian'} 
+                      value={author.guardianName} 
+                    />
+                    <InfoField 
+                      label={isSpanish ? 'Método de consentimiento' : 'Consent method'} 
+                      value={
+                        author.consentMethod === 'upload' ? (isSpanish ? 'Formulario subido' : 'Form uploaded') :
+                        author.consentMethod === 'email' ? (isSpanish ? 'Enviado por correo' : 'Sent by email') :
+                        '—'
+                      } 
+                    />
+                  </div>
+                ))}
+              </div>
+            </InfoBlock>
+          )}
+
+          {/* USO DE IA */}
+          <InfoBlock 
+            icon="🤖" 
+            title={isSpanish ? 'Uso de Inteligencia Artificial' : 'Use of Artificial Intelligence'}
+          >
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-[#0A1929] font-['Lora']">
+                  {isSpanish ? '¿Se utilizó IA?' : 'Was AI used?'}
+                </span>
+                <StatusBadge 
+                  condition={aiUsed}
+                  trueLabel={isSpanish ? 'Sí' : 'Yes'}
+                  trueColor="bg-purple-100 text-purple-800"
+                  falseLabel={isSpanish ? 'No' : 'No'}
+                  falseColor="bg-gray-100 text-gray-600"
+                />
+              </div>
+              {aiUsed && aiTools.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  <label className="block text-[10px] font-mono font-semibold uppercase tracking-[0.1em] text-[#5A6B7A]">
+                    {isSpanish ? 'Herramientas declaradas' : 'Declared tools'}
+                  </label>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-[#F5F7FA]">
+                          <th className="text-left p-2 text-[10px] font-mono text-[#5A6B7A] uppercase tracking-wider">
+                            {isSpanish ? 'Herramienta' : 'Tool'}
+                          </th>
+                          <th className="text-left p-2 text-[10px] font-mono text-[#5A6B7A] uppercase tracking-wider">
+                            {isSpanish ? 'Versión' : 'Version'}
+                          </th>
+                          <th className="text-left p-2 text-[10px] font-mono text-[#5A6B7A] uppercase tracking-wider">
+                            {isSpanish ? 'Propósito' : 'Purpose'}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {aiTools.map((tool, index) => (
+                          <tr key={index} className="border-t border-[#E5E9F0]">
+                            <td className="p-2 font-['Lora'] text-[#0A1929]">{tool.name}</td>
+                            <td className="p-2 font-['Lora'] text-[#0A1929]">{tool.version || '—'}</td>
+                            <td className="p-2 font-['Lora'] text-[#0A1929] text-xs">{tool.purpose}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          </InfoBlock>
+
+          {/* DISPONIBILIDAD DE DATOS Y CÓDIGO */}
+          <InfoBlock 
+            icon="📊" 
+            title={isSpanish ? 'Disponibilidad de Datos y Código' : 'Data & Code Availability'}
+          >
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-mono font-semibold uppercase tracking-[0.1em] text-[#5A6B7A] mb-1">
+                  {isSpanish ? 'Datos' : 'Data'}
+                </label>
+                <div className="flex items-center gap-2">
+                  <span className="text-[#0A1929] font-['Lora'] text-sm font-medium">
+                    {translateAvailability(submission.dataAvailability)}
+                  </span>
+                </div>
+                {submission.dataAvailabilityEn && (
+                  <p className="text-[#5A6B7A] text-xs mt-1 font-['Lora'] italic">
+                    EN: {submission.dataAvailabilityEn}
+                  </p>
+                )}
+              </div>
+              {submission.codeAvailability && (
+                <div className="border-t border-[#E5E9F0] pt-4">
+                  <label className="block text-[10px] font-mono font-semibold uppercase tracking-[0.1em] text-[#5A6B7A] mb-1">
+                    {isSpanish ? 'Código' : 'Code'}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#0A1929] font-['Lora'] text-sm font-medium">
+                      {translateAvailability(submission.codeAvailability)}
+                    </span>
+                  </div>
+                  {submission.codeAvailabilityEn && (
+                    <p className="text-[#5A6B7A] text-xs mt-1 font-['Lora'] italic">
+                      EN: {submission.codeAvailabilityEn}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </InfoBlock>
+
+          {/* FINANCIAMIENTO */}
+          <InfoBlock 
+            icon="💰" 
+            title={isSpanish ? 'Financiamiento' : 'Funding'}
+          >
+            {hasFunding ? (
+              <div className="space-y-3">
+                <InfoField 
+                  label={isSpanish ? 'Entidad financiadora' : 'Funding entity'} 
+                  value={submission.funding?.sources} 
+                />
+                <InfoField 
+                  label={isSpanish ? 'Código(s) de subvención' : 'Grant number(s)'} 
+                  value={submission.funding?.grantNumbers} 
+                />
+              </div>
+            ) : (
+              <p className="text-[#5A6B7A] text-sm italic font-['Lora']">
+                {isSpanish ? 'Sin financiamiento externo declarado' : 'No external funding declared'}
+              </p>
+            )}
+          </InfoBlock>
+
+          {/* CONFLICTO DE INTERESES */}
+          <InfoBlock 
+            icon="⚠️" 
+            title={isSpanish ? 'Conflicto de Intereses' : 'Conflict of Interest'}
+          >
+            <p className="text-[#0A1929] text-sm leading-relaxed whitespace-pre-wrap font-['Lora']">
+              {submission.conflictOfInterest || '—'}
+            </p>
+          </InfoBlock>
+
+          {/* AGRADECIMIENTOS */}
+          {submission.acknowledgments && (
+            <InfoBlock 
+              icon="🙏" 
+              title={isSpanish ? 'Agradecimientos' : 'Acknowledgments'}
+            >
+              <p className="text-[#0A1929] text-sm leading-relaxed whitespace-pre-wrap font-['Lora']">
+                {submission.acknowledgments}
+              </p>
+            </InfoBlock>
+          )}
+
+          {/* REVISORES EXCLUIDOS */}
+          {submission.excludedReviewers && submission.excludedReviewers.length > 0 && (
+            <InfoBlock 
+              icon="🚫" 
+              title={isSpanish ? 'Revisores Excluidos' : 'Excluded Reviewers'}
+            >
+              <ul className="space-y-1">
+                {submission.excludedReviewers.map((reviewer, index) => (
+                  <li key={index} className="flex items-center gap-2 text-sm text-[#0A1929] font-['Lora']">
+                    <span className="w-1.5 h-1.5 bg-[#B22234] rounded-full"></span>
+                    {reviewer}
+                  </li>
+                ))}
+              </ul>
+            </InfoBlock>
+          )}
+
+          {/* INFORMACIÓN DEL ARCHIVO */}
+          <InfoBlock 
+            icon="📄" 
+            title={isSpanish ? 'Información del Archivo' : 'File Information'}
+          >
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <InfoField 
+                  label={isSpanish ? 'Nombre del archivo' : 'File name'} 
+                  value={submission.originalFileName} 
+                />
+                <InfoField 
+                  label={isSpanish ? 'Tamaño' : 'Size'} 
+                  value={submission.originalFileSize 
+                    ? `${(submission.originalFileSize / 1024).toFixed(2)} KB` 
+                    : '—'
+                  } 
+                />
+              </div>
+              <InfoField 
+                label="SHA-256" 
+                value={submission.originalFileHash ? `${submission.originalFileHash.substring(0, 16)}...` : '—'} 
+              />
+            </div>
+          </InfoBlock>
+        </div>
+      </div>
+
+      {/* ==================== DECLARACIONES ACEPTADAS ==================== */}
+      {submission.declarations && Object.keys(submission.declarations).length > 0 && (
+        <InfoBlock 
+          icon="✅" 
+          title={isSpanish ? 'Declaraciones Aceptadas por el Autor' : 'Declarations Accepted by Author'}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {[
+              { key: 'originalAndSimilarity', label: isSpanish ? 'Originalidad y <15% similitud' : 'Originality and <15% similarity' },
+              { key: 'exclusiveSubmission', label: isSpanish ? 'Envío exclusivo' : 'Exclusive submission' },
+              { key: 'authorshipCriteria', label: isSpanish ? 'Criterios de autoría ICMJE' : 'ICMJE authorship criteria' },
+              { key: 'dataAuthentic', label: isSpanish ? 'Datos auténticos' : 'Authentic data' },
+              { key: 'informedConsent', label: isSpanish ? 'Consentimiento informado' : 'Informed consent' },
+              { key: 'aiDisclosure', label: isSpanish ? 'Declaración de IA' : 'AI disclosure' },
+              { key: 'conflicts', label: isSpanish ? 'Conflictos declarados' : 'Conflicts declared' },
+              { key: 'ccByLicense', label: isSpanish ? 'Licencia CC-BY 4.0' : 'CC-BY 4.0 License' },
+            ].map(d => (
+              <div key={d.key} className="flex items-center gap-2 text-sm">
+                <span className={submission.declarations[d.key] ? 'text-green-600' : 'text-red-400'}>
+                  {submission.declarations[d.key] ? '✓' : '✗'}
+                </span>
+                <span className={`font-['Lora'] ${submission.declarations[d.key] ? 'text-[#0A1929]' : 'text-[#5A6B7A]'}`}>
+                  {d.label}
+                </span>
               </div>
             ))}
           </div>
-        </div>
+        </InfoBlock>
       )}
 
-      {/* RESUMEN (Abstract) - Bilingüe */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-[#F5F7FA] rounded-xl p-6 border border-[#E5E9F0]">
-          <h3 className="font-['Playfair_Display'] font-bold text-[#0A1929] text-lg mb-3 flex items-center gap-2">
-            <svg className="w-5 h-5 text-[#C0A86A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            {isSpanish ? 'Resumen' : 'Abstract'} (ES)
-          </h3>
-          <p className="text-[#0A1929] text-sm leading-relaxed whitespace-pre-wrap">
-            {submission.abstract || '—'}
-          </p>
-        </div>
-        <div className="bg-[#F5F7FA] rounded-xl p-6 border border-[#E5E9F0]">
-          <h3 className="font-['Playfair_Display'] font-bold text-[#0A1929] text-lg mb-3 flex items-center gap-2">
-            <svg className="w-5 h-5 text-[#C0A86A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            {isSpanish ? 'Resumen' : 'Abstract'} (EN)
-          </h3>
-          <p className="text-[#0A1929] text-sm leading-relaxed whitespace-pre-wrap">
-            {submission.abstractEn || submission.abstract || '—'}
-          </p>
-        </div>
-      </div>
-
-      {/* PALABRAS CLAVE Y FINANCIAMIENTO */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-[#F5F7FA] rounded-xl p-6 border border-[#E5E9F0]">
-          <h3 className="font-['Playfair_Display'] font-bold text-[#0A1929] text-lg mb-3 flex items-center gap-2">
-            <svg className="w-5 h-5 text-[#C0A86A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l5 5a2 2 0 01.586 1.414V19a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2z" />
-            </svg>
-            {isSpanish ? 'Palabras Clave' : 'Keywords'}
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            {(isSpanish ? submission.keywords : submission.keywordsEn || submission.keywords)?.map((keyword, index) => (
-              <span key={index} className="px-3 py-1 bg-white border border-[#C0A86A] text-[#0A1929] rounded-full text-sm">
-                {keyword}
-              </span>
-            )) || '—'}
-          </div>
-        </div>
-        <div className="bg-[#F5F7FA] rounded-xl p-6 border border-[#E5E9F0]">
-          <h3 className="font-['Playfair_Display'] font-bold text-[#0A1929] text-lg mb-3 flex items-center gap-2">
-            <svg className="w-5 h-5 text-[#C0A86A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            {isSpanish ? 'Financiamiento' : 'Funding'}
-          </h3>
-          {submission.funding?.hasFunding ? (
-            <div className="space-y-2">
-              <p className="text-[#0A1929] font-medium">{submission.funding.sources || '—'}</p>
-              <p className="text-sm text-[#5A6B7A]">Grant: {submission.funding.grantNumbers || '—'}</p>
-            </div>
-          ) : (
-            <p className="text-[#5A6B7A] italic">{isSpanish ? 'Sin financiamiento' : 'No funding'}</p>
-          )}
-        </div>
-      </div>
-
-      {/* CONFLICTO DE INTERESES Y DISPONIBILIDAD */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-[#F5F7FA] rounded-xl p-6 border border-[#E5E9F0]">
-          <h3 className="font-['Playfair_Display'] font-bold text-[#0A1929] text-lg mb-3 flex items-center gap-2">
-            <svg className="w-5 h-5 text-[#C0A86A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            {isSpanish ? 'Conflicto de Intereses' : 'Conflict of Interest'}
-          </h3>
-          <p className="text-[#0A1929]">{submission.conflictOfInterest || '—'}</p>
-        </div>
-        <div className="bg-[#F5F7FA] rounded-xl p-6 border border-[#E5E9F0]">
-          <h3 className="font-['Playfair_Display'] font-bold text-[#0A1929] text-lg mb-3 flex items-center gap-2">
-            <svg className="w-5 h-5 text-[#C0A86A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
-            </svg>
-            {isSpanish ? 'Disponibilidad de Datos' : 'Data Availability'}
-          </h3>
-          <p className="text-[#0A1929]">
-            {isSpanish 
-              ? (submission.dataAvailability === 'available' ? 'Disponible' : 
-                 submission.dataAvailability === 'upon_request' ? 'Bajo solicitud' : 'No disponible')
-              : (submission.dataAvailability === 'available' ? 'Available' : 
-                 submission.dataAvailability === 'upon_request' ? 'Upon request' : 'Not available')
-            }
-          </p>
-        </div>
-      </div>
-
-      {/* DECISIÓN EDITORIAL */}
-      <div className="mt-8 pt-6 border-t-2 border-[#E5E9F0]">
-        <label className="block font-['Playfair_Display'] font-semibold text-[#0A1929] mb-3">
+      {/* ==================== DECISIÓN EDITORIAL ==================== */}
+      <div className="mt-8 pt-6 border-t-2 border-[#C0A86A]">
+        <h3 className="font-['Playfair_Display'] font-bold text-[#0A1929] text-lg mb-4 flex items-center gap-2">
+          <svg className="w-5 h-5 text-[#C0A86A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
           {isSpanish ? 'Decisión Editorial' : 'Editorial Decision'}
-        </label>
-        <div className="grid grid-cols-2 gap-3">
+        </h3>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
           {[
-            { value: 'reject', label: isSpanish ? 'Rechazar' : 'Reject', bg: 'bg-red-50 hover:bg-red-100', border: 'border-red-200' },
-            { value: 'minor-revision', label: isSpanish ? 'Revisión menor' : 'Minor revision', bg: 'bg-yellow-50 hover:bg-yellow-100', border: 'border-yellow-200' },
-            { value: 'revision-required', label: isSpanish ? 'Enviar a revisión' : 'Send to review', bg: 'bg-blue-50 hover:bg-blue-100', border: 'border-blue-200' },
-            { value: 'accept', label: isSpanish ? 'Aceptar' : 'Accept', bg: 'bg-green-50 hover:bg-green-100', border: 'border-green-200' }
+            { value: 'reject', label: isSpanish ? 'Rechazar' : 'Reject', bg: 'bg-red-50 hover:bg-red-100', border: 'border-red-200', icon: '✕' },
+            { value: 'minor-revision', label: isSpanish ? 'Revisión menor' : 'Minor revision', bg: 'bg-yellow-50 hover:bg-yellow-100', border: 'border-yellow-200', icon: '🔧' },
+            { value: 'revision-required', label: isSpanish ? 'Enviar a revisión' : 'Send to review', bg: 'bg-blue-50 hover:bg-blue-100', border: 'border-blue-200', icon: '📤' },
+            { value: 'accept', label: isSpanish ? 'Aceptar' : 'Accept', bg: 'bg-green-50 hover:bg-green-100', border: 'border-green-200', icon: '✓' }
           ].map(opt => (
             <button
               key={opt.value}
               onClick={() => setDecision(opt.value)}
-              className={`p-4 rounded-xl border-2 font-['Lora'] transition-all ${
+              className={`p-4 rounded-xl border-2 font-['Lora'] transition-all text-center ${
                 decision === opt.value
-                  ? 'border-[#C0A86A] bg-[#FBF9F3] text-[#0A1929]'
+                  ? 'border-[#C0A86A] bg-[#FBF9F3] text-[#0A1929] shadow-md'
                   : `${opt.bg} ${opt.border} text-[#5A6B7A] hover:text-[#0A1929]`
               }`}
             >
-              {opt.label}
+              <span className="text-xl block mb-1">{opt.icon}</span>
+              <span className="text-sm font-medium">{opt.label}</span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Feedback y Comentarios */}
+      {/* FEEDBACK */}
       <div>
         <label className="block font-['Playfair_Display'] font-semibold text-[#0A1929] mb-3">
           {isSpanish ? 'Feedback para el Autor' : 'Feedback to Author'}
@@ -400,6 +780,7 @@ export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading
         />
       </div>
 
+      {/* COMENTARIOS INTERNOS */}
       <div>
         <label className="block font-['Playfair_Display'] font-semibold text-[#0A1929] mb-3">
           {isSpanish ? 'Comentarios Internos' : 'Internal Comments'}
@@ -413,10 +794,11 @@ export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading
         />
       </div>
 
+      {/* BOTÓN DE GUARDAR */}
       <button
         onClick={handleSubmit}
         disabled={isLoading || !decision}
-        className="w-full py-4 bg-[#0A1929] hover:bg-[#1E2F40] text-white font-['Playfair_Display'] font-bold rounded-xl transition-all disabled:bg-[#E5E9F0] disabled:text-[#5A6B7A]"
+        className="w-full py-4 bg-[#0A1929] hover:bg-[#1E2F40] text-white font-['Playfair_Display'] font-bold rounded-xl transition-all disabled:bg-[#E5E9F0] disabled:text-[#5A6B7A] disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
       >
         {isLoading ? (
           <span className="flex items-center justify-center gap-2">
