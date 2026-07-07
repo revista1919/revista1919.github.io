@@ -3044,7 +3044,6 @@ function sanitizeText(text) {
 }
 
 /* ===================== SUBMIT ARTICLE ===================== */
-/* ===================== SUBMIT ARTICLE ===================== */
 exports.submitArticle = onRequest(
   { 
     secrets: [OAUTH2_CLIENT_ID, OAUTH2_CLIENT_SECRET, OAUTH2_REFRESH_TOKEN],
@@ -3108,28 +3107,75 @@ exports.submitArticle = onRequest(
         return res.status(403).json({ error: 'Cuenta bloqueada para envíos' });
       }
 
-      // --- NUEVO: Extraer campos de disponibilidad ---
+      // --- EXTRACCIÓN COMPLETA DE TODOS LOS CAMPOS ---
       const {
+        // Campos básicos del artículo
         title, titleEn, abstract, abstractEn, 
         keywords, keywordsEn, area, paperLanguage = 'es',
-        authors, funding, conflictOfInterest,
-        minorAuthors, excludedReviewers,
+        
+        // Autores
+        authors, 
+        
+        // NUEVO: Autor de correspondencia (se detecta del array, pero también lo recibimos)
+        correspondingAuthor,
+        
+        // Financiamiento y conflictos
+        funding, conflictOfInterest,
+        
+        // Autores menores
+        minorAuthors, 
+        
+        // Revisiones excluidas
+        excludedReviewers,
+        
+        // Archivo manuscrito
         manuscriptBase64, manuscriptName,
+        
+        // Datos del autor que envía
         authorEmail, authorName,
-        articleType,
-        acknowledgments,
-        // NUEVOS CAMPOS
-        dataAvailability,
-        dataAvailabilityEn,
-        codeAvailability,
-        codeAvailabilityEn
+        
+        // Tipo de artículo y agradecimientos
+        articleType, acknowledgments,
+        
+        // NUEVO: Disponibilidad de datos y código
+        dataAvailability, dataAvailabilityEn,
+        codeAvailability, codeAvailabilityEn,
+        
+        // NUEVO: Campos de ética
+        requiresEthicsApproval = false,
+        ethicsCommitteeName,
+        
+        // NUEVO: Campos de IA
+        aiUsed = false,
+        aiTools = [],
+        
+        // NUEVO: Declaraciones aceptadas (para auditoría)
+        declarations
       } = req.body;
 
-      // NUEVO: Validar disponibilidad de datos (obligatorio)
+      // --- VALIDACIONES ---
+
+      // NUEVO: Validar disponibilidad de datos (obligatorio según política 8.1)
       if (!dataAvailability) {
         return res.status(400).json({ 
-          error: 'Debes declarar la disponibilidad de los datos',
+          error: 'Debes declarar la disponibilidad de los datos (Política 8.1)',
           missingFields: ['dataAvailability']
+        });
+      }
+
+      // NUEVO: Validar que si requiere aprobación ética, venga el nombre del comité
+      if (requiresEthicsApproval && !ethicsCommitteeName?.trim()) {
+        return res.status(400).json({
+          error: 'Debes especificar el nombre del comité de ética y el código de aprobación',
+          missingFields: ['ethicsCommitteeName']
+        });
+      }
+
+      // NUEVO: Validar que si usó IA, haya especificado las herramientas
+      if (aiUsed && (!Array.isArray(aiTools) || aiTools.length === 0 || !aiTools.some(t => t.name?.trim() && t.purpose?.trim()))) {
+        return res.status(400).json({
+          error: 'Debes especificar al menos una herramienta de IA con su nombre y propósito (Política 7.3)',
+          missingFields: ['aiTools']
         });
       }
 
@@ -3144,6 +3190,14 @@ exports.submitArticle = onRequest(
 
       if (!Array.isArray(authors) || authors.length === 0) {
         return res.status(400).json({ error: 'Debe incluir al menos un autor' });
+      }
+
+      // Validar que haya al menos un autor de correspondencia
+      const hasCorrespondingAuthor = authors.some(a => a.isCorresponding);
+      if (!hasCorrespondingAuthor) {
+        console.warn(`[${requestId}] ⚠️ No se especificó autor de correspondencia. Se usará el primer autor.`);
+        // No es un error crítico, lo marcamos automáticamente
+        authors[0].isCorresponding = true;
       }
 
       const authorEmailToUse = authorEmail || decodedToken.email;
@@ -3213,7 +3267,6 @@ exports.submitArticle = onRequest(
 
       const safeTitle = title.substring(0, 30).replace(/[^a-zA-Z0-9]/g, '_');
       
-      // --- MODIFICADO: Crear DOS carpetas ---
       // Carpeta 1: Para el autor (documentos originales)
       const authorFolderName = `AUTHOR_${submissionId}_${safeTitle}`;
       let authorFolder;
@@ -3227,14 +3280,13 @@ exports.submitArticle = onRequest(
         });
       }
 
-      // Carpeta 2: Para editores (revisión editorial) - NUEVA
+      // Carpeta 2: Para editores (revisión editorial)
       const editorialFolderName = `EDITORIAL_${submissionId}_${safeTitle}`;
       let editorialFolder;
       try {
         editorialFolder = await createDriveFolder(drive, editorialFolderName);
         console.log(`✅ Carpeta editorial creada: ${editorialFolderName} (${editorialFolder.id})`);
       } catch (folderError) {
-        // Si falla la carpeta editorial, no detenemos el proceso pero registramos el error
         console.error(`⚠️ Error creando carpeta editorial:`, folderError.message);
         editorialFolder = null;
       }
@@ -3254,10 +3306,9 @@ exports.submitArticle = onRequest(
         });
       }
 
-      // Si hay carpeta editorial, crear un acceso directo simbólico o copiar referencia
+      // Si hay carpeta editorial, crear un acceso directo simbólico
       if (editorialFolder) {
         try {
-          // Crear un atajo (shortcut) en la carpeta editorial que apunte al archivo original
           await drive.files.create({
             resource: {
               name: `[REF] ${fileName}`,
@@ -3275,7 +3326,7 @@ exports.submitArticle = onRequest(
         }
       }
 
-      console.log('🔒 Configurando permisos restringidos para editores...');
+      console.log('🔒 Configurando permisos...');
 
       const editorSnapshotForPermissions = await db.collection('users')
         .where('roles', 'array-contains-any', ['Director General', 'Editor en Jefe'])
@@ -3291,7 +3342,6 @@ exports.submitArticle = onRequest(
         editorEmailsForPermissions.push('contact@revistacienciasestudiantes.com');
       }
 
-      // --- MODIFICADO: Otorgar permisos a AMBAS carpetas ---
       // Permisos para carpeta de autor (solo lectura para editores)
       for (const email of editorEmailsForPermissions) {
         try {
@@ -3329,7 +3379,7 @@ exports.submitArticle = onRequest(
         }
       }
 
-      // Permiso para el autor en su propia carpeta (escritura)
+      // Permiso para el autor en su propia carpeta (lectura)
       try {
         await drive.permissions.create({
           fileId: authorFolder.id,
@@ -3340,15 +3390,17 @@ exports.submitArticle = onRequest(
           },
           sendNotificationEmail: false
         });
-        console.log(`✅ Permiso writer otorgado a autor: ${decodedToken.email}`);
+        console.log(`✅ Permiso reader otorgado a autor: ${decodedToken.email}`);
       } catch (permErr) {
         console.error(`❌ Error permiso para autor:`, permErr.message);
       }
 
+      // Hash de integridad del archivo
       const crypto = require('crypto');
       const fileBuffer = Buffer.from(manuscriptBase64, 'base64');
       const integrityHash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
 
+      // --- PROCESAMIENTO DE AUTORES ---
       const processedAuthors = [];
       const consentFiles = [];
 
@@ -3362,7 +3414,7 @@ exports.submitArticle = onRequest(
           contribution: sanitizeText(author.contribution || ''),
           isMinor: Boolean(author.isMinor),
           guardianName: author.isMinor ? sanitizeText(author.guardianName) : null,
-          isCorresponding: Boolean(author.isCorresponding)
+          isCorresponding: Boolean(author.isCorresponding)  // NUEVO: Se guarda explícitamente
         };
 
         if (!emailRegex.test(author.email)) {
@@ -3374,12 +3426,16 @@ exports.submitArticle = onRequest(
         processedAuthors.push(authorData);
       }
 
+      // NUEVO: Identificar autor de correspondencia
+      const correspondingAuthorData = processedAuthors.find(a => a.isCorresponding) || processedAuthors[0];
+      console.log(`📧 Autor de correspondencia: ${correspondingAuthorData.firstName} ${correspondingAuthorData.lastName} (${correspondingAuthorData.email})`);
+
+      // Procesar consentimientos de autores menores
       if (Array.isArray(minorAuthors)) {
         for (const minor of minorAuthors) {
           if (minor.consentMethod === 'upload' && minor.consentFile?.data) {
             try {
               const consentFileName = `CONSENT_${minor.name.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.pdf`;
-              // Subir consentimiento a la carpeta del autor
               const consentFile = await uploadToDrive(
                 drive, 
                 minor.consentFile.data, 
@@ -3417,14 +3473,24 @@ exports.submitArticle = onRequest(
         consentMethod: m.consentMethod
       }));
 
-      // --- MODIFICADO: Añadir nuevos campos a submissionData ---
+      // NUEVO: Procesar herramientas de IA
+      const processedAITools = Array.isArray(aiTools) 
+        ? aiTools.filter(t => t.name?.trim() && t.purpose?.trim()).map(t => ({
+            name: sanitizeText(t.name),
+            version: sanitizeText(t.version || 'No especificada'),
+            purpose: sanitizeText(t.purpose)
+          }))
+        : [];
+
+      // --- CONSTRUCCIÓN DEL DOCUMENTO PRINCIPAL DE FIRESTORE ---
       const submissionData = {
         submissionId,
         uid,
         authorUID: uid,
         authorEmail: authorEmailToUse,
-        authorName: authorName || `${authors[0].firstName} ${authors[0].lastName}`.trim(),
+        authorName: authorName || `${processedAuthors[0].firstName} ${processedAuthors[0].lastName}`.trim(),
         
+        // Datos del artículo
         title: sanitizeText(title),
         titleEn: titleEn ? sanitizeText(titleEn) : null,
         abstract: sanitizeText(abstract),
@@ -3434,6 +3500,7 @@ exports.submitArticle = onRequest(
         area: sanitizeText(area),
         paperLanguage: paperLanguage === 'en' ? 'en' : 'es',
         
+        // Tipo de artículo y agradecimientos
         articleType: articleType ? sanitizeText(articleType) : null,
         acknowledgments: acknowledgments ? sanitizeText(acknowledgments) : '',
         
@@ -3443,31 +3510,55 @@ exports.submitArticle = onRequest(
         codeAvailability: codeAvailability ? sanitizeText(codeAvailability) : null,
         codeAvailabilityEn: codeAvailabilityEn ? sanitizeText(codeAvailabilityEn) : null,
         
-        authors: processedAuthors,
+        // NUEVO: Ética
+        requiresEthicsApproval: Boolean(requiresEthicsApproval),
+        ethicsCommitteeName: ethicsCommitteeName ? sanitizeText(ethicsCommitteeName) : null,
         
+        // NUEVO: IA
+        aiUsed: Boolean(aiUsed),
+        aiTools: processedAITools,
+        
+        // Autores
+        authors: processedAuthors,
+        correspondingAuthor: {
+          firstName: correspondingAuthorData.firstName,
+          lastName: correspondingAuthorData.lastName,
+          email: correspondingAuthorData.email,
+          institution: correspondingAuthorData.institution,
+          orcid: correspondingAuthorData.orcid
+        },
+        
+        // Financiamiento y conflictos
         funding: funding || { hasFunding: false, sources: '', grantNumbers: '' },
         conflictOfInterest: conflictOfInterest ? sanitizeText(conflictOfInterest) : '',
         
+        // Menores
         hasMinorAuthors: processedAuthors.some(a => a.isMinor),
         minorAuthors: sanitizedMinorAuthors,
         consentFiles,
         
+        // Revisiones excluidas
         excludedReviewers: excludedReviewers 
           ? excludedReviewers.split(';').map(r => sanitizeText(r.trim())).filter(Boolean)
           : [],
         
+        // NUEVO: Declaraciones aceptadas (para registro de auditoría)
+        declarations: declarations || {},
+        
+        // Archivo original
         originalFileId: file.id,
         originalFileUrl: file.webViewLink,
         originalFileName: fileName,
         originalFileHash: integrityHash,
         originalFileSize: fileBuffer.length,
         
-        // MODIFICADO: Guardar AMBAS carpetas
+        // Carpetas de Drive
         driveFolderId: authorFolder.id,
         driveFolderUrl: authorFolder.webViewLink,
         editorialFolderId: editorialFolder ? editorialFolder.id : null,
         editorialFolderUrl: editorialFolder ? editorialFolder.webViewLink : null,
         
+        // Estado y metadata
         status: 'submitted',
         currentRound: 1,
         
@@ -3479,9 +3570,12 @@ exports.submitArticle = onRequest(
         requestId
       };
 
+      // --- TRANSACCIÓN EN FIRESTORE ---
       await db.runTransaction(async (transaction) => {
+        // Documento principal del envío
         transaction.set(db.collection('submissions').doc(submissionId), submissionData);
         
+        // Versión inicial del manuscrito
         transaction.set(db.collection('submissions').doc(submissionId).collection('versions').doc(), {
           version: 1,
           fileId: file.id,
@@ -3495,13 +3589,26 @@ exports.submitArticle = onRequest(
           createdAt: admin.firestore.FieldValue.serverTimestamp()
         });
         
+        // Log de auditoría
         transaction.set(db.collection('submissions').doc(submissionId).collection('auditLogs').doc(), {
           action: 'submission_created',
           by: uid,
           byEmail: decodedToken.email,
-          timestamp: admin.firestore.FieldValue.serverTimestamp()
+          timestamp: admin.firestore.FieldValue.serverTimestamp(),
+          details: {
+            articleType,
+            area,
+            paperLanguage,
+            hasFunding: funding?.hasFunding || false,
+            aiUsed: Boolean(aiUsed),
+            requiresEthicsApproval: Boolean(requiresEthicsApproval),
+            hasMinorAuthors: processedAuthors.some(a => a.isMinor),
+            dataAvailability,
+            codeAvailability: codeAvailability || null
+          }
         });
         
+        // Actualizar contador del usuario
         transaction.update(db.collection('users').doc(uid), {
           totalSubmissions: admin.firestore.FieldValue.increment(1),
           lastSubmissionAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -3511,6 +3618,7 @@ exports.submitArticle = onRequest(
       
       console.log(`✅ Datos guardados en Firestore`);
 
+      // --- ENVÍO DE CORREOS ---
       const editors = [];
       const usersSnapshot = await db.collection('users')
         .where('roles', 'array-contains-any', ['Director General', 'Editor en Jefe'])
@@ -3534,23 +3642,34 @@ exports.submitArticle = onRequest(
 
       const emailPromises = [];
 
+      // Correo a editores
       for (const editor of editorEmails) {
-        const authorsList = authors.map(a => 
-          `• ${a.firstName} ${a.lastName} (${a.email})${a.isMinor ? ' [MENOR]' : ''}`
+        const authorsList = processedAuthors.map(a => 
+          `• ${a.firstName} ${a.lastName} (${a.email})${a.isCorresponding ? ' 📧 [CORRESPONDENCIA]' : ''}${a.isMinor ? ' 👶 [MENOR]' : ''}`
         ).join('<br>');
 
         const minorInfo = processedAuthors.some(a => a.isMinor) 
-          ? `<p style="color: #b45309;">⚠️ Incluye autores menores - Revisar consentimientos</p>`
+          ? `<p style="color: #b45309; background-color: #fffbeb; padding: 10px; border-left: 4px solid #d97706;">⚠️ Incluye autores menores - Revisar consentimientos</p>`
           : '';
 
         const fundingInfo = funding?.hasFunding 
-          ? `<p><strong>Financiación:</strong> ${funding.sources || 'Sí'}</p>`
+          ? `<p><strong>Financiación:</strong> ${funding.sources || 'Sí'}${funding.grantNumbers ? ` (Subvención: ${funding.grantNumbers})` : ''}</p>`
           : '';
 
-        // NUEVO: Incluir disponibilidad en el email
+        // NUEVO: Información de ética
+        const ethicsInfo = requiresEthicsApproval
+          ? `<p style="color: #0A1929;"><strong>✅ Aprobación ética:</strong> ${ethicsCommitteeName || 'Declarada'}</p>`
+          : '';
+
+        // NUEVO: Información de IA
+        const aiInfo = aiUsed && processedAITools.length > 0
+          ? `<p style="color: #0A1929;"><strong>🤖 IA utilizada:</strong> ${processedAITools.map(t => `${t.name} (${t.purpose})`).join(', ')}</p>`
+          : '';
+
+        // NUEVO: Disponibilidad de datos
         const availabilityInfo = `
-          <p><strong>Disponibilidad de datos:</strong> ${dataAvailability}</p>
-          ${codeAvailability ? `<p><strong>Disponibilidad de código:</strong> ${codeAvailability}</p>` : ''}
+          <p><strong>📊 Disponibilidad de datos:</strong> ${dataAvailability}</p>
+          ${codeAvailability ? `<p><strong>💻 Disponibilidad de código:</strong> ${codeAvailability}</p>` : ''}
         `;
 
         const articleInfo = `
@@ -3558,14 +3677,17 @@ exports.submitArticle = onRequest(
             <p class="article-title">"${sanitizeText(title)}"</p>
             ${minorInfo}
             <p><strong>ID:</strong> ${submissionId}</p>
-            <p><strong>Autor:</strong> ${sanitizeText(authorName)}</p>
+            <p><strong>Autor de envío:</strong> ${sanitizeText(authorName || 'No especificado')}</p>
             <p><strong>Email:</strong> ${authorEmailToUse}</p>
+            <p><strong>📧 Autor de correspondencia:</strong> ${correspondingAuthorData.firstName} ${correspondingAuthorData.lastName} (${correspondingAuthorData.email})</p>
             <p><strong>Área:</strong> ${sanitizeText(area)}</p>
             <p><strong>Tipo de artículo:</strong> ${articleType ? articleType.toUpperCase() : 'No especificado'}</p>
             <p><strong>Idioma:</strong> ${paperLanguage === 'es' ? 'Español' : 'Inglés'}</p>
             ${fundingInfo}
+            ${ethicsInfo}
+            ${aiInfo}
             ${availabilityInfo}
-            <p><strong>Autores (${authors.length}):</strong><br>${authorsList}</p>
+            <p><strong>Autores (${processedAuthors.length}):</strong><br>${authorsList}</p>
           </div>
           
           <div class="button-container">
@@ -3594,28 +3716,29 @@ exports.submitArticle = onRequest(
             editor.email,
             `📄 Nuevo artículo: ${title.substring(0, 50)}${title.length > 50 ? '...' : ''}`,
             htmlBody
-          ).catch(err => console.log(`⚠️ Error email to ${editor.email}`))
+          ).catch(err => console.log(`⚠️ Error email to ${editor.email}:`, err.message))
         );
       }
 
+      // Correo al autor
       const authorEmailTitle = paperLanguage === 'es' 
         ? '✅ Confirmación de envío'
         : '✅ Submission confirmation';
 
       const authorGreeting = paperLanguage === 'es'
-        ? `Estimado/a ${authorName}:`
-        : `Dear ${authorName}:`;
+        ? `Estimado/a ${authorName || processedAuthors[0].firstName}:`
+        : `Dear ${authorName || processedAuthors[0].firstName}:`;
 
       let minorMessage = '';
       if (processedAuthors.some(a => a.isMinor)) {
         minorMessage = paperLanguage === 'es'
           ? `<p style="background-color: #fffbeb; padding: 15px; border-left: 4px solid #d97706;">
                <strong>📋 IMPORTANTE - AUTOR MENOR:</strong><br>
-               Hemos recibido los documentos de consentimiento.
+               Hemos recibido los documentos de consentimiento. Los revisaremos durante el proceso editorial.
              </p>`
           : `<p style="background-color: #fffbeb; padding: 15px; border-left: 4px solid #d97706;">
                <strong>📋 IMPORTANT - MINOR AUTHOR:</strong><br>
-               We have received the consent documents.
+               We have received the consent documents. They will be reviewed during the editorial process.
              </p>`;
       }
 
@@ -3634,6 +3757,13 @@ exports.submitArticle = onRequest(
           </div>
         `;
 
+      // NUEVO: Información de IA para el autor
+      const aiAuthorMessage = aiUsed && processedAITools.length > 0
+        ? (paperLanguage === 'es'
+            ? `<p><strong>🤖 Uso de IA declarado:</strong> ${processedAITools.map(t => t.name).join(', ')}</p>`
+            : `<p><strong>🤖 AI use declared:</strong> ${processedAITools.map(t => t.name).join(', ')}</p>`)
+        : '';
+
       const authorBody = paperLanguage === 'es'
         ? `
           ${minorMessage}
@@ -3643,6 +3773,9 @@ exports.submitArticle = onRequest(
             <p class="article-title">"${sanitizeText(title)}"</p>
             <p><strong>ID de envío:</strong> ${submissionId}</p>
             <p><strong>Fecha:</strong> ${new Date().toLocaleDateString('es-CL')}</p>
+            <p><strong>Tipo de artículo:</strong> ${articleType ? articleType.toUpperCase() : 'No especificado'}</p>
+            <p><strong>📧 Autor de correspondencia:</strong> ${correspondingAuthorData.firstName} ${correspondingAuthorData.lastName}</p>
+            ${aiAuthorMessage}
           </div>
           
           <p>Hemos recibido tu artículo correctamente. El proceso de revisión comenzará en los próximos días.</p>
@@ -3650,14 +3783,15 @@ exports.submitArticle = onRequest(
           <p><strong>Próximos pasos:</strong></p>
           <ol>
             <li>Revisión editorial inicial</li>
+            <li>Verificación de similitud con PlagiarismGuard</li>
             <li>Asignación de revisores</li>
-            <li>Revisión por pares</li>
+            <li>Revisión por pares doble ciego</li>
           </ol>
           
           <p><strong>Tus documentos:</strong></p>
-<ul>
-  <li><a href="${authorFolder.webViewLink}">📁 Carpeta personal</a> (tus documentos originales)</li>
-</ul>
+          <ul>
+            <li><a href="${authorFolder.webViewLink}">📁 Carpeta personal</a> (tus documentos originales)</li>
+          </ul>
           
           <p><em>Nota: Los plazos de revisión dependen de la disponibilidad de los revisores y de la complejidad del artículo, por lo que no son fijos. Te mantendremos informado de cualquier avance.</em></p>
           
@@ -3673,6 +3807,9 @@ exports.submitArticle = onRequest(
             <p class="article-title">"${sanitizeText(title)}"</p>
             <p><strong>Submission ID:</strong> ${submissionId}</p>
             <p><strong>Date:</strong> ${new Date().toLocaleDateString('en-US')}</p>
+            <p><strong>Article type:</strong> ${articleType ? articleType.toUpperCase() : 'Not specified'}</p>
+            <p><strong>📧 Corresponding author:</strong> ${correspondingAuthorData.firstName} ${correspondingAuthorData.lastName}</p>
+            ${aiAuthorMessage}
           </div>
           
           <p>We have received your article successfully. The review process will begin in the coming days.</p>
@@ -3680,14 +3817,14 @@ exports.submitArticle = onRequest(
           <p><strong>Next steps:</strong></p>
           <ol>
             <li>Initial editorial review</li>
+            <li>Similarity check with PlagiarismGuard</li>
             <li>Reviewer assignment</li>
-            <li>Peer review</li>
+            <li>Double-blind peer review</li>
           </ol>
           
           <p><strong>Your Google Drive folders:</strong></p>
           <ul>
             <li><a href="${authorFolder.webViewLink}">📁 Personal folder</a> (your original documents)</li>
-            ${editorialFolder ? `<li><a href="${editorialFolder.webViewLink}">📋 Editorial folder</a> (review tracking)</li>` : ''}
           </ul>
           
           <p><em>Note: Review timelines depend on reviewer availability and article complexity, so they are not fixed. We will keep you updated on any progress.</em></p>
@@ -3711,36 +3848,54 @@ exports.submitArticle = onRequest(
           authorEmailToUse,
           paperLanguage === 'es' ? 'Confirmación de envío' : 'Submission confirmation',
           authorHtmlBody
-        ).catch(err => console.log(`⚠️ Error email to author`))
+        ).catch(err => console.log(`⚠️ Error email to author:`, err.message))
       );
 
-      Promise.allSettled(emailPromises);
+      // Enviar correos en segundo plano
+      Promise.allSettled(emailPromises).then(results => {
+        const succeeded = results.filter(r => r.status === 'fulfilled').length;
+        const failed = results.filter(r => r.status === 'rejected').length;
+        console.log(`📧 Correos enviados: ${succeeded} exitosos, ${failed} fallidos`);
+      });
 
       const processingTime = Date.now() - startTime;
       console.log(`✅ Envío exitoso: ${submissionId} (${processingTime}ms)`);
 
-      // MODIFICADO: Devolver URLs de ambas carpetas
+      // NUEVO: Respuesta más completa
       return res.status(201).json({
         success: true,
         submissionId,
+        driveFolderId: authorFolder.id,
         driveFolderUrl: authorFolder.webViewLink,
         editorialFolderUrl: editorialFolder ? editorialFolder.webViewLink : null,
+        correspondingAuthor: {
+          name: `${correspondingAuthorData.firstName} ${correspondingAuthorData.lastName}`,
+          email: correspondingAuthorData.email
+        },
         message: paperLanguage === 'es' 
-          ? 'Artículo enviado correctamente'
-          : 'Article submitted successfully',
+          ? 'Artículo enviado correctamente. Revisa tu correo para más detalles.'
+          : 'Article submitted successfully. Check your email for more details.',
         requestId
       });
 
     } catch (error) {
-      console.error(`❌ Error:`, error.message);
+      console.error(`[${requestId}] ❌ Error:`, error.message);
+      console.error(`[${requestId}] Stack:`, error.stack);
       
       try {
         await admin.firestore().collection('systemErrors').add({
           function: 'submitArticle',
-          error: { message: error.message, stack: error.stack },
+          error: { 
+            message: error.message, 
+            stack: error.stack,
+            code: error.code || 'UNKNOWN'
+          },
+          requestId,
           timestamp: admin.firestore.FieldValue.serverTimestamp()
         });
-      } catch (logError) {}
+      } catch (logError) {
+        console.error(`❌ Error al registrar error:`, logError.message);
+      }
       
       return res.status(500).json({
         error: 'Error interno del servidor',

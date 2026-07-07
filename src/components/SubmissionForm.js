@@ -162,7 +162,6 @@ const MinorConsentSection = ({ author, index, onUpdate }) => {
         </p>
       </div>
 
-      {/* Nombre del tutor */}
       <div>
         <label className="block text-xs font-medium text-[#1A2B3C] mb-1.5 font-serif">
           {isSpanish ? 'Nombre completo del tutor legal *' : 'Legal guardian full name *'}
@@ -176,7 +175,6 @@ const MinorConsentSection = ({ author, index, onUpdate }) => {
         />
       </div>
 
-      {/* Método de consentimiento */}
       <div className="space-y-4">
         <p className="text-xs uppercase tracking-widest text-[#546E7A] font-mono">Método de consentimiento</p>
 
@@ -271,6 +269,77 @@ const MinorConsentSection = ({ author, index, onUpdate }) => {
   );
 };
 
+// NUEVO CAMBIO: Listado exhaustivo de áreas temáticas generales
+const AREAS_TEMATICAS = {
+  "Ciencias Exactas y Naturales": [
+    "Matemáticas",
+    "Física",
+    "Química",
+    "Biología",
+    "Geología",
+    "Astronomía y Astrofísica",
+    "Ciencias Ambientales y Ecología",
+    "Oceanografía",
+    "Meteorología y Ciencias Atmosféricas",
+    "Paleontología"
+  ],
+  "Ciencias de la Salud": [
+    "Medicina General e Interna",
+    "Salud Pública y Epidemiología",
+    "Enfermería",
+    "Nutrición y Dietética",
+    "Farmacología y Farmacia",
+    "Odontología",
+    "Kinesiología y Fisioterapia",
+    "Tecnología Médica y Bioanálisis",
+    "Veterinaria"
+  ],
+  "Ingeniería y Tecnología": [
+    "Ingeniería Civil",
+    "Ingeniería Industrial y de Sistemas",
+    "Ingeniería Mecánica",
+    "Ingeniería Eléctrica y Electrónica",
+    "Ingeniería Química y Biotecnología",
+    "Ingeniería en Computación e Informática",
+    "Ciencia de Datos e Inteligencia Artificial",
+    "Robótica y Automatización",
+    "Ingeniería de Materiales y Nanotecnología",
+    "Ingeniería Aeroespacial",
+    "Energías Renovables y Sostenibilidad"
+  ],
+  "Ciencias Sociales": [
+    "Sociología",
+    "Antropología y Arqueología",
+    "Psicología",
+    "Economía y Negocios",
+    "Ciencias Políticas y Relaciones Internacionales",
+    "Derecho",
+    "Geografía Humana y Ordenamiento Territorial",
+    "Estudios de Género",
+    "Comunicación Social y Periodismo",
+    "Educación y Pedagogía",
+    "Trabajo Social"
+  ],
+  "Humanidades": [
+    "Historia",
+    "Filosofía",
+    "Lingüística y Filología",
+    "Literatura",
+    "Estudios Clásicos",
+    "Teología y Ciencias de la Religión",
+    "Estudios Culturales",
+    "Arte, Música y Cine",
+    "Arquitectura y Urbanismo"
+  ],
+  "Ciencias Agropecuarias": [
+    "Agronomía y Producción Agrícola",
+    "Ciencias Forestales",
+    "Acuicultura y Pesca",
+    "Zootecnia y Producción Animal",
+    "Ingeniería de Alimentos"
+  ]
+};
+
 // Componente principal COMPLETO - ESTILO OXFORD
 export default function SubmissionForm({ user, onSuccess }) {
   const { language } = useLanguage();
@@ -290,7 +359,7 @@ export default function SubmissionForm({ user, onSuccess }) {
     abstractEn: '',
     keywords: '',
     keywordsEn: '',
-    area: '',
+    area: '', // Ahora será un select
     paperLanguage: 'es',
     articleType: '',
     acknowledgments: '',
@@ -317,15 +386,22 @@ export default function SubmissionForm({ user, onSuccess }) {
 
     conflictOfInterest: '',
 
-    // NUEVO: Disponibilidad de datos y código
     dataAvailability: '',
     dataAvailabilityEn: '',
     codeAvailability: '',
     codeAvailabilityEn: '',
 
+    // NUEVO CAMBIO: Campos adicionales para ética e IA
+    requiresEthicsApproval: 'no',
+    ethicsCommitteeName: '',
+    aiUsed: 'no',
+    aiTools: [{ name: '', version: '', purpose: '' }],
+
     declarations: {
-      original: false,
-      notSubmitted: false,
+      // Cambio: Declaraciones más específicas basadas en las políticas
+      originalAndSimilarity: false,
+      exclusiveSubmission: false,
+      authorshipCriteria: false,
       dataAuthentic: false,
       informedConsent: false,
       aiDisclosure: false,
@@ -338,39 +414,38 @@ export default function SubmissionForm({ user, onSuccess }) {
     manuscriptName: ''
   });
 
-  // Opciones de tipo de artículo
+  // NUEVO CAMBIO: Opciones de tipo de artículo ahora son EXACTAMENTE las de la política 2.2
   const articleTypeOptions = {
     es: [
       { value: 'research', label: 'Artículo de Investigación Original' },
-      { value: 'review', label: 'Artículo de Revisión Sistemática' },
-      { value: 'short', label: 'Comunicación Corta' },
+      { value: 'review', label: 'Revisión Sistemática' },
+      { value: 'essay', label: 'Ensayo Académico y Reflexivo' },
       { value: 'case', label: 'Reporte de Caso' },
-      { value: 'letter', label: 'Carta al Editor' },
-      { value: 'other', label: 'Otro (especificar)' }
+      { value: 'book_review', label: 'Reseña de Libros (Book Review)' }
     ],
     en: [
       { value: 'research', label: 'Original Research Article' },
-      { value: 'review', label: 'Systematic Review Article' },
-      { value: 'short', label: 'Short Communication' },
+      { value: 'review', label: 'Systematic Review' },
+      { value: 'essay', label: 'Academic and Reflective Essay' },
       { value: 'case', label: 'Case Report' },
-      { value: 'letter', label: 'Letter to the Editor' },
-      { value: 'other', label: 'Other (specify)' }
+      { value: 'book_review', label: 'Book Review' }
     ]
   };
 
-  // Opciones para disponibilidad de datos y código
   const availabilityOptions = {
     es: [
-      { value: 'public_repo', label: 'Disponible en repositorio público (enlace en el manuscrito)' },
-      { value: 'upon_request', label: 'Disponible bajo solicitud razonable' },
+      { value: 'public_repo', label: 'Disponible en repositorio público' },
+      { value: 'supplementary', label: 'En material suplementario' },
+      { value: 'upon_request', label: 'Disponible bajo solicitud razonable al autor de correspondencia' },
       { value: 'not_available', label: 'No disponible (especificar razón)' },
-      { value: 'supplementary', label: 'En material suplementario' }
+      { value: 'not_applicable', label: 'No aplica (ensayo teórico, revisión sin datos nuevos)' }
     ],
     en: [
-      { value: 'public_repo', label: 'Available in public repository (link in manuscript)' },
-      { value: 'upon_request', label: 'Available upon reasonable request' },
+      { value: 'public_repo', label: 'Available in a public repository' },
+      { value: 'supplementary', label: 'In supplementary material' },
+      { value: 'upon_request', label: 'Available upon reasonable request from the corresponding author' },
       { value: 'not_available', label: 'Not available (specify reason)' },
-      { value: 'supplementary', label: 'In supplementary material' }
+      { value: 'not_applicable', label: 'Not applicable (theoretical essay, review without new data)' }
     ]
   };
 
@@ -460,6 +535,25 @@ export default function SubmissionForm({ user, onSuccess }) {
     }
   };
 
+  // NUEVO CAMBIO: Manejo de herramientas de IA
+  const handleAIToolChange = (index, field, value) => {
+    const newTools = [...formData.aiTools];
+    newTools[index][field] = value;
+    setFormData(prev => ({ ...prev, aiTools: newTools }));
+  };
+
+  const addAITool = () => {
+    setFormData(prev => ({
+      ...prev,
+      aiTools: [...prev.aiTools, { name: '', version: '', purpose: '' }]
+    }));
+  };
+
+  const removeAITool = (index) => {
+    const newTools = formData.aiTools.filter((_, i) => i !== index);
+    setFormData(prev => ({ ...prev, aiTools: newTools.length > 0 ? newTools : [{ name: '', version: '', purpose: '' }] }));
+  };
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -492,7 +586,6 @@ export default function SubmissionForm({ user, onSuccess }) {
 
   const allDeclarationsAccepted = () => Object.values(formData.declarations).every(Boolean);
 
-  // VALIDACIÓN MEJORADA (incluye disponibilidad de datos en step3)
   const validateStep = (step) => {
     switch (step) {
       case 1:
@@ -514,10 +607,20 @@ export default function SubmissionForm({ user, onSuccess }) {
           );
         return basicOk && minorsOk;
       case 3:
-        // Validación incluye disponibilidad de datos
-        return allDeclarationsAccepted() && 
+        // Cambio: Validación incluye disponibilidad de datos y declaraciones
+        let isValid = allDeclarationsAccepted() && 
                formData.manuscript && 
-               formData.dataAvailability.trim(); // Obligatorio declarar disponibilidad de datos
+               formData.dataAvailability.trim();
+        // Si requiere aprobación ética, debe especificar el comité
+        if (formData.requiresEthicsApproval === 'yes' && !formData.ethicsCommitteeName.trim()) {
+            isValid = false;
+        }
+        // Si usa IA, debe completar al menos una herramienta
+        if (formData.aiUsed === 'yes') {
+            const hasValidTool = formData.aiTools.some(tool => tool.name.trim() && tool.purpose.trim());
+            if (!hasValidTool) isValid = false;
+        }
+        return isValid;
       default:
         return true;
     }
@@ -526,7 +629,7 @@ export default function SubmissionForm({ user, onSuccess }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateStep(3)) {
-      alert(isSpanish ? 'Completa todos los campos requeridos, incluyendo disponibilidad de datos' : 'Complete all required fields, including data availability');
+      alert(isSpanish ? 'Completa todos los campos requeridos, incluyendo la declaración de datos y el uso de IA si aplica.' : 'Complete all required fields, including data declaration and AI use if applicable.');
       return;
     }
 
@@ -537,13 +640,8 @@ export default function SubmissionForm({ user, onSuccess }) {
       const token = await auth.currentUser.getIdToken();
       const manuscriptBase64 = await toBase64(formData.manuscript);
 
-      const response = await fetch('https://submitarticle-ggqsq2kkua-uc.a.run.app', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
+      // NUEVO CAMBIO: Construir el payload con los nuevos campos
+      const payload = {
           title: formData.title,
           titleEn: formData.titleEn,
           abstract: formData.abstract,
@@ -555,7 +653,6 @@ export default function SubmissionForm({ user, onSuccess }) {
           articleType: formData.articleType,
           acknowledgments: formData.acknowledgments,
 
-          // NUEVO: Disponibilidad de datos y código
           dataAvailability: formData.dataAvailability,
           dataAvailabilityEn: formData.dataAvailabilityEn,
           codeAvailability: formData.codeAvailability,
@@ -577,6 +674,12 @@ export default function SubmissionForm({ user, onSuccess }) {
           conflictOfInterest: formData.conflictOfInterest,
           excludedReviewers: formData.excludedReviewers,
 
+          // Nuevos campos de ética e IA
+          requiresEthicsApproval: formData.requiresEthicsApproval === 'yes',
+          ethicsCommitteeName: formData.ethicsCommitteeName,
+          aiUsed: formData.aiUsed === 'yes',
+          aiTools: formData.aiUsed === 'yes' ? formData.aiTools : [],
+
           minorAuthors: formData.authors
             .filter(a => a.isMinor)
             .map(a => ({
@@ -592,7 +695,15 @@ export default function SubmissionForm({ user, onSuccess }) {
           authorUID: user.uid,
           authorEmail: user.email,
           authorName: user.displayName || `${formData.authors[0].firstName} ${formData.authors[0].lastName}`.trim()
-        })
+        };
+
+      const response = await fetch('https://submitarticle-ggqsq2kkua-uc.a.run.app', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) throw new Error(await response.text());
@@ -601,7 +712,7 @@ export default function SubmissionForm({ user, onSuccess }) {
 
       localStorage.removeItem('submissionFormDraft');
       setSubmissionId(result.submissionId);
-      setDriveFolderId(result.driveFolderId); // NUEVO - guardar el ID de la carpeta
+      setDriveFolderId(result.driveFolderId);
       setSubmitStatus(isSpanish ? '✅ Artículo enviado con éxito' : '✅ Article submitted successfully');
       setSubmitted(true);
 
@@ -619,7 +730,7 @@ export default function SubmissionForm({ user, onSuccess }) {
     if (validateStep(currentStep)) {
       setCurrentStep(prev => prev + 1);
     } else {
-      alert(isSpanish ? 'Completa los campos requeridos antes de continuar' : 'Complete required fields before continuing');
+      alert(isSpanish ? 'Completa los campos requeridos antes de continuar.' : 'Complete required fields before continuing.');
     }
   };
 
@@ -628,101 +739,99 @@ export default function SubmissionForm({ user, onSuccess }) {
   const steps = [
     { id: 1, title: isSpanish ? 'INFORMACIÓN DEL ARTÍCULO' : 'ARTICLE INFORMATION' },
     { id: 2, title: isSpanish ? 'AUTORES Y ÉTICA' : 'AUTHORS & ETHICS' },
-    { id: 3, title: isSpanish ? 'DATOS Y DECLARACIONES' : 'DATA & DECLARATIONS' }
+    { id: 3, title: isSpanish ? 'DATOS, IA Y DECLARACIONES' : 'DATA, AI & DECLARATIONS' }
   ];
 
-  // Pantalla de éxito final (con información de carpetas)
-  // Pantalla de éxito final (CORREGIDA)
-if (submitted) {
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="max-w-2xl mx-auto py-16 px-4"
-    >
-      <div className="bg-white border border-[#E0E7E9] shadow-2xl rounded-3xl overflow-hidden">
-        <div className="bg-[#0A1929] p-12 text-center">
-          <div className="mx-auto w-24 h-24 bg-[#E5E9F0] rounded-full flex items-center justify-center mb-6">
-            <span className="text-5xl">📮</span>
-          </div>
-          <h2 className="text-3xl font-light text-white mb-3 font-serif">
-            {isSpanish ? '¡Gracias por tu envío!' : 'Thank you for your submission!'}
-          </h2>
-          <p className="text-[#E0E7E9] font-serif">
-            {isSpanish
-              ? 'Tu artículo ha sido recibido y será revisado por el equipo editorial.'
-              : 'Your article has been received and will be reviewed by the editorial team.'}
-          </p>
-        </div>
-        
-        <div className="p-12 space-y-8">
-          <div className="bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl p-6">
-            <p className="text-xs font-mono text-[#546E7A] mb-2">SUBMISSION ID</p>
-            <p className="text-2xl font-serif text-[#0A1929] tracking-wider">{submissionId}</p>
-          </div>
-
-          {/* SOLO UNA CARPETA - La del autor */}
-          <div className="border border-[#E0E7E9] rounded-2xl p-8 hover:border-[#0A1929] transition-colors">
-            <div className="flex items-start gap-6">
-              <div className="w-16 h-16 bg-[#E5E9F0] rounded-2xl flex items-center justify-center flex-shrink-0">
-                <span className="text-3xl">📁</span>
-              </div>
-              <div className="flex-1">
-                <h3 className="text-xl font-serif text-[#0A1929] mb-2">
-                  {isSpanish ? 'Tu carpeta de documentos' : 'Your documents folder'}
-                </h3>
-                <p className="text-sm text-[#546E7A] mb-4 font-serif">
-                  {isSpanish 
-                    ? 'Aquí puedes ver los documentos que subiste (solo lectura)' 
-                    : 'Here you can view the documents you uploaded (read-only)'}
-                </p>
-                <a 
-                  href={`https://drive.google.com/drive/folders/${driveFolderId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-[#0A1929] text-sm font-medium hover:text-[#B22234] transition-colors"
-                >
-                  {isSpanish ? 'Abrir en Google Drive' : 'Open in Google Drive'} →
-                </a>
-              </div>
+  // Pantalla de éxito final (sin cambios sustanciales, solo estética)
+  if (submitted) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="max-w-2xl mx-auto py-16 px-4"
+      >
+        <div className="bg-white border border-[#E0E7E9] shadow-2xl rounded-3xl overflow-hidden">
+          <div className="bg-[#0A1929] p-12 text-center">
+            <div className="mx-auto w-24 h-24 bg-[#E5E9F0] rounded-full flex items-center justify-center mb-6">
+              <span className="text-5xl">📮</span>
             </div>
+            <h2 className="text-3xl font-light text-white mb-3 font-serif">
+              {isSpanish ? '¡Gracias por tu envío!' : 'Thank you for your submission!'}
+            </h2>
+            <p className="text-[#E0E7E9] font-serif">
+              {isSpanish
+                ? 'Tu artículo ha sido recibido y será revisado por el equipo editorial.'
+                : 'Your article has been received and will be reviewed by the editorial team.'}
+            </p>
           </div>
+          
+          <div className="p-12 space-y-8">
+            <div className="bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl p-6">
+              <p className="text-xs font-mono text-[#546E7A] mb-2">SUBMISSION ID</p>
+              <p className="text-2xl font-serif text-[#0A1929] tracking-wider">{submissionId}</p>
+            </div>
 
-          {/* Información sobre seguimiento - REEMPLAZADO */}
-          <div className="bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl p-8">
-            <div className="flex items-start gap-6">
-              <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center flex-shrink-0 border border-[#E0E7E9]">
-                <span className="text-3xl">📋</span>
-              </div>
-              <div className="flex-1">
-                <h3 className="text-xl font-serif text-[#0A1929] mb-2">
-                  {isSpanish ? 'Seguimiento del envío' : 'Submission tracking'}
-                </h3>
-                <p className="text-sm text-[#546E7A] mb-4 font-serif">
-                  {isSpanish 
-                    ? 'Puedes ver el estado de tu artículo en la pestaña "Mis envíos" del portal' 
-                    : 'You can check your article status in the "My submissions" tab on the portal'}
-                </p>
-                <div className="inline-flex items-center gap-2 text-sm text-[#0A1929] font-medium">
-                  <span className="text-[#B22234]">⬤</span>
-                  {isSpanish ? 'Estado actual: Recibido' : 'Current status: Received'}
+            <div className="border border-[#E0E7E9] rounded-2xl p-8 hover:border-[#0A1929] transition-colors">
+              <div className="flex items-start gap-6">
+                <div className="w-16 h-16 bg-[#E5E9F0] rounded-2xl flex items-center justify-center flex-shrink-0">
+                  <span className="text-3xl">📁</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-serif text-[#0A1929] mb-2">
+                    {isSpanish ? 'Tu carpeta de documentos' : 'Your documents folder'}
+                  </h3>
+                  <p className="text-sm text-[#546E7A] mb-4 font-serif">
+                    {isSpanish 
+                      ? 'Aquí puedes ver los documentos que subiste (solo lectura)' 
+                      : 'Here you can view the documents you uploaded (read-only)'}
+                  </p>
+                  <a 
+                    href={`https://drive.google.com/drive/folders/${driveFolderId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-[#0A1929] text-sm font-medium hover:text-[#B22234] transition-colors"
+                  >
+                    {isSpanish ? 'Abrir en Google Drive' : 'Open in Google Drive'} →
+                  </a>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div className="text-center pt-6 border-t border-[#E0E7E9]">
-            <p className="text-xs text-[#546E7A] font-serif">
-              {isSpanish 
-                ? 'Recibirás un correo con los detalles del envío' 
-                : 'You will receive an email with submission details'}
-            </p>
+            <div className="bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl p-8">
+              <div className="flex items-start gap-6">
+                <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center flex-shrink-0 border border-[#E0E7E9]">
+                  <span className="text-3xl">📋</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-serif text-[#0A1929] mb-2">
+                    {isSpanish ? 'Seguimiento del envío' : 'Submission tracking'}
+                  </h3>
+                  <p className="text-sm text-[#546E7A] mb-4 font-serif">
+                    {isSpanish 
+                      ? 'Puedes ver el estado de tu artículo en la pestaña "Mis envíos" del portal' 
+                      : 'You can check your article status in the "My submissions" tab on the portal'}
+                  </p>
+                  <div className="inline-flex items-center gap-2 text-sm text-[#0A1929] font-medium">
+                    <span className="text-[#B22234]">⬤</span>
+                    {isSpanish ? 'Estado actual: Recibido' : 'Current status: Received'}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="text-center pt-6 border-t border-[#E0E7E9]">
+              <p className="text-xs text-[#546E7A] font-serif">
+                {isSpanish 
+                  ? 'Recibirás un correo con los detalles del envío' 
+                  : 'You will receive an email with submission details'}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
-    </motion.div>
-  );
-}
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -731,7 +840,6 @@ if (submitted) {
     >
       <div className="bg-white border border-[#E0E7E9] shadow-2xl shadow-[#0A1929]/5 rounded-3xl overflow-hidden">
 
-        {/* Header estilo Oxford */}
         <div className="bg-[#0A1929] border-b border-[#1A2B3C] p-12 text-center">
           <div className="flex justify-center items-center gap-3 mb-4">
             <div className="h-px w-8 bg-[#B22234]" />
@@ -744,7 +852,6 @@ if (submitted) {
           <p className="text-[#E0E7E9] text-sm mt-3 font-serif">Sistema seguro • Borrador guardado automáticamente</p>
         </div>
 
-        {/* Stepper moderno */}
         <div className="px-8 py-7 bg-white border-b border-[#E0E7E9]">
           <div className="flex justify-between items-center relative">
             <div className="absolute top-5 left-0 w-full h-px bg-[#E0E7E9] z-0" />
@@ -768,7 +875,7 @@ if (submitted) {
         <form onSubmit={handleSubmit} className="p-8 md:p-12 space-y-16">
 
           <AnimatePresence mode="wait">
-            {/* STEP 1 */}
+            {/* STEP 1: INFORMACIÓN DEL ARTÍCULO */}
             {currentStep === 1 && (
               <motion.div
                 key="step1"
@@ -777,7 +884,6 @@ if (submitted) {
                 exit={{ opacity: 0, x: -30 }}
                 className="space-y-12"
               >
-                {/* Título */}
                 <div>
                   <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-2">
                     {isSpanish ? 'Título del artículo' : 'Article title'} *
@@ -807,7 +913,6 @@ if (submitted) {
                   />
                 </div>
 
-                {/* Resumen */}
                 <div>
                   <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-2">
                     {isSpanish ? 'Resumen' : 'Abstract'} *
@@ -836,10 +941,14 @@ if (submitted) {
                   />
                 </div>
 
-                {/* Tipo de artículo */}
+                {/* NUEVO CAMBIO: Selector de tipo de artículo alineado a la política */}
                 <div>
                   <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-2">
                     {isSpanish ? 'Tipo de artículo' : 'Article type'} *
+                    <HelpCapsule
+                      text="Selecciona la tipología que mejor se adapte a tu manuscrito según las políticas editoriales (Sección 2.2)."
+                      textEn="Select the typology that best fits your manuscript according to the editorial policies (Section 2.2)."
+                    />
                   </label>
                   <select
                     name="articleType"
@@ -854,7 +963,6 @@ if (submitted) {
                   </select>
                 </div>
 
-                {/* Keywords */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <KeywordInput
                     value={formData.keywords}
@@ -874,41 +982,48 @@ if (submitted) {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div>
-                    <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-2">
-                      {isSpanish ? 'Área temática' : 'Subject area'} *
-                    </label>
-                    <input
-                      type="text"
-                      name="area"
-                      value={formData.area}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full p-4 bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif"
-                      placeholder={isSpanish ? 'Ciencias de la Educación' : 'Education Sciences'}
-                    />
-                  </div>
+                {/* NUEVO CAMBIO: Área temática ahora es un select obligatorio */}
+                <div>
+                  <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-2">
+                    {isSpanish ? 'Área temática' : 'Subject area'} *
+                    <HelpCapsule text="Selecciona el área principal de tu investigación." textEn="Select the main area of your research." />
+                  </label>
+                  <select
+                    name="area"
+                    value={formData.area}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full p-4 bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif"
+                  >
+                    <option value="">— Selecciona un área general —</option>
+                    {Object.entries(AREAS_TEMATICAS).map(([categoria, subareas]) => (
+                      <optgroup key={categoria} label={categoria}>
+                        {subareas.map(sub => (
+                          <option key={sub} value={sub}>{sub}</option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                </div>
 
-                  <div>
-                    <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-2">
-                      {isSpanish ? 'Idioma del manuscrito' : 'Manuscript language'} *
-                    </label>
-                    <select
-                      name="paperLanguage"
-                      value={formData.paperLanguage}
-                      onChange={handleInputChange}
-                      className="w-full p-4 bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif"
-                    >
-                      <option value="es">Español</option>
-                      <option value="en">English</option>
-                    </select>
-                  </div>
+                <div>
+                  <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-2">
+                    {isSpanish ? 'Idioma del manuscrito' : 'Manuscript language'} *
+                  </label>
+                  <select
+                    name="paperLanguage"
+                    value={formData.paperLanguage}
+                    onChange={handleInputChange}
+                    className="w-full p-4 bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif"
+                  >
+                    <option value="es">Español</option>
+                    <option value="en">English</option>
+                  </select>
                 </div>
               </motion.div>
             )}
 
-            {/* STEP 2 */}
+            {/* STEP 2: AUTORES Y ÉTICA */}
             {currentStep === 2 && (
               <motion.div
                 key="step2"
@@ -917,7 +1032,6 @@ if (submitted) {
                 exit={{ opacity: 0, x: -30 }}
                 className="space-y-14"
               >
-                {/* Autores */}
                 <div>
                   <h3 className="font-serif text-2xl font-light text-[#0A1929] mb-6 border-b border-[#E0E7E9] pb-4">
                     {isSpanish ? 'Autores' : 'Authors'}
@@ -959,7 +1073,6 @@ if (submitted) {
                             className="w-full p-3.5 border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif"
                           />
                         </div>
-
                         <div className="md:col-span-2">
                           <label className="text-xs text-[#546E7A] mb-1 block font-serif">Correo electrónico *</label>
                           <input
@@ -969,7 +1082,6 @@ if (submitted) {
                             className="w-full p-3.5 border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif"
                           />
                         </div>
-
                         <div className="md:col-span-2">
                           <label className="text-xs text-[#546E7A] mb-1 block font-serif">Institución / Afiliación *</label>
                           <input
@@ -979,7 +1091,6 @@ if (submitted) {
                             className="w-full p-3.5 border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif"
                           />
                         </div>
-
                         <div className="md:col-span-2">
                           <label className="text-xs text-[#546E7A] mb-1 block flex items-center font-serif">
                             ORCID
@@ -993,14 +1104,12 @@ if (submitted) {
                             className="w-full p-3.5 border border-[#E0E7E9] rounded-2xl text-sm font-mono focus:border-[#0A1929] outline-none"
                           />
                         </div>
-
-                        {/* Contribución por autor */}
                         <div className="md:col-span-2">
                           <label className="text-xs text-[#546E7A] mb-1 block font-serif">
-                            {isSpanish ? 'Contribución del autor (CRediT)' : 'Author contribution (CRediT)'}
+                            {isSpanish ? 'Contribución del autor (CRediT)' : 'Author contribution (CRediT)'} *
                             <HelpCapsule
-                              text="Describe el rol específico (Conceptualización, Metodología, Análisis, Escritura, etc.)"
-                              textEn="Describe specific role (Conceptualization, Methodology, Analysis, Writing, etc.)"
+                              text="Especifica el rol según la taxonomía CRediT (Conceptualización, Metodología, Software, Validación, Análisis Formal, Investigación, Recursos, Curación de Datos, Escritura - Original, Escritura - Revisión, Visualización, Supervisión, Administración de Proyecto, Adquisición de Fondos). Debe cumplir los 4 criterios de autoría ICMJE."
+                              textEn="Specify the role according to the CRediT taxonomy (Conceptualization, Methodology, Software, Validation, Formal analysis, Investigation, Resources, Data Curation, Writing - Original Draft, Writing - Review & Editing, Visualization, Supervision, Project administration, Funding acquisition). Must meet all 4 ICMJE authorship criteria."
                             />
                           </label>
                           <textarea
@@ -1013,7 +1122,6 @@ if (submitted) {
                         </div>
                       </div>
 
-                      {/* Menor de edad */}
                       <div className="mt-8 border-t border-[#E0E7E9] pt-6">
                         <label className="flex items-center gap-3 cursor-pointer">
                           <input
@@ -1043,7 +1151,6 @@ if (submitted) {
                         )}
                       </div>
 
-                      {/* Autor de correspondencia */}
                       <div className="mt-6">
                         <label className="flex items-center gap-3 cursor-pointer">
                           <input
@@ -1072,8 +1179,12 @@ if (submitted) {
 
                 {/* Financiación */}
                 <div className="space-y-6">
-                  <h3 className="font-serif text-2xl font-light text-[#0A1929] border-b border-[#E0E7E9] pb-4">
+                  <h3 className="font-serif text-2xl font-light text-[#0A1929] border-b border-[#E0E7E9] pb-4 flex items-center gap-2">
                     {isSpanish ? 'Financiación' : 'Funding'}
+                    <HelpCapsule
+                      text="Declara todas las fuentes de financiamiento, incluyendo códigos de subvención. Si no hubo financiamiento, lo declararás en el manuscrito."
+                      textEn="Declare all funding sources, including grant numbers. If there was no funding, you will declare this in the manuscript."
+                    />
                   </h3>
                   <label className="flex items-center gap-3">
                     <input
@@ -1091,7 +1202,7 @@ if (submitted) {
                   {formData.funding.hasFunding && (
                     <div className="pl-8 space-y-6">
                       <div>
-                        <label className="text-xs text-[#546E7A] mb-1 block font-serif">Fuentes</label>
+                        <label className="text-xs text-[#546E7A] mb-1 block font-serif">{isSpanish ? 'Entidad financiadora' : 'Funding entity'}</label>
                         <input
                           type="text"
                           name="funding.sources"
@@ -1102,7 +1213,7 @@ if (submitted) {
                         />
                       </div>
                       <div>
-                        <label className="text-xs text-[#546E7A] mb-1 block font-serif">Números de grant</label>
+                        <label className="text-xs text-[#546E7A] mb-1 block font-serif">{isSpanish ? 'Código(s) de la subvención' : 'Grant number(s)'}</label>
                         <input
                           type="text"
                           name="funding.grantNumbers"
@@ -1121,8 +1232,8 @@ if (submitted) {
                   <h3 className="font-serif text-2xl font-light text-[#0A1929] border-b border-[#E0E7E9] pb-4 flex items-center gap-2">
                     {isSpanish ? 'Conflicto de intereses' : 'Conflict of interest'}
                     <HelpCapsule
-                      text="Declara cualquier relación que pueda influir en la interpretación de los resultados."
-                      textEn="Declare any relationship that may influence the interpretation of results."
+                      text="Declara cualquier relación financiera, personal, académica o ideológica que pueda influir. Si no hay, declara: 'Los autores declaran no tener conflictos de interés'."
+                      textEn="Declare any financial, personal, academic, or ideological relationship that could influence. If none, declare: 'The authors declare no conflicts of interest'."
                     />
                   </h3>
                   <textarea
@@ -1134,10 +1245,46 @@ if (submitted) {
                     placeholder={isSpanish ? 'Los autores declaran no tener conflictos de interés.' : 'The authors declare no conflicts of interest.'}
                   />
                 </div>
+
+                {/* NUEVA SECCIÓN: Aprobación Ética */}
+                <div className="space-y-6">
+                  <h3 className="font-serif text-2xl font-light text-[#0A1929] border-b border-[#E0E7E9] pb-4 flex items-center gap-2">
+                    {isSpanish ? 'Aprobación Ética' : 'Ethics Approval'}
+                    <HelpCapsule
+                      text="Requerida para estudios con interacción directa con seres humanos, datos personales identificables o muestras biológicas. Exenta para revisiones, ensayos teóricos o datos públicos anónimos. (Política 5.2)"
+                      textEn="Required for studies involving direct interaction with humans, identifiable personal data, or human biological samples. Exempt for reviews, theoretical essays, or public anonymous data. (Policy 5.2)"
+                    />
+                  </h3>
+                  <select
+                    name="requiresEthicsApproval"
+                    value={formData.requiresEthicsApproval}
+                    onChange={handleInputChange}
+                    className="w-full p-4 bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif"
+                  >
+                    <option value="no">{isSpanish ? 'No, mi estudio está exento o no involucra sujetos humanos' : 'No, my study is exempt or does not involve human subjects'}</option>
+                    <option value="yes">{isSpanish ? 'Sí, mi estudio requirió aprobación de un comité de ética' : 'Yes, my study required ethics committee approval'}</option>
+                  </select>
+
+                  {formData.requiresEthicsApproval === 'yes' && (
+                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
+                      <label className="text-xs text-[#546E7A] mb-1 block font-serif">
+                        {isSpanish ? 'Nombre del comité, código de aprobación y fecha *' : 'Committee name, approval code and date *'}
+                      </label>
+                      <input
+                        type="text"
+                        name="ethicsCommitteeName"
+                        value={formData.ethicsCommitteeName}
+                        onChange={handleInputChange}
+                        className="w-full p-3.5 border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif"
+                        placeholder={isSpanish ? 'Comité de Ética Universidad X, Acta 123, 01/2024' : 'Ethics Committee University X, Protocol 123, 01/2024'}
+                      />
+                    </motion.div>
+                  )}
+                </div>
               </motion.div>
             )}
 
-            {/* STEP 3 */}
+            {/* STEP 3: DATOS, IA Y DECLARACIONES FINALES */}
             {currentStep === 3 && (
               <motion.div
                 key="step3"
@@ -1146,19 +1293,80 @@ if (submitted) {
                 exit={{ opacity: 0, x: -30 }}
                 className="space-y-14"
               >
-                {/* NUEVA SECCIÓN: DISPONIBILIDAD DE DATOS Y CÓDIGO */}
+                {/* NUEVA SECCIÓN: USO DE INTELIGENCIA ARTIFICIAL */}
+                <div className="space-y-6">
+                  <h3 className="font-serif text-2xl font-light text-[#0A1929] border-b border-[#E0E7E9] pb-4 flex items-center gap-2">
+                    {isSpanish ? 'Uso de Inteligencia Artificial (IA)' : 'Use of Artificial Intelligence (AI)'}
+                    <HelpCapsule
+                      text="La IA no puede ser autora. Declara si usaste herramientas como ChatGPT para corrección, traducción, análisis de datos o generación de texto/imágenes. Esto es obligatorio según la Sección 7.3."
+                      textEn="AI cannot be an author. Declare if you used tools like ChatGPT for editing, translation, data analysis, or text/image generation. This is mandatory per Section 7.3."
+                    />
+                  </h3>
+                  <select
+                    name="aiUsed"
+                    value={formData.aiUsed}
+                    onChange={handleInputChange}
+                    className="w-full p-4 bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif"
+                  >
+                    <option value="no">{isSpanish ? 'No se utilizó IA en este trabajo' : 'AI was not used in this work'}</option>
+                    <option value="yes">{isSpanish ? 'Sí, se utilizó IA en este trabajo' : 'Yes, AI was used in this work'}</option>
+                  </select>
+
+                  {formData.aiUsed === 'yes' && (
+                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-4 border border-[#E0E7E9] rounded-2xl p-6 bg-[#F5F7FA]">
+                      <p className="text-xs font-mono text-[#546E7A] uppercase tracking-widest">{isSpanish ? 'Especifica las herramientas usadas' : 'Specify the tools used'}</p>
+                      {formData.aiTools.map((tool, index) => (
+                        <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-white rounded-xl border border-[#E0E7E9] relative">
+                          <div>
+                            <label className="text-xs text-[#546E7A] block mb-1 font-serif">{isSpanish ? 'Herramienta y versión' : 'Tool and version'}</label>
+                            <input
+                              type="text"
+                              value={tool.name}
+                              onChange={(e) => handleAIToolChange(index, 'name', e.target.value)}
+                              placeholder="ChatGPT-4, Gemini Pro..."
+                              className="w-full p-2.5 border border-[#E0E7E9] rounded-xl text-sm font-serif outline-none"
+                            />
+                          </div>
+                          <div className="md:col-span-2">
+                            <label className="text-xs text-[#546E7A] block mb-1 font-serif">{isSpanish ? 'Propósito y sección donde se usó' : 'Purpose and section where it was used'}</label>
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={tool.purpose}
+                                onChange={(e) => handleAIToolChange(index, 'purpose', e.target.value)}
+                                placeholder={isSpanish ? 'Corrección de estilo en todo el manuscrito, traducción del resumen...' : 'Proofreading of the manuscript, translation of the abstract...'}
+                                className="flex-1 p-2.5 border border-[#E0E7E9] rounded-xl text-sm font-serif outline-none"
+                              />
+                              {formData.aiTools.length > 1 && (
+                                <button type="button" onClick={() => removeAITool(index)} className="text-[#B22234] hover:bg-red-50 p-2 rounded-xl transition-colors">✕</button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={addAITool}
+                        className="text-sm text-[#0A1929] hover:text-[#B22234] font-medium flex items-center gap-1 font-serif"
+                      >
+                        + {isSpanish ? 'Agregar otra herramienta' : 'Add another tool'}
+                      </button>
+                    </motion.div>
+                  )}
+                </div>
+
+                {/* DISPONIBILIDAD DE DATOS Y CÓDIGO */}
                 <div className="space-y-8">
                   <h3 className="font-serif text-2xl font-light text-[#0A1929] border-b border-[#E0E7E9] pb-4">
                     {isSpanish ? 'Disponibilidad de Datos y Código' : 'Data and Code Availability'}
                   </h3>
                   
-                  {/* Disponibilidad de datos */}
                   <div>
                     <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-3">
-                      {isSpanish ? 'Disponibilidad de los datos' : 'Data availability'} *
+                      {isSpanish ? 'Declaración de disponibilidad de los datos' : 'Data availability statement'} *
                       <HelpCapsule
-                        text="Declara cómo se puede acceder a los datos que respaldan tu investigación"
-                        textEn="Declare how the data supporting your research can be accessed"
+                        text="Obligatorio incluso si no hay datos. Recomendamos repositorios como Zenodo, Figshare, OSF o Dryad."
+                        textEn="Mandatory even if there is no data. We recommend repositories such as Zenodo, Figshare, OSF or Dryad."
                       />
                     </label>
                     <select
@@ -1183,13 +1391,12 @@ if (submitted) {
                     />
                   </div>
 
-                  {/* Disponibilidad de código */}
                   <div>
                     <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-3">
-                      {isSpanish ? 'Disponibilidad del código' : 'Code availability'}
+                      {isSpanish ? 'Declaración de disponibilidad del código' : 'Code availability statement'}
                       <HelpCapsule
-                        text="Declara si el código utilizado está disponible y cómo acceder a él"
-                        textEn="Declare if the code used is available and how to access it"
+                        text="Recomendamos depositar el código en GitHub (archivado con Zenodo para un DOI), GitLab u OSF con licencia abierta (MIT, BSD, GPL)."
+                        textEn="We recommend depositing the code in GitHub (archived with Zenodo for a DOI), GitLab, or OSF under an open license (MIT, BSD, GPL)."
                       />
                     </label>
                     <select
@@ -1214,19 +1421,20 @@ if (submitted) {
                   </div>
                 </div>
 
-                {/* Declaraciones */}
+                {/* DECLARACIONES OBLIGATORIAS (Actualizadas) */}
                 <div>
                   <h3 className="font-serif text-2xl font-light text-[#0A1929] border-b border-[#E0E7E9] pb-4">
                     {isSpanish ? 'Declaraciones obligatorias' : 'Mandatory declarations'}
                   </h3>
                   <div className="mt-8 space-y-5">
                     {[
-                      { key: 'original', text: 'El trabajo es original y no ha sido publicado previamente', textEn: 'The work is original and has not been previously published' },
-                      { key: 'notSubmitted', text: 'No está siendo considerado simultáneamente en otra revista', textEn: 'It is not being considered simultaneously in another journal' },
-                      { key: 'dataAuthentic', text: 'Los datos presentados son auténticos y verificables', textEn: 'The presented data is authentic and verifiable' },
-                      { key: 'informedConsent', text: 'Se obtuvo consentimiento informado cuando fue necesario', textEn: 'Informed consent was obtained when necessary' },
-                      { key: 'aiDisclosure', text: 'Cualquier uso de IA ha sido declarado en el manuscrito', textEn: 'Any use of AI has been disclosed in the manuscript' },
-                      { key: 'conflicts', text: 'Los conflictos de interés están declarados', textEn: 'Conflicts of interest are declared' }
+                      { key: 'originalAndSimilarity', text: 'El manuscrito es inédito y, en caso de derivar de un trabajo previo, la superposición textual no excede el 15% (Sección 3.2).', textEn: 'The manuscript is unpublished and, if derived from previous work, the textual overlap does not exceed 15% (Section 3.2).' },
+                      { key: 'exclusiveSubmission', text: 'El manuscrito no está siendo evaluado simultáneamente en otra revista (Sección 3.3).', textEn: 'The manuscript is not being simultaneously evaluated in another journal (Section 3.3).' },
+                      { key: 'authorshipCriteria', text: 'Todos los autores cumplen los 4 criterios de autoría del ICMJE y sus roles CRediT están declarados (Sección 4.1).', textEn: 'All authors meet the 4 ICMJE authorship criteria and their CRediT roles are declared (Section 4.1).' },
+                      { key: 'dataAuthentic', text: 'Los datos presentados son auténticos, no han sido manipulados y la investigación cumplió con los estándares éticos aplicables (Capítulo 5).', textEn: 'The data presented are authentic, have not been manipulated, and the research complied with applicable ethical standards (Chapter 5).' },
+                      { key: 'informedConsent', text: 'Se obtuvo el consentimiento/asentimiento informado cuando fue necesario y se declara en el manuscrito (Sección 5.2).', textEn: 'Informed consent/assent was obtained when necessary and is declared in the manuscript (Section 5.2).' },
+                      { key: 'aiDisclosure', text: 'El uso de cualquier herramienta de IA ha sido declarado en el formulario y en el manuscrito (Capítulo 7).', textEn: 'The use of any AI tool has been declared in this form and in the manuscript (Chapter 7).' },
+                      { key: 'conflicts', text: 'Todos los conflictos de interés (reales, potenciales o aparentes) están declarados en el formulario y en el manuscrito (Capítulo 6).', textEn: 'All conflicts of interest (real, potential, or apparent) are declared in this form and in the manuscript (Chapter 6).' }
                     ].map(d => (
                       <label key={d.key} className="flex gap-4 cursor-pointer group">
                         <input
@@ -1243,7 +1451,7 @@ if (submitted) {
                   </div>
                 </div>
 
-                {/* Licencia CC-BY */}
+                {/* LICENCIA CC-BY */}
                 <div className="bg-[#E5E9F0] border border-[#0A1929] rounded-3xl p-8">
                   <label className="flex gap-4 cursor-pointer">
                     <input
@@ -1253,23 +1461,25 @@ if (submitted) {
                       className="mt-1 w-5 h-5 text-[#0A1929] rounded"
                     />
                     <div>
-                      <div className="font-medium text-[#0A1929] font-serif">Licencia Creative Commons CC-BY</div>
+                      <div className="font-medium text-[#0A1929] font-serif">
+                        {isSpanish ? 'Acuerdo de Licencia Creative Commons CC-BY 4.0' : 'Creative Commons CC-BY 4.0 License Agreement'}
+                      </div>
                       <p className="text-xs text-[#1A2B3C] mt-1 font-serif">
                         {isSpanish
-                          ? 'Autorizo la publicación bajo licencia CC-BY (open access). No cedo derechos de autor.'
-                          : 'I authorize publication under CC-BY license (open access). I do not transfer copyright.'}
+                          ? 'Al marcar esta casilla, acepto que el artículo, si es aceptado, se publique bajo la licencia de acceso abierto CC BY 4.0. Esto permite a otros compartir y adaptar el material para cualquier propósito, incluso comercial, siempre que se otorgue la atribución adecuada. No cedo mis derechos de autor, solo otorgo una licencia no exclusiva a la revista (Sección 13.2).'
+                          : 'By checking this box, I agree that the article, if accepted, will be published under the CC BY 4.0 open access license. This allows others to share and adapt the material for any purpose, even commercially, as long as appropriate credit is given. I do not transfer my copyright, I only grant a non-exclusive license to the journal (Section 13.2).'}
                       </p>
                     </div>
                   </label>
                 </div>
 
-                {/* Agradecimientos */}
+                {/* AGRADECIMIENTOS */}
                 <div>
                   <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-3">
                     {isSpanish ? 'Agradecimientos' : 'Acknowledgments'} (opcional)
                     <HelpCapsule
-                      text="Agradecimientos a personas o entidades que apoyaron el trabajo pero no cumplen criterios de autoría. NO incluir en el manuscrito anonimizado."
-                      textEn="Acknowledgments to people or entities that supported the work but do not meet authorship criteria. Do NOT include in the anonymized manuscript."
+                      text="Personas que no cumplen criterios de autoría. NO incluir en el manuscrito anonimizado para la revisión."
+                      textEn="People who do not meet authorship criteria. Do NOT include in the anonymized manuscript for review."
                     />
                   </label>
                   <textarea
@@ -1278,11 +1488,11 @@ if (submitted) {
                     onChange={handleInputChange}
                     rows={4}
                     className="w-full p-4 border border-[#E0E7E9] rounded-2xl text-sm font-serif"
-                    placeholder={isSpanish ? 'Agradecemos a la Universidad X por el financiamiento...' : 'We thank University X for funding...'}
+                    placeholder={isSpanish ? 'Agradecemos al Dr. Juan Pérez por sus comentarios...' : 'We thank Dr. John Smith for his comments...'}
                   />
                 </div>
 
-                {/* Revisores excluidos */}
+                {/* REVISORES EXCLUIDOS */}
                 <div>
                   <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-3">
                     {isSpanish ? 'Revisores sugeridos a excluir (opcional)' : 'Reviewers to exclude (optional)'}
@@ -1301,13 +1511,13 @@ if (submitted) {
                   />
                 </div>
 
-                {/* Archivo manuscrito */}
+                {/* ARCHIVO MANUSCRITO */}
                 <div>
                   <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-3">
                     {isSpanish ? 'Manuscrito anonimizado' : 'Anonymized manuscript'} *
                     <HelpCapsule
-                      text="Obligatorio: formato Word (.doc/.docx), máximo 10 MB, SIN nombres, afiliaciones ni agradecimientos."
-                      textEn="Required: Word format (.doc/.docx), max 10 MB, WITHOUT names, affiliations or acknowledgments."
+                      text="Obligatorio: Word (.doc/.docx), máx. 10 MB. SIN autores, afiliaciones ni agradecimientos. No se aceptan working papers o informes no finalizados (Sección 2.4)."
+                      textEn="Required: Word (.doc/.docx), max 10 MB. WITHOUT authors, affiliations, or acknowledgments. Working papers or unfinished reports are not accepted (Section 2.4)."
                     />
                   </label>
                   <div className="border border-[#E0E7E9] rounded-3xl p-8 bg-[#F5F7FA]">
@@ -1325,12 +1535,10 @@ if (submitted) {
                     )}
                   </div>
                 </div>
-
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* Navegación */}
           <div className="flex justify-between items-center pt-8 border-t border-[#E0E7E9]">
             {currentStep > 1 && (
               <button
@@ -1355,7 +1563,7 @@ if (submitted) {
               ) : (
                 <button
                   type="submit"
-                  disabled={uploading || !allDeclarationsAccepted() || !formData.manuscript || !formData.dataAvailability}
+                  disabled={uploading || !allDeclarationsAccepted() || !formData.manuscript}
                   className="px-12 py-4 bg-[#0A1929] text-white rounded-2xl text-sm font-bold hover:bg-[#B22234] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-3 shadow-xl font-serif"
                 >
                   {uploading
