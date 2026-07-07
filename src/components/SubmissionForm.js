@@ -1297,7 +1297,7 @@ controlledKeywordsEn: [],
 
   const allDeclarationsAccepted = () => Object.values(formData.declarations).every(Boolean);
 
-  const validateStep = (step) => {
+const validateStep = (step) => {
     switch (step) {
       case 1:
          return formData.title.trim() &&
@@ -1319,15 +1319,12 @@ controlledKeywordsEn: [],
           );
         return basicOk && minorsOk;
       case 3:
-        // Cambio: Validación incluye disponibilidad de datos y declaraciones
         let isValid = allDeclarationsAccepted() && 
-               formData.manuscript && 
-               formData.dataAvailability.trim();
-        // Si requiere aprobación ética, debe especificar el comité
+               (formData.manuscript || formData.manuscriptName) && 
+               formData.dataAvailability && formData.dataAvailability.trim() !== '';
         if (formData.requiresEthicsApproval === 'yes' && !formData.ethicsCommitteeName.trim()) {
             isValid = false;
         }
-        // Si usa IA, debe completar al menos una herramienta
         if (formData.aiUsed === 'yes') {
             const hasValidTool = formData.aiTools.some(tool => tool.name.trim() && tool.purpose.trim());
             if (!hasValidTool) isValid = false;
@@ -1337,7 +1334,6 @@ controlledKeywordsEn: [],
         return true;
     }
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateStep(3)) {
@@ -2255,17 +2251,26 @@ keywordsRawEn: formData.controlledKeywordsEn,
                       />
                     </label>
                     <select
-                      name="dataAvailability"
-                      value={formData.dataAvailability}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full p-4 bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif mb-4"
-                    >
-                      <option value="">— {isSpanish ? 'Selecciona una opción' : 'Select an option'} —</option>
-                      {availabilityOptions[isSpanish ? 'es' : 'en'].map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
+  name="dataAvailability"
+  value={formData.dataAvailability}
+  onChange={handleInputChange}
+  required
+  className={`w-full p-4 border rounded-2xl text-sm focus:outline-none font-serif mb-4 transition-colors ${
+    formData.dataAvailability.trim() === '' && currentStep === 3 
+      ? 'bg-red-50 border-red-400 focus:border-red-600' 
+      : 'bg-[#F5F7FA] border-[#E0E7E9] focus:border-[#0A1929]'
+  }`}
+>
+  <option value="">— {isSpanish ? 'Selecciona una opción' : 'Select an option'} —</option>
+  {availabilityOptions[isSpanish ? 'es' : 'en'].map(opt => (
+    <option key={opt.value} value={opt.value}>{opt.label}</option>
+  ))}
+</select>
+{formData.dataAvailability.trim() === '' && currentStep === 3 && (
+  <p className="text-[#B22234] text-xs font-medium -mt-2 mb-4">
+    {isSpanish ? 'Este campo es obligatorio para enviar el formulario.' : 'This field is required to submit the form.'}
+  </p>
+)}
                     <input
                       type="text"
                       name="dataAvailabilityEn"
@@ -2448,7 +2453,7 @@ keywordsRawEn: formData.controlledKeywordsEn,
               ) : (
                 <button
                   type="submit"
-                  disabled={uploading || !allDeclarationsAccepted() || !formData.manuscript}
+                  disabled={uploading || !validateStep(3)}
                   className="px-12 py-4 bg-[#0A1929] text-white rounded-2xl text-sm font-bold hover:bg-[#B22234] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-3 shadow-xl font-serif"
                 >
                   {uploading
