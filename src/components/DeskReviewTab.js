@@ -407,6 +407,26 @@ const translateVocabulary = (value) => {
           )}
 
           {/* RESUMEN BILINGÜE */}
+          {/* RESUMEN BILINGÜE */}
+<InfoBlock 
+    icon="📝" 
+    title={isSpanish ? 'Resumen / Abstract' : 'Abstract / Resumen'}
+>
+    <div className="space-y-4">
+        <div>
+            <span className="inline-block px-2 py-0.5 bg-[#E5E9F0] text-[#0A1929] text-[10px] font-mono rounded mb-2">ES</span>
+            <p className="text-[#0A1929] text-sm leading-relaxed whitespace-pre-wrap font-['Lora']">
+                {submission.abstract || '—'}
+            </p>
+        </div>
+        <div className="border-t border-[#E5E9F0] pt-4">
+            <span className="inline-block px-2 py-0.5 bg-[#E5E9F0] text-[#0A1929] text-[10px] font-mono rounded mb-2">EN</span>
+            <p className="text-[#0A1929] text-sm leading-relaxed whitespace-pre-wrap font-['Lora']">
+                {submission.abstractEn || submission.abstract || '—'}
+            </p>
+        </div>
+    </div>
+</InfoBlock>
           {/* PALABRAS CLAVE CON VOCABULARIO CONTROLADO */}
 <InfoBlock 
     icon="🏷️" 

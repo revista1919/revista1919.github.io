@@ -3183,11 +3183,110 @@ exports.submitArticle = onRequest(
           missingFields: ['aiTools']
         });
       }
-// NUEVO: Validar palabras clave controladas (mínimo 2, máximo 6)
-if (!keywordsRaw || !Array.isArray(keywordsRaw) || keywordsRaw.length < 2) {
+// 🔄 CAMBIO: Función normalizadora de keywords (soporte dual legacy/controlled)
+const normalizeKeywords = (keywordsInput, keywordsRawInput, vocabularioInput) => {
+    // CASO 1: Vienen keywordsRaw estructuradas (formulario nuevo)
+    if (keywordsRawInput && Array.isArray(keywordsRawInput) && keywordsRawInput.length > 0) {
+        const valid = keywordsRawInput.filter(k => k.code?.trim() && k.term?.trim());
+        if (valid.length > 0) {
+            return {
+                keywords: valid.map(k => `${k.code}: ${k.term}`),
+                keywordsRaw: valid.map(k => ({
+                    code: sanitizeText(k.code),
+                    term: sanitizeText(k.term)
+                })),
+                keywordsVocabulario: vocabularioInput || 'unknown',
+                keywordsFormat: 'controlled'
+            };
+        }
+    }
+
+    // CASO 2: Vienen como string serializado (formulario antiguo o mixto)
+    if (keywordsInput && typeof keywordsInput === 'string' && keywordsInput.trim()) {
+        const parts = keywordsInput.split(';').map(k => sanitizeText(k.trim())).filter(Boolean);
+        
+        // Detectar si tiene formato controlado (CÓDIGO: Término)
+        const looksControlled = parts.length > 0 && parts.every(p => /^[A-Za-z0-9.]+:/.test(p));
+        
+        if (looksControlled) {
+            const raw = parts.map(p => {
+                const colonIndex = p.indexOf(':');
+                return {
+                    code: sanitizeText(p.substring(0, colonIndex).trim()),
+                    term: sanitizeText(p.substring(colonIndex + 1).trim())
+                };
+            });
+            return {
+                keywords: parts,
+                keywordsRaw: raw,
+                keywordsVocabulario: vocabularioInput || 'unknown',
+                keywordsFormat: 'controlled'
+            };
+        }
+        
+        // Formato legacy (strings simples)
+        return {
+            keywords: parts,
+            keywordsRaw: parts.map(k => ({ code: '', term: k })),
+            keywordsVocabulario: 'legacy',
+            keywordsFormat: 'legacy'
+        };
+    }
+
+    // CASO 3: Ya es un array (viene de Firestore)
+    if (Array.isArray(keywordsInput) && keywordsInput.length > 0) {
+        const parts = keywordsInput.map(k => typeof k === 'string' ? sanitizeText(k.trim()) : String(k));
+        const looksControlled = parts.every(p => /^[A-Za-z0-9.]+:/.test(p));
+        
+        if (looksControlled) {
+            const raw = parts.map(p => {
+                const colonIndex = p.indexOf(':');
+                return {
+                    code: sanitizeText(p.substring(0, colonIndex).trim()),
+                    term: sanitizeText(p.substring(colonIndex + 1).trim())
+                };
+            });
+            return {
+                keywords: parts,
+                keywordsRaw: raw,
+                keywordsVocabulario: vocabularioInput || 'unknown',
+                keywordsFormat: 'controlled'
+            };
+        }
+        
+        return {
+            keywords: parts,
+            keywordsRaw: parts.map(k => ({ code: '', term: typeof k === 'string' ? k : String(k) })),
+            keywordsVocabulario: 'legacy',
+            keywordsFormat: 'legacy'
+        };
+    }
+
+    // CASO 4: Vacío
+    return {
+        keywords: [],
+        keywordsRaw: [],
+        keywordsVocabulario: 'legacy',
+        keywordsFormat: 'legacy'
+    };
+};
+
+// 🔄 CAMBIO: Aplicar normalización
+const normalizedKeywordsES = normalizeKeywords(keywords, keywordsRaw, keywordsVocabulario);
+const normalizedKeywordsEN = normalizeKeywords(keywordsEn, keywordsRawEn, keywordsVocabulario);
+
+// 🔄 CAMBIO: Validación de keywords normalizada (mínimo 2, máximo 6)
+const totalKeywords = normalizedKeywordsES.keywords.length;
+if (totalKeywords < 2) {
     return res.status(400).json({
-        error: 'Debes incluir al menos 2 palabras clave con su código de vocabulario controlado',
-        missingFields: ['keywordsRaw']
+        error: 'Debes incluir al menos 2 palabras clave',
+        missingFields: ['keywords']
+    });
+}
+if (totalKeywords > 6) {
+    return res.status(400).json({
+        error: 'Máximo 6 palabras clave permitidas',
+        missingFields: ['keywords']
     });
 }
 
@@ -3523,19 +3622,13 @@ if (invalidKeywords.length > 0) {
         abstract: sanitizeText(abstract),
         abstractEn: abstractEn ? sanitizeText(abstractEn) : null,
         // NUEVO: Procesar palabras clave controladas
-keywords: keywords ? keywords.split(';').map(k => sanitizeText(k.trim())).filter(Boolean) : [],
-keywordsEn: keywordsEn ? keywordsEn.split(';').map(k => sanitizeText(k.trim())).filter(Boolean) : [],
-keywordsVocabulario: keywordsVocabulario ? sanitizeText(keywordsVocabulario) : 'unknown',
-keywordsRaw: keywordsRaw.map(k => ({
-    code: sanitizeText(k.code),
-    term: sanitizeText(k.term)
-})),
-keywordsRawEn: keywordsRawEn.length > 0 
-    ? keywordsRawEn.map(k => ({
-        code: sanitizeText(k.code),
-        term: sanitizeText(k.term)
-    }))
-    : [],
+// 🔄 CAMBIO: Keywords normalizadas (soporte dual)
+keywords: normalizedKeywordsES.keywords,
+keywordsEn: normalizedKeywordsEN.keywords.length > 0 ? normalizedKeywordsEN.keywords : normalizedKeywordsES.keywords,
+keywordsVocabulario: normalizedKeywordsES.keywordsVocabulario,
+keywordsRaw: normalizedKeywordsES.keywordsRaw,
+keywordsRawEn: normalizedKeywordsEN.keywordsRaw.length > 0 ? normalizedKeywordsEN.keywordsRaw : normalizedKeywordsES.keywordsRaw,
+keywordsFormat: normalizedKeywordsES.keywordsFormat,
         area: sanitizeText(area),
         paperLanguage: paperLanguage === 'en' ? 'en' : 'es',
         
@@ -3644,8 +3737,9 @@ keywordsRawEn: keywordsRawEn.length > 0
             hasMinorAuthors: processedAuthors.some(a => a.isMinor),
             dataAvailability,
             codeAvailability: codeAvailability || null,
-            keywordsVocabulario: keywordsVocabulario || 'unknown',
-    keywordsCount: keywordsRaw.length
+            keywordsVocabulario: normalizedKeywordsES.keywordsVocabulario,
+keywordsCount: normalizedKeywordsES.keywords.length,
+keywordsFormat: normalizedKeywordsES.keywordsFormat,
           }
         });
         
@@ -3702,9 +3796,14 @@ keywordsRawEn: keywordsRawEn.length > 0
           ? `<p style="color: #0A1929;"><strong>✅ Aprobación ética:</strong> ${ethicsCommitteeName || 'Declarada'}</p>`
           : '';
 // NUEVO: Información de palabras clave
-const keywordsInfo = keywordsRaw.length > 0
-    ? `<p><strong>🏷️ Palabras clave (${keywordsVocabulario || 'Vocabulario'}):</strong><br>
-        ${keywordsRaw.map(k => `<code style="background:#f0f0f0;padding:1px 4px;border-radius:3px;">${sanitizeText(k.code)}</code> ${sanitizeText(k.term)}`).join('<br>')}
+// 🔄 CAMBIO: Keywords info para correos (usa datos normalizados)
+const keywordsInfo = normalizedKeywordsES.keywords.length > 0
+    ? `<p><strong>🏷️ Palabras clave (${normalizedKeywordsES.keywordsVocabulario || 'Vocabulario'}):</strong><br>
+        ${normalizedKeywordsES.keywordsRaw.map(k => 
+            k.code 
+                ? `<code style="background:#f0f0f0;padding:1px 4px;border-radius:3px;">${sanitizeText(k.code)}</code> ${sanitizeText(k.term)}`
+                : sanitizeText(k.term)
+        ).join('<br>')}
       </p>`
     : '';
         // NUEVO: Información de IA
@@ -3789,9 +3888,14 @@ const keywordsInfo = keywordsRaw.length > 0
              </p>`;
       }
 // NUEVO: Información de palabras clave
-const keywordsInfo = keywordsRaw.length > 0
-    ? `<p><strong>🏷️ Palabras clave (${keywordsVocabulario || 'Vocabulario'}):</strong><br>
-        ${keywordsRaw.map(k => `<code style="background:#f0f0f0;padding:1px 4px;border-radius:3px;">${sanitizeText(k.code)}</code> ${sanitizeText(k.term)}`).join('<br>')}
+// 🔄 CAMBIO: Keywords info para correos (usa datos normalizados)
+const keywordsInfo = normalizedKeywordsES.keywords.length > 0
+    ? `<p><strong>🏷️ Palabras clave (${normalizedKeywordsES.keywordsVocabulario || 'Vocabulario'}):</strong><br>
+        ${normalizedKeywordsES.keywordsRaw.map(k => 
+            k.code 
+                ? `<code style="background:#f0f0f0;padding:1px 4px;border-radius:3px;">${sanitizeText(k.code)}</code> ${sanitizeText(k.term)}`
+                : sanitizeText(k.term)
+        ).join('<br>')}
       </p>`
     : '';
       // NUEVO: Información de disponibilidad para el autor

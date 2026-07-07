@@ -36,39 +36,70 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
   }, [hookError]);
 
   // Función para formatear valores (especialmente objetos como autores)
-  const formatValue = (value) => {
+// 🔄 CAMBIO: formatValue con soporte dual para keywords (legacy + controlled)
+const formatValue = (value, fieldName = '') => {
     if (value === null || value === undefined) return '—';
+    
+    // Si es un array de keywords, detectar formato y renderizar con chips visuales
+    if ((fieldName === 'keywords' || fieldName === 'keywordsEn') && Array.isArray(value)) {
+        return (
+            <div className="flex flex-wrap gap-1.5">
+                {value.length === 0 ? <span className="text-gray-400 italic text-xs">—</span> : 
+                    value.map((kw, idx) => {
+                        // Detectar formato controlado: "CÓDIGO: Término"
+                        const match = typeof kw === 'string' ? kw.match(/^([A-Za-z0-9.]+):\s*(.+)/) : null;
+                        if (match) {
+                            return (
+                                <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 bg-white border border-[#C0A86A] rounded-lg text-xs">
+                                    <code className="text-[10px] font-mono bg-[#F0F4F8] px-1 rounded text-[#C0A86A] font-bold">{match[1]}</code>
+                                    <span className="text-gray-700">{match[2]}</span>
+                                </span>
+                            );
+                        }
+                        // Formato legacy: string simple
+                        return (
+                            <span key={idx} className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs">
+                                {typeof kw === 'string' ? kw : kw.term || String(kw)}
+                            </span>
+                        );
+                    })
+                }
+            </div>
+        );
+    }
+    
+    // Si es objeto (autores, funding, etc.)
     if (typeof value === 'object') {
-      // Si es un array de autores
-      if (Array.isArray(value)) {
-        if (value.length === 0) return '—';
-        return value.map(author => {
-          if (typeof author === 'object') {
-            // Intenta formatear el autor de diferentes maneras
-            if (author.firstName && author.lastName) {
-              return `${author.lastName}, ${author.firstName}`;
-            } else if (author.name) {
-              return author.name;
-            } else {
-              return Object.values(author).join(' ') || 'Autor sin nombre';
-            }
-          }
-          return String(author);
-        }).join('; ');
-      }
-      // Si es un objeto simple
-      return JSON.stringify(value);
+        if (Array.isArray(value)) {
+            if (value.length === 0) return '—';
+            return value.map(item => {
+                if (typeof item === 'object') {
+                    if (item.firstName && item.lastName) {
+                        return `${item.lastName}, ${item.firstName}`;
+                    } else if (item.name) {
+                        return item.name;
+                    } else if (item.code && item.term) {
+                        // Es un keywordsRaw item
+                        return item.code ? `${item.code}: ${item.term}` : item.term;
+                    } else {
+                        return Object.values(item).join(' ') || 'Autor sin nombre';
+                    }
+                }
+                return String(item);
+            }).join('; ');
+        }
+        return JSON.stringify(value);
     }
     return String(value);
-  };
-
+};
   // Array de campos editables
   const fields = [
     { name: 'title', label: isSpanish ? 'Título' : 'Title', type: 'text', requiresConsent: true },
     { name: 'titleEn', label: isSpanish ? 'Título (inglés)' : 'Title (English)', type: 'text', requiresConsent: true },
     { name: 'abstract', label: isSpanish ? 'Resumen' : 'Abstract', type: 'textarea', requiresConsent: true },
     { name: 'abstractEn', label: isSpanish ? 'Resumen (inglés)' : 'Abstract (English)', type: 'textarea', requiresConsent: true },
-    { name: 'keywords', label: isSpanish ? 'Palabras clave' : 'Keywords', type: 'text', requiresConsent: true },
+{ name: 'keywords', label: isSpanish ? 'Palabras clave' : 'Keywords', type: 'keywords', requiresConsent: true },
+{ name: 'keywordsEn', label: isSpanish ? 'Palabras clave (inglés)' : 'Keywords (English)', type: 'keywords', requiresConsent: true },
     { name: 'keywordsEn', label: isSpanish ? 'Palabras clave (inglés)' : 'Keywords (English)', type: 'text', requiresConsent: true },
     { name: 'authors', label: isSpanish ? 'Autores' : 'Authors', type: 'textarea', requiresConsent: true },
     { name: 'funding', label: isSpanish ? 'Financiamiento' : 'Funding', type: 'text', requiresConsent: false },
@@ -77,22 +108,35 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
   ];
 
   // Función mejorada para obtener el valor actual
-  const getCurrentValue = (fieldName) => {
-    // 1. Buscar en metadata estructurada (si existe)
+// 🔄 CAMBIO: getCurrentValue con reconstrucción desde keywordsRaw si es necesario
+const getCurrentValue = (fieldName) => {
+    // 1. Buscar en currentMetadata
     if (submission.currentMetadata && submission.currentMetadata[fieldName] !== undefined) {
-      return submission.currentMetadata[fieldName];
+        return submission.currentMetadata[fieldName];
     }
-    // 2. Buscar en originalSubmission (si existe)
+    // 2. Buscar en originalSubmission
     if (submission.originalSubmission && submission.originalSubmission[fieldName] !== undefined) {
-      return submission.originalSubmission[fieldName];
+        return submission.originalSubmission[fieldName];
     }
-    // 3. Buscar directamente en el submission (campos raíz)
+    // 3. Buscar directamente en submission
     if (submission[fieldName] !== undefined) {
-      return submission[fieldName];
+        return submission[fieldName];
     }
-    // 4. Si no se encuentra, retornar cadena vacía
+    
+    // 4. Para keywords, reconstruir desde keywordsRaw si existe
+    if (fieldName === 'keywords' && submission.keywordsRaw?.length > 0) {
+        return submission.keywordsRaw.map(k => k.code ? `${k.code}: ${k.term}` : k.term);
+    }
+    if (fieldName === 'keywordsEn' && submission.keywordsRawEn?.length > 0) {
+        return submission.keywordsRawEn.map(k => k.code ? `${k.code}: ${k.term}` : k.term);
+    }
+    if (fieldName === 'keywordsEn' && submission.keywordsRaw?.length > 0) {
+        // Fallback a ES si no hay EN
+        return submission.keywordsRaw.map(k => k.code ? `${k.code}: ${k.term}` : k.term);
+    }
+    
     return '';
-  };
+};
 
   // Debug: Mostrar estructura del submission en consola
   useEffect(() => {
@@ -290,14 +334,14 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
             <p className="text-xs text-[#5A6B7A] uppercase">Resumen (EN)</p>
             <p className="font-medium text-sm">{formatValue(submission.abstractEn)}</p>
           </div>
-          <div>
-            <p className="text-xs text-[#5A6B7A] uppercase">Palabras clave</p>
-            <p className="font-medium">{formatValue(submission.keywords)}</p>
-          </div>
-          <div>
-            <p className="text-xs text-[#5A6B7A] uppercase">Palabras clave (EN)</p>
-            <p className="font-medium">{formatValue(submission.keywordsEn)}</p>
-          </div>
+         <div>
+    <p className="text-xs text-[#5A6B7A] uppercase">Palabras clave</p>
+    <div className="font-medium">{formatValue(submission.keywords, 'keywords')}</div>
+</div>
+<div>
+    <p className="text-xs text-[#5A6B7A] uppercase">Palabras clave (EN)</p>
+    <div className="font-medium">{formatValue(submission.keywordsEn, 'keywordsEn')}</div>
+</div>
           <div className="md:col-span-2">
             <p className="text-xs text-[#5A6B7A] uppercase">Autores</p>
             <p className="font-medium text-sm whitespace-pre-wrap">{formatValue(submission.authors)}</p>
@@ -389,30 +433,44 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {isSpanish ? 'Nuevo valor' : 'New value'}
                 </label>
-                {fields.find(f => f.name === currentField)?.type === 'textarea' ? (
-                  <textarea
-                    value={fieldValue}
-                    onChange={(e) => setFieldValue(e.target.value)}
-                    rows={4}
-                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
-                    placeholder={isSpanish ? 'Ingresa el nuevo valor...' : 'Enter the new value...'}
-                  />
-                ) : (
-                  <input
-                    type="text"
-                    value={fieldValue}
-                    onChange={(e) => setFieldValue(e.target.value)}
-                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
-                    placeholder={isSpanish ? 'Ingresa el nuevo valor...' : 'Enter the new value...'}
-                  />
-                )}
-                <p className="text-xs text-gray-500 mt-1">
-                  {isSpanish 
-                    ? 'Para autores, usa el formato: Apellido, Nombre; Apellido2, Nombre2' 
-                    : 'For authors, use format: LastName, FirstName; LastName2, FirstName2'}
-                </p>
-              </div>
-
+                {/* 🔄 CAMBIO: Placeholder contextual para keywords */}
+{fields.find(f => f.name === currentField)?.type === 'textarea' || fields.find(f => f.name === currentField)?.type === 'keywords' ? (
+    <textarea
+        value={fieldValue}
+        onChange={(e) => setFieldValue(e.target.value)}
+        rows={4}
+        className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+        placeholder={
+            currentField === 'keywords' || currentField === 'keywordsEn'
+                ? (isSpanish 
+                    ? 'Formato controlado: "CÓDIGO: Término1; CÓDIGO: Término2" | Formato simple: "término1; término2"'
+                    : 'Controlled format: "CODE: Term1; CODE: Term2" | Simple format: "term1; term2"')
+                : (isSpanish ? 'Ingresa el nuevo valor...' : 'Enter the new value...')
+        }
+    />
+) : (
+    <input
+        type="text"
+        value={fieldValue}
+        onChange={(e) => setFieldValue(e.target.value)}
+        className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
+        placeholder={isSpanish ? 'Ingresa el nuevo valor...' : 'Enter the new value...'}
+    />
+)}
+                {/* 🔄 CAMBIO: Texto de ayuda contextual según el campo */}
+<p className="text-xs text-gray-500 mt-1">
+    {currentField === 'keywords' || currentField === 'keywordsEn'
+        ? (isSpanish
+            ? 'Separa con ";". Formato controlado: "CÓDIGO: Término". Formato simple: "término".'
+            : 'Separate with ";". Controlled: "CODE: Term". Simple: "term".')
+        : currentField === 'authors'
+            ? (isSpanish
+                ? 'Para autores, usa el formato: Apellido, Nombre; Apellido2, Nombre2'
+                : 'For authors, use format: LastName, FirstName; LastName2, FirstName2')
+            : ''
+    }
+</p>
+</div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {isSpanish ? 'Razón del cambio' : 'Reason for change'}
@@ -501,9 +559,9 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
                     <div key={idx} className="text-sm border-l-2 border-gray-200 pl-3">
                       <p className="font-medium">{change.field}</p>
                       <div className="text-xs text-gray-600 mt-1">
-                        <span className="line-through text-gray-400">{formatValue(change.currentValue)}</span>
-                        {' → '}
-                        <span className="text-green-600">{formatValue(change.proposedValue)}</span>
+                        <span className="line-through text-gray-400">{formatValue(change.currentValue, change.field)}</span>
+{' → '}
+<span className="text-green-600">{formatValue(change.proposedValue, change.field)}</span>
                       </div>
                       <p className="text-xs text-gray-500 mt-1">{change.reason}</p>
                     </div>

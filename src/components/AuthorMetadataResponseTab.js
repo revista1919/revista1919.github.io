@@ -95,18 +95,43 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
     }
   };
 
-  const formatValue = (value) => {
+  // 🔄 CAMBIO: formatValue con soporte dual para keywords (legacy + controlled)
+const formatValue = (value, fieldName = '') => {
     if (value === null || value === undefined || value === '') return <span className="text-gray-400 italic">none</span>;
+    
+    // Si es array de keywords, detectar formato
+    if ((fieldName === 'keywords' || fieldName === 'keywordsEn') && Array.isArray(value)) {
+        return (
+            <div className="flex flex-wrap gap-1">
+                {value.map((v, i) => {
+                    const match = typeof v === 'string' ? v.match(/^([A-Za-z0-9.]+):\s*(.+)/) : null;
+                    if (match) {
+                        return (
+                            <span key={i} className="inline-flex items-center gap-1 bg-slate-100 rounded px-2 py-0.5 border border-slate-200 text-xs">
+                                <code className="text-[10px] font-mono bg-white px-1 rounded text-indigo-600 font-bold">{match[1]}</code>
+                                <span>{match[2]}</span>
+                            </span>
+                        );
+                    }
+                    return (
+                        <span key={i} className="inline-block bg-slate-100 rounded px-2 py-0.5 border border-slate-200 text-xs">
+                            {typeof v === 'string' ? v : v.term || String(v)}
+                        </span>
+                    );
+                })}
+            </div>
+        );
+    }
+    
     if (Array.isArray(value)) {
-      return value.map((v, i) => (
-        <span key={i} className="inline-block bg-slate-100 rounded px-2 py-0.5 m-0.5 border border-slate-200 text-xs sm:text-sm">
-          {typeof v === 'object' ? (v.lastName ? `${v.lastName}, ${v.firstName}` : JSON.stringify(v)) : String(v)}
-        </span>
-      ));
+        return value.map((v, i) => (
+            <span key={i} className="inline-block bg-slate-100 rounded px-2 py-0.5 m-0.5 border border-slate-200 text-xs sm:text-sm">
+                {typeof v === 'object' ? (v.lastName ? `${v.lastName}, ${v.firstName}` : JSON.stringify(v)) : String(v)}
+            </span>
+        ));
     }
     return String(value);
-  };
-
+};
   const ChangeCard = ({ change, index }) => (
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
@@ -131,7 +156,7 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
           <div className="space-y-1">
             <span className="text-[10px] text-slate-400 uppercase font-semibold">{isSpanish ? 'Original' : 'Original'}</span>
             <div className="p-3 bg-red-50/30 rounded-lg border border-red-100/50 text-slate-600 line-through decoration-red-300 text-xs sm:text-sm break-words">
-              {formatValue(change.currentValue)}
+              {formatValue(change.currentValue, change.field)}
             </div>
           </div>
           
@@ -142,7 +167,7 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
           <div className="space-y-1">
             <span className="text-[10px] text-emerald-600 uppercase font-semibold">{isSpanish ? 'Propuesto' : 'Proposed'}</span>
             <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-100 text-emerald-900 font-medium text-xs sm:text-sm break-words">
-              {formatValue(change.proposedValue)}
+              {formatValue(change.proposedValue, change.field)}
             </div>
           </div>
         </div>
@@ -152,7 +177,7 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
           <div className="space-y-1">
             <span className="text-[10px] text-slate-400 uppercase font-semibold">{isSpanish ? 'Original' : 'Original'}</span>
             <div className="p-3 bg-red-50/30 rounded-lg border border-red-100/50 text-slate-600 line-through decoration-red-300 text-sm break-words">
-              {formatValue(change.currentValue)}
+              {formatValue(change.currentValue, change.field)}
             </div>
           </div>
 
@@ -163,7 +188,7 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
           <div className="space-y-1">
             <span className="text-[10px] text-emerald-600 uppercase font-semibold">{isSpanish ? 'Propuesto' : 'Proposed'}</span>
             <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-100 text-emerald-900 font-medium text-sm break-words">
-              {formatValue(change.proposedValue)}
+              {formatValue(change.proposedValue, change.field)}
             </div>
           </div>
         </div>

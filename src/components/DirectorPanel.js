@@ -315,9 +315,44 @@ export default function DirectorPanel({ user }) {
       }
 
       // 4. Palabras clave
-      const palabrasClave = metadata.keywords || metadata.palabras_clave || [];
-      const keywordsEnglish = metadata.keywordsEn || metadata.keywords_english || [];
+// 4. Palabras clave - DETECCIÓN AUTOMÁTICA DE FORMATO (legacy + controlled)
+let palabrasClaveStr = '';
+let keywordsEnglishStr = '';
 
+// Intentar usar keywordsRaw primero (formato nuevo controlado)
+if (metadata.keywordsRaw && metadata.keywordsRaw.length > 0) {
+    palabrasClaveStr = metadata.keywordsRaw
+        .map(k => k.code ? `${k.code}: ${k.term}` : k.term)
+        .join('; ');
+} else if (metadata.keywords && Array.isArray(metadata.keywords) && metadata.keywords.length > 0) {
+    // Detectar si el array tiene formato controlado
+    const looksControlled = metadata.keywords.some(k => 
+        typeof k === 'string' && /^[A-Za-z0-9.]+:/.test(k)
+    );
+    palabrasClaveStr = metadata.keywords.join('; ');
+} else if (metadata.palabras_clave) {
+    palabrasClaveStr = Array.isArray(metadata.palabras_clave) 
+        ? metadata.palabras_clave.join('; ') 
+        : String(metadata.palabras_clave);
+}
+
+// Mismo proceso para inglés
+if (metadata.keywordsRawEn && metadata.keywordsRawEn.length > 0) {
+    keywordsEnglishStr = metadata.keywordsRawEn
+        .map(k => k.code ? `${k.code}: ${k.term}` : k.term)
+        .join('; ');
+} else if (metadata.keywordsEn && Array.isArray(metadata.keywordsEn) && metadata.keywordsEn.length > 0) {
+    keywordsEnglishStr = metadata.keywordsEn.join('; ');
+} else if (metadata.keywords_english) {
+    keywordsEnglishStr = Array.isArray(metadata.keywords_english) 
+        ? metadata.keywords_english.join('; ') 
+        : String(metadata.keywords_english);
+}
+
+// Si no hay inglés, usar español
+if (!keywordsEnglishStr && palabrasClaveStr) {
+    keywordsEnglishStr = palabrasClaveStr;
+}
       // 5. Fechas aproximadas
       const receivedDate = submission.createdAt ? submission.createdAt.toISOString().split('T')[0] : '';
       const acceptedDate = submission.publicationReadyAt ? submission.publicationReadyAt.toISOString().split('T')[0] : 
@@ -330,8 +365,8 @@ export default function DirectorPanel({ user }) {
         autores: importedAuthors,
         resumen: metadata.abstract || '',
         abstract: metadata.abstractEn || '',
-        palabras_clave: Array.isArray(palabrasClave) ? palabrasClave.join('; ') : palabrasClave || '',
-        keywords_english: Array.isArray(keywordsEnglish) ? keywordsEnglish.join('; ') : keywordsEnglish || '',
+        palabras_clave: palabrasClaveStr,
+keywords_english: keywordsEnglishStr,
         area: metadata.area || '',
         tipo: metadata.articleType || metadata.tipo || '',
         type: metadata.type || metadata.articleType || '',
@@ -453,23 +488,16 @@ export default function DirectorPanel({ user }) {
       }));
 
       // Procesar palabras clave
-      let palabrasClaveArray = [];
-      if (articleForm.palabras_clave) {
-        if (Array.isArray(articleForm.palabras_clave)) {
-          palabrasClaveArray = articleForm.palabras_clave;
-        } else if (typeof articleForm.palabras_clave === 'string') {
-          palabrasClaveArray = articleForm.palabras_clave.split(';').map(k => k.trim()).filter(k => k);
-        }
-      }
+      // 🔄 Procesar palabras clave (normalizar string → array)
+const processKeywordString = (input) => {
+    if (!input) return [];
+    if (Array.isArray(input)) return input.map(k => typeof k === 'string' ? k.trim() : String(k)).filter(Boolean);
+    if (typeof input === 'string') return input.split(';').map(k => k.trim()).filter(Boolean);
+    return [];
+};
 
-      let keywordsArray = [];
-      if (articleForm.keywords_english) {
-        if (Array.isArray(articleForm.keywords_english)) {
-          keywordsArray = articleForm.keywords_english;
-        } else if (typeof articleForm.keywords_english === 'string') {
-          keywordsArray = articleForm.keywords_english.split(';').map(k => k.trim()).filter(k => k);
-        }
-      }
+const palabrasClaveArray = processKeywordString(articleForm.palabras_clave);
+const keywordsArray = processKeywordString(articleForm.keywords_english);
 
       const articleData = {
         titulo: articleForm.titulo,
@@ -1151,8 +1179,30 @@ const ArticleForm = ({ formData, setFormData, isProcessing, isEditing, submissio
 
         {activeStep === 5 && (
           <div className="space-y-4">
-            <Input label="Palabras Clave (ES) * (separar con ;)" name="palabras_clave" value={formData.palabras_clave} onChange={handleChange} placeholder="Ej: ciencia; investigación; método" />
-            <Input label="Keywords (EN) (separar con ;)" name="keywords_english" value={formData.keywords_english} onChange={handleChange} placeholder="Ej: science; research; method" />
+            <div>
+    <Input 
+        label="Palabras Clave (ES) * (separar con ;)" 
+        name="palabras_clave" 
+        value={formData.palabras_clave} 
+        onChange={handleChange} 
+        placeholder="Ej: B14: Marxismo; D00: Economía general" 
+    />
+    <p className="text-[10px] text-gray-400 mt-1 ml-1">
+        Formato controlado: "CÓDIGO: Término; CÓDIGO: Término" | Simple: "término1; término2"
+    </p>
+</div>
+<div>
+    <Input 
+        label="Keywords (EN) (separar con ;)" 
+        name="keywords_english" 
+        value={formData.keywords_english} 
+        onChange={handleChange} 
+        placeholder="Ej: B14: Marxism; D00: General economics" 
+    />
+    <p className="text-[10px] text-gray-400 mt-1 ml-1">
+        Controlled format: "CODE: Term; CODE: Term" | Simple: "term1; term2"
+    </p>
+</div>
             <div><label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Resumen (ES)</label><textarea className="w-full p-3 border rounded-xl h-24 outline-none focus:ring-2 focus:ring-blue-500 text-sm" value={formData.resumen} onChange={(e) => setFormData({...formData, resumen: e.target.value})} placeholder="Resumen en español..." /></div>
             <div><label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Abstract (EN)</label><textarea className="w-full p-3 border rounded-xl h-24 outline-none focus:ring-2 focus:ring-blue-500 text-sm" value={formData.abstract} onChange={(e) => setFormData({...formData, abstract: e.target.value})} placeholder="English abstract..." /></div>
             <div><label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Conflictos de Interés (ES)</label><textarea className="w-full p-3 border rounded-xl h-20 outline-none focus:ring-2 focus:ring-blue-500 text-sm" name="conflicts" value={formData.conflicts} onChange={handleChange} placeholder="Declaración de conflictos de interés..." /></div>
@@ -1396,8 +1446,58 @@ const ArticleList = ({ articles, expandedArticles, onToggleExpand, onEdit, onDel
                     <div className="space-y-4">
                       <div><h4 className="font-semibold text-gray-900 mb-2">Resumen</h4><div className="text-gray-700 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: article.resumen || 'No disponible' }} /></div>
                       <div><h4 className="font-semibold text-gray-900 mb-2">Abstract</h4><div className="text-gray-700 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: article.abstract || 'No disponible' }} /></div>
-                      <div><h4 className="font-semibold text-gray-900 mb-2">Palabras Clave</h4><p className="text-gray-700">{article.palabras_clave?.join(', ') || 'No disponible'}</p></div>
-                      <div><h4 className="font-semibold text-gray-900 mb-2">Keywords</h4><p className="text-gray-700">{article.keywords_english?.join(', ') || 'No disponible'}</p></div>
+                      <div>
+    <h4 className="font-semibold text-gray-900 mb-2">Palabras Clave</h4>
+    <div className="flex flex-wrap gap-1.5">
+        {(Array.isArray(article.palabras_clave) ? article.palabras_clave : 
+          (typeof article.palabras_clave === 'string' ? article.palabras_clave.split(';').map(k => k.trim()).filter(Boolean) : [])
+        ).map((kw, idx) => {
+            const match = typeof kw === 'string' ? kw.match(/^([A-Za-z0-9.]+):\s*(.+)/) : null;
+            if (match) {
+                return (
+                    <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-200 rounded-full text-xs">
+                        <code className="text-[10px] font-mono text-blue-700 font-bold">{match[1]}</code>
+                        <span className="text-blue-900">{match[2]}</span>
+                    </span>
+                );
+            }
+            return (
+                <span key={idx} className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs">
+                    {kw}
+                </span>
+            );
+        })}
+        {(!article.palabras_clave || (Array.isArray(article.palabras_clave) && article.palabras_clave.length === 0)) && 
+            <span className="text-gray-400 text-xs">No disponible</span>
+        }
+    </div>
+</div>
+<div>
+    <h4 className="font-semibold text-gray-900 mb-2">Keywords</h4>
+    <div className="flex flex-wrap gap-1.5">
+        {(Array.isArray(article.keywords_english) ? article.keywords_english : 
+          (typeof article.keywords_english === 'string' ? article.keywords_english.split(';').map(k => k.trim()).filter(Boolean) : [])
+        ).map((kw, idx) => {
+            const match = typeof kw === 'string' ? kw.match(/^([A-Za-z0-9.]+):\s*(.+)/) : null;
+            if (match) {
+                return (
+                    <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-50 border border-purple-200 rounded-full text-xs">
+                        <code className="text-[10px] font-mono text-purple-700 font-bold">{match[1]}</code>
+                        <span className="text-purple-900">{match[2]}</span>
+                    </span>
+                );
+            }
+            return (
+                <span key={idx} className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs">
+                    {kw}
+                </span>
+            );
+        })}
+        {(!article.keywords_english || (Array.isArray(article.keywords_english) && article.keywords_english.length === 0)) && 
+            <span className="text-gray-400 text-xs">No disponible</span>
+        }
+    </div>
+</div>
                       {article.referencias && <div><h4 className="font-semibold text-gray-900 mb-2">Referencias</h4><div className="text-gray-700 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: article.referencias }} /></div>}
                     </div>
 
