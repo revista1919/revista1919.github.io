@@ -3305,7 +3305,14 @@ if (invalidKeywords.length > 0) {
         missingFields: ['keywordsRaw']
     });
 }
-      const requiredFields = { title, abstract, keywords, area, manuscriptBase64, authors, articleType };
+      const requiredFields = { title, abstract, area, manuscriptBase64, authors, articleType };
+      // Y agregar validación específica para keywordsRaw:
+if (!keywordsRaw || !Array.isArray(keywordsRaw) || keywordsRaw.length < 2) {
+  return res.status(400).json({
+    error: 'Faltan campos requeridos',
+    missingFields: ['keywords']
+  });
+}
       const missingFields = Object.entries(requiredFields)
         .filter(([_, value]) => !value)
         .map(([key]) => key);
