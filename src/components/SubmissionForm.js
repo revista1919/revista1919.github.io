@@ -3,7 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { auth } from '../firebase';
 import { useLanguage } from '../hooks/useLanguage';
 
-// Componente de Tooltip/Cápsula explicativa (estilo Oxford)
+// ============ COMPONENTES AUXILIARES ============
+
+// Componente de Tooltip/Cápsula explicativa
 const HelpCapsule = ({ text, textEn }) => {
   const [show, setShow] = useState(false);
   const { language } = useLanguage();
@@ -38,70 +40,721 @@ const HelpCapsule = ({ text, textEn }) => {
   );
 };
 
-// Componente para Keywords con chips (estilo Oxford)
-const KeywordInput = ({ value, onChange, placeholder, label, helpText, helpTextEn }) => {
-  const [inputValue, setInputValue] = useState('');
-  const { language } = useLanguage();
+// ============ CONFIGURACIÓN DE ÁREAS TEMÁTICAS ============
+
+const AREAS_TEMATICAS = {
+  "Ciencias Exactas y Naturales": [
+    "Matemáticas",
+    "Física",
+    "Química",
+    "Biología",
+    "Geología",
+    "Astronomía y Astrofísica",
+    "Ciencias Ambientales y Ecología",
+    "Oceanografía",
+    "Meteorología y Ciencias Atmosféricas",
+    "Paleontología"
+  ],
+  "Ciencias de la Salud": [
+    "Medicina General e Interna",
+    "Salud Pública y Epidemiología",
+    "Enfermería",
+    "Nutrición y Dietética",
+    "Farmacología y Farmacia",
+    "Odontología",
+    "Kinesiología y Fisioterapia",
+    "Tecnología Médica y Bioanálisis",
+    "Veterinaria"
+  ],
+  "Ingeniería y Tecnología": [
+    "Ingeniería Civil",
+    "Ingeniería Industrial y de Sistemas",
+    "Ingeniería Mecánica",
+    "Ingeniería Eléctrica y Electrónica",
+    "Ingeniería Química y Biotecnología",
+    "Ingeniería en Computación e Informática",
+    "Ciencia de Datos e Inteligencia Artificial",
+    "Robótica y Automatización",
+    "Ingeniería de Materiales y Nanotecnología",
+    "Ingeniería Aeroespacial",
+    "Energías Renovables y Sostenibilidad"
+  ],
+  "Ciencias Sociales": [
+    "Sociología",
+    "Antropología y Arqueología",
+    "Psicología",
+    "Economía y Negocios",
+    "Ciencias Políticas y Relaciones Internacionales",
+    "Derecho",
+    "Geografía Humana y Ordenamiento Territorial",
+    "Estudios de Género",
+    "Comunicación Social y Periodismo",
+    "Educación y Pedagogía",
+    "Trabajo Social"
+  ],
+  "Humanidades": [
+    "Historia",
+    "Filosofía",
+    "Lingüística y Filología",
+    "Literatura",
+    "Estudios Clásicos",
+    "Teología y Ciencias de la Religión",
+    "Estudios Culturales",
+    "Arte, Música y Cine",
+    "Arquitectura y Urbanismo"
+  ],
+  "Ciencias Agropecuarias": [
+    "Agronomía y Producción Agrícola",
+    "Ciencias Forestales",
+    "Acuicultura y Pesca",
+    "Zootecnia y Producción Animal",
+    "Ingeniería de Alimentos"
+  ]
+};
+
+// ============ CONFIGURACIÓN DE VOCABULARIOS CONTROLADOS ============
+
+const VOCABULARIO_POR_AREA = {
+  "Matemáticas": {
+    vocabulario: "MSC",
+    nombre: "Mathematics Subject Classification (MSC2020)",
+    formato: "Código MSC: Término",
+    ejemplo: "11N05: Distribution of primes",
+    searchUrl: "https://mathscinet.ams.org/mathscinet/msc/msc2020.html",
+    instrucciones: "Busca tu código en la clasificación MSC2020 de la AMS y copia el código y descriptor exacto."
+  },
+  "Física": {
+    vocabulario: "PhySH",
+    nombre: "Physics Subject Headings (APS)",
+    formato: "Término PhySH",
+    ejemplo: "Quantum mechanics",
+    searchUrl: "https://physh.aps.org/",
+    instrucciones: "Usa PhySH, el esquema actual de la American Physical Society, y copia el descriptor."
+  },
+  "Química": {
+    vocabulario: "CAS",
+    nombre: "Chemical Abstracts Service Classification",
+    formato: "Número CAS: Término",
+    ejemplo: "78-10-4: Tetraethyl silicate",
+    searchUrl: "https://commonchemistry.cas.org/",
+    instrucciones: "Busca tu compuesto o sustancia en CAS Common Chemistry y copia el número de registro CAS."
+  },
+  "Biología": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D001777: Biology",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca y copia el código y descriptor MeSH."
+  },
+  "Geología": {
+    vocabulario: "GeoRef",
+    nombre: "GeoRef Thesaurus",
+    formato: "Término controlado GeoRef",
+    ejemplo: "Igneous rocks: Petrology",
+    searchUrl: "https://www.americangeosciences.org/georef/georef-thesaurus",
+    instrucciones: "Busca el descriptor controlado aceptado en el tesauro GeoRef."
+  },
+  "Astronomía y Astrofísica": {
+    vocabulario: "UAT",
+    nombre: "Unified Astronomy Thesaurus",
+    formato: "Código UAT: Término",
+    ejemplo: "1087: Exoplanet astronomy",
+    searchUrl: "https://astrothesaurus.org/",
+    instrucciones: "Navega por el tesauro astronómico unificado y copia el código numérico y descriptor."
+  },
+  "Ciencias Ambientales y Ecología": {
+    vocabulario: "EnvThes",
+    nombre: "Environmental Thesaurus",
+    formato: "Código EnvThes: Término",
+    ejemplo: "20286: Ecosystem services",
+    searchUrl: "https://vocabs.lter-europe.net/envthes/en/",
+    instrucciones: "Busca tu término en el tesauro ambiental europeo EnvThes."
+  },
+  "Oceanografía": {
+    vocabulario: "BODC",
+    nombre: "British Oceanographic Data Centre Vocabulary",
+    formato: "Código BODC: Término",
+    ejemplo: "P021: Ocean circulation",
+    searchUrl: "https://vocab.nerc.ac.uk/",
+    instrucciones: "Navega por el NERC Vocabulary Server y copia el código alfanumérico."
+  },
+  "Meteorología y Ciencias Atmosféricas": {
+    vocabulario: "WMO",
+    nombre: "World Meteorological Organization Vocabulary",
+    formato: "Código WMO: Término",
+    ejemplo: "3720: Atmospheric pressure",
+    searchUrl: "https://codes.wmo.int/",
+    instrucciones: "Busca tu código en los estándares de la Organización Meteorológica Mundial."
+  },
+  "Paleontología": {
+    vocabulario: "PBDB",
+    nombre: "Paleobiology Database Taxonomy",
+    formato: "Código PBDB: Término",
+    ejemplo: "52822: Tyrannosauridae",
+    searchUrl: "https://paleobiodb.org/navigator/",
+    instrucciones: "Busca tu taxón o grupo fósil en el navegador de la base de datos paleobiológica."
+  },
+  "Medicina General e Interna": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D008112: Internal Medicine",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca y copia el código y descriptor MeSH exacto."
+  },
+  "Salud Pública y Epidemiología": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D011635: Public Health",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+  },
+  "Enfermería": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D009729: Nursing",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+  },
+  "Nutrición y Dietética": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D009750: Nutritional Sciences",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+  },
+  "Farmacología y Farmacia": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D010597: Pharmacology",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+  },
+  "Odontología": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D003813: Dentistry",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+  },
+  "Kinesiología y Fisioterapia": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D026801: Physical Therapy Specialty",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+  },
+  "Tecnología Médica y Bioanálisis": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D008364: Medical Laboratory Science",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+  },
+  "Veterinaria": {
+    vocabulario: "MeSH",
+    nombre: "Medical Subject Headings",
+    formato: "Código MeSH: Término",
+    ejemplo: "D014730: Veterinary Medicine",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+  },
+  "Ingeniería Civil": {
+    vocabulario: "Ei",
+    nombre: "Engineering Index Thesaurus (Compendex)",
+    formato: "Código Ei: Término",
+    ejemplo: "405.1: Construction management",
+    searchUrl: "https://www.engineeringvillage.com/",
+    instrucciones: "Busca tu término en el Engineering Index Thesaurus de Compendex."
+  },
+  "Ingeniería Industrial y de Sistemas": {
+    vocabulario: "IIE",
+    nombre: "Industrial Engineering Terminology (IISE)",
+    formato: "Código IIE: Término",
+    ejemplo: "4.2.1: Supply chain optimization",
+    searchUrl: "https://www.iise.org/",
+    instrucciones: "Usa la terminología estándar de ingeniería industrial del IISE."
+  },
+  "Ingeniería Mecánica": {
+    vocabulario: "ASME",
+    nombre: "ASME Subject Classification",
+    formato: "Código ASME: Término",
+    ejemplo: "10-01: Thermodynamics",
+    searchUrl: "https://www.asme.org/",
+    instrucciones: "Navega por las áreas temáticas de la ASME."
+  },
+  "Ingeniería Eléctrica y Electrónica": {
+    vocabulario: "IEEE",
+    nombre: "IEEE Thesaurus",
+    formato: "Término normalizado IEEE",
+    ejemplo: "B6210L: Computer communications",
+    searchUrl: "https://www.ieee.org/publications/services/thesaurus-access-page.html",
+    instrucciones: "Busca tu término técnico en el tesauro oficial del IEEE."
+  },
+  "Ingeniería Química y Biotecnología": {
+    vocabulario: "IChemE",
+    nombre: "Institution of Chemical Engineers Thesaurus",
+    formato: "Código IChemE: Término",
+    ejemplo: "BIO-04: Bioprocessing",
+    searchUrl: "https://www.icheme.org/",
+    instrucciones: "Usa la clasificación temática de ingeniería química de IChemE."
+  },
+  "Ingeniería en Computación e Informática": {
+    vocabulario: "ACM",
+    nombre: "ACM Computing Classification System",
+    formato: "Código ACM: Término",
+    ejemplo: "CCS2012.10003116: Software engineering",
+    searchUrl: "https://dl.acm.org/ccs",
+    instrucciones: "ACM CCS es el estándar jerárquico global para ciencias de la computación."
+  },
+  "Ciencia de Datos e Inteligencia Artificial": {
+    vocabulario: "ACM",
+    nombre: "ACM Computing Classification System",
+    formato: "Código ACM: Término",
+    ejemplo: "CCS2012.10010179: Machine learning",
+    searchUrl: "https://dl.acm.org/ccs",
+    instrucciones: "ACM CCS cubre ramas de ML e IA extensamente."
+  },
+  "Robótica y Automatización": {
+    vocabulario: "ACM",
+    nombre: "ACM Computing Classification System",
+    formato: "Código ACM: Término",
+    ejemplo: "CCS2012.10010187: Robotics",
+    searchUrl: "https://dl.acm.org/ccs",
+    instrucciones: "Navega por la clasificación ACM y copia el código y descriptor."
+  },
+  "Ingeniería de Materiales y Nanotecnología": {
+    vocabulario: "ASM",
+    nombre: "ASM International Materials Thesaurus",
+    formato: "Término controlado ASM",
+    ejemplo: "Nanocomposites: Materials science",
+    searchUrl: "https://www.asminternational.org/",
+    instrucciones: "Busca tu material o proceso en el vocabulario controlado de ASM."
+  },
+  "Ingeniería Aeroespacial": {
+    vocabulario: "NASA",
+    nombre: "NASA Thesaurus",
+    formato: "Término controlado NASA",
+    ejemplo: "Aircraft design: Aeronautics",
+    searchUrl: "https://sti.nasa.gov/nasa-thesaurus/",
+    instrucciones: "Busca tu término en el tesauro aeroespacial de la NASA."
+  },
+  "Energías Renovables y Sostenibilidad": {
+    vocabulario: "ETDE",
+    nombre: "Energy Technology Data Exchange Thesaurus",
+    formato: "Término controlado ETDE",
+    ejemplo: "Solar energy: Photovoltaics",
+    searchUrl: "https://www.etde.org/",
+    instrucciones: "Busca tu término en el tesauro de tecnología energética ETDE."
+  },
+  "Sociología": {
+    vocabulario: "JEL",
+    nombre: "JEL Classification System",
+    formato: "Código JEL: Término",
+    ejemplo: "Z13: Economic Sociology",
+    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
+    instrucciones: "Busca el código JEL que mejor describa tu tema sociológico."
+  },
+  "Antropología y Arqueología": {
+    vocabulario: "JEL",
+    nombre: "JEL Classification System",
+    formato: "Código JEL: Término",
+    ejemplo: "Z19: Other Cultural Economics",
+    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
+    instrucciones: "Busca el código JEL más cercano a tu tema de antropología."
+  },
+  "Psicología": {
+    vocabulario: "APA",
+    nombre: "APA Thesaurus of Psychological Index Terms",
+    formato: "Término indexado APA",
+    ejemplo: "Cognitive Processes: Memory",
+    searchUrl: "https://psycnet.apa.org/thesaurus/",
+    instrucciones: "Busca tu término de indexación en el tesauro oficial de la APA."
+  },
+  "Economía y Negocios": {
+    vocabulario: "JEL",
+    nombre: "JEL Classification System",
+    formato: "Código JEL: Término",
+    ejemplo: "D00: General Economics",
+    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
+    instrucciones: "Selecciona los códigos JEL que mejor describan tu investigación."
+  },
+  "Ciencias Políticas y Relaciones Internacionales": {
+    vocabulario: "JEL",
+    nombre: "JEL Classification System",
+    formato: "Código JEL: Término",
+    ejemplo: "F50: International Relations",
+    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
+    instrucciones: "Busca códigos JEL en categorías F o H."
+  },
+  "Derecho": {
+    vocabulario: "LCSH",
+    nombre: "Library of Congress Subject Headings",
+    formato: "Código/Descriptor LCSH",
+    ejemplo: "KF385: Common law",
+    searchUrl: "https://id.loc.gov/authorities/subjects.html",
+    instrucciones: "Busca en los encabezamientos temáticos de la Biblioteca del Congreso."
+  },
+  "Geografía Humana y Ordenamiento Territorial": {
+    vocabulario: "JEL",
+    nombre: "JEL Classification System",
+    formato: "Código JEL: Término",
+    ejemplo: "R10: General Regional Economics",
+    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
+    instrucciones: "Usa categorías R o Q del sistema JEL."
+  },
+  "Estudios de Género": {
+    vocabulario: "JEL",
+    nombre: "JEL Classification System",
+    formato: "Código JEL: Término",
+    ejemplo: "J16: Economics of Gender",
+    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
+    instrucciones: "Busca en categorías J para estudios de género."
+  },
+  "Comunicación Social y Periodismo": {
+    vocabulario: "CIOS",
+    nombre: "Communication Institute for Online Scholarship Thesaurus",
+    formato: "Término normalizado CIOS",
+    ejemplo: "Mass media effects: Journalism",
+    searchUrl: "https://www.cios.org/",
+    instrucciones: "Navega por las categorías controladas especializadas en comunicación."
+  },
+  "Educación y Pedagogía": {
+    vocabulario: "ERIC",
+    nombre: "Education Resources Information Center Thesaurus",
+    formato: "Término Descriptor ERIC",
+    ejemplo: "Educational technology: Pedagogy",
+    searchUrl: "https://eric.ed.gov/?ti=all",
+    instrucciones: "Busca e identifica descriptores específicos en ERIC."
+  },
+  "Trabajo Social": {
+    vocabulario: "JEL",
+    nombre: "JEL Classification System",
+    formato: "Código JEL: Término",
+    ejemplo: "I38: Welfare, Well-Being, and Poverty",
+    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
+    instrucciones: "Busca en categorías I o J del sistema JEL."
+  },
+  "Historia": {
+    vocabulario: "UNESCO",
+    nombre: "UNESCO Thesaurus",
+    formato: "Código UNESCO: Término",
+    ejemplo: "6.25: Historia",
+    searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
+    instrucciones: "Navega por el tesauro de la UNESCO y copia el código y descriptor."
+  },
+  "Filosofía": {
+    vocabulario: "UNESCO",
+    nombre: "UNESCO Thesaurus",
+    formato: "Código UNESCO: Término",
+    ejemplo: "6.05: Filosofía",
+    searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
+    instrucciones: "Navega por el tesauro de la UNESCO."
+  },
+  "Lingüística y Filología": {
+    vocabulario: "UNESCO",
+    nombre: "UNESCO Thesaurus",
+    formato: "Código UNESCO: Término",
+    ejemplo: "6.10: Lingüística",
+    searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
+    instrucciones: "Navega por el tesauro de la UNESCO."
+  },
+  "Literatura": {
+    vocabulario: "UNESCO",
+    nombre: "UNESCO Thesaurus",
+    formato: "Código UNESCO: Término",
+    ejemplo: "6.15: Literatura",
+    searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
+    instrucciones: "Navega por el tesauro de la UNESCO."
+  },
+  "Estudios Clásicos": {
+    vocabulario: "UNESCO",
+    nombre: "UNESCO Thesaurus",
+    formato: "Código UNESCO: Término",
+    ejemplo: "6.20: Estudios Clásicos",
+    searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
+    instrucciones: "Navega por el tesauro de la UNESCO."
+  },
+  "Teología y Ciencias de la Religión": {
+    vocabulario: "UNESCO",
+    nombre: "UNESCO Thesaurus",
+    formato: "Código UNESCO: Término",
+    ejemplo: "6.30: Teología",
+    searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
+    instrucciones: "Navega por el tesauro de la UNESCO."
+  },
+  "Estudios Culturales": {
+    vocabulario: "UNESCO",
+    nombre: "UNESCO Thesaurus",
+    formato: "Código UNESCO: Término",
+    ejemplo: "6.35: Cultura",
+    searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
+    instrucciones: "Navega por el tesauro de la UNESCO."
+  },
+  "Arte, Música y Cine": {
+    vocabulario: "AAT",
+    nombre: "Art & Architecture Thesaurus",
+    formato: "Código AAT: Término",
+    ejemplo: "300033618: Oil paintings",
+    searchUrl: "https://www.getty.edu/research/tools/vocabularies/aat/",
+    instrucciones: "Busca descriptores artísticos en la base del Getty Research Institute."
+  },
+  "Arquitectura y Urbanismo": {
+    vocabulario: "AAT",
+    nombre: "Art & Architecture Thesaurus",
+    formato: "Código AAT: Término",
+    ejemplo: "300008125: Skyscrapers",
+    searchUrl: "https://www.getty.edu/research/tools/vocabularies/aat/",
+    instrucciones: "Busca estructuras o conceptos espaciales en la base del Getty."
+  },
+  "Agronomía y Producción Agrícola": {
+    vocabulario: "AGROVOC",
+    nombre: "FAO Agricultural Thesaurus (AGROVOC)",
+    formato: "Código AGROVOC: Término",
+    ejemplo: "c_867: Crop rotation",
+    searchUrl: "https://agrovoc.fao.org/browse/agrovoc/en/",
+    instrucciones: "AGROVOC es el estándar para ciencias agrícolas de la FAO."
+  },
+  "Ciencias Forestales": {
+    vocabulario: "AGROVOC",
+    nombre: "FAO Agricultural Thesaurus (AGROVOC)",
+    formato: "Código AGROVOC: Término",
+    ejemplo: "c_3014: Forest ecology",
+    searchUrl: "https://agrovoc.fao.org/browse/agrovoc/en/",
+    instrucciones: "AGROVOC cubre ciencias forestales."
+  },
+  "Acuicultura y Pesca": {
+    vocabulario: "ASFA",
+    nombre: "Aquatic Sciences and Fisheries Abstracts Thesaurus",
+    formato: "Código ASFA: Término",
+    ejemplo: "Q5 01521: Fish culture",
+    searchUrl: "https://www.fao.org/fishery/asfa/en",
+    instrucciones: "Busca en el tesauro ASFA de la FAO."
+  },
+  "Zootecnia y Producción Animal": {
+    vocabulario: "AGROVOC",
+    nombre: "FAO Agricultural Thesaurus (AGROVOC)",
+    formato: "Código AGROVOC: Término",
+    ejemplo: "c_433: Animal breeding",
+    searchUrl: "https://agrovoc.fao.org/browse/agrovoc/en/",
+    instrucciones: "Busca tu término en AGROVOC."
+  },
+  "Ingeniería de Alimentos": {
+    vocabulario: "FSTA",
+    nombre: "Food Science and Technology Abstracts Thesaurus",
+    formato: "Código FSTA: Término",
+    ejemplo: "Q04: Food microbiology",
+    searchUrl: "https://www.ifis.org/fsta",
+    instrucciones: "Usa el tesauro de ciencia y tecnología de alimentos FSTA."
+  }
+};
+
+// ============ COMPONENTE: PALABRAS CLAVE CONTROLADAS ============
+
+const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language }) => {
   const isSpanish = language === 'es';
-  const keywords = value ? value.split(';').filter(k => k.trim()) : [];
+  const [newCode, setNewCode] = useState('');
+  const [newTerm, setNewTerm] = useState('');
+  const [error, setError] = useState('');
+
+  const maxKeywords = 6;
+  const minKeywords = 2;
+  const keywords = Array.isArray(value) ? value : [];
+
+  // Limpiar error cuando cambian los inputs
+  useEffect(() => {
+    if (newCode.trim() && newTerm.trim()) {
+      setError('');
+    }
+  }, [newCode, newTerm]);
 
   const addKeyword = () => {
-    if (inputValue.trim()) {
-      const newKeywords = [...keywords, inputValue.trim()];
-      onChange(newKeywords.join('; '));
-      setInputValue('');
+    const code = newCode.trim();
+    const term = newTerm.trim();
+    
+    // Validaciones con mensajes claros
+    if (!code || !term) {
+      setError(isSpanish 
+        ? 'Debes ingresar tanto el código como el término.' 
+        : 'You must enter both the code and the term.');
+      return;
+    }
+    
+    if (keywords.length >= maxKeywords) {
+      setError(isSpanish 
+        ? `Has alcanzado el máximo de ${maxKeywords} palabras clave.` 
+        : `You have reached the maximum of ${maxKeywords} keywords.`);
+      return;
+    }
+    
+    if (keywords.some(k => k.code === code)) {
+      setError(isSpanish 
+        ? 'Este código ya existe en tus palabras clave. Usa un código diferente.' 
+        : 'This code already exists in your keywords. Use a different code.');
+      return;
+    }
+
+    const updatedKeywords = [...keywords, { code, term }];
+    onChange(updatedKeywords);
+    setNewCode('');
+    setNewTerm('');
+    setError('');
+  };
+
+  const removeKeyword = (index) => {
+    const updatedKeywords = keywords.filter((_, i) => i !== index);
+    onChange(updatedKeywords);
+  };
+
+  const handleCodeKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      document.getElementById('controlled-term-input')?.focus();
     }
   };
 
-  const removeKeyword = (indexToRemove) => {
-    const newKeywords = keywords.filter((_, index) => index !== indexToRemove);
-    onChange(newKeywords.join('; '));
-  };
-
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' || e.key === ',') {
+  const handleTermKeyPress = (e) => {
+    if (e.key === 'Enter') {
       e.preventDefault();
       addKeyword();
     }
   };
 
   return (
-    <div className="space-y-3">
-      <label className="block text-[10px] font-mono font-semibold uppercase tracking-[0.125em] text-[#546E7A] flex items-center">
-        {label}
-        <HelpCapsule text={helpText} textEn={helpTextEn} />
-      </label>
-
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyPress={handleKeyPress}
-          placeholder={placeholder}
-          className="flex-1 p-3.5 bg-white border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] focus:ring-1 focus:ring-[#0A1929] outline-none transition-all font-serif"
-        />
-        <button
-          type="button"
-          onClick={addKeyword}
-          className="px-5 py-3 bg-[#E5E9F0] text-[#0A1929] rounded-2xl text-sm font-medium hover:bg-[#CCD4E0] transition-colors font-serif"
-        >
-          {isSpanish ? 'Agregar' : 'Add'}
-        </button>
+    <div className="space-y-4">
+      {/* Info del vocabulario */}
+      <div className="bg-[#F0F4F8] border border-[#C0A86A] rounded-2xl p-5 space-y-3">
+        <div className="flex items-start gap-3">
+          <span className="text-2xl">📚</span>
+          <div className="flex-1">
+            <h4 className="font-['Playfair_Display'] font-bold text-[#0A1929] text-base">
+              {vocabularyConfig.vocabulario}: {vocabularyConfig.nombre}
+            </h4>
+            <p className="text-[#5A6B7A] text-sm mt-1 font-['Lora']">
+              {vocabularyConfig.instrucciones}
+            </p>
+            <a
+              href={vocabularyConfig.searchUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 mt-2 text-[#0A1929] hover:text-[#C0A86A] text-sm font-medium transition-colors font-['Lora']"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+              {isSpanish ? 'Abrir buscador' : 'Open search'} →
+            </a>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl p-3 border border-[#E5E9F0]">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-[#5A6B7A]">
+            {isSpanish ? 'Formato esperado:' : 'Expected format:'}
+          </span>
+          <code className="ml-2 text-sm font-mono text-[#0A1929] bg-[#F5F7FA] px-2 py-0.5 rounded">
+            {vocabularyConfig.formato}
+          </code>
+          <span className="text-[#5A6B7A] text-sm mx-2">·</span>
+          <span className="text-[10px] font-mono uppercase tracking-wider text-[#5A6B7A]">
+            {isSpanish ? 'Ejemplo:' : 'Example:'}
+          </span>
+          <code className="ml-2 text-sm font-mono text-[#C0A86A] bg-[#F5F7FA] px-2 py-0.5 rounded">
+            {vocabularyConfig.ejemplo}
+          </code>
+        </div>
       </div>
 
+      {/* Campos de entrada */}
+      <div className="flex gap-3">
+        <div className="w-1/3">
+          <label className="block text-[10px] font-mono font-semibold uppercase tracking-wider text-[#546E7A] mb-1.5">
+            {isSpanish ? 'Código' : 'Code'} *
+          </label>
+          <input
+            type="text"
+            value={newCode}
+            onChange={(e) => setNewCode(e.target.value)}
+            onKeyPress={handleCodeKeyPress}
+            placeholder={vocabularyConfig.vocabulario === 'JEL' ? 'B14' : 'CCS2012.10010179'}
+            className="w-full p-3.5 bg-white border border-[#E0E7E9] rounded-2xl text-sm font-mono focus:border-[#0A1929] focus:ring-1 focus:ring-[#0A1929] outline-none transition-all"
+          />
+        </div>
+        <div className="flex-1">
+          <label className="block text-[10px] font-mono font-semibold uppercase tracking-wider text-[#546E7A] mb-1.5">
+            {isSpanish ? 'Término' : 'Term'} *
+          </label>
+          <input
+            id="controlled-term-input"
+            type="text"
+            value={newTerm}
+            onChange={(e) => setNewTerm(e.target.value)}
+            onKeyPress={handleTermKeyPress}
+            placeholder="Machine learning"
+            className="w-full p-3.5 bg-white border border-[#E0E7E9] rounded-2xl text-sm font-['Lora'] focus:border-[#0A1929] focus:ring-1 focus:ring-[#0A1929] outline-none transition-all"
+          />
+        </div>
+        <div className="flex items-end">
+          <button
+            type="button"
+            onClick={addKeyword}
+            disabled={!newCode.trim() || !newTerm.trim() || keywords.length >= maxKeywords}
+            className="px-5 py-3.5 bg-[#E5E9F0] text-[#0A1929] rounded-2xl text-sm font-medium hover:bg-[#CCD4E0] transition-colors font-serif disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+          >
+            + {isSpanish ? 'Agregar' : 'Add'}
+          </button>
+        </div>
+      </div>
+
+      {/* Mensaje de error */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-[#B22234] font-serif">
+          {error}
+        </div>
+      )}
+
+      {/* Contador y validación */}
+      <div className="flex items-center justify-between">
+        <p className={`text-xs font-mono ${keywords.length < minKeywords ? 'text-[#B22234]' : 'text-[#5A6B7A]'}`}>
+          {isSpanish 
+            ? `${keywords.length} de ${minKeywords}-${maxKeywords} palabras clave requeridas`
+            : `${keywords.length} of ${minKeywords}-${maxKeywords} required keywords`
+          }
+          {keywords.length < minKeywords && (
+            <span className="ml-2">
+              {isSpanish ? `(mínimo ${minKeywords})` : `(minimum ${minKeywords})`}
+            </span>
+          )}
+        </p>
+        {keywords.length >= maxKeywords && (
+          <p className="text-xs text-[#C0A86A] font-mono">
+            {isSpanish ? 'Máximo alcanzado' : 'Maximum reached'}
+          </p>
+        )}
+      </div>
+
+      {/* Chips de palabras clave */}
       {keywords.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {keywords.map((keyword, index) => (
+          {keywords.map((kw, index) => (
             <span
               key={index}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#E5E9F0] text-[#0A1929] rounded-2xl text-xs font-medium font-serif"
+              className="inline-flex items-center gap-2 px-3.5 py-2 bg-white border-2 border-[#C0A86A] text-[#0A1929] rounded-2xl text-sm font-medium shadow-sm"
             >
-              {keyword}
+              <code className="text-xs font-mono bg-[#F0F4F8] px-1.5 py-0.5 rounded text-[#C0A86A]">
+                {kw.code}
+              </code>
+              <span className="font-['Lora']">{kw.term}</span>
               <button
                 type="button"
                 onClick={() => removeKeyword(index)}
-                className="text-[#546E7A] hover:text-[#B22234] transition-colors"
+                className="ml-1 text-[#546E7A] hover:text-[#B22234] transition-colors"
               >
                 ✕
               </button>
@@ -113,7 +766,8 @@ const KeywordInput = ({ value, onChange, placeholder, label, helpText, helpTextE
   );
 };
 
-// Componente para manejo de autores menores
+// ============ COMPONENTE: SECCIÓN DE CONSENTIMIENTO PARA MENORES ============
+
 const MinorConsentSection = ({ author, index, onUpdate }) => {
   const { language } = useLanguage();
   const isSpanish = language === 'es';
@@ -176,7 +830,9 @@ const MinorConsentSection = ({ author, index, onUpdate }) => {
       </div>
 
       <div className="space-y-4">
-        <p className="text-xs uppercase tracking-widest text-[#546E7A] font-mono">Método de consentimiento</p>
+        <p className="text-xs uppercase tracking-widest text-[#546E7A] font-mono">
+          {isSpanish ? 'Método de consentimiento' : 'Consent method'}
+        </p>
 
         <label className="flex items-start gap-3 cursor-pointer">
           <input
@@ -269,812 +925,33 @@ const MinorConsentSection = ({ author, index, onUpdate }) => {
   );
 };
 
-// NUEVO CAMBIO: Listado exhaustivo de áreas temáticas generales
-const AREAS_TEMATICAS = {
-  "Ciencias Exactas y Naturales": [
-    "Matemáticas",
-    "Física",
-    "Química",
-    "Biología",
-    "Geología",
-    "Astronomía y Astrofísica",
-    "Ciencias Ambientales y Ecología",
-    "Oceanografía",
-    "Meteorología y Ciencias Atmosféricas",
-    "Paleontología"
-  ],
-  "Ciencias de la Salud": [
-    "Medicina General e Interna",
-    "Salud Pública y Epidemiología",
-    "Enfermería",
-    "Nutrición y Dietética",
-    "Farmacología y Farmacia",
-    "Odontología",
-    "Kinesiología y Fisioterapia",
-    "Tecnología Médica y Bioanálisis",
-    "Veterinaria"
-  ],
-  "Ingeniería y Tecnología": [
-    "Ingeniería Civil",
-    "Ingeniería Industrial y de Sistemas",
-    "Ingeniería Mecánica",
-    "Ingeniería Eléctrica y Electrónica",
-    "Ingeniería Química y Biotecnología",
-    "Ingeniería en Computación e Informática",
-    "Ciencia de Datos e Inteligencia Artificial",
-    "Robótica y Automatización",
-    "Ingeniería de Materiales y Nanotecnología",
-    "Ingeniería Aeroespacial",
-    "Energías Renovables y Sostenibilidad"
-  ],
-  "Ciencias Sociales": [
-    "Sociología",
-    "Antropología y Arqueología",
-    "Psicología",
-    "Economía y Negocios",
-    "Ciencias Políticas y Relaciones Internacionales",
-    "Derecho",
-    "Geografía Humana y Ordenamiento Territorial",
-    "Estudios de Género",
-    "Comunicación Social y Periodismo",
-    "Educación y Pedagogía",
-    "Trabajo Social"
-  ],
-  "Humanidades": [
-    "Historia",
-    "Filosofía",
-    "Lingüística y Filología",
-    "Literatura",
-    "Estudios Clásicos",
-    "Teología y Ciencias de la Religión",
-    "Estudios Culturales",
-    "Arte, Música y Cine",
-    "Arquitectura y Urbanismo"
-  ],
-  "Ciencias Agropecuarias": [
-    "Agronomía y Producción Agrícola",
-    "Ciencias Forestales",
-    "Acuicultura y Pesca",
-    "Zootecnia y Producción Animal",
-    "Ingeniería de Alimentos"
-  ]
-};
-// Configuración de vocabularios controlados por área
-/**
- * Diccionario de Vocabularios Controlados y Tesauros por Área de Conocimiento.
- * Proporciona el estándar de clasificación, formato esperado y URLs de búsqueda directa.
- */
-const VOCABULARIO_POR_AREA = {
-  // ==========================================
-  // CIENCIAS EXACTAS Y NATURALES
-  // ==========================================
-  
-  "Matemáticas": {
-    vocabulario: "MSC",
-    nombre: "Mathematics Subject Classification (MSC2020)",
-    formato: "Código MSC: Término",
-    ejemplo: "11N05: Distribution of primes",
-    searchUrl: "https://mathscinet.ams.org/mathscinet/msc/msc2020.html",
-    instrucciones: "Busca tu código en la clasificación MSC2020 de la AMS y copia el código y descriptor exacto."
-  },
-  
-  "Física": {
-    vocabulario: "PhySH",
-    nombre: "Physics Subject Headings (APS)",
-    formato: "Término PhySH",
-    ejemplo: "Quantum mechanics",
-    searchUrl: "https://physh.aps.org/",
-    instrucciones: "PACS está obsoleto. Usa PhySH, el esquema actual de la American Physical Society, y copia el descriptor."
-  },
-  
-  "Química": {
-    vocabulario: "CAS",
-    nombre: "Chemical Abstracts Service Classification",
-    formato: "Número CAS: Término",
-    ejemplo: "78-10-4: Tetraethyl silicate",
-    searchUrl: "https://commonchemistry.cas.org/",
-    instrucciones: "Busca tu compuesto o sustancia en CAS Common Chemistry y copia el número de registro CAS."
-  },
-  
-  "Biología": {
-    vocabulario: "MeSH",
-    nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D001777: Biology",
-    searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "MeSH es adecuado para biología por su amplia cobertura en ciencias de la vida. Busca y copia el código y descriptor."
-  },
-  
-  "Geología": {
-    vocabulario: "GeoRef",
-    nombre: "GeoRef Thesaurus (American Geosciences Institute)",
-    formato: "Término controlado GeoRef",
-    ejemplo: "Igneous rocks: Petrology",
-    searchUrl: "https://www.americangeosciences.org/georef/georef-thesaurus",
-    instrucciones: "Busca el descriptor controlado aceptado en el tesauro GeoRef del AGI."
-  },
-  
-  "Astronomía y Astrofísica": {
-    vocabulario: "UAT",
-    nombre: "Unified Astronomy Thesaurus",
-    formato: "Código UAT: Término",
-    ejemplo: "1087: Exoplanet astronomy",
-    searchUrl: "https://astrothesaurus.org/",
-    instrucciones: "Navega por el tesauro astronómico unificado y copia el código numérico y descriptor."
-  },
-  
-  "Ciencias Ambientales y Ecología": {
-    vocabulario: "EnvThes",
-    nombre: "Environmental Thesaurus (LTER-Europe)",
-    formato: "Código EnvThes: Término",
-    ejemplo: "20286: Ecosystem services",
-    searchUrl: "https://vocabs.lter-europe.net/envthes/en/",
-    instrucciones: "Busca tu término en el tesauro ambiental europeo EnvThes y copia el identificador."
-  },
-  
-  "Oceanografía": {
-    vocabulario: "BODC",
-    nombre: "British Oceanographic Data Centre Vocabulary (NVS)",
-    formato: "Código BODC: Término",
-    ejemplo: "P021: Ocean circulation",
-    searchUrl: "https://vocab.nerc.ac.uk/",
-    instrucciones: "Navega por el NERC Vocabulary Server y copia el código alfanumérico."
-  },
-  
-  "Meteorología y Ciencias Atmosféricas": {
-    vocabulario: "WMO",
-    nombre: "World Meteorological Organization Vocabulary",
-    formato: "Código WMO: Término",
-    ejemplo: "3720: Atmospheric pressure",
-    searchUrl: "https://codes.wmo.int/",
-    instrucciones: "Busca tu código en los estándares de la Organización Meteorológica Mundial."
-  },
-  
-  "Paleontología": {
-    vocabulario: "PBDB",
-    nombre: "Paleobiology Database Taxonomy",
-    formato: "Código PBDB: Término",
-    ejemplo: "52822: Tyrannosauridae",
-    searchUrl: "https://paleobiodb.org/navigator/",
-    instrucciones: "Busca tu taxón o grupo fósil en el navegador de la base de datos paleobiológica y copia el identificador."
-  },
+// ============ COMPONENTE PRINCIPAL DEL FORMULARIO ============
 
-  // ==========================================
-  // CIENCIAS DE LA SALUD
-  // ==========================================
-  
-  "Medicina General e Interna": {
-    vocabulario: "MeSH",
-    nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D008112: Internal Medicine",
-    searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "MeSH es el estándar internacional para ciencias de la salud. Busca y copia el código y descriptor."
-  },
-  
-  "Salud Pública y Epidemiología": {
-    vocabulario: "MeSH",
-    nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D011635: Public Health",
-    searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
-  },
-  
-  "Enfermería": {
-    vocabulario: "MeSH",
-    nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D009729: Nursing",
-    searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
-  },
-  
-  "Nutrición y Dietética": {
-    vocabulario: "MeSH",
-    nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D009750: Nutritional Sciences",
-    searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
-  },
-  
-  "Farmacología y Farmacia": {
-    vocabulario: "MeSH",
-    nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D010597: Pharmacology",
-    searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
-  },
-  
-  "Odontología": {
-    vocabulario: "MeSH",
-    nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D003813: Dentistry",
-    searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
-  },
-  
-  "Kinesiología y Fisioterapia": {
-    vocabulario: "MeSH",
-    nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D026801: Physical Therapy Specialty",
-    searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
-  },
-  
-  "Tecnología Médica y Bioanálisis": {
-    vocabulario: "MeSH",
-    nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D008364: Medical Laboratory Science",
-    searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
-  },
-  
-  "Veterinaria": {
-    vocabulario: "MeSH",
-    nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D014730: Veterinary Medicine",
-    searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
-  },
-
-  // ==========================================
-  // INGENIERÍA Y TECNOLOGÍA
-  // ==========================================
-  
-  "Ingeniería Civil": {
-    vocabulario: "Ei",
-    nombre: "Engineering Index Thesaurus (Compendex)",
-    formato: "Código Ei: Término",
-    ejemplo: "405.1: Construction management",
-    searchUrl: "https://www.engineeringvillage.com/",
-    instrucciones: "Busca tu término en el Engineering Index Thesaurus de Compendex y copia el código numérico."
-  },
-  
-  "Ingeniería Industrial y de Sistemas": {
-    vocabulario: "IIE",
-    nombre: "Industrial Engineering Terminology (IISE)",
-    formato: "Código IIE: Término",
-    ejemplo: "4.2.1: Supply chain optimization",
-    searchUrl: "https://www.iise.org/",
-    instrucciones: "Usa la terminología estándar de ingeniería industrial del Institute of Industrial and Systems Engineers."
-  },
-  
-  "Ingeniería Mecánica": {
-    vocabulario: "ASME",
-    nombre: "ASME Subject Classification",
-    formato: "Código ASME: Término",
-    ejemplo: "10-01: Thermodynamics",
-    searchUrl: "https://www.asme.org/",
-    instrucciones: "Navega por las áreas temáticas de la American Society of Mechanical Engineers."
-  },
-  
-  "Ingeniería Eléctrica y Electrónica": {
-    vocabulario: "IEEE",
-    nombre: "IEEE Thesaurus",
-    formato: "Término normalizado IEEE",
-    ejemplo: "B6210L: Computer communications",
-    searchUrl: "https://www.ieee.org/publications/services/thesaurus-access-page.html",
-    instrucciones: "Busca tu término técnico en el tesauro oficial del IEEE."
-  },
-  
-  "Ingeniería Química y Biotecnología": {
-    vocabulario: "IChemE",
-    nombre: "Institution of Chemical Engineers Thesaurus",
-    formato: "Código IChemE: Término",
-    ejemplo: "BIO-04: Bioprocessing",
-    searchUrl: "https://www.icheme.org/",
-    instrucciones: "Usa la clasificación temática de ingeniería química de IChemE."
-  },
-  
-  "Ingeniería en Computación e Informática": {
-    vocabulario: "ACM",
-    nombre: "ACM Computing Classification System",
-    formato: "Código ACM: Término",
-    ejemplo: "CCS2012.10003116: Software engineering",
-    searchUrl: "https://dl.acm.org/ccs",
-    instrucciones: "ACM CCS es el estándar jerárquico global para ciencias de la computación. Navega y copia el código."
-  },
-  
-  "Ciencia de Datos e Inteligencia Artificial": {
-    vocabulario: "ACM",
-    nombre: "ACM Computing Classification System",
-    formato: "Código ACM: Término",
-    ejemplo: "CCS2012.10010179: Machine learning",
-    searchUrl: "https://dl.acm.org/ccs",
-    instrucciones: "ACM CCS cubre ramas de Machine Learning e Inteligencia Artificial extensamente. Navega y copia el código."
-  },
-  
-  "Robótica y Automatización": {
-    vocabulario: "ACM",
-    nombre: "ACM Computing Classification System",
-    formato: "Código ACM: Término",
-    ejemplo: "CCS2012.10010187: Robotics",
-    searchUrl: "https://dl.acm.org/ccs",
-    instrucciones: "Navega por la clasificación ACM y copia el código y descriptor más cercano."
-  },
-  
-  "Ingeniería de Materiales y Nanotecnología": {
-    vocabulario: "ASM",
-    nombre: "ASM International Materials Thesaurus",
-    formato: "Término controlado ASM",
-    ejemplo: "Nanocomposites: Materials science",
-    searchUrl: "https://www.asminternational.org/",
-    instrucciones: "Busca tu material o proceso en el vocabulario controlado de ASM International."
-  },
-  
-  "Ingeniería Aeroespacial": {
-    vocabulario: "NASA",
-    nombre: "NASA Thesaurus",
-    formato: "Término controlado NASA",
-    ejemplo: "Aircraft design: Aeronautics",
-    searchUrl: "https://sti.nasa.gov/nasa-thesaurus/",
-    instrucciones: "Busca tu término en el tesauro aeroespacial de la NASA."
-  },
-  
-  "Energías Renovables y Sostenibilidad": {
-    vocabulario: "ETDE",
-    nombre: "Energy Technology Data Exchange Thesaurus",
-    formato: "Término controlado ETDE",
-    ejemplo: "Solar energy: Photovoltaics",
-    searchUrl: "https://www.etde.org/",
-    instrucciones: "Busca tu término en el tesauro de tecnología energética ETDE."
-  },
-
-  // ==========================================
-  // CIENCIAS SOCIALES
-  // ==========================================
-  
-  "Sociología": {
-    vocabulario: "JEL",
-    nombre: "JEL Classification System (Journal of Economic Literature)",
-    formato: "Código JEL: Término",
-    ejemplo: "Z13: Economic Sociology",
-    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
-    instrucciones: "Busca el código JEL que mejor describa tu tema sociológico. Ej: Z13 para sociología económica, I31 para bienestar general."
-  },
-  
-  "Antropología y Arqueología": {
-    vocabulario: "JEL",
-    nombre: "JEL Classification System",
-    formato: "Código JEL: Término",
-    ejemplo: "Z19: Other Cultural Economics",
-    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
-    instrucciones: "Busca el código JEL más cercano a tu tema de antropología económica o cultural."
-  },
-  
-  "Psicología": {
-    vocabulario: "APA",
-    nombre: "APA Thesaurus of Psychological Index Terms",
-    formato: "Término indexado APA",
-    ejemplo: "Cognitive Processes: Memory",
-    searchUrl: "https://psycnet.apa.org/thesaurus/",
-    instrucciones: "Busca tu término de indexación en el tesauro oficial de la APA (PsycINFO)."
-  },
-  
-  "Economía y Negocios": {
-    vocabulario: "JEL",
-    nombre: "JEL Classification System",
-    formato: "Código JEL: Término",
-    ejemplo: "D00: General Economics",
-    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
-    instrucciones: "Selecciona los códigos JEL que mejor describan tu investigación económica."
-  },
-  
-  "Ciencias Políticas y Relaciones Internacionales": {
-    vocabulario: "JEL",
-    nombre: "JEL Classification System",
-    formato: "Código JEL: Término",
-    ejemplo: "F50: International Relations",
-    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
-    instrucciones: "Busca códigos JEL en categorías F (Economía Internacional) o H (Economía Pública)."
-  },
-  
-  "Derecho": {
-    vocabulario: "LCSH",
-    nombre: "Library of Congress Subject Headings (Law)",
-    formato: "Código/Descriptor LCSH",
-    ejemplo: "KF385: Common law",
-    searchUrl: "https://id.loc.gov/authorities/subjects.html",
-    instrucciones: "Busca en los encabezamientos temáticos oficiales de la Biblioteca del Congreso de EE.UU."
-  },
-  
-  "Geografía Humana y Ordenamiento Territorial": {
-    vocabulario: "JEL",
-    nombre: "JEL Classification System",
-    formato: "Código JEL: Término",
-    ejemplo: "R10: General Regional Economics",
-    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
-    instrucciones: "Usa categorías R (Economía Regional) o Q (Economía de Recursos) del sistema JEL."
-  },
-  
-  "Estudios de Género": {
-    vocabulario: "JEL",
-    nombre: "JEL Classification System",
-    formato: "Código JEL: Término",
-    ejemplo: "J16: Economics of Gender",
-    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
-    instrucciones: "Busca en categorías J (Economía Laboral) para estudios de género."
-  },
-  
-  "Comunicación Social y Periodismo": {
-    vocabulario: "CIOS",
-    nombre: "Communication Institute for Online Scholarship Thesaurus",
-    formato: "Término normalizado CIOS",
-    ejemplo: "Mass media effects: Journalism",
-    searchUrl: "https://www.cios.org/",
-    instrucciones: "Navega por las categorías controladas especializadas en comunicación del CIOS."
-  },
-  
-  "Educación y Pedagogía": {
-    vocabulario: "ERIC",
-    nombre: "Education Resources Information Center Thesaurus",
-    formato: "Término Descriptor ERIC",
-    ejemplo: "Educational technology: Pedagogy",
-    searchUrl: "https://eric.ed.gov/?ti=all",
-    instrucciones: "Busca e identifica descriptores específicos indexados en la base de datos ERIC."
-  },
-  
-  "Trabajo Social": {
-    vocabulario: "JEL",
-    nombre: "JEL Classification System",
-    formato: "Código JEL: Término",
-    ejemplo: "I38: Welfare, Well-Being, and Poverty",
-    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
-    instrucciones: "Busca en categorías I (Bienestar) o J (Economía Laboral) del sistema JEL."
-  },
-
-  // ==========================================
-  // HUMANIDADES
-  // ==========================================
-  
-  "Historia": {
-    vocabulario: "UNESCO",
-    nombre: "UNESCO Thesaurus",
-    formato: "Código UNESCO: Término",
-    ejemplo: "6.25: Historia",
-    searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
-    instrucciones: "Navega por el tesauro de la UNESCO y copia el código numérico y el descriptor."
-  },
-  
-  "Filosofía": {
-    vocabulario: "UNESCO",
-    nombre: "UNESCO Thesaurus",
-    formato: "Código UNESCO: Término",
-    ejemplo: "6.05: Filosofía",
-    searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
-    instrucciones: "Navega por el tesauro de la UNESCO y copia el código y descriptor."
-  },
-  
-  "Lingüística y Filología": {
-    vocabulario: "UNESCO",
-    nombre: "UNESCO Thesaurus",
-    formato: "Código UNESCO: Término",
-    ejemplo: "6.10: Lingüística",
-    searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
-    instrucciones: "Navega por el tesauro de la UNESCO y copia el código y descriptor."
-  },
-  
-  "Literatura": {
-    vocabulario: "UNESCO",
-    nombre: "UNESCO Thesaurus",
-    formato: "Código UNESCO: Término",
-    ejemplo: "6.15: Literatura",
-    searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
-    instrucciones: "Navega por el tesauro de la UNESCO y copia el código y descriptor."
-  },
-  
-  "Estudios Clásicos": {
-    vocabulario: "UNESCO",
-    nombre: "UNESCO Thesaurus",
-    formato: "Código UNESCO: Término",
-    ejemplo: "6.20: Estudios Clásicos",
-    searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
-    instrucciones: "Navega por el tesauro de la UNESCO y copia el código y descriptor."
-  },
-  
-  "Teología y Ciencias de la Religión": {
-    vocabulario: "UNESCO",
-    nombre: "UNESCO Thesaurus",
-    formato: "Código UNESCO: Término",
-    ejemplo: "6.30: Teología",
-    searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
-    instrucciones: "Navega por el tesauro de la UNESCO y copia el código y descriptor."
-  },
-  
-  "Estudios Culturales": {
-    vocabulario: "UNESCO",
-    nombre: "UNESCO Thesaurus",
-    formato: "Código UNESCO: Término",
-    ejemplo: "6.35: Cultura",
-    searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
-    instrucciones: "Navega por el tesauro de la UNESCO y copia el código y descriptor."
-  },
-  
-  "Arte, Música y Cine": {
-    vocabulario: "AAT",
-    nombre: "Art & Architecture Thesaurus (Getty Research Institute)",
-    formato: "Código AAT: Término",
-    ejemplo: "300033618: Oil paintings",
-    searchUrl: "https://www.getty.edu/research/tools/vocabularies/aat/",
-    instrucciones: "Busca descriptores artísticos en la base de datos del Getty Research Institute."
-  },
-  
-  "Arquitectura y Urbanismo": {
-    vocabulario: "AAT",
-    nombre: "Art & Architecture Thesaurus (Getty Research Institute)",
-    formato: "Código AAT: Término",
-    ejemplo: "300008125: Skyscrapers",
-    searchUrl: "https://www.getty.edu/research/tools/vocabularies/aat/",
-    instrucciones: "Busca estructuras o conceptos espaciales en la base controlada del Getty."
-  },
-
-  // ==========================================
-  // CIENCIAS AGROPECUARIAS
-  // ==========================================
-  
-  "Agronomía y Producción Agrícola": {
-    vocabulario: "AGROVOC",
-    nombre: "FAO Agricultural Thesaurus (AGROVOC)",
-    formato: "Código AGROVOC: Término",
-    ejemplo: "c_867: Crop rotation",
-    searchUrl: "https://agrovoc.fao.org/browse/agrovoc/en/",
-    instrucciones: "AGROVOC es el estándar para ciencias agrícolas de la FAO. Busca y copia el identificador."
-  },
-  
-  "Ciencias Forestales": {
-    vocabulario: "AGROVOC",
-    nombre: "FAO Agricultural Thesaurus (AGROVOC)",
-    formato: "Código AGROVOC: Término",
-    ejemplo: "c_3014: Forest ecology",
-    searchUrl: "https://agrovoc.fao.org/browse/agrovoc/en/",
-    instrucciones: "AGROVOC cubre ciencias forestales. Busca tu término y copia el identificador."
-  },
-  
-  "Acuicultura y Pesca": {
-    vocabulario: "ASFA",
-    nombre: "Aquatic Sciences and Fisheries Abstracts Thesaurus",
-    formato: "Código ASFA: Término",
-    ejemplo: "Q5 01521: Fish culture",
-    searchUrl: "https://www.fao.org/fishery/asfa/en",
-    instrucciones: "Busca en el tesauro ASFA de la FAO para ciencias acuáticas y pesqueras."
-  },
-  
-  "Zootecnia y Producción Animal": {
-    vocabulario: "AGROVOC",
-    nombre: "FAO Agricultural Thesaurus (AGROVOC)",
-    formato: "Código AGROVOC: Término",
-    ejemplo: "c_433: Animal breeding",
-    searchUrl: "https://agrovoc.fao.org/browse/agrovoc/en/",
-    instrucciones: "Busca tu término en AGROVOC para producción animal y zootecnia."
-  },
-  
-  "Ingeniería de Alimentos": {
-    vocabulario: "FSTA",
-    nombre: "Food Science and Technology Abstracts Thesaurus",
-    formato: "Código FSTA: Término",
-    ejemplo: "Q04: Food microbiology",
-    searchUrl: "https://www.ifis.org/fsta",
-    instrucciones: "Usa el tesauro de ciencia y tecnología de alimentos FSTA del IFIS."
-  }
-};
-// Componente para palabras clave con vocabulario controlado
-const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language }) => {
-  const isSpanish = language === 'es';
-  const keywords = value || [];
-  const [newCode, setNewCode] = useState('');
-  const [newTerm, setNewTerm] = useState('');
-
-  const maxKeywords = 6;
-  const minKeywords = 2;
-
-  const addKeyword = () => {
-    const code = newCode.trim();
-    const term = newTerm.trim();
-    if (!code || !term) return;
-    if (keywords.length >= maxKeywords) return;
-    
-    // Verificar que el código no esté duplicado
-    if (keywords.some(k => k.code === code)) {
-      alert(isSpanish ? 'Este código ya existe en tus palabras clave.' : 'This code already exists in your keywords.');
-      return;
-    }
-
-    onChange([...keywords, { code, term }]);
-    setNewCode('');
-    setNewTerm('');
-  };
-
-  const removeKeyword = (index) => {
-    onChange(keywords.filter((_, i) => i !== index));
-  };
-
-  const handleCodeKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      document.getElementById('controlled-term-input')?.focus();
-    }
-  };
-
-  const handleTermKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      addKeyword();
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      {/* Info del vocabulario */}
-      <div className="bg-[#F0F4F8] border border-[#C0A86A] rounded-2xl p-5 space-y-3">
-        <div className="flex items-start gap-3">
-          <span className="text-2xl">📚</span>
-          <div className="flex-1">
-            <h4 className="font-['Playfair_Display'] font-bold text-[#0A1929] text-base">
-              {vocabularyConfig.vocabulario}: {vocabularyConfig.nombre}
-            </h4>
-            <p className="text-[#5A6B7A] text-sm mt-1 font-['Lora']">
-              {vocabularyConfig.instrucciones}
-            </p>
-            <a
-              href={vocabularyConfig.searchUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 mt-2 text-[#0A1929] hover:text-[#C0A86A] text-sm font-medium transition-colors font-['Lora']"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-              {isSpanish ? 'Abrir buscador' : 'Open search'} →
-            </a>
-            <span className="text-[#5A6B7A] text-xs mx-2">·</span>
-<a
-  href={isSpanish ? 'https://www.revistacienciasestudiantes.com/policies.html#alcance' : 'https://www.revistacienciasestudiantes.com/policiesEN.html#scope'}
-  target="_blank"
-  rel="noopener noreferrer"
-  className="inline-flex items-center gap-1 text-[#0A1929] hover:text-[#C0A86A] text-xs font-medium transition-colors font-['Lora']"
->
-  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-  </svg>
-  {isSpanish ? 'Ver políticas de keywords' : 'View keyword policies'} ↗
-</a>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl p-3 border border-[#E5E9F0]">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-[#5A6B7A]">
-            {isSpanish ? 'Formato esperado:' : 'Expected format:'}
-          </span>
-          <code className="ml-2 text-sm font-mono text-[#0A1929] bg-[#F5F7FA] px-2 py-0.5 rounded">
-            {vocabularyConfig.formato}
-          </code>
-          <span className="text-[#5A6B7A] text-sm mx-2">·</span>
-          <span className="text-[10px] font-mono uppercase tracking-wider text-[#5A6B7A]">
-            {isSpanish ? 'Ejemplo:' : 'Example:'}
-          </span>
-          <code className="ml-2 text-sm font-mono text-[#C0A86A] bg-[#F5F7FA] px-2 py-0.5 rounded">
-            {vocabularyConfig.ejemplo}
-          </code>
-        </div>
-      </div>
-
-      {/* Campos de entrada */}
-      <div className="flex gap-3">
-        <div className="w-1/3">
-          <label className="block text-[10px] font-mono font-semibold uppercase tracking-wider text-[#546E7A] mb-1.5">
-            {isSpanish ? 'Código' : 'Code'} *
-          </label>
-          <input
-            type="text"
-            value={newCode}
-            onChange={(e) => setNewCode(e.target.value)}
-            onKeyPress={handleCodeKeyPress}
-            placeholder={vocabularyConfig.vocabulario === 'JEL' ? 'B14' : vocabularyConfig.vocabulario === 'MeSH' ? 'D009369' : 'CCS2012.10010179'}
-            className="w-full p-3.5 bg-white border border-[#E0E7E9] rounded-2xl text-sm font-mono focus:border-[#0A1929] focus:ring-1 focus:ring-[#0A1929] outline-none transition-all"
-          />
-        </div>
-        <div className="flex-1">
-          <label className="block text-[10px] font-mono font-semibold uppercase tracking-wider text-[#546E7A] mb-1.5">
-            {isSpanish ? 'Término' : 'Term'} *
-          </label>
-          <input
-            id="controlled-term-input"
-            type="text"
-            value={newTerm}
-            onChange={(e) => setNewTerm(e.target.value)}
-            onKeyPress={handleTermKeyPress}
-            placeholder={vocabularyConfig.vocabulario === 'JEL' ? 'Marxism' : 'Neoplasms'}
-            className="w-full p-3.5 bg-white border border-[#E0E7E9] rounded-2xl text-sm font-['Lora'] focus:border-[#0A1929] focus:ring-1 focus:ring-[#0A1929] outline-none transition-all"
-          />
-        </div>
-        <div className="flex items-end">
-          <button
-            type="button"
-            onClick={addKeyword}
-            disabled={!newCode.trim() || !newTerm.trim() || keywords.length >= maxKeywords}
-            className="px-5 py-3.5 bg-[#E5E9F0] text-[#0A1929] rounded-2xl text-sm font-medium hover:bg-[#CCD4E0] transition-colors font-serif disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-          >
-            + {isSpanish ? 'Agregar' : 'Add'}
-          </button>
-        </div>
-      </div>
-
-      {/* Contador y validación */}
-      <div className="flex items-center justify-between">
-        <p className={`text-xs font-mono ${keywords.length < minKeywords ? 'text-[#B22234]' : 'text-[#5A6B7A]'}`}>
-          {isSpanish 
-            ? `${keywords.length} de ${minKeywords}-${maxKeywords} palabras clave requeridas`
-            : `${keywords.length} of ${minKeywords}-${maxKeywords} required keywords`
-          }
-          {keywords.length < minKeywords && (
-            <span className="ml-2">
-              {isSpanish ? `(mínimo ${minKeywords})` : `(minimum ${minKeywords})`}
-            </span>
-          )}
-        </p>
-        {keywords.length >= maxKeywords && (
-          <p className="text-xs text-[#C0A86A] font-mono">
-            {isSpanish ? 'Máximo alcanzado' : 'Maximum reached'}
-          </p>
-        )}
-      </div>
-
-      {/* Chips de palabras clave */}
-      {keywords.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {keywords.map((kw, index) => (
-            <span
-              key={index}
-              className="inline-flex items-center gap-2 px-3.5 py-2 bg-white border-2 border-[#C0A86A] text-[#0A1929] rounded-2xl text-sm font-medium shadow-sm"
-            >
-              <code className="text-xs font-mono bg-[#F0F4F8] px-1.5 py-0.5 rounded text-[#C0A86A]">
-                {kw.code}
-              </code>
-              <span className="font-['Lora']">{kw.term}</span>
-              <button
-                type="button"
-                onClick={() => removeKeyword(index)}
-                className="ml-1 text-[#546E7A] hover:text-[#B22234] transition-colors"
-              >
-                ✕
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-// Componente principal COMPLETO - ESTILO OXFORD
 export default function SubmissionForm({ user, onSuccess }) {
   const { language } = useLanguage();
   const isSpanish = language === 'es';
 
+  // Estados del formulario
   const [currentStep, setCurrentStep] = useState(1);
   const [uploading, setUploading] = useState(false);
   const [submitStatus, setSubmitStatus] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [submissionId, setSubmissionId] = useState('');
   const [driveFolderId, setDriveFolderId] = useState('');
+  const [validationErrors, setValidationErrors] = useState({});
 
-  const [formData, setFormData] = useState({
+  // Estado inicial del formulario
+  const initialFormState = {
     title: '',
     titleEn: '',
     abstract: '',
     abstractEn: '',
     controlledKeywords: [],
-controlledKeywordsEn: [],
-    area: '', // Ahora será un select
+    controlledKeywordsEn: [],
+    area: '',
     paperLanguage: 'es',
     articleType: '',
     acknowledgments: '',
-
     authors: [{
       firstName: '',
       lastName: '',
@@ -1088,28 +965,21 @@ controlledKeywordsEn: [],
       consentFile: null,
       isCorresponding: true
     }],
-
     funding: {
       hasFunding: false,
       sources: '',
       grantNumbers: ''
     },
-
     conflictOfInterest: '',
-
     dataAvailability: '',
     dataAvailabilityEn: '',
     codeAvailability: '',
     codeAvailabilityEn: '',
-
-    // NUEVO CAMBIO: Campos adicionales para ética e IA
     requiresEthicsApproval: 'no',
     ethicsCommitteeName: '',
     aiUsed: 'no',
     aiTools: [{ name: '', version: '', purpose: '' }],
-
     declarations: {
-      // Cambio: Declaraciones más específicas basadas en las políticas
       originalAndSimilarity: false,
       exclusiveSubmission: false,
       authorshipCriteria: false,
@@ -1119,13 +989,14 @@ controlledKeywordsEn: [],
       conflicts: false,
       ccByLicense: false
     },
-
     excludedReviewers: '',
     manuscript: null,
     manuscriptName: ''
-  });
+  };
 
-  // NUEVO CAMBIO: Opciones de tipo de artículo ahora son EXACTAMENTE las de la política 2.2
+  const [formData, setFormData] = useState(initialFormState);
+
+  // Opciones de tipo de artículo
   const articleTypeOptions = {
     es: [
       { value: 'research', label: 'Artículo de Investigación Original' },
@@ -1160,7 +1031,7 @@ controlledKeywordsEn: [],
     ]
   };
 
-  // Persistencia de borrador
+  // Cargar borrador guardado
   useEffect(() => {
     const savedData = localStorage.getItem('submissionFormDraft');
     if (savedData) {
@@ -1170,14 +1041,15 @@ controlledKeywordsEn: [],
           ...prev,
           ...parsed,
           manuscript: null,
-          manuscriptName: ''
+          manuscriptName: parsed.manuscriptName || ''
         }));
       } catch (e) {
-        console.error('Error loading draft:', e);
+        console.error('[DEBUG] Error cargando borrador:', e);
       }
     }
   }, []);
 
+  // Guardar borrador automáticamente
   useEffect(() => {
     const interval = setInterval(() => {
       const dataToSave = {
@@ -1186,10 +1058,12 @@ controlledKeywordsEn: [],
         manuscriptName: formData.manuscriptName
       };
       localStorage.setItem('submissionFormDraft', JSON.stringify(dataToSave));
+      console.log('[DEBUG] Borrador guardado:', new Date().toLocaleTimeString());
     }, 30000);
     return () => clearInterval(interval);
   }, [formData]);
 
+  // Utilidad para convertir archivo a base64
   const toBase64 = (file) =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -1198,8 +1072,10 @@ controlledKeywordsEn: [],
       reader.onerror = reject;
     });
 
+  // Manejador de cambios en inputs simples
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
+    
     if (name.includes('.')) {
       const [parent, child] = name.split('.');
       setFormData(prev => ({
@@ -1212,14 +1088,23 @@ controlledKeywordsEn: [],
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
+    
+    // Limpiar error del campo cuando se modifica
+    setValidationErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[name];
+      return newErrors;
+    });
   };
 
+  // Manejador de cambios en autores
   const handleAuthorChange = (index, field, value) => {
     const newAuthors = [...formData.authors];
-    newAuthors[index][field] = value;
+    newAuthors[index] = { ...newAuthors[index], [field]: value };
     setFormData(prev => ({ ...prev, authors: newAuthors }));
   };
 
+  // Agregar autor
   const addAuthor = () => {
     setFormData(prev => ({
       ...prev,
@@ -1239,6 +1124,7 @@ controlledKeywordsEn: [],
     }));
   };
 
+  // Eliminar autor
   const removeAuthor = (index) => {
     if (formData.authors.length > 1) {
       const newAuthors = formData.authors.filter((_, i) => i !== index);
@@ -1246,10 +1132,10 @@ controlledKeywordsEn: [],
     }
   };
 
-  // NUEVO CAMBIO: Manejo de herramientas de IA
+  // Manejadores de herramientas de IA
   const handleAIToolChange = (index, field, value) => {
     const newTools = [...formData.aiTools];
-    newTools[index][field] = value;
+    newTools[index] = { ...newTools[index], [field]: value };
     setFormData(prev => ({ ...prev, aiTools: newTools }));
   };
 
@@ -1262,9 +1148,13 @@ controlledKeywordsEn: [],
 
   const removeAITool = (index) => {
     const newTools = formData.aiTools.filter((_, i) => i !== index);
-    setFormData(prev => ({ ...prev, aiTools: newTools.length > 0 ? newTools : [{ name: '', version: '', purpose: '' }] }));
+    setFormData(prev => ({ 
+      ...prev, 
+      aiTools: newTools.length > 0 ? newTools : [{ name: '', version: '', purpose: '' }] 
+    }));
   };
 
+  // Manejador de archivo
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -1285,6 +1175,7 @@ controlledKeywordsEn: [],
     }));
   };
 
+  // Manejador de declaraciones
   const handleDeclarationChange = (key) => {
     setFormData(prev => ({
       ...prev,
@@ -1295,122 +1186,200 @@ controlledKeywordsEn: [],
     }));
   };
 
+  // Verificar si todas las declaraciones están aceptadas
   const allDeclarationsAccepted = () => Object.values(formData.declarations).every(Boolean);
 
-const validateStep = (step) => {
+  // ============ FUNCIÓN DE VALIDACIÓN CORREGIDA ============
+  
+  const validateStep = (step) => {
+    const errors = {};
+    
     switch (step) {
       case 1:
-         return formData.title.trim() &&
-          formData.abstract.trim() &&
-          formData.controlledKeywords.length >= 2 && 
-          formData.controlledKeywords.length <= 6 &&
-          formData.area.trim() &&
-          formData.articleType;
+        if (!formData.title.trim()) {
+          errors.title = isSpanish ? 'El título es obligatorio' : 'Title is required';
+        }
+        if (!formData.abstract.trim()) {
+          errors.abstract = isSpanish ? 'El resumen es obligatorio' : 'Abstract is required';
+        }
+        if (!formData.controlledKeywords || formData.controlledKeywords.length < 2) {
+          errors.controlledKeywords = isSpanish 
+            ? 'Debes agregar al menos 2 palabras clave' 
+            : 'You must add at least 2 keywords';
+        }
+        if (formData.controlledKeywords && formData.controlledKeywords.length > 6) {
+          errors.controlledKeywords = isSpanish 
+            ? 'Máximo 6 palabras clave permitidas' 
+            : 'Maximum 6 keywords allowed';
+        }
+        if (!formData.area.trim()) {
+          errors.area = isSpanish ? 'El área temática es obligatoria' : 'Subject area is required';
+        }
+        if (!formData.articleType) {
+          errors.articleType = isSpanish ? 'El tipo de artículo es obligatorio' : 'Article type is required';
+        }
+        break;
+        
       case 2:
-        const basicOk = formData.authors.every(a =>
-          a.firstName.trim() && a.lastName.trim() && a.email.trim() && a.institution.trim()
-        );
-        const minorsOk = formData.authors
-          .filter(a => a.isMinor)
-          .every(a =>
-            a.guardianName.trim() &&
-            a.consentMethod !== 'none' &&
-            (a.consentMethod !== 'upload' || !!a.consentFile)
-          );
-        return basicOk && minorsOk;
+        formData.authors.forEach((author, index) => {
+          if (!author.firstName.trim()) {
+            errors[`author_${index}_firstName`] = isSpanish ? 'Nombre requerido' : 'First name required';
+          }
+          if (!author.lastName.trim()) {
+            errors[`author_${index}_lastName`] = isSpanish ? 'Apellido requerido' : 'Last name required';
+          }
+          if (!author.email.trim()) {
+            errors[`author_${index}_email`] = isSpanish ? 'Email requerido' : 'Email required';
+          }
+          if (!author.institution.trim()) {
+            errors[`author_${index}_institution`] = isSpanish ? 'Institución requerida' : 'Institution required';
+          }
+          if (author.isMinor) {
+            if (!author.guardianName.trim()) {
+              errors[`author_${index}_guardian`] = isSpanish 
+                ? 'Nombre del tutor requerido para autor menor' 
+                : 'Guardian name required for minor author';
+            }
+            if (author.consentMethod === 'none') {
+              errors[`author_${index}_consent`] = isSpanish 
+                ? 'Debes seleccionar un método de consentimiento' 
+                : 'You must select a consent method';
+            }
+            if (author.consentMethod === 'upload' && !author.consentFile) {
+              errors[`author_${index}_consentFile`] = isSpanish 
+                ? 'Debes subir el formulario firmado' 
+                : 'You must upload the signed form';
+            }
+          }
+        });
+        break;
+        
       case 3:
-        let isValid = allDeclarationsAccepted() && 
-               (formData.manuscript || formData.manuscriptName) && 
-               formData.dataAvailability && formData.dataAvailability.trim() !== '';
+        if (!allDeclarationsAccepted()) {
+          errors.declarations = isSpanish 
+            ? 'Debes aceptar todas las declaraciones obligatorias' 
+            : 'You must accept all mandatory declarations';
+        }
+        if (!formData.manuscript && !formData.manuscriptName) {
+          errors.manuscript = isSpanish 
+            ? 'Debes subir el manuscrito' 
+            : 'You must upload the manuscript';
+        }
+        if (!formData.dataAvailability || !formData.dataAvailability.trim()) {
+          errors.dataAvailability = isSpanish 
+            ? 'La declaración de disponibilidad de datos es obligatoria' 
+            : 'Data availability statement is required';
+        }
         if (formData.requiresEthicsApproval === 'yes' && !formData.ethicsCommitteeName.trim()) {
-            isValid = false;
+          errors.ethicsCommittee = isSpanish 
+            ? 'Debes especificar el comité de ética' 
+            : 'You must specify the ethics committee';
         }
         if (formData.aiUsed === 'yes') {
-            const hasValidTool = formData.aiTools.some(tool => tool.name.trim() && tool.purpose.trim());
-            if (!hasValidTool) isValid = false;
+          const hasValidTool = formData.aiTools.some(tool => tool.name.trim() && tool.purpose.trim());
+          if (!hasValidTool) {
+            errors.aiTools = isSpanish 
+              ? 'Debes especificar al menos una herramienta de IA con su propósito' 
+              : 'You must specify at least one AI tool with its purpose';
+          }
         }
-        return isValid;
+        break;
+        
       default:
-        return true;
+        break;
     }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
   };
+
+  // ============ FUNCIÓN DE ENVÍO CORREGIDA ============
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    console.log('[DEBUG] Iniciando validación del paso 3...');
+    
     if (!validateStep(3)) {
-      alert(isSpanish ? 'Completa todos los campos requeridos, incluyendo la declaración de datos y el uso de IA si aplica.' : 'Complete all required fields, including data declaration and AI use if applicable.');
+      console.log('[DEBUG] Validación fallida:', validationErrors);
+      alert(isSpanish 
+        ? 'Completa todos los campos requeridos antes de enviar.' 
+        : 'Complete all required fields before submitting.');
       return;
     }
 
+    console.log('[DEBUG] Validación exitosa, preparando envío...');
     setUploading(true);
     setSubmitStatus(isSpanish ? 'Enviando artículo...' : 'Submitting article...');
 
     try {
       const token = await auth.currentUser.getIdToken();
+      
+      // Convertir manuscrito a base64
       const manuscriptBase64 = await toBase64(formData.manuscript);
-const keywordsSerialized = formData.controlledKeywords
-  .map(kw => `${kw.code}: ${kw.term}`)
-  .join('; ');
+      
+      // Serializar palabras clave
+      const keywordsSerialized = formData.controlledKeywords
+        .map(kw => `${kw.code}: ${kw.term}`)
+        .join('; ');
+      
+      const keywordsEnSerialized = formData.controlledKeywordsEn
+        .map(kw => `${kw.code}: ${kw.term}`)
+        .join('; ');
 
-const keywordsEnSerialized = formData.controlledKeywordsEn
-  .map(kw => `${kw.code}: ${kw.term}`)
-  .join('; ');
-      // NUEVO CAMBIO: Construir el payload con los nuevos campos
+      // Construir payload
       const payload = {
-          title: formData.title,
-          titleEn: formData.titleEn,
-          abstract: formData.abstract,
-          abstractEn: formData.abstractEn,
-          keywordsVocabulario: VOCABULARIO_POR_AREA[formData.area]?.vocabulario || 'unknown',
-keywordsRaw: formData.controlledKeywords,
-keywordsRawEn: formData.controlledKeywordsEn,
-          area: formData.area,
-          paperLanguage: formData.paperLanguage,
-          articleType: formData.articleType,
-          acknowledgments: formData.acknowledgments,
-
-          dataAvailability: formData.dataAvailability,
-          dataAvailabilityEn: formData.dataAvailabilityEn,
-          codeAvailability: formData.codeAvailability,
-          codeAvailabilityEn: formData.codeAvailabilityEn,
-
-          authors: formData.authors.map(a => ({
-            firstName: a.firstName,
-            lastName: a.lastName,
-            email: a.email,
-            institution: a.institution,
-            orcid: a.orcid || null,
-            contribution: a.contribution,
-            isMinor: a.isMinor,
+        title: formData.title,
+        titleEn: formData.titleEn,
+        abstract: formData.abstract,
+        abstractEn: formData.abstractEn,
+        keywordsVocabulario: VOCABULARIO_POR_AREA[formData.area]?.vocabulario || 'unknown',
+        keywordsRaw: formData.controlledKeywords,
+        keywordsRawEn: formData.controlledKeywordsEn,
+        keywordsSerialized,
+        keywordsEnSerialized,
+        area: formData.area,
+        paperLanguage: formData.paperLanguage,
+        articleType: formData.articleType,
+        acknowledgments: formData.acknowledgments,
+        dataAvailability: formData.dataAvailability,
+        dataAvailabilityEn: formData.dataAvailabilityEn,
+        codeAvailability: formData.codeAvailability,
+        codeAvailabilityEn: formData.codeAvailabilityEn,
+        authors: formData.authors.map(a => ({
+          firstName: a.firstName,
+          lastName: a.lastName,
+          email: a.email,
+          institution: a.institution,
+          orcid: a.orcid || null,
+          contribution: a.contribution,
+          isMinor: a.isMinor,
+          guardianName: a.guardianName,
+          isCorresponding: a.isCorresponding
+        })),
+        funding: formData.funding,
+        conflictOfInterest: formData.conflictOfInterest,
+        excludedReviewers: formData.excludedReviewers,
+        requiresEthicsApproval: formData.requiresEthicsApproval === 'yes',
+        ethicsCommitteeName: formData.ethicsCommitteeName,
+        aiUsed: formData.aiUsed === 'yes',
+        aiTools: formData.aiUsed === 'yes' ? formData.aiTools : [],
+        minorAuthors: formData.authors
+          .filter(a => a.isMinor)
+          .map(a => ({
+            name: `${a.firstName} ${a.lastName}`,
             guardianName: a.guardianName,
-            isCorresponding: a.isCorresponding
+            consentMethod: a.consentMethod,
+            consentFile: a.consentFile
           })),
+        manuscriptBase64,
+        manuscriptName: formData.manuscript.name,
+        authorUID: user.uid,
+        authorEmail: user.email,
+        authorName: user.displayName || `${formData.authors[0].firstName} ${formData.authors[0].lastName}`.trim()
+      };
 
-          funding: formData.funding,
-          conflictOfInterest: formData.conflictOfInterest,
-          excludedReviewers: formData.excludedReviewers,
-
-          // Nuevos campos de ética e IA
-          requiresEthicsApproval: formData.requiresEthicsApproval === 'yes',
-          ethicsCommitteeName: formData.ethicsCommitteeName,
-          aiUsed: formData.aiUsed === 'yes',
-          aiTools: formData.aiUsed === 'yes' ? formData.aiTools : [],
-
-          minorAuthors: formData.authors
-            .filter(a => a.isMinor)
-            .map(a => ({
-              name: `${a.firstName} ${a.lastName}`,
-              guardianName: a.guardianName,
-              consentMethod: a.consentMethod,
-              consentFile: a.consentFile
-            })),
-
-          manuscriptBase64,
-          manuscriptName: formData.manuscript.name,
-
-          authorUID: user.uid,
-          authorEmail: user.email,
-          authorName: user.displayName || `${formData.authors[0].firstName} ${formData.authors[0].lastName}`.trim()
-        };
+      console.log('[DEBUG] Payload preparado:', { ...payload, manuscriptBase64: '[BASE64_DATA]' });
 
       const response = await fetch('https://submitarticle-ggqsq2kkua-uc.a.run.app', {
         method: 'POST',
@@ -1421,9 +1390,14 @@ keywordsRawEn: formData.controlledKeywordsEn,
         body: JSON.stringify(payload)
       });
 
-      if (!response.ok) throw new Error(await response.text());
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[DEBUG] Error del servidor:', errorText);
+        throw new Error(errorText);
+      }
 
       const result = await response.json();
+      console.log('[DEBUG] Respuesta exitosa:', result);
 
       localStorage.removeItem('submissionFormDraft');
       setSubmissionId(result.submissionId);
@@ -1434,30 +1408,49 @@ keywordsRawEn: formData.controlledKeywordsEn,
       if (onSuccess) onSuccess(result.submissionId);
 
     } catch (error) {
-      console.error('Error:', error);
-      setSubmitStatus(isSpanish ? `❌ Error: ${error.message}` : `❌ Error: ${error.message}`);
+      console.error('[DEBUG] Error en el envío:', error);
+      setSubmitStatus(isSpanish 
+        ? `❌ Error: ${error.message}` 
+        : `❌ Error: ${error.message}`);
     } finally {
       setUploading(false);
     }
   };
 
+  // Navegación entre pasos
   const nextStep = () => {
+    console.log(`[DEBUG] Intentando avanzar del paso ${currentStep} al ${currentStep + 1}`);
+    
     if (validateStep(currentStep)) {
+      console.log(`[DEBUG] Validación exitosa, avanzando al paso ${currentStep + 1}`);
       setCurrentStep(prev => prev + 1);
     } else {
-      alert(isSpanish ? 'Completa los campos requeridos antes de continuar.' : 'Complete required fields before continuing.');
+      console.log('[DEBUG] Validación fallida:', validationErrors);
+      
+      // Construir mensaje de error detallado
+      const errorMessages = Object.values(validationErrors);
+      const errorMessage = errorMessages.join('\n• ');
+      
+      alert(isSpanish 
+        ? `Completa los campos requeridos antes de continuar:\n• ${errorMessage}` 
+        : `Complete required fields before continuing:\n• ${errorMessage}`);
     }
   };
 
-  const prevStep = () => setCurrentStep(prev => prev - 1);
+  const prevStep = () => {
+    console.log(`[DEBUG] Retrocediendo del paso ${currentStep} al ${currentStep - 1}`);
+    setCurrentStep(prev => prev - 1);
+  };
 
+  // Configuración de pasos
   const steps = [
     { id: 1, title: isSpanish ? 'INFORMACIÓN DEL ARTÍCULO' : 'ARTICLE INFORMATION' },
     { id: 2, title: isSpanish ? 'AUTORES Y ÉTICA' : 'AUTHORS & ETHICS' },
     { id: 3, title: isSpanish ? 'DATOS, IA Y DECLARACIONES' : 'DATA, AI & DECLARATIONS' }
   ];
 
-  // Pantalla de éxito final (sin cambios sustanciales, solo estética)
+  // ============ PANTALLA DE ÉXITO ============
+  
   if (submitted) {
     return (
       <motion.div
@@ -1466,53 +1459,6 @@ keywordsRawEn: formData.controlledKeywordsEn,
         className="max-w-2xl mx-auto py-16 px-4"
       >
         <div className="bg-white border border-[#E0E7E9] shadow-2xl rounded-3xl overflow-hidden">
-          {/* BANNER DE POLÍTICAS Y GUÍAS - PERSISTENTE */}
-<div className="bg-[#001f3f] border-b border-[#c0a86a] px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-  <div className="flex items-center gap-3">
-    <svg className="w-5 h-5 text-[#c0a86a] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-    </svg>
-    <p className="text-white text-xs font-serif leading-relaxed">
-      {isSpanish
-        ? 'El envío de un manuscrito implica la aceptación íntegra de nuestras '
-        : 'Submitting a manuscript implies full acceptance of our '}
-      <a
-        href={isSpanish ? 'https://www.revistacienciasestudiantes.com/policies.html' : 'https://www.revistacienciasestudiantes.com/policiesEN.html'}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-[#c0a86a] underline hover:text-white transition-colors font-semibold"
-      >
-        {isSpanish ? 'Políticas Editoriales' : 'Editorial Policies'}
-      </a>
-      {isSpanish ? ' y nuestras ' : ' and our '}
-      <button
-        type="button"
-        onClick={() => window.open(isSpanish ? '/guidelines' : '/en/guidelines', '_blank')}
-        className="text-[#c0a86a] underline hover:text-white transition-colors font-semibold"
-      >
-        {isSpanish ? 'Directrices para Autores' : 'Author Guidelines'}
-      </button>
-      .
-    </p>
-  </div>
-  <div className="flex gap-3 flex-shrink-0">
-    <a
-      href={isSpanish ? 'https://www.revistacienciasestudiantes.com/policies.html' : 'https://www.revistacienciasestudiantes.com/policiesEN.html'}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-[10px] uppercase font-bold tracking-[0.15em] text-[#c0a86a] border border-[#c0a86a] px-4 py-2 rounded-sm hover:bg-[#c0a86a] hover:text-[#001f3f] transition-colors whitespace-nowrap"
-    >
-      {isSpanish ? 'Políticas' : 'Policies'} ↗
-    </a>
-    <button
-      type="button"
-      onClick={() => window.open(isSpanish ? '/guidelines' : '/en/guidelines', '_blank')}
-      className="text-[10px] uppercase font-bold tracking-[0.15em] text-white border border-white px-4 py-2 rounded-sm hover:bg-white hover:text-[#001f3f] transition-colors whitespace-nowrap"
-    >
-      {isSpanish ? 'Guías' : 'Guidelines'} ↗
-    </button>
-  </div>
-</div>
           <div className="bg-[#0A1929] p-12 text-center">
             <div className="mx-auto w-24 h-24 bg-[#E5E9F0] rounded-full flex items-center justify-center mb-6">
               <span className="text-5xl">📮</span>
@@ -1594,6 +1540,8 @@ keywordsRawEn: formData.controlledKeywordsEn,
     );
   }
 
+  // ============ RENDERIZADO DEL FORMULARIO ============
+  
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -1601,44 +1549,28 @@ keywordsRawEn: formData.controlledKeywordsEn,
       className="max-w-3xl mx-auto px-4 pb-20"
     >
       <div className="bg-white border border-[#E0E7E9] shadow-2xl shadow-[#0A1929]/5 rounded-3xl overflow-hidden">
-
+        {/* Encabezado */}
         <div className="bg-[#0A1929] border-b border-[#1A2B3C] p-12 text-center">
           <div className="flex justify-center items-center gap-3 mb-4">
             <div className="h-px w-8 bg-[#B22234]" />
-            <span className="uppercase text-[10px] font-mono tracking-[0.2em] text-[#E5E9F0]">Revista Nacional de las Ciencias para Estudiantes</span>
+            <span className="uppercase text-[10px] font-mono tracking-[0.2em] text-[#E5E9F0]">
+              Revista Nacional de las Ciencias para Estudiantes
+            </span>
             <div className="h-px w-8 bg-[#B22234]" />
           </div>
           <h1 className="font-serif text-5xl font-light tracking-tight text-white">
             {isSpanish ? 'Envío de Manuscrito' : 'Manuscript Submission'}
           </h1>
           <p className="text-[#E0E7E9] text-sm mt-3 font-serif">
-  {isSpanish ? 'Sistema seguro • Borrador guardado automáticamente' : 'Secure system • Draft auto-saved'}
-</p>
-<p className="text-[#c0a86a] text-xs mt-2 font-serif">
-  {isSpanish ? 'Rige: ' : 'Governed by: '}
-  <a
-    href={isSpanish ? 'https://www.revistacienciasestudiantes.com/policies.html' : 'https://www.revistacienciasestudiantes.com/policiesEN.html'}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="underline hover:text-white transition-colors"
-  >
-    {isSpanish ? 'Políticas Editoriales' : 'Editorial Policies'}
-  </a>
-  {' · '}
-  <button
-    type="button"
-    onClick={() => window.open(isSpanish ? '/guidelines' : '/en/guidelines', '_blank')}
-    className="underline hover:text-white transition-colors"
-  >
-    {isSpanish ? 'Guía para Autores' : 'Author Guidelines'}
-  </button>
-</p>
+            {isSpanish ? 'Sistema seguro • Borrador guardado automáticamente' : 'Secure system • Draft auto-saved'}
+          </p>
         </div>
 
+        {/* Indicador de pasos */}
         <div className="px-8 py-7 bg-white border-b border-[#E0E7E9]">
           <div className="flex justify-between items-center relative">
             <div className="absolute top-5 left-0 w-full h-px bg-[#E0E7E9] z-0" />
-            {steps.map((step, idx) => (
+            {steps.map((step) => (
               <div key={step.id} className="relative z-10 flex flex-col items-center">
                 <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-mono text-base font-semibold transition-all shadow-sm
                   ${currentStep >= step.id
@@ -1655,10 +1587,10 @@ keywordsRawEn: formData.controlledKeywordsEn,
           </div>
         </div>
 
+        {/* Contenido del formulario */}
         <form onSubmit={handleSubmit} className="p-8 md:p-12 space-y-16">
-
           <AnimatePresence mode="wait">
-            {/* STEP 1: INFORMACIÓN DEL ARTÍCULO */}
+            {/* PASO 1: INFORMACIÓN DEL ARTÍCULO */}
             {currentStep === 1 && (
               <motion.div
                 key="step1"
@@ -1667,22 +1599,29 @@ keywordsRawEn: formData.controlledKeywordsEn,
                 exit={{ opacity: 0, x: -30 }}
                 className="space-y-12"
               >
+                {/* Título */}
                 <div>
                   <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-2">
                     {isSpanish ? 'Título del artículo' : 'Article title'} *
-                    <HelpCapsule text="Claro, conciso y representativo. Máximo 20 palabras." textEn="Clear, concise and representative. Max 20 words." />
                   </label>
                   <input
                     type="text"
                     name="title"
                     value={formData.title}
                     onChange={handleInputChange}
-                    required
-                    className="w-full p-4 bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl text-lg font-serif focus:border-[#0A1929] outline-none"
+                    className={`w-full p-4 border rounded-2xl text-lg font-serif focus:outline-none ${
+                      validationErrors.title 
+                        ? 'border-red-400 bg-red-50' 
+                        : 'bg-[#F5F7FA] border-[#E0E7E9] focus:border-[#0A1929]'
+                    }`}
                     placeholder={isSpanish ? 'Ejemplo: Impacto de la inteligencia artificial...' : 'Example: Impact of artificial intelligence...'}
                   />
+                  {validationErrors.title && (
+                    <p className="text-red-500 text-xs mt-1">{validationErrors.title}</p>
+                  )}
                 </div>
 
+                {/* Título en inglés */}
                 <div>
                   <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-2">
                     {isSpanish ? 'Título en inglés (recomendado)' : 'English title (recommended)'}
@@ -1696,21 +1635,28 @@ keywordsRawEn: formData.controlledKeywordsEn,
                   />
                 </div>
 
+                {/* Resumen */}
                 <div>
                   <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-2">
                     {isSpanish ? 'Resumen' : 'Abstract'} *
-                    <HelpCapsule text="Máximo 250 palabras. Estructurado: introducción, métodos, resultados, conclusiones." textEn="Max 250 words. Structured: introduction, methods, results, conclusions." />
                   </label>
                   <textarea
                     name="abstract"
                     value={formData.abstract}
                     onChange={handleInputChange}
-                    required
                     rows={7}
-                    className="w-full p-4 bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif"
+                    className={`w-full p-4 border rounded-2xl text-sm focus:outline-none font-serif ${
+                      validationErrors.abstract 
+                        ? 'border-red-400 bg-red-50' 
+                        : 'bg-[#F5F7FA] border-[#E0E7E9] focus:border-[#0A1929]'
+                    }`}
                   />
+                  {validationErrors.abstract && (
+                    <p className="text-red-500 text-xs mt-1">{validationErrors.abstract}</p>
+                  )}
                 </div>
 
+                {/* Abstract en inglés */}
                 <div>
                   <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-2">
                     {isSpanish ? 'Abstract en inglés' : 'English abstract'}
@@ -1724,56 +1670,47 @@ keywordsRawEn: formData.controlledKeywordsEn,
                   />
                 </div>
 
-                {/* NUEVO CAMBIO: Selector de tipo de artículo alineado a la política */}
+                {/* Tipo de artículo */}
                 <div>
                   <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-2">
                     {isSpanish ? 'Tipo de artículo' : 'Article type'} *
-                    <HelpCapsule
-                      text="Selecciona la tipología que mejor se adapte a tu manuscrito según las políticas editoriales (Sección 2.2)."
-                      textEn="Select the typology that best fits your manuscript according to the editorial policies (Section 2.2)."
-                    />
                   </label>
                   <select
                     name="articleType"
                     value={formData.articleType}
                     onChange={handleInputChange}
-                    className="w-full p-4 bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif"
+                    className={`w-full p-4 border rounded-2xl text-sm focus:outline-none font-serif ${
+                      validationErrors.articleType 
+                        ? 'border-red-400 bg-red-50' 
+                        : 'bg-[#F5F7FA] border-[#E0E7E9] focus:border-[#0A1929]'
+                    }`}
                   >
-                    <option value="">— Selecciona tipo —</option>
+                    <option value="">— {isSpanish ? 'Selecciona tipo' : 'Select type'} —</option>
                     {articleTypeOptions[isSpanish ? 'es' : 'en'].map(opt => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
                   </select>
-                  <p className="text-[11px] text-[#546E7A] mt-2 font-serif leading-relaxed">
-  {isSpanish
-    ? 'Consulte la '
-    : 'Refer to the '}
-  <a
-    href={isSpanish ? 'https://www.revistacienciasestudiantes.com/policies.html#alcance' : 'https://www.revistacienciasestudiantes.com/policiesEN.html#scope'}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="text-[#0A1929] underline hover:text-[#B22234] transition-colors"
-  >
-    {isSpanish ? 'Sección 2.2 de las Políticas Editoriales' : 'Section 2.2 of the Editorial Policies'}
-  </a>
-  {isSpanish ? ' para una descripción detallada de cada tipología.' : ' for a detailed description of each typology.'}
-</p>
+                  {validationErrors.articleType && (
+                    <p className="text-red-500 text-xs mt-1">{validationErrors.articleType}</p>
+                  )}
                 </div>
 
-                {/* NUEVO CAMBIO: Área temática ahora es un select obligatorio */}
+                {/* Área temática */}
                 <div>
                   <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-2">
                     {isSpanish ? 'Área temática' : 'Subject area'} *
-                    <HelpCapsule text="Selecciona el área principal de tu investigación." textEn="Select the main area of your research." />
                   </label>
                   <select
                     name="area"
                     value={formData.area}
                     onChange={handleInputChange}
-                    required
-                    className="w-full p-4 bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif"
+                    className={`w-full p-4 border rounded-2xl text-sm focus:outline-none font-serif ${
+                      validationErrors.area 
+                        ? 'border-red-400 bg-red-50' 
+                        : 'bg-[#F5F7FA] border-[#E0E7E9] focus:border-[#0A1929]'
+                    }`}
                   >
-                    <option value="">— Selecciona un área general —</option>
+                    <option value="">— {isSpanish ? 'Selecciona un área general' : 'Select a general area'} —</option>
                     {Object.entries(AREAS_TEMATICAS).map(([categoria, subareas]) => (
                       <optgroup key={categoria} label={categoria}>
                         {subareas.map(sub => (
@@ -1782,69 +1719,59 @@ keywordsRawEn: formData.controlledKeywordsEn,
                       </optgroup>
                     ))}
                   </select>
-                  <p className="text-[11px] text-[#546E7A] mt-2 font-serif leading-relaxed">
-  {isSpanish
-    ? 'El área determina el vocabulario controlado para las palabras clave. Consulte la '
-    : 'The area determines the controlled vocabulary for keywords. See the '}
-  <a
-    href={isSpanish ? 'https://www.revistacienciasestudiantes.com/policies.html#alcance' : 'https://www.revistacienciasestudiantes.com/policiesEN.html#scope'}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="text-[#0A1929] underline hover:text-[#B22234] transition-colors"
-  >
-    {isSpanish ? 'Sección 2.5 de las Políticas' : 'Section 2.5 of the Policies'}
-  </a>
-  .
-</p>
+                  {validationErrors.area && (
+                    <p className="text-red-500 text-xs mt-1">{validationErrors.area}</p>
+                  )}
                 </div>
 
-                {/* PALABRAS CLAVE CON VOCABULARIO CONTROLADO */}
-{formData.area && VOCABULARIO_POR_AREA[formData.area] ? (
-  <div className="space-y-8">
-    <div>
-      <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-3">
-        {isSpanish ? 'Palabras Clave' : 'Keywords'} *
-        <HelpCapsule
-          text={`Mínimo 2, máximo 6. Usa el vocabulario ${VOCABULARIO_POR_AREA[formData.area]?.vocabulario || 'controlado'} para esta área. Cada palabra debe tener un código y un término.`}
-          textEn={`Minimum 2, maximum 6. Use the ${VOCABULARIO_POR_AREA[formData.area]?.vocabulario || 'controlled'} vocabulary for this area. Each keyword must have a code and a term.`}
-        />
-      </label>
-      <ControlledKeywordInput
-        vocabularyConfig={VOCABULARIO_POR_AREA[formData.area]}
-        value={formData.controlledKeywords}
-        onChange={(val) => setFormData(prev => ({ ...prev, controlledKeywords: val }))}
-        language={language}
-      />
-    </div>
-    
-    <div>
-      <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-3">
-        {isSpanish ? 'Keywords en inglés' : 'English Keywords'}
-        <HelpCapsule
-          text="Traduce tus palabras clave al inglés usando el mismo formato y vocabulario."
-          textEn="Translate your keywords to English using the same format and vocabulary."
-        />
-      </label>
-      <ControlledKeywordInput
-        vocabularyConfig={VOCABULARIO_POR_AREA[formData.area]}
-        value={formData.controlledKeywordsEn}
-        onChange={(val) => setFormData(prev => ({ ...prev, controlledKeywordsEn: val }))}
-        language={language}
-      />
-    </div>
-  </div>
-) : (
-  <div className="bg-[#F5F7FA] rounded-2xl p-6 text-center border-2 border-dashed border-[#E0E7E9]">
-    <p className="text-[#5A6B7A] text-sm font-['Lora']">
-      {isSpanish 
-        ? 'Selecciona primero un área temática para configurar el vocabulario controlado.'
-        : 'Select a subject area first to configure the controlled vocabulary.'}
-    </p>
-  </div>
-)}
+                {/* Palabras clave controladas */}
+                {formData.area && VOCABULARIO_POR_AREA[formData.area] ? (
+                  <div className="space-y-8">
+                    <div>
+                      <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-3">
+                        {isSpanish ? 'Palabras Clave' : 'Keywords'} *
+                      </label>
+                      <ControlledKeywordInput
+                        vocabularyConfig={VOCABULARIO_POR_AREA[formData.area]}
+                        value={formData.controlledKeywords}
+                        onChange={(val) => {
+                          setFormData(prev => ({ ...prev, controlledKeywords: val }));
+                          setValidationErrors(prev => {
+                            const newErrors = { ...prev };
+                            delete newErrors.controlledKeywords;
+                            return newErrors;
+                          });
+                        }}
+                        language={language}
+                      />
+                      {validationErrors.controlledKeywords && (
+                        <p className="text-red-500 text-xs mt-1">{validationErrors.controlledKeywords}</p>
+                      )}
+                    </div>
+                    
+                    <div>
+                      <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-3">
+                        {isSpanish ? 'Keywords en inglés' : 'English Keywords'}
+                      </label>
+                      <ControlledKeywordInput
+                        vocabularyConfig={VOCABULARIO_POR_AREA[formData.area]}
+                        value={formData.controlledKeywordsEn}
+                        onChange={(val) => setFormData(prev => ({ ...prev, controlledKeywordsEn: val }))}
+                        language={language}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-[#F5F7FA] rounded-2xl p-6 text-center border-2 border-dashed border-[#E0E7E9]">
+                    <p className="text-[#5A6B7A] text-sm font-['Lora']">
+                      {isSpanish 
+                        ? 'Selecciona primero un área temática para configurar el vocabulario controlado.'
+                        : 'Select a subject area first to configure the controlled vocabulary.'}
+                    </p>
+                  </div>
+                )}
 
-                
-
+                {/* Idioma del manuscrito */}
                 <div>
                   <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-2">
                     {isSpanish ? 'Idioma del manuscrito' : 'Manuscript language'} *
@@ -1862,7 +1789,7 @@ keywordsRawEn: formData.controlledKeywordsEn,
               </motion.div>
             )}
 
-            {/* STEP 2: AUTORES Y ÉTICA */}
+            {/* PASO 2: AUTORES Y ÉTICA */}
             {currentStep === 2 && (
               <motion.div
                 key="step2"
@@ -1871,6 +1798,7 @@ keywordsRawEn: formData.controlledKeywordsEn,
                 exit={{ opacity: 0, x: -30 }}
                 className="space-y-14"
               >
+                {/* Sección de autores */}
                 <div>
                   <h3 className="font-serif text-2xl font-light text-[#0A1929] mb-6 border-b border-[#E0E7E9] pb-4">
                     {isSpanish ? 'Autores' : 'Authors'}
@@ -1895,45 +1823,80 @@ keywordsRawEn: formData.controlledKeywordsEn,
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                          <label className="text-xs text-[#546E7A] mb-1 block font-serif">Nombre *</label>
+                          <label className="text-xs text-[#546E7A] mb-1 block font-serif">
+                            {isSpanish ? 'Nombre' : 'First name'} *
+                          </label>
                           <input
                             type="text"
                             value={author.firstName}
                             onChange={(e) => handleAuthorChange(index, 'firstName', e.target.value)}
-                            className="w-full p-3.5 border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif"
+                            className={`w-full p-3.5 border rounded-2xl text-sm focus:outline-none font-serif ${
+                              validationErrors[`author_${index}_firstName`] 
+                                ? 'border-red-400 bg-red-50' 
+                                : 'border-[#E0E7E9] focus:border-[#0A1929]'
+                            }`}
                           />
+                          {validationErrors[`author_${index}_firstName`] && (
+                            <p className="text-red-500 text-xs mt-1">{validationErrors[`author_${index}_firstName`]}</p>
+                          )}
                         </div>
                         <div>
-                          <label className="text-xs text-[#546E7A] mb-1 block font-serif">Apellido *</label>
+                          <label className="text-xs text-[#546E7A] mb-1 block font-serif">
+                            {isSpanish ? 'Apellido' : 'Last name'} *
+                          </label>
                           <input
                             type="text"
                             value={author.lastName}
                             onChange={(e) => handleAuthorChange(index, 'lastName', e.target.value)}
-                            className="w-full p-3.5 border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif"
+                            className={`w-full p-3.5 border rounded-2xl text-sm focus:outline-none font-serif ${
+                              validationErrors[`author_${index}_lastName`] 
+                                ? 'border-red-400 bg-red-50' 
+                                : 'border-[#E0E7E9] focus:border-[#0A1929]'
+                            }`}
                           />
+                          {validationErrors[`author_${index}_lastName`] && (
+                            <p className="text-red-500 text-xs mt-1">{validationErrors[`author_${index}_lastName`]}</p>
+                          )}
                         </div>
                         <div className="md:col-span-2">
-                          <label className="text-xs text-[#546E7A] mb-1 block font-serif">Correo electrónico *</label>
+                          <label className="text-xs text-[#546E7A] mb-1 block font-serif">
+                            {isSpanish ? 'Correo electrónico' : 'Email'} *
+                          </label>
                           <input
                             type="email"
                             value={author.email}
                             onChange={(e) => handleAuthorChange(index, 'email', e.target.value)}
-                            className="w-full p-3.5 border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif"
+                            className={`w-full p-3.5 border rounded-2xl text-sm focus:outline-none font-serif ${
+                              validationErrors[`author_${index}_email`] 
+                                ? 'border-red-400 bg-red-50' 
+                                : 'border-[#E0E7E9] focus:border-[#0A1929]'
+                            }`}
                           />
+                          {validationErrors[`author_${index}_email`] && (
+                            <p className="text-red-500 text-xs mt-1">{validationErrors[`author_${index}_email`]}</p>
+                          )}
                         </div>
                         <div className="md:col-span-2">
-                          <label className="text-xs text-[#546E7A] mb-1 block font-serif">Institución / Afiliación *</label>
+                          <label className="text-xs text-[#546E7A] mb-1 block font-serif">
+                            {isSpanish ? 'Institución / Afiliación' : 'Institution / Affiliation'} *
+                          </label>
                           <input
                             type="text"
                             value={author.institution}
                             onChange={(e) => handleAuthorChange(index, 'institution', e.target.value)}
-                            className="w-full p-3.5 border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif"
+                            className={`w-full p-3.5 border rounded-2xl text-sm focus:outline-none font-serif ${
+                              validationErrors[`author_${index}_institution`] 
+                                ? 'border-red-400 bg-red-50' 
+                                : 'border-[#E0E7E9] focus:border-[#0A1929]'
+                            }`}
                           />
+                          {validationErrors[`author_${index}_institution`] && (
+                            <p className="text-red-500 text-xs mt-1">{validationErrors[`author_${index}_institution`]}</p>
+                          )}
                         </div>
                         <div className="md:col-span-2">
-                          <label className="text-xs text-[#546E7A] mb-1 block flex items-center font-serif">
+                          <label className="text-xs text-[#546E7A] mb-1 block font-serif">
                             ORCID
-                            <HelpCapsule text="0000-0000-0000-0000" textEn="0000-0000-0000-0000" />
                           </label>
                           <input
                             type="text"
@@ -1946,10 +1909,6 @@ keywordsRawEn: formData.controlledKeywordsEn,
                         <div className="md:col-span-2">
                           <label className="text-xs text-[#546E7A] mb-1 block font-serif">
                             {isSpanish ? 'Contribución del autor (CRediT)' : 'Author contribution (CRediT)'} *
-                            <HelpCapsule
-                              text="Especifica el rol según la taxonomía CRediT (Conceptualización, Metodología, Software, Validación, Análisis Formal, Investigación, Recursos, Curación de Datos, Escritura - Original, Escritura - Revisión, Visualización, Supervisión, Administración de Proyecto, Adquisición de Fondos). Debe cumplir los 4 criterios de autoría ICMJE."
-                              textEn="Specify the role according to the CRediT taxonomy (Conceptualization, Methodology, Software, Validation, Formal analysis, Investigation, Resources, Data Curation, Writing - Original Draft, Writing - Review & Editing, Visualization, Supervision, Project administration, Funding acquisition). Must meet all 4 ICMJE authorship criteria."
-                            />
                           </label>
                           <textarea
                             value={author.contribution}
@@ -1961,6 +1920,7 @@ keywordsRawEn: formData.controlledKeywordsEn,
                         </div>
                       </div>
 
+                      {/* Menor de edad */}
                       <div className="mt-8 border-t border-[#E0E7E9] pt-6">
                         <label className="flex items-center gap-3 cursor-pointer">
                           <input
@@ -1990,6 +1950,7 @@ keywordsRawEn: formData.controlledKeywordsEn,
                         )}
                       </div>
 
+                      {/* Autor de correspondencia */}
                       <div className="mt-6">
                         <label className="flex items-center gap-3 cursor-pointer">
                           <input
@@ -2018,12 +1979,8 @@ keywordsRawEn: formData.controlledKeywordsEn,
 
                 {/* Financiación */}
                 <div className="space-y-6">
-                  <h3 className="font-serif text-2xl font-light text-[#0A1929] border-b border-[#E0E7E9] pb-4 flex items-center gap-2">
+                  <h3 className="font-serif text-2xl font-light text-[#0A1929] border-b border-[#E0E7E9] pb-4">
                     {isSpanish ? 'Financiación' : 'Funding'}
-                    <HelpCapsule
-                      text="Declara todas las fuentes de financiamiento, incluyendo códigos de subvención. Si no hubo financiamiento, lo declararás en el manuscrito."
-                      textEn="Declare all funding sources, including grant numbers. If there was no funding, you will declare this in the manuscript."
-                    />
                   </h3>
                   <label className="flex items-center gap-3">
                     <input
@@ -2041,7 +1998,9 @@ keywordsRawEn: formData.controlledKeywordsEn,
                   {formData.funding.hasFunding && (
                     <div className="pl-8 space-y-6">
                       <div>
-                        <label className="text-xs text-[#546E7A] mb-1 block font-serif">{isSpanish ? 'Entidad financiadora' : 'Funding entity'}</label>
+                        <label className="text-xs text-[#546E7A] mb-1 block font-serif">
+                          {isSpanish ? 'Entidad financiadora' : 'Funding entity'}
+                        </label>
                         <input
                           type="text"
                           name="funding.sources"
@@ -2052,7 +2011,9 @@ keywordsRawEn: formData.controlledKeywordsEn,
                         />
                       </div>
                       <div>
-                        <label className="text-xs text-[#546E7A] mb-1 block font-serif">{isSpanish ? 'Código(s) de la subvención' : 'Grant number(s)'}</label>
+                        <label className="text-xs text-[#546E7A] mb-1 block font-serif">
+                          {isSpanish ? 'Código(s) de la subvención' : 'Grant number(s)'}
+                        </label>
                         <input
                           type="text"
                           name="funding.grantNumbers"
@@ -2068,12 +2029,8 @@ keywordsRawEn: formData.controlledKeywordsEn,
 
                 {/* Conflicto de intereses */}
                 <div>
-                  <h3 className="font-serif text-2xl font-light text-[#0A1929] border-b border-[#E0E7E9] pb-4 flex items-center gap-2">
+                  <h3 className="font-serif text-2xl font-light text-[#0A1929] border-b border-[#E0E7E9] pb-4">
                     {isSpanish ? 'Conflicto de intereses' : 'Conflict of interest'}
-                    <HelpCapsule
-                      text="Declara cualquier relación financiera, personal, académica o ideológica que pueda influir. Si no hay, declara: 'Los autores declaran no tener conflictos de interés'."
-                      textEn="Declare any financial, personal, academic, or ideological relationship that could influence. If none, declare: 'The authors declare no conflicts of interest'."
-                    />
                   </h3>
                   <textarea
                     name="conflictOfInterest"
@@ -2085,14 +2042,10 @@ keywordsRawEn: formData.controlledKeywordsEn,
                   />
                 </div>
 
-                {/* NUEVA SECCIÓN: Aprobación Ética */}
+                {/* Aprobación ética */}
                 <div className="space-y-6">
-                  <h3 className="font-serif text-2xl font-light text-[#0A1929] border-b border-[#E0E7E9] pb-4 flex items-center gap-2">
+                  <h3 className="font-serif text-2xl font-light text-[#0A1929] border-b border-[#E0E7E9] pb-4">
                     {isSpanish ? 'Aprobación Ética' : 'Ethics Approval'}
-                    <HelpCapsule
-                      text="Requerida para estudios con interacción directa con seres humanos, datos personales identificables o muestras biológicas. Exenta para revisiones, ensayos teóricos o datos públicos anónimos. (Política 5.2)"
-                      textEn="Required for studies involving direct interaction with humans, identifiable personal data, or human biological samples. Exempt for reviews, theoretical essays, or public anonymous data. (Policy 5.2)"
-                    />
                   </h3>
                   <select
                     name="requiresEthicsApproval"
@@ -2100,23 +2053,13 @@ keywordsRawEn: formData.controlledKeywordsEn,
                     onChange={handleInputChange}
                     className="w-full p-4 bg-[#F5F7FA] border border-[#E0E7E9] rounded-2xl text-sm focus:border-[#0A1929] outline-none font-serif"
                   >
-                    <option value="no">{isSpanish ? 'No, mi estudio está exento o no involucra sujetos humanos' : 'No, my study is exempt or does not involve human subjects'}</option>
-                    <option value="yes">{isSpanish ? 'Sí, mi estudio requirió aprobación de un comité de ética' : 'Yes, my study required ethics committee approval'}</option>
+                    <option value="no">
+                      {isSpanish ? 'No, mi estudio está exento o no involucra sujetos humanos' : 'No, my study is exempt or does not involve human subjects'}
+                    </option>
+                    <option value="yes">
+                      {isSpanish ? 'Sí, mi estudio requirió aprobación de un comité de ética' : 'Yes, my study required ethics committee approval'}
+                    </option>
                   </select>
-                  <p className="text-[11px] text-[#546E7A] mt-2 font-serif leading-relaxed">
-  {isSpanish
-    ? 'Consulte los criterios de exención y requisitos en la '
-    : 'See the exemption criteria and requirements in '}
-  <a
-    href={isSpanish ? 'https://www.revistacienciasestudiantes.com/policies.html#etica' : 'https://www.revistacienciasestudiantes.com/policiesEN.html#ethics'}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="text-[#0A1929] underline hover:text-[#B22234] transition-colors"
-  >
-    {isSpanish ? 'Sección 5.2 de las Políticas Editoriales' : 'Section 5.2 of the Editorial Policies'}
-  </a>
-  .
-</p>
 
                   {formData.requiresEthicsApproval === 'yes' && (
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
@@ -2137,7 +2080,7 @@ keywordsRawEn: formData.controlledKeywordsEn,
               </motion.div>
             )}
 
-            {/* STEP 3: DATOS, IA Y DECLARACIONES FINALES */}
+            {/* PASO 3: DATOS, IA Y DECLARACIONES */}
             {currentStep === 3 && (
               <motion.div
                 key="step3"
@@ -2146,14 +2089,10 @@ keywordsRawEn: formData.controlledKeywordsEn,
                 exit={{ opacity: 0, x: -30 }}
                 className="space-y-14"
               >
-                {/* NUEVA SECCIÓN: USO DE INTELIGENCIA ARTIFICIAL */}
+                {/* Uso de IA */}
                 <div className="space-y-6">
-                  <h3 className="font-serif text-2xl font-light text-[#0A1929] border-b border-[#E0E7E9] pb-4 flex items-center gap-2">
+                  <h3 className="font-serif text-2xl font-light text-[#0A1929] border-b border-[#E0E7E9] pb-4">
                     {isSpanish ? 'Uso de Inteligencia Artificial (IA)' : 'Use of Artificial Intelligence (AI)'}
-                    <HelpCapsule
-                      text="La IA no puede ser autora. Declara si usaste herramientas como ChatGPT para corrección, traducción, análisis de datos o generación de texto/imágenes. Esto es obligatorio según la Sección 7.3."
-                      textEn="AI cannot be an author. Declare if you used tools like ChatGPT for editing, translation, data analysis, or text/image generation. This is mandatory per Section 7.3."
-                    />
                   </h3>
                   <select
                     name="aiUsed"
@@ -2164,28 +2103,18 @@ keywordsRawEn: formData.controlledKeywordsEn,
                     <option value="no">{isSpanish ? 'No se utilizó IA en este trabajo' : 'AI was not used in this work'}</option>
                     <option value="yes">{isSpanish ? 'Sí, se utilizó IA en este trabajo' : 'Yes, AI was used in this work'}</option>
                   </select>
-                  <p className="text-[11px] text-[#546E7A] mt-2 font-serif leading-relaxed">
-  {isSpanish
-    ? 'La IA no puede ser autora ni citada como fuente. Consulte el '
-    : 'AI cannot be an author or cited as a source. See '}
-  <a
-    href={isSpanish ? 'https://www.revistacienciasestudiantes.com/policies.html#ia' : 'https://www.revistacienciasestudiantes.com/policiesEN.html#ai'}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="text-[#0A1929] underline hover:text-[#B22234] transition-colors"
-  >
-    {isSpanish ? 'Capítulo 7 de las Políticas' : 'Chapter 7 of the Policies'}
-  </a>
-  {isSpanish ? ' para los usos permitidos y prohibidos.' : ' for permitted and prohibited uses.'}
-</p>
 
                   {formData.aiUsed === 'yes' && (
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-4 border border-[#E0E7E9] rounded-2xl p-6 bg-[#F5F7FA]">
-                      <p className="text-xs font-mono text-[#546E7A] uppercase tracking-widest">{isSpanish ? 'Especifica las herramientas usadas' : 'Specify the tools used'}</p>
+                      <p className="text-xs font-mono text-[#546E7A] uppercase tracking-widest">
+                        {isSpanish ? 'Especifica las herramientas usadas' : 'Specify the tools used'}
+                      </p>
                       {formData.aiTools.map((tool, index) => (
                         <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-white rounded-xl border border-[#E0E7E9] relative">
                           <div>
-                            <label className="text-xs text-[#546E7A] block mb-1 font-serif">{isSpanish ? 'Herramienta y versión' : 'Tool and version'}</label>
+                            <label className="text-xs text-[#546E7A] block mb-1 font-serif">
+                              {isSpanish ? 'Herramienta y versión' : 'Tool and version'}
+                            </label>
                             <input
                               type="text"
                               value={tool.name}
@@ -2195,17 +2124,25 @@ keywordsRawEn: formData.controlledKeywordsEn,
                             />
                           </div>
                           <div className="md:col-span-2">
-                            <label className="text-xs text-[#546E7A] block mb-1 font-serif">{isSpanish ? 'Propósito y sección donde se usó' : 'Purpose and section where it was used'}</label>
+                            <label className="text-xs text-[#546E7A] block mb-1 font-serif">
+                              {isSpanish ? 'Propósito y sección donde se usó' : 'Purpose and section where it was used'}
+                            </label>
                             <div className="flex gap-2">
                               <input
                                 type="text"
                                 value={tool.purpose}
                                 onChange={(e) => handleAIToolChange(index, 'purpose', e.target.value)}
-                                placeholder={isSpanish ? 'Corrección de estilo en todo el manuscrito, traducción del resumen...' : 'Proofreading of the manuscript, translation of the abstract...'}
+                                placeholder={isSpanish ? 'Corrección de estilo en todo el manuscrito...' : 'Proofreading of the manuscript...'}
                                 className="flex-1 p-2.5 border border-[#E0E7E9] rounded-xl text-sm font-serif outline-none"
                               />
                               {formData.aiTools.length > 1 && (
-                                <button type="button" onClick={() => removeAITool(index)} className="text-[#B22234] hover:bg-red-50 p-2 rounded-xl transition-colors">✕</button>
+                                <button 
+                                  type="button" 
+                                  onClick={() => removeAITool(index)} 
+                                  className="text-[#B22234] hover:bg-red-50 p-2 rounded-xl transition-colors"
+                                >
+                                  ✕
+                                </button>
                               )}
                             </div>
                           </div>
@@ -2222,55 +2159,34 @@ keywordsRawEn: formData.controlledKeywordsEn,
                   )}
                 </div>
 
-                {/* DISPONIBILIDAD DE DATOS Y CÓDIGO */}
+                {/* Disponibilidad de datos y código */}
                 <div className="space-y-8">
                   <h3 className="font-serif text-2xl font-light text-[#0A1929] border-b border-[#E0E7E9] pb-4">
                     {isSpanish ? 'Disponibilidad de Datos y Código' : 'Data and Code Availability'}
                   </h3>
-                  <p className="text-[11px] text-[#546E7A] -mt-4 mb-6 font-serif leading-relaxed">
-  {isSpanish
-    ? 'Obligatorio según el '
-    : 'Mandatory as per '}
-  <a
-    href={isSpanish ? 'https://www.revistacienciasestudiantes.com/policies.html#datos' : 'https://www.revistacienciasestudiantes.com/policiesEN.html#data'}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="text-[#0A1929] underline hover:text-[#B22234] transition-colors"
-  >
-    {isSpanish ? 'Capítulo 8 de las Políticas Editoriales' : 'Chapter 8 of the Editorial Policies'}
-  </a>
-  .
-</p>
                   
                   <div>
                     <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-3">
                       {isSpanish ? 'Declaración de disponibilidad de los datos' : 'Data availability statement'} *
-                      <HelpCapsule
-                        text="Obligatorio incluso si no hay datos. Recomendamos repositorios como Zenodo, Figshare, OSF o Dryad."
-                        textEn="Mandatory even if there is no data. We recommend repositories such as Zenodo, Figshare, OSF or Dryad."
-                      />
                     </label>
                     <select
-  name="dataAvailability"
-  value={formData.dataAvailability}
-  onChange={handleInputChange}
-  required
-  className={`w-full p-4 border rounded-2xl text-sm focus:outline-none font-serif mb-4 transition-colors ${
-    formData.dataAvailability.trim() === '' && currentStep === 3 
-      ? 'bg-red-50 border-red-400 focus:border-red-600' 
-      : 'bg-[#F5F7FA] border-[#E0E7E9] focus:border-[#0A1929]'
-  }`}
->
-  <option value="">— {isSpanish ? 'Selecciona una opción' : 'Select an option'} —</option>
-  {availabilityOptions[isSpanish ? 'es' : 'en'].map(opt => (
-    <option key={opt.value} value={opt.value}>{opt.label}</option>
-  ))}
-</select>
-{formData.dataAvailability.trim() === '' && currentStep === 3 && (
-  <p className="text-[#B22234] text-xs font-medium -mt-2 mb-4">
-    {isSpanish ? 'Este campo es obligatorio para enviar el formulario.' : 'This field is required to submit the form.'}
-  </p>
-)}
+                      name="dataAvailability"
+                      value={formData.dataAvailability}
+                      onChange={handleInputChange}
+                      className={`w-full p-4 border rounded-2xl text-sm focus:outline-none font-serif mb-4 ${
+                        validationErrors.dataAvailability 
+                          ? 'border-red-400 bg-red-50' 
+                          : 'bg-[#F5F7FA] border-[#E0E7E9] focus:border-[#0A1929]'
+                      }`}
+                    >
+                      <option value="">— {isSpanish ? 'Selecciona una opción' : 'Select an option'} —</option>
+                      {availabilityOptions[isSpanish ? 'es' : 'en'].map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                    {validationErrors.dataAvailability && (
+                      <p className="text-red-500 text-xs mt-1">{validationErrors.dataAvailability}</p>
+                    )}
                     <input
                       type="text"
                       name="dataAvailabilityEn"
@@ -2284,10 +2200,6 @@ keywordsRawEn: formData.controlledKeywordsEn,
                   <div>
                     <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-3">
                       {isSpanish ? 'Declaración de disponibilidad del código' : 'Code availability statement'}
-                      <HelpCapsule
-                        text="Recomendamos depositar el código en GitHub (archivado con Zenodo para un DOI), GitLab u OSF con licencia abierta (MIT, BSD, GPL)."
-                        textEn="We recommend depositing the code in GitHub (archived with Zenodo for a DOI), GitLab, or OSF under an open license (MIT, BSD, GPL)."
-                      />
                     </label>
                     <select
                       name="codeAvailability"
@@ -2311,20 +2223,34 @@ keywordsRawEn: formData.controlledKeywordsEn,
                   </div>
                 </div>
 
-                {/* DECLARACIONES OBLIGATORIAS (Actualizadas) */}
+                {/* Declaraciones obligatorias */}
                 <div>
                   <h3 className="font-serif text-2xl font-light text-[#0A1929] border-b border-[#E0E7E9] pb-4">
                     {isSpanish ? 'Declaraciones obligatorias' : 'Mandatory declarations'}
                   </h3>
                   <div className="mt-8 space-y-5">
                     {[
-                      { key: 'originalAndSimilarity', text: 'El manuscrito es inédito y, en caso de derivar de un trabajo previo, la superposición textual no excede el 15% (Sección 3.2).', textEn: 'The manuscript is unpublished and, if derived from previous work, the textual overlap does not exceed 15% (Section 3.2).' },
-                      { key: 'exclusiveSubmission', text: 'El manuscrito no está siendo evaluado simultáneamente en otra revista (Sección 3.3).', textEn: 'The manuscript is not being simultaneously evaluated in another journal (Section 3.3).' },
-                      { key: 'authorshipCriteria', text: 'Todos los autores cumplen los 4 criterios de autoría del ICMJE y sus roles CRediT están declarados (Sección 4.1).', textEn: 'All authors meet the 4 ICMJE authorship criteria and their CRediT roles are declared (Section 4.1).' },
-                      { key: 'dataAuthentic', text: 'Los datos presentados son auténticos, no han sido manipulados y la investigación cumplió con los estándares éticos aplicables (Capítulo 5).', textEn: 'The data presented are authentic, have not been manipulated, and the research complied with applicable ethical standards (Chapter 5).' },
-                      { key: 'informedConsent', text: 'Se obtuvo el consentimiento/asentimiento informado cuando fue necesario y se declara en el manuscrito (Sección 5.2).', textEn: 'Informed consent/assent was obtained when necessary and is declared in the manuscript (Section 5.2).' },
-                      { key: 'aiDisclosure', text: 'El uso de cualquier herramienta de IA ha sido declarado en el formulario y en el manuscrito (Capítulo 7).', textEn: 'The use of any AI tool has been declared in this form and in the manuscript (Chapter 7).' },
-                      { key: 'conflicts', text: 'Todos los conflictos de interés (reales, potenciales o aparentes) están declarados en el formulario y en el manuscrito (Capítulo 6).', textEn: 'All conflicts of interest (real, potential, or apparent) are declared in this form and in the manuscript (Chapter 6).' }
+                      { key: 'originalAndSimilarity', 
+                        text: 'El manuscrito es inédito y, en caso de derivar de un trabajo previo, la superposición textual no excede el 15% (Sección 3.2).', 
+                        textEn: 'The manuscript is unpublished and, if derived from previous work, the textual overlap does not exceed 15% (Section 3.2).' },
+                      { key: 'exclusiveSubmission', 
+                        text: 'El manuscrito no está siendo evaluado simultáneamente en otra revista (Sección 3.3).', 
+                        textEn: 'The manuscript is not being simultaneously evaluated in another journal (Section 3.3).' },
+                      { key: 'authorshipCriteria', 
+                        text: 'Todos los autores cumplen los 4 criterios de autoría del ICMJE y sus roles CRediT están declarados (Sección 4.1).', 
+                        textEn: 'All authors meet the 4 ICMJE authorship criteria and their CRediT roles are declared (Section 4.1).' },
+                      { key: 'dataAuthentic', 
+                        text: 'Los datos presentados son auténticos, no han sido manipulados y la investigación cumplió con los estándares éticos aplicables (Capítulo 5).', 
+                        textEn: 'The data presented are authentic, have not been manipulated, and the research complied with applicable ethical standards (Chapter 5).' },
+                      { key: 'informedConsent', 
+                        text: 'Se obtuvo el consentimiento/asentimiento informado cuando fue necesario y se declara en el manuscrito (Sección 5.2).', 
+                        textEn: 'Informed consent/assent was obtained when necessary and is declared in the manuscript (Section 5.2).' },
+                      { key: 'aiDisclosure', 
+                        text: 'El uso de cualquier herramienta de IA ha sido declarado en el formulario y en el manuscrito (Capítulo 7).', 
+                        textEn: 'The use of any AI tool has been declared in this form and in the manuscript (Chapter 7).' },
+                      { key: 'conflicts', 
+                        text: 'Todos los conflictos de interés (reales, potenciales o aparentes) están declarados en el formulario y en el manuscrito (Capítulo 6).', 
+                        textEn: 'All conflicts of interest (real, potential, or apparent) are declared in this form and in the manuscript (Chapter 6).' }
                     ].map(d => (
                       <label key={d.key} className="flex gap-4 cursor-pointer group">
                         <input
@@ -2341,7 +2267,7 @@ keywordsRawEn: formData.controlledKeywordsEn,
                   </div>
                 </div>
 
-                {/* LICENCIA CC-BY */}
+                {/* Licencia CC-BY */}
                 <div className="bg-[#E5E9F0] border border-[#0A1929] rounded-3xl p-8">
                   <label className="flex gap-4 cursor-pointer">
                     <input
@@ -2356,21 +2282,17 @@ keywordsRawEn: formData.controlledKeywordsEn,
                       </div>
                       <p className="text-xs text-[#1A2B3C] mt-1 font-serif">
                         {isSpanish
-                          ? 'Al marcar esta casilla, acepto que el artículo, si es aceptado, se publique bajo la licencia de acceso abierto CC BY 4.0. Esto permite a otros compartir y adaptar el material para cualquier propósito, incluso comercial, siempre que se otorgue la atribución adecuada. No cedo mis derechos de autor, solo otorgo una licencia no exclusiva a la revista (Sección 13.2).'
-                          : 'By checking this box, I agree that the article, if accepted, will be published under the CC BY 4.0 open access license. This allows others to share and adapt the material for any purpose, even commercially, as long as appropriate credit is given. I do not transfer my copyright, I only grant a non-exclusive license to the journal (Section 13.2).'}
+                          ? 'Al marcar esta casilla, acepto que el artículo, si es aceptado, se publique bajo la licencia de acceso abierto CC BY 4.0.'
+                          : 'By checking this box, I agree that the article, if accepted, will be published under the CC BY 4.0 open access license.'}
                       </p>
                     </div>
                   </label>
                 </div>
 
-                {/* AGRADECIMIENTOS */}
+                {/* Agradecimientos */}
                 <div>
                   <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-3">
                     {isSpanish ? 'Agradecimientos' : 'Acknowledgments'} (opcional)
-                    <HelpCapsule
-                      text="Personas que no cumplen criterios de autoría. NO incluir en el manuscrito anonimizado para la revisión."
-                      textEn="People who do not meet authorship criteria. Do NOT include in the anonymized manuscript for review."
-                    />
                   </label>
                   <textarea
                     name="acknowledgments"
@@ -2382,14 +2304,10 @@ keywordsRawEn: formData.controlledKeywordsEn,
                   />
                 </div>
 
-                {/* REVISORES EXCLUIDOS */}
+                {/* Revisores excluidos */}
                 <div>
                   <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-3">
                     {isSpanish ? 'Revisores sugeridos a excluir (opcional)' : 'Reviewers to exclude (optional)'}
-                    <HelpCapsule
-                      text="Nombres completos separados por punto y coma. No es una garantía absoluta."
-                      textEn="Full names separated by semicolon. Not an absolute guarantee."
-                    />
                   </label>
                   <input
                     type="text"
@@ -2401,16 +2319,14 @@ keywordsRawEn: formData.controlledKeywordsEn,
                   />
                 </div>
 
-                {/* ARCHIVO MANUSCRITO */}
+                {/* Archivo manuscrito */}
                 <div>
                   <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-3">
                     {isSpanish ? 'Manuscrito anonimizado' : 'Anonymized manuscript'} *
-                    <HelpCapsule
-                      text="Obligatorio: Word (.doc/.docx), máx. 10 MB. SIN autores, afiliaciones ni agradecimientos. No se aceptan working papers o informes no finalizados (Sección 2.4)."
-                      textEn="Required: Word (.doc/.docx), max 10 MB. WITHOUT authors, affiliations, or acknowledgments. Working papers or unfinished reports are not accepted (Section 2.4)."
-                    />
                   </label>
-                  <div className="border border-[#E0E7E9] rounded-3xl p-8 bg-[#F5F7FA]">
+                  <div className={`border rounded-3xl p-8 ${
+                    validationErrors.manuscript ? 'border-red-400 bg-red-50' : 'border-[#E0E7E9] bg-[#F5F7FA]'
+                  }`}>
                     <input
                       type="file"
                       accept=".doc,.docx"
@@ -2424,11 +2340,15 @@ keywordsRawEn: formData.controlledKeywordsEn,
                       </div>
                     )}
                   </div>
+                  {validationErrors.manuscript && (
+                    <p className="text-red-500 text-xs mt-1">{validationErrors.manuscript}</p>
+                  )}
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
 
+          {/* Botones de navegación */}
           <div className="flex justify-between items-center pt-8 border-t border-[#E0E7E9]">
             {currentStep > 1 && (
               <button
@@ -2464,16 +2384,20 @@ keywordsRawEn: formData.controlledKeywordsEn,
             </div>
           </div>
 
+          {/* Estado del envío */}
           {submitStatus && (
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="text-center text-sm font-medium mt-4 font-serif"
+              className={`text-center text-sm font-medium mt-4 font-serif ${
+                submitStatus.includes('❌') ? 'text-red-600' : 'text-green-600'
+              }`}
             >
               {submitStatus}
             </motion.p>
           )}
 
+          {/* Indicador de guardado automático */}
           <p className="text-center text-[10px] text-[#546E7A] font-mono tracking-widest">
             ⏺ {isSpanish ? 'Borrador guardado automáticamente cada 30 segundos' : 'Draft auto-saved every 30 seconds'}
           </p>
