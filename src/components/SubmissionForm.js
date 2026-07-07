@@ -1337,6 +1337,13 @@ const validateAndProceed = (step) => {
   setValidationErrors(errors);
   return Object.keys(errors).length === 0;
 };
+// ============ AQUÍ AGREGA LA VARIABLE STEPS ============
+const steps = [
+  { id: 1, title: isSpanish ? 'INFORMACIÓN DEL ARTÍCULO' : 'ARTICLE INFORMATION' },
+  { id: 2, title: isSpanish ? 'AUTORES Y ÉTICA' : 'AUTHORS & ETHICS' },
+  { id: 3, title: isSpanish ? 'DATOS, IA Y DECLARACIONES' : 'DATA, AI & DECLARATIONS' }
+];
+
 
 // Navegación entre pasos (CORREGIDA)
 const nextStep = () => {
@@ -1362,6 +1369,11 @@ const nextStep = () => {
   }
 };
 
+const prevStep = () => {
+  console.log(`[DEBUG] Retrocediendo del paso ${currentStep} al ${currentStep - 1}`);
+  setValidationErrors({});
+  setCurrentStep(prev => prev - 1);
+};
   // ============ FUNCIÓN DE ENVÍO CORREGIDA ============
   
   const handleSubmit = async (e) => {
@@ -1369,7 +1381,7 @@ const nextStep = () => {
     
     console.log('[DEBUG] Iniciando validación del paso 3...');
     
-    if (!validateStep(3)) {
+    if (!validateAndProceed(3)) {
       console.log('[DEBUG] Validación fallida:', validationErrors);
       alert(isSpanish 
         ? 'Completa todos los campos requeridos antes de enviar.' 
