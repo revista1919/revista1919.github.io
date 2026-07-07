@@ -340,98 +340,118 @@ const AREAS_TEMATICAS = {
   ]
 };
 // Configuración de vocabularios controlados por área
+/**
+ * Diccionario de Vocabularios Controlados y Tesauros por Área de Conocimiento.
+ * Proporciona el estándar de clasificación, formato esperado y URLs de búsqueda directa.
+ */
 const VOCABULARIO_POR_AREA = {
-  // Ciencias Exactas y Naturales → MeSH
+  // ==========================================
+  // CIENCIAS EXACTAS Y NATURALES
+  // ==========================================
+  
   "Matemáticas": {
-    vocabulario: "MeSH",
-    nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D009369: Neoplasms",
-    searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca tu término en MeSH y copia el código (ej. D009369) y el descriptor exacto."
+    vocabulario: "MSC",
+    nombre: "Mathematics Subject Classification (MSC2020)",
+    formato: "Código MSC: Término",
+    ejemplo: "11N05: Distribution of primes",
+    searchUrl: "https://mathscinet.ams.org/mathscinet/msc/msc2020.html",
+    instrucciones: "Busca tu código en la clasificación MSC2020 de la AMS y copia el código y descriptor exacto."
   },
+  
   "Física": {
-    vocabulario: "MeSH",
-    nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D010825: Physics",
-    searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+    vocabulario: "PhySH",
+    nombre: "Physics Subject Headings (APS)",
+    formato: "Término PhySH",
+    ejemplo: "Quantum mechanics",
+    searchUrl: "https://physh.aps.org/",
+    instrucciones: "PACS está obsoleto. Usa PhySH, el esquema actual de la American Physical Society, y copia el descriptor."
   },
+  
   "Química": {
-    vocabulario: "MeSH",
-    nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D002621: Chemistry",
-    searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+    vocabulario: "CAS",
+    nombre: "Chemical Abstracts Service Classification",
+    formato: "Número CAS: Término",
+    ejemplo: "78-10-4: Tetraethyl silicate",
+    searchUrl: "https://commonchemistry.cas.org/",
+    instrucciones: "Busca tu compuesto o sustancia en CAS Common Chemistry y copia el número de registro CAS."
   },
+  
   "Biología": {
     vocabulario: "MeSH",
     nombre: "Medical Subject Headings",
     formato: "Código MeSH: Término",
     ejemplo: "D001777: Biology",
     searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+    instrucciones: "MeSH es adecuado para biología por su amplia cobertura en ciencias de la vida. Busca y copia el código y descriptor."
   },
+  
   "Geología": {
-    vocabulario: "MeSH",
-    nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D005811: Geology",
-    searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+    vocabulario: "GeoRef",
+    nombre: "GeoRef Thesaurus (American Geosciences Institute)",
+    formato: "Término controlado GeoRef",
+    ejemplo: "Igneous rocks: Petrology",
+    searchUrl: "https://www.americangeosciences.org/georef/georef-thesaurus",
+    instrucciones: "Busca el descriptor controlado aceptado en el tesauro GeoRef del AGI."
   },
+  
   "Astronomía y Astrofísica": {
-    vocabulario: "MeSH",
-    nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D001260: Astronomy",
-    searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+    vocabulario: "UAT",
+    nombre: "Unified Astronomy Thesaurus",
+    formato: "Código UAT: Término",
+    ejemplo: "1087: Exoplanet astronomy",
+    searchUrl: "https://astrothesaurus.org/",
+    instrucciones: "Navega por el tesauro astronómico unificado y copia el código numérico y descriptor."
   },
+  
   "Ciencias Ambientales y Ecología": {
-    vocabulario: "MeSH",
-    nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D004463: Ecology",
-    searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+    vocabulario: "EnvThes",
+    nombre: "Environmental Thesaurus (LTER-Europe)",
+    formato: "Código EnvThes: Término",
+    ejemplo: "20286: Ecosystem services",
+    searchUrl: "https://vocabs.lter-europe.net/envthes/en/",
+    instrucciones: "Busca tu término en el tesauro ambiental europeo EnvThes y copia el identificador."
   },
+  
   "Oceanografía": {
-    vocabulario: "MeSH",
-    nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D009791: Oceanography",
-    searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+    vocabulario: "BODC",
+    nombre: "British Oceanographic Data Centre Vocabulary (NVS)",
+    formato: "Código BODC: Término",
+    ejemplo: "P021: Ocean circulation",
+    searchUrl: "https://vocab.nerc.ac.uk/",
+    instrucciones: "Navega por el NERC Vocabulary Server y copia el código alfanumérico."
   },
+  
   "Meteorología y Ciencias Atmosféricas": {
-    vocabulario: "MeSH",
-    nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D008795: Meteorology",
-    searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+    vocabulario: "WMO",
+    nombre: "World Meteorological Organization Vocabulary",
+    formato: "Código WMO: Término",
+    ejemplo: "3720: Atmospheric pressure",
+    searchUrl: "https://codes.wmo.int/",
+    instrucciones: "Busca tu código en los estándares de la Organización Meteorológica Mundial."
   },
+  
   "Paleontología": {
-    vocabulario: "MeSH",
-    nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D010163: Paleontology",
-    searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+    vocabulario: "PBDB",
+    nombre: "Paleobiology Database Taxonomy",
+    formato: "Código PBDB: Término",
+    ejemplo: "52822: Tyrannosauridae",
+    searchUrl: "https://paleobiodb.org/navigator/",
+    instrucciones: "Busca tu taxón o grupo fósil en el navegador de la base de datos paleobiológica y copia el identificador."
   },
 
-  // Ciencias de la Salud → MeSH
+  // ==========================================
+  // CIENCIAS DE LA SALUD
+  // ==========================================
+  
   "Medicina General e Interna": {
     vocabulario: "MeSH",
     nombre: "Medical Subject Headings",
     formato: "Código MeSH: Término",
     ejemplo: "D008112: Internal Medicine",
     searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+    instrucciones: "MeSH es el estándar internacional para ciencias de la salud. Busca y copia el código y descriptor."
   },
+  
   "Salud Pública y Epidemiología": {
     vocabulario: "MeSH",
     nombre: "Medical Subject Headings",
@@ -440,6 +460,7 @@ const VOCABULARIO_POR_AREA = {
     searchUrl: "https://meshb.nlm.nih.gov/search",
     instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
   },
+  
   "Enfermería": {
     vocabulario: "MeSH",
     nombre: "Medical Subject Headings",
@@ -448,6 +469,7 @@ const VOCABULARIO_POR_AREA = {
     searchUrl: "https://meshb.nlm.nih.gov/search",
     instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
   },
+  
   "Nutrición y Dietética": {
     vocabulario: "MeSH",
     nombre: "Medical Subject Headings",
@@ -456,6 +478,7 @@ const VOCABULARIO_POR_AREA = {
     searchUrl: "https://meshb.nlm.nih.gov/search",
     instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
   },
+  
   "Farmacología y Farmacia": {
     vocabulario: "MeSH",
     nombre: "Medical Subject Headings",
@@ -464,6 +487,7 @@ const VOCABULARIO_POR_AREA = {
     searchUrl: "https://meshb.nlm.nih.gov/search",
     instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
   },
+  
   "Odontología": {
     vocabulario: "MeSH",
     nombre: "Medical Subject Headings",
@@ -472,6 +496,7 @@ const VOCABULARIO_POR_AREA = {
     searchUrl: "https://meshb.nlm.nih.gov/search",
     instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
   },
+  
   "Kinesiología y Fisioterapia": {
     vocabulario: "MeSH",
     nombre: "Medical Subject Headings",
@@ -480,6 +505,7 @@ const VOCABULARIO_POR_AREA = {
     searchUrl: "https://meshb.nlm.nih.gov/search",
     instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
   },
+  
   "Tecnología Médica y Bioanálisis": {
     vocabulario: "MeSH",
     nombre: "Medical Subject Headings",
@@ -488,6 +514,7 @@ const VOCABULARIO_POR_AREA = {
     searchUrl: "https://meshb.nlm.nih.gov/search",
     instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
   },
+  
   "Veterinaria": {
     vocabulario: "MeSH",
     nombre: "Medical Subject Headings",
@@ -497,63 +524,73 @@ const VOCABULARIO_POR_AREA = {
     instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
   },
 
-  // Ingeniería y Tecnología → ACM
+  // ==========================================
+  // INGENIERÍA Y TECNOLOGÍA
+  // ==========================================
+  
   "Ingeniería Civil": {
-    vocabulario: "ACM",
-    nombre: "ACM Computing Classification System",
-    formato: "Código ACM: Término",
-    ejemplo: "CCS2012.10002944: Computing in civil engineering",
-    searchUrl: "https://dl.acm.org/ccs",
-    instrucciones: "Navega por la clasificación ACM y copia el código y descriptor más cercano a tu tema."
+    vocabulario: "Ei",
+    nombre: "Engineering Index Thesaurus (Compendex)",
+    formato: "Código Ei: Término",
+    ejemplo: "405.1: Construction management",
+    searchUrl: "https://www.engineeringvillage.com/",
+    instrucciones: "Busca tu término en el Engineering Index Thesaurus de Compendex y copia el código numérico."
   },
+  
   "Ingeniería Industrial y de Sistemas": {
-    vocabulario: "ACM",
-    nombre: "ACM Computing Classification System",
-    formato: "Código ACM: Término",
-    ejemplo: "CCS2012.10010405: Systems engineering",
-    searchUrl: "https://dl.acm.org/ccs",
-    instrucciones: "Navega por la clasificación ACM y copia el código y descriptor más cercano."
+    vocabulario: "IIE",
+    nombre: "Industrial Engineering Terminology (IISE)",
+    formato: "Código IIE: Término",
+    ejemplo: "4.2.1: Supply chain optimization",
+    searchUrl: "https://www.iise.org/",
+    instrucciones: "Usa la terminología estándar de ingeniería industrial del Institute of Industrial and Systems Engineers."
   },
+  
   "Ingeniería Mecánica": {
-    vocabulario: "ACM",
-    nombre: "ACM Computing Classification System",
-    formato: "Código ACM: Término",
-    ejemplo: "CCS2012.10010405: Computer-aided engineering",
-    searchUrl: "https://dl.acm.org/ccs",
-    instrucciones: "Navega por la clasificación ACM y copia el código y descriptor más cercano."
+    vocabulario: "ASME",
+    nombre: "ASME Subject Classification",
+    formato: "Código ASME: Término",
+    ejemplo: "10-01: Thermodynamics",
+    searchUrl: "https://www.asme.org/",
+    instrucciones: "Navega por las áreas temáticas de la American Society of Mechanical Engineers."
   },
+  
   "Ingeniería Eléctrica y Electrónica": {
-    vocabulario: "ACM",
-    nombre: "ACM Computing Classification System",
-    formato: "Código ACM: Término",
-    ejemplo: "CCS2012.10002726: Embedded systems",
-    searchUrl: "https://dl.acm.org/ccs",
-    instrucciones: "Navega por la clasificación ACM y copia el código y descriptor más cercano."
+    vocabulario: "IEEE",
+    nombre: "IEEE Thesaurus",
+    formato: "Término normalizado IEEE",
+    ejemplo: "B6210L: Computer communications",
+    searchUrl: "https://www.ieee.org/publications/services/thesaurus-access-page.html",
+    instrucciones: "Busca tu término técnico en el tesauro oficial del IEEE."
   },
+  
   "Ingeniería Química y Biotecnología": {
-    vocabulario: "ACM",
-    nombre: "ACM Computing Classification System",
-    formato: "Código ACM: Término",
-    ejemplo: "CCS2012.10003041: Computational biology",
-    searchUrl: "https://dl.acm.org/ccs",
-    instrucciones: "Navega por la clasificación ACM y copia el código y descriptor más cercano."
+    vocabulario: "IChemE",
+    nombre: "Institution of Chemical Engineers Thesaurus",
+    formato: "Código IChemE: Término",
+    ejemplo: "BIO-04: Bioprocessing",
+    searchUrl: "https://www.icheme.org/",
+    instrucciones: "Usa la clasificación temática de ingeniería química de IChemE."
   },
+  
   "Ingeniería en Computación e Informática": {
     vocabulario: "ACM",
     nombre: "ACM Computing Classification System",
     formato: "Código ACM: Término",
     ejemplo: "CCS2012.10003116: Software engineering",
     searchUrl: "https://dl.acm.org/ccs",
-    instrucciones: "Navega por la clasificación ACM y copia el código y descriptor más cercano."
+    instrucciones: "ACM CCS es el estándar jerárquico global para ciencias de la computación. Navega y copia el código."
   },
+  
   "Ciencia de Datos e Inteligencia Artificial": {
     vocabulario: "ACM",
     nombre: "ACM Computing Classification System",
     formato: "Código ACM: Término",
     ejemplo: "CCS2012.10010179: Machine learning",
     searchUrl: "https://dl.acm.org/ccs",
-    instrucciones: "Navega por la clasificación ACM y copia el código y descriptor más cercano."
+    instrucciones: "ACM CCS cubre ramas de Machine Learning e Inteligencia Artificial extensamente. Navega y copia el código."
   },
+  
   "Robótica y Automatización": {
     vocabulario: "ACM",
     nombre: "ACM Computing Classification System",
@@ -562,40 +599,47 @@ const VOCABULARIO_POR_AREA = {
     searchUrl: "https://dl.acm.org/ccs",
     instrucciones: "Navega por la clasificación ACM y copia el código y descriptor más cercano."
   },
+  
   "Ingeniería de Materiales y Nanotecnología": {
-    vocabulario: "ACM",
-    nombre: "ACM Computing Classification System",
-    formato: "Código ACM: Término",
-    ejemplo: "CCS2012.10003128: Nanotechnology",
-    searchUrl: "https://dl.acm.org/ccs",
-    instrucciones: "Navega por la clasificación ACM y copia el código y descriptor más cercano."
+    vocabulario: "ASM",
+    nombre: "ASM International Materials Thesaurus",
+    formato: "Término controlado ASM",
+    ejemplo: "Nanocomposites: Materials science",
+    searchUrl: "https://www.asminternational.org/",
+    instrucciones: "Busca tu material o proceso en el vocabulario controlado de ASM International."
   },
+  
   "Ingeniería Aeroespacial": {
-    vocabulario: "ACM",
-    nombre: "ACM Computing Classification System",
-    formato: "Código ACM: Término",
-    ejemplo: "CCS2012.10010535: Avionics",
-    searchUrl: "https://dl.acm.org/ccs",
-    instrucciones: "Navega por la clasificación ACM y copia el código y descriptor más cercano."
+    vocabulario: "NASA",
+    nombre: "NASA Thesaurus",
+    formato: "Término controlado NASA",
+    ejemplo: "Aircraft design: Aeronautics",
+    searchUrl: "https://sti.nasa.gov/nasa-thesaurus/",
+    instrucciones: "Busca tu término en el tesauro aeroespacial de la NASA."
   },
+  
   "Energías Renovables y Sostenibilidad": {
-    vocabulario: "ACM",
-    nombre: "ACM Computing Classification System",
-    formato: "Código ACM: Término",
-    ejemplo: "CCS2012.10003048: Green computing",
-    searchUrl: "https://dl.acm.org/ccs",
-    instrucciones: "Navega por la clasificación ACM y copia el código y descriptor más cercano."
+    vocabulario: "ETDE",
+    nombre: "Energy Technology Data Exchange Thesaurus",
+    formato: "Término controlado ETDE",
+    ejemplo: "Solar energy: Photovoltaics",
+    searchUrl: "https://www.etde.org/",
+    instrucciones: "Busca tu término en el tesauro de tecnología energética ETDE."
   },
 
-  // Ciencias Sociales → JEL
+  // ==========================================
+  // CIENCIAS SOCIALES
+  // ==========================================
+  
   "Sociología": {
     vocabulario: "JEL",
     nombre: "JEL Classification System (Journal of Economic Literature)",
     formato: "Código JEL: Término",
     ejemplo: "Z13: Economic Sociology",
     searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
-    instrucciones: "Busca el código JEL que mejor describa tu tema. Ej: Z13 para sociología económica, I31 para bienestar general."
+    instrucciones: "Busca el código JEL que mejor describa tu tema sociológico. Ej: Z13 para sociología económica, I31 para bienestar general."
   },
+  
   "Antropología y Arqueología": {
     vocabulario: "JEL",
     nombre: "JEL Classification System",
@@ -604,14 +648,16 @@ const VOCABULARIO_POR_AREA = {
     searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
     instrucciones: "Busca el código JEL más cercano a tu tema de antropología económica o cultural."
   },
+  
   "Psicología": {
-    vocabulario: "JEL",
-    nombre: "JEL Classification System",
-    formato: "Código JEL: Término",
-    ejemplo: "D91: Micro-Based Behavioral Economics",
-    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
-    instrucciones: "Busca el código JEL más cercano. Usa D (Microeconomía) o I (Salud) para psicología."
+    vocabulario: "APA",
+    nombre: "APA Thesaurus of Psychological Index Terms",
+    formato: "Término indexado APA",
+    ejemplo: "Cognitive Processes: Memory",
+    searchUrl: "https://psycnet.apa.org/thesaurus/",
+    instrucciones: "Busca tu término de indexación en el tesauro oficial de la APA (PsycINFO)."
   },
+  
   "Economía y Negocios": {
     vocabulario: "JEL",
     nombre: "JEL Classification System",
@@ -620,6 +666,7 @@ const VOCABULARIO_POR_AREA = {
     searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
     instrucciones: "Selecciona los códigos JEL que mejor describan tu investigación económica."
   },
+  
   "Ciencias Políticas y Relaciones Internacionales": {
     vocabulario: "JEL",
     nombre: "JEL Classification System",
@@ -628,22 +675,25 @@ const VOCABULARIO_POR_AREA = {
     searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
     instrucciones: "Busca códigos JEL en categorías F (Economía Internacional) o H (Economía Pública)."
   },
+  
   "Derecho": {
-    vocabulario: "JEL",
-    nombre: "JEL Classification System",
-    formato: "Código JEL: Término",
-    ejemplo: "K00: Law and Economics",
-    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
-    instrucciones: "Usa la categoría K (Law and Economics) del sistema JEL."
+    vocabulario: "LCSH",
+    nombre: "Library of Congress Subject Headings (Law)",
+    formato: "Código/Descriptor LCSH",
+    ejemplo: "KF385: Common law",
+    searchUrl: "https://id.loc.gov/authorities/subjects.html",
+    instrucciones: "Busca en los encabezamientos temáticos oficiales de la Biblioteca del Congreso de EE.UU."
   },
+  
   "Geografía Humana y Ordenamiento Territorial": {
     vocabulario: "JEL",
     nombre: "JEL Classification System",
     formato: "Código JEL: Término",
     ejemplo: "R10: General Regional Economics",
     searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
-    instrucciones: "Usa categorías R (Economía Regional) o Q (Economía de Recursos)."
+    instrucciones: "Usa categorías R (Economía Regional) o Q (Economía de Recursos) del sistema JEL."
   },
+  
   "Estudios de Género": {
     vocabulario: "JEL",
     nombre: "JEL Classification System",
@@ -652,32 +702,38 @@ const VOCABULARIO_POR_AREA = {
     searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
     instrucciones: "Busca en categorías J (Economía Laboral) para estudios de género."
   },
+  
   "Comunicación Social y Periodismo": {
-    vocabulario: "JEL",
-    nombre: "JEL Classification System",
-    formato: "Código JEL: Término",
-    ejemplo: "L82: Entertainment; Media",
-    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
-    instrucciones: "Busca en categoría L (Organización Industrial) para medios y comunicación."
+    vocabulario: "CIOS",
+    nombre: "Communication Institute for Online Scholarship Thesaurus",
+    formato: "Término normalizado CIOS",
+    ejemplo: "Mass media effects: Journalism",
+    searchUrl: "https://www.cios.org/",
+    instrucciones: "Navega por las categorías controladas especializadas en comunicación del CIOS."
   },
+  
   "Educación y Pedagogía": {
-    vocabulario: "JEL",
-    nombre: "JEL Classification System",
-    formato: "Código JEL: Término",
-    ejemplo: "I20: Education and Research Institutions",
-    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
-    instrucciones: "Usa categoría I (Salud, Educación y Bienestar) del sistema JEL."
+    vocabulario: "ERIC",
+    nombre: "Education Resources Information Center Thesaurus",
+    formato: "Término Descriptor ERIC",
+    ejemplo: "Educational technology: Pedagogy",
+    searchUrl: "https://eric.ed.gov/?ti=all",
+    instrucciones: "Busca e identifica descriptores específicos indexados en la base de datos ERIC."
   },
+  
   "Trabajo Social": {
     vocabulario: "JEL",
     nombre: "JEL Classification System",
     formato: "Código JEL: Término",
     ejemplo: "I38: Welfare, Well-Being, and Poverty",
     searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
-    instrucciones: "Busca en categorías I (Bienestar) o J (Economía Laboral)."
+    instrucciones: "Busca en categorías I (Bienestar) o J (Economía Laboral) del sistema JEL."
   },
 
-  // Humanidades → UNESCO Thesaurus
+  // ==========================================
+  // HUMANIDADES
+  // ==========================================
+  
   "Historia": {
     vocabulario: "UNESCO",
     nombre: "UNESCO Thesaurus",
@@ -686,6 +742,7 @@ const VOCABULARIO_POR_AREA = {
     searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
     instrucciones: "Navega por el tesauro de la UNESCO y copia el código numérico y el descriptor."
   },
+  
   "Filosofía": {
     vocabulario: "UNESCO",
     nombre: "UNESCO Thesaurus",
@@ -694,6 +751,7 @@ const VOCABULARIO_POR_AREA = {
     searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
     instrucciones: "Navega por el tesauro de la UNESCO y copia el código y descriptor."
   },
+  
   "Lingüística y Filología": {
     vocabulario: "UNESCO",
     nombre: "UNESCO Thesaurus",
@@ -702,6 +760,7 @@ const VOCABULARIO_POR_AREA = {
     searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
     instrucciones: "Navega por el tesauro de la UNESCO y copia el código y descriptor."
   },
+  
   "Literatura": {
     vocabulario: "UNESCO",
     nombre: "UNESCO Thesaurus",
@@ -710,6 +769,7 @@ const VOCABULARIO_POR_AREA = {
     searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
     instrucciones: "Navega por el tesauro de la UNESCO y copia el código y descriptor."
   },
+  
   "Estudios Clásicos": {
     vocabulario: "UNESCO",
     nombre: "UNESCO Thesaurus",
@@ -718,6 +778,7 @@ const VOCABULARIO_POR_AREA = {
     searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
     instrucciones: "Navega por el tesauro de la UNESCO y copia el código y descriptor."
   },
+  
   "Teología y Ciencias de la Religión": {
     vocabulario: "UNESCO",
     nombre: "UNESCO Thesaurus",
@@ -726,6 +787,7 @@ const VOCABULARIO_POR_AREA = {
     searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
     instrucciones: "Navega por el tesauro de la UNESCO y copia el código y descriptor."
   },
+  
   "Estudios Culturales": {
     vocabulario: "UNESCO",
     nombre: "UNESCO Thesaurus",
@@ -734,66 +796,74 @@ const VOCABULARIO_POR_AREA = {
     searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
     instrucciones: "Navega por el tesauro de la UNESCO y copia el código y descriptor."
   },
+  
   "Arte, Música y Cine": {
-    vocabulario: "UNESCO",
-    nombre: "UNESCO Thesaurus",
-    formato: "Código UNESCO: Término",
-    ejemplo: "6.40: Arte",
-    searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
-    instrucciones: "Navega por el tesauro de la UNESCO y copia el código y descriptor."
+    vocabulario: "AAT",
+    nombre: "Art & Architecture Thesaurus (Getty Research Institute)",
+    formato: "Código AAT: Término",
+    ejemplo: "300033618: Oil paintings",
+    searchUrl: "https://www.getty.edu/research/tools/vocabularies/aat/",
+    instrucciones: "Busca descriptores artísticos en la base de datos del Getty Research Institute."
   },
+  
   "Arquitectura y Urbanismo": {
-    vocabulario: "UNESCO",
-    nombre: "UNESCO Thesaurus",
-    formato: "Código UNESCO: Término",
-    ejemplo: "6.45: Arquitectura",
-    searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
-    instrucciones: "Navega por el tesauro de la UNESCO y copia el código y descriptor."
+    vocabulario: "AAT",
+    nombre: "Art & Architecture Thesaurus (Getty Research Institute)",
+    formato: "Código AAT: Término",
+    ejemplo: "300008125: Skyscrapers",
+    searchUrl: "https://www.getty.edu/research/tools/vocabularies/aat/",
+    instrucciones: "Busca estructuras o conceptos espaciales en la base controlada del Getty."
   },
 
-  // Ciencias Agropecuarias → MeSH
+  // ==========================================
+  // CIENCIAS AGROPECUARIAS
+  // ==========================================
+  
   "Agronomía y Producción Agrícola": {
-    vocabulario: "MeSH",
-    nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D000383: Agriculture",
-    searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca tu término en MeSH. Usa también Agrovoc si es muy específico."
+    vocabulario: "AGROVOC",
+    nombre: "FAO Agricultural Thesaurus (AGROVOC)",
+    formato: "Código AGROVOC: Término",
+    ejemplo: "c_867: Crop rotation",
+    searchUrl: "https://agrovoc.fao.org/browse/agrovoc/en/",
+    instrucciones: "AGROVOC es el estándar para ciencias agrícolas de la FAO. Busca y copia el identificador."
   },
+  
   "Ciencias Forestales": {
-    vocabulario: "MeSH",
-    nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D005560: Forestry",
-    searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca tu término en MeSH y copia el código y descriptor."
+    vocabulario: "AGROVOC",
+    nombre: "FAO Agricultural Thesaurus (AGROVOC)",
+    formato: "Código AGROVOC: Término",
+    ejemplo: "c_3014: Forest ecology",
+    searchUrl: "https://agrovoc.fao.org/browse/agrovoc/en/",
+    instrucciones: "AGROVOC cubre ciencias forestales. Busca tu término y copia el identificador."
   },
+  
   "Acuicultura y Pesca": {
-    vocabulario: "MeSH",
-    nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D017742: Aquaculture",
-    searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca tu término en MeSH y copia el código y descriptor."
+    vocabulario: "ASFA",
+    nombre: "Aquatic Sciences and Fisheries Abstracts Thesaurus",
+    formato: "Código ASFA: Término",
+    ejemplo: "Q5 01521: Fish culture",
+    searchUrl: "https://www.fao.org/fishery/asfa/en",
+    instrucciones: "Busca en el tesauro ASFA de la FAO para ciencias acuáticas y pesqueras."
   },
+  
   "Zootecnia y Producción Animal": {
-    vocabulario: "MeSH",
-    nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D000825: Animal Husbandry",
-    searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca tu término en MeSH y copia el código y descriptor."
+    vocabulario: "AGROVOC",
+    nombre: "FAO Agricultural Thesaurus (AGROVOC)",
+    formato: "Código AGROVOC: Término",
+    ejemplo: "c_433: Animal breeding",
+    searchUrl: "https://agrovoc.fao.org/browse/agrovoc/en/",
+    instrucciones: "Busca tu término en AGROVOC para producción animal y zootecnia."
   },
+  
   "Ingeniería de Alimentos": {
-    vocabulario: "MeSH",
-    nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D005494: Food Technology",
-    searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca tu término en MeSH y copia el código y descriptor."
+    vocabulario: "FSTA",
+    nombre: "Food Science and Technology Abstracts Thesaurus",
+    formato: "Código FSTA: Término",
+    ejemplo: "Q04: Food microbiology",
+    searchUrl: "https://www.ifis.org/fsta",
+    instrucciones: "Usa el tesauro de ciencia y tecnología de alimentos FSTA del IFIS."
   }
 };
-
 // Componente para palabras clave con vocabulario controlado
 const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language }) => {
   const isSpanish = language === 'es';
@@ -865,7 +935,7 @@ const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language })
             </a>
             <span className="text-[#5A6B7A] text-xs mx-2">·</span>
 <a
-  href={isSpanish ? 'https://www.revistacienciasestudiantes.com/policies.html#clasificacion' : 'https://www.revistacienciasestudiantes.com/policiesEN.html#classification'}
+  href={isSpanish ? 'https://www.revistacienciasestudiantes.com/policies.html#alcance' : 'https://www.revistacienciasestudiantes.com/policiesEN.html#scope'}
   target="_blank"
   rel="noopener noreferrer"
   className="inline-flex items-center gap-1 text-[#0A1929] hover:text-[#C0A86A] text-xs font-medium transition-colors font-['Lora']"
@@ -1721,7 +1791,7 @@ keywordsRawEn: formData.controlledKeywordsEn,
     ? 'El área determina el vocabulario controlado para las palabras clave. Consulte la '
     : 'The area determines the controlled vocabulary for keywords. See the '}
   <a
-    href={isSpanish ? 'https://www.revistacienciasestudiantes.com/policies.html#clasificacion' : 'https://www.revistacienciasestudiantes.com/policiesEN.html#classification'}
+    href={isSpanish ? 'https://www.revistacienciasestudiantes.com/policies.html#alcance' : 'https://www.revistacienciasestudiantes.com/policiesEN.html#scope'}
     target="_blank"
     rel="noopener noreferrer"
     className="text-[#0A1929] underline hover:text-[#B22234] transition-colors"
