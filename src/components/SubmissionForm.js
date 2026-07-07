@@ -1486,37 +1486,7 @@ const nextStep = () => {
     }
   };
 
-  // Navegación entre pasos
-  const nextStep = () => {
-    console.log(`[DEBUG] Intentando avanzar del paso ${currentStep} al ${currentStep + 1}`);
-    
-    if (validateStep(currentStep)) {
-      console.log(`[DEBUG] Validación exitosa, avanzando al paso ${currentStep + 1}`);
-      setCurrentStep(prev => prev + 1);
-    } else {
-      console.log('[DEBUG] Validación fallida:', validationErrors);
-      
-      // Construir mensaje de error detallado
-      const errorMessages = Object.values(validationErrors);
-      const errorMessage = errorMessages.join('\n• ');
-      
-      alert(isSpanish 
-        ? `Completa los campos requeridos antes de continuar:\n• ${errorMessage}` 
-        : `Complete required fields before continuing:\n• ${errorMessage}`);
-    }
-  };
-
-  const prevStep = () => {
-    console.log(`[DEBUG] Retrocediendo del paso ${currentStep} al ${currentStep - 1}`);
-    setCurrentStep(prev => prev - 1);
-  };
-
-  // Configuración de pasos
-  const steps = [
-    { id: 1, title: isSpanish ? 'INFORMACIÓN DEL ARTÍCULO' : 'ARTICLE INFORMATION' },
-    { id: 2, title: isSpanish ? 'AUTORES Y ÉTICA' : 'AUTHORS & ETHICS' },
-    { id: 3, title: isSpanish ? 'DATOS, IA Y DECLARACIONES' : 'DATA, AI & DECLARATIONS' }
-  ];
+  
 
   // ============ PANTALLA DE ÉXITO ============
   
