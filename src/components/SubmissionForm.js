@@ -1191,107 +1191,176 @@ export default function SubmissionForm({ user, onSuccess }) {
 
   // ============ FUNCIÓN DE VALIDACIÓN CORREGIDA ============
   
-  const validateStep = (step) => {
-    const errors = {};
+ // ============ FUNCIÓN DE VALIDACIÓN CORREGIDA (SIN EFECTOS SECUNDARIOS) ============
+
+// Función pura para validar sin modificar estado (para usar en el renderizado)
+const isStepValid = (step) => {
+  switch (step) {
+    case 1:
+      return formData.title.trim() &&
+        formData.abstract.trim() &&
+        formData.controlledKeywords.length >= 2 && 
+        formData.controlledKeywords.length <= 6 &&
+        formData.area.trim() &&
+        formData.articleType;
     
-    switch (step) {
-      case 1:
-        if (!formData.title.trim()) {
-          errors.title = isSpanish ? 'El título es obligatorio' : 'Title is required';
-        }
-        if (!formData.abstract.trim()) {
-          errors.abstract = isSpanish ? 'El resumen es obligatorio' : 'Abstract is required';
-        }
-        if (!formData.controlledKeywords || formData.controlledKeywords.length < 2) {
-          errors.controlledKeywords = isSpanish 
-            ? 'Debes agregar al menos 2 palabras clave' 
-            : 'You must add at least 2 keywords';
-        }
-        if (formData.controlledKeywords && formData.controlledKeywords.length > 6) {
-          errors.controlledKeywords = isSpanish 
-            ? 'Máximo 6 palabras clave permitidas' 
-            : 'Maximum 6 keywords allowed';
-        }
-        if (!formData.area.trim()) {
-          errors.area = isSpanish ? 'El área temática es obligatoria' : 'Subject area is required';
-        }
-        if (!formData.articleType) {
-          errors.articleType = isSpanish ? 'El tipo de artículo es obligatorio' : 'Article type is required';
-        }
-        break;
-        
-      case 2:
-        formData.authors.forEach((author, index) => {
-          if (!author.firstName.trim()) {
-            errors[`author_${index}_firstName`] = isSpanish ? 'Nombre requerido' : 'First name required';
-          }
-          if (!author.lastName.trim()) {
-            errors[`author_${index}_lastName`] = isSpanish ? 'Apellido requerido' : 'Last name required';
-          }
-          if (!author.email.trim()) {
-            errors[`author_${index}_email`] = isSpanish ? 'Email requerido' : 'Email required';
-          }
-          if (!author.institution.trim()) {
-            errors[`author_${index}_institution`] = isSpanish ? 'Institución requerida' : 'Institution required';
-          }
-          if (author.isMinor) {
-            if (!author.guardianName.trim()) {
-              errors[`author_${index}_guardian`] = isSpanish 
-                ? 'Nombre del tutor requerido para autor menor' 
-                : 'Guardian name required for minor author';
-            }
-            if (author.consentMethod === 'none') {
-              errors[`author_${index}_consent`] = isSpanish 
-                ? 'Debes seleccionar un método de consentimiento' 
-                : 'You must select a consent method';
-            }
-            if (author.consentMethod === 'upload' && !author.consentFile) {
-              errors[`author_${index}_consentFile`] = isSpanish 
-                ? 'Debes subir el formulario firmado' 
-                : 'You must upload the signed form';
-            }
-          }
-        });
-        break;
-        
-      case 3:
-        if (!allDeclarationsAccepted()) {
-          errors.declarations = isSpanish 
-            ? 'Debes aceptar todas las declaraciones obligatorias' 
-            : 'You must accept all mandatory declarations';
-        }
-        if (!formData.manuscript && !formData.manuscriptName) {
-          errors.manuscript = isSpanish 
-            ? 'Debes subir el manuscrito' 
-            : 'You must upload the manuscript';
-        }
-        if (!formData.dataAvailability || !formData.dataAvailability.trim()) {
-          errors.dataAvailability = isSpanish 
-            ? 'La declaración de disponibilidad de datos es obligatoria' 
-            : 'Data availability statement is required';
-        }
-        if (formData.requiresEthicsApproval === 'yes' && !formData.ethicsCommitteeName.trim()) {
-          errors.ethicsCommittee = isSpanish 
-            ? 'Debes especificar el comité de ética' 
-            : 'You must specify the ethics committee';
-        }
-        if (formData.aiUsed === 'yes') {
+    case 2:
+      const basicOk = formData.authors.every(a =>
+        a.firstName.trim() && a.lastName.trim() && a.email.trim() && a.institution.trim()
+      );
+      const minorsOk = formData.authors
+        .filter(a => a.isMinor)
+        .every(a =>
+          a.guardianName.trim() &&
+          a.consentMethod !== 'none' &&
+          (a.consentMethod !== 'upload' || !!a.consentFile)
+        );
+      return basicOk && minorsOk;
+    
+    case 3:
+      let isValid = allDeclarationsAccepted() && 
+             (formData.manuscript || formData.manuscriptName) && 
+             formData.dataAvailability && formData.dataAvailability.trim() !== '';
+      if (formData.requiresEthicsApproval === 'yes' && !formData.ethicsCommitteeName.trim()) {
+          isValid = false;
+      }
+      if (formData.aiUsed === 'yes') {
           const hasValidTool = formData.aiTools.some(tool => tool.name.trim() && tool.purpose.trim());
-          if (!hasValidTool) {
-            errors.aiTools = isSpanish 
-              ? 'Debes especificar al menos una herramienta de IA con su propósito' 
-              : 'You must specify at least one AI tool with its purpose';
+          if (!hasValidTool) isValid = false;
+      }
+      return isValid;
+    
+    default:
+      return true;
+  }
+};
+
+// Función de validación con efectos secundarios (solo para navegación y envío)
+const validateAndProceed = (step) => {
+  const errors = {};
+  
+  switch (step) {
+    case 1:
+      if (!formData.title.trim()) {
+        errors.title = isSpanish ? 'El título es obligatorio' : 'Title is required';
+      }
+      if (!formData.abstract.trim()) {
+        errors.abstract = isSpanish ? 'El resumen es obligatorio' : 'Abstract is required';
+      }
+      if (!formData.controlledKeywords || formData.controlledKeywords.length < 2) {
+        errors.controlledKeywords = isSpanish 
+          ? 'Debes agregar al menos 2 palabras clave (mínimo 2)' 
+          : 'You must add at least 2 keywords (minimum 2)';
+      }
+      if (formData.controlledKeywords && formData.controlledKeywords.length > 6) {
+        errors.controlledKeywords = isSpanish 
+          ? 'Máximo 6 palabras clave permitidas' 
+          : 'Maximum 6 keywords allowed';
+      }
+      if (!formData.area.trim()) {
+        errors.area = isSpanish ? 'El área temática es obligatoria' : 'Subject area is required';
+      }
+      if (!formData.articleType) {
+        errors.articleType = isSpanish ? 'El tipo de artículo es obligatorio' : 'Article type is required';
+      }
+      break;
+      
+    case 2:
+      formData.authors.forEach((author, index) => {
+        if (!author.firstName.trim()) {
+          errors[`author_${index}_firstName`] = isSpanish ? 'Nombre requerido' : 'First name required';
+        }
+        if (!author.lastName.trim()) {
+          errors[`author_${index}_lastName`] = isSpanish ? 'Apellido requerido' : 'Last name required';
+        }
+        if (!author.email.trim()) {
+          errors[`author_${index}_email`] = isSpanish ? 'Email requerido' : 'Email required';
+        }
+        if (!author.institution.trim()) {
+          errors[`author_${index}_institution`] = isSpanish ? 'Institución requerida' : 'Institution required';
+        }
+        if (author.isMinor) {
+          if (!author.guardianName.trim()) {
+            errors[`author_${index}_guardian`] = isSpanish 
+              ? 'Nombre del tutor requerido para autor menor' 
+              : 'Guardian name required for minor author';
+          }
+          if (author.consentMethod === 'none') {
+            errors[`author_${index}_consent`] = isSpanish 
+              ? 'Debes seleccionar un método de consentimiento' 
+              : 'You must select a consent method';
+          }
+          if (author.consentMethod === 'upload' && !author.consentFile) {
+            errors[`author_${index}_consentFile`] = isSpanish 
+              ? 'Debes subir el formulario firmado' 
+              : 'You must upload the signed form';
           }
         }
-        break;
-        
-      default:
-        break;
-    }
+      });
+      break;
+      
+    case 3:
+      if (!allDeclarationsAccepted()) {
+        errors.declarations = isSpanish 
+          ? 'Debes aceptar todas las declaraciones obligatorias' 
+          : 'You must accept all mandatory declarations';
+      }
+      if (!formData.manuscript && !formData.manuscriptName) {
+        errors.manuscript = isSpanish 
+          ? 'Debes subir el manuscrito' 
+          : 'You must upload the manuscript';
+      }
+      if (!formData.dataAvailability || !formData.dataAvailability.trim()) {
+        errors.dataAvailability = isSpanish 
+          ? 'La declaración de disponibilidad de datos es obligatoria' 
+          : 'Data availability statement is required';
+      }
+      if (formData.requiresEthicsApproval === 'yes' && !formData.ethicsCommitteeName.trim()) {
+        errors.ethicsCommittee = isSpanish 
+          ? 'Debes especificar el comité de ética' 
+          : 'You must specify the ethics committee';
+      }
+      if (formData.aiUsed === 'yes') {
+        const hasValidTool = formData.aiTools.some(tool => tool.name.trim() && tool.purpose.trim());
+        if (!hasValidTool) {
+          errors.aiTools = isSpanish 
+            ? 'Debes especificar al menos una herramienta de IA con su propósito' 
+            : 'You must specify at least one AI tool with its purpose';
+        }
+      }
+      break;
+      
+    default:
+      break;
+  }
+  
+  setValidationErrors(errors);
+  return Object.keys(errors).length === 0;
+};
+
+// Navegación entre pasos (CORREGIDA)
+const nextStep = () => {
+  console.log(`[DEBUG] Intentando avanzar del paso ${currentStep} al ${currentStep + 1}`);
+  
+  if (validateAndProceed(currentStep)) {
+    console.log(`[DEBUG] Validación exitosa, avanzando al paso ${currentStep + 1}`);
+    setValidationErrors({}); // Limpiar errores al avanzar
+    setCurrentStep(prev => prev + 1);
+  } else {
+    console.log('[DEBUG] Validación fallida:', validationErrors);
     
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
+    // Construir mensaje de error detallado
+    const errorList = Object.entries(validationErrors)
+      .map(([key, msg]) => `• ${msg}`)
+      .join('\n');
+    
+    if (errorList) {
+      alert(isSpanish 
+        ? `Completa los campos requeridos antes de continuar:\n${errorList}` 
+        : `Complete required fields before continuing:\n${errorList}`);
+    }
+  }
+};
 
   // ============ FUNCIÓN DE ENVÍO CORREGIDA ============
   
@@ -2373,7 +2442,7 @@ export default function SubmissionForm({ user, onSuccess }) {
               ) : (
                 <button
                   type="submit"
-                  disabled={uploading || !validateStep(3)}
+                  disabled={uploading || !isStepValid(3)}
                   className="px-12 py-4 bg-[#0A1929] text-white rounded-2xl text-sm font-bold hover:bg-[#B22234] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-3 shadow-xl font-serif"
                 >
                   {uploading
