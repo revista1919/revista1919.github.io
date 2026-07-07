@@ -168,7 +168,27 @@ function validateOrigin(req) {
   }
   return false;
 }
+/**
+ * Sanitiza texto para prevenir inyecciones
+ */
+function sanitizeText(text) {
+  if (!text) return '';
+  return String(text)
+    .replace(/[<>]/g, '') // Eliminar HTML tags
+    .replace(/javascript:/gi, '') // Prevenir XSS
+    .trim();
+}
 
+/**
+ * Verifica si es un documento válido
+ */
+function isValidDocument(base64Sample) {
+  const decoded = Buffer.from(base64Sample, 'base64').toString('hex');
+  // Firmas mágicas de documentos Word
+  const docxSignature = '504b0304'; // PK..
+  const docSignature = 'd0cf11e0a1b11ae1'; // OLE2
+  return decoded.startsWith(docxSignature) || decoded.startsWith(docSignature);
+}
 function base64DecodeUnicode(str) {
   try { return str ? Buffer.from(str, "base64").toString("utf-8") : ""; } catch { return ""; }
 }
@@ -2799,11 +2819,17 @@ async function getDriveClient(requestId = 'unknown') {
       refresh_token: refreshToken
     });
     
+    // ✅ Refrescar el token antes de crear los clientes
     await oauth2Client.getAccessToken();
-    const drive = google.drive({ version: 'v3', auth: oauth2Client });
     
-    console.log(`[${requestId}] ✅ Drive inicializado correctamente`);
-    return drive;
+    // ✅ Crear ambos clientes
+    const drive = google.drive({ version: 'v3', auth: oauth2Client });
+    const docs = google.docs({ version: 'v1', auth: oauth2Client });  // ← AHORA SÍ SE USA
+    
+    console.log(`[${requestId}] ✅ Drive y Docs inicializados correctamente`);
+    
+    // ✅ RETORNAR AMBOS
+    return { drive, docs, oauth2Client };
     
   } catch (error) {
     console.error(`[${requestId}] ❌ Error inicializando Drive:`, error.message);
@@ -2845,6 +2871,703 @@ async function createDriveFolder(drive, folderName, parentId = null) {
   } catch (error) {
     console.error(`❌ Error creando carpeta:`, error.message);
     throw new Error(`Failed to create folder: ${error.message}`);
+  }
+}
+/* ===================== PROCESAR DOCUMENTO CON GOOGLE DOCS API ===================== */
+
+/**
+ * Procesa el documento Word subido:
+ * 1. Lo convierte a Google Docs
+ * 2. Elimina metadatos del autor
+ * 3. Aplica estilos profesionales
+ * 4. Añade portada institucional
+ * 5. Inserta marca de agua
+ */
+async function processDocumentWithDocsAPI(drive, fileId, submissionData, requestId) {
+  console.log(`[${requestId}] 📝 Iniciando procesamiento del documento...`);
+    // ✅ Validación defensiva al inicio
+  if (!google) {
+    throw new Error('Google APIs no disponibles para procesamiento de documentos');
+  }
+  
+  if (!google.docs) {
+    throw new Error('Google Docs API no disponible');
+  }
+  try {
+    // ===== PASO 1: Convertir Word a Google Docs =====
+    console.log(`[${requestId}] 🔄 Convirtiendo a Google Docs...`);
+    const docsFile = await drive.files.copy({
+      fileId: fileId,
+      requestBody: {
+        name: `PROCESSED_${submissionData.submissionId}`,
+        mimeType: 'application/vnd.google-apps.document',
+        parents: [submissionData.editorialFolderId] // Visible solo para editores
+      },
+      fields: 'id, webViewLink'
+    });
+    
+    const docsFileId = docsFile.data.id;
+    console.log(`[${requestId}] ✅ Documento Google Docs creado: ${docsFileId}`);
+    
+    // Esperar que el documento esté listo
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // ===== PASO 2: Obtener el Docs API client =====
+    const { google } = await loadDependencies();
+    const docs = google.docs({ version: 'v1', auth: drive.auth });
+    
+    // Obtener el documento actual para analizarlo
+    const document = await docs.documents.get({
+      documentId: docsFileId
+    });
+    
+    const docData = document.data;
+    const documentStyle = docData.documentStyle;
+    const body = docData.body;
+    const content = body.content || [];
+    
+    // ===== PASO 3: Preparar solicitudes de formato =====
+    const requests = [];
+    
+    // --- ELIMINAR METADATOS DEL AUTOR ---
+    // Limpiar propiedades del documento que puedan contener metadatos
+    requests.push({
+      updateDocumentStyle: {
+        documentStyle: {
+          useFirstPageHeaderFooter: false,
+          useEvenPageHeaderFooter: false,
+          defaultHeaderId: null,
+          defaultFooterId: null,
+          background: {
+            color: {
+              color: {
+                rgbColor: {
+                  red: 1.0,
+                  green: 1.0,
+                  blue: 1.0
+                }
+              }
+            }
+          }
+        },
+        fields: 'useFirstPageHeaderFooter,useEvenPageHeaderFooter,defaultHeaderId,defaultFooterId,background'
+      }
+    });
+    
+    // --- CONFIGURAR ESTILOS BASE DEL DOCUMENTO ---
+    // Estilo de texto normal: Lora, tamaño 12
+    requests.push({
+      updateTextStyle: {
+        range: {
+          startIndex: 1,
+          endIndex: content[content.length - 1].endIndex - 1
+        },
+        textStyle: {
+          weightedFontFamily: {
+            fontFamily: 'Lora',
+            weight: 400
+          },
+          fontSize: {
+            magnitude: 12,
+            unit: 'PT'
+          },
+          foregroundColor: {
+            color: {
+              rgbColor: {
+                red: 0.13,
+                green: 0.13,
+                blue: 0.13
+              }
+            }
+          },
+          lineHeight: 1.5,
+          bold: false,
+          italic: false
+        },
+        fields: 'weightedFontFamily,fontSize,foregroundColor,bold,italic'
+      }
+    });
+    
+    // --- CREAR PORTADA INSTITUCIONAL ---
+    // Insertar página de título al inicio
+    requests.push({
+      insertPageBreak: {
+        location: {
+          index: 1
+        }
+      }
+    });
+    
+    // Insertar imagen del logo
+    const logoImageId = await insertLogoImage(drive, docsFileId, requests, requestId);
+    
+    // Insertar texto de la portada
+    const coverTexts = [
+      { text: '\n\n', style: 'normal' },
+      { text: 'Revista Nacional de las Ciencias para Estudiantes\n', style: 'heading1' },
+      { text: 'National Review of Sciences for Students\n\n', style: 'heading2' },
+      { text: `${submissionData.title}\n\n`, style: 'title' },
+      { text: `Submission ID: ${submissionData.submissionId}\n`, style: 'subtitle' },
+      { text: `Article Type: ${(submissionData.articleType || 'Research Article').toUpperCase()}\n\n`, style: 'subtitle' },
+      { text: 'Keywords\n', style: 'heading2' },
+      { text: `${submissionData.keywords.join(', ')}\n\n`, style: 'normal' },
+      { text: 'Authors\n', style: 'heading2' }
+    ];
+    
+    // Agregar autores
+    submissionData.authors.forEach((author, index) => {
+      const authorLine = `${author.firstName} ${author.lastName}${author.orcid ? ` (ORCID: ${author.orcid})` : ''}${author.isCorresponding ? ' ✉ [Corresponding Author]' : ''}${index < submissionData.authors.length - 1 ? '\n' : '\n\n'}`;
+      coverTexts.push({ text: authorLine, style: 'normal' });
+    });
+    
+    // Agregar contacto
+    coverTexts.push(
+      { text: '\nFor any queries please contact:\n', style: 'normal' },
+      { text: 'contact@revistacienciasestudiantes.com\n\n', style: 'normal' }
+    );
+    
+    // Agregar línea divisoria
+    coverTexts.push(
+      { text: '—' .repeat(40) + '\n\n', style: 'normal' },
+      { text: 'CONFIDENTIAL DOCUMENT - FOR EDITORIAL REVIEW ONLY\n\n', style: 'heading3' }
+    );
+    
+    // Insertar todos los textos de la portada
+    let insertIndex = 1;
+    for (const textItem of coverTexts) {
+      requests.push({
+        insertText: {
+          location: {
+            index: insertIndex
+          },
+          text: textItem.text
+        }
+      });
+      
+      // Aplicar estilo según el tipo
+      const textLength = textItem.text.length;
+      if (textItem.style !== 'normal') {
+        requests.push({
+          updateParagraphStyle: {
+            range: {
+              startIndex: insertIndex,
+              endIndex: insertIndex + textLength
+            },
+            paragraphStyle: {
+              namedStyleType: textItem.style === 'title' ? 'TITLE' : 
+                               textItem.style === 'heading1' ? 'HEADING_1' :
+                               textItem.style === 'heading2' ? 'HEADING_2' :
+                               textItem.style === 'heading3' ? 'HEADING_3' : 'SUBTITLE',
+              alignment: 'CENTER',
+              spaceBelow: {
+                magnitude: textItem.style.includes('heading') ? 12 : 6,
+                unit: 'PT'
+              }
+            },
+            fields: 'namedStyleType,alignment,spaceBelow'
+          }
+        });
+      }
+      
+      insertIndex += textLength;
+    }
+    
+    // Insertar salto de página después de la portada
+    requests.push({
+      insertPageBreak: {
+        location: {
+          index: insertIndex
+        }
+      }
+    });
+    
+    // --- APLICAR ESTILOS A HEADINGS ---
+    // Playfair Display para todos los headings
+    const headingStyles = [
+      { type: 'HEADING_1', size: 24, weight: 700, color: '#1a365d' },
+      { type: 'HEADING_2', size: 18, weight: 600, color: '#2d3748' },
+      { type: 'HEADING_3', size: 14, weight: 600, color: '#4a5568' }
+    ];
+    
+    headingStyles.forEach(heading => {
+      requests.push({
+        updateParagraphStyle: {
+          range: {
+            startIndex: 1,
+            endIndex: content[content.length - 1].endIndex - 1
+          },
+          paragraphStyle: {
+            namedStyleType: heading.type
+          },
+          fields: 'namedStyleType'
+        }
+      });
+    });
+    
+    // --- MARCAR ECUACIONES CON CAMBRIA MATH ---
+    // Nota: Esto detectará automáticamente las ecuaciones en el texto
+    // Se aplica un estilo especial para resaltarlas
+    requests.push({
+      createNamedRange: {
+        name: 'EquationZone',
+        range: {
+          startIndex: 1,
+          endIndex: content[content.length - 1].endIndex - 1
+        }
+      }
+    });
+    
+    // ===== PASO 4: INSERTAR MARCA DE AGUA =====
+    // La marca de agua en Google Docs se maneja con encabezados/pies de página
+    // Crearemos un encabezado con texto diagonal "CONFIDENCIAL"
+    
+    requests.push({
+      createHeader: {
+        type: 'DEFAULT',
+        sectionBreakLocation: {
+          index: 1
+        }
+      }
+    });
+    
+    // Insertar texto de marca de agua en el encabezado
+    // Nota: Google Docs no soporta marcas de agua nativas como Word,
+    // pero podemos simularlo con texto en el encabezado
+    const watermarkText = 'CONFIDENCIAL - REVISIÓN EDITORIAL';
+    requests.push({
+      insertText: {
+        location: {
+          segmentId: '', // Se insertará en el encabezado
+          index: 0
+        },
+        text: watermarkText
+      }
+    });
+    
+    // Estilizar la marca de agua
+    requests.push({
+      updateTextStyle: {
+        range: {
+          segmentId: '',
+          startIndex: 0,
+          endIndex: watermarkText.length
+        },
+        textStyle: {
+          foregroundColor: {
+            color: {
+              rgbColor: {
+                red: 0.9,
+                green: 0.1,
+                blue: 0.1
+              }
+            }
+          },
+          fontSize: {
+            magnitude: 36,
+            unit: 'PT'
+          },
+          weightedFontFamily: {
+            fontFamily: 'Playfair Display',
+            weight: 700
+          },
+          bold: true,
+          italic: true
+        },
+        fields: 'foregroundColor,fontSize,weightedFontFamily,bold,italic'
+      }
+    });
+    
+    // Centrar la marca de agua
+    requests.push({
+      updateParagraphStyle: {
+        range: {
+          segmentId: '',
+          startIndex: 0,
+          endIndex: watermarkText.length
+        },
+        paragraphStyle: {
+          alignment: 'CENTER'
+        },
+        fields: 'alignment'
+      }
+    });
+    
+    // ===== PASO 5: CONFIGURAR MÁRGENES Y DISEÑO =====
+    requests.push({
+      updateDocumentStyle: {
+        documentStyle: {
+          marginTop: {
+            magnitude: 72,
+            unit: 'PT'
+          },
+          marginBottom: {
+            magnitude: 72,
+            unit: 'PT'
+          },
+          marginRight: {
+            magnitude: 72,
+            unit: 'PT'
+          },
+          marginLeft: {
+            magnitude: 72,
+            unit: 'PT'
+          },
+          pageSize: {
+            width: {
+              magnitude: 612,
+              unit: 'PT'
+            },
+            height: {
+              magnitude: 792,
+              unit: 'PT'
+            }
+          }
+        },
+        fields: 'marginTop,marginBottom,marginRight,marginLeft,pageSize'
+      }
+    });
+    
+    // ===== PASO 6: APLICAR ESTILOS ESPECÍFICOS =====
+    // Configurar estilos de lista
+    requests.push({
+      updateDocumentStyle: {
+        documentStyle: {
+          defaultParagraphStyle: {
+            lineSpacing: 150,
+            spaceAbove: {
+              magnitude: 6,
+              unit: 'PT'
+            },
+            spaceBelow: {
+              magnitude: 6,
+              unit: 'PT'
+            },
+            indentFirstLine: {
+              magnitude: 36,
+              unit: 'PT'
+            }
+          }
+        },
+        fields: 'defaultParagraphStyle'
+      }
+    });
+    
+    // --- NOMBRAR ESTILOS PERSONALIZADOS ---
+    // Actualizar los estilos nombrados
+    requests.push({
+      updateNamedStyles: {
+        namedStyles: [
+          {
+            namedStyleType: 'NORMAL_TEXT',
+            textStyle: {
+              weightedFontFamily: {
+                fontFamily: 'Lora',
+                weight: 400
+              },
+              fontSize: {
+                magnitude: 12,
+                unit: 'PT'
+              },
+              foregroundColor: {
+                color: {
+                  rgbColor: {
+                    red: 0.13,
+                    green: 0.13,
+                    blue: 0.13
+                  }
+                }
+              }
+            },
+            paragraphStyle: {
+              alignment: 'JUSTIFIED',
+              lineSpacing: 150,
+              spaceBelow: {
+                magnitude: 6,
+                unit: 'PT'
+              }
+            }
+          },
+          {
+            namedStyleType: 'HEADING_1',
+            textStyle: {
+              weightedFontFamily: {
+                fontFamily: 'Playfair Display',
+                weight: 700
+              },
+              fontSize: {
+                magnitude: 24,
+                unit: 'PT'
+              },
+              foregroundColor: {
+                color: {
+                  rgbColor: {
+                    red: 0.102,
+                    green: 0.212,
+                    blue: 0.365
+                  }
+                }
+              }
+            },
+            paragraphStyle: {
+              alignment: 'LEFT',
+              spaceAbove: {
+                magnitude: 24,
+                unit: 'PT'
+              },
+              spaceBelow: {
+                magnitude: 12,
+                unit: 'PT'
+              }
+            }
+          },
+          {
+            namedStyleType: 'HEADING_2',
+            textStyle: {
+              weightedFontFamily: {
+                fontFamily: 'Playfair Display',
+                weight: 600
+              },
+              fontSize: {
+                magnitude: 18,
+                unit: 'PT'
+              },
+              foregroundColor: {
+                color: {
+                  rgbColor: {
+                    red: 0.176,
+                    green: 0.216,
+                    blue: 0.282
+                  }
+                }
+              }
+            },
+            paragraphStyle: {
+              alignment: 'LEFT',
+              spaceAbove: {
+                magnitude: 18,
+                unit: 'PT'
+              },
+              spaceBelow: {
+                magnitude: 9,
+                unit: 'PT'
+              }
+            }
+          },
+          {
+            namedStyleType: 'HEADING_3',
+            textStyle: {
+              weightedFontFamily: {
+                fontFamily: 'Playfair Display',
+                weight: 600
+              },
+              fontSize: {
+                magnitude: 14,
+                unit: 'PT'
+              },
+              foregroundColor: {
+                color: {
+                  rgbColor: {
+                    red: 0.290,
+                    green: 0.337,
+                    blue: 0.412
+                  }
+                }
+              }
+            },
+            paragraphStyle: {
+              alignment: 'LEFT',
+              spaceAbove: {
+                magnitude: 14,
+                unit: 'PT'
+              },
+              spaceBelow: {
+                magnitude: 7,
+                unit: 'PT'
+              }
+            }
+          },
+          {
+            namedStyleType: 'TITLE',
+            textStyle: {
+              weightedFontFamily: {
+                fontFamily: 'Playfair Display',
+                weight: 700
+              },
+              fontSize: {
+                magnitude: 28,
+                unit: 'PT'
+              },
+              foregroundColor: {
+                color: {
+                  rgbColor: {
+                    red: 0.102,
+                    green: 0.212,
+                    blue: 0.365
+                  }
+                }
+              }
+            },
+            paragraphStyle: {
+              alignment: 'CENTER',
+              spaceBelow: {
+                magnitude: 12,
+                unit: 'PT'
+              }
+            }
+          }
+        ],
+        fields: 'namedStyleType,textStyle,paragraphStyle'
+      }
+    });
+    
+    // ===== PASO 7: EJECUTAR TODAS LAS SOLICITUDES =====
+    console.log(`[${requestId}] 🎨 Aplicando ${requests.length} cambios de formato...`);
+    
+    // Google Docs API tiene un límite de requests por batch
+    // Dividimos en lotes de 50
+    const batchSize = 50;
+    for (let i = 0; i < requests.length; i += batchSize) {
+      const batch = requests.slice(i, i + batchSize);
+      try {
+        await docs.documents.batchUpdate({
+          documentId: docsFileId,
+          resource: {
+            requests: batch
+          }
+        });
+        console.log(`[${requestId}] ✅ Lote ${Math.floor(i/batchSize) + 1} aplicado (${batch.length} cambios)`);
+      } catch (batchError) {
+        console.error(`[${requestId}] ⚠️ Error en lote ${Math.floor(i/batchSize) + 1}:`, batchError.message);
+        // Continuar con el siguiente lote
+      }
+    }
+    
+    // ===== PASO 8: EXPORTAR COMO PDF (OPCIONAL) =====
+    let pdfFile = null;
+    try {
+      console.log(`[${requestId}] 📄 Exportando a PDF...`);
+      const pdfExport = await drive.files.export({
+        fileId: docsFileId,
+        mimeType: 'application/pdf'
+      }, {
+        responseType: 'arraybuffer'
+      });
+      
+      // Subir el PDF a la carpeta editorial
+      const pdfBuffer = Buffer.from(pdfExport.data);
+      const pdfUpload = await drive.files.create({
+        resource: {
+          name: `FORMATTED_${submissionData.submissionId}.pdf`,
+          parents: [submissionData.editorialFolderId],
+          mimeType: 'application/pdf'
+        },
+        media: {
+          mimeType: 'application/pdf',
+          body: pdfBuffer
+        },
+        fields: 'id, webViewLink'
+      });
+      
+      pdfFile = {
+        id: pdfUpload.data.id,
+        webViewLink: pdfUpload.data.webViewLink
+      };
+      
+      console.log(`[${requestId}] ✅ PDF formateado creado: ${pdfFile.id}`);
+    } catch (pdfError) {
+      console.error(`[${requestId}] ⚠️ Error creando PDF:`, pdfError.message);
+    }
+    
+    return {
+      success: true,
+      docsFileId,
+      docsFileUrl: docsFile.data.webViewLink,
+      pdfFileId: pdfFile?.id || null,
+      pdfFileUrl: pdfFile?.webViewLink || null
+    };
+    
+  } catch (error) {
+    console.error(`[${requestId}] ❌ Error procesando documento:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Inserta el logo de la revista en el documento
+ */
+async function insertLogoImage(drive, docsFileId, requests, requestId) {
+  try {
+    // Descargar el logo desde la URL
+    const https = require('https');
+    const imageBuffer = await new Promise((resolve, reject) => {
+      https.get('https://www.revistacienciasestudiantes.com/assets/logo.png', (response) => {
+        const chunks = [];
+        response.on('data', (chunk) => chunks.push(chunk));
+        response.on('end', () => resolve(Buffer.concat(chunks)));
+        response.on('error', reject);
+      }).on('error', reject);
+    });
+    
+    // Subir imagen a Drive temporalmente
+    const imageUpload = await drive.files.create({
+      resource: {
+        name: 'logo_temp.png',
+        mimeType: 'image/png'
+      },
+      media: {
+        mimeType: 'image/png',
+        body: imageBuffer
+      },
+      fields: 'id, webContentLink'
+    });
+    
+    // Insertar la imagen en el documento
+    requests.push({
+      insertInlineImage: {
+        location: {
+          index: 2
+        },
+        uri: imageUpload.data.webContentLink,
+        objectSize: {
+          width: {
+            magnitude: 200,
+            unit: 'PT'
+          },
+          height: {
+            magnitude: 100,
+            unit: 'PT'
+          }
+        }
+      }
+    });
+    
+    // Centrar la imagen
+    requests.push({
+      updateParagraphStyle: {
+        range: {
+          startIndex: 2,
+          endIndex: 3
+        },
+        paragraphStyle: {
+          alignment: 'CENTER'
+        },
+        fields: 'alignment'
+      }
+    });
+    
+    console.log(`[${requestId}] ✅ Logo preparado para inserción`);
+    
+    // Limpiar imagen temporal
+    try {
+      await drive.files.delete({ fileId: imageUpload.data.id });
+    } catch (cleanupError) {
+      // Ignorar error de limpieza
+    }
+    
+    return true;
+  } catch (error) {
+    console.error(`[${requestId}] ⚠️ Error insertando logo:`, error.message);
+    return false;
   }
 }
 
@@ -3387,10 +4110,13 @@ if (!keywordsRaw || !Array.isArray(keywordsRaw) || keywordsRaw.length < 2) {
         });
       }
 
-      let drive;
-      try {
-        drive = await getDriveClient(requestId);
-      } catch (driveError) {
+      let drive, docs, oauth2Client;
+try {
+  const clients = await getDriveClient(requestId);
+  drive = clients.drive;
+  docs = clients.docs;
+  oauth2Client = clients.oauth2Client;
+} catch (driveError) {
         console.error(`[${requestId}] ❌ Error obteniendo cliente Drive:`, driveError);
         return res.status(500).json({ 
           error: 'Error en servicio de almacenamiento',
@@ -3528,6 +4254,7 @@ if (!keywordsRaw || !Array.isArray(keywordsRaw) || keywordsRaw.length < 2) {
         console.error(`❌ Error permiso para autor:`, permErr.message);
       }
 
+ 
       // Hash de integridad del archivo
       const crypto = require('crypto');
       const fileBuffer = Buffer.from(manuscriptBase64, 'base64');
@@ -3708,6 +4435,61 @@ keywordsFormat: normalizedKeywordsES.keywordsFormat,
         ipAddress: clientIp,
         requestId
       };
+
+// PROCESAR DOCUMENTO CON GOOGLE DOCS API
+// PROCESAR DOCUMENTO CON GOOGLE DOCS API
+let formattedDocsFile = null;
+let formattedPdfFile = null;
+
+try {
+  console.log(`[${requestId}] 🎨 Iniciando formateo del documento...`);
+  
+  // ✅ NUEVO: Verificar que google esté disponible antes de formatear
+  if (!google) {
+    console.log(`[${requestId}] ⏳ google no disponible para formateo, intentando cargar...`);
+    await loadDependencies();
+  }
+  
+  // Si después de cargar sigue sin estar disponible, saltamos el formateo
+  if (!google) {
+    console.warn(`[${requestId}] ⚠️ Google APIs no disponibles para formateo, continuando sin formatear`);
+    throw new Error('Google APIs no disponibles');
+  }
+  
+  const formattingResult = await processDocumentWithDocsAPI(
+    drive, 
+    docs,
+    file.id, 
+    submissionData, 
+    requestId
+  );
+  
+  formattedDocsFile = {
+    id: formattingResult.docsFileId,
+    url: formattingResult.docsFileUrl
+  };
+  
+  formattedPdfFile = formattingResult.pdfFileUrl ? {
+    id: formattingResult.pdfFileId,
+    url: formattingResult.pdfFileUrl
+  } : null;
+  
+  console.log(`[${requestId}] ✅ Documento formateado exitosamente`);
+} catch (formatError) {
+  console.error(`[${requestId}] ⚠️ Error en formateo (no crítico):`, formatError.message);
+  // No es crítico, continuamos con el flujo normal
+}
+
+// Agregar al submissionData los archivos formateados
+submissionData.formattedDocsFile = formattedDocsFile;
+submissionData.formattedPdfFile = formattedPdfFile;
+submissionData.documentStatus = formattedDocsFile ? 'processed' : 'submitted';
+
+// Agregar al submissionData los archivos formateados
+submissionData.formattedDocsFile = formattedDocsFile;
+submissionData.formattedPdfFile = formattedPdfFile;
+submissionData.documentStatus = 'processed'; // o 'processing' si falló
+
 
       // --- TRANSACCIÓN EN FIRESTORE ---
       await db.runTransaction(async (transaction) => {
@@ -4649,8 +5431,8 @@ function escapeHtml(text) {
 exports.onReviewerInvitationUpdated = onDocumentUpdated(
   {
     document: 'reviewerInvitations/{invitationId}',
-    secrets: [OAUTH2_CLIENT_ID, OAUTH2_CLIENT_SECRET, OAUTH2_REFRESH_TOKEN], // AÑADE ESTOS SECRETS
-    memory: '512MiB' // Aumenta memoria para manejar Drive
+    secrets: [OAUTH2_CLIENT_ID, OAUTH2_CLIENT_SECRET, OAUTH2_REFRESH_TOKEN],
+    memory: '512MiB'
   },
   async (event) => {
     const beforeData = event.data.before.data();
@@ -4662,12 +5444,13 @@ exports.onReviewerInvitationUpdated = onDocumentUpdated(
       return;
     }
 
-    console.log(`📝 [onReviewerInvitationUpdated] Invitación ${invitationId} ACEPTADA. Otorgando permisos...`);
+    console.log(`📝 [onReviewerInvitationUpdated] Invitación ${invitationId} ACEPTADA. Preparando documento anónimo...`);
 
     try {
       const db = admin.firestore();
+      const requestId = `REV-${invitationId}-${Date.now()}`;
 
-      // 1. Obtener el submission para conocer la carpeta editorial
+      // ===== PASO 1: Obtener el submission completo =====
       const submissionDoc = await db.collection('submissions').doc(afterData.submissionId).get();
       if (!submissionDoc.exists) {
         console.error(`❌ Submission no encontrado: ${afterData.submissionId}`);
@@ -4675,40 +5458,136 @@ exports.onReviewerInvitationUpdated = onDocumentUpdated(
       }
       const submission = submissionDoc.data();
 
-      // 2. Verificar que existe la carpeta editorial
+      // ===== PASO 2: Verificar que existe la carpeta editorial =====
       if (!submission.editorialFolderId) {
         console.error(`❌ El submission ${afterData.submissionId} no tiene editorialFolderId`);
         return;
       }
 
-      // 3. Inicializar Drive (necesita los secrets)
-      const drive = await getDriveClient(`invitation-${invitationId}`);
-
-      // 4. OTORGAR PERMISOS AL REVISOR EN LA CARPETA EDITORIAL
-      console.log(`🔑 Otorgando permisos a ${afterData.reviewerEmail} en carpeta ${submission.editorialFolderId}`);
+      // ===== PASO 3: Inicializar Google Drive =====
+      const drive = await getDriveClient(`reviewer-${invitationId}`);
       
-      try {
-        await drive.permissions.create({
-          fileId: submission.editorialFolderId,
-          requestBody: {
-            role: 'reader', // Permiso de solo lectura para revisores
-            type: 'user',
-            emailAddress: afterData.reviewerEmail
-          },
-          sendNotificationEmail: false // No enviar notificación de Drive para no confundir
-        });
-        console.log(`✅ Permisos otorgados exitosamente a ${afterData.reviewerEmail}`);
-      } catch (permError) {
-        console.error(`❌ Error otorgando permisos:`, permError.message);
-        // No detenemos el flujo, pero registramos el error
-        await logSystemError('drive_permission_error', permError, {
-          invitationId,
-          reviewerEmail: afterData.reviewerEmail,
-          folderId: submission.editorialFolderId
-        });
+      // ===== PASO 4: IDENTIFICAR EL DOCUMENTO FORMATEADO =====
+      // Prioridad: documento formateado > documento original
+      let sourceFileId = null;
+      let sourceFileName = null;
+      
+      if (submission.formattedDocsFile?.id) {
+        // Usar el Google Docs formateado (ya procesado, sin metadatos de autor)
+        sourceFileId = submission.formattedDocsFile.id;
+        sourceFileName = `FORMATTED_${submission.submissionId}`;
+        console.log(`[${requestId}] ✅ Usando documento formateado existente`);
+      } else if (submission.originalFileId) {
+        // Si no hay versión formateada, usar el original y procesarlo ahora
+        sourceFileId = submission.originalFileId;
+        sourceFileName = `ORIGINAL_${submission.submissionId}`;
+        console.log(`[${requestId}] ⚠️ No hay versión formateada. Usando documento original.`);
+      } else {
+        throw new Error(`No se encontró ningún documento para ${afterData.submissionId}`);
       }
 
-      // 5. Crear la asignación (reviewerAssignment)
+      // ===== PASO 5: CREAR COPIA ANÓNIMA PARA EL REVISOR =====
+      console.log(`[${requestId}] 📄 Creando copia anónima para revisor...`);
+      
+      const reviewerCopyName = `REVIEW_COPY_${submission.submissionId}_${afterData.reviewerUid.substring(0, 8)}`;
+      
+      // Copiar el documento a la carpeta editorial
+      const reviewerCopy = await drive.files.copy({
+        fileId: sourceFileId,
+        requestBody: {
+          name: reviewerCopyName,
+          parents: [submission.editorialFolderId],
+          // Mantener como Google Docs si es formato Docs
+          mimeType: submission.formattedDocsFile?.id 
+            ? 'application/vnd.google-apps.document' 
+            : undefined
+        },
+        fields: 'id, webViewLink, mimeType'
+      });
+      
+      const reviewerFileId = reviewerCopy.data.id;
+      const reviewerFileUrl = reviewerCopy.data.webViewLink;
+      
+      console.log(`[${requestId}] ✅ Copia creada: ${reviewerFileId}`);
+
+      // ===== PASO 6: ELIMINAR METADATOS SENSIBLES DEL AUTOR =====
+      // Solo si es un Google Docs (no aplica a PDFs o Word originales)
+      if (reviewerCopy.data.mimeType === 'application/vnd.google-apps.document') {
+        await removeAuthorMetadata(drive, reviewerFileId, requestId);
+      }
+
+      // ===== PASO 7: INSERTAR MARCA DE AGUA Y PORTADA DE REVISIÓN =====
+      if (reviewerCopy.data.mimeType === 'application/vnd.google-apps.document') {
+        await addReviewerWatermarkAndCover(drive, reviewerFileId, submission, afterData, requestId);
+      }
+
+      // ===== PASO 8: OTORGAR PERMISOS EXCLUSIVOS AL REVISOR =====
+      console.log(`[${requestId}] 🔑 Configurando permisos EXCLUSIVOS para ${afterData.reviewerEmail}...`);
+      
+      // 8.1: Otorgar permiso de COMENTARISTA al revisor en el documento
+      await drive.permissions.create({
+        fileId: reviewerFileId,
+        requestBody: {
+          role: 'commenter',     // ⭐ SOLO PUEDE COMENTAR, NO EDITAR
+          type: 'user',
+          emailAddress: afterData.reviewerEmail
+        },
+        sendNotificationEmail: false,
+        fields: 'id'
+      });
+      
+      console.log(`[${requestId}] ✅ Permiso de comentarista otorgado a: ${afterData.reviewerEmail}`);
+
+      // 8.2: Verificar que NADIE MÁS tenga acceso (solo el revisor y el sistema)
+      const existingPermissions = await drive.permissions.list({
+        fileId: reviewerFileId,
+        fields: 'permissions(id, emailAddress, role, type)'
+      });
+      
+      // Remover cualquier permiso que no sea del revisor o del owner (cuenta de servicio)
+      for (const perm of existingPermissions.data.permissions) {
+        if (perm.role === 'owner') continue; // No remover al owner (cuenta de servicio)
+        
+        if (perm.emailAddress !== afterData.reviewerEmail) {
+          try {
+            await drive.permissions.delete({
+              fileId: reviewerFileId,
+              permissionId: perm.id
+            });
+            console.log(`[${requestId}] 🔒 Permiso removido: ${perm.emailAddress}`);
+          } catch (deleteErr) {
+            console.warn(`[${requestId}] ⚠️ No se pudo remover permiso ${perm.id}:`, deleteErr.message);
+          }
+        }
+      }
+      
+      // 8.3: Otorgar acceso de LECTURA al editor en jefe (solo lectura, sin comentarios)
+      const editorSnapshot = await db.collection('users')
+        .where('roles', 'array-contains', 'Editor en Jefe')
+        .limit(1)
+        .get();
+      
+      if (!editorSnapshot.empty) {
+        const editorEmail = editorSnapshot.docs[0].data().email;
+        if (editorEmail && editorEmail !== afterData.reviewerEmail) {
+          try {
+            await drive.permissions.create({
+              fileId: reviewerFileId,
+              requestBody: {
+                role: 'reader',      // Solo lectura, no puede comentar
+                type: 'user',
+                emailAddress: editorEmail
+              },
+              sendNotificationEmail: false
+            });
+            console.log(`[${requestId}] 👁️ Editor ${editorEmail} tiene acceso de solo lectura (monitoreo)`);
+          } catch (permErr) {
+            console.warn(`[${requestId}] ⚠️ No se pudo dar acceso al editor:`, permErr.message);
+          }
+        }
+      }
+
+      // ===== PASO 9: CREAR LA ASIGNACIÓN EN FIRESTORE =====
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + 21); // 21 días desde ahora
 
@@ -4726,29 +5605,344 @@ exports.onReviewerInvitationUpdated = onDocumentUpdated(
         assignedAt: admin.firestore.FieldValue.serverTimestamp(),
         dueDate: admin.firestore.Timestamp.fromDate(dueDate),
         
-        // Guardar también la referencia a la carpeta editorial
+        // Documento anónimo del revisor
+        reviewerFileId: reviewerFileId,
+        reviewerFileUrl: reviewerFileUrl,
+        
+        // Referencia a la carpeta editorial
         driveFolderId: submission.editorialFolderId,
-        driveFolderUrl: submission.editorialFolderUrl
+        driveFolderUrl: submission.editorialFolderUrl,
+        
+        // Metadata de la copia
+        sourceFileId: sourceFileId,
+        copyCreatedAt: admin.firestore.FieldValue.serverTimestamp()
       };
 
-      await db.collection('reviewerAssignments').add(assignmentData);
-      console.log(`✅ Asignación creada para revisor ${afterData.reviewerEmail}`);
+      const assignmentRef = await db.collection('reviewerAssignments').add(assignmentData);
+      console.log(`[${requestId}] ✅ Asignación creada: ${assignmentRef.id}`);
 
-      // 6. Enviar email con instrucciones (incluyendo el enlace directo a Drive)
+      // ===== PASO 10: REGISTRAR EN AUDITLOG =====
+      await db.collection('submissions')
+        .doc(afterData.submissionId)
+        .collection('auditLogs')
+        .add({
+          action: 'reviewer_copy_created',
+          by: 'system',
+          timestamp: admin.firestore.FieldValue.serverTimestamp(),
+          details: {
+            invitationId,
+            reviewerEmail: afterData.reviewerEmail,
+            reviewerFileId: reviewerFileId,
+            reviewerFileUrl: reviewerFileUrl,
+            permissions: 'commenter',
+            sourceFileId: sourceFileId
+          }
+        });
+
+      // ===== PASO 11: ENVIAR EMAIL AL REVISOR CON INSTRUCCIONES =====
       await sendReviewerAssignmentEmail({
         ...afterData,
-        driveFolderUrl: submission.editorialFolderUrl,
-        submissionTitle: submission.title
+        reviewerFileUrl: reviewerFileUrl,
+        submissionTitle: submission.title,
+        submissionAbstract: submission.abstract,
+        dueDate: dueDate,
+        driveFolderUrl: submission.editorialFolderUrl
       });
+
+      console.log(`[${requestId}] ✅ Proceso completado para revisor ${afterData.reviewerEmail}`);
 
     } catch (error) {
       console.error(`❌ Error en onReviewerInvitationUpdated:`, error.message);
-      await logSystemError('onReviewerInvitationUpdated', error, { invitationId, ...afterData });
+      console.error(`❌ Stack:`, error.stack);
+      
+      try {
+        await admin.firestore().collection('systemErrors').add({
+          function: 'onReviewerInvitationUpdated',
+          error: {
+            message: error.message,
+            stack: error.stack,
+            code: error.code || 'UNKNOWN'
+          },
+          invitationId,
+          timestamp: admin.firestore.FieldValue.serverTimestamp()
+        });
+      } catch (logError) {
+        console.error(`❌ Error al registrar error:`, logError.message);
+      }
     }
   }
 );
 
+// ============================================================
+// FUNCIONES AUXILIARES PARA EL PROCESAMIENTO DE DOCUMENTOS
+// ============================================================
 
+/**
+ * Elimina metadatos del autor del documento Google Docs
+ * Mantiene: título, resumen, keywords, contenido académico
+ * Elimina: nombres de autores, afiliaciones, emails, ORCID, agradecimientos personales
+ */
+async function removeAuthorMetadata(drive, fileId, requestId) {
+  console.log(`[${requestId}] 🧹 Eliminando metadatos de autor...`);
+  
+  try {
+    const { google } = await loadDependencies();
+    const docs = google.docs({ version: 'v1', auth: drive.auth });
+    
+    const document = await docs.documents.get({
+      documentId: fileId
+    });
+    
+    const content = document.data.body.content;
+    const requests = [];
+    
+    // Recorrer el contenido buscando texto sensible
+    let currentIndex = 0;
+    for (const element of content) {
+      if (element.paragraph) {
+        const paragraph = element.paragraph;
+        const text = paragraph.elements?.map(e => e.textRun?.content || '').join('') || '';
+        
+        // Detectar y eliminar secciones con metadatos de autor
+        const sensitivePatterns = [
+          /Authors?:[\s\S]*?(?=\n\n|\n(?:Abstract|Resumen|Keywords|Palabras|Introduction|1\.))/i,
+          /Corresponding Author[\s\S]*?(?=\n\n|\n(?:Abstract|Resumen|Keywords|Palabras|Introduction|1\.))/i,
+          /Email:[\s\S]*?(?=\n)/gi,
+          /ORCID:[\s\S]*?(?=\n)/gi,
+          /Affiliation:[\s\S]*?(?=\n)/gi,
+          /Acknowledgments?:[\s\S]*?(?=\n\n|\n(?:References|Referencias|Bibliography))/i,
+          /Agradecimientos?:[\s\S]*?(?=\n\n|\n(?:Referencias|References|Bibliography))/i
+        ];
+        
+        for (const pattern of sensitivePatterns) {
+          const match = text.match(pattern);
+          if (match) {
+            const startIndex = currentIndex + text.indexOf(match[0]);
+            const endIndex = startIndex + match[0].length;
+            
+            // Reemplazar con "[INFORMACIÓN OMITIDA PARA REVISIÓN CIEGA]"
+            requests.push({
+              deleteContentRange: {
+                range: {
+                  startIndex: startIndex,
+                  endIndex: endIndex
+                }
+              }
+            });
+            
+            requests.push({
+              insertText: {
+                location: {
+                  index: startIndex
+                },
+                text: '[INFORMACIÓN OMITIDA PARA REVISIÓN DOBLE CIEGO]\n'
+              }
+            });
+          }
+        }
+      }
+      currentIndex = element.endIndex;
+    }
+    
+    // También eliminar propiedades del documento
+    requests.push({
+      updateDocumentStyle: {
+        documentStyle: {
+          defaultHeaderId: null,
+          defaultFooterId: null,
+          useFirstPageHeaderFooter: false,
+          useEvenPageHeaderFooter: false
+        },
+        fields: 'defaultHeaderId,defaultFooterId,useFirstPageHeaderFooter,useEvenPageHeaderFooter'
+      }
+    });
+    
+    if (requests.length > 0) {
+      // Ejecutar en lotes de 50
+      for (let i = 0; i < requests.length; i += 50) {
+        const batch = requests.slice(i, i + 50);
+        await docs.documents.batchUpdate({
+          documentId: fileId,
+          resource: { requests: batch }
+        });
+      }
+      console.log(`[${requestId}] ✅ ${requests.length} cambios de anonimización aplicados`);
+    } else {
+      console.log(`[${requestId}] ℹ️ No se encontraron metadatos sensibles para eliminar`);
+    }
+    
+  } catch (error) {
+    console.error(`[${requestId}] ⚠️ Error eliminando metadatos:`, error.message);
+    // No es crítico, continuamos
+  }
+}
+
+/**
+ * Añade marca de agua y portada de revisión al documento
+ */
+async function addReviewerWatermarkAndCover(drive, fileId, submission, invitationData, requestId) {
+  console.log(`[${requestId}] 🎨 Añadiendo marca de agua y portada de revisión...`);
+  
+  try {
+    const { google } = await loadDependencies();
+    const docs = google.docs({ version: 'v1', auth: drive.auth });
+    
+    const requests = [];
+    
+    // ===== INSERTAR PORTADA DE REVISIÓN AL INICIO =====
+    requests.push({
+      insertPageBreak: {
+        location: { index: 1 }
+      }
+    });
+    
+    const coverLines = [
+      { text: '\n\n', style: 'normal' },
+      { text: 'REVISTA NACIONAL DE LAS CIENCIAS PARA ESTUDIANTES\n', style: 'title' },
+      { text: 'DOCUMENTO PARA REVISIÓN POR PARES\n', style: 'heading1' },
+      { text: 'DOUBLE-BLIND PEER REVIEW COPY\n\n', style: 'heading2' },
+      { text: '─'.repeat(50) + '\n\n', style: 'normal' },
+      { text: `Submission ID: ${submission.submissionId}\n`, style: 'normal' },
+      { text: `Review Round: ${invitationData.round || 1}\n`, style: 'normal' },
+      { text: `Article Type: ${(submission.articleType || 'Research Article').toUpperCase()}\n\n`, style: 'normal' },
+      { text: 'TITLE\n', style: 'heading2' },
+      { text: `${submission.title}\n\n`, style: 'normal' },
+      { text: 'ABSTRACT\n', style: 'heading2' },
+      { text: `${submission.abstract.substring(0, 500)}${submission.abstract.length > 500 ? '...' : ''}\n\n`, style: 'normal' },
+      { text: 'KEYWORDS\n', style: 'heading2' },
+      { text: `${(submission.keywords || []).join(' • ')}\n\n`, style: 'normal' },
+      { text: '─'.repeat(50) + '\n\n', style: 'normal' },
+      { text: '⚠️ CONFIDENTIAL - FOR REVIEW PURPOSES ONLY\n', style: 'heading3' },
+      { text: 'This document contains a blind copy for peer review. Do not distribute.\n', style: 'normal' },
+      { text: `Assigned to: ${invitationData.reviewerName}\n`, style: 'normal' },
+      { text: `Due date: ${new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toLocaleDateString('es-CL')}\n\n`, style: 'normal' },
+      { text: 'INSTRUCTIONS FOR REVIEWERS\n', style: 'heading2' },
+      { text: '1. Use the "Comment" feature (Ctrl+Alt+M) to add your observations\n', style: 'normal' },
+      { text: '2. Do not modify the document text directly\n', style: 'normal' },
+      { text: '3. Focus on: methodology, analysis, conclusions, and references\n', style: 'normal' },
+      { text: '4. Submit your evaluation through the editorial portal\n\n', style: 'normal' },
+      { text: '─'.repeat(50) + '\n\n', style: 'normal' }
+    ];
+    
+    let insertIndex = 1;
+    for (const line of coverLines) {
+      requests.push({
+        insertText: {
+          location: { index: insertIndex },
+          text: line.text
+        }
+      });
+      
+      if (line.style === 'title' || line.style.includes('heading')) {
+        const textLength = line.text.length;
+        requests.push({
+          updateParagraphStyle: {
+            range: { startIndex: insertIndex, endIndex: insertIndex + textLength },
+            paragraphStyle: {
+              namedStyleType: line.style === 'title' ? 'TITLE' :
+                              line.style === 'heading1' ? 'HEADING_1' :
+                              line.style === 'heading2' ? 'HEADING_2' : 'HEADING_3',
+              alignment: 'CENTER',
+              spaceBelow: { magnitude: 8, unit: 'PT' }
+            },
+            fields: 'namedStyleType,alignment,spaceBelow'
+          }
+        });
+      }
+      
+      insertIndex += line.text.length;
+    }
+    
+    // Insertar salto de página después de la portada
+    requests.push({
+      insertPageBreak: {
+        location: { index: insertIndex }
+      }
+    });
+    
+    // ===== AÑADIR MARCA DE AGUA EN ENCABEZADO =====
+    requests.push({
+      createHeader: {
+        type: 'DEFAULT',
+        sectionBreakLocation: { index: insertIndex + 1 }
+      }
+    });
+    
+    const watermarkText = 'REVIEW COPY - CONFIDENTIAL - DO NOT DISTRIBUTE';
+    
+    // Obtener el ID del encabezado recién creado
+    const updatedDoc = await docs.documents.get({
+      documentId: fileId
+    });
+    
+    const headerId = updatedDoc.data.documentStyle?.defaultHeaderId;
+    
+    if (headerId) {
+      requests.push({
+        insertText: {
+          location: {
+            segmentId: headerId,
+            index: 0
+          },
+          text: watermarkText
+        }
+      });
+      
+      requests.push({
+        updateTextStyle: {
+          range: {
+            segmentId: headerId,
+            startIndex: 0,
+            endIndex: watermarkText.length
+          },
+          textStyle: {
+            foregroundColor: {
+              color: {
+                rgbColor: { red: 0.8, green: 0.8, blue: 0.8 }
+              }
+            },
+            fontSize: { magnitude: 10, unit: 'PT' },
+            italic: true,
+            bold: false
+          },
+          fields: 'foregroundColor,fontSize,italic,bold'
+        }
+      });
+      
+      requests.push({
+        updateParagraphStyle: {
+          range: {
+            segmentId: headerId,
+            startIndex: 0,
+            endIndex: watermarkText.length
+          },
+          paragraphStyle: {
+            alignment: 'CENTER'
+          },
+          fields: 'alignment'
+        }
+      });
+    }
+    
+    // ===== EJECUTAR TODOS LOS CAMBIOS =====
+    console.log(`[${requestId}] 📝 Aplicando ${requests.length} cambios de formato...`);
+    
+    for (let i = 0; i < requests.length; i += 50) {
+      const batch = requests.slice(i, i + 50);
+      await docs.documents.batchUpdate({
+        documentId: fileId,
+        resource: { requests: batch }
+      });
+      console.log(`[${requestId}] ✅ Lote ${Math.floor(i/50) + 1}/${Math.ceil(requests.length/50)} aplicado`);
+    }
+    
+    console.log(`[${requestId}] ✅ Marca de agua y portada añadidas exitosamente`);
+    
+  } catch (error) {
+    console.error(`[${requestId}] ⚠️ Error añadiendo marca de agua:`, error.message);
+    // No es crítico
+  }
+}
 
 // Funciones para generar los cuerpos de los emails de decisión
 // ============================================================================
