@@ -2,10 +2,41 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db, auth, submitRevision } from '../firebase';
-import { collection, query, where, onSnapshot, doc, updateDoc, serverTimestamp, addDoc } from 'firebase/firestore';
+import { 
+  collection, 
+  query, 
+  where, 
+  onSnapshot, 
+  doc, 
+  updateDoc, 
+  serverTimestamp, 
+  addDoc,
+  getDoc  // ⭐ AGREGAR: Para obtener documentos individuales
+} from 'firebase/firestore';
 import { useLanguage } from '../hooks/useLanguage';
 import { AuthorMetadataResponseTab } from './AuthorMetadataResponseTab';
-
+/**
+ * Convierte una URL de Google Docs en URL de descarga PDF
+ * @param {string} docsUrl - URL del Google Docs
+ * @returns {string} URL de exportación PDF
+ */
+const getDocsExportUrl = (docsUrl) => {
+  if (!docsUrl) return null;
+  
+  // Extraer el ID del documento de la URL
+  const match = docsUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (match && match[1]) {
+    return `https://docs.google.com/document/d/${match[1]}/export?format=pdf`;
+  }
+  
+  // Si es una URL de Drive, intentar extraer ID
+  const driveMatch = docsUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (driveMatch && driveMatch[1]) {
+    return `https://docs.google.com/document/d/${driveMatch[1]}/export?format=pdf`;
+  }
+  
+  return null;
+};
 const OXFORD_COLORS = {
   darkBlue: '#002147',
   gold: '#C0A86A',
@@ -837,72 +868,199 @@ const AuthorSubmissionsPanel = ({ user }) => {
                           )}
                         </div>
 
-                        {/* Documentos */}
-                        <div className="bg-white p-4 sm:p-6 border border-slate-200 rounded-lg">
-                          <h4 className="font-bold text-xs tracking-widest text-slate-400 uppercase mb-4 font-['Inter']">
-                            {isSpanish ? 'Documentos' : 'Documents'}
-                          </h4>
-                          
-                          {/* Links a documentos */}
-                          <div className="space-y-2">
-                            {sub.originalFileUrl && (
-                              <a
-                                href={sub.originalFileUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex items-center gap-3 p-3 bg-slate-50 hover:bg-slate-100 transition-colors border border-slate-200 rounded-lg"
-                              >
-                                <span className="text-xl sm:text-2xl">📄</span>
-                                <div className="overflow-hidden">
-                                  <p className="text-xs font-bold text-slate-700 truncate">
-                                    {sub.fileName || (isSpanish ? 'manuscrito_original.pdf' : 'original_manuscript.pdf')}
-                                  </p>
-                                  <p className="text-[10px] text-slate-400">
-                                    {isSpanish ? 'Ver documento' : 'View document'}
-                                  </p>
-                                </div>
-                              </a>
-                            )}
-                            
-                            {sub.driveFolderUrl && (
-                              <a
-                                href={sub.driveFolderUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex items-center gap-3 p-3 bg-slate-50 hover:bg-slate-100 transition-colors border border-slate-200 rounded-lg"
-                              >
-                                <span className="text-xl sm:text-2xl">📁</span>
-                                <div className="overflow-hidden">
-                                  <p className="text-xs font-bold text-slate-700 truncate">
-                                    Google Drive
-                                  </p>
-                                  <p className="text-[10px] text-slate-400">
-                                    {isSpanish ? 'Ver carpeta' : 'View folder'}
-                                  </p>
-                                </div>
-                              </a>
-                            )}
-                            
-                            {sub.immutableHistoryId && (
-                              <a
-                                href={`/history/${sub.immutableHistoryId}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex items-center gap-3 p-3 bg-slate-50 hover:bg-slate-100 transition-colors border border-slate-200 rounded-lg"
-                              >
-                                <span className="text-xl sm:text-2xl">📜</span>
-                                <div className="overflow-hidden">
-                                  <p className="text-xs font-bold text-slate-700 truncate">
-                                    {isSpanish ? 'Historial inmutable' : 'Immutable history'}
-                                  </p>
-                                  <p className="text-[10px] text-slate-400">
-                                    {isSpanish ? 'Ver historial' : 'View history'}
-                                  </p>
-                                </div>
-                              </a>
-                            )}
-                          </div>
-                        </div>
+                        {/* Documentos y Descargas */}
+<div className="bg-white p-4 sm:p-6 border border-slate-200 rounded-lg">
+  <h4 className="font-bold text-xs tracking-widest text-slate-400 uppercase mb-4 font-['Inter']">
+    {isSpanish ? 'Documentos y Descargas' : 'Documents & Downloads'}
+  </h4>
+  
+  <div className="space-y-3">
+    
+    {/* BOTÓN: DESCARGAR PDF DEL MANUSCRITO */}
+    <button
+      onClick={async () => {
+        try {
+          // Determinar qué archivo descargar (PDF formateado > Docs formateado > Original)
+          let downloadUrl = null;
+          let fileName = 'manuscrito.pdf';
+          
+          if (sub.formattedPdfFile?.url) {
+            downloadUrl = sub.formattedPdfFile.url;
+            fileName = `manuscrito_${sub.submissionId || sub.id?.substring(0, 8)}.pdf`;
+          } else if (sub.formattedDocsFile?.url) {
+            // Exportar Google Docs a PDF
+            console.log('📥 Exportando Google Docs a PDF...');
+            const fileId = sub.formattedDocsFile.id || sub.formattedDocsFile.url.split('/d/')[1]?.split('/')[0];
+            if (fileId) {
+              downloadUrl = `https://docs.google.com/document/d/${fileId}/export?format=pdf`;
+              fileName = `manuscrito_${sub.submissionId || sub.id?.substring(0, 8)}.pdf`;
+            }
+          } else if (sub.originalFileUrl) {
+            downloadUrl = sub.originalFileUrl;
+            fileName = sub.originalFileName || 'manuscrito_original.pdf';
+          }
+          
+          if (downloadUrl) {
+            // Crear un link temporal para descarga
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = fileName;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            console.log('✅ Descarga iniciada:', fileName);
+          } else {
+            alert(isSpanish 
+              ? 'No hay documento disponible para descargar' 
+              : 'No document available for download');
+          }
+        } catch (error) {
+          console.error('❌ Error descargando:', error);
+          alert(isSpanish 
+            ? 'Error al descargar el documento' 
+            : 'Error downloading document');
+        }
+      }}
+      className="w-full flex items-center gap-3 p-3 bg-[#FBF9F3] hover:bg-[#F5F0E0] transition-colors border-2 border-[#C0A86A] rounded-lg group"
+    >
+      <span className="text-2xl">📥</span>
+      <div className="text-left flex-1 overflow-hidden">
+        <p className="text-sm font-bold text-[#0A1929] group-hover:text-[#002147] transition-colors truncate">
+          {isSpanish ? 'Descargar manuscrito (PDF)' : 'Download manuscript (PDF)'}
+        </p>
+        <p className="text-[10px] text-slate-400">
+          {sub.formattedPdfFile?.url 
+            ? (isSpanish ? 'Versión formateada' : 'Formatted version')
+            : sub.formattedDocsFile?.url
+            ? (isSpanish ? 'Exportado de Google Docs' : 'Exported from Google Docs')
+            : (isSpanish ? 'Documento original' : 'Original document')
+          }
+        </p>
+      </div>
+      <svg className="w-5 h-5 text-[#C0A86A] group-hover:text-[#A58D4F] transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    </button>
+
+    {/* BOTÓN: DESCARGAR CONSENTIMIENTO (SOLO SI ES MENOR) */}
+    {sub.hasMinorAuthors && sub.consentFiles && sub.consentFiles.length > 0 && (
+      <div className="border-t border-slate-200 pt-3">
+        <p className="text-[10px] font-bold text-orange-600 uppercase tracking-wider mb-2 px-1">
+          {isSpanish ? '👶 Consentimientos de menores' : '👶 Minor consent forms'}
+        </p>
+        {sub.consentFiles.map((consent, idx) => (
+          <button
+            key={idx}
+            onClick={() => {
+              if (consent.fileUrl) {
+                window.open(consent.fileUrl, '_blank', 'noopener noreferrer');
+              } else if (consent.fileId) {
+                window.open(`https://drive.google.com/file/d/${consent.fileId}/view`, '_blank', 'noopener noreferrer');
+              } else if (consent.method === 'email') {
+                alert(isSpanish 
+                  ? `Consentimiento para ${consent.author} fue enviado por correo electrónico.` 
+                  : `Consent for ${consent.author} was sent by email.`);
+              } else {
+                alert(isSpanish 
+                  ? 'Documento de consentimiento no disponible' 
+                  : 'Consent document not available');
+              }
+            }}
+            className="w-full flex items-center gap-2 p-2.5 bg-orange-50 hover:bg-orange-100 transition-colors border border-orange-200 rounded-lg mb-2 text-left"
+          >
+            <span className="text-lg flex-shrink-0">📋</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-[#0A1929] truncate">
+                {consent.author || `${isSpanish ? 'Menor' : 'Minor'} ${idx + 1}`}
+              </p>
+              <p className="text-[10px] text-slate-500">
+                {consent.method === 'upload' 
+                  ? (isSpanish ? 'Formulario subido' : 'Uploaded form')
+                  : consent.method === 'email'
+                  ? (isSpanish ? 'Enviado por correo' : 'Sent by email')
+                  : consent.method || (isSpanish ? 'Desconocido' : 'Unknown')
+                }
+              </p>
+            </div>
+            {consent.fileUrl || consent.fileId ? (
+              <svg className="w-4 h-4 text-orange-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+            ) : (
+              <span className="text-[10px] text-slate-400 flex-shrink-0">
+                {isSpanish ? 'No disponible' : 'N/A'}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+    )}
+
+    {/* BOTÓN: DESCARGAR AUTORIZACIÓN (SI ES MENOR Y EL USUARIO ES EL TUTOR) */}
+    {sub.hasMinorAuthors && sub.minorAuthors && sub.minorAuthors.length > 0 && (
+      <div className="border-t border-slate-200 pt-3">
+        <p className="text-[10px] font-bold text-[#0A1929] uppercase tracking-wider mb-2 px-1">
+          {isSpanish ? '📝 Formularios de autorización' : '📝 Authorization forms'}
+        </p>
+        <p className="text-[10px] text-slate-500 mb-2 px-1">
+          {isSpanish 
+            ? 'Descarga el formulario de consentimiento para completar y enviar a contact@revistacienciasestudiantes.com'
+            : 'Download the consent form to complete and send to contact@revistacienciasestudiantes.com'
+          }
+        </p>
+        <button
+          onClick={() => {
+            // Descargar plantilla de consentimiento
+            const templateUrl = 'https://www.revistacienciasestudiantes.com/assets/consentimiento-menor.pdf';
+            window.open(templateUrl, '_blank', 'noopener noreferrer');
+          }}
+          className="w-full flex items-center gap-2 p-2.5 bg-slate-50 hover:bg-slate-100 transition-colors border border-slate-200 rounded-lg"
+        >
+          <span className="text-lg flex-shrink-0">📄</span>
+          <div className="text-left flex-1 min-w-0">
+            <p className="text-xs font-medium text-[#0A1929]">
+              {isSpanish ? 'Plantilla de consentimiento' : 'Consent form template'}
+            </p>
+            <p className="text-[10px] text-slate-500">PDF</p>
+          </div>
+          <svg className="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+        </button>
+      </div>
+    )}
+
+    {/* INDICADOR DE ESTADO DEL DOCUMENTO */}
+    {sub.documentStatus && (
+      <div className="border-t border-slate-200 pt-3">
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-1">
+          {isSpanish ? 'Estado del documento' : 'Document status'}
+        </p>
+        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-mono ${
+          sub.documentStatus === 'processed' 
+            ? 'bg-green-100 text-green-700' 
+            : sub.documentStatus === 'processing'
+            ? 'bg-yellow-100 text-yellow-700'
+            : 'bg-red-100 text-red-700'
+        }`}>
+          {sub.documentStatus === 'processed' && '✓'}
+          {sub.documentStatus === 'processing' && '⏳'}
+          {sub.documentStatus === 'processing_failed' && '⚠️'}
+          {' '}
+          {sub.documentStatus === 'processed' 
+            ? (isSpanish ? 'Formateado' : 'Formatted')
+            : sub.documentStatus === 'processing'
+            ? (isSpanish ? 'Procesando...' : 'Processing...')
+            : (isSpanish ? 'Error' : 'Error')
+          }
+        </span>
+      </div>
+    )}
+  </div>
+</div>
                       </div>
                     </div>
                   </motion.div>

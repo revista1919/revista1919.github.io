@@ -267,32 +267,99 @@ const translateVocabulary = (value) => {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            {submission.originalFileUrl && (
-              <a 
-                href={submission.originalFileUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors text-sm whitespace-nowrap font-['Lora']"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                </svg>
-                {isSpanish ? 'Manuscrito original' : 'Original manuscript'}
-              </a>
-            )}
-            {latestRevisionUrl && (
-              <a 
-                href={latestRevisionUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors text-sm whitespace-nowrap font-['Lora']"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-                {isSpanish ? 'Última revisión' : 'Latest revision'}
-              </a>
-            )}
+            <div className="flex flex-wrap gap-2">
+  {/* DOCUMENTO FORMATEADO (VISIBLE PARA EDITOR) - BOTÓN PRINCIPAL */}
+  {submission.formattedDocsFile?.url && (
+    <a 
+      href={submission.formattedDocsFile.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-2 bg-[#C0A86A] hover:bg-[#A58D4F] text-white px-4 py-2 rounded-lg transition-colors text-sm whitespace-nowrap font-['Lora'] shadow-md"
+    >
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+      {isSpanish ? '📄 Documento formateado' : '📄 Formatted document'}
+    </a>
+  )}
+  
+  {/* PDF FORMATEADO (si existe) */}
+  {submission.formattedPdfFile?.url && (
+    <a 
+      href={submission.formattedPdfFile.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors text-sm whitespace-nowrap font-['Lora']"
+    >
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+      </svg>
+      PDF
+    </a>
+  )}
+  
+  {/* MANUSCRITO ORIGINAL (secundario, solo si no hay formateado) */}
+  {!submission.formattedDocsFile?.url && submission.originalFileUrl && (
+    <a 
+      href={submission.originalFileUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors text-sm whitespace-nowrap font-['Lora']"
+    >
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+      </svg>
+      {isSpanish ? 'Manuscrito original' : 'Original manuscript'}
+    </a>
+  )}
+  
+  {/* ÚLTIMA REVISIÓN (si existe) */}
+  {latestRevisionUrl && (
+    <a 
+      href={latestRevisionUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors text-sm whitespace-nowrap font-['Lora']"
+    >
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+      </svg>
+      {isSpanish ? 'Última revisión' : 'Latest revision'}
+    </a>
+  )}
+  
+  {/* CARPETAS (enlaces secundarios) */}
+  <div className="flex gap-1">
+    {submission.driveFolderUrl && (
+      <a 
+        href={submission.driveFolderUrl} 
+        target="_blank" 
+        rel="noopener noreferrer"
+        className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-lg transition-colors text-sm whitespace-nowrap font-['Lora']"
+        title={isSpanish ? 'Carpeta del autor' : 'Author folder'}
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+        </svg>
+        {isSpanish ? 'Drive autor' : 'Author Drive'}
+      </a>
+    )}
+    {submission.editorialFolderUrl && (
+      <a 
+        href={submission.editorialFolderUrl} 
+        target="_blank" 
+        rel="noopener noreferrer"
+        className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-lg transition-colors text-sm whitespace-nowrap font-['Lora']"
+        title={isSpanish ? 'Carpeta editorial' : 'Editorial folder'}
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        {isSpanish ? 'Drive editorial' : 'Editorial Drive'}
+      </a>
+    )}
+  </div>
+</div>
             <div className="flex gap-1">
               <a 
                 href={submission.driveFolderUrl} 
