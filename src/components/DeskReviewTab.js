@@ -279,7 +279,7 @@ const translateVocabulary = (value) => {
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
       </svg>
-      {isSpanish ? '📄 Documento formateado' : '📄 Formatted document'}
+      {isSpanish ? '📄 Manuscrito PDF' : '📄 PDF Manuscript'}
     </a>
   )}
   
@@ -297,7 +297,63 @@ const translateVocabulary = (value) => {
       PDF
     </a>
   )}
-  
+  {/* ===== BOTONES DEL DOCUMENTO FINAL CON REVISIONES ===== */}
+{submission.finalReviewDocUrl && (
+  <>
+    {/* BOTÓN PRINCIPAL: VER EN GOOGLE DOCS */}
+    <a 
+      href={submission.finalReviewDocUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition-colors text-sm whitespace-nowrap font-['Lora'] shadow-md"
+      title={isSpanish ? 'Documento final con todas las revisiones' : 'Final document with all reviews'}
+    >
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+      {isSpanish ? '📋 Doc. Final' : '📋 Final Doc'}
+    </a>
+    
+    {/* BOTÓN SECUNDARIO: DESCARGAR COMO DOCX */}
+    <button
+      onClick={async () => {
+        try {
+          // Extraer ID del documento de la URL
+          const match = submission.finalReviewDocUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+          if (match && match[1]) {
+            const downloadUrl = `https://docs.google.com/document/d/${match[1]}/export?format=docx`;
+            const fileName = `Revisiones_${submission.submissionId || 'final'}.docx`;
+            
+            // Crear link temporal para descarga
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = fileName;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            console.log('✅ Descarga de documento final iniciada');
+          } else {
+            // Fallback: abrir en Google Docs
+            window.open(submission.finalReviewDocUrl, '_blank', 'noopener noreferrer');
+          }
+        } catch (error) {
+          console.error('❌ Error descargando:', error);
+          window.open(submission.finalReviewDocUrl, '_blank', 'noopener noreferrer');
+        }
+      }}
+      className="flex items-center gap-2 bg-[#002147] hover:bg-[#001A38] text-white px-4 py-2 rounded-lg transition-colors text-sm whitespace-nowrap font-['Lora']"
+      title={isSpanish ? 'Descargar como Word (DOCX)' : 'Download as Word (DOCX)'}
+    >
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+      </svg>
+      {isSpanish ? '⬇️ DOCX' : '⬇️ DOCX'}
+    </button>
+  </>
+)}
   {/* MANUSCRITO ORIGINAL (secundario, solo si no hay formateado) */}
   {!submission.formattedDocsFile?.url && submission.originalFileUrl && (
     <a 

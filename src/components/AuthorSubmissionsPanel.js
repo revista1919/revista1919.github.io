@@ -37,6 +37,28 @@ const getDocsExportUrl = (docsUrl) => {
   
   return null;
 };
+/**
+ * Convierte una URL de Google Docs en URL de descarga DOCX
+ * @param {string} docsUrl - URL del Google Docs
+ * @returns {string} URL de exportación DOCX
+ */
+const getDocsExportDocxUrl = (docsUrl) => {
+  if (!docsUrl) return null;
+  
+  // Extraer el ID del documento de la URL
+  const match = docsUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (match && match[1]) {
+    return `https://docs.google.com/document/d/${match[1]}/export?format=docx`;
+  }
+  
+  // Si es una URL de Drive, intentar extraer ID
+  const driveMatch = docsUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (driveMatch && driveMatch[1]) {
+    return `https://docs.google.com/document/d/${driveMatch[1]}/export?format=docx`;
+  }
+  
+  return null;
+};
 const OXFORD_COLORS = {
   darkBlue: '#002147',
   gold: '#C0A86A',
@@ -944,7 +966,79 @@ const AuthorSubmissionsPanel = ({ user }) => {
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
       </svg>
     </button>
-
+{/* BOTÓN: DESCARGAR DOCUMENTO FINAL CON REVISIONES (DOCX) */}
+{sub.finalReviewDocUrl && (
+  <button
+    onClick={async () => {
+      try {
+        console.log('📥 Descargando documento final con revisiones en DOCX...');
+        
+        const downloadUrl = getDocsExportDocxUrl(sub.finalReviewDocUrl);
+        
+        if (downloadUrl) {
+          const fileName = `revisiones_${sub.submissionId || sub.id?.substring(0, 8)}.docx`;
+          
+          // Mostrar indicador de descarga
+          const downloadingToast = document.createElement('div');
+          downloadingToast.className = 'fixed bottom-4 right-4 bg-[#002147] text-white px-4 py-3 rounded-lg shadow-2xl z-50 text-sm font-medium animate-in slide-in-from-right';
+          downloadingToast.textContent = isSpanish ? '📥 Descargando documento...' : '📥 Downloading document...';
+          document.body.appendChild(downloadingToast);
+          
+          // Crear un link temporal para descarga
+          const link = document.createElement('a');
+          link.href = downloadUrl;
+          link.download = fileName;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          // Eliminar toast después de 3 segundos
+          setTimeout(() => {
+            downloadingToast.remove();
+          }, 3000);
+          
+          console.log('✅ Descarga de revisiones iniciada:', fileName);
+        } else {
+          throw new Error('No se pudo generar URL de descarga');
+        }
+      } catch (error) {
+        console.error('❌ Error descargando revisiones:', error);
+        
+        // Toast de error
+        const errorToast = document.createElement('div');
+        errorToast.className = 'fixed bottom-4 right-4 bg-red-600 text-white px-4 py-3 rounded-lg shadow-2xl z-50 text-sm font-medium';
+        errorToast.textContent = isSpanish 
+          ? '❌ Error al descargar. Intenta de nuevo.'
+          : '❌ Download error. Please try again.';
+        document.body.appendChild(errorToast);
+        
+        setTimeout(() => {
+          errorToast.remove();
+        }, 4000);
+      }
+    }}
+    className="w-full flex items-center gap-3 p-3 bg-gradient-to-r from-[#F0F4FF] to-[#E8EEFF] hover:from-[#E0E8FF] hover:to-[#D0DCFF] transition-all border-2 border-[#002147] rounded-lg group shadow-sm hover:shadow-md"
+  >
+    <span className="text-2xl flex-shrink-0">📝</span>
+    <div className="text-left flex-1 overflow-hidden">
+      <p className="text-sm font-bold text-[#002147] group-hover:text-[#001A38] transition-colors truncate">
+        {isSpanish ? 'Descargar revisiones (DOCX)' : 'Download reviews (DOCX)'}
+      </p>
+      <p className="text-[10px] text-slate-500">
+        {isSpanish 
+          ? 'Documento Word con comentarios de revisores' 
+          : 'Word document with reviewer comments'}
+      </p>
+    </div>
+    <div className="flex-shrink-0 w-8 h-8 bg-[#002147] rounded-full flex items-center justify-center group-hover:bg-[#001A38] transition-colors">
+      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+      </svg>
+    </div>
+  </button>
+)}
     {/* BOTÓN: DESCARGAR CONSENTIMIENTO (SOLO SI ES MENOR) */}
     {sub.hasMinorAuthors && sub.consentFiles && sub.consentFiles.length > 0 && (
       <div className="border-t border-slate-200 pt-3">
@@ -1051,7 +1145,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
           {sub.documentStatus === 'processing_failed' && '⚠️'}
           {' '}
           {sub.documentStatus === 'processed' 
-            ? (isSpanish ? 'Formateado' : 'Formatted')
+            ? (isSpanish ? 'Procesado' : 'Processed')
             : sub.documentStatus === 'processing'
             ? (isSpanish ? 'Procesando...' : 'Processing...')
             : (isSpanish ? 'Error' : 'Error')

@@ -2883,127 +2883,465 @@ async function createDriveFolder(drive, folderName, parentId = null) {
  * 4. Añade portada institucional
  * 5. Inserta marca de agua
  */
-async function getDriveClient(requestId = 'unknown') {
-  console.log(`[${requestId}] 🔧 Inicializando cliente de Drive...`);
+// ============================================================
+// 1. IMPORTS
+// ============================================================
+const { Readable } = require('stream');
+
+// ============================================================
+// CONFIGURACIÓN GLOBAL - DEFINIDA FUERA PARA ACCESO GLOBAL
+// ============================================================
+const CONFIG = {
+  COLORS: {
+    academicBlue: { red: 0.0, green: 0.15, blue: 0.35 },
+    darkCharcoal: { red: 0.08, green: 0.08, blue: 0.08 },
+    bodyGray: { red: 0.15, green: 0.15, blue: 0.15 },
+    metadataGray: { red: 0.08, green: 0.08, blue: 0.08 },  // ← Mismo que darkCharcoal
+    academicRed: { red: 0.5, green: 0.0, blue: 0.0 }
+  },
+  
+  TYPOGRAPHY: {
+    journalName: { family: 'Open Sans', weight: 600, size: 10 },
+    journalSubtitle: { family: 'Open Sans', weight: 400, size: 9 },
+    articleTitle: { family: 'Lora', weight: 700, size: 22 },
+    metadata: { family: 'Open Sans', weight: 400, size: 9 },
+    metadataLabel: { family: 'Open Sans', weight: 600, size: 9 },
+    body: { family: 'Lora', weight: 400, size: 11 },
+    confidential: { family: 'Open Sans', weight: 600, size: 8 }
+  }
+};
+
+// ============================================================
+// FUNCIÓN PRINCIPAL: PROCESAR DOCUMENTO (VERSIÓN SIMPLE)
+// ============================================================
+async function processDocumentWithDocsAPI(drive, docsClient, fileId, submissionData, requestId) {
+  console.log(`[${requestId}] 📝 Iniciando procesamiento de documento (diseño simple)...`);
+  
+  const result = {
+    success: true,
+    docsFileId: null,
+    docsFileUrl: null,
+    pdfFileId: null,
+    pdfFileUrl: null,
+    warnings: [],
+    errors: []
+  };
   
   try {
-    if (!google) {
-      await loadDependencies();
-      if (!google) {
-        throw new Error('Google APIs no disponible');
-      }
-    }
+    const submissionId = submissionData?.submissionId || requestId;
+    const editorialFolderId = submissionData?.editorialFolderId || null;
+    const authors = submissionData.authors || ['Autor no especificado'];
+    const authorNames = Array.isArray(authors) ? authors.join(', ') : authors;
+    const articleTitle = submissionData.title || 'Untitled';
+    const articleType = (submissionData.articleType || 'RESEARCH ARTICLE').toUpperCase();
+    const date = new Date().toLocaleDateString('es-CL');
     
-    const clientId = OAUTH2_CLIENT_ID.value();
-    const clientSecret = OAUTH2_CLIENT_SECRET.value();
-    const refreshToken = OAUTH2_REFRESH_TOKEN.value();
+    // ============================================================
+    // PASO 1: CONVERTIR WORD A GOOGLE DOCS
+    // ============================================================
+    let docsFileId = null;
     
-    if (!clientId || !clientSecret || !refreshToken) {
-      throw new Error('Faltan credenciales OAuth2');
-    }
-    
-    const oauth2Client = new google.auth.OAuth2(
-      clientId,
-      clientSecret,
-      'urn:ietf:wg:oauth:2.0:oob'
-    );
-    
-    oauth2Client.setCredentials({
-      refresh_token: refreshToken
-    });
-    
-    await oauth2Client.getAccessToken();
-    
-    // ✅ Crear ambos clientes con la misma autenticación
-    const drive = google.drive({ version: 'v3', auth: oauth2Client });
-    const docs = google.docs({ version: 'v1', auth: oauth2Client });
-    
-    console.log(`[${requestId}] ✅ Drive y Docs inicializados correctamente`);
-    
-    // ✅ Retornar ambos
-    return { drive, docs };
-    
-  } catch (error) {
-    console.error(`[${requestId}] ❌ Error inicializando Drive:`, error.message);
-    throw new Error(`Failed to initialize Drive: ${error.message}`);
-  }
-}
-/**
- * Inserta el logo de la revista en el documento
- */
-async function insertLogoImage(drive, docsFileId, requests, requestId) {
-  try {
-    // Descargar el logo desde la URL
-    const https = require('https');
-    const imageBuffer = await new Promise((resolve, reject) => {
-      https.get('https://www.revistacienciasestudiantes.com/assets/logo.png', (response) => {
-        const chunks = [];
-        response.on('data', (chunk) => chunks.push(chunk));
-        response.on('end', () => resolve(Buffer.concat(chunks)));
-        response.on('error', reject);
-      }).on('error', reject);
-    });
-    
-    // Subir imagen a Drive temporalmente
-    const imageUpload = await drive.files.create({
-      resource: {
-        name: 'logo_temp.png',
-        mimeType: 'image/png'
-      },
-      media: {
-        mimeType: 'image/png',
-        body: imageBuffer
-      },
-      fields: 'id, webContentLink'
-    });
-    
-    // Insertar la imagen en el documento
-    requests.push({
-      insertInlineImage: {
-        location: {
-          index: 2
+    try {
+      const copyRequest = {
+        fileId: fileId,
+        requestBody: {
+          name: `PROCESSED_${submissionId}`,
+          mimeType: 'application/vnd.google-apps.document'
         },
-        uri: imageUpload.data.webContentLink,
-        objectSize: {
-          width: {
-            magnitude: 200,
-            unit: 'PT'
-          },
-          height: {
-            magnitude: 100,
-            unit: 'PT'
-          }
-        }
+        fields: 'id, webViewLink'
+      };
+      
+      if (editorialFolderId) {
+        copyRequest.requestBody.parents = [editorialFolderId];
+      }
+      
+      const docsFile = await drive.files.copy(copyRequest);
+      docsFileId = docsFile.data.id;
+      result.docsFileId = docsFileId;
+      result.docsFileUrl = docsFile.data.webViewLink;
+      
+      console.log(`[${requestId}] ✅ Google Docs creado: ${docsFileId}`);
+      
+      // Pequeña pausa para asegurar que el documento esté listo
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+    } catch (error) {
+      throw new Error(`Error creando documento: ${error.message}`);
+    }
+    
+    // ============================================================
+    // PASO 2: CONSTRUIR PORTADA SIMPLE Y CENTRADA
+    // ============================================================
+    const COLORS = CONFIG.COLORS;
+    const TYPO = CONFIG.TYPOGRAPHY;
+    
+    // Texto de la portada con marcadores de estilo
+    const coverText = [
+      'REVISTA NACIONAL DE LAS CIENCIAS PARA ESTUDIANTES\n',
+      'National Review of Sciences for Students\n',
+      '\n',
+      '──────────────────────────────────────────────────\n',
+      '\n',
+      articleTitle + '\n',
+      '\n',
+      `Submission ID: ${submissionId}\n`,
+      `Article Type: ${articleType}\n`,
+      `Date: ${date}\n`,
+      '\n',
+      '──────────────────────────────────────────────────\n',
+      'CONFIDENTIAL DOCUMENT // FOR EDITORIAL REVIEW ONLY\n'
+    ].join('');
+    
+    // ============================================================
+    // PASO 3: GENERAR SOLICITUDES DE FORMATO
+    // ============================================================
+    const requests = [];
+    
+    // Insertar texto de la portada
+    requests.push({
+      insertText: {
+        location: { index: 1 },
+        text: coverText
       }
     });
     
-    // Centrar la imagen
+    // Calcular posiciones para aplicar estilos
+    let currentPos = 1;
+    
+    // 1. Nombre de la revista
+    const journalText = 'REVISTA NACIONAL DE LAS CIENCIAS PARA ESTUDIANTES\n';
+    requests.push({
+      updateTextStyle: {
+        range: { startIndex: currentPos, endIndex: currentPos + journalText.length },
+        textStyle: {
+          weightedFontFamily: { fontFamily: TYPO.journalName.family, weight: TYPO.journalName.weight },
+          fontSize: { magnitude: TYPO.journalName.size, unit: 'PT' },
+          bold: true,
+          foregroundColor: { color: { rgbColor: COLORS.academicBlue } }
+        },
+        fields: 'weightedFontFamily,fontSize,bold,foregroundColor'
+      }
+    });
     requests.push({
       updateParagraphStyle: {
-        range: {
-          startIndex: 2,
-          endIndex: 3
+        range: { startIndex: currentPos, endIndex: currentPos + journalText.length },
+        paragraphStyle: { alignment: 'CENTER', spaceBelow: { magnitude: 2, unit: 'PT' } },
+        fields: 'alignment,spaceBelow'
+      }
+    });
+    currentPos += journalText.length;
+    
+    // 2. Subtítulo en inglés
+    const subtitleText = 'National Review of Sciences for Students\n';
+    requests.push({
+      updateTextStyle: {
+        range: { startIndex: currentPos, endIndex: currentPos + subtitleText.length },
+        textStyle: {
+          weightedFontFamily: { fontFamily: TYPO.journalSubtitle.family, weight: TYPO.journalSubtitle.weight },
+          fontSize: { magnitude: TYPO.journalSubtitle.size, unit: 'PT' },
+          italic: true,
+          foregroundColor: { color: { rgbColor: COLORS.metadataGray } }
         },
-        paragraphStyle: {
-          alignment: 'CENTER'
+        fields: 'weightedFontFamily,fontSize,italic,foregroundColor'
+      }
+    });
+    requests.push({
+      updateParagraphStyle: {
+        range: { startIndex: currentPos, endIndex: currentPos + subtitleText.length },
+        paragraphStyle: { alignment: 'CENTER', spaceBelow: { magnitude: 12, unit: 'PT' } },
+        fields: 'alignment,spaceBelow'
+      }
+    });
+    currentPos += subtitleText.length;
+    
+    // 3. Espacio
+    currentPos += '\n'.length;
+    
+    // 4. Línea decorativa superior
+    const dividerText = '──────────────────────────────────────────────────\n';
+    requests.push({
+      updateTextStyle: {
+        range: { startIndex: currentPos, endIndex: currentPos + dividerText.length },
+        textStyle: {
+          foregroundColor: { color: { rgbColor: COLORS.academicBlue } },
+          fontSize: { magnitude: 6, unit: 'PT' }
         },
-        fields: 'alignment'
+        fields: 'foregroundColor,fontSize'
+      }
+    });
+    requests.push({
+      updateParagraphStyle: {
+        range: { startIndex: currentPos, endIndex: currentPos + dividerText.length },
+        paragraphStyle: { alignment: 'CENTER', spaceBelow: { magnitude: 18, unit: 'PT' } },
+        fields: 'alignment,spaceBelow'
+      }
+    });
+    currentPos += dividerText.length;
+    
+    // 5. Espacio
+    currentPos += '\n'.length;
+    
+    // 6. Título del artículo
+    const titleText = articleTitle + '\n';
+    requests.push({
+      updateTextStyle: {
+        range: { startIndex: currentPos, endIndex: currentPos + titleText.length },
+        textStyle: {
+          weightedFontFamily: { fontFamily: TYPO.articleTitle.family, weight: TYPO.articleTitle.weight },
+          fontSize: { magnitude: TYPO.articleTitle.size, unit: 'PT' },
+          bold: true,
+          foregroundColor: { color: { rgbColor: COLORS.darkCharcoal } }
+        },
+        fields: 'weightedFontFamily,fontSize,bold,foregroundColor'
+      }
+    });
+    requests.push({
+      updateParagraphStyle: {
+        range: { startIndex: currentPos, endIndex: currentPos + titleText.length },
+        paragraphStyle: { alignment: 'CENTER', spaceBelow: { magnitude: 24, unit: 'PT' } },
+        fields: 'alignment,spaceBelow'
+      }
+    });
+    currentPos += titleText.length;
+    
+    // 7. Espacio
+    currentPos += '\n'.length;
+    
+    // 8. Metadatos (aplicar estilo a cada línea)
+    const metadataLines = [
+      `Submission ID: ${submissionId}\n`,
+      `Article Type: ${articleType}\n`,
+      `Date: ${date}\n`
+    ];
+    
+    for (const line of metadataLines) {
+      // Buscar el punto y aparte para estilizar la etiqueta
+      const colonIndex = line.indexOf(':');
+      if (colonIndex > 0) {
+        // Estilo para la etiqueta (antes de los dos puntos)
+        requests.push({
+          updateTextStyle: {
+            range: { startIndex: currentPos, endIndex: currentPos + colonIndex + 1 },
+            textStyle: {
+              weightedFontFamily: { fontFamily: TYPO.metadataLabel.family, weight: TYPO.metadataLabel.weight },
+              fontSize: { magnitude: TYPO.metadataLabel.size, unit: 'PT' },
+              bold: true,
+              foregroundColor: { color: { rgbColor: COLORS.academicBlue } }
+            },
+            fields: 'weightedFontFamily,fontSize,bold,foregroundColor'
+          }
+        });
+        
+        // Estilo para el valor (después de los dos puntos)
+        requests.push({
+          updateTextStyle: {
+            range: { startIndex: currentPos + colonIndex + 1, endIndex: currentPos + line.length },
+            textStyle: {
+              weightedFontFamily: { fontFamily: TYPO.metadata.family, weight: TYPO.metadata.weight },
+              fontSize: { magnitude: TYPO.metadata.size, unit: 'PT' },
+              foregroundColor: { color: { rgbColor: COLORS.bodyGray } }
+            },
+            fields: 'weightedFontFamily,fontSize,foregroundColor'
+          }
+        });
+      }
+      
+      requests.push({
+        updateParagraphStyle: {
+          range: { startIndex: currentPos, endIndex: currentPos + line.length },
+          paragraphStyle: { alignment: 'CENTER', spaceBelow: { magnitude: 4, unit: 'PT' } },
+          fields: 'alignment,spaceBelow'
+        }
+      });
+      
+      currentPos += line.length;
+    }
+    
+    // 9. Espacio
+    currentPos += '\n'.length;
+    
+    // 10. Línea decorativa inferior
+    requests.push({
+      updateTextStyle: {
+        range: { startIndex: currentPos, endIndex: currentPos + dividerText.length },
+        textStyle: {
+          foregroundColor: { color: { rgbColor: COLORS.academicBlue } },
+          fontSize: { magnitude: 6, unit: 'PT' }
+        },
+        fields: 'foregroundColor,fontSize'
+      }
+    });
+    requests.push({
+      updateParagraphStyle: {
+        range: { startIndex: currentPos, endIndex: currentPos + dividerText.length },
+        paragraphStyle: { alignment: 'CENTER', spaceBelow: { magnitude: 18, unit: 'PT' } },
+        fields: 'alignment,spaceBelow'
+      }
+    });
+    currentPos += dividerText.length;
+    
+    // 11. Texto confidencial
+    const confidentialText = 'CONFIDENTIAL DOCUMENT // FOR EDITORIAL REVIEW ONLY\n';
+    requests.push({
+      updateTextStyle: {
+        range: { startIndex: currentPos, endIndex: currentPos + confidentialText.length },
+        textStyle: {
+          weightedFontFamily: { fontFamily: TYPO.confidential.family, weight: TYPO.confidential.weight },
+          fontSize: { magnitude: TYPO.confidential.size, unit: 'PT' },
+          foregroundColor: { color: { rgbColor: COLORS.academicRed } },
+          bold: true
+        },
+        fields: 'weightedFontFamily,fontSize,foregroundColor,bold'
+      }
+    });
+    requests.push({
+      updateParagraphStyle: {
+        range: { startIndex: currentPos, endIndex: currentPos + confidentialText.length },
+        paragraphStyle: { alignment: 'CENTER', spaceAbove: { magnitude: 12, unit: 'PT' } },
+        fields: 'alignment,spaceAbove'
+      }
+    });
+    currentPos += confidentialText.length;
+    
+    // 12. Insertar salto de página
+    requests.push({
+      insertPageBreak: {
+        location: { index: currentPos }
       }
     });
     
-    console.log(`[${requestId}] ✅ Logo preparado para inserción`);
+    // ============================================================
+    // PASO 4: APLICAR TODOS LOS ESTILOS
+    // ============================================================
+    console.log(`[${requestId}] 🎨 Aplicando estilos (${requests.length} solicitudes)...`);
     
-    // Limpiar imagen temporal
+    await docsClient.documents.batchUpdate({
+      documentId: docsFileId,
+      requestBody: { requests: requests }
+    });
+    
+    console.log(`[${requestId}] ✅ Estilos aplicados`);
+    
+    // ============================================================
+    // PASO 5: ESTILO BASE AL CUERPO DEL DOCUMENTO
+    // ============================================================
     try {
-      await drive.files.delete({ fileId: imageUpload.data.id });
-    } catch (cleanupError) {
-      // Ignorar error de limpieza
+      const updatedDoc = await docsClient.documents.get({
+        documentId: docsFileId
+      });
+      
+      const docEnd = updatedDoc.data.body.content[updatedDoc.data.body.content.length - 1].endIndex;
+      const bodyStart = currentPos + 2; // Después del salto de página
+      
+      if (bodyStart < docEnd - 1) {
+        await docsClient.documents.batchUpdate({
+          documentId: docsFileId,
+          requestBody: {
+            requests: [
+              {
+                updateTextStyle: {
+                  range: { startIndex: bodyStart, endIndex: docEnd - 1 },
+                  textStyle: {
+                    weightedFontFamily: { fontFamily: TYPO.body.family, weight: TYPO.body.weight },
+                    fontSize: { magnitude: TYPO.body.size, unit: 'PT' },
+                    foregroundColor: { color: { rgbColor: COLORS.bodyGray } }
+                  },
+                  fields: 'weightedFontFamily,fontSize,foregroundColor'
+                }
+              },
+              {
+                updateParagraphStyle: {
+                  range: { startIndex: bodyStart, endIndex: docEnd - 1 },
+                  paragraphStyle: {
+                    lineSpacing: 125,
+                    spaceBelow: { magnitude: 8, unit: 'PT' },
+                    alignment: 'JUSTIFIED'
+                  },
+                  fields: 'lineSpacing,spaceBelow,alignment'
+                }
+              }
+            ]
+          }
+        });
+        
+        console.log(`[${requestId}] ✅ Estilo base aplicado al cuerpo`);
+      }
+    } catch (bodyError) {
+      console.warn(`[${requestId}] ⚠️ Estilo cuerpo no aplicado:`, bodyError.message);
+      result.warnings.push(`Estilo cuerpo: ${bodyError.message}`);
     }
     
-    return true;
+    // ============================================================
+    // PASO 6: EXPORTAR A PDF
+    // ============================================================
+    try {
+      console.log(`[${requestId}] 📄 Exportando a PDF...`);
+      
+      const pdfExport = await drive.files.export({
+        fileId: docsFileId,
+        mimeType: 'application/pdf'
+      }, { responseType: 'arraybuffer' });
+      
+      const pdfStream = Readable.from(Buffer.from(pdfExport.data));
+      
+      const pdfUpload = await drive.files.create({
+        requestBody: {
+          name: `FORMATTED_${submissionId}.pdf`,
+          mimeType: 'application/pdf',
+          parents: editorialFolderId ? [editorialFolderId] : undefined
+        },
+        media: {
+          mimeType: 'application/pdf',
+          body: pdfStream
+        },
+        fields: 'id, webViewLink'
+      });
+      
+      result.pdfFileId = pdfUpload.data.id;
+      result.pdfFileUrl = pdfUpload.data.webViewLink;
+      
+      console.log(`[${requestId}] ✅ PDF creado: ${result.pdfFileId}`);
+      
+    } catch (pdfError) {
+      console.warn(`[${requestId}] ⚠️ Error creando PDF:`, pdfError.message);
+      result.warnings.push(`PDF: ${pdfError.message}`);
+    }
+    
+    return result;
+    
   } catch (error) {
-    console.error(`[${requestId}] ⚠️ Error insertando logo:`, error.message);
-    return false;
+    console.error(`[${requestId}] ❌ Error fatal:`, error.message);
+    result.success = false;
+    result.errors.push(error.message);
+    return result;
+  }
+}
+
+// ============================================================
+// FUNCIÓN AUXILIAR: CREAR CARPETA
+// ============================================================
+async function createFolder(drive, folderName, parentId = null) {
+  try {
+    const fileMetadata = {
+      name: folderName,
+      mimeType: 'application/vnd.google-apps.folder'
+    };
+    
+    if (parentId) {
+      fileMetadata.parents = [parentId];
+    }
+    
+    const response = await drive.files.create({
+      resource: fileMetadata,
+      fields: 'id, webViewLink, name'
+    });
+    
+    console.log(`✅ Carpeta creada: ${folderName} (${response.data.id})`);
+    return response.data;
+    
+  } catch (error) {
+    console.error(`❌ Error creando carpeta:`, error.message);
+    throw new Error(`Failed to create folder: ${error.message}`);
   }
 }
 
@@ -4863,7 +5201,7 @@ function escapeHtml(text) {
  * 4. TRIGGER: Cuando un revisor RESPONDE a una invitación (se actualiza)
  * ----------------------------------------------------------------------------
  */
-// ===================== TRIGGER CORREGIDO CON PERMISOS DE DRIVE =====================
+// ===================== TRIGGER CORREGIDO - VERSIÓN LIMPIA =====================
 exports.onReviewerInvitationUpdated = onDocumentUpdated(
   {
     document: 'reviewerInvitations/{invitationId}',
@@ -4880,11 +5218,11 @@ exports.onReviewerInvitationUpdated = onDocumentUpdated(
       return;
     }
 
-    console.log(`📝 [onReviewerInvitationUpdated] Invitación ${invitationId} ACEPTADA. Preparando documento anónimo...`);
+    console.log(`📝 [REVIEWER] Invitación ${invitationId} ACEPTADA. Creando copia exclusiva...`);
 
     try {
       const db = admin.firestore();
-      const requestId = `REV-${invitationId}-${Date.now()}`;
+      const requestId = `REV-${invitationId}-${Date.now().substring(0, 8)}`;
 
       // ===== PASO 1: Obtener el submission completo =====
       const submissionDoc = await db.collection('submissions').doc(afterData.submissionId).get();
@@ -4894,170 +5232,173 @@ exports.onReviewerInvitationUpdated = onDocumentUpdated(
       }
       const submission = submissionDoc.data();
 
-      // ===== PASO 2: Verificar que existe la carpeta editorial =====
+      // ===== PASO 2: Verificar carpeta editorial =====
       if (!submission.editorialFolderId) {
-        console.error(`❌ El submission ${afterData.submissionId} no tiene editorialFolderId`);
+        console.error(`❌ Submission sin editorialFolderId`);
         return;
       }
 
       // ===== PASO 3: Inicializar Google Drive =====
       const drive = await getDriveClient(`reviewer-${invitationId}`);
       
-      // ===== PASO 4: IDENTIFICAR EL DOCUMENTO FORMATEADO =====
+      // ===== PASO 4: IDENTIFICAR DOCUMENTO FUENTE =====
       // Prioridad: documento formateado > documento original
       let sourceFileId = null;
-      let sourceFileName = null;
+      let sourceMimeType = null;
       
       if (submission.formattedDocsFile?.id) {
-        // Usar el Google Docs formateado (ya procesado, sin metadatos de autor)
+        // Usar el Google Docs ya procesado y formateado
         sourceFileId = submission.formattedDocsFile.id;
-        sourceFileName = `FORMATTED_${submission.submissionId}`;
-        console.log(`[${requestId}] ✅ Usando documento formateado existente`);
+        sourceMimeType = 'application/vnd.google-apps.document';
+        console.log(`[${requestId}] ✅ Usando documento formateado (Google Docs)`);
       } else if (submission.originalFileId) {
-        // Si no hay versión formateada, usar el original y procesarlo ahora
+        // Compatibilidad con submissions antiguas sin formato
         sourceFileId = submission.originalFileId;
-        sourceFileName = `ORIGINAL_${submission.submissionId}`;
-        console.log(`[${requestId}] ⚠️ No hay versión formateada. Usando documento original.`);
+        console.log(`[${requestId}] ⚠️ Submission antigua. Usando documento original.`);
+        
+        // Verificar tipo MIME del original
+        try {
+          const fileMeta = await drive.files.get({
+            fileId: sourceFileId,
+            fields: 'mimeType'
+          });
+          sourceMimeType = fileMeta.data.mimeType;
+        } catch (metaErr) {
+          console.warn(`[${requestId}] ⚠️ No se pudo obtener MIME type. Asumiendo Word.`);
+          sourceMimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        }
       } else {
-        throw new Error(`No se encontró ningún documento para ${afterData.submissionId}`);
+        throw new Error(`No se encontró documento para submission ${afterData.submissionId}`);
       }
 
-      // ===== PASO 5: CREAR COPIA ANÓNIMA PARA EL REVISOR =====
-      console.log(`[${requestId}] 📄 Creando copia anónima para revisor...`);
+      // ===== PASO 5: CREAR COPIA EXCLUSIVA PARA EL REVISOR =====
+      console.log(`[${requestId}] 📄 Creando copia para revisor...`);
       
-      const reviewerCopyName = `REVIEW_COPY_${submission.submissionId}_${afterData.reviewerUid.substring(0, 8)}`;
+      const reviewerUidShort = afterData.reviewerUid ? afterData.reviewerUid.substring(0, 8) : 'unknown';
+      const reviewerCopyName = `REVIEW_${submission.submissionId}_${reviewerUidShort}`;
       
-      // Copiar el documento a la carpeta editorial
-      const reviewerCopy = await drive.files.copy({
+      const copyConfig = {
         fileId: sourceFileId,
         requestBody: {
           name: reviewerCopyName,
-          parents: [submission.editorialFolderId],
-          // Mantener como Google Docs si es formato Docs
-          mimeType: submission.formattedDocsFile?.id 
-            ? 'application/vnd.google-apps.document' 
-            : undefined
+          parents: [submission.editorialFolderId]
         },
         fields: 'id, webViewLink, mimeType'
-      });
+      };
+      
+      // Si es Google Docs formateado, mantener el formato
+      if (sourceMimeType === 'application/vnd.google-apps.document') {
+        copyConfig.requestBody.mimeType = 'application/vnd.google-apps.document';
+      }
+      
+      const reviewerCopy = await drive.files.copy(copyConfig);
       
       const reviewerFileId = reviewerCopy.data.id;
       const reviewerFileUrl = reviewerCopy.data.webViewLink;
       
       console.log(`[${requestId}] ✅ Copia creada: ${reviewerFileId}`);
 
-      // ===== PASO 6: ELIMINAR METADATOS SENSIBLES DEL AUTOR =====
-      // Solo si es un Google Docs (no aplica a PDFs o Word originales)
-      if (reviewerCopy.data.mimeType === 'application/vnd.google-apps.document') {
-        await removeAuthorMetadata(drive, reviewerFileId, requestId);
-      }
-
-      // ===== PASO 7: INSERTAR MARCA DE AGUA Y PORTADA DE REVISIÓN =====
-      if (reviewerCopy.data.mimeType === 'application/vnd.google-apps.document') {
-        await addReviewerWatermarkAndCover(drive, reviewerFileId, submission, afterData, requestId);
-      }
-
-      // ===== PASO 8: OTORGAR PERMISOS EXCLUSIVOS AL REVISOR =====
-      console.log(`[${requestId}] 🔑 Configurando permisos EXCLUSIVOS para ${afterData.reviewerEmail}...`);
+      // ===== PASO 6: CONFIGURAR PERMISOS EXCLUSIVOS =====
+      console.log(`[${requestId}] 🔑 Configurando permisos para ${afterData.reviewerEmail}...`);
       
-      // 8.1: Otorgar permiso de COMENTARISTA al revisor en el documento
-      await drive.permissions.create({
-        fileId: reviewerFileId,
-        requestBody: {
-          role: 'commenter',     // ⭐ SOLO PUEDE COMENTAR, NO EDITAR
-          type: 'user',
-          emailAddress: afterData.reviewerEmail
-        },
-        sendNotificationEmail: false,
-        fields: 'id'
-      });
-      
-      console.log(`[${requestId}] ✅ Permiso de comentarista otorgado a: ${afterData.reviewerEmail}`);
-
-      // 8.2: Verificar que NADIE MÁS tenga acceso (solo el revisor y el sistema)
+      // 6.1: Primero, eliminar TODOS los permisos existentes (excepto owner)
       const existingPermissions = await drive.permissions.list({
         fileId: reviewerFileId,
         fields: 'permissions(id, emailAddress, role, type)'
       });
       
-      // Remover cualquier permiso que no sea del revisor o del owner (cuenta de servicio)
       for (const perm of existingPermissions.data.permissions) {
-        if (perm.role === 'owner') continue; // No remover al owner (cuenta de servicio)
+        if (perm.role === 'owner') {
+          console.log(`[${requestId}] 👑 Owner mantenido: ${perm.emailAddress || 'cuenta de servicio'}`);
+          continue; // Mantener al propietario (cuenta de servicio)
+        }
         
-        if (perm.emailAddress !== afterData.reviewerEmail) {
-          try {
+        try {
+          await drive.permissions.delete({
+            fileId: reviewerFileId,
+            permissionId: perm.id
+          });
+          console.log(`[${requestId}] 🗑️ Permiso eliminado: ${perm.emailAddress || perm.id}`);
+        } catch (deleteErr) {
+          console.warn(`[${requestId}] ⚠️ No se pudo eliminar permiso: ${deleteErr.message}`);
+        }
+      }
+      
+      // 6.2: Otorgar permiso de COMENTARISTA solo al revisor asignado
+      await drive.permissions.create({
+        fileId: reviewerFileId,
+        requestBody: {
+          role: 'commenter',           // ⭐ SOLO COMENTAR, NO EDITAR
+          type: 'user',
+          emailAddress: afterData.reviewerEmail
+        },
+        sendNotificationEmail: false,  // No enviar email automático de Google
+        fields: 'id'
+      });
+      
+      console.log(`[${requestId}] ✅ Permiso COMENTARISTA otorgado a: ${afterData.reviewerEmail}`);
+      
+      // 6.3: Verificar que el acceso es realmente exclusivo
+      const finalPermissions = await drive.permissions.list({
+        fileId: reviewerFileId,
+        fields: 'permissions(id, emailAddress, role)'
+      });
+      
+      const accessCount = finalPermissions.data.permissions.filter(p => p.role !== 'owner').length;
+      
+      if (accessCount > 1) {
+        console.warn(`[${requestId}] ⚠️ Hay ${accessCount} accesos además del owner. Revisando...`);
+        // Fuerza bruta: eliminar cualquier permiso extra
+        for (const perm of finalPermissions.data.permissions) {
+          if (perm.role !== 'owner' && perm.emailAddress !== afterData.reviewerEmail) {
             await drive.permissions.delete({
               fileId: reviewerFileId,
               permissionId: perm.id
             });
-            console.log(`[${requestId}] 🔒 Permiso removido: ${perm.emailAddress}`);
-          } catch (deleteErr) {
-            console.warn(`[${requestId}] ⚠️ No se pudo remover permiso ${perm.id}:`, deleteErr.message);
+            console.log(`[${requestId}] 🔒 Acceso extra eliminado: ${perm.emailAddress}`);
           }
         }
       }
       
-      // 8.3: Otorgar acceso de LECTURA al editor en jefe (solo lectura, sin comentarios)
-      const editorSnapshot = await db.collection('users')
-        .where('roles', 'array-contains', 'Editor en Jefe')
-        .limit(1)
-        .get();
-      
-      if (!editorSnapshot.empty) {
-        const editorEmail = editorSnapshot.docs[0].data().email;
-        if (editorEmail && editorEmail !== afterData.reviewerEmail) {
-          try {
-            await drive.permissions.create({
-              fileId: reviewerFileId,
-              requestBody: {
-                role: 'reader',      // Solo lectura, no puede comentar
-                type: 'user',
-                emailAddress: editorEmail
-              },
-              sendNotificationEmail: false
-            });
-            console.log(`[${requestId}] 👁️ Editor ${editorEmail} tiene acceso de solo lectura (monitoreo)`);
-          } catch (permErr) {
-            console.warn(`[${requestId}] ⚠️ No se pudo dar acceso al editor:`, permErr.message);
-          }
-        }
-      }
+      console.log(`[${requestId}] 🔐 Acceso exclusivo verificado: SOLO ${afterData.reviewerEmail}`);
 
-      // ===== PASO 9: CREAR LA ASIGNACIÓN EN FIRESTORE =====
+      // ===== PASO 7: CREAR ASIGNACIÓN EN FIRESTORE =====
       const dueDate = new Date();
-      dueDate.setDate(dueDate.getDate() + 21); // 21 días desde ahora
+      dueDate.setDate(dueDate.getDate() + 21); // 21 días para revisar
 
       const assignmentData = {
         submissionId: afterData.submissionId,
-        editorialReviewId: afterData.editorialReviewId,
-        editorialTaskId: afterData.editorialTaskId,
-        round: afterData.round,
+        editorialReviewId: afterData.editorialReviewId || null,
+        editorialTaskId: afterData.editorialTaskId || null,
+        round: afterData.round || 1,
         reviewerUid: afterData.reviewerUid,
         reviewerEmail: afterData.reviewerEmail,
-        reviewerName: afterData.reviewerName,
+        reviewerName: afterData.reviewerName || 'Revisor',
         invitationId: invitationId,
         status: 'pending',
-        conflictOfInterest: afterData.conflictOfInterest,
+        conflictOfInterest: afterData.conflictOfInterest || false,
         assignedAt: admin.firestore.FieldValue.serverTimestamp(),
         dueDate: admin.firestore.Timestamp.fromDate(dueDate),
         
-        // Documento anónimo del revisor
+        // Documento exclusivo del revisor
         reviewerFileId: reviewerFileId,
         reviewerFileUrl: reviewerFileUrl,
         
         // Referencia a la carpeta editorial
         driveFolderId: submission.editorialFolderId,
-        driveFolderUrl: submission.editorialFolderUrl,
+        driveFolderUrl: submission.editorialFolderUrl || null,
         
         // Metadata de la copia
         sourceFileId: sourceFileId,
-        copyCreatedAt: admin.firestore.FieldValue.serverTimestamp()
+        copyCreatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        accessLevel: 'commenter',
+        isExclusiveAccess: true
       };
 
       const assignmentRef = await db.collection('reviewerAssignments').add(assignmentData);
       console.log(`[${requestId}] ✅ Asignación creada: ${assignmentRef.id}`);
 
-      // ===== PASO 10: REGISTRAR EN AUDITLOG =====
+      // ===== PASO 8: AUDIT LOG =====
       await db.collection('submissions')
         .doc(afterData.submissionId)
         .collection('auditLogs')
@@ -5068,35 +5409,32 @@ exports.onReviewerInvitationUpdated = onDocumentUpdated(
           details: {
             invitationId,
             reviewerEmail: afterData.reviewerEmail,
+            reviewerUid: afterData.reviewerUid,
             reviewerFileId: reviewerFileId,
             reviewerFileUrl: reviewerFileUrl,
-            permissions: 'commenter',
-            sourceFileId: sourceFileId
+            permissions: 'commenter_exclusive',
+            sourceFileId: sourceFileId,
+            isFormatted: !!submission.formattedDocsFile?.id
           }
         });
 
-      // ===== PASO 11: ENVIAR EMAIL AL REVISOR CON INSTRUCCIONES =====
-      await sendReviewerAssignmentEmail({
-        ...afterData,
-        reviewerFileUrl: reviewerFileUrl,
-        submissionTitle: submission.title,
-        submissionAbstract: submission.abstract,
-        dueDate: dueDate,
-        driveFolderUrl: submission.editorialFolderUrl
-      });
-
-      console.log(`[${requestId}] ✅ Proceso completado para revisor ${afterData.reviewerEmail}`);
+      console.log(`[${requestId}] ✅ Proceso completado. Revisor ${afterData.reviewerEmail} tiene acceso exclusivo.`);
+      
+      // ===== PASO 9: ENVIAR EMAIL AL REVISOR (OPCIONAL) =====
+      // Si tienes función de envío de emails, descomenta:
+      // await sendReviewerAssignmentEmail({...});
 
     } catch (error) {
       console.error(`❌ Error en onReviewerInvitationUpdated:`, error.message);
       console.error(`❌ Stack:`, error.stack);
       
+      // Registrar error en sistema
       try {
         await admin.firestore().collection('systemErrors').add({
           function: 'onReviewerInvitationUpdated',
           error: {
             message: error.message,
-            stack: error.stack,
+            stack: error.stack?.substring(0, 500),
             code: error.code || 'UNKNOWN'
           },
           invitationId,
@@ -5108,277 +5446,6 @@ exports.onReviewerInvitationUpdated = onDocumentUpdated(
     }
   }
 );
-
-// ============================================================
-// FUNCIONES AUXILIARES PARA EL PROCESAMIENTO DE DOCUMENTOS
-// ============================================================
-
-/**
- * Elimina metadatos del autor del documento Google Docs
- * Mantiene: título, resumen, keywords, contenido académico
- * Elimina: nombres de autores, afiliaciones, emails, ORCID, agradecimientos personales
- */
-async function removeAuthorMetadata(drive, fileId, requestId) {
-  console.log(`[${requestId}] 🧹 Eliminando metadatos de autor...`);
-  
-  try {
-    const { google } = await loadDependencies();
-    const docs = google.docs({ version: 'v1', auth: drive.auth });
-    
-    const document = await docs.documents.get({
-      documentId: fileId
-    });
-    
-    const content = document.data.body.content;
-    const requests = [];
-    
-    // Recorrer el contenido buscando texto sensible
-    let currentIndex = 0;
-    for (const element of content) {
-      if (element.paragraph) {
-        const paragraph = element.paragraph;
-        const text = paragraph.elements?.map(e => e.textRun?.content || '').join('') || '';
-        
-        // Detectar y eliminar secciones con metadatos de autor
-        const sensitivePatterns = [
-          /Authors?:[\s\S]*?(?=\n\n|\n(?:Abstract|Resumen|Keywords|Palabras|Introduction|1\.))/i,
-          /Corresponding Author[\s\S]*?(?=\n\n|\n(?:Abstract|Resumen|Keywords|Palabras|Introduction|1\.))/i,
-          /Email:[\s\S]*?(?=\n)/gi,
-          /ORCID:[\s\S]*?(?=\n)/gi,
-          /Affiliation:[\s\S]*?(?=\n)/gi,
-          /Acknowledgments?:[\s\S]*?(?=\n\n|\n(?:References|Referencias|Bibliography))/i,
-          /Agradecimientos?:[\s\S]*?(?=\n\n|\n(?:Referencias|References|Bibliography))/i
-        ];
-        
-        for (const pattern of sensitivePatterns) {
-          const match = text.match(pattern);
-          if (match) {
-            const startIndex = currentIndex + text.indexOf(match[0]);
-            const endIndex = startIndex + match[0].length;
-            
-            // Reemplazar con "[INFORMACIÓN OMITIDA PARA REVISIÓN CIEGA]"
-            requests.push({
-              deleteContentRange: {
-                range: {
-                  startIndex: startIndex,
-                  endIndex: endIndex
-                }
-              }
-            });
-            
-            requests.push({
-              insertText: {
-                location: {
-                  index: startIndex
-                },
-                text: '[INFORMACIÓN OMITIDA PARA REVISIÓN DOBLE CIEGO]\n'
-              }
-            });
-          }
-        }
-      }
-      currentIndex = element.endIndex;
-    }
-    
-    // También eliminar propiedades del documento
-    requests.push({
-      updateDocumentStyle: {
-        documentStyle: {
-          defaultHeaderId: null,
-          defaultFooterId: null,
-          useFirstPageHeaderFooter: false,
-          useEvenPageHeaderFooter: false
-        },
-        fields: 'defaultHeaderId,defaultFooterId,useFirstPageHeaderFooter,useEvenPageHeaderFooter'
-      }
-    });
-    
-    if (requests.length > 0) {
-      // Ejecutar en lotes de 50
-      for (let i = 0; i < requests.length; i += 50) {
-        const batch = requests.slice(i, i + 50);
-        await docs.documents.batchUpdate({
-          documentId: fileId,
-          resource: { requests: batch }
-        });
-      }
-      console.log(`[${requestId}] ✅ ${requests.length} cambios de anonimización aplicados`);
-    } else {
-      console.log(`[${requestId}] ℹ️ No se encontraron metadatos sensibles para eliminar`);
-    }
-    
-  } catch (error) {
-    console.error(`[${requestId}] ⚠️ Error eliminando metadatos:`, error.message);
-    // No es crítico, continuamos
-  }
-}
-
-/**
- * Añade marca de agua y portada de revisión al documento
- */
-async function addReviewerWatermarkAndCover(drive, fileId, submission, invitationData, requestId) {
-  console.log(`[${requestId}] 🎨 Añadiendo marca de agua y portada de revisión...`);
-  
-  try {
-    const { google } = await loadDependencies();
-    const docs = google.docs({ version: 'v1', auth: drive.auth });
-    
-    const requests = [];
-    
-    // ===== INSERTAR PORTADA DE REVISIÓN AL INICIO =====
-    requests.push({
-      insertPageBreak: {
-        location: { index: 1 }
-      }
-    });
-    
-    const coverLines = [
-      { text: '\n\n', style: 'normal' },
-      { text: 'REVISTA NACIONAL DE LAS CIENCIAS PARA ESTUDIANTES\n', style: 'title' },
-      { text: 'DOCUMENTO PARA REVISIÓN POR PARES\n', style: 'heading1' },
-      { text: 'DOUBLE-BLIND PEER REVIEW COPY\n\n', style: 'heading2' },
-      { text: '─'.repeat(50) + '\n\n', style: 'normal' },
-      { text: `Submission ID: ${submission.submissionId}\n`, style: 'normal' },
-      { text: `Review Round: ${invitationData.round || 1}\n`, style: 'normal' },
-      { text: `Article Type: ${(submission.articleType || 'Research Article').toUpperCase()}\n\n`, style: 'normal' },
-      { text: 'TITLE\n', style: 'heading2' },
-      { text: `${submission.title}\n\n`, style: 'normal' },
-      { text: 'ABSTRACT\n', style: 'heading2' },
-      { text: `${submission.abstract.substring(0, 500)}${submission.abstract.length > 500 ? '...' : ''}\n\n`, style: 'normal' },
-      { text: 'KEYWORDS\n', style: 'heading2' },
-      { text: `${(submission.keywords || []).join(' • ')}\n\n`, style: 'normal' },
-      { text: '─'.repeat(50) + '\n\n', style: 'normal' },
-      { text: '⚠️ CONFIDENTIAL - FOR REVIEW PURPOSES ONLY\n', style: 'heading3' },
-      { text: 'This document contains a blind copy for peer review. Do not distribute.\n', style: 'normal' },
-      { text: `Assigned to: ${invitationData.reviewerName}\n`, style: 'normal' },
-      { text: `Due date: ${new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toLocaleDateString('es-CL')}\n\n`, style: 'normal' },
-      { text: 'INSTRUCTIONS FOR REVIEWERS\n', style: 'heading2' },
-      { text: '1. Use the "Comment" feature (Ctrl+Alt+M) to add your observations\n', style: 'normal' },
-      { text: '2. Do not modify the document text directly\n', style: 'normal' },
-      { text: '3. Focus on: methodology, analysis, conclusions, and references\n', style: 'normal' },
-      { text: '4. Submit your evaluation through the editorial portal\n\n', style: 'normal' },
-      { text: '─'.repeat(50) + '\n\n', style: 'normal' }
-    ];
-    
-    let insertIndex = 1;
-    for (const line of coverLines) {
-      requests.push({
-        insertText: {
-          location: { index: insertIndex },
-          text: line.text
-        }
-      });
-      
-      if (line.style === 'title' || line.style.includes('heading')) {
-        const textLength = line.text.length;
-        requests.push({
-          updateParagraphStyle: {
-            range: { startIndex: insertIndex, endIndex: insertIndex + textLength },
-            paragraphStyle: {
-              namedStyleType: line.style === 'title' ? 'TITLE' :
-                              line.style === 'heading1' ? 'HEADING_1' :
-                              line.style === 'heading2' ? 'HEADING_2' : 'HEADING_3',
-              alignment: 'CENTER',
-              spaceBelow: { magnitude: 8, unit: 'PT' }
-            },
-            fields: 'namedStyleType,alignment,spaceBelow'
-          }
-        });
-      }
-      
-      insertIndex += line.text.length;
-    }
-    
-    // Insertar salto de página después de la portada
-    requests.push({
-      insertPageBreak: {
-        location: { index: insertIndex }
-      }
-    });
-    
-    // ===== AÑADIR MARCA DE AGUA EN ENCABEZADO =====
-    requests.push({
-      createHeader: {
-        type: 'DEFAULT',
-        sectionBreakLocation: { index: insertIndex + 1 }
-      }
-    });
-    
-    const watermarkText = 'REVIEW COPY - CONFIDENTIAL - DO NOT DISTRIBUTE';
-    
-    // Obtener el ID del encabezado recién creado
-    const updatedDoc = await docs.documents.get({
-      documentId: fileId
-    });
-    
-    const headerId = updatedDoc.data.documentStyle?.defaultHeaderId;
-    
-    if (headerId) {
-      requests.push({
-        insertText: {
-          location: {
-            segmentId: headerId,
-            index: 0
-          },
-          text: watermarkText
-        }
-      });
-      
-      requests.push({
-        updateTextStyle: {
-          range: {
-            segmentId: headerId,
-            startIndex: 0,
-            endIndex: watermarkText.length
-          },
-          textStyle: {
-            foregroundColor: {
-              color: {
-                rgbColor: { red: 0.8, green: 0.8, blue: 0.8 }
-              }
-            },
-            fontSize: { magnitude: 10, unit: 'PT' },
-            italic: true,
-            bold: false
-          },
-          fields: 'foregroundColor,fontSize,italic,bold'
-        }
-      });
-      
-      requests.push({
-        updateParagraphStyle: {
-          range: {
-            segmentId: headerId,
-            startIndex: 0,
-            endIndex: watermarkText.length
-          },
-          paragraphStyle: {
-            alignment: 'CENTER'
-          },
-          fields: 'alignment'
-        }
-      });
-    }
-    
-    // ===== EJECUTAR TODOS LOS CAMBIOS =====
-    console.log(`[${requestId}] 📝 Aplicando ${requests.length} cambios de formato...`);
-    
-    for (let i = 0; i < requests.length; i += 50) {
-      const batch = requests.slice(i, i + 50);
-      await docs.documents.batchUpdate({
-        documentId: fileId,
-        resource: { requests: batch }
-      });
-      console.log(`[${requestId}] ✅ Lote ${Math.floor(i/50) + 1}/${Math.ceil(requests.length/50)} aplicado`);
-    }
-    
-    console.log(`[${requestId}] ✅ Marca de agua y portada añadidas exitosamente`);
-    
-  } catch (error) {
-    console.error(`[${requestId}] ⚠️ Error añadiendo marca de agua:`, error.message);
-    // No es crítico
-  }
-}
 
 // Funciones para generar los cuerpos de los emails de decisión
 // ============================================================================
@@ -6355,102 +6422,288 @@ exports.onReviewerAssignmentCreatedEmail = onDocumentCreated(
     const assignment = event.data.data();
     const assignmentId = event.params.assignmentId;
 
-    console.log(`📧 [onReviewerAssignmentCreatedEmail] Enviando instrucciones para asignación ${assignmentId}`);
+    console.log(`📧 [REVIEWER EMAIL] Enviando instrucciones para asignación ${assignmentId}`);
 
     try {
       const db = admin.firestore();
       
-      // Obtener datos del submission
+      // ===== PASO 1: Obtener datos del submission =====
       const submissionDoc = await db.collection('submissions').doc(assignment.submissionId).get();
       if (!submissionDoc.exists) {
         console.error(`❌ Submission no encontrado: ${assignment.submissionId}`);
         return;
       }
       const submission = submissionDoc.data();
-      const driveFolderUrl = assignment.driveFolderUrl || submission.editorialFolderUrl;
+      
+      // ===== PASO 2: VALIDACIÓN RIGUROSA - EL DOCUMENTO DEL REVISOR ES OBLIGATORIO =====
+      if (!assignment.reviewerFileUrl || !assignment.reviewerFileId) {
+        console.error(`❌ [REVIEWER EMAIL] Asignación ${assignmentId} SIN documento de revisor. ABORTANDO.`);
+        
+        // Registrar error crítico
+        await db.collection('systemErrors').add({
+          function: 'onReviewerAssignmentCreatedEmail',
+          error: {
+            message: 'Asignación sin reviewerFileUrl/reviewerFileId',
+            severity: 'CRITICAL'
+          },
+          assignmentId,
+          reviewerEmail: assignment.reviewerEmail,
+          submissionId: assignment.submissionId,
+          timestamp: admin.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // Notificar al editor sobre el problema
+        try {
+          const editorSnapshot = await db.collection('users')
+            .where('roles', 'array-contains', 'Editor en Jefe')
+            .limit(1)
+            .get();
+          
+          if (!editorSnapshot.empty) {
+            const editorEmail = editorSnapshot.docs[0].data().email;
+            await sendEmailViaExtension(
+              editorEmail,
+              '⚠️ ALERTA: Revisor sin documento asignado',
+              getEmailTemplate(
+                'Alerta del Sistema',
+                'Estimado Editor,',
+                `<p>La asignación de revisión <strong>${assignmentId}</strong> para el revisor <strong>${assignment.reviewerEmail}</strong> no tiene un documento de revisión asignado.</p>
+                 <p><strong>Submission:</strong> ${submission.title || assignment.submissionId}</p>
+                 <p><strong>Acción requerida:</strong> Verificar el trigger onReviewerInvitationUpdated y asignar manualmente el documento.</p>`,
+                'Sistema Automático',
+                'Revista Nacional de las Ciencias para Estudiantes',
+                'es'
+              )
+            );
+          }
+        } catch (notifyErr) {
+          console.error(`❌ Error notificando al editor:`, notifyErr.message);
+        }
+        
+        return; // ABORTAR - No enviar email sin documento
+      }
+      
+      console.log(`[REVIEWER EMAIL] ✅ Documento del revisor verificado: ${assignment.reviewerFileId}`);
+      console.log(`[REVIEWER EMAIL] 🔗 URL: ${assignment.reviewerFileUrl}`);
+      
+      // ===== PASO 3: Configurar idioma =====
       const lang = submission.paperLanguage || 'es';
       const isSpanish = lang === 'es';
       const baseUrl = 'https://www.revistacienciasestudiantes.com';
       
-      const emailTitle = isSpanish ? 'Instrucciones para tu revisión' : 'Instructions for your review';
-      const emailGreeting = isSpanish 
-        ? `Estimado/a ${assignment.reviewerName}:` 
-        : `Dear ${assignment.reviewerName}:`;
+      // ===== PASO 4: Construir email =====
+      const emailTitle = isSpanish 
+        ? '📝 Instrucciones para tu revisión - Acceso al manuscrito' 
+        : '📝 Instructions for your review - Manuscript access';
       
-      // Calcular fecha límite (debería estar en assignment.dueDate)
+      const emailGreeting = isSpanish 
+        ? `Estimado/a ${assignment.reviewerName || 'Revisor'}:` 
+        : `Dear ${assignment.reviewerName || 'Reviewer'}:`;
+      
+      // Calcular fecha límite
       const dueDate = assignment.dueDate?.toDate() || new Date(Date.now() + 21 * 24 * 60 * 60 * 1000);
-      const formattedDate = dueDate.toLocaleDateString(isSpanish ? 'es-CL' : 'en-US');
+      const formattedDate = dueDate.toLocaleDateString(isSpanish ? 'es-CL' : 'en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
       
       const bodyContent = isSpanish
     ? `
       <p>Gracias por aceptar la invitación a revisar el siguiente artículo:</p>
+      
       <div class="highlight-box">
-        <p class="article-title">"${submission.title}"</p>
-      </div>
-      <p>Debes ingresar al portal para entrar al workspace y dejar tus revisiones</p>
-      <p><strong>Acceso al manuscrito:</strong></p>
-      <p>Ya tienes acceso a la carpeta de Google Drive con el manuscrito y materiales complementarios:</p>
-      <p>Puedes dejar comentarios en la carpeta. El editor los tomará en cuenta. Pero asegurate de incluirlos en tus comentarios al autor.</p>
-      <div class="button-container">
-        <a href="${driveFolderUrl}" class="btn">VER MANUSCRITO EN DRIVE</a>
-      </div>
-      
-      <p>Por favor, completa tu revisión antes de la fecha límite. Utiliza el siguiente enlace para enviar tu informe:</p>
-      
-      <div class="button-container">
-        <a href="${baseUrl}/reviewer-workspace/${assignment.id}" class="btn btn-secondary">ENVIAR REVISIÓN</a>
+        <p class="article-title">📚 "${submission.title}"</p>
+        <p style="font-size: 13px; color: #666; margin-top: 8px;">
+          <strong>ID de submission:</strong> ${submission.submissionId || 'N/A'}<br>
+          <strong>Tipo de artículo:</strong> ${(submission.articleType || 'Research Article').toUpperCase()}<br>
+          <strong>Ronda de revisión:</strong> ${assignment.round || 1}<br>
+          <strong>Fecha límite:</strong> ${formattedDate}
+        </p>
       </div>
       
-      <p class="info-text">
-        <strong>Nota:</strong> Ya deberías tener acceso a la carpeta de Drive. Si no puedes acceder, 
+      <div class="info-box" style="background: #f0f7ff; border-left: 4px solid #00509e; padding: 15px; margin: 20px 0; border-radius: 4px;">
+        <h3 style="margin-top: 0; color: #00509e;">🔍 ACCESO AL MANUSCRITO</h3>
+        <p>Ya tienes acceso <strong>exclusivo</strong> a tu copia del manuscrito. <strong>Solo tú</strong> puedes ver y comentar en este documento.</p>
+        <p style="margin-bottom: 0;"><strong>⚠️ Importante:</strong> Este es un documento de solo comentarios. <u>No puedes editar el texto</u>, solo añadir comentarios y sugerencias.</p>
+      </div>
+      
+      <div class="button-container" style="margin: 25px 0;">
+        <a href="${assignment.reviewerFileUrl}" class="btn" style="font-size: 16px; padding: 14px 28px;">
+          📄 ABRIR MANUSCRITO PARA REVISIÓN
+        </a>
+      </div>
+      
+      <div class="instructions-box" style="background: #fafafa; border: 1px solid #e0e0e0; padding: 20px; margin: 20px 0; border-radius: 8px;">
+        <h3 style="margin-top: 0; color: #333;">📋 CÓMO DEJAR TUS COMENTARIOS</h3>
+        <ol style="padding-left: 20px; line-height: 1.8;">
+          <li><strong>Abre el documento</strong> usando el botón de arriba</li>
+          <li><strong>Selecciona el texto</strong> que quieras comentar</li>
+          <li><strong>Añade un comentario:</strong>
+            <ul style="margin-top: 5px;">
+              <li>En computadora: <strong>Ctrl + Alt + M</strong> (Windows/Linux) o <strong>⌘ + Option + M</strong> (Mac)</li>
+              <li>O haz clic en <strong>Insertar → Comentario</strong> en el menú</li>
+              <li>O usa el botón <strong>+</strong> que aparece al seleccionar texto</li>
+            </ul>
+          </li>
+          <li><strong>Escribe tu observación</strong> de forma clara y constructiva</li>
+          <li><strong>Haz clic en "Comentar"</strong> para guardar</li>
+        </ol>
+        
+        <h4 style="color: #555; margin-top: 20px;">💡 Consejos para tus comentarios:</h4>
+        <ul style="padding-left: 20px; line-height: 1.8;">
+          <li>Sé <strong>específico</strong>: indica exactamente qué parte necesita revisión</li>
+          <li>Sé <strong>constructivo</strong>: sugiere mejoras, no solo señales problemas</li>
+          <li>Sé <strong>respetuoso</strong>: mantén un tono profesional y académico</li>
+          <li><strong>Céntrate en:</strong> metodología, análisis de datos, conclusiones y referencias</li>
+          <li>Los comentarios son <strong>anónimos</strong>: los autores no verán tu identidad</li>
+        </ul>
+      </div>
+      
+      <p><strong>Después de revisar el documento, envía tu informe completo a través del portal:</strong></p>
+      
+      <div class="button-container" style="margin: 20px 0;">
+        <a href="${baseUrl}/reviewer-workspace/${assignmentId}" class="btn btn-secondary" style="font-size: 15px; padding: 12px 24px;">
+          📤 ENVIAR INFORME DE REVISIÓN
+        </a>
+      </div>
+      
+      <div class="warning-box" style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px;">
+        <p style="margin: 0; color: #856404;">
+          <strong>⏰ Recordatorio:</strong> La fecha límite para completar tu revisión es el <strong>${formattedDate}</strong>.
+          Por favor, organiza tu tiempo para cumplir con este plazo.
+        </p>
+      </div>
+      
+      <p class="info-text" style="color: #666; font-size: 13px;">
+        <strong>¿Problemas para acceder al documento?</strong> 
+        Asegúrate de haber iniciado sesión en Google con la cuenta 
+        <strong>${assignment.reviewerEmail}</strong>. Si el problema persiste, 
         <a href="mailto:contact@revistacienciasestudiantes.com">contáctanos</a>.
       </p>
     `
     : `
       <p>Thank you for accepting the invitation to review the following article:</p>
+      
       <div class="highlight-box">
-        <p class="article-title">"${submission.title}"</p>
-      </div>
-      <p>You must login in the portal in order to see the workspace and complete your assignment</p>
-      
-      <p><strong>Access to manuscript:</strong></p>
-      <p>You now have access to the Google Drive folder with the manuscript and supplementary materials:</p>
-      <p>You can leave comments in the document. The editor will consider them. But make sure to include them in your comments to the author.</p>
-      <div class="button-container">
-        <a href="${driveFolderUrl}" class="btn">VIEW MANUSCRIPT ON DRIVE</a>
+        <p class="article-title">📚 "${submission.title}"</p>
+        <p style="font-size: 13px; color: #666; margin-top: 8px;">
+          <strong>Submission ID:</strong> ${submission.submissionId || 'N/A'}<br>
+          <strong>Article Type:</strong> ${(submission.articleType || 'Research Article').toUpperCase()}<br>
+          <strong>Review Round:</strong> ${assignment.round || 1}<br>
+          <strong>Deadline:</strong> ${formattedDate}
+        </p>
       </div>
       
-      <p>Please complete your review by the deadline. Use the following link to submit your report:</p>
-      
-      <div class="button-container">
-        <a href="${baseUrl}/reviewer-workspace/${assignment.id}" class="btn btn-secondary">SUBMIT REVIEW</a>
+      <div class="info-box" style="background: #f0f7ff; border-left: 4px solid #00509e; padding: 15px; margin: 20px 0; border-radius: 4px;">
+        <h3 style="margin-top: 0; color: #00509e;">🔍 MANUSCRIPT ACCESS</h3>
+        <p>You now have <strong>exclusive access</strong> to your copy of the manuscript. <strong>Only you</strong> can view and comment on this document.</p>
+        <p style="margin-bottom: 0;"><strong>⚠️ Important:</strong> This is a comment-only document. <u>You cannot edit the text</u>, only add comments and suggestions.</p>
       </div>
       
-      <p class="info-text">
-        <strong>Note:</strong> You should already have access to the Drive folder. If you cannot access it, 
+      <div class="button-container" style="margin: 25px 0;">
+        <a href="${assignment.reviewerFileUrl}" class="btn" style="font-size: 16px; padding: 14px 28px;">
+          📄 OPEN MANUSCRIPT FOR REVIEW
+        </a>
+      </div>
+      
+      <div class="instructions-box" style="background: #fafafa; border: 1px solid #e0e0e0; padding: 20px; margin: 20px 0; border-radius: 8px;">
+        <h3 style="margin-top: 0; color: #333;">📋 HOW TO LEAVE COMMENTS</h3>
+        <ol style="padding-left: 20px; line-height: 1.8;">
+          <li><strong>Open the document</strong> using the button above</li>
+          <li><strong>Select the text</strong> you want to comment on</li>
+          <li><strong>Add a comment:</strong>
+            <ul style="margin-top: 5px;">
+              <li>On desktop: <strong>Ctrl + Alt + M</strong> (Windows/Linux) or <strong>⌘ + Option + M</strong> (Mac)</li>
+              <li>Or click <strong>Insert → Comment</strong> in the menu</li>
+              <li>Or use the <strong>+</strong> button that appears when selecting text</li>
+            </ul>
+          </li>
+          <li><strong>Write your observation</strong> clearly and constructively</li>
+          <li><strong>Click "Comment"</strong> to save</li>
+        </ol>
+        
+        <h4 style="color: #555; margin-top: 20px;">💡 Tips for your comments:</h4>
+        <ul style="padding-left: 20px; line-height: 1.8;">
+          <li>Be <strong>specific</strong>: indicate exactly what needs revision</li>
+          <li>Be <strong>constructive</strong>: suggest improvements, not just problems</li>
+          <li>Be <strong>respectful</strong>: maintain a professional and academic tone</li>
+          <li><strong>Focus on:</strong> methodology, data analysis, conclusions, and references</li>
+          <li>Comments are <strong>anonymous</strong>: authors will not see your identity</li>
+        </ul>
+      </div>
+      
+      <p><strong>After reviewing the document, submit your complete report through the portal:</strong></p>
+      
+      <div class="button-container" style="margin: 20px 0;">
+        <a href="${baseUrl}/reviewer-workspace/${assignmentId}" class="btn btn-secondary" style="font-size: 15px; padding: 12px 24px;">
+          📤 SUBMIT REVIEW REPORT
+        </a>
+      </div>
+      
+      <div class="warning-box" style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px;">
+        <p style="margin: 0; color: #856404;">
+          <strong>⏰ Reminder:</strong> The deadline to complete your review is <strong>${formattedDate}</strong>.
+          Please plan your time accordingly.
+        </p>
+      </div>
+      
+      <p class="info-text" style="color: #666; font-size: 13px;">
+        <strong>Problems accessing the document?</strong> 
+        Make sure you're signed into Google with 
+        <strong>${assignment.reviewerEmail}</strong>. If issues persist, 
         <a href="mailto:contact@revistacienciasestudiantes.com">contact us</a>.
       </p>
     `;
 
-  const htmlBody = getEmailTemplate(
-    emailTitle,
-    emailGreeting,
-    bodyContent,
-    isSpanish ? 'Equipo Editorial' : 'Editorial Team',
-    isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
-    lang
-  );
+      // ===== PASO 5: Generar HTML completo con template =====
+      const htmlBody = getEmailTemplate(
+        emailTitle,
+        emailGreeting,
+        bodyContent,
+        isSpanish ? 'Equipo Editorial' : 'Editorial Team',
+        isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
+        lang
+      );
 
-  await sendEmailViaExtension(assignment.reviewerEmail, emailTitle, htmlBody);
+      // ===== PASO 6: Enviar email =====
+      await sendEmailViaExtension(assignment.reviewerEmail, emailTitle, htmlBody);
+      
+      console.log(`[REVIEWER EMAIL] ✅ Email enviado a ${assignment.reviewerEmail}`);
+      console.log(`[REVIEWER EMAIL] 📄 Documento: ${assignment.reviewerFileId}`);
+      console.log(`[REVIEWER EMAIL] 🔗 URL: ${assignment.reviewerFileUrl}`);
+
+      // ===== PASO 7: Registrar envío en Firestore =====
+      await db.collection('reviewerAssignments').doc(assignmentId).update({
+        instructionsEmailSent: true,
+        instructionsEmailSentAt: admin.firestore.FieldValue.serverTimestamp(),
+        instructionsEmailRecipient: assignment.reviewerEmail,
+        documentUrlSent: assignment.reviewerFileUrl
+      });
 
     } catch (error) {
       console.error(`❌ Error en onReviewerAssignmentCreatedEmail:`, error.message);
-      await logSystemError('onReviewerAssignmentCreatedEmail', error, { assignmentId });
+      console.error(`❌ Stack:`, error.stack);
+      
+      // Registrar error
+      try {
+        await admin.firestore().collection('systemErrors').add({
+          function: 'onReviewerAssignmentCreatedEmail',
+          error: {
+            message: error.message,
+            stack: error.stack?.substring(0, 500)
+          },
+          assignmentId,
+          reviewerEmail: event.data.data()?.reviewerEmail,
+          timestamp: admin.firestore.FieldValue.serverTimestamp()
+        });
+      } catch (logError) {
+        console.error(`❌ Error al registrar error:`, logError.message);
+      }
     }
   }
-
 );
-
 /**
  * 8. TRIGGER: Cuando una editorialTask cambia a 'awaiting-decision'
  * Notificar al editor que ya puede tomar la decisión final
@@ -6568,29 +6821,26 @@ exports.onEditorialTaskAwaitingDecision = onDocumentUpdated(
 exports.onReviewerAssignmentCreated = onDocumentCreated(
   {
     document: 'reviewerAssignments/{assignmentId}',
-    secrets: [], // Los secrets se manejan dentro de sendEmailViaExtension
+    secrets: [],
     memory: '256MiB'
   },
   async (event) => {
-    // Datos de la nueva asignación que se acaba de crear (el revisor acaba de aceptar)
     const newAssignment = event.data.data();
     const newAssignmentId = event.params.assignmentId;
 
-    console.log(`🆕 [onReviewerAssignmentCreated] NUEVA ASIGNACIÓN CREADA (revisor aceptó): ${newAssignmentId}. Verificando si se alcanza el mínimo...`);
-
-    // Como el documento SOLO se crea cuando acepta, no necesitamos verificar status.
-    // Su creación ya es la confirmación de aceptación.
+    console.log(`🆕 [REVIEWER MILESTONE] Nueva asignación creada: ${newAssignmentId}`);
+    console.log(`👤 Revisor: ${newAssignment.reviewerName} (${newAssignment.reviewerEmail})`);
 
     try {
       const db = admin.firestore();
       const taskId = newAssignment.editorialTaskId;
 
       if (!taskId) {
-        console.warn(`⚠️ La asignación ${newAssignmentId} no tiene editorialTaskId. No se puede verificar el mínimo.`);
+        console.warn(`⚠️ Asignación ${newAssignmentId} sin editorialTaskId. No se puede verificar.`);
         return;
       }
 
-      // 1. Obtener la tarea editorial para conocer el mínimo requerido
+      // ===== PASO 1: Obtener la tarea editorial =====
       const taskRef = db.collection('editorialTasks').doc(taskId);
       const taskSnap = await taskRef.get();
 
@@ -6600,80 +6850,74 @@ exports.onReviewerAssignmentCreated = onDocumentCreated(
       }
       const taskData = taskSnap.data();
 
-      // 2. Definir el mínimo de revisores necesarios (por defecto 2)
-      const requiredReviewers = taskData.requiredReviewers || 2;
-      console.log(`🎯 Mínimo de revisores requeridos para la tarea ${taskId}: ${requiredReviewers}`);
-
-      // 3. Contar cuántas asignaciones (aceptaciones) hay para esta tarea
-      //    INCLUYENDO la que acaba de crear el trigger
+      // ===== PASO 2: Contar revisores aceptados =====
       const assignmentsSnapshot = await db.collection('reviewerAssignments')
         .where('editorialTaskId', '==', taskId)
-        .get(); // SIN filtro por status, porque todas las que existen son aceptaciones
+        .get();
 
       const acceptedCount = assignmentsSnapshot.size;
-      console.log(`📊 Total de revisiones ACEPTADAS (documentos existentes) para la tarea ${taskId}: ${acceptedCount}`);
+      const requiredReviewers = taskData.requiredReviewers || 2;
+      
+      console.log(`📊 Revisores aceptados: ${acceptedCount}/${requiredReviewers} requeridos`);
 
-      // 4. Si se alcanza o supera el mínimo, proceder
-      if (acceptedCount >= requiredReviewers) {
-        console.log(`✅ MÍNIMO ALCANZADO (${acceptedCount}/${requiredReviewers}) para la tarea ${taskId}. Iniciando revisión por pares.`);
+      // ===== PASO 3: Obtener datos del submission =====
+      const submissionRef = db.collection('submissions').doc(taskData.submissionId);
+      const submissionSnap = await submissionRef.get();
 
-        const submissionRef = db.collection('submissions').doc(taskData.submissionId);
-        const submissionSnap = await submissionRef.get();
+      if (!submissionSnap.exists) {
+        console.error(`❌ Submission no encontrado: ${taskData.submissionId}`);
+        return;
+      }
+      const submissionData = submissionSnap.data();
+      const lang = submissionData.paperLanguage || 'es';
+      const isSpanish = lang === 'es';
 
-        if (!submissionSnap.exists) {
-          console.error(`❌ Submission no encontrado: ${taskData.submissionId}`);
-          return;
-        }
-        const submissionData = submissionSnap.data();
+      // ===== PASO 4: Construir lista de revisores =====
+      let reviewersListHtml = '<ul style="padding-left: 20px; line-height: 1.8;">';
+      assignmentsSnapshot.docs.forEach(doc => {
+        const reviewer = doc.data();
+        reviewersListHtml += `<li><strong>${reviewer.reviewerName || 'Revisor'}</strong> — ${reviewer.reviewerEmail}</li>`;
+      });
+      reviewersListHtml += '</ul>';
 
-        // 5. ACTUALIZAR ESTADOS (SOLO UNA VEZ)
+      // ===== PASO 5: LÓGICA SEGÚN CANTIDAD DE REVISORES =====
+      
+      if (acceptedCount === 2) {
+        // ============================================================
+        // CASO 1: EXACTAMENTE 2 REVISORES - INICIAR REVISIÓN POR PARES
+        // ============================================================
+        console.log(`✅ MÍNIMO ALCANZADO (2/${requiredReviewers}). Iniciando revisión por pares.`);
+
+        // Actualizar estados en transacción
         await db.runTransaction(async (transaction) => {
-          // Leer el estado actual de la tarea dentro de la transacción
           const taskTxSnap = await transaction.get(taskRef);
           if (!taskTxSnap.exists) return;
           
           const currentTaskStatus = taskTxSnap.data().status;
 
-          // Solo actualizar si la tarea sigue en 'reviewer-selection'
-          // Esto evita procesar múltiples veces si varias aceptaciones llegan casi al mismo tiempo
           if (currentTaskStatus === 'reviewer-selection') {
-            // Actualizar Tarea
             transaction.update(taskRef, {
-              status: 'reviews-in-progress', // Pasa a la siguiente fase
+              status: 'reviews-in-progress',
               acceptedReviewers: acceptedCount,
               minimumReviewersReachedAt: admin.firestore.FieldValue.serverTimestamp(),
               updatedAt: admin.firestore.FieldValue.serverTimestamp()
             });
 
-            // Actualizar Submission
             transaction.update(submissionRef, {
-              status: 'in-peer-review', // El artículo ahora está siendo revisado por pares
+              status: 'in-peer-review',
               updatedAt: admin.firestore.FieldValue.serverTimestamp()
             });
 
-            console.log(`✅ Transacción exitosa: Tarea ${taskId} y submission ${taskData.submissionId} avanzaron.`);
+            console.log(`✅ Transacción exitosa: Revisión por pares iniciada.`);
           } else {
-            console.log(`⏭️ La tarea ${taskId} ya no está en 'reviewer-selection' (actual: ${currentTaskStatus}). Probablemente ya se inició la revisión.`);
+            console.log(`⏭️ Tarea ya en estado: ${currentTaskStatus}`);
           }
         });
 
-        // --- ENVIAR NOTIFICACIÓN AL EDITOR ---
-        console.log(`📧 Notificando al editor (${taskData.assignedToEmail}) que la revisión por pares ha comenzado...`);
-
-        const lang = submissionData.paperLanguage || 'es';
-        const isSpanish = lang === 'es';
-
-        // Construir lista de revisores asignados
-        let reviewersListHtml = '<ul>';
-        assignmentsSnapshot.docs.forEach(doc => {
-          const reviewer = doc.data();
-          reviewersListHtml += `<li><strong>${reviewer.reviewerName || 'Revisor'}</strong> (${reviewer.reviewerEmail})</li>`;
-        });
-        reviewersListHtml += '</ul>';
-
+        // Enviar notificación ESTÁNDAR al editor
         const emailTitle = isSpanish
-          ? `✅ Revisión por pares iniciada: "${submissionData.title.substring(0, 60)}..."`
-          : `✅ Peer review started: "${submissionData.title.substring(0, 60)}..."`;
+          ? `✅ Revisión por pares iniciada: "${submissionData.title.substring(0, 60)}${submissionData.title.length > 60 ? '...' : ''}"`
+          : `✅ Peer review started: "${submissionData.title.substring(0, 60)}${submissionData.title.length > 60 ? '...' : ''}"`;
 
         const emailGreeting = isSpanish
           ? `Estimado/a ${taskData.assignedToName || 'Editor/a'}:`
@@ -6681,42 +6925,56 @@ exports.onReviewerAssignmentCreated = onDocumentCreated(
 
         const bodyContent = isSpanish
           ? `
-            <p>El artículo <strong>"${submissionData.title}"</strong> ha alcanzado el mínimo de <strong>${requiredReviewers} revisores aceptados</strong> y ha pasado automáticamente a la fase de <strong>revisión por pares</strong>.</p>
+            <p>El artículo ha alcanzado el mínimo de <strong>2 revisores aceptados</strong> y ha pasado automáticamente a la fase de <strong>revisión por pares</strong>.</p>
 
             <div class="highlight-box">
-              <p class="article-title">"${submissionData.title}"</p>
+              <p class="article-title">📚 "${submissionData.title}"</p>
               <p><strong>ID del envío:</strong> ${submissionData.submissionId}</p>
-              <p><strong>Área:</strong> ${submissionData.area}</p>
-              <p><strong>Autor/a:</strong> ${submissionData.authorName}</p>
+              <p><strong>Área:</strong> ${submissionData.area || 'No especificada'}</p>
+              <p><strong>Autor/a:</strong> ${submissionData.authorName || 'No especificado'}</p>
+              <p><strong>Tipo de artículo:</strong> ${(submissionData.articleType || 'Research Article').toUpperCase()}</p>
             </div>
 
-            <h3>📋 Revisores asignados (${acceptedCount}):</h3>
+            <h3 style="color: #2d7d46;">✅ Revisores asignados (${acceptedCount}):</h3>
             ${reviewersListHtml}
 
             <p>El sistema notificará automáticamente cuando se completen las revisiones.</p>
 
             <div class="button-container">
-              <a href="https://www.revistacienciasestudiantes.com/${isSpanish ? 'es' : 'en'}/editorial/task/${taskId}" class="btn">VER TAREA</a>
+              <a href="https://www.revistacienciasestudiantes.com/${isSpanish ? 'es' : 'en'}/editorial/task/${taskId}" class="btn">
+                📋 VER TAREA EDITORIAL
+              </a>
             </div>
+
+            <p style="color: #666; font-size: 13px; margin-top: 20px;">
+              <em>Este es un mensaje automático del sistema. Los revisores ya tienen acceso a sus copias del manuscrito.</em>
+            </p>
           `
           : `
-            <p>The article <strong>"${submissionData.title}"</strong> has reached the minimum of <strong>${requiredReviewers} accepted reviewers</strong> and has automatically moved to the <strong>peer review</strong> phase.</p>
+            <p>The article has reached the minimum of <strong>2 accepted reviewers</strong> and has automatically moved to the <strong>peer review</strong> phase.</p>
 
             <div class="highlight-box">
-              <p class="article-title">"${submissionData.title}"</p>
+              <p class="article-title">📚 "${submissionData.title}"</p>
               <p><strong>Submission ID:</strong> ${submissionData.submissionId}</p>
-              <p><strong>Area:</strong> ${submissionData.area}</p>
-              <p><strong>Author:</strong> ${submissionData.authorName}</p>
+              <p><strong>Area:</strong> ${submissionData.area || 'Not specified'}</p>
+              <p><strong>Author:</strong> ${submissionData.authorName || 'Not specified'}</p>
+              <p><strong>Article Type:</strong> ${(submissionData.articleType || 'Research Article').toUpperCase()}</p>
             </div>
 
-            <h3>📋 Assigned reviewers (${acceptedCount}):</h3>
+            <h3 style="color: #2d7d46;">✅ Assigned reviewers (${acceptedCount}):</h3>
             ${reviewersListHtml}
 
             <p>The system will automatically notify you when reviews are completed.</p>
 
             <div class="button-container">
-              <a href="https://www.revistacienciasestudiantes.com/${isSpanish ? 'es' : 'en'}/editorial/task/${taskId}" class="btn">VIEW TASK</a>
+              <a href="https://www.revistacienciasestudiantes.com/${isSpanish ? 'es' : 'en'}/editorial/task/${taskId}" class="btn">
+                📋 VIEW EDITORIAL TASK
+              </a>
             </div>
+
+            <p style="color: #666; font-size: 13px; margin-top: 20px;">
+              <em>This is an automated system message. Reviewers already have access to their manuscript copies.</em>
+            </p>
           `;
 
         const htmlBody = getEmailTemplate(
@@ -6729,355 +6987,1009 @@ exports.onReviewerAssignmentCreated = onDocumentCreated(
         );
 
         await sendEmailViaExtension(taskData.assignedToEmail, emailTitle, htmlBody);
-        console.log(`✅ Notificación enviada a editor ${taskData.assignedToEmail}`);
+        console.log(`✅ Notificación estándar enviada al editor: ${taskData.assignedToEmail}`);
 
         // Registrar en audit log
         await db.collection('submissions').doc(taskData.submissionId)
           .collection('auditLogs').add({
             action: 'peer_review_started',
-            details: `Iniciado automáticamente al alcanzar ${acceptedCount} aceptaciones de revisores.`,
+            details: `Revisión por pares iniciada con ${acceptedCount} revisores.`,
             taskId: taskId,
             timestamp: admin.firestore.FieldValue.serverTimestamp()
           });
 
+      } else if (acceptedCount > 2) {
+        // ============================================================
+        // CASO 2: MÁS DE 2 REVISORES - NOTIFICACIÓN ESPECIAL
+        // ============================================================
+        console.log(`🔔 REVISOR EXTRA (${acceptedCount} total). Enviando notificación especial al editor.`);
+
+        const extraReviewer = newAssignment; // El que acaba de aceptar
+        const extraCount = acceptedCount - 2;
+
+        const emailTitle = isSpanish
+          ? `🔔 Revisor adicional aceptó: "${submissionData.title.substring(0, 60)}${submissionData.title.length > 60 ? '...' : ''}"`
+          : `🔔 Additional reviewer accepted: "${submissionData.title.substring(0, 60)}${submissionData.title.length > 60 ? '...' : ''}"`;
+
+        const emailGreeting = isSpanish
+          ? `Estimado/a ${taskData.assignedToName || 'Editor/a'}:`
+          : `Dear ${taskData.assignedToName || 'Editor'}:`;
+
+        const bodyContent = isSpanish
+          ? `
+            <div class="info-box" style="background: #fff8e1; border-left: 4px solid #ff8f00; padding: 15px; margin: 20px 0; border-radius: 4px;">
+              <h3 style="margin-top: 0; color: #e65100;">🔔 REVISOR ADICIONAL</h3>
+              <p>Un <strong>${acceptedCount}º revisor</strong> ha aceptado la invitación para el artículo que ya está en revisión por pares.</p>
+            </div>
+
+            <div class="highlight-box">
+              <p class="article-title">📚 "${submissionData.title}"</p>
+              <p><strong>ID del envío:</strong> ${submissionData.submissionId}</p>
+              <p><strong>Estado actual:</strong> En revisión por pares</p>
+            </div>
+
+            <h3 style="color: #e65100;">🆕 Nuevo revisor que aceptó:</h3>
+            <ul style="padding-left: 20px; line-height: 1.8;">
+              <li><strong>Nombre:</strong> ${extraReviewer.reviewerName || 'No especificado'}</li>
+              <li><strong>Email:</strong> ${extraReviewer.reviewerEmail}</li>
+              <li><strong>Ronda:</strong> ${extraReviewer.round || 1}</li>
+            </ul>
+
+            <h3 style="color: #333;">📋 Todos los revisores asignados (${acceptedCount}):</h3>
+            ${reviewersListHtml}
+
+            <div class="warning-box" style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px;">
+              <p style="margin: 0; color: #856404;">
+                <strong>⚠️ Atención:</strong> Hay <strong>${extraCount} revisor(es) adicional(es)</strong> además de los 2 requeridos. 
+                Esto puede enriquecer la revisión pero también extender los tiempos. 
+                El sistema esperará a que todos completen sus revisiones o hasta que tú decidas cerrar el proceso manualmente.
+              </p>
+            </div>
+
+            <div class="button-container">
+              <a href="https://www.revistacienciasestudiantes.com/${isSpanish ? 'es' : 'en'}/editorial/task/${taskId}" class="btn">
+                📋 GESTIONAR TAREA EDITORIAL
+              </a>
+            </div>
+
+            <p style="color: #666; font-size: 13px; margin-top: 20px;">
+              <em>Este es un mensaje automático del sistema. El revisor adicional ya tiene acceso a su copia del manuscrito.</em>
+            </p>
+          `
+          : `
+            <div class="info-box" style="background: #fff8e1; border-left: 4px solid #ff8f00; padding: 15px; margin: 20px 0; border-radius: 4px;">
+              <h3 style="margin-top: 0; color: #e65100;">🔔 ADDITIONAL REVIEWER</h3>
+              <p>A <strong>${acceptedCount}th reviewer</strong> has accepted the invitation for the article already in peer review.</p>
+            </div>
+
+            <div class="highlight-box">
+              <p class="article-title">📚 "${submissionData.title}"</p>
+              <p><strong>Submission ID:</strong> ${submissionData.submissionId}</p>
+              <p><strong>Current status:</strong> In peer review</p>
+            </div>
+
+            <h3 style="color: #e65100;">🆕 New reviewer who accepted:</h3>
+            <ul style="padding-left: 20px; line-height: 1.8;">
+              <li><strong>Name:</strong> ${extraReviewer.reviewerName || 'Not specified'}</li>
+              <li><strong>Email:</strong> ${extraReviewer.reviewerEmail}</li>
+              <li><strong>Round:</strong> ${extraReviewer.round || 1}</li>
+            </ul>
+
+            <h3 style="color: #333;">📋 All assigned reviewers (${acceptedCount}):</h3>
+            ${reviewersListHtml}
+
+            <div class="warning-box" style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px;">
+              <p style="margin: 0; color: #856404;">
+                <strong>⚠️ Attention:</strong> There are <strong>${extraCount} additional reviewer(s)</strong> beyond the 2 required. 
+                This may enrich the review but also extend timelines. 
+                The system will wait for all to complete their reviews or until you decide to close the process manually.
+              </p>
+            </div>
+
+            <div class="button-container">
+              <a href="https://www.revistacienciasestudiantes.com/${isSpanish ? 'es' : 'en'}/editorial/task/${taskId}" class="btn">
+                📋 MANAGE EDITORIAL TASK
+              </a>
+            </div>
+
+            <p style="color: #666; font-size: 13px; margin-top: 20px;">
+              <em>This is an automated system message. The additional reviewer already has access to their manuscript copy.</em>
+            </p>
+          `;
+
+        const htmlBody = getEmailTemplate(
+          emailTitle,
+          emailGreeting,
+          bodyContent,
+          isSpanish ? 'Sistema Editorial' : 'Editorial System',
+          isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
+          lang
+        );
+
+        await sendEmailViaExtension(taskData.assignedToEmail, emailTitle, htmlBody);
+        console.log(`✅ Notificación ESPECIAL enviada al editor: ${taskData.assignedToEmail}`);
+
+        // Registrar en audit log
+        await db.collection('submissions').doc(taskData.submissionId)
+          .collection('auditLogs').add({
+            action: 'additional_reviewer_accepted',
+            details: `Revisor adicional #${acceptedCount} (${newAssignment.reviewerName}) aceptó. Total: ${acceptedCount} revisores.`,
+            taskId: taskId,
+            reviewerEmail: newAssignment.reviewerEmail,
+            timestamp: admin.firestore.FieldValue.serverTimestamp()
+          });
+
+        // Actualizar contador en la tarea
+        await taskRef.update({
+          acceptedReviewers: acceptedCount,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
       } else {
-        console.log(`⏳ Aún no se alcanza el mínimo (${acceptedCount}/${requiredReviewers}). Se necesitan ${requiredReviewers - acceptedCount} más.`);
+        // ============================================================
+        // CASO 3: MENOS DE 2 REVISORES - SOLO LOG
+        // ============================================================
+        console.log(`⏳ Solo ${acceptedCount} revisor(es). Esperando al menos 2. Faltan ${2 - acceptedCount}.`);
+        
+        // Actualizar contador en la tarea
+        await taskRef.update({
+          acceptedReviewers: acceptedCount,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
       }
 
     } catch (error) {
       console.error(`❌ Error en onReviewerAssignmentCreated:`, error.message);
-      console.error(error.stack);
-      await logSystemError('onReviewerAssignmentCreated', error, {
-        newAssignmentId,
-        newAssignmentData: newAssignment
-      });
+      console.error(`❌ Stack:`, error.stack);
+      
+      try {
+        await admin.firestore().collection('systemErrors').add({
+          function: 'onReviewerAssignmentCreated',
+          error: {
+            message: error.message,
+            stack: error.stack?.substring(0, 500)
+          },
+          assignmentId: newAssignmentId,
+          reviewerEmail: newAssignment?.reviewerEmail,
+          timestamp: admin.firestore.FieldValue.serverTimestamp()
+        });
+      } catch (logError) {
+        console.error(`❌ Error al registrar error:`, logError.message);
+      }
     }
   }
 );
-
 // ===================== MEJORA: TRIGGER PARA CUANDO SE COMPLETA UNA REVISIÓN =====================
 // ===================== TRIGGER: CUANDO SE COMPLETA UNA REVISIÓN (CON EMAIL AL EDITOR) =====================
 exports.onReviewerAssignmentSubmitted = onDocumentUpdated(
   {
     document: 'reviewerAssignments/{assignmentId}',
-    secrets: [], // Los secrets se manejan en sendEmailViaExtension
-    memory: '256MiB'
+    secrets: [],
+    memory: '512MiB' // Más memoria para procesar comentarios
   },
   async (event) => {
     const beforeData = event.data.before.data();
     const afterData = event.data.after.data();
     const assignmentId = event.params.assignmentId;
 
-    // Solo nos interesa cuando el estado CAMBIA a 'submitted'
     if (beforeData.status === afterData.status || afterData.status !== 'submitted') {
-      console.log(`⏭️ [onReviewerAssignmentSubmitted] No hay cambio a 'submitted' (estado actual: ${afterData.status}). Saliendo.`);
       return;
     }
 
-    console.log(`📝 [onReviewerAssignmentSubmitted] NUEVA REVISIÓN COMPLETADA: ${assignmentId} para el revisor ${afterData.reviewerEmail}`);
+    console.log(`📝 [REVIEW COMPLETED] Nueva revisión: ${assignmentId} - ${afterData.reviewerEmail}`);
 
     try {
       const db = admin.firestore();
       const taskId = afterData.editorialTaskId;
       
       if (!taskId) {
-        console.warn('⚠️ La asignación no tiene editorialTaskId. No se puede procesar.');
+        console.warn('⚠️ Sin editorialTaskId. Abortando.');
         return;
       }
 
-      // 1. Obtener la tarea editorial para conocer el mínimo requerido
+      // ===== PASO 1: Obtener datos de la tarea y submission =====
       const taskRef = db.collection('editorialTasks').doc(taskId);
       const taskSnap = await taskRef.get();
-
       if (!taskSnap.exists) {
-        console.error(`❌ Tarea editorial no encontrada: ${taskId}`);
+        console.error(`❌ Tarea no encontrada: ${taskId}`);
         return;
       }
       const taskData = taskSnap.data();
 
-      // 2. Obtener el submission asociado
       const submissionRef = db.collection('submissions').doc(taskData.submissionId);
       const submissionSnap = await submissionRef.get();
-      
       if (!submissionSnap.exists) {
         console.error(`❌ Submission no encontrado: ${taskData.submissionId}`);
         return;
       }
       const submissionData = submissionSnap.data();
 
-      // 3. Contar cuántas asignaciones COMPLETADAS (submitted) hay para esta tarea (INCLUYENDO la actual)
+      // ===== PASO 2: Contar revisiones completadas =====
       const assignmentsSnapshot = await db.collection('reviewerAssignments')
         .where('editorialTaskId', '==', taskId)
         .where('status', '==', 'submitted')
         .get();
 
       const submittedCount = assignmentsSnapshot.size;
-      const requiredReviews = taskData.requiredReviews || 2; // Mínimo de revisiones necesarias
+      const requiredReviews = taskData.requiredReviews || 2;
       
-      console.log(`📊 Revisiones completadas para tarea ${taskId}: ${submittedCount} de ${requiredReviews} requeridas`);
+      console.log(`📊 Revisiones: ${submittedCount}/${requiredReviews}`);
 
-      // Registrar en audit log que se recibió una revisión
+      // Registrar revisión recibida
       await db.collection('submissions').doc(taskData.submissionId)
         .collection('auditLogs').add({
           action: 'review_submitted',
-          details: `Revisión recibida de ${afterData.reviewerName || afterData.reviewerEmail}`,
+          details: `Revisión de ${afterData.reviewerName || afterData.reviewerEmail}`,
           reviewerId: assignmentId,
           recommendation: afterData.recommendation,
-          round: taskData.round || 1,
           timestamp: admin.firestore.FieldValue.serverTimestamp()
         });
 
-      // 4. SI SE ALCANZA EL MÍNIMO DE REVISIONES COMPLETADAS, AVANZAR AL SIGUIENTE ESTADO
+      // ===== PASO 3: SI SE ALCANZA EL MÍNIMO, PROCESAR COMENTARIOS =====
       if (submittedCount >= requiredReviews) {
-        console.log(`🎯 MÍNIMO DE REVISIONES ALCANZADO (${submittedCount}/${requiredReviews}) para tarea ${taskId}`);
+        console.log(`🎯 MÍNIMO ALCANZADO (${submittedCount}/${requiredReviews}). Procesando comentarios...`);
 
-        // Usar transacción para actualizar tarea y submission de forma atómica
+        // Inicializar Google Drive para extraer comentarios
+        const drive = await getDriveClient(`extract-comments-${taskId}`);
+
+        // ===== PASO 4: EXTRAER COMENTARIOS DE TODOS LOS REVISORES =====
+        const allReviewerComments = [];
+        
+        for (const doc of assignmentsSnapshot.docs) {
+          const reviewData = doc.data();
+          const reviewerFileId = reviewData.reviewerFileId;
+          
+          if (!reviewerFileId) {
+            console.warn(`⚠️ Revisor ${reviewData.reviewerEmail} sin reviewerFileId. Omitiendo comentarios.`);
+            continue;
+          }
+
+          console.log(`📄 Extrayendo comentarios de: ${reviewerFileId}`);
+          
+          try {
+            const comments = await extractCommentsFromDocument(drive, reviewerFileId);
+            
+            allReviewerComments.push({
+              reviewerNumber: allReviewerComments.length + 1,
+              reviewerEmail: reviewData.reviewerEmail,
+              reviewerName: reviewData.reviewerName || 'Revisor',
+              recommendation: reviewData.recommendation || 'No especificada',
+              commentsToAuthor: reviewData.commentsToAuthor || '',
+              commentsToEditor: reviewData.commentsToEditor || '',
+              documentComments: comments,
+              submittedAt: reviewData.submittedAt
+            });
+
+            console.log(`✅ ${comments.length} comentarios extraídos del revisor ${allReviewerComments.length}`);
+
+          } catch (commentError) {
+            console.error(`❌ Error extrayendo comentarios de ${reviewerFileId}:`, commentError.message);
+            // Continuar con el siguiente revisor aunque falle uno
+          }
+        }
+
+        // ===== PASO 5: CREAR DOCUMENTO FINAL CON REVISIONES =====
+console.log(`📝 Creando documento final con ${allReviewerComments.length} revisiones...`);
+
+let finalDocId = null;
+let finalDocUrl = null;
+
+const sourceFileId = submissionData.formattedDocsFile?.id || submissionData.originalFileId;
+
+if (!sourceFileId) {
+  throw new Error('No se encontró documento fuente para crear la versión final');
+}
+
+try {
+  // Crear copia del documento original
+  const finalCopy = await drive.files.copy({
+    fileId: sourceFileId,
+    requestBody: {
+      name: `FINAL_WITH_REVIEWS_${submissionData.submissionId}`,
+      parents: [submissionData.editorialFolderId],
+      mimeType: 'application/vnd.google-apps.document'
+    },
+    fields: 'id, webViewLink'
+  });
+
+  finalDocId = finalCopy.data.id;
+  finalDocUrl = finalCopy.data.webViewLink;
+  
+  console.log(`✅ Documento final creado: ${finalDocId}`);
+
+  // ===== ⭐ NUEVO: OTORGAR PERMISOS AL EDITOR =====
+  console.log(`🔑 Configurando permisos del documento final...`);
+  
+  // Otorgar permiso de EDITOR al editor asignado
+  if (taskData.assignedToEmail) {
+    try {
+      await drive.permissions.create({
+        fileId: finalDocId,
+        requestBody: {
+          role: 'writer',           // Puede editar
+          type: 'user',
+          emailAddress: taskData.assignedToEmail
+        },
+        sendNotificationEmail: false,
+        fields: 'id'
+      });
+      console.log(`✅ Permiso de editor otorgado a: ${taskData.assignedToEmail}`);
+    } catch (permError) {
+      console.warn(`⚠️ No se pudo otorgar permiso al editor: ${permError.message}`);
+    }
+  }
+  
+  // También otorgar acceso a otros editores en jefe
+  try {
+    const editorsSnapshot = await db.collection('users')
+      .where('roles', 'array-contains', 'Editor en Jefe')
+      .get();
+    
+    for (const editorDoc of editorsSnapshot.docs) {
+      const editorEmail = editorDoc.data().email;
+      if (editorEmail && editorEmail !== taskData.assignedToEmail) {
+        try {
+          await drive.permissions.create({
+            fileId: finalDocId,
+            requestBody: {
+              role: 'writer',
+              type: 'user',
+              emailAddress: editorEmail
+            },
+            sendNotificationEmail: false,
+            fields: 'id'
+          });
+          console.log(`✅ Permiso adicional para Editor en Jefe: ${editorEmail}`);
+        } catch (editorPermError) {
+          console.warn(`⚠️ No se pudo otorgar permiso a ${editorEmail}: ${editorPermError.message}`);
+        }
+      }
+    }
+  } catch (editorsError) {
+    console.warn(`⚠️ Error buscando editores: ${editorsError.message}`);
+  }
+  
+  // ⭐ QUITAR PERMISOS A REVISORES (por si acaso heredaron algo)
+  try {
+    const existingPermissions = await drive.permissions.list({
+      fileId: finalDocId,
+      fields: 'permissions(id, emailAddress, role)'
+    });
+    
+    for (const perm of existingPermissions.data.permissions) {
+      if (perm.role === 'owner') continue;
+      
+      // Si el permiso es de algún revisor, eliminarlo
+      const isReviewer = assignmentsSnapshot.docs.some(
+        revDoc => revDoc.data().reviewerEmail === perm.emailAddress
+      );
+      
+      if (isReviewer) {
+        await drive.permissions.delete({
+          fileId: finalDocId,
+          permissionId: perm.id
+        });
+        console.log(`🔒 Permiso de revisor eliminado: ${perm.emailAddress}`);
+      }
+    }
+  } catch (permCleanupError) {
+    console.warn(`⚠️ Error limpiando permisos: ${permCleanupError.message}`);
+  }
+
+  // Insertar la sección de revisiones al final del documento
+  await insertReviewsSection(drive, finalDocId, allReviewerComments, submissionData);
+
+  console.log(`✅ Sección de revisiones insertada`);
+
+} catch (docError) {
+  console.error(`❌ Error creando documento final:`, docError.message);
+  throw docError;
+}
+        // ===== PASO 6: PROGRAMAR ELIMINACIÓN DE DOCUMENTOS DE REVISORES (5 DÍAS) =====
+        console.log(`⏰ Programando eliminación de documentos temporales en 5 días...`);
+        
+        const deleteAt = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000); // 5 días
+        
+        for (const doc of assignmentsSnapshot.docs) {
+          const reviewData = doc.data();
+          const reviewerFileId = reviewData.reviewerFileId;
+          
+          if (reviewerFileId) {
+            // Guardar referencia para eliminación programada
+            await db.collection('scheduledDeletions').add({
+              fileId: reviewerFileId,
+              fileName: `REVIEW_COPY_${submissionData.submissionId}`,
+              submissionId: submissionData.submissionId,
+              reviewerEmail: reviewData.reviewerEmail,
+              scheduledFor: admin.firestore.Timestamp.fromDate(deleteAt),
+              createdAt: admin.firestore.FieldValue.serverTimestamp(),
+              status: 'pending',
+              reason: 'Documentos de revisión individual ya consolidados en documento final'
+            });
+            
+            console.log(`🗑️ Eliminación programada para: ${reviewerFileId}`);
+          }
+        }
+
+        // ===== PASO 7: GUARDAR REFERENCIA AL DOCUMENTO FINAL EN FIRESTORE =====
+        await submissionRef.update({
+          finalReviewDocId: finalDocId,
+          finalReviewDocUrl: finalDocUrl,
+          reviewsConsolidatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        // Guardar los comentarios extraídos en Firestore (respaldo)
+        await db.collection('submissions').doc(taskData.submissionId)
+          .collection('extractedReviews').add({
+            reviewerComments: allReviewerComments,
+            extractedAt: admin.firestore.FieldValue.serverTimestamp(),
+            finalDocId: finalDocId,
+            finalDocUrl: finalDocUrl
+          });
+
+        // ===== PASO 8: ACTUALIZAR ESTADOS =====
         await db.runTransaction(async (transaction) => {
-          // Leer el estado actual de la tarea dentro de la transacción
           const taskTxSnap = await transaction.get(taskRef);
           if (!taskTxSnap.exists) return;
           
           const currentTaskStatus = taskTxSnap.data().status;
           
-          // Solo actualizar si la tarea está en el estado correcto (reviews-in-progress)
-          // Esto evita que se procese múltiples veces
           if (currentTaskStatus === 'reviews-in-progress') {
-            
-            // Actualizar Tarea a 'awaiting-decision'
             transaction.update(taskRef, {
               status: 'awaiting-decision',
               reviewsCompletedAt: admin.firestore.FieldValue.serverTimestamp(),
               completedReviews: submittedCount,
+              finalReviewDocId: finalDocId,
+              finalReviewDocUrl: finalDocUrl,
               updatedAt: admin.firestore.FieldValue.serverTimestamp()
             });
 
-            // Actualizar Submission a 'awaiting-editor-decision'
             transaction.update(submissionRef, {
               status: 'awaiting-editor-decision',
               updatedAt: admin.firestore.FieldValue.serverTimestamp()
             });
 
-            console.log(`✅ Transacción: Tarea ${taskId} y submission ${taskData.submissionId} avanzaron a 'awaiting-decision' / 'awaiting-editor-decision'.`);
-          } else {
-            console.log(`⏭️ La tarea ${taskId} ya no está en 'reviews-in-progress' (actual: ${currentTaskStatus}). Probablemente ya se procesó.`);
+            console.log(`✅ Estados actualizados: awaiting-decision`);
           }
         });
 
-        // --- ENVIAR EMAIL COMPLETO AL EDITOR (FUERA DE LA TRANSACCIÓN) ---
-        console.log(`📧 Preparando email de decisión pendiente para el editor (${taskData.assignedToEmail})...`);
-
-        const lang = submissionData.paperLanguage || 'es';
-        const isSpanish = lang === 'es';
-
-        // --- CONSTRUIR LISTA DETALLADA DE REVISIONES COMPLETADAS ---
-        let reviewsListHtml = '';
-        let recommendationSummary = { accept: 0, minor: 0, major: 0, reject: 0 };
-
-        assignmentsSnapshot.docs.forEach((doc, index) => {
-          const review = doc.data();
-          
-          // Mapear la recomendación a un formato legible
-          let recommendationText = review.recommendation || 'No especificada';
-          if (isSpanish) {
-            const recMap = {
-              'accept': 'Aceptar',
-              'minor-revision': 'Revisiones menores',
-              'major-revision': 'Revisiones mayores',
-              'reject': 'Rechazar'
-            };
-            recommendationText = recMap[review.recommendation] || recommendationText;
-          } else {
-            const recMap = {
-              'accept': 'Accept',
-              'minor-revision': 'Minor revisions',
-              'major-revision': 'Major revisions',
-              'reject': 'Reject'
-            };
-            recommendationText = recMap[review.recommendation] || recommendationText;
-          }
-
-          // Contar para el resumen
-          if (review.recommendation === 'accept') recommendationSummary.accept++;
-          else if (review.recommendation === 'minor-revision') recommendationSummary.minor++;
-          else if (review.recommendation === 'major-revision') recommendationSummary.major++;
-          else if (review.recommendation === 'reject') recommendationSummary.reject++;
-
-          // Extraer puntuaciones si existen
-          const scores = review.scores || {};
-          const scoresHtml = Object.keys(scores).length > 0 
-            ? `<p><strong>Puntuaciones:</strong> ${Object.entries(scores).map(([k, v]) => `${k}: ${v}`).join(' | ')}</p>`
-            : '';
-
-          reviewsListHtml += `
-            <div style="background-color: #f9f9f9; padding: 15px; margin-bottom: 15px; border-left: 4px solid #007398; border-radius: 4px;">
-              <p><strong>Revisor ${index + 1}:</strong> ${review.reviewerName || 'Anónimo'} (${review.reviewerEmail})</p>
-              <p><strong>Recomendación:</strong> <span style="font-weight: bold; color: ${getRecommendationColor(review.recommendation)}">${recommendationText}</span></p>
-              ${scoresHtml}
-              <p><strong>Comentarios para el autor:</strong><br>${(review.commentsToAuthor || 'Sin comentarios').substring(0, 300)}${(review.commentsToAuthor || '').length > 300 ? '...' : ''}</p>
-              ${review.commentsToEditor ? `<p><strong>Comentarios confidenciales:</strong><br>${review.commentsToEditor.substring(0, 200)}${review.commentsToEditor.length > 200 ? '...' : ''}</p>` : ''}
-              <p><small>Enviado: ${review.submittedAt?.toDate()?.toLocaleString(isSpanish ? 'es-CL' : 'en-US') || 'Fecha no disponible'}</small></p>
-            </div>
-          `;
-        });
-
-        // --- RESUMEN DE RECOMENDACIONES ---
-        const summaryHtml = isSpanish
-          ? `
-            <div style="display: flex; gap: 10px; margin: 20px 0; flex-wrap: wrap;">
-              <div style="background-color: #d4edda; color: #155724; padding: 10px; border-radius: 4px; flex: 1; text-align: center;">
-                <strong>Aceptar:</strong> ${recommendationSummary.accept}
-              </div>
-              <div style="background-color: #fff3cd; color: #856404; padding: 10px; border-radius: 4px; flex: 1; text-align: center;">
-                <strong>Revisiones menores:</strong> ${recommendationSummary.minor}
-              </div>
-              <div style="background-color: #ffe5b4; color: #8a6d3b; padding: 10px; border-radius: 4px; flex: 1; text-align: center;">
-                <strong>Revisiones mayores:</strong> ${recommendationSummary.major}
-              </div>
-              <div style="background-color: #f8d7da; color: #721c24; padding: 10px; border-radius: 4px; flex: 1; text-align: center;">
-                <strong>Rechazar:</strong> ${recommendationSummary.reject}
-              </div>
-            </div>
-          `
-          : `
-            <div style="display: flex; gap: 10px; margin: 20px 0; flex-wrap: wrap;">
-              <div style="background-color: #d4edda; color: #155724; padding: 10px; border-radius: 4px; flex: 1; text-align: center;">
-                <strong>Accept:</strong> ${recommendationSummary.accept}
-              </div>
-              <div style="background-color: #fff3cd; color: #856404; padding: 10px; border-radius: 4px; flex: 1; text-align: center;">
-                <strong>Minor revisions:</strong> ${recommendationSummary.minor}
-              </div>
-              <div style="background-color: #ffe5b4; color: #8a6d3b; padding: 10px; border-radius: 4px; flex: 1; text-align: center;">
-                <strong>Major revisions:</strong> ${recommendationSummary.major}
-              </div>
-              <div style="background-color: #f8d7da; color: #721c24; padding: 10px; border-radius: 4px; flex: 1; text-align: center;">
-                <strong>Reject:</strong> ${recommendationSummary.reject}
-              </div>
-            </div>
-          `;
-
-        // --- CONSTRUIR EL EMAIL ---
-        const emailTitle = isSpanish
-          ? `📋 Revisiones completadas: "${submissionData.title.substring(0, 60)}..."`
-          : `📋 Reviews completed: "${submissionData.title.substring(0, 60)}..."`;
-
-        const emailGreeting = isSpanish
-          ? `Estimado/a ${taskData.assignedToName || 'Editor/a'}:`
-          : `Dear ${taskData.assignedToName || 'Editor'}:`;
-
-        const bodyContent = isSpanish
-          ? `
-            <p>El artículo <strong>"${submissionData.title}"</strong> ha recibido las <strong>${submittedCount} revisiones requeridas</strong> y está listo para tu decisión editorial.</p>
-
-            <div class="highlight-box">
-              <p class="article-title">"${submissionData.title}"</p>
-              <p><strong>ID del envío:</strong> ${submissionData.submissionId}</p>
-              <p><strong>Área:</strong> ${submissionData.area}</p>
-              <p><strong>Autor/a:</strong> ${submissionData.authorName} (${submissionData.authorEmail})</p>
-              <p><strong>Ronda actual:</strong> ${taskData.round || 1}</p>
-            </div>
-
-            <h3>📊 Resumen de recomendaciones:</h3>
-            ${summaryHtml}
-
-            <h3>📋 Detalle de las revisiones recibidas:</h3>
-            ${reviewsListHtml}
-
-            <h3>🔍 Próximos pasos:</h3>
-            <ol>
-              <li><strong>Revisa los informes:</strong> Analiza las recomendaciones y comentarios de los revisores.</li>
-              <li><strong>Toma una decisión:</strong> Puedes optar por: aceptar, solicitar revisiones menores/mayores, o rechazar el artículo.</li>
-              <li><strong>Redacta tu decisión:</strong> Prepara una carta de decisión para el autor, incorporando los comentarios de los revisores.</li>
-              <li><strong>Notifica al autor:</strong> Una vez que tomes la decisión, el sistema notificará automáticamente al autor.</li>
-            </ol>
-
-            <div class="button-container">
-              <a href="https://www.revistacienciasestudiantes.com/${isSpanish ? 'es' : 'en'}/login" class="btn">TOMAR DECISIÓN</a>
-              <a href="${submissionData.driveFolderUrl}" class="btn btn-secondary">VER CARPETA EN DRIVE</a>
-            </div>
-
-            <p class="info-text">
-              <strong>Nota:</strong> Una vez que tomes la decisión, el sistema actualizará automáticamente el estado del envío y notificará al autor.
-            </p>
-          `
-          : `
-            <p>The article <strong>"${submissionData.title}"</strong> has received the <strong>${submittedCount} required reviews</strong> and is ready for your editorial decision.</p>
-
-            <div class="highlight-box">
-              <p class="article-title">"${submissionData.title}"</p>
-              <p><strong>Submission ID:</strong> ${submissionData.submissionId}</p>
-              <p><strong>Area:</strong> ${submissionData.area}</p>
-              <p><strong>Author:</strong> ${submissionData.authorName} (${submissionData.authorEmail})</p>
-              <p><strong>Current round:</strong> ${taskData.round || 1}</p>
-            </div>
-
-            <h3>📊 Recommendation summary:</h3>
-            ${summaryHtml}
-
-            <h3>📋 Review details:</h3>
-            ${reviewsListHtml}
-
-            <h3>🔍 Next steps:</h3>
-            <ol>
-              <li><strong>Review the reports:</strong> Analyze the reviewers' recommendations and comments.</li>
-              <li><strong>Make a decision:</strong> You can choose to: accept, request minor/major revisions, or reject the article.</li>
-              <li><strong>Draft your decision:</strong> Prepare a decision letter for the author, incorporating the reviewers' comments.</li>
-              <li><strong>Notify the author:</strong> Once you make the decision, the system will automatically notify the author.</li>
-            </ol>
-
-            <div class="button-container">
-              <a href="https://www.revistacienciasestudiantes.com/${isSpanish ? 'es' : 'en'}/login" class="btn">MAKE DECISION</a>
-              <a href="${submissionData.driveFolderUrl}" class="btn btn-secondary">VIEW DRIVE FOLDER</a>
-            </div>
-
-            <p class="info-text">
-              <strong>Note:</strong> Once you make the decision, the system will automatically update the submission status and notify the author.
-            </p>
-          `;
-
-        const htmlBody = getEmailTemplate(
-          emailTitle,
-          emailGreeting,
-          bodyContent,
-          isSpanish ? 'Sistema Editorial' : 'Editorial System',
-          isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
-          lang
+        // ===== PASO 9: ENVIAR EMAIL AL EDITOR =====
+        await sendEditorDecisionEmail(
+          taskData, 
+          submissionData, 
+          assignmentsSnapshot, 
+          submittedCount, 
+          finalDocUrl
         );
 
-        // Enviar el email
-        await sendEmailViaExtension(taskData.assignedToEmail, emailTitle, htmlBody);
-        console.log(`✅ Email de decisión pendiente enviado a editor ${taskData.assignedToEmail}`);
-
-        // Registrar envío de notificación
-        await db.collection('submissions').doc(taskData.submissionId)
-          .collection('auditLogs').add({
-            action: 'editor_notified_decision_pending',
-            details: `Editor ${taskData.assignedToEmail} notificado sobre revisiones completadas`,
-            timestamp: admin.firestore.FieldValue.serverTimestamp()
-          });
+        console.log(`✅ Proceso completado. Documento final: ${finalDocUrl}`);
 
       } else {
-        // No se ha alcanzado el mínimo aún, pero podemos notificar al editor que llegó una nueva revisión (opcional)
-        console.log(`📨 Notificación opcional: Se recibió una revisión (${submittedCount}/${requiredReviews}) para la tarea ${taskId}`);
-        
-        // Opcional: Enviar un email de "progreso" al editor
-        // await sendProgressNotification(taskData, submissionData, submittedCount, requiredReviews);
+        console.log(`⏳ Solo ${submittedCount}/${requiredReviews} revisiones. Esperando más.`);
       }
 
     } catch (error) {
       console.error(`❌ Error en onReviewerAssignmentSubmitted:`, error.message);
-      console.error(error.stack);
-      await logSystemError('onReviewerAssignmentSubmitted', error, { 
+      console.error(`❌ Stack:`, error.stack);
+      
+      await db.collection('systemErrors').add({
+        function: 'onReviewerAssignmentSubmitted',
+        error: {
+          message: error.message,
+          stack: error.stack?.substring(0, 500)
+        },
         assignmentId,
-        afterData: {
-          submissionId: afterData?.submissionId,
-          editorialTaskId: afterData?.editorialTaskId,
-          reviewerEmail: afterData?.reviewerEmail
-        }
+        timestamp: admin.firestore.FieldValue.serverTimestamp()
       });
     }
   }
 );
 
+// ============================================================
+// FUNCIÓN: EXTRAER COMENTARIOS DE UN DOCUMENTO
+// ============================================================
+async function extractCommentsFromDocument(drive, fileId) {
+  try {
+    const response = await drive.comments.list({
+      fileId: fileId,
+      fields: 'comments(id, content, anchor, author(displayName, emailAddress), createdTime, modifiedTime, resolved, replies(id, content, author(displayName), createdTime))',
+      pageSize: 100
+    });
+
+    const comments = response.data.comments || [];
+    
+    // Formatear comentarios para el documento final
+    const formattedComments = [];
+    
+    for (const comment of comments) {
+      // Solo incluir comentarios no resueltos (los que el revisor dejó)
+      if (!comment.resolved) {
+        const commentData = {
+          id: comment.id,
+          content: comment.content,
+          author: comment.author?.displayName || 'Anónimo',
+          createdTime: comment.createdTime,
+          resolved: comment.resolved || false,
+          replies: []
+        };
+
+        // Incluir respuestas si existen
+        if (comment.replies && comment.replies.length > 0) {
+          commentData.replies = comment.replies.map(reply => ({
+            id: reply.id,
+            content: reply.content,
+            author: reply.author?.displayName || 'Anónimo',
+            createdTime: reply.createdTime
+          }));
+        }
+
+        formattedComments.push(commentData);
+      }
+    }
+
+    return formattedComments;
+
+  } catch (error) {
+    console.error(`❌ Error extrayendo comentarios de ${fileId}:`, error.message);
+    return [];
+  }
+}
+
+// ============================================================
+// FUNCIÓN: INSERTAR SECCIÓN DE REVISIONES EN EL DOCUMENTO FINAL
+// ============================================================
+async function insertReviewsSection(drive, docsFileId, allReviewerComments, submissionData) {
+  try {
+    const { google } = require('googleapis');
+    const docs = google.docs({ version: 'v1', auth: drive.auth });
+    
+    // Obtener el final del documento
+    const document = await docs.documents.get({
+      documentId: docsFileId
+    });
+    
+    const docEnd = document.data.body.content[document.data.body.content.length - 1].endIndex - 1;
+    
+    const requests = [];
+    
+    // Insertar salto de página antes de la sección de revisiones
+    requests.push({
+      insertPageBreak: {
+        location: { index: docEnd }
+      }
+    });
+    
+    let insertIndex = docEnd + 1;
+    
+    // ===== TÍTULO DE LA SECCIÓN =====
+    const sectionTitle = '\nREVISIONES\n\n';
+    requests.push({
+      insertText: {
+        location: { index: insertIndex },
+        text: sectionTitle
+      }
+    });
+    
+    // Estilo del título
+    requests.push({
+      updateParagraphStyle: {
+        range: { startIndex: insertIndex, endIndex: insertIndex + sectionTitle.length },
+        paragraphStyle: {
+          namedStyleType: 'HEADING_1',
+          alignment: 'CENTER',
+          spaceBelow: { magnitude: 24, unit: 'PT' }
+        },
+        fields: 'namedStyleType,alignment,spaceBelow'
+      }
+    });
+    
+    insertIndex += sectionTitle.length;
+    
+    // ===== INSERTAR REVISIÓN DE CADA REVISOR =====
+    for (const review of allReviewerComments) {
+      // Línea separadora
+      const separator = '─'.repeat(60) + '\n\n';
+      requests.push({
+        insertText: {
+          location: { index: insertIndex },
+          text: separator
+        }
+      });
+      
+      requests.push({
+        updateTextStyle: {
+          range: { startIndex: insertIndex, endIndex: insertIndex + separator.length },
+          textStyle: {
+            foregroundColor: { color: { rgbColor: { red: 0.0, green: 0.32, blue: 0.62 } } },
+            fontSize: { magnitude: 8, unit: 'PT' }
+          },
+          fields: 'foregroundColor,fontSize'
+        }
+      });
+      
+      insertIndex += separator.length;
+      
+      // Encabezado del revisor
+      const reviewerHeader = `Revisor ${review.reviewerNumber}\n`;
+      requests.push({
+        insertText: {
+          location: { index: insertIndex },
+          text: reviewerHeader
+        }
+      });
+      
+      requests.push({
+        updateTextStyle: {
+          range: { startIndex: insertIndex, endIndex: insertIndex + reviewerHeader.length },
+          textStyle: {
+            bold: true,
+            fontSize: { magnitude: 14, unit: 'PT' },
+            foregroundColor: { color: { rgbColor: { red: 0.1, green: 0.1, blue: 0.1 } } }
+          },
+          fields: 'bold,fontSize,foregroundColor'
+        }
+      });
+      
+      requests.push({
+        updateParagraphStyle: {
+          range: { startIndex: insertIndex, endIndex: insertIndex + reviewerHeader.length },
+          paragraphStyle: {
+            alignment: 'START',
+            spaceBelow: { magnitude: 8, unit: 'PT' }
+          },
+          fields: 'alignment,spaceBelow'
+        }
+      });
+      
+      insertIndex += reviewerHeader.length;
+      
+      // Recomendación
+      const recommendationText = `Recomendación: ${review.recommendation}\n`;
+      requests.push({
+        insertText: {
+          location: { index: insertIndex },
+          text: recommendationText
+        }
+      });
+      
+      requests.push({
+        updateTextStyle: {
+          range: { startIndex: insertIndex, endIndex: insertIndex + recommendationText.length },
+          textStyle: {
+            bold: true,
+            fontSize: { magnitude: 11, unit: 'PT' },
+            foregroundColor: { color: { rgbColor: { red: 0.0, green: 0.32, blue: 0.62 } } }
+          },
+          fields: 'bold,fontSize,foregroundColor'
+        }
+      });
+      
+      requests.push({
+        updateParagraphStyle: {
+          range: { startIndex: insertIndex, endIndex: insertIndex + recommendationText.length },
+          paragraphStyle: {
+            spaceBelow: { magnitude: 12, unit: 'PT' }
+          },
+          fields: 'spaceBelow'
+        }
+      });
+      
+      insertIndex += recommendationText.length;
+      
+      // Comentarios para el autor
+      if (review.commentsToAuthor) {
+        const authorCommentsLabel = 'Comentarios para el autor:\n';
+        requests.push({
+          insertText: {
+            location: { index: insertIndex },
+            text: authorCommentsLabel
+          }
+        });
+        
+        requests.push({
+          updateTextStyle: {
+            range: { startIndex: insertIndex, endIndex: insertIndex + authorCommentsLabel.length },
+            textStyle: {
+              bold: true,
+              fontSize: { magnitude: 10, unit: 'PT' }
+            },
+            fields: 'bold,fontSize'
+          }
+        });
+        
+        insertIndex += authorCommentsLabel.length;
+        
+        const authorCommentsText = review.commentsToAuthor + '\n\n';
+        requests.push({
+          insertText: {
+            location: { index: insertIndex },
+            text: authorCommentsText
+          }
+        });
+        
+        requests.push({
+          updateTextStyle: {
+            range: { startIndex: insertIndex, endIndex: insertIndex + authorCommentsText.length },
+            textStyle: {
+              fontSize: { magnitude: 10, unit: 'PT' },
+              foregroundColor: { color: { rgbColor: { red: 0.2, green: 0.2, blue: 0.2 } } }
+            },
+            fields: 'fontSize,foregroundColor'
+          }
+        });
+        
+        requests.push({
+          updateParagraphStyle: {
+            range: { startIndex: insertIndex, endIndex: insertIndex + authorCommentsText.length },
+            paragraphStyle: {
+              spaceBelow: { magnitude: 12, unit: 'PT' }
+            },
+            fields: 'spaceBelow'
+          }
+        });
+        
+        insertIndex += authorCommentsText.length;
+      }
+      
+      // Comentarios en el documento (extraídos)
+      if (review.documentComments && review.documentComments.length > 0) {
+        const docCommentsLabel = 'Comentarios en el documento:\n';
+        requests.push({
+          insertText: {
+            location: { index: insertIndex },
+            text: docCommentsLabel
+          }
+        });
+        
+        requests.push({
+          updateTextStyle: {
+            range: { startIndex: insertIndex, endIndex: insertIndex + docCommentsLabel.length },
+            textStyle: {
+              bold: true,
+              fontSize: { magnitude: 10, unit: 'PT' }
+            },
+            fields: 'bold,fontSize'
+          }
+        });
+        
+        insertIndex += docCommentsLabel.length;
+        
+        // Formatear cada comentario
+        for (let i = 0; i < review.documentComments.length; i++) {
+          const comment = review.documentComments[i];
+          const commentNumber = i + 1;
+          
+          // Texto del comentario
+          let commentText = `${commentNumber}. ${comment.content}\n`;
+          
+          requests.push({
+            insertText: {
+              location: { index: insertIndex },
+              text: commentText
+            }
+          });
+          
+          requests.push({
+            updateTextStyle: {
+              range: { startIndex: insertIndex, endIndex: insertIndex + commentText.length },
+              textStyle: {
+                fontSize: { magnitude: 10, unit: 'PT' },
+                foregroundColor: { color: { rgbColor: { red: 0.15, green: 0.15, blue: 0.15 } } },
+                italic: false
+              },
+              fields: 'fontSize,foregroundColor,italic'
+            }
+          });
+          
+          requests.push({
+            updateParagraphStyle: {
+              range: { startIndex: insertIndex, endIndex: insertIndex + commentText.length },
+              paragraphStyle: {
+                spaceBelow: { magnitude: 4, unit: 'PT' },
+                indentStart: { magnitude: 20, unit: 'PT' }
+              },
+              fields: 'spaceBelow,indentStart'
+            }
+          });
+          
+          insertIndex += commentText.length;
+          
+          // Respuestas si existen
+          if (comment.replies && comment.replies.length > 0) {
+            for (const reply of comment.replies) {
+              let replyText = `   ↳ Respuesta: ${reply.content}\n`;
+              
+              requests.push({
+                insertText: {
+                  location: { index: insertIndex },
+                  text: replyText
+                }
+              });
+              
+              requests.push({
+                updateTextStyle: {
+                  range: { startIndex: insertIndex, endIndex: insertIndex + replyText.length },
+                  textStyle: {
+                    fontSize: { magnitude: 9, unit: 'PT' },
+                    foregroundColor: { color: { rgbColor: { red: 0.4, green: 0.4, blue: 0.4 } } },
+                    italic: true
+                  },
+                  fields: 'fontSize,foregroundColor,italic'
+                }
+              });
+              
+              requests.push({
+                updateParagraphStyle: {
+                  range: { startIndex: insertIndex, endIndex: insertIndex + replyText.length },
+                  paragraphStyle: {
+                    spaceBelow: { magnitude: 2, unit: 'PT' },
+                    indentStart: { magnitude: 40, unit: 'PT' }
+                  },
+                  fields: 'spaceBelow,indentStart'
+                }
+              });
+              
+              insertIndex += replyText.length;
+            }
+          }
+        }
+        
+        // Espacio después de los comentarios
+        const spacer = '\n';
+        requests.push({
+          insertText: {
+            location: { index: insertIndex },
+            text: spacer
+          }
+        });
+        insertIndex += spacer.length;
+      }
+    }
+    
+    // ===== LÍNEA FINAL =====
+    const finalSeparator = '\n' + '─'.repeat(60) + '\n';
+    requests.push({
+      insertText: {
+        location: { index: insertIndex },
+        text: finalSeparator
+      }
+    });
+    
+    requests.push({
+      updateTextStyle: {
+        range: { startIndex: insertIndex, endIndex: insertIndex + finalSeparator.length },
+        textStyle: {
+          foregroundColor: { color: { rgbColor: { red: 0.0, green: 0.32, blue: 0.62 } } },
+          fontSize: { magnitude: 8, unit: 'PT' }
+        },
+        fields: 'foregroundColor,fontSize'
+      }
+    });
+    
+    // ===== EJECUTAR TODOS LOS CAMBIOS EN LOTES =====
+    console.log(`📝 Aplicando ${requests.length} cambios al documento final...`);
+    
+    for (let i = 0; i < requests.length; i += 50) {
+      const batch = requests.slice(i, i + 50);
+      await docs.documents.batchUpdate({
+        documentId: docsFileId,
+        requestBody: { requests: batch }
+      });
+      console.log(`✅ Lote ${Math.floor(i/50) + 1}/${Math.ceil(requests.length/50)} aplicado`);
+    }
+    
+    console.log(`✅ Sección de revisiones insertada correctamente`);
+    
+  } catch (error) {
+    console.error(`❌ Error insertando sección de revisiones:`, error.message);
+    throw error;
+  }
+}
+
+// ============================================================
+// FUNCIÓN: ENVIAR EMAIL AL EDITOR
+// ============================================================
+async function sendEditorDecisionEmail(taskData, submissionData, assignmentsSnapshot, submittedCount, finalDocUrl) {
+  const lang = submissionData.paperLanguage || 'es';
+  const isSpanish = lang === 'es';
+  
+  // Construir lista de revisiones
+  let reviewsListHtml = '';
+  
+  assignmentsSnapshot.docs.forEach((doc, index) => {
+    const review = doc.data();
+    
+    let recommendationText = review.recommendation || 'No especificada';
+    if (isSpanish) {
+      const recMap = {
+        'accept': 'Aceptar',
+        'minor-revision': 'Revisiones menores',
+        'major-revision': 'Revisiones mayores',
+        'reject': 'Rechazar'
+      };
+      recommendationText = recMap[review.recommendation] || recommendationText;
+    }
+    
+    reviewsListHtml += `
+      <div style="background-color: #f9f9f9; padding: 15px; margin-bottom: 15px; border-left: 4px solid #007398; border-radius: 4px;">
+        <p><strong>Revisor ${index + 1}:</strong></p>
+        <p><strong>Recomendación:</strong> ${recommendationText}</p>
+        <p><strong>Comentarios para el autor:</strong><br>${(review.commentsToAuthor || 'Sin comentarios').substring(0, 300)}...</p>
+      </div>
+    `;
+  });
+  
+  const emailTitle = isSpanish
+    ? `📋 Revisiones completadas: "${submissionData.title.substring(0, 60)}..."`
+    : `📋 Reviews completed: "${submissionData.title.substring(0, 60)}..."`;
+
+  const emailGreeting = isSpanish
+    ? `Estimado/a ${taskData.assignedToName || 'Editor/a'}:`
+    : `Dear ${taskData.assignedToName || 'Editor'}:`;
+
+  const bodyContent = isSpanish
+    ? `
+      <p>El artículo ha recibido las <strong>${submittedCount} revisiones requeridas</strong>.</p>
+      
+      <div class="highlight-box">
+        <p class="article-title">📚 "${submissionData.title}"</p>
+        <p><strong>ID:</strong> ${submissionData.submissionId}</p>
+      </div>
+      
+      <h3>📋 Revisiones:</h3>
+      ${reviewsListHtml}
+      
+      <div class="info-box" style="background: #e8f5e9; border-left: 4px solid #4caf50; padding: 15px; margin: 20px 0;">
+        <h3 style="margin-top: 0;">✅ Documento final con revisiones</h3>
+        <p>Se ha creado un documento consolidado con todas las revisiones al final del manuscrito.</p>
+      </div>
+      
+      <div class="button-container">
+        <a href="${finalDocUrl}" class="btn">📄 VER DOCUMENTO FINAL</a>
+      </div>
+      
+      <p style="color: #666; font-size: 13px; margin-top: 20px;">
+        <em>Los documentos temporales de los revisores se eliminarán automáticamente en 5 días.</em>
+      </p>
+    `
+    : `
+      <p>The article has received the <strong>${submittedCount} required reviews</strong>.</p>
+      
+      <div class="highlight-box">
+        <p class="article-title">📚 "${submissionData.title}"</p>
+        <p><strong>ID:</strong> ${submissionData.submissionId}</p>
+      </div>
+      
+      <h3>📋 Reviews:</h3>
+      ${reviewsListHtml}
+      
+      <div class="info-box" style="background: #e8f5e9; border-left: 4px solid #4caf50; padding: 15px; margin: 20px 0;">
+        <h3 style="margin-top: 0;">✅ Final document with reviews</h3>
+        <p>A consolidated document has been created with all reviews at the end of the manuscript.</p>
+      </div>
+      
+      <div class="button-container">
+        <a href="${finalDocUrl}" class="btn">📄 VIEW FINAL DOCUMENT</a>
+      </div>
+      
+      <p style="color: #666; font-size: 13px; margin-top: 20px;">
+        <em>Reviewer temporary documents will be automatically deleted in 5 days.</em>
+      </p>
+    `;
+
+  const htmlBody = getEmailTemplate(
+    emailTitle,
+    emailGreeting,
+    bodyContent,
+    isSpanish ? 'Sistema Editorial' : 'Editorial System',
+    isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
+    lang
+  );
+
+  await sendEmailViaExtension(taskData.assignedToEmail, emailTitle, htmlBody);
+  console.log(`✅ Email enviado al editor: ${taskData.assignedToEmail}`);
+}
 // ===================== FUNCIÓN AUXILIAR PARA COLORES DE RECOMENDACIÓN =====================
 function getRecommendationColor(recommendation) {
   switch (recommendation) {
