@@ -414,21 +414,71 @@ export const ReviewerWorkspace = ({ assignmentId, onClose, readOnly = false }) =
               )}
               
               <div className="pt-4">
-                {/* Primero intentar con carpeta editorial, si no existe usar la del autor */}
-<a
-  href={submission.editorialFolderUrl || submission.driveFolderUrl}
-  target="_blank"
-  rel="noopener noreferrer"
-  className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors w-full justify-center"
->
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-  </svg>
-  {isSpanish 
-    ? (submission.editorialFolderUrl ? 'Ver documento en carpeta editorial' : 'Ver documento en Drive')
-    : (submission.editorialFolderUrl ? 'View document in editorial folder' : 'View document in Drive')}
-</a>
-              </div>
+                // En la sección del Left Panel, reemplazar el botón de "Ver documento"
+// Encuentra esta parte (alrededor de la línea 400-420):
+
+<div className="pt-4">
+  {/* CORRECCIÓN: Mostrar el documento específico del revisor, no la carpeta */}
+  <a
+    href={assignment.reviewerFileUrl || submission.editorialFolderUrl || submission.driveFolderUrl}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors w-full justify-center"
+  >
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+    {assignment.reviewerFileUrl 
+      ? (isSpanish ? 'Ver documento para revisión' : 'View review document')
+      : (isSpanish ? 'Ver documento en Drive' : 'View document in Drive')
+    }
+  </a>
+  
+  {/* Si hay documento específico del revisor, mostrar información adicional */}
+  {assignment.reviewerFileUrl && (
+    <div className="mt-2 p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+      <div className="flex items-start gap-2">
+        <svg className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+        </svg>
+        <div>
+          <p className="text-xs font-medium text-emerald-800">
+            {isSpanish ? 'Documento exclusivo para revisión' : 'Exclusive review document'}
+          </p>
+          <p className="text-xs text-emerald-600 mt-1">
+            {isSpanish 
+              ? 'Este documento es solo para ti. Puedes comentar pero no editar.'
+              : 'This document is for your eyes only. You can comment but not edit.'
+            }
+          </p>
+        </div>
+      </div>
+    </div>
+  )}
+  
+  {/* Si NO hay documento específico, mostrar advertencia */}
+  {!assignment.reviewerFileUrl && (
+    <div className="mt-2 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+      <div className="flex items-start gap-2">
+        <svg className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+        </svg>
+        <div>
+          <p className="text-xs font-medium text-yellow-800">
+            {isSpanish ? 'Documento de revisión no disponible' : 'Review document not available'}
+          </p>
+          <p className="text-xs text-yellow-600 mt-1">
+            {isSpanish 
+              ? 'Contacta al editor si necesitas acceso al documento.'
+              : 'Contact the editor if you need document access.'
+            }
+          </p>
+        </div>
+      </div>
+    </div>
+  )}
+</div>
+            </div>
             </div>
           </div>
         </div>

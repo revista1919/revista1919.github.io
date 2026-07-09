@@ -5222,7 +5222,8 @@ exports.onReviewerInvitationUpdated = onDocumentUpdated(
 
     try {
       const db = admin.firestore();
-      const requestId = `REV-${invitationId}-${Date.now().substring(0, 8)}`;
+      const requestId = `REV-${invitationId}-${Date.now().toString().substring(0, 8)}`;
+      const warnings = []; // Acumular warnings sin interrumpir
 
       // ===== PASO 1: Obtener el submission completo =====
       const submissionDoc = await db.collection('submissions').doc(afterData.submissionId).get();
@@ -5239,213 +5240,367 @@ exports.onReviewerInvitationUpdated = onDocumentUpdated(
       }
 
       // ===== PASO 3: Inicializar Google Drive =====
-      const drive = await getDriveClient(`reviewer-${invitationId}`);
+      let drive;
+      try {
+        const driveClients = await getDriveClient(`reviewer-${invitationId}`);
+        drive = driveClients.drive;
+        
+        if (!drive?.files?.copy) {
+          throw new Error('Cliente de Google Drive mal inicializado');
+        }
+      } catch (driveError) {
+        console.error(`❌ Error inicializando Drive:`, driveError.message);
+        await logSystemError('drive_init_failed', driveError, invitationId);
+        return;
+      }
       
       // ===== PASO 4: IDENTIFICAR DOCUMENTO FUENTE =====
-      // Prioridad: documento formateado > documento original
       let sourceFileId = null;
       let sourceMimeType = null;
       
-      if (submission.formattedDocsFile?.id) {
-        // Usar el Google Docs ya procesado y formateado
-        sourceFileId = submission.formattedDocsFile.id;
-        sourceMimeType = 'application/vnd.google-apps.document';
-        console.log(`[${requestId}] ✅ Usando documento formateado (Google Docs)`);
-      } else if (submission.originalFileId) {
-        // Compatibilidad con submissions antiguas sin formato
-        sourceFileId = submission.originalFileId;
-        console.log(`[${requestId}] ⚠️ Submission antigua. Usando documento original.`);
-        
-        // Verificar tipo MIME del original
-        try {
-          const fileMeta = await drive.files.get({
-            fileId: sourceFileId,
-            fields: 'mimeType'
-          });
-          sourceMimeType = fileMeta.data.mimeType;
-        } catch (metaErr) {
-          console.warn(`[${requestId}] ⚠️ No se pudo obtener MIME type. Asumiendo Word.`);
-          sourceMimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      try {
+        if (submission.formattedDocsFile?.id) {
+          sourceFileId = submission.formattedDocsFile.id;
+          sourceMimeType = 'application/vnd.google-apps.document';
+          console.log(`[${requestId}] ✅ Usando documento formateado (Google Docs)`);
+        } else if (submission.originalFileId) {
+          sourceFileId = submission.originalFileId;
+          console.log(`[${requestId}] ⚠️ Submission antigua. Usando documento original.`);
+          
+          try {
+            const fileMeta = await drive.files.get({
+              fileId: sourceFileId,
+              fields: 'mimeType'
+            });
+            sourceMimeType = fileMeta.data.mimeType;
+          } catch (metaErr) {
+            console.warn(`[${requestId}] ⚠️ No se pudo obtener MIME type. Asumiendo Word.`);
+            sourceMimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+            warnings.push('mime_type_assumed');
+          }
+        } else {
+          throw new Error(`No se encontró documento para submission ${afterData.submissionId}`);
         }
-      } else {
-        throw new Error(`No se encontró documento para submission ${afterData.submissionId}`);
+      } catch (sourceError) {
+        console.error(`❌ Error identificando documento fuente:`, sourceError.message);
+        await logSystemError('source_doc_error', sourceError, invitationId);
+        return;
       }
 
       // ===== PASO 5: CREAR COPIA EXCLUSIVA PARA EL REVISOR =====
       console.log(`[${requestId}] 📄 Creando copia para revisor...`);
       
-      const reviewerUidShort = afterData.reviewerUid ? afterData.reviewerUid.substring(0, 8) : 'unknown';
-      const reviewerCopyName = `REVIEW_${submission.submissionId}_${reviewerUidShort}`;
+      let reviewerFileId, reviewerFileUrl;
       
-      const copyConfig = {
-        fileId: sourceFileId,
-        requestBody: {
-          name: reviewerCopyName,
-          parents: [submission.editorialFolderId]
-        },
-        fields: 'id, webViewLink, mimeType'
-      };
-      
-      // Si es Google Docs formateado, mantener el formato
-      if (sourceMimeType === 'application/vnd.google-apps.document') {
-        copyConfig.requestBody.mimeType = 'application/vnd.google-apps.document';
-      }
-      
-      const reviewerCopy = await drive.files.copy(copyConfig);
-      
-      const reviewerFileId = reviewerCopy.data.id;
-      const reviewerFileUrl = reviewerCopy.data.webViewLink;
-      
-      console.log(`[${requestId}] ✅ Copia creada: ${reviewerFileId}`);
-
-      // ===== PASO 6: CONFIGURAR PERMISOS EXCLUSIVOS =====
-      console.log(`[${requestId}] 🔑 Configurando permisos para ${afterData.reviewerEmail}...`);
-      
-      // 6.1: Primero, eliminar TODOS los permisos existentes (excepto owner)
-      const existingPermissions = await drive.permissions.list({
-        fileId: reviewerFileId,
-        fields: 'permissions(id, emailAddress, role, type)'
-      });
-      
-      for (const perm of existingPermissions.data.permissions) {
-        if (perm.role === 'owner') {
-          console.log(`[${requestId}] 👑 Owner mantenido: ${perm.emailAddress || 'cuenta de servicio'}`);
-          continue; // Mantener al propietario (cuenta de servicio)
+      try {
+        const reviewerUidShort = afterData.reviewerUid ? afterData.reviewerUid.substring(0, 8) : 'unknown';
+        const reviewerCopyName = `REVIEW_${submission.submissionId}_${reviewerUidShort}`;
+        
+        const copyConfig = {
+          fileId: sourceFileId,
+          requestBody: {
+            name: reviewerCopyName,
+            parents: [submission.editorialFolderId],
+            copyRequiresWriterPermission: true,
+            writersCanShare: false
+          },
+          fields: 'id, webViewLink, mimeType'
+        };
+        
+        if (sourceMimeType === 'application/vnd.google-apps.document') {
+          copyConfig.requestBody.mimeType = 'application/vnd.google-apps.document';
         }
         
+        const reviewerCopy = await drive.files.copy(copyConfig);
+        
+        reviewerFileId = reviewerCopy.data.id;
+        reviewerFileUrl = reviewerCopy.data.webViewLink;
+        
+        console.log(`[${requestId}] ✅ Copia creada: ${reviewerFileId}`);
+      } catch (copyError) {
+        console.error(`❌ Error creando copia:`, copyError.message);
+        await logSystemError('copy_creation_failed', copyError, invitationId);
+        
+        // Intentar crear la asignación igual sin archivo
+        warnings.push('copy_failed');
+        reviewerFileId = null;
+        reviewerFileUrl = null;
+      }
+
+      // ===== PASO 6: CONFIGURAR PERMISOS (NO BLOQUEANTE) =====
+      if (reviewerFileId) {
         try {
-          await drive.permissions.delete({
-            fileId: reviewerFileId,
-            permissionId: perm.id
-          });
-          console.log(`[${requestId}] 🗑️ Permiso eliminado: ${perm.emailAddress || perm.id}`);
-        } catch (deleteErr) {
-          console.warn(`[${requestId}] ⚠️ No se pudo eliminar permiso: ${deleteErr.message}`);
+          console.log(`[${requestId}] 🔑 Configurando permisos...`);
+          await configureReviewerPermissions(drive, reviewerFileId, afterData.reviewerEmail, requestId);
+        } catch (permError) {
+          console.warn(`[${requestId}] ⚠️ Error en permisos (no crítico):`, permError.message);
+          warnings.push('permission_error');
+          // Continuar a pesar del error de permisos
         }
       }
-      
-      // 6.2: Otorgar permiso de COMENTARISTA solo al revisor asignado
-      await drive.permissions.create({
-        fileId: reviewerFileId,
-        requestBody: {
-          role: 'commenter',           // ⭐ SOLO COMENTAR, NO EDITAR
-          type: 'user',
-          emailAddress: afterData.reviewerEmail
-        },
-        sendNotificationEmail: false,  // No enviar email automático de Google
-        fields: 'id'
-      });
-      
-      console.log(`[${requestId}] ✅ Permiso COMENTARISTA otorgado a: ${afterData.reviewerEmail}`);
-      
-      // 6.3: Verificar que el acceso es realmente exclusivo
-      const finalPermissions = await drive.permissions.list({
-        fileId: reviewerFileId,
-        fields: 'permissions(id, emailAddress, role)'
-      });
-      
-      const accessCount = finalPermissions.data.permissions.filter(p => p.role !== 'owner').length;
-      
-      if (accessCount > 1) {
-        console.warn(`[${requestId}] ⚠️ Hay ${accessCount} accesos además del owner. Revisando...`);
-        // Fuerza bruta: eliminar cualquier permiso extra
-        for (const perm of finalPermissions.data.permissions) {
-          if (perm.role !== 'owner' && perm.emailAddress !== afterData.reviewerEmail) {
-            await drive.permissions.delete({
-              fileId: reviewerFileId,
-              permissionId: perm.id
-            });
-            console.log(`[${requestId}] 🔒 Acceso extra eliminado: ${perm.emailAddress}`);
-          }
-        }
-      }
-      
-      console.log(`[${requestId}] 🔐 Acceso exclusivo verificado: SOLO ${afterData.reviewerEmail}`);
 
       // ===== PASO 7: CREAR ASIGNACIÓN EN FIRESTORE =====
-      const dueDate = new Date();
-      dueDate.setDate(dueDate.getDate() + 21); // 21 días para revisar
+      let assignmentRef;
+      try {
+        const dueDate = new Date();
+        dueDate.setDate(dueDate.getDate() + 21);
 
-      const assignmentData = {
-        submissionId: afterData.submissionId,
-        editorialReviewId: afterData.editorialReviewId || null,
-        editorialTaskId: afterData.editorialTaskId || null,
-        round: afterData.round || 1,
-        reviewerUid: afterData.reviewerUid,
-        reviewerEmail: afterData.reviewerEmail,
-        reviewerName: afterData.reviewerName || 'Revisor',
-        invitationId: invitationId,
-        status: 'pending',
-        conflictOfInterest: afterData.conflictOfInterest || false,
-        assignedAt: admin.firestore.FieldValue.serverTimestamp(),
-        dueDate: admin.firestore.Timestamp.fromDate(dueDate),
-        
-        // Documento exclusivo del revisor
-        reviewerFileId: reviewerFileId,
-        reviewerFileUrl: reviewerFileUrl,
-        
-        // Referencia a la carpeta editorial
-        driveFolderId: submission.editorialFolderId,
-        driveFolderUrl: submission.editorialFolderUrl || null,
-        
-        // Metadata de la copia
-        sourceFileId: sourceFileId,
-        copyCreatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        accessLevel: 'commenter',
-        isExclusiveAccess: true
-      };
+        const assignmentData = {
+          submissionId: afterData.submissionId,
+          editorialReviewId: afterData.editorialReviewId || null,
+          editorialTaskId: afterData.editorialTaskId || null,
+          round: afterData.round || 1,
+          reviewerUid: afterData.reviewerUid,
+          reviewerEmail: afterData.reviewerEmail,
+          reviewerName: afterData.reviewerName || 'Revisor',
+          invitationId: invitationId,
+          status: 'pending',
+          conflictOfInterest: afterData.conflictOfInterest || false,
+          assignedAt: admin.firestore.FieldValue.serverTimestamp(),
+          dueDate: admin.firestore.Timestamp.fromDate(dueDate),
+          
+          // Documento exclusivo del revisor
+          reviewerFileId: reviewerFileId,
+          reviewerFileUrl: reviewerFileUrl,
+          
+          // Referencia a la carpeta editorial
+          driveFolderId: submission.editorialFolderId,
+          driveFolderUrl: submission.editorialFolderUrl || null,
+          
+          // Metadata de la copia
+          sourceFileId: sourceFileId,
+          copyCreatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          accessLevel: 'commenter',
+          isExclusiveAccess: !!reviewerFileId,
+          warnings: warnings.length > 0 ? warnings : null
+        };
 
-      const assignmentRef = await db.collection('reviewerAssignments').add(assignmentData);
-      console.log(`[${requestId}] ✅ Asignación creada: ${assignmentRef.id}`);
+        assignmentRef = await db.collection('reviewerAssignments').add(assignmentData);
+        console.log(`[${requestId}] ✅ Asignación creada: ${assignmentRef.id}`);
+      } catch (assignmentError) {
+        console.error(`❌ Error creando asignación:`, assignmentError.message);
+        await logSystemError('assignment_creation_failed', assignmentError, invitationId);
+        return;
+      }
 
       // ===== PASO 8: AUDIT LOG =====
-      await db.collection('submissions')
-        .doc(afterData.submissionId)
-        .collection('auditLogs')
-        .add({
-          action: 'reviewer_copy_created',
-          by: 'system',
-          timestamp: admin.firestore.FieldValue.serverTimestamp(),
-          details: {
-            invitationId,
-            reviewerEmail: afterData.reviewerEmail,
-            reviewerUid: afterData.reviewerUid,
-            reviewerFileId: reviewerFileId,
-            reviewerFileUrl: reviewerFileUrl,
-            permissions: 'commenter_exclusive',
-            sourceFileId: sourceFileId,
-            isFormatted: !!submission.formattedDocsFile?.id
-          }
-        });
+      try {
+        await db.collection('submissions')
+          .doc(afterData.submissionId)
+          .collection('auditLogs')
+          .add({
+            action: 'reviewer_copy_created',
+            by: 'system',
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            details: {
+              invitationId,
+              reviewerEmail: afterData.reviewerEmail,
+              reviewerUid: afterData.reviewerUid,
+              reviewerFileId: reviewerFileId,
+              reviewerFileUrl: reviewerFileUrl,
+              permissions: reviewerFileId ? 'commenter_exclusive' : 'failed',
+              sourceFileId: sourceFileId,
+              isFormatted: !!submission.formattedDocsFile?.id,
+              warnings: warnings
+            }
+          });
+      } catch (auditError) {
+        console.warn(`[${requestId}] ⚠️ Error en audit log (no crítico):`, auditError.message);
+      }
 
-      console.log(`[${requestId}] ✅ Proceso completado. Revisor ${afterData.reviewerEmail} tiene acceso exclusivo.`);
+      console.log(`[${requestId}] ✅ Proceso completado${warnings.length > 0 ? ` con ${warnings.length} warnings` : ''}.`);
       
-      // ===== PASO 9: ENVIAR EMAIL AL REVISOR (OPCIONAL) =====
-      // Si tienes función de envío de emails, descomenta:
-      // await sendReviewerAssignmentEmail({...});
+      // Devolver resultado para posibles consumidores
+      return {
+        success: true,
+        assignmentId: assignmentRef?.id,
+        reviewerFileId,
+        warnings
+      };
 
     } catch (error) {
-      console.error(`❌ Error en onReviewerInvitationUpdated:`, error.message);
+      console.error(`❌ Error fatal en onReviewerInvitationUpdated:`, error.message);
       console.error(`❌ Stack:`, error.stack);
       
-      // Registrar error en sistema
-      try {
-        await admin.firestore().collection('systemErrors').add({
-          function: 'onReviewerInvitationUpdated',
-          error: {
-            message: error.message,
-            stack: error.stack?.substring(0, 500),
-            code: error.code || 'UNKNOWN'
-          },
-          invitationId,
-          timestamp: admin.firestore.FieldValue.serverTimestamp()
-        });
-      } catch (logError) {
-        console.error(`❌ Error al registrar error:`, logError.message);
-      }
+      await logSystemError('fatal_error', error, invitationId);
+      
+      // No relanzar el error para evitar reintentos innecesarios
+      return {
+        success: false,
+        error: error.message
+      };
     }
   }
 );
+
+// ============================================================
+// FUNCIÓN AUXILIAR: Configurar permisos del revisor (NO BLOQUEANTE)
+// ============================================================
+// ============================================================
+// FUNCIÓN AUXILIAR: Configurar permisos del revisor (CORREGIDA)
+// ============================================================
+async function configureReviewerPermissions(drive, fileId, reviewerEmail, requestId) {
+  try {
+    console.log(`[${requestId}] 🔑 Iniciando configuración de permisos...`);
+    
+    // PASO 1: Obtener permisos existentes (SIN el campo 'inherited')
+    let existingPermissions;
+    try {
+      const response = await drive.permissions.list({
+        fileId: fileId,
+        fields: 'permissions(id, emailAddress, role, type)'  // ← QUITAR 'inherited'
+      });
+      existingPermissions = response.data.permissions || [];
+      console.log(`[${requestId}] 📋 ${existingPermissions.length} permisos encontrados`);
+    } catch (listError) {
+      console.warn(`[${requestId}] ⚠️ No se pudieron listar permisos:`, listError.message);
+      existingPermissions = []; // Continuar sin permisos existentes
+    }
+    
+    // PASO 2: Eliminar permisos existentes (excepto owner)
+    let deletedCount = 0;
+    for (const perm of existingPermissions) {
+      // Saltar al propietario
+      if (perm.role === 'owner') {
+        console.log(`[${requestId}] 👑 Owner mantenido: ${perm.emailAddress || 'cuenta de servicio'}`);
+        continue;
+      }
+      
+      try {
+        await drive.permissions.delete({
+          fileId: fileId,
+          permissionId: perm.id
+        });
+        deletedCount++;
+        console.log(`[${requestId}] 🗑️ Permiso eliminado: ${perm.emailAddress || perm.id}`);
+      } catch (deleteErr) {
+        // Si no se puede eliminar (heredado), intentar degradar
+        console.warn(`[${requestId}] ⚠️ No se pudo eliminar (posiblemente heredado): ${perm.emailAddress || perm.id}`);
+        
+        try {
+          // Construir objeto LIMPIO sin inherited
+          const cleanPerm = {
+            role: 'commenter' // Degradar a comentarista
+          };
+          
+          await drive.permissions.update({
+            fileId: fileId,
+            permissionId: perm.id,
+            requestBody: cleanPerm  // ← OBJETO LIMPIO
+          });
+          console.log(`[${requestId}] ⬇️ Permiso degradado: ${perm.emailAddress || perm.id}`);
+        } catch (updateErr) {
+          // Ignorar si no se puede modificar
+          console.warn(`[${requestId}] ⚠️ No modificable: ${perm.emailAddress || perm.id}`);
+        }
+      }
+    }
+    console.log(`[${requestId}] 🗑️ ${deletedCount} permisos eliminados`);
+    
+    // PASO 3: Otorgar permiso al revisor (CON OBJETO LIMPIO)
+    try {
+      // Construir objeto de permiso NUEVO y LIMPIO
+      const reviewerPermission = {
+        role: 'commenter',
+        type: 'user',
+        emailAddress: reviewerEmail
+        // NO incluir: inherited, id, kind, etc.
+      };
+      
+      const newPerm = await drive.permissions.create({
+        fileId: fileId,
+        requestBody: reviewerPermission,  // ← OBJETO LIMPIO
+        sendNotificationEmail: false,
+        fields: 'id'  // Solo pedir el ID
+      });
+      
+      console.log(`[${requestId}] ✅ Permiso COMENTARISTA otorgado a: ${reviewerEmail} (ID: ${newPerm.data.id})`);
+      
+    } catch (createError) {
+      console.error(`[${requestId}] ❌ Error otorgando permiso:`, createError.message);
+      
+      // Plan B: Intentar con writer y luego degradar
+      try {
+        const writerPerm = {
+          role: 'writer',
+          type: 'user',
+          emailAddress: reviewerEmail
+        };
+        
+        const tempPerm = await drive.permissions.create({
+          fileId: fileId,
+          requestBody: writerPerm,
+          sendNotificationEmail: false,
+          fields: 'id'
+        });
+        
+        // Inmediatamente degradar a commenter
+        const degradeBody = {
+          role: 'commenter'
+        };
+        
+        await drive.permissions.update({
+          fileId: fileId,
+          permissionId: tempPerm.data.id,
+          requestBody: degradeBody  // ← OBJETO LIMPIO
+        });
+        
+        console.log(`[${requestId}] ✅ Permiso creado y degradado a COMENTARISTA`);
+      } catch (planBErr) {
+        console.error(`[${requestId}] ❌ Plan B falló:`, planBErr.message);
+        throw new Error(`No se pudo otorgar permiso: ${planBErr.message}`);
+      }
+    }
+    
+    // PASO 4: Verificación final (SIN inherited)
+    try {
+      const finalCheck = await drive.permissions.list({
+        fileId: fileId,
+        fields: 'permissions(id, emailAddress, role)'  // ← SIN inherited
+      });
+      
+      const reviewerPerm = finalCheck.data.permissions.find(
+        p => p.emailAddress === reviewerEmail
+      );
+      
+      if (reviewerPerm) {
+        console.log(`[${requestId}] ✅ Verificación exitosa: ${reviewerEmail} tiene rol '${reviewerPerm.role}'`);
+      } else {
+        console.warn(`[${requestId}] ⚠️ No se encontró permiso para ${reviewerEmail}`);
+      }
+    } catch (verifyError) {
+      console.warn(`[${requestId}] ⚠️ Error en verificación (no crítico):`, verifyError.message);
+    }
+    
+    return { success: true };
+    
+  } catch (error) {
+    console.error(`[${requestId}] ❌ Error fatal en permisos:`, error.message);
+    // No relanzar para no interrumpir el flujo principal
+    return { success: false, error: error.message };
+  }
+}
+
+// ============================================================
+// FUNCIÓN AUXILIAR: Registrar errores del sistema
+// ============================================================
+async function logSystemError(errorType, error, invitationId) {
+  try {
+    await admin.firestore().collection('systemErrors').add({
+      function: 'onReviewerInvitationUpdated',
+      errorType: errorType,
+      error: {
+        message: error.message || 'Unknown error',
+        stack: error.stack?.substring(0, 500) || 'No stack available',
+        code: error.code || 'UNKNOWN'
+      },
+      invitationId: invitationId || 'unknown',
+      timestamp: admin.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (logError) {
+    console.error(`❌ Error al registrar error del sistema:`, logError.message);
+  }
+}
 
 // Funciones para generar los cuerpos de los emails de decisión
 // ============================================================================
