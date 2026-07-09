@@ -598,15 +598,30 @@ const ProfileSection = ({ user }) => {
 };
 
 // ==================== GESTIÓN DE USUARIOS ====================
+// Componente UserManagement optimizado
 const UserManagement = ({ users: initialUsers }) => {
-  const [users, setUsers] = useState(initialUsers);
+  const [users, setUsers] = useState(initialUsers || []);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
   const { language } = useLanguage();
   const isSpanish = language === 'es';
+  const containerRef = useRef(null);
 
   useEffect(() => {
-    setUsers(initialUsers);
+    if (initialUsers && initialUsers.length > 0) {
+      setUsers(initialUsers);
+      setIsLoading(false);
+    }
   }, [initialUsers]);
+
+  // Virtualización simple para mejorar rendimiento
+  const filteredUsers = useMemo(() => {
+    if (!users || users.length === 0) return [];
+    return users.filter(user => 
+      (user.displayName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (user.email || '').toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [users, searchTerm]);
 
   const addRole = async (uid, role) => {
     const user = users.find(u => u.id === uid);
@@ -618,10 +633,18 @@ const UserManagement = ({ users: initialUsers }) => {
     const newRoles = [...currentRoles, role];
     
     try {
+      // Actualización optimista
+      setUsers(prev => prev.map(u => 
+        u.id === uid ? { ...u, roles: newRoles } : u
+      ));
+      
       await updateRole({ targetUid: uid, newRoles });
-      console.log(`Role added: ${role} to user ${uid}`);
     } catch (err) {
       console.error('Error al añadir rol:', err);
+      // Revertir cambio en caso de error
+      setUsers(prev => prev.map(u => 
+        u.id === uid ? { ...u, roles: currentRoles } : u
+      ));
     }
   };
 
@@ -632,26 +655,45 @@ const UserManagement = ({ users: initialUsers }) => {
     const newRoles = (user.roles || []).filter(r => r !== role);
     
     try {
+      // Actualización optimista
+      setUsers(prev => prev.map(u => 
+        u.id === uid ? { ...u, roles: newRoles } : u
+      ));
+      
       await updateRole({ targetUid: uid, newRoles });
-      console.log(`Role removed: ${role} from user ${uid}`);
     } catch (err) {
       console.error('Error al eliminar rol:', err);
+      // Revertir cambio
+      setUsers(prev => prev.map(u => 
+        u.id === uid ? { ...u, roles: (user.roles || []) } : u
+      ));
     }
   };
 
-  const filteredUsers = users.filter(user => 
-    (user.displayName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (user.email || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-12 max-w-6xl mx-auto text-center">
+        <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-emerald-200 border-t-emerald-600 mb-6"></div>
+        <p className="text-gray-500 font-medium">
+          {isSpanish ? 'Cargando usuarios...' : 'Loading users...'}
+        </p>
+      </div>
+    );
+  }
 
   if (!users || users.length === 0) {
-    return <div className="text-center py-12 sm:py-20 text-gray-400">
-      {isSpanish ? 'Cargando usuarios...' : 'Loading users...'}
-    </div>;
+    return (
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-12 max-w-6xl mx-auto text-center">
+        <UserIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+        <p className="text-gray-500 font-medium">
+          {isSpanish ? 'No hay usuarios disponibles' : 'No users available'}
+        </p>
+      </div>
+    );
   }
 
   return (
-    <div className="bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 p-4 sm:p-6 lg:p-10 max-w-6xl mx-auto">
+    <div ref={containerRef} className="bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 p-4 sm:p-6 lg:p-10 max-w-6xl mx-auto">
       <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 mb-6 sm:mb-8 lg:mb-10">
         <div>
           <h3 className="text-2xl sm:text-3xl font-serif font-bold text-gray-900">
@@ -667,27 +709,38 @@ const UserManagement = ({ users: initialUsers }) => {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder={isSpanish ? "Buscar..." : "Search..."}
-            className="w-full pl-10 pr-4 py-3 sm:py-4 bg-gray-50 border border-gray-200 rounded-xl sm:rounded-2xl focus:border-emerald-400 focus:ring-0 text-sm"
+            placeholder={isSpanish ? "Buscar usuario..." : "Search user..."}
+            className="w-full pl-10 pr-4 py-3 sm:py-4 bg-gray-50 border border-gray-200 rounded-xl sm:rounded-2xl focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 text-sm transition-all"
           />
-          <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
         </div>
+      </div>
+
+      {/* Contador de resultados */}
+      <div className="mb-4 text-sm text-gray-500">
+        {isSpanish 
+          ? `${filteredUsers.length} de ${users.length} usuarios`
+          : `${filteredUsers.length} of ${users.length} users`
+        }
       </div>
 
       {/* Vista Móvil: Tarjetas */}
       <div className="block lg:hidden space-y-4">
-        {filteredUsers.map((user) => (
-          <div key={user.id} className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+        {filteredUsers.slice(0, 50).map((user) => ( // Limitar a 50 para rendimiento
+          <div key={user.id} className="bg-gray-50 rounded-2xl p-4 border border-gray-100 hover:shadow-md transition-shadow">
             <div className="flex items-center gap-3 mb-3">
               {user.imageUrl ? (
                 <img 
                   src={user.imageUrl} 
                   className="w-10 h-10 rounded-xl object-cover ring-1 ring-gray-200" 
-                  alt={user.displayName} 
+                  alt={user.displayName || 'User'}
+                  loading="lazy"
                 />
               ) : (
-                <div className="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-50 rounded-xl flex items-center justify-center ring-1 ring-gray-200">
-                  <span className="text-lg font-serif font-bold text-gray-400">
+                <div className="w-10 h-10 bg-gradient-to-br from-emerald-100 to-emerald-50 rounded-xl flex items-center justify-center ring-1 ring-gray-200">
+                  <span className="text-lg font-serif font-bold text-emerald-600">
                     {user.displayName?.charAt(0) || 'U'}
                   </span>
                 </div>
@@ -710,12 +763,13 @@ const UserManagement = ({ users: initialUsers }) => {
                   return (
                     <div 
                       key={role}
-                      className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-xs font-medium px-3 py-1.5 rounded-xl"
+                      className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-xs font-medium px-3 py-1.5 rounded-xl group"
                     >
                       {displayRole}
                       <button
                         onClick={() => removeRole(user.id, role)}
-                        className="text-emerald-600 hover:text-red-600 transition-colors font-bold text-base leading-none ml-1"
+                        className="text-emerald-600 hover:text-red-600 transition-colors font-bold text-base leading-none ml-1 opacity-0 group-hover:opacity-100"
+                        title={isSpanish ? 'Eliminar rol' : 'Remove role'}
                       >
                         ×
                       </button>
@@ -749,112 +803,136 @@ const UserManagement = ({ users: initialUsers }) => {
             </div>
             
             <div className="text-xs text-gray-400 font-mono">
-              ID: {user.id.slice(0, 8)}...
+              ID: {user.id?.slice(0, 8)}...
             </div>
           </div>
         ))}
+        {filteredUsers.length > 50 && (
+          <div className="text-center py-4 text-sm text-gray-500">
+            {isSpanish 
+              ? `Mostrando 50 de ${filteredUsers.length} usuarios. Use la búsqueda para filtrar.`
+              : `Showing 50 of ${filteredUsers.length} users. Use search to filter.`
+            }
+          </div>
+        )}
       </div>
 
       {/* Vista Desktop: Tabla */}
       <div className="hidden lg:block overflow-hidden rounded-3xl border border-gray-100">
-        <table className="min-w-full divide-y divide-gray-100">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-8 py-5 text-left text-xs font-semibold text-gray-500 uppercase tracking-widest">
-                {isSpanish ? 'Usuario' : 'User'}
-              </th>
-              <th className="px-8 py-5 text-left text-xs font-semibold text-gray-500 uppercase tracking-widest">Email</th>
-              <th className="px-8 py-5 text-left text-xs font-semibold text-gray-500 uppercase tracking-widest">
-                {isSpanish ? 'Roles' : 'Roles'}
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 bg-white">
-            {filteredUsers.map((user) => (
-              <tr key={user.id} className="hover:bg-emerald-50/50 transition-colors group">
-                <td className="px-8 py-6 whitespace-nowrap">
-                  <div className="flex items-center gap-4">
-                    {user.imageUrl ? (
-                      <img 
-                        src={user.imageUrl} 
-                        className="w-11 h-11 rounded-2xl object-cover ring-1 ring-gray-100" 
-                        alt={user.displayName} 
-                      />
-                    ) : (
-                      <div className="w-11 h-11 bg-gradient-to-br from-gray-100 to-gray-50 rounded-2xl flex items-center justify-center ring-1 ring-gray-100">
-                        <span className="text-xl font-serif font-bold text-gray-400">
-                          {user.displayName?.charAt(0) || 'U'}
-                        </span>
-                      </div>
-                    )}
-                    <div>
-                      <div className="font-semibold text-gray-900">
-                        {user.displayName || (isSpanish ? 'Sin nombre' : 'No name')}
-                      </div>
-                      <div className="text-xs text-gray-400 font-mono">ID: {user.id.slice(0, 8)}</div>
-                    </div>
-                  </div>
-                </td>
-                
-                <td className="px-8 py-6 whitespace-nowrap text-gray-600 font-medium text-sm">
-                  {user.email}
-                </td>
-
-                <td className="px-8 py-6">
-                  <div className="flex flex-wrap gap-2">
-                    {(user.roles || []).map(role => {
-                      const displayRole = !isSpanish ? (ES_TO_EN[role] || role) : role;
-                      return (
-                        <div 
-                          key={role}
-                          className="inline-flex items-center gap-2 bg-emerald-100 text-emerald-800 text-xs font-medium px-4 py-2 rounded-2xl group-hover:bg-emerald-200 transition-colors"
-                        >
-                          {displayRole}
-                          <button
-                            onClick={() => removeRole(user.id, role)}
-                            className="text-emerald-600 hover:text-red-600 transition-colors font-bold text-base leading-none"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      );
-                    })}
-
-                    <div className="relative">
-                      <select
-                        onChange={(e) => {
-                          if (e.target.value) {
-                            addRole(user.id, e.target.value);
-                            e.target.value = '';
-                          }
-                        }}
-                        className="appearance-none bg-transparent border border-dashed border-gray-300 hover:border-emerald-400 text-emerald-600 text-xs font-medium rounded-2xl px-4 py-2 cursor-pointer transition-all focus:outline-none focus:border-emerald-500"
-                        value=""
-                      >
-                        <option value="" disabled>
-                          {isSpanish ? '+ Añadir rol' : '+ Add role'}
-                        </option>
-                        {ALL_ROLES.filter(r => !(user.roles || []).includes(r)).map(role => {
-                          const displayRole = !isSpanish ? (ES_TO_EN[role] || role) : role;
-                          return (
-                            <option key={role} value={role}>{displayRole}</option>
-                          );
-                        })}
-                      </select>
-                    </div>
-                  </div>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-100">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-8 py-5 text-left text-xs font-semibold text-gray-500 uppercase tracking-widest">
+                  {isSpanish ? 'Usuario' : 'User'}
+                </th>
+                <th className="px-8 py-5 text-left text-xs font-semibold text-gray-500 uppercase tracking-widest">Email</th>
+                <th className="px-8 py-5 text-left text-xs font-semibold text-gray-500 uppercase tracking-widest">
+                  {isSpanish ? 'Roles' : 'Roles'}
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-100 bg-white">
+              {filteredUsers.slice(0, 100).map((user) => (
+                <tr key={user.id} className="hover:bg-emerald-50/50 transition-colors group">
+                  <td className="px-8 py-6 whitespace-nowrap">
+                    <div className="flex items-center gap-4">
+                      {user.imageUrl ? (
+                        <img 
+                          src={user.imageUrl} 
+                          className="w-11 h-11 rounded-2xl object-cover ring-1 ring-gray-100" 
+                          alt={user.displayName || 'User'}
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="w-11 h-11 bg-gradient-to-br from-emerald-100 to-emerald-50 rounded-2xl flex items-center justify-center ring-1 ring-gray-100">
+                          <span className="text-xl font-serif font-bold text-emerald-600">
+                            {user.displayName?.charAt(0) || 'U'}
+                          </span>
+                        </div>
+                      )}
+                      <div>
+                        <div className="font-semibold text-gray-900">
+                          {user.displayName || (isSpanish ? 'Sin nombre' : 'No name')}
+                        </div>
+                        <div className="text-xs text-gray-400 font-mono">ID: {user.id?.slice(0, 8)}</div>
+                      </div>
+                    </div>
+                  </td>
+                  
+                  <td className="px-8 py-6 whitespace-nowrap text-gray-600 font-medium text-sm">
+                    {user.email}
+                  </td>
+
+                  <td className="px-8 py-6">
+                    <div className="flex flex-wrap gap-2">
+                      {(user.roles || []).map(role => {
+                        const displayRole = !isSpanish ? (ES_TO_EN[role] || role) : role;
+                        return (
+                          <div 
+                            key={role}
+                            className="inline-flex items-center gap-2 bg-emerald-100 text-emerald-800 text-xs font-medium px-4 py-2 rounded-2xl group-hover:bg-emerald-200 transition-colors"
+                          >
+                            {displayRole}
+                            <button
+                              onClick={() => removeRole(user.id, role)}
+                              className="text-emerald-600 hover:text-red-600 transition-colors font-bold text-base leading-none opacity-0 group-hover:opacity-100"
+                              title={isSpanish ? 'Eliminar rol' : 'Remove role'}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        );
+                      })}
+
+                      <div className="relative">
+                        <select
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              addRole(user.id, e.target.value);
+                              e.target.value = '';
+                            }
+                          }}
+                          className="appearance-none bg-transparent border border-dashed border-gray-300 hover:border-emerald-400 text-emerald-600 text-xs font-medium rounded-2xl px-4 py-2 cursor-pointer transition-all focus:outline-none focus:border-emerald-500"
+                          value=""
+                        >
+                          <option value="" disabled>
+                            {isSpanish ? '+ Añadir rol' : '+ Add role'}
+                          </option>
+                          {ALL_ROLES.filter(r => !(user.roles || []).includes(r)).map(role => {
+                            const displayRole = !isSpanish ? (ES_TO_EN[role] || role) : role;
+                            return (
+                              <option key={role} value={role}>{displayRole}</option>
+                            );
+                          })}
+                        </select>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {filteredUsers.length > 100 && (
+          <div className="text-center py-4 text-sm text-gray-500 border-t border-gray-100">
+            {isSpanish 
+              ? `Mostrando 100 de ${filteredUsers.length} usuarios. Use la búsqueda para filtrar.`
+              : `Showing 100 of ${filteredUsers.length} users. Use search to filter.`
+            }
+          </div>
+        )}
       </div>
 
       {filteredUsers.length === 0 && (
         <div className="text-center py-12 sm:py-20 text-gray-400">
-          {isSpanish 
-            ? 'No se encontraron usuarios con ese criterio de búsqueda.' 
-            : 'No users found matching your search criteria.'}
+          <UserIcon className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+          <p className="text-lg">
+            {isSpanish 
+              ? 'No se encontraron usuarios con ese criterio de búsqueda.' 
+              : 'No users found matching your search criteria.'
+            }
+          </p>
         </div>
       )}
     </div>
