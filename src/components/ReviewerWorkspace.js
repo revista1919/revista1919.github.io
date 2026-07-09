@@ -414,8 +414,7 @@ export const ReviewerWorkspace = ({ assignmentId, onClose, readOnly = false }) =
               )}
               
               <div className="pt-4">
-                // En la sección del Left Panel, reemplazar el botón de "Ver documento"
-// Encuentra esta parte (alrededor de la línea 400-420):
+               
 
 <div className="pt-4">
   {/* CORRECCIÓN: Mostrar el documento específico del revisor, no la carpeta */}

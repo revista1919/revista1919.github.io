@@ -7315,17 +7315,17 @@ exports.onReviewerAssignmentCreated = onDocumentCreated(
   }
 );
 // ===================== MEJORA: TRIGGER PARA CUANDO SE COMPLETA UNA REVISIÓN =====================
-// ===================== TRIGGER: CUANDO SE COMPLETA UNA REVISIÓN (CON EMAIL AL EDITOR) =====================
+// ===================== TRIGGER: CUANDO SE COMPLETA UNA REVISIÓN (CORREGIDO) =====================
 exports.onReviewerAssignmentSubmitted = onDocumentUpdated(
   {
     document: 'reviewerAssignments/{assignmentId}',
-    secrets: [],
-    memory: '512MiB' // Más memoria para procesar comentarios
+    secrets: [OAUTH2_CLIENT_ID, OAUTH2_CLIENT_SECRET, OAUTH2_REFRESH_TOKEN], // ← CORREGIDO
+    memory: '512MiB'
   },
   async (event) => {
     const beforeData = event.data.before.data();
     const afterData = event.data.after.data();
-    const assignmentId = event.params.assignmentId;
+    const assignmentId = event.params.invitationId;
 
     if (beforeData.status === afterData.status || afterData.status !== 'submitted') {
       return;
@@ -7333,8 +7333,11 @@ exports.onReviewerAssignmentSubmitted = onDocumentUpdated(
 
     console.log(`📝 [REVIEW COMPLETED] Nueva revisión: ${assignmentId} - ${afterData.reviewerEmail}`);
 
+    // Declarar db al inicio para que esté disponible en todo el scope
+    const db = admin.firestore();
+    const warnings = [];
+
     try {
-      const db = admin.firestore();
       const taskId = afterData.editorialTaskId;
       
       if (!taskId) {
@@ -7371,21 +7374,39 @@ exports.onReviewerAssignmentSubmitted = onDocumentUpdated(
       console.log(`📊 Revisiones: ${submittedCount}/${requiredReviews}`);
 
       // Registrar revisión recibida
-      await db.collection('submissions').doc(taskData.submissionId)
-        .collection('auditLogs').add({
-          action: 'review_submitted',
-          details: `Revisión de ${afterData.reviewerName || afterData.reviewerEmail}`,
-          reviewerId: assignmentId,
-          recommendation: afterData.recommendation,
-          timestamp: admin.firestore.FieldValue.serverTimestamp()
-        });
+      try {
+        await db.collection('submissions').doc(taskData.submissionId)
+          .collection('auditLogs').add({
+            action: 'review_submitted',
+            details: `Revisión de ${afterData.reviewerName || afterData.reviewerEmail}`,
+            reviewerId: assignmentId,
+            recommendation: afterData.recommendation,
+            timestamp: admin.firestore.FieldValue.serverTimestamp()
+          });
+      } catch (auditError) {
+        console.warn(`⚠️ Error en audit log:`, auditError.message);
+      }
 
       // ===== PASO 3: SI SE ALCANZA EL MÍNIMO, PROCESAR COMENTARIOS =====
       if (submittedCount >= requiredReviews) {
         console.log(`🎯 MÍNIMO ALCANZADO (${submittedCount}/${requiredReviews}). Procesando comentarios...`);
 
-        // Inicializar Google Drive para extraer comentarios
-        const drive = await getDriveClient(`extract-comments-${taskId}`);
+        // Inicializar Google Drive (con manejo de errores)
+        let drive;
+        try {
+          const driveClients = await getDriveClient(`extract-comments-${taskId}`);
+          drive = driveClients.drive;
+          
+          if (!drive?.files?.copy) {
+            throw new Error('Cliente de Google Drive mal inicializado');
+          }
+        } catch (driveError) {
+          console.error(`❌ Error inicializando Drive:`, driveError.message);
+          warnings.push('drive_init_failed');
+          // Continuar sin Drive - actualizar estados igual
+          await updateTaskStatusSafely(db, taskRef, submissionRef, submittedCount, null, null);
+          return;
+        }
 
         // ===== PASO 4: EXTRAER COMENTARIOS DE TODOS LOS REVISORES =====
         const allReviewerComments = [];
@@ -7396,6 +7417,7 @@ exports.onReviewerAssignmentSubmitted = onDocumentUpdated(
           
           if (!reviewerFileId) {
             console.warn(`⚠️ Revisor ${reviewData.reviewerEmail} sin reviewerFileId. Omitiendo comentarios.`);
+            warnings.push(`no_file_${reviewData.reviewerEmail}`);
             continue;
           }
 
@@ -7419,228 +7441,257 @@ exports.onReviewerAssignmentSubmitted = onDocumentUpdated(
 
           } catch (commentError) {
             console.error(`❌ Error extrayendo comentarios de ${reviewerFileId}:`, commentError.message);
+            warnings.push(`extract_failed_${reviewData.reviewerEmail}`);
             // Continuar con el siguiente revisor aunque falle uno
           }
         }
 
         // ===== PASO 5: CREAR DOCUMENTO FINAL CON REVISIONES =====
-console.log(`📝 Creando documento final con ${allReviewerComments.length} revisiones...`);
+        let finalDocId = null;
+        let finalDocUrl = null;
 
-let finalDocId = null;
-let finalDocUrl = null;
-
-const sourceFileId = submissionData.formattedDocsFile?.id || submissionData.originalFileId;
-
-if (!sourceFileId) {
-  throw new Error('No se encontró documento fuente para crear la versión final');
-}
-
-try {
-  // Crear copia del documento original
-  const finalCopy = await drive.files.copy({
-    fileId: sourceFileId,
-    requestBody: {
-      name: `FINAL_WITH_REVIEWS_${submissionData.submissionId}`,
-      parents: [submissionData.editorialFolderId],
-      mimeType: 'application/vnd.google-apps.document'
-    },
-    fields: 'id, webViewLink'
-  });
-
-  finalDocId = finalCopy.data.id;
-  finalDocUrl = finalCopy.data.webViewLink;
-  
-  console.log(`✅ Documento final creado: ${finalDocId}`);
-
-  // ===== ⭐ NUEVO: OTORGAR PERMISOS AL EDITOR =====
-  console.log(`🔑 Configurando permisos del documento final...`);
-  
-  // Otorgar permiso de EDITOR al editor asignado
-  if (taskData.assignedToEmail) {
-    try {
-      await drive.permissions.create({
-        fileId: finalDocId,
-        requestBody: {
-          role: 'writer',           // Puede editar
-          type: 'user',
-          emailAddress: taskData.assignedToEmail
-        },
-        sendNotificationEmail: false,
-        fields: 'id'
-      });
-      console.log(`✅ Permiso de editor otorgado a: ${taskData.assignedToEmail}`);
-    } catch (permError) {
-      console.warn(`⚠️ No se pudo otorgar permiso al editor: ${permError.message}`);
-    }
-  }
-  
-  // También otorgar acceso a otros editores en jefe
-  try {
-    const editorsSnapshot = await db.collection('users')
-      .where('roles', 'array-contains', 'Editor en Jefe')
-      .get();
-    
-    for (const editorDoc of editorsSnapshot.docs) {
-      const editorEmail = editorDoc.data().email;
-      if (editorEmail && editorEmail !== taskData.assignedToEmail) {
         try {
-          await drive.permissions.create({
-            fileId: finalDocId,
-            requestBody: {
-              role: 'writer',
-              type: 'user',
-              emailAddress: editorEmail
-            },
-            sendNotificationEmail: false,
-            fields: 'id'
-          });
-          console.log(`✅ Permiso adicional para Editor en Jefe: ${editorEmail}`);
-        } catch (editorPermError) {
-          console.warn(`⚠️ No se pudo otorgar permiso a ${editorEmail}: ${editorPermError.message}`);
-        }
-      }
-    }
-  } catch (editorsError) {
-    console.warn(`⚠️ Error buscando editores: ${editorsError.message}`);
-  }
-  
-  // ⭐ QUITAR PERMISOS A REVISORES (por si acaso heredaron algo)
-  try {
-    const existingPermissions = await drive.permissions.list({
-      fileId: finalDocId,
-      fields: 'permissions(id, emailAddress, role)'
-    });
-    
-    for (const perm of existingPermissions.data.permissions) {
-      if (perm.role === 'owner') continue;
-      
-      // Si el permiso es de algún revisor, eliminarlo
-      const isReviewer = assignmentsSnapshot.docs.some(
-        revDoc => revDoc.data().reviewerEmail === perm.emailAddress
-      );
-      
-      if (isReviewer) {
-        await drive.permissions.delete({
-          fileId: finalDocId,
-          permissionId: perm.id
-        });
-        console.log(`🔒 Permiso de revisor eliminado: ${perm.emailAddress}`);
-      }
-    }
-  } catch (permCleanupError) {
-    console.warn(`⚠️ Error limpiando permisos: ${permCleanupError.message}`);
-  }
+          const sourceFileId = submissionData.formattedDocsFile?.id || submissionData.originalFileId;
 
-  // Insertar la sección de revisiones al final del documento
-  await insertReviewsSection(drive, finalDocId, allReviewerComments, submissionData);
-
-  console.log(`✅ Sección de revisiones insertada`);
-
-} catch (docError) {
-  console.error(`❌ Error creando documento final:`, docError.message);
-  throw docError;
-}
-        // ===== PASO 6: PROGRAMAR ELIMINACIÓN DE DOCUMENTOS DE REVISORES (5 DÍAS) =====
-        console.log(`⏰ Programando eliminación de documentos temporales en 5 días...`);
-        
-        const deleteAt = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000); // 5 días
-        
-        for (const doc of assignmentsSnapshot.docs) {
-          const reviewData = doc.data();
-          const reviewerFileId = reviewData.reviewerFileId;
-          
-          if (reviewerFileId) {
-            // Guardar referencia para eliminación programada
-            await db.collection('scheduledDeletions').add({
-              fileId: reviewerFileId,
-              fileName: `REVIEW_COPY_${submissionData.submissionId}`,
-              submissionId: submissionData.submissionId,
-              reviewerEmail: reviewData.reviewerEmail,
-              scheduledFor: admin.firestore.Timestamp.fromDate(deleteAt),
-              createdAt: admin.firestore.FieldValue.serverTimestamp(),
-              status: 'pending',
-              reason: 'Documentos de revisión individual ya consolidados en documento final'
-            });
-            
-            console.log(`🗑️ Eliminación programada para: ${reviewerFileId}`);
+          if (!sourceFileId) {
+            throw new Error('No se encontró documento fuente');
           }
-        }
 
-        // ===== PASO 7: GUARDAR REFERENCIA AL DOCUMENTO FINAL EN FIRESTORE =====
-        await submissionRef.update({
-          finalReviewDocId: finalDocId,
-          finalReviewDocUrl: finalDocUrl,
-          reviewsConsolidatedAt: admin.firestore.FieldValue.serverTimestamp(),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
+          console.log(`📝 Creando documento final con ${allReviewerComments.length} revisiones...`);
 
-        // Guardar los comentarios extraídos en Firestore (respaldo)
-        await db.collection('submissions').doc(taskData.submissionId)
-          .collection('extractedReviews').add({
-            reviewerComments: allReviewerComments,
-            extractedAt: admin.firestore.FieldValue.serverTimestamp(),
-            finalDocId: finalDocId,
-            finalDocUrl: finalDocUrl
+          // Crear copia del documento original
+          const finalCopy = await drive.files.copy({
+            fileId: sourceFileId,
+            requestBody: {
+              name: `FINAL_WITH_REVIEWS_${submissionData.submissionId}`,
+              parents: [submissionData.editorialFolderId],
+              mimeType: 'application/vnd.google-apps.document'
+            },
+            fields: 'id, webViewLink'
           });
 
-        // ===== PASO 8: ACTUALIZAR ESTADOS =====
-        await db.runTransaction(async (transaction) => {
-          const taskTxSnap = await transaction.get(taskRef);
-          if (!taskTxSnap.exists) return;
+          finalDocId = finalCopy.data.id;
+          finalDocUrl = finalCopy.data.webViewLink;
           
-          const currentTaskStatus = taskTxSnap.data().status;
+          console.log(`✅ Documento final creado: ${finalDocId}`);
+
+          // Otorgar permisos al editor (no bloqueante)
+          try {
+            await configureEditorPermissions(drive, finalDocId, taskData, assignmentsSnapshot);
+          } catch (permError) {
+            console.warn(`⚠️ Error configurando permisos:`, permError.message);
+            warnings.push('permissions_error');
+          }
+
+          // Insertar la sección de revisiones (no bloqueante)
+          try {
+            await insertReviewsSection(drive, finalDocId, allReviewerComments, submissionData);
+            console.log(`✅ Sección de revisiones insertada`);
+          } catch (insertError) {
+            console.error(`❌ Error insertando revisiones:`, insertError.message);
+            warnings.push('insert_reviews_failed');
+          }
+
+        } catch (docError) {
+          console.error(`❌ Error creando documento final:`, docError.message);
+          warnings.push('final_doc_failed');
+        }
+
+        // ===== PASO 6: PROGRAMAR ELIMINACIÓN DE DOCUMENTOS DE REVISORES =====
+        try {
+          console.log(`⏰ Programando eliminación de documentos temporales...`);
           
-          if (currentTaskStatus === 'reviews-in-progress') {
-            transaction.update(taskRef, {
-              status: 'awaiting-decision',
-              reviewsCompletedAt: admin.firestore.FieldValue.serverTimestamp(),
-              completedReviews: submittedCount,
+          const deleteAt = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+          
+          for (const doc of assignmentsSnapshot.docs) {
+            const reviewData = doc.data();
+            const reviewerFileId = reviewData.reviewerFileId;
+            
+            if (reviewerFileId) {
+              await db.collection('scheduledDeletions').add({
+                fileId: reviewerFileId,
+                fileName: `REVIEW_COPY_${submissionData.submissionId}`,
+                submissionId: submissionData.submissionId,
+                reviewerEmail: reviewData.reviewerEmail,
+                scheduledFor: admin.firestore.Timestamp.fromDate(deleteAt),
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                status: 'pending',
+                reason: 'Documentos de revisión individual ya consolidados'
+              });
+            }
+          }
+        } catch (deleteSchedError) {
+          console.warn(`⚠️ Error programando eliminaciones:`, deleteSchedError.message);
+        }
+
+        // ===== PASO 7: GUARDAR REFERENCIA AL DOCUMENTO FINAL =====
+        if (finalDocId) {
+          try {
+            await submissionRef.update({
               finalReviewDocId: finalDocId,
               finalReviewDocUrl: finalDocUrl,
+              reviewsConsolidatedAt: admin.firestore.FieldValue.serverTimestamp(),
               updatedAt: admin.firestore.FieldValue.serverTimestamp()
             });
 
-            transaction.update(submissionRef, {
-              status: 'awaiting-editor-decision',
-              updatedAt: admin.firestore.FieldValue.serverTimestamp()
-            });
-
-            console.log(`✅ Estados actualizados: awaiting-decision`);
+            // Guardar comentarios extraídos como respaldo
+            await db.collection('submissions').doc(taskData.submissionId)
+              .collection('extractedReviews').add({
+                reviewerComments: allReviewerComments,
+                extractedAt: admin.firestore.FieldValue.serverTimestamp(),
+                finalDocId: finalDocId,
+                finalDocUrl: finalDocUrl
+              });
+          } catch (updateError) {
+            console.error(`❌ Error guardando referencia:`, updateError.message);
           }
-        });
+        }
 
-        // ===== PASO 9: ENVIAR EMAIL AL EDITOR =====
-        await sendEditorDecisionEmail(
-          taskData, 
-          submissionData, 
-          assignmentsSnapshot, 
-          submittedCount, 
-          finalDocUrl
-        );
+        // ===== PASO 8: ACTUALIZAR ESTADOS =====
+        await updateTaskStatusSafely(db, taskRef, submissionRef, submittedCount, finalDocId, finalDocUrl);
 
-        console.log(`✅ Proceso completado. Documento final: ${finalDocUrl}`);
+        // ===== PASO 9: ENVIAR EMAIL AL EDITOR (NO BLOQUEANTE) =====
+        try {
+          await sendEditorDecisionEmail(
+            taskData, 
+            submissionData, 
+            assignmentsSnapshot, 
+            submittedCount, 
+            finalDocUrl
+          );
+        } catch (emailError) {
+          console.warn(`⚠️ Error enviando email:`, emailError.message);
+        }
+
+        console.log(`✅ Proceso completado. FinalDoc: ${finalDocUrl || 'No disponible'}`);
+        console.log(`⚠️ Warnings: ${warnings.length > 0 ? warnings.join(', ') : 'Ninguno'}`);
 
       } else {
         console.log(`⏳ Solo ${submittedCount}/${requiredReviews} revisiones. Esperando más.`);
       }
 
+      return { success: true, warnings };
+
     } catch (error) {
       console.error(`❌ Error en onReviewerAssignmentSubmitted:`, error.message);
       console.error(`❌ Stack:`, error.stack);
       
-      await db.collection('systemErrors').add({
-        function: 'onReviewerAssignmentSubmitted',
-        error: {
-          message: error.message,
-          stack: error.stack?.substring(0, 500)
-        },
-        assignmentId,
-        timestamp: admin.firestore.FieldValue.serverTimestamp()
-      });
+      // db está disponible aquí porque se declaró al inicio
+      try {
+        await db.collection('systemErrors').add({
+          function: 'onReviewerAssignmentSubmitted',
+          error: {
+            message: error.message,
+            stack: error.stack?.substring(0, 500) || 'No stack'
+          },
+          assignmentId,
+          timestamp: admin.firestore.FieldValue.serverTimestamp()
+        });
+      } catch (logError) {
+        console.error(`❌ Error al registrar error:`, logError.message);
+      }
+      
+      return { success: false, error: error.message };
     }
   }
 );
 
+// ============================================================
+// FUNCIÓN AUXILIAR: Configurar permisos del editor
+// ============================================================
+async function configureEditorPermissions(drive, fileId, taskData, assignmentsSnapshot) {
+  try {
+    // Otorgar permiso al editor asignado
+    if (taskData.assignedToEmail) {
+      const editorPerm = {
+        role: 'writer',
+        type: 'user',
+        emailAddress: taskData.assignedToEmail
+      };
+      
+      await drive.permissions.create({
+        fileId: fileId,
+        requestBody: editorPerm,
+        sendNotificationEmail: false,
+        fields: 'id'
+      });
+      console.log(`✅ Permiso de editor otorgado a: ${taskData.assignedToEmail}`);
+    }
+    
+    // Eliminar permisos de revisores (no bloqueante)
+    try {
+      const existingPermissions = await drive.permissions.list({
+        fileId: fileId,
+        fields: 'permissions(id, emailAddress, role)'
+      });
+      
+      for (const perm of existingPermissions.data.permissions) {
+        if (perm.role === 'owner') continue;
+        
+        const isReviewer = assignmentsSnapshot.docs.some(
+          revDoc => revDoc.data().reviewerEmail === perm.emailAddress
+        );
+        
+        if (isReviewer) {
+          try {
+            await drive.permissions.delete({
+              fileId: fileId,
+              permissionId: perm.id
+            });
+            console.log(`🔒 Permiso de revisor eliminado: ${perm.emailAddress}`);
+          } catch (deleteErr) {
+            // Ignorar si no se puede eliminar
+          }
+        }
+      }
+    } catch (listError) {
+      console.warn(`⚠️ Error listando permisos:`, listError.message);
+    }
+    
+  } catch (error) {
+    console.warn(`⚠️ Error en configureEditorPermissions:`, error.message);
+    throw error;
+  }
+}
+
+// ============================================================
+// FUNCIÓN AUXILIAR: Actualizar estados de forma segura
+// ============================================================
+async function updateTaskStatusSafely(db, taskRef, submissionRef, submittedCount, finalDocId, finalDocUrl) {
+  try {
+    await db.runTransaction(async (transaction) => {
+      const taskTxSnap = await transaction.get(taskRef);
+      if (!taskTxSnap.exists) return;
+      
+      const currentTaskStatus = taskTxSnap.data().status;
+      
+      if (currentTaskStatus === 'reviews-in-progress') {
+        const updateData = {
+          status: 'awaiting-decision',
+          reviewsCompletedAt: admin.firestore.FieldValue.serverTimestamp(),
+          completedReviews: submittedCount,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        };
+        
+        if (finalDocId) {
+          updateData.finalReviewDocId = finalDocId;
+          updateData.finalReviewDocUrl = finalDocUrl;
+        }
+        
+        transaction.update(taskRef, updateData);
+
+        transaction.update(submissionRef, {
+          status: 'awaiting-editor-decision',
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        console.log(`✅ Estados actualizados: awaiting-decision`);
+      }
+    });
+  } catch (txError) {
+    console.warn(`⚠️ Error actualizando estados:`, txError.message);
+  }
+}
 // ============================================================
 // FUNCIÓN: EXTRAER COMENTARIOS DE UN DOCUMENTO
 // ============================================================
