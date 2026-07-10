@@ -2883,9 +2883,6 @@ async function createDriveFolder(drive, folderName, parentId = null) {
  * 4. Añade portada institucional
  * 5. Inserta marca de agua
  */
-// ============================================================
-// 1. IMPORTS
-// ============================================================
 const { Readable } = require('stream');
 
 // ============================================================
@@ -2896,7 +2893,7 @@ const CONFIG = {
     academicBlue: { red: 0.0, green: 0.15, blue: 0.35 },
     darkCharcoal: { red: 0.08, green: 0.08, blue: 0.08 },
     bodyGray: { red: 0.15, green: 0.15, blue: 0.15 },
-    metadataGray: { red: 0.08, green: 0.08, blue: 0.08 },  // ← Mismo que darkCharcoal
+    metadataGray: { red: 0.08, green: 0.08, blue: 0.08 },
     academicRed: { red: 0.5, green: 0.0, blue: 0.0 }
   },
   
@@ -2907,15 +2904,224 @@ const CONFIG = {
     metadata: { family: 'Open Sans', weight: 400, size: 9 },
     metadataLabel: { family: 'Open Sans', weight: 600, size: 9 },
     body: { family: 'Lora', weight: 400, size: 11 },
-    confidential: { family: 'Open Sans', weight: 600, size: 8 }
+    confidential: { family: 'Open Sans', weight: 600, size: 8 },
+    
+    heading1: { 
+      family: 'Open Sans', 
+      weight: 700,
+      size: 15,
+      color: 'darkCharcoal',
+      alignment: 'CENTER' 
+    },
+    heading2: { 
+      family: 'Open Sans', 
+      weight: 600,
+      size: 12.5,
+      color: 'darkCharcoal',
+      alignment: 'START' 
+    },
+    heading3: { 
+      family: 'Lora',
+      weight: 700,
+      italic: true,
+      size: 11,
+      color: 'darkCharcoal',
+      alignment: 'START' 
+    },
+    blockquote: {
+      family: 'Lora',
+      weight: 400,
+      italic: true,
+      size: 10,
+      color: 'bodyGray'
+    }
   }
 };
 
 // ============================================================
-// FUNCIÓN PRINCIPAL: PROCESAR DOCUMENTO (VERSIÓN SIMPLE)
+// FUNCIONES DE ESTILO PARA TÍTULOS Y BLOCKQUOTES (CORREGIDAS)
+// ============================================================
+
+// CORRECCIÓN: Ahora reciben directamente startIndex y endIndex absolutos de la API
+function createHeading1Style(startIndex, endIndex) {
+    const style = CONFIG.TYPOGRAPHY.heading1;
+    const color = CONFIG.COLORS[style.color];
+
+    return [
+        {
+            updateParagraphStyle: {
+                range: { startIndex: startIndex, endIndex: endIndex },
+                paragraphStyle: {
+                    namedStyleType: 'HEADING_1',
+                    alignment: style.alignment,
+                    spaceAbove: { magnitude: 24, unit: 'PT' }, 
+                    spaceBelow: { magnitude: 12, unit: 'PT' }
+                },
+                fields: 'namedStyleType,alignment,spaceAbove,spaceBelow' 
+            }
+        },
+        {
+            updateTextStyle: {
+                range: { startIndex: startIndex, endIndex: endIndex },
+                textStyle: {
+                    weightedFontFamily: { fontFamily: style.family, weight: style.weight },
+                    fontSize: { magnitude: style.size, unit: 'PT' },
+                    foregroundColor: { color: { rgbColor: color } }
+                },
+                fields: 'weightedFontFamily,fontSize,foregroundColor'
+            }
+        }
+    ];
+}
+
+function createHeading2Style(startIndex, endIndex) {
+    const style = CONFIG.TYPOGRAPHY.heading2;
+    const color = CONFIG.COLORS[style.color];
+
+    return [
+        {
+            updateParagraphStyle: {
+                range: { startIndex: startIndex, endIndex: endIndex },
+                paragraphStyle: {
+                    namedStyleType: 'HEADING_2',
+                    alignment: style.alignment, 
+                    spaceAbove: { magnitude: 18, unit: 'PT' }, 
+                    spaceBelow: { magnitude: 8, unit: 'PT' }
+                },
+                fields: 'namedStyleType,alignment,spaceAbove,spaceBelow' 
+            }
+        },
+        {
+            updateTextStyle: {
+                range: { startIndex: startIndex, endIndex: endIndex },
+                textStyle: {
+                    weightedFontFamily: { fontFamily: style.family, weight: style.weight },
+                    fontSize: { magnitude: style.size, unit: 'PT' },
+                    foregroundColor: { color: { rgbColor: color } }
+                },
+                fields: 'weightedFontFamily,fontSize,foregroundColor'
+            }
+        }
+    ];
+}
+
+function createHeading3Style(startIndex, endIndex) {
+    const style = CONFIG.TYPOGRAPHY.heading3;
+    const color = CONFIG.COLORS[style.color];
+
+    return [
+        {
+            updateParagraphStyle: {
+                range: { startIndex: startIndex, endIndex: endIndex },
+                paragraphStyle: {
+                    namedStyleType: 'HEADING_3',
+                    alignment: style.alignment, 
+                    spaceAbove: { magnitude: 14, unit: 'PT' }, 
+                    spaceBelow: { magnitude: 2, unit: 'PT' }
+                },
+                fields: 'namedStyleType,alignment,spaceAbove,spaceBelow' 
+            }
+        },
+        {
+            updateTextStyle: {
+                range: { startIndex: startIndex, endIndex: endIndex },
+                textStyle: {
+                    weightedFontFamily: { fontFamily: style.family, weight: style.weight },
+                    fontSize: { magnitude: style.size, unit: 'PT' },
+                    italic: style.italic,
+                    foregroundColor: { color: { rgbColor: color } }
+                },
+                fields: 'weightedFontFamily,fontSize,italic,foregroundColor'
+            }
+        }
+    ];
+}
+
+/**
+ * Aplica estilo Blockquote: Bloque de cita como objeto de diseño
+ */
+function createBlockquoteStyle(startIndex, endIndex) {
+    const style = CONFIG.TYPOGRAPHY.blockquote;
+    const color = CONFIG.COLORS[style.color];
+    const accentColor = CONFIG.COLORS.academicBlue;
+
+    return [
+        {
+            updateParagraphStyle: {
+                range: { startIndex: startIndex, endIndex: endIndex },
+                paragraphStyle: {
+                    indentStart: { magnitude: 36, unit: 'PT' },
+                    indentEnd: { magnitude: 36, unit: 'PT' },
+                    spaceAbove: { magnitude: 14, unit: 'PT' }, 
+                    spaceBelow: { magnitude: 14, unit: 'PT' },
+                    borderLeft: {
+                        color: { rgbColor: accentColor },
+                        width: { magnitude: 2.5 }, 
+                        padding: 12, 
+                        dashStyle: 'SOLID'
+                    },
+                    lineSpacing: 120.0,
+                    alignment: 'JUSTIFIED'
+                },
+                fields: 'indentStart,indentEnd,spaceAbove,spaceBelow,borderLeft,lineSpacing,alignment' 
+            }
+        },
+        {
+            updateTextStyle: {
+                range: { startIndex: startIndex, endIndex: endIndex },
+                textStyle: {
+                    weightedFontFamily: { fontFamily: style.family, weight: style.weight },
+                    fontSize: { magnitude: style.size, unit: 'PT' },
+                    italic: style.italic,
+                    foregroundColor: { color: { rgbColor: color } } 
+                },
+                fields: 'weightedFontFamily,fontSize,italic,foregroundColor'
+            }
+        }
+    ];
+}
+
+/**
+ * Aplica estilo al cuerpo del documento (párrafos normales)
+ */
+function createBodyStyle(startIndex, endIndex) {
+    const style = CONFIG.TYPOGRAPHY.body;
+    const color = CONFIG.COLORS.bodyGray;
+
+    return [
+        {
+            updateParagraphStyle: {
+                range: { startIndex: startIndex, endIndex: endIndex },
+                paragraphStyle: {
+                    namedStyleType: 'NORMAL_TEXT',
+                    alignment: 'JUSTIFIED',
+                    lineSpacing: 140.0,
+                    spaceBelow: { magnitude: 8, unit: 'PT' },
+                    indentFirstLine: { magnitude: 0, unit: 'PT' }
+                },
+                fields: 'namedStyleType,alignment,lineSpacing,spaceBelow,indentFirstLine'
+            }
+        },
+        {
+            updateTextStyle: {
+                range: { startIndex: startIndex, endIndex: endIndex },
+                textStyle: {
+                    weightedFontFamily: { fontFamily: style.family, weight: style.weight },
+                    fontSize: { magnitude: style.size, unit: 'PT' },
+                    foregroundColor: { color: { rgbColor: color } }
+                },
+                fields: 'weightedFontFamily,fontSize,foregroundColor'
+            }
+        }
+    ];
+}
+
+
+// ============================================================
+// FUNCIÓN PRINCIPAL: PROCESAR DOCUMENTO (VERSIÓN COMPLETA)
 // ============================================================
 async function processDocumentWithDocsAPI(drive, docsClient, fileId, submissionData, requestId) {
-  console.log(`[${requestId}] 📝 Iniciando procesamiento de documento (diseño simple)...`);
+  console.log(`[${requestId}] 📝 Iniciando procesamiento de documento con diseño completo...`);
   
   const result = {
     success: true,
@@ -2993,7 +3199,7 @@ async function processDocumentWithDocsAPI(drive, docsClient, fileId, submissionD
     ].join('');
     
     // ============================================================
-    // PASO 3: GENERAR SOLICITUDES DE FORMATO
+    // PASO 3: GENERAR SOLICITUDES DE FORMATO PARA LA PORTADA
     // ============================================================
     const requests = [];
     
@@ -3005,7 +3211,7 @@ async function processDocumentWithDocsAPI(drive, docsClient, fileId, submissionD
       }
     });
     
-    // Calcular posiciones para aplicar estilos
+    // Calcular posiciones para aplicar estilos de portada
     let currentPos = 1;
     
     // 1. Nombre de la revista
@@ -3203,7 +3409,7 @@ async function processDocumentWithDocsAPI(drive, docsClient, fileId, submissionD
     });
     currentPos += confidentialText.length;
     
-    // 12. Insertar salto de página
+    // 12. Insertar salto de página después de la portada
     requests.push({
       insertPageBreak: {
         location: { index: currentPos }
@@ -3211,66 +3417,202 @@ async function processDocumentWithDocsAPI(drive, docsClient, fileId, submissionD
     });
     
     // ============================================================
-    // PASO 4: APLICAR TODOS LOS ESTILOS
+    // PASO 4: APLICAR ESTILOS DE PORTADA
     // ============================================================
-    console.log(`[${requestId}] 🎨 Aplicando estilos (${requests.length} solicitudes)...`);
+    console.log(`[${requestId}] 🎨 Aplicando estilos de portada (${requests.length} solicitudes)...`);
     
     await docsClient.documents.batchUpdate({
       documentId: docsFileId,
       requestBody: { requests: requests }
     });
     
-    console.log(`[${requestId}] ✅ Estilos aplicados`);
+    console.log(`[${requestId}] ✅ Estilos de portada aplicados`);
     
-    // ============================================================
-    // PASO 5: ESTILO BASE AL CUERPO DEL DOCUMENTO
-    // ============================================================
-    try {
-      const updatedDoc = await docsClient.documents.get({
-        documentId: docsFileId
-      });
+
+// ============================================================
+// PASO 5: ANALIZAR Y APLICAR ESTILOS AL CUERPO DEL DOCUMENTO
+// ============================================================
+try {
+  console.log(`[${requestId}] 🔍 Analizando estructura del documento...`);
+  
+  const updatedDoc = await docsClient.documents.get({
+    documentId: docsFileId
+  });
+  
+  const bodyContent = updatedDoc.data.body.content;
+  const bodyRequests = [];
+  let bodyStart = currentPos + 2; // Después del salto de página
+  
+  // Recorrer el contenido del documento para identificar títulos y blockquotes
+  let structuralElements = [];
+  
+  if (bodyContent && bodyContent.length > 0) {
+    for (let i = 0; i < bodyContent.length; i++) {
+      const element = bodyContent[i];
       
-      const docEnd = updatedDoc.data.body.content[updatedDoc.data.body.content.length - 1].endIndex;
-      const bodyStart = currentPos + 2; // Después del salto de página
-      
-      if (bodyStart < docEnd - 1) {
-        await docsClient.documents.batchUpdate({
-          documentId: docsFileId,
-          requestBody: {
-            requests: [
-              {
-                updateTextStyle: {
-                  range: { startIndex: bodyStart, endIndex: docEnd - 1 },
-                  textStyle: {
-                    weightedFontFamily: { fontFamily: TYPO.body.family, weight: TYPO.body.weight },
-                    fontSize: { magnitude: TYPO.body.size, unit: 'PT' },
-                    foregroundColor: { color: { rgbColor: COLORS.bodyGray } }
-                  },
-                  fields: 'weightedFontFamily,fontSize,foregroundColor'
-                }
-              },
-              {
-                updateParagraphStyle: {
-                  range: { startIndex: bodyStart, endIndex: docEnd - 1 },
-                  paragraphStyle: {
-                    lineSpacing: 125,
-                    spaceBelow: { magnitude: 8, unit: 'PT' },
-                    alignment: 'JUSTIFIED'
-                  },
-                  fields: 'lineSpacing,spaceBelow,alignment'
-                }
-              }
-            ]
-          }
-        });
+      // Verificar si es un párrafo
+      if (element.paragraph) {
+        const paragraph = element.paragraph;
+        const paragraphStyle = paragraph.paragraphStyle;
+        const startIdx = element.startIndex;
+        const endIdx = element.endIndex;
         
-        console.log(`[${requestId}] ✅ Estilo base aplicado al cuerpo`);
+        // Saltar elementos de la portada (índices menores a bodyStart)
+        if (startIdx < bodyStart) continue;
+        
+        // Extraer el texto del párrafo
+        let paragraphText = '';
+        if (paragraph.elements) {
+          for (const elem of paragraph.elements) {
+            if (elem.textRun && elem.textRun.content) {
+              paragraphText += elem.textRun.content;
+            }
+          }
+        }
+        
+        // Trim para análisis (pero mantenemos el texto original con saltos de línea)
+        const trimmedText = paragraphText.trim();
+        if (trimmedText.length === 0) continue; // Saltar párrafos vacíos
+        
+        // Detectar tipo de elemento estructural
+        let elementType = 'body'; 
+        
+        // Verificar si tiene estilo de heading del documento original
+        if (paragraphStyle && paragraphStyle.namedStyleType) {
+          const styleType = paragraphStyle.namedStyleType;
+          if (styleType === 'HEADING_1' || styleType === 'HEADING_2' || styleType === 'HEADING_3') {
+            elementType = styleType.toLowerCase();
+          }
+        }
+        
+        // Detectar blockquotes: párrafos que empiezan con ">" o están entre comillas grandes
+        if (!elementType.startsWith('heading')) {
+          if (trimmedText.startsWith('>') || 
+              (trimmedText.startsWith('"') && trimmedText.endsWith('"') && trimmedText.length > 50) ||
+              (trimmedText.startsWith('«') && trimmedText.endsWith('»') && trimmedText.length > 50)) {
+            elementType = 'blockquote';
+          }
+        }
+        
+        // Almacenar el elemento estructural con sus índices absolutos nativos
+        structuralElements.push({
+          type: elementType,
+          startIndex: startIdx,
+          endIndex: endIdx, // Guardamos el fin absoluto real dado por la API
+          text: paragraphText
+        });
       }
-    } catch (bodyError) {
-      console.warn(`[${requestId}] ⚠️ Estilo cuerpo no aplicado:`, bodyError.message);
-      result.warnings.push(`Estilo cuerpo: ${bodyError.message}`);
+    }
+  }
+  
+  console.log(`[${requestId}] 📊 Elementos estructurales encontrados: ${structuralElements.length}`);
+  
+  // Aplicar estilos según el tipo de elemento utilizando rangos absolutos precisos
+  for (const element of structuralElements) {
+    let styleRequests = [];
+    
+    // NOTA EXTRA: Asegúrate de adaptar tus funciones auxiliares para que reciban (startIndex, endIndex) directos
+    switch (element.type) {
+      case 'heading_1':
+        styleRequests = createHeading1Style(element.startIndex, element.endIndex);
+        console.log(`[${requestId}] 📌 Aplicando estilo Heading 1: "${element.text.trim().substring(0, 50)}..."`);
+        break;
+        
+      case 'heading_2':
+        styleRequests = createHeading2Style(element.startIndex, element.endIndex);
+        console.log(`[${requestId}] 📌 Aplicando estilo Heading 2: "${element.text.trim().substring(0, 50)}..."`);
+        break;
+        
+      case 'heading_3':
+        styleRequests = createHeading3Style(element.startIndex, element.endIndex);
+        console.log(`[${requestId}] 📌 Aplicando estilo Heading 3: "${element.text.trim().substring(0, 50)}..."`);
+        break;
+        
+      case 'blockquote':
+        styleRequests = createBlockquoteStyle(element.startIndex, element.endIndex);
+        console.log(`[${requestId}] 💬 Aplicando estilo Blockquote: "${element.text.trim().substring(0, 50)}..."`);
+        break;
+        
+      default:
+        styleRequests = createBodyStyle(element.startIndex, element.endIndex);
+        break;
     }
     
+    bodyRequests.push(...styleRequests);
+  }
+  
+  // Si no se encontraron elementos estructurales, aplicar estilo base a todo el cuerpo
+  if (structuralElements.length === 0) {
+    const docEnd = bodyContent[bodyContent.length - 1].endIndex;
+    if (bodyStart < docEnd - 1) {
+      bodyRequests.push(...createBodyStyle(bodyStart, docEnd - 1));
+      console.log(`[${requestId}] 📄 Aplicando estilo base a todo el cuerpo del documento`);
+    }
+  }
+  
+  // Aplicar todos los estilos del cuerpo
+  if (bodyRequests.length > 0) {
+    console.log(`[${requestId}] 🎨 Aplicando ${bodyRequests.length} solicitudes de estilo al cuerpo...`);
+    
+    await docsClient.documents.batchUpdate({
+      documentId: docsFileId,
+      requestBody: { requests: bodyRequests }
+    });
+    
+    console.log(`[${requestId}] ✅ Estilos del cuerpo aplicados exitosamente`);
+  } else {
+    console.log(`[${requestId}] ℹ️ No se encontraron elementos para estilizar en el cuerpo`);
+  }
+  
+} catch (bodyError) {
+  console.warn(`[${requestId}] ⚠️ Error aplicando estilos al cuerpo:`, bodyError.message);
+  result.warnings.push(`Estilos cuerpo: ${bodyError.message}`);
+  
+  // Fallback seguro: aplicar estilo base si falló el análisis estructural mapeando CONFIG correctamente
+  try {
+    const updatedDoc = await docsClient.documents.get({
+      documentId: docsFileId
+    });
+    
+    const docEnd = updatedDoc.data.body.content[updatedDoc.data.body.content.length - 1].endIndex;
+    const bodyStart = currentPos + 2;
+    
+    if (bodyStart < docEnd - 1) {
+      await docsClient.documents.batchUpdate({
+        documentId: docsFileId,
+        requestBody: {
+          requests: [
+            {
+              updateTextStyle: {
+                range: { startIndex: bodyStart, endIndex: docEnd - 1 },
+                textStyle: {
+                  weightedFontFamily: { fontFamily: CONFIG.TYPOGRAPHY.body.family, weight: CONFIG.TYPOGRAPHY.body.weight }, // CORREGIDO
+                  fontSize: { magnitude: CONFIG.TYPOGRAPHY.body.size, unit: 'PT' }, // CORREGIDO
+                  foregroundColor: { color: { rgbColor: CONFIG.COLORS.bodyGray } } // CORREGIDO
+                },
+                fields: 'weightedFontFamily,fontSize,foregroundColor'
+              }
+            },
+            {
+              updateParagraphStyle: {
+                range: { startIndex: bodyStart, endIndex: docEnd - 1 },
+                paragraphStyle: {
+                  lineSpacing: 140,
+                  spaceBelow: { magnitude: 8, unit: 'PT' },
+                  alignment: 'JUSTIFIED'
+                },
+                fields: 'lineSpacing,spaceBelow,alignment'
+              }
+            }
+          ]
+        }
+      });
+      console.log(`[${requestId}] ✅ Estilo base de respaldo aplicado al cuerpo`);
+    }
+  } catch (fallbackError) {
+    console.warn(`[${requestId}] ⚠️ Error en estilo de respaldo:`, fallbackError.message);
+  }
+}
     // ============================================================
     // PASO 6: EXPORTAR A PDF
     // ============================================================
@@ -3316,6 +3658,7 @@ async function processDocumentWithDocsAPI(drive, docsClient, fileId, submissionD
     return result;
   }
 }
+
 
 // ============================================================
 // FUNCIÓN AUXILIAR: CREAR CARPETA
@@ -7314,43 +7657,66 @@ exports.onReviewerAssignmentCreated = onDocumentCreated(
     }
   }
 );
-// ===================== MEJORA: TRIGGER PARA CUANDO SE COMPLETA UNA REVISIÓN =====================
-// ===================== TRIGGER: CUANDO SE COMPLETA UNA REVISIÓN (CORREGIDO) =====================
+// ============================================================
+// CONFIGURACIÓN GLOBAL DE ESTILOS (mismo patrón que processDocumentWithDocsAPI)
+// ============================================================
+const REVIEWS_STYLES = {
+  COLORS: {
+    academicBlue: { red: 0.0, green: 0.15, blue: 0.35 },
+    darkCharcoal: { red: 0.08, green: 0.08, blue: 0.08 },
+    bodyGray: { red: 0.15, green: 0.15, blue: 0.15 },
+    academicRed: { red: 0.5, green: 0.0, blue: 0.0 },
+    reviewerGreen: { red: 0.0, green: 0.3, blue: 0.1 }
+  },
+  TYPOGRAPHY: {
+    title: { family: 'Open Sans', weight: 700, size: 16 },
+    reviewerName: { family: 'Open Sans', weight: 600, size: 12 },
+    sectionLabel: { family: 'Open Sans', weight: 600, size: 10 },
+    body: { family: 'Lora', weight: 400, size: 10 },
+    comment: { family: 'Lora', weight: 400, size: 9 },
+    metadata: { family: 'Open Sans', weight: 400, size: 9 }
+  }
+};
+
+// ============================================================
+// FUNCIÓN PRINCIPAL
+// ============================================================
 exports.onReviewerAssignmentSubmitted = onDocumentUpdated(
   {
     document: 'reviewerAssignments/{assignmentId}',
-    secrets: [OAUTH2_CLIENT_ID, OAUTH2_CLIENT_SECRET, OAUTH2_REFRESH_TOKEN], // ← CORREGIDO
+    secrets: ['OAUTH2_CLIENT_ID', 'OAUTH2_CLIENT_SECRET', 'OAUTH2_REFRESH_TOKEN'],
     memory: '512MiB'
   },
   async (event) => {
     const beforeData = event.data.before.data();
     const afterData = event.data.after.data();
-    const assignmentId = event.params.invitationId;
+    const assignmentId = event.params.assignmentId;
 
+    // Solo proceder si el estado cambió a 'submitted'
     if (beforeData.status === afterData.status || afterData.status !== 'submitted') {
       return;
     }
 
     console.log(`📝 [REVIEW COMPLETED] Nueva revisión: ${assignmentId} - ${afterData.reviewerEmail}`);
 
-    // Declarar db al inicio para que esté disponible en todo el scope
     const db = admin.firestore();
     const warnings = [];
+    const errors = [];
 
     try {
       const taskId = afterData.editorialTaskId;
       
       if (!taskId) {
         console.warn('⚠️ Sin editorialTaskId. Abortando.');
-        return;
+        return { success: false, error: 'no_task_id' };
       }
 
-      // ===== PASO 1: Obtener datos de la tarea y submission =====
+      // ===== PASO 1: OBTENER DATOS DE LA TAREA Y SUBMISSION =====
       const taskRef = db.collection('editorialTasks').doc(taskId);
       const taskSnap = await taskRef.get();
       if (!taskSnap.exists) {
         console.error(`❌ Tarea no encontrada: ${taskId}`);
-        return;
+        return { success: false, error: 'task_not_found' };
       }
       const taskData = taskSnap.data();
 
@@ -7358,146 +7724,268 @@ exports.onReviewerAssignmentSubmitted = onDocumentUpdated(
       const submissionSnap = await submissionRef.get();
       if (!submissionSnap.exists) {
         console.error(`❌ Submission no encontrado: ${taskData.submissionId}`);
-        return;
+        return { success: false, error: 'submission_not_found' };
       }
       const submissionData = submissionSnap.data();
 
-      // ===== PASO 2: Contar revisiones completadas =====
-      const assignmentsSnapshot = await db.collection('reviewerAssignments')
-        .where('editorialTaskId', '==', taskId)
-        .where('status', '==', 'submitted')
-        .get();
+      // ===== PASO 2: CONTAR TODAS LAS REVISIONES COMPLETADAS =====
+      let assignmentsSnapshot;
+      try {
+        assignmentsSnapshot = await db.collection('reviewerAssignments')
+          .where('editorialTaskId', '==', taskId)
+          .where('status', '==', 'submitted')
+          .get();
+
+        console.log(`📊 Total revisiones encontradas: ${assignmentsSnapshot.size}`);
+        console.log(`📊 Revisores: ${assignmentsSnapshot.docs.map(d => d.data().reviewerEmail).join(', ')}`);
+        
+      } catch (countError) {
+        console.error(`❌ Error contando revisiones:`, countError.message);
+        await logSystemError('count_reviews_failed', countError, assignmentId);
+        return { success: false, error: 'count_failed' };
+      }
 
       const submittedCount = assignmentsSnapshot.size;
       const requiredReviews = taskData.requiredReviews || 2;
       
       console.log(`📊 Revisiones: ${submittedCount}/${requiredReviews}`);
 
-      // Registrar revisión recibida
+      // ===== PASO 3: AUDIT LOG (NO BLOQUEANTE) =====
       try {
         await db.collection('submissions').doc(taskData.submissionId)
           .collection('auditLogs').add({
             action: 'review_submitted',
-            details: `Revisión de ${afterData.reviewerName || afterData.reviewerEmail}`,
-            reviewerId: assignmentId,
-            recommendation: afterData.recommendation,
-            timestamp: admin.firestore.FieldValue.serverTimestamp()
+            by: 'system',
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            details: {
+              reviewerEmail: afterData.reviewerEmail,
+              reviewerId: assignmentId,
+              submittedAt: afterData.submittedAt,
+              currentCount: submittedCount,
+              requiredCount: requiredReviews
+            }
           });
       } catch (auditError) {
         console.warn(`⚠️ Error en audit log:`, auditError.message);
+        warnings.push('audit_log_failed');
       }
 
-      // ===== PASO 3: SI SE ALCANZA EL MÍNIMO, PROCESAR COMENTARIOS =====
-      if (submittedCount >= requiredReviews) {
-        console.log(`🎯 MÍNIMO ALCANZADO (${submittedCount}/${requiredReviews}). Procesando comentarios...`);
+      // ===== PASO 4: SI NO SE ALCANZA EL MÍNIMO, SALIR =====
+      if (submittedCount < requiredReviews) {
+        console.log(`⏳ Solo ${submittedCount}/${requiredReviews} revisiones. Esperando más revisores.`);
+        return { 
+          success: true, 
+          status: 'waiting_for_more_reviews',
+          submittedCount,
+          requiredReviews,
+          warnings 
+        };
+      }
 
-        // Inicializar Google Drive (con manejo de errores)
-        let drive;
-        try {
-          const driveClients = await getDriveClient(`extract-comments-${taskId}`);
-          drive = driveClients.drive;
-          
-          if (!drive?.files?.copy) {
-            throw new Error('Cliente de Google Drive mal inicializado');
-          }
-        } catch (driveError) {
-          console.error(`❌ Error inicializando Drive:`, driveError.message);
-          warnings.push('drive_init_failed');
-          // Continuar sin Drive - actualizar estados igual
-          await updateTaskStatusSafely(db, taskRef, submissionRef, submittedCount, null, null);
-          return;
-        }
+      console.log(`🎯 MÍNIMO ALCANZADO (${submittedCount}/${requiredReviews}). Procesando TODAS las revisiones...`);
 
-        // ===== PASO 4: EXTRAER COMENTARIOS DE TODOS LOS REVISORES =====
-        const allReviewerComments = [];
+      // ===== PASO 5: INICIALIZAR GOOGLE DRIVE Y DOCS =====
+      let drive;
+      let docsClient;
+      
+      try {
+        const driveClients = await getDriveClient(`extract-comments-${taskId}`);
+        drive = driveClients.drive;
+        docsClient = driveClients.docs;
         
-        for (const doc of assignmentsSnapshot.docs) {
-          const reviewData = doc.data();
-          const reviewerFileId = reviewData.reviewerFileId;
+        if (!drive?.files?.copy) {
+          throw new Error('Cliente de Google Drive mal inicializado');
+        }
+        if (!docsClient?.documents) {
+          throw new Error('Cliente de Google Docs mal inicializado');
+        }
+        
+        console.log(`✅ Drive y Docs inicializados correctamente`);
+      } catch (driveError) {
+        console.error(`❌ Error inicializando Drive:`, driveError.message);
+        await logSystemError('drive_init_failed', driveError, assignmentId);
+        
+        try {
+          await updateTaskStatusSafely(db, taskRef, submissionRef, submittedCount, null, null);
+        } catch (updateError) {
+          console.warn(`⚠️ Error actualizando estados:`, updateError.message);
+        }
+        
+        return {
+          success: false,
+          error: 'drive_init_failed',
+          message: driveError.message,
+          warnings
+        };
+      }
+
+      // ===== PASO 6: EXTRAER SOLO COMENTARIOS DEL DOCUMENTO =====
+      console.log(`📄 Iniciando extracción de comentarios para ${assignmentsSnapshot.size} revisores...`);
+      
+      const allDocumentComments = [];
+      let commentsExtracted = 0;
+      let commentsFailed = 0;
+      
+      for (const doc of assignmentsSnapshot.docs) {
+        const reviewData = doc.data();
+        const reviewerFileId = reviewData.reviewerFileId;
+        const reviewerEmail = reviewData.reviewerEmail;
+        const reviewerNumber = allDocumentComments.length + 1;
+        
+        console.log(`\n📄 [REVISOR ${reviewerNumber}/${assignmentsSnapshot.size}] Procesando: ${reviewerEmail}`);
+        console.log(`   FileID: ${reviewerFileId || 'NO DISPONIBLE'}`);
+        
+        if (!reviewerFileId) {
+          console.warn(`⚠️ Revisor ${reviewerEmail} sin reviewerFileId. Agregando sin comentarios.`);
+          warnings.push(`no_file_${reviewerEmail}`);
           
-          if (!reviewerFileId) {
-            console.warn(`⚠️ Revisor ${reviewData.reviewerEmail} sin reviewerFileId. Omitiendo comentarios.`);
-            warnings.push(`no_file_${reviewData.reviewerEmail}`);
-            continue;
-          }
-
-          console.log(`📄 Extrayendo comentarios de: ${reviewerFileId}`);
-          
-          try {
-            const comments = await extractCommentsFromDocument(drive, reviewerFileId);
-            
-            allReviewerComments.push({
-              reviewerNumber: allReviewerComments.length + 1,
-              reviewerEmail: reviewData.reviewerEmail,
-              reviewerName: reviewData.reviewerName || 'Revisor',
-              recommendation: reviewData.recommendation || 'No especificada',
-              commentsToAuthor: reviewData.commentsToAuthor || '',
-              commentsToEditor: reviewData.commentsToEditor || '',
-              documentComments: comments,
-              submittedAt: reviewData.submittedAt
-            });
-
-            console.log(`✅ ${comments.length} comentarios extraídos del revisor ${allReviewerComments.length}`);
-
-          } catch (commentError) {
-            console.error(`❌ Error extrayendo comentarios de ${reviewerFileId}:`, commentError.message);
-            warnings.push(`extract_failed_${reviewData.reviewerEmail}`);
-            // Continuar con el siguiente revisor aunque falle uno
-          }
+          allDocumentComments.push({
+            reviewerNumber: reviewerNumber,
+            reviewerEmail: reviewerEmail,
+            documentComments: [],
+            submittedAt: reviewData.submittedAt,
+            hasDocumentComments: false
+          });
+          continue;
         }
 
-        // ===== PASO 5: CREAR DOCUMENTO FINAL CON REVISIONES =====
-        let finalDocId = null;
-        let finalDocUrl = null;
-
         try {
-          const sourceFileId = submissionData.formattedDocsFile?.id || submissionData.originalFileId;
-
-          if (!sourceFileId) {
-            throw new Error('No se encontró documento fuente');
-          }
-
-          console.log(`📝 Creando documento final con ${allReviewerComments.length} revisiones...`);
-
-          // Crear copia del documento original
-          const finalCopy = await drive.files.copy({
-            fileId: sourceFileId,
-            requestBody: {
-              name: `FINAL_WITH_REVIEWS_${submissionData.submissionId}`,
-              parents: [submissionData.editorialFolderId],
-              mimeType: 'application/vnd.google-apps.document'
-            },
-            fields: 'id, webViewLink'
+          console.log(`   🔍 Extrayendo comentarios del documento...`);
+          const comments = await extractCommentsFromDocument(drive, reviewerFileId);
+          
+          console.log(`   ✅ ${comments.length} comentarios extraídos`);
+          
+          allDocumentComments.push({
+            reviewerNumber: reviewerNumber,
+            reviewerEmail: reviewerEmail,
+            documentComments: comments,
+            submittedAt: reviewData.submittedAt,
+            hasDocumentComments: comments.length > 0
           });
 
-          finalDocId = finalCopy.data.id;
-          finalDocUrl = finalCopy.data.webViewLink;
+          commentsExtracted++;
+          console.log(`   ✅ Revisor ${reviewerNumber} completado exitosamente`);
+
+        } catch (commentError) {
+          console.error(`   ❌ Error extrayendo comentarios:`, commentError.message);
+          warnings.push(`extract_failed_${reviewerEmail}`);
+          commentsFailed++;
           
-          console.log(`✅ Documento final creado: ${finalDocId}`);
+          allDocumentComments.push({
+            reviewerNumber: reviewerNumber,
+            reviewerEmail: reviewerEmail,
+            documentComments: [],
+            submittedAt: reviewData.submittedAt,
+            hasDocumentComments: false,
+            extractionError: commentError.message
+          });
+        }
+      }
 
-          // Otorgar permisos al editor (no bloqueante)
+      console.log(`\n📊 RESUMEN DE EXTRACCIÓN:`);
+      console.log(`   Total revisores: ${assignmentsSnapshot.size}`);
+      console.log(`   Extracciones exitosas: ${commentsExtracted}`);
+      console.log(`   Extracciones fallidas: ${commentsFailed}`);
+
+      // ===== PASO 7: CREAR DOCUMENTO FINAL SOLO CON COMENTARIOS =====
+      let finalDocId = null;
+      let finalDocUrl = null;
+      let finalDocCreated = false;
+
+      try {
+        let sourceFileId = null;
+        let sourceMimeType = null;
+        
+        if (submissionData.formattedDocsFile?.id) {
+          sourceFileId = submissionData.formattedDocsFile.id;
+          sourceMimeType = 'application/vnd.google-apps.document';
+          console.log(`✅ Usando documento formateado (Google Docs): ${sourceFileId}`);
+        } else if (submissionData.originalFileId) {
+          sourceFileId = submissionData.originalFileId;
+          console.log(`⚠️ Submission antigua. Usando documento original: ${sourceFileId}`);
+          
           try {
-            await configureEditorPermissions(drive, finalDocId, taskData, assignmentsSnapshot);
-          } catch (permError) {
-            console.warn(`⚠️ Error configurando permisos:`, permError.message);
-            warnings.push('permissions_error');
+            const fileMeta = await drive.files.get({
+              fileId: sourceFileId,
+              fields: 'mimeType'
+            });
+            sourceMimeType = fileMeta.data.mimeType;
+            console.log(`   MIME type detectado: ${sourceMimeType}`);
+          } catch (metaErr) {
+            console.warn(`⚠️ No se pudo obtener MIME type. Asumiendo Word.`);
+            sourceMimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+            warnings.push('mime_type_assumed');
           }
-
-          // Insertar la sección de revisiones (no bloqueante)
-          try {
-            await insertReviewsSection(drive, finalDocId, allReviewerComments, submissionData);
-            console.log(`✅ Sección de revisiones insertada`);
-          } catch (insertError) {
-            console.error(`❌ Error insertando revisiones:`, insertError.message);
-            warnings.push('insert_reviews_failed');
-          }
-
-        } catch (docError) {
-          console.error(`❌ Error creando documento final:`, docError.message);
-          warnings.push('final_doc_failed');
         }
 
-        // ===== PASO 6: PROGRAMAR ELIMINACIÓN DE DOCUMENTOS DE REVISORES =====
+        if (!sourceFileId) {
+          throw new Error('No se encontró documento fuente');
+        }
+
+        console.log(`📝 Creando documento final con ${allDocumentComments.length} revisiones...`);
+
+        const copyConfig = {
+          fileId: sourceFileId,
+          requestBody: {
+            name: `FINAL_WITH_COMMENTS_${submissionData.submissionId}`,
+            parents: submissionData.editorialFolderId ? [submissionData.editorialFolderId] : undefined,
+            copyRequiresWriterPermission: true,
+            writersCanShare: false
+          },
+          fields: 'id, webViewLink, mimeType'
+        };
+        
+        if (sourceMimeType === 'application/vnd.google-apps.document') {
+          copyConfig.requestBody.mimeType = 'application/vnd.google-apps.document';
+        }
+        
+        const finalCopy = await drive.files.copy(copyConfig);
+        
+        finalDocId = finalCopy.data.id;
+        finalDocUrl = finalCopy.data.webViewLink;
+        finalDocCreated = true;
+        
+        console.log(`✅ Documento final creado: ${finalDocId}`);
+        
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // ===== PASO 8: OTORGAR PERMISOS =====
+        try {
+          console.log(`🔑 Configurando permisos del documento final...`);
+          await configureEditorPermissions(drive, finalDocId, taskData, assignmentsSnapshot);
+          console.log(`✅ Permisos configurados`);
+        } catch (permError) {
+          console.warn(`⚠️ Error configurando permisos:`, permError.message);
+          warnings.push('permissions_error');
+        }
+
+        // ===== PASO 9: INSERTAR SOLO COMENTARIOS DEL DOCUMENTO =====
+        console.log(`📝 Insertando comentarios de ${allDocumentComments.length} revisores...`);
+        
+        try {
+          await insertDocumentCommentsSection(
+            drive, 
+            docsClient,
+            finalDocId, 
+            allDocumentComments, 
+            submissionData
+          );
+          console.log(`✅ Comentarios insertados correctamente`);
+        } catch (insertError) {
+          console.error(`❌ Error insertando comentarios:`, insertError.message);
+          warnings.push('insert_comments_failed');
+          errors.push(insertError.message);
+        }
+
+      } catch (docError) {
+        console.error(`❌ Error creando documento final:`, docError.message);
+        await logSystemError('final_doc_failed', docError, assignmentId);
+        warnings.push('final_doc_failed');
+        errors.push(docError.message);
+      }
+
+      // ===== PASO 10: PROGRAMAR ELIMINACIÓN DE DOCUMENTOS TEMPORALES =====
+      if (finalDocCreated) {
         try {
           console.log(`⏰ Programando eliminación de documentos temporales...`);
           
@@ -7516,86 +8004,559 @@ exports.onReviewerAssignmentSubmitted = onDocumentUpdated(
                 scheduledFor: admin.firestore.Timestamp.fromDate(deleteAt),
                 createdAt: admin.firestore.FieldValue.serverTimestamp(),
                 status: 'pending',
-                reason: 'Documentos de revisión individual ya consolidados'
+                reason: 'Documentos de revisión individual ya consolidados en documento final',
+                finalDocId: finalDocId
               });
             }
           }
+          
+          console.log(`✅ Eliminaciones programadas para ${assignmentsSnapshot.size} documentos`);
         } catch (deleteSchedError) {
           console.warn(`⚠️ Error programando eliminaciones:`, deleteSchedError.message);
+          warnings.push('schedule_deletion_failed');
         }
-
-        // ===== PASO 7: GUARDAR REFERENCIA AL DOCUMENTO FINAL =====
-        if (finalDocId) {
-          try {
-            await submissionRef.update({
-              finalReviewDocId: finalDocId,
-              finalReviewDocUrl: finalDocUrl,
-              reviewsConsolidatedAt: admin.firestore.FieldValue.serverTimestamp(),
-              updatedAt: admin.firestore.FieldValue.serverTimestamp()
-            });
-
-            // Guardar comentarios extraídos como respaldo
-            await db.collection('submissions').doc(taskData.submissionId)
-              .collection('extractedReviews').add({
-                reviewerComments: allReviewerComments,
-                extractedAt: admin.firestore.FieldValue.serverTimestamp(),
-                finalDocId: finalDocId,
-                finalDocUrl: finalDocUrl
-              });
-          } catch (updateError) {
-            console.error(`❌ Error guardando referencia:`, updateError.message);
-          }
-        }
-
-        // ===== PASO 8: ACTUALIZAR ESTADOS =====
-        await updateTaskStatusSafely(db, taskRef, submissionRef, submittedCount, finalDocId, finalDocUrl);
-
-        // ===== PASO 9: ENVIAR EMAIL AL EDITOR (NO BLOQUEANTE) =====
-        try {
-          await sendEditorDecisionEmail(
-            taskData, 
-            submissionData, 
-            assignmentsSnapshot, 
-            submittedCount, 
-            finalDocUrl
-          );
-        } catch (emailError) {
-          console.warn(`⚠️ Error enviando email:`, emailError.message);
-        }
-
-        console.log(`✅ Proceso completado. FinalDoc: ${finalDocUrl || 'No disponible'}`);
-        console.log(`⚠️ Warnings: ${warnings.length > 0 ? warnings.join(', ') : 'Ninguno'}`);
-
-      } else {
-        console.log(`⏳ Solo ${submittedCount}/${requiredReviews} revisiones. Esperando más.`);
       }
 
-      return { success: true, warnings };
+      // ===== PASO 11: GUARDAR REFERENCIA AL DOCUMENTO FINAL =====
+      if (finalDocId) {
+        try {
+          await submissionRef.update({
+            finalReviewDocId: finalDocId,
+            finalReviewDocUrl: finalDocUrl,
+            reviewsConsolidatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            totalReviewsReceived: submittedCount,
+            requiredReviews: requiredReviews,
+            reviewersProcessed: allDocumentComments.length,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+
+          console.log(`✅ Referencia al documento final guardada`);
+        } catch (updateError) {
+          console.error(`❌ Error guardando referencia:`, updateError.message);
+          warnings.push('save_reference_failed');
+        }
+      }
+
+      // ===== PASO 12: ACTUALIZAR ESTADOS =====
+      try {
+        await updateTaskStatusSafely(db, taskRef, submissionRef, submittedCount, finalDocId, finalDocUrl);
+        console.log(`✅ Estados actualizados`);
+      } catch (statusError) {
+        console.error(`❌ Error actualizando estados:`, statusError.message);
+        warnings.push('status_update_failed');
+      }
+
+      // ===== PASO 13: ENVIAR EMAIL AL EDITOR =====
+      try {
+        await sendEditorDecisionEmail(
+          taskData, 
+          submissionData, 
+          assignmentsSnapshot, 
+          submittedCount, 
+          finalDocUrl
+        );
+        console.log(`✅ Email enviado al editor`);
+      } catch (emailError) {
+        console.warn(`⚠️ Error enviando email:`, emailError.message);
+        warnings.push('email_failed');
+      }
+
+      // ===== AUDIT LOG FINAL =====
+      try {
+        await db.collection('submissions')
+          .doc(taskData.submissionId)
+          .collection('auditLogs')
+          .add({
+            action: 'comments_consolidated',
+            by: 'system',
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            details: {
+              assignmentId,
+              taskId,
+              submittedCount,
+              requiredReviews,
+              finalDocId,
+              finalDocUrl,
+              finalDocCreated,
+              reviewersProcessed: allDocumentComments.length,
+              reviewerEmails: allDocumentComments.map(r => r.reviewerEmail),
+              commentsExtracted,
+              commentsFailed,
+              warnings,
+              errors
+            }
+          });
+      } catch (auditError) {
+        console.warn(`⚠️ Error en audit log final:`, auditError.message);
+      }
+
+      console.log(`\n✅ ====== PROCESO COMPLETADO ======`);
+      console.log(`   FinalDoc: ${finalDocUrl || 'No disponible'}`);
+      console.log(`   Revisores procesados: ${allDocumentComments.length}/${assignmentsSnapshot.size}`);
+      console.log(`   Warnings: ${warnings.length > 0 ? warnings.join(', ') : 'Ninguno'}`);
+      console.log(`   Errores: ${errors.length > 0 ? errors.join(', ') : 'Ninguno'}`);
+
+      return { 
+        success: true, 
+        finalDocCreated,
+        finalDocId,
+        finalDocUrl,
+        submittedCount,
+        requiredReviews,
+        reviewersProcessed: allDocumentComments.length,
+        totalReviewers: assignmentsSnapshot.size,
+        commentsExtracted,
+        commentsFailed,
+        warnings,
+        errors
+      };
 
     } catch (error) {
-      console.error(`❌ Error en onReviewerAssignmentSubmitted:`, error.message);
+      console.error(`❌ Error fatal en onReviewerAssignmentSubmitted:`, error.message);
       console.error(`❌ Stack:`, error.stack);
       
-      // db está disponible aquí porque se declaró al inicio
       try {
         await db.collection('systemErrors').add({
           function: 'onReviewerAssignmentSubmitted',
           error: {
             message: error.message,
-            stack: error.stack?.substring(0, 500) || 'No stack'
+            stack: error.stack?.substring(0, 1000) || 'No stack'
           },
           assignmentId,
-          timestamp: admin.firestore.FieldValue.serverTimestamp()
+          taskId: afterData?.editorialTaskId || null,
+          timestamp: admin.firestore.FieldValue.serverTimestamp(),
+          warnings
         });
       } catch (logError) {
         console.error(`❌ Error al registrar error:`, logError.message);
       }
       
-      return { success: false, error: error.message };
+      return { 
+        success: false, 
+        error: error.message,
+        warnings 
+      };
     }
   }
 );
 
+// ============================================================
+// FUNCIÓN: INSERTAR SOLO COMENTARIOS DEL DOCUMENTO
+// ============================================================
+// ============================================================
+// FUNCIÓN: INSERTAR SOLO COMENTARIOS DEL DOCUMENTO (VERSIÓN CORREGIDA)
+ // ============================================================
+async function insertDocumentCommentsSection(drive, docsClient, finalDocId, allDocumentComments, submissionData) {
+  const requestId = `insert-comments-${finalDocId?.substring(0, 8) || 'unknown'}`;
+  console.log(`[${requestId}] 📝 Insertando comentarios del documento...`);
+
+  if (!docsClient?.documents) {
+    throw new Error('docsClient no inicializado');
+  }
+
+  // ==================== CLEAN TEXT ====================
+  function cleanText(text) {
+    if (!text) return '';
+    return text
+      .replace(/<[^>]*>/g, '')
+      .replace(/&[a-zA-Z0-9#]+;/g, (match) => {
+        const entities = { '&aacute;': 'á', '&eacute;': 'é', '&iacute;': 'í', '&oacute;': 'ó', '&uacute;': 'ú', '&ntilde;': 'ñ', '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'", '&nbsp;': ' ' };
+        return entities[match] || String.fromCharCode(parseInt(match.replace(/&#?(\d+);/, '$1'))) || match;
+      })
+      .trim();
+  }
+
+  // ==================== COLORES Y TIPOGRAFÍA ====================
+  const C = {
+    titleBlue: { red: 0.05, green: 0.20, blue: 0.40 },
+    darkGray: { red: 0.12, green: 0.12, blue: 0.12 },
+    bodyGray: { red: 0.22, green: 0.22, blue: 0.22 },
+    accentBlue: { red: 0.10, green: 0.35, blue: 0.55 },
+    lightGray: { red: 0.55, green: 0.55, blue: 0.55 },
+    quotedBg: { red: 0.96, green: 0.96, blue: 0.98 },
+    greenAccent: { red: 0.05, green: 0.40, blue: 0.20 }
+  };
+
+  const T = {
+    titleFont: 'Open Sans',
+    bodyFont: 'Lora',
+    monoFont: 'Courier New'
+  };
+
+  const document = await docsClient.documents.get({ documentId: finalDocId });
+  let pos = document.data.body.content[document.data.body.content.length - 1].endIndex - 1;
+
+  const requests = [];
+
+  // ==================== HELPER addText MEJORADO ====================
+ // ==================== HELPER MEJORADO ====================
+function addText(text, textStyle = {}, paraStyle = {}) {
+  const clean = cleanText(text);
+  if (!clean) return;
+
+  // Insertamos siempre con \n al final para forzar nuevo párrafo
+  const textToInsert = clean.endsWith('\n') ? clean : clean + '\n';
+
+  requests.push({
+    insertText: {
+      location: { index: pos },
+      text: textToInsert
+    }
+  });
+
+  const textEnd = pos + textToInsert.length;
+
+  // Text Style
+  if (Object.keys(textStyle).length > 0) {
+    const fields = Object.keys(textStyle).filter(key => 
+      ['bold','italic','fontSize','foregroundColor','weightedFontFamily','backgroundColor'].includes(key)
+    );
+    
+    if (fields.length > 0) {
+      requests.push({
+        updateTextStyle: {
+          range: { startIndex: pos, endIndex: textEnd },
+          textStyle: textStyle,
+          fields: fields.join(',')
+        }
+      });
+    }
+  }
+
+  // Paragraph Style - Valores generosos
+  const finalParaStyle = {
+    lineSpacing: 145,
+    spaceAbove: { magnitude: 10, unit: 'PT' },
+    spaceBelow: { magnitude: 18, unit: 'PT' },
+    ...paraStyle
+  };
+
+  const paraFields = ['lineSpacing', 'spaceAbove', 'spaceBelow', 'alignment', 'indentStart', 'indentEnd', 'indentFirstLine'];
+  
+  requests.push({
+    updateParagraphStyle: {
+      range: { startIndex: pos, endIndex: textEnd },
+      paragraphStyle: finalParaStyle,
+      fields: paraFields.filter(f => finalParaStyle[f] !== undefined).join(',')
+    }
+  });
+
+  pos = textEnd;   // Actualizamos posición
+}
+  // ==================== 1. SALTO DE PÁGINA ====================
+  requests.push({ insertPageBreak: { location: { index: pos } } });
+  pos++;
+
+  // ==================== 2. TÍTULO ====================
+  const reviewDate = new Date().toLocaleDateString('es-CL', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  addText('\n\n', {}, { spaceBelow: { magnitude: 40, unit: 'PT' } });
+
+  addText('DOCUMENT COMMENTS REPORT\n', {
+    weightedFontFamily: { fontFamily: T.titleFont, weight: 700 },
+    fontSize: { magnitude: 22, unit: 'PT' },
+    foregroundColor: { color: { rgbColor: C.titleBlue } }
+  }, {
+    alignment: 'CENTER',
+    spaceBelow: { magnitude: 8, unit: 'PT' }
+  });
+
+  addText('Comentarios Extraídos del Documento\n', {
+    weightedFontFamily: { fontFamily: T.titleFont, weight: 400 },
+    fontSize: { magnitude: 11, unit: 'PT' },
+    foregroundColor: { color: { rgbColor: C.lightGray } },
+    italic: true
+  }, {
+    alignment: 'CENTER',
+    spaceBelow: { magnitude: 32, unit: 'PT' }
+  });
+
+  // ==================== METADATOS ====================
+  addText(`Article: ${submissionData.title || 'Untitled'}\n`, {
+    weightedFontFamily: { fontFamily: T.bodyFont, weight: 400 },
+    fontSize: { magnitude: 11, unit: 'PT' },
+    foregroundColor: { color: { rgbColor: C.bodyGray } }
+  }, { alignment: 'CENTER', spaceBelow: { magnitude: 6, unit: 'PT' } });
+
+  addText(`Submission: ${submissionData.submissionId || 'N/A'}  ·  Reviews: ${allDocumentComments.length}  ·  ${reviewDate}\n`, {
+    weightedFontFamily: { fontFamily: T.monoFont, weight: 400 },
+    fontSize: { magnitude: 9, unit: 'PT' },
+    foregroundColor: { color: { rgbColor: C.lightGray } }
+  }, { alignment: 'CENTER', spaceBelow: { magnitude: 48, unit: 'PT' } });
+
+  // ==================== 3. CONTENIDO POR REVISOR ====================
+  for (let i = 0; i < allDocumentComments.length; i++) {
+    const review = allDocumentComments[i];
+    const rn = review.reviewerNumber || '?';
+
+    // Título del revisor
+    addText(`\nReviewer ${rn}\n`, {
+      weightedFontFamily: { fontFamily: T.titleFont, weight: 700 },
+      fontSize: { magnitude: 15, unit: 'PT' },
+      foregroundColor: { color: { rgbColor: C.titleBlue } }
+    }, {
+      spaceAbove: { magnitude: 28, unit: 'PT' },
+      spaceBelow: { magnitude: 16, unit: 'PT' }
+    });
+
+    const docComments = review.documentComments || [];
+    const mainComments = docComments.filter(c => !c.isReply);
+
+    if (mainComments.length > 0) {
+      addText(`Document Comments (${mainComments.length})\n`, {
+        weightedFontFamily: { fontFamily: T.titleFont, weight: 600 },
+        fontSize: { magnitude: 10.5, unit: 'PT' },
+        foregroundColor: { color: { rgbColor: C.greenAccent } }
+      }, {
+        spaceAbove: { magnitude: 18, unit: 'PT' },
+        spaceBelow: { magnitude: 12, unit: 'PT' },
+        indentStart: { magnitude: 12, unit: 'PT' }
+      });
+
+      let commentCounter = 0;
+
+      for (const item of docComments) {
+        if (item.isReply) {
+          addText(`↳ ${item.content}\n`, {
+            weightedFontFamily: { fontFamily: T.bodyFont, weight: 400 },
+            fontSize: { magnitude: 9.5, unit: 'PT' },
+            foregroundColor: { color: { rgbColor: C.lightGray } },
+            italic: true
+          }, {
+            spaceBelow: { magnitude: 10, unit: 'PT' },
+            indentStart: { magnitude: 48, unit: 'PT' }
+          });
+        } else {
+          commentCounter++;
+
+          // Texto citado
+          if (item.quotedText && cleanText(item.quotedText)) {
+            const quotedClean = cleanText(item.quotedText);
+            const quotedPreview = quotedClean.length > 220 ? quotedClean.substring(0, 220) + '...' : quotedClean;
+
+            addText(`"${quotedPreview}"\n`, {
+              weightedFontFamily: { fontFamily: T.bodyFont, weight: 400 },
+              fontSize: { magnitude: 9.5, unit: 'PT' },
+              foregroundColor: { color: { rgbColor: C.lightGray } },
+              italic: true,
+              backgroundColor: { color: { rgbColor: C.quotedBg } }
+            }, {
+              spaceBelow: { magnitude: 10, unit: 'PT' },
+              indentStart: { magnitude: 28, unit: 'PT' }
+            });
+          }
+
+          // Comentario principal
+          const commentClean = cleanText(item.content);
+          addText(`${commentCounter}. ${commentClean}\n`, {
+            weightedFontFamily: { fontFamily: T.bodyFont, weight: 400 },
+            fontSize: { magnitude: 10.8, unit: 'PT' },
+            foregroundColor: { color: { rgbColor: C.bodyGray } }
+          }, {
+            spaceBelow: { magnitude: 18, unit: 'PT' },   // ← más espacio aquí
+            indentStart: { magnitude: 28, unit: 'PT' }
+          });
+        }
+      }
+    } else {
+      addText('No document comments\n', {
+        weightedFontFamily: { fontFamily: T.bodyFont, weight: 400 },
+        fontSize: { magnitude: 10, unit: 'PT' },
+        foregroundColor: { color: { rgbColor: C.lightGray } },
+        italic: true
+      }, { spaceBelow: { magnitude: 24, unit: 'PT' }, indentStart: { magnitude: 12, unit: 'PT' } });
+    }
+
+    // Separador entre revisores (menos intrusivo)
+    if (i < allDocumentComments.length - 1) {
+      addText('\n· · · · ·\n', {
+        fontSize: { magnitude: 8, unit: 'PT' },
+        foregroundColor: { color: { rgbColor: C.lightGray } }
+      }, {
+        alignment: 'CENTER',
+        spaceAbove: { magnitude: 24, unit: 'PT' },
+        spaceBelow: { magnitude: 32, unit: 'PT' }
+      });
+    }
+  }
+
+  // ==================== PIE DE PÁGINA ====================
+  addText('\n\n', {}, { spaceBelow: { magnitude: 32, unit: 'PT' } });
+
+  addText('━'.repeat(60) + '\n', {
+    fontSize: { magnitude: 6, unit: 'PT' },
+    foregroundColor: { color: { rgbColor: C.accentBlue } }
+  }, { alignment: 'CENTER', spaceBelow: { magnitude: 12, unit: 'PT' } });
+
+  addText('END OF DOCUMENT COMMENTS\n', {
+    weightedFontFamily: { fontFamily: T.titleFont, weight: 600 },
+    fontSize: { magnitude: 9, unit: 'PT' },
+    foregroundColor: { color: { rgbColor: C.lightGray } }
+  }, { alignment: 'CENTER', spaceBelow: { magnitude: 8, unit: 'PT' } });
+
+  addText(`🔒 CONFIDENTIAL — Generated ${reviewDate}\n`, {
+    weightedFontFamily: { fontFamily: T.monoFont, weight: 400 },
+    fontSize: { magnitude: 7.5, unit: 'PT' },
+    foregroundColor: { color: { rgbColor: { red: 0.60, green: 0.15, blue: 0.15 } } }
+  }, { alignment: 'CENTER' });
+
+  // ==================== EJECUTAR EN LOTES ====================
+  console.log(`[${requestId}] 🎨 Aplicando ${requests.length} solicitudes...`);
+
+  for (let i = 0; i < requests.length; i += 50) {
+    const batch = requests.slice(i, i + 50);
+    await docsClient.documents.batchUpdate({
+      documentId: finalDocId,
+      requestBody: { requests: batch }
+    });
+  }
+
+  console.log(`[${requestId}] ✅ Comentarios insertados correctamente`);
+  return { success: true, reviewersIncluded: allDocumentComments.length };
+}
+// ============================================================
+// FUNCIÓN: EXTRAER COMENTARIOS DEL DOCUMENTO
+// ============================================================
+async function extractCommentsFromDocument(drive, fileId) {
+  console.log(`   🔍 Extrayendo comentarios de: ${fileId}`);
+  
+  try {
+    const commentsResponse = await drive.comments.list({
+      fileId: fileId,
+      fields: 'comments(id,createdTime,modifiedTime,htmlContent,content,deleted,resolved,quotedFileContent(value,mimeType),anchor,replies(id,createdTime,modifiedTime,htmlContent,content,deleted))',
+      pageSize: 100
+    });
+    
+    const allComments = commentsResponse.data.comments || [];
+    console.log(`   📄 ${allComments.length} hilos de comentarios encontrados`);
+    
+    const extractedComments = [];
+    
+    for (const comment of allComments) {
+      let quotedText = '';
+      if (comment.quotedFileContent?.value) {
+        quotedText = comment.quotedFileContent.value
+          .replace(/<[^>]*>/g, '')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'")
+          .trim();
+      }
+      
+      if (!quotedText && comment.htmlContent) {
+        const match = comment.htmlContent.match(/sobre "([^"]+)"/);
+        if (match) {
+          quotedText = match[1];
+        }
+      }
+      
+      const replies = [];
+      if (comment.replies && comment.replies.length > 0) {
+        for (const reply of comment.replies) {
+          replies.push({
+            id: reply.id,
+            content: reply.content || '',
+            htmlContent: reply.htmlContent || '',
+            createdTime: reply.createdTime,
+            modifiedTime: reply.modifiedTime,
+            deleted: reply.deleted || false
+          });
+        }
+      }
+      
+      extractedComments.push({
+        id: comment.id,
+        content: comment.content || '',
+        htmlContent: comment.htmlContent || '',
+        quotedText: quotedText,
+        anchor: comment.anchor || null,
+        createdTime: comment.createdTime,
+        modifiedTime: comment.modifiedTime,
+        resolved: comment.resolved || false,
+        deleted: comment.deleted || false,
+        isReply: false,
+        replies: replies
+      });
+      
+      for (const reply of replies) {
+        extractedComments.push({
+          id: reply.id,
+          content: reply.content || '',
+          htmlContent: reply.htmlContent || '',
+          quotedText: quotedText,
+          anchor: comment.anchor || null,
+          parentId: comment.id,
+          createdTime: reply.createdTime,
+          modifiedTime: reply.modifiedTime,
+          deleted: reply.deleted || false,
+          isReply: true,
+          replies: []
+        });
+      }
+    }
+    
+    const mainComments = extractedComments.filter(c => !c.isReply).length;
+    const replyCount = extractedComments.filter(c => c.isReply).length;
+    console.log(`   ✅ Total: ${mainComments} comentarios + ${replyCount} respuestas`);
+    
+    return extractedComments;
+    
+  } catch (error) {
+    console.error(`   ❌ Error extrayendo comentarios:`, error.message);
+    
+    try {
+      console.log(`   🔄 Intentando fallback...`);
+      const basicResponse = await drive.comments.list({
+        fileId: fileId,
+        fields: 'comments(id,content,htmlContent,quotedFileContent(value),createdTime,resolved,deleted)',
+        pageSize: 100
+      });
+      
+      const basicComments = (basicResponse.data.comments || []).map(c => ({
+        id: c.id,
+        content: c.content || '',
+        htmlContent: c.htmlContent || '',
+        quotedText: c.quotedFileContent?.value?.replace(/<[^>]*>/g, '').trim() || '',
+        anchor: null,
+        createdTime: c.createdTime,
+        resolved: c.resolved || false,
+        deleted: c.deleted || false,
+        isReply: false,
+        replies: []
+      }));
+      
+      console.log(`   ✅ Fallback: ${basicComments.length} comentarios`);
+      return basicComments;
+      
+    } catch (fallbackError) {
+      console.error(`   ❌ Fallback falló:`, fallbackError.message);
+      return [];
+    }
+  }
+}
+
+// ============================================================
+// FUNCIÓN AUXILIAR: REGISTRAR ERRORES DEL SISTEMA
+// ============================================================
+async function logSystemError(type, error, context) {
+  try {
+    const db = admin.firestore();
+    await db.collection('systemErrors').add({
+      type,
+      function: 'onReviewerAssignmentSubmitted',
+      error: {
+        message: error.message,
+        stack: error.stack?.substring(0, 1000) || 'No stack'
+      },
+      context,
+      timestamp: admin.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (e) {
+    console.error('Error logging to Firestore:', e.message);
+  }
+}
 // ============================================================
 // FUNCIÓN AUXILIAR: Configurar permisos del editor
 // ============================================================
@@ -7692,406 +8653,7 @@ async function updateTaskStatusSafely(db, taskRef, submissionRef, submittedCount
     console.warn(`⚠️ Error actualizando estados:`, txError.message);
   }
 }
-// ============================================================
-// FUNCIÓN: EXTRAER COMENTARIOS DE UN DOCUMENTO
-// ============================================================
-async function extractCommentsFromDocument(drive, fileId) {
-  try {
-    const response = await drive.comments.list({
-      fileId: fileId,
-      fields: 'comments(id, content, anchor, author(displayName, emailAddress), createdTime, modifiedTime, resolved, replies(id, content, author(displayName), createdTime))',
-      pageSize: 100
-    });
 
-    const comments = response.data.comments || [];
-    
-    // Formatear comentarios para el documento final
-    const formattedComments = [];
-    
-    for (const comment of comments) {
-      // Solo incluir comentarios no resueltos (los que el revisor dejó)
-      if (!comment.resolved) {
-        const commentData = {
-          id: comment.id,
-          content: comment.content,
-          author: comment.author?.displayName || 'Anónimo',
-          createdTime: comment.createdTime,
-          resolved: comment.resolved || false,
-          replies: []
-        };
-
-        // Incluir respuestas si existen
-        if (comment.replies && comment.replies.length > 0) {
-          commentData.replies = comment.replies.map(reply => ({
-            id: reply.id,
-            content: reply.content,
-            author: reply.author?.displayName || 'Anónimo',
-            createdTime: reply.createdTime
-          }));
-        }
-
-        formattedComments.push(commentData);
-      }
-    }
-
-    return formattedComments;
-
-  } catch (error) {
-    console.error(`❌ Error extrayendo comentarios de ${fileId}:`, error.message);
-    return [];
-  }
-}
-
-// ============================================================
-// FUNCIÓN: INSERTAR SECCIÓN DE REVISIONES EN EL DOCUMENTO FINAL
-// ============================================================
-async function insertReviewsSection(drive, docsFileId, allReviewerComments, submissionData) {
-  try {
-    const { google } = require('googleapis');
-    const docs = google.docs({ version: 'v1', auth: drive.auth });
-    
-    // Obtener el final del documento
-    const document = await docs.documents.get({
-      documentId: docsFileId
-    });
-    
-    const docEnd = document.data.body.content[document.data.body.content.length - 1].endIndex - 1;
-    
-    const requests = [];
-    
-    // Insertar salto de página antes de la sección de revisiones
-    requests.push({
-      insertPageBreak: {
-        location: { index: docEnd }
-      }
-    });
-    
-    let insertIndex = docEnd + 1;
-    
-    // ===== TÍTULO DE LA SECCIÓN =====
-    const sectionTitle = '\nREVISIONES\n\n';
-    requests.push({
-      insertText: {
-        location: { index: insertIndex },
-        text: sectionTitle
-      }
-    });
-    
-    // Estilo del título
-    requests.push({
-      updateParagraphStyle: {
-        range: { startIndex: insertIndex, endIndex: insertIndex + sectionTitle.length },
-        paragraphStyle: {
-          namedStyleType: 'HEADING_1',
-          alignment: 'CENTER',
-          spaceBelow: { magnitude: 24, unit: 'PT' }
-        },
-        fields: 'namedStyleType,alignment,spaceBelow'
-      }
-    });
-    
-    insertIndex += sectionTitle.length;
-    
-    // ===== INSERTAR REVISIÓN DE CADA REVISOR =====
-    for (const review of allReviewerComments) {
-      // Línea separadora
-      const separator = '─'.repeat(60) + '\n\n';
-      requests.push({
-        insertText: {
-          location: { index: insertIndex },
-          text: separator
-        }
-      });
-      
-      requests.push({
-        updateTextStyle: {
-          range: { startIndex: insertIndex, endIndex: insertIndex + separator.length },
-          textStyle: {
-            foregroundColor: { color: { rgbColor: { red: 0.0, green: 0.32, blue: 0.62 } } },
-            fontSize: { magnitude: 8, unit: 'PT' }
-          },
-          fields: 'foregroundColor,fontSize'
-        }
-      });
-      
-      insertIndex += separator.length;
-      
-      // Encabezado del revisor
-      const reviewerHeader = `Revisor ${review.reviewerNumber}\n`;
-      requests.push({
-        insertText: {
-          location: { index: insertIndex },
-          text: reviewerHeader
-        }
-      });
-      
-      requests.push({
-        updateTextStyle: {
-          range: { startIndex: insertIndex, endIndex: insertIndex + reviewerHeader.length },
-          textStyle: {
-            bold: true,
-            fontSize: { magnitude: 14, unit: 'PT' },
-            foregroundColor: { color: { rgbColor: { red: 0.1, green: 0.1, blue: 0.1 } } }
-          },
-          fields: 'bold,fontSize,foregroundColor'
-        }
-      });
-      
-      requests.push({
-        updateParagraphStyle: {
-          range: { startIndex: insertIndex, endIndex: insertIndex + reviewerHeader.length },
-          paragraphStyle: {
-            alignment: 'START',
-            spaceBelow: { magnitude: 8, unit: 'PT' }
-          },
-          fields: 'alignment,spaceBelow'
-        }
-      });
-      
-      insertIndex += reviewerHeader.length;
-      
-      // Recomendación
-      const recommendationText = `Recomendación: ${review.recommendation}\n`;
-      requests.push({
-        insertText: {
-          location: { index: insertIndex },
-          text: recommendationText
-        }
-      });
-      
-      requests.push({
-        updateTextStyle: {
-          range: { startIndex: insertIndex, endIndex: insertIndex + recommendationText.length },
-          textStyle: {
-            bold: true,
-            fontSize: { magnitude: 11, unit: 'PT' },
-            foregroundColor: { color: { rgbColor: { red: 0.0, green: 0.32, blue: 0.62 } } }
-          },
-          fields: 'bold,fontSize,foregroundColor'
-        }
-      });
-      
-      requests.push({
-        updateParagraphStyle: {
-          range: { startIndex: insertIndex, endIndex: insertIndex + recommendationText.length },
-          paragraphStyle: {
-            spaceBelow: { magnitude: 12, unit: 'PT' }
-          },
-          fields: 'spaceBelow'
-        }
-      });
-      
-      insertIndex += recommendationText.length;
-      
-      // Comentarios para el autor
-      if (review.commentsToAuthor) {
-        const authorCommentsLabel = 'Comentarios para el autor:\n';
-        requests.push({
-          insertText: {
-            location: { index: insertIndex },
-            text: authorCommentsLabel
-          }
-        });
-        
-        requests.push({
-          updateTextStyle: {
-            range: { startIndex: insertIndex, endIndex: insertIndex + authorCommentsLabel.length },
-            textStyle: {
-              bold: true,
-              fontSize: { magnitude: 10, unit: 'PT' }
-            },
-            fields: 'bold,fontSize'
-          }
-        });
-        
-        insertIndex += authorCommentsLabel.length;
-        
-        const authorCommentsText = review.commentsToAuthor + '\n\n';
-        requests.push({
-          insertText: {
-            location: { index: insertIndex },
-            text: authorCommentsText
-          }
-        });
-        
-        requests.push({
-          updateTextStyle: {
-            range: { startIndex: insertIndex, endIndex: insertIndex + authorCommentsText.length },
-            textStyle: {
-              fontSize: { magnitude: 10, unit: 'PT' },
-              foregroundColor: { color: { rgbColor: { red: 0.2, green: 0.2, blue: 0.2 } } }
-            },
-            fields: 'fontSize,foregroundColor'
-          }
-        });
-        
-        requests.push({
-          updateParagraphStyle: {
-            range: { startIndex: insertIndex, endIndex: insertIndex + authorCommentsText.length },
-            paragraphStyle: {
-              spaceBelow: { magnitude: 12, unit: 'PT' }
-            },
-            fields: 'spaceBelow'
-          }
-        });
-        
-        insertIndex += authorCommentsText.length;
-      }
-      
-      // Comentarios en el documento (extraídos)
-      if (review.documentComments && review.documentComments.length > 0) {
-        const docCommentsLabel = 'Comentarios en el documento:\n';
-        requests.push({
-          insertText: {
-            location: { index: insertIndex },
-            text: docCommentsLabel
-          }
-        });
-        
-        requests.push({
-          updateTextStyle: {
-            range: { startIndex: insertIndex, endIndex: insertIndex + docCommentsLabel.length },
-            textStyle: {
-              bold: true,
-              fontSize: { magnitude: 10, unit: 'PT' }
-            },
-            fields: 'bold,fontSize'
-          }
-        });
-        
-        insertIndex += docCommentsLabel.length;
-        
-        // Formatear cada comentario
-        for (let i = 0; i < review.documentComments.length; i++) {
-          const comment = review.documentComments[i];
-          const commentNumber = i + 1;
-          
-          // Texto del comentario
-          let commentText = `${commentNumber}. ${comment.content}\n`;
-          
-          requests.push({
-            insertText: {
-              location: { index: insertIndex },
-              text: commentText
-            }
-          });
-          
-          requests.push({
-            updateTextStyle: {
-              range: { startIndex: insertIndex, endIndex: insertIndex + commentText.length },
-              textStyle: {
-                fontSize: { magnitude: 10, unit: 'PT' },
-                foregroundColor: { color: { rgbColor: { red: 0.15, green: 0.15, blue: 0.15 } } },
-                italic: false
-              },
-              fields: 'fontSize,foregroundColor,italic'
-            }
-          });
-          
-          requests.push({
-            updateParagraphStyle: {
-              range: { startIndex: insertIndex, endIndex: insertIndex + commentText.length },
-              paragraphStyle: {
-                spaceBelow: { magnitude: 4, unit: 'PT' },
-                indentStart: { magnitude: 20, unit: 'PT' }
-              },
-              fields: 'spaceBelow,indentStart'
-            }
-          });
-          
-          insertIndex += commentText.length;
-          
-          // Respuestas si existen
-          if (comment.replies && comment.replies.length > 0) {
-            for (const reply of comment.replies) {
-              let replyText = `   ↳ Respuesta: ${reply.content}\n`;
-              
-              requests.push({
-                insertText: {
-                  location: { index: insertIndex },
-                  text: replyText
-                }
-              });
-              
-              requests.push({
-                updateTextStyle: {
-                  range: { startIndex: insertIndex, endIndex: insertIndex + replyText.length },
-                  textStyle: {
-                    fontSize: { magnitude: 9, unit: 'PT' },
-                    foregroundColor: { color: { rgbColor: { red: 0.4, green: 0.4, blue: 0.4 } } },
-                    italic: true
-                  },
-                  fields: 'fontSize,foregroundColor,italic'
-                }
-              });
-              
-              requests.push({
-                updateParagraphStyle: {
-                  range: { startIndex: insertIndex, endIndex: insertIndex + replyText.length },
-                  paragraphStyle: {
-                    spaceBelow: { magnitude: 2, unit: 'PT' },
-                    indentStart: { magnitude: 40, unit: 'PT' }
-                  },
-                  fields: 'spaceBelow,indentStart'
-                }
-              });
-              
-              insertIndex += replyText.length;
-            }
-          }
-        }
-        
-        // Espacio después de los comentarios
-        const spacer = '\n';
-        requests.push({
-          insertText: {
-            location: { index: insertIndex },
-            text: spacer
-          }
-        });
-        insertIndex += spacer.length;
-      }
-    }
-    
-    // ===== LÍNEA FINAL =====
-    const finalSeparator = '\n' + '─'.repeat(60) + '\n';
-    requests.push({
-      insertText: {
-        location: { index: insertIndex },
-        text: finalSeparator
-      }
-    });
-    
-    requests.push({
-      updateTextStyle: {
-        range: { startIndex: insertIndex, endIndex: insertIndex + finalSeparator.length },
-        textStyle: {
-          foregroundColor: { color: { rgbColor: { red: 0.0, green: 0.32, blue: 0.62 } } },
-          fontSize: { magnitude: 8, unit: 'PT' }
-        },
-        fields: 'foregroundColor,fontSize'
-      }
-    });
-    
-    // ===== EJECUTAR TODOS LOS CAMBIOS EN LOTES =====
-    console.log(`📝 Aplicando ${requests.length} cambios al documento final...`);
-    
-    for (let i = 0; i < requests.length; i += 50) {
-      const batch = requests.slice(i, i + 50);
-      await docs.documents.batchUpdate({
-        documentId: docsFileId,
-        requestBody: { requests: batch }
-      });
-      console.log(`✅ Lote ${Math.floor(i/50) + 1}/${Math.ceil(requests.length/50)} aplicado`);
-    }
-    
-    console.log(`✅ Sección de revisiones insertada correctamente`);
-    
-  } catch (error) {
-    console.error(`❌ Error insertando sección de revisiones:`, error.message);
-    throw error;
-  }
-}
 
 // ============================================================
 // FUNCIÓN: ENVIAR EMAIL AL EDITOR
