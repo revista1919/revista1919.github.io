@@ -35,36 +35,41 @@ export default function LoginSection({ onLogin }) {
 
   useEffect(() => {
     if (!auth) {
-      setMessage({ text: 'Error en configuración', type: 'error' });
+      setMessage({ text: 'Configuration error', type: 'error' });
       return;
     }
 
-    // ========== INICIAR TIMEOUT DE SEGURIDAD ==========
-    timeoutRef.current = setTimeout(() => {
-      console.error('Timeout de carga en LoginSection - posible corrupción');
-      setLoadingTimeout(true);
-    }, MAX_LOADING_TIME);
-    // =================================================
+    // Limpiar cualquier timeout anterior
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
+    // Iniciar timeout de seguridad SOLO si no hay usuario actual
+    if (!currentUser) {
+      timeoutRef.current = setTimeout(() => {
+        console.error('LoginSection loading timeout - possible corruption');
+        setLoadingTimeout(true);
+        timeoutRef.current = null;
+      }, MAX_LOADING_TIME);
+    }
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      // ========== LIMPIAR TIMEOUT AL RECIBIR RESPUESTA ==========
+      // Limpiar timeout al recibir respuesta
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
       }
-      // ===========================================================
 
       if (user) {
         try {
           const userDoc = await getDoc(doc(db, 'users', user.uid));
 
-          // ========== VERIFICAR QUE EL DOCUMENTO EXISTE ==========
           if (!userDoc.exists()) {
-            console.error('Usuario autenticado pero sin documento en Firestore');
+            console.error('Authenticated user but no Firestore document');
             setCorruptedSession(true);
             return;
           }
-          // =======================================================
 
           const userData = {
             uid: user.uid,
@@ -72,7 +77,7 @@ export default function LoginSection({ onLogin }) {
             firstName: userDoc.data()?.firstName || '',
             lastName: userDoc.data()?.lastName || '',
             displayName: userDoc.data()?.displayName || user.email,
-            roles: userDoc.data()?.roles || ['Autor'],
+            roles: userDoc.data()?.roles || ['Author'],
             description: userDoc.data()?.description || { es: '', en: '' },
             interests: userDoc.data()?.interests || { es: '', en: '' },
             imageUrl: userDoc.data()?.imageUrl || '',
@@ -80,33 +85,40 @@ export default function LoginSection({ onLogin }) {
             publicEmail: userDoc.data()?.publicEmail || null
           };
 
-          // ========== VERIFICAR INTEGRIDAD MÍNIMA ==========
           if (!userData.uid || !userData.email) {
-            console.error('Datos de usuario corruptos detectados en LoginSection');
+            console.error('Corrupted user data detected in LoginSection');
             setCorruptedSession(true);
             return;
           }
-          // =================================================
 
-          setMessage({ text: `¡Bienvenido, ${userData.displayName}!`, type: 'success' });
+          // Resetear estados de error al cargar correctamente
+          setCorruptedSession(false);
+          setLoadingTimeout(false);
+          
+          setMessage({ text: `Welcome, ${userData.displayName}!`, type: 'success' });
           setCurrentUser(userData);
           if (onLogin) onLogin(userData);
         } catch (error) {
-          console.error('Error al cargar datos del usuario:', error);
+          console.error('Error loading user data:', error);
           setCorruptedSession(true);
         }
       } else {
         setMessage({ text: '', type: '' });
         setCurrentUser(null);
+        // No marcar como corrupto si simplemente no hay usuario
+        setCorruptedSession(false);
+        setLoadingTimeout(false);
       }
     });
 
     return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
       unsubscribe();
     };
   }, [onLogin]);
-
   // ========== FUNCIÓN PARA FORZAR REINICIO DE SESIÓN ==========
   const forceResetSession = async () => {
     try {

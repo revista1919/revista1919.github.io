@@ -39,32 +39,37 @@ export default function LoginSection({ onLogin }) {
       return;
     }
 
-    // ========== START SAFETY TIMEOUT ==========
-    timeoutRef.current = setTimeout(() => {
-      console.error('LoginSection loading timeout - possible corruption');
-      setLoadingTimeout(true);
-    }, MAX_LOADING_TIME);
-    // ==========================================
+    // Limpiar cualquier timeout anterior
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
+    // Iniciar timeout de seguridad SOLO si no hay usuario actual
+    if (!currentUser) {
+      timeoutRef.current = setTimeout(() => {
+        console.error('LoginSection loading timeout - possible corruption');
+        setLoadingTimeout(true);
+        timeoutRef.current = null;
+      }, MAX_LOADING_TIME);
+    }
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      // ========== CLEAR TIMEOUT ON RESPONSE ==========
+      // Limpiar timeout al recibir respuesta
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
       }
-      // ================================================
 
       if (user) {
         try {
           const userDoc = await getDoc(doc(db, 'users', user.uid));
 
-          // ========== CHECK IF DOCUMENT EXISTS ==========
           if (!userDoc.exists()) {
             console.error('Authenticated user but no Firestore document');
             setCorruptedSession(true);
             return;
           }
-          // ==============================================
 
           const userData = {
             uid: user.uid,
@@ -80,14 +85,16 @@ export default function LoginSection({ onLogin }) {
             publicEmail: userDoc.data()?.publicEmail || null
           };
 
-          // ========== VERIFY MINIMUM DATA INTEGRITY ==========
           if (!userData.uid || !userData.email) {
             console.error('Corrupted user data detected in LoginSection');
             setCorruptedSession(true);
             return;
           }
-          // ====================================================
 
+          // Resetear estados de error al cargar correctamente
+          setCorruptedSession(false);
+          setLoadingTimeout(false);
+          
           setMessage({ text: `Welcome, ${userData.displayName}!`, type: 'success' });
           setCurrentUser(userData);
           if (onLogin) onLogin(userData);
@@ -98,11 +105,17 @@ export default function LoginSection({ onLogin }) {
       } else {
         setMessage({ text: '', type: '' });
         setCurrentUser(null);
+        // No marcar como corrupto si simplemente no hay usuario
+        setCorruptedSession(false);
+        setLoadingTimeout(false);
       }
     });
 
     return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
       unsubscribe();
     };
   }, [onLogin]);

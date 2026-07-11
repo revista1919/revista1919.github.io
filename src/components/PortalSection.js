@@ -1155,38 +1155,70 @@ const safetyTimeoutRef = useRef(null);
     loadDeadlines();
   }, [user, isSpanish]);
 
-  useEffect(() => {
-    // ========== TIMEOUT DE SEGURIDAD ==========
-    safetyTimeoutRef.current = setTimeout(() => {
-      console.error('Timeout de carga en PortalSection - posible corrupción de datos');
-      setLoadTimeout(true);
-      setDataCorrupted(true);
-      setLoadingUser(false);
-    }, 20000); // 20 segundos máximo
-    // ==========================================
-
-    if (!userData || !effectiveName) {
-      setLoadingUser(true);
+ useEffect(() => {
+    // Solo ejecutar la lógica si aún estamos en estado de carga
+    if (!loadingUser) {
+      // Si ya no estamos cargando, limpiar cualquier timeout pendiente
+      if (safetyTimeoutRef.current) {
+        clearTimeout(safetyTimeoutRef.current);
+        safetyTimeoutRef.current = null;
+      }
       return;
     }
 
-    // ========== VERIFICAR INTEGRIDAD DE DATOS ==========
-    if (!userData.uid || !userData.email) {
-      console.error('Datos de usuario corruptos en PortalSection');
-      setDataCorrupted(true);
+    // Verificar si tenemos datos válidos para dejar de cargar
+    if (userData && effectiveName) {
+      // Verificar integridad mínima de datos
+      if (!userData.uid || !userData.email) {
+        console.error('Datos de usuario corruptos en PortalSection');
+        setDataCorrupted(true);
+        setLoadingUser(false);
+        if (safetyTimeoutRef.current) {
+          clearTimeout(safetyTimeoutRef.current);
+          safetyTimeoutRef.current = null;
+        }
+        return;
+      }
+
+      // Datos válidos, salir de carga
       setLoadingUser(false);
-      if (safetyTimeoutRef.current) clearTimeout(safetyTimeoutRef.current);
+      if (safetyTimeoutRef.current) {
+        clearTimeout(safetyTimeoutRef.current);
+        safetyTimeoutRef.current = null;
+      }
       return;
     }
-    // =================================================
 
-    setLoadingUser(false);
-    if (safetyTimeoutRef.current) clearTimeout(safetyTimeoutRef.current);
+    // ========== RESETEAR ESTADO DE CORRUPCIÓN CUANDO CAMBIA EL USUARIO ==========
+useEffect(() => {
+  // Si los datos del usuario cambian, resetear los estados de error
+  if (userData && userData.uid && userData.email) {
+    setDataCorrupted(false);
+    setLoadTimeout(false);
+  }
+}, [userData?.uid]);
+// ===========================================================================
 
+    // Si llegamos aquí, estamos en carga y no tenemos datos todavía
+    // Iniciar timeout de seguridad SOLO si no hay uno activo
+    if (!safetyTimeoutRef.current) {
+      safetyTimeoutRef.current = setTimeout(() => {
+        console.error('Timeout de carga en PortalSection - posible corrupción de datos');
+        setLoadTimeout(true);
+        setDataCorrupted(true);
+        setLoadingUser(false);
+        safetyTimeoutRef.current = null;
+      }, 20000); // 20 segundos máximo
+    }
+
+    // Cleanup function
     return () => {
-      if (safetyTimeoutRef.current) clearTimeout(safetyTimeoutRef.current);
+      if (safetyTimeoutRef.current) {
+        clearTimeout(safetyTimeoutRef.current);
+        safetyTimeoutRef.current = null;
+      }
     };
-  }, [userData, effectiveName]);
+  }, [userData, effectiveName, loadingUser]);
   // Función para verificar perfil anónimo
   const checkForAnonymousProfile = useCallback(async () => {
     if (!isAuthor || userData?.claimedAnonymousUid) {
@@ -1256,6 +1288,7 @@ const safetyTimeoutRef = useRef(null);
     window.open(`/reviewer-workspace/${assignmentId}`, '_blank', 'noopener,noreferrer');
   };
   // ========== PANTALLA DE CARGA CON BOTÓN DE ESCAPE ==========
+    // ========== PANTALLA DE CARGA CON BOTÓN DE ESCAPE ==========
   if (loadingUser) {
     return (
       <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
@@ -1264,25 +1297,43 @@ const safetyTimeoutRef = useRef(null);
           <p className="mt-6 text-gray-500 font-medium tracking-wider">
             {isSpanish ? 'CARGANDO PORTAL EDITORIAL...' : 'LOADING EDITORIAL PORTAL...'}
           </p>
+          <p className="mt-2 text-xs text-gray-400">
+            {isSpanish 
+              ? 'Esto no debería tardar más de unos segundos' 
+              : 'This should not take more than a few seconds'}
+          </p>
 
-          {/* ========== BOTÓN DE ESCAPE ========== */}
-          <button
-            onClick={() => {
-              setLoadTimeout(true);
-              setDataCorrupted(true);
-              setLoadingUser(false);
-            }}
-            className="mt-6 text-xs text-red-600 hover:text-red-800 underline font-medium"
-          >
-            {isSpanish
-              ? '¿Problemas? Forzar salida de carga'
-              : 'Issues? Force exit loading'}
-          </button>
-          {/* ==================================== */}
+          {/* ========== BOTÓN DE ESCAPE (aparece después de 8 segundos) ========== */}
+          <div className="mt-8 pt-4 border-t border-gray-200">
+            <p className="text-xs text-gray-400 mb-3">
+              {isSpanish 
+                ? '¿La carga está tardando demasiado?' 
+                : 'Is loading taking too long?'}
+            </p>
+            <button
+              onClick={() => {
+                // Limpiar timeout si existe
+                if (safetyTimeoutRef.current) {
+                  clearTimeout(safetyTimeoutRef.current);
+                  safetyTimeoutRef.current = null;
+                }
+                setLoadTimeout(true);
+                setDataCorrupted(true);
+                setLoadingUser(false);
+              }}
+              className="text-xs text-red-600 hover:text-red-800 underline font-bold"
+            >
+              {isSpanish
+                ? 'Forzar salida de pantalla de carga'
+                : 'Force exit loading screen'}
+            </button>
+          </div>
+          {/* ==================================================================== */}
         </div>
       </div>
     );
   }
+  // =========================================================
   // =========================================================
    // ========== PANTALLA DE DATOS CORRUPTOS O TIMEOUT ==========
  
