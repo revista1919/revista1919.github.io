@@ -1,8 +1,12 @@
-// src/components/DeskReviewPanel.js (VERSIÓN CORREGIDA)
+// src/components/DeskReviewPanel.js (VERSIÓN FINAL CONSOLIDADA)
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { db } from '../firebase';
-import { collection, query, where, onSnapshot, doc, getDoc, getDocs } from 'firebase/firestore';
+import { db, functions } from '../firebase';
+import { httpsCallable } from 'firebase/functions';
+import { 
+  collection, query, where, onSnapshot, doc, getDoc, getDocs 
+} from 'firebase/firestore';
 import { useLanguage } from '../hooks/useLanguage';
 import { useEditorialReview } from '../hooks/useEditorialReview';
 import { useReviewerInvitation } from '../hooks/useReviewerInvitation';
@@ -26,6 +30,15 @@ const DeskReviewPanel = ({ user }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [invitations, setInvitations] = useState([]);
   const [reviewers, setReviewers] = useState([]);
+  
+  // ✅ NUEVO: Estado para las revisiones completadas (submitted)
+  const [submittedReviews, setSubmittedReviews] = useState([]);
+  
+  // ✅ NUEVO: Estado para controlar la consolidación
+  const [isConsolidating, setIsConsolidating] = useState(false);
+  
+  // ✅ NUEVO: Estado para saber si ya se consolidó
+  const [isConsolidated, setIsConsolidated] = useState(false);
 
   const { loading: reviewLoading, error: reviewError, submitDeskReviewDecision } = useEditorialReview(user);
   const { loading: inviteLoading, error: inviteError, sendInvitation } = useReviewerInvitation(user);
@@ -34,7 +47,7 @@ const DeskReviewPanel = ({ user }) => {
   const userRoles = user?.roles || [];
   const hasPermission = userRoles.includes('Editor de Sección') || userRoles.includes('Director General');
   
-  // Escuchar TODAS las tareas del editor
+  // Escuchar TODAS las tareas del editor (sin cambios)
   useEffect(() => {
     if (!user || !hasPermission) return;
 
@@ -66,7 +79,7 @@ const DeskReviewPanel = ({ user }) => {
     return () => unsubscribe();
   }, [user, hasPermission]);
 
-  // AGRUPAR TAREAS POR SUBMISSION ID
+  // AGRUPAR TAREAS POR SUBMISSION ID (sin cambios)
   const groupedSubmissions = useMemo(() => {
     const grouped = {};
     
@@ -85,11 +98,8 @@ const DeskReviewPanel = ({ user }) => {
       }
       
       grouped[subId].tasks.push(task);
-      
-      // Ordenar tareas por round
       grouped[subId].tasks.sort((a, b) => (a.round || 1) - (b.round || 1));
       
-      // Actualizar estados agregados
       if (task.status !== TASK_STATES.COMPLETED) {
         grouped[subId].hasPendingTasks = true;
         grouped[subId].currentRound = task.round || 1;
@@ -97,14 +107,13 @@ const DeskReviewPanel = ({ user }) => {
         grouped[subId].hasCompletedTasks = true;
       }
       
-      // La tarea más reciente es la última en la lista ordenada
       grouped[subId].latestTask = grouped[subId].tasks[grouped[subId].tasks.length - 1];
     });
     
     return Object.values(grouped);
   }, [assignedTasks]);
 
-  // Obtener la tarea seleccionada basada en submissionId y round
+  // Obtener la tarea seleccionada (sin cambios)
   const selectedTask = useMemo(() => {
     if (!selectedSubmissionId) return null;
     
@@ -115,33 +124,75 @@ const DeskReviewPanel = ({ user }) => {
     return task || submission.latestTask;
   }, [selectedSubmissionId, selectedRound, groupedSubmissions]);
 
-  // Cargar datos relacionados cuando cambia la tarea seleccionada
+  // ✅ MODIFICADO: Cargar revisiones completadas (submitted) en tiempo real
   useEffect(() => {
-    if (!selectedTask) return;
+    if (!selectedTask) {
+      setSubmittedReviews([]);
+      setIsConsolidated(false);
+      return;
+    }
 
-    const loadInvitations = async () => {
-      const q = query(
+    // Verificar si ya está consolidado (tiene finalReviewDocId)
+    const checkConsolidation = async () => {
+      if (selectedTask.submission?.finalReviewDocId) {
+        setIsConsolidated(true);
+      } else {
+        setIsConsolidated(false);
+      }
+    };
+    checkConsolidation();
+
+    // Escuchar revisiones completadas (submitted)
+    const q = query(
+      collection(db, 'reviewerAssignments'),
+      where('editorialTaskId', '==', selectedTask.id),
+      where('status', '==', 'submitted')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const reviews = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setSubmittedReviews(reviews);
+      console.log(`📊 Revisiones completadas: ${reviews.length}`);
+    }, (error) => {
+      console.error('Error escuchando revisiones:', error);
+    });
+
+    return () => unsubscribe();
+  }, [selectedTask]);
+
+  // Cargar TODAS las asignaciones (invitaciones + submitted) para el tab de revisores
+  useEffect(() => {
+    if (!selectedTask) {
+      setInvitations([]);
+      setReviewers([]);
+      return;
+    }
+
+    const loadAllAssignments = async () => {
+      // Cargar invitaciones (todos los estados menos submitted)
+      const invQ = query(
         collection(db, 'reviewerInvitations'),
         where('editorialTaskId', '==', selectedTask.id)
       );
-      const snapshot = await getDocs(q);
-      setInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    };
+      const invSnapshot = await getDocs(invQ);
+      setInvitations(invSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
-    const loadReviewers = async () => {
-      const q = query(
+      // Cargar todas las asignaciones (incluye submitted y otros estados)
+      const revQ = query(
         collection(db, 'reviewerAssignments'),
         where('editorialTaskId', '==', selectedTask.id)
       );
-      const snapshot = await getDocs(q);
-      setReviewers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const revSnapshot = await getDocs(revQ);
+      setReviewers(revSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     };
 
-    loadInvitations();
-    loadReviewers();
+    loadAllAssignments();
   }, [selectedTask]);
 
-  // Cargar revisores potenciales
+  // Cargar revisores potenciales (sin cambios)
   useEffect(() => {
     const loadReviewers = async () => {
       const usersRef = collection(db, 'users');
@@ -173,36 +224,39 @@ const DeskReviewPanel = ({ user }) => {
     }
   };
 
- const handleCompleteDeskReview = async (result) => {
-  // 'result' viene de DeskReviewTab.onComplete y contiene { decision, feedback, internalComments, reviewId }
-  
-  if (!selectedTask?.editorialReviewId) {
-    console.error('No se encontró editorialReviewId para esta tarea');
-    alert(isSpanish 
-      ? 'Error: No se pudo identificar la revisión editorial. Por favor, reinicia la tarea.' 
-      : 'Error: Could not identify the editorial review. Please restart the task.');
-    return;
-  }
+  // ✅ MODIFICADO: handleCompleteDeskReview actualizado
+  const handleCompleteDeskReview = async (result) => {
+    if (!selectedTask?.editorialReviewId) {
+      console.error('No se encontró editorialReviewId para esta tarea');
+      alert(isSpanish 
+        ? 'Error: No se pudo identificar la revisión editorial.' 
+        : 'Error: Could not identify the editorial review.');
+      return;
+    }
 
-  // Mapear los datos que recibimos de DeskReviewTab al formato que espera submitDeskReviewDecision
-  const mappedDecisionData = {
-    decision: result.decision,
-    feedbackToAuthor: result.feedback,
-    commentsToEditorial: result.internalComments
+    const mappedDecisionData = {
+      decision: result.decision,
+      feedbackToAuthor: result.feedback,
+      commentsToEditorial: result.internalComments
+    };
+
+    const submitResult = await submitDeskReviewDecision(
+      selectedTask.editorialReviewId, 
+      mappedDecisionData
+    );
+
+    if (submitResult.success) {
+      // Después de completar desk review, redirigir a gestión de revisores
+      setActiveTaskTab('reviewerManagement');
+      alert(isSpanish 
+        ? 'Revisión completada. Ahora puedes gestionar revisores.' 
+        : 'Review completed. You can now manage reviewers.');
+    } else {
+      alert(isSpanish 
+        ? 'Error al guardar: ' + submitResult.error 
+        : 'Error saving: ' + submitResult.error);
+    }
   };
-
-  const submitResult = await submitDeskReviewDecision(selectedTask.editorialReviewId, mappedDecisionData);
-
-  if (submitResult.success) {
-    alert(isSpanish 
-      ? 'Decisión guardada correctamente. El sistema está procesando...' 
-      : 'Decision saved successfully. The system is processing...');
-  } else {
-    alert(isSpanish 
-      ? 'Error al guardar la decisión: ' + submitResult.error 
-      : 'Error saving decision: ' + submitResult.error);
-  }
-};
 
   const handleSendInvitation = async () => {
     if (!selectedTask || !selectedReviewerId) {
@@ -226,12 +280,57 @@ const DeskReviewPanel = ({ user }) => {
       setSelectedReviewerId('');
       setSearchTerm('');
       
+      // Recargar invitaciones
       const q = query(
         collection(db, 'reviewerInvitations'),
         where('editorialTaskId', '==', selectedTask.id)
       );
       const snapshot = await getDocs(q);
       setInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }
+  };
+
+  // ✅ NUEVO: Manejar la consolidación de revisiones
+  const handleProceedToDecision = async () => {
+    const requiredReviews = selectedTask?.requiredReviews || 2;
+    
+    if (submittedReviews.length < requiredReviews) {
+      alert(isSpanish 
+        ? `Se necesitan al menos ${requiredReviews} revisiones completadas. Actualmente hay ${submittedReviews.length}.` 
+        : `At least ${requiredReviews} completed reviews are needed. Currently ${submittedReviews.length}.`);
+      return;
+    }
+
+    if (!confirm(isSpanish 
+      ? `¿Proceder a la decisión final con ${submittedReviews.length} revisiones? Se creará un documento consolidado y ya no podrás solicitar más revisiones para esta ronda.` 
+      : `Proceed to final decision with ${submittedReviews.length} reviews? A consolidated document will be created and you won't be able to request more reviews for this round.`
+    )) {
+      return;
+    }
+
+    setIsConsolidating(true);
+
+    try {
+      const proceedToFinalDecision = httpsCallable(functions, 'proceedToFinalDecision');
+      const result = await proceedToFinalDecision({ taskId: selectedTask.id });
+      const data = result.data;
+
+      if (data.success) {
+        setIsConsolidated(true);
+        setActiveTaskTab('finalDecision');
+        alert(isSpanish 
+          ? '¡Documento consolidado creado! Ahora puedes tomar la decisión final.' 
+          : 'Consolidated document created! You can now make the final decision.');
+      } else {
+        throw new Error(data.error || 'Error desconocido');
+      }
+    } catch (error) {
+      console.error('Error al consolidar:', error);
+      alert(isSpanish 
+        ? `Error al crear documento consolidado: ${error.message}` 
+        : `Error creating consolidated document: ${error.message}`);
+    } finally {
+      setIsConsolidating(false);
     }
   };
 
@@ -244,7 +343,12 @@ const DeskReviewPanel = ({ user }) => {
     }
   };
 
-  const invitedEmails = new Set(invitations.map(r => r.reviewerEmail));
+  // Filtrar revisores disponibles (sin cambios)
+  const invitedEmails = new Set([
+    ...invitations.map(r => r.reviewerEmail),
+    ...submittedReviews.map(r => r.reviewerEmail),
+    ...reviewers.map(r => r.reviewerEmail)
+  ]);
   const availableReviewers = potentialReviewers.filter(r => !invitedEmails.has(r.email));
   
   const filteredReviewers = availableReviewers.filter(reviewer => {
@@ -279,7 +383,7 @@ const DeskReviewPanel = ({ user }) => {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Lista de manuscritos agrupados */}
+        {/* Lista de manuscritos agrupados (sin cambios) */}
         <div className="lg:col-span-1 space-y-4">
           <h3 className="font-['Playfair_Display'] text-lg font-semibold text-[#0A1929] border-b-2 border-[#C0A86A] pb-2 mb-4">
             {isSpanish ? 'Mis Manuscritos' : 'My Manuscripts'}
@@ -293,7 +397,6 @@ const DeskReviewPanel = ({ user }) => {
             </div>
           ) : (
             <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
-              {/* Manuscritos Pendientes */}
               {pendingSubmissions.length > 0 && (
                 <>
                   <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-2 mb-1">
@@ -311,6 +414,14 @@ const DeskReviewPanel = ({ user }) => {
                         onClick={() => {
                           setSelectedSubmissionId(group.submissionId);
                           setSelectedRound(group.currentRound);
+                          // ✅ Al seleccionar, ir al tab de gestión de revisores si está en ese estado
+                          if (latestTask?.status === TASK_STATES.REVIEWER_SELECTION || 
+                              latestTask?.status === TASK_STATES.AWAITING_REVIEWER_RESPONSES || 
+                              latestTask?.status === TASK_STATES.REVIEWS_IN_PROGRESS) {
+                            setActiveTaskTab('reviewerManagement');
+                          } else {
+                            setActiveTaskTab('deskReview');
+                          }
                         }}
                         className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
                           isSelected
@@ -331,7 +442,6 @@ const DeskReviewPanel = ({ user }) => {
                           </span>
                         </div>
 
-                        {/* Indicador de rondas */}
                         <div className="flex items-center gap-1 mt-2 mb-2">
                           {group.tasks.map((task, index) => (
                             <div
@@ -344,9 +454,7 @@ const DeskReviewPanel = ({ user }) => {
                                   : 'bg-gray-300'
                               }`}
                               title={`Ronda ${index + 1}: ${
-                                task.status === TASK_STATES.COMPLETED 
-                                  ? 'Completada' 
-                                  : 'En curso'
+                                task.status === TASK_STATES.COMPLETED ? 'Completada' : 'En curso'
                               }`}
                             />
                           ))}
@@ -362,14 +470,15 @@ const DeskReviewPanel = ({ user }) => {
                               latestTask?.status === TASK_STATES.DESK_REVIEW_IN_PROGRESS ? 'bg-blue-100 text-blue-700' :
                               latestTask?.status === TASK_STATES.REVIEWER_SELECTION ? 'bg-purple-100 text-purple-700' :
                               latestTask?.status === TASK_STATES.AWAITING_DECISION ? 'bg-green-100 text-green-700' :
-                              group.submission?.status === 'revisions-requested' ? 'bg-orange-100 text-orange-700 animate-pulse' :
+                              group.submission?.finalReviewDocId ? 'bg-teal-100 text-teal-700' :
                               'bg-gray-100 text-gray-700'
                             }`}>
                               {latestTask?.status === TASK_STATES.PENDING && (isSpanish ? 'Pendiente' : 'Pending')}
                               {latestTask?.status === TASK_STATES.DESK_REVIEW_IN_PROGRESS && (isSpanish ? 'En revisión' : 'In review')}
-                              {latestTask?.status === TASK_STATES.REVIEWER_SELECTION && (isSpanish ? 'Seleccionando revisores' : 'Selecting reviewers')}
-                              {latestTask?.status === TASK_STATES.AWAITING_DECISION && (isSpanish ? 'Esperando decisión' : 'Awaiting decision')}
-                              {group.submission?.status === 'revisions-requested' && (isSpanish ? '⏳ Esperando autor' : '⏳ Awaiting author')}
+                              {latestTask?.status === TASK_STATES.REVIEWER_SELECTION && (isSpanish ? 'Revisores' : 'Reviewers')}
+                              {latestTask?.status === TASK_STATES.AWAITING_DECISION && (isSpanish ? 'Decisión pendiente' : 'Decision pending')}
+                              {group.submission?.finalReviewDocId && !latestTask?.status === TASK_STATES.AWAITING_DECISION && 
+                                (isSpanish ? 'Revisión consolidada' : 'Review consolidated')}
                             </span>
                           </div>
                           
@@ -391,7 +500,6 @@ const DeskReviewPanel = ({ user }) => {
                 </>
               )}
 
-              {/* Manuscritos Completados */}
               {completedSubmissions.length > 0 && (
                 <>
                   <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-4 mb-1">
@@ -408,6 +516,7 @@ const DeskReviewPanel = ({ user }) => {
                         onClick={() => {
                           setSelectedSubmissionId(group.submissionId);
                           setSelectedRound(group.tasks.length);
+                          setActiveTaskTab('metadataRefinement');
                         }}
                         className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
                           isSelected
@@ -428,24 +537,6 @@ const DeskReviewPanel = ({ user }) => {
                               {isSpanish ? 'ACEPTADO' : 'ACCEPTED'}
                             </span>
                           )}
-                          {group.submission?.status === 'revisions-requested' && (
-                            <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full animate-pulse">
-                              {isSpanish ? '⏳ ESPERANDO AUTOR' : '⏳ AWAITING AUTHOR'}
-                            </span>
-                          )}
-                        </div>
-                        
-                        <div className="mt-2 flex items-center gap-1">
-                          <span className="text-xs text-gray-500">
-                            {isSpanish 
-                              ? `${group.tasks.length} ronda${group.tasks.length !== 1 ? 's' : ''}`
-                              : `${group.tasks.length} round${group.tasks.length !== 1 ? 's' : ''}`
-                            }
-                          </span>
-                        </div>
-                        
-                        <div className="mt-2 text-xs text-gray-500">
-                          {isSpanish ? 'Click para refinar metadatos' : 'Click to refine metadata'}
                         </div>
                       </motion.div>
                     );
@@ -456,11 +547,11 @@ const DeskReviewPanel = ({ user }) => {
           )}
         </div>
 
-        {/* Panel de trabajo - el resto del código se mantiene igual */}
+        {/* ✅ Panel de trabajo MODIFICADO */}
         <div className="lg:col-span-2">
           {selectedTask ? (
             <div>
-              {/* Selector de rondas */}
+              {/* Selector de rondas (sin cambios) */}
               {groupedSubmissions.find(g => g.submissionId === selectedSubmissionId)?.tasks.length > 1 && (
                 <div className="mb-4 flex items-center gap-2 border-b border-gray-200 pb-2">
                   <span className="text-sm text-gray-600">
@@ -481,9 +572,7 @@ const DeskReviewPanel = ({ user }) => {
                               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                           }`}
                           title={`Ronda ${index + 1} - ${
-                            task.status === TASK_STATES.COMPLETED 
-                              ? 'Completada' 
-                              : 'En curso'
+                            task.status === TASK_STATES.COMPLETED ? 'Completada' : 'En curso'
                           }`}
                         >
                           {index + 1}
@@ -493,8 +582,9 @@ const DeskReviewPanel = ({ user }) => {
                 </div>
               )}
 
-              {/* Tabs */}
+              {/* ✅ MODIFICADO: Tabs dinámicos */}
               <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
+                {/* Tab de Revisión Editorial - siempre visible */}
                 <button
                   onClick={() => setActiveTaskTab('deskReview')}
                   className={`px-4 py-2 font-medium text-sm transition-colors whitespace-nowrap ${
@@ -506,9 +596,11 @@ const DeskReviewPanel = ({ user }) => {
                   {isSpanish ? 'Revisión Editorial' : 'Desk Review'}
                 </button>
                 
+                {/* ✅ MODIFICADO: Tab de Gestión de Revisores - visible cuando corresponde */}
                 {(selectedTask.status === TASK_STATES.REVIEWER_SELECTION || 
                   selectedTask.status === TASK_STATES.AWAITING_REVIEWER_RESPONSES || 
-                  selectedTask.status === TASK_STATES.REVIEWS_IN_PROGRESS) && (
+                  selectedTask.status === TASK_STATES.REVIEWS_IN_PROGRESS ||
+                  selectedTask.status === TASK_STATES.AWAITING_DECISION) && (
                   <button
                     onClick={() => setActiveTaskTab('reviewerManagement')}
                     className={`px-4 py-2 font-medium text-sm transition-colors whitespace-nowrap ${
@@ -517,11 +609,19 @@ const DeskReviewPanel = ({ user }) => {
                         : 'text-[#5A6B7A] hover:text-[#0A1929]'
                     }`}
                   >
-                    {isSpanish ? 'Gestión de Revisores' : 'Reviewer Management'}
+                    <span className="flex items-center gap-2">
+                      {isSpanish ? 'Gestión de Revisores' : 'Reviewer Management'}
+                      {submittedReviews.length > 0 && (
+                        <span className="bg-[#C0A86A] text-white text-xs px-2 py-0.5 rounded-full">
+                          {submittedReviews.length}
+                        </span>
+                      )}
+                    </span>
                   </button>
                 )}
                 
-                {selectedTask.status === TASK_STATES.AWAITING_DECISION && (
+                {/* ✅ MODIFICADO: Tab de Decisión Final - solo si ya se consolidó */}
+                {(isConsolidated || selectedTask.status === TASK_STATES.AWAITING_DECISION) && (
                   <button
                     onClick={() => setActiveTaskTab('finalDecision')}
                     className={`px-4 py-2 font-medium text-sm transition-colors whitespace-nowrap ${
@@ -534,7 +634,7 @@ const DeskReviewPanel = ({ user }) => {
                   </button>
                 )}
 
-                {/* Refinamiento de Metadatos */}
+                {/* Tab de Metadatos - para completados */}
                 {selectedTask.submission?.status === 'accepted' && (
                   <button
                     onClick={() => setActiveTaskTab('metadataRefinement')}
@@ -549,7 +649,7 @@ const DeskReviewPanel = ({ user }) => {
                 )}
               </div>
 
-              {/* Renderizar tabs - el resto igual */}
+              {/* Contenido de los tabs */}
               {activeTaskTab === 'deskReview' && (
                 <DeskReviewTab
                   task={selectedTask}
@@ -559,6 +659,7 @@ const DeskReviewPanel = ({ user }) => {
                 />
               )}
 
+              {/* ✅ MODIFICADO: Tab de Gestión de Revisores con nuevas props */}
               {activeTaskTab === 'reviewerManagement' && (
                 <ReviewerManagementTab
                   task={selectedTask}
@@ -569,14 +670,16 @@ const DeskReviewPanel = ({ user }) => {
                   searchTerm={searchTerm}
                   setSearchTerm={setSearchTerm}
                   onSendInvitation={handleSendInvitation}
-                  loading={inviteLoading}
+                  onProceedToDecision={handleProceedToDecision}
+                  loading={inviteLoading || isConsolidating}
+                  submittedReviews={submittedReviews}
                 />
               )}
 
               {activeTaskTab === 'finalDecision' && (
                 <FinalDecisionTab
                   task={selectedTask}
-                  reviewers={reviewers}
+                  reviewers={[...submittedReviews, ...reviewers.filter(r => r.status === 'submitted')]}
                   onSubmitDecision={handleFinalDecision}
                   loading={reviewLoading}
                 />

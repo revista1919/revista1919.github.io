@@ -7678,9 +7678,8 @@ const REVIEWS_STYLES = {
   }
 };
 
-// ============================================================
-// FUNCIÓN PRINCIPAL
-// ============================================================
+// Esta función actualiza el número de revisores.
+
 exports.onReviewerAssignmentSubmitted = onDocumentUpdated(
   {
     document: 'reviewerAssignments/{assignmentId}',
@@ -7691,26 +7690,24 @@ exports.onReviewerAssignmentSubmitted = onDocumentUpdated(
     const beforeData = event.data.before.data();
     const afterData = event.data.after.data();
     const assignmentId = event.params.assignmentId;
-
+    
     // Solo proceder si el estado cambió a 'submitted'
     if (beforeData.status === afterData.status || afterData.status !== 'submitted') {
       return;
     }
-
+    
     console.log(`📝 [REVIEW COMPLETED] Nueva revisión: ${assignmentId} - ${afterData.reviewerEmail}`);
-
+    
     const db = admin.firestore();
     const warnings = [];
-    const errors = [];
-
+    
     try {
       const taskId = afterData.editorialTaskId;
-      
       if (!taskId) {
         console.warn('⚠️ Sin editorialTaskId. Abortando.');
         return { success: false, error: 'no_task_id' };
       }
-
+      
       // ===== PASO 1: OBTENER DATOS DE LA TAREA Y SUBMISSION =====
       const taskRef = db.collection('editorialTasks').doc(taskId);
       const taskSnap = await taskRef.get();
@@ -7718,39 +7715,28 @@ exports.onReviewerAssignmentSubmitted = onDocumentUpdated(
         console.error(`❌ Tarea no encontrada: ${taskId}`);
         return { success: false, error: 'task_not_found' };
       }
+      
       const taskData = taskSnap.data();
-
       const submissionRef = db.collection('submissions').doc(taskData.submissionId);
       const submissionSnap = await submissionRef.get();
+      
       if (!submissionSnap.exists) {
         console.error(`❌ Submission no encontrado: ${taskData.submissionId}`);
         return { success: false, error: 'submission_not_found' };
       }
-      const submissionData = submissionSnap.data();
-
-      // ===== PASO 2: CONTAR TODAS LAS REVISIONES COMPLETADAS =====
-      let assignmentsSnapshot;
-      try {
-        assignmentsSnapshot = await db.collection('reviewerAssignments')
-          .where('editorialTaskId', '==', taskId)
-          .where('status', '==', 'submitted')
-          .get();
-
-        console.log(`📊 Total revisiones encontradas: ${assignmentsSnapshot.size}`);
-        console.log(`📊 Revisores: ${assignmentsSnapshot.docs.map(d => d.data().reviewerEmail).join(', ')}`);
-        
-      } catch (countError) {
-        console.error(`❌ Error contando revisiones:`, countError.message);
-        await logSystemError('count_reviews_failed', countError, assignmentId);
-        return { success: false, error: 'count_failed' };
-      }
-
+      
+      // ===== PASO 2: CONTAR REVISIONES COMPLETADAS =====
+      const assignmentsSnapshot = await db.collection('reviewerAssignments')
+        .where('editorialTaskId', '==', taskId)
+        .where('status', '==', 'submitted')
+        .get();
+      
       const submittedCount = assignmentsSnapshot.size;
       const requiredReviews = taskData.requiredReviews || 2;
       
       console.log(`📊 Revisiones: ${submittedCount}/${requiredReviews}`);
-
-      // ===== PASO 3: AUDIT LOG (NO BLOQUEANTE) =====
+      
+      // ===== PASO 3: AUDIT LOG =====
       try {
         await db.collection('submissions').doc(taskData.submissionId)
           .collection('auditLogs').add({
@@ -7769,351 +7755,42 @@ exports.onReviewerAssignmentSubmitted = onDocumentUpdated(
         console.warn(`⚠️ Error en audit log:`, auditError.message);
         warnings.push('audit_log_failed');
       }
-
-      // ===== PASO 4: SI NO SE ALCANZA EL MÍNIMO, SALIR =====
-      if (submittedCount < requiredReviews) {
-        console.log(`⏳ Solo ${submittedCount}/${requiredReviews} revisiones. Esperando más revisores.`);
-        return { 
-          success: true, 
-          status: 'waiting_for_more_reviews',
-          submittedCount,
-          requiredReviews,
-          warnings 
-        };
-      }
-
-      console.log(`🎯 MÍNIMO ALCANZADO (${submittedCount}/${requiredReviews}). Procesando TODAS las revisiones...`);
-
-      // ===== PASO 5: INICIALIZAR GOOGLE DRIVE Y DOCS =====
-      let drive;
-      let docsClient;
       
+      // ===== PASO 4: NOTIFICAR AL EDITOR (SIEMPRE) =====
       try {
-        const driveClients = await getDriveClient(`extract-comments-${taskId}`);
-        drive = driveClients.drive;
-        docsClient = driveClients.docs;
-        
-        if (!drive?.files?.copy) {
-          throw new Error('Cliente de Google Drive mal inicializado');
-        }
-        if (!docsClient?.documents) {
-          throw new Error('Cliente de Google Docs mal inicializado');
-        }
-        
-        console.log(`✅ Drive y Docs inicializados correctamente`);
-      } catch (driveError) {
-        console.error(`❌ Error inicializando Drive:`, driveError.message);
-        await logSystemError('drive_init_failed', driveError, assignmentId);
-        
-        try {
-          await updateTaskStatusSafely(db, taskRef, submissionRef, submittedCount, null, null);
-        } catch (updateError) {
-          console.warn(`⚠️ Error actualizando estados:`, updateError.message);
-        }
-        
-        return {
-          success: false,
-          error: 'drive_init_failed',
-          message: driveError.message,
-          warnings
-        };
+        await notifyEditorNewReview(taskData, afterData, submittedCount, requiredReviews);
+        console.log(`✅ Editor notificado`);
+      } catch (notifyError) {
+        console.warn(`⚠️ Error notificando al editor:`, notifyError.message);
+        warnings.push('notify_editor_failed');
       }
-
-      // ===== PASO 6: EXTRAER SOLO COMENTARIOS DEL DOCUMENTO =====
-      console.log(`📄 Iniciando extracción de comentarios para ${assignmentsSnapshot.size} revisores...`);
       
-      const allDocumentComments = [];
-      let commentsExtracted = 0;
-      let commentsFailed = 0;
+      // ===== PASO 5: ACTUALIZAR CONTADOR EN LA TAREA =====
+      try {
+        await taskRef.update({
+          completedReviews: submittedCount,
+          lastReviewSubmittedAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+      } catch (updateError) {
+        console.warn(`⚠️ Error actualizando tarea:`, updateError.message);
+        warnings.push('task_update_failed');
+      }
       
-      for (const doc of assignmentsSnapshot.docs) {
-        const reviewData = doc.data();
-        const reviewerFileId = reviewData.reviewerFileId;
-        const reviewerEmail = reviewData.reviewerEmail;
-        const reviewerNumber = allDocumentComments.length + 1;
-        
-        console.log(`\n📄 [REVISOR ${reviewerNumber}/${assignmentsSnapshot.size}] Procesando: ${reviewerEmail}`);
-        console.log(`   FileID: ${reviewerFileId || 'NO DISPONIBLE'}`);
-        
-        if (!reviewerFileId) {
-          console.warn(`⚠️ Revisor ${reviewerEmail} sin reviewerFileId. Agregando sin comentarios.`);
-          warnings.push(`no_file_${reviewerEmail}`);
-          
-          allDocumentComments.push({
-            reviewerNumber: reviewerNumber,
-            reviewerEmail: reviewerEmail,
-            documentComments: [],
-            submittedAt: reviewData.submittedAt,
-            hasDocumentComments: false
-          });
-          continue;
-        }
-
-        try {
-          console.log(`   🔍 Extrayendo comentarios del documento...`);
-          const comments = await extractCommentsFromDocument(drive, reviewerFileId);
-          
-          console.log(`   ✅ ${comments.length} comentarios extraídos`);
-          
-          allDocumentComments.push({
-            reviewerNumber: reviewerNumber,
-            reviewerEmail: reviewerEmail,
-            documentComments: comments,
-            submittedAt: reviewData.submittedAt,
-            hasDocumentComments: comments.length > 0
-          });
-
-          commentsExtracted++;
-          console.log(`   ✅ Revisor ${reviewerNumber} completado exitosamente`);
-
-        } catch (commentError) {
-          console.error(`   ❌ Error extrayendo comentarios:`, commentError.message);
-          warnings.push(`extract_failed_${reviewerEmail}`);
-          commentsFailed++;
-          
-          allDocumentComments.push({
-            reviewerNumber: reviewerNumber,
-            reviewerEmail: reviewerEmail,
-            documentComments: [],
-            submittedAt: reviewData.submittedAt,
-            hasDocumentComments: false,
-            extractionError: commentError.message
-          });
-        }
-      }
-
-      console.log(`\n📊 RESUMEN DE EXTRACCIÓN:`);
-      console.log(`   Total revisores: ${assignmentsSnapshot.size}`);
-      console.log(`   Extracciones exitosas: ${commentsExtracted}`);
-      console.log(`   Extracciones fallidas: ${commentsFailed}`);
-
-      // ===== PASO 7: CREAR DOCUMENTO FINAL SOLO CON COMENTARIOS =====
-      let finalDocId = null;
-      let finalDocUrl = null;
-      let finalDocCreated = false;
-
-      try {
-        let sourceFileId = null;
-        let sourceMimeType = null;
-        
-        if (submissionData.formattedDocsFile?.id) {
-          sourceFileId = submissionData.formattedDocsFile.id;
-          sourceMimeType = 'application/vnd.google-apps.document';
-          console.log(`✅ Usando documento formateado (Google Docs): ${sourceFileId}`);
-        } else if (submissionData.originalFileId) {
-          sourceFileId = submissionData.originalFileId;
-          console.log(`⚠️ Submission antigua. Usando documento original: ${sourceFileId}`);
-          
-          try {
-            const fileMeta = await drive.files.get({
-              fileId: sourceFileId,
-              fields: 'mimeType'
-            });
-            sourceMimeType = fileMeta.data.mimeType;
-            console.log(`   MIME type detectado: ${sourceMimeType}`);
-          } catch (metaErr) {
-            console.warn(`⚠️ No se pudo obtener MIME type. Asumiendo Word.`);
-            sourceMimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-            warnings.push('mime_type_assumed');
-          }
-        }
-
-        if (!sourceFileId) {
-          throw new Error('No se encontró documento fuente');
-        }
-
-        console.log(`📝 Creando documento final con ${allDocumentComments.length} revisiones...`);
-
-        const copyConfig = {
-          fileId: sourceFileId,
-          requestBody: {
-            name: `FINAL_WITH_COMMENTS_${submissionData.submissionId}`,
-            parents: submissionData.editorialFolderId ? [submissionData.editorialFolderId] : undefined,
-            copyRequiresWriterPermission: true,
-            writersCanShare: false
-          },
-          fields: 'id, webViewLink, mimeType'
-        };
-        
-        if (sourceMimeType === 'application/vnd.google-apps.document') {
-          copyConfig.requestBody.mimeType = 'application/vnd.google-apps.document';
-        }
-        
-        const finalCopy = await drive.files.copy(copyConfig);
-        
-        finalDocId = finalCopy.data.id;
-        finalDocUrl = finalCopy.data.webViewLink;
-        finalDocCreated = true;
-        
-        console.log(`✅ Documento final creado: ${finalDocId}`);
-        
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-        // ===== PASO 8: OTORGAR PERMISOS =====
-        try {
-          console.log(`🔑 Configurando permisos del documento final...`);
-          await configureEditorPermissions(drive, finalDocId, taskData, assignmentsSnapshot);
-          console.log(`✅ Permisos configurados`);
-        } catch (permError) {
-          console.warn(`⚠️ Error configurando permisos:`, permError.message);
-          warnings.push('permissions_error');
-        }
-
-        // ===== PASO 9: INSERTAR SOLO COMENTARIOS DEL DOCUMENTO =====
-        console.log(`📝 Insertando comentarios de ${allDocumentComments.length} revisores...`);
-        
-        try {
-          await insertDocumentCommentsSection(
-            drive, 
-            docsClient,
-            finalDocId, 
-            allDocumentComments, 
-            submissionData
-          );
-          console.log(`✅ Comentarios insertados correctamente`);
-        } catch (insertError) {
-          console.error(`❌ Error insertando comentarios:`, insertError.message);
-          warnings.push('insert_comments_failed');
-          errors.push(insertError.message);
-        }
-
-      } catch (docError) {
-        console.error(`❌ Error creando documento final:`, docError.message);
-        await logSystemError('final_doc_failed', docError, assignmentId);
-        warnings.push('final_doc_failed');
-        errors.push(docError.message);
-      }
-
-      // ===== PASO 10: PROGRAMAR ELIMINACIÓN DE DOCUMENTOS TEMPORALES =====
-      if (finalDocCreated) {
-        try {
-          console.log(`⏰ Programando eliminación de documentos temporales...`);
-          
-          const deleteAt = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
-          
-          for (const doc of assignmentsSnapshot.docs) {
-            const reviewData = doc.data();
-            const reviewerFileId = reviewData.reviewerFileId;
-            
-            if (reviewerFileId) {
-              await db.collection('scheduledDeletions').add({
-                fileId: reviewerFileId,
-                fileName: `REVIEW_COPY_${submissionData.submissionId}`,
-                submissionId: submissionData.submissionId,
-                reviewerEmail: reviewData.reviewerEmail,
-                scheduledFor: admin.firestore.Timestamp.fromDate(deleteAt),
-                createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                status: 'pending',
-                reason: 'Documentos de revisión individual ya consolidados en documento final',
-                finalDocId: finalDocId
-              });
-            }
-          }
-          
-          console.log(`✅ Eliminaciones programadas para ${assignmentsSnapshot.size} documentos`);
-        } catch (deleteSchedError) {
-          console.warn(`⚠️ Error programando eliminaciones:`, deleteSchedError.message);
-          warnings.push('schedule_deletion_failed');
-        }
-      }
-
-      // ===== PASO 11: GUARDAR REFERENCIA AL DOCUMENTO FINAL =====
-      if (finalDocId) {
-        try {
-          await submissionRef.update({
-            finalReviewDocId: finalDocId,
-            finalReviewDocUrl: finalDocUrl,
-            reviewsConsolidatedAt: admin.firestore.FieldValue.serverTimestamp(),
-            totalReviewsReceived: submittedCount,
-            requiredReviews: requiredReviews,
-            reviewersProcessed: allDocumentComments.length,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
-          });
-
-          console.log(`✅ Referencia al documento final guardada`);
-        } catch (updateError) {
-          console.error(`❌ Error guardando referencia:`, updateError.message);
-          warnings.push('save_reference_failed');
-        }
-      }
-
-      // ===== PASO 12: ACTUALIZAR ESTADOS =====
-      try {
-        await updateTaskStatusSafely(db, taskRef, submissionRef, submittedCount, finalDocId, finalDocUrl);
-        console.log(`✅ Estados actualizados`);
-      } catch (statusError) {
-        console.error(`❌ Error actualizando estados:`, statusError.message);
-        warnings.push('status_update_failed');
-      }
-
-      // ===== PASO 13: ENVIAR EMAIL AL EDITOR =====
-      try {
-        await sendEditorDecisionEmail(
-          taskData, 
-          submissionData, 
-          assignmentsSnapshot, 
-          submittedCount, 
-          finalDocUrl
-        );
-        console.log(`✅ Email enviado al editor`);
-      } catch (emailError) {
-        console.warn(`⚠️ Error enviando email:`, emailError.message);
-        warnings.push('email_failed');
-      }
-
-      // ===== AUDIT LOG FINAL =====
-      try {
-        await db.collection('submissions')
-          .doc(taskData.submissionId)
-          .collection('auditLogs')
-          .add({
-            action: 'comments_consolidated',
-            by: 'system',
-            timestamp: admin.firestore.FieldValue.serverTimestamp(),
-            details: {
-              assignmentId,
-              taskId,
-              submittedCount,
-              requiredReviews,
-              finalDocId,
-              finalDocUrl,
-              finalDocCreated,
-              reviewersProcessed: allDocumentComments.length,
-              reviewerEmails: allDocumentComments.map(r => r.reviewerEmail),
-              commentsExtracted,
-              commentsFailed,
-              warnings,
-              errors
-            }
-          });
-      } catch (auditError) {
-        console.warn(`⚠️ Error en audit log final:`, auditError.message);
-      }
-
-      console.log(`\n✅ ====== PROCESO COMPLETADO ======`);
-      console.log(`   FinalDoc: ${finalDocUrl || 'No disponible'}`);
-      console.log(`   Revisores procesados: ${allDocumentComments.length}/${assignmentsSnapshot.size}`);
-      console.log(`   Warnings: ${warnings.length > 0 ? warnings.join(', ') : 'Ninguno'}`);
-      console.log(`   Errores: ${errors.length > 0 ? errors.join(', ') : 'Ninguno'}`);
-
-      return { 
-        success: true, 
-        finalDocCreated,
-        finalDocId,
-        finalDocUrl,
+      // ===== NO HACER NADA MÁS - EL EDITOR DECIDE CUÁNDO PROCEDER =====
+      console.log(`✅ Revisión ${submittedCount}/${requiredReviews} registrada. Esperando decisión del editor.`);
+      
+      return {
+        success: true,
+        status: 'review_recorded',
         submittedCount,
         requiredReviews,
-        reviewersProcessed: allDocumentComments.length,
-        totalReviewers: assignmentsSnapshot.size,
-        commentsExtracted,
-        commentsFailed,
         warnings,
-        errors
+        message: 'Revisión registrada. El editor decidirá cuándo proceder a la decisión final.'
       };
-
+      
     } catch (error) {
-      console.error(`❌ Error fatal en onReviewerAssignmentSubmitted:`, error.message);
-      console.error(`❌ Stack:`, error.stack);
+      console.error(`❌ Error en onReviewerAssignmentSubmitted:`, error.message);
       
       try {
         await db.collection('systemErrors').add({
@@ -8131,18 +7808,380 @@ exports.onReviewerAssignmentSubmitted = onDocumentUpdated(
         console.error(`❌ Error al registrar error:`, logError.message);
       }
       
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: error.message,
-        warnings 
+        warnings
       };
     }
   }
 );
 
-// ============================================================
-// FUNCIÓN: INSERTAR SOLO COMENTARIOS DEL DOCUMENTO
-// ============================================================
+
+// ===== FUNCIÓN AUXILIAR: Notificar al editor =====
+async function notifyEditorNewReview(taskData, reviewData, submittedCount, requiredReviews) {
+  const db = admin.firestore();
+  
+  // Obtener emails de los editores asignados
+  const editorsSnapshot = await db.collection('editorialTasks')
+    .doc(taskData.id)
+    .collection('assignedEditors')
+    .get();
+  
+  const editorEmails = editorsSnapshot.docs.map(doc => doc.data().email);
+  
+  if (editorEmails.length === 0) return;
+  
+  const mailOptions = {
+    to: editorEmails.join(','),
+    subject: `Nueva revisión recibida (${submittedCount}/${requiredReviews}) - ${taskData.submissionTitle || taskData.submissionId}`,
+    html: `
+      <h2>Nueva revisión completada</h2>
+      <p><strong>Revisor:</strong> ${reviewData.reviewerName || reviewData.reviewerEmail}</p>
+      <p><strong>Progreso:</strong> ${submittedCount}/${requiredReviews} revisiones completadas</p>
+      <p><strong>Artículo:</strong> ${taskData.submissionTitle || taskData.submissionId}</p>
+      <p>Puedes revisar los detalles en el panel editorial. Cuando todas las revisiones estén completas, podrás proceder a la decisión final.</p>
+    `
+  };
+  
+  await sendEmail(mailOptions);
+}
+
+
+// src/functions/proceedToFinalDecision.js
+
+/**
+ * Función llamada explícitamente por el editor para proceder a la decisión final.
+ * Crea el documento consolidado y actualiza estados.
+ */
+exports.proceedToFinalDecision = onCall(
+  {
+    secrets: ['OAUTH2_CLIENT_ID', 'OAUTH2_CLIENT_SECRET', 'OAUTH2_REFRESH_TOKEN'],
+    memory: '512MiB'
+  },
+  async (request) => {
+    // Verificar autenticación
+    if (!request.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Debes iniciar sesión');
+    }
+    
+    const { taskId } = request.data;
+    if (!taskId) {
+      throw new functions.https.HttpsError('invalid-argument', 'Se requiere taskId');
+    }
+    
+    const db = admin.firestore();
+    const warnings = [];
+    const errors = [];
+    
+    try {
+      // ===== 1. OBTENER TAREA Y SUBMISSION =====
+      const taskRef = db.collection('editorialTasks').doc(taskId);
+      const taskSnap = await taskRef.get();
+      
+      if (!taskSnap.exists) {
+        throw new functions.https.HttpsError('not-found', 'Tarea no encontrada');
+      }
+      
+      const taskData = taskSnap.data();
+      const submissionRef = db.collection('submissions').doc(taskData.submissionId);
+      const submissionSnap = await submissionRef.get();
+      
+      if (!submissionSnap.exists) {
+        throw new functions.https.HttpsError('not-found', 'Submission no encontrado');
+      }
+      
+      const submissionData = submissionSnap.data();
+      
+      // ===== 2. VERIFICAR REVISIONES COMPLETADAS =====
+      const assignmentsSnapshot = await db.collection('reviewerAssignments')
+        .where('editorialTaskId', '==', taskId)
+        .where('status', '==', 'submitted')
+        .get();
+      
+      const submittedCount = assignmentsSnapshot.size;
+      const requiredReviews = taskData.requiredReviews || 2;
+      
+      if (submittedCount < requiredReviews) {
+        throw new functions.https.HttpsError(
+          'failed-precondition',
+          `Se necesitan al menos ${requiredReviews} revisiones. Actualmente hay ${submittedCount}.`
+        );
+      }
+      
+      console.log(`🎯 Procediendo a decisión final con ${submittedCount} revisiones...`);
+      
+      // ===== 3. INICIALIZAR GOOGLE DRIVE Y DOCS =====
+      let drive;
+      let docsClient;
+      
+      const driveClients = await getDriveClient(`consolidate-${taskId}`);
+      drive = driveClients.drive;
+      docsClient = driveClients.docs;
+      
+      if (!drive?.files?.copy) {
+        throw new Error('Cliente de Google Drive mal inicializado');
+      }
+      if (!docsClient?.documents) {
+        throw new Error('Cliente de Google Docs mal inicializado');
+      }
+      
+      // ===== 4. EXTRAER COMENTARIOS DE TODAS LAS REVISIONES =====
+      console.log(`📄 Extrayendo comentarios de ${assignmentsSnapshot.size} revisiones...`);
+      
+      const allDocumentComments = [];
+      let commentsExtracted = 0;
+      let commentsFailed = 0;
+      
+      for (const doc of assignmentsSnapshot.docs) {
+        const reviewData = doc.data();
+        const reviewerFileId = reviewData.reviewerFileId;
+        const reviewerEmail = reviewData.reviewerEmail;
+        const reviewerNumber = allDocumentComments.length + 1;
+        
+        if (!reviewerFileId) {
+          console.warn(`⚠️ Revisor ${reviewerEmail} sin reviewerFileId`);
+          warnings.push(`no_file_${reviewerEmail}`);
+          
+          allDocumentComments.push({
+            reviewerNumber,
+            reviewerEmail,
+            documentComments: [],
+            submittedAt: reviewData.submittedAt,
+            hasDocumentComments: false
+          });
+          continue;
+        }
+        
+        try {
+          const comments = await extractCommentsFromDocument(drive, reviewerFileId);
+          console.log(`✅ ${comments.length} comentarios de ${reviewerEmail}`);
+          
+          allDocumentComments.push({
+            reviewerNumber,
+            reviewerEmail,
+            documentComments: comments,
+            submittedAt: reviewData.submittedAt,
+            hasDocumentComments: comments.length > 0
+          });
+          commentsExtracted++;
+        } catch (commentError) {
+          console.error(`❌ Error extrayendo comentarios de ${reviewerEmail}:`, commentError.message);
+          warnings.push(`extract_failed_${reviewerEmail}`);
+          commentsFailed++;
+          
+          allDocumentComments.push({
+            reviewerNumber,
+            reviewerEmail,
+            documentComments: [],
+            submittedAt: reviewData.submittedAt,
+            hasDocumentComments: false,
+            extractionError: commentError.message
+          });
+        }
+      }
+      
+      // ===== 5. CREAR DOCUMENTO FINAL CONSOLIDADO =====
+      let finalDocId = null;
+      let finalDocUrl = null;
+      
+      try {
+        let sourceFileId = null;
+        let sourceMimeType = null;
+        
+        if (submissionData.formattedDocsFile?.id) {
+          sourceFileId = submissionData.formattedDocsFile.id;
+          sourceMimeType = 'application/vnd.google-apps.document';
+          console.log(`✅ Usando documento formateado: ${sourceFileId}`);
+        } else if (submissionData.originalFileId) {
+          sourceFileId = submissionData.originalFileId;
+          console.log(`⚠️ Usando documento original: ${sourceFileId}`);
+          
+          try {
+            const fileMeta = await drive.files.get({
+              fileId: sourceFileId,
+              fields: 'mimeType'
+            });
+            sourceMimeType = fileMeta.data.mimeType;
+          } catch (metaErr) {
+            sourceMimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+            warnings.push('mime_type_assumed');
+          }
+        }
+        
+        if (!sourceFileId) {
+          throw new Error('No se encontró documento fuente');
+        }
+        
+        console.log(`📝 Creando documento final consolidado...`);
+        
+        const copyConfig = {
+          fileId: sourceFileId,
+          requestBody: {
+            name: `FINAL_REVIEW_${submissionData.submissionId}`,
+            parents: submissionData.editorialFolderId ? [submissionData.editorialFolderId] : undefined,
+            copyRequiresWriterPermission: true,
+            writersCanShare: false
+          },
+          fields: 'id, webViewLink, mimeType'
+        };
+        
+        if (sourceMimeType === 'application/vnd.google-apps.document') {
+          copyConfig.requestBody.mimeType = 'application/vnd.google-apps.document';
+        }
+        
+        const finalCopy = await drive.files.copy(copyConfig);
+        finalDocId = finalCopy.data.id;
+        finalDocUrl = finalCopy.data.webViewLink;
+        
+        console.log(`✅ Documento final creado: ${finalDocId}`);
+        
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Configurar permisos
+        try {
+          await configureEditorPermissions(drive, finalDocId, taskData, assignmentsSnapshot);
+          console.log(`✅ Permisos configurados`);
+        } catch (permError) {
+          console.warn(`⚠️ Error configurando permisos:`, permError.message);
+          warnings.push('permissions_error');
+        }
+        
+        // Insertar comentarios en el documento
+        try {
+          await insertDocumentCommentsSection(
+            drive,
+            docsClient,
+            finalDocId,
+            allDocumentComments,
+            submissionData
+          );
+          console.log(`✅ Comentarios insertados`);
+        } catch (insertError) {
+          console.error(`❌ Error insertando comentarios:`, insertError.message);
+          warnings.push('insert_comments_failed');
+          errors.push(insertError.message);
+        }
+        
+      } catch (docError) {
+        console.error(`❌ Error creando documento final:`, docError.message);
+        await logSystemError('final_doc_failed', docError, taskId);
+        warnings.push('final_doc_failed');
+        errors.push(docError.message);
+        
+        throw new functions.https.HttpsError('internal', `Error creando documento: ${docError.message}`);
+      }
+      
+      // ===== 6. PROGRAMAR ELIMINACIÓN DE DOCUMENTOS TEMPORALES =====
+      try {
+        const deleteAt = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+        
+        for (const doc of assignmentsSnapshot.docs) {
+          const reviewData = doc.data();
+          const reviewerFileId = reviewData.reviewerFileId;
+          
+          if (reviewerFileId) {
+            await db.collection('scheduledDeletions').add({
+              fileId: reviewerFileId,
+              fileName: `REVIEW_COPY_${submissionData.submissionId}`,
+              submissionId: submissionData.submissionId,
+              reviewerEmail: reviewData.reviewerEmail,
+              scheduledFor: admin.firestore.Timestamp.fromDate(deleteAt),
+              createdAt: admin.firestore.FieldValue.serverTimestamp(),
+              status: 'pending',
+              reason: 'Documentos individuales consolidados en documento final',
+              finalDocId
+            });
+          }
+        }
+        
+        console.log(`✅ Eliminaciones programadas para ${assignmentsSnapshot.size} documentos`);
+      } catch (deleteSchedError) {
+        console.warn(`⚠️ Error programando eliminaciones:`, deleteSchedError.message);
+        warnings.push('schedule_deletion_failed');
+      }
+      
+      // ===== 7. ACTUALIZAR SUBMISSION CON REFERENCIA AL DOCUMENTO FINAL =====
+      await submissionRef.update({
+        finalReviewDocId: finalDocId,
+        finalReviewDocUrl: finalDocUrl,
+        reviewsConsolidatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        totalReviewsReceived: submittedCount,
+        requiredReviews,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+      
+      // ===== 8. CAMBIAR ESTADO A AWAITING_EDITOR_DECISION =====
+      await updateTaskStatusSafely(db, taskRef, submissionRef, submittedCount, finalDocId, finalDocUrl);
+      
+      // ===== 9. ENVIAR EMAIL AL EDITOR =====
+      try {
+        await sendEditorDecisionEmail(
+          taskData,
+          submissionData,
+          assignmentsSnapshot,
+          submittedCount,
+          finalDocUrl
+        );
+        console.log(`✅ Email enviado al editor`);
+      } catch (emailError) {
+        console.warn(`⚠️ Error enviando email:`, emailError.message);
+        warnings.push('email_failed');
+      }
+      
+      // ===== 10. AUDIT LOG =====
+      try {
+        await db.collection('submissions')
+          .doc(taskData.submissionId)
+          .collection('auditLogs')
+          .add({
+            action: 'proceeded_to_decision',
+            by: request.auth.uid,
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            details: {
+              taskId,
+              submittedCount,
+              requiredReviews,
+              finalDocId,
+              finalDocUrl,
+              reviewersProcessed: allDocumentComments.length,
+              reviewerEmails: allDocumentComments.map(r => r.reviewerEmail),
+              commentsExtracted,
+              commentsFailed,
+              warnings,
+              errors
+            }
+          });
+      } catch (auditError) {
+        console.warn(`⚠️ Error en audit log:`, auditError.message);
+      }
+      
+      console.log(`✅ Proceso de consolidación completado`);
+      
+      return {
+        success: true,
+        finalDocId,
+        finalDocUrl,
+        submittedCount,
+        requiredReviews,
+        reviewersProcessed: allDocumentComments.length,
+        commentsExtracted,
+        commentsFailed,
+        warnings,
+        errors
+      };
+      
+    } catch (error) {
+      console.error(`❌ Error en proceedToFinalDecision:`, error.message);
+      
+      if (error instanceof functions.https.HttpsError) {
+        throw error;
+      }
+      
+      throw new functions.https.HttpsError('internal', error.message);
+    }
+  }
+);
 // ============================================================
 // FUNCIÓN: INSERTAR SOLO COMENTARIOS DEL DOCUMENTO (VERSIÓN CORREGIDA)
  // ============================================================
