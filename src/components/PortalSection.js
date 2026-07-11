@@ -1155,7 +1155,8 @@ const safetyTimeoutRef = useRef(null);
     loadDeadlines();
   }, [user, isSpanish]);
 
- useEffect(() => {
+  // ========== EFECTO 1: CONTROL DE CARGA Y TIMEOUT ==========
+  useEffect(() => {
     // Solo ejecutar la lógica si aún estamos en estado de carga
     if (!loadingUser) {
       // Si ya no estamos cargando, limpiar cualquier timeout pendiente
@@ -1189,16 +1190,6 @@ const safetyTimeoutRef = useRef(null);
       return;
     }
 
-    // ========== RESETEAR ESTADO DE CORRUPCIÓN CUANDO CAMBIA EL USUARIO ==========
-useEffect(() => {
-  // Si los datos del usuario cambian, resetear los estados de error
-  if (userData && userData.uid && userData.email) {
-    setDataCorrupted(false);
-    setLoadTimeout(false);
-  }
-}, [userData?.uid]);
-// ===========================================================================
-
     // Si llegamos aquí, estamos en carga y no tenemos datos todavía
     // Iniciar timeout de seguridad SOLO si no hay uno activo
     if (!safetyTimeoutRef.current) {
@@ -1219,31 +1210,16 @@ useEffect(() => {
       }
     };
   }, [userData, effectiveName, loadingUser]);
-  // Función para verificar perfil anónimo
-  const checkForAnonymousProfile = useCallback(async () => {
-    if (!isAuthor || userData?.claimedAnonymousUid) {
-      return;
-    }
-    
-    setClaimStatus('checking');
-    setClaimError('');
-    
-    try {
-      const result = await checkAnonymousProfile();
-      
-      if (result.hasProfile) {
-        setAnonymousProfile(result.profile);
-        setClaimStatus('available');
-      } else {
-        setClaimStatus('not-available');
-      }
-    } catch (error) {
-      console.error('Error checking anonymous profile:', error);
-      setClaimError(isSpanish ? 'Error al verificar perfil' : 'Error checking profile');
-      setClaimStatus('error');
-    }
-  }, [isAuthor, userData, isSpanish]);
 
+  // ========== EFECTO 2: RESETEAR ESTADO DE CORRUPCIÓN CUANDO CAMBIA EL USUARIO ==========
+  useEffect(() => {
+    // Si los datos del usuario cambian, resetear los estados de error
+    if (userData && userData.uid && userData.email) {
+      setDataCorrupted(false);
+      setLoadTimeout(false);
+    }
+  }, [userData?.uid]);
+  // ====================================================================================
   // Función para reclamar perfil
   const handleClaimProfile = useCallback(async () => {
     if (!anonymousProfile) return;
