@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { EyeIcon, EyeSlashIcon, LockClosedIcon, ArrowRightOnRectangleIcon, UserIcon } from '@heroicons/react/24/outline';
 import {
@@ -26,39 +26,116 @@ export default function LoginSection({ onLogin }) {
   const [errors, setErrors] = useState({ firstName: '', lastName: '', email: '', password: '' });
   const [currentUser, setCurrentUser] = useState(null);
 
+  // ========== NEW STATES FOR CORRUPTION AND TIMEOUT HANDLING ==========
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+  const [corruptedSession, setCorruptedSession] = useState(false);
+  const timeoutRef = useRef(null);
+  const MAX_LOADING_TIME = 15000; // 15 seconds max
+  // =====================================================================
+
   useEffect(() => {
     if (!auth) {
       setMessage({ text: 'Configuration error', type: 'error' });
       return;
     }
 
+    // ========== START SAFETY TIMEOUT ==========
+    timeoutRef.current = setTimeout(() => {
+      console.error('LoginSection loading timeout - possible corruption');
+      setLoadingTimeout(true);
+    }, MAX_LOADING_TIME);
+    // ==========================================
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      // ========== CLEAR TIMEOUT ON RESPONSE ==========
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      // ================================================
+
       if (user) {
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        const userData = {
-          uid: user.uid,
-          email: user.email,
-          firstName: userDoc.data()?.firstName || '',
-          lastName: userDoc.data()?.lastName || '',
-          displayName: userDoc.data()?.displayName || user.email,
-          roles: userDoc.data()?.roles || ['Author'],
-          description: userDoc.data()?.description || { es: '', en: '' },
-          interests: userDoc.data()?.interests || { es: '', en: '' },
-          imageUrl: userDoc.data()?.imageUrl || '',
-          social: userDoc.data()?.social || {},
-          publicEmail: userDoc.data()?.publicEmail || null
-        };
-        setMessage({ text: `Welcome, ${userData.displayName}!`, type: 'success' });
-        setCurrentUser(userData);
-        if (onLogin) onLogin(userData);
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+
+          // ========== CHECK IF DOCUMENT EXISTS ==========
+          if (!userDoc.exists()) {
+            console.error('Authenticated user but no Firestore document');
+            setCorruptedSession(true);
+            return;
+          }
+          // ==============================================
+
+          const userData = {
+            uid: user.uid,
+            email: user.email,
+            firstName: userDoc.data()?.firstName || '',
+            lastName: userDoc.data()?.lastName || '',
+            displayName: userDoc.data()?.displayName || user.email,
+            roles: userDoc.data()?.roles || ['Author'],
+            description: userDoc.data()?.description || { es: '', en: '' },
+            interests: userDoc.data()?.interests || { es: '', en: '' },
+            imageUrl: userDoc.data()?.imageUrl || '',
+            social: userDoc.data()?.social || {},
+            publicEmail: userDoc.data()?.publicEmail || null
+          };
+
+          // ========== VERIFY MINIMUM DATA INTEGRITY ==========
+          if (!userData.uid || !userData.email) {
+            console.error('Corrupted user data detected in LoginSection');
+            setCorruptedSession(true);
+            return;
+          }
+          // ====================================================
+
+          setMessage({ text: `Welcome, ${userData.displayName}!`, type: 'success' });
+          setCurrentUser(userData);
+          if (onLogin) onLogin(userData);
+        } catch (error) {
+          console.error('Error loading user data:', error);
+          setCorruptedSession(true);
+        }
       } else {
         setMessage({ text: '', type: '' });
         setCurrentUser(null);
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      unsubscribe();
+    };
   }, [onLogin]);
+
+  // ========== FORCE SESSION RESET FUNCTION ==========
+  const forceResetSession = async () => {
+    try {
+      // Clear any corrupted local state
+      localStorage.removeItem('userSession');
+      sessionStorage.clear();
+
+      // Sign out from Firebase
+      if (auth.currentUser) {
+        await signOut(auth);
+      }
+
+      // Reset all states
+      setCurrentUser(null);
+      setCorruptedSession(false);
+      setLoadingTimeout(false);
+      setMessage({
+        text: 'Session reset. Please sign in again. If the problem persists, contact contact@revistacienciasestudiantes.com',
+        type: 'info'
+      });
+    } catch (error) {
+      console.error('Error resetting session:', error);
+      setMessage({
+        text: 'Error resetting session. Please reload the page manually or contact contact@revistacienciasestudiantes.com',
+        type: 'error'
+      });
+    }
+  };
+  // ==================================================
 
   const validateInputs = () => {
     let isValid = true;
@@ -233,6 +310,73 @@ export default function LoginSection({ onLogin }) {
     }
   };
 
+  // ========== CORRUPTED SESSION OR TIMEOUT SCREEN ==========
+  // THIS GOES FIRST, before any other return
+  if (corruptedSession || loadingTimeout) {
+    return (
+      <div className="max-w-md mx-auto py-12 px-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white border-2 border-red-200 p-8 text-center space-y-6 shadow-lg"
+        >
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto border border-red-200">
+            <svg className="h-10 w-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+
+          <div>
+            <h3 className="text-2xl font-serif font-bold text-gray-900 mb-2">
+              {loadingTimeout ? 'Loading Timeout' : 'Corrupted Session Detected'}
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              {loadingTimeout
+                ? 'Loading is taking too long. This may be due to connection issues or corrupted data.'
+                : 'Your session data appears to be corrupted. This prevents you from accessing the portal correctly.'}
+            </p>
+            <p className="text-xs text-gray-500 mb-6">
+              If the problem persists, please report the error to:{' '}
+              <a
+                href="mailto:contact@revistacienciasestudiantes.com"
+                className="text-[#007398] underline font-bold"
+              >
+                contact@revistacienciasestudiantes.com
+              </a>
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <button
+              onClick={forceResetSession}
+              className="w-full bg-red-600 hover:bg-red-700 text-white py-4 text-xs uppercase font-black tracking-[0.2em] transition-colors"
+            >
+              Reset Session
+            </button>
+
+            <button
+              onClick={() => {
+                setCorruptedSession(false);
+                setLoadingTimeout(false);
+                setIsLogin(true);
+                setEmail('');
+                setPassword('');
+                setFirstName('');
+                setLastName('');
+              }}
+              className="w-full border-2 border-gray-300 text-gray-700 py-4 text-xs uppercase font-black tracking-[0.2em] hover:bg-gray-50 transition-colors"
+            >
+              Create New Account
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+  // =============================================================
+
+  // ========== LOGGED IN USER SCREEN ==========
   if (currentUser) {
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-md mx-auto py-12 px-6">
@@ -269,18 +413,39 @@ export default function LoginSection({ onLogin }) {
       </motion.div>
     );
   }
+  // ==============================================
 
+  // ========== LOADING SCREEN WITH ESCAPE BUTTON ==========
+  // REPLACE YOUR EXISTING "if (isLoading && !currentUser)" BLOCK WITH THIS:
   if (isLoading && !currentUser) {
     return (
       <div className="max-w-md mx-auto py-12 px-6">
         <div className="bg-white border-2 border-black p-8 text-center space-y-6">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#007398] mx-auto mb-4"></div>
           <p className="text-gray-600">Loading...</p>
+
+          {/* Escape button to exit infinite loading */}
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <p className="text-xs text-gray-400 mb-3">
+              Is loading taking too long?
+            </p>
+            <button
+              onClick={() => {
+                setLoadingTimeout(true);
+                setCorruptedSession(true);
+              }}
+              className="text-xs text-red-600 hover:text-red-800 underline font-bold"
+            >
+              Force exit loading screen
+            </button>
+          </div>
         </div>
       </div>
     );
   }
+  // ==========================================================
 
+  // ========== LOGIN/REGISTRATION FORM (YOUR ORIGINAL CODE) ==========
   return (
     <div className="max-w-md mx-auto py-16 px-6">
       <motion.div

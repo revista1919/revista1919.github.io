@@ -24,7 +24,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
-import { db, onSnapshot, query, collection, doc, updateDoc, uploadImageToImgBB, updateRole } from '../firebase';
+import { db, onSnapshot, query, collection, doc, updateDoc, uploadImageToImgBB, updateRole, auth } from '../firebase';
+import { signOut } from 'firebase/auth'; 
 import SubmissionForm from './SubmissionForm';
 import { useLanguage } from '../hooks/useLanguage';
 import { useReviewerAssignment } from '../hooks/useReviewerAssignment';
@@ -959,7 +960,11 @@ export default function PortalSection({ user, onLogout }) {
   const [effectiveName, setEffectiveName] = useState(user?.displayName || '');
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const [loadingUser, setLoadingUser] = useState(true);
+ const [loadingUser, setLoadingUser] = useState(true);
+const [loadTimeout, setLoadTimeout] = useState(false);
+const [dataCorrupted, setDataCorrupted] = useState(false);
+const safetyTimeoutRef = useRef(null);
+// ===============================================
   
   // Datos en tiempo real desde Firebase
   const [userData, setUserData] = useState(user);
@@ -1151,13 +1156,37 @@ export default function PortalSection({ user, onLogout }) {
   }, [user, isSpanish]);
 
   useEffect(() => {
+    // ========== TIMEOUT DE SEGURIDAD ==========
+    safetyTimeoutRef.current = setTimeout(() => {
+      console.error('Timeout de carga en PortalSection - posible corrupción de datos');
+      setLoadTimeout(true);
+      setDataCorrupted(true);
+      setLoadingUser(false);
+    }, 20000); // 20 segundos máximo
+    // ==========================================
+
     if (!userData || !effectiveName) {
       setLoadingUser(true);
       return;
     }
-    setLoadingUser(false);
-  }, [userData, effectiveName]);
 
+    // ========== VERIFICAR INTEGRIDAD DE DATOS ==========
+    if (!userData.uid || !userData.email) {
+      console.error('Datos de usuario corruptos en PortalSection');
+      setDataCorrupted(true);
+      setLoadingUser(false);
+      if (safetyTimeoutRef.current) clearTimeout(safetyTimeoutRef.current);
+      return;
+    }
+    // =================================================
+
+    setLoadingUser(false);
+    if (safetyTimeoutRef.current) clearTimeout(safetyTimeoutRef.current);
+
+    return () => {
+      if (safetyTimeoutRef.current) clearTimeout(safetyTimeoutRef.current);
+    };
+  }, [userData, effectiveName]);
   // Función para verificar perfil anónimo
   const checkForAnonymousProfile = useCallback(async () => {
     if (!isAuthor || userData?.claimedAnonymousUid) {
@@ -1226,7 +1255,7 @@ export default function PortalSection({ user, onLogout }) {
     // Idealmente, deberías usar navigate de React Router
     window.open(`/reviewer-workspace/${assignmentId}`, '_blank', 'noopener,noreferrer');
   };
-
+  // ========== PANTALLA DE CARGA CON BOTÓN DE ESCAPE ==========
   if (loadingUser) {
     return (
       <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
@@ -1235,10 +1264,114 @@ export default function PortalSection({ user, onLogout }) {
           <p className="mt-6 text-gray-500 font-medium tracking-wider">
             {isSpanish ? 'CARGANDO PORTAL EDITORIAL...' : 'LOADING EDITORIAL PORTAL...'}
           </p>
+
+          {/* ========== BOTÓN DE ESCAPE ========== */}
+          <button
+            onClick={() => {
+              setLoadTimeout(true);
+              setDataCorrupted(true);
+              setLoadingUser(false);
+            }}
+            className="mt-6 text-xs text-red-600 hover:text-red-800 underline font-medium"
+          >
+            {isSpanish
+              ? '¿Problemas? Forzar salida de carga'
+              : 'Issues? Force exit loading'}
+          </button>
+          {/* ==================================== */}
         </div>
       </div>
     );
   }
+  // =========================================================
+   // ========== PANTALLA DE DATOS CORRUPTOS O TIMEOUT ==========
+ 
+  if (dataCorrupted || loadTimeout) {
+    return (
+      <div className="min-h-screen bg-[#fafafa] flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-3xl shadow-xl border border-red-200 p-8 md:p-12 max-w-lg w-full text-center space-y-6"
+        >
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto">
+            <svg className="h-10 w-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+
+          <h3 className="font-serif text-2xl md:text-3xl font-bold text-gray-900">
+            {loadTimeout ? 'Error de carga' : 'Datos de usuario dañados'}
+          </h3>
+
+          <p className="text-gray-600 leading-relaxed">
+            {loadTimeout
+              ? 'El portal está tardando demasiado en cargar. Esto puede deberse a problemas de conexión o datos corruptos en tu perfil.'
+              : 'Se han detectado datos corruptos en tu perfil de usuario. Esto impide que el portal funcione correctamente.'}
+          </p>
+
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6">
+            <p className="text-sm text-amber-800 font-semibold mb-2">
+              ¿Qué puedes hacer?
+            </p>
+            <ul className="text-sm text-amber-700 space-y-2 text-left">
+              <li className="flex items-start gap-2">
+                <span className="text-amber-500 font-bold">1.</span>
+                Cierra sesión y vuelve a iniciar
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-amber-500 font-bold">2.</span>
+                Limpia la caché de tu navegador
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-amber-500 font-bold">3.</span>
+                Si el problema persiste, reporta el error a:{' '}
+                <a
+                  href="mailto:contact@revistacienciasestudiantes.com"
+                  className="text-[#007398] underline font-bold"
+                >
+                  contact@revistacienciasestudiantes.com
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <div className="space-y-3">
+            <button
+              onClick={() => {
+                // Forzar cierre de sesión y recarga
+                if (auth) signOut(auth).catch(console.error);
+                setDataCorrupted(false);
+                setLoadTimeout(false);
+                setLoadingUser(false);
+                if (onLogout) onLogout();
+                window.location.reload();
+              }}
+              className="w-full bg-red-600 hover:bg-red-700 text-white py-4 text-sm uppercase font-black tracking-wider rounded-2xl transition-all"
+            >
+              Cerrar sesión y recargar
+            </button>
+
+            <button
+              onClick={() => {
+                // Intentar recargar sin cerrar sesión
+                window.location.reload();
+              }}
+              className="w-full border-2 border-gray-300 text-gray-700 py-4 text-sm uppercase font-black tracking-wider rounded-2xl hover:bg-gray-50 transition-all"
+            >
+              Recargar página
+            </button>
+          </div>
+
+          <p className="text-xs text-gray-400">
+            También puedes crear una nueva cuenta si lo prefieres
+          </p>
+        </motion.div>
+      </div>
+    );
+  }
+  // ==============================================================
 
   if (!effectiveName) {
     return <div className="text-red-600 text-center p-4">

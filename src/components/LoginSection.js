@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { EyeIcon, EyeSlashIcon, LockClosedIcon, ArrowRightOnRectangleIcon, UserIcon } from '@heroicons/react/24/outline';
 import {
@@ -26,39 +26,116 @@ export default function LoginSection({ onLogin }) {
   const [errors, setErrors] = useState({ firstName: '', lastName: '', email: '', password: '' });
   const [currentUser, setCurrentUser] = useState(null);
 
+  // ========== NUEVOS ESTADOS PARA MANEJAR CORRUPCIÓN Y TIMEOUT ==========
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+  const [corruptedSession, setCorruptedSession] = useState(false);
+  const timeoutRef = useRef(null);
+  const MAX_LOADING_TIME = 15000; // 15 segundos máximo
+  // =====================================================================
+
   useEffect(() => {
     if (!auth) {
       setMessage({ text: 'Error en configuración', type: 'error' });
       return;
     }
 
+    // ========== INICIAR TIMEOUT DE SEGURIDAD ==========
+    timeoutRef.current = setTimeout(() => {
+      console.error('Timeout de carga en LoginSection - posible corrupción');
+      setLoadingTimeout(true);
+    }, MAX_LOADING_TIME);
+    // =================================================
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      // ========== LIMPIAR TIMEOUT AL RECIBIR RESPUESTA ==========
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      // ===========================================================
+
       if (user) {
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        const userData = {
-          uid: user.uid,
-          email: user.email,
-          firstName: userDoc.data()?.firstName || '',
-          lastName: userDoc.data()?.lastName || '',
-          displayName: userDoc.data()?.displayName || user.email,
-          roles: userDoc.data()?.roles || ['Autor'],
-          description: userDoc.data()?.description || { es: '', en: '' },
-          interests: userDoc.data()?.interests || { es: '', en: '' },
-          imageUrl: userDoc.data()?.imageUrl || '',
-          social: userDoc.data()?.social || {},
-          publicEmail: userDoc.data()?.publicEmail || null
-        };
-        setMessage({ text: `¡Bienvenido, ${userData.displayName}!`, type: 'success' });
-        setCurrentUser(userData);
-        if (onLogin) onLogin(userData);
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+
+          // ========== VERIFICAR QUE EL DOCUMENTO EXISTE ==========
+          if (!userDoc.exists()) {
+            console.error('Usuario autenticado pero sin documento en Firestore');
+            setCorruptedSession(true);
+            return;
+          }
+          // =======================================================
+
+          const userData = {
+            uid: user.uid,
+            email: user.email,
+            firstName: userDoc.data()?.firstName || '',
+            lastName: userDoc.data()?.lastName || '',
+            displayName: userDoc.data()?.displayName || user.email,
+            roles: userDoc.data()?.roles || ['Autor'],
+            description: userDoc.data()?.description || { es: '', en: '' },
+            interests: userDoc.data()?.interests || { es: '', en: '' },
+            imageUrl: userDoc.data()?.imageUrl || '',
+            social: userDoc.data()?.social || {},
+            publicEmail: userDoc.data()?.publicEmail || null
+          };
+
+          // ========== VERIFICAR INTEGRIDAD MÍNIMA ==========
+          if (!userData.uid || !userData.email) {
+            console.error('Datos de usuario corruptos detectados en LoginSection');
+            setCorruptedSession(true);
+            return;
+          }
+          // =================================================
+
+          setMessage({ text: `¡Bienvenido, ${userData.displayName}!`, type: 'success' });
+          setCurrentUser(userData);
+          if (onLogin) onLogin(userData);
+        } catch (error) {
+          console.error('Error al cargar datos del usuario:', error);
+          setCorruptedSession(true);
+        }
       } else {
         setMessage({ text: '', type: '' });
         setCurrentUser(null);
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      unsubscribe();
+    };
   }, [onLogin]);
+
+  // ========== FUNCIÓN PARA FORZAR REINICIO DE SESIÓN ==========
+  const forceResetSession = async () => {
+    try {
+      // Limpiar cualquier estado local corrupto
+      localStorage.removeItem('userSession');
+      sessionStorage.clear();
+
+      // Cerrar sesión en Firebase
+      if (auth.currentUser) {
+        await signOut(auth);
+      }
+
+      // Resetear estados
+      setCurrentUser(null);
+      setCorruptedSession(false);
+      setLoadingTimeout(false);
+      setMessage({
+        text: 'Sesión reiniciada. Por favor, inicia sesión nuevamente. Si el problema persiste, contacta a contact@revistacienciasestudiantes.com',
+        type: 'info'
+      });
+    } catch (error) {
+      console.error('Error al reiniciar sesión:', error);
+      setMessage({
+        text: 'Error al reiniciar sesión. Por favor, recarga la página manualmente o contacta a contact@revistacienciasestudiantes.com',
+        type: 'error'
+      });
+    }
+  };
+  // ============================================================
 
   const validateInputs = () => {
     let isValid = true;
@@ -233,6 +310,73 @@ export default function LoginSection({ onLogin }) {
     }
   };
 
+  // ========== PANTALLA DE SESIÓN CORRUPTA O TIMEOUT ==========
+  // ESTO VA PRIMERO, antes de cualquier otro return
+  if (corruptedSession || loadingTimeout) {
+    return (
+      <div className="max-w-md mx-auto py-12 px-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white border-2 border-red-200 p-8 text-center space-y-6 shadow-lg"
+        >
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto border border-red-200">
+            <svg className="h-10 w-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+
+          <div>
+            <h3 className="text-2xl font-serif font-bold text-gray-900 mb-2">
+              {loadingTimeout ? 'Tiempo de espera agotado' : 'Sesión corrupta detectada'}
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              {loadingTimeout
+                ? 'La carga está tardando demasiado. Esto puede deberse a problemas de conexión o datos dañados.'
+                : 'Los datos de tu sesión parecen estar dañados. Esto impide que puedas acceder al portal correctamente.'}
+            </p>
+            <p className="text-xs text-gray-500 mb-6">
+              Si el problema persiste, por favor reporta el error a:{' '}
+              <a
+                href="mailto:contact@revistacienciasestudiantes.com"
+                className="text-[#007398] underline font-bold"
+              >
+                contact@revistacienciasestudiantes.com
+              </a>
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <button
+              onClick={forceResetSession}
+              className="w-full bg-red-600 hover:bg-red-700 text-white py-4 text-xs uppercase font-black tracking-[0.2em] transition-colors"
+            >
+              Reiniciar sesión
+            </button>
+
+            <button
+              onClick={() => {
+                setCorruptedSession(false);
+                setLoadingTimeout(false);
+                setIsLogin(true);
+                setEmail('');
+                setPassword('');
+                setFirstName('');
+                setLastName('');
+              }}
+              className="w-full border-2 border-gray-300 text-gray-700 py-4 text-xs uppercase font-black tracking-[0.2em] hover:bg-gray-50 transition-colors"
+            >
+              Crear nueva cuenta
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+  // =============================================================
+
+  // ========== PANTALLA DE USUARIO YA LOGUEADO ==========
   if (currentUser) {
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-md mx-auto py-12 px-6">
@@ -269,18 +413,39 @@ export default function LoginSection({ onLogin }) {
       </motion.div>
     );
   }
+  // ======================================================
 
+  // ========== PANTALLA DE CARGA CON BOTÓN DE ESCAPE ==========
+  // REEMPLAZA TU BLOQUE EXISTENTE DE "if (isLoading && !currentUser)" POR ESTO:
   if (isLoading && !currentUser) {
     return (
       <div className="max-w-md mx-auto py-12 px-6">
         <div className="bg-white border-2 border-black p-8 text-center space-y-6">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#007398] mx-auto mb-4"></div>
           <p className="text-gray-600">Cargando...</p>
+
+          {/* Botón de escape para salir de la carga infinita */}
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <p className="text-xs text-gray-400 mb-3">
+              ¿La carga está tardando demasiado?
+            </p>
+            <button
+              onClick={() => {
+                setLoadingTimeout(true);
+                setCorruptedSession(true);
+              }}
+              className="text-xs text-red-600 hover:text-red-800 underline font-bold"
+            >
+              Forzar salida de pantalla de carga
+            </button>
+          </div>
         </div>
       </div>
     );
   }
+  // ==============================================================
 
+  // ========== FORMULARIO DE LOGIN/REGISTRO (TU CÓDIGO ORIGINAL) ==========
   return (
     <div className="max-w-md mx-auto py-16 px-6">
       <motion.div
