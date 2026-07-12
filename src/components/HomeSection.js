@@ -198,7 +198,7 @@ const HomeSection = ({ onOpenMenu }) => {
               />
             </motion.div>
             <p className="text-base sm:text-lg text-gray-600 mb-8 sm:mb-10 font-light leading-relaxed max-w-lg mx-auto lg:mx-0 text-center lg:text-left">
-              La Revista Nacional de las Ciencias para Estudiantes es una revista académica, siendo una plataforma que busca a la difusión de trabajos científicos desarrollados por estudiantes, promoviendo el aprendizaje y la discusión académica.
+              La Revista Nacional de las Ciencias para Estudiantes es una revista académica de acceso abierto y sin costo para publicar, siendo una plataforma que busca la difusión de trabajos científicos desarrollados por estudiantes, promoviendo el aprendizaje y la discusión académica. 
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <button

@@ -196,7 +196,7 @@ const HomeSection = ({ onOpenMenu }) => {
               />
             </motion.div>
             <p className="text-base sm:text-lg text-gray-600 mb-8 sm:mb-10 font-light leading-relaxed max-w-lg mx-auto lg:mx-0 text-center lg:text-left">
-              The National Review of Sciences for Students is an academic journal, being a platform dedicated to the dissemination of scientific work developed by students, promoting learning and academic discussion.
+              The National Review of Sciences for Students is an open-access and free-to-publish academic journal , being a platform dedicated to the dissemination of scientific work developed by students, promoting learning and academic discussion.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <button
