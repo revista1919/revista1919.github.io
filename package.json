@@ -41,6 +41,7 @@
     "googleapis": "^171.4.0",
     "i18next": "^25.5.2",
     "i18next-browser-languagedetector": "^8.2.0",
+    "jsdom": "^29.1.1",
     "katex": "^0.16.38",
     "lodash": "^4.17.23",
     "lucide": "^0.563.0",

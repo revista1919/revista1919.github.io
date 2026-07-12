@@ -110,8 +110,9 @@ function initAgents() {
 // Clientes cacheados
 let cachedOctokit = null;
 let cachedGenAI = null;
-let cachedDeepSeekFetch = null; // NUEVO: Cache para DeepSeek
-
+let cachedLagunaFetch = null;
+// Forzar disponibilidad de fetch lo antes posible
+globalThis.fetch = globalThis.fetch || null;
 /* ===================== TRADUCCIÓN DE ROLES ===================== */
 const ES_TO_EN = {
   'Fundador': 'Founder', 'Co-Fundador': 'Co-Founder', 'Director General': 'General Director',
@@ -269,16 +270,16 @@ async function deletePDFFromRepo(fileName, commitMessage, folder = "Articles") {
   }
 }
 
-/* ===================== DEEPSEEK (PRINCIPAL) ===================== */
-async function getDeepSeekFetch() {
+/* ===================== LAGUNA (PRINCIPAL) ===================== */
+async function getLagunaFetch() {
   if (!fetch) throw new Error("fetch no está disponible");
   
-  if (!cachedDeepSeekFetch) {
-    const apiKey = DEEPSEEK_API_KEY.value();
+  if (!cachedLagunaFetch) {
+    const apiKey = DEEPSEEK_API_KEY.value(); // Usamos la misma API key
     if (!apiKey) throw new Error("DEEPSEEK_API_KEY no configurada");
     
     // Configurar fetch con los agentes HTTP/HTTPS
-    cachedDeepSeekFetch = async (url, options = {}) => {
+    cachedLagunaFetch = async (url, options = {}) => {
       const fetchOptions = {
         ...options,
         agent: url.startsWith('https') ? httpsAgent : httpAgent
@@ -286,17 +287,17 @@ async function getDeepSeekFetch() {
       return fetch(url, fetchOptions);
     };
   }
-  return cachedDeepSeekFetch;
+  return cachedLagunaFetch;
 }
 
-async function callDeepSeek(prompt, temperature = 0) {
-  console.log("🤖 Intentando con DeepSeek (modelo: tngtech/deepseek-r1t2-chimera)");
+async function callLaguna(prompt, temperature = 0) {
+  console.log("🤖 Intentando con Laguna (modelo: poolside/laguna-xs-2.1:free)");
   
   try {
-    const deepseekFetch = await getDeepSeekFetch();
+    const lagunaFetch = await getLagunaFetch();
     const apiKey = DEEPSEEK_API_KEY.value();
     
-    const response = await deepseekFetch("https://openrouter.ai/api/v1/chat/completions", {
+    const response = await lagunaFetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${apiKey}`,
@@ -305,7 +306,7 @@ async function callDeepSeek(prompt, temperature = 0) {
         "X-Title": "Revista Nacional de Ciencias para Estudiantes"
       },
       body: JSON.stringify({
-        model: "tngtech/deepseek-r1t2-chimera",
+        model: "poolside/laguna-xs-2.1:free",
         messages: [
           {
             role: "user",
@@ -313,13 +314,13 @@ async function callDeepSeek(prompt, temperature = 0) {
           }
         ],
         temperature: temperature,
-        max_tokens: 4096
+        max_tokens: 16384
       })
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`DeepSeek API error (${response.status}): ${errorText}`);
+      throw new Error(`Laguna API error (${response.status}): ${errorText}`);
     }
 
     const data = await response.json();
@@ -330,11 +331,11 @@ async function callDeepSeek(prompt, temperature = 0) {
       text = text.replace(/^```(?:html)?\n?/, "").replace(/\n?```$/, "").trim();
     }
     
-    console.log("✅ DeepSeek respondió exitosamente");
+    console.log("✅ Laguna respondió exitosamente");
     return text;
     
   } catch (error) {
-    console.error("❌ Error con DeepSeek:", error.message);
+    console.error("❌ Error con Laguna:", error.message);
     throw error; // Re-lanzamos para que el fallback lo capture
   }
 }
@@ -358,7 +359,7 @@ async function callGemini(prompt, temperature = 0) {
     const ai = await getGenAI();
 
     const result = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-3.1-flash-lite",
       contents: prompt,
       config: {
         temperature: temperature,
@@ -385,27 +386,25 @@ async function callGemini(prompt, temperature = 0) {
 async function callAIWithFallback(prompt, temperature = 0) {
   console.log("🚀 Iniciando llamada a IA con fallback");
   
-  // Intentar primero con DeepSeek
+  // Intentar primero con Laguna
   try {
-    const result = await callDeepSeek(prompt, temperature);
-    console.log("✅ Traducción completada con DeepSeek");
+    const result = await callLaguna(prompt, temperature);
+    console.log("✅ Traducción completada con Laguna");
     return result;
-  } catch (deepseekError) {
-    console.log("🔄 DeepSeek falló, intentando con Gemini fallback...", deepseekError.message);
+  } catch (lagunaError) {
+    console.log("🔄 Laguna falló, intentando con Gemini...", lagunaError.message);
     
-    // Si DeepSeek falla, intentar con Gemini
+    // Si Laguna falla, intentar con Gemini
     try {
       const result = await callGemini(prompt, temperature);
       console.log("✅ Traducción completada con Gemini fallback");
       return result;
     } catch (geminiError) {
-      // Si ambos fallan, lanzar error
       console.error("💥 Ambos servicios de IA fallaron");
       throw new Error("No se pudo completar la operación con ningún servicio de IA");
     }
   }
 }
-
 /* ===================== FUNCIÓN DE TRADUCCIÓN (ACTUALIZADA CON FALLBACK) ===================== */
 async function translateText(text, source, target) {
   const prompt = `You are a faithful translator for an academic journal. The National Review of Sciences for Students in English, and Revista Nacional de las Ciencias in Spanish.
@@ -445,44 +444,7 @@ ${html}`;
   return await callAIWithFallback(prompt);
 }
 
-function splitHtmlContent(html) {
-  const maxLength = 2000;
-  const fragments = [];
-  let current = "";
-  let inTag = false;
 
-  for (const char of html) {
-    if (char === "<") inTag = true;
-    if (char === ">" && inTag) inTag = false;
-
-    current += char;
-
-    if (current.length >= maxLength && !inTag) {
-      fragments.push(current);
-      current = "";
-    }
-  }
-
-  if (current) fragments.push(current);
-  return fragments;
-}
-
-async function translateHtmlFragmentWithSplit(html, source, target) {
-  if (html.length < 3000) {
-    return await translateHtmlFragment(html, source, target);
-  }
-
-  const fragments = splitHtmlContent(html);
-  const translated = [];
-
-  for (const frag of fragments) {
-    translated.push(
-      await translateHtmlFragment(frag, source, target),
-    );
-  }
-
-  return translated.join("");
-}
 
 /* ===================== IMGBB UPLOAD ===================== */
 exports.uploadImageToImgBBCallable = onCall(
@@ -1012,7 +974,7 @@ exports.uploadNews = onRequest(
       const titleTarget = await translateText(titleSource, source, target);
       
       // Usar la función con fallback para el body
-      const bodyTarget = await translateHtmlFragmentWithSplit(bodySource, source, target);
+      const bodyTarget = await translateHtmlFragment(bodySource, source, target);
 
       // Preparar datos de la noticia
       const now = new Date();
@@ -10942,6 +10904,809 @@ generateCollection();`;
         message: err.message,
         requestId: requestId
       });
+    }
+  }
+);
+// =====================================================
+// OAI-PMH SERVER - VERSIÓN 100% COMPLETA Y BLINDADA
+// Firebase Functions v2
+// =====================================================
+const ARTICLES_URL = 'https://www.revistacienciasestudiantes.com/articles.json';
+const BASE_URL = 'https://www.revistacienciasestudiantes.com/oai';
+const REPO_IDENTIFIER = 'revistacienciasestudiantes.com';
+const ADMIN_EMAIL = 'contact@revistacienciasestudiantes.com';
+const REPO_NAME = 'Revista Ciencias Estudiantes';
+const EARLIEST_DATESTAMP = '2025-11-10';
+const BATCH_SIZE = 50;
+const CACHE_TTL = 5 * 60 * 1000;
+
+// Caché
+let cachedArticles = null;
+let lastFetch = 0;
+let dynamicFetch = null;
+
+// =====================================================
+// CARGA SEGURA DE FETCH
+// =====================================================
+async function ensureFetch() {
+  if (dynamicFetch) return dynamicFetch;
+
+  console.log('🔄 [OAI] Cargando fetch...');
+
+  try {
+    if (typeof fetch !== 'undefined') {
+      dynamicFetch = fetch;
+      console.log('✅ [OAI] Usando fetch nativo');
+      return dynamicFetch;
+    }
+
+    if (typeof globalThis.fetch !== 'undefined') {
+      dynamicFetch = globalThis.fetch;
+      console.log('✅ [OAI] Usando fetch global');
+      return dynamicFetch;
+    }
+
+    console.log('⚠️ [OAI] Cargando node-fetch...');
+    const { default: nodeFetch } = await import('node-fetch');
+    dynamicFetch = nodeFetch;
+    console.log('✅ [OAI] node-fetch cargado');
+    return dynamicFetch;
+  } catch (e) {
+    console.error('❌ [OAI] Error cargando fetch:', e.message);
+    throw new Error('Fetch no disponible');
+  }
+}
+
+// =====================================================
+// UTILIDADES
+// =====================================================
+function escapeXml(unsafe) {
+  if (unsafe == null) return '';
+  return String(unsafe)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function oaiIdentifier(numeroArticulo) {
+  return `oai:${REPO_IDENTIFIER}:article/${numeroArticulo}`;
+}
+
+function generateSlug(text) {
+  if (!text) return '';
+  return text.toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function getSetSpecs(article) {
+  const sets = [];
+  if (article.area) sets.push(`area:${generateSlug(article.area)}`);
+  if (article.tipo) sets.push(`tipo:${generateSlug(article.tipo)}`);
+  if (article.volumen) {
+    sets.push(`volumen:${article.volumen}`);
+    if (article.numero) sets.push(`volumen:${article.volumen}:numero:${article.numero}`);
+  }
+  return sets;
+}
+
+function getArticleUrl(article) {
+  const slug = generateSlug(article.titulo);
+  return `https://www.revistacienciasestudiantes.com/articles/article-${slug}-${article.numeroArticulo}.html`;
+}
+
+function parseIdentifier(identifier) {
+  const match = identifier?.match(/^oai:[^:]+:article\/(\d+)$/);
+  return match ? parseInt(match[1], 10) : null;
+}
+
+// =====================================================
+// DUBLIN CORE
+// =====================================================
+function articleToDublinCore(article) {
+  const elements = [];
+
+  elements.push(`<dc:title xml:lang="es">${escapeXml(article.titulo)}</dc:title>`);
+  if (article.tituloEnglish) elements.push(`<dc:title xml:lang="en">${escapeXml(article.tituloEnglish)}</dc:title>`);
+
+  if (Array.isArray(article.autores)) {
+    for (const author of article.autores) {
+      if (author?.name) elements.push(`<dc:creator>${escapeXml(author.name)}</dc:creator>`);
+    }
+  }
+
+  if (Array.isArray(article.palabras_clave)) {
+    for (const kw of article.palabras_clave) if (kw) elements.push(`<dc:subject xml:lang="es">${escapeXml(kw)}</dc:subject>`);
+  }
+  if (Array.isArray(article.keywords_english)) {
+    for (const kw of article.keywords_english) if (kw) elements.push(`<dc:subject xml:lang="en">${escapeXml(kw)}</dc:subject>`);
+  }
+
+  if (article.resumen) elements.push(`<dc:description xml:lang="es">${escapeXml(article.resumen)}</dc:description>`);
+  if (article.abstract) elements.push(`<dc:description xml:lang="en">${escapeXml(article.abstract)}</dc:description>`);
+
+  if (article.fecha) elements.push(`<dc:date>${escapeXml(article.fecha)}</dc:date>`);
+  
+  if (article.tipo) {
+    elements.push(`<dc:type>${escapeXml(article.tipo)}</dc:type>`);
+  } else {
+    elements.push(`<dc:type>Artículo de Investigación</dc:type>`);
+  }
+
+  elements.push(`<dc:identifier>${escapeXml(getArticleUrl(article))}</dc:identifier>`);
+  if (article.doi) elements.push(`<dc:identifier>https://doi.org/${escapeXml(article.doi)}</dc:identifier>`);
+
+  if (article.pdfUrl) {
+    elements.push(`<dc:format>application/pdf</dc:format>`);
+    elements.push(`<dc:identifier>${escapeXml(article.pdfUrl)}</dc:identifier>`);
+  }
+
+  elements.push(`<dc:language>es</dc:language>`);
+  if (article.conflicts) elements.push(`<dc:rights>${escapeXml(article.conflicts)}</dc:rights>`);
+
+  const sourceParts = [];
+  if (article.volumen) sourceParts.push(`Vol. ${article.volumen}`);
+  if (article.numero) sourceParts.push(`No. ${article.numero}`);
+  if (article.primeraPagina && article.ultimaPagina) sourceParts.push(`pp. ${article.primeraPagina}-${article.ultimaPagina}`);
+  if (sourceParts.length > 0) elements.push(`<dc:source>${escapeXml(sourceParts.join(', '))}</dc:source>`);
+
+  return elements.join('\n      ');
+}
+
+// =====================================================
+// XML BUILDERS
+// =====================================================
+function buildXmlResponse(verbElement, requestAttrs = {}) {
+  const now = new Date().toISOString();
+  let attrStr = Object.entries(requestAttrs)
+    .filter(([_, v]) => v != null)
+    .map(([k, v]) => ` ${k}="${escapeXml(String(v))}"`)
+    .join('');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
+  <responseDate>${now}</responseDate>
+  <request${attrStr}>${escapeXml(BASE_URL)}</request>
+  ${verbElement}
+</OAI-PMH>`;
+}
+
+function buildErrorXml(code, message = '') {
+  return buildXmlResponse(`<error code="${code}">${escapeXml(message)}</error>`);
+}
+
+function buildRecordXml(article) {
+  const datestamp = article.updatedAt?.split('T')[0] || article.fecha || article.createdAt?.split('T')[0] || EARLIEST_DATESTAMP;
+
+  let xml = ` <record>
+    <header>
+      <identifier>${escapeXml(oaiIdentifier(article.numeroArticulo))}</identifier>
+      <datestamp>${datestamp}</datestamp>`;
+
+  for (const spec of getSetSpecs(article)) {
+    xml += `\n      <setSpec>${escapeXml(spec)}</setSpec>`;
+  }
+
+  xml += `
+    </header>
+    <metadata>
+      <oai_dc:dc xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                 xmlns:dc="http://purl.org/dc/elements/1.1/"
+                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                 xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+        ${articleToDublinCore(article)}
+      </oai_dc:dc>
+    </metadata>
+  </record>`;
+  return xml;
+}
+
+/**
+ * Construye un registro OAI con metadatos en formato JATS
+ * Usa el campo article.jats si existe, o genera un esqueleto mínimo
+ */
+function buildJatsRecordXml(article) {
+  const datestamp = article.updatedAt?.split('T')[0] || article.fecha || article.createdAt?.split('T')[0] || EARLIEST_DATESTAMP;
+
+  let xml = ` <record>
+    <header>
+      <identifier>${escapeXml(oaiIdentifier(article.numeroArticulo))}</identifier>
+      <datestamp>${datestamp}</datestamp>`;
+
+  for (const spec of getSetSpecs(article)) {
+    xml += `\n      <setSpec>${escapeXml(spec)}</setSpec>`;
+  }
+
+  xml += `
+    </header>
+    <metadata>`;
+
+  // Si el artículo tiene JATS generado por convert-jats.js, lo incluimos
+  if (article.jats) {
+    // Extraemos solo el contenido del artículo JATS sin la declaración XML ni DOCTYPE
+    // para evitar duplicados dentro del registro OAI-PMH
+    const jatsContent = article.jats
+      .replace(/<\?xml[^?]*\?>\s*/g, '')   // Quitar declaración XML
+      .replace(/<!DOCTYPE[^>]*>\s*/g, '');  // Quitar DOCTYPE
+    
+    xml += `\n${jatsContent}`;
+  } else {
+    // Si no hay JATS generado, creamos un esqueleto mínimo con los metadatos básicos
+    const pubDate = article.fecha || '';
+    const pubDateParts = pubDate.split('-');
+    
+    xml += `
+      <article dtd-version="1.4" article-type="research-article" xml:lang="es"
+               xmlns:mml="http://www.w3.org/1998/Math/MathML"
+               xmlns:xlink="http://www.w3.org/1999/xlink">
+        <front>
+          <journal-meta>
+            <journal-id journal-id-type="publisher">RNCE</journal-id>
+            <journal-title-group>
+              <journal-title>Revista Nacional de las Ciencias para Estudiantes</journal-title>
+            </journal-title-group>
+            <issn publication-format="electronic">3087-2839</issn>
+            <publisher>
+              <publisher-name>Revista Nacional de las Ciencias para Estudiantes</publisher-name>
+            </publisher>
+          </journal-meta>
+          <article-meta>`;
+    
+    if (article.doi) {
+      xml += `
+            <article-id pub-id-type="doi">${escapeXml(article.doi)}</article-id>`;
+    }
+    
+    xml += `
+            <title-group>
+              <article-title>${escapeXml(article.titulo || '')}</article-title>`;
+    
+    if (article.tituloEnglish) {
+      xml += `
+              <trans-title xml:lang="en">${escapeXml(article.tituloEnglish)}</trans-title>`;
+    }
+    
+    xml += `
+            </title-group>`;
+    
+    // Autores
+    if (Array.isArray(article.autores) && article.autores.length > 0) {
+      xml += `
+            <contrib-group>`;
+      
+      article.autores.forEach((autor, index) => {
+        const nameParts = (autor.name || '').split(' ');
+        let givenNames = '';
+        let surname = '';
+        
+        if (nameParts.length === 1) {
+          surname = nameParts[0];
+        } else if (nameParts.length === 2) {
+          givenNames = nameParts[0];
+          surname = nameParts[1];
+        } else {
+          surname = nameParts[nameParts.length - 1];
+          givenNames = nameParts.slice(0, -1).join(' ');
+        }
+        
+        xml += `
+              <contrib contrib-type="author" id="author${index + 1}">`;
+        
+        if (autor.orcid) {
+          xml += `
+                <contrib-id contrib-id-type="orcid" authenticated="true">${escapeXml(autor.orcid)}</contrib-id>`;
+        }
+        
+        xml += `
+                <name>
+                  <surname>${escapeXml(surname)}</surname>
+                  <given-names>${escapeXml(givenNames)}</given-names>
+                </name>`;
+        
+        if (autor.email) {
+          xml += `
+                <email>${escapeXml(autor.email)}</email>`;
+        }
+        
+        if (autor.institution) {
+          xml += `
+                <xref ref-type="aff" rid="aff${index + 1}">${escapeXml(autor.institution)}</xref>`;
+        }
+        
+        xml += `
+              </contrib>`;
+      });
+      
+      xml += `
+            </contrib-group>`;
+      
+      // Afiliaciones
+      const uniqueInstitutions = [...new Set(article.autores.map(a => a.institution).filter(Boolean))];
+      if (uniqueInstitutions.length > 0) {
+        xml += `
+            <aff-alternatives>`;
+        uniqueInstitutions.forEach((inst, idx) => {
+          xml += `
+              <aff id="aff${idx + 1}">
+                <institution>${escapeXml(inst)}</institution>
+              </aff>`;
+        });
+        xml += `
+            </aff-alternatives>`;
+      }
+    }
+    
+    // Fecha de publicación
+    if (pubDate) {
+      xml += `
+            <pub-date publication-format="electronic" date-type="pub" iso-8601-date="${pubDate}">
+              <year>${pubDateParts[0] || ''}</year>`;
+      if (pubDateParts[1]) {
+        xml += `
+              <month>${pubDateParts[1]}</month>`;
+      }
+      if (pubDateParts[2]) {
+        xml += `
+              <day>${pubDateParts[2]}</day>`;
+      }
+      xml += `
+            </pub-date>`;
+    }
+    
+    // Volumen, número, páginas
+    if (article.volumen) {
+      xml += `
+            <volume>${escapeXml(article.volumen)}</volume>`;
+    }
+    if (article.numero) {
+      xml += `
+            <issue>${escapeXml(article.numero)}</issue>`;
+    }
+    if (article.primeraPagina) {
+      xml += `
+            <fpage>${escapeXml(article.primeraPagina)}</fpage>`;
+    }
+    if (article.ultimaPagina) {
+      xml += `
+            <lpage>${escapeXml(article.ultimaPagina)}</lpage>`;
+    }
+    
+    // Fechas de recibido/aceptado
+    if (article.receivedDate || article.acceptedDate) {
+      xml += `
+            <history>`;
+      if (article.receivedDate) {
+        xml += `
+              <date date-type="received" iso-8601-date="${article.receivedDate}">
+                <year>${article.receivedDate.split('-')[0]}</year>
+                <month>${article.receivedDate.split('-')[1] || ''}</month>
+                <day>${article.receivedDate.split('-')[2] || ''}</day>
+              </date>`;
+      }
+      if (article.acceptedDate) {
+        xml += `
+              <date date-type="accepted" iso-8601-date="${article.acceptedDate}">
+                <year>${article.acceptedDate.split('-')[0]}</year>
+                <month>${article.acceptedDate.split('-')[1] || ''}</month>
+                <day>${article.acceptedDate.split('-')[2] || ''}</day>
+              </date>`;
+      }
+      xml += `
+            </history>`;
+    }
+    
+    // Licencia
+    xml += `
+            <permissions>
+              <license license-type="open-access" xlink:href="https://creativecommons.org/licenses/by/4.0/">
+                <license-p>Creative Commons Attribution 4.0 International License</license-p>
+              </license>
+            </permissions>`;
+    
+    // Abstracts
+    if (article.resumen) {
+      xml += `
+            <abstract xml:lang="es">
+              <title>Resumen</title>
+              <p>${escapeXml(article.resumen)}</p>
+            </abstract>`;
+    }
+    if (article.abstract) {
+      xml += `
+            <abstract xml:lang="en">
+              <title>Abstract</title>
+              <p>${escapeXml(article.abstract)}</p>
+            </abstract>`;
+    }
+    
+    // Palabras clave
+    if (Array.isArray(article.palabras_clave) && article.palabras_clave.length > 0) {
+      xml += `
+            <kwd-group xml:lang="es">
+              <title>Palabras clave</title>`;
+      article.palabras_clave.forEach(kw => {
+        if (kw) xml += `
+              <kwd>${escapeXml(kw)}</kwd>`;
+      });
+      xml += `
+            </kwd-group>`;
+    }
+    if (Array.isArray(article.keywords_english) && article.keywords_english.length > 0) {
+      xml += `
+            <kwd-group xml:lang="en">
+              <title>Keywords</title>`;
+      article.keywords_english.forEach(kw => {
+        if (kw) xml += `
+              <kwd>${escapeXml(kw)}</kwd>`;
+      });
+      xml += `
+            </kwd-group>`;
+    }
+    
+    xml += `
+          </article-meta>
+        </front>
+      </article>`;
+  }
+
+  xml += `
+    </metadata>
+  </record>`;
+  
+  return xml;
+}
+
+// =====================================================
+// FILTROS Y TOKENS
+// =====================================================
+function filterByDateRange(articles, from, until) {
+  if (!from && !until) return articles;
+  return articles.filter(a => {
+    const d = a.fecha || a.createdAt?.split('T')[0] || a.updatedAt?.split('T')[0];
+    if (!d) return false;
+    return (!from || d >= from) && (!until || d <= until);
+  });
+}
+
+function filterBySet(articles, setSpec) {
+  if (!setSpec) return articles;
+  return articles.filter(a => getSetSpecs(a).some(s => s === setSpec || s.startsWith(setSpec + ':')));
+}
+
+function createResumptionToken(params, offset, totalCount) {
+  const token = {
+    from: params.from || null,
+    until: params.until || null,
+    set: params.set || null,
+    metadataPrefix: params.metadataPrefix || 'oai_dc',
+    offset,
+    totalCount,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + 86400000
+  };
+  return Buffer.from(JSON.stringify(token)).toString('base64');
+}
+
+function parseResumptionToken(tokenStr) {
+  try {
+    const token = JSON.parse(Buffer.from(tokenStr, 'base64').toString('utf8'));
+    if (Date.now() > token.expiresAt) return null;
+    return token;
+  } catch {
+    return null;
+  }
+}
+
+function getPublishedArticles(articles) {
+  if (!articles || !Array.isArray(articles)) {
+    console.error("[OAI] articles no es un array");
+    return [];
+  }
+
+  console.log(`[OAI] Total de artículos en JSON: ${articles.length}`);
+
+  // Como no tienes campo "status", devolvemos TODOS
+  const allArticles = [...articles];
+
+  console.log(`[OAI] Devolviendo TODOS los artículos como publicados: ${allArticles.length}`);
+
+  return allArticles;
+}
+
+async function getArticles(forceRefresh = false) {
+  const now = Date.now();
+  if (!forceRefresh && cachedArticles && (now - lastFetch) < CACHE_TTL) {
+    console.log('[OAI] Usando caché');
+    return cachedArticles;
+  }
+
+  console.log('📥 [OAI] Obteniendo articles.json (forceRefresh =', forceRefresh, ')');
+
+  const fetchFn = await ensureFetch();
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+
+  const response = await fetchFn(ARTICLES_URL, { 
+    signal: controller.signal 
+  });
+
+  clearTimeout(timeout);
+
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+  cachedArticles = await response.json();
+  lastFetch = now;
+
+  console.log(`✅ [OAI] Cargados ${cachedArticles.length} artículos del JSON`);
+  return cachedArticles;
+}
+
+// =====================================================
+// HANDLERS
+// =====================================================
+async function handleIdentify(res) {
+  const articles = await getArticles();
+  const published = getPublishedArticles(articles);
+  
+  let earliestDate = EARLIEST_DATESTAMP;
+
+  if (published.length > 0) {
+    const dates = published
+      .map(a => a.fecha || a.createdAt?.split('T')[0] || a.updatedAt?.split('T')[0])
+      .filter(Boolean)
+      .sort();
+
+    if (dates.length > 0) {
+      earliestDate = dates[0];
+    }
+  }
+
+  const xml = `
+  <Identify>
+    <repositoryName>${escapeXml(REPO_NAME)}</repositoryName>
+    <baseURL>${escapeXml(BASE_URL)}</baseURL>
+    <protocolVersion>2.0</protocolVersion>
+    <adminEmail>${escapeXml(ADMIN_EMAIL)}</adminEmail>
+    <earliestDatestamp>${earliestDate}</earliestDatestamp>
+    <deletedRecord>transient</deletedRecord>
+    <granularity>YYYY-MM-DD</granularity>
+    <description>
+      <oai-identifier xmlns="http://www.openarchives.org/OAI/2.0/oai-identifier"
+                      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                      xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai-identifier http://www.openarchives.org/OAI/2.0/oai-identifier.xsd">
+        <scheme>oai</scheme>
+        <repositoryIdentifier>${escapeXml(REPO_IDENTIFIER)}</repositoryIdentifier>
+        <delimiter>:</delimiter>
+        <sampleIdentifier>oai:${escapeXml(REPO_IDENTIFIER)}:article/1</sampleIdentifier>
+      </oai-identifier>
+    </description>
+  </Identify>`;
+
+  res.status(200).send(buildXmlResponse(xml, { verb: 'Identify' }));
+}
+
+async function handleListMetadataFormats(res, params) {
+  if (params.identifier) {
+    const n = parseIdentifier(params.identifier);
+    if (n === null) return res.status(200).send(buildErrorXml('idDoesNotExist'));
+    const articles = await getArticles();
+    if (!getPublishedArticles(articles).some(a => a.numeroArticulo === n)) {
+      return res.status(200).send(buildErrorXml('idDoesNotExist'));
+    }
+  }
+
+  const xml = `
+  <ListMetadataFormats>
+    <metadataFormat>
+      <metadataPrefix>oai_dc</metadataPrefix>
+      <schema>http://www.openarchives.org/OAI/2.0/oai_dc.xsd</schema>
+      <metadataNamespace>http://www.openarchives.org/OAI/2.0/oai_dc/</metadataNamespace>
+    </metadataFormat>
+    <metadataFormat>
+      <metadataPrefix>jats</metadataPrefix>
+      <schema>https://jats.nlm.nih.gov/publishing/1.4/JATS-journalpublishing1.dtd</schema>
+      <metadataNamespace>https://jats.nlm.nih.gov/publishing/1.4/</metadataNamespace>
+    </metadataFormat>
+  </ListMetadataFormats>`;
+
+  res.status(200).send(buildXmlResponse(xml, { verb: 'ListMetadataFormats', ...(params.identifier && { identifier: params.identifier }) }));
+}
+
+async function handleListSets(res) {
+  const articles = await getArticles();
+  const setMap = new Map();
+
+  for (const a of getPublishedArticles(articles)) {
+    for (const spec of getSetSpecs(a)) {
+      if (!setMap.has(spec)) {
+        let name = spec;
+        if (spec.startsWith('area:')) name = `Área: ${spec.substring(5)}`;
+        else if (spec.startsWith('tipo:')) name = `Tipo: ${spec.substring(5)}`;
+        else if (spec.match(/^volumen:\d+:numero:\d+$/)) {
+          const p = spec.split(':');
+          name = `Volumen ${p[1]}, Número ${p[3]}`;
+        } else if (spec.startsWith('volumen:')) name = `Volumen ${spec.substring(8)}`;
+        setMap.set(spec, name);
+      }
+    }
+  }
+
+  let xml = ' <ListSets>\n';
+  for (const [spec, name] of [...setMap.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+    xml += ` <set><setSpec>${escapeXml(spec)}</setSpec><setName>${escapeXml(name)}</setName></set>\n`;
+  }
+  xml += ' </ListSets>';
+
+  res.status(200).send(buildXmlResponse(xml, { verb: 'ListSets' }));
+}
+
+async function handleGetRecord(res, params) {
+  const { identifier, metadataPrefix } = params;
+
+  if (!identifier) return res.status(200).send(buildErrorXml('badArgument', 'Falta identifier'));
+  if (!metadataPrefix) return res.status(200).send(buildErrorXml('badArgument', 'Falta metadataPrefix'));
+  
+  // Aceptar tanto oai_dc como jats
+  if (metadataPrefix !== 'oai_dc' && metadataPrefix !== 'jats') {
+    return res.status(200).send(buildErrorXml('cannotDisseminateFormat', `Formato no soportado: ${metadataPrefix}`));
+  }
+
+  const n = parseIdentifier(identifier);
+  if (n === null) {
+    return res.status(200).send(buildErrorXml('idDoesNotExist', `Formato inválido: ${identifier}`));
+  }
+
+  console.log(`[OAI] GetRecord - Buscando artículo ID: ${n} (formato: ${metadataPrefix})`);
+
+  const articles = await getArticles(true);
+  const published = getPublishedArticles(articles);
+
+  const article = published.find(a => {
+    const idArticulo = a.numeroArticulo;
+    return idArticulo == n || String(idArticulo) == String(n);
+  });
+
+  if (!article) {
+    console.error(`[OAI] Artículo ${n} NO encontrado.`);
+    console.log(`[OAI] Primeros 5 IDs disponibles:`, 
+      published.slice(0, 5).map(a => a.numeroArticulo));
+    return res.status(200).send(buildErrorXml('idDoesNotExist', `Artículo ${n} no encontrado`));
+  }
+
+  console.log(`✅ [OAI] Artículo ${n} encontrado - Formato: ${metadataPrefix}`);
+
+  let xml;
+  if (metadataPrefix === 'jats') {
+    xml = `<GetRecord>\n${buildJatsRecordXml(article)}\n </GetRecord>`;
+  } else {
+    xml = `<GetRecord>\n${buildRecordXml(article)}\n </GetRecord>`;
+  }
+
+  res.status(200).send(buildXmlResponse(xml, { verb: 'GetRecord', identifier, metadataPrefix }));
+}
+
+async function handleListIdentifiers(res, params) {
+  return handleListPaginated(res, params, 'ListIdentifiers', false);
+}
+
+async function handleListRecords(res, params) {
+  return handleListPaginated(res, params, 'ListRecords', true);
+}
+
+async function handleListPaginated(res, params, verb, includeFullRecord) {
+  const { metadataPrefix, from, until, set, resumptionToken: tokenStr } = params;
+
+  let q = { 
+    from: from || null, 
+    until: until || null, 
+    set: set || null, 
+    metadataPrefix: metadataPrefix || 'oai_dc', 
+    offset: 0 
+  };
+
+  if (tokenStr) {
+    const token = parseResumptionToken(tokenStr);
+    if (!token) return res.status(200).send(buildErrorXml('badResumptionToken'));
+    q = token;
+  } else if (metadataPrefix) {
+    // Aceptar tanto oai_dc como jats
+    if (metadataPrefix !== 'oai_dc' && metadataPrefix !== 'jats') {
+      return res.status(200).send(buildErrorXml('cannotDisseminateFormat', `Formato no soportado: ${metadataPrefix}`));
+    }
+  }
+
+  const articles = await getArticles(true);
+  let results = getPublishedArticles(articles);
+
+  console.log(`[OAI] ${verb} - Total publicados antes de filtros: ${results.length} (formato: ${q.metadataPrefix})`);
+
+  results = filterByDateRange(results, q.from, q.until);
+  if (q.set) results = filterBySet(results, q.set);
+
+  console.log(`[OAI] Después de filtros (set/date): ${results.length}`);
+
+  // Ordenar por número de artículo descendente (más nuevos primero)
+  results.sort((a, b) => (b.numeroArticulo || 0) - (a.numeroArticulo || 0));
+
+  const total = results.length;
+  if (total === 0 && q.offset === 0) {
+    return res.status(200).send(buildErrorXml('noRecordsMatch'));
+  }
+
+  const batch = results.slice(q.offset, q.offset + BATCH_SIZE);
+  const hasMore = (q.offset + BATCH_SIZE) < total;
+
+  console.log(`[OAI] Enviando batch desde ${q.offset} → ${batch.length} registros (total ${total})`);
+
+  let xml = ` <${verb}>\n`;
+  for (const a of batch) {
+    if (includeFullRecord) {
+      // Usar JATS si el metadataPrefix es jats, de lo contrario Dublin Core
+      xml += (q.metadataPrefix === 'jats') ? buildJatsRecordXml(a) : buildRecordXml(a);
+    } else {
+      // ListIdentifiers: solo header, sin metadata
+      xml += ` <header><identifier>${escapeXml(oaiIdentifier(a.numeroArticulo))}</identifier><datestamp>${a.fecha || EARLIEST_DATESTAMP}</datestamp>${getSetSpecs(a).map(s => `\n  <setSpec>${escapeXml(s)}</setSpec>`).join('')}</header>\n`;
+    }
+  }
+
+  if (hasMore) {
+    const token = createResumptionToken(q, q.offset + BATCH_SIZE, total);
+    xml += ` <resumptionToken expirationDate="${new Date(Date.now() + 86400000).toISOString()}" completeListSize="${total}" cursor="${q.offset}">${token}</resumptionToken>\n`;
+  } else if (q.offset > 0) {
+    xml += ` <resumptionToken completeListSize="${total}" cursor="${q.offset}"/>\n`;
+  }
+  xml += ` </${verb}>`;
+
+  const attrs = { verb, metadataPrefix: q.metadataPrefix };
+  if (q.from) attrs.from = q.from;
+  if (q.until) attrs.until = q.until;
+  if (q.set) attrs.set = q.set;
+
+  res.status(200).send(buildXmlResponse(xml, attrs));
+}
+
+// =====================================================
+// EXPORTACIÓN FINAL
+// =====================================================
+exports.oai = onRequest(
+  { timeoutSeconds: 60, memory: '256MiB', cors: true },
+  async (req, res) => {
+    res.set('Content-Type', 'application/xml; charset=utf-8');
+
+    try {
+      // Blindaje inicial
+      await ensureFetch();
+
+      const params = req.method === 'POST' ? req.body : req.query;
+      const verb = params?.verb;
+
+      const validVerbs = ['Identify', 'ListMetadataFormats', 'ListSets', 'GetRecord', 'ListIdentifiers', 'ListRecords'];
+
+      if (!verb || !validVerbs.includes(verb)) {
+        return res.status(200).send(buildErrorXml('badVerb', verb ? `Verbo inválido: ${verb}` : 'Falta parámetro verb'));
+      }
+
+      console.log(`📥 [OAI] ${verb} - Params: ${JSON.stringify(params)}`);
+
+      switch (verb) {
+        case 'Identify': return await handleIdentify(res);
+        case 'ListMetadataFormats': return await handleListMetadataFormats(res, params);
+        case 'ListSets': return await handleListSets(res);
+        case 'GetRecord': return await handleGetRecord(res, params);
+        case 'ListIdentifiers': return await handleListIdentifiers(res, params);
+        case 'ListRecords': return await handleListRecords(res, params);
+        default: return res.status(200).send(buildErrorXml('badVerb'));
+      }
+    } catch (error) {
+      console.error('❌ [OAI] Error crítico:', error);
+      return res.status(200).send(buildErrorXml('badArgument', `Error interno: ${error.message}`));
     }
   }
 );
