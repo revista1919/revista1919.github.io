@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useLanguage } from '../hooks/useLanguage';
 import logo from '../../public/logo.png';
+
 const HomeSection = ({ onOpenMenu }) => {
   const navigate = useNavigate();
   const { switchLanguage, language } = useLanguage();
@@ -230,6 +231,101 @@ const HomeSection = ({ onOpenMenu }) => {
             </div>
           </motion.div>
         </div>
+
+        {/* GUÍAS PARA AUTORES - Sección de enlaces directos */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="mb-16 sm:mb-20"
+        >
+          <div className="text-center mb-8">
+            <h2 className="text-2xl sm:text-3xl font-serif font-bold text-gray-900 mb-3">
+              Guías para Autores
+            </h2>
+            <p className="text-sm text-gray-500 font-serif italic max-w-xl mx-auto">
+              Consulte nuestros recursos completos antes de preparar su manuscrito
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-4xl mx-auto">
+            <a
+              href="/author.html"
+              className="group relative p-6 bg-white rounded-xl border border-gray-200 hover:border-[#007398] hover:shadow-lg transition-all overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 w-full h-1 bg-[#001f3f] group-hover:bg-[#007398] transition-colors"></div>
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-[#f0f4f8] rounded-lg group-hover:bg-[#e0ecf4] transition-colors">
+                  <svg className="w-5 h-5 text-[#001f3f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900 group-hover:text-[#007398] transition-colors mb-1">
+                    Guía para Autores
+                  </h3>
+                  <p className="text-xs text-gray-500 leading-relaxed">
+                    Instrucciones detalladas para preparar y enviar su manuscrito.
+                  </p>
+                  <span className="inline-block mt-2 text-[10px] font-bold uppercase tracking-wider text-[#007398] opacity-0 group-hover:opacity-100 transition-all transform translate-x-0 group-hover:translate-x-1">
+                    Consultar →
+                  </span>
+                </div>
+              </div>
+            </a>
+
+            <a
+              href="/practices.html"
+              className="group relative p-6 bg-white rounded-xl border border-gray-200 hover:border-[#007398] hover:shadow-lg transition-all overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 w-full h-1 bg-[#001f3f] group-hover:bg-[#007398] transition-colors"></div>
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-[#f0f4f8] rounded-lg group-hover:bg-[#e0ecf4] transition-colors">
+                  <svg className="w-5 h-5 text-[#001f3f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900 group-hover:text-[#007398] transition-colors mb-1">
+                    Buenas Prácticas
+                  </h3>
+                  <p className="text-xs text-gray-500 leading-relaxed">
+                    Estándares éticos y mejores prácticas para publicar.
+                  </p>
+                  <span className="inline-block mt-2 text-[10px] font-bold uppercase tracking-wider text-[#007398] opacity-0 group-hover:opacity-100 transition-all transform translate-x-0 group-hover:translate-x-1">
+                    Consultar →
+                  </span>
+                </div>
+              </div>
+            </a>
+
+            <a
+              href="/open-access.html"
+              className="group relative p-6 bg-white rounded-xl border border-gray-200 hover:border-[#007398] hover:shadow-lg transition-all overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 w-full h-1 bg-[#001f3f] group-hover:bg-[#007398] transition-colors"></div>
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-[#f0f4f8] rounded-lg group-hover:bg-[#e0ecf4] transition-colors">
+                  <svg className="w-5 h-5 text-[#001f3f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900 group-hover:text-[#007398] transition-colors mb-1">
+                    Open Access
+                  </h3>
+                  <p className="text-xs text-gray-500 leading-relaxed">
+                    Políticas de acceso abierto, licencias y derechos de autor.
+                  </p>
+                  <span className="inline-block mt-2 text-[10px] font-bold uppercase tracking-wider text-[#007398] opacity-0 group-hover:opacity-100 transition-all transform translate-x-0 group-hover:translate-x-1">
+                    Consultar →
+                  </span>
+                </div>
+              </div>
+            </a>
+          </div>
+        </motion.div>
+
         {/* GRID */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {cards.map((card, index) => (
@@ -245,7 +341,7 @@ const HomeSection = ({ onOpenMenu }) => {
         >
           <div className="relative z-10 max-w-2xl mx-auto">
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold text-white mb-6 italic">
-              “La ciencia se construye aprendiendo y compartiendo.”
+              "La ciencia se construye aprendiendo y compartiendo."
             </h2>
             <p className="text-gray-400 font-light mb-8 sm:mb-10">
               Invitamos a estudiantes interesados en la divulgación científica a participar en el proyecto editorial y en las distintas áreas de trabajo de la revista.

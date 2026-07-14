@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Guía para Autores · Revista Nacional de las Ciencias para Estudiantes</title>
+  <style>
+    :root {
+      --primary: #001f3f;
+      --text: #1a1a1a;
+      --light-text: #666;
+      --border: #e0e0e0;
+      --soft-white: #fdfdfd;
+      --accent: #c0a86a;
+      --link: #007398;
+    }
+    body {
+      font-family: 'Lora', 'Georgia', Times, serif;
+      line-height: 1.8;
+      margin: 0;
+      padding: 0;
+      background-color: var(--soft-white);
+      color: var(--text);
+    }
+    .page-wrapper {
+      max-width: 900px;
+      margin: 60px auto;
+      background-color: #fff;
+      padding: 60px 80px;
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.02);
+    }
+    .header {
+      text-align: center;
+      border-bottom: 3px double var(--text);
+      padding-bottom: 30px;
+      margin-bottom: 50px;
+    }
+    .header img {
+      max-width: 160px;
+      margin-bottom: 20px;
+      filter: grayscale(1);
+    }
+    .header h1 {
+      font-family: 'Playfair Display', 'Georgia', serif;
+      font-size: 2.4em;
+      font-weight: 900;
+      margin: 0;
+      letter-spacing: -0.02em;
+      color: var(--primary);
+    }
+    .document-meta {
+      font-family: 'Inter', sans-serif;
+      text-transform: uppercase;
+      font-size: 10px;
+      letter-spacing: 0.3em;
+      color: #888;
+      font-weight: 500;
+      margin-top: 10px;
+    }
+    h2 {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9em;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: var(--primary);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+      margin-top: 50px;
+    }
+    h3 {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.8em;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: #444;
+      margin-top: 35px;
+      margin-bottom: 15px;
+    }
+    h4 {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.75em;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #555;
+      margin-top: 25px;
+      margin-bottom: 10px;
+    }
+    p {
+      margin-bottom: 25px;
+      font-size: 1.05em;
+      color: #333;
+    }
+    ul, ol {
+      margin-bottom: 25px;
+      padding-left: 25px;
+    }
+    li {
+      margin-bottom: 8px;
+      font-size: 1.05em;
+      color: #333;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 0.9em;
+    }
+    table th {
+      font-family: 'Inter', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-size: 0.7em;
+      color: var(--primary);
+      border-bottom: 2px solid var(--primary);
+      padding: 10px 8px;
+      text-align: left;
+    }
+    table td {
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    table tr:last-child td {
+      border-bottom: none;
+    }
+    a {
+      color: var(--link);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      transition: all 0.2s;
+    }
+    a:hover {
+      background-color: var(--link);
+      color: white;
+      text-decoration: none;
+    }
+    .footer {
+      margin-top: 60px;
+      padding-top: 30px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: #999;
+    }
+    .toc {
+      margin: 30px 0;
+      padding: 20px;
+      background-color: #fafafa;
+      border: 1px solid var(--border);
+    }
+    .toc ol {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.8em;
+      line-height: 2.2;
+      list-style-position: inside;
+      padding-left: 0;
+    }
+    .toc a {
+      text-decoration: none;
+    }
+    .highlight-box {
+      background-color: #f8f9fa;
+      border-left: 4px solid var(--primary);
+      padding: 20px;
+      margin: 25px 0;
+      font-size: 0.95em;
+    }
+    .highlight-box p {
+      margin-bottom: 10px;
+    }
+    .highlight-box p:last-child {
+      margin-bottom: 0;
+    }
+    .warning-box {
+      background-color: #fff8e1;
+      border-left: 4px solid var(--accent);
+      padding: 20px;
+      margin: 25px 0;
+      font-size: 0.95em;
+    }
+    .video-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin: 25px 0;
+    }
+    .video-container {
+      aspect-ratio: 16 / 9;
+      background-color: #000;
+      border-radius: 4px;
+      overflow: hidden;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    .video-container iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+    .resource-card {
+      background-color: #fff;
+      border: 1px solid var(--border);
+      padding: 20px;
+      margin-bottom: 15px;
+      border-radius: 4px;
+      transition: box-shadow 0.2s;
+    }
+    .resource-card:hover {
+      box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    }
+    .resource-card h4 {
+      margin-top: 0;
+      color: var(--link);
+    }
+    .btn {
+      display: inline-block;
+      background-color: var(--primary);
+      color: #fff;
+      padding: 12px 24px;
+      text-decoration: none;
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      border-radius: 4px;
+      transition: background-color 0.2s;
+    }
+    .btn:hover {
+      background-color: var(--accent);
+      color: #fff;
+      text-decoration: none;
+    }
+    .citation-example {
+      background-color: #f4f6f8;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-left: 3px solid var(--primary);
+    }
+    .citation-example p {
+      margin: 5px 0;
+      font-size: 0.9em;
+    }
+    .citation-example .label {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.7em;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--primary);
+      font-weight: 700;
+    }
+    @media (max-width: 768px) {
+      .page-wrapper { margin: 20px; padding: 30px; }
+      .header h1 { font-size: 1.8em; }
+      .video-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrapper">
+    <!-- Encabezado -->
+    <div class="header">
+      <img src="logo.png" alt="Logo Revista Nacional de las Ciencias para Estudiantes">
+      <h1>Guía para Autores</h1>
+      <div class="document-meta">Manual de Preparación de Manuscritos · Versión 2.0, Julio 2026 · San Felipe, Chile</div>
+    </div>
+
+    <!-- Índice -->
+    <div class="toc">
+      <p style="font-family: 'Inter', sans-serif; text-transform: uppercase; letter-spacing: 0.15em; font-size: 0.8em; font-weight: bold; margin-top: 0;">Índice</p>
+      <ol>
+        <li><a href="#aviso-politicas">Aviso Importante sobre las Políticas Editoriales</a></li>
+        <li><a href="#formato-documento">Formato del Documento y Procesadores de Texto</a></li>
+        <li><a href="#anonimizacion">Anonimización para Revisión Doble Ciego</a></li>
+        <li><a href="#estructura-headings">Estructura del Manuscrito y Uso de Encabezados (Headings)</a></li>
+        <li><a href="#extension">Extensión Recomendada</a></li>
+        <li><a href="#estilo-citacion">Estilo de Citación: Chicago 17.ª ed. (Autor-Fecha)</a></li>
+        <li><a href="#palabras-clave">Palabras Clave y Vocabularios Controlados</a></li>
+        <li><a href="#figuras-tablas">Figuras, Tablas y Material Gráfico</a></li>
+        <li><a href="#recursos">Recursos y Talleres Audiovisuales</a></li>
+        <li><a href="#lista-verificacion">Lista de Verificación para el Envío</a></li>
+      </ol>
+    </div>
+
+    <!-- 01. Aviso Importante -->
+    <h2 id="aviso-politicas">01. Aviso Importante sobre las Políticas Editoriales</h2>
+    <div class="highlight-box">
+      <p>El envío de un manuscrito a la <strong>Revista Nacional de las Ciencias para Estudiantes</strong> implica la aceptación íntegra, sin reservas, de la totalidad de nuestras <strong>Políticas Editoriales</strong>. Le instamos a leerlas detenidamente antes de preparar su contribución. El incumplimiento de cualquiera de sus disposiciones —en materia de originalidad, ética, autoría, conflictos de interés o cualquier otra— podrá dar lugar a la desestimación del envío en cualquier etapa del proceso editorial.</p>
+      <a href="policies.html" class="btn">Leer Políticas Editoriales Completas →</a>
+    </div>
+
+    <!-- 02. Formato del Documento y Procesadores de Texto -->
+    <h2 id="formato-documento">02. Formato del Documento y Procesadores de Texto</h2>
+    
+    <h3>2.1. Formato Obligatorio</h3>
+    <p>Todos los manuscritos deben ser enviados exclusivamente en formato <strong>Microsoft Word (.docx)</strong>. Este es el formato estándar de trabajo para el proceso de revisión, edición y maquetación de la Revista. No se aceptarán envíos en otros formatos (PDF, LaTeX, RTF, TXT, Google Docs, etc.).</p>
+
+    <h3>2.2. Instrucciones para Usuarios de LaTeX</h3>
+    <p>La Revista reconoce que LaTeX es una herramienta ampliamente utilizada en disciplinas como matemáticas, física, ingeniería y ciencias de la computación. Sin embargo, para homogeneizar el flujo editorial, es indispensable que el manuscrito final se entregue en formato <strong>.docx</strong>. Para ello, los autores que redacten en LaTeX deberán realizar una conversión de su documento antes del envío.</p>
+    <p>Se recomienda el uso de herramientas de conversión como <strong>Pandoc</strong>, un conversor de documentos libre y gratuito. A continuación, se proporciona un comando de ejemplo para convertir un archivo <code>.tex</code> a <code>.docx</code>:</p>
+    <div class="highlight-box">
+      <code style="word-break: break-all;">pandoc documento.tex --citeproc --csl chicago-fullnote-bibliography.csl --bibliography=referencias.bib -o documento.docx</code>
+      <p style="margin-top: 10px;">El uso de un archivo de estilo CSL (Citation Style Language) y un archivo de bibliografía en formato BibTeX es altamente recomendable para preservar la integridad de las citas y referencias durante la conversión.</p>
+    </div>
+    <p><strong>Es responsabilidad exclusiva del autor verificar que la conversión haya preservado fielmente el contenido, las fórmulas matemáticas, las referencias cruzadas y las citas bibliográficas.</strong> Se sugiere revisar meticulosamente el archivo .docx resultante antes de proceder al envío. La Revista no se hace responsable por errores o pérdidas de formato derivados de una conversión deficiente.</p>
+
+    <h3>2.3. Formato de la Fuente y Estilos</h3>
+    <p>El tipo de letra, tamaño, interlineado y márgenes del documento enviado por el autor <strong>no son relevantes</strong> para la evaluación inicial, ya que el manuscrito será estandarizado automáticamente durante el proceso de maquetación. Lo fundamental es que el contenido sea claro y que la estructura del documento esté jerarquizada mediante el uso correcto de encabezados (ver Sección 04).</p>
+
+    <!-- 03. Anonimización para Revisión Doble Ciego -->
+    <h2 id="anonimizacion">03. Anonimización para Revisión Doble Ciego</h2>
+    
+    <h3>3.1. Principio General</h3>
+    <p>La Revista opera un sistema de revisión por pares <strong>doble ciego</strong>. Para garantizar su integridad, el manuscrito enviado no debe contener ninguna información que permita identificar a sus autores, ni directa ni indirectamente.</p>
+
+    <h3>3.2. Elementos que Deben Ser Eliminados o Anonimizados</h3>
+    <p>Antes de enviar el documento, los autores deben asegurarse de que se han eliminado o reemplazado los siguientes elementos identificativos:</p>
+    <ul>
+      <li><strong>Nombres de los autores y sus afiliaciones institucionales</strong> en la página del título y en cualquier otra parte del manuscrito.</li>
+      <li><strong>Direcciones de correo electrónico, números de teléfono y direcciones postales</strong> de los autores.</li>
+      <li><strong>Agradecimientos</strong> que mencionen a personas, instituciones o proyectos que puedan revelar la identidad de los autores. Esta sección debe ser eliminada del manuscrito para la revisión y podrá ser restituida en la versión final aceptada.</li>
+      <li><strong>Información de financiamiento</strong> que incluya códigos de subvención o referencias a proyectos específicos que puedan delatar a los autores. Puede mencionarse de forma genérica (ej. «Este trabajo fue financiado por una beca doctoral nacional») si es estrictamente necesario, pero es preferible omitirla.</li>
+      <li><strong>Auto-citas</strong> que puedan revelar la identidad. Las referencias a trabajos previos de los autores deben aparecer en el texto como «(Autor, año)» y en la lista de referencias como «[Anonimizado para revisión]». Tras la aceptación, se restaurarán las citas completas.</li>
+      <li><strong>Metadatos del archivo</strong>: El archivo .docx no debe contener información del autor en sus propiedades (Archivo > Información > Propiedades). Se recomienda usar la herramienta "Inspeccionar documento" de Word para eliminar datos personales antes de guardar la versión final para envío.</li>
+      <li><strong>Nombres de instituciones o laboratorios específicos</strong> en la sección de Métodos, si estos son únicos y fácilmente rastreables a los autores. Utilice descripciones genéricas (ej. "un hospital universitario de la región metropolitana").</li>
+    </ul>
+
+    <!-- 04. Estructura del Manuscrito y Uso de Encabezados (Headings) -->
+    <h2 id="estructura-headings">04. Estructura del Manuscrito y Uso de Encabezados (Headings)</h2>
+    
+    <h3>4.1. La Importancia de los Encabezados</h3>
+    <p>La estructura de un manuscrito académico no debe indicarse mediante texto en negrita o con un tamaño de letra mayor aplicado manualmente. Es obligatorio que los autores utilicen las <strong>funciones de encabezado (Heading 1, Heading 2, Heading 3, etc.) de su procesador de texto</strong>. Esto es de vital importancia para la Revista por las siguientes razones:</p>
+    <ol>
+      <li><strong>Estilizado Automático:</strong> La Revista aplica estilos de formato automáticos a todos los manuscritos aceptados. Un documento que utiliza encabezados reales puede ser formateado en segundos; un documento con "falsos encabezados" requiere un formateo manual costoso y propenso a errores.</li>
+      <li><strong>Navegación y Evaluación:</strong> Los encabezados generan automáticamente un panel de navegación en el procesador de texto, lo que permite a editores y revisores moverse ágilmente por el documento y comprender su estructura de un vistazo.</li>
+      <li><strong>Accesibilidad:</strong> Los encabezados semánticos son esenciales para que las tecnologías de asistencia (como los lectores de pantalla utilizados por personas con discapacidad visual) puedan navegar y comprender la jerarquía del documento.</li>
+    </ol>
+
+    <h3>4.2. Uso Correcto de la Jerarquía de Encabezados</h3>
+    <p>A continuación, se detalla la jerarquía estándar de encabezados y su aplicación en un manuscrito típico. Se ruega respetar el orden y la anidación lógica. No se debe saltar de un nivel de encabezado a otro (por ejemplo, de Título a Heading 3 sin pasar por Heading 2).</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Nivel</th>
+          <th>Estilo en Word / LaTeX</th>
+          <th>Uso Recomendado</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td><strong>Heading 1</strong> / <code>\section{}</code></td>
+          <td>Título de las secciones principales: «Introducción», «Métodos», «Resultados», «Discusión», «Conclusión», «Referencias».</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><strong>Heading 2</strong> / <code>\subsection{}</code></td>
+          <td>Subsecciones dentro de una sección principal. Por ejemplo, dentro de «Métodos»: «Participantes», «Instrumentos», «Procedimiento».</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><strong>Heading 3</strong> / <code>\subsubsection{}</code></td>
+          <td>Subdivisiones más específicas. Por ejemplo, dentro de «Instrumentos»: «Cuestionario de Datos Demográficos», «Escala de Bienestar Psicológico».</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p><strong>Nota sobre LaTeX:</strong> Si redacta en LaTeX, el uso de <code>\section</code>, <code>\subsection</code> y <code>\subsubsection</code> genera automáticamente la estructura de encabezados correcta. Al convertir a .docx con Pandoc, estos comandos se traducirán a los estilos «Heading 1», «Heading 2» y «Heading 3» de Word, siempre que se utilice un archivo de referencia adecuado.</p>
+
+    <div class="warning-box">
+      <p><strong>Advertencia:</strong> Un manuscrito que presente sus secciones únicamente con texto en negrita y sin utilizar los estilos de encabezado del procesador de texto podrá ser devuelto a los autores para su corrección antes de iniciar el proceso de revisión.</p>
+    </div>
+
+    <h3>4.3. Estructura Recomendada para un Artículo de Investigación Original (Formato IMRyD)</h3>
+    <p>Se recomienda la siguiente estructura para artículos empíricos. Otros tipos de manuscrito (ensayos, revisiones) pueden adaptarla a su naturaleza, manteniendo siempre una jerarquía lógica de encabezados.</p>
+    <ul>
+      <li><strong>Heading 1: Introducción</strong> (Presenta el problema, la pregunta de investigación y los objetivos)</li>
+      <li><strong>Heading 1: Métodos</strong>
+        <ul>
+          <li>Heading 2: Diseño</li>
+          <li>Heading 2: Participantes</li>
+          <li>Heading 2: Instrumentos</li>
+          <li>Heading 2: Procedimiento</li>
+          <li>Heading 2: Análisis de Datos</li>
+        </ul>
+      </li>
+      <li><strong>Heading 1: Resultados</strong></li>
+      <li><strong>Heading 1: Discusión</strong></li>
+      <li><strong>Heading 1: Conclusión</strong></li>
+      <li><strong>Heading 1: Referencias</strong></li>
+    </ul>
+
+    <!-- 05. Extensión Recomendada -->
+    <h2 id="extension">05. Extensión Recomendada</h2>
+    
+    <h3>5.1. Rango Estándar</h3>
+    <p>La extensión recomendada para todos los tipos de manuscrito es de <strong>1.000 a 10.000 palabras</strong>, incluyendo el cuerpo del texto, notas al pie, agradecimientos (en la versión final) y la lista de referencias. Este rango se considera adecuado para la mayoría de los trabajos de investigación presentados por estudiantes y jóvenes investigadores, permitiendo un desarrollo suficiente sin llegar a ser excesivo.</p>
+
+    <h3>5.2. Manuscritos que Excedan la Extensión Recomendada</h3>
+    <p>La Revista es consciente de que ciertos trabajos —como las revisiones sistemáticas extensas, los estudios con múltiples experimentos o las tesis adaptadas— pueden superar naturalmente el límite de 10.000 palabras. <strong>Se aceptarán manuscritos de mayor extensión</strong>. Sin embargo, dichos trabajos estarán sujetos a un criterio de revisión adicional por parte del editor a cargo:</p>
+    <ul>
+      <li>El editor evaluará si la extensión está plenamente justificada por la naturaleza y complejidad del estudio.</li>
+      <li>Si se considera que la extensión es excesiva y no aporta valor sustancial (por ejemplo, por verbosidad, repetición de información o inclusión de contenido tangencial), el editor podrá <strong>sugerir un recorte</strong> como condición para continuar con el proceso de revisión o para la aceptación final.</li>
+      <li>En casos extremos, si el manuscrito supera el doble de la extensión máxima recomendada (20.000 palabras) y no se considera una contribución monumental, el editor podrá sugerir su división en dos o más publicaciones independientes.</li>
+    </ul>
+    <p>La decisión final sobre la aceptación de un manuscrito de extensión atípica recae en el editor, quien la comunicará a los autores de forma razonada.</p>
+
+    <!-- 06. Estilo de Citación: Chicago 17.ª ed. (Autor-Fecha) -->
+    <h2 id="estilo-citacion">06. Estilo de Citación: Chicago 17.ª ed. (Autor-Fecha)</h2>
+    
+    <h3>6.1. Norma General</h3>
+    <p>Todos los manuscritos, sin excepción, deben ajustar su aparato crítico al estilo <strong>Chicago 17.ª edición</strong>, en su modalidad <strong>autor-fecha</strong> (author-date). El uso correcto y consistente de este estilo es un requisito para la aceptación del manuscrito.</p>
+
+    <h3>6.2. Citas en el Texto</h3>
+    <p>Las citas se insertan en el cuerpo del texto entre paréntesis, indicando el apellido del autor, el año de publicación y, cuando sea relevante, la(s) página(s).</p>
+    <div class="citation-example">
+      <span class="label">Ejemplos:</span>
+      <p>«La teoría del constructivismo social ha sido ampliamente debatida en las últimas décadas (González 2020, 45-48).»</p>
+      <p>«Según Martínez y López (2019), los resultados sugieren una correlación significativa...»</p>
+      <p>«Para un análisis más detallado, véase Rodríguez et al. (2022).» (Para tres o más autores, use "et al." desde la primera cita).</p>
+    </div>
+    <p>Las comunicaciones personales (correos electrónicos, conversaciones) se citan solo en el texto y no se incluyen en la lista de referencias: (Juan Pérez, comunicación personal, 15 de marzo de 2024).</p>
+
+    <h3>6.3. Lista de Referencias</h3>
+    <p>Todas las referencias citadas en el texto deben listarse al final del manuscrito bajo el título «Referencias» (Heading 1), ordenadas alfabéticamente por el apellido del primer autor. A continuación, se presentan ejemplos detallados de los tipos documentales más frecuentes. Para cualquier otro tipo no contemplado aquí, consulte el manual oficial en <a href="https://www.chicagomanualofstyle.org/tools_citationguide/citation-guide-2.html" target="_blank">Chicago Manual of Style Online</a> o contacte al equipo editorial.</p>
+
+    <div class="citation-example">
+      <span class="label">Libro (un autor):</span>
+      <p>Binder, Amy J. 2022. <em>The Channels of Student Activism: How the Left and Right Are Winning (and Losing) in Campus Politics Today</em>. Chicago: University of Chicago Press.</p>
+      <span class="label">Libro (dos o más autores):</span>
+      <p>Levitt, Steven D., y Stephen J. Dubner. 2005. <em>Freakonomics: A Rogue Economist Explores the Hidden Side of Everything</em>. New York: William Morrow.</p>
+      <span class="label">Capítulo de libro editado:</span>
+      <p>Doyle, Kathleen. 2023. «The Queen Mary Psalter». En <em>The Book by Design: The Remarkable Story of the World's Greatest Invention</em>, editado por P. J. M. Marks y Stephen Parkin, 60-73. Chicago: University of Chicago Press.</p>
+      <span class="label">Artículo de revista:</span>
+      <p>Dittmar, Emily L., y Douglas W. Schemske. 2023. «Temporal Variation in Selection Influences Microgeographic Local Adaptation». <em>American Naturalist</em> 202 (4): 471-85. https://doi.org/10.1086/725865.</p>
+      <span class="label">Tesis o disertación:</span>
+      <p>Blajer de la Garza, Yuna. 2019. «A House Is Not a Home: Citizenship and Belonging in Contemporary Democracies». PhD diss., University of Chicago. ProQuest (13865986).</p>
+      <span class="label">Página web:</span>
+      <p>Google. 2023. «Privacy Policy». Privacy & Terms. Effective November 15. https://policies.google.com/privacy.</p>
+      <span class="label">Artículo de prensa o revista:</span>
+      <p>Blum, Dani. 2023. «Are Flax Seeds All That?» <em>New York Times</em>, 13 de diciembre. https://www.nytimes.com/2023/12/13/well/eat/flax-seeds-benefits.html.</p>
+    </div>
+
+    <h4>Notas Importantes sobre el Formato de Referencias:</h4>
+    <ul>
+      <li>El lugar de publicación ya no es obligatorio para libros según la 17.ª edición, pero se recomienda incluirlo cuando sea relevante.</li>
+      <li>Para artículos con más de seis autores, liste los tres primeros seguidos de «et al.» en la referencia completa.</li>
+      <li>Siempre que esté disponible, incluya el DOI (Digital Object Identifier) al final de la referencia de artículos de revista.</li>
+      <li>Si una fuente no tiene fecha de publicación identificable, use «s.f.» (sin fecha) o «n.d.» en inglés.</li>
+    </ul>
+
+    <!-- 07. Palabras Clave y Vocabularios Controlados -->
+    <h2 id="palabras-clave">07. Palabras Clave y Vocabularios Controlados</h2>
+    <p>Todos los manuscritos enviados a partir del <strong>Volumen 2, Número 2</strong> deben incluir un mínimo de <strong>dos (2)</strong> y un máximo de <strong>seis (6) palabras clave</strong>, seleccionadas de los vocabularios controlados oficiales. Consulte el <a href="policies.html#tabla-vocabularios">mapeo completo de disciplinas a vocabularios controlados</a> en las Políticas Editoriales para encontrar el tesauro correspondiente a su área y el enlace de consulta.</p>
+    <p>Cada palabra clave debe presentarse en el formato <strong>Código: Término</strong> (ej. <code>D009369: Neoplasms</code> para MeSH), tanto en español como en inglés. El formulario de envío le guiará en este proceso.</p>
+
+    <!-- 08. Figuras, Tablas y Material Gráfico -->
+    <h2 id="figuras-tablas">08. Figuras, Tablas y Material Gráfico</h2>
+    <p>Las figuras y tablas deben insertarse en el lugar aproximado del texto donde se mencionan por primera vez, con su correspondiente numeración y leyenda. Consulte las <a href="policies.html#figuras">Directrices para Figuras e Imágenes</a> en las Políticas Editoriales para conocer los requisitos técnicos, de integridad científica y de permisos de terceros.</p>
+
+    <!-- 09. Recursos y Talleres Audiovisuales -->
+    <h2 id="recursos">09. Recursos y Talleres Audiovisuales</h2>
+    <p>La Revista pone a disposición de los autores una serie de recursos de apoyo, incluyendo una suite de herramientas académicas y talleres audiovisuales, para facilitar el proceso de preparación del manuscrito.</p>
+    
+    <h3>9.1. Talleres Audiovisuales</h3>
+    <p>Estos talleres cubren aspectos prácticos de la escritura académica, el uso de herramientas de gestión bibliográfica y la preparación de manuscritos para revistas científicas.</p>
+    <div class="video-grid">
+      <div class="video-container">
+        <iframe src="https://www.youtube.com/embed/wyPhAGW6-94" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen title="Taller 1: Introducción a la Escritura Académica"></iframe>
+      </div>
+      <div class="video-container">
+        <iframe src="https://www.youtube.com/embed/videoseries?list=PL8yQlmhs7KsBerg9X63QnZnlNAopwzDmw" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen title="Playlist: Serie de Talleres para Autores"></iframe>
+      </div>
+    </div>
+
+    <h3>9.2. Suite de Herramientas Académicas "Academic Tools"</h3>
+    <div class="highlight-box" style="display: flex; align-items: center; gap: 30px;">
+      <img src="https://www.revistacienciasestudiantes.com/academic-tools/assets/logoP.png" alt="Logo Academic Tools" style="width: 100px; height: 100px; object-fit: contain; filter: grayscale(1); flex-shrink: 0;">
+      <div>
+        <h3 style="margin-top:0; font-size: 1.2em; text-transform: none; letter-spacing: normal; color: var(--primary);">Academic Tools</h3>
+        <p>Plataforma integral gratuita para la gestión de documentos PDF, generación automática de citas en múltiples estilos (incluido Chicago 17), análisis de texto y procesamiento de lenguaje académico. Una herramienta de apoyo recomendada para agilizar la preparación de su manuscrito.</p>
+        <a href="https://www.revistacienciasestudiantes.com/academic-tools" target="_blank" class="btn">Acceder a la Suite →</a>
+      </div>
+    </div>
+
+    <h3>9.3. Recursos de Búsqueda Recomendados</h3>
+    <p>Para la localización de literatura académica de calidad, sugerimos las siguientes plataformas:</p>
+    <div class="resource-card">
+      <h4>Google Scholar</h4>
+      <p>Buscador líder y gratuito para literatura académica de todas las disciplinas. Permite rastrear citas y crear alertas.</p>
+      <a href="https://scholar.google.com/" target="_blank">scholar.google.com</a>
+    </div>
+    <div class="resource-card">
+      <h4>SciELO</h4>
+      <p>Biblioteca científica electrónica de acceso abierto con una amplia colección de revistas iberoamericanas de calidad.</p>
+      <a href="https://scielo.org/es/" target="_blank">scielo.org</a>
+    </div>
+    <div class="resource-card">
+      <h4>Consensus</h4>
+      <p>Buscador de evidencia científica basado en inteligencia artificial que sintetiza hallazgos de artículos de investigación.</p>
+      <a href="https://consensus.app/" target="_blank">consensus.app</a>
+    </div>
+
+    <!-- 10. Lista de Verificación para el Envío -->
+    <h2 id="lista-verificacion">10. Lista de Verificación para el Envío</h2>
+    <p>Antes de enviar su manuscrito, verifique que cumple con todos los puntos de esta lista. Un envío que no cumpla con estos requisitos básicos será devuelto para su corrección, retrasando el proceso editorial.</p>
+    <ol>
+      <li>El manuscrito está en formato <strong>.docx</strong>. Si se usó LaTeX, se ha convertido correctamente y se ha verificado el resultado.</li>
+      <li>La <strong>extensión</strong> está dentro del rango recomendado de 1.000 a 10.000 palabras. Si es mayor, se ha considerado si el exceso está justificado.</li>
+      <li>El documento está completamente <strong>anonimizado</strong>: no contiene nombres de autores, afiliaciones, agradecimientos, ni metadatos identificativos.</li>
+      <li>Se ha utilizado la <strong>función de encabezados</strong> del procesador de texto (Heading 1, Heading 2, etc.) para estructurar el manuscrito. No se ha simulado la estructura con texto en negrita.</li>
+      <li>Las <strong>citas y referencias</strong> se ajustan estrictamente al estilo Chicago 17.ª edición (autor-fecha). Se ha revisado cada cita y su correspondiente referencia.</li>
+      <li>Se han incluido entre <strong>2 y 6 palabras clave</strong> con su código de vocabulario controlado, tanto en español como en inglés.</li>
+      <li>Las <strong>figuras y tablas</strong> cumplen con los requisitos de resolución, formato y tienen sus leyendas correspondientes.</li>
+      <li>Se ha leído y se aceptan en su totalidad las <a href="policies.html">Políticas Editoriales</a> de la Revista.</li>
+      <li>Se ha completado la <strong>carta de presentación (cover letter)</strong> dirigida al Editor, detallando la contribución y originalidad del trabajo, y declarando que no está siendo considerado en otra publicación.</li>
+    </ol>
+
+    <!-- Pie de página -->
+    <div class="footer" id="footer">
+      Revista Nacional de las Ciencias para Estudiantes · ISSN 3087-2839 <br>
+      San Felipe, Chile · Publicación Académica Independiente · © <span id="current-year"></span>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('current-year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>

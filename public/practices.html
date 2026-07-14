@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Buenas Prácticas · Revista Nacional de las Ciencias para Estudiantes</title>
+  <style>
+    :root {
+      --primary: #001f3f;
+      --text: #1a1a1a;
+      --light-text: #666;
+      --border: #e0e0e0;
+      --soft-white: #fdfdfd;
+      --accent: #c0a86a;
+      --link: #007398;
+    }
+    body {
+      font-family: 'Lora', 'Georgia', Times, serif;
+      line-height: 1.8;
+      margin: 0;
+      padding: 0;
+      background-color: var(--soft-white);
+      color: var(--text);
+    }
+    .page-wrapper {
+      max-width: 900px;
+      margin: 60px auto;
+      background-color: #fff;
+      padding: 60px 80px;
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.02);
+    }
+    .header {
+      text-align: center;
+      border-bottom: 3px double var(--text);
+      padding-bottom: 30px;
+      margin-bottom: 50px;
+    }
+    .header img {
+      max-width: 160px;
+      margin-bottom: 20px;
+      filter: grayscale(1);
+    }
+    .header h1 {
+      font-family: 'Playfair Display', 'Georgia', serif;
+      font-size: 2.4em;
+      font-weight: 900;
+      margin: 0;
+      letter-spacing: -0.02em;
+      color: var(--primary);
+    }
+    .document-meta {
+      font-family: 'Inter', sans-serif;
+      text-transform: uppercase;
+      font-size: 10px;
+      letter-spacing: 0.3em;
+      color: #888;
+      font-weight: 500;
+      margin-top: 10px;
+    }
+    h2 {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9em;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: var(--primary);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+      margin-top: 50px;
+    }
+    h3 {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.8em;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: #444;
+      margin-top: 35px;
+      margin-bottom: 15px;
+    }
+    p {
+      margin-bottom: 25px;
+      font-size: 1.05em;
+      color: #333;
+    }
+    ul, ol {
+      margin-bottom: 25px;
+      padding-left: 25px;
+    }
+    li {
+      margin-bottom: 8px;
+      font-size: 1.05em;
+      color: #333;
+    }
+    a {
+      color: var(--link);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      transition: all 0.2s;
+    }
+    a:hover {
+      background-color: var(--link);
+      color: white;
+      text-decoration: none;
+    }
+    .footer {
+      margin-top: 60px;
+      padding-top: 30px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: #999;
+    }
+    .principle-card {
+      background-color: #f8f9fa;
+      border-left: 4px solid var(--primary);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .principle-card h4 {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.8em;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--primary);
+      margin-top: 0;
+    }
+    .principle-card p {
+      margin-bottom: 0;
+    }
+    .role-section {
+      margin-bottom: 40px;
+    }
+    @media (max-width: 768px) {
+      .page-wrapper { margin: 20px; padding: 30px; }
+      .header h1 { font-size: 1.8em; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrapper">
+    <!-- Encabezado -->
+    <div class="header">
+      <img src="logo.png" alt="Logo Revista Nacional de las Ciencias para Estudiantes">
+      <h1>Buenas Prácticas</h1>
+      <div class="document-meta">Estándares para Autores, Revisores y Editores · Versión 2.0, Julio 2026 · San Felipe, Chile</div>
+    </div>
+
+    <p>La integridad de la literatura científica depende de la conducta ética y profesional de todos los actores involucrados en el proceso de publicación. La <strong>Revista Nacional de las Ciencias para Estudiantes</strong>, comprometida con los más altos estándares de calidad y transparencia, ha establecido el siguiente código de buenas prácticas, basado en las directrices del <strong>Committee on Publication Ethics (COPE)</strong>, el <strong>International Committee of Medical Journal Editors (ICMJE)</strong> y otras organizaciones internacionales de referencia.</p>
+    <p>Este código es de observancia obligatoria para todos los participantes en nuestros procesos editoriales y complementa nuestras <a href="policies.html">Políticas Editoriales</a>.</p>
+
+    <!-- 01. Buenas Prácticas para Autores -->
+    <div class="role-section">
+      <h2 id="autores">01. Buenas Prácticas para Autores</h2>
+      
+      <h3>1.1. Originalidad y Exclusividad</h3>
+      <div class="principle-card">
+        <h4>El Manuscrito como Contribución Original</h4>
+        <p>El autor se compromete a presentar un trabajo que constituya una contribución original, redactado por él mismo o por el equipo de coautores declarado. No se ha publicado previamente en otro medio con ISSN/ISBN, ni está siendo considerado simultáneamente por otra publicación. Cualquier fragmento de trabajo previo, propio o ajeno, está debidamente citado. La traducción o adaptación no autorizada de un trabajo previamente publicado se considera una forma de publicación duplicada.</p>
+      </div>
+
+      <h3>1.2. Autoría Responsable</h3>
+      <div class="principle-card">
+        <h4>Criterios y Transparencia</h4>
+        <p>Todas las personas que figuran como autores cumplen con los cuatro criterios de autoría del ICMJE (contribución sustancial, redacción o revisión crítica, aprobación final y responsabilidad). Las contribuciones se detallan mediante la taxonomía CRediT. Ninguna persona que cumpla los criterios ha sido excluida de la lista de autores. Las personas que han contribuido de forma secundaria son reconocidas en los agradecimientos, con su consentimiento expreso. El orden de los autores es un consenso unánime antes del envío.</p>
+      </div>
+
+      <h3>1.3. Rigor Metodológico y Honestidad Intelectual</h3>
+      <div class="principle-card">
+        <h4>Datos, Métodos y Precisión</h4>
+        <p>Los datos presentados son reales, completos y no han sido fabricados, falsificados ni manipulados. Las metodologías se describen con la suficiente precisión para permitir su replicación por otros investigadores. Las limitaciones del estudio se reconocen explícitamente. Los resultados negativos o que contradicen las hipótesis no se omiten ni se maquillan.</p>
+      </div>
+
+      <h3>1.4. Citación Precisa y Reconocimiento de Fuentes</h3>
+      <div class="principle-card">
+        <h4>Evitar el Plagio en Todas sus Formas</h4>
+        <p>Se reconoce y cita de manera explícita y precisa todo el trabajo de otros investigadores que haya influido en el estudio, ya sea en forma de ideas, datos, métodos o texto literal. El autoplagio (reciclaje textual no justificado de trabajos previos) se evita. El uso de herramientas de IA generativa se declara conforme a la política de la Revista.</p>
+      </div>
+
+      <h3>1.5. Transparencia sobre Conflictos de Interés y Financiamiento</h3>
+      <div class="principle-card">
+        <h4>Declaración Completa y Oportuna</h4>
+        <p>Todas las fuentes de financiamiento, apoyo institucional y posibles conflictos de interés (financieros, personales, académicos o ideológicos) que puedan haber influido en el trabajo son declarados de forma completa en el manuscrito y en el formulario de envío.</p>
+      </div>
+
+      <h3>1.6. Colaboración con el Proceso Editorial</h3>
+      <div class="principle-card">
+        <h4>Respuesta y Corrección</h4>
+        <p>El autor de correspondencia se compromete a gestionar la comunicación con la Revista de manera ágil y profesional, respondiendo a las solicitudes de los editores dentro de los plazos establecidos. Si se detecta un error significativo en un trabajo publicado, los autores están obligados a notificarlo de inmediato a la Revista y a colaborar en la publicación de una corrección (Corrigendum) o, en casos graves, en la retractación del artículo.</p>
+      </div>
+    </div>
+
+    <!-- 02. Buenas Prácticas para Revisores -->
+    <div class="role-section">
+      <h2 id="revisores">02. Buenas Prácticas para Revisores</h2>
+      
+      <h3>2.1. Confidencialidad</h3>
+      <div class="principle-card">
+        <h4>Protección del Manuscrito</h4>
+        <p>El revisor trata el manuscrito y todos los materiales asociados como documentos estrictamente confidenciales. No los comparte, discute con terceros no autorizados, ni utiliza la información contenida en ellos para beneficio propio o de terceros antes de su publicación. El deber de confidencialidad subsiste incluso después de finalizado el proceso de revisión.</p>
+      </div>
+
+      <h3>2.2. Imparcialidad y Objetividad</h3>
+      <div class="principle-card">
+        <h4>Evaluación Basada en el Mérito</h4>
+        <p>La evaluación se centra exclusivamente en la calidad científica, la originalidad, el rigor metodológico y la claridad expositiva del manuscrito. El revisor evita cualquier sesgo relacionado con el origen, la filiación o las características personales de los autores (si llegara a conocerlos). Las críticas son constructivas, específicas y respetuosas, sin lenguaje ofensivo o despectivo.</p>
+      </div>
+
+      <h3>2.3. Declaración de Conflictos de Interés</h3>
+      <div class="principle-card">
+        <h4>Transparencia Sobre Posibles Sesgos</h4>
+        <p>El revisor declara cualquier conflicto de interés real, potencial o aparente (colaboraciones recientes, competencia directa, relaciones personales, etc.) que pueda comprometer su imparcialidad. Si el conflicto es significativo, rechazará la invitación a revisar.</p>
+      </div>
+
+      <h3>2.4. Puntualidad y Compromiso</h3>
+      <div class="principle-card">
+        <h4>Cumplimiento de Plazos</h4>
+        <p>El revisor acepta la invitación solo si puede emitir un informe de calidad dentro del plazo establecido. Si surgen imprevistos, lo comunica al editor con la mayor antelación posible. Si no posee la experiencia necesaria para evaluar el manuscrito, rechaza la invitación de inmediato.</p>
+      </div>
+
+      <h3>2.5. Uso Responsable de la Inteligencia Artificial</h3>
+      <div class="principle-card">
+        <h4>El Juicio Humano es Insustituible</h4>
+        <p>El revisor puede utilizar herramientas de IA como apoyo para mejorar la redacción u organización de su informe, pero <strong>no puede delegar en ellas la lectura crítica ni el juicio científico del manuscrito</strong>. Está prohibido introducir el manuscrito o fragmentos sustanciales del mismo en servicios de IA que no ofrezcan garantías de confidencialidad, salvo autorización expresa de la Revista. La responsabilidad última del dictamen recae exclusivamente en el revisor.</p>
+      </div>
+    </div>
+
+    <!-- 03. Buenas Prácticas para Editores -->
+    <div class="role-section">
+      <h2 id="editores">03. Buenas Prácticas para Editores</h2>
+      
+      <h3>3.1. Independencia Editorial</h3>
+      <div class="principle-card">
+        <h4>Decisiones Basadas en el Mérito Científico</h4>
+        <p>El Comité Editorial toma las decisiones de publicación basándose exclusivamente en la calidad, originalidad, rigor metodológico y adecuación al alcance de la Revista. Ningún interés comercial, institucional, político o personal interfiere en estas decisiones. La Revista no aplica cuotas de publicación por institución, país o temática.</p>
+      </div>
+
+      <h3>3.2. Confidencialidad y Transparencia</h3>
+      <div class="principle-card">
+        <h4>Protección de la Información y Rendición de Cuentas</h4>
+        <p>Los editores protegen la confidencialidad de los manuscritos y de su proceso de revisión, limitando el acceso a quienes lo requieran para sus funciones. Al mismo tiempo, las políticas, los procesos y los criterios de decisión se comunican de forma abierta y accesible a todos los participantes. Cualquier modificación sustancial de las políticas editoriales se notifica con transparencia.</p>
+      </div>
+
+      <h3>3.3. Gestión de Conflictos de Interés</h3>
+      <div class="principle-card">
+        <h4>Abstención y Manejo de Casos</h4>
+        <p>Los editores se abstienen de participar en la gestión de manuscritos en los que tengan un conflicto de interés real, potencial o aparente. Cuando se detecta un conflicto no declarado en un autor o revisor, se inicia una investigación conforme a los flujogramas de COPE.</p>
+      </div>
+
+      <h3>3.4. Manejo de Mala Conducta Científica</h3>
+      <div class="principle-card">
+        <h4>Investigación y Corrección del Registro</h4>
+        <p>Ante denuncias o sospechas fundadas de mala conducta (plagio, falsificación de datos, manipulación de imágenes, conflictos de interés no declarados, etc.), el Comité Editorial actúa con diligencia siguiendo los flujogramas y directrices de COPE. Si la investigación confirma la mala conducta, se aplican las medidas correctivas necesarias: corrección, expresión de preocupación o retractación del artículo. La integridad del registro académico es una prioridad absoluta.</p>
+      </div>
+
+      <h3>3.5. Fomento de la Diversidad y la Inclusión</h3>
+      <div class="principle-card">
+        <h4>Equidad en Todas las Etapas</h4>
+        <p>El Comité Editorial trabaja activamente para promover la diversidad y la inclusión en la conformación del equipo editorial, la selección de revisores y la evaluación de los manuscritos. Se evita cualquier sesgo o discriminación por motivos de género, origen étnico, nacionalidad, orientación sexual, creencias religiosas o posturas políticas.</p>
+      </div>
+    </div>
+
+    <p style="margin-top: 40px;">Para cualquier consulta sobre este código o para reportar una posible infracción, contacte al Editor en Jefe a través de <a href="mailto:editor@revistacienciasestudiantes.com">editor@revistacienciasestudiantes.com</a>.</p>
+
+    <!-- Pie de página -->
+    <div class="footer" id="footer">
+      Revista Nacional de las Ciencias para Estudiantes · ISSN 3087-2839 <br>
+      San Felipe, Chile · Publicación Académica Independiente · © <span id="current-year"></span>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('current-year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>

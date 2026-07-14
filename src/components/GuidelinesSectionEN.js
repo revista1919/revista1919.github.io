@@ -36,6 +36,45 @@ function GuidelinesSection() {
               </a>
             </div>
 
+            {/* Links to Complete Guides */}
+            <div className="space-y-3 mb-8">
+              <a 
+                href="/authorEN.html" 
+                className="block p-4 bg-white rounded-lg border border-gray-200 hover:border-[#007398] hover:shadow-md transition-all group"
+              >
+                <h3 className="text-sm font-bold text-[#001f3f] group-hover:text-[#007398] transition-colors mb-1">
+                  Complete Author Guidelines
+                </h3>
+                <p className="text-xs text-gray-500 font-serif">
+                  Detailed instructions for manuscript preparation and submission.
+                </p>
+              </a>
+
+              <a 
+                href="/practicesEN.html" 
+                className="block p-4 bg-white rounded-lg border border-gray-200 hover:border-[#007398] hover:shadow-md transition-all group"
+              >
+                <h3 className="text-sm font-bold text-[#001f3f] group-hover:text-[#007398] transition-colors mb-1">
+                  Good Practices Guide
+                </h3>
+                <p className="text-xs text-gray-500 font-serif">
+                  Ethical standards and best practices for academic publishing.
+                </p>
+              </a>
+
+              <a 
+                href="/open-accessEN.html" 
+                className="block p-4 bg-white rounded-lg border border-gray-200 hover:border-[#007398] hover:shadow-md transition-all group"
+              >
+                <h3 className="text-sm font-bold text-[#001f3f] group-hover:text-[#007398] transition-colors mb-1">
+                  Open Access Policies
+                </h3>
+                <p className="text-xs text-gray-500 font-serif">
+                  Information about licenses, copyright, and open access.
+                </p>
+              </a>
+            </div>
+
             <ul className="space-y-6">
               {[
                 { label: 'Length', val: '1,000–10,000 words (including references)' },
