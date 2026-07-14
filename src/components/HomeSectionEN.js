@@ -230,6 +230,7 @@ const HomeSection = ({ onOpenMenu }) => {
         </div>
 
         {/* AUTHOR GUIDES - Direct links section */}
+               {/* AUTHOR GUIDES - Direct links section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -245,7 +246,7 @@ const HomeSection = ({ onOpenMenu }) => {
               Consult our complete resources before preparing your manuscript
             </p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
             <a
               href="/authorEN.html"
               className="group relative p-6 bg-white rounded-xl border border-gray-200 hover:border-[#007398] hover:shadow-lg transition-all overflow-hidden"
@@ -320,9 +321,33 @@ const HomeSection = ({ onOpenMenu }) => {
                 </div>
               </div>
             </a>
+
+            <a
+              href="/policiesEN.html"
+              className="group relative p-6 bg-white rounded-xl border border-gray-200 hover:border-[#c0a86a] hover:shadow-lg transition-all overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 w-full h-1 bg-[#001f3f] group-hover:bg-[#c0a86a] transition-colors"></div>
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-[#f0f4f8] rounded-lg group-hover:bg-[#f5f0e6] transition-colors">
+                  <svg className="w-5 h-5 text-[#001f3f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900 group-hover:text-[#c0a86a] transition-colors mb-1">
+                    Editorial Policies
+                  </h3>
+                  <p className="text-xs text-gray-500 leading-relaxed">
+                    Rules, processes, and editorial requirements of the journal.
+                  </p>
+                  <span className="inline-block mt-2 text-[10px] font-bold uppercase tracking-wider text-[#c0a86a] opacity-0 group-hover:opacity-100 transition-all transform translate-x-0 group-hover:translate-x-1">
+                    View →
+                  </span>
+                </div>
+              </div>
+            </a>
           </div>
         </motion.div>
-
         {/* GRID */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {cards.map((card, index) => (

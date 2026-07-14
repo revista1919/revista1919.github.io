@@ -302,7 +302,7 @@
     <p>The Journal recognizes that LaTeX is a widely used tool in disciplines such as mathematics, physics, engineering, and computer science. However, to standardize the editorial workflow, the final manuscript must be delivered in <strong>.docx</strong> format. To this end, authors writing in LaTeX must convert their document before submission.</p>
     <p>The use of conversion tools such as <strong>Pandoc</strong>, a free and open-source document converter, is recommended. Below is an example command to convert a <code>.tex</code> file to <code>.docx</code>:</p>
     <div class="highlight-box">
-      <code style="word-break: break-all;">pandoc document.tex --citeproc --csl chicago-fullnote-bibliography.csl --bibliography=referencias.bib -o document.docx</code>
+      <code style="word-break: break-all;">pandoc archivo.tex --citeproc --csl=chicago-author-date.csl -o resultado.docx</code>
       <p style="margin-top: 10px;">The use of a CSL (Citation Style Language) style file and a BibTeX bibliography file is highly recommended to preserve the integrity of citations and references during conversion.</p>
     </div>
     <p><strong>It is the author's sole responsibility to verify that the conversion has faithfully preserved the content, mathematical formulas, cross-references, and bibliographic citations.</strong> It is suggested to meticulously review the resulting .docx file before proceeding with the submission. The Journal is not responsible for errors or formatting losses resulting from a deficient conversion.</p>

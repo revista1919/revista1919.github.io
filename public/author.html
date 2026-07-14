@@ -302,7 +302,7 @@
     <p>La Revista reconoce que LaTeX es una herramienta ampliamente utilizada en disciplinas como matemáticas, física, ingeniería y ciencias de la computación. Sin embargo, para homogeneizar el flujo editorial, es indispensable que el manuscrito final se entregue en formato <strong>.docx</strong>. Para ello, los autores que redacten en LaTeX deberán realizar una conversión de su documento antes del envío.</p>
     <p>Se recomienda el uso de herramientas de conversión como <strong>Pandoc</strong>, un conversor de documentos libre y gratuito. A continuación, se proporciona un comando de ejemplo para convertir un archivo <code>.tex</code> a <code>.docx</code>:</p>
     <div class="highlight-box">
-      <code style="word-break: break-all;">pandoc documento.tex --citeproc --csl chicago-fullnote-bibliography.csl --bibliography=referencias.bib -o documento.docx</code>
+      <code style="word-break: break-all;">pandoc archivo.tex --citeproc --csl=chicago-author-date.csl -o resultado.docx</code>
       <p style="margin-top: 10px;">El uso de un archivo de estilo CSL (Citation Style Language) y un archivo de bibliografía en formato BibTeX es altamente recomendable para preservar la integridad de las citas y referencias durante la conversión.</p>
     </div>
     <p><strong>Es responsabilidad exclusiva del autor verificar que la conversión haya preservado fielmente el contenido, las fórmulas matemáticas, las referencias cruzadas y las citas bibliográficas.</strong> Se sugiere revisar meticulosamente el archivo .docx resultante antes de proceder al envío. La Revista no se hace responsable por errores o pérdidas de formato derivados de una conversión deficiente.</p>
