@@ -91,7 +91,7 @@ const PreOrcidEmailModal = ({ isOpen, onClose, onConfirm, isLoading }) => {
           </div>
 
           <p className="text-[10px] uppercase tracking-[0.3em] font-bold text-[#A6CE39] mb-2">
-            Revista de Ciencias para Estudiantes
+            Revista Nacional de las Ciencias para Estudiantes
           </p>
           <h3 className="font-serif text-2xl font-bold text-gray-900 mb-3">
             Iniciar sesión con ORCID
@@ -739,7 +739,7 @@ export default function LoginSection({ onLogin }) {
               {isLogin ? 'Acceso Editorial' : 'Registro de Autor'}
             </h2>
             <p className="text-xs text-gray-400 uppercase tracking-widest font-medium">
-              Revista de Ciencias para Estudiantes
+              Revista Nacional de las Ciencias para Estudiantes
             </p>
           </div>
 

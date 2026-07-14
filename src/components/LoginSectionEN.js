@@ -12,7 +12,6 @@ import {
   doc,
   setDoc,
   getDoc,
-  updateDoc,
   OAuthProvider,
   signInWithPopup,
   getAdditionalUserInfo
@@ -29,14 +28,14 @@ const OrcidIcon = ({ className = "h-5 w-5" }) => (
     </g>
   </svg>
 );
+// =============================================
 
-// ========== ELEGANT EMAIL MODAL FOR ORCID ==========
-const OrcidEmailModal = ({ user, onComplete, onCancel }) => {
+// ========== ELEGANT PRE-ORCID EMAIL MODAL ==========
+const PreOrcidEmailModal = ({ isOpen, onClose, onConfirm, isLoading }) => {
   const [email, setEmail] = useState('');
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
 
@@ -45,22 +44,16 @@ const OrcidEmailModal = ({ user, onComplete, onCancel }) => {
       return;
     }
 
-    setSaving(true);
-    try {
-      await updateDoc(doc(db, 'users', user.uid), {
-        email: email.trim().toLowerCase(),
-        emailPending: false,
-        emailVerified: true,
-        emailUpdatedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
-      onComplete(email.trim().toLowerCase());
-    } catch (err) {
-      console.error('Error saving email:', err);
-      setError('Error saving. Please try again.');
-    }
-    setSaving(false);
+    onConfirm(email.trim().toLowerCase());
   };
+
+  const handleClose = () => {
+    setEmail('');
+    setError('');
+    onClose();
+  };
+
+  if (!isOpen) return null;
 
   return (
     <motion.div
@@ -68,7 +61,7 @@ const OrcidEmailModal = ({ user, onComplete, onCancel }) => {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
-      onClick={onCancel}
+      onClick={handleClose}
     >
       <motion.div
         initial={{ scale: 0.95, opacity: 0, y: 10 }}
@@ -81,20 +74,30 @@ const OrcidEmailModal = ({ user, onComplete, onCancel }) => {
         {/* Decorative top line */}
         <div className="absolute top-0 left-0 w-full h-1 bg-[#A6CE39]" />
 
+        {/* Close button */}
+        <button
+          onClick={handleClose}
+          className="absolute top-4 right-4 text-gray-300 hover:text-gray-600 transition-colors"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
         <div className="text-center mb-8">
           {/* Icon circle */}
           <div className="w-16 h-16 bg-stone-50 border border-stone-200 rounded-full flex items-center justify-center mx-auto mb-5">
-            <EnvelopeIcon className="w-7 h-7 text-stone-500" />
+            <OrcidIcon className="w-8 h-8" />
           </div>
 
           <p className="text-[10px] uppercase tracking-[0.3em] font-bold text-[#A6CE39] mb-2">
             The National Review of Sciences for Students
           </p>
           <h3 className="font-serif text-2xl font-bold text-gray-900 mb-3">
-            Email Address
+            Sign in with ORCID
           </h3>
           <p className="text-sm text-gray-500 leading-relaxed max-w-sm mx-auto">
-            Your ORCID account does not include a public email. We need one to send you notifications about your submissions, reviews, and portal updates.
+            You will be redirected to ORCID to authenticate. First, we need your email address to keep you informed about your submissions and reviews.
           </p>
         </div>
 
@@ -103,14 +106,18 @@ const OrcidEmailModal = ({ user, onComplete, onCancel }) => {
             <label className="text-[10px] uppercase font-bold tracking-widest text-gray-400 mb-1.5 block">
               Email address
             </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="your.name@institution.edu"
-              className="w-full bg-gray-50 border border-gray-200 px-4 py-3.5 text-sm focus:outline-none focus:border-[#A6CE39] focus:bg-white transition-all placeholder:text-gray-300"
-              autoFocus
-            />
+            <div className="relative">
+              <EnvelopeIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your.name@institution.edu"
+                className="w-full bg-gray-50 border border-gray-200 pl-11 pr-4 py-3.5 text-sm focus:outline-none focus:border-[#A6CE39] focus:bg-white transition-all placeholder:text-gray-300"
+                autoFocus
+                disabled={isLoading}
+              />
+            </div>
             {error && (
               <p className="mt-2 text-[11px] text-red-600 font-medium">{error}</p>
             )}
@@ -118,30 +125,34 @@ const OrcidEmailModal = ({ user, onComplete, onCancel }) => {
 
           <button
             type="submit"
-            disabled={saving}
-            className="w-full bg-gray-900 text-white py-4 text-xs uppercase font-black tracking-[0.2em] hover:bg-[#A6CE39] transition-colors flex items-center justify-center gap-3 disabled:bg-gray-300"
+            disabled={isLoading || !email}
+            className="w-full bg-[#A6CE39] hover:bg-[#8FB832] text-white py-4 text-xs uppercase font-black tracking-[0.2em] transition-colors flex items-center justify-center gap-3 disabled:bg-gray-300 disabled:cursor-not-allowed shadow-sm"
           >
-            {saving ? (
+            {isLoading ? (
               <>
                 <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Saving...
+                Connecting to ORCID...
               </>
             ) : (
-              'Save & Continue'
+              <>
+                <OrcidIcon className="h-4 w-4" />
+                Continue to ORCID
+              </>
             )}
           </button>
 
           <button
             type="button"
-            onClick={onCancel}
+            onClick={handleClose}
             className="w-full text-center text-xs text-gray-400 hover:text-gray-600 transition-colors py-2 font-medium"
+            disabled={isLoading}
           >
-            Skip for now
+            Cancel
           </button>
         </form>
 
         <p className="text-[10px] text-gray-400 text-center mt-6 leading-relaxed">
-          You can change your email later from the profile section of the editorial portal.
+          By continuing, you will be redirected to the official ORCID website to authenticate your academic identity.
         </p>
       </motion.div>
     </motion.div>
@@ -161,10 +172,11 @@ export default function LoginSection({ onLogin }) {
   const [errors, setErrors] = useState({ firstName: '', lastName: '', email: '', password: '' });
   const [currentUser, setCurrentUser] = useState(null);
 
-  // ========== STATES FOR ORCID EMAIL MODAL ==========
-  const [showOrcidEmailModal, setShowOrcidEmailModal] = useState(false);
-  const [pendingOrcidUser, setPendingOrcidUser] = useState(null);
-  // ==================================================
+  // ========== STATES FOR PRE-ORCID MODAL ==========
+  const [showPreOrcidModal, setShowPreOrcidModal] = useState(false);
+  const [preOrcidEmail, setPreOrcidEmail] = useState('');
+  const [isOrcidLoading, setIsOrcidLoading] = useState(false);
+  // ================================================
 
   // ========== STATES FOR CORRUPTION AND TIMEOUT HANDLING ==========
   const [loadingTimeout, setLoadingTimeout] = useState(false);
@@ -220,36 +232,18 @@ export default function LoginSection({ onLogin }) {
             imageUrl: userDoc.data()?.imageUrl || '',
             social: userDoc.data()?.social || {},
             publicEmail: userDoc.data()?.publicEmail || null,
-            orcid: userDoc.data()?.orcid || '',
-            emailPending: userDoc.data()?.emailPending || false
+            orcid: userDoc.data()?.orcid || ''
           };
 
-         if (!userData.uid) {
-    console.error('Corrupted user data - missing UID');
-    setCorruptedSession(true);
-    return;
-}
-
-// If email is pending (ORCID without email), show modal
-if (userData.emailPending && !userData.email) {
-    setPendingOrcidUser(userData);
-    setShowOrcidEmailModal(true);
-    setCurrentUser(userData); // ← ADD THIS LINE (important)
-    setCorruptedSession(false);
-    setLoadingTimeout(false);
-    return;
-}
-
-// Validate email ONLY if it's NOT pending
-if (!userData.email && !userData.emailPending) {
-    console.error('Corrupted user data - missing email and not pending');
-    setCorruptedSession(true);
-    return;
-}
+          if (!userData.uid || !userData.email) {
+            console.error('Corrupted user data detected');
+            setCorruptedSession(true);
+            return;
+          }
 
           setCorruptedSession(false);
           setLoadingTimeout(false);
-          
+
           setMessage({ text: `Welcome, ${userData.displayName}!`, type: 'success' });
           setCurrentUser(userData);
           if (onLogin) onLogin(userData);
@@ -360,7 +354,6 @@ if (!userData.email && !userData.emailPending) {
         imageUrl: '',
         social: {},
         publicEmail: null,
-        emailPending: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
@@ -371,9 +364,6 @@ if (!userData.email && !userData.emailPending) {
       setPassword('');
       setFirstName('');
       setLastName('');
-setCurrentUser(userData); // ← Establecer currentUser inmediatamente
-setPendingOrcidUser(userData);
-setShowOrcidEmailModal(true);
       setErrors({ firstName: '', lastName: '', email: '', password: '' });
     } catch (error) {
       let errorText = 'Error creating account';
@@ -455,65 +445,88 @@ setShowOrcidEmailModal(true);
     }
   };
 
-  // ========== ORCID SIGN IN (CLEAN VERSION) ==========
-  const signInWithOrcid = async () => {
-    setIsLoading(true);
-    setMessage({ text: '', type: '' });
-
-    try {
-      const provider = new OAuthProvider('oidc.orcid');
-      provider.addScope('/authenticate');
-
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      const additionalInfo = getAdditionalUserInfo(result);
-      const profile = additionalInfo?.profile || {};
-
-      const orcidId = profile?.sub || '';
-
-      console.log('User authenticated with ORCID:', user.uid);
-      console.log('ORCID iD:', orcidId);
-
-      // Save to Firestore (email pending)
-      const userData = {
-        uid: user.uid,
-        email: '',
-        firstName: profile?.given_name || '',
-        lastName: profile?.family_name || '',
-        displayName: profile?.name || '',
-        roles: ['Author'],
-        description: { es: '', en: '' },
-        interests: { es: '', en: '' },
-        imageUrl: profile?.picture || '',
-        social: {},
-        publicEmail: null,
-        orcid: orcidId,
-        emailPending: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-
-      await setDoc(doc(db, 'users', user.uid), userData, { merge: true });
-
-      // Show email modal
-      setPendingOrcidUser(userData);
-      setShowOrcidEmailModal(true);
-
-    } catch (error) {
-      console.error('Error signing in with ORCID:', error);
-
-      let errorText = 'Error signing in with ORCID';
-      if (error.code === 'auth/popup-closed-by-user') {
-        errorText = 'Window closed. Please try again.';
-      } else if (error.code === 'auth/operation-not-allowed') {
-        errorText = 'ORCID is not enabled. Contact the administrator.';
-      }
-
-      setMessage({ text: errorText, type: 'error' });
-      setIsLoading(false);
-    }
+  // ========== STEP 1: OPEN PRE-ORCID EMAIL MODAL ==========
+  const handleOrcidButtonClick = () => {
+    setShowPreOrcidModal(true);
   };
-  // ===================================================
+
+  // ========== STEP 2: RECEIVE EMAIL AND PROCEED TO ORCID ==========
+  const handlePreOrcidConfirm = async (emailFromModal) => {
+    setPreOrcidEmail(emailFromModal);
+    setShowPreOrcidModal(false);
+    setIsOrcidLoading(true);
+
+    // Small delay for smooth modal close animation before opening popup
+    setTimeout(async () => {
+      try {
+        const provider = new OAuthProvider('oidc.orcid');
+        provider.addScope('/authenticate');
+
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+        const additionalInfo = getAdditionalUserInfo(result);
+        const profile = additionalInfo?.profile || {};
+
+        const orcidId = profile?.sub || '';
+
+        console.log('✅ User authenticated with ORCID:', user.uid);
+        console.log('✅ ORCID iD:', orcidId);
+        console.log('✅ Email provided by user:', emailFromModal);
+
+        // ========== SAVE TO FIRESTORE WITH USER'S EMAIL ==========
+        const userData = {
+          uid: user.uid,
+          email: emailFromModal, // ← Email the user entered
+          firstName: profile?.given_name || '',
+          lastName: profile?.family_name || '',
+          displayName: profile?.name || '',
+          roles: ['Author'],
+          description: { es: '', en: '' },
+          interests: { es: '', en: '' },
+          imageUrl: profile?.picture || '',
+          social: {},
+          publicEmail: null,
+          orcid: orcidId,
+          emailSource: 'user-provided', // Indicates email was given by user
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        await setDoc(doc(db, 'users', user.uid), userData, { merge: true });
+
+        setMessage({
+          text: `Welcome, ${userData.displayName || 'Author'}!`,
+          type: 'success'
+        });
+
+        setCurrentUser(userData);
+        setIsOrcidLoading(false);
+        if (onLogin) onLogin(userData);
+
+      } catch (error) {
+        console.error('❌ Error signing in with ORCID:', error);
+        setIsOrcidLoading(false);
+
+        let errorText = 'Error signing in with ORCID';
+        if (error.code === 'auth/popup-closed-by-user') {
+          errorText = 'ORCID window closed. Please try again.';
+        } else if (error.code === 'auth/operation-not-allowed') {
+          errorText = 'ORCID is not enabled. Contact the administrator.';
+        } else if (error.code === 'auth/cancelled-popup-request') {
+          errorText = 'Request cancelled. Please try again.';
+        }
+
+        setMessage({ text: errorText, type: 'error' });
+      }
+    }, 300); // 300ms delay for smooth animation
+  };
+
+  // ========== CANCEL PRE-ORCID MODAL ==========
+  const handlePreOrcidCancel = () => {
+    setShowPreOrcidModal(false);
+    setPreOrcidEmail('');
+  };
+  // ===========================================
 
   const handleLogout = async () => {
     try {
@@ -606,89 +619,86 @@ setShowOrcidEmailModal(true);
   // ========== LOGGED IN USER SCREEN ==========
   if (currentUser) {
     return (
-      <>
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-md mx-auto py-12 px-6">
-          <div className="bg-white border-2 border-black p-8 text-center space-y-6">
-            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto border border-gray-200">
-              {currentUser.imageUrl ? (
-                <img src={currentUser.imageUrl} alt={currentUser.displayName} className="w-20 h-20 rounded-full object-cover" />
-              ) : (
-                <UserIcon className="h-10 w-10 text-gray-400" />
-              )}
-            </div>
-            <div>
-              <p className="text-[10px] uppercase tracking-[0.3em] font-bold text-[#007398] mb-1">Active Session</p>
-              <h3 className="text-2xl font-serif font-bold text-gray-900">{currentUser.displayName}</h3>
-              {currentUser.orcid && (
-                <a
-                  href={`https://orcid.org/${currentUser.orcid}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-xs text-[#A6CE39] hover:underline mt-1"
-                >
-                  <OrcidIcon className="h-4 w-4" />
-                  {currentUser.orcid}
-                </a>
-              )}
-              <p className="text-sm text-gray-500 font-mono mt-2">{currentUser.roles.join('; ')}</p>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center justify-center gap-2 w-full py-3 border border-red-200 text-red-600 text-xs uppercase font-black tracking-widest hover:bg-red-50 transition-colors"
-            >
-              <ArrowRightOnRectangleIcon className="h-4 w-4" /> Sign Out
-            </button>
-            <AnimatePresence>
-              {message.text && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className={`mt-6 p-4 text-[11px] font-medium leading-relaxed border-l-4 ${
-                    message.type === 'error' ? 'bg-red-50 border-red-500 text-red-700' : 'bg-green-50 border-green-500 text-green-700'
-                  }`}
-                >
-                  {message.text}
-                </motion.div>
-              )}
-            </AnimatePresence>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-md mx-auto py-12 px-6">
+        <div className="bg-white border-2 border-black p-8 text-center space-y-6">
+          <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto border border-gray-200">
+            {currentUser.imageUrl ? (
+              <img src={currentUser.imageUrl} alt={currentUser.displayName} className="w-20 h-20 rounded-full object-cover" />
+            ) : (
+              <UserIcon className="h-10 w-10 text-gray-400" />
+            )}
           </div>
-        </motion.div>
-
-        {/* ========== ORCID EMAIL MODAL ========== */}
-        <AnimatePresence>
-          {showOrcidEmailModal && pendingOrcidUser && (
-            <OrcidEmailModal
-              user={pendingOrcidUser}
-              onComplete={(email) => {
-                setShowOrcidEmailModal(false);
-                setIsLoading(false);
-                const updatedUser = { ...pendingOrcidUser, email, emailPending: false };
-                setCurrentUser(updatedUser);
-                setMessage({
-                  text: `Welcome, ${updatedUser.displayName || 'Author'}!`,
-                  type: 'success'
-                });
-                if (onLogin) onLogin(updatedUser);
-              }}
-              onCancel={() => {
-                setShowOrcidEmailModal(false);
-                setIsLoading(false);
-                setCurrentUser(pendingOrcidUser);
-                setMessage({
-                  text: `Welcome, ${pendingOrcidUser.displayName || 'Author'}! You can add your email in your profile later.`,
-                  type: 'info'
-                });
-                if (onLogin) onLogin(pendingOrcidUser);
-              }}
-            />
-          )}
-        </AnimatePresence>
-        {/* ====================================== */}
-      </>
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.3em] font-bold text-[#007398] mb-1">Active Session</p>
+            <h3 className="text-2xl font-serif font-bold text-gray-900">{currentUser.displayName}</h3>
+            {currentUser.orcid && (
+              <a
+                href={`https://orcid.org/${currentUser.orcid}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-[#A6CE39] hover:underline mt-1"
+              >
+                <OrcidIcon className="h-4 w-4" />
+                {currentUser.orcid}
+              </a>
+            )}
+            <p className="text-sm text-gray-500 font-mono mt-2">{currentUser.roles.join('; ')}</p>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="flex items-center justify-center gap-2 w-full py-3 border border-red-200 text-red-600 text-xs uppercase font-black tracking-widest hover:bg-red-50 transition-colors"
+          >
+            <ArrowRightOnRectangleIcon className="h-4 w-4" /> Sign Out
+          </button>
+          <AnimatePresence>
+            {message.text && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className={`mt-6 p-4 text-[11px] font-medium leading-relaxed border-l-4 ${
+                  message.type === 'error' ? 'bg-red-50 border-red-500 text-red-700' : 'bg-green-50 border-green-500 text-green-700'
+                }`}
+              >
+                {message.text}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </motion.div>
     );
   }
   // ==============================================
+
+  // ========== ORCID LOADING SCREEN ==========
+  if (isOrcidLoading) {
+    return (
+      <div className="max-w-md mx-auto py-12 px-6">
+        <div className="bg-white border-2 border-black p-8 text-center space-y-6">
+          <OrcidIcon className="h-12 w-12 mx-auto" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#A6CE39] mx-auto"></div>
+          <p className="text-gray-600 text-sm">Connecting to ORCID...</p>
+          <p className="text-xs text-gray-400">A pop-up window will open for authentication.</p>
+
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <p className="text-xs text-gray-400 mb-3">
+              Didn't see the pop-up?
+            </p>
+            <button
+              onClick={() => {
+                setIsOrcidLoading(false);
+                setMessage({ text: 'Sign in cancelled.', type: 'info' });
+              }}
+              className="text-xs text-red-600 hover:text-red-800 underline font-bold"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  // ===========================================
 
   // ========== LOADING SCREEN WITH ESCAPE BUTTON ==========
   if (isLoading && !currentUser) {
@@ -720,166 +730,175 @@ setShowOrcidEmailModal(true);
 
   // ========== LOGIN/REGISTRATION FORM ==========
   return (
-    <div className="max-w-md mx-auto py-16 px-6">
-      <motion.div
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="bg-white border border-gray-200 p-8 shadow-sm relative overflow-hidden"
-      >
-        <div className="absolute top-0 left-0 w-full h-1 bg-[#007398]" />
-        <div className="text-center mb-10">
-          <h2 className="text-3xl font-serif font-bold text-gray-900 mb-2">
-            {isLogin ? 'Editorial Access' : 'Author Registration'}
-          </h2>
-          <p className="text-xs text-gray-400 uppercase tracking-widest font-medium">
-            The National Review of Sciences for Students
-          </p>
-        </div>
+    <>
+      <div className="max-w-md mx-auto py-16 px-6">
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="bg-white border border-gray-200 p-8 shadow-sm relative overflow-hidden"
+        >
+          <div className="absolute top-0 left-0 w-full h-1 bg-[#007398]" />
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-serif font-bold text-gray-900 mb-2">
+              {isLogin ? 'Editorial Access' : 'Author Registration'}
+            </h2>
+            <p className="text-xs text-gray-400 uppercase tracking-widest font-medium">
+              The National Review of Sciences for Students
+            </p>
+          </div>
 
-        {/* ========== ORCID BUTTON ========== */}
-        <div className="mb-6">
-          <button
-            type="button"
-            onClick={signInWithOrcid}
-            disabled={isLoading}
-            className="w-full bg-[#A6CE39] hover:bg-[#8FB832] text-white py-4 text-xs uppercase font-black tracking-[0.2em] transition-colors flex items-center justify-center gap-3 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-sm"
-          >
-            {isLoading ? (
-              <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
+          {/* ========== ORCID BUTTON (OPENS MODAL FIRST) ========== */}
+          <div className="mb-6">
+            <button
+              type="button"
+              onClick={handleOrcidButtonClick}
+              disabled={isLoading}
+              className="w-full bg-[#A6CE39] hover:bg-[#8FB832] text-white py-4 text-xs uppercase font-black tracking-[0.2em] transition-colors flex items-center justify-center gap-3 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-sm"
+            >
+              <OrcidIcon className="h-5 w-5" />
+              Sign in with ORCID
+            </button>
+          </div>
+
+          {/* ========== SEPARATOR ========== */}
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-200"></div>
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-white px-4 text-gray-400 font-bold tracking-widest">or with email</span>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {!isLogin && (
               <>
-                <OrcidIcon className="h-5 w-5" />
-                Sign in with ORCID
+                <div>
+                  <label className="text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-1.5 block">First Name</label>
+                  <input
+                    type="text"
+                    className="w-full bg-gray-50 border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:border-[#007398] focus:bg-white transition-all"
+                    placeholder="Your first name"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    disabled={isLoading}
+                  />
+                  {errors.firstName && <p className="mt-1 text-[11px] text-red-700">{errors.firstName}</p>}
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-1.5 block">Last Name</label>
+                  <input
+                    type="text"
+                    className="w-full bg-gray-50 border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:border-[#007398] focus:bg-white transition-all"
+                    placeholder="Your last name"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    disabled={isLoading}
+                  />
+                  {errors.lastName && <p className="mt-1 text-[11px] text-red-700">{errors.lastName}</p>}
+                </div>
               </>
             )}
-          </button>
-        </div>
-
-        {/* ========== SEPARATOR ========== */}
-        <div className="relative mb-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-200"></div>
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white px-4 text-gray-400 font-bold tracking-widest">or with email</span>
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {!isLogin && (
-            <>
-              <div>
-                <label className="text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-1.5 block">First Name</label>
-                <input
-                  type="text"
-                  className="w-full bg-gray-50 border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:border-[#007398] focus:bg-white transition-all"
-                  placeholder="Your first name"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  disabled={isLoading}
-                />
-                {errors.firstName && <p className="mt-1 text-[11px] text-red-700">{errors.firstName}</p>}
-              </div>
-              <div>
-                <label className="text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-1.5 block">Last Name</label>
-                <input
-                  type="text"
-                  className="w-full bg-gray-50 border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:border-[#007398] focus:bg-white transition-all"
-                  placeholder="Your last name"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  disabled={isLoading}
-                />
-                {errors.lastName && <p className="mt-1 text-[11px] text-red-700">{errors.lastName}</p>}
-              </div>
-            </>
-          )}
-          <div>
-            <label className="text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-1.5 block">Email</label>
-            <input
-              type="email"
-              className="w-full bg-gray-50 border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:border-[#007398] focus:bg-white transition-all"
-              placeholder="example@gmail.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={isLoading}
-            />
-            {errors.email && <p className="mt-1 text-[11px] text-red-700">{errors.email}</p>}
-          </div>
-          <div>
-            <div className="flex justify-between items-end mb-1.5">
-              <label className="text-[10px] uppercase font-bold tracking-widest text-gray-500 block">Password</label>
-              {isLogin && (
-                <button
-                  type="button"
-                  onClick={handleForgotPassword}
-                  className="text-[9px] uppercase font-bold text-[#007398] hover:underline"
-                  disabled={isLoading || !email}
-                >
-                  Forgot your password?
-                </button>
-              )}
-            </div>
-            <div className="relative">
+            <div>
+              <label className="text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-1.5 block">Email</label>
               <input
-                type={showPassword ? 'text' : 'password'}
+                type="email"
                 className="w-full bg-gray-50 border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:border-[#007398] focus:bg-white transition-all"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                placeholder="example@gmail.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 disabled={isLoading}
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                disabled={isLoading}
-              >
-                {showPassword ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
-              </button>
+              {errors.email && <p className="mt-1 text-[11px] text-red-700">{errors.email}</p>}
             </div>
-            {errors.password && <p className="mt-1 text-[11px] text-red-700">{errors.password}</p>}
-          </div>
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full bg-black text-white py-4 text-xs uppercase font-black tracking-[0.2em] hover:bg-[#007398] transition-colors flex items-center justify-center gap-3 disabled:bg-gray-400"
-          >
-            {isLoading ? (
-              <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <>{isLogin ? 'Sign In' : 'Create Account'}</>
-            )}
-          </button>
-        </form>
-        <div className="mt-8 pt-6 border-t border-gray-100 text-center">
-          <button
-            onClick={() => setIsLogin(!isLogin)}
-            className="text-xs text-gray-500 hover:text-black transition-colors"
-            disabled={isLoading}
-          >
-            {isLogin ? (
-              <>First time here? <span className="font-bold text-[#007398]">Create your account</span></>
-            ) : (
-              <>Already have an account? <span className="font-bold text-[#007398]">Sign in</span></>
-            )}
-          </button>
-        </div>
-        <AnimatePresence>
-          {message.text && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className={`mt-6 p-4 text-[11px] font-medium leading-relaxed border-l-4 ${
-                message.type === 'error' ? 'bg-red-50 border-red-500 text-red-700' : 'bg-green-50 border-green-500 text-green-700'
-              }`}
+            <div>
+              <div className="flex justify-between items-end mb-1.5">
+                <label className="text-[10px] uppercase font-bold tracking-widest text-gray-500 block">Password</label>
+                {isLogin && (
+                  <button
+                    type="button"
+                    onClick={handleForgotPassword}
+                    className="text-[9px] uppercase font-bold text-[#007398] hover:underline"
+                    disabled={isLoading || !email}
+                  >
+                    Forgot your password?
+                  </button>
+                )}
+              </div>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  className="w-full bg-gray-50 border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:border-[#007398] focus:bg-white transition-all"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isLoading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  disabled={isLoading}
+                >
+                  {showPassword ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+                </button>
+              </div>
+              {errors.password && <p className="mt-1 text-[11px] text-red-700">{errors.password}</p>}
+            </div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-black text-white py-4 text-xs uppercase font-black tracking-[0.2em] hover:bg-[#007398] transition-colors flex items-center justify-center gap-3 disabled:bg-gray-400"
             >
-              {message.text}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
-    </div>
+              {isLoading ? (
+                <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <>{isLogin ? 'Sign In' : 'Create Account'}</>
+              )}
+            </button>
+          </form>
+          <div className="mt-8 pt-6 border-t border-gray-100 text-center">
+            <button
+              onClick={() => setIsLogin(!isLogin)}
+              className="text-xs text-gray-500 hover:text-black transition-colors"
+              disabled={isLoading}
+            >
+              {isLogin ? (
+                <>First time here? <span className="font-bold text-[#007398]">Create your account</span></>
+              ) : (
+                <>Already have an account? <span className="font-bold text-[#007398]">Sign in</span></>
+              )}
+            </button>
+          </div>
+          <AnimatePresence>
+            {message.text && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className={`mt-6 p-4 text-[11px] font-medium leading-relaxed border-l-4 ${
+                  message.type === 'error' ? 'bg-red-50 border-red-500 text-red-700' : 'bg-green-50 border-green-500 text-green-700'
+                }`}
+              >
+                {message.text}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      </div>
+
+      {/* ========== PRE-ORCID MODAL (OUTSIDE FORM) ========== */}
+      <AnimatePresence>
+        {showPreOrcidModal && (
+          <PreOrcidEmailModal
+            isOpen={showPreOrcidModal}
+            onClose={handlePreOrcidCancel}
+            onConfirm={handlePreOrcidConfirm}
+            isLoading={false}
+          />
+        )}
+      </AnimatePresence>
+      {/* ==================================================== */}
+    </>
   );
 }
