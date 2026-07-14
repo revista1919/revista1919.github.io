@@ -225,19 +225,27 @@ export default function LoginSection({ onLogin }) {
           };
 
           if (!userData.uid) {
-            console.error('Datos de usuario corruptos - falta UID');
-            setCorruptedSession(true);
-            return;
-          }
+    console.error('Datos de usuario corruptos - falta UID');
+    setCorruptedSession(true);
+    return;
+}
 
-          // Si el email está pendiente (ORCID sin email), mostrar modal
-          if (userData.emailPending && !userData.email) {
-            setPendingOrcidUser(userData);
-            setShowOrcidEmailModal(true);
-            setCorruptedSession(false);
-            setLoadingTimeout(false);
-            return;
-          }
+// Si el email está pendiente (ORCID sin email), mostrar modal
+if (userData.emailPending && !userData.email) {
+    setPendingOrcidUser(userData);
+    setShowOrcidEmailModal(true);
+    setCurrentUser(userData); // ← AÑADE ESTA LÍNEA (importante)
+    setCorruptedSession(false);
+    setLoadingTimeout(false);
+    return;
+}
+
+// Validación de email SOLO si NO es email pendiente
+if (!userData.email && !userData.emailPending) {
+    console.error('Datos de usuario corruptos - falta email y no es pendiente');
+    setCorruptedSession(true);
+    return;
+}
 
           setCorruptedSession(false);
           setLoadingTimeout(false);
@@ -363,6 +371,10 @@ export default function LoginSection({ onLogin }) {
       setPassword('');
       setFirstName('');
       setLastName('');
+
+setCurrentUser(userData); // ← Establecer currentUser inmediatamente
+setPendingOrcidUser(userData);
+setShowOrcidEmailModal(true);
       setErrors({ firstName: '', lastName: '', email: '', password: '' });
     } catch (error) {
       let errorText = 'Error al crear la cuenta';

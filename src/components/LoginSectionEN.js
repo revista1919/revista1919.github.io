@@ -224,20 +224,28 @@ export default function LoginSection({ onLogin }) {
             emailPending: userDoc.data()?.emailPending || false
           };
 
-          if (!userData.uid) {
-            console.error('Corrupted user data - missing UID');
-            setCorruptedSession(true);
-            return;
-          }
+         if (!userData.uid) {
+    console.error('Corrupted user data - missing UID');
+    setCorruptedSession(true);
+    return;
+}
 
-          // If email is pending (ORCID without email), show modal
-          if (userData.emailPending && !userData.email) {
-            setPendingOrcidUser(userData);
-            setShowOrcidEmailModal(true);
-            setCorruptedSession(false);
-            setLoadingTimeout(false);
-            return;
-          }
+// If email is pending (ORCID without email), show modal
+if (userData.emailPending && !userData.email) {
+    setPendingOrcidUser(userData);
+    setShowOrcidEmailModal(true);
+    setCurrentUser(userData); // ← ADD THIS LINE (important)
+    setCorruptedSession(false);
+    setLoadingTimeout(false);
+    return;
+}
+
+// Validate email ONLY if it's NOT pending
+if (!userData.email && !userData.emailPending) {
+    console.error('Corrupted user data - missing email and not pending');
+    setCorruptedSession(true);
+    return;
+}
 
           setCorruptedSession(false);
           setLoadingTimeout(false);
@@ -363,6 +371,9 @@ export default function LoginSection({ onLogin }) {
       setPassword('');
       setFirstName('');
       setLastName('');
+setCurrentUser(userData); // ← Establecer currentUser inmediatamente
+setPendingOrcidUser(userData);
+setShowOrcidEmailModal(true);
       setErrors({ firstName: '', lastName: '', email: '', password: '' });
     } catch (error) {
       let errorText = 'Error creating account';
