@@ -12,7 +12,9 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   signInWithRedirect,
-  getRedirectResult
+  getRedirectResult,
+  OAuthProvider,           // ← AÑADE ESTO
+  getAdditionalUserInfo    // ← AÑADE ESTO
 } from 'firebase/auth';
 import {
   getFirestore,
@@ -151,6 +153,8 @@ export {
   signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
+  OAuthProvider,            // ← EXPÓRTALO TAMBIÉN
+  getAdditionalUserInfo,    // ← EXPÓRTALO TAMBIÉN
   doc,
   setDoc,
   getDoc,
