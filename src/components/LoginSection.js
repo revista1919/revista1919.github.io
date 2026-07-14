@@ -309,100 +309,88 @@ export default function LoginSection({ onLogin }) {
   };
 
   // ========== NUEVA FUNCIÓN: LOGIN CON ORCID ==========
-  const signInWithOrcid = async () => {
+const signInWithOrcid = async () => {
     setIsLoading(true);
     setMessage({ text: '', type: '' });
 
     try {
       const provider = new OAuthProvider('oidc.orcid');
-      
-      // ========== SCOPES CORRECTOS PARA ORCID ==========
-      // /authenticate: Permite autenticación básica (obligatorio)
       provider.addScope('/authenticate');
-      // /read-limited: Acceso a información limitada del registro
-      provider.addScope('/read-limited');
-      // ==================================================
-      
-      // ========== SOLICITAR EMAIL EXPLÍCITAMENTE ==========
-      // Esto le pide a ORCID que incluya el email en el perfil
-      provider.setCustomParameters({
-        prompt: 'login', // Forzar login incluso si ya tiene sesión
-        // Opcional: puedes sugerir un email específico
-        // login_hint: 'usuario@ejemplo.com'
-      });
-      // =====================================================
       
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
       const additionalInfo = getAdditionalUserInfo(result);
       const profile = additionalInfo?.profile || {};
 
-      console.log('Perfil ORCID completo:', profile);
+      // ========== OBTENER EL TOKEN DE ACCESO DE ORCID ==========
+      const credential = OAuthProvider.credentialFromResult(result);
+      const orcidAccessToken = credential?.accessToken;
+      const orcidId = profile?.sub;
+      
+      console.log('ORCID Access Token:', orcidAccessToken ? '✅ Obtenido' : '❌ No disponible');
+      console.log('ORCID iD:', orcidId);
 
-      // ========== OBTENER EMAIL DE MÚLTIPLES FUENTES ==========
+      // ========== LLAMAR A LA API DE ORCID PARA OBTENER EL EMAIL ==========
       let userEmail = '';
       
-      // 1. Intentar obtener email del perfil de ORCID
-      if (profile?.email) {
-        userEmail = profile.email;
-      }
-      // 2. Intentar obtener de Firebase Auth (a veces lo mapea)
-      else if (user.email && !user.email.includes('firebase')) {
-        userEmail = user.email;
-      }
-      // 3. Buscar en emails del perfil ORCID (puede venir como array)
-      else if (profile?.emails && Array.isArray(profile.emails)) {
-        const primaryEmail = profile.emails.find(e => e.primary) || profile.emails[0];
-        userEmail = primaryEmail?.email || '';
+      if (orcidAccessToken && orcidId) {
+        try {
+          // Llamada a la API de ORCID para obtener el registro completo
+          const response = await fetch(
+            `https://pub.orcid.org/v3.0/${orcidId}/record`,
+            {
+              headers: {
+                'Authorization': `Bearer ${orcidAccessToken}`,
+                'Accept': 'application/json'
+              }
+            }
+          );
+          
+          if (response.ok) {
+            const orcidRecord = await response.json();
+            console.log('Registro ORCID:', orcidRecord);
+            
+            // Extraer emails del registro
+            const emails = orcidRecord?.person?.emails?.email || [];
+            if (emails.length > 0) {
+              // Buscar email primario, luego verificado, luego el primero
+              const primaryEmail = emails.find(e => e.primary && e.verified) 
+                || emails.find(e => e.verified)
+                || emails[0];
+              
+              userEmail = primaryEmail?.email || '';
+              console.log('Email obtenido de ORCID:', userEmail);
+            }
+          } else {
+            console.warn('No se pudo obtener el registro ORCID:', response.status);
+          }
+        } catch (apiError) {
+          console.error('Error llamando a la API de ORCID:', apiError);
+        }
       }
       
-      // ========== SI NO HAY EMAIL: SOLICITARLO AL USUARIO ==========
+      // ========== SI AÚN NO HAY EMAIL, USAR ALTERNATIVO ==========
       if (!userEmail) {
-        console.warn('ORCID no proporcionó email');
-        
-        // Guardar en Firestore sin email, pero marcar como pendiente
-        await setDoc(doc(db, 'users', user.uid), {
-          uid: user.uid,
-          email: '', // Vacío temporalmente
-          firstName: profile?.given_name || '',
-          lastName: profile?.family_name || '',
-          displayName: profile?.name || '',
-          roles: ['Autor'],
-          description: { es: '', en: '' },
-          interests: { es: '', en: '' },
-          imageUrl: profile?.picture || '',
-          social: {},
-          publicEmail: null,
-          orcid: profile?.sub || '',
-          emailPending: true, // ← Marcar que falta el email
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }, { merge: true });
-
-        setMessage({ 
-          text: 'Tu cuenta ORCID no tiene un email público. Por favor, completa tu email en el perfil para recibir notificaciones.', 
-          type: 'warning' 
-        });
-        
-        setIsLoading(false);
-        return; // Salir sin iniciar sesión completa
+        userEmail = `orcid:${orcidId}@orcid.org`;
+        console.warn('Usando email alternativo para ORCID');
       }
-      // =========================================================
 
+      // ========== GUARDAR EN FIRESTORE ==========
       const userData = {
         uid: user.uid,
         email: userEmail,
-        firstName: profile?.given_name || user.displayName?.split(' ')[0] || '',
-        lastName: profile?.family_name || user.displayName?.split(' ').slice(1).join(' ') || '',
-        displayName: profile?.name || user.displayName || '',
+        firstName: profile?.given_name || '',
+        lastName: profile?.family_name || '',
+        displayName: profile?.name || '',
         roles: ['Autor'],
         description: { es: '', en: '' },
         interests: { es: '', en: '' },
         imageUrl: profile?.picture || '',
         social: {},
         publicEmail: null,
-        orcid: profile?.sub || '',
-        emailPending: false,
+        orcid: orcidId,
+        orcidAccessToken: orcidAccessToken, // Guardar para futuras llamadas
+        emailVerified: !userEmail.startsWith('orcid:'), // true si es email real
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -420,8 +408,6 @@ export default function LoginSection({ onLogin }) {
       let errorText = 'Error al iniciar sesión con ORCID';
       if (error.code === 'auth/popup-closed-by-user') {
         errorText = 'Ventana cerrada. Intenta nuevamente.';
-      } else if (error.code === 'auth/operation-not-allowed') {
-        errorText = 'ORCID no está habilitado. Contacta al administrador.';
       }
       
       setMessage({ text: errorText, type: 'error' });
@@ -429,65 +415,122 @@ export default function LoginSection({ onLogin }) {
 
     setIsLoading(false);
 };
-// Componente para solicitar email
-const EmailRequiredModal = ({ user, onComplete }) => {
+// Componente para solicitar email (ya lo tienes, pero mejorado)
+const EmailRequiredModal = ({ user, onComplete, onCancel }) => {
   const [email, setEmail] = useState('');
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
   const { language } = useLanguage();
   const isSpanish = language === 'es';
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    // Validar email
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      alert(isSpanish ? 'Email inválido' : 'Invalid email');
+      setError(isSpanish ? 'Por favor ingresa un email válido' : 'Please enter a valid email');
       return;
     }
 
     setSaving(true);
     try {
+      // Guardar el email en Firestore
       await updateDoc(doc(db, 'users', user.uid), {
-        email: email,
-        emailPending: false,
+        email: email.trim().toLowerCase(),
+        emailVerified: true, // El usuario lo ingresó manualmente
+        emailUpdatedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       });
-      onComplete(email);
+      
+      onComplete(email.trim().toLowerCase());
     } catch (error) {
       console.error('Error saving email:', error);
+      setError(isSpanish ? 'Error al guardar. Intenta de nuevo.' : 'Error saving. Please try again.');
     }
     setSaving(false);
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-3xl p-8 max-w-md w-full">
-        <h3 className="font-serif text-2xl font-bold mb-4">
-          {isSpanish ? 'Email requerido' : 'Email required'}
-        </h3>
-        <p className="text-gray-600 mb-6">
-          {isSpanish 
-            ? 'Tu cuenta de ORCID no tiene un email público. Necesitamos un email para enviarte notificaciones sobre tus envíos y revisiones.'
-            : 'Your ORCID account does not have a public email. We need an email to send you notifications about your submissions and reviews.'}
-        </p>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder={isSpanish ? 'tu@email.com' : 'you@email.com'}
-          className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl mb-4 focus:outline-none focus:border-emerald-400"
-        />
-        <button
-          onClick={handleSubmit}
-          disabled={saving || !email}
-          className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 text-white font-bold rounded-2xl transition-all"
-        >
-          {saving 
-            ? (isSpanish ? 'Guardando...' : 'Saving...')
-            : (isSpanish ? 'Guardar email' : 'Save email')
-          }
-        </button>
-      </div>
-    </div>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+      onClick={onCancel}
+    >
+      <motion.div
+        initial={{ scale: 0.9 }}
+        animate={{ scale: 1 }}
+        className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <EnvelopeIcon className="w-8 h-8 text-amber-600" />
+          </div>
+          <h3 className="font-serif text-2xl font-bold text-gray-900 mb-2">
+            {isSpanish ? 'Email requerido' : 'Email required'}
+          </h3>
+          <p className="text-gray-600 text-sm leading-relaxed">
+            {isSpanish 
+              ? 'Tu cuenta de ORCID no tiene un email público. Necesitamos un email para enviarte notificaciones importantes sobre tus envíos, revisiones y actualizaciones del portal.'
+              : 'Your ORCID account does not have a public email. We need an email to send you important notifications about your submissions, reviews, and portal updates.'}
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">
+              {isSpanish ? 'Tu email' : 'Your email'}
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder={isSpanish ? 'ejemplo@correo.com' : 'example@email.com'}
+              className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 text-sm transition-all"
+              autoFocus
+            />
+            {error && (
+              <p className="mt-2 text-xs text-red-600">{error}</p>
+            )}
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="flex-1 py-4 border border-gray-300 text-gray-700 font-bold rounded-2xl hover:bg-gray-50 transition-all text-sm"
+            >
+              {isSpanish ? 'Omitir' : 'Skip'}
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex-1 py-4 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 text-white font-bold rounded-2xl transition-all text-sm flex items-center justify-center gap-2"
+            >
+              {saving ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  {isSpanish ? 'Guardando...' : 'Saving...'}
+                </>
+              ) : (
+                isSpanish ? 'Guardar email' : 'Save email'
+              )}
+            </button>
+          </div>
+
+          <p className="text-xs text-gray-400 text-center">
+            {isSpanish 
+              ? 'Puedes cambiar tu email más tarde en la configuración de tu perfil.'
+              : 'You can change your email later in your profile settings.'}
+          </p>
+        </form>
+      </motion.div>
+    </motion.div>
   );
 };
+
   // =====================================================
 
   const handleLogout = async () => {
