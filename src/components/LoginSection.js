@@ -11,8 +11,24 @@ import {
   db,
   doc,
   setDoc,
-  getDoc
+  getDoc,
+  OAuthProvider,
+  signInWithPopup,
+  getAdditionalUserInfo
 } from '../firebase';
+
+// ========== COMPONENTE DEL LOGO DE ORCID ==========
+const OrcidIcon = ({ className = "h-5 w-5" }) => (
+  <svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <circle cx="128" cy="128" r="120" fill="#A6CE39" />
+    <g fill="#FFFFFF">
+      <rect x="71" y="78" width="17" height="102" />
+      <circle cx="79.5" cy="56" r="11" />
+      <path d="M103 78 v102 h41.5 c28.2 0 51-22.8 51-51 s-22.8-51-51-51 H103 zm17 17 h24.5 c18.8 0 34 15.2 34 34 s-15.2 34-34 34 H120 V95 z" fillRule="evenodd" />
+    </g>
+  </svg>
+);
+// =====================================================
 
 export default function LoginSection({ onLogin }) {
   const [isLogin, setIsLogin] = useState(true);
@@ -30,7 +46,7 @@ export default function LoginSection({ onLogin }) {
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   const [corruptedSession, setCorruptedSession] = useState(false);
   const timeoutRef = useRef(null);
-  const MAX_LOADING_TIME = 15000; // 15 segundos máximo
+  const MAX_LOADING_TIME = 15000;
   // =====================================================================
 
   useEffect(() => {
@@ -39,13 +55,11 @@ export default function LoginSection({ onLogin }) {
       return;
     }
 
-    // Limpiar cualquier timeout anterior
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
 
-    // Iniciar timeout de seguridad SOLO si no hay usuario actual
     if (!currentUser) {
       timeoutRef.current = setTimeout(() => {
         console.error('LoginSection loading timeout - possible corruption');
@@ -55,7 +69,6 @@ export default function LoginSection({ onLogin }) {
     }
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      // Limpiar timeout al recibir respuesta
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
@@ -91,7 +104,6 @@ export default function LoginSection({ onLogin }) {
             return;
           }
 
-          // Resetear estados de error al cargar correctamente
           setCorruptedSession(false);
           setLoadingTimeout(false);
           
@@ -105,7 +117,6 @@ export default function LoginSection({ onLogin }) {
       } else {
         setMessage({ text: '', type: '' });
         setCurrentUser(null);
-        // No marcar como corrupto si simplemente no hay usuario
         setCorruptedSession(false);
         setLoadingTimeout(false);
       }
@@ -119,19 +130,17 @@ export default function LoginSection({ onLogin }) {
       unsubscribe();
     };
   }, [onLogin]);
+
   // ========== FUNCIÓN PARA FORZAR REINICIO DE SESIÓN ==========
   const forceResetSession = async () => {
     try {
-      // Limpiar cualquier estado local corrupto
       localStorage.removeItem('userSession');
       sessionStorage.clear();
 
-      // Cerrar sesión en Firebase
       if (auth.currentUser) {
         await signOut(auth);
       }
 
-      // Resetear estados
       setCurrentUser(null);
       setCorruptedSession(false);
       setLoadingTimeout(false);
@@ -299,6 +308,73 @@ export default function LoginSection({ onLogin }) {
     }
   };
 
+  // ========== NUEVA FUNCIÓN: LOGIN CON ORCID ==========
+  const signInWithOrcid = async () => {
+    setIsLoading(true);
+    setMessage({ text: '', type: '' });
+
+    try {
+      // Usa el Provider ID que configuraste en Firebase Console
+      const provider = new OAuthProvider('oidc.orcid');
+      
+      // Scopes adicionales que podrías necesitar
+      provider.addScope('/authenticate');
+      
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      const additionalInfo = getAdditionalUserInfo(result);
+      const profile = additionalInfo?.profile || {};
+
+      console.log('Usuario autenticado con ORCID:', user);
+      console.log('Perfil ORCID:', profile);
+
+      // Mapear datos de ORCID a tu estructura de Firestore
+      const userData = {
+        uid: user.uid,
+        email: user.email || profile?.email || '',
+        firstName: profile?.given_name || user.displayName?.split(' ')[0] || '',
+        lastName: profile?.family_name || user.displayName?.split(' ').slice(1).join(' ') || '',
+        displayName: profile?.name || user.displayName || '',
+        roles: ['Autor'],
+        description: { es: '', en: '' },
+        interests: { es: '', en: '' },
+        imageUrl: profile?.picture || '',
+        social: {},
+        publicEmail: null,
+        orcid: profile?.sub || '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      // Guardar en Firestore con merge: true para no sobrescribir
+      await setDoc(doc(db, 'users', user.uid), userData, { merge: true });
+
+      setMessage({ 
+        text: `¡Bienvenido, ${userData.displayName || 'Autor'}!`, 
+        type: 'success' 
+      });
+
+    } catch (error) {
+      console.error('Error en login con ORCID:', error);
+      
+      let errorText = 'Error al iniciar sesión con ORCID';
+      if (error.code === 'auth/popup-closed-by-user') {
+        errorText = 'Ventana cerrada. Intenta nuevamente.';
+      } else if (error.code === 'auth/operation-not-allowed') {
+        errorText = 'ORCID no está habilitado. Contacta al administrador.';
+      } else if (error.code === 'auth/unauthorized-domain') {
+        errorText = 'Dominio no autorizado. Verifica las Redirect URIs en ORCID.';
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        errorText = 'Solicitud cancelada. Intenta de nuevo.';
+      }
+      
+      setMessage({ text: errorText, type: 'error' });
+    }
+
+    setIsLoading(false);
+  };
+  // =====================================================
+
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -323,7 +399,6 @@ export default function LoginSection({ onLogin }) {
   };
 
   // ========== PANTALLA DE SESIÓN CORRUPTA O TIMEOUT ==========
-  // ESTO VA PRIMERO, antes de cualquier otro return
   if (corruptedSession || loadingTimeout) {
     return (
       <div className="max-w-md mx-auto py-12 px-6">
@@ -386,7 +461,6 @@ export default function LoginSection({ onLogin }) {
       </div>
     );
   }
-  // =============================================================
 
   // ========== PANTALLA DE USUARIO YA LOGUEADO ==========
   if (currentUser) {
@@ -394,12 +468,27 @@ export default function LoginSection({ onLogin }) {
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-md mx-auto py-12 px-6">
         <div className="bg-white border-2 border-black p-8 text-center space-y-6">
           <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto border border-gray-200">
-            <UserIcon className="h-10 w-10 text-gray-400" />
+            {currentUser.imageUrl ? (
+              <img src={currentUser.imageUrl} alt={currentUser.displayName} className="w-20 h-20 rounded-full object-cover" />
+            ) : (
+              <UserIcon className="h-10 w-10 text-gray-400" />
+            )}
           </div>
           <div>
             <p className="text-[10px] uppercase tracking-[0.3em] font-bold text-[#007398] mb-1">Sesión Iniciada</p>
             <h3 className="text-2xl font-serif font-bold text-gray-900">{currentUser.displayName}</h3>
-            <p className="text-sm text-gray-500 font-mono">{currentUser.roles.join('; ')}</p>
+            {currentUser.orcid && (
+              <a
+                href={`https://orcid.org/${currentUser.orcid}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-[#A6CE39] hover:underline mt-1"
+              >
+                <OrcidIcon className="h-4 w-4" />
+                {currentUser.orcid}
+              </a>
+            )}
+            <p className="text-sm text-gray-500 font-mono mt-2">{currentUser.roles.join('; ')}</p>
           </div>
           <button
             onClick={handleLogout}
@@ -425,10 +514,8 @@ export default function LoginSection({ onLogin }) {
       </motion.div>
     );
   }
-  // ======================================================
 
   // ========== PANTALLA DE CARGA CON BOTÓN DE ESCAPE ==========
-  // REEMPLAZA TU BLOQUE EXISTENTE DE "if (isLoading && !currentUser)" POR ESTO:
   if (isLoading && !currentUser) {
     return (
       <div className="max-w-md mx-auto py-12 px-6">
@@ -436,7 +523,6 @@ export default function LoginSection({ onLogin }) {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#007398] mx-auto mb-4"></div>
           <p className="text-gray-600">Cargando...</p>
 
-          {/* Botón de escape para salir de la carga infinita */}
           <div className="mt-4 pt-4 border-t border-gray-100">
             <p className="text-xs text-gray-400 mb-3">
               ¿La carga está tardando demasiado?
@@ -455,9 +541,8 @@ export default function LoginSection({ onLogin }) {
       </div>
     );
   }
-  // ==============================================================
 
-  // ========== FORMULARIO DE LOGIN/REGISTRO (TU CÓDIGO ORIGINAL) ==========
+  // ========== FORMULARIO DE LOGIN/REGISTRO ==========
   return (
     <div className="max-w-md mx-auto py-16 px-6">
       <motion.div
@@ -474,6 +559,36 @@ export default function LoginSection({ onLogin }) {
             Revista Nacional de las Ciencias
           </p>
         </div>
+
+        {/* ========== BOTÓN DE ORCID (SIEMPRE VISIBLE) ========== */}
+        <div className="mb-6">
+          <button
+            type="button"
+            onClick={signInWithOrcid}
+            disabled={isLoading}
+            className="w-full bg-[#A6CE39] hover:bg-[#8FB832] text-white py-4 text-xs uppercase font-black tracking-[0.2em] transition-colors flex items-center justify-center gap-3 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-sm"
+          >
+            {isLoading ? (
+              <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <>
+                <OrcidIcon className="h-5 w-5" />
+                Iniciar sesión con ORCID
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* ========== SEPARADOR ========== */}
+        <div className="relative mb-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-200"></div>
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-white px-4 text-gray-400 font-bold tracking-widest">o con correo</span>
+          </div>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-5">
           {!isLogin && (
             <>

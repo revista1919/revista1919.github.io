@@ -11010,15 +11010,18 @@ function parseIdentifier(identifier) {
 function articleToDublinCore(article) {
   const elements = [];
 
+  // --- Títulos ---
   elements.push(`<dc:title xml:lang="es">${escapeXml(article.titulo)}</dc:title>`);
   if (article.tituloEnglish) elements.push(`<dc:title xml:lang="en">${escapeXml(article.tituloEnglish)}</dc:title>`);
 
+  // --- Autores ---
   if (Array.isArray(article.autores)) {
     for (const author of article.autores) {
       if (author?.name) elements.push(`<dc:creator>${escapeXml(author.name)}</dc:creator>`);
     }
   }
 
+  // --- Palabras Clave ---
   if (Array.isArray(article.palabras_clave)) {
     for (const kw of article.palabras_clave) if (kw) elements.push(`<dc:subject xml:lang="es">${escapeXml(kw)}</dc:subject>`);
   }
@@ -11026,37 +11029,76 @@ function articleToDublinCore(article) {
     for (const kw of article.keywords_english) if (kw) elements.push(`<dc:subject xml:lang="en">${escapeXml(kw)}</dc:subject>`);
   }
 
+  // --- Descripciones (Resúmenes) ---
   if (article.resumen) elements.push(`<dc:description xml:lang="es">${escapeXml(article.resumen)}</dc:description>`);
   if (article.abstract) elements.push(`<dc:description xml:lang="en">${escapeXml(article.abstract)}</dc:description>`);
 
+  // --- Fecha (AAAA-MM-DD es ideal, pero si solo hay año, también funciona) ---
   if (article.fecha) elements.push(`<dc:date>${escapeXml(article.fecha)}</dc:date>`);
   
-  if (article.tipo) {
-    elements.push(`<dc:type>${escapeXml(article.tipo)}</dc:type>`);
-  } else {
-    elements.push(`<dc:type>Artículo de Investigación</dc:type>`);
+  // --- Tipo de documento ---
+  const tipo = article.tipo || 'Artículo de Investigación';
+  elements.push(`<dc:type>${escapeXml(tipo)}</dc:type>`);
+
+  // --- Identificadores y Enlaces ---
+  // 1. URL del artículo en la revista (muy importante)
+  elements.push(`<dc:identifier>${escapeXml(getArticleUrl(article))}</dc:identifier>`);
+  
+  // 2. DOI como enlace canónico (¡CLAVE! A Dialnet le encanta esto)
+  if (article.doi) {
+    elements.push(`<dc:identifier>https://doi.org/${escapeXml(article.doi)}</dc:identifier>`);
   }
 
-  elements.push(`<dc:identifier>${escapeXml(getArticleUrl(article))}</dc:identifier>`);
-  if (article.doi) elements.push(`<dc:identifier>https://doi.org/${escapeXml(article.doi)}</dc:identifier>`);
-
+  // 3. Enlace directo al PDF (si existe)
   if (article.pdfUrl) {
     elements.push(`<dc:format>application/pdf</dc:format>`);
     elements.push(`<dc:identifier>${escapeXml(article.pdfUrl)}</dc:identifier>`);
   }
 
+  // --- Lengua y Derechos ---
   elements.push(`<dc:language>es</dc:language>`);
-  if (article.conflicts) elements.push(`<dc:rights>${escapeXml(article.conflicts)}</dc:rights>`);
+  
+  const rights = article.conflicts || 'Derechos de autor y licencias bajo revisión.';
+  elements.push(`<dc:rights>${escapeXml(rights)}</dc:rights>`);
 
+  // --- INICIO DE LA CORRECCIÓN PRINCIPAL ---
+
+  // 1. METADATOS ESTRUCTURADOS (dc:relation)
+  // Esta es la clave para Dialnet. Le das la información de forma granular.
+  if (article.volumen) {
+    elements.push(`<dc:relation>Vol. ${escapeXml(article.volumen)}</dc:relation>`);
+  }
+  if (article.numero) {
+    elements.push(`<dc:relation>No. ${escapeXml(article.numero)}</dc:relation>`);
+  }
+  if (article.primeraPagina && article.ultimaPagina) {
+    elements.push(`<dc:relation>pp. ${escapeXml(article.primeraPagina)}-${escapeXml(article.ultimaPagina)}</dc:relation>`);
+  } else if (article.primeraPagina) {
+    // Por si acaso solo hay página inicial
+    elements.push(`<dc:relation>p. ${escapeXml(article.primeraPagina)}</dc:relation>`);
+  }
+
+  // 2. CAMPO dc:source MEJORADO (Redundancia positiva)
+  // Formato estándar de citación: Vol. X, No. Y (AAAA), pp. XX-YY
   const sourceParts = [];
   if (article.volumen) sourceParts.push(`Vol. ${article.volumen}`);
   if (article.numero) sourceParts.push(`No. ${article.numero}`);
+  if (article.fecha) {
+    // Extraemos el año de la fecha para el formato (AAAA)
+    const year = article.fecha.split('-')[0];
+    sourceParts.push(`(${year})`);
+  }
   if (article.primeraPagina && article.ultimaPagina) sourceParts.push(`pp. ${article.primeraPagina}-${article.ultimaPagina}`);
-  if (sourceParts.length > 0) elements.push(`<dc:source>${escapeXml(sourceParts.join(', '))}</dc:source>`);
+  
+  // Solo añadimos la etiqueta si hay algo que reportar
+  if (sourceParts.length > 0) {
+    elements.push(`<dc:source>${escapeXml(sourceParts.join(', '))}</dc:source>`);
+  }
+
+  // --- FIN DE LA CORRECCIÓN PRINCIPAL ---
 
   return elements.join('\n      ');
 }
-
 // =====================================================
 // XML BUILDERS
 // =====================================================
