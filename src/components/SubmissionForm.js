@@ -887,7 +887,6 @@ const MinorConsentSection = ({ author, index, onUpdate }) => {
         </>
       )}
       
-      // Reemplaza el bloque del botón "Redactar correo en Gmail" con este código mejorado:
 
 <button
   type="button"
@@ -1195,13 +1194,14 @@ export default function SubmissionForm({ user, onSuccess }) {
           ...prev,
           ...parsed,
           manuscript: null,
-          manuscriptName: parsed.manuscriptName || ''
+          manuscriptName: parsed.manuscriptName || '',
+          editorComment: editorComment
         }));
       } catch (e) {
         console.error('[DEBUG] Error cargando borrador:', e);
       }
     }
-  }, []);
+  }, [formData, editorComment]);
 
   // ============ DEBUG: Mostrar estado del paso 3 ============
   useEffect(() => {
@@ -1237,18 +1237,18 @@ export default function SubmissionForm({ user, onSuccess }) {
 
   // Guardar borrador automáticamente
   useEffect(() => {
-    const interval = setInterval(() => {
-      const dataToSave = {
-        ...formData,
-        manuscript: null,
-        manuscriptName: formData.manuscriptName
-      };
-      localStorage.setItem('submissionFormDraft', JSON.stringify(dataToSave));
-      console.log('[DEBUG] Borrador guardado:', new Date().toLocaleTimeString());
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [formData]);
-
+  const interval = setInterval(() => {
+    const dataToSave = {
+      ...formData,
+      manuscript: null,
+      manuscriptName: formData.manuscriptName,
+      editorComment: editorComment 
+    };
+    localStorage.setItem('submissionFormDraft', JSON.stringify(dataToSave));
+    console.log('[DEBUG] Borrador guardado:', new Date().toLocaleTimeString());
+  }, 30000);
+  return () => clearInterval(interval);
+}, [formData, editorComment]); 
   // Utilidad para convertir archivo a base64
   const toBase64 = (file) =>
     new Promise((resolve, reject) => {
