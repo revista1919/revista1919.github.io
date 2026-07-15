@@ -1426,17 +1426,48 @@ const safetyTimeoutRef = useRef(null);
           )}
 
           {/* ENVIAR MANUSCRITO */}
-          {activeTab === 'submit' && (
-            <motion.section key="submit">
-              <SubmissionForm 
-                user={userData} 
-                onSuccess={(submissionId) => {
-                  console.log('Submission successful:', submissionId);
-                  handleTabChange('submissions', null);
-                }}
-              />
-            </motion.section>
-          )}
+          {/* ENVIAR MANUSCRITO - OCUPA TODA LA PANTALLA */}
+{activeTab === 'submit' && (
+  <motion.section
+    key="submit"
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    className="fixed inset-0 z-40 bg-[#f4f5f7] overflow-y-auto"
+  >
+    {/* Barra superior para volver al portal */}
+    <div className="sticky top-0 z-50 bg-white border-b-2 border-gray-300 shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => handleTabChange('profile', null)}
+            className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#004b87] hover:text-[#e86125] transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            {isSpanish ? 'Volver al Portal' : 'Back to Portal'}
+          </button>
+        </div>
+        <h2 className="font-serif text-lg font-bold text-[#004b87]">
+          {isSpanish ? 'Envío de Manuscrito' : 'Manuscript Submission'}
+        </h2>
+        <div className="w-24"></div> {/* Espaciador para centrar el título */}
+      </div>
+    </div>
+
+    {/* Contenido del formulario a pantalla completa */}
+    <div className="w-full">
+      <SubmissionForm 
+        user={userData} 
+        onSuccess={(submissionId) => {
+          console.log('Submission successful:', submissionId);
+          handleTabChange('submissions', null);
+        }}
+      />
+    </div>
+  </motion.section>
+)}
 
           {/* PANEL DIRECTIVO */}
           {activeTab === 'director' && (
