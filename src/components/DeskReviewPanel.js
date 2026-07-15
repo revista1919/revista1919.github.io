@@ -1,5 +1,4 @@
-// src/components/DeskReviewPanel.js (VERSIÓN FINAL CONSOLIDADA)
-
+// src/components/DeskReviewPanel.js
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db, functions } from '../firebase';
@@ -16,6 +15,75 @@ import { ReviewerManagementTab } from './ReviewerManagementTab';
 import { FinalDecisionTab } from './FinalDecisionTab';
 import { MetadataRefinementTab } from './MetadataRefinementTab';
 
+// ============ ICONOS SVG PROFESIONALES ============
+const Icons = {
+  FileText: () => (
+    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+  ),
+  Clock: () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  ),
+  CheckCircle: () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  ),
+  XCircle: () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  ),
+  AlertCircle: () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+    </svg>
+  ),
+  Users: () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+    </svg>
+  ),
+  Tag: () => (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+    </svg>
+  ),
+  ArrowLeft: () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+    </svg>
+  ),
+  ChevronDown: () => (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+    </svg>
+  ),
+  Search: () => (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+    </svg>
+  ),
+  Ban: () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+    </svg>
+  ),
+  ExternalLink: () => (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+    </svg>
+  ),
+  Inbox: () => (
+    <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+    </svg>
+  ),
+};
+
 const DeskReviewPanel = ({ user }) => {
   const { language } = useLanguage();
   const isSpanish = language === 'es';
@@ -24,6 +92,7 @@ const DeskReviewPanel = ({ user }) => {
   const [selectedSubmissionId, setSelectedSubmissionId] = useState(null);
   const [selectedRound, setSelectedRound] = useState(1);
   const [activeTaskTab, setActiveTaskTab] = useState('deskReview');
+  const [viewMode, setViewMode] = useState('panel'); // 'panel' | 'fullscreen'
   
   const [potentialReviewers, setPotentialReviewers] = useState([]);
   const [selectedReviewerId, setSelectedReviewerId] = useState('');
@@ -31,14 +100,13 @@ const DeskReviewPanel = ({ user }) => {
   const [invitations, setInvitations] = useState([]);
   const [reviewers, setReviewers] = useState([]);
   
-  // ✅ NUEVO: Estado para las revisiones completadas (submitted)
   const [submittedReviews, setSubmittedReviews] = useState([]);
-  
-  // ✅ NUEVO: Estado para controlar la consolidación
   const [isConsolidating, setIsConsolidating] = useState(false);
-  
-  // ✅ NUEVO: Estado para saber si ya se consolidó
   const [isConsolidated, setIsConsolidated] = useState(false);
+  
+  // Filtros y búsqueda
+  const [filterStatus, setFilterStatus] = useState('all'); // 'all' | 'pending' | 'completed' | 'rejected'
+  const [searchManuscript, setSearchManuscript] = useState('');
 
   const { loading: reviewLoading, error: reviewError, submitDeskReviewDecision } = useEditorialReview(user);
   const { loading: inviteLoading, error: inviteError, sendInvitation } = useReviewerInvitation(user);
@@ -47,7 +115,7 @@ const DeskReviewPanel = ({ user }) => {
   const userRoles = user?.roles || [];
   const hasPermission = userRoles.includes('Editor de Sección') || userRoles.includes('Director General');
   
-  // Escuchar TODAS las tareas del editor (sin cambios)
+  // Escuchar TODAS las tareas del editor
   useEffect(() => {
     if (!user || !hasPermission) return;
 
@@ -79,7 +147,7 @@ const DeskReviewPanel = ({ user }) => {
     return () => unsubscribe();
   }, [user, hasPermission]);
 
-  // AGRUPAR TAREAS POR SUBMISSION ID (sin cambios)
+  // AGRUPAR TAREAS POR SUBMISSION ID
   const groupedSubmissions = useMemo(() => {
     const grouped = {};
     
@@ -93,14 +161,24 @@ const DeskReviewPanel = ({ user }) => {
           latestTask: null,
           hasPendingTasks: false,
           hasCompletedTasks: false,
-          currentRound: 1
+          currentRound: 1,
+          finalDecision: null
         };
       }
       
       grouped[subId].tasks.push(task);
       grouped[subId].tasks.sort((a, b) => (a.round || 1) - (b.round || 1));
       
-      if (task.status !== TASK_STATES.COMPLETED) {
+      // Verificar si hay una decisión de rechazo
+      const hasRejection = task.decision === 'reject' || task.submission?.status === 'rejected';
+      
+      if (hasRejection) {
+        grouped[subId].finalDecision = 'rejected';
+      } else if (task.decision === 'accept' || task.submission?.status === 'accepted') {
+        grouped[subId].finalDecision = 'accepted';
+      }
+      
+      if (task.status !== TASK_STATES.COMPLETED && !hasRejection) {
         grouped[subId].hasPendingTasks = true;
         grouped[subId].currentRound = task.round || 1;
       } else {
@@ -113,7 +191,7 @@ const DeskReviewPanel = ({ user }) => {
     return Object.values(grouped);
   }, [assignedTasks]);
 
-  // Obtener la tarea seleccionada (sin cambios)
+  // Obtener la tarea seleccionada
   const selectedTask = useMemo(() => {
     if (!selectedSubmissionId) return null;
     
@@ -124,7 +202,7 @@ const DeskReviewPanel = ({ user }) => {
     return task || submission.latestTask;
   }, [selectedSubmissionId, selectedRound, groupedSubmissions]);
 
-  // ✅ MODIFICADO: Cargar revisiones completadas (submitted) en tiempo real
+  // Cargar revisiones completadas (submitted) en tiempo real
   useEffect(() => {
     if (!selectedTask) {
       setSubmittedReviews([]);
@@ -132,7 +210,6 @@ const DeskReviewPanel = ({ user }) => {
       return;
     }
 
-    // Verificar si ya está consolidado (tiene finalReviewDocId)
     const checkConsolidation = async () => {
       if (selectedTask.submission?.finalReviewDocId) {
         setIsConsolidated(true);
@@ -142,7 +219,6 @@ const DeskReviewPanel = ({ user }) => {
     };
     checkConsolidation();
 
-    // Escuchar revisiones completadas (submitted)
     const q = query(
       collection(db, 'reviewerAssignments'),
       where('editorialTaskId', '==', selectedTask.id),
@@ -155,7 +231,6 @@ const DeskReviewPanel = ({ user }) => {
         ...doc.data()
       }));
       setSubmittedReviews(reviews);
-      console.log(`📊 Revisiones completadas: ${reviews.length}`);
     }, (error) => {
       console.error('Error escuchando revisiones:', error);
     });
@@ -163,7 +238,7 @@ const DeskReviewPanel = ({ user }) => {
     return () => unsubscribe();
   }, [selectedTask]);
 
-  // Cargar TODAS las asignaciones (invitaciones + submitted) para el tab de revisores
+  // Cargar TODAS las asignaciones
   useEffect(() => {
     if (!selectedTask) {
       setInvitations([]);
@@ -172,7 +247,6 @@ const DeskReviewPanel = ({ user }) => {
     }
 
     const loadAllAssignments = async () => {
-      // Cargar invitaciones (todos los estados menos submitted)
       const invQ = query(
         collection(db, 'reviewerInvitations'),
         where('editorialTaskId', '==', selectedTask.id)
@@ -180,7 +254,6 @@ const DeskReviewPanel = ({ user }) => {
       const invSnapshot = await getDocs(invQ);
       setInvitations(invSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
-      // Cargar todas las asignaciones (incluye submitted y otros estados)
       const revQ = query(
         collection(db, 'reviewerAssignments'),
         where('editorialTaskId', '==', selectedTask.id)
@@ -192,7 +265,7 @@ const DeskReviewPanel = ({ user }) => {
     loadAllAssignments();
   }, [selectedTask]);
 
-  // Cargar revisores potenciales (sin cambios)
+  // Cargar revisores potenciales
   useEffect(() => {
     const loadReviewers = async () => {
       const usersRef = collection(db, 'users');
@@ -224,7 +297,6 @@ const DeskReviewPanel = ({ user }) => {
     }
   };
 
-  // ✅ MODIFICADO: handleCompleteDeskReview actualizado
   const handleCompleteDeskReview = async (result) => {
     if (!selectedTask?.editorialReviewId) {
       console.error('No se encontró editorialReviewId para esta tarea');
@@ -246,11 +318,18 @@ const DeskReviewPanel = ({ user }) => {
     );
 
     if (submitResult.success) {
-      // Después de completar desk review, redirigir a gestión de revisores
-      setActiveTaskTab('reviewerManagement');
-      alert(isSpanish 
-        ? 'Revisión completada. Ahora puedes gestionar revisores.' 
-        : 'Review completed. You can now manage reviewers.');
+      if (result.decision === 'reject') {
+        alert(isSpanish 
+          ? 'Manuscrito rechazado. El autor será notificado.' 
+          : 'Manuscript rejected. The author will be notified.');
+        setViewMode('panel');
+        setSelectedSubmissionId(null);
+      } else {
+        setActiveTaskTab('reviewerManagement');
+        alert(isSpanish 
+          ? 'Revisión completada. Ahora puedes gestionar revisores.' 
+          : 'Review completed. You can now manage reviewers.');
+      }
     } else {
       alert(isSpanish 
         ? 'Error al guardar: ' + submitResult.error 
@@ -280,7 +359,6 @@ const DeskReviewPanel = ({ user }) => {
       setSelectedReviewerId('');
       setSearchTerm('');
       
-      // Recargar invitaciones
       const q = query(
         collection(db, 'reviewerInvitations'),
         where('editorialTaskId', '==', selectedTask.id)
@@ -290,7 +368,6 @@ const DeskReviewPanel = ({ user }) => {
     }
   };
 
-  // ✅ NUEVO: Manejar la consolidación de revisiones
   const handleProceedToDecision = async () => {
     const requiredReviews = selectedTask?.requiredReviews || 2;
     
@@ -338,12 +415,28 @@ const DeskReviewPanel = ({ user }) => {
     const result = await makeFinalDecision(taskId, decisionData);
     if (result.success) {
       alert(isSpanish ? 'Decisión final guardada' : 'Final decision saved');
+      setViewMode('panel');
       setSelectedSubmissionId(null);
       setSelectedRound(1);
     }
   };
 
-  // Filtrar revisores disponibles (sin cambios)
+  const handleSelectManuscript = (submissionId, round, group) => {
+    setSelectedSubmissionId(submissionId);
+    setSelectedRound(round);
+    setViewMode('fullscreen');
+    
+    const latestTask = group.latestTask;
+    if (latestTask?.status === TASK_STATES.REVIEWER_SELECTION || 
+        latestTask?.status === TASK_STATES.AWAITING_REVIEWER_RESPONSES || 
+        latestTask?.status === TASK_STATES.REVIEWS_IN_PROGRESS) {
+      setActiveTaskTab('reviewerManagement');
+    } else {
+      setActiveTaskTab('deskReview');
+    }
+  };
+
+  // Filtrar revisores disponibles
   const invitedEmails = new Set([
     ...invitations.map(r => r.reviewerEmail),
     ...submittedReviews.map(r => r.reviewerEmail),
@@ -360,357 +453,543 @@ const DeskReviewPanel = ({ user }) => {
     );
   });
 
-  const pendingSubmissions = groupedSubmissions.filter(g => g.hasPendingTasks);
-  const completedSubmissions = groupedSubmissions.filter(g => !g.hasPendingTasks && g.hasCompletedTasks);
+  // Filtrar manuscritos
+  const filteredSubmissions = useMemo(() => {
+    let filtered = [...groupedSubmissions];
+    
+    // Filtrar por estado
+    if (filterStatus === 'pending') {
+      filtered = filtered.filter(g => g.hasPendingTasks && g.finalDecision !== 'rejected');
+    } else if (filterStatus === 'completed') {
+      filtered = filtered.filter(g => !g.hasPendingTasks && g.hasCompletedTasks && g.finalDecision !== 'rejected');
+    } else if (filterStatus === 'rejected') {
+      filtered = filtered.filter(g => g.finalDecision === 'rejected');
+    }
+    
+    // Filtrar por búsqueda
+    if (searchManuscript) {
+      const searchLower = searchManuscript.toLowerCase();
+      filtered = filtered.filter(g => 
+        g.submission?.title?.toLowerCase().includes(searchLower) ||
+        g.submission?.submissionId?.toLowerCase().includes(searchLower) ||
+        g.submission?.area?.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    return filtered;
+  }, [groupedSubmissions, filterStatus, searchManuscript]);
+
+  const pendingSubmissions = filteredSubmissions.filter(g => g.hasPendingTasks && g.finalDecision !== 'rejected');
+  const completedSubmissions = filteredSubmissions.filter(g => !g.hasPendingTasks && g.hasCompletedTasks && g.finalDecision !== 'rejected');
+  const rejectedSubmissions = filteredSubmissions.filter(g => g.finalDecision === 'rejected');
 
   if (!hasPermission) {
     return null;
   }
 
+  // Si está en modo fullscreen, mostrar solo el DeskReviewTab
+  if (viewMode === 'fullscreen' && selectedTask) {
+    return (
+      <DeskReviewTab
+        task={selectedTask}
+        user={user}
+        onComplete={handleCompleteDeskReview}
+        loading={reviewLoading}
+        onBackToPanel={() => setViewMode('panel')}
+      />
+    );
+  }
+
   return (
-    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 max-w-7xl mx-auto font-serif">
-      <h2 className="font-['Playfair_Display'] text-4xl font-bold text-[#0A1929] mb-2 tracking-tight">
-        {isSpanish ? 'Revisión Editorial' : 'Editorial Review'}
-      </h2>
-      <p className="text-[#5A6B7A] font-['Lora'] text-lg mb-8 border-b border-[#E5E9F0] pb-4">
-        {isSpanish ? 'Evaluación de manuscritos asignados' : 'Evaluation of assigned manuscripts'}
-      </p>
-
-      {(reviewError || inviteError) && (
-        <div className="bg-[#FEF2F2] border-l-4 border-[#991B1B] text-[#991B1B] p-4 rounded-lg mb-6 font-['Lora']">
-          {reviewError || inviteError}
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Lista de manuscritos agrupados (sin cambios) */}
-        <div className="lg:col-span-1 space-y-4">
-          <h3 className="font-['Playfair_Display'] text-lg font-semibold text-[#0A1929] border-b-2 border-[#C0A86A] pb-2 mb-4">
-            {isSpanish ? 'Mis Manuscritos' : 'My Manuscripts'}
-          </h3>
-          
-          {groupedSubmissions.length === 0 ? (
-            <div className="bg-[#F5F7FA] rounded-xl p-8 text-center border border-[#E5E9F0]">
-              <p className="text-[#5A6B7A] font-['Lora'] italic">
-                {isSpanish ? 'No tienes manuscritos asignados' : 'No manuscripts assigned'}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
-              {pendingSubmissions.length > 0 && (
-                <>
-                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-2 mb-1">
-                    {isSpanish ? 'EN PROCESO' : 'IN PROGRESS'}
-                  </h4>
-                  {pendingSubmissions.map(group => {
-                    const latestTask = group.latestTask;
-                    const isSelected = selectedSubmissionId === group.submissionId;
-                    
-                    return (
-                      <motion.div
-                        key={group.submissionId}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        onClick={() => {
-                          setSelectedSubmissionId(group.submissionId);
-                          setSelectedRound(group.currentRound);
-                          // ✅ Al seleccionar, ir al tab de gestión de revisores si está en ese estado
-                          if (latestTask?.status === TASK_STATES.REVIEWER_SELECTION || 
-                              latestTask?.status === TASK_STATES.AWAITING_REVIEWER_RESPONSES || 
-                              latestTask?.status === TASK_STATES.REVIEWS_IN_PROGRESS) {
-                            setActiveTaskTab('reviewerManagement');
-                          } else {
-                            setActiveTaskTab('deskReview');
-                          }
-                        }}
-                        className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                          isSelected
-                            ? 'border-[#C0A86A] bg-[#FBF9F3]'
-                            : 'border-[#E5E9F0] hover:border-[#C0A86A] bg-white hover:shadow-md'
-                        }`}
-                      >
-                        <h4 className="font-['Playfair_Display'] font-bold text-[#0A1929] mb-2 line-clamp-2">
-                          {group.submission?.title || 'Cargando...'}
-                        </h4>
-                        
-                        <div className="flex items-center justify-between text-xs mb-2">
-                          <span className="font-mono text-[#5A6B7A]">
-                            {group.submission?.submissionId?.slice(0, 8) || 'Sin ID'}
-                          </span>
-                          <span className="px-2 py-1 bg-[#E8F0FE] text-[#1E4A7A] rounded-full">
-                            {group.submission?.area || 'Sin área'}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-1 mt-2 mb-2">
-                          {group.tasks.map((task, index) => (
-                            <div
-                              key={task.id}
-                              className={`flex-1 h-1 rounded-full ${
-                                task.status === TASK_STATES.COMPLETED
-                                  ? 'bg-green-500'
-                                  : task.id === latestTask.id
-                                  ? 'bg-[#C0A86A]'
-                                  : 'bg-gray-300'
-                              }`}
-                              title={`Ronda ${index + 1}: ${
-                                task.status === TASK_STATES.COMPLETED ? 'Completada' : 'En curso'
-                              }`}
-                            />
-                          ))}
-                        </div>
-
-                        <div className="flex items-center justify-between mt-2">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-500">
-                              {isSpanish ? `Ronda ${group.currentRound}` : `Round ${group.currentRound}`}
-                            </span>
-                            <span className={`text-xs px-2 py-1 rounded-full ${
-                              latestTask?.status === TASK_STATES.PENDING ? 'bg-yellow-100 text-yellow-700' :
-                              latestTask?.status === TASK_STATES.DESK_REVIEW_IN_PROGRESS ? 'bg-blue-100 text-blue-700' :
-                              latestTask?.status === TASK_STATES.REVIEWER_SELECTION ? 'bg-purple-100 text-purple-700' :
-                              latestTask?.status === TASK_STATES.AWAITING_DECISION ? 'bg-green-100 text-green-700' :
-                              group.submission?.finalReviewDocId ? 'bg-teal-100 text-teal-700' :
-                              'bg-gray-100 text-gray-700'
-                            }`}>
-                              {latestTask?.status === TASK_STATES.PENDING && (isSpanish ? 'Pendiente' : 'Pending')}
-                              {latestTask?.status === TASK_STATES.DESK_REVIEW_IN_PROGRESS && (isSpanish ? 'En revisión' : 'In review')}
-                              {latestTask?.status === TASK_STATES.REVIEWER_SELECTION && (isSpanish ? 'Revisores' : 'Reviewers')}
-                              {latestTask?.status === TASK_STATES.AWAITING_DECISION && (isSpanish ? 'Decisión pendiente' : 'Decision pending')}
-                              {group.submission?.finalReviewDocId && !latestTask?.status === TASK_STATES.AWAITING_DECISION && 
-                                (isSpanish ? 'Revisión consolidada' : 'Review consolidated')}
-                            </span>
-                          </div>
-                          
-                          {latestTask?.status === TASK_STATES.PENDING && (
-                            <button
-                              onClick={(e) => { 
-                                e.stopPropagation(); 
-                                handleStartReview(latestTask.id); 
-                              }}
-                              className="text-xs bg-[#C0A86A] text-white px-2 py-1 rounded hover:bg-[#A58D4F]"
-                            >
-                              {isSpanish ? 'Iniciar' : 'Start'}
-                            </button>
-                          )}
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </>
-              )}
-
-              {completedSubmissions.length > 0 && (
-                <>
-                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-4 mb-1">
-                    {isSpanish ? 'COMPLETADOS' : 'COMPLETED'}
-                  </h4>
-                  {completedSubmissions.map(group => {
-                    const isSelected = selectedSubmissionId === group.submissionId;
-                    
-                    return (
-                      <motion.div
-                        key={group.submissionId}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        onClick={() => {
-                          setSelectedSubmissionId(group.submissionId);
-                          setSelectedRound(group.tasks.length);
-                          setActiveTaskTab('metadataRefinement');
-                        }}
-                        className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                          isSelected
-                            ? 'border-[#C0A86A] bg-[#FBF9F3]'
-                            : 'border-gray-200 hover:border-[#C0A86A] bg-gray-50 hover:shadow-md'
-                        }`}
-                      >
-                        <h4 className="font-['Playfair_Display'] font-bold text-[#0A1929] mb-2 line-clamp-2">
-                          {group.submission?.title || 'Cargando...'}
-                        </h4>
-                        
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-mono text-[#5A6B7A]">
-                            {group.submission?.submissionId?.slice(0, 8) || 'Sin ID'}
-                          </span>
-                          {group.submission?.status === 'accepted' && (
-                            <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full">
-                              {isSpanish ? 'ACEPTADO' : 'ACCEPTED'}
-                            </span>
-                          )}
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* ✅ Panel de trabajo MODIFICADO */}
-        <div className="lg:col-span-2">
-          {selectedTask ? (
-            <div>
-              {/* Selector de rondas (sin cambios) */}
-              {groupedSubmissions.find(g => g.submissionId === selectedSubmissionId)?.tasks.length > 1 && (
-                <div className="mb-4 flex items-center gap-2 border-b border-gray-200 pb-2">
-                  <span className="text-sm text-gray-600">
-                    {isSpanish ? 'Ronda:' : 'Round:'}
-                  </span>
-                  <div className="flex gap-1">
-                    {groupedSubmissions
-                      .find(g => g.submissionId === selectedSubmissionId)
-                      ?.tasks.map((task, index) => (
-                        <button
-                          key={task.id}
-                          onClick={() => setSelectedRound(task.round || index + 1)}
-                          className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                            (task.round || index + 1) === selectedRound
-                              ? 'bg-[#C0A86A] text-white'
-                              : task.status === TASK_STATES.COMPLETED
-                              ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          }`}
-                          title={`Ronda ${index + 1} - ${
-                            task.status === TASK_STATES.COMPLETED ? 'Completada' : 'En curso'
-                          }`}
-                        >
-                          {index + 1}
-                        </button>
-                      ))}
-                  </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      {/* Barra de navegación superior */}
+      <div className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
+        <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-900 to-blue-700 rounded-xl flex items-center justify-center">
+                  <Icons.FileText />
                 </div>
-              )}
-
-              {/* ✅ MODIFICADO: Tabs dinámicos */}
-              <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
-                {/* Tab de Revisión Editorial - siempre visible */}
-                <button
-                  onClick={() => setActiveTaskTab('deskReview')}
-                  className={`px-4 py-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                    activeTaskTab === 'deskReview' 
-                      ? 'text-[#C0A86A] border-b-2 border-[#C0A86A]' 
-                      : 'text-[#5A6B7A] hover:text-[#0A1929]'
-                  }`}
-                >
-                  {isSpanish ? 'Revisión Editorial' : 'Desk Review'}
-                </button>
-                
-                {/* ✅ MODIFICADO: Tab de Gestión de Revisores - visible cuando corresponde */}
-                {(selectedTask.status === TASK_STATES.REVIEWER_SELECTION || 
-                  selectedTask.status === TASK_STATES.AWAITING_REVIEWER_RESPONSES || 
-                  selectedTask.status === TASK_STATES.REVIEWS_IN_PROGRESS ||
-                  selectedTask.status === TASK_STATES.AWAITING_DECISION) && (
-                  <button
-                    onClick={() => setActiveTaskTab('reviewerManagement')}
-                    className={`px-4 py-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                      activeTaskTab === 'reviewerManagement' 
-                        ? 'text-[#C0A86A] border-b-2 border-[#C0A86A]' 
-                        : 'text-[#5A6B7A] hover:text-[#0A1929]'
-                    }`}
-                  >
-                    <span className="flex items-center gap-2">
-                      {isSpanish ? 'Gestión de Revisores' : 'Reviewer Management'}
-                      {submittedReviews.length > 0 && (
-                        <span className="bg-[#C0A86A] text-white text-xs px-2 py-0.5 rounded-full">
-                          {submittedReviews.length}
-                        </span>
-                      )}
-                    </span>
-                  </button>
-                )}
-                
-                {/* ✅ MODIFICADO: Tab de Decisión Final - solo si ya se consolidó */}
-                {(isConsolidated || selectedTask.status === TASK_STATES.AWAITING_DECISION) && (
-                  <button
-                    onClick={() => setActiveTaskTab('finalDecision')}
-                    className={`px-4 py-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                      activeTaskTab === 'finalDecision' 
-                        ? 'text-[#C0A86A] border-b-2 border-[#C0A86A]' 
-                        : 'text-[#5A6B7A] hover:text-[#0A1929]'
-                    }`}
-                  >
-                    {isSpanish ? 'Decisión Final' : 'Final Decision'}
-                  </button>
-                )}
-
-                {/* Tab de Metadatos - para completados */}
-                {selectedTask.submission?.status === 'accepted' && (
-                  <button
-                    onClick={() => setActiveTaskTab('metadataRefinement')}
-                    className={`px-4 py-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                      activeTaskTab === 'metadataRefinement' 
-                        ? 'text-[#C0A86A] border-b-2 border-[#C0A86A]' 
-                        : 'text-[#5A6B7A] hover:text-[#0A1929]'
-                    }`}
-                  >
-                    {isSpanish ? 'Refinar Metadatos' : 'Refine Metadata'}
-                  </button>
-                )}
+                <div>
+                  <h1 className="text-lg font-bold text-gray-900">
+                    {isSpanish ? 'Panel de Revisión' : 'Review Panel'}
+                  </h1>
+                  <p className="text-xs text-gray-500">
+                    {isSpanish ? 'Editor de Sección' : 'Section Editor'}
+                  </p>
+                </div>
               </div>
-
-              {/* Contenido de los tabs */}
-              {activeTaskTab === 'deskReview' && (
-                <DeskReviewTab
-                  task={selectedTask}
-                  user={user}
-                  onComplete={handleCompleteDeskReview}
-                  loading={reviewLoading}
-                />
-              )}
-
-              {/* ✅ MODIFICADO: Tab de Gestión de Revisores con nuevas props */}
-              {activeTaskTab === 'reviewerManagement' && (
-                <ReviewerManagementTab
-                  task={selectedTask}
-                  invitations={invitations}
-                  potentialReviewers={filteredReviewers}
-                  selectedReviewerId={selectedReviewerId}
-                  setSelectedReviewerId={setSelectedReviewerId}
-                  searchTerm={searchTerm}
-                  setSearchTerm={setSearchTerm}
-                  onSendInvitation={handleSendInvitation}
-                  onProceedToDecision={handleProceedToDecision}
-                  loading={inviteLoading || isConsolidating}
-                  submittedReviews={submittedReviews}
-                />
-              )}
-
-              {activeTaskTab === 'finalDecision' && (
-                <FinalDecisionTab
-                  task={selectedTask}
-                  reviewers={[...submittedReviews, ...reviewers.filter(r => r.status === 'submitted')]}
-                  onSubmitDecision={handleFinalDecision}
-                  loading={reviewLoading}
-                />
-              )}
-
-              {activeTaskTab === 'metadataRefinement' && (
-                <MetadataRefinementTab
-                  submission={selectedTask.submission}
-                  user={user}
-                  onComplete={() => {}}
-                />
-              )}
             </div>
-          ) : (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex flex-col items-center justify-center h-96 bg-[#F5F7FA] rounded-xl border-2 border-dashed border-[#E5E9F0]"
-            >
-              <svg className="w-16 h-16 text-[#C0A86A] mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <p className="text-[#5A6B7A] text-lg font-['Lora'] italic">
-                {isSpanish 
-                  ? 'Selecciona un manuscrito para comenzar' 
-                  : 'Select a manuscript to start'}
-              </p>
-            </motion.div>
-          )}
+            
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-4 py-2">
+                <Icons.Search />
+                <input
+                  type="text"
+                  placeholder={isSpanish ? 'Buscar manuscrito...' : 'Search manuscript...'}
+                  value={searchManuscript}
+                  onChange={(e) => setSearchManuscript(e.target.value)}
+                  className="bg-transparent border-none outline-none text-sm text-gray-700 placeholder-gray-400 w-48"
+                />
+              </div>
+              
+              <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl p-1">
+                {[
+                  { value: 'all', label: isSpanish ? 'Todos' : 'All' },
+                  { value: 'pending', label: isSpanish ? 'Pendientes' : 'Pending' },
+                  { value: 'completed', label: isSpanish ? 'Completados' : 'Completed' },
+                  { value: 'rejected', label: isSpanish ? 'Rechazados' : 'Rejected' },
+                ].map(filter => (
+                  <button
+                    key={filter.value}
+                    onClick={() => setFilterStatus(filter.value)}
+                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                      filterStatus === filter.value
+                        ? 'bg-blue-900 text-white shadow-md'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {filter.label}
+                    {filter.value === 'rejected' && rejectedSubmissions.length > 0 && (
+                      <span className="ml-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                        {rejectedSubmissions.length}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Contenido principal */}
+      <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {(reviewError || inviteError) && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-2xl mb-6 flex items-center gap-3">
+            <Icons.AlertCircle />
+            <span className="font-medium">{reviewError || inviteError}</span>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Lista de manuscritos - Sidebar */}
+          <div className="lg:col-span-4 xl:col-span-3">
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-bold text-gray-900">
+                  {isSpanish ? 'Manuscritos' : 'Manuscripts'}
+                </h3>
+                <span className="bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full font-medium">
+                  {filteredSubmissions.length}
+                </span>
+              </div>
+
+              {filteredSubmissions.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                    <Icons.Inbox />
+                  </div>
+                  <p className="text-gray-500 font-medium">
+                    {isSpanish ? 'No hay manuscritos' : 'No manuscripts found'}
+                  </p>
+                  <p className="text-gray-400 text-sm mt-1">
+                    {isSpanish ? 'Cambia los filtros para ver más' : 'Change filters to see more'}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-[calc(100vh-280px)] overflow-y-auto pr-2 custom-scrollbar">
+                  {/* Manuscritos pendientes */}
+                  {pendingSubmissions.length > 0 && filterStatus !== 'rejected' && (
+                    <div>
+                      <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 px-1">
+                        {isSpanish ? 'En Proceso' : 'In Progress'}
+                      </h4>
+                      <div className="space-y-2">
+                        {pendingSubmissions.map(group => {
+                          const latestTask = group.latestTask;
+                          const isSelected = selectedSubmissionId === group.submissionId;
+                          
+                          return (
+                            <motion.div
+                              key={group.submissionId}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              onClick={() => handleSelectManuscript(group.submissionId, group.currentRound, group)}
+                              className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
+                                isSelected
+                                  ? 'border-blue-500 bg-blue-50 shadow-lg shadow-blue-100'
+                                  : 'border-gray-200 hover:border-blue-300 bg-white hover:shadow-md'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between mb-2">
+                                <h4 className="font-semibold text-gray-900 text-sm line-clamp-2 flex-1">
+                                  {group.submission?.title || 'Cargando...'}
+                                </h4>
+                              </div>
+                              
+                              <div className="flex items-center justify-between text-xs mb-2">
+                                <span className="font-mono text-gray-500">
+                                  {group.submission?.submissionId?.slice(0, 8) || 'Sin ID'}
+                                </span>
+                                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
+                                  {group.submission?.area || 'Sin área'}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-1 mt-2 mb-2">
+                                {group.tasks.map((task, index) => (
+                                  <div
+                                    key={task.id}
+                                    className={`flex-1 h-1.5 rounded-full ${
+                                      task.status === TASK_STATES.COMPLETED
+                                        ? 'bg-emerald-500'
+                                        : task.id === latestTask.id
+                                        ? 'bg-blue-500'
+                                        : 'bg-gray-300'
+                                    }`}
+                                    title={`Ronda ${index + 1}: ${
+                                      task.status === TASK_STATES.COMPLETED ? 'Completada' : 'En curso'
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+
+                              <div className="flex items-center justify-between mt-3">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-gray-500 font-medium">
+                                    {isSpanish ? `Ronda ${group.currentRound}` : `Round ${group.currentRound}`}
+                                  </span>
+                                </div>
+                                <span className={`text-xs px-3 py-1 rounded-full font-medium ${
+                                  latestTask?.status === TASK_STATES.PENDING ? 'bg-amber-100 text-amber-700' :
+                                  latestTask?.status === TASK_STATES.DESK_REVIEW_IN_PROGRESS ? 'bg-blue-100 text-blue-700' :
+                                  latestTask?.status === TASK_STATES.REVIEWER_SELECTION ? 'bg-purple-100 text-purple-700' :
+                                  latestTask?.status === TASK_STATES.AWAITING_DECISION ? 'bg-emerald-100 text-emerald-700' :
+                                  group.submission?.finalReviewDocId ? 'bg-teal-100 text-teal-700' :
+                                  'bg-gray-100 text-gray-600'
+                                }`}>
+                                  {latestTask?.status === TASK_STATES.PENDING && (isSpanish ? 'Pendiente' : 'Pending')}
+                                  {latestTask?.status === TASK_STATES.DESK_REVIEW_IN_PROGRESS && (isSpanish ? 'En revisión' : 'In review')}
+                                  {latestTask?.status === TASK_STATES.REVIEWER_SELECTION && (isSpanish ? 'Revisores' : 'Reviewers')}
+                                  {latestTask?.status === TASK_STATES.AWAITING_DECISION && (isSpanish ? 'Decisión' : 'Decision')}
+                                  {group.submission?.finalReviewDocId && !latestTask?.status === TASK_STATES.AWAITING_DECISION && 
+                                    (isSpanish ? 'Consolidado' : 'Consolidated')}
+                                </span>
+                              </div>
+                              
+                              {latestTask?.status === TASK_STATES.PENDING && (
+                                <button
+                                  onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    handleStartReview(latestTask.id); 
+                                  }}
+                                  className="w-full mt-3 bg-blue-900 text-white text-xs px-4 py-2 rounded-xl hover:bg-blue-800 transition-colors font-medium"
+                                >
+                                  {isSpanish ? 'Iniciar Revisión' : 'Start Review'}
+                                </button>
+                              )}
+                            </motion.div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Manuscritos completados */}
+                  {completedSubmissions.length > 0 && filterStatus !== 'rejected' && (
+                    <div>
+                      <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 mt-6 px-1">
+                        {isSpanish ? 'Completados' : 'Completed'}
+                      </h4>
+                      <div className="space-y-2">
+                        {completedSubmissions.map(group => {
+                          const isSelected = selectedSubmissionId === group.submissionId;
+                          
+                          return (
+                            <motion.div
+                              key={group.submissionId}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              onClick={() => handleSelectManuscript(group.submissionId, group.tasks.length, group)}
+                              className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
+                                isSelected
+                                  ? 'border-emerald-500 bg-emerald-50 shadow-lg shadow-emerald-100'
+                                  : 'border-gray-200 hover:border-emerald-300 bg-gray-50 hover:shadow-md'
+                              }`}
+                            >
+                              <h4 className="font-semibold text-gray-900 text-sm line-clamp-2 mb-2">
+                                {group.submission?.title || 'Cargando...'}
+                              </h4>
+                              
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="font-mono text-gray-500">
+                                  {group.submission?.submissionId?.slice(0, 8) || 'Sin ID'}
+                                </span>
+                                <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full font-medium flex items-center gap-1">
+                                  <Icons.CheckCircle />
+                                  {isSpanish ? 'Aceptado' : 'Accepted'}
+                                </span>
+                              </div>
+                            </motion.div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Manuscritos rechazados */}
+                  {rejectedSubmissions.length > 0 && (filterStatus === 'rejected' || filterStatus === 'all') && (
+                    <div>
+                      <h4 className="text-xs font-bold text-red-500 uppercase tracking-wider mb-3 mt-6 px-1 flex items-center gap-2">
+                        <Icons.XCircle />
+                        {isSpanish ? 'Rechazados' : 'Rejected'}
+                      </h4>
+                      <div className="space-y-2">
+                        {rejectedSubmissions.map(group => {
+                          const isSelected = selectedSubmissionId === group.submissionId;
+                          
+                          return (
+                            <motion.div
+                              key={group.submissionId}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              onClick={() => handleSelectManuscript(group.submissionId, group.tasks.length, group)}
+                              className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
+                                isSelected
+                                  ? 'border-red-500 bg-red-50 shadow-lg shadow-red-100'
+                                  : 'border-red-200 hover:border-red-400 bg-red-50/50 hover:shadow-md'
+                              }`}
+                            >
+                              <div className="flex items-start gap-2 mb-2">
+                                <Icons.Ban className="text-red-500 w-4 h-4 flex-shrink-0 mt-0.5" />
+                                <h4 className="font-semibold text-gray-800 text-sm line-clamp-2">
+                                  {group.submission?.title || 'Cargando...'}
+                                </h4>
+                              </div>
+                              
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="font-mono text-gray-500">
+                                  {group.submission?.submissionId?.slice(0, 8) || 'Sin ID'}
+                                </span>
+                                <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full font-medium flex items-center gap-1">
+                                  <Icons.XCircle />
+                                  {isSpanish ? 'Rechazado' : 'Rejected'}
+                                </span>
+                              </div>
+                            </motion.div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Panel de trabajo - Área principal */}
+          <div className="lg:col-span-8 xl:col-span-9">
+            {selectedTask ? (
+              <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                {/* Selector de rondas */}
+                {groupedSubmissions.find(g => g.submissionId === selectedSubmissionId)?.tasks.length > 1 && (
+                  <div className="mb-6 flex items-center gap-3 pb-4 border-b border-gray-200">
+                    <span className="text-sm font-medium text-gray-600">
+                      {isSpanish ? 'Ronda:' : 'Round:'}
+                    </span>
+                    <div className="flex gap-2">
+                      {groupedSubmissions
+                        .find(g => g.submissionId === selectedSubmissionId)
+                        ?.tasks.map((task, index) => (
+                          <button
+                            key={task.id}
+                            onClick={() => setSelectedRound(task.round || index + 1)}
+                            className={`px-4 py-2 text-sm font-medium rounded-xl transition-all duration-200 ${
+                              (task.round || index + 1) === selectedRound
+                                ? 'bg-blue-900 text-white shadow-md'
+                                : task.status === TASK_STATES.COMPLETED
+                                ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                            title={`Ronda ${index + 1} - ${
+                              task.status === TASK_STATES.COMPLETED ? 'Completada' : 'En curso'
+                            }`}
+                          >
+                            {isSpanish ? 'Ronda' : 'Round'} {index + 1}
+                          </button>
+                        ))}
+                    </div>
+                    
+                    {/* Botón para ver a pantalla completa */}
+                    <button
+                      onClick={() => setViewMode('fullscreen')}
+                      className="ml-auto flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-900 hover:bg-blue-50 rounded-xl transition-colors"
+                    >
+                      <Icons.ExternalLink />
+                      {isSpanish ? 'Pantalla completa' : 'Full screen'}
+                    </button>
+                  </div>
+                )}
+
+                {/* Tabs dinámicos */}
+                <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
+                  <button
+                    onClick={() => setActiveTaskTab('deskReview')}
+                    className={`px-6 py-3 font-medium text-sm transition-all duration-200 whitespace-nowrap border-b-2 ${
+                      activeTaskTab === 'deskReview' 
+                        ? 'text-blue-900 border-blue-900' 
+                        : 'text-gray-500 border-transparent hover:text-gray-700'
+                    }`}
+                  >
+                    {isSpanish ? 'Revisión Editorial' : 'Desk Review'}
+                  </button>
+                  
+                  {(selectedTask.status === TASK_STATES.REVIEWER_SELECTION || 
+                    selectedTask.status === TASK_STATES.AWAITING_REVIEWER_RESPONSES || 
+                    selectedTask.status === TASK_STATES.REVIEWS_IN_PROGRESS ||
+                    selectedTask.status === TASK_STATES.AWAITING_DECISION) && (
+                    <button
+                      onClick={() => setActiveTaskTab('reviewerManagement')}
+                      className={`px-6 py-3 font-medium text-sm transition-all duration-200 whitespace-nowrap border-b-2 ${
+                        activeTaskTab === 'reviewerManagement' 
+                          ? 'text-blue-900 border-blue-900' 
+                          : 'text-gray-500 border-transparent hover:text-gray-700'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        {isSpanish ? 'Gestión de Revisores' : 'Reviewer Management'}
+                        {submittedReviews.length > 0 && (
+                          <span className="bg-blue-900 text-white text-xs px-2.5 py-0.5 rounded-full">
+                            {submittedReviews.length}
+                          </span>
+                        )}
+                      </span>
+                    </button>
+                  )}
+                  
+                  {(isConsolidated || selectedTask.status === TASK_STATES.AWAITING_DECISION) && (
+                    <button
+                      onClick={() => setActiveTaskTab('finalDecision')}
+                      className={`px-6 py-3 font-medium text-sm transition-all duration-200 whitespace-nowrap border-b-2 ${
+                        activeTaskTab === 'finalDecision' 
+                          ? 'text-blue-900 border-blue-900' 
+                          : 'text-gray-500 border-transparent hover:text-gray-700'
+                      }`}
+                    >
+                      {isSpanish ? 'Decisión Final' : 'Final Decision'}
+                    </button>
+                  )}
+
+                  {selectedTask.submission?.status === 'accepted' && (
+                    <button
+                      onClick={() => setActiveTaskTab('metadataRefinement')}
+                      className={`px-6 py-3 font-medium text-sm transition-all duration-200 whitespace-nowrap border-b-2 ${
+                        activeTaskTab === 'metadataRefinement' 
+                          ? 'text-blue-900 border-blue-900' 
+                          : 'text-gray-500 border-transparent hover:text-gray-700'
+                      }`}
+                    >
+                      {isSpanish ? 'Refinar Metadatos' : 'Refine Metadata'}
+                    </button>
+                  )}
+                </div>
+
+                {/* Contenido de los tabs */}
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activeTaskTab}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {activeTaskTab === 'deskReview' && (
+                      <DeskReviewTab
+                        task={selectedTask}
+                        user={user}
+                        onComplete={handleCompleteDeskReview}
+                        loading={reviewLoading}
+                        onBackToPanel={() => setViewMode('panel')}
+                      />
+                    )}
+
+                    {activeTaskTab === 'reviewerManagement' && (
+                      <ReviewerManagementTab
+                        task={selectedTask}
+                        invitations={invitations}
+                        potentialReviewers={filteredReviewers}
+                        selectedReviewerId={selectedReviewerId}
+                        setSelectedReviewerId={setSelectedReviewerId}
+                        searchTerm={searchTerm}
+                        setSearchTerm={setSearchTerm}
+                        onSendInvitation={handleSendInvitation}
+                        onProceedToDecision={handleProceedToDecision}
+                        loading={inviteLoading || isConsolidating}
+                        submittedReviews={submittedReviews}
+                      />
+                    )}
+
+                    {activeTaskTab === 'finalDecision' && (
+                      <FinalDecisionTab
+                        task={selectedTask}
+                        reviewers={[...submittedReviews, ...reviewers.filter(r => r.status === 'submitted')]}
+                        onSubmitDecision={handleFinalDecision}
+                        loading={reviewLoading}
+                      />
+                    )}
+
+                    {activeTaskTab === 'metadataRefinement' && (
+                      <MetadataRefinementTab
+                        submission={selectedTask.submission}
+                        user={user}
+                        onComplete={() => {}}
+                      />
+                    )}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="bg-white rounded-2xl shadow-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center py-24"
+              >
+                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+                  <Icons.FileText />
+                </div>
+                <h3 className="text-xl font-bold text-gray-700 mb-2">
+                  {isSpanish ? 'Selecciona un manuscrito' : 'Select a manuscript'}
+                </h3>
+                <p className="text-gray-500 text-center max-w-md">
+                  {isSpanish 
+                    ? 'Elige un manuscrito de la lista para comenzar la revisión editorial'
+                    : 'Choose a manuscript from the list to start the editorial review'}
+                </p>
+              </motion.div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Estilos personalizados */}
+      <style jsx>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: #f1f5f9;
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
+      `}</style>
     </div>
   );
 };
