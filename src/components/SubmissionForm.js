@@ -4,6 +4,7 @@ import { auth } from '../firebase';
 import { useLanguage } from '../hooks/useLanguage';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import { UserIcon } from '@heroicons/react/24/outline';
 
 // ============ COMPONENTES AUXILIARES ============
 
@@ -1136,7 +1137,36 @@ useEffect(() => {
     newAuthors[index] = { ...newAuthors[index], [field]: value };
     setFormData(prev => ({ ...prev, authors: newAuthors }));
   };
+// ============ FUNCIÓN PARA IMPORTAR PERFIL DEL USUARIO LOGUEADO ============
+const handleImportMyProfile = (authorIndex) => {
+  if (!user) return;
 
+  const updatedAuthors = [...formData.authors];
+  const author = updatedAuthors[authorIndex];
+
+  // Mapeo de campos del perfil de usuario a campos del autor
+  const importedData = {
+    firstName: user.firstName || author.firstName,
+    lastName: user.lastName || author.lastName,
+    email: user.email || author.email,
+    institution: user.institution || author.institution || '',
+    orcid: user.orcid || author.orcid || '',
+    // La contribución NO se importa automáticamente, debe ser manual
+    contribution: author.contribution,
+    // No tocamos isMinor, guardianName, consentMethod, consentFile
+    isMinor: author.isMinor,
+    guardianName: author.guardianName,
+    consentMethod: author.consentMethod,
+    consentFile: author.consentFile,
+    isCorresponding: author.isCorresponding,
+  };
+
+  updatedAuthors[authorIndex] = importedData;
+  setFormData(prev => ({ ...prev, authors: updatedAuthors }));
+
+  // Pequeña notificación visual (opcional)
+  console.log(`✅ Perfil importado para autor #${authorIndex + 1}: ${importedData.firstName} ${importedData.lastName}`);
+};
   // Agregar autor
   const addAuthor = () => {
     setFormData(prev => ({
@@ -2003,18 +2033,35 @@ const prevStep = () => {
                             <p className="text-red-500 text-xs mt-1">{validationErrors[`author_${index}_institution`]}</p>
                           )}
                         </div>
-                        <div className="md:col-span-2">
-                          <label className="text-xs text-[#546E7A] mb-1 block font-serif">
-                            ORCID
-                          </label>
-                          <input
-                            type="text"
-                            value={author.orcid}
-                            onChange={(e) => handleAuthorChange(index, 'orcid', e.target.value)}
-                            placeholder="0000-0000-0000-0000"
-                            className="w-full p-3.5 border border-[#E0E7E9] rounded-2xl text-sm font-mono focus:border-[#0A1929] outline-none"
-                          />
-                        </div>
+                       {/* ORCID field */}
+<div className="md:col-span-2">
+  <label className="text-xs text-[#546E7A] mb-1 block font-serif">
+    ORCID
+  </label>
+  <div className="flex gap-3 items-start">
+    <input
+      type="text"
+      value={author.orcid}
+      onChange={(e) => handleAuthorChange(index, 'orcid', e.target.value)}
+      placeholder="0000-0000-0000-0000"
+      className="flex-1 p-3.5 border border-[#E0E7E9] rounded-2xl text-sm font-mono focus:border-[#0A1929] outline-none"
+    />
+    
+    {/* ========== BOTÓN "ESTE AUTOR SOY YO" ========== */}
+    {user && (
+      <button
+        type="button"
+        onClick={() => handleImportMyProfile(index)}
+        className="px-5 py-3.5 bg-[#A6CE39] hover:bg-[#8FB832] text-white rounded-2xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-sm whitespace-nowrap"
+        title={isSpanish ? 'Importar datos de mi perfil' : 'Import my profile data'}
+      >
+        <UserIcon className="w-4 h-4" />
+        {isSpanish ? 'Este soy yo' : 'This is me'}
+      </button>
+    )}
+    {/* ================================================ */}
+  </div>
+</div>
                         <div className="md:col-span-2">
                           <label className="text-xs text-[#546E7A] mb-1 block font-serif">
                             {isSpanish ? 'Contribución del autor (CRediT)' : 'Author contribution (CRediT)'} *
