@@ -6,7 +6,7 @@ function SubmitSection() {
   const navigate = useNavigate();
 
   const handleSubmitClick = () => {
-    navigate('/en/login');
+    navigate('/en/login/submit');
   };
 
   return (
@@ -207,7 +207,7 @@ function SubmitSection() {
               <p className="text-xs text-gray-500">
                 Para envíos en español,{' '}
                 <a 
-                  href="/login" 
+                  href="/login/submit" 
                   className="text-blue-600 hover:text-blue-800"
                 >
                   acceda al portal en español

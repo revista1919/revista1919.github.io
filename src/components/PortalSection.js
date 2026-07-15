@@ -862,7 +862,7 @@ const safetyTimeoutRef = useRef(null);
   // Estados para reclamación de perfil
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [claimStatus, setClaimStatus] = useState('idle');
-  const [anonymousProfile, setAnonymousProfile] = useState(null);
+  const [submissionLanguage, setSubmissionLanguage] = useState(language);
   const [claimError, setClaimError] = useState('');
 
   const { getReviewerAssignmentsByEmail } = useReviewerAssignment(user);
@@ -942,15 +942,21 @@ const safetyTimeoutRef = useRef(null);
   }, [location.pathname]);
 
   // Función para cambiar de pestaña y navegar (CORREGIDA)
-  const handleTabChange = (tabId, event) => {
-    // Prevenir cualquier comportamiento por defecto del navegador
+// Busca la función handleTabChange en PortalSection
+const handleTabChange = (tabId, event) => {
     if (event) {
       event.preventDefault();
     }
     
+    // *** INICIO DEL CAMBIO ***
+    // Antes de cambiar de pestaña, si es la de 'submit', congela el idioma
+    if (tabId === 'submit') {
+      setSubmissionLanguage(language);
+    }
+    // *** FIN DEL CAMBIO ***
+
     setActiveTab(tabId);
     const route = tabRoutes[tabId] || '';
-    // Usar navigate de React Router para navegación del lado del cliente
     navigate(`/login/${route}`, { replace: true });
   };
 
@@ -1426,7 +1432,6 @@ const safetyTimeoutRef = useRef(null);
           )}
 
           {/* ENVIAR MANUSCRITO */}
-          {/* ENVIAR MANUSCRITO - OCUPA TODA LA PANTALLA */}
 {activeTab === 'submit' && (
   <motion.section
     key="submit"
@@ -1464,6 +1469,7 @@ const safetyTimeoutRef = useRef(null);
           console.log('Submission successful:', submissionId);
           handleTabChange('submissions', null);
         }}
+        forcedLanguage={submissionLanguage} // <-- NUEVA PROP AÑADIDA
       />
     </div>
   </motion.section>

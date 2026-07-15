@@ -704,6 +704,189 @@ function AppEN() {
       <ReviewerResponsePage />
     </motion.div>
   } />
+
+  {/* ========== RUTAS DEL PORTAL EDITORIAL EN INGLÉS ========== */}
+  <Route path="/login/submit" element={
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.3 }}
+      className="container max-w-full px-0 flex-grow"
+    >
+      {user ? (
+        <PortalSection user={user} onLogout={handleLogout} />
+      ) : (
+        <Navigate to="/en/login" replace />
+      )}
+    </motion.div>
+  } />
+  <Route path="/login/submissions" element={
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.3 }}
+      className="container max-w-full px-0 flex-grow"
+    >
+      {user ? (
+        <PortalSection user={user} onLogout={handleLogout} />
+      ) : (
+        <Navigate to="/en/login" replace />
+      )}
+    </motion.div>
+  } />
+  <Route path="/login/reviewer-tasks" element={
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.3 }}
+      className="container max-w-full px-0 flex-grow"
+    >
+      {user ? (
+        <PortalSection user={user} onLogout={handleLogout} />
+      ) : (
+        <Navigate to="/en/login" replace />
+      )}
+    </motion.div>
+  } />
+  <Route path="/login/deskreview" element={
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.3 }}
+      className="container max-w-full px-0 flex-grow"
+    >
+      {user ? (
+        <PortalSection user={user} onLogout={handleLogout} />
+      ) : (
+        <Navigate to="/en/login" replace />
+      )}
+    </motion.div>
+  } />
+  <Route path="/login/assignment" element={
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.3 }}
+      className="container max-w-full px-0 flex-grow"
+    >
+      {user ? (
+        <PortalSection user={user} onLogout={handleLogout} />
+      ) : (
+        <Navigate to="/en/login" replace />
+      )}
+    </motion.div>
+  } />
+  <Route path="/login/calendar" element={
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.3 }}
+      className="container max-w-full px-0 flex-grow"
+    >
+      {user ? (
+        <PortalSection user={user} onLogout={handleLogout} />
+      ) : (
+        <Navigate to="/en/login" replace />
+      )}
+    </motion.div>
+  } />
+  <Route path="/login/director" element={
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.3 }}
+      className="container max-w-full px-0 flex-grow"
+    >
+      {user ? (
+        <PortalSection user={user} onLogout={handleLogout} />
+      ) : (
+        <Navigate to="/en/login" replace />
+      )}
+    </motion.div>
+  } />
+  <Route path="/login/chief" element={
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.3 }}
+      className="container max-w-full px-0 flex-grow"
+    >
+      {user ? (
+        <PortalSection user={user} onLogout={handleLogout} />
+      ) : (
+        <Navigate to="/en/login" replace />
+      )}
+    </motion.div>
+  } />
+  <Route path="/login/tasks" element={
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.3 }}
+      className="container max-w-full px-0 flex-grow"
+    >
+      {user ? (
+        <PortalSection user={user} onLogout={handleLogout} />
+      ) : (
+        <Navigate to="/en/login" replace />
+      )}
+    </motion.div>
+  } />
+  <Route path="/login/news" element={
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.3 }}
+      className="container max-w-full px-0 flex-grow"
+    >
+      {user ? (
+        <PortalSection user={user} onLogout={handleLogout} />
+      ) : (
+        <Navigate to="/en/login" replace />
+      )}
+    </motion.div>
+  } />
+  <Route path="/login/admissions" element={
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.3 }}
+      className="container max-w-full px-0 flex-grow"
+    >
+      {user ? (
+        <PortalSection user={user} onLogout={handleLogout} />
+      ) : (
+        <Navigate to="/en/login" replace />
+      )}
+    </motion.div>
+  } />
+  <Route path="/login/users" element={
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.3 }}
+      className="container max-w-full px-0 flex-grow"
+    >
+      {user ? (
+        <PortalSection user={user} onLogout={handleLogout} />
+      ) : (
+        <Navigate to="/en/login" replace />
+      )}
+    </motion.div>
+  } />
+  {/* ========== FIN RUTAS DEL PORTAL EDITORIAL ========== */}
   
   {/* Rutas de secciones en inglés */}
   {sections.map(s => (
