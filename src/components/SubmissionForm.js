@@ -937,9 +937,9 @@ const MinorConsentSection = ({ author, index, onUpdate }) => {
 
 // ============ COMPONENTE PRINCIPAL DEL FORMULARIO ============
 
-export default function SubmissionForm({ user, onSuccess, forcedLanguage }) {
-  const { language: contextLanguage } = useLanguage();
-  const language = forcedLanguage || contextLanguage;
+export default function SubmissionForm({ user, onSuccess }) {
+  const { language } = useLanguage();
+  const isSpanish = language === 'es';
 
   // Estados del formulario
   const [currentStep, setCurrentStep] = useState(1);
