@@ -5,258 +5,330 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Guía para Autores · Revista Nacional de las Ciencias para Estudiantes</title>
   <style>
-    :root {
-      --primary: #001f3f;
-      --text: #1a1a1a;
-      --light-text: #666;
-      --border: #e0e0e0;
-      --soft-white: #fdfdfd;
-      --accent: #c0a86a;
-      --link: #007398;
-    }
-    body {
-      font-family: 'Lora', 'Georgia', Times, serif;
-      line-height: 1.8;
-      margin: 0;
-      padding: 0;
-      background-color: var(--soft-white);
-      color: var(--text);
-    }
-    .page-wrapper {
-      max-width: 900px;
-      margin: 60px auto;
-      background-color: #fff;
-      padding: 60px 80px;
-      border: 1px solid var(--border);
-      box-shadow: 0 10px 30px rgba(0,0,0,0.02);
-    }
-    .header {
-      text-align: center;
-      border-bottom: 3px double var(--text);
-      padding-bottom: 30px;
-      margin-bottom: 50px;
-    }
-    .header img {
-      max-width: 160px;
-      margin-bottom: 20px;
-      filter: grayscale(1);
-    }
-    .header h1 {
-      font-family: 'Playfair Display', 'Georgia', serif;
-      font-size: 2.4em;
-      font-weight: 900;
-      margin: 0;
-      letter-spacing: -0.02em;
-      color: var(--primary);
-    }
-    .document-meta {
-      font-family: 'Inter', sans-serif;
-      text-transform: uppercase;
-      font-size: 10px;
-      letter-spacing: 0.3em;
-      color: #888;
-      font-weight: 500;
-      margin-top: 10px;
-    }
-    h2 {
-      font-family: 'Inter', sans-serif;
-      font-size: 0.9em;
-      text-transform: uppercase;
-      letter-spacing: 0.2em;
-      color: var(--primary);
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 10px;
-      margin-top: 50px;
-    }
-    h3 {
-      font-family: 'Inter', sans-serif;
-      font-size: 0.8em;
-      text-transform: uppercase;
-      letter-spacing: 0.15em;
-      color: #444;
-      margin-top: 35px;
-      margin-bottom: 15px;
-    }
-    h4 {
-      font-family: 'Inter', sans-serif;
-      font-size: 0.75em;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: #555;
-      margin-top: 25px;
-      margin-bottom: 10px;
-    }
-    p {
-      margin-bottom: 25px;
-      font-size: 1.05em;
-      color: #333;
-    }
-    ul, ol {
-      margin-bottom: 25px;
-      padding-left: 25px;
-    }
-    li {
-      margin-bottom: 8px;
-      font-size: 1.05em;
-      color: #333;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 20px 0;
-      font-size: 0.9em;
-    }
-    table th {
-      font-family: 'Inter', sans-serif;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      font-size: 0.7em;
-      color: var(--primary);
-      border-bottom: 2px solid var(--primary);
-      padding: 10px 8px;
-      text-align: left;
-    }
-    table td {
-      padding: 10px 8px;
-      border-bottom: 1px solid var(--border);
-      vertical-align: top;
-    }
-    table tr:last-child td {
-      border-bottom: none;
-    }
-    a {
-      color: var(--link);
-      text-decoration: underline;
-      text-underline-offset: 3px;
-      transition: all 0.2s;
-    }
-    a:hover {
-      background-color: var(--link);
-      color: white;
-      text-decoration: none;
-    }
-    .footer {
-      margin-top: 60px;
-      padding-top: 30px;
-      border-top: 1px solid var(--border);
-      text-align: center;
-      font-family: 'Inter', sans-serif;
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 0.2em;
-      color: #999;
-    }
-    .toc {
-      margin: 30px 0;
-      padding: 20px;
-      background-color: #fafafa;
-      border: 1px solid var(--border);
-    }
-    .toc ol {
-      font-family: 'Inter', sans-serif;
-      font-size: 0.8em;
-      line-height: 2.2;
-      list-style-position: inside;
-      padding-left: 0;
-    }
-    .toc a {
-      text-decoration: none;
-    }
-    .highlight-box {
-      background-color: #f8f9fa;
-      border-left: 4px solid var(--primary);
-      padding: 20px;
-      margin: 25px 0;
-      font-size: 0.95em;
-    }
-    .highlight-box p {
-      margin-bottom: 10px;
-    }
-    .highlight-box p:last-child {
-      margin-bottom: 0;
-    }
-    .warning-box {
-      background-color: #fff8e1;
-      border-left: 4px solid var(--accent);
-      padding: 20px;
-      margin: 25px 0;
-      font-size: 0.95em;
-    }
-    .video-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      margin: 25px 0;
-    }
-    .video-container {
-      aspect-ratio: 16 / 9;
-      background-color: #000;
-      border-radius: 4px;
-      overflow: hidden;
-      box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-    }
-    .video-container iframe {
-      width: 100%;
-      height: 100%;
-      border: 0;
-    }
-    .resource-card {
-      background-color: #fff;
-      border: 1px solid var(--border);
-      padding: 20px;
-      margin-bottom: 15px;
-      border-radius: 4px;
-      transition: box-shadow 0.2s;
-    }
-    .resource-card:hover {
-      box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-    }
-    .resource-card h4 {
-      margin-top: 0;
-      color: var(--link);
-    }
-    .btn {
-      display: inline-block;
-      background-color: var(--primary);
-      color: #fff;
-      padding: 12px 24px;
-      text-decoration: none;
-      font-family: 'Inter', sans-serif;
-      font-size: 10px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.2em;
-      border-radius: 4px;
-      transition: background-color 0.2s;
-    }
-    .btn:hover {
-      background-color: var(--accent);
-      color: #fff;
-      text-decoration: none;
-    }
-    .citation-example {
-      background-color: #f4f6f8;
-      padding: 15px;
-      margin-bottom: 15px;
-      border-left: 3px solid var(--primary);
-    }
-    .citation-example p {
-      margin: 5px 0;
-      font-size: 0.9em;
-    }
-    .citation-example .label {
-      font-family: 'Inter', sans-serif;
-      font-size: 0.7em;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--primary);
-      font-weight: 700;
-    }
-    @media (max-width: 768px) {
-      .page-wrapper { margin: 20px; padding: 30px; }
-      .header h1 { font-size: 1.8em; }
-      .video-grid { grid-template-columns: 1fr; }
-    }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap');
+
+:root {
+  /* Paleta Editorial Académica */
+  --primary: #004b87;       /* Azul académico profundo */
+  --secondary: #006dae;     /* Azul interactivo */
+  --accent: #e86125;        /* Naranja tipo Elsevier para alertas/botones */
+  --text-main: #2b2b2b;     /* Negro suave para lectura prolongada */
+  --text-muted: #666666;    /* Gris para metadatos y etiquetas */
+  --border-light: #e6e8ea;  /* Bordes sutiles para tarjetas y separadores */
+  --border-dark: #cbd0d5;   /* Bordes estructurales */
+  --bg-out: #f4f5f7;        /* Fondo exterior (efecto escritorio/visor) */
+  --bg-paper: #ffffff;      /* Fondo del documento */
+  --bg-highlight: #f8f9fa;  /* Cajas de texto estándar */
+  --bg-warning: #fdf6f3;    /* Fondo cálido para advertencias */
+  --link: #006dae;
+}
+
+body {
+  font-family: 'Lora', 'Georgia', Times, serif;
+  font-size: 16px;
+  line-height: 1.75;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-out);
+  color: var(--text-main);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.page-wrapper {
+  max-width: 850px;
+  margin: 60px auto;
+  background-color: var(--bg-paper);
+  padding: 70px 90px;
+  border: 1px solid var(--border-light);
+  border-top: 5px solid var(--primary); /* Cinta superior de identidad */
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
+.header {
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 30px;
+  margin-bottom: 50px;
+}
+
+.header img {
+  max-width: 180px;
+  margin-bottom: 25px;
+  display: block;
+}
+
+.header h1 {
+  font-family: 'Inter', sans-serif;
+  font-size: 2.2em;
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 0;
+  letter-spacing: -0.02em;
+  color: var(--text-main);
+}
+
+.document-meta {
+  font-family: 'Inter', sans-serif;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-top: 15px;
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+/* Jerarquía de Encabezados (Sans-Serif) */
+h2, h3, h4 {
+  font-family: 'Inter', sans-serif;
+  color: var(--primary);
+  margin-top: 2.5em;
+  font-weight: 600;
+}
+
+h2 {
+  font-size: 1.25em;
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 8px;
+  margin-bottom: 1em;
+}
+
+h3 {
+  font-size: 1.1em;
+  color: var(--text-main);
+  margin-bottom: 0.8em;
+}
+
+h4 {
+  font-size: 0.95em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5em;
+}
+
+p {
+  margin-top: 0;
+  margin-bottom: 1.5em;
+  color: var(--text-main);
+}
+
+ul, ol {
+  margin-top: 0;
+  margin-bottom: 1.5em;
+  padding-left: 1.5em;
+}
+
+li {
+  margin-bottom: 0.5em;
+}
+
+/* Tablas estilo APA / Científico */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 2.5em 0;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9em;
+}
+
+table th, table td {
+  padding: 12px 16px;
+  text-align: left;
+  vertical-align: top;
+  color: var(--text-main);
+}
+
+table th {
+  font-weight: 600;
+  border-top: 2px solid var(--border-dark);
+  border-bottom: 1px solid var(--border-dark);
+  color: var(--primary);
+}
+
+table tr:last-child td {
+  border-bottom: 2px solid var(--border-dark);
+}
+
+table td {
+  border-bottom: 1px solid var(--border-light);
+}
+
+/* Enlaces editoriales */
+a {
+  color: var(--link);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+a:hover {
+  color: var(--primary);
+  border-bottom: 1px solid var(--primary);
+}
+
+/* Botones de acción (Submission, Download) */
+.btn {
+  display: inline-block;
+  background-color: var(--primary);
+  color: #ffffff;
+  padding: 12px 28px;
+  text-decoration: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  border-radius: 3px;
+  transition: background-color 0.2s ease;
+  border-bottom: none;
+}
+
+.btn:hover {
+  background-color: var(--accent);
+  color: #ffffff;
+  border-bottom: none;
+}
+
+/* Tabla de Contenidos */
+.toc {
+  margin: 2em 0 3em 0;
+  padding: 25px 30px;
+  background-color: var(--bg-highlight);
+  border-radius: 4px;
+  border: 1px solid var(--border-light);
+}
+
+.toc ol {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9em;
+  line-height: 2;
+  margin: 0;
+  padding-left: 1.2em;
+  color: var(--link);
+}
+
+/* Cajas de Información y Alertas */
+.highlight-box {
+  background-color: var(--bg-highlight);
+  border-left: 4px solid var(--primary);
+  padding: 20px 25px;
+  margin: 2em 0;
+  font-size: 0.95em;
+  border-radius: 0 4px 4px 0;
+}
+
+.warning-box {
+  background-color: var(--bg-warning);
+  border-left: 4px solid var(--accent);
+  padding: 20px 25px;
+  margin: 2em 0;
+  font-size: 0.95em;
+  border-radius: 0 4px 4px 0;
+}
+
+.highlight-box p:last-child,
+.warning-box p:last-child {
+  margin-bottom: 0;
+}
+
+/* Ejemplos de Citación (Formato Referencias) */
+.citation-example {
+  background-color: var(--bg-out);
+  padding: 20px 25px;
+  margin: 1.5em 0;
+  border-left: 3px solid var(--border-dark);
+  border-radius: 0 4px 4px 0;
+}
+
+.citation-example .label {
+  display: block;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75em;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.citation-example p {
+  margin: 0;
+  font-size: 0.95em;
+  line-height: 1.6;
+}
+
+/* Tarjetas de Recursos (Archivos Suplementarios, Templates) */
+.resource-card {
+  background-color: var(--bg-paper);
+  border: 1px solid var(--border-light);
+  padding: 24px;
+  margin-bottom: 20px;
+  border-radius: 4px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.resource-card:hover {
+  border-color: var(--secondary);
+  box-shadow: 0 4px 15px rgba(0, 75, 135, 0.08); /* Sombra tintada en azul */
+}
+
+.resource-card h4 {
+  margin-top: 0;
+  font-size: 1.05em;
+  color: var(--primary);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* Multimedia Científica */
+.video-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 2.5em 0;
+}
+
+.video-container {
+  aspect-ratio: 16 / 9;
+  background-color: #111; /* Negro profundo para contraste audiovisual */
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--border-dark);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+.video-container iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* Pie de página del documento */
+.footer {
+  margin-top: 80px;
+  padding-top: 30px;
+  border-top: 1px solid var(--border-light);
+  text-align: center;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* Adaptabilidad móvil */
+@media (max-width: 768px) {
+  .page-wrapper { 
+    margin: 0; 
+    padding: 30px 20px; 
+    border: none;
+    border-top: 4px solid var(--primary);
+  }
+  .header h1 { font-size: 1.7em; }
+  .document-meta { flex-direction: column; align-items: flex-start; gap: 5px; }
+  .video-grid { grid-template-columns: 1fr; gap: 16px; }
+}
   </style>
 </head>
 <body>
