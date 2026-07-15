@@ -15,6 +15,8 @@ import {
 } from 'firebase/firestore';
 import { useLanguage } from '../hooks/useLanguage';
 import { AuthorMetadataResponseTab } from './AuthorMetadataResponseTab';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 /**
  * Convierte una URL de Google Docs en URL de descarga PDF
  * @param {string} docsUrl - URL del Google Docs
@@ -215,6 +217,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
   const isSpanish = language === 'es';
   const [submissions, setSubmissions] = useState([]);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
+  const [revisionComment, setRevisionComment] = useState('');
   const [revisionFile, setRevisionFile] = useState(null);
   const [revisionNotes, setRevisionNotes] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -446,66 +449,67 @@ const AuthorSubmissionsPanel = ({ user }) => {
   };
 
   const handleSubmitRevision = async () => {
-    if (!revisionFile || !revisionNotes.trim()) {
-      alert(isSpanish ? 'Debes seleccionar un archivo y agregar notas' : 'You must select a file and add notes');
-      return;
-    }
+  if (!revisionFile || !revisionNotes.trim()) {
+    alert(isSpanish ? 'Debes seleccionar un archivo y agregar un resumen de cambios' : 'You must select a file and add a summary of changes');
+    return;
+  }
 
-    setUploading(true);
-    console.log('📤 Iniciando subida de revisión para:', selectedSubmission?.id);
+  setUploading(true);
+  console.log('📤 Iniciando subida de revisión para:', selectedSubmission?.id);
+  
+  try {
+    const reader = new FileReader();
     
-    try {
-      const reader = new FileReader();
-      
-      const filePromise = new Promise((resolve, reject) => {
-        reader.onload = async () => {
-          try {
-            const base64 = reader.result;
-            console.log('📄 Archivo convertido a base64, tamaño:', base64.length);
-            
-            const result = await submitRevision({
-              submissionId: selectedSubmission.id,
-              fileBase64: base64,
-              fileName: revisionFile.name,
-              notes: revisionNotes,
-              round: selectedSubmission.currentRound || 1
-            });
+    const filePromise = new Promise((resolve, reject) => {
+      reader.onload = async () => {
+        try {
+          const base64 = reader.result;
+          console.log('📄 Archivo convertido a base64, tamaño:', base64.length);
+          
+          const result = await submitRevision({
+            submissionId: selectedSubmission.id,
+            fileBase64: base64,
+            fileName: revisionFile.name,
+            notes: revisionNotes,
+            revisionComment: revisionComment, 
+            round: selectedSubmission.currentRound || 1
+          });
 
-            console.log('✅ Resultado de submitRevision:', result);
+          console.log('✅ Resultado de submitRevision:', result);
 
-            if (result.success) {
-              alert(isSpanish ? 'Revisión enviada con éxito' : 'Revision submitted successfully');
-              setSelectedSubmission(null);
-              setRevisionFile(null);
-              setRevisionNotes('');
-            } else {
-              throw new Error(result.error || 'Error al subir revisión');
-            }
-            
-            resolve();
-          } catch (error) {
-            console.error('❌ Error en proceso de subida:', error);
-            reject(error);
+          if (result.success) {
+            alert(isSpanish ? 'Revisión enviada con éxito' : 'Revision submitted successfully');
+            setSelectedSubmission(null);
+            setRevisionFile(null);
+            setRevisionNotes('');
+            setRevisionComment(''); 
+          } else {
+            throw new Error(result.error || 'Error al subir revisión');
           }
-        };
-        
-        reader.onerror = () => {
-          console.error('❌ Error leyendo archivo');
-          reject(new Error('Error leyendo archivo'));
-        };
-        reader.readAsDataURL(revisionFile);
-      });
+          
+          resolve();
+        } catch (error) {
+          console.error('❌ Error en proceso de subida:', error);
+          reject(error);
+        }
+      };
+      
+      reader.onerror = () => {
+        console.error('❌ Error leyendo archivo');
+        reject(new Error('Error leyendo archivo'));
+      };
+      reader.readAsDataURL(revisionFile);
+    });
 
-      await filePromise;
+    await filePromise;
 
-    } catch (error) {
-      console.error('❌ Error submitting revision:', error);
-      alert(isSpanish ? 'Error al enviar la revisión: ' + error.message : 'Error submitting revision: ' + error.message);
-    } finally {
-      setUploading(false);
-    }
-  };
-
+  } catch (error) {
+    console.error('❌ Error submitting revision:', error);
+    alert(isSpanish ? 'Error al enviar la revisión: ' + error.message : 'Error submitting revision: ' + error.message);
+  } finally {
+    setUploading(false);
+  }
+};
   const getStatusBadge = (status) => {
     const state = SUBMISSION_STATES[status] || SUBMISSION_STATES.submitted;
     return (
@@ -1126,7 +1130,64 @@ const AuthorSubmissionsPanel = ({ user }) => {
         </button>
       </div>
     )}
-
+{/* ============ COMENTARIOS AL EDITOR ============ */}
+{submission.editorComment && (
+  <div className="bg-white p-4 sm:p-6 border border-slate-200 rounded-lg overflow-hidden">
+    <div className="flex items-center gap-2 mb-4">
+      <div className="w-8 h-8 bg-[#002147] rounded-lg flex items-center justify-center">
+        <svg className="w-4 h-4 text-[#C0A86A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+        </svg>
+      </div>
+      <h4 className="font-['Playfair_Display'] font-bold text-sm text-[#002147] uppercase tracking-wider">
+        {isSpanish ? 'Tu Mensaje al Editor' : 'Your Message to the Editor'}
+      </h4>
+    </div>
+    
+    {/* Contenido del comentario con estilos preservados */}
+    <div className="bg-gradient-to-br from-[#F8F9FB] to-[#F0F4F8] border border-[#E5E9F0] rounded-xl p-4 relative">
+      {/* Línea decorativa lateral */}
+      <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#C0A86A] to-[#002147] rounded-l-xl" />
+      
+      <div className="pl-4">
+        <div 
+          className="prose prose-sm max-w-none font-['Lora'] text-[#1A2B3C] leading-relaxed
+            [&_strong]:text-[#002147] [&_strong]:font-bold
+            [&_em]:text-[#C0A86A] [&_em]:italic
+            [&_u]:underline [&_u]:decoration-[#C0A86A] [&_u]:decoration-2
+            [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1
+            [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-1
+            [&_li]:text-[#1A2B3C] [&_li]:marker:text-[#C0A86A]"
+          dangerouslySetInnerHTML={{ __html: submission.editorComment }}
+        />
+      </div>
+    </div>
+    
+    {/* Footer decorativo */}
+    <div className="mt-3 flex items-center gap-2 text-[10px] text-[#5A6B7A] font-mono uppercase tracking-wider">
+      <span className="w-2 h-2 bg-[#C0A86A] rounded-full" />
+      {isSpanish ? 'Enviado con el manuscrito' : 'Submitted with manuscript'}
+    </div>
+  </div>
+)}
+<div className="sm:hidden bg-gradient-to-r from-[#FBF9F3] to-[#F8F9FB] border border-[#C0A86A]/30 rounded-xl p-3">
+  <div className="flex items-center gap-2 mb-2">
+    <span className="text-lg">💬</span>
+    <span className="text-[10px] font-mono font-bold text-[#002147] uppercase tracking-wider">
+      {isSpanish ? 'Mensaje al Editor' : 'Message to Editor'}
+    </span>
+  </div>
+  <div 
+    className="text-xs font-['Lora'] text-[#1A2B3C] leading-relaxed line-clamp-4"
+    dangerouslySetInnerHTML={{ __html: submission.editorComment }}
+  />
+  <button 
+    onClick={() => {/* expandir */}} 
+    className="mt-2 text-[10px] text-[#C0A86A] font-mono hover:text-[#002147] transition-colors"
+  >
+    {isSpanish ? 'Leer más →' : 'Read more →'}
+  </button>
+</div>
     {/* INDICADOR DE ESTADO DEL DOCUMENTO */}
     {sub.documentStatus && (
       <div className="border-t border-slate-200 pt-3">
@@ -1166,96 +1227,270 @@ const AuthorSubmissionsPanel = ({ user }) => {
       )}
 
       {/* Modal para subir revisión - Responsive */}
-      <AnimatePresence>
-        {selectedSubmission && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4"
-            onClick={() => setSelectedSubmission(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-5 sm:p-6 md:p-8"
-              onClick={e => e.stopPropagation()}
-            >
-              <h3 className="font-['Playfair_Display'] text-xl sm:text-2xl font-bold text-[#0A1929] mb-2">
+      {/* Modal para subir revisión - VERSIÓN MEJORADA */}
+<AnimatePresence>
+  {selectedSubmission && (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+      onClick={() => {
+        if (!uploading) {
+          setSelectedSubmission(null);
+          setRevisionFile(null);
+          setRevisionNotes('');
+          setRevisionComment('');
+        }
+      }}
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header del modal */}
+        <div className="bg-gradient-to-r from-[#0A1929] to-[#1E2F40] p-6 sm:p-8 text-white sticky top-0 z-10">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-['Playfair_Display'] text-xl sm:text-2xl font-bold mb-1">
                 {isSpanish ? 'Subir Versión Revisada' : 'Upload Revised Version'}
               </h3>
-              <p className="text-[#5A6B7A] mb-2 text-sm sm:text-base break-words">
+              <p className="text-[#E5E9F0] text-sm font-['Lora']">
                 {selectedSubmission.title}
               </p>
-              <p className="text-xs sm:text-sm text-[#C0A86A] mb-4 sm:mb-6">
-                {isSpanish ? `Ronda ${selectedSubmission.currentRound || 1} → Ronda ${(selectedSubmission.currentRound || 1) + 1}` : `Round ${selectedSubmission.currentRound || 1} → Round ${(selectedSubmission.currentRound || 1) + 1}`}
-              </p>
+            </div>
+            <button
+              onClick={() => {
+                setSelectedSubmission(null);
+                setRevisionFile(null);
+                setRevisionNotes('');
+                setRevisionComment('');
+              }}
+              className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+              disabled={uploading}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="px-3 py-1 bg-[#C0A86A] text-[#0A1929] text-xs font-bold rounded-full font-mono">
+              {isSpanish ? `Ronda ${selectedSubmission.currentRound || 1} → ${(selectedSubmission.currentRound || 1) + 1}` : `Round ${selectedSubmission.currentRound || 1} → ${(selectedSubmission.currentRound || 1) + 1}`}
+            </span>
+            <span className="px-3 py-1 bg-white/15 text-white text-xs rounded-full font-mono">
+              {selectedSubmission.submissionId}
+            </span>
+          </div>
+        </div>
 
-              <div className="space-y-4 sm:space-y-6">
-                <div>
-                  <label className="block font-['Playfair_Display'] font-semibold text-[#0A1929] mb-2 text-sm sm:text-base">
-                    {isSpanish ? 'Archivo (PDF o Word)' : 'File (PDF or Word)'}
-                  </label>
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    onChange={handleFileChange}
-                    className="w-full p-3 sm:p-4 bg-[#F5F7FA] border border-[#E5E9F0] rounded-xl text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs sm:file:text-sm file:font-semibold file:bg-[#C0A86A] file:text-white hover:file:bg-[#A58D4F]"
-                  />
-                  {revisionFile && (
-                    <p className="mt-2 text-xs sm:text-sm text-green-600 break-words">
-                      ✓ {revisionFile.name} ({(revisionFile.size / 1024).toFixed(2)} KB)
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block font-['Playfair_Display'] font-semibold text-[#0A1929] mb-2 text-sm sm:text-base">
-                    {isSpanish ? 'Notas para el editor' : 'Notes for the editor'}
-                  </label>
-                  <textarea
-                    value={revisionNotes}
-                    onChange={(e) => setRevisionNotes(e.target.value)}
-                    rows="4"
-                    className="w-full p-3 sm:p-4 bg-[#F5F7FA] border border-[#E5E9F0] rounded-xl focus:ring-2 focus:ring-[#C0A86A] focus:border-transparent text-sm"
-                    placeholder={isSpanish 
-                      ? 'Explica los cambios realizados en esta versión...' 
-                      : 'Explain the changes made in this version...'}
-                  />
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                  <button
-                    onClick={handleSubmitRevision}
-                    disabled={uploading || !revisionFile || !revisionNotes.trim()}
-                    className="flex-1 py-3 sm:py-4 bg-[#C0A86A] hover:bg-[#A58D4F] disabled:bg-[#E5E9F0] disabled:text-[#5A6B7A] text-white font-['Playfair_Display'] font-bold rounded-xl transition-all text-sm sm:text-base"
-                  >
-                    {uploading ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        {isSpanish ? 'SUBIENDO...' : 'UPLOADING...'}
-                      </span>
-                    ) : (
-                      isSpanish ? 'ENVIAR REVISIÓN' : 'SUBMIT REVISION'
-                    )}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSelectedSubmission(null);
-                      setRevisionFile(null);
-                      setRevisionNotes('');
-                    }}
-                    className="flex-1 py-3 sm:py-4 border-2 border-[#0A1929] text-[#0A1929] font-['Playfair_Display'] font-bold rounded-xl hover:bg-[#0A1929] hover:text-white transition-colors text-sm sm:text-base"
-                  >
-                    {isSpanish ? 'CANCELAR' : 'CANCEL'}
-                  </button>
-                </div>
+        {/* Cuerpo del modal */}
+        <div className="p-6 sm:p-8 space-y-8">
+          
+          {/* ============ 1. ARCHIVO ============ */}
+          <section>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-[#F0F4F8] rounded-xl flex items-center justify-center">
+                <svg className="w-5 h-5 text-[#0A1929]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <div>
+                <h4 className="font-['Playfair_Display'] font-bold text-[#0A1929] text-sm uppercase tracking-wide">
+                  {isSpanish ? '1. Archivo Revisado' : '1. Revised File'}
+                </h4>
+                <p className="text-[10px] text-[#5A6B7A] font-mono">
+                  {isSpanish ? 'PDF o Word (.doc, .docx) — Máx. 10MB' : 'PDF or Word (.doc, .docx) — Max. 10MB'}
+                </p>
+              </div>
+            </div>
+            
+            <div className="bg-[#F5F7FA] border-2 border-dashed border-[#E5E9F0] hover:border-[#C0A86A] rounded-2xl p-6 transition-colors">
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                onChange={handleFileChange}
+                className="w-full text-sm text-[#546E7A] file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-[#C0A86A] file:text-white hover:file:bg-[#A58D4F] file:cursor-pointer file:transition-colors"
+                disabled={uploading}
+              />
+              
+              {revisionFile && (
+                <div className="mt-4 flex items-center gap-3 bg-white rounded-xl p-3 border border-[#E5E9F0]">
+                  <span className="text-2xl">📄</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-[#0A1929] truncate font-['Lora']">
+                      {revisionFile.name}
+                    </p>
+                    <p className="text-xs text-[#5A6B7A]">
+                      {(revisionFile.size / 1024).toFixed(2)} KB
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setRevisionFile(null)}
+                    className="text-[#B22234] hover:bg-red-50 p-1.5 rounded-lg transition-colors"
+                    disabled={uploading}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* ============ 2. NOTAS BREVES PARA EL EDITOR ============ */}
+          <section>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-[#F0F4F8] rounded-xl flex items-center justify-center">
+                <svg className="w-5 h-5 text-[#0A1929]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </div>
+              <div>
+                <h4 className="font-['Playfair_Display'] font-bold text-[#0A1929] text-sm uppercase tracking-wide">
+                  {isSpanish ? '2. Resumen de Cambios' : '2. Summary of Changes'}
+                </h4>
+                <p className="text-[10px] text-[#5A6B7A] font-mono">
+                  {isSpanish ? 'Breve descripción de los cambios realizados' : 'Brief description of changes made'}
+                </p>
+              </div>
+            </div>
+            
+            <textarea
+              value={revisionNotes}
+              onChange={(e) => setRevisionNotes(e.target.value)}
+              rows="4"
+              className="w-full p-4 bg-[#F5F7FA] border border-[#E5E9F0] rounded-2xl focus:ring-2 focus:ring-[#C0A86A] focus:border-transparent font-['Lora'] text-sm resize-none"
+              placeholder={isSpanish 
+                ? 'Ej: Se corrigieron los errores metodológicos señalados por el Revisor 1. Se actualizó la sección de resultados con nuevos datos. Se mejoró la discusión según las sugerencias del Revisor 2...' 
+                : 'Ex: Corrected methodological errors pointed out by Reviewer 1. Updated results section with new data. Improved discussion based on Reviewer 2 suggestions...'}
+              disabled={uploading}
+            />
+          </section>
+
+          {/* ============ 3. COMENTARIO DETALLADO AL EDITOR (QUILL) ============ */}
+          <section>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-[#F0F4F8] rounded-xl flex items-center justify-center">
+                <svg className="w-5 h-5 text-[#0A1929]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
+              </div>
+              <div>
+                <h4 className="font-['Playfair_Display'] font-bold text-[#0A1929] text-sm uppercase tracking-wide">
+                  {isSpanish ? '3. Comentario Detallado al Editor' : '3. Detailed Comment to Editor'}
+                </h4>
+                <p className="text-[10px] text-[#5A6B7A] font-mono">
+                  {isSpanish ? 'Explica cómo incorporaste las revisiones, justifica cambios de autoría, etc.' : 'Explain how you incorporated revisions, justify authorship changes, etc.'}
+                </p>
+              </div>
+            </div>
+            
+            <div className="border border-[#E5E9F0] rounded-2xl overflow-hidden bg-white focus-within:border-[#C0A86A] focus-within:ring-2 focus-within:ring-[#C0A86A]/20 transition-all">
+              <ReactQuill
+                theme="snow"
+                value={revisionComment}
+                onChange={setRevisionComment}
+                placeholder={isSpanish 
+                  ? 'Escribe aquí un comentario detallado para el editor...\n\nPuedes:\n• Explicar cómo respondiste a cada revisión\n• Justificar cambios en la lista de autores\n• Señalar mejoras adicionales\n• Incluir enlaces a repositorios o datos complementarios\n• Usar negritas, cursivas, listas y URLs' 
+                  : 'Write a detailed comment for the editor here...\n\nYou can:\n• Explain how you responded to each review\n• Justify changes in the author list\n• Point out additional improvements\n• Include links to repositories or supplementary data\n• Use bold, italics, lists and URLs'}
+                modules={{
+                  toolbar: [
+                    [{ 'header': [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    ['blockquote', 'code-block'],
+                    ['link', 'image'],
+                    ['clean']
+                  ]
+                }}
+                formats={[
+                  'header',
+                  'bold', 'italic', 'underline', 'strike',
+                  'list', 'bullet',
+                  'blockquote', 'code-block',
+                  'link', 'image'
+                ]}
+                className="font-['Lora'] text-sm"
+                style={{ height: '300px' }}
+                readOnly={uploading}
+              />
+            </div>
+            
+            {/* Mini-guía de formato */}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="inline-flex items-center gap-1 text-[10px] font-mono text-[#5A6B7A] bg-[#F5F7FA] px-2 py-1 rounded-full">
+                <span className="font-bold">B</span> {isSpanish ? 'Negrita' : 'Bold'}
+              </span>
+              <span className="inline-flex items-center gap-1 text-[10px] font-mono text-[#5A6B7A] bg-[#F5F7FA] px-2 py-1 rounded-full">
+                <span className="italic">I</span> {isSpanish ? 'Cursiva' : 'Italic'}
+              </span>
+              <span className="inline-flex items-center gap-1 text-[10px] font-mono text-[#5A6B7A] bg-[#F5F7FA] px-2 py-1 rounded-full">
+                🔗 URLs
+              </span>
+              <span className="inline-flex items-center gap-1 text-[10px] font-mono text-[#5A6B7A] bg-[#F5F7FA] px-2 py-1 rounded-full">
+                📋 {isSpanish ? 'Listas' : 'Lists'}
+              </span>
+            </div>
+          </section>
+
+          {/* ============ BOTONES DE ACCIÓN ============ */}
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4 border-t border-[#E5E9F0]">
+            <button
+              onClick={handleSubmitRevision}
+              disabled={uploading || !revisionFile || !revisionNotes.trim()}
+              className="flex-1 py-4 bg-gradient-to-r from-[#0A1929] to-[#1E2F40] hover:from-[#1E2F40] hover:to-[#0A1929] disabled:from-[#E5E9F0] disabled:to-[#E5E9F0] disabled:text-[#5A6B7A] text-white font-['Playfair_Display'] font-bold rounded-xl transition-all text-sm sm:text-base shadow-lg hover:shadow-xl disabled:shadow-none flex items-center justify-center gap-2"
+            >
+              {uploading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  {isSpanish ? 'SUBIENDO REVISIÓN...' : 'UPLOADING REVISION...'}
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                  </svg>
+                  {isSpanish ? 'ENVIAR VERSIÓN REVISADA' : 'SUBMIT REVISED VERSION'}
+                </>
+              )}
+            </button>
+            
+            <button
+              onClick={() => {
+                if (revisionNotes.trim() || revisionComment.trim() || revisionFile) {
+                  const confirmDiscard = window.confirm(
+                    isSpanish 
+                      ? '¿Estás seguro? Perderás todos los cambios no guardados.' 
+                      : 'Are you sure? You will lose all unsaved changes.'
+                  );
+                  if (!confirmDiscard) return;
+                }
+                setSelectedSubmission(null);
+                setRevisionFile(null);
+                setRevisionNotes('');
+                setRevisionComment('');
+              }}
+              disabled={uploading}
+              className="flex-1 py-4 border-2 border-[#0A1929] text-[#0A1929] font-['Playfair_Display'] font-bold rounded-xl hover:bg-[#0A1929] hover:text-white transition-all text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSpanish ? 'CANCELAR' : 'CANCEL'}
+            </button>
+          </div>
+          
+          {/* Indicador de campos requeridos */}
+          <p className="text-center text-[10px] font-mono text-[#5A6B7A]">
+            * {isSpanish ? 'Archivo y resumen de cambios son obligatorios' : 'File and change summary are required'}
+          </p>
+        </div>
+      </motion.div>
+    </motion.div>
+  )}
+</AnimatePresence>
     </div>
   );
 };

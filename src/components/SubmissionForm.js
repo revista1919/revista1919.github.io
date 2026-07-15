@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { auth } from '../firebase';
 import { useLanguage } from '../hooks/useLanguage';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
 // ============ COMPONENTES AUXILIARES ============
 
@@ -939,7 +941,7 @@ export default function SubmissionForm({ user, onSuccess }) {
   const [submissionId, setSubmissionId] = useState('');
   const [driveFolderId, setDriveFolderId] = useState('');
   const [validationErrors, setValidationErrors] = useState({});
-
+const [editorComment, setEditorComment] = useState('');
   // Estado inicial del formulario
   const initialFormState = {
     title: '',
@@ -990,6 +992,7 @@ export default function SubmissionForm({ user, onSuccess }) {
       ccByLicense: false
     },
     excludedReviewers: '',
+    editorComment: '',
     manuscript: null,
     manuscriptName: ''
   };
@@ -1495,6 +1498,7 @@ const prevStep = () => {
         funding: formData.funding,
         conflictOfInterest: formData.conflictOfInterest,
         excludedReviewers: formData.excludedReviewers,
+        editorComment: editorComment,
         requiresEthicsApproval: formData.requiresEthicsApproval === 'yes',
         ethicsCommitteeName: formData.ethicsCommitteeName,
         aiUsed: formData.aiUsed === 'yes',
@@ -2678,7 +2682,43 @@ const prevStep = () => {
                     placeholder={isSpanish ? 'Dra. Ana López; Dr. Carlos Mendoza' : 'Dr. Jane Smith; Prof. Michael Brown'}
                   />
                 </div>
-
+                {/* Comentarios al Editor */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A]">
+                      {isSpanish ? 'Comentarios al Editor' : 'Comments to the Editor'}
+                    </label>
+                    <HelpCapsule 
+                      text="Explica brevemente por qué tu tema es relevante y merece ser considerado para publicación. No es una cover letter extensa, solo un párrafo conciso. Si tuviste algún problema durante el envío, también puedes mencionarlo aquí."
+                      textEn="Briefly explain why your topic is relevant and deserves consideration for publication. This is not a lengthy cover letter, just a concise paragraph. If you had any issues during submission, you can mention them here too."
+                    />
+                  </div>
+                  <div className="border border-[#E0E7E9] rounded-2xl overflow-hidden bg-white focus-within:border-[#0A1929] transition-colors">
+                    <ReactQuill
+                      theme="snow"
+                      value={editorComment}
+                      onChange={setEditorComment}
+                      placeholder={isSpanish 
+                        ? 'Escribe aquí un breve párrafo sobre la relevancia de tu investigación y por qué debería ser considerada...' 
+                        : 'Write a short paragraph about the relevance of your research and why it should be considered...'}
+                      modules={{
+                        toolbar: [
+                          ['bold', 'italic', 'underline'],
+                          [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                          ['clean']
+                        ]
+                      }}
+                      formats={['bold', 'italic', 'underline', 'list', 'bullet']}
+                      className="font-serif text-sm"
+                      style={{ height: '180px' }}
+                    />
+                  </div>
+                  <p className="text-[10px] text-[#546E7A] font-mono tracking-wider">
+                    {isSpanish 
+                      ? 'Máximo un párrafo breve. Puedes usar negrita, cursiva y listas.' 
+                      : 'Maximum one short paragraph. You can use bold, italic and lists.'}
+                  </p>
+                </div>
                 {/* Archivo manuscrito */}
                 <div>
                   <label className="block text-[10px] font-mono font-semibold uppercase tracking-widest text-[#546E7A] mb-3">

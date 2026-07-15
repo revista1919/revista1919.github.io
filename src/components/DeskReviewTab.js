@@ -57,7 +57,8 @@ export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading
   const [editorialReview, setEditorialReview] = useState(null);
   const [loadingReview, setLoadingReview] = useState(false);
   const [latestRevisionUrl, setLatestRevisionUrl] = useState(null);
-  
+  const [latestRevisionComment, setLatestRevisionComment] = useState(null); // NUEVO
+const [latestRevisionNotes, setLatestRevisionNotes] = useState(''); // NUEVO
   // Usar el hook para manejar la revisión editorial
   const { loading: hookLoading, error, submitDeskReviewDecision } = useEditorialReview(user);
   
@@ -100,6 +101,8 @@ export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading
         if (!snapshot.empty) {
           const data = snapshot.docs[0].data();
           setLatestRevisionUrl(data.fileUrl);
+          setLatestRevisionComment(data.revisionComment || null); // NUEVO
+          setLatestRevisionNotes(data.notes || ''); // NUEVO
         }
       } catch (error) {
         console.error('Error fetching latest revision:', error);
@@ -107,7 +110,6 @@ export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading
     };
     fetchLatestRevision();
   }, [task.submissionId]);
-
   // Función handleSubmit
   const handleSubmit = async () => {
     try {
@@ -863,7 +865,180 @@ const translateVocabulary = (value) => {
               </ul>
             </InfoBlock>
           )}
+{/* ============ COMENTARIOS DEL AUTOR AL EDITOR ============ */}
+{submission.editorComment && (
+  <InfoBlock 
+    icon={
+      <svg className="w-5 h-5 text-[#C0A86A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+      </svg>
+    } 
+    title={isSpanish ? 'Mensaje del Autor al Editor' : 'Author\'s Message to Editor'}
+  >
+    <div className="space-y-3">
+      {/* Badge de prioridad/relevancia */}
+      <div className="flex items-center gap-2 mb-4">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#FBF9F3] border border-[#C0A86A] rounded-full text-xs">
+          <span className="w-2 h-2 bg-[#C0A86A] rounded-full animate-pulse" />
+          <span className="font-mono text-[#002147] font-semibold uppercase tracking-wider text-[10px]">
+            {isSpanish ? 'Relevancia del tema' : 'Topic relevance'}
+          </span>
+        </span>
+      </div>
+      
+      {/* Contenido del mensaje */}
+      <div className="bg-gradient-to-br from-[#FAFBFD] to-[#F0F4F8] border-2 border-[#E5E9F0] rounded-2xl p-5 relative overflow-hidden">
+        {/* Decoración de fondo */}
+        <div className="absolute top-0 right-0 w-32 h-32 opacity-[0.03]">
+          <svg viewBox="0 0 100 100" className="w-full h-full text-[#002147]">
+            <path d="M0 100 L100 0" stroke="currentColor" strokeWidth="2" fill="none" />
+            <path d="M20 100 L100 20" stroke="currentColor" strokeWidth="1" fill="none" />
+            <path d="M40 100 L100 40" stroke="currentColor" strokeWidth="0.5" fill="none" />
+          </svg>
+        </div>
+        
+        {/* Cita decorativa */}
+        <div className="relative z-10">
+          <div className="text-5xl font-['Playfair_Display'] text-[#C0A86A] leading-none opacity-30 mb-[-0.5rem]">"</div>
+          
+          <div 
+            className="prose prose-sm max-w-none font-['Lora'] text-[#1A2B3C] leading-relaxed pl-4 border-l-4 border-[#C0A86A]/30
+              [&_strong]:text-[#002147] [&_strong]:font-bold [&_strong]:bg-[#FBF9F3] [&_strong]:px-1 [&_strong]:rounded
+              [&_em]:text-[#B8860B] [&_em]:italic
+              [&_u]:underline [&_u]:decoration-[#C0A86A] [&_u]:decoration-2 [&_u]:underline-offset-4
+              [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-2
+              [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-2
+              [&_li]:text-[#1A2B3C] [&_li]:marker:text-[#C0A86A] [&_li]:marker:font-bold
+              [&_p]:mb-3"
+            dangerouslySetInnerHTML={{ __html: submission.editorComment }}
+          />
+          
+          <div className="text-5xl font-['Playfair_Display'] text-[#C0A86A] leading-none opacity-30 text-right mt-[-0.5rem] rotate-180">"</div>
+        </div>
+        
+        {/* Línea decorativa inferior */}
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#C0A86A] to-transparent opacity-50" />
+      </div>
+      
+      {/* Metadata del mensaje */}
+      <div className="flex items-center justify-between text-[10px] font-mono text-[#5A6B7A] uppercase tracking-wider">
+        <span className="flex items-center gap-2">
+          <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+          {isSpanish ? 'Incluido en el envío' : 'Included with submission'}
+        </span>
+        <span className="text-[#C0A86A]">
+          {submission.createdAt?.toDate?.() 
+            ? new Date(submission.createdAt.toDate()).toLocaleDateString(isSpanish ? 'es-CL' : 'en-US', {
+                day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+              })
+            : '—'}
+        </span>
+      </div>
+    </div>
+  </InfoBlock>
+)}
+{/* ============ COMENTARIO DE REVISIÓN DEL AUTOR ============ */}
+{latestRevisionComment && (
+  <InfoBlock 
+    icon={
+      <svg className="w-5 h-5 text-[#C0A86A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+      </svg>
+    } 
+    title={isSpanish ? 'Comentario de Revisión del Autor' : 'Author\'s Revision Comment'}
+  >
+    <div className="space-y-3">
+      {/* Badge de ronda */}
+      <div className="flex items-center gap-2 mb-4">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-[#E8F5E9] to-[#C8E6C9] border border-emerald-300 rounded-full text-xs">
+          <span className="w-2 h-2 bg-emerald-500 rounded-full" />
+          <span className="font-mono text-emerald-800 font-semibold uppercase tracking-wider text-[10px]">
+            {isSpanish ? 'Ronda de revisión' : 'Revision round'}
+          </span>
+        </span>
+        {latestRevisionNotes && (
+          <span className="text-[10px] font-mono text-[#5A6B7A] bg-[#F5F7FA] px-2 py-1 rounded-full truncate max-w-[200px]">
+            {latestRevisionNotes.substring(0, 60)}{latestRevisionNotes.length > 60 ? '...' : ''}
+          </span>
+        )}
+      </div>
+      
+      {/* Contenido del comentario */}
+      <div className="bg-gradient-to-br from-[#F0FAF0] to-[#E8F5E9] border-2 border-emerald-200 rounded-2xl p-5 relative overflow-hidden">
+        {/* Decoración de fondo - patrón de revisión */}
+        <div className="absolute top-0 right-0 w-24 h-24 opacity-[0.04]">
+          <svg viewBox="0 0 100 100" className="w-full h-full text-emerald-800">
+            <circle cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="1" fill="none" />
+            <path d="M30 50 L70 50 M50 30 L50 70" stroke="currentColor" strokeWidth="1" fill="none" />
+            <path d="M35 35 L65 65 M35 65 L65 35" stroke="currentColor" strokeWidth="0.5" fill="none" />
+          </svg>
+        </div>
+        
+        <div className="relative z-10">
+          {/* Icono de diálogo */}
+          <div className="flex items-start gap-3 mb-4">
+            <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+              </svg>
+            </div>
+            <p className="text-[10px] font-mono text-emerald-700 uppercase tracking-wider font-semibold">
+              {isSpanish ? 'El autor explica:' : 'The author explains:'}
+            </p>
+          </div>
+          
+          {/* Contenido HTML del comentario */}
+          <div 
+            className="prose prose-sm max-w-none font-['Lora'] text-[#1A2B3C] leading-relaxed
+              [&_strong]:text-emerald-800 [&_strong]:font-bold 
+              [&_em]:text-emerald-600 [&_em]:italic
+              [&_u]:underline [&_u]:decoration-emerald-400 [&_u]:decoration-2 [&_u]:underline-offset-4
+              [&_a]:text-[#0A1929] [&_a]:underline [&_a]:decoration-[#C0A86A] [&_a]:hover:text-[#C0A86A]
+              [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-2
+              [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-2
+              [&_li]:text-[#1A2B3C] [&_li]:marker:text-emerald-500 [&_li]:marker:font-bold
+              [&_blockquote]:border-l-4 [&_blockquote]:border-emerald-300 [&_blockquote]:bg-emerald-50/50 [&_blockquote]:px-4 [&_blockquote]:py-2 [&_blockquote]:rounded-r-lg [&_blockquote]:italic
+              [&_code]:bg-[#F5F7FA] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_code]:font-mono
+              [&_h1]:text-lg [&_h1]:font-bold [&_h1]:text-[#0A1929]
+              [&_h2]:text-base [&_h2]:font-bold [&_h2]:text-[#0A1929]
+              [&_h3]:text-sm [&_h3]:font-bold [&_h3]:text-[#0A1929]
+              [&_p]:mb-3 [&_p]:last:mb-0"
+            dangerouslySetInnerHTML={{ __html: latestRevisionComment }}
+          />
+        </div>
+        
+        {/* Línea decorativa inferior */}
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent opacity-40" />
+      </div>
+      
+      {/* Indicador de tipo de contenido */}
+      <div className="flex items-center gap-3 text-[10px] font-mono text-[#5A6B7A]">
+        <span className="flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+          {isSpanish ? 'Incluye formato enriquecido' : 'Includes rich formatting'}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 bg-blue-400 rounded-full" />
+          {isSpanish ? 'Parte del proceso de revisión' : 'Part of review process'}
+        </span>
+      </div>
+    </div>
+  </InfoBlock>
+)}
 
+{/* Versión simplificada si solo hay notas pero no comentario enriquecido */}
+{!latestRevisionComment && latestRevisionNotes && (
+  <InfoBlock 
+    icon="📝" 
+    title={isSpanish ? 'Notas de Revisión del Autor' : 'Author\'s Revision Notes'}
+  >
+    <div className="bg-[#F5F7FA] rounded-xl p-4 border border-[#E5E9F0]">
+      <p className="text-[#1A2B3C] text-sm leading-relaxed whitespace-pre-wrap font-['Lora']">
+        {latestRevisionNotes}
+      </p>
+    </div>
+  </InfoBlock>
+)}
           {/* INFORMACIÓN DEL ARCHIVO */}
           <InfoBlock 
             icon="📄" 

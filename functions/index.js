@@ -3955,7 +3955,7 @@ exports.submitArticle = onRequest(
         // NUEVO: Campos de IA
         aiUsed = false,
         aiTools = [],
-        
+        editorComment,
         // NUEVO: Declaraciones aceptadas (para auditoría)
         declarations
       } = req.body;
@@ -4489,7 +4489,7 @@ keywordsFormat: normalizedKeywordsES.keywordsFormat,
         
         // NUEVO: Declaraciones aceptadas (para registro de auditoría)
         declarations: declarations || {},
-        
+        editorComment: editorComment || null,
         // Archivo original
         originalFileId: file.id,
         originalFileUrl: file.webViewLink,
@@ -4608,6 +4608,10 @@ submissionData.documentStatus = 'processed'; // o 'processing' si falló
             keywordsVocabulario: normalizedKeywordsES.keywordsVocabulario,
 keywordsCount: normalizedKeywordsES.keywords.length,
 keywordsFormat: normalizedKeywordsES.keywordsFormat,
+hasEditorComment: !!editorComment,
+editorCommentPreview: editorComment 
+  ? editorComment.replace(/<[^>]*>/g, '').substring(0, 100) + (editorComment.length > 100 ? '...' : '') 
+  : null,
           }
         });
         
@@ -8794,7 +8798,7 @@ exports.submitRevision = onRequest(
       const decodedToken = await admin.auth().verifyIdToken(token);
       const uid = decodedToken.uid;
       
-      const { submissionId, fileBase64, fileName, notes, round } = req.body;
+      const { submissionId, fileBase64, fileName, notes, round, revisionComment } = req.body;
       
       if (!submissionId || !fileBase64 || !fileName) {
         return res.status(400).json({ error: 'Faltan datos requeridos' });
@@ -8834,6 +8838,7 @@ exports.submitRevision = onRequest(
         fileUrl: file.webViewLink,
         fileName: revisionFileName,
         fileSize: file.size,
+        revisionComment: revisionComment || null,
         notes: notes || '',
         type: 'revision',
         uploadedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -8842,21 +8847,27 @@ exports.submitRevision = onRequest(
       });
       
       await submissionRef.update({
-        status: 'in-desk-review',
-        lastRevisionAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      });
+  status: 'in-desk-review',
+  lastRevisionAt: admin.firestore.FieldValue.serverTimestamp(),
+  lastRevisionComment: revisionComment || null, 
+  lastRevisionHasComment: !!revisionComment, 
+  updatedAt: admin.firestore.FieldValue.serverTimestamp()
+});
       
       const auditLogRef = db.collection('submissions').doc(submissionId).collection('auditLogs');
-      await auditLogRef.add({
-        action: 'revision_submitted',
-        round: round + 1,
-        notes: notes,
-        fileName: revisionFileName,
-        by: uid,
-        byEmail: decodedToken.email,
-        timestamp: admin.firestore.FieldValue.serverTimestamp()
-      });
+await auditLogRef.add({
+  action: 'revision_submitted',
+  round: round + 1,
+  notes: notes,
+  hasDetailedComment: !!revisionComment, // NUEVO: Flag para saber si hay comentario detallado
+  revisionCommentPreview: revisionComment 
+    ? revisionComment.replace(/<[^>]*>/g, '').substring(0, 150) + (revisionComment.replace(/<[^>]*>/g, '').length > 150 ? '...' : '')
+    : null, // NUEVO: Preview sin HTML para búsquedas
+  fileName: revisionFileName,
+  by: uid,
+  byEmail: decodedToken.email,
+  timestamp: admin.firestore.FieldValue.serverTimestamp()
+});
       
       return res.json({
         success: true,
