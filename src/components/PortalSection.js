@@ -942,18 +942,26 @@ const safetyTimeoutRef = useRef(null);
   }, [location.pathname]);
 
   // Función para cambiar de pestaña y navegar (CORREGIDA)
-  const handleTabChange = (tabId, event) => {
-    // Prevenir cualquier comportamiento por defecto del navegador
-    if (event) {
-      event.preventDefault();
-    }
-    
-    setActiveTab(tabId);
-    const route = tabRoutes[tabId] || '';
-    // Usar navigate de React Router para navegación del lado del cliente
-    navigate(`/login/${route}`, { replace: true });
-  };
-
+// Función para cambiar de pestaña y navegar (CORREGIDA)
+const handleTabChange = (tabId, event) => {
+  // Prevenir cualquier comportamiento por defecto del navegador
+  if (event) {
+    event.preventDefault();
+  }
+  
+  setActiveTab(tabId);
+  const route = tabRoutes[tabId] || '';
+  
+  // IMPORTANTE: Preservar el prefijo de idioma actual
+  const currentPath = location.pathname;
+  const langPrefix = currentPath.match(/^\/(es|en)\//) ? currentPath.match(/^\/(es|en)\//)[0] : '/';
+  
+  // Construir la nueva ruta con el prefijo de idioma correcto
+  const newPath = route ? `${langPrefix}login/${route}` : `${langPrefix}login`;
+  
+  // Usar navigate de React Router para navegación del lado del cliente
+  navigate(newPath, { replace: true });
+};
   // Snapshot de usuario
   useEffect(() => {
     if (!user?.uid) {

@@ -81,7 +81,7 @@ function GuidelinesSection() {
                 { label: 'Formato', val: 'Microsoft Word (.docx). Documento anonimizado para revision doble ciego.' },
                 { label: 'Citacion', val: 'Chicago 17.ª ed. (Autor-Fecha)', link: 'https://www.chicagomanualofstyle.org/tools_citationguide/citation-guide-2.html' },
                 { label: 'Idiomas', val: 'Espanol e Ingles (titulo, resumen y palabras clave en ambos)' },
-                { label: 'Palabras clave', val: '2–6, con vocabulario controlado (JEL, MeSH, ACM, UNESCO)', link: 'https://www.revistacienciasestudiantes.com/policies.html#clasificacion' },
+                { label: 'Palabras clave', val: '2–6, con vocabulario controlado (JEL, MeSH, ACM, UNESCO)', link: 'https://www.revistacienciasestudiantes.com/policies.html#alcance' },
                 { label: 'Originalidad', val: 'Similitud maxima permitida: 15%' },
                 { label: 'Etica', val: 'Aprobacion de comite cuando corresponda; declaracion en el manuscrito.' }
               ].map((item, i) => (

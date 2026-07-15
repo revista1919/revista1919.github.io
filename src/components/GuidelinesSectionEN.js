@@ -81,7 +81,7 @@ function GuidelinesSection() {
                 { label: 'Format', val: 'Microsoft Word (.docx). Anonymized document for double-blind peer review.' },
                 { label: 'Citation', val: 'Chicago 17th ed. (Author-Date)', link: 'https://www.chicagomanualofstyle.org/tools_citationguide/citation-guide-2.html' },
                 { label: 'Languages', val: 'Spanish and English (title, abstract, and keywords in both)' },
-                { label: 'Keywords', val: '2–6, with controlled vocabulary (JEL, MeSH, ACM, UNESCO)', link: 'https://www.revistacienciasestudiantes.com/policies.html#clasificacion' },
+                { label: 'Keywords', val: '2–6, with controlled vocabulary (JEL, MeSH, ACM, UNESCO)', link: 'https://www.revistacienciasestudiantes.com/policiesEN.html#scope' },
                 { label: 'Originality', val: 'Maximum similarity allowed: 15%' },
                 { label: 'Ethics', val: 'Committee approval when applicable; statement in the manuscript.' }
               ].map((item, i) => (
