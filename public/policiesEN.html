@@ -198,22 +198,91 @@ a:hover {
   border-bottom: 1px solid var(--primary);
 }
 
-/* Tabla de Contenidos (TOC) */
+/* =========================================
+   ÍNDICE (TABLE OF CONTENTS - EDITORIAL STYLE)
+   ========================================= */
+
 .toc {
-  margin: 2em 0 3em 0;
-  padding: 25px 30px;
-  background-color: var(--bg-highlight);
-  border-radius: 4px;
+  margin: 3.5em 0;
+  padding: 35px 45px;
+  background-color: var(--bg-paper); /* Fondo blanco puro */
   border: 1px solid var(--border-light);
+  border-top: 4px solid var(--primary); /* Línea de anclaje visual superior */
+  box-shadow: 0 10px 30px rgba(0, 75, 135, 0.04); /* Sombra elegante azulada */
+  border-radius: 0 0 4px 4px;
 }
 
+/* Título del Índice */
+.toc .toc-title {
+  font-family: 'Inter', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 0.85em;
+  font-weight: 700;
+  color: var(--primary);
+  margin-top: 0;
+  margin-bottom: 25px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+/* Estructura de la lista: 2 columnas para elegancia y ahorro de espacio */
 .toc ol {
+  margin: 0;
+  padding: 0;
+  list-style: none; /* Quitamos los números por defecto */
+  column-count: 2;  /* Dividimos en dos columnas */
+  column-gap: 50px;
+  counter-reset: toc-counter; /* Iniciamos un contador personalizado */
+}
+
+/* Elementos de la lista */
+.toc li {
+  position: relative;
+  padding-left: 28px;
+  margin-bottom: 14px;
+  break-inside: avoid; /* Evita que un item se parta entre columnas */
   font-family: 'Inter', sans-serif;
   font-size: 0.9em;
-  line-height: 2;
-  margin: 0;
-  padding-left: 1.2em;
+  line-height: 1.4;
+}
+
+/* Numeración personalizada (Color de acento) */
+.toc li::before {
+  counter-increment: toc-counter;
+  content: counter(toc-counter) ".";
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--accent); /* Naranja Elsevier / Highlight */
+  font-weight: 700;
+  font-size: 0.95em;
+}
+
+/* Enlaces del índice */
+.toc a {
+  color: var(--text-main);
+  text-decoration: none;
+  border-bottom: none;
+  display: inline-block;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+/* Efecto hover: Cambio de color y sutil desplazamiento a la derecha */
+.toc a:hover {
   color: var(--link);
+  transform: translateX(4px);
+  border-bottom: none;
+}
+
+/* Responsividad para el Índice */
+@media (max-width: 768px) {
+  .toc { 
+    padding: 25px 20px; 
+  }
+  .toc ol { 
+    column-count: 1; /* Pasa a 1 sola columna en móviles */
+  }
 }
 
 /* Cajas de texto destacadas (Abstracts, Notas clave) */
