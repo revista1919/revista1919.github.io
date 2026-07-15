@@ -887,90 +887,138 @@ const MinorConsentSection = ({ author, index, onUpdate }) => {
         </>
       )}
       
-      <button
-        type="button"
-        onClick={() => {
-          // Obtener datos del formulario para construir el correo
-          const minorName = `${author.firstName} ${author.lastName}`.trim();
-          const guardianName = author.guardianName || '[Nombre del tutor]';
-          
-          // Intentar obtener el titulo del articulo del DOM o usar un placeholder
-          const titleElement = document.querySelector('input[name="title"]');
-          const articleTitle = titleElement ? titleElement.value : '[Titulo del articulo]';
-          
-          // Construir el asunto
-          const subject = encodeURIComponent(
-            `Consentimiento para publicacion - Autor menor: ${minorName}`
-          );
-          
-          // Construir el cuerpo del correo
-          const bodyText = 
-`FORMULARIO DE CONSENTIMIENTO PARA PUBLICACION
-AUTOR MENOR DE EDAD
+      // Reemplaza el bloque del botón "Redactar correo en Gmail" con este código mejorado:
+
+<button
+  type="button"
+  onClick={() => {
+    const minorName = `${author.firstName} ${author.lastName}`.trim();
+    const guardianName = author.guardianName || (isSpanish ? '[Nombre del tutor]' : '[Guardian name]');
+    
+    const titleElement = document.querySelector('input[name="title"]');
+    const articleTitle = titleElement ? titleElement.value : (isSpanish ? '[Título del artículo]' : '[Article title]');
+    
+    const subject = isSpanish
+      ? `Consentimiento para publicación - Autor menor: ${minorName}`
+      : `Publication Consent - Minor Author: ${minorName}`;
+    
+    // Texto en español
+    const bodyEs = 
+`CONSENTIMIENTO PARA PUBLICACIÓN — AUTOR MENOR DE EDAD
 Revista Nacional de las Ciencias para Estudiantes
 
-=============================================
-DATOS DEL TUTOR LEGAL
-=============================================
+Estimado equipo editorial,
+
+Por medio del presente correo electrónico, yo, ${guardianName}, en calidad de tutor legal de ${minorName}, declaro y manifiesto lo siguiente:
+
+— AUTORIZACIÓN DE PUBLICACIÓN —
+Autorizo expresamente la publicación del artículo titulado «${articleTitle}» en la Revista Nacional de las Ciencias para Estudiantes, bajo la licencia Creative Commons CC-BY 4.0, de acceso abierto y con posibilidad de reutilización por terceros con la debida atribución.
+
+— DATOS DEL TUTOR LEGAL —
 Nombre completo: ${guardianName}
-RUT: [Ingrese RUT del tutor]
-Relacion con el menor: [Ingrese relacion: Padre/Madre/Tutor]
+Relación con el menor: [Indicar: Padre / Madre / Tutor legal]
+Documento de identidad: [Indicar tipo y número]
 
-=============================================
-DATOS DEL MENOR AUTOR
-=============================================
+— DATOS DEL MENOR AUTOR —
 Nombre completo: ${minorName}
-Edad: [Ingrese edad del menor]
-Fecha de nacimiento: [Ingrese fecha de nacimiento]
+Edad: [Indicar edad]
+Fecha de nacimiento: [Indicar fecha]
 
-=============================================
-INFORMACION DEL ARTICULO
-=============================================
-Titulo del articulo: ${articleTitle}
+— DECLARACIONES —
+• He leído el manuscrito completo y apruebo su contenido.
+• Comprendo que el artículo será de acceso público en internet.
+• No recibo compensación económica por esta publicación.
+• Entiendo que puedo retirar este consentimiento antes de la publicación efectiva, notificándolo por escrito a contact@revistacienciasestudiantes.com.
 
-=============================================
-DECLARACION Y AUTORIZACION
-=============================================
+Sin otro particular, saluda atentamente,
 
-Declaro y autorizo lo siguiente:
+${guardianName}
+[Ciudad, país] — [Fecha]`;
 
-1. Soy el tutor legal del menor arriba mencionado y tengo plena autoridad para otorgar este consentimiento.
+    // Texto en inglés
+    const bodyEn = 
+`PUBLICATION CONSENT — MINOR AUTHOR
+National Review of Sciences for Students
 
-2. He leido el manuscrito completo y apruebo su contenido.
+Dear Editorial Team,
 
-3. Autorizo la publicacion del articulo en la Revista Nacional de las Ciencias para Estudiantes, bajo licencia Creative Commons CC-BY 4.0 (acceso abierto, permite reutilizacion con atribucion).
+Through this email, I, ${guardianName}, as legal guardian of ${minorName}, hereby declare and state the following:
 
-4. Entiendo que el articulo sera de acceso publico en internet y podra ser citado, distribuido y adaptado por terceros siempre que se cite correctamente a los autores.
+— PUBLICATION AUTHORIZATION —
+I expressly authorize the publication of the article titled «${articleTitle}» in the National Review of Sciences for Students, under the Creative Commons CC-BY 4.0 license, open access, with possibility of reuse by third parties with proper attribution.
 
-5. No recibo compensacion economica por esta publicacion.
+— LEGAL GUARDIAN INFORMATION —
+Full name: ${guardianName}
+Relationship to minor: [Specify: Father / Mother / Legal guardian]
+ID document: [Specify type and number]
 
-6. Puedo retirar este consentimiento en cualquier momento antes de la publicacion efectiva, notificandolo por escrito a contact@revistacienciasestudiantes.com.
+— MINOR AUTHOR INFORMATION —
+Full name: ${minorName}
+Age: [Specify age]
+Date of birth: [Specify date]
 
-=============================================
-FIRMA Y CONTACTO
-=============================================
-Firma del tutor legal: [Firmar en documento adjunto]
-Nombre impreso: ${guardianName}
-Telefono: [Ingrese telefono de contacto]
+— DECLARATIONS —
+• I have read the complete manuscript and approve its content.
+• I understand that the article will be publicly accessible on the internet.
+• I receive no financial compensation for this publication.
+• I understand that I may withdraw this consent prior to effective publication by notifying in writing to contact@revistacienciasestudiantes.com.
 
-Lugar: [Ingrese ciudad y pais]
-Fecha: [Ingrese fecha]`;
-          
-          const body = encodeURIComponent(bodyText);
-          
-          // Construir URL de Gmail
-          const gmailUrl = `https://mail.google.com/mail/u/0/?fs=1&to=contact@revistacienciasestudiantes.com&su=${subject}&body=${body}&tf=cm`;
-          
-          // Abrir en nueva pestaña
-          window.open(gmailUrl, '_blank', 'noopener,noreferrer');
-        }}
-        className="w-full px-5 py-3 bg-[#003b5c] text-white rounded-sm text-sm font-bold uppercase tracking-wider hover:bg-[#002b44] transition-colors flex items-center justify-center gap-2"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        </svg>
-        {isSpanish ? 'Redactar correo en Gmail' : 'Compose email in Gmail'}
-      </button>
+Sincerely,
+
+${guardianName}
+[City, country] — [Date]`;
+
+    const body = isSpanish ? bodyEs : bodyEn;
+    
+    // Codificar manualmente los caracteres especiales
+    const encodedSubject = subject
+      .replace(/á/g, '%C3%A1')
+      .replace(/é/g, '%C3%A9')
+      .replace(/í/g, '%C3%AD')
+      .replace(/ó/g, '%C3%B3')
+      .replace(/ú/g, '%C3%BA')
+      .replace(/ñ/g, '%C3%B1')
+      .replace(/Á/g, '%C3%81')
+      .replace(/É/g, '%C3%89')
+      .replace(/Í/g, '%C3%8D')
+      .replace(/Ó/g, '%C3%93')
+      .replace(/Ú/g, '%C3%9A')
+      .replace(/Ñ/g, '%C3%91')
+      .replace(/ü/g, '%C3%BC')
+      .replace(/Ü/g, '%C3%9C');
+    
+    const encodedBody = body
+      .replace(/á/g, '%C3%A1')
+      .replace(/é/g, '%C3%A9')
+      .replace(/í/g, '%C3%AD')
+      .replace(/ó/g, '%C3%B3')
+      .replace(/ú/g, '%C3%BA')
+      .replace(/ñ/g, '%C3%B1')
+      .replace(/Á/g, '%C3%81')
+      .replace(/É/g, '%C3%89')
+      .replace(/Í/g, '%C3%8D')
+      .replace(/Ó/g, '%C3%93')
+      .replace(/Ú/g, '%C3%9A')
+      .replace(/Ñ/g, '%C3%91')
+      .replace(/ü/g, '%C3%BC')
+      .replace(/Ü/g, '%C3%9C')
+      .replace(/«/g, '%C2%AB')
+      .replace(/»/g, '%C2%BB')
+      .replace(/—/g, '%E2%80%94')
+      .replace(/•/g, '%E2%80%A2')
+      .replace(/\n/g, '%0A');
+    
+    const gmailUrl = `https://mail.google.com/mail/u/0/?fs=1&to=contact@revistacienciasestudiantes.com&su=${encodedSubject}&body=${encodedBody}&tf=cm`;
+    
+    window.open(gmailUrl, '_blank', 'noopener,noreferrer');
+  }}
+  className="w-full px-5 py-3 bg-[#003b5c] text-white rounded-sm text-sm font-bold uppercase tracking-wider hover:bg-[#002b44] transition-colors flex items-center justify-center gap-2"
+>
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+  </svg>
+  {isSpanish ? 'Redactar correo en Gmail' : 'Compose email in Gmail'}
+</button>
       
       <p className="text-[10px] text-gray-400 leading-relaxed">
         {isSpanish 
