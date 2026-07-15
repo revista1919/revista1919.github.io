@@ -1759,6 +1759,147 @@ export default function SubmissionForm({ user, onSuccess }) {
         <div className="bg-white border border-gray-200 rounded-sm shadow-sm">
           <form onSubmit={handleSubmit} className="p-8 md:p-12 space-y-16">
             <AnimatePresence mode="wait">
+              {/* ============ GUÍAS PARA AUTORES ============ */}
+<motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.6 }}
+  className="bg-[#f8f9fa] border border-gray-200 rounded-sm p-8"
+>
+  <div className="text-center mb-6">
+    <h2 className="text-xl font-serif font-bold text-[#003b5c] mb-2">
+      {isSpanish ? 'Guías para Autores' : 'Author Guidelines'}
+    </h2>
+    <p className="text-xs text-gray-500 font-sans max-w-xl mx-auto">
+      {isSpanish 
+        ? 'Consulte nuestros recursos completos antes de preparar su manuscrito' 
+        : 'Consult our complete resources before preparing your manuscript'}
+    </p>
+  </div>
+
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+    {/* Tarjeta 1: Guía para Autores */}
+    <a
+      href={isSpanish ? '/author.html' : '/authorEN.html'}
+      className="group relative p-5 bg-white rounded-sm border border-gray-200 hover:border-[#003b5c] hover:shadow-sm transition-all overflow-hidden"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      <div className="absolute top-0 left-0 w-full h-0.5 bg-[#003b5c] group-hover:bg-[#e86125] transition-colors"></div>
+      <div className="flex items-start gap-3">
+        <div className="p-2 bg-[#f0f4f8] rounded-sm group-hover:bg-[#e0ecf4] transition-colors flex-shrink-0">
+          <svg className="w-4 h-4 text-[#003b5c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        </div>
+        <div className="min-w-0">
+          <h3 className="text-xs font-bold text-gray-900 group-hover:text-[#003b5c] transition-colors mb-1 font-sans uppercase tracking-wider">
+            {isSpanish ? 'Guía para Autores' : 'Author Guide'}
+          </h3>
+          <p className="text-[11px] text-gray-500 leading-relaxed font-sans">
+            {isSpanish 
+              ? 'Instrucciones detalladas para preparar y enviar su manuscrito.' 
+              : 'Detailed instructions to prepare and submit your manuscript.'}
+          </p>
+          <span className="inline-block mt-2 text-[10px] font-bold uppercase tracking-wider text-[#003b5c] opacity-0 group-hover:opacity-100 transition-all transform translate-x-0 group-hover:translate-x-1">
+            {isSpanish ? 'Consultar →' : 'View →'}
+          </span>
+        </div>
+      </div>
+    </a>
+
+    {/* Tarjeta 2: Buenas Prácticas */}
+    <a
+      href={isSpanish ? '/practices.html' : '/practicesEN.html'}
+      className="group relative p-5 bg-white rounded-sm border border-gray-200 hover:border-[#003b5c] hover:shadow-sm transition-all overflow-hidden"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      <div className="absolute top-0 left-0 w-full h-0.5 bg-[#003b5c] group-hover:bg-[#e86125] transition-colors"></div>
+      <div className="flex items-start gap-3">
+        <div className="p-2 bg-[#f0f4f8] rounded-sm group-hover:bg-[#e0ecf4] transition-colors flex-shrink-0">
+          <svg className="w-4 h-4 text-[#003b5c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+        </div>
+        <div className="min-w-0">
+          <h3 className="text-xs font-bold text-gray-900 group-hover:text-[#003b5c] transition-colors mb-1 font-sans uppercase tracking-wider">
+            {isSpanish ? 'Buenas Prácticas' : 'Best Practices'}
+          </h3>
+          <p className="text-[11px] text-gray-500 leading-relaxed font-sans">
+            {isSpanish 
+              ? 'Estándares éticos y mejores prácticas para publicar.' 
+              : 'Ethical standards and best practices for publishing.'}
+          </p>
+          <span className="inline-block mt-2 text-[10px] font-bold uppercase tracking-wider text-[#003b5c] opacity-0 group-hover:opacity-100 transition-all transform translate-x-0 group-hover:translate-x-1">
+            {isSpanish ? 'Consultar →' : 'View →'}
+          </span>
+        </div>
+      </div>
+    </a>
+
+    {/* Tarjeta 3: Open Access */}
+    <a
+      href={isSpanish ? '/open-access.html' : '/open-accessEN.html'}
+      className="group relative p-5 bg-white rounded-sm border border-gray-200 hover:border-[#003b5c] hover:shadow-sm transition-all overflow-hidden"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      <div className="absolute top-0 left-0 w-full h-0.5 bg-[#003b5c] group-hover:bg-[#e86125] transition-colors"></div>
+      <div className="flex items-start gap-3">
+        <div className="p-2 bg-[#f0f4f8] rounded-sm group-hover:bg-[#e0ecf4] transition-colors flex-shrink-0">
+          <svg className="w-4 h-4 text-[#003b5c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+        </div>
+        <div className="min-w-0">
+          <h3 className="text-xs font-bold text-gray-900 group-hover:text-[#003b5c] transition-colors mb-1 font-sans uppercase tracking-wider">
+            Open Access
+          </h3>
+          <p className="text-[11px] text-gray-500 leading-relaxed font-sans">
+            {isSpanish 
+              ? 'Políticas de acceso abierto, licencias y derechos de autor.' 
+              : 'Open access policies, licenses, and copyright.'}
+          </p>
+          <span className="inline-block mt-2 text-[10px] font-bold uppercase tracking-wider text-[#003b5c] opacity-0 group-hover:opacity-100 transition-all transform translate-x-0 group-hover:translate-x-1">
+            {isSpanish ? 'Consultar →' : 'View →'}
+          </span>
+        </div>
+      </div>
+    </a>
+
+    {/* Tarjeta 4: Políticas Editoriales */}
+    <a
+      href={isSpanish ? '/policies.html' : '/policiesEN.html'}
+      className="group relative p-5 bg-white rounded-sm border border-gray-200 hover:border-[#003b5c] hover:shadow-sm transition-all overflow-hidden"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      <div className="absolute top-0 left-0 w-full h-0.5 bg-[#003b5c] group-hover:bg-[#e86125] transition-colors"></div>
+      <div className="flex items-start gap-3">
+        <div className="p-2 bg-[#f0f4f8] rounded-sm group-hover:bg-[#e0ecf4] transition-colors flex-shrink-0">
+          <svg className="w-4 h-4 text-[#003b5c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+          </svg>
+        </div>
+        <div className="min-w-0">
+          <h3 className="text-xs font-bold text-gray-900 group-hover:text-[#003b5c] transition-colors mb-1 font-sans uppercase tracking-wider">
+            {isSpanish ? 'Políticas Editoriales' : 'Editorial Policies'}
+          </h3>
+          <p className="text-[11px] text-gray-500 leading-relaxed font-sans">
+            {isSpanish 
+              ? 'Normas, procesos y requisitos editoriales de la revista.' 
+              : 'Standards, processes, and editorial requirements of the journal.'}
+          </p>
+          <span className="inline-block mt-2 text-[10px] font-bold uppercase tracking-wider text-[#003b5c] opacity-0 group-hover:opacity-100 transition-all transform translate-x-0 group-hover:translate-x-1">
+            {isSpanish ? 'Consultar →' : 'View →'}
+          </span>
+        </div>
+      </div>
+    </a>
+  </div>
+</motion.div>
+{/* ============ FIN GUÍAS PARA AUTORES ============ */}
               {/* PASO 1: INFORMACIÓN DEL ARTÍCULO */}
               {currentStep === 1 && (
                 <motion.div
