@@ -839,98 +839,192 @@ const MinorConsentSection = ({ author, index, onUpdate }) => {
         />
       </div>
 
-      <div className="space-y-4">
-        <p className="text-xs uppercase tracking-widest text-[#546E7A] font-mono font-bold">
-          {isSpanish ? 'Método de consentimiento' : 'Consent method'}
-        </p>
+      {/* Reemplaza ESTE bloque en tu código */}
+<div className="space-y-4">
+  <p className="text-xs uppercase tracking-widest text-[#546E7A] font-mono font-bold">
+    {isSpanish ? 'Método de consentimiento' : 'Consent method'}
+  </p>
 
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input
-            type="radio"
-            name={`consent-${index}`}
-            value="email"
-            checked={consentMethod === 'email'}
-            onChange={() => handleConsentChange('email')}
-            className="mt-0.5 w-4 h-4 text-[#003b5c]"
-          />
-          <div>
-            <span className="text-sm text-[#1A2B3C] block font-sans">
-              {isSpanish ? 'Enviar por correo electrónico' : 'Send by email'}
-            </span>
-            <span className="text-xs text-[#546E7A] font-sans">contact@revistacienciasestudiantes.com</span>
-          </div>
-        </label>
+  <label className="flex items-start gap-3 cursor-pointer">
+    <input
+      type="radio"
+      name={`consent-${index}-${author.firstName}-${author.lastName}`}
+      value="email"
+      checked={author.consentMethod === 'email'}
+      onChange={() => onUpdate(index, 'consentMethod', 'email')}
+      className="mt-0.5 w-4 h-4 text-[#003b5c]"
+    />
+    <div>
+      <span className="text-sm text-[#1A2B3C] block font-sans">
+        {isSpanish ? 'Enviar por correo electrónico' : 'Send by email'}
+      </span>
+      <span className="text-xs text-[#546E7A] font-sans">contact@revistacienciasestudiantes.com</span>
+    </div>
+  </label>
 
-        {consentMethod === 'email' && (
-          <div className="ml-7 p-4 bg-white border border-gray-200 rounded-sm text-xs text-[#1A2B3C] font-sans">
-            {isSpanish ? (
-              <>
-                <p className="font-medium mb-2">El correo debe contener:</p>
-                <ul className="list-disc pl-5 space-y-1">
-                  <li>Nombre del autor menor</li>
-                  <li>Nombre completo del tutor</li>
-                  <li>Documento de identidad del tutor</li>
-                  <li>Frase: "Autorizo la publicación en Revista Nacional de las Ciencias"</li>
-                </ul>
-              </>
-            ) : (
-              <>
-                <p className="font-medium mb-2">Email must include:</p>
-                <ul className="list-disc pl-5 space-y-1">
-                  <li>Minor author name</li>
-                  <li>Guardian full name</li>
-                  <li>Guardian ID document</li>
-                  <li>Phrase: "I authorize publication in National Review of Sciences"</li>
-                </ul>
-              </>
-            )}
-          </div>
-        )}
+ {author.consentMethod === 'email' && (
+  <div className="ml-7 space-y-4">
+    <div className="p-4 bg-white border border-gray-200 rounded-sm text-xs text-[#1A2B3C] font-sans">
+      {isSpanish ? (
+        <>
+          <p className="font-medium mb-2">El correo debe contener:</p>
+          <ul className="list-disc pl-5 space-y-1 mb-4">
+            <li>Nombre del autor menor</li>
+            <li>Nombre completo del tutor</li>
+            <li>Documento de identidad del tutor</li>
+            <li>Frase: "Autorizo la publicacion en Revista Nacional de las Ciencias"</li>
+          </ul>
+        </>
+      ) : (
+        <>
+          <p className="font-medium mb-2">Email must include:</p>
+          <ul className="list-disc pl-5 space-y-1 mb-4">
+            <li>Minor author name</li>
+            <li>Guardian full name</li>
+            <li>Guardian ID document</li>
+            <li>Phrase: "I authorize publication in National Review of Sciences"</li>
+          </ul>
+        </>
+      )}
+      
+      <button
+        type="button"
+        onClick={() => {
+          // Obtener datos del formulario para construir el correo
+          const minorName = `${author.firstName} ${author.lastName}`.trim();
+          const guardianName = author.guardianName || '[Nombre del tutor]';
+          
+          // Intentar obtener el titulo del articulo del DOM o usar un placeholder
+          const titleElement = document.querySelector('input[name="title"]');
+          const articleTitle = titleElement ? titleElement.value : '[Titulo del articulo]';
+          
+          // Construir el asunto
+          const subject = encodeURIComponent(
+            `Consentimiento para publicacion - Autor menor: ${minorName}`
+          );
+          
+          // Construir el cuerpo del correo
+          const bodyText = 
+`FORMULARIO DE CONSENTIMIENTO PARA PUBLICACION
+AUTOR MENOR DE EDAD
+Revista Nacional de las Ciencias para Estudiantes
 
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input
-            type="radio"
-            name={`consent-${index}`}
-            value="upload"
-            checked={consentMethod === 'upload'}
-            onChange={() => handleConsentChange('upload')}
-            className="mt-0.5 w-4 h-4 text-[#003b5c]"
-          />
-          <span className="text-sm text-[#1A2B3C] font-sans">
-            {isSpanish ? 'Subir formulario firmado' : 'Upload signed form'}
-          </span>
-        </label>
+=============================================
+DATOS DEL TUTOR LEGAL
+=============================================
+Nombre completo: ${guardianName}
+RUT: [Ingrese RUT del tutor]
+Relacion con el menor: [Ingrese relacion: Padre/Madre/Tutor]
 
-        {consentMethod === 'upload' && (
-          <div className="ml-7 space-y-4">
-            <a
-              href={consentUrls[language]}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-[#003b5c] hover:text-[#e86125] text-sm underline-offset-4 hover:underline font-sans font-medium"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v-4m0 0l4 4m-4-4l4-4m12 4v4m0-4l-4 4m4-4l-4-4" />
-              </svg>
-              {isSpanish ? 'Descargar formulario' : 'Download form'}
-            </a>
+=============================================
+DATOS DEL MENOR AUTOR
+=============================================
+Nombre completo: ${minorName}
+Edad: [Ingrese edad del menor]
+Fecha de nacimiento: [Ingrese fecha de nacimiento]
 
-            <input
-              type="file"
-              accept=".pdf,.jpg,.jpeg,.png"
-              onChange={handleFileUpload}
-              className="block w-full text-sm text-[#546E7A] file:mr-4 file:py-2.5 file:px-5 file:rounded-sm file:border-0 file:text-xs file:font-bold file:bg-[#f4f5f7] file:text-[#003b5c] hover:file:bg-gray-200 font-sans uppercase tracking-wider"
-            />
+=============================================
+INFORMACION DEL ARTICULO
+=============================================
+Titulo del articulo: ${articleTitle}
 
-            {author.consentFile && (
-              <div className="flex items-center gap-2 text-[#003b5c] text-xs font-sans">
-                <span>✓</span>
-                <span>{author.consentFile.name}</span>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+=============================================
+DECLARACION Y AUTORIZACION
+=============================================
+
+Declaro y autorizo lo siguiente:
+
+1. Soy el tutor legal del menor arriba mencionado y tengo plena autoridad para otorgar este consentimiento.
+
+2. He leido el manuscrito completo y apruebo su contenido.
+
+3. Autorizo la publicacion del articulo en la Revista Nacional de las Ciencias para Estudiantes, bajo licencia Creative Commons CC-BY 4.0 (acceso abierto, permite reutilizacion con atribucion).
+
+4. Entiendo que el articulo sera de acceso publico en internet y podra ser citado, distribuido y adaptado por terceros siempre que se cite correctamente a los autores.
+
+5. No recibo compensacion economica por esta publicacion.
+
+6. Puedo retirar este consentimiento en cualquier momento antes de la publicacion efectiva, notificandolo por escrito a contact@revistacienciasestudiantes.com.
+
+=============================================
+FIRMA Y CONTACTO
+=============================================
+Firma del tutor legal: [Firmar en documento adjunto]
+Nombre impreso: ${guardianName}
+Telefono: [Ingrese telefono de contacto]
+
+Lugar: [Ingrese ciudad y pais]
+Fecha: [Ingrese fecha]`;
+          
+          const body = encodeURIComponent(bodyText);
+          
+          // Construir URL de Gmail
+          const gmailUrl = `https://mail.google.com/mail/u/0/?fs=1&to=contact@revistacienciasestudiantes.com&su=${subject}&body=${body}&tf=cm`;
+          
+          // Abrir en nueva pestaña
+          window.open(gmailUrl, '_blank', 'noopener,noreferrer');
+        }}
+        className="w-full px-5 py-3 bg-[#003b5c] text-white rounded-sm text-sm font-bold uppercase tracking-wider hover:bg-[#002b44] transition-colors flex items-center justify-center gap-2"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        </svg>
+        {isSpanish ? 'Redactar correo en Gmail' : 'Compose email in Gmail'}
+      </button>
+      
+      <p className="text-[10px] text-gray-400 leading-relaxed">
+        {isSpanish 
+          ? 'Se abrira una nueva ventana de Gmail con el formulario pre-completado. Complete los campos marcados con [ ] y envie el correo. No olvide adjuntar el documento de identidad del tutor si es necesario.'
+          : 'A new Gmail window will open with the pre-filled form. Complete the fields marked with [ ] and send the email. Do not forget to attach the guardian ID document if necessary.'}
+      </p>
+    </div>
+  </div>
+)}
+
+  <label className="flex items-start gap-3 cursor-pointer">
+    <input
+      type="radio"
+      name={`consent-${index}-${author.firstName}-${author.lastName}`}
+      value="upload"
+      checked={author.consentMethod === 'upload'}
+      onChange={() => onUpdate(index, 'consentMethod', 'upload')}
+      className="mt-0.5 w-4 h-4 text-[#003b5c]"
+    />
+    <span className="text-sm text-[#1A2B3C] font-sans">
+      {isSpanish ? 'Subir formulario firmado' : 'Upload signed form'}
+    </span>
+  </label>
+
+  {author.consentMethod === 'upload' && (
+    <div className="ml-7 space-y-4">
+      <a
+        href={consentUrls[language]}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-2 text-[#003b5c] hover:text-[#e86125] text-sm underline-offset-4 hover:underline font-sans font-medium"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v-4m0 0l4 4m-4-4l4-4m12 4v4m0-4l-4 4m4-4l-4-4" />
+        </svg>
+        {isSpanish ? 'Descargar formulario' : 'Download form'}
+      </a>
+
+      <input
+        type="file"
+        accept=".pdf,.jpg,.jpeg,.png"
+        onChange={handleFileUpload}
+        className="block w-full text-sm text-[#546E7A] file:mr-4 file:py-2.5 file:px-5 file:rounded-sm file:border-0 file:text-xs file:font-bold file:bg-[#f4f5f7] file:text-[#003b5c] hover:file:bg-gray-200 font-sans uppercase tracking-wider"
+      />
+
+      {author.consentFile && (
+        <div className="flex items-center gap-2 text-[#003b5c] text-xs font-sans">
+          <span>✓</span>
+          <span>{author.consentFile.name}</span>
+        </div>
+      )}
+    </div>
+  )}
+</div>
     </motion.div>
   );
 };
