@@ -1257,7 +1257,7 @@ const safetyTimeoutRef = useRef(null);
       {/* HEADER EDITORIAL */}
       <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between border-b-2 border-gray-300 pb-8">
         <div>
-          <h1 className="font-serif text-4xl md:text-5xl font-bold text-[#004b87] mb-3">
+          <h1 className="font-serif text-4xl md:text-5xl font-bold text-[#051d31] mb-3">
             {isSpanish ? 'Portal Editorial' : 'Editorial Portal'}
           </h1>
           <div className="flex items-center space-x-3 bg-white border border-gray-200 px-4 py-2 rounded-md shadow-sm w-fit">
