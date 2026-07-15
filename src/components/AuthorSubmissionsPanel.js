@@ -1131,7 +1131,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
       </div>
     )}
 {/* ============ COMENTARIOS AL EDITOR ============ */}
-{submission.editorComment && (
+{sub.editorComment && (
   <div className="bg-white p-4 sm:p-6 border border-slate-200 rounded-lg overflow-hidden">
     <div className="flex items-center gap-2 mb-4">
       <div className="w-8 h-8 bg-[#002147] rounded-lg flex items-center justify-center">
@@ -1158,7 +1158,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
             [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1
             [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-1
             [&_li]:text-[#1A2B3C] [&_li]:marker:text-[#C0A86A]"
-          dangerouslySetInnerHTML={{ __html: submission.editorComment }}
+          dangerouslySetInnerHTML={{ __html: sub.editorComment }}
         />
       </div>
     </div>
@@ -1179,7 +1179,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
   </div>
   <div 
     className="text-xs font-['Lora'] text-[#1A2B3C] leading-relaxed line-clamp-4"
-    dangerouslySetInnerHTML={{ __html: submission.editorComment }}
+    dangerouslySetInnerHTML={{ __html: sub.editorComment }}
   />
   <button 
     onClick={() => {/* expandir */}} 
