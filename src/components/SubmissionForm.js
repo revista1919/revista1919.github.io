@@ -1184,25 +1184,53 @@ export default function SubmissionForm({ user, onSuccess }) {
     ]
   };
 
-  // Cargar borrador guardado
-  useEffect(() => {
-    const savedData = localStorage.getItem('submissionFormDraft');
-    if (savedData) {
-      try {
-        const parsed = JSON.parse(savedData);
-        setFormData(prev => ({
-          ...prev,
-          ...parsed,
-          manuscript: null,
-          manuscriptName: parsed.manuscriptName || '',
-          editorComment: editorComment
-        }));
-      } catch (e) {
-        console.error('[DEBUG] Error cargando borrador:', e);
-      }
-    }
-  }, [formData, editorComment]);
+// 1. Primero, añade estos refs al inicio de tu componente
+const formDataRef = useRef(formData);
+const editorCommentRef = useRef(editorComment);
 
+// 2. Sincroniza los refs
+useEffect(() => {
+  formDataRef.current = formData;
+}, [formData]);
+
+useEffect(() => {
+  editorCommentRef.current = editorComment;
+}, [editorComment]);
+
+// 3. Corrige el useEffect de carga del borrador
+useEffect(() => {
+  const savedData = localStorage.getItem('submissionFormDraft');
+  if (savedData) {
+    try {
+      const parsed = JSON.parse(savedData);
+      setFormData(prev => ({
+        ...prev,
+        ...parsed,
+        manuscript: null,
+        manuscriptName: parsed.manuscriptName || '',
+        editorComment: parsed.editorComment || '' // Carga el editorComment del localStorage
+      }));
+    } catch (e) {
+      console.error('[DEBUG] Error cargando borrador:', e);
+    }
+  }
+}, []); // ✅ Solo al montar
+
+// 4. Corrige el guardado automático usando los refs
+useEffect(() => {
+  const interval = setInterval(() => {
+    const dataToSave = {
+      ...formDataRef.current,
+      manuscript: null,
+      manuscriptName: formDataRef.current.manuscriptName,
+      editorComment: editorCommentRef.current
+    };
+    localStorage.setItem('submissionFormDraft', JSON.stringify(dataToSave));
+    console.log('[DEBUG] Borrador guardado:', new Date().toLocaleTimeString());
+  }, 30000);
+  
+  return () => clearInterval(interval);
+}, []); // ✅ Se ejecuta solo una vez
   // ============ DEBUG: Mostrar estado del paso 3 ============
   useEffect(() => {
     if (currentStep === 3) {
@@ -1235,20 +1263,7 @@ export default function SubmissionForm({ user, onSuccess }) {
     }
   }, [currentStep, formData, formData.declarations]);
 
-  // Guardar borrador automáticamente
-  useEffect(() => {
-  const interval = setInterval(() => {
-    const dataToSave = {
-      ...formData,
-      manuscript: null,
-      manuscriptName: formData.manuscriptName,
-      editorComment: editorComment 
-    };
-    localStorage.setItem('submissionFormDraft', JSON.stringify(dataToSave));
-    console.log('[DEBUG] Borrador guardado:', new Date().toLocaleTimeString());
-  }, 30000);
-  return () => clearInterval(interval);
-}, [formData, editorComment]); 
+  
   // Utilidad para convertir archivo a base64
   const toBase64 = (file) =>
     new Promise((resolve, reject) => {
