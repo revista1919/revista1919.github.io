@@ -92,7 +92,7 @@ const DeskReviewPanel = ({ user }) => {
   const [selectedSubmissionId, setSelectedSubmissionId] = useState(null);
   const [selectedRound, setSelectedRound] = useState(1);
   const [activeTaskTab, setActiveTaskTab] = useState('deskReview');
-  const [viewMode, setViewMode] = useState('panel'); // 'panel' | 'fullscreen'
+  // ELIMINADO: const [viewMode, setViewMode] = useState('panel');
   
   const [potentialReviewers, setPotentialReviewers] = useState([]);
   const [selectedReviewerId, setSelectedReviewerId] = useState('');
@@ -105,7 +105,7 @@ const DeskReviewPanel = ({ user }) => {
   const [isConsolidated, setIsConsolidated] = useState(false);
   
   // Filtros y búsqueda
-  const [filterStatus, setFilterStatus] = useState('all'); // 'all' | 'pending' | 'completed' | 'rejected'
+  const [filterStatus, setFilterStatus] = useState('all');
   const [searchManuscript, setSearchManuscript] = useState('');
 
   const { loading: reviewLoading, error: reviewError, submitDeskReviewDecision } = useEditorialReview(user);
@@ -169,7 +169,6 @@ const DeskReviewPanel = ({ user }) => {
       grouped[subId].tasks.push(task);
       grouped[subId].tasks.sort((a, b) => (a.round || 1) - (b.round || 1));
       
-      // Verificar si hay una decisión de rechazo
       const hasRejection = task.decision === 'reject' || task.submission?.status === 'rejected';
       
       if (hasRejection) {
@@ -322,7 +321,7 @@ const DeskReviewPanel = ({ user }) => {
         alert(isSpanish 
           ? 'Manuscrito rechazado. El autor será notificado.' 
           : 'Manuscript rejected. The author will be notified.');
-        setViewMode('panel');
+        // Volvemos al panel (deseleccionamos)
         setSelectedSubmissionId(null);
       } else {
         setActiveTaskTab('reviewerManagement');
@@ -415,16 +414,16 @@ const DeskReviewPanel = ({ user }) => {
     const result = await makeFinalDecision(taskId, decisionData);
     if (result.success) {
       alert(isSpanish ? 'Decisión final guardada' : 'Final decision saved');
-      setViewMode('panel');
+      // Volvemos al panel (deseleccionamos)
       setSelectedSubmissionId(null);
       setSelectedRound(1);
     }
   };
 
+  // MODIFICADO: Ya no gestiona viewMode, solo establece la tarea seleccionada
   const handleSelectManuscript = (submissionId, round, group) => {
     setSelectedSubmissionId(submissionId);
     setSelectedRound(round);
-    setViewMode('fullscreen');
     
     const latestTask = group.latestTask;
     if (latestTask?.status === TASK_STATES.REVIEWER_SELECTION || 
@@ -457,7 +456,6 @@ const DeskReviewPanel = ({ user }) => {
   const filteredSubmissions = useMemo(() => {
     let filtered = [...groupedSubmissions];
     
-    // Filtrar por estado
     if (filterStatus === 'pending') {
       filtered = filtered.filter(g => g.hasPendingTasks && g.finalDecision !== 'rejected');
     } else if (filterStatus === 'completed') {
@@ -466,7 +464,6 @@ const DeskReviewPanel = ({ user }) => {
       filtered = filtered.filter(g => g.finalDecision === 'rejected');
     }
     
-    // Filtrar por búsqueda
     if (searchManuscript) {
       const searchLower = searchManuscript.toLowerCase();
       filtered = filtered.filter(g => 
@@ -487,19 +484,7 @@ const DeskReviewPanel = ({ user }) => {
     return null;
   }
 
-  // Si está en modo fullscreen, mostrar solo el DeskReviewTab
-  if (viewMode === 'fullscreen' && selectedTask) {
-    return (
-      <DeskReviewTab
-        task={selectedTask}
-        user={user}
-        onComplete={handleCompleteDeskReview}
-        loading={reviewLoading}
-        onBackToPanel={() => setViewMode('panel')}
-      />
-    );
-  }
-
+  // ==================== RENDERIZADO PRINCIPAL UNIFICADO ====================
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Barra de navegación superior */}
@@ -822,14 +807,7 @@ const DeskReviewPanel = ({ user }) => {
                         ))}
                     </div>
                     
-                    {/* Botón para ver a pantalla completa */}
-                    <button
-                      onClick={() => setViewMode('fullscreen')}
-                      className="ml-auto flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-900 hover:bg-blue-50 rounded-xl transition-colors"
-                    >
-                      <Icons.ExternalLink />
-                      {isSpanish ? 'Pantalla completa' : 'Full screen'}
-                    </button>
+                    {/* ELIMINADO: Botón de pantalla completa */}
                   </div>
                 )}
 
@@ -911,7 +889,7 @@ const DeskReviewPanel = ({ user }) => {
                         user={user}
                         onComplete={handleCompleteDeskReview}
                         loading={reviewLoading}
-                        onBackToPanel={() => setViewMode('panel')}
+                        onBackToPanel={() => setSelectedSubmissionId(null)}
                       />
                     )}
 
