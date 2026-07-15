@@ -130,12 +130,13 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="text-red-600 text-center p-4">
-          Ocurrió un error. Por favor recargue la página.
-          <details className="mt-2 text-sm">
-            <summary>Detalles del error</summary>
-            <pre>{this.state.error?.message}</pre>
-            <pre>{this.state.errorInfo?.componentStack}</pre>
+        <div className="bg-[#fdf6f3] border-l-4 border-[#e86125] text-gray-800 p-6 m-4 shadow-sm rounded-r-md font-sans">
+          <h3 className="font-bold text-[#e86125] uppercase tracking-wider text-sm mb-2">Error Crítico</h3>
+          <p className="text-sm">Ocurrió un error en el portal. Por favor recargue la página.</p>
+          <details className="mt-4 text-xs text-gray-500 bg-white p-4 border border-gray-200 rounded">
+            <summary className="cursor-pointer font-bold text-[#004b87]">Detalles técnicos</summary>
+            <pre className="mt-2 overflow-x-auto">{this.state.error?.message}</pre>
+            <pre className="mt-2 overflow-x-auto">{this.state.errorInfo?.componentStack}</pre>
           </details>
         </div>
       );
@@ -151,11 +152,11 @@ function CalendarComponent({ events, onSelectEvent }) {
   const isSpanish = language === 'es';
   
   return (
-    <div className="bg-white border border-gray-200 p-4 md:p-8 rounded-3xl shadow-sm mb-6 overflow-hidden">
-      <h3 className="font-serif text-2xl font-bold text-gray-900 mb-4">
+    <div className="bg-white border border-gray-200 border-t-4 border-t-[#004b87] p-6 md:p-10 rounded-lg shadow-sm mb-6 overflow-hidden">
+      <h3 className="font-serif text-2xl font-bold text-gray-900 mb-6 pb-4 border-b border-gray-100">
         {isSpanish ? 'Calendario de Plazos' : 'Deadline Calendar'}
       </h3>
-      <div className="h-[400px] md:h-[600px]">
+      <div className="h-[500px] md:h-[700px] font-sans">
         <Calendar
           localizer={localizer}
           events={events}
@@ -166,7 +167,7 @@ function CalendarComponent({ events, onSelectEvent }) {
           views={['month', 'week', 'day', 'agenda']}
           popup
           selectable
-          className="rounded-2xl border border-gray-100 overflow-hidden"
+          className="border border-gray-200 rounded-md overflow-hidden bg-white"
           messages={{
             next: isSpanish ? "Siguiente" : "Next",
             previous: isSpanish ? "Anterior" : "Previous",
@@ -218,14 +219,14 @@ const InterestsTags = ({ value = [], onChange, placeholder }) => {
         {value.map((tag, index) => (
           <motion.div
             key={index}
-            initial={{ scale: 0.8, opacity: 0 }}
+            initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="group bg-emerald-100 hover:bg-emerald-200 transition-colors text-emerald-800 text-sm font-medium px-4 py-2 rounded-2xl flex items-center gap-2 shadow-sm"
+            className="group bg-[#f4f5f7] border border-gray-200 hover:border-[#004b87] transition-colors text-[#2b2b2b] text-xs font-medium px-3 py-1.5 rounded-md flex items-center gap-2"
           >
             {tag}
             <button
               onClick={() => removeTag(index)}
-              className="text-emerald-600 hover:text-red-600 transition-colors"
+              className="text-gray-400 hover:text-[#e86125] transition-colors"
             >
               <XMarkIcon className="w-4 h-4" />
             </button>
@@ -239,13 +240,13 @@ const InterestsTags = ({ value = [], onChange, placeholder }) => {
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="flex-1 p-4 sm:p-5 bg-gray-50 border-0 rounded-2xl sm:rounded-3xl focus:ring-2 focus:ring-emerald-300 text-sm placeholder-gray-400"
+          className="flex-1 p-3 bg-[#f8f9fa] border border-gray-200 rounded-md focus:ring-1 focus:ring-[#004b87] focus:border-[#004b87] text-sm text-gray-800 placeholder-gray-400 font-sans transition-all"
         />
         <button
           onClick={addTag}
-          className="px-6 sm:px-8 py-4 sm:py-5 bg-emerald-600 hover:bg-emerald-700 transition-all text-white font-semibold rounded-2xl sm:rounded-3xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-200 active:scale-95"
+          className="px-6 py-3 bg-[#004b87] hover:bg-[#003666] transition-all text-white font-bold tracking-wider text-xs uppercase rounded-md flex items-center justify-center gap-2 shadow-sm active:scale-95"
         >
-          <PlusIcon className="w-5 h-5" />
+          <PlusIcon className="w-4 h-4" />
           {isSpanish ? 'AÑADIR' : 'ADD'}
         </button>
       </div>
@@ -370,135 +371,139 @@ const ProfileSection = ({ user }) => {
 
   if (!user) {
     console.warn('ProfileSection rendered without user data');
-    return <div className="text-center p-8">{language === 'es' ? 'Cargando perfil...' : 'Loading profile...'}</div>;
+    return <div className="text-center p-8 font-sans text-sm tracking-widest uppercase text-gray-500">{language === 'es' ? 'Cargando perfil...' : 'Loading profile...'}</div>;
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 sm:space-y-12 px-2 sm:px-4">
+    <div className="max-w-6xl mx-auto space-y-8 px-2 sm:px-4 font-sans text-[#2b2b2b]">
+      
       {/* Encabezado Avatar */}
-      <div className="bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 p-6 sm:p-8 lg:p-12 flex flex-col lg:flex-row items-center gap-6 sm:gap-8 lg:gap-12">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 border-t-4 border-t-[#004b87] p-8 lg:p-10 flex flex-col lg:flex-row items-center gap-8 lg:gap-12 relative overflow-hidden">
         <div className="relative group flex-shrink-0">
-          <div className="w-36 h-36 sm:w-44 sm:h-44 lg:w-52 lg:h-52 rounded-2xl sm:rounded-3xl overflow-hidden ring-8 ring-white shadow-2xl relative">
+          <div className="w-36 h-36 lg:w-44 lg:h-44 rounded-lg overflow-hidden ring-1 ring-gray-200 shadow-sm relative bg-[#f4f5f7]">
             {form.imageUrl ? (
               <img src={form.imageUrl} className="object-cover w-full h-full" alt={language === 'es' ? 'Perfil' : 'Profile'} />
             ) : (
-              <div className="flex items-center justify-center w-full h-full bg-gradient-to-br from-gray-100 to-gray-50">
-                <UserIcon className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 text-gray-300" />
+              <div className="flex items-center justify-center w-full h-full">
+                <UserIcon className="w-16 h-16 text-gray-300" />
               </div>
             )}
 
             {uploading && (
-              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-4 border-white border-t-transparent rounded-full animate-spin mb-2 sm:mb-3" />
-                <span className="text-white text-xs sm:text-sm font-medium tracking-widest">
+              <div className="absolute inset-0 bg-[#004b87]/80 backdrop-blur-sm flex flex-col items-center justify-center">
+                <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin mb-2" />
+                <span className="text-white text-xs font-bold tracking-widest">
                   {language === 'es' ? 'SUBIENDO...' : 'UPLOADING...'}
                 </span>
               </div>
             )}
 
-            <label className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/50 transition-all duration-300 cursor-pointer rounded-2xl sm:rounded-3xl">
-              <CameraIcon className="w-8 h-8 sm:w-10 sm:h-10 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+            <label className="absolute inset-0 flex items-center justify-center bg-[#004b87]/0 group-hover:bg-[#004b87]/60 transition-all duration-300 cursor-pointer">
+              <CameraIcon className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
               <input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploading} className="hidden" />
             </label>
           </div>
         </div>
 
         <div className="flex-1 text-center lg:text-left">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold text-gray-900 mb-1 break-words">
+          <h2 className="text-3xl lg:text-4xl font-serif font-bold text-gray-900 mb-2 border-b border-gray-100 pb-4 inline-block lg:block">
             {form.firstName} {form.lastName}
           </h2>
-          <p className="text-base sm:text-lg lg:text-xl text-gray-500 font-medium break-words">
-            {form.institution || (language === 'es' ? 'Sin institución' : 'No institution')}
+          <p className="text-base font-sans text-[#666] tracking-wide uppercase text-sm mt-4">
+            {form.institution || (language === 'es' ? 'Sin institución afiliada' : 'No affiliated institution')}
           </p>
           {form.orcid && (
-            <a href={`https://orcid.org/${form.orcid}`} target="_blank" className="text-emerald-600 hover:underline text-xs sm:text-sm mt-2 inline-block break-words">
-              ORCID • {form.orcid}
+            <a href={`https://orcid.org/${form.orcid}`} target="_blank" rel="noreferrer" className="text-[#004b87] hover:text-[#e86125] transition-colors text-sm font-mono mt-3 inline-flex items-center gap-2 font-medium">
+              <span className="bg-[#e86125] text-white text-[10px] px-2 py-0.5 rounded-sm font-bold tracking-wider">ORCID</span>
+              {form.orcid}
             </a>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-12">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Columna Izquierda */}
-        <div className="lg:col-span-7 space-y-6 sm:space-y-8 lg:space-y-10">
+        <div className="lg:col-span-7 space-y-8">
+          
           {/* Biografía */}
-          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 p-6 sm:p-8 lg:p-12">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8 lg:mb-10">
-              <h3 className="font-serif text-2xl sm:text-3xl font-bold text-gray-900">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 lg:p-10">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 pb-4 border-b border-gray-100">
+              <h3 className="font-serif text-2xl font-bold text-gray-900">
                 {language === 'es' ? 'Biografía e Intereses' : 'Biography & Interests'}
               </h3>
-              <div className="flex bg-gray-100 rounded-2xl p-1.5 w-full sm:w-auto">
+              
+              <div className="flex bg-[#f4f5f7] rounded-md p-1 border border-gray-200">
                 <button 
                   onClick={() => setLang('es')} 
-                  className={`flex-1 sm:flex-none px-4 sm:px-6 lg:px-8 py-2 sm:py-3 rounded-2xl text-xs sm:text-sm font-semibold transition-all ${lang === 'es' ? 'bg-white shadow text-emerald-700' : 'text-gray-500'}`}
+                  className={`px-4 py-1.5 rounded text-xs font-bold tracking-wider transition-all ${lang === 'es' ? 'bg-white shadow-sm text-[#004b87] border border-gray-200' : 'text-gray-500 hover:text-gray-700'}`}
                 >
                   ESPAÑOL
                 </button>
                 <button 
                   onClick={() => setLang('en')} 
-                  className={`flex-1 sm:flex-none px-4 sm:px-6 lg:px-8 py-2 sm:py-3 rounded-2xl text-xs sm:text-sm font-semibold transition-all ${lang === 'en' ? 'bg-white shadow text-emerald-700' : 'text-gray-500'}`}
+                  className={`px-4 py-1.5 rounded text-xs font-bold tracking-wider transition-all ${lang === 'en' ? 'bg-white shadow-sm text-[#004b87] border border-gray-200' : 'text-gray-500 hover:text-gray-700'}`}
                 >
                   ENGLISH
                 </button>
               </div>
             </div>
 
-            <div className="space-y-6 sm:space-y-8 lg:space-y-10">
+            <div className="space-y-8">
               <div>
-                <label className="block uppercase text-xs tracking-[2px] font-bold text-gray-400 mb-2 sm:mb-3">
-                  {language === 'es' ? 'DESCRIPCIÓN' : 'DESCRIPTION'}
+                <label className="block text-xs tracking-[0.15em] font-bold text-[#666] uppercase mb-3">
+                  {language === 'es' ? 'Descripción Académica' : 'Academic Description'}
                 </label>
                 <textarea
                   name={lang === 'es' ? 'descriptionEs' : 'descriptionEn'}
                   value={lang === 'es' ? form.descriptionEs : form.descriptionEn}
                   onChange={handleChange}
-                  className="w-full h-40 sm:h-48 lg:h-56 p-4 sm:p-5 lg:p-7 bg-gray-50 border-0 rounded-2xl sm:rounded-3xl focus:ring-2 focus:ring-emerald-200 resize-y leading-relaxed text-sm sm:text-base"
-                  placeholder={lang === 'es' ? 'Tu trayectoria académica y profesional...' : 'Your academic and professional journey...'}
+                  className="w-full h-48 p-4 bg-[#f9fafb] border border-gray-200 rounded-md focus:ring-1 focus:ring-[#004b87] focus:border-[#004b87] resize-y text-sm leading-relaxed text-[#2b2b2b] transition-all"
+                  placeholder={lang === 'es' ? 'Resumen de trayectoria académica, publicaciones y enfoque de investigación...' : 'Summary of academic trajectory, publications, and research focus...'}
                 />
               </div>
 
               <div>
-                <label className="block uppercase text-xs tracking-[2px] font-bold text-gray-400 mb-2 sm:mb-3">
-                  {language === 'es' ? 'ÁREAS DE INTERÉS' : 'AREAS OF INTEREST'}
+                <label className="block text-xs tracking-[0.15em] font-bold text-[#666] uppercase mb-3">
+                  {language === 'es' ? 'Áreas de Especialidad' : 'Areas of Expertise'}
                 </label>
                 <InterestsTags
                   value={lang === 'es' ? form.interestsEs : form.interestsEn}
                   onChange={(newTags) => handleInterestsChange(lang, newTags)}
-                  placeholder={lang === 'es' ? 'Economía, IA, Historia...' : 'Economics, AI, History...'}
+                  placeholder={lang === 'es' ? 'Economía Política, IA, Historia...' : 'Political Economy, AI, History...'}
                 />
               </div>
             </div>
           </div>
 
           {/* Afiliación */}
-          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 p-6 sm:p-8 lg:p-12">
-            <h3 className="font-serif text-2xl sm:text-3xl font-bold text-gray-900 mb-6 sm:mb-8 lg:mb-10">
-              {language === 'es' ? 'Afiliación Académica' : 'Academic Affiliation'}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 lg:p-10">
+            <h3 className="font-serif text-2xl font-bold text-gray-900 mb-8 pb-4 border-b border-gray-100">
+              {language === 'es' ? 'Datos de Afiliación' : 'Affiliation Data'}
             </h3>
-            <div className="space-y-6 sm:space-y-8">
+            <div className="space-y-6">
               <div>
-                <label className="block uppercase text-xs tracking-[2px] font-bold text-gray-400 mb-2 sm:mb-3">
-                  {language === 'es' ? 'INSTITUCIÓN' : 'INSTITUTION'}
+                <label className="block text-xs tracking-[0.15em] font-bold text-[#666] uppercase mb-3">
+                  {language === 'es' ? 'Institución u Organización' : 'Institution or Organization'}
                 </label>
                 <input 
                   name="institution" 
                   value={form.institution} 
                   onChange={handleChange} 
-                  className="w-full p-4 sm:p-5 lg:p-7 bg-gray-50 border-0 rounded-2xl sm:rounded-3xl focus:ring-2 focus:ring-emerald-200 text-sm sm:text-base" 
+                  className="w-full p-4 bg-[#f9fafb] border border-gray-200 rounded-md focus:ring-1 focus:ring-[#004b87] focus:border-[#004b87] text-sm text-[#2b2b2b]" 
                 />
               </div>
               <div>
-                <label className="block uppercase text-xs tracking-[2px] font-bold text-gray-400 mb-2 sm:mb-3">
-                  {language === 'es' ? 'CORREO PÚBLICO' : 'PUBLIC EMAIL'}
+                <label className="block text-xs tracking-[0.15em] font-bold text-[#666] uppercase mb-3">
+                  {language === 'es' ? 'Correo de Contacto Público' : 'Public Contact Email'}
                 </label>
                 <div className="relative">
-                  <EnvelopeIcon className="absolute left-4 sm:left-5 lg:left-7 top-1/2 -translate-y-1/2 w-5 h-5 sm:w-6 sm:h-6 text-gray-400" />
+                  <EnvelopeIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input 
                     name="publicEmail" 
                     value={form.publicEmail} 
                     onChange={handleChange} 
-                    className="w-full pl-12 sm:pl-14 lg:pl-16 p-4 sm:p-5 lg:p-7 bg-gray-50 border-0 rounded-2xl sm:rounded-3xl focus:ring-2 focus:ring-emerald-200 text-sm sm:text-base" 
-                    placeholder={language === 'es' ? 'tucorreo@ejemplo.org' : 'youremail@example.org'} 
+                    className="w-full pl-12 p-4 bg-[#f9fafb] border border-gray-200 rounded-md focus:ring-1 focus:ring-[#004b87] focus:border-[#004b87] text-sm text-[#2b2b2b]" 
+                    placeholder={language === 'es' ? 'academico@universidad.edu' : 'academic@university.edu'} 
                   />
                 </div>
               </div>
@@ -507,71 +512,56 @@ const ProfileSection = ({ user }) => {
         </div>
 
         {/* Columna Derecha */}
-        <div className="lg:col-span-5 space-y-6 sm:space-y-8 lg:space-y-10">
-          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 p-6 sm:p-8 lg:p-12">
-            <h3 className="font-serif text-2xl sm:text-3xl font-bold text-gray-900 mb-6 sm:mb-8 lg:mb-10">
-              {language === 'es' ? 'Presencia Digital' : 'Digital Presence'}
+        <div className="lg:col-span-5 space-y-8">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 lg:p-10">
+            <h3 className="font-serif text-2xl font-bold text-gray-900 mb-8 pb-4 border-b border-gray-100">
+              {language === 'es' ? 'Identificadores & Redes' : 'Identifiers & Networks'}
             </h3>
-            <div className="space-y-4 sm:space-y-5 lg:space-y-6">
-              {/* LinkedIn */}
-              <div className="group flex items-center bg-gray-50 rounded-2xl sm:rounded-3xl border border-transparent focus-within:border-emerald-300 transition-all overflow-hidden">
-                <div className="pl-4 sm:pl-5 lg:pl-6 pr-2 sm:pr-3 lg:pr-4 text-[#0A66C2] font-black text-lg sm:text-xl">in</div>
+            <div className="space-y-5">
+              
+              <div className="group flex items-center bg-[#f9fafb] border border-gray-200 rounded-md focus-within:border-[#004b87] focus-within:ring-1 focus-within:ring-[#004b87] transition-all overflow-hidden">
+                <div className="pl-4 pr-3 text-[#004b87] font-serif font-black text-lg border-r border-gray-200 bg-gray-50 h-full py-3">in</div>
                 <input
                   name="linkedin"
                   value={form.social.linkedin}
                   onChange={handleSocialChange}
                   placeholder="https://linkedin.com/in/..."
-                  className="bg-transparent border-0 flex-1 py-4 sm:py-5 lg:py-6 focus:ring-0 text-xs sm:text-sm truncate"
+                  className="bg-transparent border-0 flex-1 py-3 px-4 focus:ring-0 text-sm text-[#2b2b2b] truncate"
                 />
               </div>
 
-              {/* Twitter / X */}
-              <div className="group flex items-center bg-gray-50 rounded-2xl sm:rounded-3xl border border-transparent focus-within:border-emerald-300 transition-all overflow-hidden">
-                <div className="pl-4 sm:pl-5 lg:pl-6 pr-2 sm:pr-3 lg:pr-4 text-black font-bold text-lg sm:text-xl">𝕏</div>
+              <div className="group flex items-center bg-[#f9fafb] border border-gray-200 rounded-md focus-within:border-[#004b87] focus-within:ring-1 focus-within:ring-[#004b87] transition-all overflow-hidden">
+                <div className="pl-4 pr-3 text-[#2b2b2b] font-bold text-lg border-r border-gray-200 bg-gray-50 h-full py-3">𝕏</div>
                 <input
                   name="twitter"
                   value={form.social.twitter}
                   onChange={handleSocialChange}
                   placeholder="https://x.com/..."
-                  className="bg-transparent border-0 flex-1 py-4 sm:py-5 lg:py-6 focus:ring-0 text-xs sm:text-sm truncate"
+                  className="bg-transparent border-0 flex-1 py-3 px-4 focus:ring-0 text-sm text-[#2b2b2b] truncate"
                 />
               </div>
 
-              {/* Instagram */}
-              <div className="group flex items-center bg-gray-50 rounded-2xl sm:rounded-3xl border border-transparent focus-within:border-emerald-300 transition-all overflow-hidden">
-                <div className="pl-4 sm:pl-5 lg:pl-6 pr-2 sm:pr-3 lg:pr-4 text-[#E4405F] text-lg sm:text-xl">📷</div>
-                <input
-                  name="instagram"
-                  value={form.social.instagram}
-                  onChange={handleSocialChange}
-                  placeholder="https://instagram.com/..."
-                  className="bg-transparent border-0 flex-1 py-4 sm:py-5 lg:py-6 focus:ring-0 text-xs sm:text-sm truncate"
-                />
-              </div>
-
-              {/* Website */}
-              <div className="group flex items-center bg-gray-50 rounded-2xl sm:rounded-3xl border border-transparent focus-within:border-emerald-300 transition-all overflow-hidden">
-                <div className="pl-4 sm:pl-5 lg:pl-6 pr-2 sm:pr-3 lg:pr-4 text-gray-400">
-                  <LinkIcon className="w-5 h-5 sm:w-6 sm:h-6" />
+              <div className="group flex items-center bg-[#f9fafb] border border-gray-200 rounded-md focus-within:border-[#004b87] focus-within:ring-1 focus-within:ring-[#004b87] transition-all overflow-hidden">
+                <div className="pl-4 pr-3 text-gray-400 border-r border-gray-200 bg-gray-50 h-full py-3 flex items-center justify-center">
+                  <LinkIcon className="w-5 h-5 text-gray-500" />
                 </div>
                 <input
                   name="website"
                   value={form.social.website}
                   onChange={handleSocialChange}
-                  placeholder="https://tusitio.com"
-                  className="bg-transparent border-0 flex-1 py-4 sm:py-5 lg:py-6 focus:ring-0 text-xs sm:text-sm truncate"
+                  placeholder="https://academicwebsite.com"
+                  className="bg-transparent border-0 flex-1 py-3 px-4 focus:ring-0 text-sm text-[#2b2b2b] truncate"
                 />
               </div>
 
-              {/* ORCID */}
-              <div className="group flex items-center bg-gray-50 rounded-2xl sm:rounded-3xl border border-transparent focus-within:border-emerald-300 transition-all overflow-hidden">
-                <div className="pl-4 sm:pl-5 lg:pl-6 pr-2 sm:pr-3 lg:pr-4 text-orange-600 font-mono font-bold text-lg sm:text-xl">OR</div>
+              <div className="group flex items-center bg-[#fdf6f3] border border-[#e86125]/30 rounded-md focus-within:border-[#e86125] focus-within:ring-1 focus-within:ring-[#e86125] transition-all overflow-hidden">
+                <div className="pl-4 pr-3 text-[#e86125] font-mono font-bold text-sm border-r border-[#e86125]/30 bg-white h-full py-3">ORCID</div>
                 <input
                   name="orcid"
                   value={form.orcid}
                   onChange={handleChange}
                   placeholder="0000-0000-0000-0000"
-                  className="bg-transparent border-0 flex-1 py-4 sm:py-5 lg:py-6 focus:ring-0 text-xs sm:text-sm font-mono truncate"
+                  className="bg-transparent border-0 flex-1 py-3 px-4 focus:ring-0 text-sm font-mono text-[#2b2b2b] truncate"
                 />
               </div>
             </div>
@@ -581,15 +571,15 @@ const ProfileSection = ({ user }) => {
           <button
             onClick={saveProfile}
             disabled={saving}
-            className="w-full py-4 sm:py-5 lg:py-6 bg-gradient-to-r from-gray-900 to-black text-white rounded-2xl sm:rounded-3xl font-bold tracking-[0.08em] text-xs sm:text-sm uppercase hover:from-emerald-600 hover:to-emerald-700 transition-all duration-300 shadow-xl shadow-gray-200 active:scale-[0.985] flex items-center justify-center gap-2 sm:gap-3"
+            className="w-full py-5 bg-[#004b87] text-white rounded-md font-bold tracking-[0.15em] text-xs uppercase hover:bg-[#003666] transition-colors border border-transparent shadow-sm disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3"
           >
             {saving ? (
               <>
-                <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 {language === 'es' ? 'GUARDANDO...' : 'SAVING...'}
               </>
             ) : (
-              language === 'es' ? 'GUARDAR PERFIL' : 'SAVE PROFILE'
+              language === 'es' ? 'ACTUALIZAR REGISTRO' : 'UPDATE RECORD'
             )}
           </button>
         </div>
@@ -673,10 +663,10 @@ const UserManagement = ({ users: initialUsers }) => {
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-12 max-w-6xl mx-auto text-center">
-        <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-emerald-200 border-t-emerald-600 mb-6"></div>
-        <p className="text-gray-500 font-medium">
-          {isSpanish ? 'Cargando usuarios...' : 'Loading users...'}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 max-w-6xl mx-auto text-center border-t-4 border-t-[#004b87]">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-[#f4f5f7] border-t-[#004b87] mb-4"></div>
+        <p className="text-gray-500 font-sans tracking-widest text-xs uppercase">
+          {isSpanish ? 'Cargando directorio...' : 'Loading directory...'}
         </p>
       </div>
     );
@@ -684,7 +674,7 @@ const UserManagement = ({ users: initialUsers }) => {
 
   if (!users || users.length === 0) {
     return (
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-12 max-w-6xl mx-auto text-center">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 max-w-6xl mx-auto text-center border-t-4 border-t-[#004b87]">
         <UserIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
         <p className="text-gray-500 font-medium">
           {isSpanish ? 'No hay usuarios disponibles' : 'No users available'}
@@ -694,91 +684,108 @@ const UserManagement = ({ users: initialUsers }) => {
   }
 
   return (
-    <div ref={containerRef} className="bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 p-4 sm:p-6 lg:p-10 max-w-6xl mx-auto">
-      <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 mb-6 sm:mb-8 lg:mb-10">
+    <div ref={containerRef} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 lg:p-10 max-w-7xl mx-auto border-t-4 border-t-[#004b87]">
+      <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-6 mb-8 border-b border-gray-100 pb-6">
         <div>
-          <h3 className="text-2xl sm:text-3xl font-serif font-bold text-gray-900">
-            {isSpanish ? 'Gestión de Usuarios' : 'User Management'}
+          <h3 className="text-3xl font-serif font-bold text-gray-900">
+            {isSpanish ? 'Directorio Editorial' : 'Editorial Directory'}
           </h3>
-          <p className="text-sm sm:text-base text-gray-500 mt-1">
-            {isSpanish ? 'Administra roles y accesos del equipo editorial' : 'Manage editorial team roles and access'}
+          <p className="text-sm font-sans tracking-wide text-[#666] mt-2 uppercase">
+            {isSpanish ? 'Gestión de Permisos y Roles' : 'Roles and Access Management'}
           </p>
         </div>
         
-        <div className="relative w-full sm:w-64 lg:w-80">
+        <div className="relative w-full sm:w-72 lg:w-96">
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder={isSpanish ? "Buscar usuario..." : "Search user..."}
-            className="w-full pl-10 pr-4 py-3 sm:py-4 bg-gray-50 border border-gray-200 rounded-xl sm:rounded-2xl focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 text-sm transition-all"
+            placeholder={isSpanish ? "Filtrar por nombre o email..." : "Filter by name or email..."}
+            className="w-full pl-10 pr-4 py-3 bg-[#f9fafb] border border-gray-200 rounded-md focus:border-[#004b87] focus:ring-1 focus:ring-[#004b87] text-sm font-sans transition-all"
           />
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </div>
       </div>
 
-      {/* Contador de resultados */}
-      <div className="mb-4 text-sm text-gray-500">
+      <div className="mb-4 text-xs font-bold tracking-widest text-[#666] uppercase">
         {isSpanish 
-          ? `${filteredUsers.length} de ${users.length} usuarios`
-          : `${filteredUsers.length} of ${users.length} users`
+          ? `Mostrando ${filteredUsers.length} de ${users.length} registros`
+          : `Showing ${filteredUsers.length} of ${users.length} records`
         }
       </div>
 
-      {/* Vista Móvil: Tarjetas */}
-      <div className="block lg:hidden space-y-4">
-        {filteredUsers.slice(0, 50).map((user) => ( // Limitar a 50 para rendimiento
-          <div key={user.id} className="bg-gray-50 rounded-2xl p-4 border border-gray-100 hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-3 mb-3">
-              {user.imageUrl ? (
-                <img 
-                  src={user.imageUrl} 
-                  className="w-10 h-10 rounded-xl object-cover ring-1 ring-gray-200" 
-                  alt={user.displayName || 'User'}
-                  loading="lazy"
-                />
-              ) : (
-                <div className="w-10 h-10 bg-gradient-to-br from-emerald-100 to-emerald-50 rounded-xl flex items-center justify-center ring-1 ring-gray-200">
-                  <span className="text-lg font-serif font-bold text-emerald-600">
-                    {user.displayName?.charAt(0) || 'U'}
-                  </span>
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-gray-900 text-base truncate">
-                  {user.displayName || (isSpanish ? 'Sin nombre' : 'No name')}
-                </div>
-                <div className="text-xs text-gray-400 truncate">{user.email}</div>
-              </div>
-            </div>
-            
-            <div className="mb-3">
-              <div className="text-xs font-semibold text-gray-500 uppercase mb-2">
-                {isSpanish ? 'Roles' : 'Roles'}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {(user.roles || []).map(role => {
-                  const displayRole = !isSpanish ? (ES_TO_EN[role] || role) : role;
-                  return (
-                    <div 
-                      key={role}
-                      className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-xs font-medium px-3 py-1.5 rounded-xl group"
-                    >
-                      {displayRole}
-                      <button
-                        onClick={() => removeRole(user.id, role)}
-                        className="text-emerald-600 hover:text-red-600 transition-colors font-bold text-base leading-none ml-1 opacity-0 group-hover:opacity-100"
-                        title={isSpanish ? 'Eliminar rol' : 'Remove role'}
-                      >
-                        ×
-                      </button>
+      {/* Tabla Desktop (Forzada estilo APA/Elsevier) */}
+      <div className="overflow-x-auto rounded-md border border-gray-200">
+        <table className="min-w-full border-collapse text-left font-sans text-sm">
+          <thead className="bg-[#f8f9fa] border-b-2 border-gray-300">
+            <tr>
+              <th className="px-6 py-4 font-bold text-[#004b87] uppercase tracking-widest text-[10px]">
+                {isSpanish ? 'Investigador / Usuario' : 'Researcher / User'}
+              </th>
+              <th className="px-6 py-4 font-bold text-[#004b87] uppercase tracking-widest text-[10px]">
+                Contacto
+              </th>
+              <th className="px-6 py-4 font-bold text-[#004b87] uppercase tracking-widest text-[10px]">
+                {isSpanish ? 'Asignación de Roles' : 'Role Assignment'}
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 bg-white">
+            {filteredUsers.slice(0, 100).map((user) => (
+              <tr key={user.id} className="hover:bg-[#f4f5f7] transition-colors">
+                <td className="px-6 py-4 align-top">
+                  <div className="flex items-center gap-4">
+                    {user.imageUrl ? (
+                      <img 
+                        src={user.imageUrl} 
+                        className="w-10 h-10 rounded object-cover border border-gray-200" 
+                        alt={user.displayName}
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 bg-[#f4f5f7] border border-gray-200 rounded flex items-center justify-center">
+                        <span className="text-lg font-serif font-bold text-[#004b87]">
+                          {user.displayName?.charAt(0) || 'U'}
+                        </span>
+                      </div>
+                    )}
+                    <div>
+                      <div className="font-bold text-[#2b2b2b]">
+                        {user.displayName || (isSpanish ? 'Sin nombre' : 'No name')}
+                      </div>
+                      <div className="text-[10px] text-gray-400 font-mono tracking-wider mt-0.5">UID: {user.id?.slice(0, 8)}</div>
                     </div>
-                  );
-                })}
+                  </div>
+                </td>
+                
+                <td className="px-6 py-4 align-top text-[#666] font-medium">
+                  {user.email}
+                </td>
 
-                <div className="relative">
+                <td className="px-6 py-4 align-top">
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {(user.roles || []).map(role => {
+                      const displayRole = !isSpanish ? (ES_TO_EN[role] || role) : role;
+                      return (
+                        <div 
+                          key={role}
+                          className="inline-flex items-center gap-1.5 bg-[#eef3f7] border border-[#004b87]/20 text-[#004b87] text-[11px] font-bold tracking-wide px-2.5 py-1 rounded"
+                        >
+                          {displayRole}
+                          <button
+                            onClick={() => removeRole(user.id, role)}
+                            className="text-[#004b87] hover:text-[#e86125] transition-colors font-black ml-1"
+                            title={isSpanish ? 'Revocar' : 'Revoke'}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+
                   <select
                     onChange={(e) => {
                       if (e.target.value) {
@@ -786,11 +793,11 @@ const UserManagement = ({ users: initialUsers }) => {
                         e.target.value = '';
                       }
                     }}
-                    className="appearance-none bg-transparent border border-dashed border-gray-300 hover:border-emerald-400 text-emerald-600 text-xs font-medium rounded-xl px-3 py-1.5 cursor-pointer transition-all focus:outline-none focus:border-emerald-500"
+                    className="w-full max-w-xs appearance-none bg-[#f9fafb] border border-dashed border-gray-300 hover:border-[#004b87] text-[#666] text-xs font-bold tracking-wider uppercase rounded px-3 py-2 cursor-pointer transition-colors focus:outline-none focus:border-[#004b87]"
                     value=""
                   >
                     <option value="" disabled>
-                      {isSpanish ? '+ Añadir' : '+ Add'}
+                      {isSpanish ? '+ AÑADIR NUEVO ROL' : '+ ADD NEW ROLE'}
                     </option>
                     {ALL_ROLES.filter(r => !(user.roles || []).includes(r)).map(role => {
                       const displayRole = !isSpanish ? (ES_TO_EN[role] || role) : role;
@@ -799,139 +806,20 @@ const UserManagement = ({ users: initialUsers }) => {
                       );
                     })}
                   </select>
-                </div>
-              </div>
-            </div>
-            
-            <div className="text-xs text-gray-400 font-mono">
-              ID: {user.id?.slice(0, 8)}...
-            </div>
-          </div>
-        ))}
-        {filteredUsers.length > 50 && (
-          <div className="text-center py-4 text-sm text-gray-500">
-            {isSpanish 
-              ? `Mostrando 50 de ${filteredUsers.length} usuarios. Use la búsqueda para filtrar.`
-              : `Showing 50 of ${filteredUsers.length} users. Use search to filter.`
-            }
-          </div>
-        )}
-      </div>
-
-      {/* Vista Desktop: Tabla */}
-      <div className="hidden lg:block overflow-hidden rounded-3xl border border-gray-100">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-100">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-8 py-5 text-left text-xs font-semibold text-gray-500 uppercase tracking-widest">
-                  {isSpanish ? 'Usuario' : 'User'}
-                </th>
-                <th className="px-8 py-5 text-left text-xs font-semibold text-gray-500 uppercase tracking-widest">Email</th>
-                <th className="px-8 py-5 text-left text-xs font-semibold text-gray-500 uppercase tracking-widest">
-                  {isSpanish ? 'Roles' : 'Roles'}
-                </th>
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 bg-white">
-              {filteredUsers.slice(0, 100).map((user) => (
-                <tr key={user.id} className="hover:bg-emerald-50/50 transition-colors group">
-                  <td className="px-8 py-6 whitespace-nowrap">
-                    <div className="flex items-center gap-4">
-                      {user.imageUrl ? (
-                        <img 
-                          src={user.imageUrl} 
-                          className="w-11 h-11 rounded-2xl object-cover ring-1 ring-gray-100" 
-                          alt={user.displayName || 'User'}
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="w-11 h-11 bg-gradient-to-br from-emerald-100 to-emerald-50 rounded-2xl flex items-center justify-center ring-1 ring-gray-100">
-                          <span className="text-xl font-serif font-bold text-emerald-600">
-                            {user.displayName?.charAt(0) || 'U'}
-                          </span>
-                        </div>
-                      )}
-                      <div>
-                        <div className="font-semibold text-gray-900">
-                          {user.displayName || (isSpanish ? 'Sin nombre' : 'No name')}
-                        </div>
-                        <div className="text-xs text-gray-400 font-mono">ID: {user.id?.slice(0, 8)}</div>
-                      </div>
-                    </div>
-                  </td>
-                  
-                  <td className="px-8 py-6 whitespace-nowrap text-gray-600 font-medium text-sm">
-                    {user.email}
-                  </td>
-
-                  <td className="px-8 py-6">
-                    <div className="flex flex-wrap gap-2">
-                      {(user.roles || []).map(role => {
-                        const displayRole = !isSpanish ? (ES_TO_EN[role] || role) : role;
-                        return (
-                          <div 
-                            key={role}
-                            className="inline-flex items-center gap-2 bg-emerald-100 text-emerald-800 text-xs font-medium px-4 py-2 rounded-2xl group-hover:bg-emerald-200 transition-colors"
-                          >
-                            {displayRole}
-                            <button
-                              onClick={() => removeRole(user.id, role)}
-                              className="text-emerald-600 hover:text-red-600 transition-colors font-bold text-base leading-none opacity-0 group-hover:opacity-100"
-                              title={isSpanish ? 'Eliminar rol' : 'Remove role'}
-                            >
-                              ×
-                            </button>
-                          </div>
-                        );
-                      })}
-
-                      <div className="relative">
-                        <select
-                          onChange={(e) => {
-                            if (e.target.value) {
-                              addRole(user.id, e.target.value);
-                              e.target.value = '';
-                            }
-                          }}
-                          className="appearance-none bg-transparent border border-dashed border-gray-300 hover:border-emerald-400 text-emerald-600 text-xs font-medium rounded-2xl px-4 py-2 cursor-pointer transition-all focus:outline-none focus:border-emerald-500"
-                          value=""
-                        >
-                          <option value="" disabled>
-                            {isSpanish ? '+ Añadir rol' : '+ Add role'}
-                          </option>
-                          {ALL_ROLES.filter(r => !(user.roles || []).includes(r)).map(role => {
-                            const displayRole = !isSpanish ? (ES_TO_EN[role] || role) : role;
-                            return (
-                              <option key={role} value={role}>{displayRole}</option>
-                            );
-                          })}
-                        </select>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {filteredUsers.length > 100 && (
-          <div className="text-center py-4 text-sm text-gray-500 border-t border-gray-100">
-            {isSpanish 
-              ? `Mostrando 100 de ${filteredUsers.length} usuarios. Use la búsqueda para filtrar.`
-              : `Showing 100 of ${filteredUsers.length} users. Use search to filter.`
-            }
-          </div>
-        )}
+            ))}
+          </tbody>
+        </table>
       </div>
 
       {filteredUsers.length === 0 && (
-        <div className="text-center py-12 sm:py-20 text-gray-400">
-          <UserIcon className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-          <p className="text-lg">
+        <div className="text-center py-16 text-gray-400 bg-[#f9fafb] border border-gray-200 mt-4 rounded-md">
+          <UserIcon className="w-10 h-10 mx-auto mb-3 text-gray-300" />
+          <p className="text-sm tracking-wide font-sans">
             {isSpanish 
-              ? 'No se encontraron usuarios con ese criterio de búsqueda.' 
-              : 'No users found matching your search criteria.'
+              ? 'No se encontraron coincidencias en el directorio.' 
+              : 'No matches found in the directory.'
             }
           </p>
         </div>
@@ -1267,11 +1155,11 @@ const safetyTimeoutRef = useRef(null);
     // ========== PANTALLA DE CARGA CON BOTÓN DE ESCAPE ==========
   if (loadingUser) {
     return (
-      <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
-        <div className="flex flex-col items-center">
-          <div className="w-16 h-16 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin" />
-          <p className="mt-6 text-gray-500 font-medium tracking-wider">
-            {isSpanish ? 'CARGANDO PORTAL EDITORIAL...' : 'LOADING EDITORIAL PORTAL...'}
+      <div className="min-h-screen bg-[#f4f5f7] flex items-center justify-center font-sans">
+        <div className="flex flex-col items-center bg-white p-12 rounded-lg shadow-sm border border-gray-200">
+          <div className="w-12 h-12 border-2 border-[#f4f5f7] border-t-[#004b87] rounded-full animate-spin" />
+          <p className="mt-6 text-[#004b87] font-bold tracking-widest text-xs uppercase">
+            {isSpanish ? 'Iniciando Portal Editorial...' : 'Loading Editorial Portal...'}
           </p>
           <p className="mt-2 text-xs text-gray-400">
             {isSpanish 
@@ -1297,7 +1185,7 @@ const safetyTimeoutRef = useRef(null);
                 setDataCorrupted(true);
                 setLoadingUser(false);
               }}
-              className="text-xs text-red-600 hover:text-red-800 underline font-bold"
+              className="text-xs text-[#e86125] hover:text-red-800 underline font-bold"
             >
               {isSpanish
                 ? 'Forzar salida de pantalla de carga'
@@ -1315,86 +1203,27 @@ const safetyTimeoutRef = useRef(null);
  
   if (dataCorrupted || loadTimeout) {
     return (
-      <div className="min-h-screen bg-[#fafafa] flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-3xl shadow-xl border border-red-200 p-8 md:p-12 max-w-lg w-full text-center space-y-6"
-        >
-          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto">
-            <svg className="h-10 w-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>
-          </div>
-
-          <h3 className="font-serif text-2xl md:text-3xl font-bold text-gray-900">
-            {loadTimeout ? 'Error de carga' : 'Datos de usuario dañados'}
+      <div className="min-h-screen bg-[#f4f5f7] flex items-center justify-center p-4 font-sans">
+        <div className="bg-[#fdf6f3] border-t-4 border-t-[#e86125] rounded-md shadow-md p-8 md:p-12 max-w-lg w-full">
+          <h3 className="font-serif text-2xl font-bold text-[#e86125] mb-4">
+            {loadTimeout ? 'Timeout del Servidor' : 'Excepción de Sesión'}
           </h3>
-
-          <p className="text-gray-600 leading-relaxed">
+          <p className="text-sm text-gray-700 leading-relaxed mb-6">
             {loadTimeout
-              ? 'El portal está tardando demasiado en cargar. Esto puede deberse a problemas de conexión o datos corruptos en tu perfil.'
-              : 'Se han detectado datos corruptos en tu perfil de usuario. Esto impide que el portal funcione correctamente.'}
+              ? 'La conexión con los repositorios editoriales ha superado el tiempo de espera.'
+              : 'Se detectó una discrepancia en los metadatos de su perfil que impide inicializar el entorno.'}
           </p>
-
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6">
-            <p className="text-sm text-amber-800 font-semibold mb-2">
-              ¿Qué puedes hacer?
-            </p>
-            <ul className="text-sm text-amber-700 space-y-2 text-left">
-              <li className="flex items-start gap-2">
-                <span className="text-amber-500 font-bold">1.</span>
-                Cierra sesión y vuelve a iniciar
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-amber-500 font-bold">2.</span>
-                Limpia la caché de tu navegador
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-amber-500 font-bold">3.</span>
-                Si el problema persiste, reporta el error a:{' '}
-                <a
-                  href="mailto:contact@revistacienciasestudiantes.com"
-                  className="text-[#007398] underline font-bold"
-                >
-                  contact@revistacienciasestudiantes.com
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          <div className="space-y-3">
-            <button
-              onClick={() => {
-                // Forzar cierre de sesión y recarga
-                if (auth) signOut(auth).catch(console.error);
-                setDataCorrupted(false);
-                setLoadTimeout(false);
-                setLoadingUser(false);
-                if (onLogout) onLogout();
-                window.location.reload();
-              }}
-              className="w-full bg-red-600 hover:bg-red-700 text-white py-4 text-sm uppercase font-black tracking-wider rounded-2xl transition-all"
-            >
-              Cerrar sesión y recargar
-            </button>
-
-            <button
-              onClick={() => {
-                // Intentar recargar sin cerrar sesión
-                window.location.reload();
-              }}
-              className="w-full border-2 border-gray-300 text-gray-700 py-4 text-sm uppercase font-black tracking-wider rounded-2xl hover:bg-gray-50 transition-all"
-            >
-              Recargar página
-            </button>
-          </div>
-
-          <p className="text-xs text-gray-400">
-            También puedes crear una nueva cuenta si lo prefieres
-          </p>
-        </motion.div>
+          <button
+            onClick={() => {
+              if (auth) signOut(auth).catch(console.error);
+              if (onLogout) onLogout();
+              window.location.reload();
+            }}
+            className="w-full bg-[#2b2b2b] hover:bg-black text-white py-3 text-xs uppercase font-bold tracking-widest rounded transition-all"
+          >
+            {isSpanish ? 'Destruir Sesión y Reiniciar' : 'Destroy Session & Restart'}
+          </button>
+        </div>
       </div>
     );
   }
@@ -1411,7 +1240,7 @@ const safetyTimeoutRef = useRef(null);
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="min-h-screen bg-[#fafafa] p-4 md:p-8 flex items-center justify-center"
+        className="min-h-screen bg-[#f4f5f7] p-4 md:p-8 flex items-center justify-center"
       >
         <div className="text-center text-gray-600 bg-white p-6 rounded-lg shadow-md">
           <p className="text-lg font-sans mb-4">
@@ -1423,41 +1252,31 @@ const safetyTimeoutRef = useRef(null);
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-12 bg-[#fafafa] min-h-screen">
-      {/* Header del Portal */}
-      <header className="mb-8 sm:mb-10 md:mb-12 flex flex-col md:flex-row md:items-end justify-between border-b border-gray-900 pb-6 md:pb-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 bg-[#f4f5f7] min-h-screen font-sans">
+      
+      {/* HEADER EDITORIAL */}
+      <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between border-b-2 border-gray-300 pb-8">
         <div>
-          <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 tracking-tighter mb-2 break-words">
+          <h1 className="font-serif text-4xl md:text-5xl font-bold text-[#004b87] mb-3">
             {isSpanish ? 'Portal Editorial' : 'Editorial Portal'}
           </h1>
-          <div className="flex items-center space-x-2 sm:space-x-3">
-            <p className="text-gray-500 font-sans tracking-widest uppercase text-xs break-words">
-              {isSpanish ? 'Sesión activa:' : 'Active Session:'}
+          <div className="flex items-center space-x-3 bg-white border border-gray-200 px-4 py-2 rounded-md shadow-sm w-fit">
+            <p className="text-gray-500 font-bold uppercase text-[10px] tracking-widest">
+              {isSpanish ? 'ID SESIÓN:' : 'SESSION ID:'}
             </p>
             {userData.imageUrl ? (
-              <motion.img
-                initial={{ scale: 0.8 }}
-                animate={{ scale: 1 }}
-                src={userData.imageUrl}
-                alt={`${isSpanish ? 'Perfil de' : 'Profile of'} ${effectiveName || (isSpanish ? 'Usuario' : 'User')}`}
-                className="w-5 h-5 sm:w-6 sm:h-6 rounded-full object-cover border-2 border-gray-300"
-                onError={(e) => (e.target.style.display = 'none')}
-              />
+              <img src={userData.imageUrl} alt="Profile" className="w-6 h-6 rounded-sm object-cover border border-gray-200" />
             ) : (
-              <motion.div
-                initial={{ scale: 0.8 }}
-                animate={{ scale: 1 }}
-                className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-gray-300 flex items-center justify-center border-2 border-gray-300"
-              >
-                <span className="text-gray-600 text-xs font-sans">{effectiveName?.charAt(0) || 'U'}</span>
-              </motion.div>
+              <div className="w-6 h-6 rounded-sm bg-[#f4f5f7] flex items-center justify-center border border-gray-200">
+                <span className="text-[#004b87] text-xs font-serif font-bold">{effectiveName?.charAt(0) || 'U'}</span>
+              </div>
             )}
-            <span className="font-bold text-gray-800 font-sans text-xs uppercase tracking-widest break-words">{effectiveName}</span>
+            <span className="font-bold text-[#2b2b2b] text-xs uppercase tracking-wider">{effectiveName}</span>
           </div>
         </div>
         <button
           onClick={onLogout}
-          className="mt-4 md:mt-0 text-xs font-bold uppercase tracking-widest px-5 sm:px-6 py-2 border border-gray-900 hover:bg-gray-900 hover:text-white transition-all rounded-xl"
+          className="mt-6 md:mt-0 text-[10px] font-bold uppercase tracking-widest px-6 py-2.5 border border-gray-300 bg-white text-[#2b2b2b] hover:bg-gray-50 hover:border-gray-400 transition-all rounded"
         >
           {isSpanish ? 'Cerrar Sesión' : 'Log Out'}
         </button>
@@ -1476,20 +1295,20 @@ const safetyTimeoutRef = useRef(null);
         />
       )}
 
-      {/* Navegación - CORREGIDA con type="button" y preventDefault */}
-      <nav className="flex overflow-x-auto pb-2 mb-6 sm:mb-8 md:mb-12 border-b border-gray-200 gap-4 md:gap-8 whitespace-nowrap">
+      {/* TABS NAVEGACIÓN */}
+      <nav className="flex overflow-x-auto mb-10 border-b border-gray-200 gap-8 whitespace-nowrap">
         {tabs.map(tab => (
           <button
             key={tab.id}
             type="button" // <- IMPORTANTE: Especificar type="button"
             onClick={(e) => handleTabChange(tab.id, e)} // <- Pasamos el evento
-            className={`pb-3 md:pb-4 text-xs font-bold uppercase tracking-widest transition-all relative flex-shrink-0 ${
-              activeTab === tab.id ? 'text-emerald-700' : 'text-gray-400 hover:text-gray-600'
+            className={`pb-4 text-[11px] font-bold uppercase tracking-widest transition-colors relative flex-shrink-0 ${
+              activeTab === tab.id ? 'text-[#004b87]' : 'text-gray-500 hover:text-[#2b2b2b]'
             }`}
           >
             {tab.label}
             {activeTab === tab.id && (
-              <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-700" />
+              <motion.div layoutId="activeTab" className="absolute bottom-[-1px] left-0 right-0 h-0.5 bg-[#e86125]" />
             )}
           </button>
         ))}
@@ -1501,58 +1320,27 @@ const safetyTimeoutRef = useRef(null);
           {activeTab === 'profile' && (
             <motion.section
               key="profile"
-              initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
             >
               <ProfileSection user={userData} />
               
-              {isAuthor && !userData?.claimedAnonymousUid && (
-                <div className="mt-8 max-w-6xl mx-auto">
-                  {claimStatus === 'idle' && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-3xl p-8">
-                      <h3 className="font-serif text-2xl font-bold text-amber-900 mb-3">
-                        {isSpanish ? '¿Has publicado antes con nosotros?' : 'Have you published with us before?'}
-                      </h3>
-                      <p className="text-amber-800 mb-6 leading-relaxed">
-                        {isSpanish 
-                          ? 'Si has sido autor o coautor en artículos publicados anteriormente, puedes reclamar tu perfil para que todas tus publicaciones aparezcan vinculadas a tu cuenta.'
-                          : 'If you have been an author or co-author in previously published articles, you can claim your profile so that all your publications appear linked to your account.'}
-                      </p>
-                      <button
-                        onClick={() => {
-                          setShowClaimModal(true);
-                          checkForAnonymousProfile();
-                        }}
-                        className="px-8 py-4 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-2xl transition-all shadow-lg shadow-amber-200"
-                      >
-                        {isSpanish ? 'Verificar y reclamar perfil' : 'Verify and claim profile'}
-                      </button>
-                    </div>
-                  )}
-                  
-                  {claimStatus === 'checking' && (
-                    <div className="bg-gray-50 rounded-3xl p-8 text-center">
-                      <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600 mb-4"></div>
-                      <p className="text-gray-600">
-                        {isSpanish ? 'Verificando publicaciones anteriores...' : 'Checking previous publications...'}
-                      </p>
-                    </div>
-                  )}
-                  
-                  {claimStatus === 'not-available' && (
-                    <div className="bg-gray-50 rounded-3xl p-8 text-center">
-                      <p className="text-gray-600">
-                        {isSpanish 
-                          ? 'No encontramos publicaciones anteriores asociadas a tu email. Si crees que esto es un error, contacta al equipo editorial.'
-                          : 'We did not find previous publications associated with your email. If you believe this is an error, contact the editorial team.'}
-                      </p>
-                    </div>
-                  )}
-                  
-                  {claimError && (
-                    <div className="bg-red-50 border border-red-200 rounded-3xl p-8 text-center">
-                      <p className="text-red-600">{claimError}</p>
-                    </div>
-                  )}
+              {/* Box de Claim Profile */}
+              {isAuthor && !userData?.claimedAnonymousUid && claimStatus === 'idle' && (
+                <div className="mt-8 max-w-6xl mx-auto bg-white border border-gray-200 border-l-4 border-l-[#004b87] rounded-r-md p-8 shadow-sm">
+                  <h3 className="font-serif text-xl font-bold text-[#004b87] mb-2">
+                    {isSpanish ? 'Reclamar Publicaciones Anteriores' : 'Claim Previous Publications'}
+                  </h3>
+                  <p className="text-sm text-[#666] mb-5">
+                    {isSpanish 
+                      ? 'Si publicaste en volúmenes pasados de la revista, puedes asociar esos metadatos a este perfil digital.'
+                      : 'If you published in past volumes of the journal, you can associate those metadata to this digital profile.'}
+                  </p>
+                  <button
+                    onClick={() => { setShowClaimModal(true); checkForAnonymousProfile(); }}
+                    className="px-6 py-2.5 bg-[#f4f5f7] border border-gray-200 hover:border-[#004b87] text-[#004b87] font-bold text-xs uppercase tracking-widest rounded transition-all"
+                  >
+                    {isSpanish ? 'Verificar Historial' : 'Verify History'}
+                  </button>
                 </div>
               )}
             </motion.section>
@@ -1562,9 +1350,9 @@ const safetyTimeoutRef = useRef(null);
           {activeTab === 'submissions' && (
             <motion.section
               key="submissions"
-              initial={{ opacity: 0, x: -20 }} 
-              animate={{ opacity: 1, x: 0 }} 
-              exit={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }}
             >
               <AuthorSubmissionsPanel user={userData} />
             </motion.section>
@@ -1574,45 +1362,40 @@ const safetyTimeoutRef = useRef(null);
           {activeTab === 'reviewer-tasks' && (
             <motion.section
               key="reviewer-tasks"
-              initial={{ opacity: 0, x: -20 }} 
-              animate={{ opacity: 1, x: 0 }} 
-              exit={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }}
             >
-              <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
-                <h2 className="font-['Playfair_Display'] text-3xl font-bold text-[#0A1929] mb-6">
-                  {isSpanish ? 'Mis Revisiones Asignadas' : 'My Assigned Reviews'}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 border-t-4 border-t-[#004b87] p-8">
+                <h2 className="font-serif text-2xl font-bold text-gray-900 mb-6 border-b border-gray-100 pb-4">
+                  {isSpanish ? 'Expedientes Asignados para Revisión' : 'Assigned Files for Review'}
                 </h2>
                 {reviewerAssignments.length === 0 ? (
-                  <p className="text-gray-500 text-center py-12">
-                    {isSpanish ? 'No tienes revisiones pendientes' : 'You have no pending reviews'}
+                  <p className="text-gray-500 text-sm italic font-serif">
+                    {isSpanish ? 'No existen manuscritos en cola de revisión para su perfil en este momento.' : 'There are no manuscripts in the review queue for your profile at this time.'}
                   </p>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="grid grid-cols-1 gap-4">
                     {reviewerAssignments.map(assignment => (
                       <div
                         key={assignment.id}
-                        className="p-6 border border-gray-200 rounded-xl hover:shadow-md transition-shadow cursor-pointer"
-                        onClick={() => navigate(`/reviewer-workspace/${assignment.id}`)} // <- AHORA USA NAVIGATE
+                        className="p-6 border border-gray-200 rounded-md bg-[#f9fafb] hover:border-[#004b87] hover:shadow-sm transition-all cursor-pointer group"
+                        onClick={() => navigate(`/reviewer-workspace/${assignment.id}`)}
                       >
-                        <h3 className="font-bold text-lg text-[#0A1929] mb-2">
+                        <h3 className="font-serif font-bold text-lg text-[#004b87] group-hover:text-[#e86125] transition-colors mb-3">
                           {assignment.submission?.title}
                         </h3>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">
-                            {isSpanish ? 'Estado:' : 'Status:'} 
-                            <span className={`ml-2 px-2 py-1 rounded-full ${
-                              assignment.status === 'submitted' ? 'bg-green-100 text-green-700' :
-                              assignment.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
-                              'bg-yellow-100 text-yellow-700'
-                            }`}>
-                              {assignment.status === 'submitted' && (isSpanish ? 'Enviada' : 'Submitted')}
-                              {assignment.status === 'in-progress' && (isSpanish ? 'En progreso' : 'In progress')}
-                              {assignment.status === 'pending' && (isSpanish ? 'Pendiente' : 'Pending')}
+                        <div className="flex gap-6 text-xs font-sans text-gray-600 uppercase tracking-widest font-bold">
+                          <span>
+                            {isSpanish ? 'ESTADO: ' : 'STATUS: '} 
+                            <span className={
+                              assignment.status === 'submitted' ? 'text-green-700' :
+                              assignment.status === 'in-progress' ? 'text-blue-700' : 'text-[#e86125]'
+                            }>
+                              {assignment.status}
                             </span>
                           </span>
-                          <span className="text-gray-600">
-                            {isSpanish ? 'Ronda:' : 'Round:'} {assignment.round}
-                          </span>
+                          <span>{isSpanish ? 'RONDA: ' : 'ROUND: '} {assignment.round}</span>
                         </div>
                       </div>
                     ))}
@@ -1623,40 +1406,19 @@ const safetyTimeoutRef = useRef(null);
           )}
 
           {/* DESK REVIEW */}
-          {activeTab === 'deskreview' && (
-            <motion.section
-              key="deskreview"
-              initial={{ opacity: 0, x: -20 }} 
-              animate={{ opacity: 1, x: 0 }} 
-              exit={{ opacity: 0, x: 20 }}
-            >
-              <DeskReviewPanel user={userData} />
-            </motion.section>
-          )}
-
+          {activeTab === 'deskreview' && <motion.section key="deskreview"><DeskReviewPanel user={userData} /></motion.section>}
+          
           {/* ASIGNAR ARTÍCULOS */}
-          {activeTab === 'assignment' && (
-            <motion.section
-              key="assignment"
-              initial={{ opacity: 0, x: -20 }} 
-              animate={{ opacity: 1, x: 0 }} 
-              exit={{ opacity: 0, x: 20 }}
-            >
-              <ArticleAssignmentPanel user={userData} />
-            </motion.section>
-          )}
-
+          {activeTab === 'assignment' && <motion.section key="assignment"><ArticleAssignmentPanel user={userData} /></motion.section>}
+          
           {/* CALENDARIO */}
           {activeTab === 'calendar' && (
-            <motion.section
-              key="calendar"
-              initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
-            >
+            <motion.section key="calendar">
               <CalendarComponent 
                 events={calendarEvents} 
                 onSelectEvent={(e) => {
                   if (e.resource?.targetType === 'reviewerAssignment') {
-                    navigate(`/reviewer-workspace/${e.resource.targetId}`); // <- AHORA USA NAVIGATE
+                    navigate(`/reviewer-workspace/${e.resource.targetId}`);
                   }
                 }} 
               />
@@ -1665,12 +1427,7 @@ const safetyTimeoutRef = useRef(null);
 
           {/* ENVIAR MANUSCRITO */}
           {activeTab === 'submit' && (
-            <motion.section
-              key="submit"
-              initial={{ opacity: 0, x: -20 }} 
-              animate={{ opacity: 1, x: 0 }} 
-              exit={{ opacity: 0, x: 20 }}
-            >
+            <motion.section key="submit">
               <SubmissionForm 
                 user={userData} 
                 onSuccess={(submissionId) => {
@@ -1683,18 +1440,12 @@ const safetyTimeoutRef = useRef(null);
 
           {/* PANEL DIRECTIVO */}
           {activeTab === 'director' && (
-            <motion.section
-              key="director"
-              initial={{ opacity: 0, x: -20 }} 
-              animate={{ opacity: 1, x: 0 }} 
-              exit={{ opacity: 0, x: 20 }}
-            >
+            <motion.section key="director">
               <DirectorPanel 
                 user={userData} 
                 isExpanded={isDirectorPanelExpanded} 
                 onToggle={() => setIsDirectorPanelExpanded(!isDirectorPanelExpanded)} 
               />
-              
               {(isAssignmentManager || isDirector) && (
                 <div className="mt-8">
                   <ArticleAssignmentPanel user={userData} />
@@ -1705,12 +1456,7 @@ const safetyTimeoutRef = useRef(null);
 
           {/* PANEL EDITOR JEFE */}
           {activeTab === 'chief' && (
-            <motion.section
-              key="chief"
-              initial={{ opacity: 0, x: -20 }} 
-              animate={{ opacity: 1, x: 0 }} 
-              exit={{ opacity: 0, x: 20 }}
-            >
+            <motion.section key="chief">
               <AssignSection 
                 user={userData} 
                 isExpanded={isChiefEditorPanelExpanded} 
@@ -1720,99 +1466,61 @@ const safetyTimeoutRef = useRef(null);
           )}
 
           {/* TAREAS */}
-          {activeTab === 'tasks' && (
-            <motion.section
-              key="tasks"
-              initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
-            >
-              <TaskSection user={userData} />
-            </motion.section>
-          )}
-
+          {activeTab === 'tasks' && <motion.section key="tasks"><TaskSection user={userData} /></motion.section>}
+          
           {/* NOTICIAS */}
-          {activeTab === 'news' && (
-            <motion.section
-              key="news"
-              initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
-            >
-              <NewsUploadSection />
-            </motion.section>
-          )}
-
+          {activeTab === 'news' && <motion.section key="news"><NewsUploadSection /></motion.section>}
+          
           {/* ADMISIONES */}
-          {activeTab === 'admissions' && (
-            <motion.section
-              key="admissions"
-              initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
-            >
-              <Admissions />
-            </motion.section>
-          )}
-
+          {activeTab === 'admissions' && <motion.section key="admissions"><Admissions /></motion.section>}
+          
           {/* GESTIÓN DE USUARIOS */}
-          {activeTab === 'usermanagement' && (
-            <motion.section
-              key="usermanagement"
-              initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
-            >
-              <UserManagement users={users} />
-            </motion.section>
-          )}
+          {activeTab === 'usermanagement' && <motion.section key="users"><UserManagement users={users} /></motion.section>}
         </AnimatePresence>
       </main>
 
-      {/* MODAL DE RECLAMACIÓN DE PERFIL */}
+      {/* MODAL DE RECLAMACIÓN DE PERFIL (Re-estilizado) */}
       <AnimatePresence>
         {showClaimModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
-            onClick={() => setShowClaimModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl"
-              onClick={e => e.stopPropagation()}
+          <div className="fixed inset-0 z-50 bg-[#004b87]/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              exit={{ scale: 0.95, opacity: 0 }} 
+              className="bg-white rounded-md shadow-2xl max-w-lg w-full p-10 font-sans border-t-8 border-t-[#e86125]"
             >
               {claimStatus === 'checking' && (
                 <div className="text-center py-8">
-                  <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-amber-200 border-t-amber-600 mb-4"></div>
-                  <h3 className="font-serif text-xl font-bold mb-2">
-                    {isSpanish ? 'Verificando...' : 'Checking...'}
-                  </h3>
-                  <p className="text-gray-600">
-                    {isSpanish ? 'Buscando publicaciones asociadas a tu email.' : 'Looking for publications associated with your email.'}
+                  <div className="w-8 h-8 border-2 border-gray-200 border-t-[#004b87] rounded-full animate-spin mx-auto mb-4" />
+                  <p className="text-xs tracking-widest font-bold text-gray-500 uppercase">
+                    {isSpanish ? 'Consultando base de datos...' : 'Querying database...'}
                   </p>
                 </div>
               )}
-              
+
               {claimStatus === 'available' && anonymousProfile && (
                 <>
-                  <h3 className="font-serif text-2xl font-bold mb-4">
+                  <h3 className="font-serif text-2xl font-bold text-[#004b87] mb-4">
                     {isSpanish ? '¡Perfil encontrado!' : 'Profile found!'}
                   </h3>
-                  <div className="bg-amber-50 rounded-2xl p-6 mb-6">
-                    <p className="text-amber-900 font-semibold mb-2">
+                  <div className="bg-[#f9fafb] border border-gray-200 rounded-md p-6 mb-6">
+                    <p className="text-[#2b2b2b] font-semibold mb-2 text-sm">
                       {isSpanish ? 'Hemos encontrado un perfil como autor en los siguientes artículos:' : 'We found a profile as author in the following articles:'}
                     </p>
-                    <ul className="list-disc list-inside text-amber-800 space-y-1">
+                    <ul className="list-disc list-inside text-[#666] space-y-1">
                       {anonymousProfile.articles?.map((article, idx) => (
-                        <li key={idx} className="text-sm">{article.title}</li>
+                        <li key={idx} className="text-xs">{article.title}</li>
                       ))}
                     </ul>
                   </div>
-                  <p className="text-gray-700 mb-6">
+                  <p className="text-[#2b2b2b] mb-6 text-sm leading-relaxed">
                     {isSpanish 
                       ? 'Al reclamar este perfil, todos estos artículos se vincularán automáticamente a tu cuenta y aparecerán en tu perfil público.'
                       : 'By claiming this profile, all these articles will be automatically linked to your account and will appear in your public profile.'}
                   </p>
                   
                   {claimError && (
-                    <div className="bg-red-50 text-red-600 p-4 rounded-2xl mb-6 text-sm">
+                    <div className="bg-[#fdf6f3] text-[#e86125] p-4 rounded-md mb-6 text-xs border border-[#e86125]/30">
                       {claimError}
                     </div>
                   )}
@@ -1821,11 +1529,11 @@ const safetyTimeoutRef = useRef(null);
                     <button
                       onClick={handleClaimProfile}
                       disabled={claimStatus === 'claiming'}
-                      className="flex-1 py-4 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-300 text-white font-bold rounded-2xl transition-all"
+                      className="flex-1 py-3 bg-[#004b87] hover:bg-[#003666] disabled:bg-gray-300 text-white font-bold text-xs uppercase tracking-widest rounded-md transition-all"
                     >
                       {claimStatus === 'claiming' ? (
                         <span className="flex items-center justify-center gap-2">
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                           {isSpanish ? 'Reclamando...' : 'Claiming...'}
                         </span>
                       ) : (
@@ -1838,7 +1546,7 @@ const safetyTimeoutRef = useRef(null);
                         setClaimStatus('idle');
                         setAnonymousProfile(null);
                       }}
-                      className="flex-1 py-4 border border-gray-300 hover:bg-gray-50 font-bold rounded-2xl transition-all"
+                      className="flex-1 py-3 border border-gray-300 hover:bg-gray-50 font-bold text-xs uppercase tracking-widest rounded-md transition-all text-[#2b2b2b]"
                     >
                       {isSpanish ? 'Cancelar' : 'Cancel'}
                     </button>
@@ -1848,43 +1556,59 @@ const safetyTimeoutRef = useRef(null);
               
               {claimStatus === 'success' && (
                 <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-12 h-12 bg-[#eef3f7] rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-6 h-6 text-[#004b87]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
-                  <h3 className="font-serif text-xl font-bold text-green-700 mb-2">
+                  <h3 className="font-serif text-xl font-bold text-[#004b87] mb-2">
                     {isSpanish ? '¡Perfil reclamado con éxito!' : 'Profile claimed successfully!'}
                   </h3>
-                  <p className="text-gray-600">
+                  <p className="text-[#666] text-sm">
                     {isSpanish 
-                      ? 'Tus publicaciones se han vinculado a tu cuenta. El sitio se actualizará en los próximos minutos.'
-                      : 'Your publications have been linked to your account. The site will update in the next few minutes.'}
+                      ? 'Tus publicaciones se han vinculado a tu cuenta.'
+                      : 'Your publications have been linked to your account.'}
                   </p>
                 </div>
               )}
               
               {claimStatus === 'error' && claimStatus !== 'claiming' && (
                 <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-12 h-12 bg-[#fdf6f3] rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-6 h-6 text-[#e86125]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </div>
-                  <h3 className="font-serif text-xl font-bold text-red-700 mb-2">
+                  <h3 className="font-serif text-xl font-bold text-[#e86125] mb-2">
                     {isSpanish ? 'Error al reclamar' : 'Error claiming profile'}
                   </h3>
-                  <p className="text-gray-600 mb-4">{claimError || (isSpanish ? 'Intenta nuevamente más tarde' : 'Please try again later')}</p>
+                  <p className="text-[#666] mb-4 text-sm">{claimError || (isSpanish ? 'Intenta nuevamente más tarde' : 'Please try again later')}</p>
                   <button
                     onClick={() => setShowClaimModal(false)}
-                    className="px-6 py-3 bg-gray-900 text-white rounded-xl font-bold"
+                    className="px-6 py-2.5 bg-[#2b2b2b] text-white rounded-md font-bold text-xs uppercase tracking-widest"
+                  >
+                    {isSpanish ? 'Cerrar' : 'Close'}
+                  </button>
+                </div>
+              )}
+
+              {claimStatus === 'not-available' && (
+                <div className="text-center py-8">
+                  <p className="text-[#666] text-sm">
+                    {isSpanish 
+                      ? 'No encontramos publicaciones anteriores asociadas a tu email.'
+                      : 'We did not find previous publications associated with your email.'}
+                  </p>
+                  <button
+                    onClick={() => setShowClaimModal(false)}
+                    className="mt-6 px-6 py-2.5 bg-[#2b2b2b] text-white rounded-md font-bold text-xs uppercase tracking-widest"
                   >
                     {isSpanish ? 'Cerrar' : 'Close'}
                   </button>
                 </div>
               )}
             </motion.div>
-          </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>
