@@ -1,5 +1,5 @@
 // src/components/SubmissionForm.js (DISEÑO EDITORIAL - LÓGICA INTACTA)
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { auth } from '../firebase';
 import { useLanguage } from '../hooks/useLanguage';
