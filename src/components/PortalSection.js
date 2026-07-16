@@ -605,7 +605,20 @@ const UserManagement = ({ users: initialUsers }) => {
       setIsLoading(false);
     }
   }, [initialUsers]);
+  useEffect(() => {
+    const handleLinkClick = (e) => {
+      const target = e.target.closest('a[href^="/login"]');
+      if (target) {
+        e.preventDefault();
+        const path = target.getAttribute('href').replace(/^\/login\//, '');
+        const tabId = Object.keys(tabRoutes).find(key => tabRoutes[key] === path) || 'profile';
+        handleTabChange(tabId, e);
+      }
+    };
 
+    document.addEventListener('click', handleLinkClick);
+    return () => document.removeEventListener('click', handleLinkClick);
+  }, [location.pathname]); // Dependencia: location.pathname
   // Virtualización simple para mejorar rendimiento
   const filteredUsers = useMemo(() => {
     if (!users || users.length === 0) return [];
@@ -1015,25 +1028,25 @@ const safetyTimeoutRef = useRef(null);
     }
   }, [location.pathname]);
 
-  // Función para cambiar de pestaña y navegar (CORREGIDA)
 // Función para cambiar de pestaña y navegar (CORREGIDA)
 const handleTabChange = (tabId, event) => {
-  // Prevenir cualquier comportamiento por defecto del navegador
+  // IMPORTANTE: Prevenir el comportamiento por defecto del navegador
   if (event) {
     event.preventDefault();
   }
   
+  // Actualizar el estado local
   setActiveTab(tabId);
   const route = tabRoutes[tabId] || '';
   
-  // IMPORTANTE: Preservar el prefijo de idioma actual
+  // Preservar el prefijo de idioma
   const currentPath = location.pathname;
   const langPrefix = currentPath.match(/^\/(es|en)\//) ? currentPath.match(/^\/(es|en)\//)[0] : '/';
   
-  // Construir la nueva ruta con el prefijo de idioma correcto
+  // Construir la nueva ruta
   const newPath = route ? `${langPrefix}login/${route}` : `${langPrefix}login`;
   
-  // Usar navigate de React Router para navegación del lado del cliente
+  // Usar navigate de React Router (NO window.location)
   navigate(newPath, { replace: true });
 };
   // Snapshot de usuario
@@ -1343,23 +1356,25 @@ const handleTabChange = (tabId, event) => {
       )}
 
       {/* TABS NAVEGACIÓN */}
-      <nav className="flex overflow-x-auto mb-10 border-b border-gray-200 gap-8 whitespace-nowrap">
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            type="button" // <- IMPORTANTE: Especificar type="button"
-            onClick={(e) => handleTabChange(tab.id, e)} // <- Pasamos el evento
-            className={`pb-4 text-[11px] font-bold uppercase tracking-widest transition-colors relative flex-shrink-0 ${
-              activeTab === tab.id ? 'text-[#004b87]' : 'text-gray-500 hover:text-[#2b2b2b]'
-            }`}
-          >
-            {tab.label}
-            {activeTab === tab.id && (
-              <motion.div layoutId="activeTab" className="absolute bottom-[-1px] left-0 right-0 h-0.5 bg-[#e86125]" />
-            )}
-          </button>
-        ))}
-      </nav>
+
+        <nav className="flex overflow-x-auto mb-10 border-b border-gray-200 gap-8 whitespace-nowrap">
+  {tabs.map(tab => (
+    <button
+      key={tab.id}
+      type="button" // <- IMPORTANTE: type="button"
+      onClick={(e) => handleTabChange(tab.id, e)} // <- Pasamos el evento
+      className={`pb-4 text-[11px] font-bold uppercase tracking-widest transition-colors relative flex-shrink-0 ${
+        activeTab === tab.id ? 'text-[#004b87]' : 'text-gray-500 hover:text-[#2b2b2b]'
+      }`}
+    >
+      {tab.label}
+      {activeTab === tab.id && (
+        <motion.div layoutId="activeTab" className="absolute bottom-[-1px] left-0 right-0 h-0.5 bg-[#e86125]" />
+      )}
+    </button>
+  ))}
+</nav>
+    
 
       <main>
         <AnimatePresence mode="wait">
@@ -1383,7 +1398,7 @@ const handleTabChange = (tabId, event) => {
                       : 'If you published in past volumes of the journal, you can associate those metadata to this digital profile.'}
                   </p>
                   <button
-                    onClick={() => { setShowClaimModal(true); checkForAnonymousProfile(); }}
+                    onClick={() => { setShowClaimModal(true); checkForAnonymousProfileLocal(); }}
                     className="px-6 py-2.5 bg-[#f4f5f7] border border-gray-200 hover:border-[#004b87] text-[#004b87] font-bold text-xs uppercase tracking-widest rounded transition-all"
                   >
                     {isSpanish ? 'Verificar Historial' : 'Verify History'}
