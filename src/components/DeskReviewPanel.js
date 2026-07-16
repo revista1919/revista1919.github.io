@@ -729,6 +729,7 @@ const DeskReviewPanel = ({ user }) => {
             {selectedTask ? (
               <DeskReviewTab
                 task={selectedTask}
+                key={`${selectedTask?.id}-${selectedRound}`}
                 user={user}
                 onComplete={handleCompleteDeskReview}
                 loading={reviewLoading}

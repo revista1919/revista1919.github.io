@@ -40,7 +40,47 @@ export const ReviewerManagementTab = ({
       </span>
     );
   };
-
+// src/utils/decodeHelpers.js
+export const decodeBase64IfNeeded = (text) => {
+  if (!text || typeof text !== 'string') return text;
+  
+  // Si el texto está vacío o solo tiene espacios
+  if (text.trim() === '') return text;
+  
+  // Intentar decodificar base64 de manera segura
+  const tryDecodeBase64 = (str) => {
+    try {
+      // Decodificar el base64
+      const decoded = atob(str);
+      
+      // Verificar que el resultado sea texto utilizable
+      // (caracteres ASCII imprimibles, saltos de línea, tabs, o HTML)
+      const isText = /^[\x20-\x7E\r\n\t]*$/.test(decoded) || /<[^>]*>/.test(decoded);
+      
+      if (!isText || decoded.length === 0) {
+        return null;
+      }
+      
+      return decoded;
+    } catch (e) {
+      return null;
+    }
+  };
+  
+  // Limpiar el texto (remover espacios extra)
+  const cleanText = text.trim();
+  
+  // Verificar si parece base64 (caracteres válidos + longitud múltiplo de 4)
+  const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+  if (base64Regex.test(cleanText) && cleanText.length % 4 === 0) {
+    const decoded = tryDecodeBase64(cleanText);
+    if (decoded !== null) {
+      return decoded;
+    }
+  }
+  
+  return text;
+};
   const getRecommendationBadge = (recommendation) => {
     const recMap = {
       'accept': { bg: 'bg-emerald-50', text: 'text-emerald-700', icon: '✓', label: isSpanish ? 'Aceptar' : 'Accept' },
@@ -243,54 +283,55 @@ export const ReviewerManagementTab = ({
                       <div className="px-6 pb-6 pt-2 bg-slate-50/30">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                           {/* Comentarios al Autor */}
-                          {rev.commentsToAuthor && (
-                            <motion.div
-                              initial={{ opacity: 0, x: -20 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: 0.1 }}
-                              className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm"
-                            >
-                              <div className="flex items-center gap-2 mb-3">
-                                <div className="w-8 h-8 rounded-lg bg-sky-100 flex items-center justify-center">
-                                  <svg className="w-4 h-4 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                  </svg>
-                                </div>
-                                <h5 className="font-['Playfair_Display'] font-semibold text-[#0A1929] text-sm">
-                                  {isSpanish ? 'Comentarios al Autor' : 'Comments to Author'}
-                                </h5>
-                              </div>
-                              <div 
-                                className="prose prose-sm max-w-none text-slate-600 font-['Lora'] text-sm leading-relaxed"
-                                dangerouslySetInnerHTML={{ __html: rev.commentsToAuthor }}
-                              />
-                            </motion.div>
-                          )}
-                          
-                          {/* Comentarios al Editor */}
-                          {rev.commentsToEditor && (
-                            <motion.div
-                              initial={{ opacity: 0, x: -20 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: 0.2 }}
-                              className="bg-amber-50/50 rounded-xl p-4 border border-amber-200"
-                            >
-                              <div className="flex items-center gap-2 mb-3">
-                                <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
-                                  <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                  </svg>
-                                </div>
-                                <h5 className="font-['Playfair_Display'] font-semibold text-amber-800 text-sm">
-                                  {isSpanish ? 'Comentarios Confidenciales al Editor' : 'Confidential Comments to Editor'}
-                                </h5>
-                              </div>
-                              <div 
-                                className="prose prose-sm max-w-none text-amber-900/80 font-['Lora'] text-sm leading-relaxed italic"
-                                dangerouslySetInnerHTML={{ __html: rev.commentsToEditor }}
-                              />
-                            </motion.div>
-                          )}
+                          // En la sección de comentarios al autor (línea ~209)
+{rev.commentsToAuthor && (
+  <motion.div
+    initial={{ opacity: 0, x: -20 }}
+    animate={{ opacity: 1, x: 0 }}
+    transition={{ delay: 0.1 }}
+    className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm"
+  >
+    <div className="flex items-center gap-2 mb-3">
+      <div className="w-8 h-8 rounded-lg bg-sky-100 flex items-center justify-center">
+        <svg className="w-4 h-4 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+        </svg>
+      </div>
+      <h5 className="font-['Playfair_Display'] font-semibold text-[#0A1929] text-sm">
+        {isSpanish ? 'Comentarios al Autor' : 'Comments to Author'}
+      </h5>
+    </div>
+    <div 
+      className="prose prose-sm max-w-none text-slate-600 font-['Lora'] text-sm leading-relaxed"
+      dangerouslySetInnerHTML={{ __html: decodeBase64IfNeeded(rev.commentsToAuthor) }}
+    />
+  </motion.div>
+)}
+
+// En la sección de comentarios al editor (línea ~235)
+{rev.commentsToEditor && (
+  <motion.div
+    initial={{ opacity: 0, x: -20 }}
+    animate={{ opacity: 1, x: 0 }}
+    transition={{ delay: 0.2 }}
+    className="bg-amber-50/50 rounded-xl p-4 border border-amber-200"
+  >
+    <div className="flex items-center gap-2 mb-3">
+      <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
+        <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        </svg>
+      </div>
+      <h5 className="font-['Playfair_Display'] font-semibold text-amber-800 text-sm">
+        {isSpanish ? 'Comentarios Confidenciales al Editor' : 'Confidential Comments to Editor'}
+      </h5>
+    </div>
+    <div 
+      className="prose prose-sm max-w-none text-amber-900/80 font-['Lora'] text-sm leading-relaxed italic"
+      dangerouslySetInnerHTML={{ __html: decodeBase64IfNeeded(rev.commentsToEditor) }}
+    />
+  </motion.div>
+)}
                           
                           {/* Puntuaciones si existen */}
                           {rev.scores && Object.keys(rev.scores).length > 0 && (

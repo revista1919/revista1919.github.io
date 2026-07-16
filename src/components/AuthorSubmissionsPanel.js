@@ -17,6 +17,54 @@ import { useLanguage } from '../hooks/useLanguage';
 import { AuthorMetadataResponseTab } from './AuthorMetadataResponseTab';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+// src/components/AuthorSubmissionsPanel.js
+// Agregar esta función después de los imports y antes del componente
+
+/**
+ * Decodifica texto en base64 si es necesario
+ * @param {string} text - Texto que puede estar en base64
+ * @returns {string} Texto decodificado o el original
+ */
+const decodeBase64IfNeeded = (text) => {
+  if (!text || typeof text !== 'string') return text;
+  
+  // Si el texto está vacío o solo tiene espacios
+  if (text.trim() === '') return text;
+  
+  // Intentar decodificar base64 de manera segura
+  const tryDecodeBase64 = (str) => {
+    try {
+      // Decodificar el base64
+      const decoded = atob(str);
+      
+      // Verificar que el resultado sea texto utilizable
+      // (caracteres ASCII imprimibles, saltos de línea, tabs, o HTML)
+      const isText = /^[\x20-\x7E\r\n\t]*$/.test(decoded) || /<[^>]*>/.test(decoded);
+      
+      if (!isText || decoded.length === 0) {
+        return null;
+      }
+      
+      return decoded;
+    } catch (e) {
+      return null;
+    }
+  };
+  
+  // Limpiar el texto (remover espacios extra)
+  const cleanText = text.trim();
+  
+  // Verificar si parece base64 (caracteres válidos + longitud múltiplo de 4)
+  const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+  if (base64Regex.test(cleanText) && cleanText.length % 4 === 0) {
+    const decoded = tryDecodeBase64(cleanText);
+    if (decoded !== null) {
+      return decoded;
+    }
+  }
+  
+  return text;
+};
 /**
  * Convierte una URL de Google Docs en URL de descarga PDF
  * @param {string} docsUrl - URL del Google Docs
@@ -807,15 +855,24 @@ const AuthorSubmissionsPanel = ({ user }) => {
                                   )}
                                   
                                   {/* Comentarios */}
-                                  {review.commentsToAuthor && (
-                                    <div className="text-xs sm:text-sm text-slate-600 mt-2">
-                                      <p className="font-medium text-[#0A1929] mb-1">
-                                        {isSpanish ? 'Comentarios:' : 'Comments:'}
-                                      </p>
-                                      <div className="bg-slate-50 p-3 rounded-lg text-xs sm:text-sm" 
-                                           dangerouslySetInnerHTML={{ __html: review.commentsToAuthor.replace(/\n/g, '<br/>') }} />
-                                    </div>
-                                  )}
+                                  {/* Comentarios - CON DECODIFICACIÓN BASE64 */}
+{review.commentsToAuthor && (
+  <div className="text-xs sm:text-sm text-slate-600 mt-2">
+    <p className="font-medium text-[#0A1929] mb-1">
+      {isSpanish ? 'Comentarios:' : 'Comments:'}
+    </p>
+    <div className="bg-slate-50 p-3 rounded-lg text-xs sm:text-sm 
+                    [&_strong]:text-[#002147] [&_strong]:font-bold
+                    [&_em]:text-[#C0A86A] [&_em]:italic
+                    [&_u]:underline [&_u]:decoration-[#C0A86A]
+                    [&_ul]:list-disc [&_ul]:pl-4
+                    [&_ol]:list-decimal [&_ol]:pl-4
+                    [&_li]:text-slate-700" 
+         dangerouslySetInnerHTML={{ 
+           __html: decodeBase64IfNeeded(review.commentsToAuthor).replace(/\n/g, '<br/>') 
+         }} />
+  </div>
+)}
                                 </div>
                               ))}
                             </div>

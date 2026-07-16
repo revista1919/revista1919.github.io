@@ -141,25 +141,26 @@ export const DeskReviewTab = ({
     loadEditorialReview();
   }, [task.editorialReviewId]);
 
-  // Cargar la última revisión del submission
-  useEffect(() => {
+useEffect(() => {
+    let cancelled = false;
     const fetchLatestRevision = async () => {
       if (!task.submissionId) return;
       try {
         const versionsRef = collection(db, 'submissions', task.submissionId, 'versions');
         const q = query(versionsRef, where('type', '==', 'revision'), orderBy('uploadedAt', 'desc'), limit(1));
         const snapshot = await getDocs(q);
-        if (!snapshot.empty) {
+        if (!snapshot.empty && !cancelled) {
           const data = snapshot.docs[0].data();
           setLatestRevisionUrl(data.fileUrl);
           setLatestRevisionComment(data.revisionComment || null);
           setLatestRevisionNotes(data.notes || '');
         }
       } catch (error) {
-        console.error('Error fetching latest revision:', error);
+        if (!cancelled) console.error('Error fetching latest revision:', error);
       }
     };
     fetchLatestRevision();
+    return () => { cancelled = true; };
   }, [task.submissionId]);
 
   const handleSubmit = async () => {
