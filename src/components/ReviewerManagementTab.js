@@ -3,43 +3,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '../hooks/useLanguage';
-
-export const ReviewerManagementTab = ({
-  task,
-  invitations,
-  potentialReviewers,
-  selectedReviewerId,
-  setSelectedReviewerId,
-  searchTerm,
-  setSearchTerm,
-  onSendInvitation,
-  onProceedToDecision,
-  loading,
-  submittedReviews = []
-}) => {
-  const { language } = useLanguage();
-  const isSpanish = language === 'es';
-  const [expandedReview, setExpandedReview] = useState(null);
-  
-  const submittedCount = submittedReviews.length;
-  const requiredReviews = task?.requiredReviews || 2;
-  const canProceed = submittedCount >= requiredReviews;
-  
-  const getStatusBadge = (status) => {
-    const statusMap = {
-      'pending': { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', label: isSpanish ? 'Pendiente' : 'Pending' },
-      'accepted': { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', label: isSpanish ? 'Aceptada' : 'Accepted' },
-      'declined': { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200', label: isSpanish ? 'Rechazada' : 'Declined' },
-      'expired': { bg: 'bg-slate-50', text: 'text-slate-600', border: 'border-slate-200', label: isSpanish ? 'Expirada' : 'Expired' },
-      'submitted': { bg: 'bg-sky-50', text: 'text-sky-700', border: 'border-sky-200', label: isSpanish ? 'Completada' : 'Completed' }
-    };
-    const style = statusMap[status] || statusMap.pending;
-    return (
-      <span className={`${style.bg} ${style.text} ${style.border} px-3 py-1 rounded-full text-xs font-medium border`}>
-        {style.label}
-      </span>
-    );
-  };
 // src/utils/decodeHelpers.js
 export const decodeBase64IfNeeded = (text) => {
   if (!text || typeof text !== 'string') return text;
@@ -81,6 +44,43 @@ export const decodeBase64IfNeeded = (text) => {
   
   return text;
 };
+export const ReviewerManagementTab = ({
+  task,
+  invitations,
+  potentialReviewers,
+  selectedReviewerId,
+  setSelectedReviewerId,
+  searchTerm,
+  setSearchTerm,
+  onSendInvitation,
+  onProceedToDecision,
+  loading,
+  submittedReviews = []
+}) => {
+  const { language } = useLanguage();
+  const isSpanish = language === 'es';
+  const [expandedReview, setExpandedReview] = useState(null);
+  
+  const submittedCount = submittedReviews.length;
+  const requiredReviews = task?.requiredReviews || 2;
+  const canProceed = submittedCount >= requiredReviews;
+  
+  const getStatusBadge = (status) => {
+    const statusMap = {
+      'pending': { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', label: isSpanish ? 'Pendiente' : 'Pending' },
+      'accepted': { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', label: isSpanish ? 'Aceptada' : 'Accepted' },
+      'declined': { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200', label: isSpanish ? 'Rechazada' : 'Declined' },
+      'expired': { bg: 'bg-slate-50', text: 'text-slate-600', border: 'border-slate-200', label: isSpanish ? 'Expirada' : 'Expired' },
+      'submitted': { bg: 'bg-sky-50', text: 'text-sky-700', border: 'border-sky-200', label: isSpanish ? 'Completada' : 'Completed' }
+    };
+    const style = statusMap[status] || statusMap.pending;
+    return (
+      <span className={`${style.bg} ${style.text} ${style.border} px-3 py-1 rounded-full text-xs font-medium border`}>
+        {style.label}
+      </span>
+    );
+  };
+
   const getRecommendationBadge = (recommendation) => {
     const recMap = {
       'accept': { bg: 'bg-emerald-50', text: 'text-emerald-700', icon: '✓', label: isSpanish ? 'Aceptar' : 'Accept' },
