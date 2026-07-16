@@ -4,6 +4,9 @@ import { useLanguage } from '../hooks/useLanguage';
 import { useEditorialReview } from '../hooks/useEditorialReview';
 import { doc, getDoc, collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
+import { ReviewerManagementTab } from './ReviewerManagementTab';
+import { FinalDecisionTab } from './FinalDecisionTab';
+import { MetadataRefinementTab } from './MetadataRefinementTab';
 
 // ============ ICONOS SVG PROFESIONALES ============
 const Icons = {
@@ -27,7 +30,9 @@ const Icons = {
   Shield: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>,
   ArrowLeft: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>,
   Eye: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>,
-  Edit: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+  Edit: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>,
+  ClipboardCheck: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>,
+  Refresh: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
 };
 
 // Componente auxiliar para etiquetas de estado booleanas
@@ -69,7 +74,28 @@ const InfoField = ({ label, value, className = '' }) => (
   </div>
 );
 
-export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading, onBackToPanel }) => {
+export const DeskReviewTab = ({ 
+  task, 
+  user, 
+  onComplete, 
+  loading: externalLoading, 
+  onBackToPanel,
+  // Nuevas props para pestañas integradas
+  invitations = [],
+  potentialReviewers = [],
+  selectedReviewerId = '',
+  setSelectedReviewerId = () => {},
+  searchTerm = '',
+  setSearchTerm = () => {},
+  onSendInvitation = () => {},
+  onProceedToDecision = () => {},
+  inviteLoading = false,
+  isConsolidating = false,
+  submittedReviews = [],
+  reviewers = [],
+  isConsolidated = false,
+  onFinalDecision = () => {}
+}) => {
   const { language } = useLanguage();
   const isSpanish = language === 'es';
   
@@ -185,16 +211,6 @@ export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading
     return translations[value] || value || '—';
   };
 
-  const translateVocabulary = (value) => {
-    const translations = {
-        JEL: 'JEL Classification System',
-        MeSH: 'Medical Subject Headings',
-        ACM: 'ACM Computing Classification',
-        UNESCO: 'UNESCO Thesaurus',
-    };
-    return translations[value] || value || '—';
-  };
-
   const correspondingAuthor = submission.correspondingAuthor || 
     (submission.authors && submission.authors.length > 0 ? submission.authors.find(a => a.isCorresponding) || submission.authors[0] : null);
   const minorAuthorsList = submission.authors?.filter(a => a.isMinor) || [];
@@ -242,11 +258,11 @@ export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading
         </div>
       </div>
 
-      {/* ==================== PESTAÑAS DE NAVEGACIÓN ==================== */}
-      <div className="bg-white border-b border-gray-200 px-6 flex items-center gap-1 flex-shrink-0">
+      {/* ==================== PESTAÑAS DE NAVEGACIÓN UNIFICADAS ==================== */}
+      <div className="bg-white border-b border-gray-200 px-6 flex items-center gap-1 flex-shrink-0 overflow-x-auto">
         <button
           onClick={() => setActiveTab('review')}
-          className={`px-5 py-3 font-sans text-sm font-bold uppercase tracking-wider border-b-2 transition-colors ${
+          className={`px-5 py-3 font-sans text-sm font-bold uppercase tracking-wider border-b-2 transition-colors whitespace-nowrap ${
             activeTab === 'review'
               ? 'border-[#003b5c] text-[#003b5c]'
               : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
@@ -259,7 +275,7 @@ export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading
         </button>
         <button
           onClick={() => setActiveTab('article')}
-          className={`px-5 py-3 font-sans text-sm font-bold uppercase tracking-wider border-b-2 transition-colors ${
+          className={`px-5 py-3 font-sans text-sm font-bold uppercase tracking-wider border-b-2 transition-colors whitespace-nowrap ${
             activeTab === 'article'
               ? 'border-[#003b5c] text-[#003b5c]'
               : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
@@ -270,6 +286,60 @@ export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading
             {isSpanish ? 'Ver Artículo' : 'View Article'}
           </span>
         </button>
+        
+        {/* NUEVA PESTAÑA: Gestión de Revisores */}
+        <button
+          onClick={() => setActiveTab('reviewers')}
+          className={`px-5 py-3 font-sans text-sm font-bold uppercase tracking-wider border-b-2 transition-colors whitespace-nowrap ${
+            activeTab === 'reviewers'
+              ? 'border-[#003b5c] text-[#003b5c]'
+              : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+          }`}
+        >
+          <span className="flex items-center gap-2">
+            <Icons.Users />
+            {isSpanish ? 'Revisores' : 'Reviewers'}
+            {submittedReviews.length > 0 && (
+              <span className="bg-[#003b5c] text-white text-xs px-2 py-0.5 rounded-full">
+                {submittedReviews.length}
+              </span>
+            )}
+          </span>
+        </button>
+        
+        {/* NUEVA PESTAÑA: Decisión Final (condicional) */}
+        {(isConsolidated || task.status === 'awaiting_decision') && (
+          <button
+            onClick={() => setActiveTab('decision')}
+            className={`px-5 py-3 font-sans text-sm font-bold uppercase tracking-wider border-b-2 transition-colors whitespace-nowrap ${
+              activeTab === 'decision'
+                ? 'border-[#003b5c] text-[#003b5c]'
+                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <Icons.ClipboardCheck />
+              {isSpanish ? 'Decisión Final' : 'Final Decision'}
+            </span>
+          </button>
+        )}
+        
+        {/* NUEVA PESTAÑA: Refinar Metadatos (condicional) */}
+        {submission.status === 'accepted' && (
+          <button
+            onClick={() => setActiveTab('metadata')}
+            className={`px-5 py-3 font-sans text-sm font-bold uppercase tracking-wider border-b-2 transition-colors whitespace-nowrap ${
+              activeTab === 'metadata'
+                ? 'border-[#003b5c] text-[#003b5c]'
+                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <Icons.Refresh />
+              {isSpanish ? 'Refinar Metadatos' : 'Refine Metadata'}
+            </span>
+          </button>
+        )}
       </div>
 
       {/* ==================== CONTENIDO PRINCIPAL CON SCROLL ==================== */}
@@ -285,7 +355,7 @@ export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading
                 </div>
               )}
               
-              {/* ==================== ENCABEZADO EDITORIAL ==================== */}
+              {/* Encabezado editorial y formulario de decisión (EXACTAMENTE IGUAL que antes) */}
               <div className="bg-[#003b5c] text-white rounded-sm p-6 lg:p-8 shadow-sm">
                 <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
                   <div className="flex-1 min-w-0">
@@ -396,10 +466,8 @@ export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                
-                {/* ================= COLUMNA IZQUIERDA ================= */}
+                {/* Columna izquierda - información del autor y resumen */}
                 <div className="space-y-6">
-                  
                   <InfoBlock icon={Icons.User} title={isSpanish ? 'Autor de Correspondencia' : 'Corresponding Author'}>
                     {correspondingAuthor ? (
                       <div className="space-y-4">
@@ -511,9 +579,8 @@ export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading
                   </InfoBlock>
                 </div>
 
-                {/* ================= COLUMNA DERECHA ================= */}
+                {/* Columna derecha - ética, IA, financiamiento, etc. */}
                 <div className="space-y-6">
-                  
                   <InfoBlock icon={Icons.Scale} title={isSpanish ? 'Ética de la Investigación' : 'Research Ethics'}>
                     <div className="space-y-4">
                       <div className="flex items-center justify-between py-2 border-b border-slate-100">
@@ -679,7 +746,7 @@ export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading
                 </div>
               </div>
 
-              {/* ==================== DECLARACIONES ==================== */}
+              {/* Declaraciones */}
               {submission.declarations && Object.keys(submission.declarations).length > 0 && (
                 <InfoBlock icon={Icons.Shield} title={isSpanish ? 'Declaraciones Aceptadas' : 'Accepted Declarations'}>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-3 gap-x-6">
@@ -708,7 +775,7 @@ export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading
                 </InfoBlock>
               )}
 
-              {/* ==================== PANEL DE DECISIÓN EDITORIAL ==================== */}
+              {/* Panel de decisión editorial */}
               <div className="bg-slate-50 border border-slate-200 rounded-sm p-6 lg:p-8 mt-12 shadow-sm">
                 <h3 className="font-sans font-bold text-[#003b5c] text-lg uppercase tracking-wider mb-6 pb-4 border-b border-slate-200">
                   {isSpanish ? 'Resolución Editorial (Desk Review)' : 'Editorial Decision (Desk Review)'}
@@ -782,8 +849,7 @@ export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading
             </div>
           )}
 
-          {/* ==================== PESTAÑA: VER ARTÍCULO ==================== */}
-          {activeTab === 'article' && (
+           {activeTab === 'article' && (
             <div className="space-y-6 pb-8">
               {/* Selector de documento */}
               <div className="bg-white rounded-sm border border-gray-200 shadow-sm p-6">
@@ -1013,6 +1079,44 @@ export const DeskReviewTab = ({ task, user, onComplete, loading: externalLoading
                 </div>
               </div>
             </div>
+          )}
+
+          {/* ==================== NUEVAS PESTAÑAS INTEGRADAS ==================== */}
+          
+          {/* PESTAÑA: GESTIÓN DE REVISORES */}
+          {activeTab === 'reviewers' && (
+            <ReviewerManagementTab
+              task={task}
+              invitations={invitations}
+              potentialReviewers={potentialReviewers}
+              selectedReviewerId={selectedReviewerId}
+              setSelectedReviewerId={setSelectedReviewerId}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              onSendInvitation={onSendInvitation}
+              onProceedToDecision={onProceedToDecision}
+              loading={inviteLoading || isConsolidating}
+              submittedReviews={submittedReviews}
+            />
+          )}
+
+          {/* PESTAÑA: DECISIÓN FINAL */}
+          {activeTab === 'decision' && (
+            <FinalDecisionTab
+              task={task}
+              reviewers={[...submittedReviews, ...reviewers.filter(r => r.status === 'submitted')]}
+              onSubmitDecision={onFinalDecision}
+              loading={externalLoading}
+            />
+          )}
+
+          {/* PESTAÑA: REFINAR METADATOS */}
+          {activeTab === 'metadata' && (
+            <MetadataRefinementTab
+              submission={submission}
+              user={user}
+              onComplete={() => {}}
+            />
           )}
           
         </div>
