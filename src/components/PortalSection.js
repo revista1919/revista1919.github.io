@@ -605,20 +605,7 @@ const UserManagement = ({ users: initialUsers }) => {
       setIsLoading(false);
     }
   }, [initialUsers]);
-  useEffect(() => {
-    const handleLinkClick = (e) => {
-      const target = e.target.closest('a[href^="/login"]');
-      if (target) {
-        e.preventDefault();
-        const path = target.getAttribute('href').replace(/^\/login\//, '');
-        const tabId = Object.keys(tabRoutes).find(key => tabRoutes[key] === path) || 'profile';
-        handleTabChange(tabId, e);
-      }
-    };
 
-    document.addEventListener('click', handleLinkClick);
-    return () => document.removeEventListener('click', handleLinkClick);
-  }, [location.pathname]); // Dependencia: location.pathname
   // Virtualización simple para mejorar rendimiento
   const filteredUsers = useMemo(() => {
     if (!users || users.length === 0) return [];
@@ -1000,7 +987,7 @@ const safetyTimeoutRef = useRef(null);
     tasks: 'tasks',
     news: 'news',
     admissions: 'admissions',
-    usermanagement: 'users'
+    users: 'users'
   };
 
   // Pestañas actualizadas para el nuevo sistema
@@ -1017,7 +1004,7 @@ const safetyTimeoutRef = useRef(null);
     { id: 'tasks', label: isSpanish ? 'TAREAS' : 'TASKS', roles: ['Encargado de Redes Sociales', 'Responsable de Desarrollo Web'], path: 'tasks' },
     { id: 'news', label: isSpanish ? 'NOTICIAS' : 'NEWS', roles: ['Director General'], path: 'news' },
     { id: 'admissions', label: isSpanish ? 'ADMISIONES' : 'ADMISSIONS', roles: ['Director General'], path: 'admissions' },
-    { id: 'usermanagement', label: isSpanish ? 'USUARIOS' : 'USERS', roles: ['Director General'], path: 'users' },
+    { id: 'users', label: isSpanish ? 'USUARIOS' : 'USERS', roles: ['Director General'], path: 'users' },
   ].filter(tab => tab.roles.includes('any') || tab.roles.some(role => userRoles.includes(role)));
 
   // Sincronizar la ruta con la pestaña activa
@@ -1568,7 +1555,11 @@ const handleTabChange = (tabId, event) => {
           {activeTab === 'admissions' && <motion.section key="admissions"><Admissions /></motion.section>}
           
           {/* GESTIÓN DE USUARIOS */}
-          {activeTab === 'usermanagement' && <motion.section key="users"><UserManagement users={users} /></motion.section>}
+          {activeTab === 'users' && (
+  <motion.section key="users">
+    <UserManagement users={users} />
+  </motion.section>
+)}
         </AnimatePresence>
       </main>
 
