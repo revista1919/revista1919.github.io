@@ -1,324 +1,197 @@
 // src/components/AuthorSubmissionsPanel.js
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { db, auth, submitRevision } from '../firebase';
+import { db, submitRevision } from '../firebase';
 import { 
   collection, 
   query, 
   where, 
-  onSnapshot, 
-  doc, 
-  updateDoc, 
-  serverTimestamp, 
-  addDoc,
-  getDoc  // ⭐ AGREGAR: Para obtener documentos individuales
+  onSnapshot
 } from 'firebase/firestore';
 import { useLanguage } from '../hooks/useLanguage';
 import { AuthorMetadataResponseTab } from './AuthorMetadataResponseTab';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-// src/components/AuthorSubmissionsPanel.js
-// Agregar esta función después de los imports y antes del componente
 
-/**
- * Decodifica texto en base64 si es necesario
- * @param {string} text - Texto que puede estar en base64
- * @returns {string} Texto decodificado o el original
- */
+// ================= ICONOS SVG ELEGANTES =================
+const Icons = {
+  Document: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
+  Inbox: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>,
+  Users: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>,
+  Alert: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>,
+  Check: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 13l4 4L19 7" /></svg>,
+  ArrowLeft: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>,
+  Download: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>,
+  Clock: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+  Tag: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>,
+  Globe: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+  Database: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 7v10c0 2 1.5 3.5 4 4.5s5.5 1 8 0 4-2.5 4-4.5V7c0 2-1.5 3.5-4 4.5S10.5 12.5 8 11.5 4 9 4 7zm0 5c0 2 1.5 3.5 4 4.5s5.5 1 8 0 4-2.5 4-4.5M4 7c0 2 1.5 3.5 4 4.5S13.5 12.5 16 11.5 20 9 20 7 18.5 3.5 16 2.5 10.5 1.5 8 2.5 4 5 4 7z" /></svg>,
+  Shield: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>,
+  Robot: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>,
+  Money: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+  User: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
+  Email: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>,
+  Building: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>,
+  Key: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>,
+  File: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+};
+
+// ================= FUNCIONES UTILITARIAS =================
 const decodeBase64IfNeeded = (text) => {
   if (!text || typeof text !== 'string') return text;
-  
-  // Si el texto está vacío o solo tiene espacios
   if (text.trim() === '') return text;
-  
-  // Intentar decodificar base64 de manera segura
   const tryDecodeBase64 = (str) => {
     try {
-      // Decodificar el base64
       const decoded = atob(str);
-      
-      // Verificar que el resultado sea texto utilizable
-      // (caracteres ASCII imprimibles, saltos de línea, tabs, o HTML)
       const isText = /^[\x20-\x7E\r\n\t]*$/.test(decoded) || /<[^>]*>/.test(decoded);
-      
-      if (!isText || decoded.length === 0) {
-        return null;
-      }
-      
+      if (!isText || decoded.length === 0) return null;
       return decoded;
-    } catch (e) {
-      return null;
-    }
+    } catch (e) { return null; }
   };
-  
-  // Limpiar el texto (remover espacios extra)
   const cleanText = text.trim();
-  
-  // Verificar si parece base64 (caracteres válidos + longitud múltiplo de 4)
   const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
   if (base64Regex.test(cleanText) && cleanText.length % 4 === 0) {
     const decoded = tryDecodeBase64(cleanText);
-    if (decoded !== null) {
-      return decoded;
-    }
+    if (decoded !== null) return decoded;
   }
-  
   return text;
 };
-/**
- * Convierte una URL de Google Docs en URL de descarga PDF
- * @param {string} docsUrl - URL del Google Docs
- * @returns {string} URL de exportación PDF
- */
+
 const getDocsExportUrl = (docsUrl) => {
   if (!docsUrl) return null;
-  
-  // Extraer el ID del documento de la URL
   const match = docsUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  if (match && match[1]) {
-    return `https://docs.google.com/document/d/${match[1]}/export?format=pdf`;
-  }
-  
-  // Si es una URL de Drive, intentar extraer ID
+  if (match && match[1]) return `https://docs.google.com/document/d/${match[1]}/export?format=pdf`;
   const driveMatch = docsUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-  if (driveMatch && driveMatch[1]) {
-    return `https://docs.google.com/document/d/${driveMatch[1]}/export?format=pdf`;
-  }
-  
+  if (driveMatch && driveMatch[1]) return `https://docs.google.com/document/d/${driveMatch[1]}/export?format=pdf`;
   return null;
 };
-/**
- * Convierte una URL de Google Docs en URL de descarga DOCX
- * @param {string} docsUrl - URL del Google Docs
- * @returns {string} URL de exportación DOCX
- */
+
 const getDocsExportDocxUrl = (docsUrl) => {
   if (!docsUrl) return null;
-  
-  // Extraer el ID del documento de la URL
   const match = docsUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  if (match && match[1]) {
-    return `https://docs.google.com/document/d/${match[1]}/export?format=docx`;
-  }
-  
-  // Si es una URL de Drive, intentar extraer ID
+  if (match && match[1]) return `https://docs.google.com/document/d/${match[1]}/export?format=docx`;
   const driveMatch = docsUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-  if (driveMatch && driveMatch[1]) {
-    return `https://docs.google.com/document/d/${driveMatch[1]}/export?format=docx`;
-  }
-  
+  if (driveMatch && driveMatch[1]) return `https://docs.google.com/document/d/${driveMatch[1]}/export?format=docx`;
   return null;
 };
-const OXFORD_COLORS = {
-  darkBlue: '#002147',
-  gold: '#C0A86A',
-  black: '#050505',
-  softGray: '#F8F9FB',
-  border: '#E5E9F0'
-};
 
+// ================= ESTADOS DE ENVÍO =================
 const SUBMISSION_STATES = {
   'submitted': { 
-    es: 'Enviado', 
-    en: 'Submitted',
-    color: 'bg-blue-50 text-blue-800',
-    icon: '◈',
-    description: { 
-      es: 'Tu artículo ha sido recibido y está en espera de revisión editorial',
-      en: 'Your article has been received and is awaiting editorial review'
-    }
+    es: 'Enviado', en: 'Submitted', 
+    color: 'bg-slate-50 text-slate-700 border-slate-200', 
+    icon: '◈', 
+    description: { es: 'Manuscrito recibido. En espera de asignación editorial.', en: 'Manuscript received. Awaiting editorial assignment.' } 
   },
   'in-desk-review': { 
-    es: 'En revisión editorial', 
-    en: 'In desk review',
-    color: 'bg-purple-50 text-purple-800',
-    icon: '⌬',
-    description: { 
-      es: 'Un editor está revisando tu artículo',
-      en: 'An editor is reviewing your article'
-    }
+    es: 'Revisión Editorial', en: 'Desk Review', 
+    color: 'bg-indigo-50 text-indigo-700 border-indigo-200', 
+    icon: '⌬', 
+    description: { es: 'Evaluación preliminar por el comité editorial.', en: 'Preliminary evaluation by the editorial committee.' } 
   },
   'desk-review-rejected': { 
-    es: 'Rechazado en revisión editorial', 
-    en: 'Rejected in desk review',
-    color: 'bg-red-50 text-red-800',
-    icon: '✕',
-    description: { 
-      es: 'El artículo no pasó la revisión editorial inicial',
-      en: 'The article did not pass initial editorial review'
-    }
+    es: 'Rechazo Editorial', en: 'Desk Reject', 
+    color: 'bg-rose-50 text-rose-700 border-rose-200', 
+    icon: '✕', 
+    description: { es: 'El manuscrito no superó los criterios iniciales de la revista.', en: 'The manuscript did not meet the initial criteria of the journal.' } 
   },
   'in-reviewer-selection': { 
-    es: 'Seleccionando revisores', 
-    en: 'Selecting reviewers',
-    color: 'bg-amber-50 text-amber-800',
-    icon: '⚇',
-    description: { 
-      es: 'El equipo editorial está seleccionando revisores para tu artículo',
-      en: 'The editorial team is selecting reviewers for your article'
-    }
+    es: 'Asignando Revisores', en: 'Assigning Reviewers', 
+    color: 'bg-sky-50 text-sky-700 border-sky-200', 
+    icon: '⚇', 
+    description: { es: 'El equipo editorial está identificando pares evaluadores idóneos.', en: 'The editorial team is identifying suitable peer reviewers.' } 
   },
   'awaiting-reviewer-responses': { 
-    es: 'Esperando respuesta de revisores', 
-    en: 'Awaiting reviewer responses',
-    color: 'bg-orange-50 text-orange-800',
-    icon: '⌛',
-    description: { 
-      es: 'Los revisores están decidiendo si aceptan revisar tu artículo',
-      en: 'Reviewers are deciding whether to accept reviewing your article'
-    }
+    es: 'Invitaciones Enviadas', en: 'Invitations Sent', 
+    color: 'bg-blue-50 text-blue-700 border-blue-200', 
+    icon: '⌛', 
+    description: { es: 'Esperando confirmación de los revisores invitados.', en: 'Awaiting confirmation from invited reviewers.' } 
   },
   'in-peer-review': { 
-    es: 'En revisión por pares', 
-    en: 'In peer review',
-    color: 'bg-indigo-50 text-indigo-800',
-    icon: '✎',
-    description: { 
-      es: 'Los revisores están evaluando tu artículo',
-      en: 'Reviewers are evaluating your article'
-    }
+    es: 'Revisión por Pares', en: 'Peer Review', 
+    color: 'bg-purple-50 text-purple-700 border-purple-200', 
+    icon: '✎', 
+    description: { es: 'Evaluación científica en curso por pares ciegos.', en: 'Scientific evaluation in progress by blind peers.' } 
   },
-  'awaiting-editor-decision': {
-    es: 'Esperando decisión del editor', 
-    en: 'Awaiting editor decision',
-    color: 'bg-violet-50 text-violet-800',
-    icon: '⚖️',
-    description: { 
-      es: 'Las revisiones están completadas. El editor tomará una decisión final pronto',
-      en: 'Reviews are complete. The editor will make a final decision soon'
-    }
+  'awaiting-editor-decision': { 
+    es: 'Decisión Pendiente', en: 'Pending Decision', 
+    color: 'bg-violet-50 text-violet-700 border-violet-200', 
+    icon: '⚖️', 
+    description: { es: 'Dictámenes recibidos. El editor está formulando la resolución final.', en: 'Reviews received. The editor is formulating the final resolution.' } 
   },
   'revisions-requested': { 
-    es: 'Revisiones solicitadas', 
-    en: 'Revisions requested',
-    color: 'bg-amber-50 text-amber-800',
-    icon: '✎',
-    description: { 
-      es: 'El editor ha solicitado cambios en tu artículo. Por favor, sube una versión revisada.',
-      en: 'The editor has requested changes to your article. Please upload a revised version.'
-    }
+    es: 'Requiere Revisiones', en: 'Revisions Required', 
+    color: 'bg-amber-50 text-amber-700 border-amber-300', 
+    icon: '✎', 
+    description: { es: 'Se requiere una versión corregida del manuscrito. Por favor, revise las indicaciones.', en: 'A corrected version of the manuscript is required. Please review the instructions.' } 
   },
   'minor-revision-required': { 
-    es: 'Revisiones menores requeridas', 
-    en: 'Minor revisions required',
-    color: 'bg-yellow-50 text-yellow-800',
-    icon: '✎',
-    description: { 
-      es: 'Se requieren cambios menores antes de la aceptación',
-      en: 'Minor changes are required before acceptance'
-    }
+    es: 'Revisión Menor', en: 'Minor Revision', 
+    color: 'bg-amber-50 text-amber-700 border-amber-300', 
+    icon: '✎', 
+    description: { es: 'Ajustes menores requeridos antes de la aceptación final.', en: 'Minor adjustments required before final acceptance.' } 
   },
   'major-revision-required': { 
-    es: 'Revisiones mayores requeridas', 
-    en: 'Major revisions required',
-    color: 'bg-orange-50 text-orange-800',
-    icon: '🔄',
-    description: { 
-      es: 'Se requieren cambios sustanciales y una nueva revisión',
-      en: 'Substantial changes and re-review are required'
-    }
+    es: 'Revisión Mayor', en: 'Major Revision', 
+    color: 'bg-orange-50 text-orange-700 border-orange-300', 
+    icon: '🔄', 
+    description: { es: 'Se requieren modificaciones sustanciales y una nueva ronda de revisión.', en: 'Substantial modifications and a new round of review are required.' } 
   },
   'awaiting-revision': { 
-    es: 'Esperando tu revisión', 
-    en: 'Awaiting your revision',
-    color: 'bg-blue-50 text-blue-800',
-    icon: '⏳',
-    description: { 
-      es: 'Por favor, sube la versión revisada de tu artículo',
-      en: 'Please upload the revised version of your article'
-    }
+    es: 'Esperando Corrección', en: 'Awaiting Correction', 
+    color: 'bg-amber-50 text-amber-700 border-amber-300', 
+    icon: '⏳', 
+    description: { es: 'Aguardando la versión corregida por parte del autor.', en: 'Awaiting the corrected version from the author.' } 
   },
   'accepted': { 
-    es: 'Aceptado', 
-    en: 'Accepted',
-    color: 'bg-emerald-50 text-emerald-800',
-    icon: '✓',
-    description: { 
-      es: '¡Tu artículo ha sido aceptado para publicación!',
-      en: 'Your article has been accepted for publication!'
-    }
+    es: 'Aceptado', en: 'Accepted', 
+    color: 'bg-emerald-50 text-emerald-700 border-emerald-200', 
+    icon: '✓', 
+    description: { es: 'Manuscrito aceptado formalmente para publicación. ¡Felicitaciones!', en: 'Manuscript formally accepted for publication. Congratulations!' } 
   },
   'rejected': { 
-    es: 'Rechazado', 
-    en: 'Rejected',
-    color: 'bg-red-50 text-red-800',
-    icon: '✕',
-    description: { 
-      es: 'El artículo no ha sido aceptado para publicación',
-      en: 'The article has not been accepted for publication'
-    }
+    es: 'Rechazado', en: 'Rejected', 
+    color: 'bg-red-50 text-red-700 border-red-200', 
+    icon: '✕', 
+    description: { es: 'El manuscrito ha sido declinado tras el proceso de revisión.', en: 'The manuscript has been declined after the review process.' } 
   },
-  'metadata_refinement_pending': {
-    es: 'Revisando metadatos', 
-    en: 'Reviewing metadata',
-    color: 'bg-teal-50 text-teal-800',
-    icon: '📋',
-    description: { 
-      es: 'El editor ha propuesto cambios en los metadatos. Por favor, revísalos.',
-      en: 'The editor has proposed metadata changes. Please review them.'
-    }
+  'metadata_refinement_pending': { 
+    es: 'Ajuste de Metadatos', en: 'Metadata Refinement', 
+    color: 'bg-teal-50 text-teal-700 border-teal-200', 
+    icon: '📋', 
+    description: { es: 'El editor ha propuesto cambios en los metadatos. Requiere su revisión y aprobación.', en: 'The editor has proposed metadata changes. Requires your review and approval.' } 
   }
 };
 
+// ================= COMPONENTE PRINCIPAL =================
 const AuthorSubmissionsPanel = ({ user }) => {
   const { language } = useLanguage();
   const isSpanish = language === 'es';
   const [submissions, setSubmissions] = useState([]);
-  const [selectedSubmission, setSelectedSubmission] = useState(null);
+  const [loading, setLoading] = useState(true);
+  
+  // Estado para el Portal (Modal de pantalla completa)
+  const [activePortal, setActivePortal] = useState(null);
+  const [activeTab, setActiveTab] = useState('overview');
+
+  // Estados para el formulario de revisión
   const [revisionComment, setRevisionComment] = useState('');
   const [revisionFile, setRevisionFile] = useState(null);
   const [revisionNotes, setRevisionNotes] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [expandedSubmission, setExpandedSubmission] = useState(null);
-  const [debugInfo, setDebugInfo] = useState({});
 
-  // LOG DE DEPURACIÓN: Verificar props iniciales
-  useEffect(() => {
-    console.log('🔍 [AuthorSubmissionsPanel] Montado con user:', user?.uid);
-    if (user) {
-      console.log('🔍 Email del usuario:', user.email);
-      console.log('🔍 Roles:', user.roles);
-    }
-  }, [user]);
-
-  // Cargar envíos del usuario actual con LOGS EXTENSIVOS
+  // ================= CARGA DE DATOS =================
   useEffect(() => {
     if (!user?.uid) {
-      console.log('⚠️ [AuthorSubmissionsPanel] No hay usuario autenticado');
       setLoading(false);
       return;
     }
 
-    console.log('🚀 [AuthorSubmissionsPanel] Iniciando carga de envíos para:', user.uid);
-
-    const q = query(
-      collection(db, 'submissions'),
-      where('authorUID', '==', user.uid)
-    );
-
-    // MAPAS para almacenar los listeners
+    const q = query(collection(db, 'submissions'), where('authorUID', '==', user.uid));
     const reviewsListeners = new Map();
     const proposalsListeners = new Map();
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      console.log(`📥 [AuthorSubmissionsPanel] Recibidos ${snapshot.docs.length} envíos de Firestore`);
-      
-      // LOG DETALLADO: Cada envío recibido
-      snapshot.docs.forEach((doc, index) => {
-        const data = doc.data();
-        console.log(`  📄 Envío ${index + 1}:`, {
-          id: doc.id,
-          title: data.title,
-          status: data.status,
-          hasMetadataRefinement: !!data.metadataRefinement,
-          metadataRefinementStatus: data.metadataRefinement?.status,
-          authorUID: data.authorUID,
-          createdAt: data.createdAt?.toDate?.() || data.createdAt
-        });
-      });
-
-      // 1. PRIMERO: Crear la lista base de submissions
       const baseSubmissionsList = snapshot.docs.map(doc => {
         const data = doc.data();
         return {
@@ -328,157 +201,126 @@ const AuthorSubmissionsPanel = ({ user }) => {
           updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
           deskReviewCompletedAt: data.deskReviewCompletedAt?.toDate?.(),
           decisionMadeAt: data.decisionMadeAt?.toDate?.(),
-          reviews: [], // Inicializar vacío
-          pendingProposals: [] // Inicializar vacío
+          reviews: [],
+          pendingProposals: []
         };
-      });
+      }).sort((a, b) => b.createdAt - a.createdAt);
 
-      // Ordenar por fecha
-      baseSubmissionsList.sort((a, b) => b.createdAt - a.createdAt);
-      
-      // 2. ACTUALIZAR EL ESTADO CON LA LISTA BASE
       setSubmissions(baseSubmissionsList);
       setLoading(false);
 
-      // 3. LOG: Verificar si hay metadataRefinement
-      baseSubmissionsList.forEach(sub => {
-        if (sub.metadataRefinement) {
-          console.log(`🔍 [MetadataRefinement] Envío ${sub.id} tiene metadataRefinement:`, sub.metadataRefinement);
-        } else {
-          console.log(`🔍 [MetadataRefinement] Envío ${sub.id} NO tiene campo metadataRefinement`);
-        }
-      });
-
-      // 4. CONFIGURAR LISTENERS PARA SUBCOLECCIONES
-      
       // Limpiar listeners anteriores
-      reviewsListeners.forEach((unsub) => unsub());
+      reviewsListeners.forEach(unsub => unsub());
       reviewsListeners.clear();
-      proposalsListeners.forEach((unsub) => unsub());
+      proposalsListeners.forEach(unsub => unsub());
       proposalsListeners.clear();
 
-      // Por cada submission, crear listeners
       snapshot.docs.forEach(doc => {
         const submissionId = doc.id;
         
-        console.log(`🔧 Configurando listeners para envío: ${submissionId}`);
-
-        // Listener para reviews
-        const reviewsQuery = query(
-          collection(db, 'submissions', submissionId, 'reviews')
-        );
-
-        const unsubscribeReviews = onSnapshot(reviewsQuery, (reviewsSnapshot) => {
-          console.log(`📬 [Reviews] ${reviewsSnapshot.docs.length} reviews cargadas para ${submissionId}`);
-          
-          const reviews = reviewsSnapshot.docs.map(reviewDoc => ({
-            id: reviewDoc.id,
-            ...reviewDoc.data(),
-            submittedAt: reviewDoc.data().submittedAt?.toDate?.() || reviewDoc.data().submittedAt
+        // Listener Revisiones
+        const reviewsQuery = query(collection(db, 'submissions', submissionId, 'reviews'));
+        const unsubReviews = onSnapshot(reviewsQuery, (reviewsSnap) => {
+          const reviews = reviewsSnap.docs.map(r => ({ 
+            id: r.id, 
+            ...r.data(), 
+            submittedAt: r.data().submittedAt?.toDate?.() || r.data().submittedAt 
           }));
-          
-          setSubmissions(prevSubs => 
-            prevSubs.map(sub => 
-              sub.id === submissionId 
-                ? { ...sub, reviews: reviews }
-                : sub
-            )
-          );
-        }, (error) => {
-          console.error(`❌ Error loading reviews for ${submissionId}:`, error);
+          setSubmissions(prev => prev.map(sub => 
+            sub.id === submissionId ? { ...sub, reviews } : sub
+          ));
+          // Actualizar portal activo si está abierto
+          setActivePortal(prev => {
+            if (prev?.id === submissionId) {
+              return { ...prev, reviews };
+            }
+            return prev;
+          });
         });
+        reviewsListeners.set(submissionId, unsubReviews);
 
-        reviewsListeners.set(submissionId, unsubscribeReviews);
-
-        // Listener para metadataProposals pendientes
+        // Listener Propuestas de metadatos
         const proposalsQuery = query(
-          collection(db, 'submissions', submissionId, 'metadataProposals'),
+          collection(db, 'submissions', submissionId, 'metadataProposals'), 
           where('status', '==', 'pending-author')
         );
-
-        const unsubscribeProposals = onSnapshot(proposalsQuery, (proposalsSnapshot) => {
-          const pendingCount = proposalsSnapshot.docs.length;
-          console.log(`📋 [MetadataProposals] ${pendingCount} propuestas pendientes para ${submissionId}`);
-          
-          // LOG DETALLADO: Cada propuesta
-          proposalsSnapshot.docs.forEach((propDoc, idx) => {
-            const propData = propDoc.data();
-            console.log(`  📝 Propuesta ${idx + 1}:`, {
-              id: propDoc.id,
-              proposedBy: propData.proposedBy,
-              proposedByEmail: propData.proposedByEmail,
-              proposedAt: propData.proposedAt?.toDate?.() || propData.proposedAt,
-              changesCount: propData.changes?.length || 0,
-              status: propData.status
-            });
-          });
-
-          const pendingProposals = proposalsSnapshot.docs.map(propDoc => ({
-            id: propDoc.id,
-            ...propDoc.data(),
-            proposedAt: propDoc.data().proposedAt?.toDate?.() || propDoc.data().proposedAt
+        const unsubProposals = onSnapshot(proposalsQuery, (propsSnap) => {
+          const pendingProposals = propsSnap.docs.map(p => ({ 
+            id: p.id, 
+            ...p.data(),
+            proposedAt: p.data().proposedAt?.toDate?.() || p.data().proposedAt
           }));
-          
-          setSubmissions(prevSubs => 
-            prevSubs.map(sub => 
-              sub.id === submissionId 
-                ? { ...sub, pendingProposals: pendingProposals }
-                : sub
-            )
-          );
-
-          // Actualizar debugInfo
-          setDebugInfo(prev => ({
-            ...prev,
-            [submissionId]: {
-              ...prev[submissionId],
-              pendingProposalsCount: pendingCount,
-              pendingProposals: pendingProposals.map(p => ({
-                id: p.id,
-                proposedBy: p.proposedByEmail,
-                changes: p.changes?.map(c => c.field)
-              }))
+          setSubmissions(prev => prev.map(sub => 
+            sub.id === submissionId ? { ...sub, pendingProposals } : sub
+          ));
+          // Actualizar portal activo si está abierto
+          setActivePortal(prev => {
+            if (prev?.id === submissionId) {
+              return { ...prev, pendingProposals };
             }
-          }));
-        }, (error) => {
-          console.error(`❌ Error loading proposals for ${submissionId}:`, error);
+            return prev;
+          });
         });
-
-        proposalsListeners.set(submissionId, unsubscribeProposals);
+        proposalsListeners.set(submissionId, unsubProposals);
       });
     }, (error) => {
-      console.error('❌ Error loading submissions:', error);
+      console.error('Error loading submissions:', error);
       setLoading(false);
     });
 
-    // Cleanup
     return () => {
-      console.log('🧹 [AuthorSubmissionsPanel] Limpiando listeners');
       unsubscribe();
-      reviewsListeners.forEach((unsub) => unsub());
-      reviewsListeners.clear();
-      proposalsListeners.forEach((unsub) => unsub());
-      proposalsListeners.clear();
+      reviewsListeners.forEach(unsub => unsub());
+      proposalsListeners.forEach(unsub => unsub());
     };
   }, [user]);
 
-  // LOG DE DEPURACIÓN: Verificar estado de submissions cada vez que cambia
-  useEffect(() => {
-    console.log('🔄 [State] Submissions actualizadas:', submissions.length);
-    submissions.forEach(sub => {
-      const hasPending = sub.pendingProposals?.length > 0;
-      const hasMetadataField = !!sub.metadataRefinement;
-      console.log(`  📊 ${sub.title?.substring(0, 30)}...`, {
-        id: sub.id,
-        status: sub.status,
-        pendingProposals: sub.pendingProposals?.length || 0,
-        hasMetadataRefinementField: hasMetadataField,
-        metadataRefinementStatus: sub.metadataRefinement?.status,
-        mostrarTab: hasPending ? 'SÍ (por propuestas)' : 'NO'
-      });
-    });
-  }, [submissions]);
+  // ================= FUNCIONES AUXILIARES =================
+  const hasPendingMetadataProposals = (submission) => {
+    return submission?.pendingProposals?.length > 0;
+  };
 
+  const needsRevisionUpload = (status) => {
+    return ['revisions-requested', 'minor-revision-required', 'major-revision-required', 'awaiting-revision'].includes(status);
+  };
+
+  const requiresAction = (sub) => {
+    return needsRevisionUpload(sub?.status) || hasPendingMetadataProposals(sub);
+  };
+
+  const handleOpenPortal = (sub) => {
+    setActivePortal(sub);
+    // Enrutamiento inteligente al abrir
+    if (requiresAction(sub)) {
+      setActiveTab('tasks');
+    } else {
+      setActiveTab('overview');
+    }
+  };
+
+  const handleClosePortal = () => {
+    if (uploading) return;
+    setActivePortal(null);
+    setRevisionFile(null);
+    setRevisionNotes('');
+    setRevisionComment('');
+  };
+
+  const getTimelineStep = (status) => {
+    const steps = [
+      'submitted',
+      'in-desk-review',
+      'in-reviewer-selection',
+      'awaiting-reviewer-responses',
+      'in-peer-review',
+      'awaiting-editor-decision',
+      'accepted'
+    ];
+    const idx = steps.indexOf(status);
+    return idx >= 0 ? idx : 0;
+  };
+
+  // ================= MANEJO DE ARCHIVOS Y REVISIÓN =================
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -489,7 +331,6 @@ const AuthorSubmissionsPanel = ({ user }) => {
       ];
       if (validTypes.includes(file.type)) {
         setRevisionFile(file);
-        console.log('📁 Archivo seleccionado:', file.name, file.type, file.size);
       } else {
         alert(isSpanish ? 'Por favor selecciona un archivo PDF o Word' : 'Please select a PDF or Word file');
       }
@@ -497,1078 +338,1161 @@ const AuthorSubmissionsPanel = ({ user }) => {
   };
 
   const handleSubmitRevision = async () => {
-  if (!revisionFile || !revisionNotes.trim()) {
-    alert(isSpanish ? 'Debes seleccionar un archivo y agregar un resumen de cambios' : 'You must select a file and add a summary of changes');
-    return;
-  }
-
-  setUploading(true);
-  console.log('📤 Iniciando subida de revisión para:', selectedSubmission?.id);
-  
-  try {
-    const reader = new FileReader();
-    
-    const filePromise = new Promise((resolve, reject) => {
-      reader.onload = async () => {
-        try {
-          const base64 = reader.result;
-          console.log('📄 Archivo convertido a base64, tamaño:', base64.length);
-          
-          const result = await submitRevision({
-            submissionId: selectedSubmission.id,
-            fileBase64: base64,
-            fileName: revisionFile.name,
-            notes: revisionNotes,
-            revisionComment: revisionComment, 
-            round: selectedSubmission.currentRound || 1
-          });
-
-          console.log('✅ Resultado de submitRevision:', result);
-
-          if (result.success) {
-            alert(isSpanish ? 'Revisión enviada con éxito' : 'Revision submitted successfully');
-            setSelectedSubmission(null);
-            setRevisionFile(null);
-            setRevisionNotes('');
-            setRevisionComment(''); 
-          } else {
-            throw new Error(result.error || 'Error al subir revisión');
-          }
-          
-          resolve();
-        } catch (error) {
-          console.error('❌ Error en proceso de subida:', error);
-          reject(error);
-        }
-      };
-      
-      reader.onerror = () => {
-        console.error('❌ Error leyendo archivo');
-        reject(new Error('Error leyendo archivo'));
-      };
-      reader.readAsDataURL(revisionFile);
-    });
-
-    await filePromise;
-
-  } catch (error) {
-    console.error('❌ Error submitting revision:', error);
-    alert(isSpanish ? 'Error al enviar la revisión: ' + error.message : 'Error submitting revision: ' + error.message);
-  } finally {
-    setUploading(false);
-  }
-};
-  const getStatusBadge = (status) => {
-    const state = SUBMISSION_STATES[status] || SUBMISSION_STATES.submitted;
-    return (
-      <span className={`text-[10px] sm:text-xs px-2 py-0.5 sm:px-3 sm:py-1 font-bold uppercase tracking-tighter rounded-full ${state.color}`}>
-        {state.icon} {state[language]}
-      </span>
-    );
-  };
-
-  const getTimelineStep = (status) => {
-    const steps = [
-      'submitted',
-      'in-desk-review',
-      'in-reviewer-selection',
-      'awaiting-reviewer-responses',
-      'in-peer-review',
-      'accepted'
-    ];
-    return steps.indexOf(status);
-  };
-
-  // Verificar si hay propuestas pendientes (AHORA USA pendingProposals)
-  const hasPendingMetadataProposals = (submission) => {
-    const hasProposals = submission.pendingProposals?.length > 0;
-    if (hasProposals) {
-      console.log(`✅ [hasPendingMetadataProposals] Envío ${submission.id} tiene ${submission.pendingProposals.length} propuestas`);
+    if (!revisionFile || !revisionNotes.trim()) {
+      alert(isSpanish ? 'Debes seleccionar un archivo y agregar un resumen de cambios' : 'You must select a file and add a summary of changes');
+      return;
     }
-    return hasProposals;
+
+    setUploading(true);
+    try {
+      const reader = new FileReader();
+      const filePromise = new Promise((resolve, reject) => {
+        reader.onload = async () => {
+          try {
+            const result = await submitRevision({
+              submissionId: activePortal.id,
+              fileBase64: reader.result,
+              fileName: revisionFile.name,
+              notes: revisionNotes,
+              revisionComment: revisionComment,
+              round: activePortal.currentRound || 1
+            });
+            if (result.success) {
+              alert(isSpanish ? 'Revisión enviada con éxito' : 'Revision submitted successfully');
+              setRevisionFile(null);
+              setRevisionNotes('');
+              setRevisionComment('');
+              setActiveTab('overview');
+            } else {
+              throw new Error(result.error || 'Error al subir revisión');
+            }
+            resolve();
+          } catch (error) {
+            reject(error);
+          }
+        };
+        reader.onerror = () => reject(new Error('Error leyendo archivo'));
+        reader.readAsDataURL(revisionFile);
+      });
+      await filePromise;
+    } catch (error) {
+      console.error('Error submitting revision:', error);
+      alert(isSpanish ? 'Error al enviar la revisión: ' + error.message : 'Error submitting revision: ' + error.message);
+    } finally {
+      setUploading(false);
+    }
   };
 
-  // Panel de depuración (solo visible en desarrollo)
-  const DebugPanel = () => {
-    if (process.env.NODE_ENV !== 'development') return null;
+  const handleDownloadManuscript = () => {
+    let downloadUrl = null;
+    let fileName = 'manuscrito.pdf';
     
-    return (
-      <div className="mb-6 p-4 bg-gray-900 text-green-400 rounded-lg font-mono text-xs overflow-auto max-h-60">
-        <h4 className="font-bold text-white mb-2">🔧 DEBUG INFO</h4>
-        <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
-      </div>
-    );
+    if (activePortal.formattedPdfFile?.url) {
+      downloadUrl = activePortal.formattedPdfFile.url;
+      fileName = `manuscrito_${activePortal.submissionId || activePortal.id?.substring(0, 8)}.pdf`;
+    } else if (activePortal.formattedDocsFile?.url) {
+      const fileId = activePortal.formattedDocsFile.id || activePortal.formattedDocsFile.url.split('/d/')[1]?.split('/')[0];
+      if (fileId) {
+        downloadUrl = `https://docs.google.com/document/d/${fileId}/export?format=pdf`;
+        fileName = `manuscrito_${activePortal.submissionId || activePortal.id?.substring(0, 8)}.pdf`;
+      }
+    } else if (activePortal.originalFileUrl) {
+      downloadUrl = activePortal.originalFileUrl;
+      fileName = activePortal.originalFileName || 'manuscrito_original.pdf';
+    }
+    
+    if (downloadUrl) {
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = fileName;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      alert(isSpanish ? 'No hay documento disponible para descargar' : 'No document available for download');
+    }
   };
 
+  const handleDownloadConsent = (consent) => {
+    if (consent.fileUrl) {
+      window.open(consent.fileUrl, '_blank', 'noopener noreferrer');
+    } else if (consent.fileId) {
+      window.open(`https://drive.google.com/file/d/${consent.fileId}/view`, '_blank', 'noopener noreferrer');
+    } else if (consent.method === 'email') {
+      alert(isSpanish 
+        ? `Consentimiento para ${consent.author} fue enviado por correo electrónico.` 
+        : `Consent for ${consent.author} was sent by email.`);
+    } else {
+      alert(isSpanish ? 'Documento de consentimiento no disponible' : 'Consent document not available');
+    }
+  };
+
+  // ================= RENDERIZADO =================
   if (!user) {
     return (
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-12 text-center">
-        <p className="text-gray-500">
-          {isSpanish ? 'Inicia sesión para ver tus envíos' : 'Log in to view your submissions'}
-        </p>
+      <div className="min-h-[50vh] flex items-center justify-center">
+        <div className="text-center p-8 bg-white border border-slate-200 shadow-sm max-w-md">
+          <Icons.Shield />
+          <p className="mt-4 text-slate-500 font-serif italic">
+            {isSpanish ? 'Inicie sesión para acceder a sus expedientes.' : 'Log in to access your records.'}
+          </p>
+        </div>
       </div>
     );
   }
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 sm:p-20 space-y-4">
-        <div className="w-12 h-12 border-4 border-t-[#002147] border-[#C0A86A]/20 rounded-full animate-spin"></div>
-        <p className="font-['Playfair_Display'] italic text-slate-500">
-          {isSpanish ? 'Consultando los archivos de la Revista Nacional...' : 'Consulting the National Journal archives...'}
+      <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-6">
+        <div className="w-10 h-10 border-2 border-t-[#003b5c] border-slate-200 rounded-full animate-spin"></div>
+        <p className="font-serif italic text-slate-500 text-lg">
+          {isSpanish ? 'Accediendo a los expedientes editoriales...' : 'Accessing editorial records...'}
         </p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-3 sm:p-4 md:p-6 space-y-6 sm:space-y-8 animate-in fade-in duration-700">
-      <DebugPanel />
+    <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 animate-in fade-in duration-700">
       
-      {/* Header Épico - Responsive */}
-      <header className="flex flex-col md:flex-row md:items-end justify-between border-b-2 border-[#002147] pb-4 sm:pb-6 mb-6 sm:mb-10">
+      {/* ===================== ESCRITORIO (DASHBOARD) ===================== */}
+      <header className="mb-12 border-b border-slate-200 pb-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1 className="font-['Playfair_Display'] text-3xl sm:text-4xl md:text-5xl font-black text-[#050505] tracking-tight">
-            {isSpanish ? 'Escritorio del' : 'Author'}{' '}
-            <span className="text-[#002147]">{isSpanish ? 'Autor' : 'Desk'}</span>
+          <h1 className="font-serif text-4xl sm:text-5xl text-[#003b5c] mb-2 leading-tight">
+            {isSpanish ? 'Expedientes de Autor' : 'Author Records'}
           </h1>
-          <p className="text-slate-500 mt-1 sm:mt-2 font-['Inter'] uppercase tracking-widest text-[10px] sm:text-xs font-bold">
-            {isSpanish 
-              ? 'Revista Nacional de las Ciencias para Estudiantes — Gestión Editorial'
-              : 'National Student Science Journal — Editorial Management'}
+          <p className="text-slate-500 font-sans uppercase tracking-widest text-xs font-bold flex items-center gap-2">
+            <span className="w-4 h-px bg-[#C0A86A]"></span>
+            {isSpanish ? 'Gestor de Manuscritos — Revista Nacional de Ciencias para Estudiantes' : 'Manuscript Manager — National Student Science Journal'}
           </p>
         </div>
         <button
           onClick={() => window.location.href = '/submit'}
-          className="mt-4 md:mt-0 px-6 sm:px-8 py-2 sm:py-3 bg-[#002147] text-white font-bold hover:bg-[#050505] transition-all transform hover:-translate-y-1 shadow-lg flex items-center gap-2 sm:gap-3 group text-sm sm:text-base"
+          className="bg-[#003b5c] hover:bg-[#002840] text-white px-8 py-3.5 text-sm font-bold uppercase tracking-widest transition-colors shadow-sm flex items-center justify-center gap-3 group"
         >
-          <span className="text-lg sm:text-xl group-hover:rotate-90 transition-transform">+</span>
-          {isSpanish ? 'INICIAR NUEVO ENVÍO' : 'START NEW SUBMISSION'}
+          <span className="text-lg leading-none group-hover:rotate-90 transition-transform">+</span>
+          {isSpanish ? 'Iniciar Nuevo Envío' : 'Start New Submission'}
         </button>
       </header>
 
       {submissions.length === 0 ? (
-        <div className="text-center py-16 sm:py-24 bg-[#F8F9FB] border-2 border-dashed border-slate-200 rounded-lg">
-          <p className="font-['Playfair_Display'] text-xl sm:text-2xl text-slate-400 italic">
-            {isSpanish ? 'No se han encontrado manuscritos en su registro.' : 'No manuscripts found in your record.'}
+        <div className="text-center py-24 bg-slate-50 border-2 border-dashed border-slate-200">
+          <Icons.File />
+          <p className="font-serif text-2xl text-slate-400 italic mt-4">
+            {isSpanish ? 'No posee manuscritos en curso.' : 'No manuscripts in progress.'}
+          </p>
+          <p className="text-slate-400 text-sm mt-2">
+            {isSpanish ? 'Inicie un nuevo envío para comenzar.' : 'Start a new submission to begin.'}
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:gap-6">
-          {submissions.map((sub) => (
-            <motion.div
-              key={sub.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className={`bg-white border ${expandedSubmission === sub.id ? 'border-[#C0A86A] shadow-2xl' : 'border-slate-200 shadow-sm'} transition-all duration-500 rounded-lg overflow-hidden`}
-            >
-              {/* Card Header - Totalmente Responsive */}
-              <div 
-                onClick={() => {
-                  console.log('📌 Expandiendo envío:', sub.id, sub.title);
-                  setExpandedSubmission(expandedSubmission === sub.id ? null : sub.id);
-                }}
-                className="p-4 sm:p-6 cursor-pointer flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 relative overflow-hidden group"
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {submissions.map((sub) => {
+            const hasAction = requiresAction(sub);
+            const statusInfo = SUBMISSION_STATES[sub.status] || SUBMISSION_STATES.submitted;
+
+            return (
+              <motion.div
+                key={sub.id}
+                whileHover={{ y: -4 }}
+                onClick={() => handleOpenPortal(sub)}
+                className={`group cursor-pointer bg-white border ${
+                  hasAction 
+                    ? 'border-amber-300 shadow-md ring-1 ring-amber-300' 
+                    : 'border-slate-200 shadow-sm hover:border-[#003b5c] hover:shadow-md'
+                } transition-all flex flex-col h-full`}
               >
-                {expandedSubmission === sub.id && (
-                  <div className="absolute top-0 left-0 w-1 h-full bg-[#002147]" />
-                )}
-                
-                <div className="flex-1 w-full sm:w-auto">
-                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-1">
-                    <span className="text-[8px] sm:text-[10px] font-bold tracking-widest text-[#C0A86A] uppercase">
-                      ID: {sub.id.substring(0,8)}
+                {/* Banner de Acción Requerida */}
+                {hasAction && (
+                  <div className="bg-amber-50 px-4 py-2 border-b border-amber-200 flex items-center gap-2">
+                    <span className="text-amber-600"><Icons.Alert /></span>
+                    <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider">
+                      {isSpanish ? 'Acción Requerida' : 'Action Required'}
                     </span>
-                    {getStatusBadge(sub.status)}
-                    {hasPendingMetadataProposals(sub) && (
-                      <span className="bg-yellow-100 text-yellow-700 text-[8px] sm:text-xs px-2 py-0.5 rounded-full animate-pulse">
-                        {isSpanish ? `✏️ ${sub.pendingProposals.length}` : `✏️ ${sub.pendingProposals.length}`}
-                      </span>
-                    )}
                   </div>
-                  <h3 className="font-['Playfair_Display'] text-lg sm:text-xl md:text-2xl font-bold text-[#050505] group-hover:text-[#002147] transition-colors break-words pr-8 sm:pr-0">
+                )}
+
+                <div className="p-6 flex-1 flex flex-col">
+                  <div className="flex justify-between items-start mb-4">
+                    <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest">
+                      ID: {sub.submissionId || sub.id.substring(0,8)}
+                    </span>
+                    <span className={`text-[10px] px-2.5 py-1 uppercase font-bold tracking-wider border ${statusInfo.color}`}>
+                      {statusInfo[language]}
+                    </span>
+                  </div>
+
+                  <h3 className="font-serif text-xl text-slate-800 group-hover:text-[#003b5c] transition-colors leading-snug mb-4 flex-1 line-clamp-3">
                     {sub.title}
                   </h3>
-                  
-                  {/* Info móvil */}
-                  <div className="flex items-center gap-3 mt-2 sm:hidden text-xs text-slate-500">
-                    <span>{sub.createdAt?.toLocaleDateString()}</span>
-                    <span>{isSpanish ? 'Ronda:' : 'Round:'} {sub.currentRound || 1}</span>
-                  </div>
-                </div>
 
-                <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto justify-between sm:justify-end">
-                  <div className="text-right hidden sm:block">
-                    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">
-                      {isSpanish ? 'Última actualización' : 'Last updated'}
-                    </p>
-                    <p className="text-xs sm:text-sm font-['Inter'] text-slate-700">
+                  <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-sans">
+                    <span className="flex items-center gap-1.5">
+                      <Icons.Clock />
                       {sub.createdAt?.toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full border border-slate-200 flex items-center justify-center transition-all flex-shrink-0 ${
-                    expandedSubmission === sub.id 
-                      ? 'rotate-180 bg-[#002147] text-white' 
-                      : 'group-hover:bg-slate-50'
-                  }`}>
-                    <svg width="10" height="10" viewBox="0 0 12 12" fill="none" className="sm:w-3 sm:h-3">
-                      <path d="M2 4L6 8L10 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
+                    </span>
+                    <span className="flex items-center gap-1 group-hover:text-[#003b5c] transition-colors font-bold uppercase tracking-wider">
+                      {isSpanish ? 'Abrir' : 'Open'} <Icons.Check />
+                    </span>
                   </div>
                 </div>
-              </div>
-
-              {/* Contenido Expandido - Totalmente Responsive */}
-              <AnimatePresence>
-                {expandedSubmission === sub.id && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden border-t border-slate-100"
-                  >
-                    <div className="p-4 sm:p-6 md:p-8 bg-[#F8F9FB] grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
-                      
-                      {/* Columna Principal (2/3 en desktop) */}
-                      <div className="lg:col-span-2 space-y-4 sm:space-y-6">
-                        {/* Descripción del estado actual */}
-                        <section className="bg-white p-4 sm:p-6 shadow-sm border border-slate-200 rounded-lg">
-                          <h4 className="font-['Playfair_Display'] font-bold text-base sm:text-lg mb-3 sm:mb-4 flex items-center gap-2">
-                            <span className="text-[#C0A86A]">I.</span> 
-                            {isSpanish ? 'Estado Actual' : 'Current Status'}
-                          </h4>
-                          <p className="text-slate-600 text-sm sm:text-base">
-                            {SUBMISSION_STATES[sub.status]?.description[language]}
-                          </p>
-                        </section>
-
-                        {/* Timeline Design - Solo mostrar si aplica */}
-                        {!['accepted', 'rejected', 'desk-review-rejected'].includes(sub.status) && (
-                          <section className="bg-white p-4 sm:p-6 shadow-sm border border-slate-200 rounded-lg">
-                            <h4 className="font-['Playfair_Display'] font-bold text-base sm:text-lg mb-4 sm:mb-6 flex items-center gap-2">
-                              <span className="text-[#C0A86A]">II.</span> 
-                              {isSpanish ? 'Progreso del Manuscrito' : 'Manuscript Progress'}
-                            </h4>
-                            
-                            {/* Timeline Responsive - Versión móvil horizontal con scroll */}
-                            <div className="relative">
-                              <div className="absolute top-4 left-0 w-full h-[1px] bg-slate-200 z-0 hidden sm:block" />
-                              <div className="flex sm:justify-between overflow-x-auto sm:overflow-visible pb-2 sm:pb-0 gap-4 sm:gap-0">
-                                {['submitted', 'in-desk-review', 'in-peer-review', 'accepted'].map((step, idx) => {
-                                  const currentStep = getTimelineStep(sub.status);
-                                  const isCompleted = idx < currentStep;
-                                  const isCurrent = idx === currentStep;
-                                  
-                                  return (
-                                    <div key={step} className="relative z-10 flex flex-col items-center flex-shrink-0">
-                                      <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 flex items-center justify-center transition-all text-xs sm:text-sm ${
-                                        isCurrent 
-                                          ? 'bg-[#002147] border-[#002147] text-white scale-110 sm:scale-125 shadow-lg' 
-                                          : isCompleted
-                                          ? 'bg-emerald-500 border-emerald-500 text-white'
-                                          : 'bg-white border-slate-200 text-slate-300'
-                                      }`}>
-                                        {isCompleted ? '✓' : idx + 1}
-                                      </div>
-                                      <span className={`text-[8px] sm:text-[10px] mt-1 sm:mt-2 font-bold uppercase tracking-tighter whitespace-nowrap ${
-                                        isCurrent ? 'text-[#002147]' : 'text-slate-400'
-                                      }`}>
-                                        {SUBMISSION_STATES[step]?.[language]}
-                                      </span>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          </section>
-                        )}
-
-                        {/* Metadata Tab */}
-                        <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-                          {console.log(`🎯 Renderizando AuthorMetadataResponseTab para ${sub.id} con ${sub.pendingProposals?.length || 0} propuestas`)}
-                          <AuthorMetadataResponseTab
-                            submission={sub}
-                            user={user}
-                            onResponded={() => {
-                              console.log('✅ Propuesta respondida para:', sub.id);
-                            }}
-                          />
-                        </div>
-
-                        {/* Feedback del editor */}
-                        {sub.deskReviewFeedback && (
-                          <div className="bg-white p-4 sm:p-6 border border-slate-200 rounded-lg">
-                            <h4 className="font-['Playfair_Display'] font-bold text-base sm:text-lg mb-3">
-                              {isSpanish ? 'Feedback del Editor' : 'Editor Feedback'}
-                            </h4>
-                            <p className="text-slate-600 text-sm sm:text-base">{sub.deskReviewFeedback}</p>
-                          </div>
-                        )}
-
-                        {/* Revisiones de pares */}
-                        {sub.reviews && sub.reviews.length > 0 && (
-                          <div className="bg-white p-4 sm:p-6 border border-slate-200 rounded-lg">
-                            <h4 className="font-['Playfair_Display'] font-bold text-base sm:text-lg mb-4">
-                              {isSpanish ? 'Revisiones de Pares' : 'Peer Reviews'}
-                            </h4>
-                            <div className="space-y-4">
-                              {sub.reviews.map((review, idx) => (
-                                <div key={review.id || idx} className="border border-slate-200 rounded-lg p-4">
-                                  <div className="flex flex-wrap items-center gap-2 justify-between mb-3">
-                                    <span className="font-medium text-xs sm:text-sm text-slate-500">
-                                      {isSpanish ? `Revisión ${idx + 1}` : `Review ${idx + 1}`}
-                                      {review.round && review.round > 1 && (
-                                        <span className="ml-2 text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
-                                          {isSpanish ? `Ronda ${review.round}` : `Round ${review.round}`}
-                                        </span>
-                                      )}
-                                    </span>
-                                    <span className={`text-[10px] px-2 py-1 rounded-full ${
-                                      review.recommendation === 'accept' ? 'bg-green-100 text-green-700' :
-                                      review.recommendation === 'minor-revision' ? 'bg-blue-100 text-blue-700' :
-                                      review.recommendation === 'major-revision' ? 'bg-yellow-100 text-yellow-700' :
-                                      'bg-red-100 text-red-700'
-                                    }`}>
-                                      {review.recommendation === 'accept' && (isSpanish ? 'Aceptar' : 'Accept')}
-                                      {review.recommendation === 'minor-revision' && (isSpanish ? 'Revisiones menores' : 'Minor revisions')}
-                                      {review.recommendation === 'major-revision' && (isSpanish ? 'Revisiones mayores' : 'Major revisions')}
-                                      {review.recommendation === 'reject' && (isSpanish ? 'Rechazar' : 'Reject')}
-                                    </span>
-                                  </div>
-                                  
-                                  {/* Puntuaciones */}
-                                  {review.scores && Object.keys(review.scores).length > 0 && (
-                                    <div className="mb-3 flex flex-wrap gap-2 text-[10px] sm:text-xs">
-                                      {Object.entries(review.scores).map(([key, value]) => (
-                                        <div key={key} className="bg-slate-50 px-2 py-1 rounded">
-                                          <span className="font-medium text-slate-600">
-                                            {key === 'originality' && (isSpanish ? 'Originalidad:' : 'Originality:')}
-                                            {key === 'methodology' && (isSpanish ? 'Metodología:' : 'Methodology:')}
-                                            {key === 'clarity' && (isSpanish ? 'Claridad:' : 'Clarity:')}
-                                            {key === 'relevance' && (isSpanish ? 'Relevancia:' : 'Relevance:')}
-                                            {key === 'overall' && (isSpanish ? 'General:' : 'Overall:')}
-                                          </span>{' '}
-                                          <span className="font-bold text-[#0A1929]">{value}</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-                                  
-                                  {/* Comentarios */}
-                                  {/* Comentarios - CON DECODIFICACIÓN BASE64 */}
-{review.commentsToAuthor && (
-  <div className="text-xs sm:text-sm text-slate-600 mt-2">
-    <p className="font-medium text-[#0A1929] mb-1">
-      {isSpanish ? 'Comentarios:' : 'Comments:'}
-    </p>
-    <div className="bg-slate-50 p-3 rounded-lg text-xs sm:text-sm 
-                    [&_strong]:text-[#002147] [&_strong]:font-bold
-                    [&_em]:text-[#C0A86A] [&_em]:italic
-                    [&_u]:underline [&_u]:decoration-[#C0A86A]
-                    [&_ul]:list-disc [&_ul]:pl-4
-                    [&_ol]:list-decimal [&_ol]:pl-4
-                    [&_li]:text-slate-700" 
-         dangerouslySetInnerHTML={{ 
-           __html: decodeBase64IfNeeded(review.commentsToAuthor).replace(/\n/g, '<br/>') 
-         }} />
-  </div>
-)}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Decisiones finales */}
-                        {sub.finalDecision && (
-  <div className="bg-blue-50 p-4 sm:p-6 border border-blue-200 rounded-lg">
-    <h4 className="font-['Playfair_Display'] font-bold text-base sm:text-lg mb-2">
-      {isSpanish ? 'Decisión final:' : 'Final decision:'}
-    </h4>
-    <p className="text-slate-700 text-sm sm:text-base font-semibold">
-      {sub.finalDecision === 'accept' && (isSpanish ? '✅ Aceptado' : '✅ Accepted')}
-      {sub.finalDecision === 'reject' && (isSpanish ? '❌ Rechazado' : '❌ Rejected')}
-      {sub.finalDecision === 'major-revision' && (isSpanish ? '🔄 Requiere revisión mayor' : '🔄 Major revision required')}
-      {sub.finalDecision === 'minor-revision' && (isSpanish ? '✏️ Requiere revisión menor' : '✏️ Minor revision required')}
-    </p>
-    {sub.finalFeedback && (
-      <div 
-        className="mt-3 p-4 bg-white/50 rounded-lg text-sm sm:text-base text-slate-700
-                  [&_strong]:text-[#002147] [&_strong]:font-bold
-                  [&_em]:text-[#C0A86A] [&_em]:italic
-                  [&_u]:underline [&_u]:decoration-[#C0A86A] [&_u]:decoration-2
-                  [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1
-                  [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-1
-                  [&_li]:text-slate-700 [&_li]:marker:text-[#C0A86A]
-                  [&_h1]:text-xl [&_h1]:font-bold [&_h1]:text-[#002147] [&_h1]:mt-2 [&_h1]:mb-1
-                  [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-[#002147] [&_h2]:mt-2 [&_h2]:mb-1
-                  [&_h3]:text-base [&_h3]:font-bold [&_h3]:text-[#002147] [&_h3]:mt-2 [&_h3]:mb-1
-                  [&_a]:text-[#002147] [&_a]:underline [&_a]:hover:text-[#C0A86A] [&_a]:transition-colors
-                  [&_blockquote]:border-l-4 [&_blockquote]:border-[#C0A86A] [&_blockquote]:pl-4 [&_blockquote]:text-slate-600 [&_blockquote]:italic
-                  [&_code]:bg-slate-100 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_code]:font-mono
-                  [&_pre]:bg-slate-100 [&_pre]:p-3 [&_pre]:rounded-lg [&_pre]:text-xs [&_pre]:font-mono [&_pre]:overflow-x-auto
-                  [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:my-2
-                  [&_table]:w-full [&_table]:border-collapse [&_table]:my-2
-                  [&_th]:border [&_th]:border-slate-300 [&_th]:px-3 [&_th]:py-2 [&_th]:bg-slate-50 [&_th]:text-left
-                  [&_td]:border [&_td]:border-slate-300 [&_td]:px-3 [&_td]:py-2
-                  prose prose-sm max-w-none"
-        dangerouslySetInnerHTML={{ __html: sub.finalFeedback }}
-      />
-    )}
-  </div>
-)}
-                      </div>
-
-                      {/* Columna Sidebar (1/3 en desktop) */}
-                      <div className="space-y-4">
-                        <div className="bg-[#002147] text-white p-4 sm:p-6 shadow-xl rounded-lg">
-                          <h4 className="font-['Playfair_Display'] text-lg sm:text-xl mb-4">
-                            {isSpanish ? 'Detalles' : 'Details'}
-                          </h4>
-                          
-                          <div className="space-y-3 text-sm">
-                            <div>
-                              <p className="text-blue-200 text-xs uppercase tracking-wider">
-                                {isSpanish ? 'Fecha de envío' : 'Submission date'}
-                              </p>
-                              <p className="text-white font-medium">
-                                {sub.createdAt?.toLocaleDateString()}
-                              </p>
-                            </div>
-                            
-                            <div>
-                              <p className="text-blue-200 text-xs uppercase tracking-wider">
-                                {isSpanish ? 'Ronda actual' : 'Current round'}
-                              </p>
-                              <p className="text-white font-medium">
-                                {sub.currentRound || 1}
-                              </p>
-                            </div>
-
-                            {sub.submissionId && (
-                              <div>
-                                <p className="text-blue-200 text-xs uppercase tracking-wider">ID</p>
-                                <p className="text-white font-mono text-xs break-all">
-                                  {sub.submissionId}
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                          
-                          {/* Botón de acción según estado */}
-                          {(sub.status === 'revisions-requested' || 
-                            sub.status === 'minor-revision-required' || 
-                            sub.status === 'major-revision-required' || 
-                            sub.status === 'awaiting-revision') && (
-                            <button
-                              onClick={() => {
-                                console.log('📤 Abriendo modal de revisión para:', sub.id);
-                                setSelectedSubmission(sub);
-                              }}
-                              className="w-full mt-6 py-3 bg-[#C0A86A] text-white font-bold text-xs sm:text-sm tracking-widest hover:bg-white hover:text-[#002147] transition-all rounded-lg"
-                            >
-                              {isSpanish ? 'SUBIR VERSIÓN REVISADA' : 'UPLOAD REVISED VERSION'}
-                            </button>
-                          )}
-                        </div>
-
-                        {/* Documentos y Descargas */}
-<div className="bg-white p-4 sm:p-6 border border-slate-200 rounded-lg">
-  <h4 className="font-bold text-xs tracking-widest text-slate-400 uppercase mb-4 font-['Inter']">
-    {isSpanish ? 'Documentos y Descargas' : 'Documents & Downloads'}
-  </h4>
-  
-  <div className="space-y-3">
-    
-    {/* BOTÓN: DESCARGAR PDF DEL MANUSCRITO */}
-    <button
-      onClick={async () => {
-        try {
-          // Determinar qué archivo descargar (PDF formateado > Docs formateado > Original)
-          let downloadUrl = null;
-          let fileName = 'manuscrito.pdf';
-          
-          if (sub.formattedPdfFile?.url) {
-            downloadUrl = sub.formattedPdfFile.url;
-            fileName = `manuscrito_${sub.submissionId || sub.id?.substring(0, 8)}.pdf`;
-          } else if (sub.formattedDocsFile?.url) {
-            // Exportar Google Docs a PDF
-            console.log('📥 Exportando Google Docs a PDF...');
-            const fileId = sub.formattedDocsFile.id || sub.formattedDocsFile.url.split('/d/')[1]?.split('/')[0];
-            if (fileId) {
-              downloadUrl = `https://docs.google.com/document/d/${fileId}/export?format=pdf`;
-              fileName = `manuscrito_${sub.submissionId || sub.id?.substring(0, 8)}.pdf`;
-            }
-          } else if (sub.originalFileUrl) {
-            downloadUrl = sub.originalFileUrl;
-            fileName = sub.originalFileName || 'manuscrito_original.pdf';
-          }
-          
-          if (downloadUrl) {
-            // Crear un link temporal para descarga
-            const link = document.createElement('a');
-            link.href = downloadUrl;
-            link.download = fileName;
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            console.log('✅ Descarga iniciada:', fileName);
-          } else {
-            alert(isSpanish 
-              ? 'No hay documento disponible para descargar' 
-              : 'No document available for download');
-          }
-        } catch (error) {
-          console.error('❌ Error descargando:', error);
-          alert(isSpanish 
-            ? 'Error al descargar el documento' 
-            : 'Error downloading document');
-        }
-      }}
-      className="w-full flex items-center gap-3 p-3 bg-[#FBF9F3] hover:bg-[#F5F0E0] transition-colors border-2 border-[#C0A86A] rounded-lg group"
-    >
-      <span className="text-2xl">📥</span>
-      <div className="text-left flex-1 overflow-hidden">
-        <p className="text-sm font-bold text-[#0A1929] group-hover:text-[#002147] transition-colors truncate">
-          {isSpanish ? 'Descargar manuscrito (PDF)' : 'Download manuscript (PDF)'}
-        </p>
-        <p className="text-[10px] text-slate-400">
-          {sub.formattedPdfFile?.url 
-            ? (isSpanish ? 'Versión formateada' : 'Formatted version')
-            : sub.formattedDocsFile?.url
-            ? (isSpanish ? 'Exportado de Google Docs' : 'Exported from Google Docs')
-            : (isSpanish ? 'Documento original' : 'Original document')
-          }
-        </p>
-      </div>
-      <svg className="w-5 h-5 text-[#C0A86A] group-hover:text-[#A58D4F] transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-      </svg>
-    </button>
-{/* BOTÓN: DESCARGAR DOCUMENTO FINAL CON REVISIONES (DOCX) */}
-{sub.finalReviewDocUrl && (
-  <button
-    onClick={async () => {
-      try {
-        console.log('📥 Descargando documento final con revisiones en DOCX...');
-        
-        const downloadUrl = getDocsExportDocxUrl(sub.finalReviewDocUrl);
-        
-        if (downloadUrl) {
-          const fileName = `revisiones_${sub.submissionId || sub.id?.substring(0, 8)}.docx`;
-          
-          // Mostrar indicador de descarga
-          const downloadingToast = document.createElement('div');
-          downloadingToast.className = 'fixed bottom-4 right-4 bg-[#002147] text-white px-4 py-3 rounded-lg shadow-2xl z-50 text-sm font-medium animate-in slide-in-from-right';
-          downloadingToast.textContent = isSpanish ? '📥 Descargando documento...' : '📥 Downloading document...';
-          document.body.appendChild(downloadingToast);
-          
-          // Crear un link temporal para descarga
-          const link = document.createElement('a');
-          link.href = downloadUrl;
-          link.download = fileName;
-          link.target = '_blank';
-          link.rel = 'noopener noreferrer';
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          
-          // Eliminar toast después de 3 segundos
-          setTimeout(() => {
-            downloadingToast.remove();
-          }, 3000);
-          
-          console.log('✅ Descarga de revisiones iniciada:', fileName);
-        } else {
-          throw new Error('No se pudo generar URL de descarga');
-        }
-      } catch (error) {
-        console.error('❌ Error descargando revisiones:', error);
-        
-        // Toast de error
-        const errorToast = document.createElement('div');
-        errorToast.className = 'fixed bottom-4 right-4 bg-red-600 text-white px-4 py-3 rounded-lg shadow-2xl z-50 text-sm font-medium';
-        errorToast.textContent = isSpanish 
-          ? '❌ Error al descargar. Intenta de nuevo.'
-          : '❌ Download error. Please try again.';
-        document.body.appendChild(errorToast);
-        
-        setTimeout(() => {
-          errorToast.remove();
-        }, 4000);
-      }
-    }}
-    className="w-full flex items-center gap-3 p-3 bg-gradient-to-r from-[#F0F4FF] to-[#E8EEFF] hover:from-[#E0E8FF] hover:to-[#D0DCFF] transition-all border-2 border-[#002147] rounded-lg group shadow-sm hover:shadow-md"
-  >
-    <span className="text-2xl flex-shrink-0">📝</span>
-    <div className="text-left flex-1 overflow-hidden">
-      <p className="text-sm font-bold text-[#002147] group-hover:text-[#001A38] transition-colors truncate">
-        {isSpanish ? 'Descargar revisiones (DOCX)' : 'Download reviews (DOCX)'}
-      </p>
-      <p className="text-[10px] text-slate-500">
-        {isSpanish 
-          ? 'Documento Word con comentarios de revisores' 
-          : 'Word document with reviewer comments'}
-      </p>
-    </div>
-    <div className="flex-shrink-0 w-8 h-8 bg-[#002147] rounded-full flex items-center justify-center group-hover:bg-[#001A38] transition-colors">
-      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-      </svg>
-    </div>
-  </button>
-)}
-    {/* BOTÓN: DESCARGAR CONSENTIMIENTO (SOLO SI ES MENOR) */}
-    {sub.hasMinorAuthors && sub.consentFiles && sub.consentFiles.length > 0 && (
-      <div className="border-t border-slate-200 pt-3">
-        <p className="text-[10px] font-bold text-orange-600 uppercase tracking-wider mb-2 px-1">
-          {isSpanish ? '👶 Consentimientos de menores' : '👶 Minor consent forms'}
-        </p>
-        {sub.consentFiles.map((consent, idx) => (
-          <button
-            key={idx}
-            onClick={() => {
-              if (consent.fileUrl) {
-                window.open(consent.fileUrl, '_blank', 'noopener noreferrer');
-              } else if (consent.fileId) {
-                window.open(`https://drive.google.com/file/d/${consent.fileId}/view`, '_blank', 'noopener noreferrer');
-              } else if (consent.method === 'email') {
-                alert(isSpanish 
-                  ? `Consentimiento para ${consent.author} fue enviado por correo electrónico.` 
-                  : `Consent for ${consent.author} was sent by email.`);
-              } else {
-                alert(isSpanish 
-                  ? 'Documento de consentimiento no disponible' 
-                  : 'Consent document not available');
-              }
-            }}
-            className="w-full flex items-center gap-2 p-2.5 bg-orange-50 hover:bg-orange-100 transition-colors border border-orange-200 rounded-lg mb-2 text-left"
-          >
-            <span className="text-lg flex-shrink-0">📋</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-[#0A1929] truncate">
-                {consent.author || `${isSpanish ? 'Menor' : 'Minor'} ${idx + 1}`}
-              </p>
-              <p className="text-[10px] text-slate-500">
-                {consent.method === 'upload' 
-                  ? (isSpanish ? 'Formulario subido' : 'Uploaded form')
-                  : consent.method === 'email'
-                  ? (isSpanish ? 'Enviado por correo' : 'Sent by email')
-                  : consent.method || (isSpanish ? 'Desconocido' : 'Unknown')
-                }
-              </p>
-            </div>
-            {consent.fileUrl || consent.fileId ? (
-              <svg className="w-4 h-4 text-orange-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-            ) : (
-              <span className="text-[10px] text-slate-400 flex-shrink-0">
-                {isSpanish ? 'No disponible' : 'N/A'}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-    )}
-
-    {/* BOTÓN: DESCARGAR AUTORIZACIÓN (SI ES MENOR Y EL USUARIO ES EL TUTOR) */}
-    {sub.hasMinorAuthors && sub.minorAuthors && sub.minorAuthors.length > 0 && (
-      <div className="border-t border-slate-200 pt-3">
-        <p className="text-[10px] font-bold text-[#0A1929] uppercase tracking-wider mb-2 px-1">
-          {isSpanish ? '📝 Formularios de autorización' : '📝 Authorization forms'}
-        </p>
-        <p className="text-[10px] text-slate-500 mb-2 px-1">
-          {isSpanish 
-            ? 'Descarga el formulario de consentimiento para completar y enviar a contact@revistacienciasestudiantes.com'
-            : 'Download the consent form to complete and send to contact@revistacienciasestudiantes.com'
-          }
-        </p>
-        <button
-          onClick={() => {
-            // Descargar plantilla de consentimiento
-            const templateUrl = 'https://www.revistacienciasestudiantes.com/assets/consentimiento-menor.pdf';
-            window.open(templateUrl, '_blank', 'noopener noreferrer');
-          }}
-          className="w-full flex items-center gap-2 p-2.5 bg-slate-50 hover:bg-slate-100 transition-colors border border-slate-200 rounded-lg"
-        >
-          <span className="text-lg flex-shrink-0">📄</span>
-          <div className="text-left flex-1 min-w-0">
-            <p className="text-xs font-medium text-[#0A1929]">
-              {isSpanish ? 'Plantilla de consentimiento' : 'Consent form template'}
-            </p>
-            <p className="text-[10px] text-slate-500">PDF</p>
-          </div>
-          <svg className="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-          </svg>
-        </button>
-      </div>
-    )}
-{/* ============ COMENTARIOS AL EDITOR ============ */}
-{sub.editorComment && (
-  <div className="bg-white p-4 sm:p-6 border border-slate-200 rounded-lg overflow-hidden">
-    <div className="flex items-center gap-2 mb-4">
-      <div className="w-8 h-8 bg-[#002147] rounded-lg flex items-center justify-center">
-        <svg className="w-4 h-4 text-[#C0A86A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-        </svg>
-      </div>
-      <h4 className="font-['Playfair_Display'] font-bold text-sm text-[#002147] uppercase tracking-wider">
-        {isSpanish ? 'Tu Mensaje al Editor' : 'Your Message to the Editor'}
-      </h4>
-    </div>
-    
-    {/* Contenido del comentario con estilos preservados */}
-    <div className="bg-gradient-to-br from-[#F8F9FB] to-[#F0F4F8] border border-[#E5E9F0] rounded-xl p-4 relative">
-      {/* Línea decorativa lateral */}
-      <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#C0A86A] to-[#002147] rounded-l-xl" />
-      
-      <div className="pl-4">
-        <div 
-          className="prose prose-sm max-w-none font-['Lora'] text-[#1A2B3C] leading-relaxed
-            [&_strong]:text-[#002147] [&_strong]:font-bold
-            [&_em]:text-[#C0A86A] [&_em]:italic
-            [&_u]:underline [&_u]:decoration-[#C0A86A] [&_u]:decoration-2
-            [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1
-            [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-1
-            [&_li]:text-[#1A2B3C] [&_li]:marker:text-[#C0A86A]"
-          dangerouslySetInnerHTML={{ __html: sub.editorComment }}
-        />
-      </div>
-    </div>
-    
-    {/* Footer decorativo */}
-    <div className="mt-3 flex items-center gap-2 text-[10px] text-[#5A6B7A] font-mono uppercase tracking-wider">
-      <span className="w-2 h-2 bg-[#C0A86A] rounded-full" />
-      {isSpanish ? 'Enviado con el manuscrito' : 'Submitted with manuscript'}
-    </div>
-  </div>
-)}
-<div className="sm:hidden bg-gradient-to-r from-[#FBF9F3] to-[#F8F9FB] border border-[#C0A86A]/30 rounded-xl p-3">
-  <div className="flex items-center gap-2 mb-2">
-    <span className="text-lg">💬</span>
-    <span className="text-[10px] font-mono font-bold text-[#002147] uppercase tracking-wider">
-      {isSpanish ? 'Mensaje al Editor' : 'Message to Editor'}
-    </span>
-  </div>
-  <div 
-    className="text-xs font-['Lora'] text-[#1A2B3C] leading-relaxed line-clamp-4"
-    dangerouslySetInnerHTML={{ __html: sub.editorComment }}
-  />
-  <button 
-    onClick={() => {/* expandir */}} 
-    className="mt-2 text-[10px] text-[#C0A86A] font-mono hover:text-[#002147] transition-colors"
-  >
-    {isSpanish ? 'Leer más →' : 'Read more →'}
-  </button>
-</div>
-    {/* INDICADOR DE ESTADO DEL DOCUMENTO */}
-    {sub.documentStatus && (
-      <div className="border-t border-slate-200 pt-3">
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-1">
-          {isSpanish ? 'Estado del documento' : 'Document status'}
-        </p>
-        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-mono ${
-          sub.documentStatus === 'processed' 
-            ? 'bg-green-100 text-green-700' 
-            : sub.documentStatus === 'processing'
-            ? 'bg-yellow-100 text-yellow-700'
-            : 'bg-red-100 text-red-700'
-        }`}>
-          {sub.documentStatus === 'processed' && '✓'}
-          {sub.documentStatus === 'processing' && '⏳'}
-          {sub.documentStatus === 'processing_failed' && '⚠️'}
-          {' '}
-          {sub.documentStatus === 'processed' 
-            ? (isSpanish ? 'Procesado' : 'Processed')
-            : sub.documentStatus === 'processing'
-            ? (isSpanish ? 'Procesando...' : 'Processing...')
-            : (isSpanish ? 'Error' : 'Error')
-          }
-        </span>
-      </div>
-    )}
-  </div>
-</div>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          ))}
+              </motion.div>
+            );
+          })}
         </div>
       )}
 
-      {/* Modal para subir revisión - Responsive */}
-      {/* Modal para subir revisión - VERSIÓN MEJORADA */}
-<AnimatePresence>
-  {selectedSubmission && (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
-      onClick={() => {
-        if (!uploading) {
-          setSelectedSubmission(null);
-          setRevisionFile(null);
-          setRevisionNotes('');
-          setRevisionComment('');
-        }
-      }}
-    >
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header del modal */}
-        <div className="bg-gradient-to-r from-[#0A1929] to-[#1E2F40] p-6 sm:p-8 text-white sticky top-0 z-10">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-['Playfair_Display'] text-xl sm:text-2xl font-bold mb-1">
-                {isSpanish ? 'Subir Versión Revisada' : 'Upload Revised Version'}
-              </h3>
-              <p className="text-[#E5E9F0] text-sm font-['Lora']">
-                {selectedSubmission.title}
-              </p>
-            </div>
-            <button
-              onClick={() => {
-                setSelectedSubmission(null);
-                setRevisionFile(null);
-                setRevisionNotes('');
-                setRevisionComment('');
-              }}
-              className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
-              disabled={uploading}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <span className="px-3 py-1 bg-[#C0A86A] text-[#0A1929] text-xs font-bold rounded-full font-mono">
-              {isSpanish ? `Ronda ${selectedSubmission.currentRound || 1} → ${(selectedSubmission.currentRound || 1) + 1}` : `Round ${selectedSubmission.currentRound || 1} → ${(selectedSubmission.currentRound || 1) + 1}`}
-            </span>
-            <span className="px-3 py-1 bg-white/15 text-white text-xs rounded-full font-mono">
-              {selectedSubmission.submissionId}
-            </span>
-          </div>
-        </div>
-
-        {/* Cuerpo del modal */}
-        <div className="p-6 sm:p-8 space-y-8">
-          
-          {/* ============ 1. ARCHIVO ============ */}
-          <section>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-[#F0F4F8] rounded-xl flex items-center justify-center">
-                <svg className="w-5 h-5 text-[#0A1929]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <div>
-                <h4 className="font-['Playfair_Display'] font-bold text-[#0A1929] text-sm uppercase tracking-wide">
-                  {isSpanish ? '1. Archivo Revisado' : '1. Revised File'}
-                </h4>
-                <p className="text-[10px] text-[#5A6B7A] font-mono">
-                  {isSpanish ? 'PDF o Word (.doc, .docx) — Máx. 10MB' : 'PDF or Word (.doc, .docx) — Max. 10MB'}
-                </p>
-              </div>
-            </div>
-            
-            <div className="bg-[#F5F7FA] border-2 border-dashed border-[#E5E9F0] hover:border-[#C0A86A] rounded-2xl p-6 transition-colors">
-              <input
-                type="file"
-                accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                onChange={handleFileChange}
-                className="w-full text-sm text-[#546E7A] file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-[#C0A86A] file:text-white hover:file:bg-[#A58D4F] file:cursor-pointer file:transition-colors"
-                disabled={uploading}
-              />
-              
-              {revisionFile && (
-                <div className="mt-4 flex items-center gap-3 bg-white rounded-xl p-3 border border-[#E5E9F0]">
-                  <span className="text-2xl">📄</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-[#0A1929] truncate font-['Lora']">
-                      {revisionFile.name}
-                    </p>
-                    <p className="text-xs text-[#5A6B7A]">
-                      {(revisionFile.size / 1024).toFixed(2)} KB
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setRevisionFile(null)}
-                    className="text-[#B22234] hover:bg-red-50 p-1.5 rounded-lg transition-colors"
-                    disabled={uploading}
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
+      {/* ===================== PORTAL DEL MANUSCRITO (PANTALLA COMPLETA) ===================== */}
+      <AnimatePresence>
+        {activePortal && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="fixed inset-0 z-50 bg-[#F8F9FB] flex flex-col overflow-hidden"
+          >
+            {/* Header del Portal */}
+            <div className="bg-[#003b5c] text-white px-4 sm:px-6 py-4 flex items-center justify-between shadow-md z-10 shrink-0">
+              <div className="flex items-center gap-4 sm:gap-6 overflow-hidden">
+                <button 
+                  onClick={handleClosePortal}
+                  className="hover:bg-white/10 p-2 -ml-2 rounded-full transition-colors flex-shrink-0"
+                  title={isSpanish ? 'Volver al Escritorio' : 'Back to Desk'}
+                >
+                  <Icons.ArrowLeft />
+                </button>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-mono text-sky-200 uppercase tracking-widest mb-1">
+                    ID: {activePortal.submissionId || activePortal.id.substring(0,8)}
+                  </p>
+                  <h2 className="font-serif text-base sm:text-lg font-bold truncate">
+                    {activePortal.title}
+                  </h2>
                 </div>
-              )}
+              </div>
+              
+              <div className="hidden sm:block">
+                <span className="text-xs px-3 py-1.5 uppercase font-bold tracking-wider bg-white/10 text-white border border-white/20">
+                  {SUBMISSION_STATES[activePortal.status]?.[language]}
+                </span>
+              </div>
             </div>
-          </section>
 
-          {/* ============ 2. NOTAS BREVES PARA EL EDITOR ============ */}
-          <section>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-[#F0F4F8] rounded-xl flex items-center justify-center">
-                <svg className="w-5 h-5 text-[#0A1929]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </div>
-              <div>
-                <h4 className="font-['Playfair_Display'] font-bold text-[#0A1929] text-sm uppercase tracking-wide">
-                  {isSpanish ? '2. Resumen de Cambios' : '2. Summary of Changes'}
-                </h4>
-                <p className="text-[10px] text-[#5A6B7A] font-mono">
-                  {isSpanish ? 'Breve descripción de los cambios realizados' : 'Brief description of changes made'}
-                </p>
+            {/* Navegación por Pestañas */}
+            <div className="bg-white border-b border-slate-200 px-4 sm:px-6 shrink-0 shadow-sm z-10">
+              <div className="max-w-6xl mx-auto flex gap-4 sm:gap-8 overflow-x-auto hide-scrollbar">
+                {[
+                  { id: 'overview', label: isSpanish ? 'Resumen' : 'Overview', icon: Icons.Document },
+                  { id: 'submission', label: isSpanish ? 'Envío Completo' : 'Full Submission', icon: Icons.Database },
+                  { id: 'documents', label: isSpanish ? 'Documentos' : 'Documents', icon: Icons.Download },
+                  { id: 'reviews', label: isSpanish ? 'Revisiones' : 'Reviews', icon: Icons.Users },
+                  { id: 'tasks', label: isSpanish ? 'Acciones' : 'Actions', icon: Icons.Alert, alert: requiresAction(activePortal) }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`py-3 sm:py-4 flex items-center gap-2 text-[10px] sm:text-xs font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors relative ${
+                      activeTab === tab.id 
+                        ? 'border-[#003b5c] text-[#003b5c]' 
+                        : 'border-transparent text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    <tab.icon />
+                    {tab.label}
+                    {tab.alert && (
+                      <span className="absolute top-2 sm:top-3 -right-2 w-2 h-2 bg-rose-500 rounded-full animate-pulse"></span>
+                    )}
+                  </button>
+                ))}
               </div>
             </div>
-            
-            <textarea
-              value={revisionNotes}
-              onChange={(e) => setRevisionNotes(e.target.value)}
-              rows="4"
-              className="w-full p-4 bg-[#F5F7FA] border border-[#E5E9F0] rounded-2xl focus:ring-2 focus:ring-[#C0A86A] focus:border-transparent font-['Lora'] text-sm resize-none"
-              placeholder={isSpanish 
-                ? 'Ej: Se corrigieron los errores metodológicos señalados por el Revisor 1. Se actualizó la sección de resultados con nuevos datos. Se mejoró la discusión según las sugerencias del Revisor 2...' 
-                : 'Ex: Corrected methodological errors pointed out by Reviewer 1. Updated results section with new data. Improved discussion based on Reviewer 2 suggestions...'}
-              disabled={uploading}
-            />
-          </section>
 
-          {/* ============ 3. COMENTARIO DETALLADO AL EDITOR (QUILL) ============ */}
-          <section>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-[#F0F4F8] rounded-xl flex items-center justify-center">
-                <svg className="w-5 h-5 text-[#0A1929]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                </svg>
-              </div>
-              <div>
-                <h4 className="font-['Playfair_Display'] font-bold text-[#0A1929] text-sm uppercase tracking-wide">
-                  {isSpanish ? '3. Comentario Detallado al Editor' : '3. Detailed Comment to Editor'}
-                </h4>
-                <p className="text-[10px] text-[#5A6B7A] font-mono">
-                  {isSpanish ? 'Explica cómo incorporaste las revisiones, justifica cambios de autoría, etc.' : 'Explain how you incorporated revisions, justify authorship changes, etc.'}
-                </p>
-              </div>
-            </div>
-            
-            <div className="border border-[#E5E9F0] rounded-2xl overflow-hidden bg-white focus-within:border-[#C0A86A] focus-within:ring-2 focus-within:ring-[#C0A86A]/20 transition-all">
-              <ReactQuill
-                theme="snow"
-                value={revisionComment}
-                onChange={setRevisionComment}
-                placeholder={isSpanish 
-                  ? 'Escribe aquí un comentario detallado para el editor...\n\nPuedes:\n• Explicar cómo respondiste a cada revisión\n• Justificar cambios en la lista de autores\n• Señalar mejoras adicionales\n• Incluir enlaces a repositorios o datos complementarios\n• Usar negritas, cursivas, listas y URLs' 
-                  : 'Write a detailed comment for the editor here...\n\nYou can:\n• Explain how you responded to each review\n• Justify changes in the author list\n• Point out additional improvements\n• Include links to repositories or supplementary data\n• Use bold, italics, lists and URLs'}
-                modules={{
-                  toolbar: [
-                    [{ 'header': [1, 2, 3, false] }],
-                    ['bold', 'italic', 'underline', 'strike'],
-                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                    ['blockquote', 'code-block'],
-                    ['link', 'image'],
-                    ['clean']
-                  ]
-                }}
-                formats={[
-                  'header',
-                  'bold', 'italic', 'underline', 'strike',
-                  'list', 'bullet',
-                  'blockquote', 'code-block',
-                  'link', 'image'
-                ]}
-                className="font-['Lora'] text-sm"
-                style={{ height: '300px' }}
-                readOnly={uploading}
-              />
-            </div>
-            
-            {/* Mini-guía de formato */}
-            <div className="mt-3 flex flex-wrap gap-2">
-              <span className="inline-flex items-center gap-1 text-[10px] font-mono text-[#5A6B7A] bg-[#F5F7FA] px-2 py-1 rounded-full">
-                <span className="font-bold">B</span> {isSpanish ? 'Negrita' : 'Bold'}
-              </span>
-              <span className="inline-flex items-center gap-1 text-[10px] font-mono text-[#5A6B7A] bg-[#F5F7FA] px-2 py-1 rounded-full">
-                <span className="italic">I</span> {isSpanish ? 'Cursiva' : 'Italic'}
-              </span>
-              <span className="inline-flex items-center gap-1 text-[10px] font-mono text-[#5A6B7A] bg-[#F5F7FA] px-2 py-1 rounded-full">
-                🔗 URLs
-              </span>
-              <span className="inline-flex items-center gap-1 text-[10px] font-mono text-[#5A6B7A] bg-[#F5F7FA] px-2 py-1 rounded-full">
-                📋 {isSpanish ? 'Listas' : 'Lists'}
-              </span>
-            </div>
-          </section>
+            {/* Área de Contenido con Scroll */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10">
+              <div className="max-w-4xl mx-auto">
+                
+                {/* ---------------- PESTAÑA: RESUMEN ---------------- */}
+                {activeTab === 'overview' && (
+                  <div className="space-y-8 animate-in fade-in">
+                    
+                    {/* Estado del Expediente */}
+                    <div className="bg-white p-6 sm:p-8 border border-slate-200 shadow-sm">
+                      <h3 className="font-sans font-bold text-xs uppercase tracking-widest text-slate-400 mb-4">
+                        {isSpanish ? 'Estado del Expediente' : 'Record Status'}
+                      </h3>
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 bg-slate-50 flex items-center justify-center text-2xl border border-slate-100 flex-shrink-0">
+                          {SUBMISSION_STATES[activePortal.status]?.icon}
+                        </div>
+                        <div>
+                          <p className="font-serif text-xl sm:text-2xl text-[#003b5c]">
+                            {SUBMISSION_STATES[activePortal.status]?.[language]}
+                          </p>
+                          <p className="text-slate-600 font-sans text-sm mt-1">
+                            {SUBMISSION_STATES[activePortal.status]?.description[language]}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
 
-          {/* ============ BOTONES DE ACCIÓN ============ */}
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4 border-t border-[#E5E9F0]">
-            <button
-              onClick={handleSubmitRevision}
-              disabled={uploading || !revisionFile || !revisionNotes.trim()}
-              className="flex-1 py-4 bg-gradient-to-r from-[#0A1929] to-[#1E2F40] hover:from-[#1E2F40] hover:to-[#0A1929] disabled:from-[#E5E9F0] disabled:to-[#E5E9F0] disabled:text-[#5A6B7A] text-white font-['Playfair_Display'] font-bold rounded-xl transition-all text-sm sm:text-base shadow-lg hover:shadow-xl disabled:shadow-none flex items-center justify-center gap-2"
-            >
-              {uploading ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  {isSpanish ? 'SUBIENDO REVISIÓN...' : 'UPLOADING REVISION...'}
-                </>
-              ) : (
-                <>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                  </svg>
-                  {isSpanish ? 'ENVIAR VERSIÓN REVISADA' : 'SUBMIT REVISED VERSION'}
-                </>
-              )}
-            </button>
-            
-            <button
-              onClick={() => {
-                if (revisionNotes.trim() || revisionComment.trim() || revisionFile) {
-                  const confirmDiscard = window.confirm(
-                    isSpanish 
-                      ? '¿Estás seguro? Perderás todos los cambios no guardados.' 
-                      : 'Are you sure? You will lose all unsaved changes.'
-                  );
-                  if (!confirmDiscard) return;
-                }
-                setSelectedSubmission(null);
-                setRevisionFile(null);
-                setRevisionNotes('');
-                setRevisionComment('');
-              }}
-              disabled={uploading}
-              className="flex-1 py-4 border-2 border-[#0A1929] text-[#0A1929] font-['Playfair_Display'] font-bold rounded-xl hover:bg-[#0A1929] hover:text-white transition-all text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSpanish ? 'CANCELAR' : 'CANCEL'}
-            </button>
-          </div>
-          
-          {/* Indicador de campos requeridos */}
-          <p className="text-center text-[10px] font-mono text-[#5A6B7A]">
-            * {isSpanish ? 'Archivo y resumen de cambios son obligatorios' : 'File and change summary are required'}
-          </p>
-        </div>
-      </motion.div>
-    </motion.div>
-  )}
-</AnimatePresence>
+                    {/* Timeline de Progreso */}
+                    {!['accepted', 'rejected', 'desk-review-rejected'].includes(activePortal.status) && (
+                      <div className="bg-white p-6 sm:p-8 border border-slate-200 shadow-sm">
+                        <h3 className="font-sans font-bold text-xs uppercase tracking-widest text-slate-400 mb-6">
+                          {isSpanish ? 'Progreso del Manuscrito' : 'Manuscript Progress'}
+                        </h3>
+                        <div className="relative">
+                          <div className="absolute top-4 left-0 w-full h-[1px] bg-slate-200 z-0 hidden sm:block" />
+                          <div className="flex sm:justify-between overflow-x-auto sm:overflow-visible pb-2 sm:pb-0 gap-4 sm:gap-0">
+                            {['submitted', 'in-desk-review', 'in-reviewer-selection', 'awaiting-reviewer-responses', 'in-peer-review', 'awaiting-editor-decision', 'accepted'].map((step, idx) => {
+                              const currentStep = getTimelineStep(activePortal.status);
+                              const isCompleted = idx < currentStep;
+                              const isCurrent = idx === currentStep;
+                              
+                              return (
+                                <div key={step} className="relative z-10 flex flex-col items-center flex-shrink-0">
+                                  <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 flex items-center justify-center transition-all text-xs ${
+                                    isCurrent 
+                                      ? 'bg-[#003b5c] border-[#003b5c] text-white scale-110 sm:scale-125 shadow-lg' 
+                                      : isCompleted
+                                      ? 'bg-emerald-500 border-emerald-500 text-white'
+                                      : 'bg-white border-slate-200 text-slate-300'
+                                  }`}>
+                                    {isCompleted ? '✓' : idx + 1}
+                                  </div>
+                                  <span className={`text-[8px] sm:text-[10px] mt-1 sm:mt-2 font-bold uppercase tracking-tighter whitespace-nowrap ${
+                                    isCurrent ? 'text-[#003b5c]' : 'text-slate-400'
+                                  }`}>
+                                    {SUBMISSION_STATES[step]?.[language] || step}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Feedback del Editor / Decisiones Finales */}
+                    {activePortal.finalDecision && (
+                      <div className={`p-6 sm:p-8 border shadow-sm ${
+                        activePortal.finalDecision === 'accept' ? 'bg-emerald-50 border-emerald-200' :
+                        activePortal.finalDecision === 'reject' ? 'bg-rose-50 border-rose-200' :
+                        'bg-amber-50 border-amber-200'
+                      }`}>
+                        <h3 className="font-sans font-bold text-xs uppercase tracking-widest text-slate-500 mb-4">
+                          {isSpanish ? 'Resolución Editorial Final' : 'Final Editorial Resolution'}
+                        </h3>
+                        {activePortal.finalFeedback && (
+                          <div className="prose prose-sm max-w-none font-serif text-slate-800 leading-relaxed" 
+                               dangerouslySetInnerHTML={{ __html: activePortal.finalFeedback }} />
+                        )}
+                      </div>
+                    )}
+
+                    {activePortal.deskReviewFeedback && !activePortal.finalDecision && (
+                      <div className="bg-white p-6 sm:p-8 border border-slate-200 shadow-sm border-l-4 border-l-indigo-400">
+                        <h3 className="font-sans font-bold text-xs uppercase tracking-widest text-slate-400 mb-4">
+                          {isSpanish ? 'Nota del Comité Editorial' : 'Note from Editorial Committee'}
+                        </h3>
+                        <p className="font-serif text-slate-700 leading-relaxed">
+                          {activePortal.deskReviewFeedback}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Datos Básicos */}
+                    <div className="bg-white p-6 sm:p-8 border border-slate-200 shadow-sm">
+                      <h3 className="font-sans font-bold text-xs uppercase tracking-widest text-slate-400 mb-4">
+                        {isSpanish ? 'Información General' : 'General Information'}
+                      </h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                            {isSpanish ? 'Fecha de envío' : 'Submission date'}
+                          </p>
+                          <p className="font-serif text-slate-700">{activePortal.createdAt?.toLocaleDateString()}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                            {isSpanish ? 'Ronda actual' : 'Current round'}
+                          </p>
+                          <p className="font-serif text-slate-700">{activePortal.currentRound || 1}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                            {isSpanish ? 'Área temática' : 'Thematic area'}
+                          </p>
+                          <p className="font-serif text-slate-700">{activePortal.area || '—'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                            {isSpanish ? 'Idioma' : 'Language'}
+                          </p>
+                          <p className="font-serif text-slate-700">
+                            {activePortal.paperLanguage === 'es' ? 'Español' : 'English'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ---------------- PESTAÑA: ENVÍO COMPLETO ---------------- */}
+                {activeTab === 'submission' && (
+                  <div className="space-y-8 animate-in fade-in">
+                    <h2 className="font-serif text-2xl sm:text-3xl text-[#003b5c] mb-2">
+                      {isSpanish ? 'Expediente Completo del Manuscrito' : 'Complete Manuscript Record'}
+                    </h2>
+                    <p className="text-slate-500 font-sans text-sm mb-6">
+                      {isSpanish 
+                        ? 'Todos los datos registrados en el sistema para este envío.' 
+                        : 'All data registered in the system for this submission.'}
+                    </p>
+
+                    {/* 1. DATOS DE IDENTIFICACIÓN */}
+                    <section className="bg-white p-6 sm:p-8 border border-slate-200 shadow-sm">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="w-8 h-8 bg-[#003b5c] text-white flex items-center justify-center">
+                          <Icons.Key />
+                        </div>
+                        <h3 className="font-sans font-bold text-xs uppercase tracking-widest text-slate-600">
+                          {isSpanish ? 'Identificación del Envío' : 'Submission Identification'}
+                        </h3>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                        {[
+                          { label: 'Submission ID', value: activePortal.submissionId },
+                          { label: 'Request ID', value: activePortal.requestId },
+                          { label: 'Author UID', value: activePortal.authorUID || activePortal.uid }
+                        ].map((item, idx) => (
+                          <div key={idx} className="bg-slate-50 p-3 border border-slate-100">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{item.label}</p>
+                            <p className="font-mono text-xs text-slate-700 break-all">{item.value || '—'}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+
+                    {/* 2. DATOS DEL AUTOR */}
+                    <section className="bg-white p-6 sm:p-8 border border-slate-200 shadow-sm">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="w-8 h-8 bg-[#003b5c] text-white flex items-center justify-center">
+                          <Icons.User />
+                        </div>
+                        <h3 className="font-sans font-bold text-xs uppercase tracking-widest text-slate-600">
+                          {isSpanish ? 'Autor Principal' : 'Main Author'}
+                        </h3>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                        {[
+                          { label: isSpanish ? 'Nombre' : 'Name', value: activePortal.authorName },
+                          { label: 'Email', value: activePortal.authorEmail }
+                        ].map((item, idx) => (
+                          <div key={idx} className="bg-slate-50 p-3 border border-slate-100">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{item.label}</p>
+                            <p className="font-serif text-slate-700 break-all">{item.value || '—'}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+
+                    {/* 3. DATOS DEL ARTÍCULO */}
+                    <section className="bg-white p-6 sm:p-8 border border-slate-200 shadow-sm">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="w-8 h-8 bg-[#003b5c] text-white flex items-center justify-center">
+                          <Icons.Document />
+                        </div>
+                        <h3 className="font-sans font-bold text-xs uppercase tracking-widest text-slate-600">
+                          {isSpanish ? 'Datos del Artículo' : 'Article Data'}
+                        </h3>
+                      </div>
+                      <div className="space-y-4">
+                        <div className="bg-slate-50 p-3 border border-slate-100">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                            {isSpanish ? 'Título' : 'Title'}
+                          </p>
+                          <p className="font-serif text-slate-700 mt-1">{activePortal.title || '—'}</p>
+                        </div>
+                        {activePortal.titleEn && (
+                          <div className="bg-slate-50 p-3 border border-slate-100">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                              {isSpanish ? 'Título (Inglés)' : 'Title (English)'}
+                            </p>
+                            <p className="font-serif text-slate-700 mt-1 italic">{activePortal.titleEn}</p>
+                          </div>
+                        )}
+                        <div className="bg-slate-50 p-3 border border-slate-100">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                            {isSpanish ? 'Resumen' : 'Abstract'}
+                          </p>
+                          <p className="font-serif text-slate-700 mt-1 text-sm leading-relaxed">
+                            {activePortal.abstract || '—'}
+                          </p>
+                        </div>
+                        {activePortal.abstractEn && (
+                          <div className="bg-slate-50 p-3 border border-slate-100">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                              {isSpanish ? 'Resumen (Inglés)' : 'Abstract (English)'}
+                            </p>
+                            <p className="font-serif text-slate-700 mt-1 text-sm leading-relaxed italic">
+                              {activePortal.abstractEn}
+                            </p>
+                          </div>
+                        )}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-slate-50 p-3 border border-slate-100">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                              {isSpanish ? 'Área' : 'Area'}
+                            </p>
+                            <p className="font-sans text-slate-700 text-sm">{activePortal.area || '—'}</p>
+                          </div>
+                          <div className="bg-slate-50 p-3 border border-slate-100">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                              {isSpanish ? 'Tipo de Artículo' : 'Article Type'}
+                            </p>
+                            <p className="font-sans text-slate-700 text-sm">{activePortal.articleType || '—'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+
+                    {/* 4. PALABRAS CLAVE */}
+                    {activePortal.keywords && activePortal.keywords.length > 0 && (
+                      <section className="bg-white p-6 sm:p-8 border border-slate-200 shadow-sm">
+                        <div className="flex items-center gap-3 mb-6">
+                          <div className="w-8 h-8 bg-[#003b5c] text-white flex items-center justify-center">
+                            <Icons.Tag />
+                          </div>
+                          <h3 className="font-sans font-bold text-xs uppercase tracking-widest text-slate-600">
+                            {isSpanish ? 'Palabras Clave' : 'Keywords'}
+                          </h3>
+                          {activePortal.keywordsVocabulario && (
+                            <span className="text-[10px] bg-slate-100 px-2 py-0.5 font-mono text-slate-500">
+                              {activePortal.keywordsVocabulario}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {activePortal.keywords.map((kw, idx) => (
+                            <span key={idx} className="px-3 py-1.5 bg-slate-50 border border-slate-200 text-xs font-mono text-slate-600">
+                              {kw}
+                            </span>
+                          ))}
+                        </div>
+                        {activePortal.keywordsEn && activePortal.keywordsEn.length > 0 && (
+                          <div className="mt-4 flex flex-wrap gap-2">
+                            {activePortal.keywordsEn.map((kw, idx) => (
+                              <span key={idx} className="px-3 py-1.5 bg-slate-50 border border-slate-200 text-xs font-mono text-slate-500 italic">
+                                {kw}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </section>
+                    )}
+
+                    {/* 5. AUTORES */}
+                    {activePortal.authors && activePortal.authors.length > 0 && (
+                      <section className="bg-white p-6 sm:p-8 border border-slate-200 shadow-sm">
+                        <div className="flex items-center gap-3 mb-6">
+                          <div className="w-8 h-8 bg-[#003b5c] text-white flex items-center justify-center">
+                            <Icons.Users />
+                          </div>
+                          <h3 className="font-sans font-bold text-xs uppercase tracking-widest text-slate-600">
+                            {isSpanish ? 'Autores' : 'Authors'} ({activePortal.authors.length})
+                          </h3>
+                        </div>
+                        <div className="space-y-3">
+                          {activePortal.authors.map((author, idx) => (
+                            <div key={idx} className="bg-slate-50 p-4 border border-slate-100">
+                              <div className="flex flex-wrap items-center gap-2 mb-2">
+                                <span className="font-serif font-bold text-slate-800">
+                                  {author.firstName} {author.lastName}
+                                </span>
+                                {author.isCorresponding && (
+                                  <span className="text-[9px] bg-[#003b5c] text-white px-2 py-0.5 uppercase tracking-wider">
+                                    {isSpanish ? 'Correspondencia' : 'Corresponding'}
+                                  </span>
+                                )}
+                                {author.isMinor && (
+                                  <span className="text-[9px] bg-orange-100 text-orange-700 px-2 py-0.5 uppercase tracking-wider">
+                                    {isSpanish ? 'Menor' : 'Minor'}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                                <div>
+                                  <span className="text-slate-400">{isSpanish ? 'Email:' : 'Email:'} </span>
+                                  <span className="text-slate-600">{author.email || '—'}</span>
+                                </div>
+                                <div>
+                                  <span className="text-slate-400">{isSpanish ? 'Institución:' : 'Institution:'} </span>
+                                  <span className="text-slate-600">{author.institution || '—'}</span>
+                                </div>
+                                <div>
+                                  <span className="text-slate-400">ORCID: </span>
+                                  <span className="text-slate-600 font-mono">{author.orcid || '—'}</span>
+                                </div>
+                              </div>
+                              {author.contribution && (
+                                <p className="text-xs text-slate-500 mt-2 italic">
+                                  {author.contribution}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+
+                    {/* 6. FINANCIAMIENTO Y CONFLICTOS */}
+                    <section className="bg-white p-6 sm:p-8 border border-slate-200 shadow-sm">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="w-8 h-8 bg-[#003b5c] text-white flex items-center justify-center">
+                          <Icons.Money />
+                        </div>
+                        <h3 className="font-sans font-bold text-xs uppercase tracking-widest text-slate-600">
+                          {isSpanish ? 'Financiamiento y Conflictos' : 'Funding and Conflicts'}
+                        </h3>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="bg-slate-50 p-3 border border-slate-100">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                            {isSpanish ? '¿Tiene financiamiento?' : 'Has funding?'}
+                          </p>
+                          <p className="font-sans text-slate-700 text-sm">
+                            {activePortal.funding?.hasFunding 
+                              ? (isSpanish ? 'Sí' : 'Yes') 
+                              : (isSpanish ? 'No' : 'No')}
+                          </p>
+                        </div>
+                        {activePortal.funding?.hasFunding && (
+                          <>
+                            <div className="bg-slate-50 p-3 border border-slate-100">
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                {isSpanish ? 'Fuentes' : 'Sources'}
+                              </p>
+                              <p className="font-sans text-slate-700 text-sm">{activePortal.funding.sources || '—'}</p>
+                            </div>
+                            <div className="bg-slate-50 p-3 border border-slate-100">
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                {isSpanish ? 'Números de subvención' : 'Grant numbers'}
+                              </p>
+                              <p className="font-mono text-slate-700 text-sm">{activePortal.funding.grantNumbers || '—'}</p>
+                            </div>
+                          </>
+                        )}
+                        {activePortal.conflictOfInterest && (
+                          <div className="bg-slate-50 p-3 border border-slate-100">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                              {isSpanish ? 'Conflicto de intereses' : 'Conflict of interest'}
+                            </p>
+                            <p className="font-sans text-slate-700 text-sm">{activePortal.conflictOfInterest}</p>
+                          </div>
+                        )}
+                      </div>
+                    </section>
+
+                    {/* 7. DISPONIBILIDAD DE DATOS Y CÓDIGO */}
+                    {(activePortal.dataAvailability || activePortal.codeAvailability) && (
+                      <section className="bg-white p-6 sm:p-8 border border-slate-200 shadow-sm">
+                        <div className="flex items-center gap-3 mb-6">
+                          <div className="w-8 h-8 bg-[#003b5c] text-white flex items-center justify-center">
+                            <Icons.Database />
+                          </div>
+                          <h3 className="font-sans font-bold text-xs uppercase tracking-widest text-slate-600">
+                            {isSpanish ? 'Disponibilidad de Datos y Código' : 'Data and Code Availability'}
+                          </h3>
+                        </div>
+                        <div className="space-y-3">
+                          {activePortal.dataAvailability && (
+                            <div className="bg-slate-50 p-3 border border-slate-100">
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                {isSpanish ? 'Datos' : 'Data'}
+                              </p>
+                              <p className="font-sans text-slate-700 text-sm">{activePortal.dataAvailability}</p>
+                            </div>
+                          )}
+                          {activePortal.codeAvailability && (
+                            <div className="bg-slate-50 p-3 border border-slate-100">
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                {isSpanish ? 'Código' : 'Code'}
+                              </p>
+                              <p className="font-sans text-slate-700 text-sm">{activePortal.codeAvailability}</p>
+                            </div>
+                          )}
+                        </div>
+                      </section>
+                    )}
+
+                    {/* 8. ÉTICA */}
+                    <section className="bg-white p-6 sm:p-8 border border-slate-200 shadow-sm">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="w-8 h-8 bg-[#003b5c] text-white flex items-center justify-center">
+                          <Icons.Shield />
+                        </div>
+                        <h3 className="font-sans font-bold text-xs uppercase tracking-widest text-slate-600">
+                          {isSpanish ? 'Ética' : 'Ethics'}
+                        </h3>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="bg-slate-50 p-3 border border-slate-100">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                            {isSpanish ? '¿Requiere aprobación ética?' : 'Requires ethics approval?'}
+                          </p>
+                          <p className="font-sans text-slate-700 text-sm">
+                            {activePortal.requiresEthicsApproval 
+                              ? (isSpanish ? 'Sí' : 'Yes') 
+                              : (isSpanish ? 'No' : 'No')}
+                          </p>
+                        </div>
+                        {activePortal.requiresEthicsApproval && activePortal.ethicsCommitteeName && (
+                          <div className="bg-slate-50 p-3 border border-slate-100">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                              {isSpanish ? 'Comité de ética' : 'Ethics committee'}
+                            </p>
+                            <p className="font-sans text-slate-700 text-sm">{activePortal.ethicsCommitteeName}</p>
+                          </div>
+                        )}
+                      </div>
+                    </section>
+
+                    {/* 9. USO DE IA */}
+                    {activePortal.aiUsed && (
+                      <section className="bg-white p-6 sm:p-8 border border-slate-200 shadow-sm">
+                        <div className="flex items-center gap-3 mb-6">
+                          <div className="w-8 h-8 bg-[#003b5c] text-white flex items-center justify-center">
+                            <Icons.Robot />
+                          </div>
+                          <h3 className="font-sans font-bold text-xs uppercase tracking-widest text-slate-600">
+                            {isSpanish ? 'Uso de Inteligencia Artificial' : 'AI Usage'}
+                          </h3>
+                        </div>
+                        {activePortal.aiTools && activePortal.aiTools.length > 0 && (
+                          <div className="space-y-3">
+                            {activePortal.aiTools.map((tool, idx) => (
+                              <div key={idx} className="bg-slate-50 p-3 border border-slate-100">
+                                <p className="font-sans font-bold text-slate-700 text-sm">{tool.name}</p>
+                                <div className="grid grid-cols-2 gap-2 mt-1 text-xs">
+                                  <div>
+                                    <span className="text-slate-400">{isSpanish ? 'Versión:' : 'Version:'} </span>
+                                    <span className="text-slate-600">{tool.version || '—'}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-slate-400">{isSpanish ? 'Propósito:' : 'Purpose:'} </span>
+                                    <span className="text-slate-600">{tool.purpose || '—'}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </section>
+                    )}
+
+                    {/* 10. COMENTARIO AL EDITOR */}
+                    {activePortal.editorComment && (
+                      <section className="bg-white p-6 sm:p-8 border border-slate-200 shadow-sm">
+                        <div className="flex items-center gap-3 mb-6">
+                          <div className="w-8 h-8 bg-[#003b5c] text-white flex items-center justify-center">
+                            <Icons.Email />
+                          </div>
+                          <h3 className="font-sans font-bold text-xs uppercase tracking-widest text-slate-600">
+                            {isSpanish ? 'Comentario al Editor' : 'Comment to Editor'}
+                          </h3>
+                        </div>
+                        <div className="bg-slate-50 p-4 border border-slate-100">
+                          <div className="prose prose-sm max-w-none font-serif text-slate-700 leading-relaxed"
+                               dangerouslySetInnerHTML={{ __html: activePortal.editorComment }} />
+                        </div>
+                      </section>
+                    )}
+
+                    {/* 11. INFORMACIÓN DE ARCHIVOS */}
+                    <section className="bg-white p-6 sm:p-8 border border-slate-200 shadow-sm">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="w-8 h-8 bg-[#003b5c] text-white flex items-center justify-center">
+                          <Icons.File />
+                        </div>
+                        <h3 className="font-sans font-bold text-xs uppercase tracking-widest text-slate-600">
+                          {isSpanish ? 'Archivos y Documentos' : 'Files and Documents'}
+                        </h3>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                        {activePortal.originalFileName && (
+                          <div className="bg-slate-50 p-3 border border-slate-100">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                              {isSpanish ? 'Archivo Original' : 'Original File'}
+                            </p>
+                            <p className="font-mono text-xs text-slate-700 break-all">{activePortal.originalFileName}</p>
+                          </div>
+                        )}
+                        {activePortal.originalFileSize && (
+                          <div className="bg-slate-50 p-3 border border-slate-100">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                              {isSpanish ? 'Tamaño' : 'Size'}
+                            </p>
+                            <p className="font-mono text-xs text-slate-700">
+                              {(activePortal.originalFileSize / 1024).toFixed(2)} KB
+                            </p>
+                          </div>
+                        )}
+                        <div className="bg-slate-50 p-3 border border-slate-100">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                            {isSpanish ? 'Estado del documento' : 'Document status'}
+                          </p>
+                          <span className={`inline-block mt-1 px-2 py-0.5 text-[10px] font-mono ${
+                            activePortal.documentStatus === 'processed' 
+                              ? 'bg-emerald-100 text-emerald-700' 
+                              : 'bg-amber-100 text-amber-700'
+                          }`}>
+                            {activePortal.documentStatus === 'processed' 
+                              ? (isSpanish ? 'Procesado' : 'Processed')
+                              : (isSpanish ? 'Enviado' : 'Submitted')}
+                          </span>
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                )}
+
+                {/* ---------------- PESTAÑA: DOCUMENTOS ---------------- */}
+                {activeTab === 'documents' && (
+                  <div className="space-y-6 animate-in fade-in">
+                    <h2 className="font-serif text-2xl sm:text-3xl text-[#003b5c] mb-6">
+                      {isSpanish ? 'Repositorio de Archivos' : 'File Repository'}
+                    </h2>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Manuscrito Principal */}
+                      <div className="bg-white p-6 border border-slate-200 shadow-sm flex flex-col">
+                        <div className="flex-1">
+                          <span className="inline-block px-2 py-1 bg-slate-100 text-slate-600 text-[10px] font-bold uppercase tracking-widest mb-3">
+                            {isSpanish ? 'Manuscrito Principal' : 'Main Manuscript'}
+                          </span>
+                          <h4 className="font-serif text-lg text-slate-800 mb-2">
+                            {isSpanish ? 'Versión Actual' : 'Current Version'}
+                          </h4>
+                          <p className="text-xs text-slate-500 font-sans mb-6">
+                            {activePortal.formattedPdfFile?.url 
+                              ? (isSpanish ? 'PDF Formateado' : 'Formatted PDF')
+                              : activePortal.formattedDocsFile?.url
+                              ? (isSpanish ? 'Google Docs' : 'Google Docs')
+                              : (isSpanish ? 'Documento Original' : 'Original Document')}
+                          </p>
+                        </div>
+                        <button 
+                          onClick={handleDownloadManuscript}
+                          className="w-full py-2.5 border border-[#003b5c] text-[#003b5c] hover:bg-[#003b5c] hover:text-white transition-colors text-xs font-bold uppercase tracking-wider flex justify-center items-center gap-2"
+                        >
+                          <Icons.Download /> {isSpanish ? 'Descargar PDF' : 'Download PDF'}
+                        </button>
+                      </div>
+
+                      {/* Docx de Revisiones */}
+                      {activePortal.finalReviewDocUrl && (
+                        <div className="bg-white p-6 border border-slate-200 shadow-sm flex flex-col border-l-4 border-l-[#C0A86A]">
+                          <div className="flex-1">
+                            <span className="inline-block px-2 py-1 bg-[#C0A86A]/20 text-[#8B7745] text-[10px] font-bold uppercase tracking-widest mb-3">
+                              {isSpanish ? 'Anotaciones de Pares' : 'Peer Annotations'}
+                            </span>
+                            <h4 className="font-serif text-lg text-slate-800 mb-2">
+                              {isSpanish ? 'Documento de Trabajo' : 'Working Document'}
+                            </h4>
+                            <p className="text-xs text-slate-500 font-sans mb-6">
+                              {isSpanish ? 'Contiene comentarios directos de revisores (DOCX).' : 'Contains direct reviewer comments (DOCX).'}
+                            </p>
+                          </div>
+                          <button 
+                            onClick={() => window.open(getDocsExportDocxUrl(activePortal.finalReviewDocUrl), '_blank')}
+                            className="w-full py-2.5 bg-[#003b5c] text-white hover:bg-[#002840] transition-colors text-xs font-bold uppercase tracking-wider flex justify-center items-center gap-2"
+                          >
+                            <Icons.Download /> {isSpanish ? 'Descargar DOCX' : 'Download DOCX'}
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Consentimientos de menores */}
+                      {activePortal.hasMinorAuthors && activePortal.consentFiles && activePortal.consentFiles.length > 0 && (
+                        <div className="bg-white p-6 border border-slate-200 shadow-sm md:col-span-2">
+                          <span className="inline-block px-2 py-1 bg-orange-100 text-orange-700 text-[10px] font-bold uppercase tracking-widest mb-4">
+                            {isSpanish ? 'Consentimientos de Menores' : 'Minor Consent Forms'}
+                          </span>
+                          <div className="space-y-2">
+                            {activePortal.consentFiles.map((consent, idx) => (
+                              <div key={idx} className="flex items-center justify-between bg-slate-50 p-3 border border-slate-100">
+                                <div className="flex items-center gap-2">
+                                  <Icons.File />
+                                  <div>
+                                    <p className="text-sm font-medium text-slate-700">
+                                      {consent.author || `${isSpanish ? 'Menor' : 'Minor'} ${idx + 1}`}
+                                    </p>
+                                    <p className="text-[10px] text-slate-400">
+                                      {consent.method === 'upload' 
+                                        ? (isSpanish ? 'Formulario subido' : 'Uploaded form')
+                                        : (isSpanish ? 'Enviado por correo' : 'Sent by email')}
+                                    </p>
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={() => handleDownloadConsent(consent)}
+                                  className="text-[#003b5c] hover:text-[#C0A86A] transition-colors p-1"
+                                >
+                                  <Icons.Download />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* ---------------- PESTAÑA: REVISIONES DE PARES ---------------- */}
+                {activeTab === 'reviews' && (
+                  <div className="space-y-6 animate-in fade-in">
+                    <h2 className="font-serif text-2xl sm:text-3xl text-[#003b5c] mb-6">
+                      {isSpanish ? 'Dictámenes de Revisión por Pares' : 'Peer Review Reports'}
+                    </h2>
+                    
+                    {!activePortal.reviews || activePortal.reviews.length === 0 ? (
+                      <div className="bg-white p-12 border border-slate-200 shadow-sm text-center">
+                        <Icons.Users />
+                        <p className="text-slate-500 italic font-serif mt-4">
+                          {isSpanish 
+                            ? 'Aún no se han recibido dictámenes de los pares revisores.' 
+                            : 'No peer review reports have been received yet.'}
+                        </p>
+                      </div>
+                    ) : (
+                      activePortal.reviews.map((review, idx) => (
+                        <div key={review.id || idx} className="bg-white border border-slate-200 shadow-sm p-6 sm:p-8 mb-6">
+                          <div className="flex flex-wrap justify-between items-center mb-6 pb-4 border-b border-slate-100">
+                            <h3 className="font-sans font-bold text-sm text-slate-400 uppercase tracking-widest">
+                              {isSpanish ? `Dictamen #${idx + 1}` : `Review #${idx + 1}`} 
+                              {review.round && review.round > 1 && (
+                                <span className="ml-2 text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5">
+                                  {isSpanish ? `Ronda ${review.round}` : `Round ${review.round}`}
+                                </span>
+                              )}
+                            </h3>
+                            {review.recommendation && (
+                              <span className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${
+                                review.recommendation === 'accept' ? 'bg-emerald-100 text-emerald-700' :
+                                review.recommendation === 'minor-revision' ? 'bg-blue-100 text-blue-700' :
+                                review.recommendation === 'major-revision' ? 'bg-amber-100 text-amber-700' :
+                                'bg-rose-100 text-rose-700'
+                              }`}>
+                                {review.recommendation === 'accept' && (isSpanish ? 'Aceptar' : 'Accept')}
+                                {review.recommendation === 'minor-revision' && (isSpanish ? 'Rev. Menor' : 'Minor Rev.')}
+                                {review.recommendation === 'major-revision' && (isSpanish ? 'Rev. Mayor' : 'Major Rev.')}
+                                {review.recommendation === 'reject' && (isSpanish ? 'Rechazar' : 'Reject')}
+                              </span>
+                            )}
+                          </div>
+                          
+                          {/* Puntuaciones */}
+                          {review.scores && Object.keys(review.scores).length > 0 && (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-6">
+                              {Object.entries(review.scores).map(([key, val]) => (
+                                <div key={key} className="text-center">
+                                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                                    {key === 'originality' && (isSpanish ? 'Originalidad' : 'Originality')}
+                                    {key === 'methodology' && (isSpanish ? 'Metodología' : 'Methodology')}
+                                    {key === 'clarity' && (isSpanish ? 'Claridad' : 'Clarity')}
+                                    {key === 'relevance' && (isSpanish ? 'Relevancia' : 'Relevance')}
+                                    {key === 'overall' && (isSpanish ? 'General' : 'Overall')}
+                                  </p>
+                                  <p className="font-serif text-xl text-[#003b5c] font-bold">{val}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Comentarios */}
+                          {review.commentsToAuthor && (
+                            <div>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">
+                                {isSpanish ? 'Comentarios para el Autor' : 'Comments to Author'}
+                              </p>
+                              <div className="prose prose-sm max-w-none font-serif text-slate-700 leading-relaxed bg-slate-50 p-6 border border-slate-100"
+                                   dangerouslySetInnerHTML={{ 
+                                     __html: decodeBase64IfNeeded(review.commentsToAuthor).replace(/\n/g, '<br/>') 
+                                   }} />
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+
+                {/* ---------------- PESTAÑA: CENTRO DE ACCIÓN ---------------- */}
+                {activeTab === 'tasks' && (
+                  <div className="space-y-10 animate-in fade-in">
+                    <h2 className="font-serif text-2xl sm:text-3xl text-[#003b5c] mb-2">
+                      {isSpanish ? 'Centro de Acción Requerida' : 'Required Action Center'}
+                    </h2>
+                    <p className="text-slate-500 font-sans text-sm mb-8">
+                      {isSpanish 
+                        ? 'Gestione las correcciones y aprobaciones solicitadas por el comité editorial.' 
+                        : 'Manage corrections and approvals requested by the editorial committee.'}
+                    </p>
+
+                    {/* Tarea: Metadatos */}
+                    {hasPendingMetadataProposals(activePortal) && (
+                      <div className="bg-white border-2 border-amber-300 shadow-md">
+                        <div className="bg-amber-50 px-6 py-4 border-b border-amber-200 flex items-center gap-3">
+                          <span className="text-amber-700"><Icons.Document /></span>
+                          <h3 className="font-bold text-amber-900 text-sm uppercase tracking-wider">
+                            {isSpanish ? 'Tarea: Autorizar Cambios de Metadatos' : 'Task: Authorize Metadata Changes'}
+                          </h3>
+                        </div>
+                        <div className="p-6">
+                          <AuthorMetadataResponseTab
+                            submission={activePortal}
+                            user={user}
+                            onResponded={() => {}}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Tarea: Subir Revisión */}
+                    {needsRevisionUpload(activePortal.status) && (
+                      <div className="bg-white border-2 border-[#003b5c] shadow-md">
+                        <div className="bg-[#003b5c] text-white px-6 py-4 flex items-center gap-3">
+                          <Icons.Inbox />
+                          <h3 className="font-bold text-sm uppercase tracking-wider">
+                            {isSpanish ? 'Tarea: Subir Manuscrito Corregido' : 'Task: Upload Corrected Manuscript'}
+                          </h3>
+                        </div>
+                        
+                        <div className="p-6 sm:p-8 space-y-8">
+                          {/* Carga de Archivo */}
+                          <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
+                              1. {isSpanish ? 'Archivo Revisado' : 'Revised File'}
+                            </label>
+                            <p className="text-[10px] text-slate-400 mb-2">
+                              {isSpanish ? 'PDF o Word (.doc, .docx) — Máx. 10MB' : 'PDF or Word (.doc, .docx) — Max. 10MB'}
+                            </p>
+                            <input
+                              type="file"
+                              accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                              onChange={handleFileChange}
+                              disabled={uploading}
+                              className="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-6 file:border-0 file:text-xs file:font-bold file:uppercase file:tracking-wider file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 file:cursor-pointer file:transition-colors bg-white border border-slate-200 p-2"
+                            />
+                            {revisionFile && (
+                              <div className="mt-3 flex items-center gap-2 bg-emerald-50 text-emerald-700 text-xs p-2 border border-emerald-200">
+                                <Icons.Check />
+                                <span className="font-mono">{revisionFile.name}</span>
+                                <span className="text-emerald-500">
+                                  ({(revisionFile.size / 1024).toFixed(2)} KB)
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Notas Breves */}
+                          <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
+                              2. {isSpanish ? 'Resumen Ejecutivo de Cambios' : 'Executive Summary of Changes'}
+                            </label>
+                            <textarea
+                              value={revisionNotes}
+                              onChange={(e) => setRevisionNotes(e.target.value)}
+                              rows="3"
+                              disabled={uploading}
+                              placeholder={isSpanish 
+                                ? 'Describa brevemente las alteraciones realizadas en respuesta a las revisiones...' 
+                                : 'Briefly describe the changes made in response to the reviews...'}
+                              className="w-full p-4 bg-white border border-slate-200 focus:ring-2 focus:ring-[#003b5c] focus:border-transparent font-serif text-sm text-slate-800 resize-none"
+                            />
+                          </div>
+
+                          {/* Carta al Editor */}
+                          <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
+                              3. {isSpanish ? 'Carta Detallada de Respuesta' : 'Detailed Response Letter'}
+                            </label>
+                            <div className="border border-slate-200 bg-white">
+                              <ReactQuill
+                                theme="snow"
+                                value={revisionComment}
+                                onChange={setRevisionComment}
+                                placeholder={isSpanish 
+                                  ? 'Explique cómo respondió a cada revisión, justifique cambios de autoría, etc.' 
+                                  : 'Explain how you responded to each review, justify authorship changes, etc.'}
+                                modules={{
+                                  toolbar: [
+                                    [{ 'header': [1, 2, 3, false] }],
+                                    ['bold', 'italic', 'underline', 'strike'],
+                                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                                    ['blockquote', 'code-block'],
+                                    ['link'],
+                                    ['clean']
+                                  ]
+                                }}
+                                formats={[
+                                  'header', 'bold', 'italic', 'underline', 'strike',
+                                  'list', 'bullet', 'blockquote', 'code-block', 'link'
+                                ]}
+                                readOnly={uploading}
+                                style={{ height: '250px' }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Botón de Envío */}
+                          <div className="pt-6 border-t border-slate-100 flex justify-end">
+                            <button
+                              onClick={handleSubmitRevision}
+                              disabled={uploading || !revisionFile || !revisionNotes.trim()}
+                              className="bg-[#003b5c] hover:bg-[#002840] disabled:bg-slate-300 disabled:text-slate-500 text-white px-8 py-4 text-xs font-bold uppercase tracking-widest transition-colors shadow-sm flex items-center justify-center gap-3 w-full sm:w-auto"
+                            >
+                              {uploading ? (
+                                <>
+                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                  {isSpanish ? 'PROCESANDO...' : 'PROCESSING...'}
+                                </>
+                              ) : (
+                                <>
+                                  <Icons.Download />
+                                  {isSpanish ? 'ENVIAR VERSIÓN CORREGIDA' : 'SUBMIT CORRECTED VERSION'}
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Sin tareas pendientes */}
+                    {!hasPendingMetadataProposals(activePortal) && !needsRevisionUpload(activePortal.status) && (
+                      <div className="text-center py-16 bg-slate-50 border border-slate-200">
+                        <span className="text-4xl mb-4 block text-emerald-600"><Icons.Check /></span>
+                        <p className="font-serif text-xl text-slate-600">
+                          {isSpanish 
+                            ? 'El expediente se encuentra al día. No se requieren acciones de su parte en este momento.' 
+                            : 'Record is up to date. No actions required on your part at this time.'}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

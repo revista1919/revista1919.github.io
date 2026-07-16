@@ -1154,14 +1154,14 @@ export default function SubmissionForm({ user, onSuccess }) {
     es: [
       { value: 'research', label: 'Artículo de Investigación Original' },
       { value: 'review', label: 'Revisión Sistemática' },
-      { value: 'essay', label: 'Ensayo Académico y Reflexivo' },
+      { value: 'essay', label: 'Ensayo Académico o Reflexivo' },
       { value: 'case', label: 'Reporte de Caso' },
       { value: 'book_review', label: 'Reseña de Libros (Book Review)' }
     ],
     en: [
       { value: 'research', label: 'Original Research Article' },
       { value: 'review', label: 'Systematic Review' },
-      { value: 'essay', label: 'Academic and Reflective Essay' },
+      { value: 'essay', label: 'Academic or Reflective Essay' },
       { value: 'case', label: 'Case Report' },
       { value: 'book_review', label: 'Book Review' }
     ]

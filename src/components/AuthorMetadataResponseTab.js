@@ -1,22 +1,27 @@
+// src/components/AuthorMetadataResponseTab.js
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   CheckCircle, 
   XCircle, 
-  MessageSquare, 
   Info, 
-  History, 
   ChevronRight,
   AlertCircle,
-  Clock,
-  User,
-  ShieldCheck,
-  FileText
+  FileText,
+  ShieldCheck
 } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
 import { useMetadataRefinement } from '../hooks/useMetadataRefinement';
 import { onSnapshot, collection, query, where, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
+
+// ================= ICONOS SVG INTERNOS (sin dependencia de lucide para los que no existen) =================
+const Icons = {
+  Document: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
+  History: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+  User: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
+  ArrowDown: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+};
 
 export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => {
   const { language } = useLanguage();
@@ -65,7 +70,7 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
         setSelectedProposal(loadedProposals[0]);
       }
     }, (error) => {
-      setLocalError(isSpanish ? 'Error al cargar propuestas' : 'Error loading proposals');
+      setLocalError(isSpanish ? 'Error al consultar el registro de enmiendas.' : 'Error consulting amendment records.');
       setLoadingProposals(false);
     });
 
@@ -78,8 +83,8 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
     if (!isAccepted && !responseComments.trim()) {
       const confirmReject = window.confirm(
         isSpanish 
-          ? '¿Deseas agregar un comentario para explicar el rechazo? Es altamente recomendado para el proceso editorial.'
-          : 'Would you like to add a comment to explain the rejection? It is highly recommended for the editorial process.'
+          ? '¿Desea omitir las observaciones? Se requiere encarecidamente una justificación académica para denegar la enmienda editorial.'
+          : 'Do you wish to skip observations? An academic justification is strongly required to deny the editorial amendment.'
       );
       if (!confirmReject) return;
     }
@@ -95,236 +100,239 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
     }
   };
 
-  // 🔄 CAMBIO: formatValue con soporte dual para keywords (legacy + controlled)
-const formatValue = (value, fieldName = '') => {
-    if (value === null || value === undefined || value === '') return <span className="text-gray-400 italic">none</span>;
+  // ================= FORMATO DE VALORES =================
+  const formatValue = (value, fieldName = '') => {
+    if (value === null || value === undefined || value === '') {
+      return <span className="text-slate-400 italic font-serif text-sm">[{isSpanish ? 'Sin valor' : 'No value'}]</span>;
+    }
     
-    // Si es array de keywords, detectar formato
+    // Si es array de keywords, detectar formato controlado
     if ((fieldName === 'keywords' || fieldName === 'keywordsEn') && Array.isArray(value)) {
-        return (
-            <div className="flex flex-wrap gap-1">
-                {value.map((v, i) => {
-                    const match = typeof v === 'string' ? v.match(/^([A-Za-z0-9.]+):\s*(.+)/) : null;
-                    if (match) {
-                        return (
-                            <span key={i} className="inline-flex items-center gap-1 bg-slate-100 rounded px-2 py-0.5 border border-slate-200 text-xs">
-                                <code className="text-[10px] font-mono bg-white px-1 rounded text-indigo-600 font-bold">{match[1]}</code>
-                                <span>{match[2]}</span>
-                            </span>
-                        );
-                    }
-                    return (
-                        <span key={i} className="inline-block bg-slate-100 rounded px-2 py-0.5 border border-slate-200 text-xs">
-                            {typeof v === 'string' ? v : v.term || String(v)}
-                        </span>
-                    );
-                })}
-            </div>
-        );
+      return (
+        <div className="flex flex-wrap gap-1.5 mt-1">
+          {value.map((v, i) => {
+            const match = typeof v === 'string' ? v.match(/^([A-Za-z0-9.]+):\s*(.+)/) : null;
+            if (match) {
+              return (
+                <span key={i} className="inline-flex items-center bg-white border border-slate-200 shadow-sm text-xs text-slate-700 overflow-hidden">
+                  <span className="bg-[#003b5c] text-white px-2 py-1 font-mono text-[10px] uppercase tracking-wider font-bold">
+                    {match[1]}
+                  </span>
+                  <span className="px-2.5 py-1 font-serif text-slate-800">
+                    {match[2]}
+                  </span>
+                </span>
+              );
+            }
+            return (
+              <span key={i} className="inline-block bg-slate-50 border border-slate-200 px-2.5 py-1 text-xs font-serif text-[#003b5c]">
+                {typeof v === 'string' ? v : v.term || String(v)}
+              </span>
+            );
+          })}
+        </div>
+      );
     }
     
+    // Arrays normales (autores, etc.)
     if (Array.isArray(value)) {
-        return value.map((v, i) => (
-            <span key={i} className="inline-block bg-slate-100 rounded px-2 py-0.5 m-0.5 border border-slate-200 text-xs sm:text-sm">
-                {typeof v === 'object' ? (v.lastName ? `${v.lastName}, ${v.firstName}` : JSON.stringify(v)) : String(v)}
-            </span>
-        ));
+      return (
+        <ul className="list-disc list-inside space-y-1">
+          {value.map((v, i) => (
+            <li key={i} className="font-serif text-sm sm:text-base text-slate-700 leading-relaxed">
+              {typeof v === 'object' 
+                ? (v.lastName 
+                    ? `${v.firstName || ''} ${v.lastName}${v.institution ? ` (${v.institution})` : ''}` 
+                    : JSON.stringify(v))
+                : String(v)}
+            </li>
+          ))}
+        </ul>
+      );
     }
-    return String(value);
-};
+    
+    // Valor simple
+    return <span className="font-serif text-sm sm:text-base leading-relaxed text-slate-800">{String(value)}</span>;
+  };
+
+  // ================= TARJETA DE CAMBIO =================
   const ChangeCard = ({ change, index }) => (
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
-      className="group bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all border-l-4 border-l-indigo-500"
+      className="bg-white border border-slate-200 shadow-sm relative overflow-hidden"
     >
-      <div className="p-3 sm:p-4 bg-slate-50/50 border-b border-slate-100 flex flex-wrap gap-2 justify-between items-center">
-        <span className="text-xs font-bold uppercase tracking-wider text-slate-500 break-words">
-          {change.field.replace(/([A-Z])/g, ' $1').trim()}
-        </span>
+      {/* Barra lateral decorativa */}
+      <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#C0A86A] to-[#003b5c]"></div>
+      
+      {/* Cabecera del campo */}
+      <div className="p-4 bg-slate-50/80 border-b border-slate-100 flex flex-wrap gap-3 justify-between items-center pl-6">
+        <div className="flex items-center gap-2">
+          <span className="w-1.5 h-1.5 bg-[#C0A86A] rounded-full"></span>
+          <span className="text-xs font-bold uppercase tracking-widest text-[#003b5c]">
+            {change.field.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase()).trim()}
+          </span>
+        </div>
         {change.requiresAuthorConsent && (
-          <span className="flex items-center gap-1 text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full uppercase whitespace-nowrap">
-            <ShieldCheck size={12} /> {isSpanish ? 'Requiere Consentimiento' : 'Requires Consent'}
+          <span className="flex items-center gap-1.5 text-[10px] font-bold bg-amber-50 text-amber-800 px-3 py-1 uppercase tracking-wider border border-amber-200">
+            <ShieldCheck size={14} className="text-amber-600" />
+            {isSpanish ? 'Requiere su autorización' : 'Requires your authorization'}
           </span>
         )}
       </div>
       
-      <div className="p-3 sm:p-5 space-y-4">
-        {/* Versión móvil: stacked */}
-        <div className="block md:hidden space-y-4">
-          <div className="space-y-1">
-            <span className="text-[10px] text-slate-400 uppercase font-semibold">{isSpanish ? 'Original' : 'Original'}</span>
-            <div className="p-3 bg-red-50/30 rounded-lg border border-red-100/50 text-slate-600 line-through decoration-red-300 text-xs sm:text-sm break-words">
-              {formatValue(change.currentValue, change.field)}
-            </div>
-          </div>
+      {/* Cuerpo: Original vs Propuesto */}
+      <div className="p-5 sm:p-6 pl-6 space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-[1fr,auto,1fr] gap-4 md:gap-6 items-stretch">
           
-          <div className="flex justify-center">
-            <ChevronRight className="text-slate-300 rotate-90" />
-          </div>
-
-          <div className="space-y-1">
-            <span className="text-[10px] text-emerald-600 uppercase font-semibold">{isSpanish ? 'Propuesto' : 'Proposed'}</span>
-            <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-100 text-emerald-900 font-medium text-xs sm:text-sm break-words">
-              {formatValue(change.proposedValue, change.field)}
-            </div>
-          </div>
-        </div>
-
-        {/* Versión desktop: grid */}
-        <div className="hidden md:grid md:grid-cols-[1fr,40px,1fr] gap-4 items-center">
-          <div className="space-y-1">
-            <span className="text-[10px] text-slate-400 uppercase font-semibold">{isSpanish ? 'Original' : 'Original'}</span>
-            <div className="p-3 bg-red-50/30 rounded-lg border border-red-100/50 text-slate-600 line-through decoration-red-300 text-sm break-words">
+          {/* Valor Original */}
+          <div className="space-y-2">
+            <span className="text-[10px] text-slate-400 uppercase font-bold tracking-widest border-b border-slate-100 pb-1.5 block">
+              {isSpanish ? 'Registro Actual' : 'Current Record'}
+            </span>
+            <div className="p-4 bg-rose-50/20 border border-rose-100/30 text-slate-500 line-through decoration-rose-300/40 h-full min-h-[60px]">
               {formatValue(change.currentValue, change.field)}
             </div>
           </div>
 
-          <div className="flex justify-center">
-            <ChevronRight className="text-slate-300 group-hover:text-indigo-400 transition-colors" />
+          {/* Flecha */}
+          <div className="flex justify-center items-center py-2 md:py-0">
+            <div className="w-8 h-8 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400">
+              <ChevronRight size={16} className="hidden md:block" />
+              <Icons.ArrowDown />
+            </div>
           </div>
 
-          <div className="space-y-1">
-            <span className="text-[10px] text-emerald-600 uppercase font-semibold">{isSpanish ? 'Propuesto' : 'Proposed'}</span>
-            <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-100 text-emerald-900 font-medium text-sm break-words">
+          {/* Valor Propuesto */}
+          <div className="space-y-2">
+            <span className="text-[10px] text-[#003b5c] uppercase font-bold tracking-widest border-b border-[#C0A86A]/30 pb-1.5 block">
+              {isSpanish ? 'Enmienda Propuesta' : 'Proposed Amendment'}
+            </span>
+            <div className="p-4 bg-blue-50/20 border border-blue-100/40 text-[#003b5c] font-medium h-full min-h-[60px] shadow-inner">
               {formatValue(change.proposedValue, change.field)}
             </div>
           </div>
         </div>
-      </div>
 
-      {change.reason && (
-        <div className="px-3 sm:px-5 pb-4">
-          <div className="flex gap-2 items-start bg-indigo-50/50 p-3 rounded-lg border border-indigo-100">
-            <Info size={16} className="text-indigo-500 mt-0.5 shrink-0" />
-            <p className="text-xs text-indigo-800 italic break-words">
-              <span className="font-semibold not-italic mr-1">{isSpanish ? 'Razón:' : 'Reason:'}</span>
-              "{change.reason}"
-            </p>
+        {/* Justificación del editor */}
+        {change.reason && (
+          <div className="mt-4 pt-4 border-t border-slate-100">
+            <div className="flex gap-3 items-start bg-slate-50 p-4 border border-slate-100">
+              <Info size={16} className="text-[#C0A86A] shrink-0 mt-0.5" />
+              <div>
+                <p className="font-sans font-bold text-[10px] uppercase tracking-widest text-slate-400 mb-1">
+                  {isSpanish ? 'Justificación Editorial' : 'Editorial Justification'}
+                </p>
+                <p className="text-sm font-serif text-slate-600 italic leading-relaxed">
+                  "{change.reason}"
+                </p>
+              </div>
+            </div>
           </div>
+        )}
+      </div>
+    </motion.div>
+  );
+
+  // ================= ESTADOS DE CARGA =================
+  if (loadingProposals) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 space-y-6">
+        <div className="w-10 h-10 border-2 border-t-[#003b5c] border-slate-200 rounded-full animate-spin"></div>
+        <p className="font-serif italic text-slate-500 text-lg">
+          {isSpanish ? 'Consultando el registro de enmiendas...' : 'Consulting amendment records...'}
+        </p>
+      </div>
+    );
+  }
+
+  // ================= ESTADO VACÍO =================
+  if (pendingProposals.length === 0) {
+    return (
+      <motion.div 
+        initial={{ opacity: 0 }} 
+        animate={{ opacity: 1 }}
+        className="text-center py-12 sm:py-16"
+      >
+        <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 bg-emerald-50 border border-emerald-200 mb-6">
+          <CheckCircle size={36} className="text-emerald-600 sm:w-10 sm:h-10" />
         </div>
-      )}
-    </motion.div>
-  );
+        <h3 className="font-serif text-xl sm:text-2xl text-[#003b5c] mb-3">
+          {isSpanish ? 'Registro Actualizado' : 'Record Up to Date'}
+        </h3>
+        <p className="font-sans text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
+          {isSpanish 
+            ? 'El registro bibliográfico no presenta enmiendas pendientes de su revisión. Todos los metadatos se encuentran conformes.'
+            : 'The bibliographic record has no amendments pending your review. All metadata is in order.'}
+        </p>
+      </motion.div>
+    );
+  }
 
-  if (loadingProposals) return (
-    <div className="flex flex-col items-center justify-center p-10 sm:p-20 space-y-4">
-      <div className="relative w-12 h-12">
-        <div className="absolute inset-0 border-4 border-indigo-100 rounded-full"></div>
-        <div className="absolute inset-0 border-4 border-indigo-600 rounded-full border-t-transparent animate-spin"></div>
-      </div>
-      <p className="text-slate-500 animate-pulse font-medium text-sm sm:text-base">
-        {isSpanish ? 'Sincronizando propuestas...' : 'Syncing proposals...'}
-      </p>
-    </div>
-  );
-
-  if (pendingProposals.length === 0) return (
-    <motion.div 
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-      className="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-8 sm:p-12 text-center"
-    >
-      <div className="bg-slate-50 w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
-        <CheckCircle size={32} className="text-slate-300 sm:w-10 sm:h-10" />
-      </div>
-      <h3 className="text-lg sm:text-xl font-semibold text-slate-800 mb-2">
-        {isSpanish ? '¡Todo al día!' : 'Everything is up to date!'}
-      </h3>
-      <p className="text-sm sm:text-base text-slate-500 max-w-sm mx-auto">
-        {isSpanish 
-          ? 'No hay propuestas de cambios en los metadatos pendientes de tu revisión en este momento.' 
-          : 'There are no metadata change proposals pending your review at this time.'}
-      </p>
-    </motion.div>
-  );
-
+  // ================= VISTA PRINCIPAL =================
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }} 
-      animate={{ opacity: 1, y: 0 }}
-      className="max-w-5xl mx-auto space-y-6 sm:space-y-8 pb-8 sm:pb-12 px-4 sm:px-0"
-    >
-      {/* Header - optimizado para móvil */}
-      <header className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start justify-between bg-gradient-to-br from-indigo-900 to-slate-900 rounded-xl sm:rounded-2xl p-5 sm:p-8 text-white shadow-xl relative overflow-hidden">
-        <div className="relative z-10 space-y-2 w-full sm:w-auto">
-          <div className="inline-flex items-center gap-2 bg-indigo-500/30 backdrop-blur-md px-3 py-1 rounded-full border border-indigo-400/30 text-[10px] sm:text-xs font-bold uppercase tracking-widest">
-            <ShieldCheck size={12} className="sm:w-3.5 sm:h-3.5" /> COPE Compliance
-          </div>
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-serif">
-            {isSpanish ? 'Revisión de Metadatos' : 'Metadata Review'}
-          </h2>
-          <p className="text-indigo-200 max-w-xl text-xs sm:text-sm leading-relaxed">
-            {isSpanish 
-              ? 'Como autor, tienes el control final sobre la integridad de tu artículo. Revisa cuidadosamente los cambios sugeridos por el equipo editorial.' 
-              : 'As an author, you have final control over your article\'s integrity. Carefully review the changes suggested by the editorial team.'}
-          </p>
-        </div>
-        <div className="relative z-10 bg-white/10 backdrop-blur-md rounded-xl p-3 sm:p-4 border border-white/20 w-full sm:w-auto sm:min-w-[200px]">
-          <div className="flex items-center gap-3">
-            <div className="bg-amber-400 p-1.5 sm:p-2 rounded-lg text-amber-900">
-              <Clock size={16} className="sm:w-5 sm:h-5" />
-            </div>
-            <div>
-              <p className="text-[8px] sm:text-[10px] text-indigo-300 uppercase font-bold tracking-tighter">Pendientes</p>
-              <p className="text-lg sm:text-xl font-bold">{pendingProposals.length}</p>
-            </div>
-          </div>
-          <p className="text-[9px] sm:text-[11px] text-indigo-200 italic mt-2">
-            {isSpanish ? 'Última actualización hoy' : 'Last updated today'}
-          </p>
-        </div>
-        <div className="absolute -right-10 -bottom-10 w-48 sm:w-64 h-48 sm:h-64 bg-indigo-500/10 rounded-full blur-3xl"></div>
-      </header>
-
-      {/* Proposal Selector - horizontal scroll en móvil */}
+    <div className="space-y-8 animate-in fade-in duration-700">
+      
+      {/* Selector de propuestas (si hay múltiples) */}
       {pendingProposals.length > 1 && (
-        <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="flex gap-1 sm:gap-2 overflow-x-auto pb-2 border-b-2 border-slate-200">
           {pendingProposals.map((prop, idx) => (
             <button
               key={prop.id}
               onClick={() => setSelectedProposal(prop)}
-              className={`flex-shrink-0 flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-2 sm:py-3 rounded-xl transition-all border ${
+              className={`flex-shrink-0 flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-3 transition-all border-b-2 -mb-[2px] ${
                 selectedProposal?.id === prop.id 
-                ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200' 
-                : 'bg-white border-slate-200 text-slate-600 hover:border-indigo-300'
+                  ? 'border-[#003b5c] text-[#003b5c] bg-slate-50' 
+                  : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'
               }`}
             >
-              <History size={14} className="sm:w-4 sm:h-4" />
+              <FileText size={16} className="flex-shrink-0" />
               <div className="text-left">
-                <p className="text-[8px] sm:text-[10px] opacity-70 uppercase font-bold">{isSpanish ? 'Propuesta' : 'Proposal'} #{pendingProposals.length - idx}</p>
-                <p className="text-xs sm:text-sm font-semibold whitespace-nowrap">{prop.proposedAt?.toLocaleDateString()}</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest">
+                  {isSpanish ? 'Resolución' : 'Resolution'} #{pendingProposals.length - idx}
+                </p>
+                <p className="font-serif text-sm whitespace-nowrap">
+                  {prop.proposedAt?.toLocaleDateString()}
+                </p>
               </div>
             </button>
           ))}
         </div>
       )}
 
-      {/* Main Review Area - stacked en móvil */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+      {/* Área Principal: Cambios + Panel de Acción */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         
-        {/* Left Col: Changes List */}
-        <div className="lg:col-span-2 space-y-4 sm:space-y-6">
+        {/* Columna Izquierda: Lista de Cambios */}
+        <div className="lg:col-span-2 space-y-6">
           <AnimatePresence mode="wait">
             {selectedProposal && (
               <motion.div
                 key={selectedProposal.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                className="space-y-4"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="space-y-6"
               >
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm sm:text-base">
-                    <MessageSquare size={16} className="text-indigo-600 sm:w-5 sm:h-5" />
-                    {isSpanish ? 'Cambios Sugeridos' : 'Suggested Changes'} 
-                    <span className="bg-slate-200 text-slate-600 text-[10px] sm:text-xs px-2 py-0.5 rounded-full">
-                      {selectedProposal.changes?.length}
-                    </span>
-                  </h3>
+                {/* Título de sección */}
+                <div className="flex items-center justify-between border-b border-[#003b5c] pb-4">
+                  <div>
+                    <h3 className="font-serif text-2xl text-[#003b5c]">
+                      {isSpanish ? 'Detalle de la Enmienda' : 'Amendment Details'}
+                    </h3>
+                    <p className="font-sans text-xs font-bold uppercase tracking-widest text-[#C0A86A] mt-1">
+                      {selectedProposal.changes?.length || 0} {isSpanish ? 'campos afectados' : 'affected fields'}
+                    </p>
+                  </div>
+                  <span className="hidden sm:inline-flex items-center gap-2 text-[10px] font-mono text-slate-400 bg-slate-50 px-3 py-1 border border-slate-200">
+                    <Icons.History />
+                    {selectedProposal.proposedAt?.toLocaleDateString()}
+                  </span>
                 </div>
 
-                <div className="space-y-3 sm:space-y-4">
+                {/* Tarjetas de cambios */}
+                <div className="space-y-5">
                   {selectedProposal.changes?.map((change, idx) => (
                     <ChangeCard key={idx} change={change} index={idx} />
                   ))}
@@ -334,84 +342,112 @@ const formatValue = (value, fieldName = '') => {
           </AnimatePresence>
         </div>
 
-        {/* Right Col: Actions & Feedback - sticky en desktop, normal en móvil */}
-        <div className="lg:col-span-1">
-          <div className="lg:sticky lg:top-6 space-y-4 sm:space-y-6">
-            <div className="bg-white border border-slate-200 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm">
-              <h4 className="font-bold text-slate-800 mb-3 sm:mb-4 flex items-center gap-2 text-xs sm:text-sm uppercase tracking-wider">
-                <User size={14} className="text-slate-400 sm:w-4 sm:h-4" />
-                {isSpanish ? 'Origen de Propuesta' : 'Proposal Source'}
+        {/* Columna Derecha: Panel de Acción */}
+        <div className="lg:col-span-1 lg:sticky lg:top-6">
+          <div className="bg-white border border-slate-200 shadow-sm">
+            
+            {/* Cabecera del panel */}
+            <div className="bg-[#003b5c] px-5 py-4 flex items-center gap-2">
+              <ShieldCheck size={16} className="text-[#C0A86A] flex-shrink-0" />
+              <h4 className="font-sans font-bold text-xs uppercase tracking-widest text-white">
+                {isSpanish ? 'Su Decisión' : 'Your Decision'}
               </h4>
-              <div className="space-y-3 mb-4 sm:mb-6">
-                <div className="flex items-center gap-3 p-2 sm:p-3 bg-slate-50 rounded-xl border border-slate-100">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold uppercase text-sm">
-                    {selectedProposal?.proposedByEmail?.charAt(0)}
-                  </div>
-                  <div className="overflow-hidden">
-                    <p className="text-xs sm:text-sm font-bold text-slate-700 truncate">{selectedProposal?.proposedByEmail}</p>
-                    <p className="text-[8px] sm:text-[10px] text-slate-500 uppercase">{isSpanish ? 'Editor Asignado' : 'Assigned Editor'}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <label className="block">
-                  <span className="text-xs font-bold text-slate-500 uppercase mb-2 block">{isSpanish ? 'Tus Comentarios' : 'Your Comments'}</span>
-                  <textarea
-                    value={responseComments}
-                    onChange={(e) => setResponseComments(e.target.value)}
-                    rows={4}
-                    className="w-full p-3 sm:p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-xs sm:text-sm"
-                    placeholder={isSpanish ? 'Opcional: Aclara dudas o justifica el rechazo...' : 'Optional: Clarify doubts or justify rejection...'}
-                  />
-                </label>
-
-                {localError && (
-                  <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                    className="flex items-center gap-2 p-2 sm:p-3 bg-rose-50 border border-rose-100 rounded-lg text-rose-600 text-[10px] sm:text-xs font-medium"
-                  >
-                    <AlertCircle size={12} className="sm:w-3.5 sm:h-3.5" /> {localError}
-                  </motion.div>
-                )}
-
-                <div className="grid grid-cols-1 gap-2 sm:gap-3">
-                  <button
-                    onClick={() => handleResponse(true)}
-                    disabled={loading}
-                    className="w-full py-3 sm:py-4 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white rounded-xl font-bold shadow-lg shadow-emerald-200 transition-all flex items-center justify-center gap-2 group text-sm sm:text-base"
-                  >
-                    {loading ? (
-                      <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        <CheckCircle size={16} className="sm:w-5 sm:h-5 group-hover:scale-110 transition-transform" />
-                        {isSpanish ? 'ACEPTAR CAMBIOS' : 'ACCEPT CHANGES'}
-                      </>
-                    )}
-                  </button>
-                  
-                  <button
-                    onClick={() => handleResponse(false)}
-                    disabled={loading}
-                    className="w-full py-3 sm:py-4 bg-white hover:bg-rose-50 border border-slate-200 text-slate-600 hover:text-rose-600 hover:border-rose-200 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-sm sm:text-base"
-                  >
-                    <XCircle size={16} className="sm:w-5 sm:h-5" />
-                    {isSpanish ? 'RECHAZAR PROPUESTA' : 'REJECT PROPOSAL'}
-                  </button>
-                </div>
-              </div>
             </div>
+            
+            <div className="p-5 sm:p-6 space-y-6">
+              
+              {/* Información del emisor */}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">
+                  {isSpanish ? 'Emitido por' : 'Issued by'}
+                </p>
+                <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-100">
+                  <div className="w-10 h-10 bg-white border border-slate-200 flex items-center justify-center text-[#003b5c] font-serif text-lg font-bold flex-shrink-0">
+                    {selectedProposal?.proposedByEmail?.charAt(0).toUpperCase() || 'E'}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-[#003b5c] truncate">
+                      {isSpanish ? 'Comité Editorial' : 'Editorial Committee'}
+                    </p>
+                    <p className="text-xs text-slate-500 font-mono truncate">
+                      {selectedProposal?.proposedByEmail || '—'}
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-            <div className="p-3 sm:p-4 bg-amber-50 border border-amber-100 rounded-xl">
-              <p className="text-[10px] sm:text-[11px] text-amber-800 leading-relaxed">
-                <strong>{isSpanish ? 'Importante:' : 'Note:'}</strong> {isSpanish 
-                  ? 'Al aceptar, los metadatos se actualizarán inmediatamente en la base de datos de producción.' 
-                  : 'Upon acceptance, metadata will be immediately updated in the production database.'}
-              </p>
+              {/* Área de comentarios del autor */}
+              <div className="space-y-2">
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  {isSpanish ? 'Sus Observaciones' : 'Your Observations'}
+                  <span className="text-slate-300 ml-1 font-normal">({isSpanish ? 'Opcional' : 'Optional'})</span>
+                </label>
+                <textarea
+                  value={responseComments}
+                  onChange={(e) => setResponseComments(e.target.value)}
+                  rows={4}
+                  className="w-full p-4 bg-slate-50 border border-slate-200 focus:ring-1 focus:ring-[#003b5c] focus:border-[#003b5c] transition-all font-serif text-sm text-slate-800 resize-none placeholder:text-slate-400"
+                  placeholder={isSpanish 
+                    ? 'Exponga aquí sus razones en caso de denegar los cambios propuestos...' 
+                    : 'State your reasons here if denying the proposed changes...'}
+                />
+              </div>
+
+              {/* Mensaje de error */}
+              {localError && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-serif flex items-start gap-2"
+                >
+                  <AlertCircle size={14} className="shrink-0 mt-0.5" /> 
+                  {localError}
+                </motion.div>
+              )}
+
+              {/* Botones de acción */}
+              <div className="space-y-3 pt-4 border-t border-slate-100">
+                <button
+                  onClick={() => handleResponse(true)}
+                  disabled={loading}
+                  className="w-full py-3.5 bg-[#003b5c] hover:bg-[#002840] disabled:bg-slate-300 disabled:text-slate-500 text-white font-bold uppercase tracking-widest text-xs transition-colors flex items-center justify-center gap-2 shadow-sm"
+                >
+                  {loading ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <CheckCircle size={16} />
+                      {isSpanish ? 'Autorizar Enmiendas' : 'Authorize Amendments'}
+                    </>
+                  )}
+                </button>
+                
+                <button
+                  onClick={() => handleResponse(false)}
+                  disabled={loading}
+                  className="w-full py-3.5 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-300 text-slate-600 hover:text-rose-700 font-bold uppercase tracking-widest text-xs transition-colors flex items-center justify-center gap-2"
+                >
+                  <XCircle size={16} />
+                  {isSpanish ? 'Denegar Modificaciones' : 'Deny Modifications'}
+                </button>
+              </div>
+
+              {/* Aviso legal */}
+              <div className="bg-amber-50/80 border border-amber-200/60 p-4">
+                <p className="text-[10px] text-amber-800 uppercase font-bold tracking-widest mb-1.5 flex items-center gap-1.5">
+                  <ShieldCheck size={12} className="text-amber-600" />
+                  {isSpanish ? 'Aviso Importante' : 'Important Notice'}
+                </p>
+                <p className="text-xs text-amber-900/80 font-serif leading-relaxed">
+                  {isSpanish 
+                    ? 'Al autorizar estas modificaciones, los metadatos de su manuscrito se actualizarán permanentemente en los sistemas de indexación y publicación de la revista.'
+                    : 'By authorizing these modifications, your manuscript\'s metadata will be permanently updated in the journal\'s indexing and publication systems.'}
+                </p>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 };

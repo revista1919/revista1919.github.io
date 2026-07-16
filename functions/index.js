@@ -11020,96 +11020,191 @@ function parseIdentifier(identifier) {
 // =====================================================
 function articleToDublinCore(article) {
   const elements = [];
-
-  // --- Títulos ---
+  
+  // Títulos (con lang)
   elements.push(`<dc:title xml:lang="es">${escapeXml(article.titulo)}</dc:title>`);
   if (article.tituloEnglish) elements.push(`<dc:title xml:lang="en">${escapeXml(article.tituloEnglish)}</dc:title>`);
-
-  // --- Autores ---
+  
+  // Autores
   if (Array.isArray(article.autores)) {
     for (const author of article.autores) {
       if (author?.name) elements.push(`<dc:creator>${escapeXml(author.name)}</dc:creator>`);
     }
   }
-
-  // --- Palabras Clave ---
+  
+  // Keywords (por separado)
   if (Array.isArray(article.palabras_clave)) {
     for (const kw of article.palabras_clave) if (kw) elements.push(`<dc:subject xml:lang="es">${escapeXml(kw)}</dc:subject>`);
   }
   if (Array.isArray(article.keywords_english)) {
     for (const kw of article.keywords_english) if (kw) elements.push(`<dc:subject xml:lang="en">${escapeXml(kw)}</dc:subject>`);
   }
-
-  // --- Descripciones (Resúmenes) ---
+  
+  // Resúmenes
   if (article.resumen) elements.push(`<dc:description xml:lang="es">${escapeXml(article.resumen)}</dc:description>`);
   if (article.abstract) elements.push(`<dc:description xml:lang="en">${escapeXml(article.abstract)}</dc:description>`);
-
-  // --- Fecha (AAAA-MM-DD es ideal, pero si solo hay año, también funciona) ---
+  
+  // ================================================================
+  // ⭐ REFERENCIAS BIBLIOGRÁFICAS EN DC:DESCRIPTION (DIALNET) ⭐
+  // ================================================================
+ if (article.referencias) {
+  const refsText = extractReferencesAsText(article.referencias);
+  if (refsText) {
+    // Va en UN SOLO <dc:description> con TODO el bloque de referencias
+    elements.push(`<dc:description xml:lang="es">${escapeXml(refsText)}</dc:description>`);
+  }
+}
   if (article.fecha) elements.push(`<dc:date>${escapeXml(article.fecha)}</dc:date>`);
   
-  // --- Tipo de documento ---
-  const tipo = article.tipo || 'Artículo de Investigación';
+  const tipo = article.tipo || 'info:eu-repo/semantics/article';
   elements.push(`<dc:type>${escapeXml(tipo)}</dc:type>`);
-
-  // --- Identificadores y Enlaces ---
-  // 1. URL del artículo en la revista (muy importante)
-  elements.push(`<dc:identifier>${escapeXml(getArticleUrl(article))}</dc:identifier>`);
   
-  // 2. DOI como enlace canónico (¡CLAVE! A Dialnet le encanta esto)
+  // Identificadores (URL + DOI + PDF)
+  elements.push(`<dc:identifier>${escapeXml(getArticleUrl(article))}</dc:identifier>`);
   if (article.doi) {
     elements.push(`<dc:identifier>https://doi.org/${escapeXml(article.doi)}</dc:identifier>`);
   }
-
-  // 3. Enlace directo al PDF (si existe)
   if (article.pdfUrl) {
     elements.push(`<dc:format>application/pdf</dc:format>`);
     elements.push(`<dc:identifier>${escapeXml(article.pdfUrl)}</dc:identifier>`);
   }
-
-  // --- Lengua y Derechos ---
+  
   elements.push(`<dc:language>es</dc:language>`);
   
-  const rights = article.conflicts || 'Derechos de autor y licencias bajo revisión.';
+  const rights = article.conflicts || 'Creative Commons Attribution 4.0 International License';
   elements.push(`<dc:rights>${escapeXml(rights)}</dc:rights>`);
 
-  // --- INICIO DE LA CORRECCIÓN PRINCIPAL ---
-
-  // 1. METADATOS ESTRUCTURADOS (dc:relation)
-  // Esta es la clave para Dialnet. Le das la información de forma granular.
-  if (article.volumen) {
-    elements.push(`<dc:relation>Vol. ${escapeXml(article.volumen)}</dc:relation>`);
-  }
-  if (article.numero) {
-    elements.push(`<dc:relation>No. ${escapeXml(article.numero)}</dc:relation>`);
-  }
-  if (article.primeraPagina && article.ultimaPagina) {
-    elements.push(`<dc:relation>pp. ${escapeXml(article.primeraPagina)}-${escapeXml(article.ultimaPagina)}</dc:relation>`);
-  } else if (article.primeraPagina) {
-    // Por si acaso solo hay página inicial
-    elements.push(`<dc:relation>p. ${escapeXml(article.primeraPagina)}</dc:relation>`);
-  }
-
-  // 2. CAMPO dc:source MEJORADO (Redundancia positiva)
-  // Formato estándar de citación: Vol. X, No. Y (AAAA), pp. XX-YY
+  // === MEJORAS DIALNET / COSECHADORES ===
+  // dc:source (formato recomendado)
   const sourceParts = [];
+  if (REPO_NAME) sourceParts.push(REPO_NAME);
   if (article.volumen) sourceParts.push(`Vol. ${article.volumen}`);
-  if (article.numero) sourceParts.push(`No. ${article.numero}`);
+  if (article.numero) sourceParts.push(`Núm. ${article.numero}`);
   if (article.fecha) {
-    // Extraemos el año de la fecha para el formato (AAAA)
     const year = article.fecha.split('-')[0];
     sourceParts.push(`(${year})`);
   }
-  if (article.primeraPagina && article.ultimaPagina) sourceParts.push(`pp. ${article.primeraPagina}-${article.ultimaPagina}`);
-  
-  // Solo añadimos la etiqueta si hay algo que reportar
+  if (article.primeraPagina && article.ultimaPagina) {
+    sourceParts.push(`pp. ${article.primeraPagina}-${article.ultimaPagina}`);
+  } else if (article.primeraPagina) {
+    sourceParts.push(`p. ${article.primeraPagina}`);
+  }
   if (sourceParts.length > 0) {
-    elements.push(`<dc:source>${escapeXml(sourceParts.join(', '))}</dc:source>`);
+    elements.push(`<dc:source>${escapeXml(sourceParts.join('; '))}</dc:source>`);
   }
 
-  // --- FIN DE LA CORRECCIÓN PRINCIPAL ---
+  // dc:coverage (páginas aisladas)
+  if (article.primeraPagina && article.ultimaPagina) {
+    elements.push(`<dc:coverage>${escapeXml(article.primeraPagina + '-' + article.ultimaPagina)}</dc:coverage>`);
+  }
+
+  // dc:relation (granular)
+  if (article.volumen) elements.push(`<dc:relation>Vol. ${escapeXml(article.volumen)}</dc:relation>`);
+  if (article.numero) elements.push(`<dc:relation>No. ${escapeXml(article.numero)}</dc:relation>`);
 
   return elements.join('\n      ');
 }
+
+/**
+ * Extrae las referencias del HTML y las devuelve como texto plano
+ * Formato esperado por Dialnet:
+ * - Una referencia por línea
+ * - Separadas por doble salto de línea (\n\n)
+ * - Sin saltos de línea internos en cada referencia
+ * - Sin guiones '———' para autores repetidos
+ */
+/**
+ * Extrae las referencias del HTML y las devuelve en el formato que espera Dialnet:
+ * "Referencias:\n1. Referencia 1\n2. Referencia 2\n..."
+ * 
+ * Formato exacto que pide Dialnet:
+ * - Encabezado "Referencias:" en la primera línea
+ * - Cada referencia numerada (1., 2., 3., ...)
+ * - Cada referencia en una línea separada
+ * - Sin saltos de línea internos en cada referencia
+ * - Sin guiones '———' para autores repetidos (reemplazar por el nombre del autor)
+ */
+function extractReferencesAsText(htmlString) {
+  if (!htmlString) return '';
+  
+  // Extraer referencias individuales
+  const refs = [];
+  
+  // Buscar divs con clase "reference-item" (tu formato actual)
+  const divMatches = htmlString.match(/<div[^>]*class="reference-item"[^>]*>([\s\S]*?)<\/div>/gi);
+  if (divMatches) {
+    let lastAuthor = ''; // Para reemplazar guiones de autor repetido
+    
+    divMatches.forEach(div => {
+      let ref = div
+        .replace(/<[^>]*>/g, '')           // Quitar etiquetas HTML
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&apos;/g, "'")
+        .replace(/\n\s*/g, ' ')            // Quitar saltos de línea internos
+        .replace(/\s+/g, ' ')              // Normalizar espacios
+        .trim();
+      
+      // Reemplazar guiones de autor repetido por el último autor conocido
+      if (/^[—–\-—]/.test(ref) && lastAuthor) {
+        ref = lastAuthor + ref.replace(/^[—–\-—]\s*/, '');
+      } else {
+        // Guardar el autor para posibles referencias siguientes con guiones
+        const authorMatch = ref.match(/^([^.,]+)/);
+        if (authorMatch) {
+          lastAuthor = authorMatch[1].trim();
+        }
+      }
+      
+      if (ref) refs.push(ref);
+    });
+  } else {
+    // Buscar párrafos <p> (formato OJS2/OJS3)
+    const pMatches = htmlString.match(/<p[^>]*>([\s\S]*?)<\/p>/gi);
+    if (pMatches) {
+      pMatches.forEach(p => {
+        let ref = p
+          .replace(/<[^>]*>/g, '')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/&apos;/g, "'")
+          .replace(/\n\s*/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        
+        if (ref) refs.push(ref);
+      });
+    } else {
+      // Texto plano separado por doble salto de línea
+      const plainText = htmlString
+        .replace(/<[^>]*>/g, '\n')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&apos;/g, "'");
+      
+      const parts = plainText.split(/\n\s*\n/);
+      parts.forEach(part => {
+        const ref = part.replace(/\s+/g, ' ').trim();
+        if (ref && ref.length > 10) refs.push(ref);
+      });
+    }
+  }
+  
+  if (refs.length === 0) return '';
+  
+  // ⚠️ FORMATO EXACTO QUE PIDE DIALNET:
+  // "Referencias:" + salto de línea + referencias numeradas
+  const referenciasFormateadas = refs.map((ref, index) => `${index + 1}. ${ref}`).join('\n');
+  
+  return `Referencias:\n${referenciasFormateadas}`;
+}
+  
 // =====================================================
 // XML BUILDERS
 // =====================================================
@@ -11150,11 +11245,11 @@ function buildRecordXml(article) {
     </header>
     <metadata>
       <oai_dc:dc xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
-                 xmlns:dc="http://purl.org/dc/elements/1.1/"
-                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-                 xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
-        ${articleToDublinCore(article)}
-      </oai_dc:dc>
+           xmlns:dc="http://purl.org/dc/elements/1.1/"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+  ${articleToDublinCore(article)}
+</oai_dc:dc>
     </metadata>
   </record>`;
   return xml;
@@ -11421,8 +11516,10 @@ function buildJatsRecordXml(article) {
 function filterByDateRange(articles, from, until) {
   if (!from && !until) return articles;
   return articles.filter(a => {
-    const d = a.fecha || a.createdAt?.split('T')[0] || a.updatedAt?.split('T')[0];
+    let d = a.fecha || a.updatedAt?.split('T')[0] || a.createdAt?.split('T')[0] || '';
     if (!d) return false;
+    // Normalizar a YYYY-MM-DD
+    d = d.split('T')[0];
     return (!from || d >= from) && (!until || d <= until);
   });
 }
@@ -11680,11 +11777,14 @@ async function handleListPaginated(res, params, verb, includeFullRecord) {
 
   console.log(`[OAI] ${verb} - Total publicados antes de filtros: ${results.length} (formato: ${q.metadataPrefix})`);
 
-  results = filterByDateRange(results, q.from, q.until);
+ results = filterByDateRange(results, q.from, q.until);
   if (q.set) results = filterBySet(results, q.set);
-
-  console.log(`[OAI] Después de filtros (set/date): ${results.length}`);
-
+  
+  console.log(`[OAI] Después de filtros: ${results.length}`);
+  
+  if (results.length === 0) {
+    return res.status(200).send(buildErrorXml('noRecordsMatch', 'No records match the given criteria'));
+  }
   // Ordenar por número de artículo descendente (más nuevos primero)
   results.sort((a, b) => (b.numeroArticulo || 0) - (a.numeroArticulo || 0));
 
