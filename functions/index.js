@@ -10926,7 +10926,7 @@ const ARTICLES_URL = 'https://www.revistacienciasestudiantes.com/articles.json';
 const BASE_URL = 'https://www.revistacienciasestudiantes.com/oai';
 const REPO_IDENTIFIER = 'revistacienciasestudiantes.com';
 const ADMIN_EMAIL = 'contact@revistacienciasestudiantes.com';
-const REPO_NAME = 'Revista Ciencias Estudiantes';
+const REPO_NAME = 'Revista Nacional de las Ciencias Estudiantes';
 const EARLIEST_DATESTAMP = '2025-11-10';
 const BATCH_SIZE = 50;
 const CACHE_TTL = 5 * 60 * 1000;
@@ -11016,7 +11016,10 @@ function parseIdentifier(identifier) {
 }
 
 // =====================================================
-// DUBLIN CORE
+// DUBLIN CORE - OPTIMIZADO PARA DIALNET
+// =====================================================
+// =====================================================
+// DUBLIN CORE - OPTIMIZADO PARA DIALNET
 // =====================================================
 function articleToDublinCore(article) {
   const elements = [];
@@ -11032,7 +11035,7 @@ function articleToDublinCore(article) {
     }
   }
   
-  // Keywords (por separado)
+  // Keywords (por separado, con lang)
   if (Array.isArray(article.palabras_clave)) {
     for (const kw of article.palabras_clave) if (kw) elements.push(`<dc:subject xml:lang="es">${escapeXml(kw)}</dc:subject>`);
   }
@@ -11044,67 +11047,98 @@ function articleToDublinCore(article) {
   if (article.resumen) elements.push(`<dc:description xml:lang="es">${escapeXml(article.resumen)}</dc:description>`);
   if (article.abstract) elements.push(`<dc:description xml:lang="en">${escapeXml(article.abstract)}</dc:description>`);
   
-  // ================================================================
-  // ⭐ REFERENCIAS BIBLIOGRÁFICAS EN DC:DESCRIPTION (DIALNET) ⭐
-  // ================================================================
- if (article.referencias) {
-  const refsText = extractReferencesAsText(article.referencias);
-  if (refsText) {
-    // Va en UN SOLO <dc:description> con TODO el bloque de referencias
-    elements.push(`<dc:description xml:lang="es">${escapeXml(refsText)}</dc:description>`);
+  // Referencias (si existen)
+  if (article.referencias) {
+    const refsText = extractReferencesAsText(article.referencias);
+    if (refsText) {
+      elements.push(`<dc:description xml:lang="es">${escapeXml(refsText)}</dc:description>`);
+    }
   }
-}
-  if (article.fecha) elements.push(`<dc:date>${escapeXml(article.fecha)}</dc:date>`);
   
-  const tipo = article.tipo || 'info:eu-repo/semantics/article';
-  elements.push(`<dc:type>${escapeXml(tipo)}</dc:type>`);
+  // ⚠️ FECHA - CRÍTICO PARA DIALNET
+  // Dialnet espera YYYY-MM-DD o al menos YYYY
+  if (article.fecha) {
+    elements.push(`<dc:date>${escapeXml(article.fecha)}</dc:date>`);
+  }
   
-  // Identificadores (URL + DOI + PDF)
-  elements.push(`<dc:identifier>${escapeXml(getArticleUrl(article))}</dc:identifier>`);
+  // ⚠️ TIPOS - DIALNET ESPERA ESTOS DOS EXACTOS
+  elements.push(`<dc:type>info:eu-repo/semantics/article</dc:type>`);
+  elements.push(`<dc:type>info:eu-repo/semantics/publishedVersion</dc:type>`);
+  
+  // ⚠️ FORMATO PDF - IMPORTANTE PARA DIALNET
+  elements.push(`<dc:format>application/pdf</dc:format>`);
+  
+  // ⚠️ IDENTIFICADOR DOI - VA PRIMERO Y JUSTO ANTES DEL SOURCE
   if (article.doi) {
-    elements.push(`<dc:identifier>https://doi.org/${escapeXml(article.doi)}</dc:identifier>`);
+    elements.push(`<dc:identifier>${escapeXml(article.doi)}</dc:identifier>`);
   }
+  
+  // ⚠️ SOURCE - ¡EL FORMATEO EXACTO QUE DIALNET NECESITA!
+  // Formato: "Nombre Revista; Vol. X Núm. Y (AÑO); PAGINAS"
+  // SIN punto y coma entre el número y el año
+  const sourceParts = [];
+  
+  if (REPO_NAME) {
+    sourceParts.push(REPO_NAME);
+  }
+  
+  // Unimos volumen, número y año en UN SOLO elemento
+  let volumenNumeroAnyo = '';
+  if (article.volumen && article.numero) {
+    volumenNumeroAnyo = `Vol. ${article.volumen} Núm. ${article.numero}`;
+  } else if (article.volumen) {
+    volumenNumeroAnyo = `Vol. ${article.volumen}`;
+  }
+  
+  // Añadimos el año al mismo elemento (sin punto y coma extra)
+  if (article.fecha && volumenNumeroAnyo) {
+    const year = new Date(article.fecha).getFullYear();
+    volumenNumeroAnyo += ` (${year})`;
+  } else if (article.fecha) {
+    const year = new Date(article.fecha).getFullYear();
+    volumenNumeroAnyo = `(${year})`;
+  }
+  
+  if (volumenNumeroAnyo) {
+    sourceParts.push(volumenNumeroAnyo);
+  }
+  
+  if (article.primeraPagina && article.ultimaPagina) {
+    sourceParts.push(`${article.primeraPagina}-${article.ultimaPagina}`);
+  } else if (article.primeraPagina) {
+    sourceParts.push(article.primeraPagina);
+  }
+  
+  if (sourceParts.length > 0) {
+    elements.push(`<dc:source xml:lang="es">${escapeXml(sourceParts.join('; '))}</dc:source>`);
+  }
+  
+  // ⚠️ ISSN - SOLO EL DIGITAL 3087-2839
+  elements.push(`<dc:source>3087-2839</dc:source>`);
+  
+  // ⚠️ LANGUAGE
+  elements.push(`<dc:language>spa</dc:language>`);
+  
+  // ⚠️ RIGHTS - Formato de Revista de Indias
+  elements.push(`<dc:rights xml:lang="es">Derechos de autor ${article.fecha ? new Date(article.fecha).getFullYear() : ''} ${REPO_NAME}</dc:rights>`);
+  elements.push(`<dc:rights xml:lang="es">https://creativecommons.org/licenses/by/4.0</dc:rights>`);
+  
+  // ⚠️ PUBLISHER
+  elements.push(`<dc:publisher xml:lang="es">${escapeXml(REPO_NAME)}</dc:publisher>`);
+  
+  // ⚠️ RESTO DE IDENTIFICADORES - VAN DESPUÉS DEL SOURCE
+  elements.push(`<dc:identifier>${escapeXml(getArticleUrl(article))}</dc:identifier>`);
   if (article.pdfUrl) {
-    elements.push(`<dc:format>application/pdf</dc:format>`);
     elements.push(`<dc:identifier>${escapeXml(article.pdfUrl)}</dc:identifier>`);
   }
   
-  elements.push(`<dc:language>es</dc:language>`);
-  
-  const rights = article.conflicts || 'Creative Commons Attribution 4.0 International License';
-  elements.push(`<dc:rights>${escapeXml(rights)}</dc:rights>`);
-
-  // === MEJORAS DIALNET / COSECHADORES ===
-  // dc:source (formato recomendado)
-  const sourceParts = [];
-  if (REPO_NAME) sourceParts.push(REPO_NAME);
-  if (article.volumen) sourceParts.push(`Vol. ${article.volumen}`);
-  if (article.numero) sourceParts.push(`Núm. ${article.numero}`);
-  if (article.fecha) {
-    const year = article.fecha.split('-')[0];
-    sourceParts.push(`(${year})`);
+  // ⚠️ RELATION - Para el PDF
+  if (article.pdfUrl) {
+    elements.push(`<dc:relation>${escapeXml(article.pdfUrl)}</dc:relation>`);
   }
-  if (article.primeraPagina && article.ultimaPagina) {
-    sourceParts.push(`pp. ${article.primeraPagina}-${article.ultimaPagina}`);
-  } else if (article.primeraPagina) {
-    sourceParts.push(`p. ${article.primeraPagina}`);
-  }
-  if (sourceParts.length > 0) {
-    elements.push(`<dc:source>${escapeXml(sourceParts.join('; '))}</dc:source>`);
-  }
-
-  // dc:coverage (páginas aisladas)
-  if (article.primeraPagina && article.ultimaPagina) {
-    elements.push(`<dc:coverage>${escapeXml(article.primeraPagina + '-' + article.ultimaPagina)}</dc:coverage>`);
-  }
-
-  // dc:relation (granular)
-  if (article.volumen) elements.push(`<dc:relation>Vol. ${escapeXml(article.volumen)}</dc:relation>`);
-  if (article.numero) elements.push(`<dc:relation>No. ${escapeXml(article.numero)}</dc:relation>`);
 
   return elements.join('\n      ');
 }
-
 /**
  * Extrae las referencias del HTML y las devuelve como texto plano
  * Formato esperado por Dialnet:

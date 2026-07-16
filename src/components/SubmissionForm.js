@@ -1090,7 +1090,7 @@ export default function SubmissionForm({ user, onSuccess }) {
   const [submissionId, setSubmissionId] = useState('');
   const [driveFolderId, setDriveFolderId] = useState('');
   const [validationErrors, setValidationErrors] = useState({});
-  const [editorComment, setEditorComment] = useState('');
+ 
   
   // Estado inicial del formulario
   const initialFormState = {
@@ -1186,16 +1186,11 @@ export default function SubmissionForm({ user, onSuccess }) {
 
 // 1. Primero, añade estos refs al inicio de tu componente
 const formDataRef = useRef(formData);
-const editorCommentRef = useRef(editorComment);
 
 // 2. Sincroniza los refs
 useEffect(() => {
   formDataRef.current = formData;
 }, [formData]);
-
-useEffect(() => {
-  editorCommentRef.current = editorComment;
-}, [editorComment]);
 
 // 3. Corrige el useEffect de carga del borrador
 useEffect(() => {
@@ -1216,21 +1211,18 @@ useEffect(() => {
   }
 }, []); // ✅ Solo al montar
 
-// 4. Corrige el guardado automático usando los refs
 useEffect(() => {
   const interval = setInterval(() => {
     const dataToSave = {
       ...formDataRef.current,
       manuscript: null,
       manuscriptName: formDataRef.current.manuscriptName,
-      editorComment: editorCommentRef.current
+      // Ya no es necesario sobreescribir editorComment, viene incluido en formDataRef
     };
     localStorage.setItem('submissionFormDraft', JSON.stringify(dataToSave));
-    console.log('[DEBUG] Borrador guardado:', new Date().toLocaleTimeString());
   }, 30000);
-  
   return () => clearInterval(interval);
-}, []); // ✅ Se ejecuta solo una vez
+}, []);
   // ============ DEBUG: Mostrar estado del paso 3 ============
   useEffect(() => {
     if (currentStep === 3) {
@@ -1697,7 +1689,7 @@ useEffect(() => {
         funding: formData.funding,
         conflictOfInterest: formData.conflictOfInterest,
         excludedReviewers: formData.excludedReviewers,
-        editorComment: editorComment,
+        editorComment: formData.editorComment,
         requiresEthicsApproval: formData.requiresEthicsApproval === 'yes',
         ethicsCommitteeName: formData.ethicsCommitteeName,
         aiUsed: formData.aiUsed === 'yes',
@@ -2155,8 +2147,8 @@ useEffect(() => {
                         <div className="border border-gray-200 rounded-sm overflow-hidden bg-gray-50 focus-within:border-[#003b5c] transition-colors">
                           <ReactQuill
                             theme="snow"
-                            value={editorComment}
-                            onChange={setEditorComment}
+                              value={formData.editorComment}
+  onChange={(value) => setFormData(prev => ({ ...prev, editorComment: value }))}
                             placeholder={isSpanish 
                               ? 'Comentarios para el equipo editorial...' 
                               : 'Comments for the editorial team...'}

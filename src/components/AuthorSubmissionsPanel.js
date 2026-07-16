@@ -97,7 +97,7 @@ const SUBMISSION_STATES = {
     icon: <Icons.Send />, 
     description: { es: 'Manuscrito recibido. En espera de asignación editorial.', en: 'Manuscript received. Awaiting editorial assignment.' } 
   },
-  'in-desk-review': { 
+  'in-editorial-review': { 
     es: 'Revisión Editorial', en: 'Desk Review', 
     color: 'bg-indigo-50 text-indigo-700 border-indigo-200', 
     icon: <Icons.Search />, 
@@ -323,7 +323,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
   const getTimelineStep = (status) => {
     const steps = [
       'submitted',
-      'in-desk-review',
+      'in-editorial-review',
       'in-reviewer-selection',
       'awaiting-reviewer-responses',
       'in-peer-review',
@@ -661,7 +661,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
                         <div className="relative">
                           <div className="absolute top-4 left-0 w-full h-[1px] bg-slate-200 z-0 hidden sm:block" />
                           <div className="flex sm:justify-between overflow-x-auto sm:overflow-visible pb-2 sm:pb-0 gap-4 sm:gap-0">
-                            {['submitted', 'in-desk-review', 'in-reviewer-selection', 'awaiting-reviewer-responses', 'in-peer-review', 'awaiting-editor-decision', 'accepted'].map((step, idx) => {
+                            {['submitted', 'in-editorial-review', 'in-reviewer-selection', 'awaiting-reviewer-responses', 'in-peer-review', 'awaiting-editor-decision', 'accepted'].map((step, idx) => {
                               const currentStep = getTimelineStep(activePortal.status);
                               const isCompleted = idx < currentStep;
                               const isCurrent = idx === currentStep;
