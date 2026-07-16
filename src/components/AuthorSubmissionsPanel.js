@@ -483,7 +483,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
           </p>
         </div>
         <button
-          onClick={() => window.location.href = '/submit'}
+          onClick={() => window.location.href = isSpanish ? '/login/submit' : '/en/login/submit'}
           className="bg-[#003b5c] hover:bg-[#002840] text-white px-8 py-3.5 text-sm font-bold uppercase tracking-widest transition-colors shadow-sm flex items-center justify-center gap-3 group"
         >
           <span className="text-lg leading-none group-hover:rotate-90 transition-transform">+</span>
