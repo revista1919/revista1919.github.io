@@ -307,7 +307,7 @@ export const ReviewerManagementTab = ({
   </motion.div>
 )}
 
-// En la sección de comentarios al editor (línea ~235)
+
 {rev.commentsToEditor && (
   <motion.div
     initial={{ opacity: 0, x: -20 }}

@@ -50,13 +50,13 @@ const StatusBadge = ({ condition, trueLabel, trueColor, falseLabel, falseColor }
 // Componente para cada bloque de información estilo panel moderno
 const InfoBlock = ({ icon: Icon, title, children, className = '' }) => (
   <div className={`bg-white rounded-sm border border-gray-200 shadow-sm ${className}`}>
-    <div className="bg-slate-50 px-5 py-3 border-b border-gray-200 flex items-center gap-2">
+  <div className="bg-slate-50 px-3 sm:px-5 py-2.5 sm:py-3 border-b border-gray-200 flex items-center gap-2">
       {Icon && <span className="text-[#003b5c]"><Icon /></span>}
       <h3 className="font-sans font-bold text-slate-800 text-xs uppercase tracking-wider">
         {title}
       </h3>
     </div>
-    <div className="p-5">
+    <div className="p-3 sm:p-5">
       {children}
     </div>
   </div>
@@ -235,117 +235,66 @@ useEffect(() => {
   return (
     <div className="fixed inset-0 bg-slate-100 z-50 flex flex-col">
       {/* ==================== BARRA SUPERIOR ==================== */}
-      <div className="bg-[#003b5c] text-white px-6 py-3 flex items-center justify-between shadow-lg flex-shrink-0">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => onBackToPanel && onBackToPanel()}
-            className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-sm transition-colors text-sm font-sans font-bold uppercase tracking-wider"
-          >
-            <Icons.ArrowLeft />
-            {isSpanish ? 'Volver al Panel' : 'Back to Panel'}
-          </button>
-          <div className="h-6 w-px bg-white/20"></div>
-          <div>
-            <span className="text-[10px] font-sans uppercase tracking-wider text-sky-200">Desk Review</span>
-            <h2 className="font-serif text-lg font-bold leading-tight truncate max-w-2xl">
-              {isSpanish ? submission.title : submission.titleEn || submission.title}
-            </h2>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="px-3 py-1 bg-white/15 text-white text-xs font-mono rounded-sm">
-            ID: {submission.submissionId || 'PENDIENTE'}
-          </span>
-        </div>
+      <div className="bg-[#003b5c] text-white px-3 sm:px-6 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 shadow-lg flex-shrink-0">
+  <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
+    <button
+      onClick={() => onBackToPanel && onBackToPanel()}
+      className="flex items-center gap-1 sm:gap-2 bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-sm transition-colors text-xs sm:text-sm font-sans font-bold uppercase tracking-wider flex-shrink-0"
+    >
+      <Icons.ArrowLeft />
+      <span className="hidden sm:inline">{isSpanish ? 'Volver al Panel' : 'Back to Panel'}</span>
+    </button>
+    <div className="hidden sm:block h-6 w-px bg-white/20"></div>
+    <div className="min-w-0 flex-1">
+      <span className="text-[9px] sm:text-[10px] font-sans uppercase tracking-wider text-sky-200">Desk Review</span>
+      <h2 className="font-serif text-sm sm:text-lg font-bold leading-tight truncate max-w-full sm:max-w-2xl">
+        {isSpanish ? submission.title : submission.titleEn || submission.title}
+      </h2>
+    </div>
+  </div>
+  <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
+    <span className="px-2 py-0.5 sm:px-3 sm:py-1 bg-white/15 text-white text-[10px] sm:text-xs font-mono rounded-sm truncate max-w-[150px] sm:max-w-none">
+      ID: {submission.submissionId || 'PENDIENTE'}
+    </span>
+  </div>
+
       </div>
 
       {/* ==================== PESTAÑAS DE NAVEGACIÓN UNIFICADAS ==================== */}
-      <div className="bg-white border-b border-gray-200 px-6 flex items-center gap-1 flex-shrink-0 overflow-x-auto">
-        <button
-          onClick={() => setActiveTab('review')}
-          className={`px-5 py-3 font-sans text-sm font-bold uppercase tracking-wider border-b-2 transition-colors whitespace-nowrap ${
-            activeTab === 'review'
-              ? 'border-[#003b5c] text-[#003b5c]'
-              : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-          }`}
-        >
-          <span className="flex items-center gap-2">
-            <Icons.Edit />
-            {isSpanish ? 'Revisión' : 'Review'}
+      <div className="bg-white border-b border-gray-200 px-2 sm:px-6 flex items-center gap-0 sm:gap-1 flex-shrink-0 overflow-x-auto scrollbar-hide">
+  {[
+    { id: 'review', icon: Icons.Edit, label: isSpanish ? 'Revisión' : 'Review', shortLabel: isSpanish ? 'Rev.' : 'Rev.' },
+    { id: 'article', icon: Icons.Eye, label: isSpanish ? 'Ver Artículo' : 'View Article', shortLabel: isSpanish ? 'Art.' : 'Art.' },
+    { id: 'reviewers', icon: Icons.Users, label: isSpanish ? 'Revisores' : 'Reviewers', shortLabel: isSpanish ? 'Rev.' : 'Rev.', badge: submittedReviews.length },
+    ...(isConsolidated || task.status === 'awaiting_decision' ? [{ id: 'decision', icon: Icons.ClipboardCheck, label: isSpanish ? 'Decisión Final' : 'Final Decision', shortLabel: isSpanish ? 'Dec.' : 'Dec.' }] : []),
+    ...(submission.status === 'accepted' ? [{ id: 'metadata', icon: Icons.Refresh, label: isSpanish ? 'Refinar Metadatos' : 'Refine Metadata', shortLabel: isSpanish ? 'Meta.' : 'Meta.' }] : [])
+  ].map(tab => (
+    <button
+      key={tab.id}
+      onClick={() => setActiveTab(tab.id)}
+      className={`px-2 sm:px-5 py-2.5 sm:py-3 font-sans text-xs sm:text-sm font-bold uppercase tracking-wider border-b-2 transition-colors whitespace-nowrap flex-shrink-0 ${
+        activeTab === tab.id
+          ? 'border-[#003b5c] text-[#003b5c]'
+          : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+      }`}
+    >
+      <span className="flex items-center gap-1 sm:gap-2">
+        <span className="w-4 h-4"><tab.icon /></span>
+        <span className="hidden sm:inline">{tab.label}</span>
+        <span className="sm:hidden">{tab.shortLabel}</span>
+        {tab.badge > 0 && (
+          <span className="bg-[#003b5c] text-white text-[10px] px-1.5 py-0.5 rounded-full">
+            {tab.badge}
           </span>
-        </button>
-        <button
-          onClick={() => setActiveTab('article')}
-          className={`px-5 py-3 font-sans text-sm font-bold uppercase tracking-wider border-b-2 transition-colors whitespace-nowrap ${
-            activeTab === 'article'
-              ? 'border-[#003b5c] text-[#003b5c]'
-              : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-          }`}
-        >
-          <span className="flex items-center gap-2">
-            <Icons.Eye />
-            {isSpanish ? 'Ver Artículo' : 'View Article'}
-          </span>
-        </button>
-        
-        {/* NUEVA PESTAÑA: Gestión de Revisores */}
-        <button
-          onClick={() => setActiveTab('reviewers')}
-          className={`px-5 py-3 font-sans text-sm font-bold uppercase tracking-wider border-b-2 transition-colors whitespace-nowrap ${
-            activeTab === 'reviewers'
-              ? 'border-[#003b5c] text-[#003b5c]'
-              : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-          }`}
-        >
-          <span className="flex items-center gap-2">
-            <Icons.Users />
-            {isSpanish ? 'Revisores' : 'Reviewers'}
-            {submittedReviews.length > 0 && (
-              <span className="bg-[#003b5c] text-white text-xs px-2 py-0.5 rounded-full">
-                {submittedReviews.length}
-              </span>
-            )}
-          </span>
-        </button>
-        
-        {/* NUEVA PESTAÑA: Decisión Final (condicional) */}
-        {(isConsolidated || task.status === 'awaiting_decision') && (
-          <button
-            onClick={() => setActiveTab('decision')}
-            className={`px-5 py-3 font-sans text-sm font-bold uppercase tracking-wider border-b-2 transition-colors whitespace-nowrap ${
-              activeTab === 'decision'
-                ? 'border-[#003b5c] text-[#003b5c]'
-                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-            }`}
-          >
-            <span className="flex items-center gap-2">
-              <Icons.ClipboardCheck />
-              {isSpanish ? 'Decisión Final' : 'Final Decision'}
-            </span>
-          </button>
         )}
-        
-        {/* NUEVA PESTAÑA: Refinar Metadatos (condicional) */}
-        {submission.status === 'accepted' && (
-          <button
-            onClick={() => setActiveTab('metadata')}
-            className={`px-5 py-3 font-sans text-sm font-bold uppercase tracking-wider border-b-2 transition-colors whitespace-nowrap ${
-              activeTab === 'metadata'
-                ? 'border-[#003b5c] text-[#003b5c]'
-                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-            }`}
-          >
-            <span className="flex items-center gap-2">
-              <Icons.Refresh />
-              {isSpanish ? 'Refinar Metadatos' : 'Refine Metadata'}
-            </span>
-          </button>
-        )}
-      </div>
+      </span>
+    </button>
+  ))}
+</div>
 
       {/* ==================== CONTENIDO PRINCIPAL CON SCROLL ==================== */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-7xl mx-auto p-6">
+      <div className="flex-1 overflow-y-auto overscroll-contain">
+  <div className="max-w-7xl mx-auto p-3 sm:p-6">
           
           {/* ==================== PESTAÑA: REVISIÓN EDITORIAL ==================== */}
           {activeTab === 'review' && (
@@ -357,9 +306,9 @@ useEffect(() => {
               )}
               
               {/* Encabezado editorial y formulario de decisión (EXACTAMENTE IGUAL que antes) */}
-              <div className="bg-[#003b5c] text-white rounded-sm p-6 lg:p-8 shadow-sm">
-                <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
-                  <div className="flex-1 min-w-0">
+              <div className="bg-[#003b5c] text-white rounded-sm p-4 sm:p-6 lg:p-8 shadow-sm">
+  <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 sm:gap-6">
+    <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-3">
                       <span className="inline-block px-2.5 py-0.5 bg-white text-[#003b5c] text-[10px] font-bold uppercase tracking-wider rounded-sm">
                         ID: {submission.submissionId || 'PENDIENTE'}
@@ -375,9 +324,9 @@ useEffect(() => {
                       </span>
                     </div>
                     
-                    <h2 className="font-serif text-2xl font-bold mb-2 leading-tight">
-                      {isSpanish ? submission.title : submission.titleEn || submission.title}
-                    </h2>
+                    <h2 className="font-serif text-lg sm:text-2xl font-bold mb-2 leading-tight break-words">
+        {isSpanish ? submission.title : submission.titleEn || submission.title}
+      </h2>
                     
                     {submission.titleEn && isSpanish && (
                       <p className="text-sky-200 text-sm font-serif italic mb-4 border-l-2 border-sky-400 pl-3">
@@ -395,7 +344,7 @@ useEffect(() => {
                   </div>
 
                   {/* Botonera de Documentos Principales */}
-                  <div className="flex flex-col gap-2 flex-shrink-0 w-full lg:w-auto">
+                  <div className="grid grid-cols-2 sm:flex sm:flex-col gap-2 flex-shrink-0 w-full lg:w-auto">
                     {submission.formattedDocsFile?.url && (
                       <a href={submission.formattedDocsFile.url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 bg-white text-[#003b5c] px-4 py-2.5 rounded-sm transition-colors text-xs font-bold uppercase tracking-wider shadow-sm hover:bg-slate-50">
                         <Icons.File /> {isSpanish ? 'Manuscrito PDF' : 'PDF Manuscript'}
@@ -450,7 +399,7 @@ useEffect(() => {
                       </a>
                     )}
 
-                    <div className="grid grid-cols-2 gap-2 mt-1">
+                    <div className="grid grid-cols-1 xs:grid-cols-2 gap-2 mt-1">
                       {submission.driveFolderUrl && (
                         <a href={submission.driveFolderUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 bg-white/10 hover:bg-white/20 text-white px-2 py-2 rounded-sm transition-colors text-[10px] font-bold uppercase tracking-wider">
                           <Icons.ExternalLink /> Drive Autor
@@ -466,7 +415,7 @@ useEffect(() => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 {/* Columna izquierda - información del autor y resumen */}
                 <div className="space-y-6">
                   <InfoBlock icon={Icons.User} title={isSpanish ? 'Autor de Correspondencia' : 'Corresponding Author'}>
@@ -782,7 +731,7 @@ useEffect(() => {
                   {isSpanish ? 'Resolución Editorial (Desk Review)' : 'Editorial Decision (Desk Review)'}
                 </h3>
                 
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+               <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-6 sm:mb-8">
                   {[
                     { value: 'reject', label: isSpanish ? 'Rechazar' : 'Reject', color: 'red' },
                     { value: 'minor-revision', label: isSpanish ? 'Revisión Menor' : 'Minor Revision', color: 'amber' },
@@ -801,7 +750,7 @@ useEffect(() => {
                       <button
                         key={opt.value}
                         onClick={() => setDecision(opt.value)}
-                        className={`px-4 py-4 rounded-sm border-2 font-sans font-bold text-sm uppercase tracking-wider transition-all duration-200 ${colorClasses[opt.color]}`}
+                        className={`px-2 sm:px-4 py-3 sm:py-4 rounded-sm border-2 font-sans font-bold text-xs sm:text-sm uppercase tracking-wider transition-all duration-200 text-center ${colorClasses[opt.color]}`}
                       >
                         {opt.label}
                       </button>
@@ -818,7 +767,7 @@ useEffect(() => {
                       value={feedback}
                       onChange={(e) => setFeedback(e.target.value)}
                       rows="4"
-                      className="w-full p-4 bg-white border border-slate-300 rounded-sm focus:ring-2 focus:ring-[#003b5c] focus:border-transparent font-serif text-sm text-slate-800 placeholder:text-slate-400"
+                      className="w-full p-3 sm:p-4 bg-white border border-slate-300 rounded-sm focus:ring-2 focus:ring-[#003b5c] focus:border-transparent font-serif text-sm sm:text-base text-slate-800 placeholder:text-slate-400"
                       placeholder={isSpanish ? 'El autor leerá este comentario...' : 'The author will read this comment...'}
                     />
                   </div>
@@ -831,7 +780,7 @@ useEffect(() => {
                       value={internalComments}
                       onChange={(e) => setInternalComments(e.target.value)}
                       rows="3"
-                      className="w-full p-4 bg-slate-100 border border-slate-300 rounded-sm focus:ring-2 focus:ring-[#003b5c] focus:border-transparent font-serif text-sm text-slate-800 placeholder:text-slate-400"
+                      className="w-full p-3 sm:p-4 bg-slate-100 border border-slate-300 rounded-sm focus:ring-2 focus:ring-[#003b5c] focus:border-transparent font-serif text-sm sm:text-base text-slate-800 placeholder:text-slate-400"
                       placeholder={isSpanish ? 'Notas privadas para el equipo editorial...' : 'Private notes for the editorial team...'}
                     />
                   </div>
@@ -840,7 +789,7 @@ useEffect(() => {
                     <button
                       onClick={handleSubmit}
                       disabled={isLoading || !decision}
-                      className="px-8 py-3 bg-[#003b5c] hover:bg-sky-900 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-sans font-bold text-sm uppercase tracking-wider rounded-sm shadow-sm transition-colors flex items-center justify-center min-w-[200px]"
+                      className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-[#003b5c] hover:bg-sky-900 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-sans font-bold text-sm uppercase tracking-wider rounded-sm shadow-sm transition-colors flex items-center justify-center sm:min-w-[200px]"
                     >
                       {isLoading ? (isSpanish ? 'GUARDANDO...' : 'SAVING...') : (isSpanish ? 'CONFIRMAR DECISIÓN' : 'CONFIRM DECISION')}
                     </button>
@@ -858,14 +807,14 @@ useEffect(() => {
                   {isSpanish ? 'Documentos del Artículo' : 'Article Documents'}
                 </h3>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   {/* Manuscrito PDF */}
                   {submission.formattedDocsFile?.url && (
                     <a 
                       href={submission.formattedDocsFile.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex flex-col items-center justify-center p-8 bg-slate-50 border-2 border-slate-200 hover:border-[#003b5c] rounded-sm transition-all group cursor-pointer"
+                      className="flex flex-col items-center justify-center p-4 sm:p-8 bg-slate-50 border-2 border-slate-200 hover:border-[#003b5c] rounded-sm transition-all group cursor-pointer"
                     >
                       <div className="w-16 h-16 bg-[#003b5c] rounded-sm flex items-center justify-center mb-4 group-hover:bg-sky-900 transition-colors">
                         <Icons.File />
@@ -885,7 +834,7 @@ useEffect(() => {
                       href={submission.finalReviewDocUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex flex-col items-center justify-center p-8 bg-slate-50 border-2 border-slate-200 hover:border-emerald-500 rounded-sm transition-all group cursor-pointer"
+                      className="flex flex-col items-center justify-center p-4 sm:p-8 bg-slate-50 border-2 border-slate-200 hover:border-emerald-500 rounded-sm transition-all group cursor-pointer"
                     >
                       <div className="w-16 h-16 bg-emerald-600 rounded-sm flex items-center justify-center mb-4 group-hover:bg-emerald-700 transition-colors">
                         <Icons.DocumentText />
@@ -905,7 +854,7 @@ useEffect(() => {
                       href={latestRevisionUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex flex-col items-center justify-center p-8 bg-slate-50 border-2 border-slate-200 hover:border-blue-500 rounded-sm transition-all group cursor-pointer"
+                      className="flex flex-col items-center justify-center p-4 sm:p-8 bg-slate-50 border-2 border-slate-200 hover:border-blue-500 rounded-sm transition-all group cursor-pointer"
                     >
                       <div className="w-16 h-16 bg-blue-600 rounded-sm flex items-center justify-center mb-4 group-hover:bg-blue-700 transition-colors">
                         <Icons.DocumentText />
@@ -925,7 +874,7 @@ useEffect(() => {
                       href={submission.originalFileUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex flex-col items-center justify-center p-8 bg-slate-50 border-2 border-slate-200 hover:border-sky-500 rounded-sm transition-all group cursor-pointer"
+                      className="flex flex-col items-center justify-center p-4 sm:p-8 bg-slate-50 border-2 border-slate-200 hover:border-sky-500 rounded-sm transition-all group cursor-pointer"
                     >
                       <div className="w-16 h-16 bg-sky-600 rounded-sm flex items-center justify-center mb-4 group-hover:bg-sky-700 transition-colors">
                         <Icons.File />
@@ -945,7 +894,7 @@ useEffect(() => {
                       href={submission.formattedPdfFile.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex flex-col items-center justify-center p-8 bg-slate-50 border-2 border-slate-200 hover:border-red-500 rounded-sm transition-all group cursor-pointer"
+                      className="flex flex-col items-center justify-center p-4 sm:p-8 bg-slate-50 border-2 border-slate-200 hover:border-red-500 rounded-sm transition-all group cursor-pointer"
                     >
                       <div className="w-16 h-16 bg-red-600 rounded-sm flex items-center justify-center mb-4 group-hover:bg-red-700 transition-colors">
                         <Icons.File />
@@ -1003,7 +952,7 @@ useEffect(() => {
                     <h4 className="font-sans font-bold text-slate-500 text-xs uppercase tracking-wider mb-2">
                       {isSpanish ? 'Título' : 'Title'}
                     </h4>
-                    <p className="font-serif text-xl text-slate-800 leading-tight">
+                    <p className="font-serif text-base sm:text-xl text-slate-800 leading-tight break-words">
                       {isSpanish ? submission.title : submission.titleEn || submission.title}
                     </p>
                     {submission.titleEn && isSpanish && (
@@ -1122,6 +1071,30 @@ useEffect(() => {
           
         </div>
       </div>
+      <style jsx>{`
+  /* Ocultar scrollbar en pestañas */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Prevenir zoom en inputs en iOS */
+  @media (max-width: 640px) {
+    textarea, input {
+      font-size: 16px !important;
+    }
+  }
+  
+  /* Breakpoint extra pequeño */
+  @media (min-width: 480px) {
+    .xs\:grid-cols-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+`}</style>
     </div>
   );
 };

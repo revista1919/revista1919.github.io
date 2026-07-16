@@ -440,62 +440,63 @@ const DeskReviewPanel = ({ user }) => {
       {/* Barra de navegación superior */}
       <div className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
         <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-900 to-blue-700 rounded-xl flex items-center justify-center">
-                  <Icons.FileText />
-                </div>
-                <div>
-                  <h1 className="text-lg font-bold text-gray-900">
-                    {isSpanish ? 'Panel de Revisión' : 'Review Panel'}
-                  </h1>
-                  <p className="text-xs text-gray-500">
-                    {isSpanish ? 'Editor de Sección' : 'Section Editor'}
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-4 py-2">
-                <Icons.Search />
-                <input
-                  type="text"
-                  placeholder={isSpanish ? 'Buscar manuscrito...' : 'Search manuscript...'}
-                  value={searchManuscript}
-                  onChange={(e) => setSearchManuscript(e.target.value)}
-                  className="bg-transparent border-none outline-none text-sm text-gray-700 placeholder-gray-400 w-48"
-                />
-              </div>
-              
-              <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl p-1">
-                {[
-                  { value: 'all', label: isSpanish ? 'Todos' : 'All' },
-                  { value: 'pending', label: isSpanish ? 'Pendientes' : 'Pending' },
-                  { value: 'completed', label: isSpanish ? 'Completados' : 'Completed' },
-                  { value: 'rejected', label: isSpanish ? 'Rechazados' : 'Rejected' },
-                ].map(filter => (
-                  <button
-                    key={filter.value}
-                    onClick={() => setFilterStatus(filter.value)}
-                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-                      filterStatus === filter.value
-                        ? 'bg-blue-900 text-white shadow-md'
-                        : 'text-gray-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    {filter.label}
-                    {filter.value === 'rejected' && rejectedSubmissions.length > 0 && (
-                      <span className="ml-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-                        {rejectedSubmissions.length}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 py-3 sm:py-0 sm:h-16">
+  <div className="flex items-center gap-3 w-full sm:w-auto">
+    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-900 to-blue-700 rounded-xl flex items-center justify-center flex-shrink-0">
+      <Icons.FileText />
+    </div>
+    <div className="min-w-0">
+      <h1 className="text-base sm:text-lg font-bold text-gray-900 truncate">
+        {isSpanish ? 'Panel de Revisión' : 'Review Panel'}
+      </h1>
+      <p className="text-xs text-gray-500">
+        {isSpanish ? 'Editor de Sección' : 'Section Editor'}
+      </p>
+    </div>
+  </div>
+  
+  {/* Buscador y filtros en móvil: full width y en columna */}
+  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+    <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2 w-full sm:w-auto">
+      <Icons.Search />
+      <input
+        type="text"
+        placeholder={isSpanish ? 'Buscar...' : 'Search...'}
+        value={searchManuscript}
+        onChange={(e) => setSearchManuscript(e.target.value)}
+        className="bg-transparent border-none outline-none text-sm text-gray-700 placeholder-gray-400 w-full sm:w-40"
+      />
+    </div>
+    
+    {/* Filtros con scroll horizontal en móvil */}
+    <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-xl p-1 overflow-x-auto w-full sm:w-auto">
+      {[
+        { value: 'all', label: isSpanish ? 'Todos' : 'All' },
+        { value: 'pending', label: isSpanish ? 'Pend.' : 'Pend.' },
+        { value: 'completed', label: isSpanish ? 'Comp.' : 'Comp.' },
+        { value: 'rejected', label: isSpanish ? 'Rech.' : 'Rej.' },
+      ].map(filter => (
+        <button
+          key={filter.value}
+          onClick={() => setFilterStatus(filter.value)}
+          className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all whitespace-nowrap ${
+            filterStatus === filter.value
+              ? 'bg-blue-900 text-white shadow-md'
+              : 'text-gray-600 hover:bg-gray-50'
+          }`}
+        >
+          {filter.label}
+          {filter.value === 'rejected' && rejectedSubmissions.length > 0 && (
+            <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+              {rejectedSubmissions.length}
+            </span>
+          )}
+        </button>
+      ))}
+    </div>
+  </div>
+</div>
+
         </div>
       </div>
 
@@ -508,10 +509,10 @@ const DeskReviewPanel = ({ user }) => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-8">
           {/* Lista de manuscritos - Sidebar */}
           <div className="lg:col-span-4 xl:col-span-3">
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+  <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-4 sm:p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-bold text-gray-900">
                   {isSpanish ? 'Manuscritos' : 'Manuscripts'}
@@ -534,7 +535,7 @@ const DeskReviewPanel = ({ user }) => {
                   </p>
                 </div>
               ) : (
-                <div className="space-y-3 max-h-[calc(100vh-280px)] overflow-y-auto pr-2 custom-scrollbar">
+                <div className="space-y-3 max-h-[50vh] lg:max-h-[calc(100vh-280px)] overflow-y-auto pr-2 custom-scrollbar">
                   {/* Manuscritos pendientes */}
                   {pendingSubmissions.length > 0 && filterStatus !== 'rejected' && (
                     <div>
@@ -559,12 +560,12 @@ const DeskReviewPanel = ({ user }) => {
                               }`}
                             >
                               <div className="flex items-start justify-between mb-2">
-                                <h4 className="font-semibold text-gray-900 text-sm line-clamp-2 flex-1">
+                                <h4 className="font-semibold text-gray-900 text-sm line-clamp-2 break-words flex-1">
                                   {group.submission?.title || 'Cargando...'}
                                 </h4>
                               </div>
                               
-                              <div className="flex items-center justify-between text-xs mb-2">
+                              <div className="flex items-center justify-between text-xs mb-2 ">
                                 <span className="font-mono text-gray-500">
                                   {group.submission?.submissionId?.slice(0, 8) || 'Sin ID'}
                                 </span>
@@ -654,7 +655,7 @@ const DeskReviewPanel = ({ user }) => {
                                   : 'border-gray-200 hover:border-emerald-300 bg-gray-50 hover:shadow-md'
                               }`}
                             >
-                              <h4 className="font-semibold text-gray-900 text-sm line-clamp-2 mb-2">
+                              <h4 className="font-semibold text-gray-900 text-sm line-clamp-2 break-words flex-1">
                                 {group.submission?.title || 'Cargando...'}
                               </h4>
                               
@@ -725,8 +726,8 @@ const DeskReviewPanel = ({ user }) => {
           </div>
 
           {/* Panel de trabajo - Área principal */}
-          <div className="lg:col-span-8 xl:col-span-9">
-            {selectedTask ? (
+          <div className="lg:col-span-8 xl:col-span-9 min-h-0">
+  {selectedTask ? (
               <DeskReviewTab
                 task={selectedTask}
                 key={`${selectedTask?.id}-${selectedRound}`}
@@ -758,22 +759,22 @@ const DeskReviewPanel = ({ user }) => {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="bg-white rounded-2xl shadow-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center py-24"
-              >
-                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-6">
-                  <Icons.FileText />
-                </div>
-                <h3 className="text-xl font-bold text-gray-700 mb-2">
-                  {isSpanish ? 'Selecciona un manuscrito' : 'Select a manuscript'}
-                </h3>
-                <p className="text-gray-500 text-center max-w-md">
-                  {isSpanish 
-                    ? 'Elige un manuscrito de la lista para comenzar la revisión editorial'
-                    : 'Choose a manuscript from the list to start the editorial review'}
-                </p>
-              </motion.div>
-            )}
-          </div>
+                 className="bg-white rounded-2xl shadow-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center py-16 sm:py-24 px-4"
+    >
+      <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4 sm:mb-6">
+        <Icons.FileText />
+      </div>
+      <h3 className="text-lg sm:text-xl font-bold text-gray-700 mb-2 text-center">
+        {isSpanish ? 'Selecciona un manuscrito' : 'Select a manuscript'}
+      </h3>
+      <p className="text-gray-500 text-center max-w-md text-sm sm:text-base">
+        {isSpanish 
+          ? 'Elige un manuscrito de la lista para comenzar la revisión editorial'
+          : 'Choose a manuscript from the list to start the editorial review'}
+      </p>
+    </motion.div>
+  )}
+</div>
         </div>
       </div>
 
@@ -794,6 +795,32 @@ const DeskReviewPanel = ({ user }) => {
           background: #94a3b8;
         }
       `}</style>
+      <style jsx>{`
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+  
+  /* Scroll horizontal suave para filtros en móvil */
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .overflow-x-auto::-webkit-scrollbar {
+    display: none;
+  }
+`}</style>
     </div>
   );
 };
