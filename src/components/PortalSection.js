@@ -1190,42 +1190,7 @@ const handleTabChange = (tabId, event) => {
     }
   }, [userData?.uid]);
   // ====================================================================================
-  // Función para reclamar perfil
-  const handleClaimProfile = useCallback(async () => {
-    if (!anonymousProfile) return;
-    
-    setClaimStatus('claiming');
-    setClaimError('');
-    
-    try {
-      const result = await claimAnonymousProfile({
-        anonymousUid: anonymousProfile.anonymousUid,
-        claimHash: anonymousProfile.claimHash,
-        anonymousName: anonymousProfile.name
-      });
-      
-      if (result.success) {
-        setClaimStatus('success');
-        
-        setUserData(prev => ({
-          ...prev,
-          claimedAnonymousUid: anonymousProfile.anonymousUid,
-          claimedAnonymousName: anonymousProfile.name,
-          articlesClaimed: result.articlesClaimed
-        }));
-        
-        setTimeout(() => {
-          setShowClaimModal(false);
-          setClaimStatus('idle');
-          setAnonymousProfile(null);
-        }, 3000);
-      }
-    } catch (error) {
-      console.error('Error claiming profile:', error);
-      setClaimError(error.message || (isSpanish ? 'Error al reclamar perfil' : 'Error claiming profile'));
-      setClaimStatus('error');
-    }
-  }, [anonymousProfile, isSpanish]);
+  
 
   // Función segura para abrir en nueva pestaña (CORREGIDA)
   const openReviewerWorkspace = (assignmentId) => {
