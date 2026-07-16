@@ -33,7 +33,20 @@ const Icons = {
   Email: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>,
   Building: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>,
   Key: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>,
-  File: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+  File: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>,
+  Send: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" /></svg>,
+  
+  Search: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>,
+  
+  XCircle: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+  
+  Edit: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.89 1.147l-3.148.868a.375.375 0 01-.465-.465l.868-3.148a4.5 4.5 0 011.147-1.89L16.862 4.487zM16.862 4.487L19.5 7.125" /></svg>,
+  
+  Scale: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.5v15.75m0 0h3.75M12 20.25H8.25M5.25 7.5h13.5M5.25 7.5l-2.25 6.75a2.25 2.25 0 004.5 0L5.25 7.5zm13.5 0l-2.25 6.75a2.25 2.25 0 004.5 0L18.75 7.5zM12 4.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3z" /></svg>,
+  
+  Refresh: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>,
+  
+  CheckBadge: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" /></svg>
 };
 
 // ================= FUNCIONES UTILITARIAS =================
@@ -76,89 +89,90 @@ const getDocsExportDocxUrl = (docsUrl) => {
 };
 
 // ================= ESTADOS DE ENVÍO =================
+// ================= ESTADOS DE ENVÍO =================
 const SUBMISSION_STATES = {
   'submitted': { 
     es: 'Enviado', en: 'Submitted', 
     color: 'bg-slate-50 text-slate-700 border-slate-200', 
-    icon: '◈', 
+    icon: <Icons.Send />, 
     description: { es: 'Manuscrito recibido. En espera de asignación editorial.', en: 'Manuscript received. Awaiting editorial assignment.' } 
   },
   'in-desk-review': { 
     es: 'Revisión Editorial', en: 'Desk Review', 
     color: 'bg-indigo-50 text-indigo-700 border-indigo-200', 
-    icon: '⌬', 
+    icon: <Icons.Search />, 
     description: { es: 'Evaluación preliminar por el comité editorial.', en: 'Preliminary evaluation by the editorial committee.' } 
   },
   'desk-review-rejected': { 
     es: 'Rechazo Editorial', en: 'Desk Reject', 
     color: 'bg-rose-50 text-rose-700 border-rose-200', 
-    icon: '✕', 
+    icon: <Icons.XCircle />, 
     description: { es: 'El manuscrito no superó los criterios iniciales de la revista.', en: 'The manuscript did not meet the initial criteria of the journal.' } 
   },
   'in-reviewer-selection': { 
     es: 'Asignando Revisores', en: 'Assigning Reviewers', 
     color: 'bg-sky-50 text-sky-700 border-sky-200', 
-    icon: '⚇', 
+    icon: <Icons.Users />, 
     description: { es: 'El equipo editorial está identificando pares evaluadores idóneos.', en: 'The editorial team is identifying suitable peer reviewers.' } 
   },
   'awaiting-reviewer-responses': { 
     es: 'Invitaciones Enviadas', en: 'Invitations Sent', 
     color: 'bg-blue-50 text-blue-700 border-blue-200', 
-    icon: '⌛', 
+    icon: <Icons.Clock />, 
     description: { es: 'Esperando confirmación de los revisores invitados.', en: 'Awaiting confirmation from invited reviewers.' } 
   },
   'in-peer-review': { 
     es: 'Revisión por Pares', en: 'Peer Review', 
     color: 'bg-purple-50 text-purple-700 border-purple-200', 
-    icon: '✎', 
+    icon: <Icons.Edit />, 
     description: { es: 'Evaluación científica en curso por pares ciegos.', en: 'Scientific evaluation in progress by blind peers.' } 
   },
   'awaiting-editor-decision': { 
     es: 'Decisión Pendiente', en: 'Pending Decision', 
     color: 'bg-violet-50 text-violet-700 border-violet-200', 
-    icon: '⚖️', 
+    icon: <Icons.Scale />, 
     description: { es: 'Dictámenes recibidos. El editor está formulando la resolución final.', en: 'Reviews received. The editor is formulating the final resolution.' } 
   },
   'revisions-requested': { 
     es: 'Requiere Revisiones', en: 'Revisions Required', 
     color: 'bg-amber-50 text-amber-700 border-amber-300', 
-    icon: '✎', 
+    icon: <Icons.Edit />, 
     description: { es: 'Se requiere una versión corregida del manuscrito. Por favor, revise las indicaciones.', en: 'A corrected version of the manuscript is required. Please review the instructions.' } 
   },
   'minor-revision-required': { 
     es: 'Revisión Menor', en: 'Minor Revision', 
     color: 'bg-amber-50 text-amber-700 border-amber-300', 
-    icon: '✎', 
+    icon: <Icons.Edit />, 
     description: { es: 'Ajustes menores requeridos antes de la aceptación final.', en: 'Minor adjustments required before final acceptance.' } 
   },
   'major-revision-required': { 
     es: 'Revisión Mayor', en: 'Major Revision', 
     color: 'bg-orange-50 text-orange-700 border-orange-300', 
-    icon: '🔄', 
+    icon: <Icons.Refresh />, 
     description: { es: 'Se requieren modificaciones sustanciales y una nueva ronda de revisión.', en: 'Substantial modifications and a new round of review are required.' } 
   },
   'awaiting-revision': { 
     es: 'Esperando Corrección', en: 'Awaiting Correction', 
     color: 'bg-amber-50 text-amber-700 border-amber-300', 
-    icon: '⏳', 
+    icon: <Icons.Clock />, 
     description: { es: 'Aguardando la versión corregida por parte del autor.', en: 'Awaiting the corrected version from the author.' } 
   },
   'accepted': { 
     es: 'Aceptado', en: 'Accepted', 
     color: 'bg-emerald-50 text-emerald-700 border-emerald-200', 
-    icon: '✓', 
+    icon: <Icons.CheckBadge />, 
     description: { es: 'Manuscrito aceptado formalmente para publicación. ¡Felicitaciones!', en: 'Manuscript formally accepted for publication. Congratulations!' } 
   },
   'rejected': { 
     es: 'Rechazado', en: 'Rejected', 
     color: 'bg-red-50 text-red-700 border-red-200', 
-    icon: '✕', 
+    icon: <Icons.XCircle />, 
     description: { es: 'El manuscrito ha sido declinado tras el proceso de revisión.', en: 'The manuscript has been declined after the review process.' } 
   },
   'metadata_refinement_pending': { 
     es: 'Ajuste de Metadatos', en: 'Metadata Refinement', 
     color: 'bg-teal-50 text-teal-700 border-teal-200', 
-    icon: '📋', 
+    icon: <Icons.Tag />, 
     description: { es: 'El editor ha propuesto cambios en los metadatos. Requiere su revisión y aprobación.', en: 'The editor has proposed metadata changes. Requires your review and approval.' } 
   }
 };
@@ -624,9 +638,9 @@ const AuthorSubmissionsPanel = ({ user }) => {
                         {isSpanish ? 'Estado del Expediente' : 'Record Status'}
                       </h3>
                       <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 bg-slate-50 flex items-center justify-center text-2xl border border-slate-100 flex-shrink-0">
-                          {SUBMISSION_STATES[activePortal.status]?.icon}
-                        </div>
+                        <div className="w-12 h-12 bg-slate-50 flex items-center justify-center border border-slate-100 flex-shrink-0 text-[#003b5c]">
+  {SUBMISSION_STATES[activePortal.status]?.icon}
+</div>
                         <div>
                           <p className="font-serif text-xl sm:text-2xl text-[#003b5c]">
                             {SUBMISSION_STATES[activePortal.status]?.[language]}
@@ -1475,16 +1489,46 @@ const AuthorSubmissionsPanel = ({ user }) => {
                     )}
 
                     {/* Sin tareas pendientes */}
-                    {!hasPendingMetadataProposals(activePortal) && !needsRevisionUpload(activePortal.status) && (
-                      <div className="text-center py-16 bg-slate-50 border border-slate-200">
-                        <span className="text-4xl mb-4 block text-emerald-600"><Icons.Check /></span>
-                        <p className="font-serif text-xl text-slate-600">
-                          {isSpanish 
-                            ? 'El expediente se encuentra al día. No se requieren acciones de su parte en este momento.' 
-                            : 'Record is up to date. No actions required on your part at this time.'}
-                        </p>
-                      </div>
-                    )}
+                    {/* Sin tareas pendientes */}
+{!hasPendingMetadataProposals(activePortal) && !needsRevisionUpload(activePortal.status) && (
+  <motion.div 
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="bg-white border border-slate-200 shadow-sm"
+  >
+    <div className="p-10 sm:p-16 text-center">
+      {/* Icono decorativo */}
+      <div className="inline-flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 bg-emerald-50 border border-emerald-200 mb-8">
+        <Icons.CheckBadge />
+      </div>
+      
+      {/* Título */}
+      <h3 className="font-serif text-2xl sm:text-3xl text-[#003b5c] mb-4">
+        {isSpanish ? 'Expediente al Día' : 'Record Up to Date'}
+      </h3>
+      
+      {/* Línea decorativa */}
+      <div className="w-16 h-px bg-[#C0A86A] mx-auto mb-6"></div>
+      
+      {/* Mensaje */}
+      <p className="font-sans text-sm sm:text-base text-slate-500 max-w-lg mx-auto leading-relaxed">
+        {isSpanish 
+          ? 'El expediente se encuentra al día. No se requieren acciones de su parte en este momento. El comité editorial le notificará cuando haya novedades.'
+          : 'The record is up to date. No actions are required on your part at this time. The editorial committee will notify you when there are updates.'}
+      </p>
+      
+      {/* Información adicional */}
+      <div className="mt-8 inline-flex items-center gap-2 text-xs text-slate-400 font-sans">
+        <Icons.Clock />
+        <span>
+          {isSpanish 
+            ? `Última actualización: ${activePortal.updatedAt?.toLocaleDateString?.() || activePortal.createdAt?.toLocaleDateString?.() || '—'}`
+            : `Last updated: ${activePortal.updatedAt?.toLocaleDateString?.() || activePortal.createdAt?.toLocaleDateString?.() || '—'}`}
+        </span>
+      </div>
+    </div>
+  </motion.div>
+)}
                   </div>
                 )}
 
