@@ -881,21 +881,42 @@ const AuthorSubmissionsPanel = ({ user }) => {
 
                         {/* Decisiones finales */}
                         {sub.finalDecision && (
-                          <div className="bg-blue-50 p-4 sm:p-6 border border-blue-200 rounded-lg">
-                            <h4 className="font-['Playfair_Display'] font-bold text-base sm:text-lg mb-2">
-                              {isSpanish ? 'Decisión final:' : 'Final decision:'}
-                            </h4>
-                            <p className="text-slate-700 text-sm sm:text-base">
-                              {sub.finalDecision === 'accept' && (isSpanish ? 'Aceptado' : 'Accepted')}
-                              {sub.finalDecision === 'reject' && (isSpanish ? 'Rechazado' : 'Rejected')}
-                              {sub.finalDecision === 'major-revision' && (isSpanish ? 'Requiere revisión mayor' : 'Major revision required')}
-                              {sub.finalDecision === 'minor-revision' && (isSpanish ? 'Requiere revisión menor' : 'Minor revision required')}
-                            </p>
-                            {sub.finalFeedback && (
-                              <p className="text-slate-600 mt-2 italic text-sm sm:text-base">"{sub.finalFeedback}"</p>
-                            )}
-                          </div>
-                        )}
+  <div className="bg-blue-50 p-4 sm:p-6 border border-blue-200 rounded-lg">
+    <h4 className="font-['Playfair_Display'] font-bold text-base sm:text-lg mb-2">
+      {isSpanish ? 'Decisión final:' : 'Final decision:'}
+    </h4>
+    <p className="text-slate-700 text-sm sm:text-base font-semibold">
+      {sub.finalDecision === 'accept' && (isSpanish ? '✅ Aceptado' : '✅ Accepted')}
+      {sub.finalDecision === 'reject' && (isSpanish ? '❌ Rechazado' : '❌ Rejected')}
+      {sub.finalDecision === 'major-revision' && (isSpanish ? '🔄 Requiere revisión mayor' : '🔄 Major revision required')}
+      {sub.finalDecision === 'minor-revision' && (isSpanish ? '✏️ Requiere revisión menor' : '✏️ Minor revision required')}
+    </p>
+    {sub.finalFeedback && (
+      <div 
+        className="mt-3 p-4 bg-white/50 rounded-lg text-sm sm:text-base text-slate-700
+                  [&_strong]:text-[#002147] [&_strong]:font-bold
+                  [&_em]:text-[#C0A86A] [&_em]:italic
+                  [&_u]:underline [&_u]:decoration-[#C0A86A] [&_u]:decoration-2
+                  [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1
+                  [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-1
+                  [&_li]:text-slate-700 [&_li]:marker:text-[#C0A86A]
+                  [&_h1]:text-xl [&_h1]:font-bold [&_h1]:text-[#002147] [&_h1]:mt-2 [&_h1]:mb-1
+                  [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-[#002147] [&_h2]:mt-2 [&_h2]:mb-1
+                  [&_h3]:text-base [&_h3]:font-bold [&_h3]:text-[#002147] [&_h3]:mt-2 [&_h3]:mb-1
+                  [&_a]:text-[#002147] [&_a]:underline [&_a]:hover:text-[#C0A86A] [&_a]:transition-colors
+                  [&_blockquote]:border-l-4 [&_blockquote]:border-[#C0A86A] [&_blockquote]:pl-4 [&_blockquote]:text-slate-600 [&_blockquote]:italic
+                  [&_code]:bg-slate-100 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_code]:font-mono
+                  [&_pre]:bg-slate-100 [&_pre]:p-3 [&_pre]:rounded-lg [&_pre]:text-xs [&_pre]:font-mono [&_pre]:overflow-x-auto
+                  [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:my-2
+                  [&_table]:w-full [&_table]:border-collapse [&_table]:my-2
+                  [&_th]:border [&_th]:border-slate-300 [&_th]:px-3 [&_th]:py-2 [&_th]:bg-slate-50 [&_th]:text-left
+                  [&_td]:border [&_td]:border-slate-300 [&_td]:px-3 [&_td]:py-2
+                  prose prose-sm max-w-none"
+        dangerouslySetInnerHTML={{ __html: sub.finalFeedback }}
+      />
+    )}
+  </div>
+)}
                       </div>
 
                       {/* Columna Sidebar (1/3 en desktop) */}

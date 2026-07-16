@@ -283,7 +283,6 @@ export const ReviewerManagementTab = ({
                       <div className="px-6 pb-6 pt-2 bg-slate-50/30">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                           {/* Comentarios al Autor */}
-                          // En la sección de comentarios al autor (línea ~209)
 {rev.commentsToAuthor && (
   <motion.div
     initial={{ opacity: 0, x: -20 }}

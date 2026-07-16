@@ -6,6 +6,35 @@ import { useMetadataRefinement } from '../hooks/useMetadataRefinement';
 import { doc, onSnapshot, collection, query, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 
+// ============ ICONOS SVG PROFESIONALES ============
+const Icons = {
+  CheckCircle: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+  ShieldCheck: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>,
+  Warning: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>,
+  DocumentText: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
+  Edit: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>,
+  History: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+  Plus: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>,
+  Cross: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>,
+  ArrowRight: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>,
+  Send: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+};
+
+// Componente para bloques de información estilo panel
+const InfoBlock = ({ icon: Icon, title, children, className = '' }) => (
+  <div className={`bg-white rounded-sm border border-gray-200 shadow-sm ${className}`}>
+    <div className="bg-slate-50 px-5 py-3 border-b border-gray-200 flex items-center gap-2">
+      {Icon && <span className="text-[#003b5c]"><Icon /></span>}
+      <h3 className="font-sans font-bold text-slate-800 text-xs uppercase tracking-wider">
+        {title}
+      </h3>
+    </div>
+    <div className="p-5">
+      {children}
+    </div>
+  </div>
+);
+
 export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
   const { language } = useLanguage();
   const isSpanish = language === 'es';
@@ -23,11 +52,8 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
   const [fieldReason, setFieldReason] = useState('');
   const [requiresConsent, setRequiresConsent] = useState(true);
   const [localError, setLocalError] = useState(null);
-  
-  // Estado para el historial de propuestas
   const [proposals, setProposals] = useState([]);
 
-  // Mostrar errores del hook
   useEffect(() => {
     if (hookError) {
       setLocalError(hookError);
@@ -35,30 +61,25 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
     }
   }, [hookError]);
 
-  // Función para formatear valores (especialmente objetos como autores)
-// 🔄 CAMBIO: formatValue con soporte dual para keywords (legacy + controlled)
-const formatValue = (value, fieldName = '') => {
-    if (value === null || value === undefined) return '—';
+  const formatValue = (value, fieldName = '') => {
+    if (value === null || value === undefined) return <span className="text-slate-400 italic font-sans text-xs">—</span>;
     
-    // Si es un array de keywords, detectar formato y renderizar con chips visuales
     if ((fieldName === 'keywords' || fieldName === 'keywordsEn') && Array.isArray(value)) {
         return (
             <div className="flex flex-wrap gap-1.5">
-                {value.length === 0 ? <span className="text-gray-400 italic text-xs">—</span> : 
+                {value.length === 0 ? <span className="text-slate-400 italic text-xs">—</span> : 
                     value.map((kw, idx) => {
-                        // Detectar formato controlado: "CÓDIGO: Término"
                         const match = typeof kw === 'string' ? kw.match(/^([A-Za-z0-9.]+):\s*(.+)/) : null;
                         if (match) {
                             return (
-                                <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 bg-white border border-[#C0A86A] rounded-lg text-xs">
-                                    <code className="text-[10px] font-mono bg-[#F0F4F8] px-1 rounded text-[#C0A86A] font-bold">{match[1]}</code>
-                                    <span className="text-gray-700">{match[2]}</span>
+                                <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1 bg-white border border-slate-200 text-slate-700 rounded-sm text-xs shadow-sm font-sans">
+                                    <code className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded-sm text-slate-500 font-mono">{match[1]}</code>
+                                    <span>{match[2]}</span>
                                 </span>
                             );
                         }
-                        // Formato legacy: string simple
                         return (
-                            <span key={idx} className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs">
+                            <span key={idx} className="px-3 py-1 bg-slate-100 text-slate-700 rounded-sm text-xs font-sans border border-slate-200">
                                 {typeof kw === 'string' ? kw : kw.term || String(kw)}
                             </span>
                         );
@@ -68,62 +89,52 @@ const formatValue = (value, fieldName = '') => {
         );
     }
     
-    // Si es objeto (autores, funding, etc.)
     if (typeof value === 'object') {
         if (Array.isArray(value)) {
-            if (value.length === 0) return '—';
-            return value.map(item => {
+            if (value.length === 0) return <span className="text-slate-400 italic font-sans text-xs">—</span>;
+            return value.map((item, idx) => {
                 if (typeof item === 'object') {
                     if (item.firstName && item.lastName) {
-                        return `${item.lastName}, ${item.firstName}`;
+                        return <span key={idx} className="block mb-1">{`${item.lastName}, ${item.firstName}`}</span>;
                     } else if (item.name) {
-                        return item.name;
+                        return <span key={idx} className="block mb-1">{item.name}</span>;
                     } else if (item.code && item.term) {
-                        // Es un keywordsRaw item
-                        return item.code ? `${item.code}: ${item.term}` : item.term;
+                        return <span key={idx} className="block mb-1">{item.code ? `${item.code}: ${item.term}` : item.term}</span>;
                     } else {
-                        return Object.values(item).join(' ') || 'Autor sin nombre';
+                        return <span key={idx} className="block mb-1">{Object.values(item).join(' ') || 'Autor sin nombre'}</span>;
                     }
                 }
                 return String(item);
-            }).join('; ');
+            });
         }
         return JSON.stringify(value);
     }
     return String(value);
-};
-  // Array de campos editables
+  };
+
   const fields = [
     { name: 'title', label: isSpanish ? 'Título' : 'Title', type: 'text', requiresConsent: true },
-    { name: 'titleEn', label: isSpanish ? 'Título (inglés)' : 'Title (English)', type: 'text', requiresConsent: true },
+    { name: 'titleEn', label: isSpanish ? 'Título (Inglés)' : 'Title (English)', type: 'text', requiresConsent: true },
     { name: 'abstract', label: isSpanish ? 'Resumen' : 'Abstract', type: 'textarea', requiresConsent: true },
-    { name: 'abstractEn', label: isSpanish ? 'Resumen (inglés)' : 'Abstract (English)', type: 'textarea', requiresConsent: true },
-{ name: 'keywords', label: isSpanish ? 'Palabras clave' : 'Keywords', type: 'keywords', requiresConsent: true },
-{ name: 'keywordsEn', label: isSpanish ? 'Palabras clave (inglés)' : 'Keywords (English)', type: 'keywords', requiresConsent: true },
-    { name: 'keywordsEn', label: isSpanish ? 'Palabras clave (inglés)' : 'Keywords (English)', type: 'text', requiresConsent: true },
+    { name: 'abstractEn', label: isSpanish ? 'Resumen (Inglés)' : 'Abstract (English)', type: 'textarea', requiresConsent: true },
+    { name: 'keywords', label: isSpanish ? 'Palabras Clave' : 'Keywords', type: 'keywords', requiresConsent: true },
+    { name: 'keywordsEn', label: isSpanish ? 'Palabras Clave (Inglés)' : 'Keywords (English)', type: 'keywords', requiresConsent: true },
     { name: 'authors', label: isSpanish ? 'Autores' : 'Authors', type: 'textarea', requiresConsent: true },
     { name: 'funding', label: isSpanish ? 'Financiamiento' : 'Funding', type: 'text', requiresConsent: false },
-    { name: 'conflictOfInterest', label: isSpanish ? 'Conflicto de intereses' : 'Conflict of interest', type: 'textarea', requiresConsent: false },
-    { name: 'dataAvailability', label: isSpanish ? 'Disponibilidad de datos' : 'Data availability', type: 'textarea', requiresConsent: false }
+    { name: 'conflictOfInterest', label: isSpanish ? 'Conflicto de Intereses' : 'Conflict of Interest', type: 'textarea', requiresConsent: false },
+    { name: 'dataAvailability', label: isSpanish ? 'Disponibilidad de Datos' : 'Data Availability', type: 'textarea', requiresConsent: false }
   ];
 
-  // Función mejorada para obtener el valor actual
-// 🔄 CAMBIO: getCurrentValue con reconstrucción desde keywordsRaw si es necesario
-const getCurrentValue = (fieldName) => {
-    // 1. Buscar en currentMetadata
+  const getCurrentValue = (fieldName) => {
     if (submission.currentMetadata && submission.currentMetadata[fieldName] !== undefined) {
         return submission.currentMetadata[fieldName];
     }
-    // 2. Buscar en originalSubmission
     if (submission.originalSubmission && submission.originalSubmission[fieldName] !== undefined) {
         return submission.originalSubmission[fieldName];
     }
-    // 3. Buscar directamente en submission
     if (submission[fieldName] !== undefined) {
         return submission[fieldName];
     }
-    
-    // 4. Para keywords, reconstruir desde keywordsRaw si existe
     if (fieldName === 'keywords' && submission.keywordsRaw?.length > 0) {
         return submission.keywordsRaw.map(k => k.code ? `${k.code}: ${k.term}` : k.term);
     }
@@ -131,25 +142,13 @@ const getCurrentValue = (fieldName) => {
         return submission.keywordsRawEn.map(k => k.code ? `${k.code}: ${k.term}` : k.term);
     }
     if (fieldName === 'keywordsEn' && submission.keywordsRaw?.length > 0) {
-        // Fallback a ES si no hay EN
         return submission.keywordsRaw.map(k => k.code ? `${k.code}: ${k.term}` : k.term);
     }
-    
     return '';
-};
+  };
 
-  // Debug: Mostrar estructura del submission en consola
-  useEffect(() => {
-    console.log('MetadataRefinementTab - submission:', submission);
-    console.log('currentMetadata:', submission.currentMetadata);
-    console.log('originalSubmission:', submission.originalSubmission);
-    console.log('Campos raíz disponibles:', Object.keys(submission));
-  }, [submission]);
-
-  // Cargar historial de propuestas
   useEffect(() => {
     if (!submission?.id) return;
-
     const proposalsRef = collection(db, 'submissions', submission.id, 'metadataProposals');
     const q = query(proposalsRef, orderBy('proposedAt', 'desc'));
 
@@ -174,7 +173,7 @@ const getCurrentValue = (fieldName) => {
 
   const handleAddChange = () => {
     if (!currentField || !fieldValue.trim() || !fieldReason.trim()) {
-      alert(isSpanish ? 'Completa todos los campos' : 'Complete all fields');
+      alert(isSpanish ? 'Completa todos los campos obligatorios.' : 'Complete all required fields.');
       return;
     }
 
@@ -192,7 +191,6 @@ const getCurrentValue = (fieldName) => {
       }
     ]);
 
-    // Reset
     setCurrentField('');
     setFieldValue('');
     setFieldReason('');
@@ -205,7 +203,7 @@ const getCurrentValue = (fieldName) => {
 
   const handleSubmitProposal = async () => {
     if (proposedChanges.length === 0) {
-      alert(isSpanish ? 'Agrega al menos un cambio' : 'Add at least one change');
+      alert(isSpanish ? 'Agrega al menos un cambio a la propuesta.' : 'Add at least one change to the proposal.');
       return;
     }
 
@@ -214,7 +212,7 @@ const getCurrentValue = (fieldName) => {
     
     if (result.success) {
       setProposedChanges([]);
-      alert(isSpanish ? '✅ Propuesta enviada al autor' : '✅ Proposal sent to author');
+      alert(isSpanish ? 'Propuesta enviada al autor exitosamente.' : 'Proposal sent to author successfully.');
     } else {
       setLocalError(result.error || (isSpanish ? 'Error al enviar propuesta' : 'Error sending proposal'));
     }
@@ -225,7 +223,7 @@ const getCurrentValue = (fieldName) => {
     const result = await applyApprovedChanges(submission.id, proposalId);
     
     if (result.success) {
-      alert(isSpanish ? '✅ Cambios aplicados exitosamente' : '✅ Changes applied successfully');
+      alert(isSpanish ? 'Cambios aplicados e integrados al manuscrito.' : 'Changes applied and integrated to the manuscript.');
     } else {
       setLocalError(result.error || (isSpanish ? 'Error al aplicar cambios' : 'Error applying changes'));
     }
@@ -233,403 +231,404 @@ const getCurrentValue = (fieldName) => {
 
   const handleMarkAsReady = async () => {
     if (window.confirm(isSpanish 
-      ? '¿Estás seguro de marcar este artículo como listo para publicación? El Director General será notificado.'
-      : 'Are you sure you want to mark this article as ready for publication? The General Director will be notified.')) {
+      ? '¿Confirmar que este artículo posee todos los metadatos correctos y está listo para publicación? Se notificará al Director.'
+      : 'Confirm this article has all correct metadata and is ready for publication? The Director will be notified.')) {
       
       setLocalError(null);
       const result = await markAsReadyForPublication(submission.id);
       
       if (result.success) {
-        alert(isSpanish ? '✅ Artículo marcado como listo' : '✅ Article marked as ready');
+        alert(isSpanish ? 'Artículo listado para publicación.' : 'Article listed for publication.');
         onComplete?.();
       } else {
-        setLocalError(result.error || (isSpanish ? 'Error al marcar como listo' : 'Error marking as ready'));
+        setLocalError(result.error || (isSpanish ? 'Error al procesar la solicitud.' : 'Error processing request.'));
       }
     }
   };
 
-  const getStatusBadge = (proposal) => {
-    const baseClasses = "px-2 py-1 text-xs rounded-full font-medium";
+  const getStatusBadge = (status) => {
+    const badges = {
+      'pending-author': { label: isSpanish ? 'Pendiente del Autor' : 'Pending Author', colors: 'bg-amber-50 text-amber-700 border-amber-200' },
+      'approved': { label: isSpanish ? 'Aprobada' : 'Approved', colors: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+      'rejected': { label: isSpanish ? 'Rechazada' : 'Rejected', colors: 'bg-rose-50 text-rose-700 border-rose-200' }
+    };
+    const badge = badges[status] || { label: status, colors: 'bg-slate-100 text-slate-700 border-slate-200' };
     
-    if (proposal.status === 'pending-author') {
-      return <span className={`${baseClasses} bg-yellow-100 text-yellow-700`}>
-        {isSpanish ? 'Pendiente de autor' : 'Pending author'}
-      </span>;
-    }
-    if (proposal.status === 'approved') {
-      return <span className={`${baseClasses} bg-green-100 text-green-700`}>
-        {isSpanish ? 'Aprobada' : 'Approved'}
-      </span>;
-    }
-    if (proposal.status === 'rejected') {
-      return <span className={`${baseClasses} bg-red-100 text-red-700`}>
-        {isSpanish ? 'Rechazada' : 'Rejected'}
-      </span>;
-    }
-    return null;
+    return (
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-[10px] font-sans font-bold uppercase tracking-wider border ${badge.colors}`}>
+        {badge.label}
+      </span>
+    );
   };
 
-  // Si el artículo ya está listo para publicación
+  // Pantalla de Éxito (Listo para Publicación)
   if (submission.publicationReady) {
     return (
-      <div className="bg-green-50 border border-green-200 rounded-lg p-8 text-center">
-        <svg className="w-16 h-16 text-green-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-        </svg>
-        <h3 className="text-xl font-bold text-green-800 mb-2">
-          {isSpanish ? '¡Listo para publicación!' : 'Ready for publication!'}
+      <div className="bg-emerald-50 border border-emerald-200 rounded-sm p-12 text-center shadow-sm">
+        <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
+          <Icons.CheckCircle className="w-8 h-8 text-emerald-600" />
+        </div>
+        <h3 className="font-serif text-2xl text-emerald-900 mb-3">
+          {isSpanish ? 'Metadatos Consolidados' : 'Metadata Consolidated'}
         </h3>
-        <p className="text-green-600">
+        <p className="text-emerald-700 font-sans max-w-lg mx-auto leading-relaxed">
           {isSpanish 
-            ? 'Este artículo ha sido marcado como listo y está pendiente de la revisión final del Director.'
-            : 'This article has been marked as ready and is pending final review by the Director.'}
+            ? 'El proceso de revisión de metadatos ha concluido. El artículo se encuentra en la cola de producción final esperando la aprobación de Dirección.'
+            : 'The metadata review process has concluded. The article is in the final production queue awaiting Direction approval.'}
         </p>
         {submission.publicationReadyAt && (
-          <p className="text-sm text-gray-500 mt-4">
-            {isSpanish ? 'Marcado el: ' : 'Marked on: '}
-            {new Date(submission.publicationReadyAt.seconds * 1000).toLocaleDateString()}
-          </p>
+          <div className="mt-6 pt-6 border-t border-emerald-200/50 inline-block">
+            <p className="text-[10px] font-sans font-bold uppercase tracking-wider text-emerald-600">
+              {isSpanish ? 'Fecha de Consolidación' : 'Consolidation Date'}
+            </p>
+            <p className="text-emerald-800 font-mono text-sm mt-1">
+              {new Date(submission.publicationReadyAt.seconds * 1000).toLocaleString()}
+            </p>
+          </div>
         )}
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      {/* Banner COPE */}
-      <div className="bg-purple-50 border-l-4 border-purple-500 p-4">
-        <p className="text-purple-700 text-sm">
-          <strong>COPE Guidelines:</strong> {isSpanish 
-            ? 'Los cambios sustanciales en metadatos requieren consentimiento del autor.'
-            : 'Substantial changes to metadata require author consent.'}
-        </p>
+    <div className="space-y-8 font-sans">
+      
+      {/* Banner COPE Institucional */}
+      <div className="bg-white border-l-4 border-[#003b5c] border-y border-r border-slate-200 rounded-sm p-5 shadow-sm flex gap-4 items-start">
+        <div className="mt-0.5 text-[#003b5c]"><Icons.ShieldCheck /></div>
+        <div>
+          <h4 className="font-sans font-bold text-xs text-slate-800 uppercase tracking-wider mb-1">
+            {isSpanish ? 'Directrices Éticas (COPE)' : 'Ethical Guidelines (COPE)'}
+          </h4>
+          <p className="text-slate-600 text-sm leading-relaxed">
+            {isSpanish 
+              ? 'Toda alteración sustancial en los metadatos bibliográficos (especialmente título, resumen y autoría) posterior al envío inicial requiere el consentimiento explícito y documentado del autor de correspondencia.'
+              : 'Any substantial alteration to bibliographic metadata (especially title, abstract, and authorship) after initial submission requires explicit and documented consent from the corresponding author.'}
+          </p>
+        </div>
       </div>
 
-      {/* Mensaje de error */}
       {localError && (
-        <div className="bg-red-50 border-l-4 border-red-500 p-4">
-          <p className="text-red-700 text-sm">❌ {localError}</p>
+        <div className="bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 rounded-sm text-sm font-medium flex items-center gap-2">
+          <Icons.Warning /> {localError}
         </div>
       )}
 
-      {/* SECCIÓN: Metadatos actuales (solo lectura) */}
-      <div className="bg-[#F5F7FA] rounded-xl p-6 border border-[#E5E9F0]">
-        <h3 className="font-['Playfair_Display'] font-bold text-[#0A1929] text-lg mb-4">
-          {isSpanish ? '📋 Metadatos actuales' : '📋 Current metadata'}
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* SECCIÓN 1: Metadatos actuales (Solo Lectura) */}
+      <InfoBlock icon={Icons.DocumentText} title={isSpanish ? 'Registro Bibliográfico Actual' : 'Current Bibliographic Record'}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
           <div>
-            <p className="text-xs text-[#5A6B7A] uppercase">Título</p>
-            <p className="font-medium">{formatValue(submission.title)}</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">{isSpanish ? 'Título Principal' : 'Main Title'}</p>
+            <div className="font-serif text-sm text-slate-800 leading-snug">{formatValue(submission.title)}</div>
           </div>
           <div>
-            <p className="text-xs text-[#5A6B7A] uppercase">Título (EN)</p>
-            <p className="font-medium">{formatValue(submission.titleEn)}</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">{isSpanish ? 'Título Secundario (EN)' : 'Secondary Title (EN)'}</p>
+            <div className="font-serif text-sm text-slate-800 leading-snug">{formatValue(submission.titleEn)}</div>
           </div>
           <div className="md:col-span-2">
-            <p className="text-xs text-[#5A6B7A] uppercase">Resumen</p>
-            <p className="font-medium text-sm">{formatValue(submission.abstract)}</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Abstract / Resumen</p>
+            <div className="font-serif text-sm text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-sm border border-slate-100">{formatValue(submission.abstract)}</div>
           </div>
           <div className="md:col-span-2">
-            <p className="text-xs text-[#5A6B7A] uppercase">Resumen (EN)</p>
-            <p className="font-medium text-sm">{formatValue(submission.abstractEn)}</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Abstract / Resumen (EN)</p>
+            <div className="font-serif text-sm text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-sm border border-slate-100">{formatValue(submission.abstractEn)}</div>
           </div>
-         <div>
-    <p className="text-xs text-[#5A6B7A] uppercase">Palabras clave</p>
-    <div className="font-medium">{formatValue(submission.keywords, 'keywords')}</div>
-</div>
-<div>
-    <p className="text-xs text-[#5A6B7A] uppercase">Palabras clave (EN)</p>
-    <div className="font-medium">{formatValue(submission.keywordsEn, 'keywordsEn')}</div>
-</div>
-          <div className="md:col-span-2">
-            <p className="text-xs text-[#5A6B7A] uppercase">Autores</p>
-            <p className="font-medium text-sm whitespace-pre-wrap">{formatValue(submission.authors)}</p>
+          <div>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">{isSpanish ? 'Palabras Clave' : 'Keywords'}</p>
+            <div>{formatValue(submission.keywords, 'keywords')}</div>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">{isSpanish ? 'Palabras Clave (EN)' : 'Keywords (EN)'}</p>
+            <div>{formatValue(submission.keywordsEn, 'keywordsEn')}</div>
+          </div>
+          <div className="md:col-span-2 pt-4 border-t border-slate-100">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">{isSpanish ? 'Registro de Autoría' : 'Authorship Record'}</p>
+            <div className="font-sans text-sm text-slate-800">{formatValue(submission.authors)}</div>
           </div>
         </div>
-      </div>
+      </InfoBlock>
 
-      {/* Formulario para nueva propuesta */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h3 className="text-lg font-bold mb-4">
-          {isSpanish ? '➕ Nueva propuesta de cambios' : '➕ New change proposal'}
-        </h3>
+      {/* SECCIÓN 2: Formulario de Nueva Propuesta */}
+      <InfoBlock icon={Icons.Edit} title={isSpanish ? 'Formular Ajustes de Metadatos' : 'Formulate Metadata Adjustments'}>
         
-        {/* Lista de cambios propuestos en esta sesión */}
+        {/* Cambios encolados (Staged) */}
         <AnimatePresence>
           {proposedChanges.length > 0 && (
             <motion.div 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="bg-blue-50 rounded-lg p-4 mb-4"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-8"
             >
-              <h4 className="font-bold mb-3">
-                {isSpanish ? 'Cambios a enviar:' : 'Changes to send:'}
-              </h4>
-              <div className="space-y-2">
-                {proposedChanges.map((change, idx) => (
-                  <div key={idx} className="flex items-start justify-between bg-white p-3 rounded border border-blue-200">
-                    <div className="flex-1">
-                      <p className="font-medium">{fields.find(f => f.name === change.field)?.label || change.field}</p>
-                      <div className="text-sm text-gray-600">
-                        <div className="line-through text-gray-400">
-                          {formatValue(change.currentValue)}
-                        </div>
-                        {' → '}
-                        <span className="text-green-600 font-medium">
-                          {formatValue(change.proposedValue)}
+              <div className="bg-sky-50 border border-sky-200 rounded-sm p-4">
+                <h4 className="font-sans font-bold text-xs text-sky-900 uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <Icons.History /> {isSpanish ? 'Ajustes en Cola' : 'Staged Adjustments'}
+                </h4>
+                <div className="space-y-3">
+                  {proposedChanges.map((change, idx) => (
+                    <div key={idx} className="bg-white border border-sky-100 p-4 rounded-sm flex items-start gap-4 shadow-sm relative group">
+                      <div className="flex-1 min-w-0">
+                        <span className="inline-block px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold uppercase tracking-wider rounded-sm mb-2">
+                          {fields.find(f => f.name === change.field)?.label || change.field}
                         </span>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-1">
+                          <div className="bg-rose-50/50 p-3 rounded-sm border border-rose-100/50">
+                            <p className="text-[10px] font-bold text-rose-700/70 uppercase tracking-wider mb-1.5">{isSpanish ? 'Original' : 'Original'}</p>
+                            <div className="text-sm font-serif text-slate-500 line-through break-words">
+                              {formatValue(change.currentValue)}
+                            </div>
+                          </div>
+                          <div className="bg-emerald-50/50 p-3 rounded-sm border border-emerald-100/50 relative">
+                            <div className="absolute -left-3 top-1/2 -translate-y-1/2 text-slate-300 hidden md:block">
+                              <Icons.ArrowRight />
+                            </div>
+                            <p className="text-[10px] font-bold text-emerald-700/70 uppercase tracking-wider mb-1.5">{isSpanish ? 'Propuesto' : 'Proposed'}</p>
+                            <div className="text-sm font-serif text-slate-800 font-medium break-words">
+                              {formatValue(change.proposedValue)}
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-3 font-sans italic border-l-2 border-slate-200 pl-2">
+                          "{change.reason}"
+                        </p>
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">Razón: {change.reason}</p>
+                      <button
+                        onClick={() => handleRemoveChange(idx)}
+                        className="text-slate-400 hover:text-rose-600 p-1 opacity-0 group-hover:opacity-100 transition-opacity absolute top-3 right-3"
+                        title={isSpanish ? 'Descartar' : 'Discard'}
+                      >
+                        <Icons.Cross />
+                      </button>
                     </div>
-                    <button
-                      onClick={() => handleRemoveChange(idx)}
-                      className="text-red-500 hover:text-red-700 ml-2 text-xl"
-                      title={isSpanish ? 'Eliminar' : 'Remove'}
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
+                  ))}
+                </div>
+                
+                <div className="mt-4 flex justify-end">
+                  <button
+                    onClick={handleSubmitProposal}
+                    disabled={loading}
+                    className="px-6 py-2.5 bg-[#003b5c] text-white text-xs font-bold uppercase tracking-wider rounded-sm hover:bg-sky-900 transition-colors shadow-sm flex items-center gap-2"
+                  >
+                    {loading ? (isSpanish ? 'PROCESANDO...' : 'PROCESSING...') : (
+                      <>
+                        <Icons.Send />
+                        {isSpanish ? 'Transferir Propuesta al Autor' : 'Transfer Proposal to Author'}
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Formulario para agregar un cambio */}
-        <div className="grid grid-cols-1 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {isSpanish ? 'Campo' : 'Field'}
-            </label>
-            <select
-              value={currentField}
-              onChange={(e) => {
-                setCurrentField(e.target.value);
-                setFieldValue(getCurrentValue(e.target.value));
-              }}
-              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">{isSpanish ? 'Seleccionar...' : 'Select...'}</option>
-              {fields.map(f => (
-                <option key={f.name} value={f.name}>{f.label}</option>
-              ))}
-            </select>
-          </div>
-
-          {currentField && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {isSpanish ? 'Valor actual' : 'Current value'}
-                </label>
-                <div className="p-2 bg-gray-100 rounded-lg text-sm font-mono">
-                  {formatValue(getCurrentValue(currentField))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {isSpanish ? 'Nuevo valor' : 'New value'}
-                </label>
-                {/* 🔄 CAMBIO: Placeholder contextual para keywords */}
-{fields.find(f => f.name === currentField)?.type === 'textarea' || fields.find(f => f.name === currentField)?.type === 'keywords' ? (
-    <textarea
-        value={fieldValue}
-        onChange={(e) => setFieldValue(e.target.value)}
-        rows={4}
-        className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
-        placeholder={
-            currentField === 'keywords' || currentField === 'keywordsEn'
-                ? (isSpanish 
-                    ? 'Formato controlado: "CÓDIGO: Término1; CÓDIGO: Término2" | Formato simple: "término1; término2"'
-                    : 'Controlled format: "CODE: Term1; CODE: Term2" | Simple format: "term1; term2"')
-                : (isSpanish ? 'Ingresa el nuevo valor...' : 'Enter the new value...')
-        }
-    />
-) : (
-    <input
-        type="text"
-        value={fieldValue}
-        onChange={(e) => setFieldValue(e.target.value)}
-        className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
-        placeholder={isSpanish ? 'Ingresa el nuevo valor...' : 'Enter the new value...'}
-    />
-)}
-                {/* 🔄 CAMBIO: Texto de ayuda contextual según el campo */}
-<p className="text-xs text-gray-500 mt-1">
-    {currentField === 'keywords' || currentField === 'keywordsEn'
-        ? (isSpanish
-            ? 'Separa con ";". Formato controlado: "CÓDIGO: Término". Formato simple: "término".'
-            : 'Separate with ";". Controlled: "CODE: Term". Simple: "term".')
-        : currentField === 'authors'
-            ? (isSpanish
-                ? 'Para autores, usa el formato: Apellido, Nombre; Apellido2, Nombre2'
-                : 'For authors, use format: LastName, FirstName; LastName2, FirstName2')
-            : ''
-    }
-</p>
-</div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {isSpanish ? 'Razón del cambio' : 'Reason for change'}
-                </label>
-                <textarea
-                  value={fieldReason}
-                  onChange={(e) => setFieldReason(e.target.value)}
-                  rows={2}
-                  placeholder={isSpanish ? 'Explica por qué este cambio mejora el artículo...' : 'Explain why this change improves the article...'}
-                  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="requiresConsent"
-                  checked={requiresConsent}
-                  onChange={(e) => setRequiresConsent(e.target.checked)}
-                  className="mr-2"
-                />
-                <label htmlFor="requiresConsent" className="text-sm text-gray-700">
-                  {isSpanish ? 'Este cambio requiere consentimiento del autor' : 'This change requires author consent'}
-                </label>
-              </div>
-
-              <button
-                onClick={handleAddChange}
-                className="py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        {/* Creador de cambios */}
+        <div className="bg-slate-50 border border-slate-200 rounded-sm p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="md:col-span-2 lg:col-span-1">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                {isSpanish ? 'Seleccionar Campo' : 'Select Field'}
+              </label>
+              <select
+                value={currentField}
+                onChange={(e) => {
+                  setCurrentField(e.target.value);
+                  setFieldValue(getCurrentValue(e.target.value));
+                }}
+                className="w-full p-2.5 bg-white border border-slate-300 rounded-sm focus:ring-2 focus:ring-[#003b5c] focus:border-transparent font-sans text-sm text-slate-800"
               >
-                {isSpanish ? '➕ Agregar a propuesta' : '➕ Add to proposal'}
-              </button>
-            </>
-          )}
+                <option value="">{isSpanish ? '-- Seleccione un campo a corregir --' : '-- Select a field to correct --'}</option>
+                {fields.map(f => (
+                  <option key={f.name} value={f.name}>{f.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {currentField && (
+              <>
+                <div className="md:col-span-2 lg:col-span-1">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                    {isSpanish ? 'Valor Existente' : 'Existing Value'}
+                  </label>
+                  <div className="p-3 bg-slate-100 border border-slate-200 rounded-sm text-sm font-serif text-slate-600 max-h-32 overflow-y-auto">
+                    {formatValue(getCurrentValue(currentField))}
+                  </div>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                    {isSpanish ? 'Valor Corregido' : 'Corrected Value'}
+                  </label>
+                  {fields.find(f => f.name === currentField)?.type === 'textarea' || fields.find(f => f.name === currentField)?.type === 'keywords' ? (
+                    <textarea
+                        value={fieldValue}
+                        onChange={(e) => setFieldValue(e.target.value)}
+                        rows={5}
+                        className="w-full p-3 bg-white border border-slate-300 rounded-sm focus:ring-2 focus:ring-[#003b5c] focus:border-transparent font-serif text-sm text-slate-800"
+                    />
+                  ) : (
+                    <input
+                        type="text"
+                        value={fieldValue}
+                        onChange={(e) => setFieldValue(e.target.value)}
+                        className="w-full p-3 bg-white border border-slate-300 rounded-sm focus:ring-2 focus:ring-[#003b5c] focus:border-transparent font-serif text-sm text-slate-800"
+                    />
+                  )}
+                  <p className="text-[10px] text-slate-500 mt-2 font-sans">
+                    {currentField.includes('keywords')
+                        ? (isSpanish ? 'Nota: Separe términos usando punto y coma (;).' : 'Note: Separate terms using semicolons (;).')
+                        : currentField === 'authors'
+                            ? (isSpanish ? 'Formato estandarizado: Apellido, Nombre; Apellido2, Nombre2.' : 'Standard format: LastName, FirstName; LastName2, FirstName2.')
+                            : ''
+                    }
+                  </p>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                    {isSpanish ? 'Justificación Editorial' : 'Editorial Justification'}
+                  </label>
+                  <textarea
+                    value={fieldReason}
+                    onChange={(e) => setFieldReason(e.target.value)}
+                    rows={2}
+                    placeholder={isSpanish ? 'Detalle la necesidad técnica o estilística del cambio...' : 'Detail the technical or stylistic need for the change...'}
+                    className="w-full p-3 bg-white border border-slate-300 rounded-sm focus:ring-2 focus:ring-[#003b5c] focus:border-transparent font-sans text-sm text-slate-800 placeholder:text-slate-400"
+                  />
+                </div>
+
+                <div className="md:col-span-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-4 border-t border-slate-200">
+                  <label className="flex items-center gap-2 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={requiresConsent}
+                      onChange={(e) => setRequiresConsent(e.target.checked)}
+                      className="w-4 h-4 text-[#003b5c] border-slate-300 rounded-sm focus:ring-[#003b5c]"
+                    />
+                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wider group-hover:text-[#003b5c] transition-colors">
+                      {isSpanish ? 'Requerir validación del autor' : 'Require author validation'}
+                    </span>
+                  </label>
+
+                  <button
+                    onClick={handleAddChange}
+                    className="w-full sm:w-auto px-6 py-2.5 bg-slate-800 text-white text-xs font-bold uppercase tracking-wider rounded-sm hover:bg-slate-700 transition-colors shadow-sm flex items-center justify-center gap-2"
+                  >
+                    <Icons.Plus />
+                    {isSpanish ? 'Añadir Corrección' : 'Add Correction'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
+      </InfoBlock>
 
-        {/* Botón para enviar propuesta */}
-        {proposedChanges.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
-            <button
-              onClick={handleSubmitProposal}
-              disabled={loading}
-              className="w-full mt-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 transition-colors font-bold"
-            >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  {isSpanish ? 'ENVIANDO...' : 'SENDING...'}
-                </span>
-              ) : (
-                isSpanish ? '📨 ENVIAR PROPUESTA AL AUTOR' : '📨 SEND PROPOSAL TO AUTHOR'
-              )}
-            </button>
-          </motion.div>
-        )}
-      </div>
-
-      {/* Historial de propuestas */}
+      {/* SECCIÓN 3: Historial de Propuestas */}
       {proposals.length > 0 && (
-        <div className="bg-gray-50 rounded-lg border border-gray-200 p-6">
-          <h3 className="text-lg font-bold mb-4">
-            {isSpanish ? '📜 Historial de propuestas' : '📜 Proposal history'}
-          </h3>
-          
-          <div className="space-y-4">
+        <InfoBlock icon={Icons.History} title={isSpanish ? 'Registro de Auditoría de Metadatos' : 'Metadata Audit Log'}>
+          <div className="space-y-6">
             {proposals.map((proposal) => (
-              <div key={proposal.id} className="bg-white rounded-lg border p-4 hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between mb-3">
+              <div key={proposal.id} className="border border-slate-200 rounded-sm bg-white overflow-hidden shadow-sm">
+                
+                {/* Header de la propuesta */}
+                <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
                   <div>
-                    <p className="text-sm text-gray-500">
-                      {isSpanish ? 'Propuesto por: ' : 'Proposed by: '}
-                      <span className="font-medium text-gray-700">{proposal.proposedByEmail}</span>
-                    </p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                       {proposal.proposedAt?.toLocaleString()}
                     </p>
+                    <p className="text-sm font-sans text-slate-800 mt-0.5">
+                      {isSpanish ? 'Emitido por: ' : 'Issued by: '}
+                      <span className="font-medium text-[#003b5c]">{proposal.proposedByEmail}</span>
+                    </p>
                   </div>
-                  {getStatusBadge(proposal)}
+                  {getStatusBadge(proposal.status)}
                 </div>
 
-                <div className="space-y-2 mb-3">
+                {/* Lista de cambios en la propuesta */}
+                <div className="p-4 space-y-4">
                   {proposal.changes.map((change, idx) => (
-                    <div key={idx} className="text-sm border-l-2 border-gray-200 pl-3">
-                      <p className="font-medium">{change.field}</p>
-                      <div className="text-xs text-gray-600 mt-1">
-                        <span className="line-through text-gray-400">{formatValue(change.currentValue, change.field)}</span>
-{' → '}
-<span className="text-green-600">{formatValue(change.proposedValue, change.field)}</span>
+                    <div key={idx} className="bg-slate-50/50 p-3 rounded-sm border border-slate-100">
+                      <p className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                        {fields.find(f => f.name === change.field)?.label || change.field}
+                      </p>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-center">
+                         <div className="text-sm font-serif text-slate-500 line-through bg-white p-2 border border-slate-200 rounded-sm">
+                           {formatValue(change.currentValue, change.field)}
+                         </div>
+                         <div className="text-sm font-serif text-slate-800 font-medium bg-white p-2 border border-emerald-200 rounded-sm shadow-sm relative">
+                            <div className="absolute -left-3 top-1/2 -translate-y-1/2 text-slate-300 hidden lg:block"><Icons.ArrowRight /></div>
+                            {formatValue(change.proposedValue, change.field)}
+                         </div>
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">{change.reason}</p>
+                      <p className="text-xs text-slate-500 font-sans italic mt-2">
+                        Justificación: {change.reason}
+                      </p>
                     </div>
                   ))}
                 </div>
 
-                {proposal.authorResponse && (
-                  <div className={`mt-2 p-2 rounded text-sm ${
-                    proposal.authorResponse.accepted ? 'bg-green-50' : 'bg-red-50'
-                  }`}>
-                    <p className="font-medium">
-                      {proposal.authorResponse.accepted 
-                        ? (isSpanish ? '✅ Autor aprobó' : '✅ Author approved')
-                        : (isSpanish ? '❌ Autor rechazó' : '❌ Author rejected')}
-                    </p>
-                    {proposal.authorResponse.comments && (
-                      <p className="text-xs mt-1 italic">"{proposal.authorResponse.comments}"</p>
+                {/* Resolución del autor y acciones */}
+                {(proposal.authorResponse || proposal.status === 'approved') && (
+                  <div className="bg-slate-50 p-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    {proposal.authorResponse && (
+                      <div className={`flex-1 border-l-2 pl-3 ${proposal.authorResponse.accepted ? 'border-emerald-500' : 'border-rose-500'}`}>
+                        <p className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                          {proposal.authorResponse.accepted 
+                            ? (isSpanish ? 'Consentimiento Otorgado' : 'Consent Granted')
+                            : (isSpanish ? 'Cambios Declinados' : 'Changes Declined')}
+                        </p>
+                        {proposal.authorResponse.comments && (
+                          <p className="text-sm font-serif text-slate-600 mt-1 italic">
+                            "{proposal.authorResponse.comments}"
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {proposal.status === 'approved' && (
+                      <button
+                        onClick={() => handleApplyApprovedChanges(proposal.id)}
+                        disabled={loading}
+                        className="px-6 py-2 bg-emerald-600 text-white text-xs font-bold uppercase tracking-wider rounded-sm hover:bg-emerald-700 transition-colors shadow-sm disabled:bg-slate-300 whitespace-nowrap"
+                      >
+                        {loading 
+                          ? (isSpanish ? 'APLICANDO...' : 'APPLYING...') 
+                          : (isSpanish ? 'Ejecutar Cambios en Sistema' : 'Execute Changes in System')}
+                      </button>
                     )}
                   </div>
-                )}
-
-                {/* Botón para aplicar cambios si está aprobada */}
-                {proposal.status === 'approved' && (
-                  <button
-                    onClick={() => handleApplyApprovedChanges(proposal.id)}
-                    disabled={loading}
-                    className="mt-3 w-full py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors disabled:bg-gray-400"
-                  >
-                    {loading ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        {isSpanish ? 'APLICANDO...' : 'APPLYING...'}
-                      </span>
-                    ) : (
-                      isSpanish ? 'Aplicar estos cambios' : 'Apply these changes'
-                    )}
-                  </button>
                 )}
               </div>
             ))}
           </div>
-        </div>
+        </InfoBlock>
       )}
 
-      {/* Botón para marcar como listo para publicación */}
-      <div className="border-t pt-6 mt-6">
-        <button
-          onClick={handleMarkAsReady}
-          disabled={loading}
-          className="w-full py-4 bg-green-700 text-white font-bold rounded-lg hover:bg-green-800 disabled:bg-gray-400 text-lg transition-colors"
-        >
-          {loading ? (
-            <span className="flex items-center justify-center gap-2">
+      {/* SECCIÓN FINAL: Acción de Cierre */}
+      <div className="pt-8 border-t border-slate-200">
+        <div className="max-w-2xl mx-auto text-center">
+          <button
+            onClick={handleMarkAsReady}
+            disabled={loading}
+            className="w-full py-4 bg-[#003b5c] hover:bg-sky-900 text-white text-sm font-bold uppercase tracking-widest rounded-sm transition-colors shadow-md disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+          >
+            {loading ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              {isSpanish ? 'PROCESANDO...' : 'PROCESSING...'}
-            </span>
-          ) : (
-            isSpanish 
-              ? '✅ MARCAR COMO LISTO PARA PUBLICACIÓN' 
-              : '✅ MARK AS READY FOR PUBLICATION'
-          )}
-        </button>
-        <p className="text-xs text-gray-500 text-center mt-2">
-          {isSpanish 
-            ? 'Al marcar como listo, se notificará al Director General para que proceda con la publicación.'
-            : 'By marking as ready, the General Director will be notified to proceed with publication.'}
-        </p>
+            ) : (
+              <Icons.CheckCircle />
+            )}
+            {isSpanish ? 'Aprobar Metadatos para Publicación Final' : 'Approve Metadata for Final Publication'}
+          </button>
+          <p className="text-xs text-slate-500 font-sans mt-3">
+            {isSpanish 
+              ? 'Al ejecutar esta acción, el manuscrito quedará formalmente bloqueado para ediciones y se transferirá a Dirección General.'
+              : 'By executing this action, the manuscript will be formally locked for edits and transferred to the General Direction.'}
+          </p>
+        </div>
       </div>
+
     </div>
   );
 };
