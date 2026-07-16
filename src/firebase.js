@@ -13,8 +13,8 @@ import {
   signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
-  OAuthProvider,           // ← AÑADE ESTO
-  getAdditionalUserInfo    // ← AÑADE ESTO
+  OAuthProvider,
+  getAdditionalUserInfo
 } from 'firebase/auth';
 import {
   getFirestore,
@@ -69,12 +69,45 @@ export const getUserInvitations = httpsCallable(functions, 'getUserInvitations')
    FUNCIONES DE RECLAMACIÓN DE PERFIL
 ============================== */
 
-export const checkAnonymousProfile = httpsCallable(functions, 'checkAnonymousProfile');
-export const claimAnonymousProfile = httpsCallable(functions, 'claimAnonymousProfile');
+/**
+ * Verifica si existe un perfil anónimo que pueda ser reclamado
+ * @param {Object} data - Datos para la verificación
+ * @param {string} data.email - Email del usuario a verificar
+ * @returns {Promise<Object>} Resultado de la verificación
+ */
+export const checkAnonymousProfile = async (data) => {
+  try {
+    const checkFunction = httpsCallable(functions, 'checkAnonymousProfile');
+    const result = await checkFunction(data);
+    return result.data;
+  } catch (error) {
+    console.error('Error en checkAnonymousProfile:', error);
+    throw error;
+  }
+};
+
+/**
+ * Reclama un perfil anónimo y lo asocia al usuario autenticado
+ * @param {Object} data - Datos para el reclamo
+ * @param {string} data.anonymousUid - UID del perfil anónimo
+ * @param {string} data.claimHash - Hash de verificación
+ * @param {string} data.anonymousName - Nombre del perfil anónimo
+ * @returns {Promise<Object>} Resultado del reclamo
+ */
+export const claimAnonymousProfile = async (data) => {
+  try {
+    const claimFunction = httpsCallable(functions, 'claimAnonymousProfile');
+    const result = await claimFunction(data);
+    return result.data;
+  } catch (error) {
+    console.error('Error en claimAnonymousProfile:', error);
+    throw error;
+  }
+};
+
 /* ==============================
    🔥 HTTP FUNCTION – IMGBB UPLOAD
 ============================== */
-
 
 const IMGBB_FUNCTION_URL =
   "https://uploadimagetoimgbbcallable-ggqsq2kkua-uc.a.run.app";
@@ -98,7 +131,11 @@ export const uploadImageToImgBB = async ({ base64, fileName }) => {
   
   return result.data;
 };
-// En src/firebase.js, después de las importaciones existentes
+
+/* ==============================
+   SUBMIT ARTICLE
+============================== */
+
 export const submitArticle = async (data) => {
   const token = await auth.currentUser.getIdToken();
   
@@ -118,10 +155,11 @@ export const submitArticle = async (data) => {
   
   return response.json();
 };
+
 /* ==============================
-   EXPORTS
+   SUBMIT REVISION
 ============================== */
-// ===================== SUBMIT REVISION =====================
+
 export const submitRevision = async (data) => {
   const token = await auth.currentUser.getIdToken();
   
@@ -141,6 +179,30 @@ export const submitRevision = async (data) => {
   
   return response.json();
 };
+
+/* ==============================
+   FUNCIONES AUXILIARES
+============================== */
+
+/**
+ * Función para generar slugs (útil para UIDs y URLs)
+ * @param {string} text - Texto a convertir en slug
+ * @returns {string} Slug generado
+ */
+export const generateSlug = (text) => {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+    .substring(0, 50);
+};
+
+/* ==============================
+   EXPORTS
+============================== */
+
 export {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -153,8 +215,8 @@ export {
   signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
-  OAuthProvider,            // ← EXPÓRTALO TAMBIÉN
-  getAdditionalUserInfo,    // ← EXPÓRTALO TAMBIÉN
+  OAuthProvider,
+  getAdditionalUserInfo,
   doc,
   setDoc,
   getDoc,

@@ -91,7 +91,84 @@ const EN_TO_ES = {
 };
 
 const ALL_ROLES = Object.keys(ES_TO_EN);
+// En el componente PortalSection, agrega esta función
+const checkForAnonymousProfile = useCallback(async () => {
+  if (!user?.email) {
+    setClaimStatus('not-available');
+    setShowClaimModal(true);
+    return;
+  }
+  
+  setClaimStatus('checking');
+  setShowClaimModal(true);
+  setClaimError('');
+  
+  try {
+    // Llamada a la Cloud Function
+    const result = await checkAnonymousProfile({
+      email: user.email
+    });
+    
+    if (result.hasProfile && result.profile) {
+      setAnonymousProfile(result.profile);
+      setClaimStatus('available');
+    } else {
+      setClaimStatus('not-available');
+    }
+  } catch (error) {
+    console.error('Error al verificar perfil anónimo:', error);
+    setClaimStatus('error');
+    setClaimError(
+      error.details?.message || 
+      error.message || 
+      (isSpanish ? 'Error al verificar el perfil' : 'Error verifying profile')
+    );
+  }
+}, [user, isSpanish]);
 
+// También actualiza la función handleClaimProfile para usar la Cloud Function correctamente
+const handleClaimProfile = useCallback(async () => {
+  if (!anonymousProfile) return;
+  
+  setClaimStatus('claiming');
+  setClaimError('');
+  
+  try {
+    const result = await claimAnonymousProfile({
+      anonymousUid: anonymousProfile.anonymousUid,
+      claimHash: anonymousProfile.claimHash,
+      anonymousName: anonymousProfile.name
+    });
+    
+    if (result.success) {
+      setClaimStatus('success');
+      
+      // Actualizar datos locales del usuario
+      setUserData(prev => ({
+        ...prev,
+        claimedAnonymousUid: anonymousProfile.anonymousUid,
+        claimedAnonymousName: anonymousProfile.name,
+        articlesClaimed: result.articlesClaimed,
+        roles: prev.roles?.includes('Autor') ? prev.roles : [...(prev.roles || []), 'Autor']
+      }));
+      
+      // Cerrar el modal después de 3 segundos
+      setTimeout(() => {
+        setShowClaimModal(false);
+        setClaimStatus('idle');
+        setAnonymousProfile(null);
+      }, 3000);
+    }
+  } catch (error) {
+    console.error('Error al reclamar perfil:', error);
+    setClaimStatus('error');
+    setClaimError(
+      error.details?.message || 
+      error.message || 
+      (isSpanish ? 'Error al reclamar perfil' : 'Error claiming profile')
+    );
+  }
+}, [anonymousProfile, isSpanish]);
 const base64EncodeUnicode = (str) => {
   const encoder = new TextEncoder();
   const bytes = encoder.encode(str);
