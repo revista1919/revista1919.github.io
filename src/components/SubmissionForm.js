@@ -2763,8 +2763,8 @@ useEffect(() => {
                         />
                         <span className="text-sm text-gray-700 group-hover:text-[#003b5c] font-sans">
                           {isSpanish 
-                            ? 'El manuscrito es inédito y, en caso de derivar de un trabajo previo, la superposición textual no excede el 15% (Sección 3.2).' 
-                            : 'The manuscript is unpublished and, if derived from previous work, the textual overlap does not exceed 15% (Section 3.2).'}
+                            ? 'El manuscrito es inédito y, en caso de derivar de un trabajo previo, la superposición textual no excede el 15%.' 
+                            : 'The manuscript is unpublished and, if derived from previous work, the textual overlap does not exceed 15%.'}
                         </span>
                       </label>
 
@@ -2791,8 +2791,8 @@ useEffect(() => {
                         />
                         <span className="text-sm text-gray-700 group-hover:text-[#003b5c] font-sans">
                           {isSpanish 
-                            ? 'El manuscrito no está siendo evaluado simultáneamente en otra revista (Sección 3.3).' 
-                            : 'The manuscript is not being simultaneously evaluated in another journal (Section 3.3).'}
+                            ? 'El manuscrito no está siendo evaluado simultáneamente en otra revista.' 
+                            : 'The manuscript is not being simultaneously evaluated in another journal.'}
                         </span>
                       </label>
 
@@ -2819,8 +2819,8 @@ useEffect(() => {
                         />
                         <span className="text-sm text-gray-700 group-hover:text-[#003b5c] font-sans">
                           {isSpanish 
-                            ? 'Todos los autores cumplen los 4 criterios de autoría del ICMJE y sus roles CRediT están declarados (Sección 4.1).' 
-                            : 'All authors meet the 4 ICMJE authorship criteria and their CRediT roles are declared (Section 4.1).'}
+                            ? 'Todos los autores cumplen los 4 criterios de autoría del ICMJE y sus roles CRediT están declarados.' 
+                            : 'All authors meet the 4 ICMJE authorship criteria and their CRediT roles are declared.'}
                         </span>
                       </label>
 
@@ -2847,8 +2847,8 @@ useEffect(() => {
                         />
                         <span className="text-sm text-gray-700 group-hover:text-[#003b5c] font-sans">
                           {isSpanish 
-                            ? 'Los datos presentados son auténticos, no han sido manipulados y la investigación cumplió con los estándares éticos aplicables (Capítulo 5).' 
-                            : 'The data presented are authentic, have not been manipulated, and the research complied with applicable ethical standards (Chapter 5).'}
+                            ? 'Los datos presentados son auténticos, no han sido manipulados y la investigación cumplió con los estándares éticos aplicables.' 
+                            : 'The data presented are authentic, have not been manipulated, and the research complied with applicable ethical standards.'}
                         </span>
                       </label>
 
@@ -2875,8 +2875,8 @@ useEffect(() => {
                         />
                         <span className="text-sm text-gray-700 group-hover:text-[#003b5c] font-sans">
                           {isSpanish 
-                            ? 'Se obtuvo el consentimiento/asentimiento informado cuando fue necesario y se declara en el manuscrito (Sección 5.2).' 
-                            : 'Informed consent/assent was obtained when necessary and is declared in the manuscript (Section 5.2).'}
+                            ? 'Se obtuvo el consentimiento/asentimiento informado cuando fue necesario y se declara en el manuscrito.' 
+                            : 'Informed consent/assent was obtained when necessary and is declared in the manuscript.'}
                         </span>
                       </label>
 
@@ -2931,8 +2931,8 @@ useEffect(() => {
                         />
                         <span className="text-sm text-gray-700 group-hover:text-[#003b5c] font-sans">
                           {isSpanish 
-                            ? 'Todos los conflictos de interés (reales, potenciales o aparentes) están declarados en el formulario y en el manuscrito (Capítulo 6).' 
-                            : 'All conflicts of interest (real, potential, or apparent) are declared in this form and in the manuscript (Chapter 6).'}
+                            ? 'Todos los conflictos de interés (reales, potenciales o aparentes) están declarados en el formulario y en el manuscrito.' 
+                            : 'All conflicts of interest (real, potential, or apparent) are declared in this form and in the manuscript.'}
                         </span>
                       </label>
                     </div>

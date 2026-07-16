@@ -91,7 +91,7 @@ export const FinalDecisionTab = ({ task, reviewers, onSubmitDecision, loading: e
   const [selectedReview, setSelectedReview] = useState(null);
   const [localLoading, setLocalLoading] = useState(false);
   const [feedbackError, setFeedbackError] = useState('');
-
+const [localError, setLocalError] = useState('');  
   const quillRef = useRef(null);
   const internalQuillRef = useRef(null);
 
