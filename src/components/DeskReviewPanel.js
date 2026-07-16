@@ -11,20 +11,12 @@ import { useEditorialReview } from '../hooks/useEditorialReview';
 import { useReviewerInvitation } from '../hooks/useReviewerInvitation';
 import { useEditorialTasks, TASK_STATES } from '../hooks/useEditorialTasks';
 import { DeskReviewTab } from './DeskReviewTab';
-import { ReviewerManagementTab } from './ReviewerManagementTab';
-import { FinalDecisionTab } from './FinalDecisionTab';
-import { MetadataRefinementTab } from './MetadataRefinementTab';
 
 // ============ ICONOS SVG PROFESIONALES ============
 const Icons = {
   FileText: () => (
     <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-    </svg>
-  ),
-  Clock: () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   ),
   CheckCircle: () => (
@@ -42,39 +34,14 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
     </svg>
   ),
-  Users: () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-    </svg>
-  ),
-  Tag: () => (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-    </svg>
-  ),
-  ArrowLeft: () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-    </svg>
-  ),
-  ChevronDown: () => (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-    </svg>
-  ),
-  Search: () => (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-    </svg>
-  ),
   Ban: () => (
     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
     </svg>
   ),
-  ExternalLink: () => (
+  Search: () => (
     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
     </svg>
   ),
   Inbox: () => (
@@ -91,8 +58,7 @@ const DeskReviewPanel = ({ user }) => {
   const [assignedTasks, setAssignedTasks] = useState([]);
   const [selectedSubmissionId, setSelectedSubmissionId] = useState(null);
   const [selectedRound, setSelectedRound] = useState(1);
-  const [activeTaskTab, setActiveTaskTab] = useState('deskReview');
-  const [viewMode, setViewMode] = useState('panel'); // 'panel' | 'fullscreen'
+  // ELIMINADO: viewMode y activeTaskTab ya no se necesitan aquí
   
   const [potentialReviewers, setPotentialReviewers] = useState([]);
   const [selectedReviewerId, setSelectedReviewerId] = useState('');
@@ -105,7 +71,7 @@ const DeskReviewPanel = ({ user }) => {
   const [isConsolidated, setIsConsolidated] = useState(false);
   
   // Filtros y búsqueda
-  const [filterStatus, setFilterStatus] = useState('all'); // 'all' | 'pending' | 'completed' | 'rejected'
+  const [filterStatus, setFilterStatus] = useState('all');
   const [searchManuscript, setSearchManuscript] = useState('');
 
   const { loading: reviewLoading, error: reviewError, submitDeskReviewDecision } = useEditorialReview(user);
@@ -169,7 +135,6 @@ const DeskReviewPanel = ({ user }) => {
       grouped[subId].tasks.push(task);
       grouped[subId].tasks.sort((a, b) => (a.round || 1) - (b.round || 1));
       
-      // Verificar si hay una decisión de rechazo
       const hasRejection = task.decision === 'reject' || task.submission?.status === 'rejected';
       
       if (hasRejection) {
@@ -299,7 +264,6 @@ const DeskReviewPanel = ({ user }) => {
 
   const handleCompleteDeskReview = async (result) => {
     if (!selectedTask?.editorialReviewId) {
-      console.error('No se encontró editorialReviewId para esta tarea');
       alert(isSpanish 
         ? 'Error: No se pudo identificar la revisión editorial.' 
         : 'Error: Could not identify the editorial review.');
@@ -322,10 +286,8 @@ const DeskReviewPanel = ({ user }) => {
         alert(isSpanish 
           ? 'Manuscrito rechazado. El autor será notificado.' 
           : 'Manuscript rejected. The author will be notified.');
-        setViewMode('panel');
         setSelectedSubmissionId(null);
       } else {
-        setActiveTaskTab('reviewerManagement');
         alert(isSpanish 
           ? 'Revisión completada. Ahora puedes gestionar revisores.' 
           : 'Review completed. You can now manage reviewers.');
@@ -379,8 +341,8 @@ const DeskReviewPanel = ({ user }) => {
     }
 
     if (!confirm(isSpanish 
-      ? `¿Proceder a la decisión final con ${submittedReviews.length} revisiones? Se creará un documento consolidado y ya no podrás solicitar más revisiones para esta ronda.` 
-      : `Proceed to final decision with ${submittedReviews.length} reviews? A consolidated document will be created and you won't be able to request more reviews for this round.`
+      ? `¿Proceder a la decisión final con ${submittedReviews.length} revisiones?` 
+      : `Proceed to final decision with ${submittedReviews.length} reviews?`
     )) {
       return;
     }
@@ -394,18 +356,17 @@ const DeskReviewPanel = ({ user }) => {
 
       if (data.success) {
         setIsConsolidated(true);
-        setActiveTaskTab('finalDecision');
         alert(isSpanish 
-          ? '¡Documento consolidado creado! Ahora puedes tomar la decisión final.' 
-          : 'Consolidated document created! You can now make the final decision.');
+          ? '¡Documento consolidado creado!' 
+          : 'Consolidated document created!');
       } else {
         throw new Error(data.error || 'Error desconocido');
       }
     } catch (error) {
       console.error('Error al consolidar:', error);
       alert(isSpanish 
-        ? `Error al crear documento consolidado: ${error.message}` 
-        : `Error creating consolidated document: ${error.message}`);
+        ? `Error: ${error.message}` 
+        : `Error: ${error.message}`);
     } finally {
       setIsConsolidating(false);
     }
@@ -415,7 +376,6 @@ const DeskReviewPanel = ({ user }) => {
     const result = await makeFinalDecision(taskId, decisionData);
     if (result.success) {
       alert(isSpanish ? 'Decisión final guardada' : 'Final decision saved');
-      setViewMode('panel');
       setSelectedSubmissionId(null);
       setSelectedRound(1);
     }
@@ -424,16 +384,6 @@ const DeskReviewPanel = ({ user }) => {
   const handleSelectManuscript = (submissionId, round, group) => {
     setSelectedSubmissionId(submissionId);
     setSelectedRound(round);
-    setViewMode('fullscreen');
-    
-    const latestTask = group.latestTask;
-    if (latestTask?.status === TASK_STATES.REVIEWER_SELECTION || 
-        latestTask?.status === TASK_STATES.AWAITING_REVIEWER_RESPONSES || 
-        latestTask?.status === TASK_STATES.REVIEWS_IN_PROGRESS) {
-      setActiveTaskTab('reviewerManagement');
-    } else {
-      setActiveTaskTab('deskReview');
-    }
   };
 
   // Filtrar revisores disponibles
@@ -457,7 +407,6 @@ const DeskReviewPanel = ({ user }) => {
   const filteredSubmissions = useMemo(() => {
     let filtered = [...groupedSubmissions];
     
-    // Filtrar por estado
     if (filterStatus === 'pending') {
       filtered = filtered.filter(g => g.hasPendingTasks && g.finalDecision !== 'rejected');
     } else if (filterStatus === 'completed') {
@@ -466,7 +415,6 @@ const DeskReviewPanel = ({ user }) => {
       filtered = filtered.filter(g => g.finalDecision === 'rejected');
     }
     
-    // Filtrar por búsqueda
     if (searchManuscript) {
       const searchLower = searchManuscript.toLowerCase();
       filtered = filtered.filter(g => 
@@ -485,33 +433,6 @@ const DeskReviewPanel = ({ user }) => {
 
   if (!hasPermission) {
     return null;
-  }
-
- if (viewMode === 'fullscreen' && selectedTask) {
-    return (
-      <DeskReviewTab
-        task={selectedTask}
-        user={user}
-        onComplete={handleCompleteDeskReview}
-        loading={reviewLoading}
-        onBackToPanel={() => setViewMode('panel')}
-        // Nuevas props para integrar todas las pestañas
-        invitations={invitations}
-        potentialReviewers={filteredReviewers}
-        selectedReviewerId={selectedReviewerId}
-        setSelectedReviewerId={setSelectedReviewerId}
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        onSendInvitation={handleSendInvitation}
-        onProceedToDecision={handleProceedToDecision}
-        inviteLoading={inviteLoading}
-        isConsolidating={isConsolidating}
-        submittedReviews={submittedReviews}
-        reviewers={reviewers}
-        isConsolidated={isConsolidated}
-        onFinalDecision={handleFinalDecision}
-      />
-    );
   }
 
   return (
@@ -806,164 +727,32 @@ const DeskReviewPanel = ({ user }) => {
           {/* Panel de trabajo - Área principal */}
           <div className="lg:col-span-8 xl:col-span-9">
             {selectedTask ? (
-              <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-                {/* Selector de rondas */}
-                {groupedSubmissions.find(g => g.submissionId === selectedSubmissionId)?.tasks.length > 1 && (
-                  <div className="mb-6 flex items-center gap-3 pb-4 border-b border-gray-200">
-                    <span className="text-sm font-medium text-gray-600">
-                      {isSpanish ? 'Ronda:' : 'Round:'}
-                    </span>
-                    <div className="flex gap-2">
-                      {groupedSubmissions
-                        .find(g => g.submissionId === selectedSubmissionId)
-                        ?.tasks.map((task, index) => (
-                          <button
-                            key={task.id}
-                            onClick={() => setSelectedRound(task.round || index + 1)}
-                            className={`px-4 py-2 text-sm font-medium rounded-xl transition-all duration-200 ${
-                              (task.round || index + 1) === selectedRound
-                                ? 'bg-blue-900 text-white shadow-md'
-                                : task.status === TASK_STATES.COMPLETED
-                                ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                            }`}
-                            title={`Ronda ${index + 1} - ${
-                              task.status === TASK_STATES.COMPLETED ? 'Completada' : 'En curso'
-                            }`}
-                          >
-                            {isSpanish ? 'Ronda' : 'Round'} {index + 1}
-                          </button>
-                        ))}
-                    </div>
-                    
-                    {/* Botón para ver a pantalla completa */}
-                    <button
-                      onClick={() => setViewMode('fullscreen')}
-                      className="ml-auto flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-900 hover:bg-blue-50 rounded-xl transition-colors"
-                    >
-                      <Icons.ExternalLink />
-                      {isSpanish ? 'Pantalla completa' : 'Full screen'}
-                    </button>
-                  </div>
-                )}
-
-                {/* Tabs dinámicos */}
-                <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
-                  <button
-                    onClick={() => setActiveTaskTab('deskReview')}
-                    className={`px-6 py-3 font-medium text-sm transition-all duration-200 whitespace-nowrap border-b-2 ${
-                      activeTaskTab === 'deskReview' 
-                        ? 'text-blue-900 border-blue-900' 
-                        : 'text-gray-500 border-transparent hover:text-gray-700'
-                    }`}
-                  >
-                    {isSpanish ? 'Revisión Editorial' : 'Desk Review'}
-                  </button>
-                  
-                  {(selectedTask.status === TASK_STATES.REVIEWER_SELECTION || 
-                    selectedTask.status === TASK_STATES.AWAITING_REVIEWER_RESPONSES || 
-                    selectedTask.status === TASK_STATES.REVIEWS_IN_PROGRESS ||
-                    selectedTask.status === TASK_STATES.AWAITING_DECISION) && (
-                    <button
-                      onClick={() => setActiveTaskTab('reviewerManagement')}
-                      className={`px-6 py-3 font-medium text-sm transition-all duration-200 whitespace-nowrap border-b-2 ${
-                        activeTaskTab === 'reviewerManagement' 
-                          ? 'text-blue-900 border-blue-900' 
-                          : 'text-gray-500 border-transparent hover:text-gray-700'
-                      }`}
-                    >
-                      <span className="flex items-center gap-2">
-                        {isSpanish ? 'Gestión de Revisores' : 'Reviewer Management'}
-                        {submittedReviews.length > 0 && (
-                          <span className="bg-blue-900 text-white text-xs px-2.5 py-0.5 rounded-full">
-                            {submittedReviews.length}
-                          </span>
-                        )}
-                      </span>
-                    </button>
-                  )}
-                  
-                  {(isConsolidated || selectedTask.status === TASK_STATES.AWAITING_DECISION) && (
-                    <button
-                      onClick={() => setActiveTaskTab('finalDecision')}
-                      className={`px-6 py-3 font-medium text-sm transition-all duration-200 whitespace-nowrap border-b-2 ${
-                        activeTaskTab === 'finalDecision' 
-                          ? 'text-blue-900 border-blue-900' 
-                          : 'text-gray-500 border-transparent hover:text-gray-700'
-                      }`}
-                    >
-                      {isSpanish ? 'Decisión Final' : 'Final Decision'}
-                    </button>
-                  )}
-
-                  {selectedTask.submission?.status === 'accepted' && (
-                    <button
-                      onClick={() => setActiveTaskTab('metadataRefinement')}
-                      className={`px-6 py-3 font-medium text-sm transition-all duration-200 whitespace-nowrap border-b-2 ${
-                        activeTaskTab === 'metadataRefinement' 
-                          ? 'text-blue-900 border-blue-900' 
-                          : 'text-gray-500 border-transparent hover:text-gray-700'
-                      }`}
-                    >
-                      {isSpanish ? 'Refinar Metadatos' : 'Refine Metadata'}
-                    </button>
-                  )}
-                </div>
-
-                {/* Contenido de los tabs */}
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={activeTaskTab}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    {activeTaskTab === 'deskReview' && (
-                      <DeskReviewTab
-                        task={selectedTask}
-                        user={user}
-                        onComplete={handleCompleteDeskReview}
-                        loading={reviewLoading}
-                        onBackToPanel={() => setViewMode('panel')}
-                      />
-                    )}
-
-                    {activeTaskTab === 'reviewerManagement' && (
-                      <ReviewerManagementTab
-                        task={selectedTask}
-                        invitations={invitations}
-                        potentialReviewers={filteredReviewers}
-                        selectedReviewerId={selectedReviewerId}
-                        setSelectedReviewerId={setSelectedReviewerId}
-                        searchTerm={searchTerm}
-                        setSearchTerm={setSearchTerm}
-                        onSendInvitation={handleSendInvitation}
-                        onProceedToDecision={handleProceedToDecision}
-                        loading={inviteLoading || isConsolidating}
-                        submittedReviews={submittedReviews}
-                      />
-                    )}
-
-                    {activeTaskTab === 'finalDecision' && (
-                      <FinalDecisionTab
-                        task={selectedTask}
-                        reviewers={[...submittedReviews, ...reviewers.filter(r => r.status === 'submitted')]}
-                        onSubmitDecision={handleFinalDecision}
-                        loading={reviewLoading}
-                      />
-                    )}
-
-                    {activeTaskTab === 'metadataRefinement' && (
-                      <MetadataRefinementTab
-                        submission={selectedTask.submission}
-                        user={user}
-                        onComplete={() => {}}
-                      />
-                    )}
-                  </motion.div>
-                </AnimatePresence>
-              </div>
+              <DeskReviewTab
+                task={selectedTask}
+                user={user}
+                onComplete={handleCompleteDeskReview}
+                loading={reviewLoading}
+                onBackToPanel={() => setSelectedSubmissionId(null)}
+                // Props para pestañas integradas
+                invitations={invitations}
+                potentialReviewers={filteredReviewers}
+                selectedReviewerId={selectedReviewerId}
+                setSelectedReviewerId={setSelectedReviewerId}
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                onSendInvitation={handleSendInvitation}
+                onProceedToDecision={handleProceedToDecision}
+                inviteLoading={inviteLoading}
+                isConsolidating={isConsolidating}
+                submittedReviews={submittedReviews}
+                reviewers={reviewers}
+                isConsolidated={isConsolidated}
+                onFinalDecision={handleFinalDecision}
+                // Selector de rondas
+                allTasks={groupedSubmissions.find(g => g.submissionId === selectedSubmissionId)?.tasks || []}
+                selectedRound={selectedRound}
+                onRoundChange={setSelectedRound}
+              />
             ) : (
               <motion.div
                 initial={{ opacity: 0 }}
