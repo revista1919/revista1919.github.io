@@ -13,11 +13,51 @@ function TeamSectionEN() {
 
   const jsonUrl = 'https://www.revistacienciasestudiantes.com/team/Team.json';
 
+  // Role translation mapping
+  const ES_TO_EN = {
+    'Fundador': 'Founder',
+    'Co-Fundador': 'Co-Founder',
+    'Director General': 'General Director',
+    'Subdirector General': 'Deputy General Director',
+    'Editor en Jefe': 'Editor-in-Chief',
+    'Editor de Sección': 'Section Editor',
+    'Editora de Sección': 'Section Editor',
+    'Revisor': 'Reviewer',
+    'Revisor / Comité Editorial': 'Reviewer',
+    'Responsable de Desarrollo Web': 'Web Development Manager',
+    'Encargado de Soporte Técnico': 'Technical Support Manager',
+    'Encargado de Redes Sociales': 'Social Media Manager',
+    'Encargada de Redes Sociales': 'Social Media Manager',
+    'Encargado de Asignación de Artículos': 'Article Assignment Manager',
+    'Diseñador Gráfico': 'Graphic Designer',
+    'Diseñadora Gráfica': 'Graphic Designer',
+    'Community Manager': 'Community Manager',
+    'Encargado de Nuevos Colaboradores': 'New Collaborators Manager',
+    'Encargada de Nuevos Colaboradores': 'New Collaborators Manager',
+    'Coordinador de Eventos o Convocatorias': 'Events or Calls Coordinator',
+    'Coordinadora de Eventos o Convocatorias': 'Events or Calls Coordinator',
+    'Asesor Legal': 'Legal Advisor',
+    'Asesora Legal': 'Legal Advisor',
+    'Asesor Editorial': 'Editorial Advisor',
+    'Asesora Editorial': 'Editorial Advisor',
+    'Responsable de Finanzas': 'Finance Manager',
+    'Responsable de Transparencia': 'Transparency Manager',
+    'Autor': 'Author',
+    'Asesor Académico': 'Academic Advisor',
+    'Institución Colaboradora': 'Partner Institution',
+    'Equipo Editorial': 'Editorial Team'
+  };
+
   // Role definitions in English
   const roleDefinitions = {
-    'Equipo Editorial': 'Group of individuals who sustain the academic project of the journal. They participate in the evaluation, editing, proofreading, dissemination, and management of content, ensuring the scientific and editorial quality of each issue.',
-    'Comité Científico': 'Advisory body composed of renowned specialists who provide guidance on the quality, relevance, and scientific rigor of the content, ensuring compliance with the academic standards of the publication.',
-    'Institución Colaboradora': 'Entities that support the project through institutional backing, funding, or dissemination, contributing to the strengthening and sustainability of the journal.'
+    'Editorial Team': 'Group of individuals who sustain the academic project of the journal. They participate in the evaluation, editing, proofreading, dissemination, and management of content, ensuring the scientific and editorial quality of each issue.',
+    'Scientific Committee': 'Advisory body composed of renowned specialists who provide guidance on the quality, relevance, and scientific rigor of the content, ensuring compliance with the academic standards of the publication.',
+    'Partner Institution': 'Entities that support the project through institutional backing, funding, or dissemination, contributing to the strengthening and sustainability of the journal.'
+  };
+
+  // Helper function to translate role
+  const translateRole = (spanishRole) => {
+    return ES_TO_EN[spanishRole] || spanishRole;
   };
 
   useEffect(() => {
@@ -69,23 +109,25 @@ function TeamSectionEN() {
       });
   }, []);
 
-  // Extract unique roles for filter (excluding "Revisor")
+  // Extract unique roles for filter (translated to English, excluding "Reviewer")
   const roles = useMemo(() => {
     const allRoles = mainData.flatMap(user => {
       return (user.roles || []).filter(role => 
         role && role !== 'Autor' && role !== 'Revisor'
       );
     });
-    const uniqueRoles = [...new Set(allRoles)];
+    const translatedRoles = allRoles.map(role => translateRole(role));
+    const uniqueRoles = [...new Set(translatedRoles)];
     return ['All', ...uniqueRoles.sort()];
   }, [mainData]);
 
-  // Filter members by selected role
+  // Filter members by selected role (comparing translated roles)
   const filteredMembers = useMemo(() => {
     if (selectedRole === 'All') return mainData;
     return mainData.filter(user => {
       const memberRoles = user.roles || [];
-      return memberRoles.includes(selectedRole);
+      const translatedMemberRoles = memberRoles.map(role => translateRole(role));
+      return translatedMemberRoles.includes(selectedRole);
     });
   }, [mainData, selectedRole]);
 
@@ -166,7 +208,7 @@ function TeamSectionEN() {
           </motion.h1>
           <div className="w-16 h-1 bg-[#FF7900] mx-auto mb-6"></div>
           <p className="text-[#64748B] max-w-2xl mx-auto leading-relaxed text-sm md:text-base">
-            Fostering scientific excellence through editorial rigor, peer review, and the collaborative work of our distinguished team.
+            Fostering scientific excellence through editorial rigor, peer review, and the collaborative work of our distinguished international team.
           </p>
         </div>
       </header>
@@ -245,7 +287,7 @@ function TeamSectionEN() {
                         <div className="flex flex-wrap gap-1.5">
                           {(member.roles || []).filter(r => r && r !== 'Autor' && r !== 'Revisor').map((role) => (
                             <span key={role} className="text-[10px] font-semibold uppercase tracking-wider bg-[#F3F7F9] text-[#003B5C] px-2.5 py-1 rounded-sm">
-                              {role}
+                              {translateRole(role)}
                             </span>
                           ))}
                         </div>
@@ -274,8 +316,8 @@ function TeamSectionEN() {
           <section className="mt-24">
             <div className="flex items-center justify-between border-b border-gray-200 pb-4 mb-8">
               <h2 className="text-2xl font-serif text-[#003B5C] inline-flex items-center">
-                Scientific Committee
-                <RoleDefinitionButton role="Comité Científico" sectionName="Comité Científico" />
+                International Scientific Committee
+                <RoleDefinitionButton role="Scientific Committee" sectionName="Scientific Committee" />
               </h2>
             </div>
             
@@ -305,7 +347,7 @@ function TeamSectionEN() {
                       {member.displayName || `${member.firstName} ${member.lastName}`}
                     </h4>
                     <p className="text-[9px] text-[#64748B] uppercase mt-1.5 tracking-widest font-semibold">
-                      Academic Advisor
+                      {translateRole('Asesor Académico')}
                     </p>
                   </div>
                 );
@@ -320,7 +362,7 @@ function TeamSectionEN() {
             <div className="flex items-center justify-between border-b border-gray-200 pb-4 mb-10">
               <h2 className="text-2xl font-serif text-[#003B5C] inline-flex items-center">
                 Partner Institutions
-                <RoleDefinitionButton role="Institución Colaboradora" sectionName="Institución Colaboradora" />
+                <RoleDefinitionButton role="Partner Institution" sectionName="Partner Institution" />
               </h2>
             </div>
 
