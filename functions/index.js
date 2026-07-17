@@ -13249,3 +13249,284 @@ async function calculateReviewerStats(reviewerUid, db) {
     };
   }
 }
+exports.onReviewerRoleAssigned = onDocumentUpdated(
+  {
+    document: 'users/{userId}',
+    region: 'us-central1',
+    timeoutSeconds: 60,
+    memory: '256MiB',
+  },
+  async (event) => {
+    // Obtener datos antes y después
+    const beforeData = event.data.before.data();
+    const afterData = event.data.after.data();
+    
+    if (!beforeData || !afterData) {
+      console.log('⚠️ Datos incompletos, ignorando...');
+      return null;
+    }
+
+    const userId = event.params.userId;
+    const beforeRoles = beforeData.roles || [];
+    const afterRoles = afterData.roles || [];
+
+    // Verificar si el rol "Revisor" fue agregado
+    const hadReviewerRole = beforeRoles.includes('Revisor');
+    const hasReviewerRole = afterRoles.includes('Revisor');
+
+    // Si ya tenía el rol o no se agregó ahora, ignorar
+    if (hadReviewerRole || !hasReviewerRole) {
+      console.log(`ℹ️ Usuario ${userId} no obtuvo rol Revisor en esta actualización`);
+      return null;
+    }
+
+    console.log(`🔄 Nuevo revisor detectado: ${userId}`);
+
+    try {
+      // ========== 1. INICIALIZAR PERFIL DE REVISOR ==========
+      const db = admin.firestore();
+      
+      // Verificar si ya existe perfil de revisor
+      const reviewerRef = db.collection('reviewers').doc(userId);
+      const reviewerDoc = await reviewerRef.get();
+
+      if (reviewerDoc.exists) {
+        console.log(`ℹ️ El usuario ${userId} ya tiene perfil de revisor. Verificando estado...`);
+        
+        const reviewerData = reviewerDoc.data();
+        
+        // Si el perfil está inactivo, reactivarlo
+        if (reviewerData.status === 'inactive') {
+          await reviewerRef.update({
+            status: 'active',
+            reactivatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+          console.log(`✅ Perfil de revisor reactivado para ${userId}`);
+        }
+        
+        // Iniciar proceso de bienvenida
+        await initializeReviewerWelcome(userId, reviewerData);
+        return { success: true, message: 'Perfil de revisor ya existente, proceso de bienvenida iniciado' };
+      }
+
+      // ========== 2. OBTENER DATOS DEL USUARIO ==========
+      const userDoc = await db.collection('users').doc(userId).get();
+      if (!userDoc.exists) {
+        console.error(`❌ Usuario ${userId} no encontrado en Firestore`);
+        return null;
+      }
+
+      const userData = userDoc.data();
+
+      // ========== 3. BUSCAR SOLICITUDES PENDIENTES ==========
+      // Buscar submissions donde el usuario solicitó ser revisor
+      const pendingSubmissionsSnapshot = await db.collection('submissions')
+        .where('authorUID', '==', userId)
+        .where('wantsToBeReviewer', '==', true)
+        .where('reviewerStatus', '==', 'pending')
+        .limit(1)
+        .get();
+
+      let applicationSource = null;
+      let areasOfExpertise = [];
+      let paperLanguage = 'es';
+
+      if (!pendingSubmissionsSnapshot.empty) {
+        const submissionDoc = pendingSubmissionsSnapshot.docs[0];
+        const submissionData = submissionDoc.data();
+        
+        applicationSource = {
+          type: 'submission',
+          submissionId: submissionDoc.id,
+          articleTitle: submissionData.title || '',
+          articleArea: submissionData.area || '',
+        };
+        areasOfExpertise = submissionData.reviewerAreas || [];
+        paperLanguage = submissionData.paperLanguage || 'es';
+
+        console.log(`📝 Solicitud encontrada en submission: ${submissionDoc.id}`);
+      } else {
+        // Si no hay solicitud activa, buscar en otras fuentes
+        console.log(`ℹ️ No se encontraron solicitudes pendientes para ${userId}`);
+        
+        // Buscar si tiene áreas de expertise en su perfil
+        areasOfExpertise = userData.areasOfExpertise || [];
+      }
+
+      // ========== 4. CALCULAR ESTADÍSTICAS INICIALES ==========
+      const reviewerStats = await calculateReviewerStats(userId, db);
+
+      // ========== 5. CREAR PERFIL DE REVISOR ==========
+      const reviewerData = {
+        uid: userId,
+        firstName: userData.firstName || '',
+        lastName: userData.lastName || '',
+        displayName: userData.displayName || `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
+        email: userData.email || '',
+        publicEmail: userData.publicEmail || '',
+        institution: userData.institution || '',
+        orcid: userData.orcid || '',
+        areasOfExpertise: areasOfExpertise,
+        interests: userData.interests || { es: [], en: [] },
+        status: 'active',
+        availability: {
+          maxActiveReviews: 3,
+          currentActiveReviews: 0,
+          preferredLanguage: paperLanguage || 'es',
+          timeAvailablePerReview: '2-weeks',
+        },
+        stats: reviewerStats,
+        approvedBy: {
+          uid: 'system',
+          email: 'system@revista.com',
+          name: 'Sistema',
+          role: 'Sistema',
+        },
+        approvedAt: admin.firestore.FieldValue.serverTimestamp(),
+        applicationSource: applicationSource || {
+          type: 'direct',
+          source: 'role_assignment',
+        },
+        notifications: {
+          newReviewRequest: true,
+          reminderBeforeDeadline: true,
+          reminderDays: [7, 3, 1],
+        },
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
+
+      await reviewerRef.set(reviewerData);
+      console.log(`✅ Perfil de revisor creado para ${userId}`);
+
+      // ========== 6. ACTUALIZAR REFERENCIA EN USUARIO ==========
+      await db.collection('users').doc(userId).update({
+        reviewerProfileId: userId,
+        reviewerCreatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // ========== 7. INICIAR PROCESO DE BIENVENIDA ==========
+      await initializeReviewerWelcome(userId, reviewerData);
+
+      // ========== 8. REGISTRAR EN AUDITORÍA ==========
+      await db.collection('auditLogs').add({
+        action: 'reviewer_profile_created_auto',
+        targetType: 'reviewer',
+        targetId: userId,
+        performedBy: {
+          uid: 'system',
+          email: 'system@revista.com',
+          name: 'Sistema',
+        },
+        details: {
+          source: reviewerData.applicationSource,
+          areasOfExpertise: areasOfExpertise,
+        },
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // ========== 9. ACTUALIZAR CUSTOM CLAIMS ==========
+      try {
+        const authUser = await admin.auth().getUser(userId);
+        const currentClaims = authUser.customClaims || {};
+        
+        if (!currentClaims.roles || !currentClaims.roles.includes('Revisor')) {
+          await admin.auth().setCustomUserClaims(userId, {
+            ...currentClaims,
+            roles: [...(currentClaims.roles || []), 'Revisor'],
+          });
+          console.log(`✅ Custom claims actualizados para ${userId}`);
+        }
+      } catch (authError) {
+        console.error(`⚠️ Error actualizando custom claims: ${authError.message}`);
+      }
+
+      console.log(`🎉 Proceso completado para nuevo revisor: ${userId}`);
+      
+      return {
+        success: true,
+        message: 'Perfil de revisor creado y proceso de bienvenida iniciado',
+        data: {
+          userId: userId,
+          areasOfExpertise: areasOfExpertise,
+          stats: reviewerStats,
+        },
+      };
+
+    } catch (error) {
+      console.error(`❌ Error en onReviewerRoleAssigned:`, error);
+      return null;
+    }
+  }
+);
+
+// ========== FUNCIÓN AUXILIAR: Inicializar bienvenida ==========
+async function initializeReviewerWelcome(userId, reviewerData) {
+  const db = admin.firestore();
+  const tasks = [];
+
+  try {
+    // 1. Crear notificación de bienvenida
+    const notificationRef = db.collection('notifications').doc();
+    tasks.push(
+      notificationRef.set({
+        uid: userId,
+        type: 'reviewer_welcome',
+        title: {
+          es: '¡Bienvenido al equipo de revisores!',
+          en: 'Welcome to the reviewer team!',
+        },
+        message: {
+          es: 'Has sido agregado como revisor de la revista. Por favor, revisa tu perfil y configura tus preferencias de revisión.',
+          en: 'You have been added as a reviewer for the journal. Please review your profile and configure your review preferences.',
+        },
+        data: {
+          reviewerId: userId,
+          status: 'active',
+        },
+        read: false,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        priority: 'high',
+      })
+    );
+
+    // 2. Enviar email de bienvenida (si tienes un sistema de emails)
+    tasks.push(
+      db.collection('emailQueue').add({
+        to: reviewerData.email,
+        template: 'reviewer_welcome',
+        data: {
+          firstName: reviewerData.firstName || 'Estimado revisor',
+          reviewerId: userId,
+          dashboardUrl: `https://revista.com/revisor/${userId}`,
+        },
+        priority: 'high',
+        status: 'pending',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      })
+    );
+
+    // 3. Agregar a estadísticas globales
+    const statsRef = db.collection('systemStats').doc('reviewers');
+    tasks.push(
+      statsRef.set({
+        totalReviewers: admin.firestore.FieldValue.increment(1),
+        activeReviewers: admin.firestore.FieldValue.increment(1),
+        lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true })
+    );
+
+    // Ejecutar todas las tareas en paralelo
+    await Promise.all(tasks);
+    console.log(`📧 Proceso de bienvenida iniciado para ${userId}`);
+
+    return true;
+
+  } catch (error) {
+    console.error(`❌ Error en initializeReviewerWelcome:`, error);
+    // No lanzamos error para no interrumpir el flujo principal
+    return false;
+  }
+}

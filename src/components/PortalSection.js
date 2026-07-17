@@ -9,6 +9,7 @@ import TaskSection from './TaskSection';
 import AssignSection from './AssignSection';
 import DirectorPanel from './DirectorPanel';
 import Admissions from './Admissions';
+import ReviewerApplicationsPanel from './ReviewerApplicationsPanel';
 import DeskReviewPanel from './DeskReviewPanel';
 import ReviewerInvitationsPanel from './ReviewerInvitationsPanel';
 import AuthorSubmissionsPanel from './AuthorSubmissionsPanel';
