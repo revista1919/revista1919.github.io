@@ -106,8 +106,7 @@ export const ReviewerManagementTab = ({
   });
 
 // Extraer datos para el renderizado
-const recommendations = recommendationResult?.recommendations || [];
-const fallbackActivated = recommendationResult?.fallbackActivated || false;
+
   const getStatusBadge = (status) => {
     const statusMap = {
       'pending': { bg: 'bg-amber-50', text: 'text-amber-800', border: 'border-amber-200', label: isSpanish ? 'Pendiente' : 'Pending' },
