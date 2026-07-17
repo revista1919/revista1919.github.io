@@ -1619,7 +1619,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
             {/* Notas Breves */}
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
-                2. {isSpanish ? 'Resumen Ejecutivo de Cambios' : 'Executive Summary of Changes'}
+                2. {isSpanish ? 'Comentarios al Editor' : 'Comments to the Editor'}
               </label>
               <textarea
                 value={revisionNotes}
