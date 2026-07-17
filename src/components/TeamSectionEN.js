@@ -166,7 +166,7 @@ function TeamSectionEN() {
           </motion.h1>
           <div className="w-16 h-1 bg-[#FF7900] mx-auto mb-6"></div>
           <p className="text-[#64748B] max-w-2xl mx-auto leading-relaxed text-sm md:text-base">
-            Fostering scientific excellence through editorial rigor, peer review, and the collaborative work of our distinguished international team.
+            Fostering scientific excellence through editorial rigor, peer review, and the collaborative work of our distinguished team.
           </p>
         </div>
       </header>
@@ -274,7 +274,7 @@ function TeamSectionEN() {
           <section className="mt-24">
             <div className="flex items-center justify-between border-b border-gray-200 pb-4 mb-8">
               <h2 className="text-2xl font-serif text-[#003B5C] inline-flex items-center">
-                International Scientific Committee
+                Scientific Committee
                 <RoleDefinitionButton role="Comité Científico" sectionName="Comité Científico" />
               </h2>
             </div>
