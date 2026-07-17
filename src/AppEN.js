@@ -796,7 +796,7 @@ function AppEN() {
       )}
     </motion.div>
   } />
-  <Route path="/en/login/reviewer-profile" element={
+  <Route path="/login/reviewer-profile" element={
   <motion.div
     initial={{ opacity: 0, y: 10 }}
     animate={{ opacity: 1, y: 0 }}
@@ -807,13 +807,13 @@ function AppEN() {
     {user ? (
       <PortalSection user={user} onLogout={handleLogout} />
     ) : (
-      <Navigate to="/en/login" replace />
+      <Navigate to="/login" replace />
     )}
   </motion.div>
 } />
 
 {/* Ruta para postulaciones a revisor (nueva pestaña para editores) */}
-<Route path="/en/login/reviewer-applications" element={
+<Route path="/login/reviewer-applications" element={
   <motion.div
     initial={{ opacity: 0, y: 10 }}
     animate={{ opacity: 1, y: 0 }}
@@ -824,7 +824,7 @@ function AppEN() {
     {user ? (
       <PortalSection user={user} onLogout={handleLogout} />
     ) : (
-      <Navigate to="/en/login" replace />
+      <Navigate to="/login" replace />
     )}
   </motion.div>
 } />
