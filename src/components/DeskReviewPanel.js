@@ -196,15 +196,54 @@ const DeskReviewPanel = ({ user }) => {
     loadAllAssignments();
   }, [selectedTask]);
 
-  useEffect(() => {
+useEffect(() => {
     const loadReviewers = async () => {
-      const q = query(collection(db, 'users'), where('roles', 'array-contains-any', ['Revisor', 'Editor de Sección']));
-      const snapshot = await getDocs(q);
-      setPotentialReviewers(snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        displayName: doc.data().displayName || `${doc.data().firstName || ''} ${doc.data().lastName || ''}`.trim() || doc.data().email
-      })));
+      // Cargar de la coleccion 'reviewers' que tiene areasOfExpertise y stats
+      const reviewersSnapshot = await getDocs(collection(db, 'reviewers'));
+      const reviewersData = {};
+      
+      reviewersSnapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.uid) {
+          reviewersData[data.uid] = {
+            id: data.uid,
+            ...data,
+            displayName: data.displayName || `${data.firstName || ''} ${data.lastName || ''}`.trim() || data.email || ''
+          };
+        }
+      });
+      
+      // Cargar de 'users' como fallback para los que no estan en 'reviewers'
+      const usersSnapshot = await getDocs(
+        query(collection(db, 'users'), where('roles', 'array-contains-any', ['Revisor', 'Editor de Sección']))
+      );
+      
+      const allReviewers = [];
+      
+      usersSnapshot.forEach(doc => {
+        const userData = doc.data();
+        const uid = doc.id;
+        
+        if (reviewersData[uid]) {
+          // Ya existe en reviewers, usar esos datos (mas completos)
+          allReviewers.push(reviewersData[uid]);
+        } else {
+          // No tiene perfil en reviewers, usar datos de users
+          allReviewers.push({
+            id: uid,
+            ...userData,
+            displayName: userData.displayName || `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || userData.email,
+            areasOfExpertise: userData.areasOfExpertise || [],
+            stats: userData.stats || {}
+          });
+        }
+      });
+      
+      console.log('Reviewers cargados:', allReviewers.length);
+      console.log('Con areasOfExpertise:', allReviewers.filter(r => r.areasOfExpertise?.length > 0).length);
+      console.log('Con stats:', allReviewers.filter(r => r.stats?.totalReviewsCompleted > 0).length);
+      
+      setPotentialReviewers(allReviewers);
     };
     loadReviewers();
   }, []);

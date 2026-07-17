@@ -58,19 +58,54 @@ export const ReviewerManagementTab = ({
   const canProceed = submittedCount >= requiredReviews;
   
   // Calcular recomendaciones
+  // Calcular recomendaciones
   const recommendationResult = React.useMemo(() => {
-    const area = articleArea || task?.area || task?.submission?.area;
+    // Intentar obtener el area de multiples fuentes
+    const area = articleArea || 
+                 task?.area || 
+                 task?.submission?.area || 
+                 (task?.submission && typeof task.submission.area === 'string' ? task.submission.area : '') ||
+                 '';
     
-    if (!area || !potentialReviewers?.length) return null;
+    // ===== DEBUG =====
+    console.log('=== REVIEWER MANAGEMENT TAB - CALCULANDO RECOMENDACIONES ===');
+    console.log('articleArea prop:', articleArea);
+    console.log('task?.area:', task?.area);
+    console.log('task?.submission?.area:', task?.submission?.area);
+    console.log('area detectada:', area);
+    console.log('potentialReviewers count:', potentialReviewers?.length);
+    console.log('potentialReviewers[0]?.areasOfExpertise:', potentialReviewers?.[0]?.areasOfExpertise);
+    console.log('invitations count:', invitations?.length);
     
-    return getRecommendedReviewers({
+    if (!area || !potentialReviewers?.length) {
+      console.warn('No hay area o revisores para generar recomendaciones');
+      return null;
+    }
+    
+    const result = getRecommendedReviewers({
       articleArea: area,
       potentialReviewers: potentialReviewers,
       existingInvitations: invitations || [],
       maxRecommendations: 5,
       language: language
     });
-  }, [articleArea, task?.area, potentialReviewers, invitations, language]);
+    
+    console.log('Resultado:', {
+      totalEligible: result.totalEligible,
+      matchDistribution: result.matchDistribution,
+      recommendationsCount: result.recommendations?.length,
+      firstRecommendation: result.recommendations?.[0] ? {
+        name: result.recommendations[0].displayName,
+        compositeScore: result.recommendations[0].compositeScore,
+        scores: result.recommendations[0].scores,
+        matchLevel: result.recommendations[0].matchLevel
+      } : null
+    });
+    console.log('==============================================================');
+    // ===== FIN DEBUG =====
+    
+    return result;
+  }, [articleArea, task?.area, task?.submission?.area, potentialReviewers, invitations, language]);
     
   // Extraer datos para el renderizado
   const recommendations = recommendationResult?.recommendations || [];

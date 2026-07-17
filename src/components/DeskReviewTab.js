@@ -115,6 +115,20 @@ export const DeskReviewTab = ({
   // Estado para controlar la pestaña activa
   const [activeTab, setActiveTab] = useState('review');
   
+  // ===== DEBUG: Verificar props recibidas =====
+  useEffect(() => {
+    console.log('=== DESK REVIEW TAB - PROPS RECIBIDAS ===');
+    console.log('task:', task);
+    console.log('task?.submission:', task?.submission);
+    console.log('task?.submission?.area:', task?.submission?.area);
+    console.log('task?.area:', task?.area);
+    console.log('articleArea (submission.area):', task?.submission?.area);
+    console.log('potentialReviewers count:', potentialReviewers?.length);
+    console.log('invitations count:', invitations?.length);
+    console.log('==========================================');
+  }, [task, potentialReviewers, invitations]);
+  // ===== FIN DEBUG =====
+  
   const { loading: hookLoading, error, submitDeskReviewDecision } = useEditorialReview(user);
   const submission = task.submission || {};
   const isLoading = externalLoading || hookLoading || loadingReview;
@@ -1038,7 +1052,13 @@ useEffect(() => {
           {activeTab === 'reviewers' && (
   <ReviewerManagementTab
     task={task}
-    articleArea={Array.isArray(submission.area) ? submission.area[0] : submission.area}
+    articleArea={
+  task?.submission?.area || 
+  task?.area || 
+  submission?.area || 
+  (Array.isArray(submission?.area) ? submission.area[0] : null) ||
+  ''
+}
     invitations={invitations}
     potentialReviewers={potentialReviewers}
     selectedReviewerId={selectedReviewerId}
