@@ -1455,7 +1455,40 @@ const handleTabChange = (tabId, event) => {
           )}
 
           {/* DESK REVIEW */}
-          {activeTab === 'deskreview' && <motion.section key="deskreview"><DeskReviewPanel user={userData} /></motion.section>}
+          {/* DESK REVIEW - PANTALLA COMPLETA */}
+{activeTab === 'deskreview' && (
+  <motion.div
+    key="deskreview"
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    className="fixed inset-0 z-50 bg-[#f4f5f7] overflow-y-auto"
+  >
+    {/* Barra superior para volver al portal */}
+    <div className="sticky top-0 z-50 bg-white border-b-2 border-gray-300 shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+        <button
+          onClick={(e) => handleTabChange('profile', e)}
+          className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#004b87] hover:text-[#e86125] transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          {isSpanish ? 'Volver al Portal' : 'Back to Portal'}
+        </button>
+        <h2 className="font-serif text-lg font-bold text-[#004b87]">
+          {isSpanish ? 'Panel de Desk Review' : 'Desk Review Panel'}
+        </h2>
+        <div className="w-24"></div> {/* Espaciador para centrar el título */}
+      </div>
+    </div>
+    
+    {/* Contenido del panel */}
+    <div className="w-full">
+      <DeskReviewPanel user={userData} />
+    </div>
+  </motion.div>
+)}
           
           {/* ASIGNAR ARTÍCULOS */}
           {activeTab === 'assignment' && <motion.section key="assignment"><ArticleAssignmentPanel user={userData} /></motion.section>}
@@ -1520,19 +1553,47 @@ const handleTabChange = (tabId, event) => {
 
           {/* PANEL DIRECTIVO */}
           {activeTab === 'director' && (
-            <motion.section key="director">
-              <DirectorPanel 
-                user={userData} 
-                isExpanded={isDirectorPanelExpanded} 
-                onToggle={() => setIsDirectorPanelExpanded(!isDirectorPanelExpanded)} 
-              />
-              {(isAssignmentManager || isDirector) && (
-                <div className="mt-8">
-                  <ArticleAssignmentPanel user={userData} />
-                </div>
-              )}
-            </motion.section>
-          )}
+  <motion.div
+    key="director"
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    className="fixed inset-0 z-50 bg-[#f4f5f7] overflow-y-auto"
+  >
+    {/* Barra superior para volver al portal */}
+    <div className="sticky top-0 z-50 bg-white border-b-2 border-gray-300 shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+        <button
+          onClick={(e) => handleTabChange('profile', e)}
+          className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#004b87] hover:text-[#e86125] transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          {isSpanish ? 'Volver al Portal' : 'Back to Portal'}
+        </button>
+        <h2 className="font-serif text-lg font-bold text-[#004b87]">
+          {isSpanish ? 'Panel Directivo' : 'Director Panel'}
+        </h2>
+        <div className="w-24"></div> {/* Espaciador para centrar el título */}
+      </div>
+    </div>
+    
+    {/* Contenido del panel */}
+    <div className="w-full">
+      <DirectorPanel 
+        user={userData} 
+        isExpanded={isDirectorPanelExpanded} 
+        onToggle={() => setIsDirectorPanelExpanded(!isDirectorPanelExpanded)} 
+      />
+      {(isAssignmentManager || isDirector) && (
+        <div className="mt-8">
+          <ArticleAssignmentPanel user={userData} />
+        </div>
+      )}
+    </div>
+  </motion.div>
+)}
 
           {/* PANEL EDITOR JEFE */}
           {activeTab === 'chief' && (
