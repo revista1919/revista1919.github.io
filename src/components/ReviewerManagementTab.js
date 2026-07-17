@@ -435,6 +435,37 @@ export const ReviewerManagementTab = ({
           : 'Based on thematic matching, historical performance and current availability'}
       </p>
     </div>
+    <p className="text-xs text-slate-300 mt-1 font-sans">
+  {isSpanish 
+    ? 'Basado en coincidencia tematica, rendimiento historico y disponibilidad actual'
+    : 'Based on thematic matching, historical performance and current availability'}
+</p>
+
+{/* Distribucion de matches */}
+{recommendationResult?.matchDistribution && (
+  <div className="flex gap-2 mt-2">
+    {recommendationResult.matchDistribution.exact > 0 && (
+      <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-sm">
+        {recommendationResult.matchDistribution.exact} exacto
+      </span>
+    )}
+    {recommendationResult.matchDistribution.category > 0 && (
+      <span className="text-[9px] bg-sky-500/20 text-sky-300 px-2 py-0.5 rounded-sm">
+        {recommendationResult.matchDistribution.category} categoria
+      </span>
+    )}
+    {recommendationResult.matchDistribution.related > 0 && (
+      <span className="text-[9px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-sm">
+        {recommendationResult.matchDistribution.related} afin
+      </span>
+    )}
+    {recommendationResult.matchDistribution.fallback > 0 && (
+      <span className="text-[9px] bg-slate-500/20 text-slate-300 px-2 py-0.5 rounded-sm">
+        {recommendationResult.matchDistribution.fallback} general
+      </span>
+    )}
+  </div>
+)}
     
     <div className="divide-y divide-slate-100">
       {recommendations.map((reviewer) => (
@@ -483,8 +514,8 @@ export const ReviewerManagementTab = ({
                 <div className="flex justify-between text-[10px] text-slate-400 mb-1">
                   <span>{isSpanish ? 'Puntuación' : 'Score'}</span>
                   <span className="font-bold text-[#003b5c]">
-                    {(reviewer.compositeScore * 100).toFixed(0)}%
-                  </span>
+  {Math.round(reviewer.compositeScore * 100)}%
+</span>
                 </div>
                 <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
                   <motion.div
@@ -501,13 +532,18 @@ export const ReviewerManagementTab = ({
               </div>
               
               {/* Score Breakdown Tooltip */}
-              <div className="flex flex-wrap gap-2 mb-2">
-                {Object.entries(reviewer.scoreBreakdown).map(([key, value]) => (
-                  <span key={key} className="text-[9px] bg-slate-50 px-2 py-0.5 text-slate-500 uppercase tracking-wider">
-                    {key}: {(value * 100).toFixed(0)}%
-                  </span>
-                ))}
-              </div>
+<div className="flex flex-wrap gap-2 mb-2">
+  {reviewer.scores && Object.entries(reviewer.scores).map(([key, value]) => (
+    <span key={key} className="text-[9px] bg-slate-50 px-2 py-0.5 text-slate-500 uppercase tracking-wider">
+      {key}: {Math.round(value * 100)}%
+    </span>
+  ))}
+  {reviewer.isParetoOptimal && (
+    <span className="text-[9px] bg-amber-50 text-amber-700 px-2 py-0.5 border border-amber-200 uppercase tracking-wider">
+      Pareto
+    </span>
+  )}
+</div>
               
               {/* Recommendation Reasons */}
               <div className="flex flex-wrap gap-1.5">
@@ -517,7 +553,15 @@ export const ReviewerManagementTab = ({
                   </span>
                 ))}
               </div>
-              
+              {/* Indicador de exploracion (nuevo revisor) */}
+{(reviewer.stats?.totalReviewsCompleted || 0) < 3 && (
+  <div className="mb-1">
+    <span className="text-[9px] bg-purple-50 text-purple-700 px-2 py-0.5 border border-purple-200 uppercase tracking-wider">
+      {isSpanish ? 'Exploracion' : 'Exploration'}
+    </span>
+  </div>
+)}
+
               {/* Stats Mini */}
               <div className="flex gap-4 mt-3 text-[10px] text-slate-400">
                 <span>

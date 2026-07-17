@@ -1,0 +1,237 @@
+{
+  "executedAt": "2026-07-17T19:49:09.577Z",
+  "dryRun": false,
+  "stats": {
+    "invitations": {
+      "checked": 18,
+      "fixed": 16,
+      "skipped": 2,
+      "errors": []
+    },
+    "assignments": {
+      "checked": 13,
+      "fixed": 6,
+      "skipped": 7,
+      "errors": []
+    },
+    "deadlines": {
+      "checked": 199,
+      "fixed": 192,
+      "skipped": 7,
+      "errors": []
+    }
+  },
+  "corrections": [
+    {
+      "docId": "2Z3SzVfjCBBCiDNSAoZ4",
+      "reviewerEmail": "marinasotoojeda15@gmail.com",
+      "previousStatus": "expired",
+      "correctStatus": "accepted",
+      "hadRespondedAt": true,
+      "hadFailedAt": false,
+      "timestamp": "2026-07-17T19:48:53.798Z"
+    },
+    {
+      "docId": "9uhgpK0o4yjifRUSg7J7",
+      "reviewerEmail": "lgvm3011@gmail.com",
+      "previousStatus": "expired",
+      "correctStatus": "failed",
+      "hadRespondedAt": true,
+      "hadFailedAt": true,
+      "timestamp": "2026-07-17T19:48:53.802Z"
+    },
+    {
+      "docId": "AQWd0X1V48MNjiFpZ95B",
+      "reviewerEmail": "aster.maturana@gmail.com",
+      "previousStatus": "expired",
+      "correctStatus": "failed",
+      "hadRespondedAt": true,
+      "hadFailedAt": true,
+      "timestamp": "2026-07-17T19:48:53.804Z"
+    },
+    {
+      "docId": "Dmh1tMQPKSTGL6xjWyZo",
+      "reviewerEmail": "javieritoalonso.vergara@gmail.com",
+      "previousStatus": "expired",
+      "correctStatus": "failed",
+      "hadRespondedAt": true,
+      "hadFailedAt": true,
+      "timestamp": "2026-07-17T19:48:53.807Z"
+    },
+    {
+      "docId": "FJJq7vce2FaQ8xbEHnK1",
+      "reviewerEmail": "bencatalanv@gmail.com",
+      "previousStatus": "expired",
+      "correctStatus": "failed",
+      "hadRespondedAt": true,
+      "hadFailedAt": true,
+      "timestamp": "2026-07-17T19:48:53.808Z"
+    },
+    {
+      "docId": "KA9E1v36rTVFDFhJ46RI",
+      "reviewerEmail": "thebreb2@gmail.com",
+      "previousStatus": "expired",
+      "correctStatus": "accepted",
+      "hadRespondedAt": true,
+      "hadFailedAt": false,
+      "timestamp": "2026-07-17T19:48:53.809Z"
+    },
+    {
+      "docId": "P0C8cQ0JjwiMqvIv1Sa2",
+      "reviewerEmail": "thebreb2@gmail.com",
+      "previousStatus": "expired",
+      "correctStatus": "failed",
+      "hadRespondedAt": false,
+      "hadFailedAt": true,
+      "timestamp": "2026-07-17T19:48:53.811Z"
+    },
+    {
+      "docId": "XCiKqrKbTXXj5qRtjd11",
+      "reviewerEmail": "fcfran007@gmail.com",
+      "previousStatus": "expired",
+      "correctStatus": "accepted",
+      "hadRespondedAt": true,
+      "hadFailedAt": false,
+      "timestamp": "2026-07-17T19:48:53.815Z"
+    },
+    {
+      "docId": "anMPpSqZmVcVagc4yZLt",
+      "reviewerEmail": "fcfran007@gmail.com",
+      "previousStatus": "expired",
+      "correctStatus": "accepted",
+      "hadRespondedAt": true,
+      "hadFailedAt": false,
+      "timestamp": "2026-07-17T19:48:53.816Z"
+    },
+    {
+      "docId": "ccmAKusZiAnzu7lyMMqT",
+      "reviewerEmail": "fcfran007@gmail.com",
+      "previousStatus": "expired",
+      "correctStatus": "failed",
+      "hadRespondedAt": true,
+      "hadFailedAt": true,
+      "timestamp": "2026-07-17T19:48:53.819Z"
+    },
+    {
+      "docId": "d67tb7oAEqvCb6TfJtjM",
+      "reviewerEmail": "emanuelcereceda3@gmail.com",
+      "previousStatus": "expired",
+      "correctStatus": "failed",
+      "hadRespondedAt": true,
+      "hadFailedAt": true,
+      "timestamp": "2026-07-17T19:48:53.821Z"
+    },
+    {
+      "docId": "j9nnluhAUAqavEAup45x",
+      "reviewerEmail": "lgvm3011@gmail.com",
+      "previousStatus": "expired",
+      "correctStatus": "accepted",
+      "hadRespondedAt": true,
+      "hadFailedAt": false,
+      "timestamp": "2026-07-17T19:48:53.823Z"
+    },
+    {
+      "docId": "mQv3doHdYCwejYquR53b",
+      "reviewerEmail": "tomasarancibiam@gmail.com",
+      "previousStatus": "expired",
+      "correctStatus": "accepted",
+      "hadRespondedAt": true,
+      "hadFailedAt": false,
+      "timestamp": "2026-07-17T19:48:53.825Z"
+    },
+    {
+      "docId": "mnvDRKpE5sp3uZI3Tli8",
+      "reviewerEmail": "amigojoel45@gmail.com",
+      "previousStatus": "expired",
+      "correctStatus": "accepted",
+      "hadRespondedAt": true,
+      "hadFailedAt": false,
+      "timestamp": "2026-07-17T19:48:53.826Z"
+    },
+    {
+      "docId": "pa6bIp9Gj9E1no0lJNoq",
+      "reviewerEmail": "bencatalanv@gmail.com",
+      "previousStatus": "expired",
+      "correctStatus": "failed",
+      "hadRespondedAt": true,
+      "hadFailedAt": true,
+      "timestamp": "2026-07-17T19:48:53.827Z"
+    },
+    {
+      "docId": "q8g3annU5zZ2axntEX6A",
+      "reviewerEmail": "juanfranciscovc@gmail.com",
+      "previousStatus": "expired",
+      "correctStatus": "failed",
+      "hadRespondedAt": false,
+      "hadFailedAt": true,
+      "timestamp": "2026-07-17T19:48:53.828Z"
+    },
+    {
+      "docId": "I4eVBOHijXYjrXzl2D42",
+      "reviewerEmail": "revistanacionalcienciae@gmail.com",
+      "reviewerName": "Revista Estudiantes",
+      "previousStatus": "overdue",
+      "correctStatus": "submitted",
+      "hadSubmittedAt": true,
+      "hadComments": true,
+      "hadScores": true,
+      "timestamp": "2026-07-17T19:48:54.008Z"
+    },
+    {
+      "docId": "OjFQB8JDnk3twp56eAXp",
+      "reviewerEmail": "fcfran007@gmail.com",
+      "reviewerName": "Francisco Correa",
+      "previousStatus": "overdue",
+      "correctStatus": "submitted",
+      "hadSubmittedAt": true,
+      "hadComments": true,
+      "hadScores": true,
+      "timestamp": "2026-07-17T19:48:54.009Z"
+    },
+    {
+      "docId": "Usf6QAnxlE8c4kmHxwmZ",
+      "reviewerEmail": "marinasotoojeda15@gmail.com",
+      "reviewerName": "Marina Soto",
+      "previousStatus": "overdue",
+      "correctStatus": "submitted",
+      "hadSubmittedAt": true,
+      "hadComments": true,
+      "hadScores": true,
+      "timestamp": "2026-07-17T19:48:54.013Z"
+    },
+    {
+      "docId": "ZUEmGx6YqeC1i3WjO1Rb",
+      "reviewerEmail": "bencatalanv@gmail.com",
+      "reviewerName": "Benjamín Catalán",
+      "previousStatus": "overdue",
+      "correctStatus": "submitted",
+      "hadSubmittedAt": true,
+      "hadComments": true,
+      "hadScores": true,
+      "timestamp": "2026-07-17T19:48:54.014Z"
+    },
+    {
+      "docId": "tAsblq6cWEaR4pEhEPuT",
+      "reviewerEmail": "javieritoalonso.vergara@gmail.com",
+      "reviewerName": "Javier Vergara",
+      "previousStatus": "overdue",
+      "correctStatus": "submitted",
+      "hadSubmittedAt": true,
+      "hadComments": true,
+      "hadScores": true,
+      "timestamp": "2026-07-17T19:48:54.017Z"
+    },
+    {
+      "docId": "wuHQDOrxYenLkzRPtt3Y",
+      "reviewerEmail": "javieritoalonso.vergara@gmail.com",
+      "reviewerName": "Revista Nacional",
+      "previousStatus": "overdue",
+      "correctStatus": "submitted",
+      "hadSubmittedAt": true,
+      "hadComments": true,
+      "hadScores": true,
+      "timestamp": "2026-07-17T19:48:54.019Z"
+    }
+  ],
+  "totalCorrections": 22
+}

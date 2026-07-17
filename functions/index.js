@@ -6699,6 +6699,22 @@ exports.onReviewerInvitationAcceptedDeadline = onDocumentUpdated(
     try {
       const db = admin.firestore();
       
+      // ✅ CANCELAR el deadline de respuesta pendiente (ya respondió)
+      const responseDeadlines = await db.collection('deadlines')
+        .where('type', '==', 'reviewer-response')
+        .where('targetId', '==', invitationId)
+        .where('status', 'in', ['pending', 'reminded'])
+        .get();
+      
+      if (!responseDeadlines.empty) {
+        await responseDeadlines.docs[0].ref.update({
+          status: 'completed',
+          completedAt: admin.firestore.FieldValue.serverTimestamp(),
+          completedNote: 'Invitación aceptada'
+        });
+        console.log(`✅ Deadline de respuesta completado para ${invitationId}`);
+      }
+      
       // Buscar si ya existe una asignación para esta invitación
       const assignmentsQuery = await db.collection('reviewerAssignments')
         .where('invitationId', '==', invitationId)
@@ -6740,7 +6756,58 @@ exports.onReviewerInvitationAcceptedDeadline = onDocumentUpdated(
 );
 
 /**
- * 3. TRIGGER: Cuando se crea una reviewerAssignment, actualizar el deadline pendiente
+ * 3. TRIGGER: Cuando se RECHAZA una reviewerInvitation, cancelar el deadline
+ */
+exports.onReviewerInvitationRejectedDeadline = onDocumentUpdated(
+  {
+    document: 'reviewerInvitations/{invitationId}',
+    secrets: [],
+    memory: '256MiB'
+  },
+  async (event) => {
+    const beforeData = event.data.before.data();
+    const afterData = event.data.after.data();
+    const invitationId = event.params.invitationId;
+
+    // Cuando pasa a 'declined' o 'failed'
+    if (beforeData.status === 'pending' && 
+        (afterData.status === 'declined' || afterData.status === 'failed')) {
+      
+      console.log(`⏰ [onReviewerInvitationRejectedDeadline] Cancelando deadlines para ${invitationId}`);
+      
+      try {
+        const db = admin.firestore();
+        
+        // Cancelar cualquier deadline pendiente para esta invitación
+        const pendingDeadlines = await db.collection('deadlines')
+          .where('invitationId', '==', invitationId)
+          .where('status', 'in', ['pending', 'reminded'])
+          .get();
+        
+        const batch = db.batch();
+        
+        pendingDeadlines.forEach(doc => {
+          batch.update(doc.ref, {
+            status: 'cancelled',
+            cancelledAt: admin.firestore.FieldValue.serverTimestamp(),
+            cancelledNote: `Invitación ${afterData.status}`
+          });
+        });
+        
+        if (!pendingDeadlines.empty) {
+          await batch.commit();
+          console.log(`✅ ${pendingDeadlines.size} deadlines cancelados para ${invitationId}`);
+        }
+        
+      } catch (error) {
+        console.error(`❌ Error cancelando deadlines:`, error.message);
+      }
+    }
+  }
+);
+
+/**
+ * 4. TRIGGER: Cuando se crea una reviewerAssignment, actualizar el deadline pendiente
  */
 exports.onReviewerAssignmentCreatedDeadline = onDocumentCreated(
   {
@@ -6767,7 +6834,8 @@ exports.onReviewerAssignmentCreatedDeadline = onDocumentCreated(
       
       if (!deadlinesQuery.empty) {
         await deadlinesQuery.docs[0].ref.update({
-          targetId: assignmentId
+          targetId: assignmentId,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
         console.log(`✅ Deadline de envío actualizado con assignmentId ${assignmentId}`);
       }
@@ -6780,7 +6848,52 @@ exports.onReviewerAssignmentCreatedDeadline = onDocumentCreated(
 );
 
 /**
- * 4. FUNCIÓN PROGRAMADA: Verificar deadlines cada hora y enviar recordatorios
+ * 5. TRIGGER: Cuando se SUBE una revisión, completar el deadline
+ */
+exports.onReviewSubmittedCompleteDeadline = onDocumentUpdated(
+  {
+    document: 'reviewerAssignments/{assignmentId}',
+    secrets: [],
+    memory: '256MiB'
+  },
+  async (event) => {
+    const beforeData = event.data.before.data();
+    const afterData = event.data.after.data();
+    const assignmentId = event.params.assignmentId;
+
+    // Cuando la revisión es enviada (pasa a 'submitted')
+    if (beforeData.status !== 'submitted' && afterData.status === 'submitted') {
+      
+      console.log(`⏰ [onReviewSubmittedCompleteDeadline] Completando deadline para ${assignmentId}`);
+      
+      try {
+        const db = admin.firestore();
+        
+        // Completar el deadline de revisión
+        const pendingDeadlines = await db.collection('deadlines')
+          .where('targetId', '==', assignmentId)
+          .where('type', '==', 'review-submission')
+          .where('status', 'in', ['pending', 'reminded'])
+          .get();
+        
+        if (!pendingDeadlines.empty) {
+          await pendingDeadlines.docs[0].ref.update({
+            status: 'completed',
+            completedAt: admin.firestore.FieldValue.serverTimestamp(),
+            completedNote: 'Revisión enviada'
+          });
+          console.log(`✅ Deadline completado para assignment ${assignmentId}`);
+        }
+        
+      } catch (error) {
+        console.error(`❌ Error completando deadline:`, error.message);
+      }
+    }
+  }
+);
+
+/**
+ * 6. FUNCIÓN PROGRAMADA: Verificar deadlines cada hora y enviar recordatorios
  */
 exports.checkDeadlines = onSchedule('every 1 hours', async (event) => {
   console.log('⏰ [checkDeadlines] Ejecutando verificación de deadlines...');
@@ -6801,6 +6914,19 @@ exports.checkDeadlines = onSchedule('every 1 hours', async (event) => {
     
     for (const doc of soonDeadlines.docs) {
       const deadline = doc.data();
+      
+      // ✅ VERIFICAR que el target aún esté activo antes de enviar recordatorio
+      const isStillActive = await verifyTargetIsActive(deadline, db);
+      
+      if (!isStillActive) {
+        console.log(`⚠️ Deadline ${doc.id} ya no está activo, cancelando...`);
+        await doc.ref.update({
+          status: 'cancelled',
+          cancelledAt: admin.firestore.FieldValue.serverTimestamp(),
+          cancelledNote: 'Target ya no está activo'
+        });
+        continue;
+      }
       
       // Enviar recordatorio si es el primero
       if (deadline.reminderCount === 0) {
@@ -6823,11 +6949,7 @@ exports.checkDeadlines = onSchedule('every 1 hours', async (event) => {
     
     for (const doc of expiredDeadlines.docs) {
       const deadline = doc.data();
-      await handleExpiredDeadline(deadline);
-      await doc.ref.update({ 
-        status: 'missed',
-        missedAt: admin.firestore.FieldValue.serverTimestamp()
-      });
+      await handleExpiredDeadline(deadline, db);
     }
     
     console.log('✅ [checkDeadlines] Verificación completada');
@@ -6839,7 +6961,216 @@ exports.checkDeadlines = onSchedule('every 1 hours', async (event) => {
 });
 
 /**
- * 5. FUNCIÓN AUXILIAR: Enviar recordatorio por email
+ * 7. FUNCIÓN AUXILIAR MEJORADA: Verificar si el target sigue activo
+ * Esta función previene enviar recordatorios o marcar como expirado
+ * algo que ya fue respondido/entregado
+ */
+async function verifyTargetIsActive(deadline, db) {
+  const { type, targetType, targetId } = deadline;
+  
+  try {
+    if (type === 'reviewer-response' && targetType === 'reviewerInvitation') {
+      // Verificar si la invitación ya fue respondida
+      const invitationDoc = await db.collection('reviewerInvitations')
+        .doc(targetId)
+        .get();
+      
+      if (!invitationDoc.exists) {
+        console.log(`⚠️ Invitación ${targetId} no existe`);
+        return false;
+      }
+      
+      const invitation = invitationDoc.data();
+      
+      // ✅ Si ya respondió (accepted, declined), falló, o expiró por otro lado
+      if (invitation.respondedAt || invitation.failedAt) {
+        console.log(`✅ Invitación ${targetId} ya respondió o falló, deadline completado`);
+        return false;
+      }
+      
+      // Si el status no es 'pending' o 'sent', ya fue procesada
+      if (!['pending', 'sent'].includes(invitation.status)) {
+        console.log(`⚠️ Invitación ${targetId} ya no está pendiente (status: ${invitation.status})`);
+        return false;
+      }
+      
+      return true;
+      
+    } else if (type === 'review-submission' && targetType === 'reviewerAssignment') {
+      // Si el targetId es 'pending', el assignment aún no se ha creado
+      if (targetId === 'pending') {
+        // Verificar si la invitación asociada sigue activa
+        if (deadline.invitationId) {
+          const invitationDoc = await db.collection('reviewerInvitations')
+            .doc(deadline.invitationId)
+            .get();
+          
+          if (invitationDoc.exists) {
+            const invitation = invitationDoc.data();
+            // Si la invitación fue rechazada o expiró, cancelar este deadline
+            if (['declined', 'expired', 'failed'].includes(invitation.status)) {
+              console.log(`⚠️ Invitación ${deadline.invitationId} ya no está activa`);
+              return false;
+            }
+          }
+        }
+        return true; // Aún no hay assignment, seguimos esperando
+      }
+      
+      // Verificar si el assignment ya fue entregado
+      const assignmentDoc = await db.collection('reviewerAssignments')
+        .doc(targetId)
+        .get();
+      
+      if (!assignmentDoc.exists) {
+        console.log(`⚠️ Assignment ${targetId} no existe`);
+        return false;
+      }
+      
+      const assignment = assignmentDoc.data();
+      
+      // ✅ Si ya envió la revisión
+      if (assignment.submittedAt || assignment.status === 'submitted') {
+        console.log(`✅ Assignment ${targetId} ya fue entregado, deadline completado`);
+        return false;
+      }
+      
+      // Si el revisor rechazó o fue cancelado
+      if (['declined', 'cancelled', 'withdrawn'].includes(assignment.status)) {
+        console.log(`⚠️ Assignment ${targetId} ya no está activo (status: ${assignment.status})`);
+        return false;
+      }
+      
+      return true;
+    }
+    
+    return true; // Por defecto, asumir activo
+    
+  } catch (error) {
+    console.error(`❌ Error verificando target:`, error.message);
+    return true; // En caso de error, no cancelar (mejor falso positivo que falso negativo)
+  }
+}
+
+/**
+ * 8. FUNCIÓN AUXILIAR MEJORADA: Manejar deadline vencido
+ * Ahora verifica si el target ya fue respondido antes de marcar como expirado/overdue
+ */
+async function handleExpiredDeadline(deadline, db) {
+  const { type, targetType, targetId, reviewerEmail, reviewerName } = deadline;
+  
+  try {
+    // ✅ VERIFICACIÓN PREVIA: No marcar como expirado si ya respondió
+    const isStillActive = await verifyTargetIsActive(deadline, db);
+    
+    if (!isStillActive) {
+      console.log(`✅ Deadline ${type} para ${targetId} ya fue respondido, no se marca como expirado`);
+      
+      // Actualizar el deadline como completado/cancelado en lugar de missed
+      await db.collection('deadlines').doc(deadline.id || '').update({
+        status: 'completed',
+        completedAt: admin.firestore.FieldValue.serverTimestamp(),
+        completedNote: 'Ya fue respondido antes de expirar',
+        _wasActive: false
+      }).catch(err => console.error('Error actualizando deadline:', err));
+      
+      return;
+    }
+    
+    // Si llegamos aquí, el target realmente expiró sin respuesta
+    if (type === 'reviewer-response' && targetType === 'reviewerInvitation') {
+      
+      // ✅ VERIFICACIÓN FINAL: Leer el estado actual de la invitación
+      const invitationDoc = await db.collection('reviewerInvitations')
+        .doc(targetId)
+        .get();
+      
+      if (invitationDoc.exists) {
+        const invitation = invitationDoc.data();
+        
+        // ⚠️ DOBLE VERIFICACIÓN: Si ya respondió, no marcar como expirada
+        if (invitation.respondedAt || invitation.failedAt) {
+          console.log(`⚠️ Invitación ${targetId} ya respondió, no se marca como expirada`);
+          return;
+        }
+        
+        // Si ya tiene un status final, no cambiar
+        if (['accepted', 'declined', 'failed', 'cancelled'].includes(invitation.status)) {
+          console.log(`⚠️ Invitación ${targetId} ya tiene status ${invitation.status}, no se modifica`);
+          return;
+        }
+        
+        // ✅ Solo marcar como expirada si realmente está pendiente
+        await invitationDoc.ref.update({
+          status: 'expired',
+          expiredAt: admin.firestore.FieldValue.serverTimestamp(),
+          expiredByDeadline: true,
+          deadlineId: deadline.id || null
+        });
+        
+        console.log(`⚠️ Invitación ${targetId} expirada para ${reviewerEmail}`);
+        
+        // Notificar al editor
+        await notifyEditorAboutExpiredInvitation(deadline, db);
+      }
+      
+    } else if (type === 'review-submission' && targetType === 'reviewerAssignment') {
+      
+      if (!targetId || targetId === 'pending') {
+        console.log(`⚠️ Deadline de revisión sin assignment creado para invitación ${deadline.invitationId}`);
+        return;
+      }
+      
+      // ✅ VERIFICACIÓN FINAL: Leer el estado actual del assignment
+      const assignmentDoc = await db.collection('reviewerAssignments')
+        .doc(targetId)
+        .get();
+      
+      if (assignmentDoc.exists) {
+        const assignment = assignmentDoc.data();
+        
+        // ⚠️ DOBLE VERIFICACIÓN: Si ya envió la revisión, no marcar como overdue
+        if (assignment.submittedAt || assignment.status === 'submitted') {
+          console.log(`⚠️ Assignment ${targetId} ya fue entregado, no se marca como overdue`);
+          
+          // Actualizar el deadline como completado
+          await db.collection('deadlines').doc(deadline.id || '').update({
+            status: 'completed',
+            completedAt: admin.firestore.FieldValue.serverTimestamp(),
+            completedNote: 'Revisión entregada (verificación tardía)'
+          }).catch(() => {});
+          
+          return;
+        }
+        
+        // Si ya tiene un status final, no cambiar
+        if (['submitted', 'declined', 'cancelled', 'withdrawn'].includes(assignment.status)) {
+          console.log(`⚠️ Assignment ${targetId} ya tiene status ${assignment.status}, no se modifica`);
+          return;
+        }
+        
+        // ✅ Solo marcar como overdue si realmente está pendiente
+        await assignmentDoc.ref.update({
+          status: 'overdue',
+          overdueAt: admin.firestore.FieldValue.serverTimestamp(),
+          overdueByDeadline: true,
+          deadlineId: deadline.id || null
+        });
+        
+        console.log(`⚠️ Asignación ${targetId} vencida para ${reviewerEmail}`);
+        
+        // Notificar al editor
+        await notifyEditorAboutOverdueAssignment(deadline, db);
+      }
+    }
+    
+  } catch (error) {
+    console.error(`❌ Error manejando deadline vencido:`, error.message);
+  }
+}
+
+/**
+ * 9. FUNCIÓN AUXILIAR: Enviar recordatorio por email
  */
 async function sendDeadlineReminder(deadline) {
   const { type, reviewerEmail, reviewerName, dueDate } = deadline;
@@ -6892,39 +7223,81 @@ async function sendDeadlineReminder(deadline) {
 }
 
 /**
- * 6. FUNCIÓN AUXILIAR: Manejar deadline vencido
+ * 10. FUNCIÓN AUXILIAR: Notificar al editor sobre invitación expirada
  */
-async function handleExpiredDeadline(deadline) {
-  const { type, targetType, targetId, reviewerEmail, reviewerName } = deadline;
-  const db = admin.firestore();
-  
+async function notifyEditorAboutExpiredInvitation(deadline, db) {
   try {
-    if (type === 'reviewer-response' && targetType === 'reviewerInvitation') {
-      // La invitación expiró, marcarla como expirada
-      await db.collection('reviewerInvitations').doc(targetId).update({
-        status: 'expired',
-        expiredAt: admin.firestore.FieldValue.serverTimestamp()
-      });
-      
-      // Notificar al editor (implementar si es necesario)
-      console.log(`⚠️ Invitación ${targetId} expirada para ${reviewerEmail}`);
-      
-    } else if (type === 'review-submission' && targetType === 'reviewerAssignment') {
-      // La asignación expiró, marcarla como overdue
-      if (targetId && targetId !== 'pending') {
-        await db.collection('reviewerAssignments').doc(targetId).update({
-          status: 'overdue',
-          overdueAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-      }
-      
-      console.log(`⚠️ Asignación ${targetId} vencida para ${reviewerEmail}`);
-    }
+    if (!deadline.editorialTaskId) return;
+    
+    // Obtener el editorialTask para encontrar al editor asignado
+    const taskDoc = await db.collection('editorialTasks')
+      .doc(deadline.editorialTaskId)
+      .get();
+    
+    if (!taskDoc.exists) return;
+    
+    const task = taskDoc.data();
+    const editorEmail = task.assignedToEmail;
+    
+    if (!editorEmail) return;
+    
+    // Crear notificación en el sistema
+    await db.collection('notifications').add({
+      type: 'reviewer_invitation_expired',
+      title: 'Invitación de revisión expirada',
+      message: `La invitación enviada a ${deadline.reviewerName || deadline.reviewerEmail} ha expirado sin respuesta.`,
+      forUid: task.assignedTo,
+      data: {
+        invitationId: deadline.targetId,
+        submissionId: deadline.submissionId,
+        reviewerEmail: deadline.reviewerEmail
+      },
+      read: false,
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
     
   } catch (error) {
-    console.error(`❌ Error manejando deadline vencido:`, error.message);
+    console.error('Error notificando al editor:', error.message);
   }
 }
+
+/**
+ * 11. FUNCIÓN AUXILIAR: Notificar al editor sobre revisión overdue
+ */
+async function notifyEditorAboutOverdueAssignment(deadline, db) {
+  try {
+    if (!deadline.editorialTaskId) return;
+    
+    const taskDoc = await db.collection('editorialTasks')
+      .doc(deadline.editorialTaskId)
+      .get();
+    
+    if (!taskDoc.exists) return;
+    
+    const task = taskDoc.data();
+    const editorEmail = task.assignedToEmail;
+    
+    if (!editorEmail) return;
+    
+    await db.collection('notifications').add({
+      type: 'review_overdue',
+      title: 'Revisión atrasada',
+      message: `La revisión de ${deadline.reviewerName || deadline.reviewerEmail} está atrasada.`,
+      forUid: task.assignedTo,
+      data: {
+        assignmentId: deadline.targetId,
+        submissionId: deadline.submissionId,
+        reviewerEmail: deadline.reviewerEmail
+      },
+      read: false,
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+    
+  } catch (error) {
+    console.error('Error notificando al editor:', error.message);
+  }
+}
+
 
 /* ===================== CORRECCIÓN DE onEditorialReviewUpdated ===================== */
 

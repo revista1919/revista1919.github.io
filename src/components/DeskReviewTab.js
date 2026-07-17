@@ -1036,21 +1036,21 @@ useEffect(() => {
           
           {/* PESTAÑA: GESTIÓN DE REVISORES */}
           {activeTab === 'reviewers' && (
-            <ReviewerManagementTab
-              task={task}
-              articleArea={submission.area}
-              invitations={invitations}
-              potentialReviewers={potentialReviewers}
-              selectedReviewerId={selectedReviewerId}
-              setSelectedReviewerId={setSelectedReviewerId}
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-              onSendInvitation={onSendInvitation}
-              onProceedToDecision={onProceedToDecision}
-              loading={inviteLoading || isConsolidating}
-              submittedReviews={submittedReviews}
-            />
-          )}
+  <ReviewerManagementTab
+    task={task}
+    articleArea={Array.isArray(submission.area) ? submission.area[0] : submission.area}
+    invitations={invitations}
+    potentialReviewers={potentialReviewers}
+    selectedReviewerId={selectedReviewerId}
+    setSelectedReviewerId={setSelectedReviewerId}
+    searchTerm={searchTerm}
+    setSearchTerm={setSearchTerm}
+    onSendInvitation={onSendInvitation}
+    onProceedToDecision={onProceedToDecision}
+    loading={inviteLoading || isConsolidating}
+    submittedReviews={submittedReviews}
+  />
+)}
 
           {/* PESTAÑA: DECISIÓN FINAL */}
           {activeTab === 'decision' && (

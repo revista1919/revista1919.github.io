@@ -85,7 +85,20 @@ const AREAS_TEMATICAS = {
 };
 
 const MAX_EXPERTISE_AREAS = 5;
-
+const REVIEWER_STATUS_OPTIONS = {
+  active: {
+    es: { label: 'Activo', description: 'Disponible para recibir nuevas invitaciones de revision.' },
+    en: { label: 'Active', description: 'Available to receive new review invitations.' }
+  },
+  inactive: {
+    es: { label: 'Inactivo', description: 'No disponible temporalmente. No recibira nuevas invitaciones.' },
+    en: { label: 'Inactive', description: 'Temporarily unavailable. Will not receive new invitations.' }
+  },
+  paused: {
+    es: { label: 'En Pausa', description: 'Pausado por tiempo limitado. Sus revisiones activas no se veran afectadas.' },
+    en: { label: 'Paused', description: 'Paused for a limited time. Active reviews will not be affected.' }
+  }
+};
 // Aplanar todas las áreas para búsqueda rápida
 const ALL_AREAS_FLAT = Object.values(AREAS_TEMATICAS.es).flat();
 
@@ -392,6 +405,8 @@ export default function ReviewerProfilePanel({ user, onBack }) {
     publicEmail: '',
     institution: '',
     orcid: '',
+    status: 'active', 
+    statusReason: '', 
   });
 
   // Cargar datos del revisor
@@ -429,6 +444,8 @@ export default function ReviewerProfilePanel({ user, onBack }) {
           publicEmail: data.publicEmail || '',
           institution: data.institution || '',
           orcid: data.orcid || '',
+          status: 'active',      
+          statusReason: '',          
         });
       } else {
         // Cargar desde users como fallback
@@ -451,6 +468,8 @@ export default function ReviewerProfilePanel({ user, onBack }) {
             publicEmail: userData.publicEmail || userData.email || '',
             institution: userData.institution || '',
             orcid: userData.orcid || '',
+            status: data.status || 'active',           
+            statusReason: data.statusReason || '',     
           });
         }
       }
@@ -472,18 +491,23 @@ export default function ReviewerProfilePanel({ user, onBack }) {
         .slice(0, MAX_EXPERTISE_AREAS);
 
       const updateData = {
-        areasOfExpertise: validAreas,
-        availability: {
-          maxActiveReviews: editForm.maxActiveReviews,
-          currentActiveReviews: reviewerData?.availability?.currentActiveReviews || 0,
-          preferredLanguage: editForm.preferredLanguage,
-          timeAvailablePerReview: editForm.timeAvailablePerReview,
-        },
-        publicEmail: editForm.publicEmail,
-        institution: editForm.institution,
-        orcid: editForm.orcid,
-        updatedAt: new Date().toISOString(),
-      };
+  areasOfExpertise: validAreas,
+  availability: {
+    maxActiveReviews: editForm.maxActiveReviews,
+    currentActiveReviews: reviewerData?.availability?.currentActiveReviews || 0,
+    preferredLanguage: editForm.preferredLanguage,
+    timeAvailablePerReview: editForm.timeAvailablePerReview,
+  },
+  publicEmail: editForm.publicEmail,
+  institution: editForm.institution,
+  orcid: editForm.orcid,
+  status: editForm.status,                    // NUEVO
+  statusReason: editForm.statusReason || '',  // NUEVO
+  statusChangedAt: editForm.status !== (reviewerData?.status || 'active') 
+    ? new Date().toISOString() 
+    : reviewerData?.statusChangedAt || null,  // NUEVO
+  updatedAt: new Date().toISOString(),
+};
 
       // Guardar en colección reviewers
       const reviewerRef = doc(db, 'reviewers', user.uid);
@@ -518,14 +542,16 @@ export default function ReviewerProfilePanel({ user, onBack }) {
   // Cancelar edición
   const handleCancel = () => {
     setEditForm({
-      areasOfExpertise: (reviewerData?.areasOfExpertise || []).slice(0, MAX_EXPERTISE_AREAS),
-      maxActiveReviews: reviewerData?.availability?.maxActiveReviews || 3,
-      preferredLanguage: reviewerData?.availability?.preferredLanguage || 'es',
-      timeAvailablePerReview: reviewerData?.availability?.timeAvailablePerReview || '2-weeks',
-      publicEmail: reviewerData?.publicEmail || '',
-      institution: reviewerData?.institution || '',
-      orcid: reviewerData?.orcid || '',
-    });
+  areasOfExpertise: (reviewerData?.areasOfExpertise || []).slice(0, MAX_EXPERTISE_AREAS),
+  maxActiveReviews: reviewerData?.availability?.maxActiveReviews || 3,
+  preferredLanguage: reviewerData?.availability?.preferredLanguage || 'es',
+  timeAvailablePerReview: reviewerData?.availability?.timeAvailablePerReview || '2-weeks',
+  publicEmail: reviewerData?.publicEmail || '',
+  institution: reviewerData?.institution || '',
+  orcid: reviewerData?.orcid || '',
+  status: reviewerData?.status || 'active',           // NUEVO
+  statusReason: reviewerData?.statusReason || '',      // NUEVO
+});
     setIsEditing(false);
   };
 
@@ -623,9 +649,18 @@ export default function ReviewerProfilePanel({ user, onBack }) {
                 <p className="relative z-10 text-white/60 text-xs font-mono">{reviewerData?.email}</p>
                 
                 <div className="relative z-10 mt-4 inline-flex items-center px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-sm border border-white/20 text-white bg-white/5">
-                  <span className={`w-1.5 h-1.5 rounded-full mr-2 ${reviewerData?.status === 'active' ? 'bg-[#10B981]' : 'bg-slate-400'}`}></span>
-                  {reviewerData?.status === 'active' ? (isSpanish ? 'Cuenta Activa' : 'Active Account') : (isSpanish ? 'Inactivo' : 'Inactive')}
-                </div>
+  <span className={`w-1.5 h-1.5 rounded-full mr-2 ${
+    reviewerData?.status === 'active' ? 'bg-[#10B981]' : 
+    reviewerData?.status === 'paused' ? 'bg-[#F59E0B]' : 
+    'bg-slate-400'
+  }`}></span>
+  {reviewerData?.status === 'active' 
+    ? (isSpanish ? 'Cuenta Activa' : 'Active Account') 
+    : reviewerData?.status === 'paused'
+    ? (isSpanish ? 'En Pausa' : 'Paused')
+    : (isSpanish ? 'Inactivo' : 'Inactive')
+  }
+</div>
               </div>
               
               <div className="p-6 space-y-4 text-sm bg-white">
@@ -765,7 +800,105 @@ export default function ReviewerProfilePanel({ user, onBack }) {
                     </div>
                   </div>
                 </div>
-
+{/* Estado de Disponibilidad */}
+<div>
+  <h4 className="text-[11px] font-bold uppercase tracking-widest text-slate-400 border-b border-slate-100 pb-2 mb-4">
+    {isSpanish ? 'Estado de Disponibilidad' : 'Availability Status'}
+  </h4>
+  
+  <div className="space-y-4">
+    {/* Selector de estado */}
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      {Object.entries(REVIEWER_STATUS_OPTIONS).map(([value, labels]) => {
+        const isSelected = editForm.status === value;
+        const statusColors = {
+          active: 'border-[#10B981] bg-[#ECFDF5]',
+          inactive: 'border-slate-300 bg-slate-50',
+          paused: 'border-[#F59E0B] bg-[#FFFBEB]'
+        };
+        const dotColors = {
+          active: 'bg-[#10B981]',
+          inactive: 'bg-slate-400',
+          paused: 'bg-[#F59E0B]'
+        };
+        
+        return (
+          <button
+            key={value}
+            type="button"
+            onClick={() => setEditForm(prev => ({ ...prev, status: value }))}
+            className={`flex items-start gap-3 p-3 rounded-sm border text-left transition-all ${
+              isSelected 
+                ? `${statusColors[value]} border-2 shadow-sm` 
+                : 'border-slate-200 bg-white hover:bg-slate-50'
+            }`}
+          >
+            <span className={`w-2.5 h-2.5 rounded-full mt-1 flex-shrink-0 ${dotColors[value]} ${isSelected ? 'ring-2 ring-offset-1 ' + (value === 'active' ? 'ring-[#10B981]/30' : value === 'paused' ? 'ring-[#F59E0B]/30' : 'ring-slate-300') : ''}`}></span>
+            <div>
+              <span className={`text-xs font-bold uppercase tracking-wider ${
+                isSelected ? 'text-slate-900' : 'text-slate-600'
+              }`}>
+                {labels[language]?.label || labels.es.label}
+              </span>
+              <p className="text-[10px] text-slate-500 mt-0.5 leading-relaxed">
+                {labels[language]?.description || labels.es.description}
+              </p>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+    
+    {/* Razon del cambio (solo si no esta activo) */}
+    {editForm.status !== 'active' && (
+      <div>
+        <label className="block text-[11px] uppercase tracking-wider text-slate-600 font-semibold mb-1.5">
+          {isSpanish ? 'Motivo (opcional)' : 'Reason (optional)'}
+        </label>
+        <textarea
+          value={editForm.statusReason}
+          onChange={(e) => setEditForm(prev => ({ ...prev, statusReason: e.target.value }))}
+          rows={2}
+          className="w-full p-2.5 bg-white border border-slate-300 rounded-sm text-sm focus:border-[#003B5C] focus:ring-1 focus:ring-[#003B5C] outline-none transition-all placeholder:text-slate-300 resize-none"
+          placeholder={isSpanish 
+            ? 'Ej: Carga academica alta este semestre...' 
+            : 'E.g.: High academic load this semester...'}
+        />
+        <p className="text-[10px] text-slate-400 mt-1">
+          {isSpanish 
+            ? 'Esta informacion solo es visible para el equipo editorial.' 
+            : 'This information is only visible to the editorial team.'}
+        </p>
+      </div>
+    )}
+    
+    {/* Advertencia si cambia de estado */}
+    {editForm.status !== (reviewerData?.status || 'active') && (
+      <div className="flex items-start gap-2 p-3 bg-[#FFF5EB] border border-[#FF7900]/20 rounded-sm">
+        <span className="text-[#FF7900] mt-0.5"><Icons.Alert /></span>
+        <div className="text-xs text-slate-700">
+          <p className="font-semibold mb-1">
+            {isSpanish ? 'Esta seguro de cambiar su estado?' : 'Are you sure you want to change your status?'}
+          </p>
+          <p>
+            {editForm.status === 'inactive' 
+              ? (isSpanish 
+                  ? 'Al desactivar su cuenta de revisor, no recibira nuevas invitaciones. Sus revisiones pendientes no se veran afectadas.' 
+                  : 'By deactivating your reviewer account, you will not receive new invitations. Your pending reviews will not be affected.')
+              : editForm.status === 'paused'
+              ? (isSpanish 
+                  ? 'Al pausar su cuenta, no recibira nuevas invitaciones temporalmente. Podra reactivarla cuando lo desee.' 
+                  : 'By pausing your account, you will temporarily not receive new invitations. You can reactivate it whenever you want.')
+              : (isSpanish 
+                  ? 'Al reactivar su cuenta, volvera a ser considerado para nuevas invitaciones de revision.' 
+                  : 'By reactivating your account, you will be considered for new review invitations again.')
+            }
+          </p>
+        </div>
+      </div>
+    )}
+  </div>
+</div>
                 {/* Disponibilidad */}
                 <div>
                   <h4 className="text-[11px] font-bold uppercase tracking-widest text-slate-400 border-b border-slate-100 pb-2 mb-4">
@@ -815,6 +948,28 @@ export default function ReviewerProfilePanel({ user, onBack }) {
                     <p className="text-sm font-medium text-[#003B5C]">{reviewerData?.availability?.maxActiveReviews || 3} {isSpanish ? 'activas máx.' : 'max active'}</p>
                   </div>
                   <div>
+  <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{isSpanish ? 'Estado' : 'Status'}</span>
+  <p className="text-sm font-medium flex items-center gap-1.5">
+    <span className={`w-1.5 h-1.5 rounded-full ${
+      reviewerData?.status === 'active' ? 'bg-[#10B981]' : 
+      reviewerData?.status === 'paused' ? 'bg-[#F59E0B]' : 
+      'bg-slate-400'
+    }`}></span>
+    <span className={
+      reviewerData?.status === 'active' ? 'text-[#10B981]' : 
+      reviewerData?.status === 'paused' ? 'text-[#F59E0B]' : 
+      'text-slate-500'
+    }>
+      {reviewerData?.status === 'active' 
+        ? (isSpanish ? 'Activo' : 'Active')
+        : reviewerData?.status === 'paused'
+        ? (isSpanish ? 'En Pausa' : 'Paused')
+        : (isSpanish ? 'Inactivo' : 'Inactive')
+      }
+    </span>
+  </p>
+</div>
+                  <div>
                     <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{isSpanish ? 'Idioma' : 'Language'}</span>
                     <p className="text-sm font-medium text-[#003B5C]">{reviewerData?.availability?.preferredLanguage === 'en' ? 'English' : 'Español'}</p>
                   </div>
@@ -831,6 +986,41 @@ export default function ReviewerProfilePanel({ user, onBack }) {
                     <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">ORCID iD</span>
                     <p className="text-xs font-mono font-medium text-[#003B5C] mt-1.5">{reviewerData?.orcid || 'No registrado'}</p>
                   </div>
+                  {/* Estado actual con razon si existe */}
+{reviewerData?.status && reviewerData.status !== 'active' && (
+  <div className="mt-4 pt-4 border-t border-slate-100">
+    <div className="flex items-start gap-3">
+      <span className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
+        reviewerData.status === 'paused' ? 'bg-[#F59E0B]' : 'bg-slate-400'
+      }`}></span>
+      <div>
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+          {isSpanish ? 'Estado Actual' : 'Current Status'}
+        </span>
+        <p className="text-sm font-medium text-slate-700 mt-0.5">
+          {reviewerData.status === 'paused' 
+            ? (isSpanish ? 'Cuenta en pausa' : 'Account paused')
+            : (isSpanish ? 'Cuenta inactiva' : 'Inactive account')
+          }
+        </p>
+        {reviewerData.statusReason && (
+          <p className="text-xs text-slate-500 mt-1 italic">
+            "{reviewerData.statusReason}"
+          </p>
+        )}
+        {reviewerData.statusChangedAt && (
+          <p className="text-[10px] text-slate-400 mt-1">
+            {isSpanish ? 'Desde: ' : 'Since: '}
+            {new Date(reviewerData.statusChangedAt).toLocaleDateString(
+              isSpanish ? 'es-CL' : 'en-US', 
+              { month: 'short', day: 'numeric', year: 'numeric' }
+            )}
+          </p>
+        )}
+      </div>
+    </div>
+  </div>
+)}
                 </div>
               </div>
             )}
