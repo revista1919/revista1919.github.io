@@ -4083,7 +4083,9 @@ exports.submitArticle = onRequest(
         aiTools = [],
         editorComment,
         // NUEVO: Declaraciones aceptadas (para auditoría)
-        declarations
+        declarations,
+        wantsToBeReviewer = false,
+        reviewerAreas = []
       } = req.body;
 
       // --- VALIDACIONES ---
@@ -4628,6 +4630,10 @@ keywordsFormat: normalizedKeywordsES.keywordsFormat,
         driveFolderUrl: authorFolder.webViewLink,
         editorialFolderId: editorialFolder ? editorialFolder.id : null,
         editorialFolderUrl: editorialFolder ? editorialFolder.webViewLink : null,
+        wantsToBeReviewer: Boolean(wantsToBeReviewer),
+  reviewerAreas: wantsToBeReviewer ? reviewerAreas : [],
+  reviewerStatus: wantsToBeReviewer ? 'pending_review' : null,
+  reviewerAppliedAt: wantsToBeReviewer ? admin.firestore.FieldValue.serverTimestamp() : null,
         
         // Estado y metadata
         status: 'submitted',
@@ -4738,6 +4744,8 @@ hasEditorComment: !!editorComment,
 editorCommentPreview: editorComment 
   ? editorComment.replace(/<[^>]*>/g, '').substring(0, 100) + (editorComment.length > 100 ? '...' : '') 
   : null,
+  wantsToBeReviewer: Boolean(wantsToBeReviewer),
+    reviewerAreasCount: wantsToBeReviewer ? reviewerAreas.length : 0,
           }
         });
         

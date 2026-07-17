@@ -1144,7 +1144,9 @@ export default function SubmissionForm({ user, onSuccess }) {
     excludedReviewers: '',
     editorComment: '',
     manuscript: null,
-    manuscriptName: ''
+    manuscriptName: '',
+    wantsToBeReviewer: false,
+    reviewerAreas: [],
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -1704,6 +1706,8 @@ useEffect(() => {
           })),
         manuscriptBase64,
         manuscriptName: formData.manuscript.name,
+        wantsToBeReviewer: formData.wantsToBeReviewer,
+        reviewerAreas: formData.wantsToBeReviewer ? formData.reviewerAreas : [],
         authorUID: user.uid,
         authorEmail: user.email,
         authorName: user.displayName || `${formData.authors[0].firstName} ${formData.authors[0].lastName}`.trim()
@@ -2989,7 +2993,176 @@ useEffect(() => {
                       placeholder={isSpanish ? 'Dra. Ana López; Dr. Carlos Mendoza' : 'Dr. Jane Smith; Prof. Michael Brown'}
                     />
                   </div>
+{/* ============ NUEVA SECCIÓN: POSTULACIÓN COMO REVISOR ============ */}
+<motion.div
+  initial={{ opacity: 0 }}
+  animate={{ opacity: 1 }}
+  className="p-6 border-b border-gray-200 bg-gradient-to-r from-[#f8f9fa] to-white"
+>
+  <div className="flex items-start gap-4">
+    <div className="w-12 h-12 bg-[#003b5c] rounded-sm flex items-center justify-center flex-shrink-0 mt-1">
+      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+      </svg>
+    </div>
+    
+    <div className="flex-1">
+      <h3 className="font-serif text-lg font-bold text-[#003b5c] mb-2">
+        {isSpanish 
+          ? '¿Te gustaría ser revisor/a?' 
+          : 'Would you like to be a reviewer?'}
+      </h3>
+      <p className="text-sm text-gray-600 mb-5 font-sans leading-relaxed">
+        {isSpanish 
+          ? 'Nuestra revista busca constantemente revisores comprometidos. Si te interesa contribuir con tu experiencia, indícalo aquí. Esto no afecta la evaluación de tu artículo actual.'
+          : 'Our journal is constantly seeking committed reviewers. If you are interested in contributing with your expertise, please indicate it here. This does not affect the evaluation of your current article.'}
+      </p>
 
+      {/* Toggle de postulación */}
+      <label className="flex items-center gap-3 cursor-pointer group mb-5">
+        <div className="relative">
+          <input
+            type="checkbox"
+            checked={formData.wantsToBeReviewer}
+            onChange={(e) => {
+              setFormData(prev => ({
+                ...prev,
+                wantsToBeReviewer: e.target.checked,
+                reviewerAreas: e.target.checked ? prev.reviewerAreas : []
+              }));
+            }}
+            className="sr-only peer"
+          />
+          <div className="w-12 h-6 bg-gray-200 rounded-full peer-checked:bg-[#003b5c] transition-colors duration-300"></div>
+          <div className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm peer-checked:translate-x-6 transition-transform duration-300"></div>
+        </div>
+        <span className="text-sm font-medium text-gray-700 group-hover:text-[#003b5c] transition-colors font-sans">
+          {isSpanish 
+            ? 'Sí, deseo ser considerado/a como revisor/a en mi área de especialización'
+            : 'Yes, I wish to be considered as a reviewer in my area of expertise'}
+        </span>
+      </label>
+
+      {/* Selección de áreas (solo si aceptó) */}
+      <AnimatePresence>
+        {formData.wantsToBeReviewer && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="space-y-4"
+          >
+            <div className="bg-white border border-[#003b5c]/20 rounded-sm p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <svg className="w-4 h-4 text-[#003b5c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                <span className="text-xs font-bold uppercase tracking-wider text-[#003b5c] font-sans">
+                  {isSpanish 
+                    ? 'Selecciona hasta 4 áreas de especialización'
+                    : 'Select up to 4 areas of expertise'}
+                </span>
+                <span className="text-[10px] text-gray-400 font-sans">
+                  ({formData.reviewerAreas.length}/4)
+                </span>
+              </div>
+
+              {/* Grid de áreas seleccionables */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {Object.entries(AREAS_TEMATICAS).map(([categoria, subareas]) => (
+                  <div key={categoria} className="space-y-2">
+                    <h4 className="text-[11px] font-bold uppercase tracking-wider text-gray-500 font-sans border-b border-gray-200 pb-1">
+                      {categoria}
+                    </h4>
+                    <div className="space-y-1.5">
+                      {subareas.map(area => {
+                        const isSelected = formData.reviewerAreas.includes(area);
+                        const isDisabled = !isSelected && formData.reviewerAreas.length >= 4;
+                        
+                        return (
+                          <button
+                            key={area}
+                            type="button"
+                            onClick={() => {
+                              setFormData(prev => {
+                                const current = prev.reviewerAreas;
+                                if (isSelected) {
+                                  return {
+                                    ...prev,
+                                    reviewerAreas: current.filter(a => a !== area)
+                                  };
+                                } else if (current.length < 4) {
+                                  return {
+                                    ...prev,
+                                    reviewerAreas: [...current, area]
+                                  };
+                                }
+                                return prev;
+                              });
+                            }}
+                            disabled={isDisabled}
+                            className={`
+                              w-full text-left px-3 py-2 rounded-sm text-xs font-sans transition-all duration-200
+                              ${isSelected 
+                                ? 'bg-[#003b5c] text-white shadow-sm' 
+                                : isDisabled
+                                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                  : 'bg-gray-50 text-gray-600 hover:bg-[#E5E9F0] hover:text-[#003b5c] border border-transparent hover:border-[#003b5c]/30'
+                              }
+                            `}
+                          >
+                            <span className="flex items-center gap-2">
+                              {isSelected ? (
+                                <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                </svg>
+                              ) : (
+                                <svg className="w-3.5 h-3.5 flex-shrink-0 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                </svg>
+                              )}
+                              {area}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Mensaje de áreas seleccionadas */}
+              {formData.reviewerAreas.length > 0 && (
+                <div className="mt-4 p-3 bg-[#f0f4f8] rounded-sm border border-[#003b5c]/10">
+                  <p className="text-xs text-[#003b5c] font-sans">
+                    <strong>
+                      {isSpanish ? 'Áreas seleccionadas:' : 'Selected areas:'}
+                    </strong>
+                    {' '}
+                    {formData.reviewerAreas.join(' • ')}
+                  </p>
+                </div>
+              )}
+
+              {/* Nota informativa */}
+              <div className="mt-4 flex items-start gap-2 text-[10px] text-gray-400 font-sans">
+                <svg className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>
+                  {isSpanish
+                    ? 'Al postularte, aceptas que tu información de contacto y áreas de especialización sean consideradas para futuras invitaciones de revisión. Podrás actualizar tus preferencias en cualquier momento desde tu perfil.'
+                    : 'By applying, you agree that your contact information and areas of expertise may be considered for future review invitations. You can update your preferences at any time from your profile.'}
+                </span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  </div>
+</motion.div>
+{/* ============ FIN SECCIÓN POSTULACIÓN REVISOR ============ */}
                   {/* Archivo manuscrito */}
                   <div className="p-6 bg-white rounded-b-sm">
                     <label className="block text-xs font-medium uppercase tracking-wider text-gray-600 mb-1">
