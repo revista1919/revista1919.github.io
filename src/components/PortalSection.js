@@ -995,6 +995,7 @@ const tabs = [
   { id: 'news', label: isSpanish ? 'NOTICIAS' : 'NEWS', roles: ['Director General'], path: 'news' },
   { id: 'admissions', label: isSpanish ? 'ADMISIONES' : 'ADMISSIONS', roles: ['Director General'], path: 'admissions' },
   { id: 'users', label: isSpanish ? 'USUARIOS' : 'USERS', roles: ['Director General'], path: 'users' },
+  { id: 'reviewer-profile', label: isSpanish ? 'MI PERFIL REVISOR' : 'MY REVIEWER PROFILE', roles: ['Revisor'], path: 'reviewer-profile' },
 ].filter(tab => tab.roles.includes('any') || tab.roles.some(role => userRoles.includes(role)));
 
 // Actualiza el mapeo de rutas para incluir la nueva ruta:
@@ -1414,7 +1415,20 @@ const handleTabChange = (tabId, event) => {
               <AuthorSubmissionsPanel user={userData} />
             </motion.section>
           )}
-
+{activeTab === 'reviewer-profile' && (
+  <motion.div
+    key="reviewer-profile"
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    className="fixed inset-0 z-50 bg-[#f4f5f7] overflow-y-auto"
+  >
+    <ReviewerProfilePanel 
+      user={userData} 
+      onBack={(e) => handleTabChange('profile', e)} 
+    />
+  </motion.div>
+)}
           {/* MIS REVISIONES (REVISOR) */}
           {activeTab === 'reviewer-tasks' && (
             <motion.section
