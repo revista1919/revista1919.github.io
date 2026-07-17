@@ -55,6 +55,58 @@ export const ReviewerManagementTab = ({
   const requiredReviews = task?.requiredReviews || 2;
   const canProceed = submittedCount >= requiredReviews;
   // Calcular recomendaciones
+    const submittedCount = submittedReviews.length;
+  const requiredReviews = task?.requiredReviews || 2;
+  const canProceed = submittedCount >= requiredReviews;
+  
+  // 🔍 DEBUG - Agrega esto aquí
+  console.log('🔍 DEBUG ReviewerManagementTab:', {
+    'task?.area': task?.area,
+    'potentialReviewers length': potentialReviewers?.length,
+    'potentialReviewers[0]': potentialReviewers?.[0],
+    'invitations length': invitations?.length,
+  });
+  
+  // Calcular recomendaciones
+  const recommendationResult = React.useMemo(() => {
+    console.log('🔍 DEBUG useMemo - calculando recomendaciones:', {
+      area: task?.area,
+      reviewersCount: potentialReviewers?.length,
+      hasArea: !!task?.area,
+      hasReviewers: !!potentialReviewers?.length
+    });
+    
+    if (!task?.area || !potentialReviewers?.length) return null;
+    
+    const result = getRecommendedReviewers({
+      articleArea: task.area,
+      potentialReviewers: potentialReviewers,
+      existingInvitations: invitations || [],
+      maxRecommendations: 5,
+      language: language
+    });
+    
+    console.log('🔍 DEBUG resultado getRecommendedReviewers:', {
+      totalEligible: result?.totalEligible,
+      recommendationsCount: result?.recommendations?.length,
+      fallbackActivated: result?.fallbackActivated,
+      articleCategory: result?.articleCategory,
+      firstRecommendation: result?.recommendations?.[0]
+    });
+    
+    return result;
+  }, [task?.area, potentialReviewers, invitations, language]);
+
+  // Extraer datos para el renderizado
+  const recommendations = recommendationResult?.recommendations || [];
+  const fallbackActivated = recommendationResult?.fallbackActivated || false;
+  
+  // 🔍 DEBUG - También agrega esto
+  console.log('🔍 DEBUG renderizado:', {
+    recommendationsLength: recommendations.length,
+    fallbackActivated,
+    mostrarSeccion: recommendations.length > 0
+  });
 const recommendationResult = React.useMemo(() => {
   if (!task?.area || !potentialReviewers?.length) return null;
   
@@ -406,7 +458,7 @@ const fallbackActivated = recommendationResult?.fallbackActivated || false;
           </div>
         </div>
       )}
-      // Sección del ReviewerManagementTab actualizada
+
 {/* ================= RECOMMENDED REVIEWERS ================= */}
 {recommendations.length > 0 && (
   <div className="bg-white border border-slate-200 shadow-sm">
