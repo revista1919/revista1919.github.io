@@ -104,17 +104,6 @@ export const ReviewerManagementTab = ({
     fallbackActivated,
     mostrarSeccion: recommendations.length > 0
   });
-const recommendationResult = React.useMemo(() => {
-  if (!task?.area || !potentialReviewers?.length) return null;
-  
-  return getRecommendedReviewers({
-    articleArea: task.area,
-    potentialReviewers: potentialReviewers,
-    existingInvitations: invitations || [],
-    maxRecommendations: 5,
-    language: language
-  });
-}, [task?.area, potentialReviewers, invitations, language]);
 
 // Extraer datos para el renderizado
 const recommendations = recommendationResult?.recommendations || [];
