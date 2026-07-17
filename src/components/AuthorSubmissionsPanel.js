@@ -91,8 +91,8 @@ const RevisionGuideCard = ({ language, onNavigateToDocuments }) => {
       icon: <Icons.Send />,
       title: isSpanish ? 'Completar y Enviar' : 'Complete and Submit',
       description: isSpanish 
-        ? 'En la primera sección de comentarios, indique si tuvo alguna dificultad o un comentario breve al editor. En la segunda sección, pegue la carta con el texto de respuesta que preparó. Adjunte el manuscrito modificado (puede dejar o no las marcas de revisión) y presione el botón de envío.'
-        : 'In the first comments section, indicate if you had any difficulties or a brief comment to the editor. In the second section, paste the response letter you prepared. Attach the modified manuscript (you may or may not leave the revision marks) and press the submit button.'
+        ? 'En la primera sección de comentarios, indique si tuvo alguna dificultad o un comentario breve al editor. En la segunda sección, pegue la carta con el texto de respuesta que preparó. Adjunte el manuscrito modificado (puede dejar o no las marcas de revisión) y presione el botón de envío. Luego reinicie la página y espere a que el editor revise su envío.'
+        : 'In the first comments section, indicate if you had any difficulties or a brief comment to the editor. In the second section, paste the response letter you prepared. Attach the modified manuscript (you may or may not leave the revision marks) and press the submit button. Then refresh the page and wait for the editor to review your submission.'
     }
   ];
 
