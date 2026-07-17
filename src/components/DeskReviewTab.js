@@ -1038,7 +1038,7 @@ useEffect(() => {
           {activeTab === 'reviewers' && (
             <ReviewerManagementTab
               task={task}
-              articleArea={articleArea}
+              articleArea={submission.area}
               invitations={invitations}
               potentialReviewers={potentialReviewers}
               selectedReviewerId={selectedReviewerId}
