@@ -7,6 +7,7 @@ import { db } from '../firebase';
 import { ReviewerManagementTab } from './ReviewerManagementTab';
 import { FinalDecisionTab } from './FinalDecisionTab';
 import { MetadataRefinementTab } from './MetadataRefinementTab';
+import { getRecommendedReviewers } from '../hooks/reviewerRecommendationEngine';
 
 // ============ ICONOS SVG PROFESIONALES ============
 const Icons = {
