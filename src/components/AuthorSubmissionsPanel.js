@@ -48,7 +48,201 @@ const Icons = {
   
   CheckBadge: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" /></svg>
 };
+// ================= COMPONENTE: GUÍA DE REVISIONES =================
+const RevisionGuideCard = ({ language, onNavigateToDocuments }) => {
+  const isSpanish = language === 'es';
+  const [isExpanded, setIsExpanded] = useState(false);
 
+  const steps = [
+    {
+      step: 1,
+      icon: <Icons.Download />,
+      title: isSpanish ? 'Descargar Documento de Trabajo' : 'Download Working Document',
+      description: isSpanish 
+        ? 'Diríjase a la pestaña "Documentos" y descargue el documento de trabajo (DOCX). Este archivo contiene las anotaciones y revisiones puntuales de los pares evaluadores al final del documento.'
+        : 'Go to the "Documents" tab and download the working document (DOCX). This file contains the specific annotations and revisions from the peer reviewers at the end of the document.'
+    },
+    {
+      step: 2,
+      icon: <Icons.Search />,
+      title: isSpanish ? 'Revisar Comentarios al Final' : 'Review Comments at the End',
+      description: isSpanish 
+        ? 'Desplácese hasta el final del documento donde encontrará los dictámenes ordenados, presentando el texto citado de su manuscrito original junto a la observación correspondiente del revisor.'
+        : 'Scroll to the end of the document where you will find the ordered reviews, presenting the cited text from your original manuscript alongside the corresponding reviewer observation.'
+    },
+    {
+      step: 3,
+      icon: <Icons.Edit />,
+      title: isSpanish ? 'Preparar Manuscrito Corregido' : 'Prepare Corrected Manuscript',
+      description: isSpanish 
+        ? 'Modifique su manuscrito ajustándolo meticulosamente a cada una de las revisiones solicitadas. Asegúrese de abordar todos los comentarios sustanciales antes de continuar.'
+        : 'Modify your manuscript by meticulously adjusting it to each of the requested revisions. Make sure to address all substantial comments before continuing.'
+    },
+    {
+      step: 4,
+      icon: <Icons.Refresh />,
+      title: isSpanish ? 'Redactar Texto de Respuesta' : 'Draft Response Text',
+      description: isSpanish 
+        ? 'Detalle por escrito cómo respondió a cada revisión de manera ordenada y metódica. Prepare este texto en un procesador externo antes de completar el formulario para evitar perderlo por accidente.'
+        : 'Detail in writing how you responded to each review in an orderly and methodical manner. Prepare this text in an external processor before completing the form to avoid losing it accidentally.'
+    },
+    {
+      step: 5,
+      icon: <Icons.Send />,
+      title: isSpanish ? 'Completar y Enviar' : 'Complete and Submit',
+      description: isSpanish 
+        ? 'En la primera sección de comentarios, indique si tuvo alguna dificultad o un comentario breve al editor. En la segunda sección, pegue la carta con el texto de respuesta que preparó. Adjunte el manuscrito modificado (puede dejar o no las marcas de revisión) y presione el botón de envío.'
+        : 'In the first comments section, indicate if you had any difficulties or a brief comment to the editor. In the second section, paste the response letter you prepared. Attach the modified manuscript (you may or may not leave the revision marks) and press the submit button.'
+    }
+  ];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white border border-slate-200 shadow-sm mb-8 relative overflow-hidden"
+    >
+      {/* Línea decorativa superior */}
+      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#C0A86A] via-[#003b5c] to-[#C0A86A]" />
+
+      {/* ================= ENCABEZADO (ACORDEÓN) ================= */}
+      <div 
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="bg-gradient-to-r from-[#003b5c] to-[#002840] text-white px-6 sm:px-8 py-6 cursor-pointer group hover:from-[#002a45] hover:to-[#001a2e] transition-all duration-300"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-5">
+            {/* Icono */}
+            <div className="hidden sm:flex w-14 h-14 border-2 border-[#C0A86A]/50 bg-white/5 items-center justify-center text-[#C0A86A] flex-shrink-0">
+              <Icons.Check />
+            </div>
+            
+            {/* Títulos */}
+            <div>
+              <p className="text-[10px] sm:text-xs font-bold font-sans uppercase tracking-[0.25em] text-[#C0A86A] mb-1">
+                {isSpanish ? 'Guía de Procedimiento' : 'Procedure Guide'}
+              </p>
+              <h3 className="font-serif text-xl sm:text-2xl font-bold leading-tight">
+                {isSpanish ? 'Cómo Enviar su Manuscrito Corregido' : 'How to Submit Your Corrected Manuscript'}
+              </h3>
+              {!isExpanded && (
+                <p className="text-sky-200/70 text-xs mt-1 font-sans">
+                  {isSpanish ? 'Haga clic para ver los 5 pasos' : 'Click to see the 5 steps'}
+                </p>
+              )}
+            </div>
+          </div>
+          
+          {/* Controles */}
+          <div className="flex items-center gap-3">
+            {/* Botón para ir a Documentos */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onNavigateToDocuments) onNavigateToDocuments();
+              }}
+              className="hidden sm:flex items-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white text-[10px] font-bold uppercase tracking-wider transition-all hover:border-white/40"
+              title={isSpanish ? 'Ir a la pestaña de documentos' : 'Go to documents tab'}
+            >
+              <Icons.Download />
+              <span>{isSpanish ? 'Documentos' : 'Documents'}</span>
+            </button>
+            
+            {/* Botón expandir/colapsar */}
+            <motion.div
+              animate={{ rotate: isExpanded ? 180 : 0 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="w-10 h-10 bg-white/10 border border-white/20 flex items-center justify-center flex-shrink-0 cursor-pointer hover:bg-white/20"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </motion.div>
+          </div>
+        </div>
+      </div>
+
+      {/* ================= CONTENIDO EXPANDIBLE ================= */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.4, ease: "easeInOut" }}
+            className="overflow-hidden bg-gradient-to-b from-slate-50 to-white"
+          >
+            <div className="p-6 sm:p-10 max-w-5xl mx-auto">
+              
+              {/* Pasos */}
+              <div className="relative">
+                {/* Línea conectora vertical */}
+                <div className="absolute left-[27px] top-6 bottom-6 w-0.5 bg-gradient-to-b from-[#C0A86A] via-slate-200 to-slate-200 hidden sm:block" />
+                
+                <div className="space-y-8">
+                  {steps.map((step, index) => (
+                    <motion.div
+                      key={step.step}
+                      initial={{ opacity: 0, x: -15 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.08 }}
+                      className="flex gap-5 sm:gap-8 relative"
+                    >
+                      {/* Número del paso */}
+                      <div className="relative z-10 flex-shrink-0">
+                        <div className="w-14 h-14 bg-[#003b5c] text-white border-2 border-[#C0A86A] flex items-center justify-center shadow-md">
+                          <span className="font-serif text-xl font-bold">{step.step}</span>
+                        </div>
+                      </div>
+
+                      {/* Contenido del paso */}
+                      <div className="flex-1 bg-white border border-slate-200 p-5 sm:p-6 hover:border-[#C0A86A]/40 transition-all duration-200 hover:shadow-sm">
+                        <div className="flex items-start gap-3 mb-3">
+                          <span className="text-[#C0A86A] mt-0.5 flex-shrink-0">
+                            {step.icon}
+                          </span>
+                          <h4 className="font-serif text-lg sm:text-xl text-[#003b5c] font-bold leading-snug">
+                            {step.title}
+                          </h4>
+                        </div>
+                        <p className="text-slate-600 font-sans text-sm leading-relaxed ml-8">
+                          {step.description}
+                        </p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Aviso importante */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="mt-10 bg-amber-50/80 border border-amber-200 border-l-4 border-l-amber-500 p-5 sm:p-6 flex gap-4 items-start"
+              >
+                <div className="w-10 h-10 bg-amber-100 border border-amber-200 flex items-center justify-center text-amber-600 flex-shrink-0">
+                  <Icons.Alert />
+                </div>
+                <div>
+                  <h5 className="font-sans font-bold text-xs text-amber-800 uppercase tracking-wider mb-2">
+                    {isSpanish ? 'Recomendación Importante' : 'Important Recommendation'}
+                  </h5>
+                  <p className="text-amber-900 font-sans text-sm leading-relaxed">
+                    {isSpanish
+                      ? 'Prepare su carta de respuesta detallada en un procesador de texto externo (Word, Google Docs, etc.) antes de pegarla en el formulario. Esto evitará perder su trabajo si ocurre algún inconveniente con la conexión o el navegador.'
+                      : 'Prepare your detailed response letter in an external word processor (Word, Google Docs, etc.) before pasting it into the form. This will prevent losing your work if any connection or browser issues occur.'}
+                  </p>
+                </div>
+              </motion.div>
+
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+};
 // ================= FUNCIONES UTILITARIAS =================
 const decodeBase64IfNeeded = (text) => {
   if (!text || typeof text !== 'string') return text;
@@ -1347,190 +1541,193 @@ const AuthorSubmissionsPanel = ({ user }) => {
                 )}
 
                 {/* ---------------- PESTAÑA: CENTRO DE ACCIÓN ---------------- */}
-                {activeTab === 'tasks' && (
-                  <div className="space-y-10 animate-in fade-in">
-                    <h2 className="font-serif text-2xl sm:text-3xl text-[#003b5c] mb-2">
-                      {isSpanish ? 'Centro de Acción Requerida' : 'Required Action Center'}
-                    </h2>
-                    <p className="text-slate-500 font-sans text-sm mb-8">
-                      {isSpanish 
-                        ? 'Gestione las correcciones y aprobaciones solicitadas por el comité editorial.' 
-                        : 'Manage corrections and approvals requested by the editorial committee.'}
-                    </p>
+{activeTab === 'tasks' && (
+  <div className="space-y-10 animate-in fade-in">
+    <h2 className="font-serif text-2xl sm:text-3xl text-[#003b5c] mb-2">
+      {isSpanish ? 'Centro de Acción Requerida' : 'Required Action Center'}
+    </h2>
+    <p className="text-slate-500 font-sans text-sm mb-8">
+      {isSpanish 
+        ? 'Gestione las correcciones y aprobaciones solicitadas por el comité editorial.' 
+        : 'Manage corrections and approvals requested by the editorial committee.'}
+    </p>
 
-                    {/* Tarea: Metadatos */}
-                    {hasPendingMetadataProposals(activePortal) && (
-                      <div className="bg-white border-2 border-amber-300 shadow-md">
-                        <div className="bg-amber-50 px-6 py-4 border-b border-amber-200 flex items-center gap-3">
-                          <span className="text-amber-700"><Icons.Document /></span>
-                          <h3 className="font-bold text-amber-900 text-sm uppercase tracking-wider">
-                            {isSpanish ? 'Tarea: Autorizar Cambios de Metadatos' : 'Task: Authorize Metadata Changes'}
-                          </h3>
-                        </div>
-                        <div className="p-6">
-                          <AuthorMetadataResponseTab
-                            submission={activePortal}
-                            user={user}
-                            onResponded={() => {}}
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Tarea: Subir Revisión */}
-                    {needsRevisionUpload(activePortal.status) && (
-                      <div className="bg-white border-2 border-[#003b5c] shadow-md">
-                        <div className="bg-[#003b5c] text-white px-6 py-4 flex items-center gap-3">
-                          <Icons.Inbox />
-                          <h3 className="font-bold text-sm uppercase tracking-wider">
-                            {isSpanish ? 'Tarea: Subir Manuscrito Corregido' : 'Task: Upload Corrected Manuscript'}
-                          </h3>
-                        </div>
-                        
-                        <div className="p-6 sm:p-8 space-y-8">
-                          {/* Carga de Archivo */}
-                          <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
-                              1. {isSpanish ? 'Archivo Revisado' : 'Revised File'}
-                            </label>
-                            <p className="text-[10px] text-slate-400 mb-2">
-                              {isSpanish ? 'PDF o Word (.doc, .docx) — Máx. 10MB' : 'PDF or Word (.doc, .docx) — Max. 10MB'}
-                            </p>
-                            <input
-                              type="file"
-                              accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                              onChange={handleFileChange}
-                              disabled={uploading}
-                              className="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-6 file:border-0 file:text-xs file:font-bold file:uppercase file:tracking-wider file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 file:cursor-pointer file:transition-colors bg-white border border-slate-200 p-2"
-                            />
-                            {revisionFile && (
-                              <div className="mt-3 flex items-center gap-2 bg-emerald-50 text-emerald-700 text-xs p-2 border border-emerald-200">
-                                <Icons.Check />
-                                <span className="font-mono">{revisionFile.name}</span>
-                                <span className="text-emerald-500">
-                                  ({(revisionFile.size / 1024).toFixed(2)} KB)
-                                </span>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Notas Breves */}
-                          <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
-                              2. {isSpanish ? 'Resumen Ejecutivo de Cambios' : 'Executive Summary of Changes'}
-                            </label>
-                            <textarea
-                              value={revisionNotes}
-                              onChange={(e) => setRevisionNotes(e.target.value)}
-                              rows="3"
-                              disabled={uploading}
-                              placeholder={isSpanish 
-                                ? 'Describa brevemente las alteraciones realizadas en respuesta a las revisiones...' 
-                                : 'Briefly describe the changes made in response to the reviews...'}
-                              className="w-full p-4 bg-white border border-slate-200 focus:ring-2 focus:ring-[#003b5c] focus:border-transparent font-serif text-sm text-slate-800 resize-none"
-                            />
-                          </div>
-
-                          {/* Carta al Editor */}
-                          <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
-                              3. {isSpanish ? 'Carta Detallada de Respuesta' : 'Detailed Response Letter'}
-                            </label>
-                            <div className="border border-slate-200 bg-white">
-                              <ReactQuill
-                                theme="snow"
-                                value={revisionComment}
-                                onChange={setRevisionComment}
-                                placeholder={isSpanish 
-                                  ? 'Explique cómo respondió a cada revisión, justifique cambios de autoría, etc.' 
-                                  : 'Explain how you responded to each review, justify authorship changes, etc.'}
-                                modules={{
-                                  toolbar: [
-                                    [{ 'header': [1, 2, 3, false] }],
-                                    ['bold', 'italic', 'underline', 'strike'],
-                                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                                    ['blockquote', 'code-block'],
-                                    ['link'],
-                                    ['clean']
-                                  ]
-                                }}
-                                formats={[
-                                  'header', 'bold', 'italic', 'underline', 'strike',
-                                  'list', 'bullet', 'blockquote', 'code-block', 'link'
-                                ]}
-                                readOnly={uploading}
-                                style={{ height: '250px' }}
-                              />
-                            </div>
-                          </div>
-
-                          {/* Botón de Envío */}
-                          <div className="pt-6 border-t border-slate-100 flex justify-end">
-                            <button
-                              onClick={handleSubmitRevision}
-                              disabled={uploading || !revisionFile || !revisionNotes.trim()}
-                              className="bg-[#003b5c] hover:bg-[#002840] disabled:bg-slate-300 disabled:text-slate-500 text-white px-8 py-4 text-xs font-bold uppercase tracking-widest transition-colors shadow-sm flex items-center justify-center gap-3 w-full sm:w-auto"
-                            >
-                              {uploading ? (
-                                <>
-                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                  {isSpanish ? 'PROCESANDO...' : 'PROCESSING...'}
-                                </>
-                              ) : (
-                                <>
-                                  <Icons.Download />
-                                  {isSpanish ? 'ENVIAR VERSIÓN CORREGIDA' : 'SUBMIT CORRECTED VERSION'}
-                                </>
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Sin tareas pendientes */}
-                    {/* Sin tareas pendientes */}
-{!hasPendingMetadataProposals(activePortal) && !needsRevisionUpload(activePortal.status) && (
-  <motion.div 
-    initial={{ opacity: 0, y: 10 }}
-    animate={{ opacity: 1, y: 0 }}
-    className="bg-white border border-slate-200 shadow-sm"
-  >
-    <div className="p-10 sm:p-16 text-center">
-      {/* Icono decorativo */}
-      <div className="inline-flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 bg-emerald-50 border border-emerald-200 mb-8">
-        <Icons.CheckBadge />
+    {/* Tarea: Metadatos */}
+    {hasPendingMetadataProposals(activePortal) && (
+      <div className="bg-white border-2 border-amber-300 shadow-md">
+        <div className="bg-amber-50 px-6 py-4 border-b border-amber-200 flex items-center gap-3">
+          <span className="text-amber-700"><Icons.Document /></span>
+          <h3 className="font-bold text-amber-900 text-sm uppercase tracking-wider">
+            {isSpanish ? 'Tarea: Autorizar Cambios de Metadatos' : 'Task: Authorize Metadata Changes'}
+          </h3>
+        </div>
+        <div className="p-6">
+          <AuthorMetadataResponseTab
+            submission={activePortal}
+            user={user}
+            onResponded={() => {}}
+          />
+        </div>
       </div>
-      
-      {/* Título */}
-      <h3 className="font-serif text-2xl sm:text-3xl text-[#003b5c] mb-4">
-        {isSpanish ? 'Expediente al Día' : 'Record Up to Date'}
-      </h3>
-      
-      {/* Línea decorativa */}
-      <div className="w-16 h-px bg-[#C0A86A] mx-auto mb-6"></div>
-      
-      {/* Mensaje */}
-      <p className="font-sans text-sm sm:text-base text-slate-500 max-w-lg mx-auto leading-relaxed">
-        {isSpanish 
-          ? 'El expediente se encuentra al día. No se requieren acciones de su parte en este momento. El comité editorial le notificará cuando haya novedades.'
-          : 'The record is up to date. No actions are required on your part at this time. The editorial committee will notify you when there are updates.'}
-      </p>
-      
-      {/* Información adicional */}
-      <div className="mt-8 inline-flex items-center gap-2 text-xs text-slate-400 font-sans">
-        <Icons.Clock />
-        <span>
-          {isSpanish 
-            ? `Última actualización: ${activePortal.updatedAt?.toLocaleDateString?.() || activePortal.createdAt?.toLocaleDateString?.() || '—'}`
-            : `Last updated: ${activePortal.updatedAt?.toLocaleDateString?.() || activePortal.createdAt?.toLocaleDateString?.() || '—'}`}
-        </span>
-      </div>
-    </div>
-  </motion.div>
-)}
-                  </div>
+    )}
+
+    {/* Tarea: Subir Revisión */}
+    {needsRevisionUpload(activePortal.status) && (
+      <>
+        {/* GUÍA DE INSTRUCCIONES */}
+        <RevisionGuideCard 
+          language={language} 
+          onNavigateToDocuments={() => setActiveTab('documents')} 
+        />
+
+        {/* FORMULARIO DE ENVÍO */}
+        <div className="bg-white border-2 border-[#003b5c] shadow-md">
+          <div className="bg-[#003b5c] text-white px-6 py-4 flex items-center gap-3">
+            <Icons.Inbox />
+            <h3 className="font-bold text-sm uppercase tracking-wider">
+              {isSpanish ? 'Tarea: Subir Manuscrito Corregido' : 'Task: Upload Corrected Manuscript'}
+            </h3>
+          </div>
+          
+          <div className="p-6 sm:p-8 space-y-8">
+            {/* Carga de Archivo */}
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
+                1. {isSpanish ? 'Archivo Revisado' : 'Revised File'}
+              </label>
+              <p className="text-[10px] text-slate-400 mb-2">
+                {isSpanish ? 'PDF o Word (.doc, .docx) — Máx. 10MB' : 'PDF or Word (.doc, .docx) — Max. 10MB'}
+              </p>
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                onChange={handleFileChange}
+                disabled={uploading}
+                className="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-6 file:border-0 file:text-xs file:font-bold file:uppercase file:tracking-wider file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 file:cursor-pointer file:transition-colors bg-white border border-slate-200 p-2"
+              />
+              {revisionFile && (
+                <div className="mt-3 flex items-center gap-2 bg-emerald-50 text-emerald-700 text-xs p-2 border border-emerald-200">
+                  <Icons.Check />
+                  <span className="font-mono">{revisionFile.name}</span>
+                  <span className="text-emerald-500">
+                    ({(revisionFile.size / 1024).toFixed(2)} KB)
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Notas Breves */}
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
+                2. {isSpanish ? 'Resumen Ejecutivo de Cambios' : 'Executive Summary of Changes'}
+              </label>
+              <textarea
+                value={revisionNotes}
+                onChange={(e) => setRevisionNotes(e.target.value)}
+                rows="3"
+                disabled={uploading}
+                placeholder={isSpanish 
+                  ? 'Describa brevemente las alteraciones realizadas en respuesta a las revisiones...' 
+                  : 'Briefly describe the changes made in response to the reviews...'}
+                className="w-full p-4 bg-white border border-slate-200 focus:ring-2 focus:ring-[#003b5c] focus:border-transparent font-serif text-sm text-slate-800 resize-none"
+              />
+            </div>
+
+            {/* Carta al Editor */}
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
+                3. {isSpanish ? 'Carta Detallada de Respuesta' : 'Detailed Response Letter'}
+              </label>
+              <div className="border border-slate-200 bg-white">
+                <ReactQuill
+                  theme="snow"
+                  value={revisionComment}
+                  onChange={setRevisionComment}
+                  placeholder={isSpanish 
+                    ? 'Explique cómo respondió a cada revisión, justifique cambios de autoría, etc.' 
+                    : 'Explain how you responded to each review, justify authorship changes, etc.'}
+                  modules={{
+                    toolbar: [
+                      [{ 'header': [1, 2, 3, false] }],
+                      ['bold', 'italic', 'underline', 'strike'],
+                      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                      ['blockquote', 'code-block'],
+                      ['link'],
+                      ['clean']
+                    ]
+                  }}
+                  formats={[
+                    'header', 'bold', 'italic', 'underline', 'strike',
+                    'list', 'bullet', 'blockquote', 'code-block', 'link'
+                  ]}
+                  readOnly={uploading}
+                  style={{ height: '250px' }}
+                />
+              </div>
+            </div>
+
+            {/* Botón de Envío */}
+            <div className="pt-6 border-t border-slate-100 flex justify-end">
+              <button
+                onClick={handleSubmitRevision}
+                disabled={uploading || !revisionFile || !revisionNotes.trim()}
+                className="bg-[#003b5c] hover:bg-[#002840] disabled:bg-slate-300 disabled:text-slate-500 text-white px-8 py-4 text-xs font-bold uppercase tracking-widest transition-colors shadow-sm flex items-center justify-center gap-3 w-full sm:w-auto"
+              >
+                {uploading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    {isSpanish ? 'PROCESANDO...' : 'PROCESSING...'}
+                  </>
+                ) : (
+                  <>
+                    <Icons.Download />
+                    {isSpanish ? 'ENVIAR VERSIÓN CORREGIDA' : 'SUBMIT CORRECTED VERSION'}
+                  </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </>
+    )}
+
+    {/* Sin tareas pendientes */}
+    {!hasPendingMetadataProposals(activePortal) && !needsRevisionUpload(activePortal.status) && (
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white border border-slate-200 shadow-sm"
+      >
+        <div className="p-10 sm:p-16 text-center">
+          <div className="inline-flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 bg-emerald-50 border border-emerald-200 mb-8">
+            <Icons.CheckBadge />
+          </div>
+          
+          <h3 className="font-serif text-2xl sm:text-3xl text-[#003b5c] mb-4">
+            {isSpanish ? 'Expediente al Día' : 'Record Up to Date'}
+          </h3>
+          
+          <div className="w-16 h-px bg-[#C0A86A] mx-auto mb-6"></div>
+          
+          <p className="font-sans text-sm sm:text-base text-slate-500 max-w-lg mx-auto leading-relaxed">
+            {isSpanish 
+              ? 'El expediente se encuentra al día. No se requieren acciones de su parte en este momento. El comité editorial le notificará cuando haya novedades.'
+              : 'The record is up to date. No actions are required on your part at this time. The editorial committee will notify you when there are updates.'}
+          </p>
+          
+          <div className="mt-8 inline-flex items-center gap-2 text-xs text-slate-400 font-sans">
+            <Icons.Clock />
+            <span>
+              {isSpanish 
+                ? `Última actualización: ${activePortal.updatedAt?.toLocaleDateString?.() || activePortal.createdAt?.toLocaleDateString?.() || '—'}`
+                : `Last updated: ${activePortal.updatedAt?.toLocaleDateString?.() || activePortal.createdAt?.toLocaleDateString?.() || '—'}`}
+            </span>
+          </div>
+        </div>
+      </motion.div>
+    )}
+  </div>
+)}
 
               </div>
             </div>
