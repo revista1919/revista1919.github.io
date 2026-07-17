@@ -565,6 +565,7 @@ const importFromSubmission = async (submission) => {
         institution: autor.institution,
         orcid: autor.orcid,
         contribution: autor.contribution, // Incluir contribution
+        isCorresponding: autor.isCorresponding || false,
       }));
 
       // Procesar palabras clave

@@ -1292,35 +1292,50 @@ console.log(`[${requestId}] 📝 Datos del artículo recibidos:`, {
         }
       }
 
-      function processAuthors(authorsInput) {
-        let authorsArray = [];
-        
-        if (typeof authorsInput === 'string') {
-          authorsArray = authorsInput.split(';').map(name => ({
-            name: name.trim(),
-            authorId: null
-          }));
-        } else if (Array.isArray(authorsInput)) {
-          if (authorsInput.length === 0) return [];
-          
-          if (typeof authorsInput[0] === 'string') {
-            authorsArray = authorsInput.map(name => ({
-              name: name.trim(),
-              authorId: null
-            }));
-          } else {
-            authorsArray = authorsInput.map(a => ({
-              name: a.name || `${a.firstName || ''} ${a.lastName || ''}`.trim(),
-              authorId: a.authorId || a.uid || null,
-              email: a.email || null,
-              institution: a.institution || null,
-              orcid: a.orcid || null
-            }));
-          }
-        }
-        
-        return authorsArray;
-      }
+      // En la función processAuthors dentro de exports.manageArticles
+function processAuthors(authorsInput) {
+  let authorsArray = [];
+  
+  if (typeof authorsInput === 'string') {
+    authorsArray = authorsInput.split(';').map((name, index) => ({
+      name: name.trim(),
+      authorId: null,
+      isCorresponding: index === 0, // El primero es correspondiente por defecto si es string
+      email: null,
+      institution: null,
+      orcid: null,
+      contribution: ''
+    }));
+  } else if (Array.isArray(authorsInput)) {
+    if (authorsInput.length === 0) return [];
+    
+    if (typeof authorsInput[0] === 'string') {
+      authorsArray = authorsInput.map((name, index) => ({
+        name: name.trim(),
+        authorId: null,
+        isCorresponding: index === 0,
+        email: null,
+        institution: null,
+        orcid: null,
+        contribution: ''
+      }));
+    } else {
+      // Objetos de autor - preservar TODOS los campos
+      authorsArray = authorsInput.map(a => ({
+        name: a.name || `${a.firstName || ''} ${a.lastName || ''}`.trim(),
+        authorId: a.authorId || a.uid || null,
+        email: a.email || null,
+        institution: a.institution || null,
+        orcid: a.orcid || null,
+        // *** AÑADIR ESTOS CAMPOS ***
+        isCorresponding: a.isCorresponding || false,
+        contribution: a.contribution || ''
+      }));
+    }
+  }
+  
+  return authorsArray;
+}
 
       async function uploadPDF(pdfBase64, fileName, commitMessage) {
         const content = pdfBase64.replace(/^data:application\/pdf;base64,/, "");
