@@ -882,7 +882,38 @@ function App() {
                 )}
               </motion.div>
             } />
-            
+            <Route path="/login/reviewer-profile" element={
+  <motion.div
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -10 }}
+    transition={{ duration: 0.3 }}
+    className="container max-w-full px-0 flex-grow"
+  >
+    {user ? (
+      <PortalSection user={user} onLogout={handleLogout} />
+    ) : (
+      <Navigate to="/login" replace />
+    )}
+  </motion.div>
+} />
+
+{/* Ruta para postulaciones a revisor (nueva pestaña para editores) */}
+<Route path="/login/reviewer-applications" element={
+  <motion.div
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -10 }}
+    transition={{ duration: 0.3 }}
+    className="container max-w-full px-0 flex-grow"
+  >
+    {user ? (
+      <PortalSection user={user} onLogout={handleLogout} />
+    ) : (
+      <Navigate to="/login" replace />
+    )}
+  </motion.div>
+} />
             <Route path="/login/tasks" element={
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
