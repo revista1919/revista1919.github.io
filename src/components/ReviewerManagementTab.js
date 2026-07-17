@@ -54,7 +54,22 @@ export const ReviewerManagementTab = ({
   const submittedCount = submittedReviews.length;
   const requiredReviews = task?.requiredReviews || 2;
   const canProceed = submittedCount >= requiredReviews;
+  // Calcular recomendaciones
+const recommendationResult = React.useMemo(() => {
+  if (!task?.area || !potentialReviewers?.length) return null;
   
+  return getRecommendedReviewers({
+    articleArea: task.area,
+    potentialReviewers: potentialReviewers,
+    existingInvitations: invitations || [],
+    maxRecommendations: 5,
+    language: language
+  });
+}, [task?.area, potentialReviewers, invitations, language]);
+
+// Extraer datos para el renderizado
+const recommendations = recommendationResult?.recommendations || [];
+const fallbackActivated = recommendationResult?.fallbackActivated || false;
   const getStatusBadge = (status) => {
     const statusMap = {
       'pending': { bg: 'bg-amber-50', text: 'text-amber-800', border: 'border-amber-200', label: isSpanish ? 'Pendiente' : 'Pending' },
@@ -393,7 +408,7 @@ export const ReviewerManagementTab = ({
       )}
       // Sección del ReviewerManagementTab actualizada
 {/* ================= RECOMMENDED REVIEWERS ================= */}
-{getRecommendedReviewers && (
+{recommendations.length > 0 && (
   <div className="bg-white border border-slate-200 shadow-sm">
     <div className="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-[#003b5c] to-[#002b44] text-white">
       <div className="flex items-center justify-between">
