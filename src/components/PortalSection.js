@@ -975,7 +975,6 @@ const safetyTimeoutRef = useRef(null);
   const isWebDev = userRoles.includes('Responsable de Desarrollo Web');
   const isAssignmentManager = userRoles.includes('Encargado de Asignación de Artículos');
 
-const isSectionEditor = userRoles.includes('Editor de Sección');
 const isChiefEditor = userRoles.includes('Editor en Jefe'); 
 const isDirectorGeneral = userRoles.includes('Director General');
 const canManageReviewers = isSectionEditor || isChiefEditor || isDirectorGeneral;
