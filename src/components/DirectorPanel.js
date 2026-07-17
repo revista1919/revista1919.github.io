@@ -280,142 +280,222 @@ export default function DirectorPanel({ user }) {
   };
 
   // --- IMPORTAR TODOS LOS DATOS DESDE LA SUBMISSION SELECCIONADA ---
-  const importFromSubmission = async (submission) => {
-    if (!submission) return;
+  // --- IMPORTAR TODOS LOS DATOS DESDE LA SUBMISSION SELECCIONADA ---
+const importFromSubmission = async (submission) => {
+  if (!submission) return;
 
-    setIsProcessing(true);
-    setStatus({ type: 'info', msg: 'Importando datos del envío...' });
+  setIsProcessing(true);
+  setStatus({ type: 'info', msg: 'Importando datos del envío...' });
 
-    try {
-      // Usar currentMetadata si existe, si no, los datos principales
-      const metadata = submission.currentMetadata || submission;
-      
-      // 1. Procesar autores con sus contribuciones
-      const importedAuthors = (metadata.authors || submission.authors || []).map(author => ({
-        name: author.name || `${author.firstName || ''} ${author.lastName || ''}`.trim(),
-        email: author.email || '',
-        institution: author.institution || '',
-        orcid: author.orcid || '',
-        authorId: author.uid || author.authorId || null,
-        isCorresponding: author.isCorresponding || false,
-        contribution: author.contribution || '', // CRediT
-      }));
-
-      // 2. Consolidar contribuciones en authorCredits
-      const authorCreditsText = importedAuthors
-        .map(a => `${a.name}: ${a.contribution || 'Sin contribución especificada'}`)
-        .join('\n');
-      
-      // 3. Financiamiento: combinar sources y grantNumbers
-      let fundingText = 'No declarada';
-      if (metadata.funding) {
-        const sources = metadata.funding.sources || '';
-        const grants = metadata.funding.grantNumbers || '';
-        fundingText = [sources, grants].filter(Boolean).join(' - ') || 'No declarada';
+  try {
+    // *** CORRECCIÓN: Usar currentMetadata como fuente principal ***
+    // currentMetadata contiene los metadatos consolidados (aprobados por el autor)
+    // Si no existe, usar los campos raíz del documento
+    const metadata = submission.currentMetadata || {};
+    
+    // Función helper para obtener un valor: primero de currentMetadata, luego de submission
+    const getMeta = (field) => {
+      if (submission.currentMetadata && submission.currentMetadata[field] !== undefined && submission.currentMetadata[field] !== null) {
+        return submission.currentMetadata[field];
       }
+      if (submission[field] !== undefined && submission[field] !== null) {
+        return submission[field];
+      }
+      return null;
+    };
+    
+    // 1. Procesar autores con sus contribuciones
+    const importedAuthors = (getMeta('authors') || []).map(author => ({
+      name: author.name || `${author.firstName || ''} ${author.lastName || ''}`.trim() || '',
+      email: author.email || '',
+      institution: author.institution || '',
+      orcid: author.orcid || '',
+      authorId: author.uid || author.authorId || null,
+      isCorresponding: author.isCorresponding || false,
+      contribution: author.contribution || '', // CRediT
+    }));
 
-      // 4. Palabras clave
-// 4. Palabras clave - DETECCIÓN AUTOMÁTICA DE FORMATO (legacy + controlled)
-let palabrasClaveStr = '';
-let keywordsEnglishStr = '';
-
-// Intentar usar keywordsRaw primero (formato nuevo controlado)
-if (metadata.keywordsRaw && metadata.keywordsRaw.length > 0) {
-    palabrasClaveStr = metadata.keywordsRaw
-        .map(k => k.code ? `${k.code}: ${k.term}` : k.term)
-        .join('; ');
-} else if (metadata.keywords && Array.isArray(metadata.keywords) && metadata.keywords.length > 0) {
-    // Detectar si el array tiene formato controlado
-    const looksControlled = metadata.keywords.some(k => 
-        typeof k === 'string' && /^[A-Za-z0-9.]+:/.test(k)
-    );
-    palabrasClaveStr = metadata.keywords.join('; ');
-} else if (metadata.palabras_clave) {
-    palabrasClaveStr = Array.isArray(metadata.palabras_clave) 
-        ? metadata.palabras_clave.join('; ') 
-        : String(metadata.palabras_clave);
-}
-
-// Mismo proceso para inglés
-if (metadata.keywordsRawEn && metadata.keywordsRawEn.length > 0) {
-    keywordsEnglishStr = metadata.keywordsRawEn
-        .map(k => k.code ? `${k.code}: ${k.term}` : k.term)
-        .join('; ');
-} else if (metadata.keywordsEn && Array.isArray(metadata.keywordsEn) && metadata.keywordsEn.length > 0) {
-    keywordsEnglishStr = metadata.keywordsEn.join('; ');
-} else if (metadata.keywords_english) {
-    keywordsEnglishStr = Array.isArray(metadata.keywords_english) 
-        ? metadata.keywords_english.join('; ') 
-        : String(metadata.keywords_english);
-}
-
-// Si no hay inglés, usar español
-if (!keywordsEnglishStr && palabrasClaveStr) {
-    keywordsEnglishStr = palabrasClaveStr;
-}
-      // 5. Fechas aproximadas
-      const receivedDate = submission.createdAt ? submission.createdAt.toISOString().split('T')[0] : '';
-      const acceptedDate = submission.publicationReadyAt ? submission.publicationReadyAt.toISOString().split('T')[0] : 
-                           (submission.decisionMadeAt ? submission.decisionMadeAt.toISOString().split('T')[0] : '');
-
-      // 6. Construir objeto con todos los campos
-      const importedData = {
-        titulo: metadata.title || submission.title || '',
-        tituloEnglish: metadata.titleEn || submission.titleEn || '',
-        autores: importedAuthors,
-        resumen: metadata.abstract || '',
-        abstract: metadata.abstractEn || '',
-        palabras_clave: palabrasClaveStr,
-keywords_english: keywordsEnglishStr,
-        area: metadata.area || '',
-        tipo: metadata.articleType || metadata.tipo || '',
-        type: metadata.type || metadata.articleType || '',
-        acknowledgments: metadata.acknowledgments || '',
-        acknowledgmentsEnglish: metadata.acknowledgmentsEn || '',
-        conflicts: metadata.conflictOfInterest || metadata.conflicts || 'Los autores declaran no tener conflictos de interés.',
-        conflictsEnglish: metadata.conflictsEnglish || 'The authors declare no conflicts of interest.',
-        funding: fundingText,
-        fundingEnglish: metadata.fundingEnglish || fundingText,
-        dataAvailability: metadata.dataAvailability || '',
-        dataAvailabilityEnglish: metadata.dataAvailabilityEn || '',
-        authorCredits: authorCreditsText,
-        authorCreditsEnglish: metadata.authorCreditsEnglish || authorCreditsText,
-        receivedDate: receivedDate,
-        acceptedDate: acceptedDate,
-        submissionId: submission.submissionId || submission.id,
-        lastVersionFileUrl: submission.lastVersionFileUrl || null,
-        // Links de Drive para referencia
-        driveFolderUrl: submission.driveFolderUrl,
-        editorialFolderUrl: submission.editorialFolderUrl,
-      };
-
-      setArticleForm(prev => ({ ...prev, ...importedData }));
-
-      // Guardar resumen de importación
-      setImportSummary({
-        fields: [
-          'título', 'título inglés', 'resumen', 'abstract', 'palabras clave', 'keywords',
-          'área', 'tipo de artículo', 'autores', 'contribuciones', 'conflictos', 'financiamiento',
-          'agradecimientos', 'disponibilidad de datos', 'fechas aproximadas', 'submission ID'
-        ],
-        lastVersionFileUrl: submission.lastVersionFileUrl,
-        driveFolderUrl: submission.driveFolderUrl,
-        editorialFolderUrl: submission.editorialFolderUrl,
+    // Si no hay autores en el array, intentar con el autor principal
+    if (importedAuthors.length === 0 && getMeta('authorName')) {
+      importedAuthors.push({
+        name: getMeta('authorName') || '',
+        email: getMeta('authorEmail') || '',
+        institution: getMeta('authorInstitution') || '',
+        orcid: getMeta('authorOrcid') || '',
+        authorId: getMeta('authorUID') || getMeta('uid') || null,
+        isCorresponding: true,
+        contribution: '',
       });
-
-      setStatus({ type: 'success', msg: '✅ Datos importados correctamente. Revise los campos y complete los que faltan.' });
-      
-      // Cerrar selector y abrir modal de artículo
-      setShowSubmissionSelector(false);
-      setShowArticleModal(true);
-      
-    } catch (error) {
-      console.error("Error importing submission:", error);
-      setStatus({ type: 'error', msg: `❌ Error al importar: ${error.message}` });
-    } finally {
-      setIsProcessing(false);
     }
-  };
+
+    // 2. Consolidar contribuciones en authorCredits
+    const authorCreditsText = importedAuthors
+      .filter(a => a.contribution)
+      .map(a => `${a.name}: ${a.contribution}`)
+      .join('\n');
+    
+    // 3. Financiamiento: combinar sources y grantNumbers
+    let fundingText = 'No declarada';
+    const fundingData = getMeta('funding');
+    if (fundingData) {
+      if (typeof fundingData === 'object' && !Array.isArray(fundingData)) {
+        const sources = fundingData.sources || '';
+        const grants = fundingData.grantNumbers || '';
+        fundingText = [sources, grants].filter(Boolean).join(' - ') || 'No declarada';
+      } else if (typeof fundingData === 'string') {
+        fundingText = fundingData;
+      }
+    }
+
+    // 4. Palabras clave - DETECCIÓN AUTOMÁTICA DE FORMATO (legacy + controlled)
+    let palabrasClaveStr = '';
+    let keywordsEnglishStr = '';
+
+    // Intentar usar keywordsRaw primero (formato nuevo controlado)
+    const keywordsRaw = getMeta('keywordsRaw');
+    if (keywordsRaw && Array.isArray(keywordsRaw) && keywordsRaw.length > 0) {
+      palabrasClaveStr = keywordsRaw
+        .map(k => k.code ? `${k.code}: ${k.term}` : k.term)
+        .join('; ');
+    } else {
+      // Intentar con keywords (array)
+      const keywords = getMeta('keywords');
+      if (keywords && Array.isArray(keywords) && keywords.length > 0) {
+        palabrasClaveStr = keywords.join('; ');
+      } else if (typeof keywords === 'string') {
+        palabrasClaveStr = keywords;
+      }
+    }
+
+    // Mismo proceso para inglés
+    const keywordsRawEn = getMeta('keywordsRawEn');
+    if (keywordsRawEn && Array.isArray(keywordsRawEn) && keywordsRawEn.length > 0) {
+      keywordsEnglishStr = keywordsRawEn
+        .map(k => k.code ? `${k.code}: ${k.term}` : k.term)
+        .join('; ');
+    } else {
+      const keywordsEn = getMeta('keywordsEn');
+      if (keywordsEn && Array.isArray(keywordsEn) && keywordsEn.length > 0) {
+        keywordsEnglishStr = keywordsEn.join('; ');
+      } else if (typeof keywordsEn === 'string') {
+        keywordsEnglishStr = keywordsEn;
+      }
+    }
+
+    // Si no hay inglés, usar español como fallback
+    if (!keywordsEnglishStr && palabrasClaveStr) {
+      keywordsEnglishStr = palabrasClaveStr;
+    }
+
+    // 5. Fechas aproximadas
+    const receivedDate = submission.createdAt ? 
+      (submission.createdAt.toDate ? submission.createdAt.toDate().toISOString().split('T')[0] : 
+       new Date(submission.createdAt).toISOString().split('T')[0]) : '';
+    
+    const acceptedDate = submission.publicationReadyAt ? 
+      (submission.publicationReadyAt.toDate ? submission.publicationReadyAt.toDate().toISOString().split('T')[0] : 
+       new Date(submission.publicationReadyAt).toISOString().split('T')[0]) : 
+      (submission.decisionMadeAt ? 
+        (submission.decisionMadeAt.toDate ? submission.decisionMadeAt.toDate().toISOString().split('T')[0] : 
+         new Date(submission.decisionMadeAt).toISOString().split('T')[0]) : '');
+
+    // 6. Tipo de artículo (usar articleType, no tipo/type)
+    const articleType = getMeta('articleType') || '';
+    // Mapear tipos comunes si es necesario
+    const articleTypeMap = {
+      'research': { es: 'Artículo de Investigación', en: 'Research Article' },
+      'review': { es: 'Artículo de Revisión', en: 'Review Article' },
+      'case_study': { es: 'Estudio de Caso', en: 'Case Study' },
+      'essay': { es: 'Ensayo', en: 'Essay' },
+      'letter': { es: 'Carta al Editor', en: 'Letter to the Editor' },
+    };
+    
+    const tipoMapped = articleTypeMap[articleType] || { es: articleType, en: articleType };
+
+    // 7. Construir objeto con todos los campos
+    const importedData = {
+      titulo: getMeta('title') || '',
+      tituloEnglish: getMeta('titleEn') || '',
+      autores: importedAuthors,
+      resumen: getMeta('abstract') || '',
+      abstract: getMeta('abstractEn') || '',
+      palabras_clave: palabrasClaveStr,
+      keywords_english: keywordsEnglishStr,
+      area: getMeta('area') || '',
+      tipo: tipoMapped.es,
+      type: tipoMapped.en,
+      acknowledgments: getMeta('acknowledgments') || '',
+      acknowledgmentsEnglish: getMeta('acknowledgmentsEn') || '',
+      conflicts: getMeta('conflictOfInterest') || 'Los autores declaran no tener conflictos de interés.',
+      conflictsEnglish: getMeta('conflictsEnglish') || 'The authors declare no conflicts of interest.',
+      funding: fundingText,
+      fundingEnglish: getMeta('fundingEnglish') || fundingText,
+      dataAvailability: getMeta('dataAvailability') || '',
+      dataAvailabilityEnglish: getMeta('dataAvailabilityEn') || '',
+      authorCredits: authorCreditsText,
+      authorCreditsEnglish: getMeta('authorCreditsEnglish') || authorCreditsText,
+      receivedDate: receivedDate,
+      acceptedDate: acceptedDate,
+      submissionId: submission.submissionId || submission.id,
+      lastVersionFileUrl: submission.lastVersionFileUrl || null,
+      // Links de Drive para referencia
+      driveFolderUrl: submission.driveFolderUrl || null,
+      editorialFolderUrl: submission.editorialFolderUrl || null,
+    };
+
+    console.log('📥 Datos importados:', {
+      titulo: importedData.titulo,
+      tituloEnglish: importedData.tituloEnglish,
+      autores: importedData.autores.length,
+      palabras_clave: importedData.palabras_clave,
+      area: importedData.area,
+      tipo: importedData.tipo,
+      submissionId: importedData.submissionId,
+    });
+
+    setArticleForm(prev => ({ ...prev, ...importedData }));
+
+    // Guardar resumen de importación
+    const importedFields = [];
+    if (importedData.titulo) importedFields.push('título');
+    if (importedData.tituloEnglish) importedFields.push('título inglés');
+    if (importedData.resumen) importedFields.push('resumen');
+    if (importedData.abstract) importedFields.push('abstract');
+    if (importedData.palabras_clave) importedFields.push('palabras clave');
+    if (importedData.keywords_english) importedFields.push('keywords');
+    if (importedData.area) importedFields.push('área');
+    if (importedData.tipo) importedFields.push('tipo de artículo');
+    if (importedData.autores.length > 0) importedFields.push(`autores (${importedData.autores.length})`);
+    if (importedData.authorCredits) importedFields.push('contribuciones');
+    if (importedData.conflicts) importedFields.push('conflictos');
+    if (importedData.funding && importedData.funding !== 'No declarada') importedFields.push('financiamiento');
+    if (importedData.acknowledgments) importedFields.push('agradecimientos');
+    if (importedData.dataAvailability) importedFields.push('disponibilidad de datos');
+    if (importedData.receivedDate) importedFields.push('fecha recepción');
+    if (importedData.acceptedDate) importedFields.push('fecha aceptación');
+    if (importedData.submissionId) importedFields.push('submission ID');
+
+    setImportSummary({
+      fields: importedFields,
+      lastVersionFileUrl: submission.lastVersionFileUrl,
+      driveFolderUrl: submission.driveFolderUrl,
+      editorialFolderUrl: submission.editorialFolderUrl,
+    });
+
+    setStatus({ type: 'success', msg: `✅ Datos importados correctamente (${importedFields.length} campos). Revise y complete los que faltan.` });
+    
+    // Cerrar selector y abrir modal de artículo
+    setShowSubmissionSelector(false);
+    setSelectedSubmission(submission);
+    setShowArticleModal(true);
+    
+  } catch (error) {
+    console.error("Error importing submission:", error);
+    setStatus({ type: 'error', msg: `❌ Error al importar: ${error.message}` });
+  } finally {
+    setIsProcessing(false);
+  }
+};
 
   // --- Filtrado de submissions ---
   const filteredReadySubmissions = useMemo(() => {

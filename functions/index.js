@@ -1982,13 +1982,14 @@ if (action === "publish") {
   }
 );
 
-// ===================== FUNCIÓN AUXILIAR PARA CREAR HISTORIAL INMUTABLE (SIN DOI) =====================
+/// ===================== FUNCIÓN AUXILIAR PARA CREAR HISTORIAL INMUTABLE (CON DOI) =====================
 async function createImmutableArticleHistory(article, user, action, requestId) {
   try {
     const db = admin.firestore();
     const crypto = require('crypto');
     
     console.log(`[${requestId}] 📦 Construyendo objeto de historial inmutable...`);
+    console.log(`[${requestId}] 📋 DOI recibido: "${article.doi || 'NO DOI'}"`);
     
     // 1. Buscar si ya existe un historial para este artículo
     const existingHistoryQuery = await db.collection('immutableHistories')
@@ -1998,29 +1999,48 @@ async function createImmutableArticleHistory(article, user, action, requestId) {
       .get();
     
     let previousHistoryId = null;
+    let previousHistory = null;
     if (!existingHistoryQuery.empty) {
       previousHistoryId = existingHistoryQuery.docs[0].id;
+      previousHistory = existingHistoryQuery.docs[0].data();
       console.log(`[${requestId}] 📚 Versión anterior encontrada: ${previousHistoryId}`);
     }
     
     // 2. Procesar autores para formato final
-    const processedAuthors = (article.autores || []).map(author => {
-      return {
-        name: author.name || `${author.firstName || ''} ${author.lastName || ''}`.trim(),
-        authorId: author.authorId || null,
-        email: author.email || null,
-        institution: author.institution || null,
-        orcid: author.orcid || null,
-        fullName: author.name || `${author.firstName || ''} ${author.lastName || ''}`.trim()
-      };
-    });
+    const processedAuthors = (article.autores || []).map(author => ({
+      name: author.name || `${author.firstName || ''} ${author.lastName || ''}`.trim(),
+      authorId: author.authorId || null,
+      email: author.email || null,
+      institution: author.institution || null,
+      orcid: author.orcid || null,
+      isCorresponding: author.isCorresponding || false,
+      contribution: author.contribution || '',
+      fullName: author.name || `${author.firstName || ''} ${author.lastName || ''}`.trim()
+    }));
     
-    // 3. Construir el objeto de historia (SIN DOI)
+    // 3. Procesar palabras clave (normalizar a array)
+    const processKeywords = (keywordsInput) => {
+      if (!keywordsInput) return [];
+      if (Array.isArray(keywordsInput)) {
+        return keywordsInput.map(k => typeof k === 'string' ? k.trim() : String(k)).filter(Boolean);
+      }
+      if (typeof keywordsInput === 'string') {
+        return keywordsInput.split(';').map(k => k.trim()).filter(Boolean);
+      }
+      return [];
+    };
+    
+    const keywordsArray = processKeywords(article.palabras_clave);
+    const keywordsEnArray = processKeywords(article.keywords_english);
+    
+    // 4. Construir el objeto de historia
     const immutableHistory = {
-      version: "1.0.0",
+      version: "2.0.0", // Versión actualizada para incluir DOI
+      schemaVersion: 2,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       createdBy: user.uid,
       createdByEmail: user.email || 'unknown',
+      createdByDisplayName: user.displayName || user.email || 'unknown',
       createdByAction: action,
       requestId: requestId,
       
@@ -2028,77 +2048,129 @@ async function createImmutableArticleHistory(article, user, action, requestId) {
       articleNumber: article.numeroArticulo,
       submissionId: article.submissionId || null,
       
-      // METADATOS FINALES DEL ARTÍCULO (SIN DOI)
+      // METADATOS FINALES DEL ARTÍCULO
       finalMetadata: {
-        title: article.titulo,
+        // Identidad
+        title: article.titulo || '',
         titleEn: article.tituloEnglish || '',
-        doi: article.doi || '',
+        doi: article.doi || '', // ← AHORA INCLUYE DOI
+        
+        // Autores
         authors: processedAuthors,
+        authorsCount: processedAuthors.length,
+        
+        // Contenido académico
         abstract: article.resumen || '',
         abstractEn: article.abstract || '',
-        keywords: article.palabras_clave || [],
-        keywordsEn: article.keywords_english || [],
+        keywords: keywordsArray,
+        keywordsEn: keywordsEnArray,
+        keywordsCount: keywordsArray.length,
+        keywordsEnCount: keywordsEnArray.length,
+        
+        // Clasificación
         area: article.area || '',
         tipo: article.tipo || 'Artículo de Investigación',
         type: article.type || 'Research Article',
+        
+        // Fechas
         fecha: article.fecha || '',
         receivedDate: article.receivedDate || '',
         acceptedDate: article.acceptedDate || '',
+        
+        // Publicación
         publication: {
           volumen: article.volumen || '',
           numero: article.numero || '',
           primeraPagina: article.primeraPagina || '',
           ultimaPagina: article.ultimaPagina || '',
-          pdfUrl: article.pdfUrl || ''
-          // SIN DOI
+          pdfUrl: article.pdfUrl || '',
+          totalPages: article.primeraPagina && article.ultimaPagina ? 
+            (parseInt(article.ultimaPagina) - parseInt(article.primeraPagina) + 1) : 0
         },
+        
+        // Declaraciones
         acknowledgments: article.acknowledgments || '',
         acknowledgmentsEnglish: article.acknowledgmentsEnglish || '',
         funding: article.funding || 'No declarada',
         fundingEnglish: article.fundingEnglish || 'Not declared',
         conflicts: article.conflicts || 'Los autores declaran no tener conflictos de interés.',
         conflictsEnglish: article.conflictsEnglish || 'The authors declare no conflicts of interest.',
+        
+        // Contribuciones
         authorCredits: article.authorCredits || '',
         authorCreditsEnglish: article.authorCreditsEnglish || '',
+        
+        // Datos
         dataAvailability: article.dataAvailability || '',
         dataAvailabilityEnglish: article.dataAvailabilityEnglish || '',
+        
+        // Contenido HTML
         html_es: article.html_es || '',
         html_en: article.html_en || '',
-        referencias: article.referencias || ''
+        html_esLength: (article.html_es || '').length,
+        html_enLength: (article.html_en || '').length,
+        
+        // Referencias
+        referencias: article.referencias || '',
+        referenciasLength: (article.referencias || '').length
       },
       
-      // INFORMACIÓN DE CONTROL
+      // METADATOS DE CONTROL Y AUDITORÍA
       control: {
         createdBy: user.uid,
-        createdByEmail: user.email,
-        createdAt: new Date().toISOString(),
+        createdByEmail: user.email || 'unknown',
+        createdByDisplayName: user.displayName || user.email || 'unknown',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAtISO: new Date().toISOString(),
         lastAction: action,
-        previousHistoryId: previousHistoryId,
+        previousHistoryId: previousHistoryId || null,
         isLatest: true,
-        articleStatus: article.status || 'published'
+        articleStatus: article.status || 'published',
+        publishedAt: article.publishedAt || new Date().toISOString(),
+        publishedBy: article.publishedBy || user.uid
+      },
+      
+      // TRAZABILIDAD
+      traceability: {
+        previousVersions: previousHistoryId ? [previousHistoryId] : [],
+        previousHash: previousHistory ? previousHistory.hash : null,
+        totalVersions: previousHistory ? (previousHistory.control?.totalVersions || 1) + 1 : 1
       },
       
       // HASH (se calculará después)
       hash: null,
       
-      previousVersions: previousHistoryId ? [previousHistoryId] : []
+      // INFORMACIÓN ADICIONAL DEL SISTEMA
+      system: {
+        functionVersion: "2.0.0",
+        nodeVersion: process.version,
+        platform: process.platform,
+        timestamp: new Date().toISOString()
+      }
     };
     
-    // 4. Si existe un historial anterior, marcarlo como no latest
+    // 5. Si existe un historial anterior, marcarlo como no latest
     if (previousHistoryId) {
+      console.log(`[${requestId}] 📝 Actualizando historial anterior ${previousHistoryId}...`);
       await db.collection('immutableHistories').doc(previousHistoryId).update({
         'control.isLatest': false,
-        'control.supersededBy': null,
+        'control.supersededBy': null, // Se actualizará después
+        'control.supersededAt': admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
       });
     }
     
-    // 5. Calcular hash SHA-256
+    // 6. Calcular hash SHA-256 del contenido
     const hashObj = { ...immutableHistory };
+    // Excluir campos que no son parte del contenido inmutable
     delete hashObj.hash;
-    delete hashObj.createdAt; // Excluir timestamp de Firebase del hash
+    delete hashObj.createdAt;
+    delete hashObj.control.createdAt;
+    delete hashObj.system;
+    delete hashObj.traceability;
     
     const hashString = JSON.stringify(hashObj, (key, value) => {
+      // Manejar Timestamps de Firestore
       if (value && typeof value === 'object' && value.toDate) {
         return value.toDate().toISOString();
       }
@@ -2110,7 +2182,9 @@ async function createImmutableArticleHistory(article, user, action, requestId) {
       .update(hashString)
       .digest('hex');
     
-    // 6. Guardar en Firestore
+    console.log(`[${requestId}] 🔒 Hash calculado: ${immutableHistory.hash.substring(0, 16)}...`);
+    
+    // 7. Guardar en Firestore
     let historyRef;
     if (previousHistoryId) {
       historyRef = await db.collection('immutableHistories').add(immutableHistory);
@@ -2118,26 +2192,63 @@ async function createImmutableArticleHistory(article, user, action, requestId) {
       // Actualizar el anterior con la referencia al nuevo
       await db.collection('immutableHistories').doc(previousHistoryId).update({
         'control.supersededBy': historyRef.id,
+        'control.supersededAt': admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
       });
+      
+      console.log(`[${requestId}] 🔗 Historial anterior actualizado con referencia a: ${historyRef.id}`);
     } else {
       historyRef = await db.collection('immutableHistories').add(immutableHistory);
+      console.log(`[${requestId}] 🆕 Primer historial creado para artículo #${article.numeroArticulo}`);
     }
     
-    console.log(`[${requestId}] ✅ Historial guardado con ID: ${historyRef.id}`);
+    console.log(`[${requestId}] ✅ Historial guardado exitosamente:`);
+    console.log(`[${requestId}]    - ID: ${historyRef.id}`);
+    console.log(`[${requestId}]    - Artículo: #${article.numeroArticulo}`);
+    console.log(`[${requestId}]    - Título: "${article.titulo?.substring(0, 50)}..."`);
+    console.log(`[${requestId}]    - DOI: "${article.doi || 'NO ASIGNADO'}"`);
+    console.log(`[${requestId}]    - Autores: ${processedAuthors.length}`);
+    console.log(`[${requestId}]    - Versión: ${immutableHistory.traceability.totalVersions}`);
+    console.log(`[${requestId}]    - Hash: ${immutableHistory.hash.substring(0, 16)}...`);
+    
+    // 8. Registrar en audit log del artículo (si existe submissionId)
+    if (article.submissionId) {
+      try {
+        await db.collection('submissions').doc(article.submissionId)
+          .collection('auditLogs').add({
+            action: 'immutable_history_created',
+            historyId: historyRef.id,
+            articleNumber: article.numeroArticulo,
+            doi: article.doi || null,
+            hash: immutableHistory.hash,
+            version: immutableHistory.traceability.totalVersions,
+            by: user.uid,
+            timestamp: admin.firestore.FieldValue.serverTimestamp()
+          });
+      } catch (auditError) {
+        console.warn(`[${requestId}] ⚠️ Error guardando audit log:`, auditError.message);
+      }
+    }
     
     return {
       historyId: historyRef.id,
       hash: immutableHistory.hash,
-      articleNumber: article.numeroArticulo
+      articleNumber: article.numeroArticulo,
+      doi: article.doi || null,
+      version: immutableHistory.traceability.totalVersions,
+      createdAt: new Date().toISOString()
     };
     
   } catch (error) {
     console.error(`[${requestId}] ❌ Error en createImmutableArticleHistory:`, error);
+    console.error(`[${requestId}] 📋 Artículo:`, JSON.stringify({
+      numeroArticulo: article.numeroArticulo,
+      titulo: article.titulo,
+      doi: article.doi
+    }));
     throw error;
   }
 }
-
 // ===================== FUNCIÓN AUXILIAR PARA GENERAR SLUG =====================
 function generateSlug(text) {
   return text
@@ -9614,7 +9725,7 @@ exports.onEditorialReviewCreated = onDocumentCreated(
 exports.onArticleReadyForPublication = onDocumentUpdated(
   {
     document: 'submissions/{submissionId}',
-    secrets: [], // Usa la extensión de email
+    secrets: [],
     memory: '256MiB'
   },
   async (event) => {
@@ -9631,6 +9742,7 @@ exports.onArticleReadyForPublication = onDocumentUpdated(
 
     try {
       const db = admin.firestore();
+      const submissionRef = db.collection('submissions').doc(submissionId);
 
       // 1. Obtener los emails de los Directores Generales
       const directorsSnapshot = await db.collection('users')
@@ -9650,47 +9762,144 @@ exports.onArticleReadyForPublication = onDocumentUpdated(
 
       if (directorEmails.length === 0) {
         console.warn('⚠️ No se encontraron Directores Generales en la base de datos.');
-        // Fallback a un email de contacto
         directorEmails.push({ email: 'contact@revistacienciasestudiantes.com', name: 'Director General' });
       }
 
-      // 2. Obtener datos del artículo
+      // 2. Obtener datos del artículo y CONSOLIDAR METADATOS
       const submission = afterData;
       const lang = submission.paperLanguage || 'es';
       const isSpanish = lang === 'es';
 
-      // 3. Construir el email
+      // *** LÓGICA DE CONSOLIDACIÓN DE METADATOS (CORREGIDA) ***
+      console.log(`🔄 Iniciando consolidación de metadatos para ${submissionId}...`);
+      
+      // 2.1 Definir los metadatos base (campos que pueden ser modificados)
+      const metadataFields = [
+        'title', 'titleEn', 'abstract', 'abstractEn', 
+        'keywords', 'keywordsEn', 'authors', 'funding', 
+        'conflictOfInterest', 'dataAvailability', 'dataAvailabilityEn',
+        'acknowledgments', 'area', 'articleType'
+      ];
+      
+      // 2.2 Extraer solo los metadatos del documento actual
+      const baseMetadata = {};
+      metadataFields.forEach(field => {
+        if (submission[field] !== undefined) {
+          baseMetadata[field] = submission[field];
+        }
+      });
+      
+      // También incluir currentMetadata si existe
+      if (submission.currentMetadata) {
+        metadataFields.forEach(field => {
+          if (submission.currentMetadata[field] !== undefined && !(field in baseMetadata)) {
+            baseMetadata[field] = submission.currentMetadata[field];
+          }
+        });
+      }
+      
+      console.log('📋 Metadatos base extraídos:', Object.keys(baseMetadata).join(', '));
+      
+      // 2.3 Obtener todas las propuestas de metadatos
+      const proposalsSnapshot = await db.collection('submissions')
+        .doc(submissionId)
+        .collection('metadataProposals')
+        .get();
+
+      let finalMetadata = { ...baseMetadata }; // Por defecto, mantener los metadatos actuales
+      
+      if (!proposalsSnapshot.empty) {
+        // 2.4 Filtrar solo las propuestas aprobadas y ordenarlas por fecha (más reciente primero)
+        const approvedProposals = proposalsSnapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .filter(proposal => proposal.status === 'approved' && proposal.changes)
+          .sort((a, b) => {
+            const dateA = a.proposedAt?.toDate?.() || new Date(0);
+            const dateB = b.proposedAt?.toDate?.() || new Date(0);
+            return dateB - dateA; // Más reciente primero = mayor prioridad
+          });
+
+        if (approvedProposals.length > 0) {
+          console.log(`✅ Se encontraron ${approvedProposals.length} propuestas aprobadas.`);
+          
+          // 2.5 Rastrear campos ya actualizados para resolver conflictos
+          const updatedFields = new Set();
+          
+          // 2.6 Aplicar cambios - los más recientes tienen prioridad
+          for (const proposal of approvedProposals) {
+            if (!Array.isArray(proposal.changes)) continue;
+            
+            console.log(`📝 Procesando propuesta ${proposal.id} (${proposal.proposedAt?.toDate?.()})`);
+            
+            for (const change of proposal.changes) {
+              const field = change.field;
+              
+              // Si este campo YA fue actualizado por una propuesta más reciente, lo saltamos
+              if (updatedFields.has(field)) {
+                console.log(`  ⚠️ Campo "${field}" ya fue actualizado por propuesta más reciente. Se ignora.`);
+                continue;
+              }
+              
+              // Aplicar el cambio propuesto
+              console.log(`  ✅ Campo "${field}" actualizado:`);
+              console.log(`     De: ${JSON.stringify(change.currentValue)?.substring(0, 80)}`);
+              console.log(`     A: ${JSON.stringify(change.proposedValue)?.substring(0, 80)}`);
+              
+              finalMetadata[field] = change.proposedValue;
+              updatedFields.add(field);
+            }
+          }
+          
+          console.log(`📊 Total campos actualizados: ${updatedFields.size} (${Array.from(updatedFields).join(', ')})`);
+        }
+      } else {
+        console.log('ℹ️ No se encontraron propuestas de metadatos para consolidar.');
+      }
+      
+      // 2.7 Actualizar el documento de submission
+      await submissionRef.update({
+        metadataBeforeConsolidation: baseMetadata,  // Respaldo del estado original
+        currentMetadata: finalMetadata,             // Los metadatos finales consolidados
+        ...finalMetadata                            // Actualizar también los campos raíz
+      });
+
+      console.log(`💾 Metadatos consolidados y guardados en Firestore para ${submissionId}.`);
+      // *** FIN DE LA SECCIÓN DE CONSOLIDACIÓN ***
+
+      // 3. Construir el email (usando los datos ya actualizados)
+      const updatedSubmissionDoc = await submissionRef.get();
+      const updatedSubmission = updatedSubmissionDoc.data();
+      
       const emailTitle = isSpanish
-        ? `✅ Artículo listo para publicación: "${submission.title.substring(0, 60)}..."`
-        : `✅ Article ready for publication: "${submission.title.substring(0, 60)}..."`;
+        ? `✅ Artículo listo para publicación: "${updatedSubmission.title?.substring(0, 60)}..."`
+        : `✅ Article ready for publication: "${updatedSubmission.title?.substring(0, 60)}..."`;
 
       // Información de los metadatos finales
-      const finalMetadata = submission.currentMetadata || submission.originalSubmission || {};
+      const finalMetadataForEmail = updatedSubmission.currentMetadata || updatedSubmission;
       
-      // Crear una lista de metadatos
       const metadataList = `
         <ul style="margin-top: 10px;">
-          <li><strong>Título:</strong> ${finalMetadata.title || 'N/A'}</li>
-          ${finalMetadata.titleEn ? `<li><strong>Title (EN):</strong> ${finalMetadata.titleEn}</li>` : ''}
-          <li><strong>Autores:</strong> ${finalMetadata.authors?.map(a => `${a.firstName} ${a.lastName}`).join('; ') || 'N/A'}</li>
-          <li><strong>Área:</strong> ${finalMetadata.area || 'N/A'}</li>
-          <li><strong>Palabras clave:</strong> ${finalMetadata.keywords?.join('; ') || 'N/A'}</li>
+          <li><strong>Título:</strong> ${finalMetadataForEmail.title || 'N/A'}</li>
+          ${finalMetadataForEmail.titleEn ? `<li><strong>Title (EN):</strong> ${finalMetadataForEmail.titleEn}</li>` : ''}
+          <li><strong>Autores:</strong> ${finalMetadataForEmail.authors?.map(a => `${a.firstName} ${a.lastName}`).join('; ') || 'N/A'}</li>
+          <li><strong>Área:</strong> ${finalMetadataForEmail.area || 'N/A'}</li>
+          <li><strong>Palabras clave:</strong> ${finalMetadataForEmail.keywords?.join('; ') || 'N/A'}</li>
         </ul>
       `;
 
       const bodyContent = isSpanish
         ? `
-          <p>El artículo <strong>"${submission.title}"</strong> ha sido marcado como <strong>listo para publicación</strong> por el equipo editorial.</p>
+          <p>El artículo <strong>"${updatedSubmission.title}"</strong> ha sido marcado como <strong>listo para publicación</strong> por el equipo editorial. Los metadatos finales han sido consolidados.</p>
           
           <div class="highlight-box">
-            <p class="article-title">"${submission.title}"</p>
-            <p><strong>ID del envío:</strong> ${submission.submissionId}</p>
-            <p><strong>Autor/a:</strong> ${submission.authorName || 'N/A'} (${submission.authorEmail || 'N/A'})</p>
+            <p class="article-title">"${updatedSubmission.title}"</p>
+            <p><strong>ID del envío:</strong> ${updatedSubmission.submissionId}</p>
+            <p><strong>Autor/a:</strong> ${updatedSubmission.authorName || 'N/A'} (${updatedSubmission.authorEmail || 'N/A'})</p>
             <p><strong>Marcado por:</strong> ${afterData.publicationReadyBy || 'Sistema'}</p>
             <p><strong>Fecha:</strong> ${afterData.publicationReadyAt?.toDate?.()?.toLocaleString('es-CL') || 'Fecha no disponible'}</p>
           </div>
           
-          <h3>📄 Metadatos finales:</h3>
+          <h3>📄 Metadatos finales consolidados:</h3>
           ${metadataList}
           
           <h3>🔍 Acciones requeridas:</h3>
@@ -9703,21 +9912,21 @@ exports.onArticleReadyForPublication = onDocumentUpdated(
           
           <div class="button-container">
             <a href="https://www.revistacienciasestudiantes.com/${isSpanish ? 'es' : 'en'}/director/dashboard" class="btn">IR AL PANEL</a>
-            <a href="${submission.driveFolderUrl || '#'}" class="btn btn-secondary">VER CARPETA EN DRIVE</a>
+            <a href="${updatedSubmission.driveFolderUrl || '#'}" class="btn btn-secondary">VER CARPETA EN DRIVE</a>
           </div>
         `
         : `
-          <p>The article <strong>"${submission.title}"</strong> has been marked as <strong>ready for publication</strong> by the editorial team.</p>
+          <p>The article <strong>"${updatedSubmission.title}"</strong> has been marked as <strong>ready for publication</strong> by the editorial team. Final metadata has been consolidated.</p>
           
           <div class="highlight-box">
-            <p class="article-title">"${submission.title}"</p>
-            <p><strong>Submission ID:</strong> ${submission.submissionId}</p>
-            <p><strong>Author:</strong> ${submission.authorName || 'N/A'} (${submission.authorEmail || 'N/A'})</p>
+            <p class="article-title">"${updatedSubmission.title}"</p>
+            <p><strong>Submission ID:</strong> ${updatedSubmission.submissionId}</p>
+            <p><strong>Author:</strong> ${updatedSubmission.authorName || 'N/A'} (${updatedSubmission.authorEmail || 'N/A'})</p>
             <p><strong>Marked by:</strong> ${afterData.publicationReadyBy || 'System'}</p>
             <p><strong>Date:</strong> ${afterData.publicationReadyAt?.toDate?.()?.toLocaleString('en-US') || 'Date not available'}</p>
           </div>
           
-          <h3>📄 Final metadata:</h3>
+          <h3>📄 Final consolidated metadata:</h3>
           ${metadataList}
           
           <h3>🔍 Required actions:</h3>
@@ -9730,7 +9939,7 @@ exports.onArticleReadyForPublication = onDocumentUpdated(
           
           <div class="button-container">
             <a href="https://www.revistacienciasestudiantes.com/${isSpanish ? 'es' : 'en'}/director/dashboard" class="btn">GO TO DASHBOARD</a>
-            <a href="${submission.driveFolderUrl || '#'}" class="btn btn-secondary">VIEW DRIVE FOLDER</a>
+            <a href="${updatedSubmission.driveFolderUrl || '#'}" class="btn btn-secondary">VIEW DRIVE FOLDER</a>
           </div>
         `;
 
@@ -11901,3 +12110,598 @@ exports.oai = onRequest(
     }
   }
 );
+// ===================== ON METADATA PROPOSAL CREATED (V2) =====================
+/**
+ * Cloud Function que se ejecuta cuando un editor crea una propuesta de cambios
+ * en los metadatos de un artículo. Envía un correo al autor notificándole.
+ * Soporte bilingüe (español/inglés) según paperLanguage del submission.
+ */
+exports.onMetadataProposalCreated = onDocumentCreated(
+  {
+    document: 'submissions/{submissionId}/metadataProposals/{proposalId}',
+    secrets: [], // Si usas secrets, agrégalos aquí
+    timeoutSeconds: 120,
+    memory: '256MiB'
+  },
+  async (event) => {
+    // Extraer parámetros de la ruta
+    const submissionId = event.params.submissionId;
+    const proposalId = event.params.proposalId;
+    
+    console.log(`📨 Nueva propuesta de metadatos: ${proposalId} para submission: ${submissionId}`);
+    
+    try {
+      const db = admin.firestore();
+      
+      // 1. Obtener datos de la propuesta
+      const proposalData = event.data.data();
+      
+      // Verificar que sea una propuesta pendiente de autor
+      if (proposalData.status !== 'pending-author') {
+        console.log(`⏭️ Propuesta con estado ${proposalData.status}, no se envía correo`);
+        return null;
+      }
+      
+      // 2. Obtener datos del submission
+      const submissionRef = db.collection('submissions').doc(submissionId);
+      const submissionSnap = await submissionRef.get();
+      
+      if (!submissionSnap.exists) {
+        console.error(`❌ Submission ${submissionId} no encontrado`);
+        return null;
+      }
+      
+      const submission = submissionSnap.data();
+      
+      // 3. Determinar idioma (español por defecto)
+      const isSpanish = submission.paperLanguage !== 'en';
+      
+      // 4. Obtener email del autor
+      const authorEmail = submission.authorEmail || submission.correspondingAuthor?.email;
+      
+      if (!authorEmail) {
+        console.error(`❌ No se encontró email del autor para submission ${submissionId}`);
+        return null;
+      }
+      
+      // 5. Obtener datos del editor que propuso
+      const editorEmail = proposalData.proposedByEmail || 'Editor';
+      const editorName = proposalData.proposedByName || 'Editor';
+      
+      // 6. Preparar datos para el correo
+      const articleTitle = submission.title || 'Sin título';
+      const changesCount = proposalData.changes?.length || 0;
+      
+      // Generar lista de cambios para el correo
+      let changesList = '';
+      if (proposalData.changes && Array.isArray(proposalData.changes)) {
+        changesList = proposalData.changes.map((change, index) => {
+          const fieldLabel = getFieldLabel(change.field, isSpanish);
+          const reason = isSpanish 
+            ? (change.reason || 'Sin justificación')
+            : (change.reason || 'No justification provided');
+          return `${index + 1}. **${fieldLabel}**: ${reason}`;
+        }).join('\n');
+      }
+      
+      // 7. Construir el cuerpo del correo según idioma
+      const emailContent = buildProposalEmail({
+        isSpanish,
+        articleTitle,
+        submissionId,
+        editorName,
+        editorEmail,
+        changesCount,
+        changesList,
+        currentYear: new Date().getFullYear()
+      });
+      
+      // 8. Enviar correo
+      await sendEmailViaExtension(authorEmail, emailContent.subject, emailContent.htmlBody);
+      
+      console.log(`✅ Correo de propuesta de metadatos enviado a ${authorEmail} (${isSpanish ? 'es' : 'en'})`);
+      
+      // 9. Registrar en auditLogs que se envió el correo
+      await db.collection('submissions').doc(submissionId).collection('auditLogs').add({
+        action: 'metadata_proposal_email_sent',
+        proposalId: proposalId,
+        to: authorEmail,
+        changesCount: changesCount,
+        language: isSpanish ? 'es' : 'en',
+        timestamp: admin.firestore.FieldValue.serverTimestamp()
+      });
+      
+      return { success: true, emailSent: authorEmail };
+      
+    } catch (error) {
+      console.error(`❌ Error en onMetadataProposalCreated:`, error.message);
+      console.error(error.stack);
+      
+      // Registrar error pero no fallar la función
+      try {
+        await admin.firestore().collection('systemErrors').add({
+          function: 'onMetadataProposalCreated',
+          submissionId: submissionId,
+          proposalId: proposalId,
+          error: {
+            message: error.message,
+            stack: error.stack
+          },
+          timestamp: admin.firestore.FieldValue.serverTimestamp()
+        });
+      } catch (logError) {
+        console.error('❌ Error al registrar error:', logError.message);
+      }
+      
+      return null;
+    }
+  }
+);
+
+// ===================== ON METADATA PROPOSAL UPDATED (V2) =====================
+/**
+ * Notifica al editor cuando el autor responde a una propuesta
+ * Soporte bilingüe (español/inglés)
+ */
+exports.onMetadataProposalUpdated = onDocumentUpdated(
+  {
+    document: 'submissions/{submissionId}/metadataProposals/{proposalId}',
+    secrets: [],
+    timeoutSeconds: 120,
+    memory: '256MiB'
+  },
+  async (event) => {
+    const submissionId = event.params.submissionId;
+    const proposalId = event.params.proposalId;
+    
+    const before = event.data.before.data();
+    const after = event.data.after.data();
+    
+    // Solo nos interesa cuando cambia de 'pending-author' a otro estado
+    if (before.status === after.status) {
+      return null;
+    }
+    
+    // Solo si el autor respondió (aprobó o rechazó)
+    if (!['approved', 'rejected'].includes(after.status)) {
+      return null;
+    }
+    
+    console.log(`📨 Respuesta del autor a propuesta ${proposalId}: ${after.status}`);
+    
+    try {
+      const db = admin.firestore();
+      
+      // Obtener datos del submission
+      const submissionRef = db.collection('submissions').doc(submissionId);
+      const submissionSnap = await submissionRef.get();
+      
+      if (!submissionSnap.exists) {
+        console.error(`❌ Submission ${submissionId} no encontrado`);
+        return null;
+      }
+      
+      const submission = submissionSnap.data();
+      
+      // Determinar idioma
+      const isSpanish = submission.paperLanguage !== 'en';
+      
+      // Obtener email del editor que propuso
+      const editorEmail = after.proposedByEmail;
+      
+      if (!editorEmail) {
+        console.log(`⚠️ No se encontró email del editor para notificar`);
+        return null;
+      }
+      
+      // Construir email de respuesta
+      const emailContent = buildResponseEmail({
+        isSpanish,
+        submissionTitle: submission.title || 'Sin título',
+        submissionId,
+        status: after.status,
+        authorComments: after.authorResponse?.comments || null,
+        currentYear: new Date().getFullYear()
+      });
+      
+      await sendEmailViaExtension(editorEmail, emailContent.subject, emailContent.htmlBody);
+      
+      console.log(`✅ Notificación de respuesta enviada a editor: ${editorEmail} (${isSpanish ? 'es' : 'en'})`);
+      
+      // Registrar en auditLogs
+      await db.collection('submissions').doc(submissionId).collection('auditLogs').add({
+        action: 'metadata_proposal_response_notified',
+        proposalId: proposalId,
+        to: editorEmail,
+        status: after.status,
+        language: isSpanish ? 'es' : 'en',
+        timestamp: admin.firestore.FieldValue.serverTimestamp()
+      });
+      
+    } catch (error) {
+      console.error(`❌ Error en onMetadataProposalUpdated:`, error.message);
+      return null;
+    }
+  }
+);
+// ===================== FUNCIÓN: buildProposalEmail =====================
+function buildProposalEmail({ isSpanish, articleTitle, submissionId, editorName, editorEmail, changesCount, changesList, currentYear }) {
+  if (isSpanish) {
+    return {
+      subject: `📝 Propuesta de corrección de metadatos - "${articleTitle.substring(0, 50)}${articleTitle.length > 50 ? '...' : ''}"`,
+      htmlBody: `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { margin:0; padding:0; background-color:#f3f4f6; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+    .container { max-width: 600px; margin: 20px auto; background-color:#ffffff; border-radius:4px; overflow:hidden; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); }
+    .header { background-color:#003b5c; padding:30px 20px; text-align:center; }
+    .header h1 { color:#ffffff; font-size:20px; font-weight:700; margin:0; font-family:'Georgia',serif; }
+    .content { padding:30px 40px; }
+    .greeting { font-size:16px; color:#1f2937; margin-bottom:20px; }
+    .alert-box { background-color:#fffbeb; border-left:4px solid #d97706; padding:15px 20px; margin:20px 0; border-radius:2px; }
+    .alert-box p { margin:0; color:#92400e; font-size:14px; line-height:1.6; }
+    .article-title { font-size:18px; font-weight:700; color:#003b5c; margin:0 0 5px 0; }
+    .article-meta { font-size:13px; color:#6b7280; margin-bottom:20px; }
+    .changes-box { background-color:#f8fafc; border:1px solid #e2e8f0; border-radius:4px; padding:15px 20px; margin:20px 0; }
+    .changes-box h3 { font-size:13px; font-weight:700; color:#1e293b; margin:0 0 12px 0; text-transform:uppercase; letter-spacing:1px; }
+    .change-item { padding:8px 0; border-bottom:1px solid #e2e8f0; font-size:14px; color:#334155; }
+    .change-item:last-child { border-bottom:none; }
+    .change-field { font-weight:600; color:#003b5c; }
+    .btn-container { text-align:center; margin:30px 0 20px 0; }
+    .btn { background-color:#003b5c; color:#ffffff !important; padding:14px 35px; text-decoration:none; border-radius:4px; font-size:14px; font-weight:600; display:inline-block; }
+    .btn:hover { background-color:#002c45; }
+    .footer { padding:20px; text-align:center; color:#9ca3af; font-size:11px; border-top:1px solid #e5e7eb; }
+    .footer a { color:#003b5c; text-decoration:none; }
+    .info-text { color:#6b7280; font-size:13px; margin-top:15px; line-height:1.6; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📝 Revisión de Metadatos</h1>
+    </div>
+    <div class="content">
+      <p class="greeting">Estimado/a autor/a,</p>
+      
+      <p>El editor <strong>${editorName}</strong> (${editorEmail}) ha realizado una propuesta de corrección sobre los metadatos de su artículo:</p>
+      
+      <div class="article-title">"${articleTitle}"</div>
+      <div class="article-meta">ID de envío: ${submissionId}</div>
+      
+      <div class="alert-box">
+        <p>🔔 <strong>Se requiere su revisión y aprobación</strong> para que estos cambios puedan ser aplicados formalmente al registro bibliográfico de su artículo.</p>
+      </div>
+      
+      <div class="changes-box">
+        <h3>📋 Cambios propuestos (${changesCount})</h3>
+        ${changesList || '<p style="color:#6b7280;font-size:14px;">No se especificaron cambios detallados.</p>'}
+      </div>
+      
+      <p style="font-size:14px;color:#4b5563;">
+        <strong>¿Qué debe hacer?</strong>
+      </p>
+      <ol style="font-size:14px;color:#4b5563;line-height:1.8;padding-left:20px;">
+        <li>Ingrese al <a href="https://www.revistacienciasestudiantes.com/es/login" style="color:#003b5c;">portal de autor</a></li>
+        <li>Vaya a la sección de <strong>"Mis Envíos"</strong></li>
+        <li>Seleccione el artículo y vaya a la pestaña <strong>"Revisión de Metadatos"</strong></li>
+        <li>Revise cada cambio propuesto y <strong>ACEPTE</strong> o <strong>RECHAZE</strong> la propuesta</li>
+      </ol>
+      
+      <div class="btn-container">
+        <a href="https://www.revistacienciasestudiantes.com/es/login" class="btn">Ir al Portal</a>
+      </div>
+      
+      <div class="info-text">
+        <p><strong>Nota importante:</strong> Si no responde en un plazo de <strong>7 días hábiles</strong>, los cambios propuestos podrían ser aplicados automáticamente según el criterio editorial, de acuerdo con las políticas de la revista.</p>
+        <p style="margin-top:10px;">Si tiene dudas, puede responder directamente a este correo para contactar al editor.</p>
+      </div>
+      
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:25px 0;">
+      
+      <p style="font-size:13px;color:#6b7280;text-align:center;">
+        Este es un correo automático generado por el sistema editorial.<br>
+        Revista Nacional de las Ciencias para Estudiantes
+      </p>
+    </div>
+    <div class="footer">
+      <p>&copy; ${currentYear} Revista Nacional de las Ciencias para Estudiantes</p>
+    </div>
+  </div>
+</body>
+</html>`
+    };
+  } else {
+    // VERSIÓN EN INGLÉS
+    return {
+      subject: `📝 Metadata correction proposal - "${articleTitle.substring(0, 50)}${articleTitle.length > 50 ? '...' : ''}"`,
+      htmlBody: `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { margin:0; padding:0; background-color:#f3f4f6; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+    .container { max-width: 600px; margin: 20px auto; background-color:#ffffff; border-radius:4px; overflow:hidden; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); }
+    .header { background-color:#003b5c; padding:30px 20px; text-align:center; }
+    .header h1 { color:#ffffff; font-size:20px; font-weight:700; margin:0; font-family:'Georgia',serif; }
+    .content { padding:30px 40px; }
+    .greeting { font-size:16px; color:#1f2937; margin-bottom:20px; }
+    .alert-box { background-color:#fffbeb; border-left:4px solid #d97706; padding:15px 20px; margin:20px 0; border-radius:2px; }
+    .alert-box p { margin:0; color:#92400e; font-size:14px; line-height:1.6; }
+    .article-title { font-size:18px; font-weight:700; color:#003b5c; margin:0 0 5px 0; }
+    .article-meta { font-size:13px; color:#6b7280; margin-bottom:20px; }
+    .changes-box { background-color:#f8fafc; border:1px solid #e2e8f0; border-radius:4px; padding:15px 20px; margin:20px 0; }
+    .changes-box h3 { font-size:13px; font-weight:700; color:#1e293b; margin:0 0 12px 0; text-transform:uppercase; letter-spacing:1px; }
+    .change-item { padding:8px 0; border-bottom:1px solid #e2e8f0; font-size:14px; color:#334155; }
+    .change-item:last-child { border-bottom:none; }
+    .change-field { font-weight:600; color:#003b5c; }
+    .btn-container { text-align:center; margin:30px 0 20px 0; }
+    .btn { background-color:#003b5c; color:#ffffff !important; padding:14px 35px; text-decoration:none; border-radius:4px; font-size:14px; font-weight:600; display:inline-block; }
+    .btn:hover { background-color:#002c45; }
+    .footer { padding:20px; text-align:center; color:#9ca3af; font-size:11px; border-top:1px solid #e5e7eb; }
+    .footer a { color:#003b5c; text-decoration:none; }
+    .info-text { color:#6b7280; font-size:13px; margin-top:15px; line-height:1.6; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📝 Metadata Review</h1>
+    </div>
+    <div class="content">
+      <p class="greeting">Dear Author,</p>
+      
+      <p>Editor <strong>${editorName}</strong> (${editorEmail}) has proposed corrections to the metadata of your article:</p>
+      
+      <div class="article-title">"${articleTitle}"</div>
+      <div class="article-meta">Submission ID: ${submissionId}</div>
+      
+      <div class="alert-box">
+        <p>🔔 <strong>Your review and approval are required</strong> for these changes to be formally applied to the bibliographic record of your article.</p>
+      </div>
+      
+      <div class="changes-box">
+        <h3>📋 Proposed Changes (${changesCount})</h3>
+        ${changesList || '<p style="color:#6b7280;font-size:14px;">No detailed changes were specified.</p>'}
+      </div>
+      
+      <p style="font-size:14px;color:#4b5563;">
+        <strong>What should you do?</strong>
+      </p>
+      <ol style="font-size:14px;color:#4b5563;line-height:1.8;padding-left:20px;">
+        <li>Log in to the <a href="https://www.revistacienciasestudiantes.com/en/login" style="color:#003b5c;">author portal</a></li>
+        <li>Go to <strong>"My Submissions"</strong></li>
+        <li>Select the article and go to the <strong>"Metadata Review"</strong> tab</li>
+        <li>Review each proposed change and <strong>ACCEPT</strong> or <strong>REJECT</strong> the proposal</li>
+      </ol>
+      
+      <div class="btn-container">
+        <a href="https://www.revistacienciasestudiantes.com/en/login" class="btn">Go to Portal</a>
+      </div>
+      
+      <div class="info-text">
+        <p><strong>Important note:</strong> If you do not respond within <strong>7 business days</strong>, the proposed changes may be automatically applied according to editorial criteria, in accordance with the journal's policies.</p>
+        <p style="margin-top:10px;">If you have questions, you can reply directly to this email to contact the editor.</p>
+      </div>
+      
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:25px 0;">
+      
+      <p style="font-size:13px;color:#6b7280;text-align:center;">
+        This is an automated email generated by the editorial system.<br>
+        National Review of Sciences for Students
+      </p>
+    </div>
+    <div class="footer">
+      <p>&copy; ${currentYear} National Review of Sciences for Students</p>
+    </div>
+  </div>
+</body>
+</html>`
+    };
+  }
+}
+
+// ===================== FUNCIÓN: buildResponseEmail =====================
+function buildResponseEmail({ isSpanish, submissionTitle, submissionId, status, authorComments, currentYear }) {
+  const isApproved = status === 'approved';
+  
+  if (isSpanish) {
+    const statusText = isApproved ? 'APROBADA ✅' : 'RECHAZADA ❌';
+    const statusColor = isApproved ? '#059669' : '#dc2626';
+    
+    return {
+      subject: `📋 Propuesta de metadatos ${statusText} - "${submissionTitle.substring(0, 40)}${submissionTitle.length > 40 ? '...' : ''}"`,
+      htmlBody: `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { margin:0; padding:0; background-color:#f3f4f6; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+    .container { max-width: 600px; margin: 20px auto; background-color:#ffffff; border-radius:4px; overflow:hidden; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); }
+    .header { background-color:#003b5c; padding:25px 20px; text-align:center; }
+    .header h1 { color:#ffffff; font-size:18px; font-weight:700; margin:0; }
+    .content { padding:30px 40px; }
+    .status-box { text-align:center; padding:20px; margin:20px 0; border-radius:4px; background-color:#f8fafc; border:2px solid ${statusColor}; }
+    .status-box .status { font-size:24px; font-weight:700; color:${statusColor}; }
+    .greeting { font-size:16px; color:#1f2937; }
+    .btn-container { text-align:center; margin:25px 0; }
+    .btn { background-color:#003b5c; color:#ffffff !important; padding:12px 30px; text-decoration:none; border-radius:4px; font-size:14px; font-weight:600; display:inline-block; }
+    .footer { padding:20px; text-align:center; color:#9ca3af; font-size:11px; border-top:1px solid #e5e7eb; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📋 Respuesta del Autor</h1>
+    </div>
+    <div class="content">
+      <p class="greeting">Estimado/a editor/a,</p>
+      
+      <p>El autor ha respondido a su propuesta de corrección de metadatos para el artículo:</p>
+      
+      <div style="font-weight:600;font-size:16px;color:#003b5c;margin:10px 0;">
+        "${submissionTitle}"
+      </div>
+      
+      <div class="status-box">
+        <div class="status">${statusText}</div>
+        <p style="margin-top:5px;color:#4b5563;font-size:14px;">
+          ${isApproved 
+            ? 'El autor ha aceptado los cambios propuestos.' 
+            : 'El autor ha rechazado los cambios propuestos.'}
+        </p>
+        ${authorComments ? `
+          <div style="margin-top:10px;padding:10px;background-color:#f1f5f9;border-radius:4px;text-align:left;font-style:italic;color:#1e293b;">
+            "${authorComments}"
+          </div>
+        ` : ''}
+      </div>
+      
+      ${isApproved ? `
+        <div style="background-color:#ecfdf5;border-left:4px solid #059669;padding:12px 16px;margin:15px 0;border-radius:2px;">
+          <p style="margin:0;font-size:14px;color:#065f46;">
+            ✅ Los cambios han sido aprobados. Puede <strong>aplicarlos al sistema</strong> desde el panel editorial.
+          </p>
+        </div>
+      ` : `
+        <div style="background-color:#fef2f2;border-left:4px solid #dc2626;padding:12px 16px;margin:15px 0;border-radius:2px;">
+          <p style="margin:0;font-size:14px;color:#991b1b;">
+            ❌ Los cambios han sido rechazados. Puede contactar al autor para discutir alternativas.
+          </p>
+        </div>
+      `}
+      
+      <div class="btn-container">
+        <a href="https://www.revistacienciasestudiantes.com/es/login" class="btn">Ver en Portal</a>
+      </div>
+      
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:25px 0;">
+      <p style="font-size:12px;color:#6b7280;text-align:center;">
+        Este es un correo automático del sistema editorial.
+      </p>
+    </div>
+    <div class="footer">
+      <p>&copy; ${currentYear} Revista Nacional de las Ciencias para Estudiantes</p>
+    </div>
+  </div>
+</body>
+</html>`
+    };
+  } else {
+    // VERSIÓN EN INGLÉS
+    const statusText = isApproved ? 'APPROVED ✅' : 'REJECTED ❌';
+    const statusColor = isApproved ? '#059669' : '#dc2626';
+    
+    return {
+      subject: `📋 Metadata proposal ${statusText} - "${submissionTitle.substring(0, 40)}${submissionTitle.length > 40 ? '...' : ''}"`,
+      htmlBody: `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { margin:0; padding:0; background-color:#f3f4f6; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+    .container { max-width: 600px; margin: 20px auto; background-color:#ffffff; border-radius:4px; overflow:hidden; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); }
+    .header { background-color:#003b5c; padding:25px 20px; text-align:center; }
+    .header h1 { color:#ffffff; font-size:18px; font-weight:700; margin:0; }
+    .content { padding:30px 40px; }
+    .status-box { text-align:center; padding:20px; margin:20px 0; border-radius:4px; background-color:#f8fafc; border:2px solid ${statusColor}; }
+    .status-box .status { font-size:24px; font-weight:700; color:${statusColor}; }
+    .greeting { font-size:16px; color:#1f2937; }
+    .btn-container { text-align:center; margin:25px 0; }
+    .btn { background-color:#003b5c; color:#ffffff !important; padding:12px 30px; text-decoration:none; border-radius:4px; font-size:14px; font-weight:600; display:inline-block; }
+    .footer { padding:20px; text-align:center; color:#9ca3af; font-size:11px; border-top:1px solid #e5e7eb; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📋 Author Response</h1>
+    </div>
+    <div class="content">
+      <p class="greeting">Dear Editor,</p>
+      
+      <p>The author has responded to your metadata correction proposal for the article:</p>
+      
+      <div style="font-weight:600;font-size:16px;color:#003b5c;margin:10px 0;">
+        "${submissionTitle}"
+      </div>
+      
+      <div class="status-box">
+        <div class="status">${statusText}</div>
+        <p style="margin-top:5px;color:#4b5563;font-size:14px;">
+          ${isApproved 
+            ? 'The author has accepted the proposed changes.' 
+            : 'The author has rejected the proposed changes.'}
+        </p>
+        ${authorComments ? `
+          <div style="margin-top:10px;padding:10px;background-color:#f1f5f9;border-radius:4px;text-align:left;font-style:italic;color:#1e293b;">
+            "${authorComments}"
+          </div>
+        ` : ''}
+      </div>
+      
+      ${isApproved ? `
+        <div style="background-color:#ecfdf5;border-left:4px solid #059669;padding:12px 16px;margin:15px 0;border-radius:2px;">
+          <p style="margin:0;font-size:14px;color:#065f46;">
+            ✅ Changes have been approved. You can <strong>apply them to the system</strong> from the editorial panel.
+          </p>
+        </div>
+      ` : `
+        <div style="background-color:#fef2f2;border-left:4px solid #dc2626;padding:12px 16px;margin:15px 0;border-radius:2px;">
+          <p style="margin:0;font-size:14px;color:#991b1b;">
+            ❌ Changes have been rejected. You can contact the author to discuss alternatives.
+          </p>
+        </div>
+      `}
+      
+      <div class="btn-container">
+        <a href="https://www.revistacienciasestudiantes.com/en/login" class="btn">View in Portal</a>
+      </div>
+      
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:25px 0;">
+      <p style="font-size:12px;color:#6b7280;text-align:center;">
+        This is an automated email from the editorial system.
+      </p>
+    </div>
+    <div class="footer">
+      <p>&copy; ${currentYear} National Review of Sciences for Students</p>
+    </div>
+  </div>
+</body>
+</html>`
+    };
+  }
+}
+
+// ===================== FUNCIÓN AUXILIAR: getFieldLabel =====================
+function getFieldLabel(fieldName, isSpanish) {
+  const labels = {
+    'title': { es: 'Título', en: 'Title' },
+    'titleEn': { es: 'Título (Inglés)', en: 'Title (English)' },
+    'abstract': { es: 'Resumen', en: 'Abstract' },
+    'abstractEn': { es: 'Resumen (Inglés)', en: 'Abstract (English)' },
+    'keywords': { es: 'Palabras Clave', en: 'Keywords' },
+    'keywordsEn': { es: 'Palabras Clave (Inglés)', en: 'Keywords (English)' },
+    'authors': { es: 'Autores', en: 'Authors' },
+    'funding': { es: 'Financiamiento', en: 'Funding' },
+    'conflictOfInterest': { es: 'Conflicto de Intereses', en: 'Conflict of Interest' },
+    'dataAvailability': { es: 'Disponibilidad de Datos', en: 'Data Availability' },
+    'codeAvailability': { es: 'Disponibilidad de Código', en: 'Code Availability' },
+    'acknowledgments': { es: 'Agradecimientos', en: 'Acknowledgments' },
+    'articleType': { es: 'Tipo de Artículo', en: 'Article Type' },
+    'area': { es: 'Área de Conocimiento', en: 'Knowledge Area' }
+  };
+  
+  const label = labels[fieldName];
+  if (!label) return fieldName;
+  return isSpanish ? label.es : label.en;
+}
