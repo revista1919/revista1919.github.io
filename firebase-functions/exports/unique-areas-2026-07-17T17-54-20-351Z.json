@@ -1,0 +1,847 @@
+{
+  "exportDate": "2026-07-17T17:54:20.354Z",
+  "totalUniqueAreas": 66,
+  "areas": [
+    {
+      "area": "Ajedrez",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Lucas Velozo Mella",
+          "email": "lgvm3011@gmail.com",
+          "institution": "Colegio Instituto Pascal"
+        }
+      ]
+    },
+    {
+      "area": "Algebra",
+      "reviewerCount": 3,
+      "reviewers": [
+        {
+          "name": "Emanuel Cereceda",
+          "email": "emanuelcereceda3@gmail.com",
+          "institution": "Liceo Bicentenario Santa María de las Condes"
+        },
+        {
+          "name": "Joel Portugal",
+          "email": "amigojoel45@gmail.com",
+          "institution": "Liceo Nacional de Maipú"
+        },
+        {
+          "name": "Tomás Arancibia",
+          "email": "tomasarancibiam@gmail.com",
+          "institution": "Colegio Calasanz"
+        }
+      ]
+    },
+    {
+      "area": "Análisis matemático",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Emanuel Cereceda",
+          "email": "emanuelcereceda3@gmail.com",
+          "institution": "Liceo Bicentenario Santa María de las Condes"
+        }
+      ]
+    },
+    {
+      "area": "Applied science",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Emanuel Cereceda",
+          "email": "emanuelcereceda3@gmail.com",
+          "institution": "Liceo Bicentenario Santa María de las Condes"
+        }
+      ]
+    },
+    {
+      "area": "Astronomy",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Lucas Velozo Mella",
+          "email": "lgvm3011@gmail.com",
+          "institution": "Colegio Instituto Pascal"
+        }
+      ]
+    },
+    {
+      "area": "Astronomía",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Lucas Velozo Mella",
+          "email": "lgvm3011@gmail.com",
+          "institution": "Colegio Instituto Pascal"
+        }
+      ]
+    },
+    {
+      "area": "Astronomía y Astrofísica",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Revisor Anónimo 1",
+          "email": "luchitojara.rovier@gmail.com",
+          "institution": "Sin institución"
+        }
+      ]
+    },
+    {
+      "area": "Biochemistry",
+      "reviewerCount": 3,
+      "reviewers": [
+        {
+          "name": "Carlos Gutiérrez",
+          "email": "thebreb2@gmail.com",
+          "institution": "New Heinrich School"
+        },
+        {
+          "name": "Joel Portugal",
+          "email": "amigojoel45@gmail.com",
+          "institution": "Liceo Nacional de Maipú"
+        },
+        {
+          "name": "Tomás Arancibia",
+          "email": "tomasarancibiam@gmail.com",
+          "institution": "Colegio Calasanz"
+        }
+      ]
+    },
+    {
+      "area": "Biología",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Revisor Anónimo 1",
+          "email": "luchitojara.rovier@gmail.com",
+          "institution": "Sin institución"
+        }
+      ]
+    },
+    {
+      "area": "Biología celular",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Agustín Maturana",
+          "email": "aster.maturana@gmail.com",
+          "institution": "Instituto Miguel León Prado"
+        }
+      ]
+    },
+    {
+      "area": "Bioquímica",
+      "reviewerCount": 3,
+      "reviewers": [
+        {
+          "name": "Carlos Gutiérrez",
+          "email": "thebreb2@gmail.com",
+          "institution": "New Heinrich School"
+        },
+        {
+          "name": "Joel Portugal",
+          "email": "amigojoel45@gmail.com",
+          "institution": "Liceo Nacional de Maipú"
+        },
+        {
+          "name": "Tomás Arancibia",
+          "email": "tomasarancibiam@gmail.com",
+          "institution": "Colegio Calasanz"
+        }
+      ]
+    },
+    {
+      "area": "Chess",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Lucas Velozo Mella",
+          "email": "lgvm3011@gmail.com",
+          "institution": "Colegio Instituto Pascal"
+        }
+      ]
+    },
+    {
+      "area": "Ciencia aplicada",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Emanuel Cereceda",
+          "email": "emanuelcereceda3@gmail.com",
+          "institution": "Liceo Bicentenario Santa María de las Condes"
+        }
+      ]
+    },
+    {
+      "area": "Ciencias Ambientales y Ecología",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Revisor Anónimo 1",
+          "email": "luchitojara.rovier@gmail.com",
+          "institution": "Sin institución"
+        }
+      ]
+    },
+    {
+      "area": "Ciencias políticas",
+      "reviewerCount": 2,
+      "reviewers": [
+        {
+          "name": "Agustín Maturana",
+          "email": "aster.maturana@gmail.com",
+          "institution": "Instituto Miguel León Prado"
+        },
+        {
+          "name": "Marina Soto",
+          "email": "marinasotoojeda15@gmail.com",
+          "institution": "Pontificia Universidad Católica de Chile "
+        }
+      ]
+    },
+    {
+      "area": "Cálculo",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Joel Portugal",
+          "email": "amigojoel45@gmail.com",
+          "institution": "Liceo Nacional de Maipú"
+        }
+      ]
+    },
+    {
+      "area": "Debate",
+      "reviewerCount": 2,
+      "reviewers": [
+        {
+          "name": "Lucas Velozo Mella",
+          "email": "lgvm3011@gmail.com",
+          "institution": "Colegio Instituto Pascal"
+        },
+        {
+          "name": "Marina Soto",
+          "email": "marinasotoojeda15@gmail.com",
+          "institution": "Pontificia Universidad Católica de Chile "
+        }
+      ]
+    },
+    {
+      "area": "Deportes",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Lucas Velozo Mella",
+          "email": "lgvm3011@gmail.com",
+          "institution": "Colegio Instituto Pascal"
+        }
+      ]
+    },
+    {
+      "area": "Economía política",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Marina Soto",
+          "email": "marinasotoojeda15@gmail.com",
+          "institution": "Pontificia Universidad Católica de Chile "
+        }
+      ]
+    },
+    {
+      "area": "Estequiometria",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Tomás Arancibia",
+          "email": "tomasarancibiam@gmail.com",
+          "institution": "Colegio Calasanz"
+        }
+      ]
+    },
+    {
+      "area": "Estequiometría",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Juan Pablo Miralles",
+          "email": "juanpaolee52@gmail.com",
+          "institution": "Colegio Calasanz"
+        }
+      ]
+    },
+    {
+      "area": "Filosofía",
+      "reviewerCount": 2,
+      "reviewers": [
+        {
+          "name": "Agustín Maturana",
+          "email": "aster.maturana@gmail.com",
+          "institution": "Instituto Miguel León Prado"
+        },
+        {
+          "name": "Benjamín Catalán",
+          "email": "bencatalanv@gmail.com",
+          "institution": "Colegio Calasanz"
+        }
+      ]
+    },
+    {
+      "area": "Finance",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Marina Soto",
+          "email": "marinasotoojeda15@gmail.com",
+          "institution": "Pontificia Universidad Católica de Chile "
+        }
+      ]
+    },
+    {
+      "area": "Finanzas",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Marina Soto",
+          "email": "marinasotoojeda15@gmail.com",
+          "institution": "Pontificia Universidad Católica de Chile "
+        }
+      ]
+    },
+    {
+      "area": "Física",
+      "reviewerCount": 3,
+      "reviewers": [
+        {
+          "name": "Benjamín Catalán",
+          "email": "bencatalanv@gmail.com",
+          "institution": "Colegio Calasanz"
+        },
+        {
+          "name": "Emanuel Cereceda",
+          "email": "emanuelcereceda3@gmail.com",
+          "institution": "Liceo Bicentenario Santa María de las Condes"
+        },
+        {
+          "name": "Joel Portugal",
+          "email": "amigojoel45@gmail.com",
+          "institution": "Liceo Nacional de Maipú"
+        }
+      ]
+    },
+    {
+      "area": "Game Theory",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Francisco Correa",
+          "email": "fcfran007@gmail.com",
+          "institution": "Colegio Calasanz"
+        }
+      ]
+    },
+    {
+      "area": "Geometry",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Tomás Arancibia",
+          "email": "tomasarancibiam@gmail.com",
+          "institution": "Colegio Calasanz"
+        }
+      ]
+    },
+    {
+      "area": "Geometría",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Tomás Arancibia",
+          "email": "tomasarancibiam@gmail.com",
+          "institution": "Colegio Calasanz"
+        }
+      ]
+    },
+    {
+      "area": "Historia",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Agustín Maturana",
+          "email": "aster.maturana@gmail.com",
+          "institution": "Instituto Miguel León Prado"
+        }
+      ]
+    },
+    {
+      "area": "Historia Universal",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Francisco Correa",
+          "email": "fcfran007@gmail.com",
+          "institution": "Colegio Calasanz"
+        }
+      ]
+    },
+    {
+      "area": "International Politics",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Francisco Correa",
+          "email": "fcfran007@gmail.com",
+          "institution": "Colegio Calasanz"
+        }
+      ]
+    },
+    {
+      "area": "Latin American Poetry",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Marina Soto",
+          "email": "marinasotoojeda15@gmail.com",
+          "institution": "Pontificia Universidad Católica de Chile "
+        }
+      ]
+    },
+    {
+      "area": "Literatura",
+      "reviewerCount": 2,
+      "reviewers": [
+        {
+          "name": "Agustín Maturana",
+          "email": "aster.maturana@gmail.com",
+          "institution": "Instituto Miguel León Prado"
+        },
+        {
+          "name": "Benjamín Catalán",
+          "email": "bencatalanv@gmail.com",
+          "institution": "Colegio Calasanz"
+        }
+      ]
+    },
+    {
+      "area": "Literatura universal",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Marina Soto",
+          "email": "marinasotoojeda15@gmail.com",
+          "institution": "Pontificia Universidad Católica de Chile "
+        }
+      ]
+    },
+    {
+      "area": "Literature",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Benjamín Catalán",
+          "email": "bencatalanv@gmail.com",
+          "institution": "Colegio Calasanz"
+        }
+      ]
+    },
+    {
+      "area": "Matemática",
+      "reviewerCount": 2,
+      "reviewers": [
+        {
+          "name": "Benjamín Catalán",
+          "email": "bencatalanv@gmail.com",
+          "institution": "Colegio Calasanz"
+        },
+        {
+          "name": "Carlos Gutiérrez",
+          "email": "thebreb2@gmail.com",
+          "institution": "New Heinrich School"
+        }
+      ]
+    },
+    {
+      "area": "Matemáticas",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Lucas Velozo Mella",
+          "email": "lgvm3011@gmail.com",
+          "institution": "Colegio Instituto Pascal"
+        }
+      ]
+    },
+    {
+      "area": "Mathematical analysis",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Emanuel Cereceda",
+          "email": "emanuelcereceda3@gmail.com",
+          "institution": "Liceo Bicentenario Santa María de las Condes"
+        }
+      ]
+    },
+    {
+      "area": "Mathematics",
+      "reviewerCount": 3,
+      "reviewers": [
+        {
+          "name": "Benjamín Catalán",
+          "email": "bencatalanv@gmail.com",
+          "institution": "Colegio Calasanz"
+        },
+        {
+          "name": "Carlos Gutiérrez",
+          "email": "thebreb2@gmail.com",
+          "institution": "New Heinrich School"
+        },
+        {
+          "name": "Lucas Velozo Mella",
+          "email": "lgvm3011@gmail.com",
+          "institution": "Colegio Instituto Pascal"
+        }
+      ]
+    },
+    {
+      "area": "Matrices",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Joel Portugal",
+          "email": "amigojoel45@gmail.com",
+          "institution": "Liceo Nacional de Maipú"
+        }
+      ]
+    },
+    {
+      "area": "Meteorología y Ciencias Atmosféricas",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Revisor Anónimo 1",
+          "email": "luchitojara.rovier@gmail.com",
+          "institution": "Sin institución"
+        }
+      ]
+    },
+    {
+      "area": "Música",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Agustín Maturana",
+          "email": "aster.maturana@gmail.com",
+          "institution": "Instituto Miguel León Prado"
+        }
+      ]
+    },
+    {
+      "area": "Nuclear Chemistry",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Marina Soto",
+          "email": "marinasotoojeda15@gmail.com",
+          "institution": "Pontificia Universidad Católica de Chile "
+        }
+      ]
+    },
+    {
+      "area": "Number Theory",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Francisco Correa",
+          "email": "fcfran007@gmail.com",
+          "institution": "Colegio Calasanz"
+        }
+      ]
+    },
+    {
+      "area": "Number theory",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Juan Pablo Miralles",
+          "email": "juanpaolee52@gmail.com",
+          "institution": "Colegio Calasanz"
+        }
+      ]
+    },
+    {
+      "area": "Philosophy",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Benjamín Catalán",
+          "email": "bencatalanv@gmail.com",
+          "institution": "Colegio Calasanz"
+        }
+      ]
+    },
+    {
+      "area": "Physics",
+      "reviewerCount": 3,
+      "reviewers": [
+        {
+          "name": "Benjamín Catalán",
+          "email": "bencatalanv@gmail.com",
+          "institution": "Colegio Calasanz"
+        },
+        {
+          "name": "Emanuel Cereceda",
+          "email": "emanuelcereceda3@gmail.com",
+          "institution": "Liceo Bicentenario Santa María de las Condes"
+        },
+        {
+          "name": "Joel Portugal",
+          "email": "amigojoel45@gmail.com",
+          "institution": "Liceo Nacional de Maipú"
+        }
+      ]
+    },
+    {
+      "area": "Poesía latinoamericana",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Marina Soto",
+          "email": "marinasotoojeda15@gmail.com",
+          "institution": "Pontificia Universidad Católica de Chile "
+        }
+      ]
+    },
+    {
+      "area": "Political Economy",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Marina Soto",
+          "email": "marinasotoojeda15@gmail.com",
+          "institution": "Pontificia Universidad Católica de Chile "
+        }
+      ]
+    },
+    {
+      "area": "Political Science",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Marina Soto",
+          "email": "marinasotoojeda15@gmail.com",
+          "institution": "Pontificia Universidad Católica de Chile "
+        }
+      ]
+    },
+    {
+      "area": "Política Internacional",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Francisco Correa",
+          "email": "fcfran007@gmail.com",
+          "institution": "Colegio Calasanz"
+        }
+      ]
+    },
+    {
+      "area": "Programación",
+      "reviewerCount": 2,
+      "reviewers": [
+        {
+          "name": "Carlos Gutiérrez",
+          "email": "thebreb2@gmail.com",
+          "institution": "New Heinrich School"
+        },
+        {
+          "name": "Joel Portugal",
+          "email": "amigojoel45@gmail.com",
+          "institution": "Liceo Nacional de Maipú"
+        }
+      ]
+    },
+    {
+      "area": "Programming",
+      "reviewerCount": 2,
+      "reviewers": [
+        {
+          "name": "Carlos Gutiérrez",
+          "email": "thebreb2@gmail.com",
+          "institution": "New Heinrich School"
+        },
+        {
+          "name": "Joel Portugal",
+          "email": "amigojoel45@gmail.com",
+          "institution": "Liceo Nacional de Maipú"
+        }
+      ]
+    },
+    {
+      "area": "Psicoanálisis",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Agustín Maturana",
+          "email": "aster.maturana@gmail.com",
+          "institution": "Instituto Miguel León Prado"
+        }
+      ]
+    },
+    {
+      "area": "Psicología",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Agustín Maturana",
+          "email": "aster.maturana@gmail.com",
+          "institution": "Instituto Miguel León Prado"
+        }
+      ]
+    },
+    {
+      "area": "Psiquiatría",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Agustín Maturana",
+          "email": "aster.maturana@gmail.com",
+          "institution": "Instituto Miguel León Prado"
+        }
+      ]
+    },
+    {
+      "area": "Química nuclear",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Marina Soto",
+          "email": "marinasotoojeda15@gmail.com",
+          "institution": "Pontificia Universidad Católica de Chile "
+        }
+      ]
+    },
+    {
+      "area": "Set theory",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Juan Pablo Miralles",
+          "email": "juanpaolee52@gmail.com",
+          "institution": "Colegio Calasanz"
+        }
+      ]
+    },
+    {
+      "area": "Sports",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Lucas Velozo Mella",
+          "email": "lgvm3011@gmail.com",
+          "institution": "Colegio Instituto Pascal"
+        }
+      ]
+    },
+    {
+      "area": "Stoichiometry",
+      "reviewerCount": 2,
+      "reviewers": [
+        {
+          "name": "Juan Pablo Miralles",
+          "email": "juanpaolee52@gmail.com",
+          "institution": "Colegio Calasanz"
+        },
+        {
+          "name": "Tomás Arancibia",
+          "email": "tomasarancibiam@gmail.com",
+          "institution": "Colegio Calasanz"
+        }
+      ]
+    },
+    {
+      "area": "Teoría de Juegos",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Francisco Correa",
+          "email": "fcfran007@gmail.com",
+          "institution": "Colegio Calasanz"
+        }
+      ]
+    },
+    {
+      "area": "Teoría de conjuntos",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Juan Pablo Miralles",
+          "email": "juanpaolee52@gmail.com",
+          "institution": "Colegio Calasanz"
+        }
+      ]
+    },
+    {
+      "area": "Teoría de números",
+      "reviewerCount": 2,
+      "reviewers": [
+        {
+          "name": "Francisco Correa",
+          "email": "fcfran007@gmail.com",
+          "institution": "Colegio Calasanz"
+        },
+        {
+          "name": "Juan Pablo Miralles",
+          "email": "juanpaolee52@gmail.com",
+          "institution": "Colegio Calasanz"
+        }
+      ]
+    },
+    {
+      "area": "World History",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Francisco Correa",
+          "email": "fcfran007@gmail.com",
+          "institution": "Colegio Calasanz"
+        }
+      ]
+    },
+    {
+      "area": "World Literature",
+      "reviewerCount": 1,
+      "reviewers": [
+        {
+          "name": "Marina Soto",
+          "email": "marinasotoojeda15@gmail.com",
+          "institution": "Pontificia Universidad Católica de Chile "
+        }
+      ]
+    },
+    {
+      "area": "Álgebra",
+      "reviewerCount": 3,
+      "reviewers": [
+        {
+          "name": "Emanuel Cereceda",
+          "email": "emanuelcereceda3@gmail.com",
+          "institution": "Liceo Bicentenario Santa María de las Condes"
+        },
+        {
+          "name": "Joel Portugal",
+          "email": "amigojoel45@gmail.com",
+          "institution": "Liceo Nacional de Maipú"
+        },
+        {
+          "name": "Tomás Arancibia",
+          "email": "tomasarancibiam@gmail.com",
+          "institution": "Colegio Calasanz"
+        }
+      ]
+    }
+  ]
+}

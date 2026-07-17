@@ -1,0 +1,340 @@
+{
+  "executionDate": "2026-07-17T17:57:49.201Z",
+  "mode": "dry-run",
+  "totalReviewers": 12,
+  "reviewersWithChanges": 10,
+  "reviewersWithoutChanges": 2,
+  "unmappedAreas": [],
+  "unmappedAreasCount": 0,
+  "reviewers": [
+    {
+      "id": "80nl6CAxqyWTHAsg4BOZTMrNRiH2",
+      "name": "Juan Pablo Miralles",
+      "email": "juanpaolee52@gmail.com",
+      "originalAreas": [
+        "Estequiometría",
+        "Number theory",
+        "Set theory",
+        "Stoichiometry",
+        "Teoría de conjuntos",
+        "Teoría de números"
+      ],
+      "normalizedAreas": [
+        "Matemáticas",
+        "Química"
+      ],
+      "changes": [
+        "\"Estequiometría\" → \"Química\"",
+        "\"Number theory\" → \"Matemáticas\"",
+        "\"Set theory\" → \"Matemáticas\"",
+        "\"Stoichiometry\" → \"Química\"",
+        "\"Teoría de conjuntos\" → \"Matemáticas\"",
+        "\"Teoría de números\" → \"Matemáticas\"",
+        "🗑️ 4 duplicado(s) eliminado(s)"
+      ],
+      "hasChanges": true
+    },
+    {
+      "id": "Fy2g2ipz91T2nYXmduetUF0RpvG3",
+      "name": "Lucas Velozo Mella",
+      "email": "lgvm3011@gmail.com",
+      "originalAreas": [
+        "Ajedrez",
+        "Astronomy",
+        "Astronomía",
+        "Chess",
+        "Debate",
+        "Deportes",
+        "Matemáticas",
+        "Mathematics",
+        "Sports"
+      ],
+      "normalizedAreas": [
+        "Astronomía y Astrofísica",
+        "Comunicación Social y Periodismo",
+        "Educación y Pedagogía",
+        "Matemáticas"
+      ],
+      "changes": [
+        "\"Ajedrez\" → \"Educación y Pedagogía\"",
+        "\"Astronomy\" → \"Astronomía y Astrofísica\"",
+        "\"Astronomía\" → \"Astronomía y Astrofísica\"",
+        "\"Chess\" → \"Educación y Pedagogía\"",
+        "\"Debate\" → \"Comunicación Social y Periodismo\"",
+        "\"Deportes\" → \"Educación y Pedagogía\"",
+        "\"Mathematics\" → \"Matemáticas\"",
+        "\"Sports\" → \"Educación y Pedagogía\"",
+        "🗑️ 5 duplicado(s) eliminado(s)"
+      ],
+      "hasChanges": true
+    },
+    {
+      "id": "PUfEv6PN9mZ9tEkEfn8ZRdpb5WW2",
+      "name": "Marina Soto",
+      "email": "marinasotoojeda15@gmail.com",
+      "originalAreas": [
+        "Ciencias políticas",
+        "Debate",
+        "Economía política",
+        "Finance",
+        "Finanzas",
+        "Latin American Poetry",
+        "Literatura universal",
+        "Nuclear Chemistry",
+        "Poesía latinoamericana",
+        "Political Economy",
+        "Political Science",
+        "Química nuclear",
+        "World Literature"
+      ],
+      "normalizedAreas": [
+        "Ciencias Políticas y Relaciones Internacionales",
+        "Comunicación Social y Periodismo",
+        "Economía y Negocios",
+        "Literatura",
+        "Química"
+      ],
+      "changes": [
+        "\"Ciencias políticas\" → \"Ciencias Políticas y Relaciones Internacionales\"",
+        "\"Debate\" → \"Comunicación Social y Periodismo\"",
+        "\"Economía política\" → \"Economía y Negocios\"",
+        "\"Finance\" → \"Economía y Negocios\"",
+        "\"Finanzas\" → \"Economía y Negocios\"",
+        "\"Latin American Poetry\" → \"Literatura\"",
+        "\"Literatura universal\" → \"Literatura\"",
+        "\"Nuclear Chemistry\" → \"Química\"",
+        "\"Poesía latinoamericana\" → \"Literatura\"",
+        "\"Political Economy\" → \"Economía y Negocios\"",
+        "\"Political Science\" → \"Ciencias Políticas y Relaciones Internacionales\"",
+        "\"Química nuclear\" → \"Química\"",
+        "\"World Literature\" → \"Literatura\"",
+        "🗑️ 8 duplicado(s) eliminado(s)"
+      ],
+      "hasChanges": true
+    },
+    {
+      "id": "V0v60t9xDYXZlo3R8SUhddrIl7f2",
+      "name": "Carlos Gutiérrez",
+      "email": "thebreb2@gmail.com",
+      "originalAreas": [
+        "Biochemistry",
+        "Bioquímica",
+        "Matemática",
+        "Mathematics",
+        "Programación",
+        "Programming"
+      ],
+      "normalizedAreas": [
+        "Bioquímica",
+        "Ingeniería en Computación e Informática",
+        "Matemáticas",
+        "Química"
+      ],
+      "changes": [
+        "\"Biochemistry\" → \"Química\"",
+        "\"Matemática\" → \"Matemáticas\"",
+        "\"Mathematics\" → \"Matemáticas\"",
+        "\"Programación\" → \"Ingeniería en Computación e Informática\"",
+        "\"Programming\" → \"Ingeniería en Computación e Informática\"",
+        "🗑️ 2 duplicado(s) eliminado(s)"
+      ],
+      "hasChanges": true
+    },
+    {
+      "id": "WB1xkKUAsnTVo4vj2CeaLUprDaB3",
+      "name": "Emanuel Cereceda",
+      "email": "emanuelcereceda3@gmail.com",
+      "originalAreas": [
+        "Algebra",
+        "Análisis matemático",
+        "Applied science",
+        "Ciencia aplicada",
+        "Física",
+        "Mathematical analysis",
+        "Physics",
+        "Álgebra"
+      ],
+      "normalizedAreas": [
+        "Física",
+        "Ingeniería y Tecnología",
+        "Matemáticas"
+      ],
+      "changes": [
+        "\"Algebra\" → \"Matemáticas\"",
+        "\"Análisis matemático\" → \"Matemáticas\"",
+        "\"Applied science\" → \"Ingeniería y Tecnología\"",
+        "\"Ciencia aplicada\" → \"Ingeniería y Tecnología\"",
+        "\"Mathematical analysis\" → \"Matemáticas\"",
+        "\"Physics\" → \"Física\"",
+        "\"Álgebra\" → \"Matemáticas\"",
+        "🗑️ 5 duplicado(s) eliminado(s)"
+      ],
+      "hasChanges": true
+    },
+    {
+      "id": "Wis4rhCQB7MM0HxFggEjngOOnSa2",
+      "name": "Joel Portugal",
+      "email": "amigojoel45@gmail.com",
+      "originalAreas": [
+        "Algebra",
+        "Biochemistry",
+        "Bioquímica",
+        "Cálculo",
+        "Física",
+        "Matrices",
+        "Physics",
+        "Programación",
+        "Programming",
+        "Álgebra"
+      ],
+      "normalizedAreas": [
+        "Bioquímica",
+        "Física",
+        "Ingeniería en Computación e Informática",
+        "Matemáticas",
+        "Química"
+      ],
+      "changes": [
+        "\"Algebra\" → \"Matemáticas\"",
+        "\"Biochemistry\" → \"Química\"",
+        "\"Cálculo\" → \"Matemáticas\"",
+        "\"Matrices\" → \"Matemáticas\"",
+        "\"Physics\" → \"Física\"",
+        "\"Programación\" → \"Ingeniería en Computación e Informática\"",
+        "\"Programming\" → \"Ingeniería en Computación e Informática\"",
+        "\"Álgebra\" → \"Matemáticas\"",
+        "🗑️ 5 duplicado(s) eliminado(s)"
+      ],
+      "hasChanges": true
+    },
+    {
+      "id": "mCaKZ93suhRHWu69IrJQgwVuxPh2",
+      "name": "Benjamín Catalán",
+      "email": "bencatalanv@gmail.com",
+      "originalAreas": [
+        "Filosofía",
+        "Física",
+        "Literatura",
+        "Literature",
+        "Matemática",
+        "Mathematics",
+        "Philosophy",
+        "Physics"
+      ],
+      "normalizedAreas": [
+        "Filosofía",
+        "Física",
+        "Literatura",
+        "Matemáticas"
+      ],
+      "changes": [
+        "\"Literature\" → \"Literatura\"",
+        "\"Matemática\" → \"Matemáticas\"",
+        "\"Mathematics\" → \"Matemáticas\"",
+        "\"Philosophy\" → \"Filosofía\"",
+        "\"Physics\" → \"Física\"",
+        "🗑️ 4 duplicado(s) eliminado(s)"
+      ],
+      "hasChanges": true
+    },
+    {
+      "id": "mfDxTTdAd9SucyFfMveGOlHZcan2",
+      "name": "Agustín Maturana",
+      "email": "aster.maturana@gmail.com",
+      "originalAreas": [
+        "Biología celular",
+        "Ciencias políticas",
+        "Filosofía",
+        "Historia",
+        "Literatura",
+        "Música",
+        "Psicoanálisis",
+        "Psicología",
+        "Psiquiatría"
+      ],
+      "normalizedAreas": [
+        "Arte, Música y Cine",
+        "Biología",
+        "Ciencias Políticas y Relaciones Internacionales",
+        "Filosofía",
+        "Historia",
+        "Literatura",
+        "Medicina General e Interna",
+        "Psicología"
+      ],
+      "changes": [
+        "\"Biología celular\" → \"Biología\"",
+        "\"Ciencias políticas\" → \"Ciencias Políticas y Relaciones Internacionales\"",
+        "\"Música\" → \"Arte, Música y Cine\"",
+        "\"Psicoanálisis\" → \"Psicología\"",
+        "\"Psiquiatría\" → \"Medicina General e Interna\"",
+        "🗑️ 1 duplicado(s) eliminado(s)"
+      ],
+      "hasChanges": true
+    },
+    {
+      "id": "ofxyom4jFkbdSaNh6gTzEKy3DTK2",
+      "name": "Francisco Correa",
+      "email": "fcfran007@gmail.com",
+      "originalAreas": [
+        "Game Theory",
+        "Historia Universal",
+        "International Politics",
+        "Number Theory",
+        "Política Internacional",
+        "Teoría de Juegos",
+        "Teoría de números",
+        "World History"
+      ],
+      "normalizedAreas": [
+        "Ciencias Políticas y Relaciones Internacionales",
+        "Economía y Negocios",
+        "Historia",
+        "Matemáticas"
+      ],
+      "changes": [
+        "\"Game Theory\" → \"Economía y Negocios\"",
+        "\"Historia Universal\" → \"Historia\"",
+        "\"International Politics\" → \"Ciencias Políticas y Relaciones Internacionales\"",
+        "\"Number Theory\" → \"Matemáticas\"",
+        "\"Política Internacional\" → \"Ciencias Políticas y Relaciones Internacionales\"",
+        "\"Teoría de Juegos\" → \"Economía y Negocios\"",
+        "\"Teoría de números\" → \"Matemáticas\"",
+        "\"World History\" → \"Historia\"",
+        "🗑️ 4 duplicado(s) eliminado(s)"
+      ],
+      "hasChanges": true
+    },
+    {
+      "id": "wqf9Go6qvLaUc38E1CKZvBJZOZk1",
+      "name": "Tomás Arancibia",
+      "email": "tomasarancibiam@gmail.com",
+      "originalAreas": [
+        "Algebra",
+        "Biochemistry",
+        "Bioquímica",
+        "Estequiometria",
+        "Geometry",
+        "Geometría",
+        "Stoichiometry",
+        "Álgebra"
+      ],
+      "normalizedAreas": [
+        "Bioquímica",
+        "Matemáticas",
+        "Química"
+      ],
+      "changes": [
+        "\"Algebra\" → \"Matemáticas\"",
+        "\"Biochemistry\" → \"Química\"",
+        "\"Estequiometria\" → \"Química\"",
+        "\"Geometry\" → \"Matemáticas\"",
+        "\"Geometría\" → \"Matemáticas\"",
+        "\"Stoichiometry\" → \"Química\"",
+        "\"Álgebra\" → \"Matemáticas\"",
+        "🗑️ 5 duplicado(s) eliminado(s)"
+      ],
+      "hasChanges": true
+    }
+  ]
+}

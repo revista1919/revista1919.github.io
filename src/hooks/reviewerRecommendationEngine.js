@@ -1,33 +1,18 @@
 // src/hooks/reviewerRecommendationEngine.js
 
-/**
- * SISTEMA DE RECOMENDACIÓN DE REVISORES - REVISTA NACIONAL DE LAS CIENCIAS
- * 
- * Fórmula de puntuación compuesta:
- * S(R) = α·S_expertise(R) + β·S_performance(R) + γ·S_availability(R) + δ·S_diversity(R) + ε·S_history(R)
- * 
- * Donde:
- * - S_expertise: Coincidencia temática (0-1)
- * - S_performance: Calidad histórica como revisor (0-1)
- * - S_availability: Capacidad actual para revisar (0-1)
- * - S_diversity: Diversidad institucional/geográfica (0-1)
- * - S_history: Historial con esta revista (0-1)
- * 
- * Pesos configurables:
- * α=0.40, β=0.25, γ=0.20, δ=0.10, ε=0.05
- */
+
 
 const WEIGHTS = {
-  EXPERTISE: 0.40,    // Coincidencia temática es lo más importante
-  PERFORMANCE: 0.25,  // Calidad histórica
-  AVAILABILITY: 0.20, // Disponibilidad actual
-  DIVERSITY: 0.10,    // Diversidad institucional
-  HISTORY: 0.05       // Historial con la revista
+  EXPERTISE: 0.35,      // Coincidencia temática (reducido para dar más peso a otros factores)
+  PERFORMANCE: 0.25,    // Calidad histórica
+  AVAILABILITY: 0.20,   // Disponibilidad actual + carga
+  DIVERSITY: 0.10,      // Diversidad institucional/geográfica
+  HISTORY: 0.05,        // Lealtad y consistencia
+  RESPONSE: 0.05        // Velocidad de respuesta (NUEVO)
 };
 
-// Mapeo de categorías principales para fallback semántico
+// ==================== MAPEO DE CATEGORÍAS ====================
 const CATEGORY_MAPPINGS = {
-  // Español
   "Ciencias Exactas y Naturales": [
     "Matemáticas", "Física", "Química", "Biología", "Geología",
     "Astronomía y Astrofísica", "Ciencias Ambientales y Ecología",
@@ -65,210 +50,245 @@ const CATEGORY_MAPPINGS = {
     "Agronomía y Producción Agrícola", "Ciencias Forestales",
     "Acuicultura y Pesca", "Zootecnia y Producción Animal", 
     "Ingeniería de Alimentos"
-  ],
-  // Inglés
-  "Exact and Natural Sciences": [
-    "Mathematics", "Physics", "Chemistry", "Biology", "Geology",
-    "Astronomy and Astrophysics", "Environmental Sciences and Ecology",
-    "Oceanography", "Meteorology and Atmospheric Sciences", "Paleontology"
-  ],
-  "Health Sciences": [
-    "General and Internal Medicine", "Public Health and Epidemiology",
-    "Nursing", "Nutrition and Dietetics", "Pharmacology and Pharmacy",
-    "Dentistry", "Kinesiology and Physical Therapy",
-    "Medical Technology and Bioanalysis", "Veterinary Medicine"
-  ],
-  "Engineering and Technology": [
-    "Civil Engineering", "Industrial and Systems Engineering",
-    "Mechanical Engineering", "Electrical and Electronic Engineering",
-    "Chemical Engineering and Biotechnology", 
-    "Computer Science and Informatics",
-    "Data Science and Artificial Intelligence", 
-    "Robotics and Automation", "Materials Science and Nanotechnology",
-    "Aerospace Engineering", "Renewable Energies and Sustainability"
-  ],
-  "Social Sciences": [
-    "Sociology", "Anthropology and Archaeology", "Psychology",
-    "Economics and Business", "Political Science and International Relations",
-    "Law", "Human Geography and Land Planning",
-    "Gender Studies", "Social Communication and Journalism",
-    "Education and Pedagogy", "Social Work"
-  ],
-  "Humanities": [
-    "History", "Philosophy", "Linguistics and Philology", "Literature",
-    "Classical Studies", "Theology and Religious Studies",
-    "Cultural Studies", "Art, Music and Film", 
-    "Architecture and Urbanism"
-  ],
-  "Agricultural Sciences": [
-    "Agronomy and Agricultural Production", "Forestry Sciences",
-    "Aquaculture and Fisheries", "Animal Science and Production", 
-    "Food Engineering"
   ]
 };
 
-// Mapeo de áreas a categorías (bidireccional español-inglés)
+// Mapeo de áreas a categorías
 const AREA_TO_CATEGORY = {};
 Object.entries(CATEGORY_MAPPINGS).forEach(([category, areas]) => {
-  areas.forEach(area => {
-    AREA_TO_CATEGORY[area] = category;
-  });
+  areas.forEach(area => { AREA_TO_CATEGORY[area] = category; });
 });
 
-// Mapeo de traducción español ↔ inglés para categorías
-const CATEGORY_TRANSLATIONS = {
-  "Ciencias Exactas y Naturales": "Exact and Natural Sciences",
-  "Ciencias de la Salud": "Health Sciences",
-  "Ingeniería y Tecnología": "Engineering and Technology",
-  "Ciencias Sociales": "Social Sciences",
-  "Humanidades": "Humanities",
-  "Ciencias Agropecuarias": "Agricultural Sciences",
-  "Exact and Natural Sciences": "Ciencias Exactas y Naturales",
-  "Health Sciences": "Ciencias de la Salud",
-  "Engineering and Technology": "Ingeniería y Tecnología",
-  "Social Sciences": "Ciencias Sociales",
-  "Humanities": "Humanidades",
-  "Agricultural Sciences": "Ciencias Agropecuarias"
+// Categorías afines para recomendación cruzada
+const RELATED_CATEGORIES = {
+  "Ciencias Exactas y Naturales": ["Ingeniería y Tecnología", "Ciencias Agropecuarias"],
+  "Ciencias de la Salud": ["Ciencias Exactas y Naturales", "Ciencias Sociales"],
+  "Ingeniería y Tecnología": ["Ciencias Exactas y Naturales", "Ciencias Agropecuarias"],
+  "Ciencias Sociales": ["Humanidades", "Ciencias de la Salud"],
+  "Humanidades": ["Ciencias Sociales", "Arte, Música y Cine"],
+  "Ciencias Agropecuarias": ["Ciencias Exactas y Naturales", "Ingeniería y Tecnología"]
 };
+
+// Palabras clave por área para matching semántico mejorado
+const AREA_KEYWORDS = {
+  "Filosofía": ["filosofía", "filosófico", "epistemología", "ontología", "ética", "metafísica", "lógica", "pensamiento", "razón", "existencia", "ser", "conciencia", "moral"],
+  "Matemáticas": ["matemática", "álgebra", "geometría", "cálculo", "estadística", "probabilidad", "teoría de números", "conjuntos", "matrices", "análisis matemático"],
+  "Física": ["física", "mecánica", "termodinámica", "electromagnetismo", "óptica", "cuántica", "relatividad", "newton", "einstein"],
+  "Química": ["química", "bioquímica", "estequiometría", "reactivo", "molécula", "átomo", "enlace", "compuesto", "orgánica", "inorgánica"],
+  "Biología": ["biología", "célula", "genética", "evolución", "ecosistema", "organismo", "especie", "ADN", "biodiversidad"],
+  "Historia": ["historia", "histórico", "civilización", "imperio", "guerra", "revolución", "antiguo", "medieval", "contemporáneo"],
+  "Literatura": ["literatura", "poesía", "novela", "cuento", "ensayo", "narrativa", "ficción", "autor", "obra", "género literario"],
+  "Psicología": ["psicología", "psicoanálisis", "conducta", "mente", "cognitivo", "emocional", "trastorno", "terapia", "freud", "jung"],
+  "Economía y Negocios": ["economía", "finanzas", "mercado", "capital", "inversión", "comercio", "macroeconomía", "microeconomía", "PIB"],
+  "Ciencias Políticas y Relaciones Internacionales": ["política", "gobierno", "estado", "democracia", "derecho", "internacional", "diplomacia", "geopolítica"],
+  "Ingeniería en Computación e Informática": ["programación", "algoritmo", "software", "hardware", "código", "computación", "informática", "datos", "redes"],
+  "Educación y Pedagogía": ["educación", "pedagogía", "enseñanza", "aprendizaje", "didáctica", "currículo", "evaluación", "docente", "estudiante"],
+  "Astronomía y Astrofísica": ["astronomía", "astrofísica", "cosmos", "universo", "estrella", "planeta", "galaxia", "telescopio", "agujero negro"],
+  "Arte, Música y Cine": ["arte", "música", "cine", "pintura", "escultura", "composición", "melodía", "cinematografía", "estética"],
+  "Medicina General e Interna": ["medicina", "psiquiatría", "clínico", "diagnóstico", "tratamiento", "patología", "farmacología", "cirugía"],
+  "Comunicación Social y Periodismo": ["comunicación", "periodismo", "medios", "debate", "discurso", "noticia", "prensa", "redes sociales", "opinión"]
+};
+
+// ==================== FUNCIONES DE CÁLCULO DE SCORES ====================
+
 /**
- * 1. SCORE DE EXPERTISE TEMÁTICA
+ * 1. SCORE DE EXPERTISE TEMÁTICA (MEJORADO)
  * 
- * Algoritmo de coincidencia semántica multinivel:
- * - Nivel 1: Coincidencia exacta en subárea (peso 1.0)
- * - Nivel 2: Coincidencia en categoría macro (peso 0.6)
- * - Nivel 3: Áreas relacionadas dentro de la categoría (peso 0.3)
- * 
- * Con fallback: si no hay revisores exactos, escala a categoría macro
- * y pondera por densidad de áreas en esa categoría
+ * Niveles de coincidencia:
+ * - Nivel 1: Coincidencia exacta de área (1.0)
+ * - Nivel 2: Coincidencia por palabras clave semánticas (0.85)
+ * - Nivel 3: Misma categoría (0.70)
+ * - Nivel 4: Categoría relacionada/afín (0.50)
+ * - Nivel 5: Sin relación aparente (0.15)
  */
 const calculateExpertiseScore = (reviewer, articleArea) => {
   const reviewerAreas = reviewer.areasOfExpertise || [];
+  if (reviewerAreas.length === 0) return 0.05; // Mínimo si no tiene áreas
   
   // Nivel 1: Coincidencia exacta
-  const exactMatch = reviewerAreas.includes(articleArea);
-  if (exactMatch) return 1.0;
+  if (reviewerAreas.includes(articleArea)) return 1.0;
   
-  // Determinar categoría del artículo
-  const articleCategory = AREA_TO_CATEGORY[articleArea];
-  if (!articleCategory) return 0.0;
-  
-  // Nivel 2: Coincidencia en categoría macro
-  const reviewerCategory = AREA_TO_CATEGORY[reviewerAreas[0]];
-  const sameCategory = reviewerCategory === articleCategory || 
-                        CATEGORY_TRANSLATIONS[reviewerCategory] === articleCategory;
-  
-  if (sameCategory) {
-    // Contar áreas del revisor en esta categoría
-    const categoryAreas = CATEGORY_MAPPINGS[articleCategory] || 
-                          CATEGORY_MAPPINGS[CATEGORY_TRANSLATIONS[articleCategory]] || [];
-    
-    const matchesInCategory = reviewerAreas.filter(area => 
-      categoryAreas.includes(area)
-    ).length;
-    
-    // Densidad normalizada (0.3 - 0.9)
-    const density = Math.min(matchesInCategory / categoryAreas.length, 1.0);
-    return 0.3 + (density * 0.6); // Rango: 0.3 - 0.9
+  // Nivel 2: Coincidencia por palabras clave
+  const articleKeywords = AREA_KEYWORDS[articleArea] || [];
+  if (articleKeywords.length > 0) {
+    const reviewerAreasLower = reviewerAreas.map(a => a.toLowerCase());
+    const keywordMatch = articleKeywords.some(keyword => 
+      reviewerAreasLower.some(area => area.includes(keyword))
+    );
+    if (keywordMatch) return 0.85;
   }
   
-  // Nivel 3: Áreas relacionadas (categorías afines)
-  return 0.1; // Mínimo por estar en el sistema
+  // Nivel 3: Misma categoría
+  const articleCategory = AREA_TO_CATEGORY[articleArea];
+  if (!articleCategory) return 0.15;
+  
+  const reviewerCategories = reviewerAreas
+    .map(area => AREA_TO_CATEGORY[area])
+    .filter(Boolean);
+  
+  const sameCategory = reviewerCategories.includes(articleCategory);
+  if (sameCategory) {
+    // Bonus por cantidad de áreas en la misma categoría
+    const categoryAreas = CATEGORY_MAPPINGS[articleCategory] || [];
+    const matchesInCategory = reviewerAreas.filter(area => categoryAreas.includes(area)).length;
+    const density = Math.min(matchesInCategory / Math.max(categoryAreas.length, 1), 1.0);
+    return 0.55 + (density * 0.25); // Rango: 0.55 - 0.80
+  }
+  
+  // Nivel 4: Categoría relacionada
+  const relatedCategories = RELATED_CATEGORIES[articleCategory] || [];
+  const hasRelatedCategory = reviewerCategories.some(rc => relatedCategories.includes(rc));
+  if (hasRelatedCategory) return 0.40;
+  
+  // Nivel 5: Sin relación aparente
+  return 0.10;
 };
 
 /**
- * 2. SCORE DE DESEMPEÑO HISTÓRICO
+ * 2. SCORE DE DESEMPEÑO HISTÓRICO (MEJORADO)
  * 
- * Fórmula: S_perf = (P_puntualidad × P_calidad × P_aceptación) ^ (1/3)
- * Media geométrica para penalizar desequilibrios
+ * Considera:
+ * - Puntualidad (onTimeRate)
+ * - Calidad (averageReviewScore)
+ * - Tasa de aceptación de invitaciones
+ * - Experiencia (total de revisiones)
+ * - Penalización por invitaciones expiradas
  */
 const calculatePerformanceScore = (reviewer) => {
   const stats = reviewer.stats || {};
   
-  const punctuality = (stats.onTimeRate || 100) / 100;     // 0-1
-  const quality = (stats.averageReviewScore || 3) / 5;      // 0-1 (normalizado a escala 5)
-  const acceptance = (stats.acceptanceRate || 50) / 100;    // 0-1
+  // Factores base (0-1)
+  const punctuality = Math.max((stats.onTimeRate || 50) / 100, 0.1);
+  const quality = Math.max((stats.averageReviewScore || 3) / 5, 0.1);
   
-  // Media geométrica: penaliza fuertemente si algún factor es bajo
+  // Tasa de aceptación de invitaciones
+  const totalInvitations = (stats.acceptedInvitations || 0) + (stats.declinedInvitations || 0) + (stats.expiredInvitations || 0);
+  const acceptanceRate = totalInvitations > 0 
+    ? (stats.acceptedInvitations || 0) / totalInvitations 
+    : 0.5; // Neutral si no hay datos
+  
+  // Penalización por invitaciones expiradas
+  const expiredRate = totalInvitations > 0 
+    ? (stats.expiredInvitations || 0) / totalInvitations 
+    : 0;
+  const expiredPenalty = Math.max(0, 1 - expiredRate * 3); // Penalización fuerte
+  
+  // Media geométrica de factores principales
   const geometricMean = Math.pow(
     Math.max(punctuality, 0.01) * 
     Math.max(quality, 0.01) * 
-    Math.max(acceptance, 0.01), 
-    1/3
+    Math.max(acceptanceRate, 0.01) * 
+    Math.max(expiredPenalty, 0.01),
+    1/4
   );
   
   // Bonus por experiencia
   const totalReviews = stats.totalReviewsCompleted || 0;
-  const experienceBonus = Math.min(totalReviews / 20, 0.2); // Máximo +0.2 por 20+ revisiones
+  const experienceBonus = Math.min(totalReviews / 15, 0.25); // +0.25 por 15+ revisiones
   
-  return Math.min(geometricMean + experienceBonus, 1.0);
+  // Bonus por consistencia (múltiples rondas)
+  const roundsParticipated = stats.totalRoundsParticipated || 0;
+  const consistencyBonus = Math.min(roundsParticipated / 8, 0.1); // +0.1 por 8+ rondas
+  
+  return Math.min(geometricMean + experienceBonus + consistencyBonus, 1.0);
 };
 
 /**
- * 3. SCORE DE DISPONIBILIDAD
+ * 3. SCORE DE DISPONIBILIDAD (MEJORADO)
  * 
- * Considera carga actual, capacidad máxima y tiempo de respuesta
+ * Considera:
+ * - Carga actual vs capacidad máxima
+ * - Tiempo disponible para revisar
+ * - Estado activo/suspendido
+ * - Tiempo promedio de respuesta
+ * - Última actividad
  */
 const calculateAvailabilityScore = (reviewer) => {
   const availability = reviewer.availability || {};
+  const stats = reviewer.stats || {};
   
   const maxReviews = availability.maxActiveReviews || 3;
   const currentReviews = availability.currentActiveReviews || 0;
   
-  // Factor de carga (0-1): 1 = sin carga, 0 = lleno
-  const loadFactor = Math.max(0, 1 - (currentReviews / maxReviews));
+  // Factor de carga (0-1): 1 = sin carga, decae exponencialmente
+  const loadRatio = currentReviews / Math.max(maxReviews, 1);
+  const loadFactor = Math.max(0, Math.pow(1 - loadRatio, 1.5)); // Curva más pronunciada
   
   // Factor de tiempo disponible
   const timeMap = {
     '1-week': 1.0,
-    '2-weeks': 0.9,
-    '3-weeks': 0.7,
-    '1-month': 0.5
+    '2-weeks': 0.85,
+    '3-weeks': 0.65,
+    '1-month': 0.45,
+    'more': 0.25
   };
-  const timeFactor = timeMap[availability.timeAvailablePerReview] || 0.7;
+  const timeFactor = timeMap[availability.timeAvailablePerReview] || 0.6;
   
-  // Factor de estado activo
-  const isActive = reviewer.status === 'active' ? 1.0 : 0.3;
+  // Factor de estado
+  const statusFactor = reviewer.status === 'active' ? 1.0 : 0.2;
   
   // Factor de respuesta rápida
-  const responseTime = reviewer.stats?.responseTimeAvgDays || 7;
-  const responseFactor = Math.max(0, 1 - (responseTime / 14)); // 14 días = 0
+  const avgResponseDays = stats.avgResponseTimeDays || 7;
+  const responseFactor = Math.max(0, 1 - (avgResponseDays / 10)); // 10 días = 0
   
-  return (loadFactor * 0.5 + timeFactor * 0.2 + isActive * 0.2 + responseFactor * 0.1);
+  // Factor de última actividad (si no ha revisado en 6 meses, penalizar)
+  const lastReviewDate = stats.lastReviewSubmittedAt ? new Date(stats.lastReviewSubmittedAt) : null;
+  const monthsSinceLastReview = lastReviewDate 
+    ? (Date.now() - lastReviewDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
+    : 12;
+  const recencyFactor = Math.max(0.3, 1 - (monthsSinceLastReview / 12)); // Mínimo 0.3
+  
+  // Ponderación
+  return (
+    loadFactor * 0.35 +
+    timeFactor * 0.20 +
+    statusFactor * 0.20 +
+    responseFactor * 0.15 +
+    recencyFactor * 0.10
+  );
 };
 
 /**
- * 4. SCORE DE DIVERSIDAD
+ * 4. SCORE DE DIVERSIDAD (MEJORADO)
  * 
- * Evita sobrecargar instituciones o regiones
+ * Evita:
+ * - Sobrecargar una misma institución
+ * - Usar siempre los mismos revisores
+ * - Falta de diversidad geográfica
  */
-const calculateDiversityScore = (reviewer, existingReviewers = []) => {
-  let score = 0.5; // Base neutral
+const calculateDiversityScore = (reviewer, existingReviewers = [], allReviewers = []) => {
+  let score = 0.50; // Base neutral
   
-  // Si ya hay revisores de la misma institución
+  // Bonus por institución diferente
   const sameInstitution = existingReviewers.some(
-    r => r.institution === reviewer.institution
+    r => r.institution && reviewer.institution && 
+         r.institution.toLowerCase() === reviewer.institution.toLowerCase()
   );
+  if (!sameInstitution) score += 0.20;
   
-  if (!sameInstitution) {
-    score += 0.3; // Bonus por diversidad institucional
-  }
-  
-  // Si el revisor no ha revisado este artículo antes
-  const alreadyInvited = existingReviewers.some(
-    r => r.email === reviewer.email
+  // Bonus si el revisor no ha sido usado recientemente
+  const alreadyUsed = existingReviewers.some(
+    r => r.email?.toLowerCase() === reviewer.email?.toLowerCase()
   );
+  if (!alreadyUsed) score += 0.15;
   
-  if (!alreadyInvited) {
-    score += 0.2; // Bonus por no repetición
-  }
+  // Bonus por baja carga actual (favorece revisores disponibles)
+  const currentLoad = reviewer.availability?.currentActiveReviews || 0;
+  if (currentLoad === 0) score += 0.10;
+  else if (currentLoad === 1) score += 0.05;
   
-  return Math.min(score, 1.0);
+  // Penalización si ya hay muchos revisores de la misma institución
+  const sameInstCount = allReviewers.filter(
+    r => r.institution && reviewer.institution &&
+         r.institution.toLowerCase() === reviewer.institution.toLowerCase()
+  ).length;
+  if (sameInstCount > 3) score -= 0.10; // Demasiados de la misma institución
+  
+  return Math.max(0.1, Math.min(score, 1.0));
 };
 
 /**
- * 5. SCORE DE HISTORIAL CON LA REVISTA
- * 
- * Revisores frecuentes y confiables tienen ventaja
+ * 5. SCORE DE HISTORIAL CON LA REVISTA (MEJORADO)
  */
 const calculateHistoryScore = (reviewer) => {
   const stats = reviewer.stats || {};
@@ -276,24 +296,59 @@ const calculateHistoryScore = (reviewer) => {
   const totalReviews = stats.totalReviewsCompleted || 0;
   const roundsParticipated = stats.totalRoundsParticipated || 0;
   
-  // Factor de lealtad (0-1)
-  const loyaltyFactor = Math.min(roundsParticipated / 10, 1.0);
+  // Lealtad: proporción de rondas participadas
+  const loyaltyFactor = Math.min(roundsParticipated / 8, 1.0);
   
-  // Factor de consistencia (0-1)
-  const consistencyFactor = totalReviews > 0 
-    ? Math.min(totalReviews / roundsParticipated / 3, 1.0) // 3 revisiones por ronda = consistente
+  // Consistencia: revisiones por ronda
+  const consistencyFactor = roundsParticipated > 0 
+    ? Math.min(totalReviews / (roundsParticipated * 2), 1.0)
     : 0.0;
   
-  return (loyaltyFactor * 0.6 + consistencyFactor * 0.4);
+  // Antigüedad: tiempo desde la primera revisión
+  const firstReviewDate = stats.lastReviewSubmittedAt ? new Date(stats.lastReviewSubmittedAt) : null;
+  const monthsSinceFirstReview = firstReviewDate 
+    ? (Date.now() - firstReviewDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
+    : 0;
+  const seniorityFactor = Math.min(monthsSinceFirstReview / 24, 1.0); // 2 años = máximo
+  
+  return (loyaltyFactor * 0.4 + consistencyFactor * 0.3 + seniorityFactor * 0.3);
 };
+
 /**
- * ALGORITMO PRINCIPAL DE RECOMENDACIÓN
+ * 6. SCORE DE VELOCIDAD DE RESPUESTA (NUEVO)
  * 
- * 1. Filtra revisores ya invitados o que declinaron
- * 2. Calcula score compuesto para cada revisor
- * 3. Ordena por score descendente
- * 4. Aplica diversificación (evita recomendar solo de una institución)
- * 5. Retorna top N recomendaciones
+ * Evalúa qué tan rápido responde el revisor a las invitaciones
+ */
+const calculateResponseScore = (reviewer) => {
+  const stats = reviewer.stats || {};
+  
+  // Tiempo promedio de respuesta a invitaciones (días)
+  const avgResponseDays = stats.avgResponseTimeDays;
+  
+  if (avgResponseDays === undefined || avgResponseDays === null) return 0.5; // Sin datos
+  
+  if (avgResponseDays <= 1) return 1.0;    // Responde en 1 día o menos
+  if (avgResponseDays <= 2) return 0.9;
+  if (avgResponseDays <= 3) return 0.8;
+  if (avgResponseDays <= 5) return 0.65;
+  if (avgResponseDays <= 7) return 0.5;
+  if (avgResponseDays <= 10) return 0.3;
+  if (avgResponseDays <= 14) return 0.15;
+  return 0.05; // Más de 2 semanas
+};
+
+// ==================== ALGORITMO PRINCIPAL ====================
+
+/**
+ * SISTEMA DE RECOMENDACIÓN INTELIGENTE
+ * 
+ * Mejoras:
+ * - Filtro inteligente: excluye invitados activos, permite expirados/declinados
+ * - Keywords semánticas para matching mejorado
+ * - Categorías afines para ampliar recomendaciones
+ * - Score de respuesta para priorizar revisores rápidos
+ * - Diversificación institucional mejorada
+ * - Penalización por invitaciones expiradas
  */
 export const getRecommendedReviewers = ({
   articleArea,
@@ -303,16 +358,23 @@ export const getRecommendedReviewers = ({
   language = 'es'
 }) => {
   
-  // 1. FILTRADO INICIAL
+  // 1. FILTRADO INTELIGENTE
   const eligibleReviewers = potentialReviewers.filter(reviewer => {
-    // No recomendar revisores ya invitados
-    const alreadyInvited = existingInvitations.some(
-      inv => inv.reviewerId === reviewer.id || inv.reviewerEmail === reviewer.email
+    // Verificar si ya tiene una invitación ACTIVA (no expirada ni declinada)
+    const hasActiveInvitation = existingInvitations.some(
+      inv => (inv.reviewerId === reviewer.id || inv.reviewerEmail === reviewer.email) &&
+             inv.status !== 'expired' && 
+             inv.status !== 'declined' &&
+             inv.status !== 'cancelled'
     );
-    if (alreadyInvited) return false;
     
-    // No recomendar revisores inactivos o suspendidos
+    if (hasActiveInvitation) return false;
+    
+    // No recomendar revisores suspendidos o baneados
     if (reviewer.status === 'suspended' || reviewer.status === 'banned') return false;
+    
+    // No recomendar revisores sin email
+    if (!reviewer.email) return false;
     
     return true;
   });
@@ -322,8 +384,9 @@ export const getRecommendedReviewers = ({
     const expertiseScore = calculateExpertiseScore(reviewer, articleArea);
     const performanceScore = calculatePerformanceScore(reviewer);
     const availabilityScore = calculateAvailabilityScore(reviewer);
-    const diversityScore = calculateDiversityScore(reviewer, []);
+    const diversityScore = calculateDiversityScore(reviewer, [], eligibleReviewers);
     const historyScore = calculateHistoryScore(reviewer);
+    const responseScore = calculateResponseScore(reviewer);
     
     // Score compuesto ponderado
     const compositeScore = 
@@ -331,114 +394,184 @@ export const getRecommendedReviewers = ({
       WEIGHTS.PERFORMANCE * performanceScore +
       WEIGHTS.AVAILABILITY * availabilityScore +
       WEIGHTS.DIVERSITY * diversityScore +
-      WEIGHTS.HISTORY * historyScore;
+      WEIGHTS.HISTORY * historyScore +
+      WEIGHTS.RESPONSE * responseScore;
     
-    // Detalles para transparencia
+    // Score breakdown detallado
     const scoreBreakdown = {
-      expertise: (WEIGHTS.EXPERTISE * expertiseScore).toFixed(3),
-      performance: (WEIGHTS.PERFORMANCE * performanceScore).toFixed(3),
-      availability: (WEIGHTS.AVAILABILITY * availabilityScore).toFixed(3),
-      diversity: (WEIGHTS.DIVERSITY * diversityScore).toFixed(3),
-      history: (WEIGHTS.HISTORY * historyScore).toFixed(3)
+      expertise: +(WEIGHTS.EXPERTISE * expertiseScore).toFixed(3),
+      performance: +(WEIGHTS.PERFORMANCE * performanceScore).toFixed(3),
+      availability: +(WEIGHTS.AVAILABILITY * availabilityScore).toFixed(3),
+      diversity: +(WEIGHTS.DIVERSITY * diversityScore).toFixed(3),
+      history: +(WEIGHTS.HISTORY * historyScore).toFixed(3),
+      response: +(WEIGHTS.RESPONSE * responseScore).toFixed(3)
     };
+    
+    // Determinar nivel de coincidencia
+    const articleCategory = AREA_TO_CATEGORY[articleArea];
+    const reviewerCategories = (reviewer.areasOfExpertise || [])
+      .map(area => AREA_TO_CATEGORY[area])
+      .filter(Boolean);
+    
+    const hasExactMatch = (reviewer.areasOfExpertise || []).includes(articleArea);
+    const sameCategory = articleCategory && reviewerCategories.includes(articleCategory);
+    const relatedCategories = RELATED_CATEGORIES[articleCategory] || [];
+    const hasRelatedCategory = reviewerCategories.some(rc => relatedCategories.includes(rc));
+    
+    let matchLevel = 'fallback';
+    if (hasExactMatch) matchLevel = 'exact';
+    else if (sameCategory) matchLevel = 'category';
+    else if (hasRelatedCategory) matchLevel = 'related';
     
     // Etiqueta de calidad
     let qualityTier = 'standard';
-    if (compositeScore >= 0.8) qualityTier = 'excellent';
+    if (compositeScore >= 0.80) qualityTier = 'excellent';
     else if (compositeScore >= 0.65) qualityTier = 'very-good';
-    else if (compositeScore >= 0.5) qualityTier = 'good';
-    else if (compositeScore < 0.3) qualityTier = 'low';
+    else if (compositeScore >= 0.50) qualityTier = 'good';
+    else if (compositeScore < 0.30) qualityTier = 'low';
     
     return {
       ...reviewer,
       compositeScore,
       scoreBreakdown,
       qualityTier,
+      matchLevel,
       matchDetails: {
-        hasExactMatch: reviewer.areasOfExpertise?.includes(articleArea),
-        sameCategory: AREA_TO_CATEGORY[reviewer.areasOfExpertise?.[0]] === 
-                     AREA_TO_CATEGORY[articleArea],
-        matchLevel: reviewer.areasOfExpertise?.includes(articleArea) 
-          ? 'exact' 
-          : AREA_TO_CATEGORY[reviewer.areasOfExpertise?.[0]] === AREA_TO_CATEGORY[articleArea]
-            ? 'category'
-            : 'fallback'
+        hasExactMatch,
+        sameCategory,
+        hasRelatedCategory,
+        matchLevel,
+        articleCategory,
+        reviewerCategories
       }
     };
   });
   
-  // 3. ORDENAMIENTO
+  // 3. ORDENAMIENTO POR SCORE
   scoredReviewers.sort((a, b) => b.compositeScore - a.compositeScore);
   
-  // 4. DIVERSIFICACIÓN
+  // 4. DIVERSIFICACIÓN INTELIGENTE
   const diversified = [];
-  const usedInstitutions = new Set();
+  const institutionCount = new Map();
   
-  // Primera pasada: tomar los mejores de cada institución
+  // Primera pasada: priorizar matchLevel + diversidad institucional
   for (const reviewer of scoredReviewers) {
     if (diversified.length >= maxRecommendations) break;
     
-    const institution = reviewer.institution || 'unknown';
+    const inst = (reviewer.institution || 'unknown').toLowerCase();
+    const currentCount = institutionCount.get(inst) || 0;
     
-    // Permitir máximo 2 revisores por institución
-    const institutionCount = diversified.filter(
-      r => r.institution === institution
-    ).length;
+    // Máximo 2 por institución, pero sin límite si hay pocos revisores
+    const maxPerInstitution = scoredReviewers.length <= 5 ? 3 : 2;
     
-    if (institutionCount < 2) {
+    if (currentCount < maxPerInstitution) {
       diversified.push(reviewer);
-      usedInstitutions.add(institution);
+      institutionCount.set(inst, currentCount + 1);
     }
   }
   
-  // Si no hay suficientes, agregar los mejores restantes
+  // Segunda pasada: llenar slots restantes con los mejores
   if (diversified.length < maxRecommendations) {
     for (const reviewer of scoredReviewers) {
       if (diversified.length >= maxRecommendations) break;
-      if (!diversified.includes(reviewer)) {
+      if (!diversified.find(d => d.id === reviewer.id)) {
         diversified.push(reviewer);
       }
     }
   }
   
-  // 5. GENERAR EXPLICACIONES
+  // 5. GENERAR RECOMENDACIONES FINALES
+  const isSpanish = language === 'es';
+  
   const recommendations = diversified.slice(0, maxRecommendations).map((reviewer, index) => {
     const reasons = [];
-    const isSpanish = language === 'es';
     
-    if (reviewer.matchDetails.matchLevel === 'exact') {
+    // Razones basadas en matchLevel
+    switch (reviewer.matchLevel) {
+      case 'exact':
+        reasons.push(isSpanish 
+          ? `✅ Experto exacto en "${articleArea}"` 
+          : `✅ Exact expert in "${articleArea}"`);
+        break;
+      case 'category':
+        reasons.push(isSpanish 
+          ? `📚 Especialista en la misma categoría (${reviewer.matchDetails.articleCategory})` 
+          : `📚 Specialist in same category (${reviewer.matchDetails.articleCategory})`);
+        break;
+      case 'related':
+        reasons.push(isSpanish 
+          ? `🔗 Experto en categoría afín` 
+          : `🔗 Expert in related category`);
+        break;
+      default:
+        reasons.push(isSpanish 
+          ? `📋 Revisor disponible en el sistema` 
+          : `📋 Available reviewer in system`);
+    }
+    
+    // Razones de rendimiento
+    if (reviewer.compositeScore >= 0.75) {
+      reasons.push(isSpanish ? '⭐ Rendimiento sobresaliente' : '⭐ Outstanding performance');
+    } else if (reviewer.compositeScore >= 0.60) {
+      reasons.push(isSpanish ? '👍 Buen rendimiento histórico' : '👍 Good historical performance');
+    }
+    
+    // Razones de disponibilidad
+    const currentLoad = reviewer.availability?.currentActiveReviews || 0;
+    const maxLoad = reviewer.availability?.maxActiveReviews || 3;
+    
+    if (currentLoad === 0) {
+      reasons.push(isSpanish ? '🟢 Sin carga actual' : '🟢 No current load');
+    } else if (currentLoad < maxLoad) {
       reasons.push(isSpanish 
-        ? `Experto exacto en "${articleArea}"` 
-        : `Exact expert in "${articleArea}"`);
-    } else if (reviewer.matchDetails.matchLevel === 'category') {
+        ? `🟡 Capacidad disponible (${currentLoad}/${maxLoad})` 
+        : `🟡 Capacity available (${currentLoad}/${maxLoad})`);
+    }
+    
+    // Razones de experiencia
+    const totalReviews = reviewer.stats?.totalReviewsCompleted || 0;
+    if (totalReviews >= 5) {
       reasons.push(isSpanish 
-        ? `Especialista en categoría afín con ${reviewer.areasOfExpertise?.length || 0} áreas` 
-        : `Specialist in related category with ${reviewer.areasOfExpertise?.length || 0} areas`);
+        ? `📝 ${totalReviews} revisiones completadas` 
+        : `📝 ${totalReviews} reviews completed`);
     }
     
-    if (reviewer.compositeScore >= 0.8) {
-      reasons.push(isSpanish ? 'Rendimiento excepcional' : 'Outstanding performance');
+    // Razones de puntualidad
+    const onTimeRate = reviewer.stats?.onTimeRate || 0;
+    if (onTimeRate >= 90) {
+      reasons.push(isSpanish ? '⏰ Excelente puntualidad' : '⏰ Excellent punctuality');
     }
     
-    if ((reviewer.availability?.currentActiveReviews || 0) === 0) {
-      reasons.push(isSpanish ? 'Disponible inmediatamente' : 'Immediately available');
-    }
+    const tierLabels = {
+      excellent: isSpanish ? '🌟 Excelente' : '🌟 Excellent',
+      'very-good': isSpanish ? '✅ Muy Bueno' : '✅ Very Good',
+      good: isSpanish ? '👍 Bueno' : '👍 Good',
+      standard: isSpanish ? '📋 Estándar' : '📋 Standard',
+      low: isSpanish ? '⚠️ Bajo' : '⚠️ Low'
+    };
     
     return {
       ...reviewer,
       rank: index + 1,
       recommendationReasons: reasons,
-      tierLabel: isSpanish 
-        ? { excellent: '🌟 Excelente', 'very-good': '✅ Muy Bueno', good: '👍 Bueno', standard: '📋 Estándar', low: '⚠️ Bajo' }[reviewer.qualityTier]
-        : { excellent: '🌟 Excellent', 'very-good': '✅ Very Good', good: '👍 Good', standard: '📋 Standard', low: '⚠️ Low' }[reviewer.qualityTier]
+      tierLabel: tierLabels[reviewer.qualityTier] || tierLabels.standard
     };
   });
   
+  // 6. RETORNAR RESULTADO
   return {
     recommendations,
     totalEligible: eligibleReviewers.length,
+    totalReviewers: potentialReviewers.length,
+    filteredOut: potentialReviewers.length - eligibleReviewers.length,
     articleArea,
     articleCategory: AREA_TO_CATEGORY[articleArea],
-    fallbackActivated: recommendations.every(r => r.matchDetails.matchLevel === 'fallback')
+    fallbackActivated: recommendations.every(r => r.matchLevel === 'fallback'),
+    matchDistribution: {
+      exact: recommendations.filter(r => r.matchLevel === 'exact').length,
+      category: recommendations.filter(r => r.matchLevel === 'category').length,
+      related: recommendations.filter(r => r.matchLevel === 'related').length,
+      fallback: recommendations.filter(r => r.matchLevel === 'fallback').length
+    }
   };
 };

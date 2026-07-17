@@ -1,0 +1,353 @@
+================================================================================
+  REPORTE DE ÁREAS DE EXPERTISE DE REVISORES
+  Colección: reviewers
+================================================================================
+
+📅 Fecha: 17-07-2026, 1:54:20 p. m.
+👥 Total revisores: 12
+✅ Con áreas: 11
+⚠️ Sin áreas: 1
+🔄 Con duplicados: 0
+🟢 Activos: 12
+🔴 Inactivos: 0
+🏷️ Áreas únicas: 66
+
+────────────────────────────────────────────────────────────────────────────────
+  ÁREAS ÚNICAS (con conteo de revisores)
+────────────────────────────────────────────────────────────────────────────────
+
+  1. "Ajedrez" → 1 revisor(es)
+  2. "Algebra" → 3 revisor(es)
+  3. "Análisis matemático" → 1 revisor(es)
+  4. "Applied science" → 1 revisor(es)
+  5. "Astronomy" → 1 revisor(es)
+  6. "Astronomía" → 1 revisor(es)
+  7. "Astronomía y Astrofísica" → 1 revisor(es)
+  8. "Biochemistry" → 3 revisor(es)
+  9. "Biología" → 1 revisor(es)
+ 10. "Biología celular" → 1 revisor(es)
+ 11. "Bioquímica" → 3 revisor(es)
+ 12. "Chess" → 1 revisor(es)
+ 13. "Ciencia aplicada" → 1 revisor(es)
+ 14. "Ciencias Ambientales y Ecología" → 1 revisor(es)
+ 15. "Ciencias políticas" → 2 revisor(es)
+ 16. "Cálculo" → 1 revisor(es)
+ 17. "Debate" → 2 revisor(es)
+ 18. "Deportes" → 1 revisor(es)
+ 19. "Economía política" → 1 revisor(es)
+ 20. "Estequiometria" → 1 revisor(es)
+ 21. "Estequiometría" → 1 revisor(es)
+ 22. "Filosofía" → 2 revisor(es)
+ 23. "Finance" → 1 revisor(es)
+ 24. "Finanzas" → 1 revisor(es)
+ 25. "Física" → 3 revisor(es)
+ 26. "Game Theory" → 1 revisor(es)
+ 27. "Geometry" → 1 revisor(es)
+ 28. "Geometría" → 1 revisor(es)
+ 29. "Historia" → 1 revisor(es)
+ 30. "Historia Universal" → 1 revisor(es)
+ 31. "International Politics" → 1 revisor(es)
+ 32. "Latin American Poetry" → 1 revisor(es)
+ 33. "Literatura" → 2 revisor(es)
+ 34. "Literatura universal" → 1 revisor(es)
+ 35. "Literature" → 1 revisor(es)
+ 36. "Matemática" → 2 revisor(es)
+ 37. "Matemáticas" → 1 revisor(es)
+ 38. "Mathematical analysis" → 1 revisor(es)
+ 39. "Mathematics" → 3 revisor(es)
+ 40. "Matrices" → 1 revisor(es)
+ 41. "Meteorología y Ciencias Atmosféricas" → 1 revisor(es)
+ 42. "Música" → 1 revisor(es)
+ 43. "Nuclear Chemistry" → 1 revisor(es)
+ 44. "Number Theory" → 1 revisor(es)
+ 45. "Number theory" → 1 revisor(es)
+ 46. "Philosophy" → 1 revisor(es)
+ 47. "Physics" → 3 revisor(es)
+ 48. "Poesía latinoamericana" → 1 revisor(es)
+ 49. "Political Economy" → 1 revisor(es)
+ 50. "Political Science" → 1 revisor(es)
+ 51. "Política Internacional" → 1 revisor(es)
+ 52. "Programación" → 2 revisor(es)
+ 53. "Programming" → 2 revisor(es)
+ 54. "Psicoanálisis" → 1 revisor(es)
+ 55. "Psicología" → 1 revisor(es)
+ 56. "Psiquiatría" → 1 revisor(es)
+ 57. "Química nuclear" → 1 revisor(es)
+ 58. "Set theory" → 1 revisor(es)
+ 59. "Sports" → 1 revisor(es)
+ 60. "Stoichiometry" → 2 revisor(es)
+ 61. "Teoría de Juegos" → 1 revisor(es)
+ 62. "Teoría de conjuntos" → 1 revisor(es)
+ 63. "Teoría de números" → 2 revisor(es)
+ 64. "World History" → 1 revisor(es)
+ 65. "World Literature" → 1 revisor(es)
+ 66. "Álgebra" → 3 revisor(es)
+
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+─
+  REVISORES (detalle)
+────────────────────────────────────────────────────────────────────────────────
+
+1. Agustín Maturana
+   Email: aster.maturana@gmail.com
+   Institución: Instituto Miguel León Prado
+   Estado: active
+   Idioma: es
+   Carga: 0/3
+   Áreas (9):
+     • "Filosofía"
+     • "Historia"
+     • "Literatura"
+     • "Psicología"
+     • "Psiquiatría"
+     • "Música"
+     • "Psicoanálisis"
+     • "Biología celular"
+     • "Ciencias políticas"
+
+2. Benjamín Catalán
+   Email: bencatalanv@gmail.com
+   Institución: Colegio Calasanz
+   Estado: active
+   Idioma: es
+   Carga: 0/3
+   Áreas (8):
+     • "Matemática"
+     • "Física"
+     • "Literatura"
+     • "Filosofía"
+     • "Mathematics"
+     • "Physics"
+     • "Literature"
+     • "Philosophy"
+
+3. Carlos Gutiérrez
+   Email: thebreb2@gmail.com
+   Institución: New Heinrich School
+   Estado: active
+   Idioma: es
+   Carga: 0/3
+   Áreas (6):
+     • "Matemática"
+     • "Bioquímica"
+     • "Programación"
+     • "Mathematics"
+     • "Biochemistry"
+     • "Programming"
+
+4. Emanuel Cereceda
+   Email: emanuelcereceda3@gmail.com
+   Institución: Liceo Bicentenario Santa María de las Condes
+   Estado: active
+   Idioma: es
+   Carga: 0/3
+   Áreas (8):
+     • "Álgebra"
+     • "Análisis matemático"
+     • "Física"
+     • "Ciencia aplicada"
+     • "Algebra"
+     • "Mathematical analysis"
+     • "Physics"
+     • "Applied science"
+
+5. Francisco Correa
+   Email: fcfran007@gmail.com
+   Institución: Colegio Calasanz
+   Estado: active
+   Idioma: es
+   Carga: 0/3
+   Áreas (8):
+     • "Teoría de números"
+     • "Teoría de Juegos"
+     • "Política Internacional"
+     • "Historia Universal"
+     • "Number Theory"
+     • "Game Theory"
+     • "International Politics"
+     • "World History"
+
+6. Joel Portugal
+   Email: amigojoel45@gmail.com
+   Institución: Liceo Nacional de Maipú
+   Estado: active
+   Idioma: es
+   Carga: 0/3
+   Áreas (10):
+     • "Álgebra"
+     • "Matrices"
+     • "Bioquímica"
+     • "Física"
+     • "Programación"
+     • "Cálculo"
+     • "Algebra"
+     • "Biochemistry"
+     • "Physics"
+     • "Programming"
+
+7. Juan Pablo Miralles
+   Email: juanpaolee52@gmail.com
+   Institución: Colegio Calasanz
+   Estado: active
+   Idioma: es
+   Carga: 0/3
+   Áreas (6):
+     • "Estequiometría"
+     • "Teoría de números"
+     • "Teoría de conjuntos"
+     • "Stoichiometry"
+     • "Number theory"
+     • "Set theory"
+
+8. Juan Vega
+   Email: juanfranciscovc@gmail.com
+   Institución: Colegio Curimón
+   Estado: active
+   Idioma: es
+   Carga: 0/3
+   ⚠️ SIN ÁREAS DEFINIDAS
+
+9. Lucas Velozo Mella
+   Email: lgvm3011@gmail.com
+   Institución: Colegio Instituto Pascal
+   Estado: active
+   Idioma: es
+   Carga: 0/3
+   Áreas (9):
+     • "Matemáticas"
+     • "Ajedrez"
+     • "Astronomía"
+     • "Debate"
+     • "Deportes"
+     • "Mathematics"
+     • "Chess"
+     • "Astronomy"
+     • "Sports"
+
+10. Marina Soto
+   Email: marinasotoojeda15@gmail.com
+   Institución: Pontificia Universidad Católica de Chile 
+   Estado: active
+   Idioma: es
+   Carga: 0/3
+   Áreas (13):
+     • "Ciencias políticas"
+     • "Finanzas"
+     • "Economía política"
+     • "Poesía latinoamericana"
+     • "Literatura universal"
+     • "Debate"
+     • "Química nuclear"
+     • "Political Science"
+     • "Finance"
+     • "Political Economy"
+     • "Latin American Poetry"
+     • "World Literature"
+     • "Nuclear Chemistry"
+
+11. Revisor Anónimo 1
+   Email: luchitojara.rovier@gmail.com
+   Institución: Sin institución
+   Estado: active
+   Idioma: en
+   Carga: 0/2
+   Áreas (4):
+     • "Biología"
+     • "Ciencias Ambientales y Ecología"
+     • "Meteorología y Ciencias Atmosféricas"
+     • "Astronomía y Astrofísica"
+
+12. Tomás Arancibia
+   Email: tomasarancibiam@gmail.com
+   Institución: Colegio Calasanz
+   Estado: active
+   Idioma: es
+   Carga: 0/3
+   Áreas (8):
+     • "Álgebra"
+     • "Estequiometria"
+     • "Bioquímica"
+     • "Geometría"
+     • "Algebra"
+     • "Stoichiometry"
+     • "Biochemistry"
+     • "Geometry"
+
