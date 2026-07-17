@@ -46,76 +46,95 @@ const HelpCapsule = ({ text, textEn }) => {
 
 // ============ CONFIGURACIÓN DE ÁREAS TEMÁTICAS ============
 
+// ============ CONFIGURACIÓN DE ÁREAS TEMÁTICAS ============
+
 const AREAS_TEMATICAS = {
-  "Ciencias Exactas y Naturales": [
-    "Matemáticas",
-    "Física",
-    "Química",
-    "Biología",
-    "Geología",
-    "Astronomía y Astrofísica",
-    "Ciencias Ambientales y Ecología",
-    "Oceanografía",
-    "Meteorología y Ciencias Atmosféricas",
-    "Paleontología"
-  ],
-  "Ciencias de la Salud": [
-    "Medicina General e Interna",
-    "Salud Pública y Epidemiología",
-    "Enfermería",
-    "Nutrición y Dietética",
-    "Farmacología y Farmacia",
-    "Odontología",
-    "Kinesiología y Fisioterapia",
-    "Tecnología Médica y Bioanálisis",
-    "Veterinaria"
-  ],
-  "Ingeniería y Tecnología": [
-    "Ingeniería Civil",
-    "Ingeniería Industrial y de Sistemas",
-    "Ingeniería Mecánica",
-    "Ingeniería Eléctrica y Electrónica",
-    "Ingeniería Química y Biotecnología",
-    "Ingeniería en Computación e Informática",
-    "Ciencia de Datos e Inteligencia Artificial",
-    "Robótica y Automatización",
-    "Ingeniería de Materiales y Nanotecnología",
-    "Ingeniería Aeroespacial",
-    "Energías Renovables y Sostenibilidad"
-  ],
-  "Ciencias Sociales": [
-    "Sociología",
-    "Antropología y Arqueología",
-    "Psicología",
-    "Economía y Negocios",
-    "Ciencias Políticas y Relaciones Internacionales",
-    "Derecho",
-    "Geografía Humana y Ordenamiento Territorial",
-    "Estudios de Género",
-    "Comunicación Social y Periodismo",
-    "Educación y Pedagogía",
-    "Trabajo Social"
-  ],
-  "Humanidades": [
-    "Historia",
-    "Filosofía",
-    "Lingüística y Filología",
-    "Literatura",
-    "Estudios Clásicos",
-    "Teología y Ciencias de la Religión",
-    "Estudios Culturales",
-    "Arte, Música y Cine",
-    "Arquitectura y Urbanismo"
-  ],
-  "Ciencias Agropecuarias": [
-    "Agronomía y Producción Agrícola",
-    "Ciencias Forestales",
-    "Acuicultura y Pesca",
-    "Zootecnia y Producción Animal",
-    "Ingeniería de Alimentos"
-  ]
+  es: {
+    "Ciencias Exactas y Naturales": [
+      "Matemáticas", "Física", "Química", "Biología", "Geología",
+      "Astronomía y Astrofísica", "Ciencias Ambientales y Ecología",
+      "Oceanografía", "Meteorología y Ciencias Atmosféricas", "Paleontología"
+    ],
+    "Ciencias de la Salud": [
+      "Medicina General e Interna", "Salud Pública y Epidemiología",
+      "Enfermería", "Nutrición y Dietética", "Farmacología y Farmacia",
+      "Odontología", "Kinesiología y Fisioterapia", 
+      "Tecnología Médica y Bioanálisis", "Veterinaria"
+    ],
+    "Ingeniería y Tecnología": [
+      "Ingeniería Civil", "Ingeniería Industrial y de Sistemas",
+      "Ingeniería Mecánica", "Ingeniería Eléctrica y Electrónica",
+      "Ingeniería Química y Biotecnología", 
+      "Ingeniería en Computación e Informática",
+      "Ciencia de Datos e Inteligencia Artificial", 
+      "Robótica y Automatización",
+      "Ingeniería de Materiales y Nanotecnología", 
+      "Ingeniería Aeroespacial", "Energías Renovables y Sostenibilidad"
+    ],
+    "Ciencias Sociales": [
+      "Sociología", "Antropología y Arqueología", "Psicología",
+      "Economía y Negocios", "Ciencias Políticas y Relaciones Internacionales",
+      "Derecho", "Geografía Humana y Ordenamiento Territorial",
+      "Estudios de Género", "Comunicación Social y Periodismo",
+      "Educación y Pedagogía", "Trabajo Social"
+    ],
+    "Humanidades": [
+      "Historia", "Filosofía", "Lingüística y Filología", "Literatura",
+      "Estudios Clásicos", "Teología y Ciencias de la Religión",
+      "Estudios Culturales", "Arte, Música y Cine", "Arquitectura y Urbanismo"
+    ],
+    "Ciencias Agropecuarias": [
+      "Agronomía y Producción Agrícola", "Ciencias Forestales",
+      "Acuicultura y Pesca", "Zootecnia y Producción Animal", 
+      "Ingeniería de Alimentos"
+    ]
+  },
+  en: {
+    "Exact and Natural Sciences": [
+      "Mathematics", "Physics", "Chemistry", "Biology", "Geology",
+      "Astronomy and Astrophysics", "Environmental Sciences and Ecology",
+      "Oceanography", "Meteorology and Atmospheric Sciences", "Paleontology"
+    ],
+    "Health Sciences": [
+      "General and Internal Medicine", "Public Health and Epidemiology",
+      "Nursing", "Nutrition and Dietetics", "Pharmacology and Pharmacy",
+      "Dentistry", "Kinesiology and Physical Therapy",
+      "Medical Technology and Bioanalysis", "Veterinary Medicine"
+    ],
+    "Engineering and Technology": [
+      "Civil Engineering", "Industrial and Systems Engineering",
+      "Mechanical Engineering", "Electrical and Electronic Engineering",
+      "Chemical Engineering and Biotechnology", 
+      "Computer Science and Informatics",
+      "Data Science and Artificial Intelligence", 
+      "Robotics and Automation",
+      "Materials Science and Nanotechnology", 
+      "Aerospace Engineering", "Renewable Energies and Sustainability"
+    ],
+    "Social Sciences": [
+      "Sociology", "Anthropology and Archaeology", "Psychology",
+      "Economics and Business", "Political Science and International Relations",
+      "Law", "Human Geography and Land Planning",
+      "Gender Studies", "Social Communication and Journalism",
+      "Education and Pedagogy", "Social Work"
+    ],
+    "Humanities": [
+      "History", "Philosophy", "Linguistics and Philology", "Literature",
+      "Classical Studies", "Theology and Religious Studies",
+      "Cultural Studies", "Art, Music and Film", "Architecture and Urbanism"
+    ],
+    "Agricultural Sciences": [
+      "Agronomy and Agricultural Production", "Forestry Sciences",
+      "Aquaculture and Fisheries", "Animal Science and Production", 
+      "Food Engineering"
+    ]
+  }
 };
 
+// Helper para obtener áreas según idioma
+const getAreasByLanguage = (language) => {
+  return AREAS_TEMATICAS[language] || AREAS_TEMATICAS.es;
+};
 // ============ CONFIGURACIÓN DE VOCABULARIOS CONTROLADOS ============
 
 const VOCABULARIO_POR_AREA = {
@@ -560,7 +579,25 @@ const VOCABULARIO_POR_AREA = {
     instrucciones: "Usa el tesauro de ciencia y tecnología de alimentos FSTA."
   }
 };
+// Agrega esto después de AREAS_TEMATICAS
+const AREA_MAPPING = {};
+Object.entries(AREAS_TEMATICAS.es).forEach(([catEs, areasEs]) => {
+  areasEs.forEach((areaEs, index) => {
+    const catEn = Object.keys(AREAS_TEMATICAS.en)[Object.keys(AREAS_TEMATICAS.es).indexOf(catEs)];
+    const areaEn = AREAS_TEMATICAS.en[catEn]?.[index];
+    if (areaEn) {
+      AREA_MAPPING[areaEn] = areaEs;
+      AREA_MAPPING[areaEs] = areaEs; // Por si acaso
+    }
+  });
+});
 
+// Helper para obtener vocabulario
+const getVocabularyForArea = (area) => {
+  // Si el área está en inglés, buscar su equivalente en español
+  const spanishArea = AREA_MAPPING[area] || area;
+  return VOCABULARIO_POR_AREA[spanishArea];
+};
 // ============ COMPONENTE: PALABRAS CLAVE CONTROLADAS ============
 
 const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language }) => {
@@ -1664,7 +1701,7 @@ useEffect(() => {
         titleEn: formData.titleEn,
         abstract: formData.abstract,
         abstractEn: formData.abstractEn,
-        keywordsVocabulario: VOCABULARIO_POR_AREA[formData.area]?.vocabulario || 'unknown',
+        keywordsVocabulario: getVocabularyForArea(formData.area)?.vocabulario || 'unknown',
         keywordsRaw: formData.controlledKeywords,
         keywordsRawEn: formData.controlledKeywordsEn,
         keywordsSerialized,
@@ -2207,7 +2244,7 @@ useEffect(() => {
                             ${validationErrors.area ? 'border-red-400 bg-red-50' : 'border-gray-200 text-gray-600'}`}
                         >
                           <option value="">— {isSpanish ? 'Seleccionar área...' : 'Select area...'} —</option>
-                          {Object.entries(AREAS_TEMATICAS).map(([categoria, subareas]) => (
+                          {Object.entries(getAreasByLanguage(language)).map(([categoria, subareas]) => (
                             <optgroup key={categoria} label={categoria}>
                               {subareas.map(sub => (
                                 <option key={sub} value={sub}>{sub}</option>
@@ -2226,11 +2263,11 @@ useEffect(() => {
                       <label className="block text-xs font-medium uppercase tracking-wider text-gray-600 mb-3">
                         {isSpanish ? 'Palabras clave' : 'Keywords'} *
                       </label>
-                      {formData.area && VOCABULARIO_POR_AREA[formData.area] ? (
+                     {formData.area && getVocabularyForArea(formData.area) ? (
                         <div className="space-y-8">
                           <div>
                             <ControlledKeywordInput
-                              vocabularyConfig={VOCABULARIO_POR_AREA[formData.area]}
+                              vocabularyConfig={getVocabularyForArea(formData.area)}
                               value={formData.controlledKeywords}
                               onChange={(val) => {
                                 setFormData(prev => ({ ...prev, controlledKeywords: val }));
@@ -2252,7 +2289,7 @@ useEffect(() => {
                               {isSpanish ? 'Keywords en inglés' : 'English Keywords'}
                             </label>
                             <ControlledKeywordInput
-                              vocabularyConfig={VOCABULARIO_POR_AREA[formData.area]}
+                              vocabularyConfig={getVocabularyForArea(formData.area)}
                               value={formData.controlledKeywordsEn}
                               onChange={(val) => setFormData(prev => ({ ...prev, controlledKeywordsEn: val }))}
                               language={language}
@@ -3069,7 +3106,7 @@ useEffect(() => {
 
               {/* Grid de áreas seleccionables */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {Object.entries(AREAS_TEMATICAS).map(([categoria, subareas]) => (
+                {Object.entries(getAreasByLanguage(language)).map(([categoria, subareas]) => (
                   <div key={categoria} className="space-y-2">
                     <h4 className="text-[11px] font-bold uppercase tracking-wider text-gray-500 font-sans border-b border-gray-200 pb-1">
                       {categoria}

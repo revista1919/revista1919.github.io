@@ -3,8 +3,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '../hooks/useLanguage';
+import { getRecommendedReviewers } from '../hooks/reviewerRecommendationEngine';
 
-// src/utils/decodeHelpers.js
 export const decodeBase64IfNeeded = (text) => {
   if (!text || typeof text !== 'string') return text;
   
@@ -391,7 +391,161 @@ export const ReviewerManagementTab = ({
           </div>
         </div>
       )}
-      
+      // Sección del ReviewerManagementTab actualizada
+{/* ================= RECOMMENDED REVIEWERS ================= */}
+{getRecommendedReviewers && (
+  <div className="bg-white border border-slate-200 shadow-sm">
+    <div className="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-[#003b5c] to-[#002b44] text-white">
+      <div className="flex items-center justify-between">
+        <h4 className="font-serif font-bold text-lg flex items-center gap-2">
+          <svg className="w-5 h-5 text-[#C0A86A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+          </svg>
+          {isSpanish ? 'Revisores Recomendados' : 'Recommended Reviewers'}
+        </h4>
+        <span className="text-[10px] bg-[#C0A86A]/20 text-[#C0A86A] px-3 py-1 uppercase tracking-widest font-bold">
+          {isSpanish ? 'Sistema Inteligente' : 'Smart System'}
+        </span>
+      </div>
+      <p className="text-xs text-slate-300 mt-1 font-sans">
+        {isSpanish 
+          ? 'Basado en coincidencia temática, rendimiento histórico y disponibilidad actual'
+          : 'Based on thematic matching, historical performance and current availability'}
+      </p>
+    </div>
+    
+    <div className="divide-y divide-slate-100">
+      {recommendations.map((reviewer) => (
+        <motion.div
+          key={reviewer.id}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          onClick={() => setSelectedReviewerId(reviewer.id)}
+          className={`p-5 cursor-pointer transition-all ${
+            selectedReviewerId === reviewer.id
+              ? 'bg-blue-50/30 border-l-4 border-[#003b5c]'
+              : 'border-l-4 border-transparent hover:bg-slate-50'
+          }`}
+        >
+          <div className="flex items-start gap-4">
+            {/* Rank Badge */}
+            <div className="flex-shrink-0">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
+                reviewer.rank === 1 
+                  ? 'bg-[#C0A86A] text-white' 
+                  : 'bg-slate-100 text-slate-600'
+              }`}>
+                #{reviewer.rank}
+              </div>
+            </div>
+            
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="font-serif font-bold text-[#003b5c] text-base">
+                  {reviewer.displayName}
+                </span>
+                <span className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-600 uppercase tracking-wider">
+                  {reviewer.tierLabel}
+                </span>
+              </div>
+              
+              <div className="flex items-center gap-3 text-xs text-slate-500 mb-2">
+                <span className="font-mono">{reviewer.email}</span>
+                {reviewer.institution && (
+                  <span className="text-slate-400">| {reviewer.institution}</span>
+                )}
+              </div>
+              
+              {/* Score Bar */}
+              <div className="mb-3">
+                <div className="flex justify-between text-[10px] text-slate-400 mb-1">
+                  <span>{isSpanish ? 'Puntuación' : 'Score'}</span>
+                  <span className="font-bold text-[#003b5c]">
+                    {(reviewer.compositeScore * 100).toFixed(0)}%
+                  </span>
+                </div>
+                <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${reviewer.compositeScore * 100}%` }}
+                    className={`h-full rounded-full ${
+                      reviewer.compositeScore >= 0.8 ? 'bg-emerald-500' :
+                      reviewer.compositeScore >= 0.65 ? 'bg-[#003b5c]' :
+                      reviewer.compositeScore >= 0.5 ? 'bg-amber-500' :
+                      'bg-slate-400'
+                    }`}
+                  />
+                </div>
+              </div>
+              
+              {/* Score Breakdown Tooltip */}
+              <div className="flex flex-wrap gap-2 mb-2">
+                {Object.entries(reviewer.scoreBreakdown).map(([key, value]) => (
+                  <span key={key} className="text-[9px] bg-slate-50 px-2 py-0.5 text-slate-500 uppercase tracking-wider">
+                    {key}: {(value * 100).toFixed(0)}%
+                  </span>
+                ))}
+              </div>
+              
+              {/* Recommendation Reasons */}
+              <div className="flex flex-wrap gap-1.5">
+                {reviewer.recommendationReasons.map((reason, idx) => (
+                  <span key={idx} className="text-[10px] bg-[#FBF9F3] text-[#003b5c] px-2 py-0.5 border border-[#C0A86A]/20">
+                    {reason}
+                  </span>
+                ))}
+              </div>
+              
+              {/* Stats Mini */}
+              <div className="flex gap-4 mt-3 text-[10px] text-slate-400">
+                <span>
+                  {isSpanish ? 'Revisiones: ' : 'Reviews: '}
+                  <strong className="text-slate-600">{reviewer.stats?.totalReviewsCompleted || 0}</strong>
+                </span>
+                <span>
+                  {isSpanish ? 'Puntualidad: ' : 'On-time: '}
+                  <strong className="text-slate-600">{reviewer.stats?.onTimeRate || 100}%</strong>
+                </span>
+                <span>
+                  {isSpanish ? 'Carga: ' : 'Load: '}
+                  <strong className="text-slate-600">
+                    {reviewer.availability?.currentActiveReviews || 0}/{reviewer.availability?.maxActiveReviews || 3}
+                  </strong>
+                </span>
+              </div>
+            </div>
+            
+            {/* Selection Indicator */}
+            <div className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+              selectedReviewerId === reviewer.id
+                ? 'border-[#003b5c] bg-[#003b5c]'
+                : 'border-slate-300'
+            }`}>
+              {selectedReviewerId === reviewer.id && (
+                <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </div>
+          </div>
+        </motion.div>
+      ))}
+    </div>
+    
+    {fallbackActivated && (
+      <div className="px-6 py-3 bg-amber-50 border-t border-amber-200">
+        <p className="text-xs text-amber-800 flex items-center gap-2">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          {isSpanish
+            ? 'No se encontraron revisores con coincidencia exacta. Mostrando los mejores perfiles en la categoría macro.'
+            : 'No reviewers with exact match found. Showing best profiles in the broader category.'}
+        </p>
+      </div>
+    )}
+  </div>
+)}
       {/* ================= NEW REVIEWER SEARCH ================= */}
       <div className="bg-white border border-slate-200 shadow-sm">
         <div className="px-6 py-4 border-b border-slate-200 bg-[#003b5c] text-white">
