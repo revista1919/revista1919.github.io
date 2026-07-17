@@ -1,16 +1,24 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-function TeamSection({ setActiveTab }) {
+function TeamSection() {
   const [mainData, setMainData] = useState([]);
-  const [asesoresData, setAsesoresData] = useState([]);
+  const [cientificoData, setCientificoData] = useState([]);
   const [institutionsData, setInstitutionsData] = useState([]);
   const [selectedRole, setSelectedRole] = useState('Todos');
   const [isLoading, setIsLoading] = useState(false);
   const [jsonError, setJsonError] = useState(null);
   const [showAll, setShowAll] = useState(false);
+  const [activeTooltip, setActiveTooltip] = useState(null);
 
   const jsonUrl = 'https://www.revistacienciasestudiantes.com/team/Team.json';
+
+  // Definiciones de roles
+  const roleDefinitions = {
+    'Equipo Editorial': 'Grupo de personas que sostienen el proyecto académico de la revista. Participan en la evaluación, edición, corrección, difusión y gestión de los contenidos, garantizando la calidad científica y editorial de cada número.',
+    'Comité Científico': 'Órgano consultivo integrado por especialistas de reconocido prestigio que asesoran sobre la calidad, pertinencia y rigor científico de los contenidos, velando por el cumplimiento de los estándares académicos de la publicación.',
+    'Institución Colaboradora': 'Entidades que respaldan el proyecto mediante apoyo institucional, financiamiento o difusión, contribuyendo al fortalecimiento y sostenibilidad de la revista.'
+  };
 
   useEffect(() => {
     setIsLoading(true);
@@ -24,15 +32,13 @@ function TeamSection({ setActiveTab }) {
         return response.json();
       })
       .then(users => {
-        // Filtrar según roles (excluir autores puros si es necesario)
         const allData = users.filter(user => {
           const memberRoles = user.roles || [];
-          // Si tiene solo el rol 'Autor' y ningún otro, lo excluimos
           return !(memberRoles.length === 1 && memberRoles[0] === 'Autor');
         });
 
-        // Separar por categorías
-        const asesores = allData.filter(user => {
+        // El rol sigue siendo "Asesor Académico" pero la sección se llama "Comité Científico"
+        const cientifico = allData.filter(user => {
           const roles = user.roles || [];
           return roles.includes('Asesor Académico');
         });
@@ -44,11 +50,12 @@ function TeamSection({ setActiveTab }) {
 
         const mainMembers = allData.filter(user => {
           const roles = user.roles || [];
-          return !roles.includes('Asesor Académico') && !roles.includes('Institución Colaboradora');
+          return !roles.includes('Asesor Académico') && 
+                 !roles.includes('Institución Colaboradora');
         });
 
         setMainData(mainMembers);
-        setAsesoresData(asesores);
+        setCientificoData(cientifico);
         setInstitutionsData(institutions);
         setIsLoading(false);
       })
@@ -56,16 +63,18 @@ function TeamSection({ setActiveTab }) {
         console.error('Error al cargar el JSON:', error);
         setJsonError('No se pudo cargar la información del equipo.');
         setMainData([]);
-        setAsesoresData([]);
+        setCientificoData([]);
         setInstitutionsData([]);
         setIsLoading(false);
       });
   }, []);
 
-  // Extraer roles únicos para el filtro
+  // Extraer roles únicos para el filtro (excluyendo "Revisor")
   const roles = useMemo(() => {
     const allRoles = mainData.flatMap(user => {
-      return (user.roles || []).filter(role => role && role !== 'Autor');
+      return (user.roles || []).filter(role => 
+        role && role !== 'Autor' && role !== 'Revisor'
+      );
     });
     const uniqueRoles = [...new Set(allRoles)];
     return ['Todos', ...uniqueRoles.sort()];
@@ -82,18 +91,15 @@ function TeamSection({ setActiveTab }) {
 
   const displayedMembers = showAll ? filteredMembers : filteredMembers.slice(0, 15);
 
-  // Función para navegar al perfil del miembro (VERSIÓN .html)
   const handleNavigation = (slug) => {
     if (!slug) return;
-    window.location.href = `/team/${slug}.html`; // Usamos .html como antes
+    window.location.href = `/team/${slug}.html`;
   };
 
-  // Obtener el slug desde el displayName o firstName+lastName
   const getUserSlug = (user) => {
     return user.slug || generateSlug(user.displayName || `${user.firstName} ${user.lastName}`);
   };
 
-  // Función auxiliar para generar slug (por si acaso)
   const generateSlug = (name) => {
     if (!name) return '';
     return name
@@ -104,237 +110,304 @@ function TeamSection({ setActiveTab }) {
       .replace(/[^a-z0-9-]/g, '');
   };
 
+  // Componente de Tooltip con icono de información
+  const RoleDefinitionButton = ({ role, sectionName }) => {
+    const definitionKey = sectionName || role;
+    if (!roleDefinitions[definitionKey]) return null;
+    
+    return (
+      <div className="relative inline-flex items-center ml-2">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setActiveTooltip(activeTooltip === definitionKey ? null : definitionKey);
+          }}
+          className="text-gray-400 hover:text-[#FF7900] transition-colors focus:outline-none"
+          title={`¿Qué es ${definitionKey}?`}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </button>
+        <AnimatePresence>
+          {activeTooltip === definitionKey && (
+            <motion.div 
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 5 }}
+              className="absolute z-50 bottom-full left-1/2 transform -translate-x-1/2 mb-3 w-72 p-4 bg-[#003B5C] text-white text-xs leading-relaxed rounded shadow-xl"
+            >
+              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-transparent border-t-[#003B5C]"></div>
+              <p className="text-left font-sans">{roleDefinitions[definitionKey]}</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  };
+
   return (
-    <div className="max-w-7xl mx-auto px-4 py-16 bg-white min-h-screen">
-      {/* Header Estilo Journal */}
-      <header className="text-center mb-16">
-        <motion.span
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          className="text-[10px] uppercase tracking-[0.4em] font-bold text-[#007398] mb-4 block"
-        >
-          Estructura Organizacional
-        </motion.span>
-        <motion.h1
-          initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-          className="text-4xl sm:text-5xl font-serif text-gray-900 mb-6"
-        >
-          Cuerpo Editorial y Académico
-        </motion.h1>
-        <div className="w-24 h-1 bg-gray-200 mx-auto mb-6"></div>
-        <p className="text-gray-500 max-w-2xl mx-auto leading-relaxed italic font-serif">
-          "Fomentando la excelencia científica a través de la colaboración académica y el rigor editorial."
-        </p>
+    <div className="bg-[#FCFCFD] min-h-screen font-sans text-[#1A232C]">
+      
+      {/* ===================== HEADER SECTION ===================== */}
+      <header className="bg-white border-b border-gray-200 pt-20 pb-16 px-4">
+        <div className="max-w-7xl mx-auto text-center">
+          <motion.span
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            className="text-[11px] uppercase tracking-[0.3em] font-semibold text-[#003B5C] mb-4 block"
+          >
+            Directorio Institucional
+          </motion.span>
+          <motion.h1
+            initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+            className="text-4xl md:text-5xl font-serif text-[#003B5C] mb-6"
+          >
+            Cuerpo Editorial y Académico
+          </motion.h1>
+          <div className="w-16 h-1 bg-[#FF7900] mx-auto mb-6"></div>
+          <p className="text-[#64748B] max-w-2xl mx-auto leading-relaxed text-sm md:text-base">
+            Fomentando la excelencia científica a través de la rigurosidad editorial, la evaluación por pares y el trabajo colaborativo de nuestro destacado equipo internacional.
+          </p>
+        </div>
       </header>
 
-      {/* Selector de Roles */}
-      <div className="flex flex-wrap justify-center gap-3 mb-12 border-b border-gray-100 pb-8">
-        {roles.map((role) => (
-          <button
-            key={role}
-            onClick={() => setSelectedRole(role)}
-            className={`px-5 py-2 text-xs uppercase tracking-widest transition-all duration-300 border ${
-              selectedRole === role
-                ? 'bg-gray-900 text-white border-gray-900'
-                : 'text-gray-500 border-gray-200 hover:border-gray-400'
-            }`}
-          >
-            {role}
-          </button>
-        ))}
-      </div>
+      <main className="max-w-7xl mx-auto px-4 py-12">
+        
+        {/* ===================== FILTROS DE ROLES ===================== */}
+        <div className="flex flex-wrap justify-center gap-2 mb-12">
+          {roles.map((role) => (
+            <div key={role} className="flex items-center">
+              <button
+                onClick={() => setSelectedRole(role)}
+                className={`px-5 py-2.5 text-[11px] font-bold uppercase tracking-widest transition-all duration-300 border-b-2 ${
+                  selectedRole === role
+                    ? 'border-[#FF7900] text-[#003B5C] bg-[#F3F7F9]'
+                    : 'border-transparent text-gray-500 hover:text-[#003B5C] hover:bg-gray-50'
+                }`}
+              >
+                {role}
+              </button>
+              {role !== 'Todos' && <RoleDefinitionButton role={role} />}
+            </div>
+          ))}
+        </div>
 
-      {/* Grid de Miembros Operativos */}
-      {isLoading ? (
-        <div className="text-center py-20 font-serif italic text-gray-400 animate-pulse">Cargando Directorio...</div>
-      ) : jsonError ? (
-        <p className="text-red-600 text-sm sm:text-lg text-center">{jsonError}</p>
-      ) : filteredMembers.length === 0 ? (
-        <p className="text-gray-600 text-sm sm:text-lg text-center">No hay miembros para este rol.</p>
-      ) : (
-        <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          <AnimatePresence>
-            {displayedMembers.map((member) => {
-              const slug = getUserSlug(member);
-              return (
-                <motion.div
-                  layout
-                  key={member.uid || member.displayName}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  onClick={() => handleNavigation(slug)}
-                  className="group p-6 border border-gray-100 hover:border-[#007398]/30 hover:shadow-2xl hover:shadow-gray-200/50 transition-all duration-500 bg-white relative overflow-hidden cursor-pointer"
+        {/* ===================== GRID: EQUIPO EDITORIAL ===================== */}
+        {isLoading ? (
+          <div className="text-center py-20">
+            <div className="w-8 h-8 border-4 border-[#003B5C] border-t-[#FF7900] rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-sm text-gray-500 uppercase tracking-widest">Cargando directorio...</p>
+          </div>
+        ) : jsonError ? (
+          <p className="text-red-600 text-center py-10 bg-red-50 border border-red-100 rounded">{jsonError}</p>
+        ) : filteredMembers.length === 0 ? (
+          <p className="text-gray-500 text-center py-10">No se encontraron miembros para este criterio.</p>
+        ) : (
+          <>
+            <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <AnimatePresence>
+                {displayedMembers.map((member) => {
+                  const slug = getUserSlug(member);
+                  return (
+                    <motion.div
+                      layout
+                      key={member.uid || member.displayName}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      onClick={() => handleNavigation(slug)}
+                      className="group bg-white border border-gray-200 border-t-4 border-t-transparent hover:border-t-[#FF7900] hover:shadow-xl hover:shadow-gray-200/40 p-6 transition-all duration-300 cursor-pointer flex flex-col"
+                    >
+                      <div className="flex items-start space-x-4 mb-4">
+                        {member.imageUrl ? (
+                          <div className="w-16 h-16 rounded overflow-hidden flex-shrink-0 border border-gray-100">
+                            <img
+                              src={member.imageUrl}
+                              alt={member.displayName}
+                              className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-16 h-16 rounded bg-[#F3F7F9] flex items-center justify-center flex-shrink-0 border border-gray-100">
+                            <span className="text-[#003B5C] font-serif text-xl">
+                              {member.firstName?.charAt(0)}{member.lastName?.charAt(0)}
+                            </span>
+                          </div>
+                        )}
+                        <div>
+                          <h3 className="text-lg font-serif text-[#003B5C] leading-tight group-hover:text-[#FF7900] transition-colors">
+                            {member.displayName || `${member.firstName} ${member.lastName}`}
+                          </h3>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-auto pt-4 border-t border-gray-50">
+                        <div className="flex flex-wrap gap-1.5">
+                          {(member.roles || []).filter(r => r && r !== 'Autor' && r !== 'Revisor').map((role) => (
+                            <span key={role} className="text-[10px] font-semibold uppercase tracking-wider bg-[#F3F7F9] text-[#003B5C] px-2.5 py-1 rounded-sm">
+                              {role}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+            </motion.div>
+
+            {filteredMembers.length > 15 && (
+              <div className="text-center mt-12">
+                <button
+                  onClick={() => setShowAll(!showAll)}
+                  className="px-6 py-2 border border-[#003B5C] text-[#003B5C] text-xs font-bold uppercase tracking-widest hover:bg-[#003B5C] hover:text-white transition-colors rounded-sm"
                 >
-                  <div className="flex items-center space-x-5">
-                    <div className="relative">
-                      {member.imageUrl && (
-                        <div className="w-20 h-20 overflow-hidden border border-gray-100 p-1 group-hover:border-[#007398] transition-colors duration-500">
-                          <img
-                            src={member.imageUrl}
-                            alt={member.displayName}
-                            className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
-                          />
+                  {showAll ? "Mostrar menos resultados" : "Ver listado completo"}
+                </button>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ===================== SECCIÓN: COMITÉ CIENTÍFICO ===================== */}
+        {cientificoData.length > 0 && (
+          <section className="mt-24">
+            <div className="flex items-center justify-between border-b border-gray-200 pb-4 mb-8">
+              <h2 className="text-2xl font-serif text-[#003B5C] inline-flex items-center">
+                Comité Científico Internacional
+                <RoleDefinitionButton role="Comité Científico" sectionName="Comité Científico" />
+              </h2>
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+              {cientificoData.map((member) => {
+                const slug = getUserSlug(member);
+                return (
+                  <div
+                    key={member.uid || member.displayName}
+                    onClick={() => handleNavigation(slug)}
+                    className="text-center group cursor-pointer"
+                  >
+                    <div className="w-20 h-20 mx-auto mb-4 rounded-full overflow-hidden border-2 border-transparent group-hover:border-[#FF7900] shadow-sm transition-all duration-300">
+                      {member.imageUrl ? (
+                        <img
+                          src={member.imageUrl}
+                          className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
+                          alt={member.displayName}
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-[#F3F7F9] flex items-center justify-center text-[#003B5C] font-serif">
+                          {member.firstName?.charAt(0)}{member.lastName?.charAt(0)}
                         </div>
                       )}
                     </div>
-                    <div>
-                      <h3 className="text-lg font-serif text-gray-900 group-hover:text-[#007398] transition-colors">
-                        {member.displayName || `${member.firstName} ${member.lastName}`}
-                      </h3>
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {(member.roles || []).filter(r => r && r !== 'Autor').map((role) => (
-                          <span key={role} className="text-[9px] uppercase tracking-tighter bg-gray-50 text-gray-500 px-2 py-0.5 border border-gray-100 italic">
-                            {role}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
+                    <h4 className="text-sm font-serif text-[#1A232C] group-hover:text-[#003B5C] leading-snug">
+                      {member.displayName || `${member.firstName} ${member.lastName}`}
+                    </h4>
+                    <p className="text-[9px] text-[#64748B] uppercase mt-1.5 tracking-widest font-semibold">
+                      Asesor Académico
+                    </p>
                   </div>
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
-        </motion.div>
-      )}
+                );
+              })}
+            </div>
+          </section>
+        )}
 
-      {/* Botón "Ver más" */}
-      {filteredMembers.length > 15 && (
-        <div className="text-center mt-12">
-          <button
-            onClick={() => setShowAll(!showAll)}
-            className="text-[11px] uppercase tracking-[0.2em] font-bold text-gray-400 hover:text-[#007398] transition-colors"
-          >
-            {showAll ? "[ — Mostrar menos ]" : "[ + Ver todo el equipo ]"}
-          </button>
-        </div>
-      )}
+        {/* ===================== SECCIÓN: INSTITUCIONES ===================== */}
+        {institutionsData.length > 0 && (
+          <section className="mt-28">
+            <div className="flex items-center justify-between border-b border-gray-200 pb-4 mb-10">
+              <h2 className="text-2xl font-serif text-[#003B5C] inline-flex items-center">
+                Instituciones Colaboradoras
+                <RoleDefinitionButton role="Institución Colaboradora" sectionName="Institución Colaboradora" />
+              </h2>
+            </div>
 
-      {/* Sección de Asesores - CON HOVER EFECTO */}
-      {asesoresData.length > 0 && (
-        <section className="mt-24 pt-16 border-t border-gray-100">
-          <h2 className="text-2xl font-serif text-center mb-12 text-gray-800 tracking-tight italic">Consejo Superior de Asesoría</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {asesoresData.map((member) => {
-              const slug = getUserSlug(member);
-              return (
-                <div
-                  key={member.uid || member.displayName}
-                  onClick={() => handleNavigation(slug)}
-                  className="text-center p-6 border border-gray-50 bg-gray-50/30 cursor-pointer group hover:border-[#007398]/30 hover:shadow-lg transition-all duration-300"
-                >
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-full overflow-hidden border-2 border-white shadow-sm group-hover:border-[#007398] transition-all">
-                    {member.imageUrl && (
-                      <img
-                        src={member.imageUrl}
-                        className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
-                        alt={member.displayName}
-                      />
-                    )}
-                  </div>
-                  <h4 className="text-md font-serif text-gray-900 group-hover:text-[#007398] transition-colors">
-                    {member.displayName || `${member.firstName} ${member.lastName}`}
-                  </h4>
-                  <p className="text-[10px] text-[#007398] uppercase mt-1 tracking-widest font-bold">Asesor Académico</p>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {institutionsData.map((inst) => {
+                const slug = getUserSlug(inst);
+                const website = inst.social?.website || inst.website || '';
 
-      {/* SECCIÓN INSTITUCIONES: DISEÑO MAJESTUOSO CON DOBLE NAVEGACIÓN */}
-      {institutionsData.length > 0 && (
-        <section className="mt-32 pt-20 border-t-2 border-double border-gray-100">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-serif text-gray-900 tracking-widest uppercase mb-2">Alianzas Institucionales</h2>
-            <div className="w-12 h-0.5 bg-[#007398] mx-auto mb-4"></div>
-            <p className="text-xs font-sans text-gray-400 tracking-[0.3em] uppercase">Entidades que respaldan nuestra labor</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-            {institutionsData.map((inst) => {
-              const slug = getUserSlug(inst);
-              // Buscar el sitio web en social.website o en algún campo específico
-              const website = inst.social?.website || inst.website || '';
-
-              return (
-                <motion.div
-                  key={inst.uid || inst.displayName}
-                  whileHover={{ y: -5 }}
-                  onClick={() => handleNavigation(slug)} // Acción por defecto: Slug interno
-                  className="relative flex flex-col items-center md:flex-row md:items-stretch bg-[#fafafa] border border-gray-100 p-8 group overflow-hidden transition-all duration-500 cursor-pointer"
-                >
-                  {/* Decoración Majestuosa Lateral */}
-                  <div className="absolute top-0 left-0 w-1 h-full bg-[#007398] scale-y-0 group-hover:scale-y-100 transition-transform duration-500 origin-top"></div>
-
-                  {/* Logo de la Institución */}
-                  <div className="flex-shrink-0 mb-6 md:mb-0 md:mr-8 flex items-center justify-center bg-white p-4 shadow-sm border border-gray-50 w-36 h-36 relative z-10">
-                    {inst.imageUrl ? (
-                      <img
-                        src={inst.imageUrl}
-                        className="max-w-full max-h-full object-contain filter grayscale group-hover:grayscale-0 transition-all duration-700"
-                        alt={inst.displayName}
-                      />
-                    ) : (
-                      <div className="text-4xl text-gray-200">🏛️</div>
-                    )}
-                  </div>
-
-                  {/* Contenido Informativo */}
-                  <div className="flex flex-col justify-between text-center md:text-left relative z-10">
-                    <div>
-                      <h3 className="text-xl font-serif text-gray-900 mb-2 leading-tight group-hover:text-[#007398] transition-colors">
-                        {inst.displayName || `${inst.firstName} ${inst.lastName}`}
-                      </h3>
-                      <p className="text-[11px] font-sans text-gray-400 uppercase tracking-widest mb-6">
-                        Institución Colaboradora
-                      </p>
-                    </div>
-
-                    {/* BOTONES DE ACCIÓN */}
-                    <div className="flex flex-col sm:flex-row gap-4 items-center md:items-start">
-                      {/* 1. Botón de Perfil Interno (visual, el clic ya lo maneja el div) */}
-                      <span className="text-[10px] font-sans font-bold uppercase tracking-[.2em] text-gray-800 border-b border-gray-300 pb-1">
-                        Ver Perfil
-                      </span>
-
-                      {/* 2. BOTÓN ESPECIAL: Sitio Web Externo */}
-                      {website && (
-                        <a
-                          href={website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()} // IMPORTANTE: Evita que el clic en el botón active el slug de la card
-                          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-[#007398] text-[9px] font-bold uppercase tracking-widest hover:bg-[#007398] hover:text-white hover:border-[#007398] transition-all duration-300 shadow-sm"
-                        >
-                          Sitio Web Oficial
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                          </svg>
-                        </a>
+                return (
+                  <motion.div
+                    key={inst.uid || inst.displayName}
+                    whileHover={{ y: -3 }}
+                    onClick={() => handleNavigation(slug)}
+                    className="flex flex-col sm:flex-row bg-white border border-gray-200 hover:border-[#FF7900] hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden rounded-sm"
+                  >
+                    <div className="sm:w-1/3 bg-[#F3F7F9] p-6 flex items-center justify-center border-b sm:border-b-0 sm:border-r border-gray-100">
+                      {inst.imageUrl ? (
+                        <img
+                          src={inst.imageUrl}
+                          className="max-w-full max-h-24 object-contain mix-blend-multiply"
+                          alt={inst.displayName}
+                        />
+                      ) : (
+                        <svg className="w-12 h-12 text-[#003B5C]/20" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 2L2 7v2h20V7L12 2zm0 2.8L18.4 7H5.6L12 4.8zM4 11h3v8H4v-8zm5 0h3v8H9v-8zm5 0h3v8h-3v-8zm5 0h3v8h-3v-8zM2 21h20v2H2v-2z"/>
+                        </svg>
                       )}
                     </div>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-        </section>
-      )}
 
-      {/* Footer de Captación */}
-      <footer className="mt-32 p-12 bg-gray-900 text-white text-center relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-1 bg-[#007398]"></div>
-        <h3 className="text-2xl font-serif mb-4">¿Desea formar parte de nuestra historia?</h3>
-        <p className="text-gray-400 text-sm max-w-xl mx-auto mb-8 font-serif italic">
-          Buscamos mentes brillantes apasionadas por la comunicación científica.
-        </p>
-        <a
-          href="https://www.revistacienciasestudiantes.com/es/admin"
-          className="inline-block border border-white px-8 py-3 text-[10px] uppercase tracking-[0.3em] font-bold hover:bg-white hover:text-black transition-all"
-        >
-          Postular a un cargo editorial
-        </a>
+                    <div className="sm:w-2/3 p-6 flex flex-col justify-between">
+                      <div>
+                        <span className="text-[9px] text-[#FF7900] font-bold uppercase tracking-widest mb-1 block">
+                          Respaldo Institucional
+                        </span>
+                        <h3 className="text-xl font-serif text-[#003B5C] mb-3 leading-tight">
+                          {inst.displayName || `${inst.firstName} ${inst.lastName}`}
+                        </h3>
+                      </div>
+
+                      <div className="flex items-center justify-between mt-4">
+                        <span className="text-xs font-semibold text-[#64748B] hover:text-[#003B5C] flex items-center gap-1 transition-colors">
+                          Ver Perfil 
+                          <span aria-hidden="true">&rarr;</span>
+                        </span>
+
+                        {website && (
+                          <a
+                            href={website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex items-center gap-1.5 text-xs text-[#003B5C] hover:text-[#FF7900] transition-colors"
+                            title="Visitar sitio web oficial"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+      </main>
+
+      {/* ===================== FOOTER DE CAPTACIÓN ===================== */}
+      <footer className="mt-20 bg-[#003B5C] text-white border-t-4 border-[#FF7900] px-4 py-16 text-center">
+        <div className="max-w-3xl mx-auto">
+          <svg className="w-10 h-10 mx-auto text-[#FF7900] mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+          </svg>
+          <h3 className="text-3xl font-serif mb-4">Únase a nuestro proyecto editorial</h3>
+          <p className="text-[#A1B3C4] mb-8 font-sans">
+            Buscamos investigadores, académicos y profesionales comprometidos con la revisión por pares y el avance de la comunicación científica.
+          </p>
+          <a
+            href="https://www.revistacienciasestudiantes.com/es/admin"
+            className="inline-block bg-[#FF7900] text-white px-8 py-3 text-xs font-bold uppercase tracking-widest hover:bg-[#E06A00] transition-colors rounded-sm"
+          >
+            Postular a un cargo
+          </a>
+        </div>
       </footer>
     </div>
   );
