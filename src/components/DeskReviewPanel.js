@@ -12,21 +12,21 @@ import { useReviewerInvitation } from '../hooks/useReviewerInvitation';
 import { useEditorialTasks, TASK_STATES } from '../hooks/useEditorialTasks';
 import { DeskReviewTab } from './DeskReviewTab';
 
-// ============ ICONOS SVG PROFESIONALES ============
+// ============ ICONOS SVG PROFESIONALES (Líneas finas, estilo editorial) ============
 const Icons = {
   FileText: () => (
-    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
     </svg>
   ),
   CheckCircle: () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   ),
   XCircle: () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   ),
   AlertCircle: () => (
@@ -35,18 +35,18 @@ const Icons = {
     </svg>
   ),
   Ban: () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
     </svg>
   ),
   Search: () => (
     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
     </svg>
   ),
   Inbox: () => (
-    <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+    <svg className="w-12 h-12 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
     </svg>
   ),
 };
@@ -436,298 +436,288 @@ const DeskReviewPanel = ({ user }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Barra de navegación superior */}
-      <div className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
-        <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 py-3 sm:py-0 sm:h-16">
-  <div className="flex items-center gap-3 w-full sm:w-auto">
-    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-900 to-blue-700 rounded-xl flex items-center justify-center flex-shrink-0">
-      <Icons.FileText />
-    </div>
-    <div className="min-w-0">
-      <h1 className="text-base sm:text-lg font-bold text-gray-900 truncate">
-        {isSpanish ? 'Panel de Revisión' : 'Review Panel'}
-      </h1>
-      <p className="text-xs text-gray-500">
-        {isSpanish ? 'Editor de Sección' : 'Section Editor'}
-      </p>
-    </div>
-  </div>
-  
-  {/* Buscador y filtros en móvil: full width y en columna */}
-  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-    <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2 w-full sm:w-auto">
-      <Icons.Search />
-      <input
-        type="text"
-        placeholder={isSpanish ? 'Buscar...' : 'Search...'}
-        value={searchManuscript}
-        onChange={(e) => setSearchManuscript(e.target.value)}
-        className="bg-transparent border-none outline-none text-sm text-gray-700 placeholder-gray-400 w-full sm:w-40"
-      />
-    </div>
-    
-    {/* Filtros con scroll horizontal en móvil */}
-    <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-xl p-1 overflow-x-auto w-full sm:w-auto">
-      {[
-        { value: 'all', label: isSpanish ? 'Todos' : 'All' },
-        { value: 'pending', label: isSpanish ? 'Pend.' : 'Pend.' },
-        { value: 'completed', label: isSpanish ? 'Comp.' : 'Comp.' },
-        { value: 'rejected', label: isSpanish ? 'Rech.' : 'Rej.' },
-      ].map(filter => (
-        <button
-          key={filter.value}
-          onClick={() => setFilterStatus(filter.value)}
-          className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all whitespace-nowrap ${
-            filterStatus === filter.value
-              ? 'bg-blue-900 text-white shadow-md'
-              : 'text-gray-600 hover:bg-gray-50'
-          }`}
-        >
-          {filter.label}
-          {filter.value === 'rejected' && rejectedSubmissions.length > 0 && (
-            <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
-              {rejectedSubmissions.length}
-            </span>
-          )}
-        </button>
-      ))}
-    </div>
-  </div>
-</div>
+    <div className="min-h-screen bg-[#F8F9FB] font-sans text-slate-800">
+      
+      {/* ===================== TOP NAVIGATION (EDITORIAL RIBBON) ===================== */}
+      <div className="bg-[#003b5c] text-white sticky top-0 z-40 shadow-md border-b-[3px] border-[#C0A86A]">
+        {/* Branding Tier */}
+        <div className="max-w-[1920px] mx-auto px-4 sm:px-8 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="hidden sm:flex w-10 h-10 border border-[#C0A86A]/40 bg-white/5 items-center justify-center text-[#C0A86A]">
+              <Icons.FileText />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#C0A86A] mb-1">
+                {isSpanish ? 'Sistema de Gestión Editorial' : 'Editorial Management System'}
+              </p>
+              <h1 className="font-serif text-xl sm:text-2xl font-bold leading-none">
+                {isSpanish ? 'Panel de Revisión' : 'Review Panel'}
+              </h1>
+            </div>
+          </div>
+          <div className="text-right hidden sm:block">
+            <p className="text-xs text-sky-200 uppercase tracking-widest font-bold">
+              {user?.displayName || user?.email}
+            </p>
+            <p className="text-[10px] text-white/60 uppercase tracking-wider mt-1">
+              {isSpanish ? 'Editor de Sección' : 'Section Editor'}
+            </p>
+          </div>
+        </div>
 
+        {/* Filters Tier */}
+        <div className="bg-white text-slate-700 border-b border-slate-200">
+          <div className="max-w-[1920px] mx-auto px-4 sm:px-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 py-2">
+            
+            {/* Search */}
+            <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 px-4 py-2 w-full sm:w-72 focus-within:border-[#003b5c] transition-colors">
+              <span className="text-slate-400"><Icons.Search /></span>
+              <input
+                type="text"
+                placeholder={isSpanish ? 'Buscar manuscrito por ID o Título...' : 'Search manuscript by ID or Title...'}
+                value={searchManuscript}
+                onChange={(e) => setSearchManuscript(e.target.value)}
+                className="bg-transparent border-none outline-none text-xs w-full text-slate-700 font-medium placeholder-slate-400"
+              />
+            </div>
+            
+            {/* Folder Tabs */}
+            <div className="flex items-center gap-6 overflow-x-auto custom-scrollbar">
+              {[
+                { value: 'all', label: isSpanish ? 'Todos los Expedientes' : 'All Records' },
+                { value: 'pending', label: isSpanish ? 'En Curso' : 'In Progress' },
+                { value: 'completed', label: isSpanish ? 'Completados' : 'Completed' },
+                { value: 'rejected', label: isSpanish ? 'Declinados' : 'Declined' },
+              ].map(filter => (
+                <button
+                  key={filter.value}
+                  onClick={() => setFilterStatus(filter.value)}
+                  className={`py-3 text-[10px] sm:text-xs font-bold uppercase tracking-widest whitespace-nowrap border-b-2 transition-all flex items-center gap-2 ${
+                    filterStatus === filter.value
+                      ? 'border-[#003b5c] text-[#003b5c]'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  {filter.label}
+                  {filter.value === 'rejected' && rejectedSubmissions.length > 0 && (
+                    <span className="bg-rose-100 text-rose-700 text-[9px] px-1.5 py-0.5 border border-rose-200">
+                      {rejectedSubmissions.length}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Contenido principal */}
-      <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* ===================== MAIN CONTENT WORKSPACE ===================== */}
+      <div className="max-w-[1920px] mx-auto px-4 sm:px-8 py-8">
+        
         {(reviewError || inviteError) && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-2xl mb-6 flex items-center gap-3">
+          <div className="bg-rose-50 border-l-4 border-l-rose-700 text-rose-800 px-6 py-4 mb-8 flex items-center gap-3 shadow-sm">
             <Icons.AlertCircle />
-            <span className="font-medium">{reviewError || inviteError}</span>
+            <span className="font-serif text-sm">{reviewError || inviteError}</span>
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-8">
-          {/* Lista de manuscritos - Sidebar */}
-          <div className="lg:col-span-4 xl:col-span-3">
-  <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-4 sm:p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold text-gray-900">
-                  {isSpanish ? 'Manuscritos' : 'Manuscripts'}
-                </h3>
-                <span className="bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full font-medium">
-                  {filteredSubmissions.length}
-                </span>
-              </div>
+        <div className="flex flex-col lg:flex-row gap-8 items-start">
+          
+          {/* ===================== SIDEBAR: DOSSIER LIST ===================== */}
+          <div className="w-full lg:w-96 xl:w-[400px] flex-shrink-0 bg-white border border-slate-200 shadow-sm flex flex-col">
+            
+            <div className="bg-slate-50 border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+              <h3 className="text-xs font-bold text-[#003b5c] uppercase tracking-widest">
+                {isSpanish ? 'Expedientes Asignados' : 'Assigned Dossiers'}
+              </h3>
+              <span className="bg-white border border-slate-200 text-slate-600 text-[10px] font-mono px-2 py-0.5">
+                Total: {filteredSubmissions.length}
+              </span>
+            </div>
 
+            <div className="flex-1 max-h-[65vh] lg:max-h-[calc(100vh-220px)] overflow-y-auto custom-scrollbar">
               {filteredSubmissions.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                    <Icons.Inbox />
-                  </div>
-                  <p className="text-gray-500 font-medium">
-                    {isSpanish ? 'No hay manuscritos' : 'No manuscripts found'}
+                <div className="flex flex-col items-center justify-center py-16 text-center px-6">
+                  <Icons.Inbox />
+                  <p className="font-serif text-slate-500 mt-4 text-lg">
+                    {isSpanish ? 'El archivo está vacío.' : 'The archive is empty.'}
                   </p>
-                  <p className="text-gray-400 text-sm mt-1">
-                    {isSpanish ? 'Cambia los filtros para ver más' : 'Change filters to see more'}
+                  <p className="text-slate-400 text-xs mt-2 font-sans uppercase tracking-widest">
+                    {isSpanish ? 'Ajuste los filtros de búsqueda' : 'Adjust search filters'}
                   </p>
                 </div>
               ) : (
-                <div className="space-y-3 max-h-[50vh] lg:max-h-[calc(100vh-280px)] overflow-y-auto pr-2 custom-scrollbar">
-                  {/* Manuscritos pendientes */}
+                <div className="divide-y divide-slate-100">
+                  
+                  {/* PENDING SECTION */}
                   {pendingSubmissions.length > 0 && filterStatus !== 'rejected' && (
-                    <div>
-                      <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 px-1">
-                        {isSpanish ? 'En Proceso' : 'In Progress'}
-                      </h4>
-                      <div className="space-y-2">
-                        {pendingSubmissions.map(group => {
-                          const latestTask = group.latestTask;
-                          const isSelected = selectedSubmissionId === group.submissionId;
-                          
-                          return (
-                            <motion.div
-                              key={group.submissionId}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              onClick={() => handleSelectManuscript(group.submissionId, group.currentRound, group)}
-                              className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
-                                isSelected
-                                  ? 'border-blue-500 bg-blue-50 shadow-lg shadow-blue-100'
-                                  : 'border-gray-200 hover:border-blue-300 bg-white hover:shadow-md'
-                              }`}
-                            >
-                              <div className="flex items-start justify-between mb-2">
-                                <h4 className="font-semibold text-gray-900 text-sm line-clamp-2 break-words flex-1">
-                                  {group.submission?.title || 'Cargando...'}
-                                </h4>
-                              </div>
-                              
-                              <div className="flex items-center justify-between text-xs mb-2 ">
-                                <span className="font-mono text-gray-500">
-                                  {group.submission?.submissionId?.slice(0, 8) || 'Sin ID'}
-                                </span>
-                                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
-                                  {group.submission?.area || 'Sin área'}
-                                </span>
-                              </div>
-
-                              <div className="flex items-center gap-1 mt-2 mb-2">
-                                {group.tasks.map((task, index) => (
-                                  <div
-                                    key={task.id}
-                                    className={`flex-1 h-1.5 rounded-full ${
-                                      task.status === TASK_STATES.COMPLETED
-                                        ? 'bg-emerald-500'
-                                        : task.id === latestTask.id
-                                        ? 'bg-blue-500'
-                                        : 'bg-gray-300'
-                                    }`}
-                                    title={`Ronda ${index + 1}: ${
-                                      task.status === TASK_STATES.COMPLETED ? 'Completada' : 'En curso'
-                                    }`}
-                                  />
-                                ))}
-                              </div>
-
-                              <div className="flex items-center justify-between mt-3">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs text-gray-500 font-medium">
-                                    {isSpanish ? `Ronda ${group.currentRound}` : `Round ${group.currentRound}`}
-                                  </span>
-                                </div>
-                                <span className={`text-xs px-3 py-1 rounded-full font-medium ${
-                                  latestTask?.status === TASK_STATES.PENDING ? 'bg-amber-100 text-amber-700' :
-                                  latestTask?.status === TASK_STATES.DESK_REVIEW_IN_PROGRESS ? 'bg-blue-100 text-blue-700' :
-                                  latestTask?.status === TASK_STATES.REVIEWER_SELECTION ? 'bg-purple-100 text-purple-700' :
-                                  latestTask?.status === TASK_STATES.AWAITING_DECISION ? 'bg-emerald-100 text-emerald-700' :
-                                  group.submission?.finalReviewDocId ? 'bg-teal-100 text-teal-700' :
-                                  'bg-gray-100 text-gray-600'
-                                }`}>
-                                  {latestTask?.status === TASK_STATES.PENDING && (isSpanish ? 'Pendiente' : 'Pending')}
-                                  {latestTask?.status === TASK_STATES.DESK_REVIEW_IN_PROGRESS && (isSpanish ? 'En revisión' : 'In review')}
-                                  {latestTask?.status === TASK_STATES.REVIEWER_SELECTION && (isSpanish ? 'Revisores' : 'Reviewers')}
-                                  {latestTask?.status === TASK_STATES.AWAITING_DECISION && (isSpanish ? 'Decisión' : 'Decision')}
-                                  {group.submission?.finalReviewDocId && !latestTask?.status === TASK_STATES.AWAITING_DECISION && 
-                                    (isSpanish ? 'Consolidado' : 'Consolidated')}
-                                </span>
-                              </div>
-                              
-                              {latestTask?.status === TASK_STATES.PENDING && (
-                                <button
-                                  onClick={(e) => { 
-                                    e.stopPropagation(); 
-                                    handleStartReview(latestTask.id); 
-                                  }}
-                                  className="w-full mt-3 bg-blue-900 text-white text-xs px-4 py-2 rounded-xl hover:bg-blue-800 transition-colors font-medium"
-                                >
-                                  {isSpanish ? 'Iniciar Revisión' : 'Start Review'}
-                                </button>
-                              )}
-                            </motion.div>
-                          );
-                        })}
+                    <div className="bg-slate-50/50">
+                      <div className="px-6 py-3 bg-slate-100/50 border-b border-slate-100">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                          {isSpanish ? 'En Revisión Activa' : 'Active Review'}
+                        </span>
                       </div>
+                      {pendingSubmissions.map(group => {
+                        const latestTask = group.latestTask;
+                        const isSelected = selectedSubmissionId === group.submissionId;
+                        
+                        return (
+                          <div
+                            key={group.submissionId}
+                            onClick={() => handleSelectManuscript(group.submissionId, group.currentRound, group)}
+                            className={`p-5 cursor-pointer transition-colors relative ${
+                              isSelected
+                                ? 'bg-[#FBF9F3] border-l-4 border-l-[#C0A86A]'
+                                : 'bg-white border-l-4 border-l-transparent hover:bg-slate-50'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="font-mono text-[10px] text-slate-500 uppercase">
+                                ID: {group.submission?.submissionId?.slice(0, 8) || 'N/A'}
+                              </span>
+                              <span className="text-[9px] px-2 py-0.5 border border-slate-200 text-slate-500 font-bold uppercase tracking-widest bg-white">
+                                {group.submission?.area || 'General'}
+                              </span>
+                            </div>
+                            
+                            <h4 className={`font-serif text-sm leading-snug line-clamp-3 mb-3 ${isSelected ? 'text-[#003b5c] font-bold' : 'text-slate-800'}`}>
+                              {group.submission?.title || 'Cargando título del manuscrito...'}
+                            </h4>
+
+                            <div className="flex items-center gap-1.5 mb-4">
+                              {group.tasks.map((task, index) => (
+                                <div
+                                  key={task.id}
+                                  className={`flex-1 h-1 ${
+                                    task.status === TASK_STATES.COMPLETED ? 'bg-emerald-600' :
+                                    task.id === latestTask.id ? 'bg-[#C0A86A]' : 'bg-slate-200'
+                                  }`}
+                                  title={`Round ${index + 1}`}
+                                />
+                              ))}
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                                {isSpanish ? `Ronda ${group.currentRound}` : `Round ${group.currentRound}`}
+                              </span>
+                              
+                              <span className={`text-[9px] px-2 py-1 uppercase tracking-widest font-bold border ${
+                                latestTask?.status === TASK_STATES.PENDING ? 'bg-slate-100 text-slate-600 border-slate-200' :
+                                latestTask?.status === TASK_STATES.DESK_REVIEW_IN_PROGRESS ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                latestTask?.status === TASK_STATES.REVIEWER_SELECTION ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                                latestTask?.status === TASK_STATES.AWAITING_DECISION ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                group.submission?.finalReviewDocId ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                'bg-slate-50 text-slate-500 border-slate-200'
+                              }`}>
+                                {latestTask?.status === TASK_STATES.PENDING && (isSpanish ? 'Pendiente' : 'Pending')}
+                                {latestTask?.status === TASK_STATES.DESK_REVIEW_IN_PROGRESS && (isSpanish ? 'Rev. Editorial' : 'Desk Review')}
+                                {latestTask?.status === TASK_STATES.REVIEWER_SELECTION && (isSpanish ? 'Sel. Revisores' : 'Reviewer Sel.')}
+                                {latestTask?.status === TASK_STATES.AWAITING_DECISION && (isSpanish ? 'Decisión Final' : 'Final Decision')}
+                                {group.submission?.finalReviewDocId && !latestTask?.status === TASK_STATES.AWAITING_DECISION && 
+                                  (isSpanish ? 'Consolidado' : 'Consolidated')}
+                              </span>
+                            </div>
+
+                            {latestTask?.status === TASK_STATES.PENDING && (
+                              <button
+                                onClick={(e) => { 
+                                  e.stopPropagation(); 
+                                  handleStartReview(latestTask.id); 
+                                }}
+                                className="w-full mt-4 bg-[#003b5c] text-white text-[10px] uppercase tracking-widest font-bold py-2.5 hover:bg-[#002840] transition-colors"
+                              >
+                                {isSpanish ? 'Iniciar Revisión Editorial' : 'Start Desk Review'}
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
 
-                  {/* Manuscritos completados */}
+                  {/* COMPLETED SECTION */}
                   {completedSubmissions.length > 0 && filterStatus !== 'rejected' && (
-                    <div>
-                      <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 mt-6 px-1">
-                        {isSpanish ? 'Completados' : 'Completed'}
-                      </h4>
-                      <div className="space-y-2">
-                        {completedSubmissions.map(group => {
-                          const isSelected = selectedSubmissionId === group.submissionId;
-                          
-                          return (
-                            <motion.div
-                              key={group.submissionId}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              onClick={() => handleSelectManuscript(group.submissionId, group.tasks.length, group)}
-                              className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
-                                isSelected
-                                  ? 'border-emerald-500 bg-emerald-50 shadow-lg shadow-emerald-100'
-                                  : 'border-gray-200 hover:border-emerald-300 bg-gray-50 hover:shadow-md'
-                              }`}
-                            >
-                              <h4 className="font-semibold text-gray-900 text-sm line-clamp-2 break-words flex-1">
-                                {group.submission?.title || 'Cargando...'}
-                              </h4>
-                              
-                              <div className="flex items-center justify-between text-xs">
-                                <span className="font-mono text-gray-500">
-                                  {group.submission?.submissionId?.slice(0, 8) || 'Sin ID'}
-                                </span>
-                                <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full font-medium flex items-center gap-1">
-                                  <Icons.CheckCircle />
-                                  {isSpanish ? 'Aceptado' : 'Accepted'}
-                                </span>
-                              </div>
-                            </motion.div>
-                          );
-                        })}
+                    <div className="bg-emerald-50/20">
+                      <div className="px-6 py-3 bg-emerald-50/50 border-b border-emerald-100/50">
+                        <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-widest">
+                          {isSpanish ? 'Expedientes Aprobados' : 'Approved Records'}
+                        </span>
                       </div>
+                      {completedSubmissions.map(group => {
+                        const isSelected = selectedSubmissionId === group.submissionId;
+                        return (
+                          <div
+                            key={group.submissionId}
+                            onClick={() => handleSelectManuscript(group.submissionId, group.tasks.length, group)}
+                            className={`p-5 cursor-pointer transition-colors relative ${
+                              isSelected
+                                ? 'bg-[#FBF9F3] border-l-4 border-l-emerald-600'
+                                : 'bg-white border-l-4 border-l-transparent hover:bg-slate-50'
+                            }`}
+                          >
+                            <div className="flex justify-between items-start mb-2">
+                              <span className="font-mono text-[10px] text-slate-500">
+                                {group.submission?.submissionId?.slice(0, 8)}
+                              </span>
+                              <span className="text-[9px] px-2 py-0.5 text-emerald-700 bg-emerald-50 border border-emerald-200 font-bold uppercase tracking-widest flex items-center gap-1">
+                                <Icons.CheckCircle /> {isSpanish ? 'Aceptado' : 'Accepted'}
+                              </span>
+                            </div>
+                            <h4 className="font-serif text-sm leading-snug text-slate-800 line-clamp-2">
+                              {group.submission?.title}
+                            </h4>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
 
-                  {/* Manuscritos rechazados */}
+                  {/* REJECTED SECTION */}
                   {rejectedSubmissions.length > 0 && (filterStatus === 'rejected' || filterStatus === 'all') && (
-                    <div>
-                      <h4 className="text-xs font-bold text-red-500 uppercase tracking-wider mb-3 mt-6 px-1 flex items-center gap-2">
-                        <Icons.XCircle />
-                        {isSpanish ? 'Rechazados' : 'Rejected'}
-                      </h4>
-                      <div className="space-y-2">
-                        {rejectedSubmissions.map(group => {
-                          const isSelected = selectedSubmissionId === group.submissionId;
-                          
-                          return (
-                            <motion.div
-                              key={group.submissionId}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              onClick={() => handleSelectManuscript(group.submissionId, group.tasks.length, group)}
-                              className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
-                                isSelected
-                                  ? 'border-red-500 bg-red-50 shadow-lg shadow-red-100'
-                                  : 'border-red-200 hover:border-red-400 bg-red-50/50 hover:shadow-md'
-                              }`}
-                            >
-                              <div className="flex items-start gap-2 mb-2">
-                                <Icons.Ban className="text-red-500 w-4 h-4 flex-shrink-0 mt-0.5" />
-                                <h4 className="font-semibold text-gray-800 text-sm line-clamp-2">
-                                  {group.submission?.title || 'Cargando...'}
-                                </h4>
-                              </div>
-                              
-                              <div className="flex items-center justify-between text-xs">
-                                <span className="font-mono text-gray-500">
-                                  {group.submission?.submissionId?.slice(0, 8) || 'Sin ID'}
-                                </span>
-                                <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full font-medium flex items-center gap-1">
-                                  <Icons.XCircle />
-                                  {isSpanish ? 'Rechazado' : 'Rejected'}
-                                </span>
-                              </div>
-                            </motion.div>
-                          );
-                        })}
+                    <div className="bg-rose-50/20">
+                      <div className="px-6 py-3 bg-rose-50/50 border-b border-rose-100/50">
+                        <span className="text-[10px] font-bold text-rose-700 uppercase tracking-widest">
+                          {isSpanish ? 'Expedientes Declinados' : 'Declined Records'}
+                        </span>
                       </div>
+                      {rejectedSubmissions.map(group => {
+                        const isSelected = selectedSubmissionId === group.submissionId;
+                        return (
+                          <div
+                            key={group.submissionId}
+                            onClick={() => handleSelectManuscript(group.submissionId, group.tasks.length, group)}
+                            className={`p-5 cursor-pointer transition-colors relative ${
+                              isSelected
+                                ? 'bg-rose-50/30 border-l-4 border-l-rose-700'
+                                : 'bg-white border-l-4 border-l-transparent hover:bg-slate-50'
+                            }`}
+                          >
+                            <div className="flex justify-between items-start mb-2">
+                              <span className="font-mono text-[10px] text-slate-500">
+                                {group.submission?.submissionId?.slice(0, 8)}
+                              </span>
+                              <span className="text-[9px] px-2 py-0.5 text-rose-700 bg-rose-50 border border-rose-200 font-bold uppercase tracking-widest flex items-center gap-1">
+                                <Icons.Ban /> {isSpanish ? 'Declinado' : 'Declined'}
+                              </span>
+                            </div>
+                            <h4 className="font-serif text-sm leading-snug text-slate-800 line-clamp-2 line-through decoration-rose-300">
+                              {group.submission?.title}
+                            </h4>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
+
                 </div>
               )}
             </div>
           </div>
 
-          {/* Panel de trabajo - Área principal */}
-          <div className="lg:col-span-8 xl:col-span-9 min-h-0">
-  {selectedTask ? (
+          {/* ===================== MAIN PANEL: WORKSPACE ===================== */}
+          <div className="flex-1 min-h-0 min-w-0">
+            {selectedTask ? (
               <DeskReviewTab
                 task={selectedTask}
                 key={`${selectedTask?.id}-${selectedRound}`}
@@ -759,22 +749,23 @@ const DeskReviewPanel = ({ user }) => {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                 className="bg-white rounded-2xl shadow-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center py-16 sm:py-24 px-4"
-    >
-      <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4 sm:mb-6">
-        <Icons.FileText />
-      </div>
-      <h3 className="text-lg sm:text-xl font-bold text-gray-700 mb-2 text-center">
-        {isSpanish ? 'Selecciona un manuscrito' : 'Select a manuscript'}
-      </h3>
-      <p className="text-gray-500 text-center max-w-md text-sm sm:text-base">
-        {isSpanish 
-          ? 'Elige un manuscrito de la lista para comenzar la revisión editorial'
-          : 'Choose a manuscript from the list to start the editorial review'}
-      </p>
-    </motion.div>
-  )}
-</div>
+                className="bg-white border border-slate-200 shadow-sm flex flex-col items-center justify-center py-32 px-8 h-[calc(100vh-220px)]"
+              >
+                <div className="w-20 h-20 bg-slate-50 border border-slate-100 flex items-center justify-center mb-6 text-[#C0A86A]">
+                  <Icons.FileText />
+                </div>
+                <h3 className="text-2xl font-serif text-[#003b5c] mb-3 text-center">
+                  {isSpanish ? 'Mesa de Trabajo Editorial' : 'Editorial Workspace'}
+                </h3>
+                <div className="w-12 h-0.5 bg-[#C0A86A] mb-4"></div>
+                <p className="text-slate-500 text-center max-w-md font-sans text-sm">
+                  {isSpanish 
+                    ? 'Seleccione un expediente del panel lateral para revisar el manuscrito, asignar pares evaluadores o emitir dictámenes finales.'
+                    : 'Select a dossier from the side panel to review the manuscript, assign peer reviewers, or issue final decisions.'}
+                </p>
+              </motion.div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -782,45 +773,27 @@ const DeskReviewPanel = ({ user }) => {
       <style jsx>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 6px;
+          height: 6px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
-          background: #f1f5f9;
-          border-radius: 10px;
+          background: #F8F9FB;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
           background: #cbd5e1;
-          border-radius: 10px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background: #94a3b8;
         }
+        
+        /* Scroll horizontal suave para filtros en móvil */
+        .overflow-x-auto {
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: none;
+        }
+        .overflow-x-auto::-webkit-scrollbar {
+          display: none;
+        }
       `}</style>
-      <style jsx>{`
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: #f1f5f9;
-    border-radius: 10px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 10px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
-  }
-  
-  /* Scroll horizontal suave para filtros en móvil */
-  .overflow-x-auto {
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-  .overflow-x-auto::-webkit-scrollbar {
-    display: none;
-  }
-`}</style>
     </div>
   );
 };
