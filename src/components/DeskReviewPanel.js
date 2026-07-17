@@ -16,16 +16,16 @@ import { DeskReviewTab } from './DeskReviewTab';
 const Icons = {
   FileText: () => (
     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.2} d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
     </svg>
   ),
   CheckCircle: () => (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   ),
   XCircle: () => (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   ),
@@ -35,7 +35,7 @@ const Icons = {
     </svg>
   ),
   Ban: () => (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
     </svg>
   ),
@@ -45,7 +45,7 @@ const Icons = {
     </svg>
   ),
   Inbox: () => (
-    <svg className="w-12 h-12 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg className="w-10 h-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
     </svg>
   ),
@@ -58,7 +58,6 @@ const DeskReviewPanel = ({ user }) => {
   const [assignedTasks, setAssignedTasks] = useState([]);
   const [selectedSubmissionId, setSelectedSubmissionId] = useState(null);
   const [selectedRound, setSelectedRound] = useState(1);
-  // ELIMINADO: viewMode y activeTaskTab ya no se necesitan aquí
   
   const [potentialReviewers, setPotentialReviewers] = useState([]);
   const [selectedReviewerId, setSelectedReviewerId] = useState('');
@@ -70,7 +69,6 @@ const DeskReviewPanel = ({ user }) => {
   const [isConsolidating, setIsConsolidating] = useState(false);
   const [isConsolidated, setIsConsolidated] = useState(false);
   
-  // Filtros y búsqueda
   const [filterStatus, setFilterStatus] = useState('all');
   const [searchManuscript, setSearchManuscript] = useState('');
 
@@ -81,7 +79,6 @@ const DeskReviewPanel = ({ user }) => {
   const userRoles = user?.roles || [];
   const hasPermission = userRoles.includes('Editor de Sección') || userRoles.includes('Director General');
   
-  // Escuchar TODAS las tareas del editor
   useEffect(() => {
     if (!user || !hasPermission) return;
 
@@ -113,10 +110,8 @@ const DeskReviewPanel = ({ user }) => {
     return () => unsubscribe();
   }, [user, hasPermission]);
 
-  // AGRUPAR TAREAS POR SUBMISSION ID
   const groupedSubmissions = useMemo(() => {
     const grouped = {};
-    
     assignedTasks.forEach(task => {
       const subId = task.submissionId;
       if (!grouped[subId]) {
@@ -136,12 +131,8 @@ const DeskReviewPanel = ({ user }) => {
       grouped[subId].tasks.sort((a, b) => (a.round || 1) - (b.round || 1));
       
       const hasRejection = task.decision === 'reject' || task.submission?.status === 'rejected';
-      
-      if (hasRejection) {
-        grouped[subId].finalDecision = 'rejected';
-      } else if (task.decision === 'accept' || task.submission?.status === 'accepted') {
-        grouped[subId].finalDecision = 'accepted';
-      }
+      if (hasRejection) grouped[subId].finalDecision = 'rejected';
+      else if (task.decision === 'accept' || task.submission?.status === 'accepted') grouped[subId].finalDecision = 'accepted';
       
       if (task.status !== TASK_STATES.COMPLETED && !hasRejection) {
         grouped[subId].hasPendingTasks = true;
@@ -156,32 +147,21 @@ const DeskReviewPanel = ({ user }) => {
     return Object.values(grouped);
   }, [assignedTasks]);
 
-  // Obtener la tarea seleccionada
   const selectedTask = useMemo(() => {
     if (!selectedSubmissionId) return null;
-    
     const submission = groupedSubmissions.find(g => g.submissionId === selectedSubmissionId);
     if (!submission) return null;
-    
     const task = submission.tasks.find(t => (t.round || 1) === selectedRound);
     return task || submission.latestTask;
   }, [selectedSubmissionId, selectedRound, groupedSubmissions]);
 
-  // Cargar revisiones completadas (submitted) en tiempo real
   useEffect(() => {
     if (!selectedTask) {
       setSubmittedReviews([]);
       setIsConsolidated(false);
       return;
     }
-
-    const checkConsolidation = async () => {
-      if (selectedTask.submission?.finalReviewDocId) {
-        setIsConsolidated(true);
-      } else {
-        setIsConsolidated(false);
-      }
-    };
+    const checkConsolidation = async () => setIsConsolidated(!!selectedTask.submission?.finalReviewDocId);
     checkConsolidation();
 
     const q = query(
@@ -191,19 +171,12 @@ const DeskReviewPanel = ({ user }) => {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const reviews = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setSubmittedReviews(reviews);
-    }, (error) => {
-      console.error('Error escuchando revisiones:', error);
+      setSubmittedReviews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
 
     return () => unsubscribe();
   }, [selectedTask]);
 
-  // Cargar TODAS las asignaciones
   useEffect(() => {
     if (!selectedTask) {
       setInvitations([]);
@@ -212,45 +185,27 @@ const DeskReviewPanel = ({ user }) => {
     }
 
     const loadAllAssignments = async () => {
-      const invQ = query(
-        collection(db, 'reviewerInvitations'),
-        where('editorialTaskId', '==', selectedTask.id)
-      );
+      const invQ = query(collection(db, 'reviewerInvitations'), where('editorialTaskId', '==', selectedTask.id));
       const invSnapshot = await getDocs(invQ);
       setInvitations(invSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
-      const revQ = query(
-        collection(db, 'reviewerAssignments'),
-        where('editorialTaskId', '==', selectedTask.id)
-      );
+      const revQ = query(collection(db, 'reviewerAssignments'), where('editorialTaskId', '==', selectedTask.id));
       const revSnapshot = await getDocs(revQ);
       setReviewers(revSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     };
-
     loadAllAssignments();
   }, [selectedTask]);
 
-  // Cargar revisores potenciales
   useEffect(() => {
     const loadReviewers = async () => {
-      const usersRef = collection(db, 'users');
-      const q = query(
-        usersRef,
-        where('roles', 'array-contains-any', ['Revisor', 'Editor de Sección'])
-      );
-      
+      const q = query(collection(db, 'users'), where('roles', 'array-contains-any', ['Revisor', 'Editor de Sección']));
       const snapshot = await getDocs(q);
-      const reviewers = snapshot.docs.map(doc => ({
+      setPotentialReviewers(snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-        displayName: doc.data().displayName || 
-          `${doc.data().firstName || ''} ${doc.data().lastName || ''}`.trim() ||
-          doc.data().email
-      }));
-      
-      setPotentialReviewers(reviewers);
+        displayName: doc.data().displayName || `${doc.data().firstName || ''} ${doc.data().lastName || ''}`.trim() || doc.data().email
+      })));
     };
-
     loadReviewers();
   }, []);
 
@@ -386,7 +341,6 @@ const DeskReviewPanel = ({ user }) => {
     setSelectedRound(round);
   };
 
-  // Filtrar revisores disponibles
   const invitedEmails = new Set([
     ...invitations.map(r => r.reviewerEmail),
     ...submittedReviews.map(r => r.reviewerEmail),
@@ -403,7 +357,6 @@ const DeskReviewPanel = ({ user }) => {
     );
   });
 
-  // Filtrar manuscritos
   const filteredSubmissions = useMemo(() => {
     let filtered = [...groupedSubmissions];
     
@@ -436,55 +389,41 @@ const DeskReviewPanel = ({ user }) => {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F9FB] font-sans text-slate-800">
+    <div className="min-h-screen bg-[#FDFDFD] font-sans text-slate-800 selection:bg-blue-100">
       
       {/* ===================== TOP NAVIGATION (EDITORIAL RIBBON) ===================== */}
-      <div className="bg-[#003b5c] text-white sticky top-0 z-40 shadow-md border-b-[3px] border-[#C0A86A]">
-        {/* Branding Tier */}
-        <div className="max-w-[1920px] mx-auto px-4 sm:px-8 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="hidden sm:flex w-10 h-10 border border-[#C0A86A]/40 bg-white/5 items-center justify-center text-[#C0A86A]">
+      <header className="bg-[#002B49] text-white sticky top-0 z-40 border-b border-slate-200 shadow-sm">
+        <div className="max-w-[1920px] mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-5">
+            <div className="hidden sm:flex w-9 h-9 items-center justify-center text-white border border-white/20 rounded-sm">
               <Icons.FileText />
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#C0A86A] mb-1">
-                {isSpanish ? 'Sistema de Gestión Editorial' : 'Editorial Management System'}
+              <p className="text-[10px] font-medium text-white/70 uppercase tracking-[0.15em] mb-0.5">
+                {isSpanish ? 'Gestión Editorial' : 'Editorial Management'}
               </p>
-              <h1 className="font-serif text-xl sm:text-2xl font-bold leading-none">
-                {isSpanish ? 'Panel de Revisión' : 'Review Panel'}
+              <h1 className="font-serif text-lg sm:text-xl text-white font-normal tracking-wide">
+                {isSpanish ? 'Panel de Revisión' : 'Review Workspace'}
               </h1>
             </div>
           </div>
           <div className="text-right hidden sm:block">
-            <p className="text-xs text-sky-200 uppercase tracking-widest font-bold">
+            <p className="text-sm text-white font-medium">
               {user?.displayName || user?.email}
             </p>
-            <p className="text-[10px] text-white/60 uppercase tracking-wider mt-1">
-              {isSpanish ? 'Editor de Sección' : 'Section Editor'}
+            <p className="text-[11px] text-white/60 font-mono mt-0.5">
+              {isSpanish ? 'EDITOR DE SECCIÓN' : 'SECTION EDITOR'}
             </p>
           </div>
         </div>
 
         {/* Filters Tier */}
-        <div className="bg-white text-slate-700 border-b border-slate-200">
-          <div className="max-w-[1920px] mx-auto px-4 sm:px-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 py-2">
+        <div className="bg-white border-t border-slate-200">
+          <div className="max-w-[1920px] mx-auto px-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
             
-            {/* Search */}
-            <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 px-4 py-2 w-full sm:w-72 focus-within:border-[#003b5c] transition-colors">
-              <span className="text-slate-400"><Icons.Search /></span>
-              <input
-                type="text"
-                placeholder={isSpanish ? 'Buscar manuscrito por ID o Título...' : 'Search manuscript by ID or Title...'}
-                value={searchManuscript}
-                onChange={(e) => setSearchManuscript(e.target.value)}
-                className="bg-transparent border-none outline-none text-xs w-full text-slate-700 font-medium placeholder-slate-400"
-              />
-            </div>
-            
-            {/* Folder Tabs */}
-            <div className="flex items-center gap-6 overflow-x-auto custom-scrollbar">
+            <div className="flex items-center gap-8 overflow-x-auto custom-scrollbar">
               {[
-                { value: 'all', label: isSpanish ? 'Todos los Expedientes' : 'All Records' },
+                { value: 'all', label: isSpanish ? 'Todos los Expedientes' : 'All Dossiers' },
                 { value: 'pending', label: isSpanish ? 'En Curso' : 'In Progress' },
                 { value: 'completed', label: isSpanish ? 'Completados' : 'Completed' },
                 { value: 'rejected', label: isSpanish ? 'Declinados' : 'Declined' },
@@ -492,58 +431,69 @@ const DeskReviewPanel = ({ user }) => {
                 <button
                   key={filter.value}
                   onClick={() => setFilterStatus(filter.value)}
-                  className={`py-3 text-[10px] sm:text-xs font-bold uppercase tracking-widest whitespace-nowrap border-b-2 transition-all flex items-center gap-2 ${
+                  className={`py-4 text-[11px] font-semibold uppercase tracking-wider whitespace-nowrap border-b-2 transition-all flex items-center gap-2 ${
                     filterStatus === filter.value
-                      ? 'border-[#003b5c] text-[#003b5c]'
-                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                      ? 'border-[#007398] text-[#002B49]'
+                      : 'border-transparent text-slate-500 hover:text-[#002B49]'
                   }`}
                 >
                   {filter.label}
                   {filter.value === 'rejected' && rejectedSubmissions.length > 0 && (
-                    <span className="bg-rose-100 text-rose-700 text-[9px] px-1.5 py-0.5 border border-rose-200">
+                    <span className="bg-slate-100 text-slate-600 text-[10px] px-1.5 py-0.5 rounded-sm">
                       {rejectedSubmissions.length}
                     </span>
                   )}
                 </button>
               ))}
             </div>
+
+            <div className="flex items-center gap-2 py-2">
+              <div className="flex items-center gap-2 bg-[#F5F7F9] border border-slate-200 px-3 py-1.5 w-full sm:w-64 focus-within:border-[#007398] focus-within:bg-white transition-colors rounded-sm">
+                <span className="text-slate-400"><Icons.Search /></span>
+                <input
+                  type="text"
+                  placeholder={isSpanish ? 'ID del Manuscrito...' : 'Manuscript ID...'}
+                  value={searchManuscript}
+                  onChange={(e) => setSearchManuscript(e.target.value)}
+                  className="bg-transparent border-none outline-none text-xs w-full text-slate-700 font-medium placeholder-slate-400"
+                />
+              </div>
+            </div>
+
           </div>
         </div>
-      </div>
+      </header>
 
       {/* ===================== MAIN CONTENT WORKSPACE ===================== */}
-      <div className="max-w-[1920px] mx-auto px-4 sm:px-8 py-8">
+      <main className="max-w-[1920px] mx-auto px-6 py-6">
         
         {(reviewError || inviteError) && (
-          <div className="bg-rose-50 border-l-4 border-l-rose-700 text-rose-800 px-6 py-4 mb-8 flex items-center gap-3 shadow-sm">
+          <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 mb-6 flex items-center gap-3 rounded-sm text-sm">
             <Icons.AlertCircle />
-            <span className="font-serif text-sm">{reviewError || inviteError}</span>
+            <span>{reviewError || inviteError}</span>
           </div>
         )}
 
-        <div className="flex flex-col lg:flex-row gap-8 items-start">
+        <div className="flex flex-col lg:flex-row gap-6 items-start">
           
           {/* ===================== SIDEBAR: DOSSIER LIST ===================== */}
-          <div className="w-full lg:w-96 xl:w-[400px] flex-shrink-0 bg-white border border-slate-200 shadow-sm flex flex-col">
+          <aside className="w-full lg:w-96 flex-shrink-0 bg-white border border-slate-200 flex flex-col rounded-sm shadow-sm">
             
-            <div className="bg-slate-50 border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-              <h3 className="text-xs font-bold text-[#003b5c] uppercase tracking-widest">
-                {isSpanish ? 'Expedientes Asignados' : 'Assigned Dossiers'}
+            <div className="bg-[#F8FAFC] border-b border-slate-200 px-5 py-3 flex items-center justify-between">
+              <h3 className="text-xs font-semibold text-slate-800 uppercase tracking-wider">
+                {isSpanish ? 'Bandeja Editorial' : 'Editorial Inbox'}
               </h3>
-              <span className="bg-white border border-slate-200 text-slate-600 text-[10px] font-mono px-2 py-0.5">
-                Total: {filteredSubmissions.length}
+              <span className="text-slate-500 text-[11px] font-mono">
+                {filteredSubmissions.length} {isSpanish ? 'archivos' : 'files'}
               </span>
             </div>
 
-            <div className="flex-1 max-h-[65vh] lg:max-h-[calc(100vh-220px)] overflow-y-auto custom-scrollbar">
+            <div className="flex-1 max-h-[65vh] lg:max-h-[calc(100vh-210px)] overflow-y-auto custom-scrollbar">
               {filteredSubmissions.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-center px-6">
+                <div className="flex flex-col items-center justify-center py-20 text-center px-6">
                   <Icons.Inbox />
-                  <p className="font-serif text-slate-500 mt-4 text-lg">
-                    {isSpanish ? 'El archivo está vacío.' : 'The archive is empty.'}
-                  </p>
-                  <p className="text-slate-400 text-xs mt-2 font-sans uppercase tracking-widest">
-                    {isSpanish ? 'Ajuste los filtros de búsqueda' : 'Adjust search filters'}
+                  <p className="font-serif text-slate-500 mt-4 text-base">
+                    {isSpanish ? 'Bandeja vacía.' : 'Inbox is empty.'}
                   </p>
                 </div>
               ) : (
@@ -551,84 +501,74 @@ const DeskReviewPanel = ({ user }) => {
                   
                   {/* PENDING SECTION */}
                   {pendingSubmissions.length > 0 && filterStatus !== 'rejected' && (
-                    <div className="bg-slate-50/50">
-                      <div className="px-6 py-3 bg-slate-100/50 border-b border-slate-100">
+                    <div className="bg-white">
+                      <div className="px-5 py-2 bg-[#F8FAFC] border-b border-slate-100">
                         <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                          {isSpanish ? 'En Revisión Activa' : 'Active Review'}
+                          {isSpanish ? 'Revisión Activa' : 'Active Review'}
                         </span>
                       </div>
+                      
                       {pendingSubmissions.map(group => {
                         const latestTask = group.latestTask;
                         const isSelected = selectedSubmissionId === group.submissionId;
-                        
+                        const accentColor = group.finalDecision === 'rejected' ? 'border-l-slate-400' 
+                                          : group.finalDecision === 'accepted' ? 'border-l-[#007398]' 
+                                          : 'border-l-[#E4852A]';
+
                         return (
                           <div
                             key={group.submissionId}
                             onClick={() => handleSelectManuscript(group.submissionId, group.currentRound, group)}
-                            className={`p-5 cursor-pointer transition-colors relative ${
+                            className={`p-5 cursor-pointer transition-colors relative border-b border-slate-50 ${
                               isSelected
-                                ? 'bg-[#FBF9F3] border-l-4 border-l-[#C0A86A]'
+                                ? `bg-[#F4F7F9] border-l-4 ${accentColor}`
                                 : 'bg-white border-l-4 border-l-transparent hover:bg-slate-50'
                             }`}
                           >
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="font-mono text-[10px] text-slate-500 uppercase">
-                                ID: {group.submission?.submissionId?.slice(0, 8) || 'N/A'}
+                            <div className="flex justify-between items-start mb-2 gap-2">
+                              <span className="font-mono text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-sm">
+                                {group.submission?.submissionId?.slice(0, 8)}
                               </span>
-                              <span className="text-[9px] px-2 py-0.5 border border-slate-200 text-slate-500 font-bold uppercase tracking-widest bg-white">
-                                {group.submission?.area || 'General'}
+                              
+                              <span className={`text-[9px] px-1.5 py-0.5 font-bold uppercase tracking-wider rounded-sm flex items-center gap-1 ${
+                                group.finalDecision === 'rejected' ? 'bg-slate-100 text-slate-600' :
+                                group.finalDecision === 'accepted' ? 'bg-[#EBF4F7] text-[#004B7F]' :
+                                'bg-slate-50 text-slate-600 border border-slate-200'
+                              }`}>
+                                {group.finalDecision === 'rejected' && <><Icons.Ban /> {isSpanish ? 'Declinado' : 'Declined'}</>}
+                                {group.finalDecision === 'accepted' && <><Icons.CheckCircle /> {isSpanish ? 'Aceptado' : 'Accepted'}</>}
+                                {!group.finalDecision && latestTask?.status.replace(/_/g, ' ')}
                               </span>
                             </div>
                             
-                            <h4 className={`font-serif text-sm leading-snug line-clamp-3 mb-3 ${isSelected ? 'text-[#003b5c] font-bold' : 'text-slate-800'}`}>
-                              {group.submission?.title || 'Cargando título del manuscrito...'}
+                            <h4 className={`font-serif text-[13px] leading-relaxed mb-3 ${group.finalDecision === 'rejected' ? 'text-slate-400 line-through' : 'text-[#002B49]'}`}>
+                              {group.submission?.title || 'Untitled Manuscript'}
                             </h4>
 
-                            <div className="flex items-center gap-1.5 mb-4">
-                              {group.tasks.map((task, index) => (
-                                <div
-                                  key={task.id}
-                                  className={`flex-1 h-1 ${
-                                    task.status === TASK_STATES.COMPLETED ? 'bg-emerald-600' :
-                                    task.id === latestTask.id ? 'bg-[#C0A86A]' : 'bg-slate-200'
-                                  }`}
-                                  title={`Round ${index + 1}`}
-                                />
-                              ))}
-                            </div>
+                            {!group.finalDecision && (
+                              <>
+                                <div className="flex items-center gap-1 mb-3">
+                                  {group.tasks.map((task, index) => (
+                                    <div
+                                      key={task.id}
+                                      className={`flex-1 h-0.5 rounded-full ${
+                                        task.status === TASK_STATES.COMPLETED ? 'bg-[#007398]' :
+                                        task.id === latestTask.id ? 'bg-[#E4852A]' : 'bg-slate-200'
+                                      }`}
+                                      title={`Round ${index + 1}`}
+                                    />
+                                  ))}
+                                </div>
 
-                            <div className="flex items-center justify-between">
-                              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
-                                {isSpanish ? `Ronda ${group.currentRound}` : `Round ${group.currentRound}`}
-                              </span>
-                              
-                              <span className={`text-[9px] px-2 py-1 uppercase tracking-widest font-bold border ${
-                                latestTask?.status === TASK_STATES.PENDING ? 'bg-slate-100 text-slate-600 border-slate-200' :
-                                latestTask?.status === TASK_STATES.DESK_REVIEW_IN_PROGRESS ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                latestTask?.status === TASK_STATES.REVIEWER_SELECTION ? 'bg-purple-50 text-purple-700 border-purple-200' :
-                                latestTask?.status === TASK_STATES.AWAITING_DECISION ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                                group.submission?.finalReviewDocId ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                                'bg-slate-50 text-slate-500 border-slate-200'
-                              }`}>
-                                {latestTask?.status === TASK_STATES.PENDING && (isSpanish ? 'Pendiente' : 'Pending')}
-                                {latestTask?.status === TASK_STATES.DESK_REVIEW_IN_PROGRESS && (isSpanish ? 'Rev. Editorial' : 'Desk Review')}
-                                {latestTask?.status === TASK_STATES.REVIEWER_SELECTION && (isSpanish ? 'Sel. Revisores' : 'Reviewer Sel.')}
-                                {latestTask?.status === TASK_STATES.AWAITING_DECISION && (isSpanish ? 'Decisión Final' : 'Final Decision')}
-                                {group.submission?.finalReviewDocId && !latestTask?.status === TASK_STATES.AWAITING_DECISION && 
-                                  (isSpanish ? 'Consolidado' : 'Consolidated')}
-                              </span>
-                            </div>
-
-                            {latestTask?.status === TASK_STATES.PENDING && (
-                              <button
-                                onClick={(e) => { 
-                                  e.stopPropagation(); 
-                                  handleStartReview(latestTask.id); 
-                                }}
-                                className="w-full mt-4 bg-[#003b5c] text-white text-[10px] uppercase tracking-widest font-bold py-2.5 hover:bg-[#002840] transition-colors"
-                              >
-                                {isSpanish ? 'Iniciar Revisión Editorial' : 'Start Desk Review'}
-                              </button>
+                                {latestTask?.status === TASK_STATES.PENDING && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); handleStartReview(latestTask.id); }}
+                                    className="w-full bg-white border border-[#002B49] text-[#002B49] hover:bg-[#002B49] hover:text-white transition-colors text-[10px] uppercase tracking-widest font-bold py-2 rounded-sm"
+                                  >
+                                    {isSpanish ? 'Iniciar Revisión' : 'Start Review'}
+                                  </button>
+                                )}
+                              </>
                             )}
                           </div>
                         );
@@ -638,33 +578,34 @@ const DeskReviewPanel = ({ user }) => {
 
                   {/* COMPLETED SECTION */}
                   {completedSubmissions.length > 0 && filterStatus !== 'rejected' && (
-                    <div className="bg-emerald-50/20">
-                      <div className="px-6 py-3 bg-emerald-50/50 border-b border-emerald-100/50">
-                        <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-widest">
-                          {isSpanish ? 'Expedientes Aprobados' : 'Approved Records'}
+                    <div className="bg-white">
+                      <div className="px-5 py-2 bg-[#F8FAFC] border-b border-slate-100">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                          {isSpanish ? 'Aprobados' : 'Approved'}
                         </span>
                       </div>
+                      
                       {completedSubmissions.map(group => {
                         const isSelected = selectedSubmissionId === group.submissionId;
                         return (
                           <div
                             key={group.submissionId}
                             onClick={() => handleSelectManuscript(group.submissionId, group.tasks.length, group)}
-                            className={`p-5 cursor-pointer transition-colors relative ${
+                            className={`p-5 cursor-pointer transition-colors relative border-b border-slate-50 ${
                               isSelected
-                                ? 'bg-[#FBF9F3] border-l-4 border-l-emerald-600'
+                                ? 'bg-[#F4F7F9] border-l-4 border-l-[#007398]'
                                 : 'bg-white border-l-4 border-l-transparent hover:bg-slate-50'
                             }`}
                           >
                             <div className="flex justify-between items-start mb-2">
-                              <span className="font-mono text-[10px] text-slate-500">
+                              <span className="font-mono text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-sm">
                                 {group.submission?.submissionId?.slice(0, 8)}
                               </span>
-                              <span className="text-[9px] px-2 py-0.5 text-emerald-700 bg-emerald-50 border border-emerald-200 font-bold uppercase tracking-widest flex items-center gap-1">
+                              <span className="text-[9px] px-1.5 py-0.5 text-[#004B7F] bg-[#EBF4F7] font-bold uppercase tracking-wider rounded-sm flex items-center gap-1">
                                 <Icons.CheckCircle /> {isSpanish ? 'Aceptado' : 'Accepted'}
                               </span>
                             </div>
-                            <h4 className="font-serif text-sm leading-snug text-slate-800 line-clamp-2">
+                            <h4 className="font-serif text-[13px] leading-relaxed text-[#002B49] line-clamp-2">
                               {group.submission?.title}
                             </h4>
                           </div>
@@ -675,33 +616,34 @@ const DeskReviewPanel = ({ user }) => {
 
                   {/* REJECTED SECTION */}
                   {rejectedSubmissions.length > 0 && (filterStatus === 'rejected' || filterStatus === 'all') && (
-                    <div className="bg-rose-50/20">
-                      <div className="px-6 py-3 bg-rose-50/50 border-b border-rose-100/50">
-                        <span className="text-[10px] font-bold text-rose-700 uppercase tracking-widest">
-                          {isSpanish ? 'Expedientes Declinados' : 'Declined Records'}
+                    <div className="bg-white">
+                      <div className="px-5 py-2 bg-[#F8FAFC] border-b border-slate-100">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                          {isSpanish ? 'Declinados' : 'Declined'}
                         </span>
                       </div>
+                      
                       {rejectedSubmissions.map(group => {
                         const isSelected = selectedSubmissionId === group.submissionId;
                         return (
                           <div
                             key={group.submissionId}
                             onClick={() => handleSelectManuscript(group.submissionId, group.tasks.length, group)}
-                            className={`p-5 cursor-pointer transition-colors relative ${
+                            className={`p-5 cursor-pointer transition-colors relative border-b border-slate-50 ${
                               isSelected
-                                ? 'bg-rose-50/30 border-l-4 border-l-rose-700'
+                                ? 'bg-[#F4F7F9] border-l-4 border-l-slate-400'
                                 : 'bg-white border-l-4 border-l-transparent hover:bg-slate-50'
                             }`}
                           >
                             <div className="flex justify-between items-start mb-2">
-                              <span className="font-mono text-[10px] text-slate-500">
+                              <span className="font-mono text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-sm">
                                 {group.submission?.submissionId?.slice(0, 8)}
                               </span>
-                              <span className="text-[9px] px-2 py-0.5 text-rose-700 bg-rose-50 border border-rose-200 font-bold uppercase tracking-widest flex items-center gap-1">
+                              <span className="text-[9px] px-1.5 py-0.5 text-slate-600 bg-slate-100 font-bold uppercase tracking-wider rounded-sm flex items-center gap-1">
                                 <Icons.Ban /> {isSpanish ? 'Declinado' : 'Declined'}
                               </span>
                             </div>
-                            <h4 className="font-serif text-sm leading-snug text-slate-800 line-clamp-2 line-through decoration-rose-300">
+                            <h4 className="font-serif text-[13px] leading-relaxed text-slate-400 line-through line-clamp-2">
                               {group.submission?.title}
                             </h4>
                           </div>
@@ -713,10 +655,10 @@ const DeskReviewPanel = ({ user }) => {
                 </div>
               )}
             </div>
-          </div>
+          </aside>
 
           {/* ===================== MAIN PANEL: WORKSPACE ===================== */}
-          <div className="flex-1 min-h-0 min-w-0">
+          <section className="flex-1 min-h-0 min-w-0 bg-white border border-slate-200 rounded-sm shadow-sm">
             {selectedTask ? (
               <DeskReviewTab
                 task={selectedTask}
@@ -725,7 +667,6 @@ const DeskReviewPanel = ({ user }) => {
                 onComplete={handleCompleteDeskReview}
                 loading={reviewLoading}
                 onBackToPanel={() => setSelectedSubmissionId(null)}
-                // Props para pestañas integradas
                 invitations={invitations}
                 potentialReviewers={filteredReviewers}
                 selectedReviewerId={selectedReviewerId}
@@ -740,7 +681,6 @@ const DeskReviewPanel = ({ user }) => {
                 reviewers={reviewers}
                 isConsolidated={isConsolidated}
                 onFinalDecision={handleFinalDecision}
-                // Selector de rondas
                 allTasks={groupedSubmissions.find(g => g.submissionId === selectedSubmissionId)?.tasks || []}
                 selectedRound={selectedRound}
                 onRoundChange={setSelectedRound}
@@ -749,43 +689,42 @@ const DeskReviewPanel = ({ user }) => {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="bg-white border border-slate-200 shadow-sm flex flex-col items-center justify-center py-32 px-8 h-[calc(100vh-220px)]"
+                className="flex flex-col items-center justify-center py-32 px-8 h-[calc(100vh-210px)]"
               >
-                <div className="w-20 h-20 bg-slate-50 border border-slate-100 flex items-center justify-center mb-6 text-[#C0A86A]">
+                <div className="w-16 h-16 bg-[#F8FAFC] border border-slate-200 rounded-full flex items-center justify-center mb-6 text-slate-400">
                   <Icons.FileText />
                 </div>
-                <h3 className="text-2xl font-serif text-[#003b5c] mb-3 text-center">
-                  {isSpanish ? 'Mesa de Trabajo Editorial' : 'Editorial Workspace'}
+                <h3 className="text-xl font-serif text-[#002B49] mb-3 text-center tracking-wide">
+                  {isSpanish ? 'Área de Trabajo Editorial' : 'Editorial Workspace'}
                 </h3>
-                <div className="w-12 h-0.5 bg-[#C0A86A] mb-4"></div>
-                <p className="text-slate-500 text-center max-w-md font-sans text-sm">
+                <div className="w-8 h-[1px] bg-[#007398] mb-4"></div>
+                <p className="text-slate-500 text-center max-w-sm font-sans text-sm leading-relaxed">
                   {isSpanish 
-                    ? 'Seleccione un expediente del panel lateral para revisar el manuscrito, asignar pares evaluadores o emitir dictámenes finales.'
-                    : 'Select a dossier from the side panel to review the manuscript, assign peer reviewers, or issue final decisions.'}
+                    ? 'Seleccione un expediente del panel izquierdo para visualizar el manuscrito, coordinar la revisión por pares o emitir un dictamen final.'
+                    : 'Select a dossier from the left panel to view the manuscript, coordinate peer review, or issue a final decision.'}
                 </p>
               </motion.div>
             )}
-          </div>
+          </section>
         </div>
-      </div>
+      </main>
 
-      {/* Estilos personalizados */}
       <style jsx>{`
         .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-          height: 6px;
+          width: 5px;
+          height: 5px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
-          background: #F8F9FB;
+          background: transparent;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
           background: #cbd5e1;
+          border-radius: 10px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background: #94a3b8;
         }
         
-        /* Scroll horizontal suave para filtros en móvil */
         .overflow-x-auto {
           -webkit-overflow-scrolling: touch;
           scrollbar-width: none;
