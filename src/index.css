@@ -53,3 +53,176 @@ main {
   margin: 0;
   padding: 0;
 }
+
+/* ================================================ */
+/* ===== ESTILOS PARA LISTAS EN REVISIONES ===== */
+/* ================================================ */
+
+/* Estilos base para listas en contenido de revisiones */
+.review-content ul,
+.review-content ol,
+.ql-editor ul,
+.ql-editor ol {
+  padding-left: 1.5em !important;
+  margin: 0.5em 0 !important;
+}
+
+.review-content ul li,
+.review-content ol li,
+.ql-editor ul li,
+.ql-editor ol li {
+  margin: 0.2em 0 !important;
+  list-style-position: outside !important;
+}
+
+/* Viñetas para listas no ordenadas */
+.review-content ul,
+.ql-editor ul {
+  list-style-type: disc !important;
+}
+
+.review-content ul ul,
+.ql-editor ul ul {
+  list-style-type: circle !important;
+}
+
+.review-content ul ul ul,
+.ql-editor ul ul ul {
+  list-style-type: square !important;
+}
+
+/* Números para listas ordenadas */
+.review-content ol,
+.ql-editor ol {
+  list-style-type: decimal !important;
+}
+
+.review-content ol ol,
+.ql-editor ol ol {
+  list-style-type: lower-alpha !important;
+}
+
+.review-content ol ol ol,
+.ql-editor ol ol ol {
+  list-style-type: lower-roman !important;
+}
+
+/* Estilos adicionales para mejorar la visualización del contenido Quill */
+.ql-editor {
+  line-height: 1.6 !important;
+  min-height: 120px;
+  max-height: 240px;
+  overflow-y: auto;
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+/* Cuando se usa en modo visualización (no editor) */
+.ql-editor.read-only {
+  min-height: auto;
+  max-height: none;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.ql-editor p {
+  margin: 0.5em 0 !important;
+}
+
+.ql-editor blockquote {
+  border-left: 4px solid #ccc !important;
+  margin: 0.5em 0 !important;
+  padding-left: 1em !important;
+  color: #555;
+}
+
+.ql-editor h1,
+.ql-editor h2,
+.ql-editor h3 {
+  margin: 0.8em 0 0.4em 0 !important;
+  font-weight: 600;
+}
+
+.ql-editor h1 {
+  font-size: 2em !important;
+}
+
+.ql-editor h2 {
+  font-size: 1.5em !important;
+}
+
+.ql-editor h3 {
+  font-size: 1.17em !important;
+}
+
+.ql-editor strong,
+.ql-editor b {
+  font-weight: bold !important;
+}
+
+.ql-editor em,
+.ql-editor i {
+  font-style: italic !important;
+}
+
+.ql-editor u {
+  text-decoration: underline !important;
+}
+
+.ql-editor a {
+  color: #003b5c !important;
+  text-decoration: underline !important;
+}
+
+.ql-editor code {
+  background-color: #f1f3f4;
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-family: monospace;
+  font-size: 0.9em;
+}
+
+.ql-editor pre {
+  background-color: #f1f3f4;
+  padding: 1em;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-family: monospace;
+  font-size: 0.9em;
+  margin: 0.5em 0;
+}
+
+/* Clase específica para el contenido de revisiones en el portal */
+.review-content {
+  font-family: 'Lora', serif;
+  line-height: 1.8;
+  color: #1a1a1a;
+}
+
+.review-content ul,
+.review-content ol {
+  padding-left: 2em !important;
+  margin: 0.75em 0 !important;
+}
+
+.review-content ul li,
+.review-content ol li {
+  margin: 0.3em 0 !important;
+}
+
+.review-content p {
+  margin: 0.75em 0 !important;
+}
+
+/* Para asegurar que las listas se vean bien en la vista de revisión */
+.review-content > ul,
+.review-content > ol {
+  margin-top: 0.5em !important;
+  margin-bottom: 0.5em !important;
+}
+
+/* ===== FIN ESTILOS PARA REVISIONES ===== */

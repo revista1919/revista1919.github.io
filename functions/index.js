@@ -8775,6 +8775,7 @@ function getRecommendationColor(recommendation) {
 }
 // ===================== SUBMIT REVISION =====================
 // ===================== SUBMIT REVISION =====================
+// ===================== SUBMIT REVISION =====================
 exports.submitRevision = onRequest(
   { 
     secrets: [OAUTH2_CLIENT_ID, OAUTH2_CLIENT_SECRET, OAUTH2_REFRESH_TOKEN],
@@ -8819,7 +8820,9 @@ exports.submitRevision = onRequest(
         return res.status(403).json({ error: 'No eres el autor de este artículo' });
       }
       
-      const drive = await getDriveClient();
+      // ✅ CORREGIDO: getDriveClient devuelve { drive, docs, oauth2Client }
+      const clients = await getDriveClient();
+      const drive = clients.drive;  // ← EXTRAER drive del objeto
       
       const folderId = submission.editorialFolderId || submission.driveFolderId;
       
@@ -8829,6 +8832,7 @@ exports.submitRevision = onRequest(
       
       const revisionFileName = `REVISION_R${round + 1}_${Date.now()}_${fileName}`;
       
+      // ✅ uploadToDrive recibe (drive, fileBase64, fileName, folderId)
       const file = await uploadToDrive(drive, fileBase64, revisionFileName, folderId);
       
       const versionRef = db.collection('submissions').doc(submissionId).collection('versions');
@@ -8847,27 +8851,27 @@ exports.submitRevision = onRequest(
       });
       
       await submissionRef.update({
-  status: 'in-desk-review',
-  lastRevisionAt: admin.firestore.FieldValue.serverTimestamp(),
-  lastRevisionComment: revisionComment || null, 
-  lastRevisionHasComment: !!revisionComment, 
-  updatedAt: admin.firestore.FieldValue.serverTimestamp()
-});
+        status: 'in-desk-review',
+        lastRevisionAt: admin.firestore.FieldValue.serverTimestamp(),
+        lastRevisionComment: revisionComment || null, 
+        lastRevisionHasComment: !!revisionComment, 
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
       
       const auditLogRef = db.collection('submissions').doc(submissionId).collection('auditLogs');
-await auditLogRef.add({
-  action: 'revision_submitted',
-  round: round + 1,
-  notes: notes,
-  hasDetailedComment: !!revisionComment, // NUEVO: Flag para saber si hay comentario detallado
-  revisionCommentPreview: revisionComment 
-    ? revisionComment.replace(/<[^>]*>/g, '').substring(0, 150) + (revisionComment.replace(/<[^>]*>/g, '').length > 150 ? '...' : '')
-    : null, // NUEVO: Preview sin HTML para búsquedas
-  fileName: revisionFileName,
-  by: uid,
-  byEmail: decodedToken.email,
-  timestamp: admin.firestore.FieldValue.serverTimestamp()
-});
+      await auditLogRef.add({
+        action: 'revision_submitted',
+        round: round + 1,
+        notes: notes,
+        hasDetailedComment: !!revisionComment,
+        revisionCommentPreview: revisionComment 
+          ? revisionComment.replace(/<[^>]*>/g, '').substring(0, 150) + (revisionComment.replace(/<[^>]*>/g, '').length > 150 ? '...' : '')
+          : null,
+        fileName: revisionFileName,
+        by: uid,
+        byEmail: decodedToken.email,
+        timestamp: admin.firestore.FieldValue.serverTimestamp()
+      });
       
       return res.json({
         success: true,

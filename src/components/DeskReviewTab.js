@@ -656,7 +656,7 @@ useEffect(() => {
                   {submission.editorComment && (
                     <InfoBlock icon={Icons.Message} title={isSpanish ? 'Mensaje al Editor' : 'Message to Editor'} className="border-l-4 border-l-[#003b5c]">
                       <div 
-                        className="prose prose-sm max-w-none font-serif text-slate-700"
+                         className="review-content ql-editor read-only prose prose-sm max-w-none font-serif text-slate-700 leading-relaxed"
                         dangerouslySetInnerHTML={{ __html: submission.editorComment }}
                       />
                     </InfoBlock>
@@ -670,7 +670,7 @@ useEffect(() => {
                         </span>
                       </div>
                       <div 
-                        className="prose prose-sm max-w-none font-serif text-slate-700"
+                         className="review-content ql-editor read-only prose prose-sm max-w-none font-serif text-slate-700 leading-relaxed"
                         dangerouslySetInnerHTML={{ __html: latestRevisionComment }}
                       />
                     </InfoBlock>
@@ -1021,7 +1021,7 @@ useEffect(() => {
                         {isSpanish ? 'Mensaje al Editor' : 'Message to Editor'}
                       </h4>
                       <div 
-                        className="prose prose-sm max-w-none font-serif text-slate-700 bg-slate-50 p-4 rounded-sm border border-slate-200"
+                        className="review-content ql-editor read-only prose prose-sm max-w-none font-serif text-slate-700 leading-relaxed"
                         dangerouslySetInnerHTML={{ __html: submission.editorComment }}
                       />
                     </div>

@@ -895,8 +895,9 @@ const AuthorSubmissionsPanel = ({ user }) => {
                           {isSpanish ? 'Resolución Editorial Final' : 'Final Editorial Resolution'}
                         </h3>
                         {activePortal.finalFeedback && (
-                          <div className="prose prose-sm max-w-none font-serif text-slate-800 leading-relaxed" 
-                               dangerouslySetInnerHTML={{ __html: activePortal.finalFeedback }} />
+                          <div 
+                            className="review-content ql-editor read-only prose prose-sm max-w-none font-serif text-slate-800 leading-relaxed" 
+                            dangerouslySetInnerHTML={{ __html: activePortal.finalFeedback }}  />
                         )}
                       </div>
                     )}
@@ -1314,8 +1315,10 @@ const AuthorSubmissionsPanel = ({ user }) => {
                           </h3>
                         </div>
                         <div className="bg-slate-50 p-4 border border-slate-100">
-                          <div className="prose prose-sm max-w-none font-serif text-slate-700 leading-relaxed"
-                               dangerouslySetInnerHTML={{ __html: activePortal.editorComment }} />
+                           <div 
+                          className="review-content ql-editor read-only prose prose-sm max-w-none font-serif text-slate-700 leading-relaxed"
+                          dangerouslySetInnerHTML={{ __html: activePortal.deskReviewFeedback }}
+                        />
                         </div>
                       </section>
                     )}
@@ -1528,10 +1531,12 @@ const AuthorSubmissionsPanel = ({ user }) => {
                               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">
                                 {isSpanish ? 'Comentarios para el Autor' : 'Comments to Author'}
                               </p>
-                              <div className="prose prose-sm max-w-none font-serif text-slate-700 leading-relaxed bg-slate-50 p-6 border border-slate-100"
-                                   dangerouslySetInnerHTML={{ 
-                                     __html: decodeBase64IfNeeded(review.commentsToAuthor).replace(/\n/g, '<br/>') 
-                                   }} />
+                              <div 
+  className="review-content ql-editor prose prose-sm max-w-none font-serif text-slate-700 leading-relaxed bg-slate-50 p-6 border border-slate-100"
+  dangerouslySetInnerHTML={{ 
+    __html: decodeBase64IfNeeded(review.commentsToAuthor) 
+  }} 
+/>
                             </div>
                           )}
                         </div>
