@@ -62,7 +62,8 @@ const ES_TO_EN = {
   'Responsable de Transparencia': 'Transparency Manager',
   'Autor': 'Author',
   'Asesor Académico': 'Academic Advisor',
-  'Institución Colaboradora': 'Partner Institution'
+  'Institución Colaboradora': 'Partner Institution',
+  'Equipo Editorial': 'Editorial Team'
 };
 
 const EN_TO_ES = {
@@ -87,7 +88,8 @@ const EN_TO_ES = {
   'Article Assignment Manager': 'Encargado de Asignación de Artículos',
   'Partner Institution': 'Institución Colaboradora',
   'Academic Advisor': 'Asesor Académico',
-  'Community Manager': 'Community Manager'
+  'Community Manager': 'Community Manager',
+  'Editorial Team': 'Equipo Editorial'
 };
 
 const ALL_ROLES = Object.keys(ES_TO_EN);
