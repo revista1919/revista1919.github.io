@@ -12728,3 +12728,524 @@ function getFieldLabel(fieldName, isSpanish) {
   if (!label) return fieldName;
   return isSpanish ? label.es : label.en;
 }
+
+exports.approveReviewerApplication = onCall(
+  {
+    timeoutSeconds: 60,
+    memory: '256MiB', // Nota: en v2 es 'MiB' no 'MB'
+    region: 'us-central1', // Especifica tu región
+  },
+  async (request) => {
+    // En v2, el context está dentro de request.auth y request.data
+    const data = request.data;
+    const auth = request.auth;
+    
+    // ========== VALIDACIÓN DE AUTENTICACIÓN ==========
+    if (!auth) {
+      throw new HttpsError(
+        'unauthenticated',
+        'Debes iniciar sesión para realizar esta acción.'
+      );
+    }
+
+    const callerUid = auth.uid;
+    const callerEmail = auth.token.email || '';
+
+    // ========== VALIDACIÓN DE ROL ==========
+    const callerDoc = await admin.firestore()
+      .collection('users')
+      .doc(callerUid)
+      .get();
+
+    if (!callerDoc.exists) {
+      throw new HttpsError(
+        'not-found',
+        'Perfil de usuario no encontrado.'
+      );
+    }
+
+    const callerData = callerDoc.data();
+    const callerRoles = callerData.roles || [];
+
+    const authorizedRoles = ['Director General', 'Editor en Jefe', 'Editor de Sección'];
+    const hasAuthorization = callerRoles.some(role => authorizedRoles.includes(role));
+
+    if (!hasAuthorization) {
+      throw new HttpsError(
+        'permission-denied',
+        'No tienes permisos para aprobar revisores. Se requiere rol de Director, Editor en Jefe o Editor de Sección.'
+      );
+    }
+
+    // ========== VALIDACIÓN DE PARÁMETROS ==========
+    const { submissionId, reviewerUid } = data;
+
+    if (!submissionId) {
+      throw new HttpsError(
+        'invalid-argument',
+        'Se requiere el ID de la submission (submissionId).'
+      );
+    }
+
+    if (!reviewerUid) {
+      throw new HttpsError(
+        'invalid-argument',
+        'Se requiere el UID del revisor (reviewerUid).'
+      );
+    }
+
+    const db = admin.firestore();
+    const batch = db.batch();
+
+    try {
+      // ========== 1. OBTENER DATOS DE LA SUBMISSION ==========
+      const submissionRef = db.collection('submissions').doc(submissionId);
+      const submissionDoc = await submissionRef.get();
+
+      if (!submissionDoc.exists) {
+        throw new HttpsError(
+          'not-found',
+          `No se encontró la submission con ID: ${submissionId}`
+        );
+      }
+
+      const submissionData = submissionDoc.data();
+
+      // Verificar que la submission sea del usuario correcto
+      if (submissionData.authorUID !== reviewerUid) {
+        throw new HttpsError(
+          'invalid-argument',
+          'El UID del revisor no coincide con el autor de la submission.'
+        );
+      }
+
+      // Verificar que la solicitud de revisor esté pendiente
+      if (!submissionData.wantsToBeReviewer) {
+        throw new HttpsError(
+          'failed-precondition',
+          'Esta submission no tiene una solicitud de revisor activa.'
+        );
+      }
+
+      if (submissionData.reviewerStatus === 'approved') {
+        throw new HttpsError(
+          'already-exists',
+          'Esta solicitud de revisor ya fue aprobada anteriormente.'
+        );
+      }
+
+      // ========== 2. OBTENER DATOS DEL PERFIL DE USUARIO ==========
+      const userRef = db.collection('users').doc(reviewerUid);
+      const userDoc = await userRef.get();
+
+      if (!userDoc.exists) {
+        throw new HttpsError(
+          'not-found',
+          'Perfil de usuario no encontrado en la colección users.'
+        );
+      }
+
+      const userData = userDoc.data();
+
+      // ========== 3. CALCULAR ESTADÍSTICAS DE REVISIÓN ==========
+      const reviewerStats = await calculateReviewerStats(reviewerUid, db);
+
+      // ========== 4. CREAR DOCUMENTO EN COLECCIÓN 'reviewers' ==========
+      const reviewerId = reviewerUid;
+      const reviewerRef = db.collection('reviewers').doc(reviewerId);
+
+      const reviewerData = {
+        uid: reviewerUid,
+        firstName: userData.firstName || '',
+        lastName: userData.lastName || '',
+        displayName: userData.displayName || `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
+        email: userData.email || submissionData.authorEmail || '',
+        publicEmail: userData.publicEmail || '',
+        institution: userData.institution || (submissionData.authors?.[0]?.institution) || '',
+        orcid: userData.orcid || (submissionData.authors?.[0]?.orcid) || '',
+        areasOfExpertise: submissionData.reviewerAreas || [],
+        interests: userData.interests || { es: [], en: [] },
+        status: 'active',
+        availability: {
+          maxActiveReviews: 3,
+          currentActiveReviews: 0,
+          preferredLanguage: submissionData.paperLanguage || 'es',
+          timeAvailablePerReview: '2-weeks',
+        },
+        stats: reviewerStats,
+        approvedBy: {
+          uid: callerUid,
+          email: callerEmail,
+          name: callerData.displayName || `${callerData.firstName || ''} ${callerData.lastName || ''}`.trim(),
+          role: callerRoles.find(r => authorizedRoles.includes(r)) || 'Editor',
+        },
+        approvedAt: admin.firestore.FieldValue.serverTimestamp(),
+        applicationSource: {
+          type: 'submission',
+          submissionId: submissionId,
+          articleTitle: submissionData.title || '',
+          articleArea: submissionData.area || '',
+        },
+        notifications: {
+          newReviewRequest: true,
+          reminderBeforeDeadline: true,
+          reminderDays: [7, 3, 1],
+        },
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
+
+      batch.set(reviewerRef, reviewerData);
+
+      // ========== 5. ACTUALIZAR ROLES DEL USUARIO ==========
+      try {
+        const authUser = await admin.auth().getUser(reviewerUid);
+        const currentClaims = authUser.customClaims || {};
+        const currentRoles = currentClaims.roles || [];
+        
+        if (!currentRoles.includes('Revisor')) {
+          const updatedRoles = [...currentRoles, 'Revisor'];
+          await admin.auth().setCustomUserClaims(reviewerUid, {
+            ...currentClaims,
+            roles: updatedRoles,
+          });
+          
+          console.log(`✅ Rol 'Revisor' agregado en Auth para usuario ${reviewerUid}`);
+        }
+      } catch (authError) {
+        console.error('⚠️ Error actualizando Custom Claims:', authError.message);
+      }
+
+      // Actualizar en Firestore
+      const currentUserRoles = userData.roles || [];
+      if (!currentUserRoles.includes('Revisor')) {
+        batch.update(userRef, {
+          roles: [...currentUserRoles, 'Revisor'],
+          reviewerProfileId: reviewerId,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+
+      // ========== 6. ACTUALIZAR ESTADO EN LA SUBMISSION ==========
+      batch.update(submissionRef, {
+        reviewerStatus: 'approved',
+        reviewerApprovedAt: admin.firestore.FieldValue.serverTimestamp(),
+        reviewerApprovedBy: callerUid,
+        reviewerProfileId: reviewerId,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // ========== 7. REGISTRAR EN AUDITORÍA ==========
+      const auditRef = db.collection('auditLogs').doc();
+      batch.set(auditRef, {
+        action: 'reviewer_application_approved',
+        targetType: 'reviewer',
+        targetId: reviewerId,
+        submissionId: submissionId,
+        performedBy: {
+          uid: callerUid,
+          email: callerEmail,
+          name: callerData.displayName || '',
+        },
+        details: {
+          reviewerUid: reviewerUid,
+          reviewerEmail: userData.email || '',
+          reviewerName: `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
+          areasOfExpertise: submissionData.reviewerAreas || [],
+          source: 'submission_application',
+        },
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        ipAddress: request.rawRequest?.ip || 'unknown', // Cambiado de context.rawRequest a request.rawRequest
+      });
+
+      const submissionAuditRef = db.collection('submissions')
+        .doc(submissionId)
+        .collection('auditLogs')
+        .doc();
+      
+      batch.set(submissionAuditRef, {
+        action: 'reviewer_application_approved',
+        performedBy: {
+          uid: callerUid,
+          email: callerEmail,
+          name: callerData.displayName || '',
+          role: callerRoles.find(r => authorizedRoles.includes(r)) || 'Editor',
+        },
+        details: {
+          reviewerProfileCreated: reviewerId,
+          areasApproved: submissionData.reviewerAreas || [],
+        },
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // ========== 8. EJECUTAR TRANSACCIÓN ==========
+      await batch.commit();
+
+      console.log(`✅ Solicitud de revisor aprobada: ${reviewerId}`);
+
+      return {
+        success: true,
+        message: 'Solicitud de revisor aprobada exitosamente.',
+        data: {
+          reviewerId: reviewerId,
+          reviewerUid: reviewerUid,
+          areasOfExpertise: submissionData.reviewerAreas || [],
+          stats: reviewerStats,
+          approvedBy: {
+            name: callerData.displayName || '',
+            role: callerRoles.find(r => authorizedRoles.includes(r)) || 'Editor',
+          },
+        },
+      };
+
+    } catch (error) {
+      console.error('❌ Error aprobando revisor:', error);
+      
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+      
+      throw new HttpsError(
+        'internal',
+        'Error interno al aprobar la solicitud de revisor.',
+        { originalError: error.message }
+      );
+    }
+  }
+);
+
+// Función rechazar revisor - v2
+exports.rejectReviewerApplication = onCall(
+  {
+    timeoutSeconds: 60,
+    memory: '256MiB',
+  },
+  async (request) => {
+    const auth = request.auth;
+    
+    if (!auth) {
+      throw new HttpsError('unauthenticated', 'Debes iniciar sesión.');
+    }
+
+    const callerUid = auth.uid;
+    const callerDoc = await admin.firestore().collection('users').doc(callerUid).get();
+    const callerRoles = callerDoc.data()?.roles || [];
+    
+    const authorizedRoles = ['Director General', 'Editor en Jefe', 'Editor de Sección'];
+    if (!callerRoles.some(role => authorizedRoles.includes(role))) {
+      throw new HttpsError('permission-denied', 'No tienes permisos.');
+    }
+
+    const { submissionId, reason } = request.data;
+    if (!submissionId) {
+      throw new HttpsError('invalid-argument', 'Se requiere submissionId.');
+    }
+
+    const db = admin.firestore();
+    const batch = db.batch();
+
+    const submissionRef = db.collection('submissions').doc(submissionId);
+    const submissionDoc = await submissionRef.get();
+
+    if (!submissionDoc.exists) {
+      throw new HttpsError('not-found', 'Submission no encontrada.');
+    }
+
+    batch.update(submissionRef, {
+      reviewerStatus: 'rejected',
+      reviewerRejectedAt: admin.firestore.FieldValue.serverTimestamp(),
+      reviewerRejectedBy: callerUid,
+      reviewerRejectionReason: reason || 'No especificado',
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    const auditRef = db.collection('auditLogs').doc();
+    batch.set(auditRef, {
+      action: 'reviewer_application_rejected',
+      targetType: 'reviewer_application',
+      submissionId: submissionId,
+      performedBy: {
+        uid: callerUid,
+        email: auth.token.email || '',
+      },
+      details: { reason: reason || 'No especificado' },
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    await batch.commit();
+
+    return {
+      success: true,
+      message: 'Solicitud de revisor rechazada.',
+    };
+  }
+);
+
+/**
+ * Función auxiliar: Calcular estadísticas del revisor
+ * 
+ * Analiza las colecciones:
+ * - reviewerInvitations: invitaciones enviadas
+ * - reviewerAssignments: revisiones asignadas y completadas
+ * 
+ * Calcula:
+ * - totalInvitations: total de invitaciones recibidas
+ * - acceptedInvitations: invitaciones aceptadas
+ * - declinedInvitations: invitaciones rechazadas
+ * - expiredInvitations: invitaciones expiradas
+ * - acceptanceRate: tasa de aceptación (%)
+ * - totalReviewsCompleted: revisiones completadas y enviadas
+ * - onTimeReviews: revisiones entregadas a tiempo
+ * - lateReviews: revisiones entregadas fuera de plazo
+ * - averageReviewScore: promedio de puntuaciones dadas
+ * - responseTimeAvg: tiempo promedio de respuesta (días)
+ */
+async function calculateReviewerStats(reviewerUid, db) {
+  try {
+    // ===== ESTADÍSTICAS DE INVITACIONES =====
+    const invitationsSnapshot = await db.collection('reviewerInvitations')
+      .where('reviewerUid', '==', reviewerUid)
+      .get();
+
+    const invitations = [];
+    invitationsSnapshot.forEach(doc => {
+      invitations.push({ id: doc.id, ...doc.data() });
+    });
+
+    const totalInvitations = invitations.length;
+    const acceptedInvitations = invitations.filter(inv => inv.status === 'accepted').length;
+    const declinedInvitations = invitations.filter(inv => inv.status === 'declined').length;
+    const expiredInvitations = invitations.filter(inv => inv.status === 'expired').length;
+    const failedInvitations = invitations.filter(inv => inv.status === 'failed').length;
+
+    const acceptanceRate = totalInvitations > 0
+      ? Math.round((acceptedInvitations / totalInvitations) * 100)
+      : 0;
+
+    // Calcular tiempo promedio de respuesta
+    const responseTimes = invitations
+      .filter(inv => inv.respondedAt && inv.createdAt)
+      .map(inv => {
+        const created = inv.createdAt.toDate();
+        const responded = inv.respondedAt.toDate();
+        return (responded - created) / (1000 * 60 * 60 * 24); // días
+      });
+
+    const responseTimeAvg = responseTimes.length > 0
+      ? parseFloat((responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length).toFixed(1))
+      : null;
+
+    // ===== ESTADÍSTICAS DE REVISIONES =====
+    const assignmentsSnapshot = await db.collection('reviewerAssignments')
+      .where('reviewerUid', '==', reviewerUid)
+      .get();
+
+    const assignments = [];
+    assignmentsSnapshot.forEach(doc => {
+      assignments.push({ id: doc.id, ...doc.data() });
+    });
+
+    const totalReviewsCompleted = assignments.filter(a => a.status === 'submitted').length;
+    const pendingReviews = assignments.filter(a => a.status === 'accepted' || a.status === 'in_progress').length;
+
+    // Revisiones a tiempo vs tarde
+    let onTimeReviews = 0;
+    let lateReviews = 0;
+
+    assignments
+      .filter(a => a.status === 'submitted' && a.submittedAt && a.dueDate)
+      .forEach(a => {
+        const submitted = a.submittedAt.toDate();
+        const due = a.dueDate.toDate();
+        if (submitted <= due) {
+          onTimeReviews++;
+        } else {
+          lateReviews++;
+        }
+      });
+
+    const onTimeRate = totalReviewsCompleted > 0
+      ? Math.round((onTimeReviews / totalReviewsCompleted) * 100)
+      : 100;
+
+    // Promedio de puntuaciones
+    const scores = assignments
+      .filter(a => a.status === 'submitted' && a.scores)
+      .map(a => {
+        const s = a.scores;
+        const scoreValues = Object.values(s).filter(v => typeof v === 'number');
+        return scoreValues.length > 0
+          ? scoreValues.reduce((sum, v) => sum + v, 0) / scoreValues.length
+          : null;
+      })
+      .filter(s => s !== null);
+
+    const averageReviewScore = scores.length > 0
+      ? parseFloat((scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1))
+      : null;
+
+    // Revisiones por ronda (útil para saber experiencia)
+    const reviewsByRound = {};
+    assignments.forEach(a => {
+      const round = a.round || 1;
+      reviewsByRound[round] = (reviewsByRound[round] || 0) + 1;
+    });
+
+    return {
+      // Invitaciones
+      totalInvitations,
+      acceptedInvitations,
+      declinedInvitations,
+      expiredInvitations,
+      failedInvitations,
+      acceptanceRate,
+      responseTimeAvgDays: responseTimeAvg,
+
+      // Revisiones
+      totalReviewsCompleted,
+      pendingReviews,
+      onTimeReviews,
+      lateReviews,
+      onTimeRate,
+      averageReviewScore,
+      maxScore: 5, // Escala de puntuación
+
+      // Experiencia
+      reviewsByRound,
+      totalRoundsParticipated: Object.keys(reviewsByRound).length,
+
+      // Última actividad
+      lastInvitationAt: invitations.length > 0
+        ? invitations.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0))[0]?.createdAt?.toDate()?.toISOString() || null
+        : null,
+      lastReviewSubmittedAt: assignments
+        .filter(a => a.submittedAt)
+        .sort((a, b) => b.submittedAt.toDate() - a.submittedAt.toDate())[0]?.submittedAt?.toDate()?.toISOString() || null,
+    };
+
+  } catch (error) {
+    console.error('⚠️ Error calculando estadísticas de revisor:', error.message);
+    // Devolver estadísticas vacías en caso de error
+    return {
+      totalInvitations: 0,
+      acceptedInvitations: 0,
+      declinedInvitations: 0,
+      expiredInvitations: 0,
+      failedInvitations: 0,
+      acceptanceRate: 0,
+      responseTimeAvgDays: null,
+      totalReviewsCompleted: 0,
+      pendingReviews: 0,
+      onTimeReviews: 0,
+      lateReviews: 0,
+      onTimeRate: 100,
+      averageReviewScore: null,
+      maxScore: 5,
+      reviewsByRound: {},
+      totalRoundsParticipated: 0,
+      lastInvitationAt: null,
+      lastReviewSubmittedAt: null,
+      error: error.message,
+    };
+  }
+}

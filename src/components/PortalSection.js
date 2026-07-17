@@ -975,39 +975,46 @@ const safetyTimeoutRef = useRef(null);
   const isWebDev = userRoles.includes('Responsable de Desarrollo Web');
   const isAssignmentManager = userRoles.includes('Encargado de Asignación de Artículos');
 
-  // Mapeo de IDs de pestañas a rutas
-  const tabRoutes = {
-    profile: '',
-    submissions: 'submissions',
-    'reviewer-tasks': 'reviewer-tasks',
-    deskreview: 'deskreview',
-    assignment: 'assignment',
-    calendar: 'calendar',
-    submit: 'submit',
-    director: 'director',
-    chief: 'chief',
-    tasks: 'tasks',
-    news: 'news',
-    admissions: 'admissions',
-    users: 'users'
-  };
+const isSectionEditor = userRoles.includes('Editor de Sección');
+const isChiefEditor = userRoles.includes('Editor en Jefe'); 
+const isDirectorGeneral = userRoles.includes('Director General');
+const canManageReviewers = isSectionEditor || isChiefEditor || isDirectorGeneral;
 
-  // Pestañas actualizadas para el nuevo sistema
-  const tabs = [
-    { id: 'profile', label: isSpanish ? 'MI PERFIL' : 'MY PROFILE', roles: ['any'], path: '' },
-    { id: 'submissions', label: isSpanish ? 'MIS ENVÍOS' : 'MY SUBMISSIONS', roles: ['Autor'], path: 'submissions' },
-    { id: 'reviewer-tasks', label: isSpanish ? 'MIS REVISIONES' : 'MY REVIEWS', roles: ['Revisor'], path: 'reviewer-tasks' },
-    { id: 'deskreview', label: isSpanish ? 'DESK REVIEW' : 'DESK REVIEW', roles: ['Editor de Sección', 'Editor en Jefe'], path: 'deskreview' },
-    { id: 'assignment', label: isSpanish ? 'ASIGNAR ARTÍCULOS' : 'ASSIGN ARTICLES', roles: ['Encargado de Asignación de Artículos', 'Director General'], path: 'assignment' },
-    { id: 'calendar', label: isSpanish ? 'CALENDARIO' : 'CALENDAR', roles: ['Editor en Jefe', 'Director General', 'Encargado de Asignación de Artículos'], path: 'calendar' },
-    { id: 'submit', label: isSpanish ? 'ENVIAR MANUSCRITO' : 'SUBMIT MANUSCRIPT', roles: ['Autor'], path: 'submit' },
-    { id: 'director', label: isSpanish ? 'PANEL DIRECTIVO' : 'DIRECTOR PANEL', roles: ['Director General'], path: 'director' },
-    { id: 'chief', label: isSpanish ? 'PANEL EDITOR JEFE' : 'CHIEF EDITOR PANEL', roles: ['Editor en Jefe'], path: 'chief' },
-    { id: 'tasks', label: isSpanish ? 'TAREAS' : 'TASKS', roles: ['Encargado de Redes Sociales', 'Responsable de Desarrollo Web'], path: 'tasks' },
-    { id: 'news', label: isSpanish ? 'NOTICIAS' : 'NEWS', roles: ['Director General'], path: 'news' },
-    { id: 'admissions', label: isSpanish ? 'ADMISIONES' : 'ADMISSIONS', roles: ['Director General'], path: 'admissions' },
-    { id: 'users', label: isSpanish ? 'USUARIOS' : 'USERS', roles: ['Director General'], path: 'users' },
-  ].filter(tab => tab.roles.includes('any') || tab.roles.some(role => userRoles.includes(role)));
+// Actualiza el array de tabs para incluir la nueva pestaña:
+const tabs = [
+  { id: 'profile', label: isSpanish ? 'MI PERFIL' : 'MY PROFILE', roles: ['any'], path: '' },
+  { id: 'submissions', label: isSpanish ? 'MIS ENVÍOS' : 'MY SUBMISSIONS', roles: ['Autor'], path: 'submissions' },
+  { id: 'reviewer-tasks', label: isSpanish ? 'MIS REVISIONES' : 'MY REVIEWS', roles: ['Revisor'], path: 'reviewer-tasks' },
+  { id: 'deskreview', label: isSpanish ? 'DESK REVIEW' : 'DESK REVIEW', roles: ['Editor de Sección', 'Editor en Jefe'], path: 'deskreview' },
+  { id: 'reviewer-applications', label: isSpanish ? 'POSTULACIONES REVISORES' : 'REVIEWER APPLICATIONS', roles: ['Editor de Sección', 'Editor en Jefe', 'Director General'], path: 'reviewer-applications' },
+  { id: 'assignment', label: isSpanish ? 'ASIGNAR ARTÍCULOS' : 'ASSIGN ARTICLES', roles: ['Encargado de Asignación de Artículos', 'Director General'], path: 'assignment' },
+  { id: 'calendar', label: isSpanish ? 'CALENDARIO' : 'CALENDAR', roles: ['Editor en Jefe', 'Director General', 'Encargado de Asignación de Artículos'], path: 'calendar' },
+  { id: 'submit', label: isSpanish ? 'ENVIAR MANUSCRITO' : 'SUBMIT MANUSCRIPT', roles: ['Autor'], path: 'submit' },
+  { id: 'director', label: isSpanish ? 'PANEL DIRECTIVO' : 'DIRECTOR PANEL', roles: ['Director General'], path: 'director' },
+  { id: 'chief', label: isSpanish ? 'PANEL EDITOR JEFE' : 'CHIEF EDITOR PANEL', roles: ['Editor en Jefe'], path: 'chief' },
+  { id: 'tasks', label: isSpanish ? 'TAREAS' : 'TASKS', roles: ['Encargado de Redes Sociales', 'Responsable de Desarrollo Web'], path: 'tasks' },
+  { id: 'news', label: isSpanish ? 'NOTICIAS' : 'NEWS', roles: ['Director General'], path: 'news' },
+  { id: 'admissions', label: isSpanish ? 'ADMISIONES' : 'ADMISSIONS', roles: ['Director General'], path: 'admissions' },
+  { id: 'users', label: isSpanish ? 'USUARIOS' : 'USERS', roles: ['Director General'], path: 'users' },
+].filter(tab => tab.roles.includes('any') || tab.roles.some(role => userRoles.includes(role)));
+
+// Actualiza el mapeo de rutas para incluir la nueva ruta:
+const tabRoutes = {
+  profile: '',
+  submissions: 'submissions',
+  'reviewer-tasks': 'reviewer-tasks',
+  deskreview: 'deskreview',
+  'reviewer-applications': 'reviewer-applications',
+  assignment: 'assignment',
+  calendar: 'calendar',
+  submit: 'submit',
+  director: 'director',
+  chief: 'chief',
+  tasks: 'tasks',
+  news: 'news',
+  admissions: 'admissions',
+  users: 'users'
+};
 
   // Sincronizar la ruta con la pestaña activa
   useEffect(() => {
@@ -1491,7 +1498,40 @@ const handleTabChange = (tabId, event) => {
     </div>
   </motion.div>
 )}
-          
+          {/* POSTULACIONES A REVISOR - PANTALLA COMPLETA */}
+{activeTab === 'reviewer-applications' && (
+  <motion.div
+    key="reviewer-applications"
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    className="fixed inset-0 z-50 bg-[#f4f5f7] overflow-y-auto"
+  >
+    {/* Barra superior para volver al portal */}
+    <div className="sticky top-0 z-50 bg-white border-b-2 border-gray-300 shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+        <button
+          onClick={(e) => handleTabChange('profile', e)}
+          className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#004b87] hover:text-[#e86125] transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          {isSpanish ? 'Volver al Portal' : 'Back to Portal'}
+        </button>
+        <h2 className="font-serif text-lg font-bold text-[#004b87]">
+          {isSpanish ? 'Panel de Postulaciones a Revisor' : 'Reviewer Applications Panel'}
+        </h2>
+        <div className="w-24"></div> {/* Espaciador para centrar el título */}
+      </div>
+    </div>
+    
+    {/* Contenido del panel a pantalla completa */}
+    <div className="w-full h-full">
+      <ReviewerApplicationsPanel />
+    </div>
+  </motion.div>
+)}
           {/* ASIGNAR ARTÍCULOS */}
           {activeTab === 'assignment' && <motion.section key="assignment"><ArticleAssignmentPanel user={userData} /></motion.section>}
           

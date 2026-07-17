@@ -1,0 +1,248 @@
+{
+  "startTime": "2026-07-17T14:56:01.740Z",
+  "endTime": "2026-07-17T14:56:09.620Z",
+  "duration": 7880,
+  "totalUsers": 39,
+  "totalReviewers": 11,
+  "created": 11,
+  "updated": 0,
+  "skipped": 0,
+  "errors": 0,
+  "details": [
+    {
+      "uid": "Wis4rhCQB7MM0HxFggEjngOOnSa2",
+      "email": "amigojoel45@gmail.com",
+      "name": "Joel Portugal",
+      "status": "created",
+      "areasOfExpertise": [
+        "Álgebra",
+        "Matrices",
+        "Bioquímica",
+        "Física",
+        "Programación",
+        "Cálculo",
+        "Algebra",
+        "Biochemistry",
+        "Physics",
+        "Programming"
+      ],
+      "statsSummary": {
+        "totalInvitations": 1,
+        "completedReviews": 0,
+        "acceptanceRate": 0
+      }
+    },
+    {
+      "uid": "mCaKZ93suhRHWu69IrJQgwVuxPh2",
+      "email": "bencatalanv@gmail.com",
+      "name": "Benjamín Catalán",
+      "status": "created",
+      "areasOfExpertise": [
+        "Matemática",
+        "Física",
+        "Literatura",
+        "Filosofía",
+        "Mathematics",
+        "Physics",
+        "Literature",
+        "Philosophy"
+      ],
+      "statsSummary": {
+        "totalInvitations": 2,
+        "completedReviews": 0,
+        "acceptanceRate": 0
+      }
+    },
+    {
+      "uid": "mfDxTTdAd9SucyFfMveGOlHZcan2",
+      "email": "aster.maturana@gmail.com",
+      "name": "Agustín Maturana",
+      "status": "created",
+      "areasOfExpertise": [
+        "Filosofía",
+        "Historia",
+        "Literatura",
+        "Psicología",
+        "Psiquiatría",
+        "Música",
+        "Psicoanálisis",
+        "Biología celular",
+        "Ciencias políticas"
+      ],
+      "statsSummary": {
+        "totalInvitations": 1,
+        "completedReviews": 0,
+        "acceptanceRate": 0
+      }
+    },
+    {
+      "uid": "WB1xkKUAsnTVo4vj2CeaLUprDaB3",
+      "email": "emanuelcereceda3@gmail.com",
+      "name": "Emanuel Cereceda",
+      "status": "created",
+      "areasOfExpertise": [
+        "Álgebra",
+        "Análisis matemático",
+        "Física",
+        "Ciencia aplicada",
+        "Algebra",
+        "Mathematical analysis",
+        "Physics",
+        "Applied science"
+      ],
+      "statsSummary": {
+        "totalInvitations": 1,
+        "completedReviews": 0,
+        "acceptanceRate": 0
+      }
+    },
+    {
+      "uid": "V0v60t9xDYXZlo3R8SUhddrIl7f2",
+      "email": "thebreb2@gmail.com",
+      "name": "Carlos Gutiérrez",
+      "status": "created",
+      "areasOfExpertise": [
+        "Matemática",
+        "Bioquímica",
+        "Programación",
+        "Mathematics",
+        "Biochemistry",
+        "Programming"
+      ],
+      "statsSummary": {
+        "totalInvitations": 2,
+        "completedReviews": 0,
+        "acceptanceRate": 0
+      }
+    },
+    {
+      "uid": "Fy2g2ipz91T2nYXmduetUF0RpvG3",
+      "email": "lgvm3011@gmail.com",
+      "name": "Lucas Velozo Mella",
+      "status": "created",
+      "areasOfExpertise": [
+        "Matemáticas",
+        "Ajedrez",
+        "Astronomía",
+        "Debate",
+        "Deportes",
+        "Mathematics",
+        "Chess",
+        "Astronomy",
+        "Sports"
+      ],
+      "statsSummary": {
+        "totalInvitations": 3,
+        "completedReviews": 0,
+        "acceptanceRate": 0
+      }
+    },
+    {
+      "uid": "ofxyom4jFkbdSaNh6gTzEKy3DTK2",
+      "email": "fcfran007@gmail.com",
+      "name": "Francisco Correa",
+      "status": "created",
+      "areasOfExpertise": [
+        "Teoría de números",
+        "Teoría de Juegos",
+        "Política Internacional",
+        "Historia Universal",
+        "Number Theory",
+        "Game Theory",
+        "International Politics",
+        "World History"
+      ],
+      "statsSummary": {
+        "totalInvitations": 3,
+        "completedReviews": 0,
+        "acceptanceRate": 0
+      }
+    },
+    {
+      "uid": "bCWBGL4eJkdufLJDyKFQrgexxgy1",
+      "email": "juanfranciscovc@gmail.com",
+      "name": "Juan Vega",
+      "status": "created",
+      "areasOfExpertise": [],
+      "statsSummary": {
+        "totalInvitations": 1,
+        "completedReviews": 0,
+        "acceptanceRate": 0
+      }
+    },
+    {
+      "uid": "PUfEv6PN9mZ9tEkEfn8ZRdpb5WW2",
+      "email": "marinasotoojeda15@gmail.com",
+      "name": "Marina Soto",
+      "status": "created",
+      "areasOfExpertise": [
+        "Ciencias políticas",
+        "Finanzas",
+        "Economía política",
+        "Poesía latinoamericana",
+        "Literatura universal",
+        "Debate",
+        "Química nuclear",
+        "Political Science",
+        "Finance",
+        "Political Economy",
+        "Latin American Poetry",
+        "World Literature",
+        "Nuclear Chemistry"
+      ],
+      "statsSummary": {
+        "totalInvitations": 1,
+        "completedReviews": 0,
+        "acceptanceRate": 0
+      }
+    },
+    {
+      "uid": "80nl6CAxqyWTHAsg4BOZTMrNRiH2",
+      "email": "juanpaolee52@gmail.com",
+      "name": "Juan Pablo Miralles",
+      "status": "created",
+      "areasOfExpertise": [
+        "Estequiometría",
+        "Teoría de números",
+        "Teoría de conjuntos",
+        "Stoichiometry",
+        "Number theory",
+        "Set theory"
+      ],
+      "statsSummary": {
+        "totalInvitations": 2,
+        "completedReviews": 0,
+        "acceptanceRate": 0
+      }
+    },
+    {
+      "uid": "wqf9Go6qvLaUc38E1CKZvBJZOZk1",
+      "email": "tomasarancibiam@gmail.com",
+      "name": "Tomás Arancibia",
+      "status": "created",
+      "areasOfExpertise": [
+        "Álgebra",
+        "Estequiometria",
+        "Bioquímica",
+        "Geometría",
+        "Algebra",
+        "Stoichiometry",
+        "Biochemistry",
+        "Geometry"
+      ],
+      "statsSummary": {
+        "totalInvitations": 1,
+        "completedReviews": 0,
+        "acceptanceRate": 0
+      }
+    }
+  ],
+  "summary": {
+    "successRate": 100,
+    "errorRate": 0,
+    "skippedRate": 0,
+    "averageAreasPerReviewer": 7.7,
+    "reviewersWithApplications": 10,
+    "reviewersWithoutApplications": 1
+  }
+}
