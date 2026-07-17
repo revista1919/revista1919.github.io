@@ -57,17 +57,9 @@ export const ReviewerManagementTab = ({
   const requiredReviews = task?.requiredReviews || 2;
   const canProceed = submittedCount >= requiredReviews;
   
-  // 🔍 DEBUG - Agrega esto aquí
-  console.log('🔍 DEBUG ReviewerManagementTab:', {
-    'task?.area': task?.area,
-    'potentialReviewers length': potentialReviewers?.length,
-    'potentialReviewers[0]': potentialReviewers?.[0],
-    'invitations length': invitations?.length,
-  });
-  
   // Calcular recomendaciones
-   const recommendationResult = React.useMemo(() => {
-    const area = articleArea || task?.area || task?.submission?.area; // ✅ Usar articleArea primero
+  const recommendationResult = React.useMemo(() => {
+    const area = articleArea || task?.area || task?.submission?.area;
     
     if (!area || !potentialReviewers?.length) return null;
     
@@ -80,19 +72,10 @@ export const ReviewerManagementTab = ({
     });
   }, [articleArea, task?.area, potentialReviewers, invitations, language]);
     
-
   // Extraer datos para el renderizado
   const recommendations = recommendationResult?.recommendations || [];
   const fallbackActivated = recommendationResult?.fallbackActivated || false;
-  
-  // 🔍 DEBUG - También agrega esto
-  console.log('🔍 DEBUG renderizado:', {
-    recommendationsLength: recommendations.length,
-    fallbackActivated,
-    mostrarSeccion: recommendations.length > 0
-  });
 
-// Extraer datos para el renderizado
 
   const getStatusBadge = (status) => {
     const statusMap = {
