@@ -1007,6 +1007,7 @@ const tabRoutes = {
   'reviewer-tasks': 'reviewer-tasks',
   deskreview: 'deskreview',
   'reviewer-applications': 'reviewer-applications',
+  'reviewer-profile': 'reviewer-profile',
   assignment: 'assignment',
   calendar: 'calendar',
   submit: 'submit',
