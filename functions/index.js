@@ -1379,7 +1379,33 @@ function processAuthors(authorsInput) {
         const maxNumber = Math.max(...articles.map(a => a.numeroArticulo || 0));
         return maxNumber + 1;
       }
-
+// Después de la función getNextArticleNumber, agrega esta nueva función:
+async function getSubmissionLanguage(submissionId) {
+  if (!submissionId) {
+    console.log(`[${requestId}] ⚠️ No hay submissionId, no se puede obtener idioma`);
+    return 'es'; // Valor por defecto
+  }
+  
+  try {
+    const submissionDoc = await admin.firestore()
+      .collection('submissions')
+      .doc(submissionId)
+      .get();
+    
+    if (submissionDoc.exists) {
+      const data = submissionDoc.data();
+      const language = data.paperLanguage || 'es';
+      console.log(`[${requestId}] 📝 Idioma obtenido de submission ${submissionId}: ${language}`);
+      return language;
+    } else {
+      console.log(`[${requestId}] ⚠️ Submission ${submissionId} no encontrado`);
+      return 'es';
+    }
+  } catch (error) {
+    console.error(`[${requestId}] ❌ Error obteniendo idioma de submission:`, error.message);
+    return 'es'; // Valor por defecto en caso de error
+  }
+}
       const { articles: currentArticles, sha } = await getCurrentArticlesJson();
       let updatedArticles = [...currentArticles];
       let responseData = {};
@@ -1400,6 +1426,7 @@ function processAuthors(authorsInput) {
           titulo: article.titulo,
           tituloEnglish: article.tituloEnglish || '',
           doi: article.doi || '',
+          language: paperLanguage, 
           autores: authorsArray,
           resumen: article.resumen,
           abstract: article.abstract || '',
@@ -1484,6 +1511,10 @@ function processAuthors(authorsInput) {
         }
 
         const oldArticle = updatedArticles[index];
+         let paperLanguage = oldArticle.language;
+  if (!paperLanguage && oldArticle.submissionId) {
+    paperLanguage = await getSubmissionLanguage(oldArticle.submissionId);
+  }
         console.log(`[${requestId}] 📝 Editando artículo #${articleNumber}: ${oldArticle.titulo}`);
 
         let authorsArray;
@@ -1508,6 +1539,7 @@ function processAuthors(authorsInput) {
 
         const updatedArticle = {
           ...oldArticle,
+          language: paperLanguage || oldArticle.language || 'es',
           titulo: article.titulo || oldArticle.titulo,
           tituloEnglish: article.tituloEnglish !== undefined ? article.tituloEnglish : oldArticle.tituloEnglish,
           autores: authorsArray,
@@ -1653,7 +1685,7 @@ if (action === "publish") {
     if (!article?.titulo) {
       return res.status(400).json({ error: "Datos de artículo incompletos - título requerido" });
     }
-    
+      const paperLanguage = await getSubmissionLanguage(article.submissionId);
     const authorsArray = processAuthors(article.autores);
     articleNumber = await getNextArticleNumber(currentArticles);
     
@@ -1663,6 +1695,7 @@ if (action === "publish") {
       doi: article.doi || '',
       titulo: article.titulo,
       tituloEnglish: article.tituloEnglish || '',
+      language: paperLanguage, 
       autores: authorsArray,
       resumen: article.resumen || '',
       abstract: article.abstract || '',
@@ -1738,7 +1771,10 @@ if (action === "publish") {
     
     const index = updatedArticles.findIndex(a => String(a.numeroArticulo) === String(articleNumber));
     const oldArticle = updatedArticles[index];
-    
+      let paperLanguage = oldArticle.language;
+  if (!paperLanguage && oldArticle.submissionId) {
+    paperLanguage = await getSubmissionLanguage(oldArticle.submissionId);
+  }
     let authorsArray;
     if (article.autores) {
       authorsArray = processAuthors(article.autores);
@@ -1748,6 +1784,7 @@ if (action === "publish") {
     
     const updatedArticle = {
       ...oldArticle,
+      language: paperLanguage || oldArticle.language || 'es',
       titulo: article.titulo || oldArticle.titulo,
       tituloEnglish: article.tituloEnglish !== undefined ? article.tituloEnglish : oldArticle.tituloEnglish,
       doi: article.doi !== undefined ? article.doi : oldArticle.doi,

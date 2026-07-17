@@ -51,10 +51,7 @@ export const ReviewerManagementTab = ({
   const isSpanish = language === 'es';
   const [expandedReview, setExpandedReview] = useState(null);
   
-  const submittedCount = submittedReviews.length;
-  const requiredReviews = task?.requiredReviews || 2;
-  const canProceed = submittedCount >= requiredReviews;
-  // Calcular recomendaciones
+  
     const submittedCount = submittedReviews.length;
   const requiredReviews = task?.requiredReviews || 2;
   const canProceed = submittedCount >= requiredReviews;
