@@ -447,142 +447,208 @@ export const ReviewerManagementTab = ({
         
         <div className="p-0 sm:p-6 grid grid-cols-1 gap-6">
           
-          {/* Bloque AI Recommendations (Solo si hay) */}
-          {recommendations.length > 0 && (
-            <div className="border border-slate-200 rounded-sm overflow-hidden bg-white">
-              <div className="bg-[#F8FAFC] border-b border-slate-200 px-5 py-3 flex justify-between items-center">
-                <h5 className="text-xs font-bold uppercase tracking-widest text-slate-600">
-                  {isSpanish ? 'Revisores Recomendados' : 'Recommended Reviewers'}
-                </h5>
-                {recommendationResult?.matchDistribution && (
-                  <div className="hidden sm:flex gap-1.5">
-                    {recommendationResult.matchDistribution.exact > 0 && <span className="text-[9px] bg-emerald-50 text-emerald-700 px-1.5 border border-emerald-200 rounded-sm">{recommendationResult.matchDistribution.exact} exacto</span>}
-                    {recommendationResult.matchDistribution.category > 0 && <span className="text-[9px] bg-sky-50 text-sky-700 px-1.5 border border-sky-200 rounded-sm">{recommendationResult.matchDistribution.category} categoria</span>}
-                    {recommendationResult.matchDistribution.related > 0 && <span className="text-[9px] bg-amber-50 text-amber-700 px-1.5 border border-amber-200 rounded-sm">{recommendationResult.matchDistribution.related} afin</span>}
-                    {recommendationResult.matchDistribution.fallback > 0 && <span className="text-[9px] bg-slate-50 text-slate-500 px-1.5 border border-slate-200 rounded-sm">{recommendationResult.matchDistribution.fallback} general</span>}
-                  </div>
-                )}
-              </div>
-              <p className="text-xs text-slate-500 mt-1 px-5 py-2 font-sans bg-[#F8FAFC] border-b border-slate-100">
-                {isSpanish 
-                  ? 'Basado en coincidencia temática, rendimiento histórico y disponibilidad actual'
-                  : 'Based on thematic matching, historical performance and current availability'}
-              </p>
-              
-              <div className="divide-y divide-slate-100">
-                {recommendations.map((reviewer) => {
-                  const isSelected = selectedReviewerId === reviewer.id;
-                  const scoreColor = reviewer.compositeScore >= 0.8 ? 'bg-[#10B981]' : reviewer.compositeScore >= 0.65 ? 'bg-[#007398]' : 'bg-[#FF7900]';
-                  
-                  return (
-                    <div
-                      key={reviewer.id}
-                      onClick={() => setSelectedReviewerId(reviewer.id)}
-                      className={`p-4 cursor-pointer transition-all flex items-start gap-4 hover:bg-slate-50 ${
-                        isSelected ? 'bg-blue-50/30' : ''
-                      }`}
-                    >
-                      {/* Radio Selector UI */}
-                      <div className="pt-1">
-                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
-                          isSelected ? 'border-[#FF7900] bg-[#FF7900]' : 'border-slate-300 bg-white'
-                        }`}>
-                          {isSelected && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
-                        </div>
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={`font-serif font-bold text-base truncate ${isSelected ? 'text-[#002B49]' : 'text-slate-700'}`}>
-                            {reviewer.displayName}
-                          </span>
-                          <span className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-600 uppercase tracking-wider rounded-sm">
-                            {reviewer.tierLabel}
-                          </span>
-                        </div>
-                        
-                        <div className="text-xs text-slate-500 font-mono mb-2 truncate">
-                          {reviewer.email} {reviewer.institution && <span className="text-slate-400 font-sans ml-1">| {reviewer.institution}</span>}
-                        </div>
-                        
-                        {/* Thin Score Bar */}
-                        <div className="max-w-xs mt-2 mb-3">
-                          <div className="flex justify-between text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1">
-                            <span>{isSpanish ? 'Puntuación' : 'Score'}</span>
-                            <span className="font-bold text-[#003b5c]">{Math.round(reviewer.compositeScore * 100)}%</span>
-                          </div>
-                          <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                            <motion.div
-                              initial={{ width: 0 }}
-                              animate={{ width: `${reviewer.compositeScore * 100}%` }}
-                              className={`h-full ${scoreColor}`}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Score Breakdown Tooltip */}
-                        <div className="flex flex-wrap gap-2 mb-2">
-                          {reviewer.scores && Object.entries(reviewer.scores).map(([key, value]) => (
-                            <span key={key} className="text-[9px] bg-slate-50 px-2 py-0.5 text-slate-500 uppercase tracking-wider rounded-sm">
-                              {key}: {Math.round(value * 100)}%
-                            </span>
-                          ))}
-                          {reviewer.isParetoOptimal && (
-                            <span className="text-[9px] bg-amber-50 text-amber-700 px-2 py-0.5 border border-amber-200 uppercase tracking-wider rounded-sm">
-                              Pareto
-                            </span>
-                          )}
-                        </div>
-                        
-                        {/* Metadatos AI */}
-                        <div className="flex flex-wrap gap-1.5">
-                          {reviewer.recommendationReasons.map((reason, idx) => (
-                            <span key={idx} className="text-[10px] bg-[#FBF9F3] text-[#003b5c] px-2 py-0.5 border border-[#C0A86A]/20 rounded-sm">
-                              {reason}
-                            </span>
-                          ))}
-                          {/* Indicador de exploracion (nuevo revisor) */}
-                          {(reviewer.stats?.totalReviewsCompleted || 0) < 3 && (
-                            <span className="text-[9px] bg-purple-50 text-purple-700 px-2 py-0.5 border border-purple-200 uppercase tracking-wider rounded-sm">
-                              {isSpanish ? 'Exploracion' : 'Exploration'}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Stats Mini */}
-                        <div className="flex gap-4 mt-3 text-[10px] text-slate-400">
-                          <span>
-                            {isSpanish ? 'Revisiones: ' : 'Reviews: '}
-                            <strong className="text-slate-600">{reviewer.stats?.totalReviewsCompleted || 0}</strong>
-                          </span>
-                          <span>
-                            {isSpanish ? 'Puntualidad: ' : 'On-time: '}
-                            <strong className="text-slate-600">{reviewer.stats?.onTimeRate || 100}%</strong>
-                          </span>
-                          <span>
-                            {isSpanish ? 'Carga: ' : 'Load: '}
-                            <strong className="text-slate-600">
-                              {reviewer.availability?.currentActiveReviews || 0}/{reviewer.availability?.maxActiveReviews || 3}
-                            </strong>
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              {fallbackActivated && (
-                <div className="px-6 py-3 bg-amber-50 border-t border-amber-200">
-                  <p className="text-xs text-amber-800 flex items-center gap-2">
-                    <Icons.Alert />
-                    {isSpanish
-                      ? 'No se encontraron revisores con coincidencia exacta. Mostrando los mejores perfiles en la categoría macro.'
-                      : 'No reviewers with exact match found. Showing best profiles in the broader category.'}
-                  </p>
-                </div>
-              )}
+          {/* ==================== MOTOR DE RECOMENDACIÓN INTELIGENTE (AI) ==================== */}
+{recommendations.length > 0 && (
+  <div className="border border-slate-200 rounded-sm bg-white shadow-sm mb-8 overflow-hidden">
+    
+    {/* Cabecera del Motor - Contexto Claro para el Editor */}
+    <div className="bg-gradient-to-r from-[#002B49] to-[#004B7F] px-6 py-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div>
+        <div className="flex items-center gap-2 mb-1.5">
+          <Icons.AI />
+          <h4 className="font-serif font-bold text-white text-lg tracking-wide">
+            {isSpanish ? 'Motor de Recomendación de Pares' : 'Peer Recommendation Engine'}
+          </h4>
+        </div>
+        <p className="text-white/70 text-xs font-sans max-w-xl leading-relaxed">
+          {isSpanish 
+            ? 'Candidatos óptimos seleccionados algorítmicamente en base a afinidad temática, carga editorial actual y rendimiento histórico.'
+            : 'Optimal candidates algorithmically selected based on thematic affinity, current editorial workload, and historical performance.'}
+        </p>
+      </div>
+      
+      {/* Resumen de Resultados de Búsqueda (Contexto de los datos) */}
+      {recommendationResult?.matchDistribution && (
+        <div className="flex gap-4 bg-[#001D33]/40 p-3 rounded-sm border border-white/10 shadow-inner">
+          {recommendationResult.matchDistribution.exact > 0 && (
+            <div className="text-center border-r border-white/10 pr-4 last:border-0 last:pr-0">
+              <span className="block text-white font-serif font-bold text-lg leading-none">{recommendationResult.matchDistribution.exact}</span>
+              <span className="block text-[9px] uppercase tracking-widest text-[#10B981] mt-1">{isSpanish ? 'Coincidencia Exacta' : 'Exact Match'}</span>
             </div>
           )}
+          {recommendationResult.matchDistribution.category > 0 && (
+            <div className="text-center border-r border-white/10 pr-4 last:border-0 last:pr-0">
+              <span className="block text-white font-serif font-bold text-lg leading-none">{recommendationResult.matchDistribution.category}</span>
+              <span className="block text-[9px] uppercase tracking-widest text-[#60A5FA] mt-1">{isSpanish ? 'Categoría Macro' : 'Macro Category'}</span>
+            </div>
+          )}
+          {recommendationResult.matchDistribution.related > 0 && (
+            <div className="text-center border-r border-white/10 pr-4 last:border-0 last:pr-0">
+              <span className="block text-white font-serif font-bold text-lg leading-none">{recommendationResult.matchDistribution.related}</span>
+              <span className="block text-[9px] uppercase tracking-widest text-[#FBBF24] mt-1">{isSpanish ? 'Afinidad' : 'Related'}</span>
+            </div>
+          )}
+          {recommendationResult.matchDistribution.fallback > 0 && (
+            <div className="text-center last:border-0 last:pr-0">
+              <span className="block text-white font-serif font-bold text-lg leading-none">{recommendationResult.matchDistribution.fallback}</span>
+              <span className="block text-[9px] uppercase tracking-widest text-slate-400 mt-1">{isSpanish ? 'General' : 'Fallback'}</span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+
+    {/* Notificación de Fallback (Si no hubo matches exactos, el editor debe saber por qué ve a estas personas) */}
+    {fallbackActivated && (
+      <div className="bg-[#FFFDF5] border-b border-[#E4852A]/20 px-6 py-3 flex items-start gap-3">
+        <svg className="w-4 h-4 text-[#C75A00] flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <p className="text-[11px] text-[#994500] font-medium leading-relaxed uppercase tracking-wider">
+          {isSpanish
+            ? 'No se hallaron coincidencias exactas con disponibilidad inmediata. El sistema ha expandido la búsqueda a perfiles destacados de la categoría disciplinaria superior.'
+            : 'No exact matches with immediate availability found. The system has expanded the search to top profiles in the broader disciplinary category.'}
+        </p>
+      </div>
+    )}
+
+    {/* Lista de Recomendaciones (UI estilo Formulario de Selección) */}
+    <div className="divide-y divide-slate-100">
+      {recommendations.map((reviewer) => {
+        const isSelected = selectedReviewerId === reviewer.id;
+        const scorePercent = Math.round(reviewer.compositeScore * 100);
+        // Semántica de colores para el score
+        const scoreColor = scorePercent >= 80 ? 'bg-[#10B981]' : scorePercent >= 65 ? 'bg-[#007398]' : 'bg-[#FF7900]';
+        const scoreText = scorePercent >= 80 ? 'text-[#10B981]' : scorePercent >= 65 ? 'text-[#007398]' : 'text-[#FF7900]';
+
+        return (
+          <div
+            key={reviewer.id}
+            onClick={() => setSelectedReviewerId(reviewer.id)}
+            className={`px-6 py-5 cursor-pointer transition-all flex flex-col md:flex-row gap-6 relative group ${
+              isSelected ? 'bg-[#F4F7F9]' : 'hover:bg-slate-50/70'
+            }`}
+          >
+            {/* Indicador visual agresivo para la selección (Barra lateral naranja) */}
+            {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#FF7900]" />}
+
+            {/* COLUMNA 1: Identidad y Selección (Radio button estilo UX clásico) */}
+            <div className="flex md:w-4/12 gap-4 items-start">
+              <div className="pt-1 flex-shrink-0">
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors shadow-sm ${
+                  isSelected ? 'border-[#FF7900] bg-[#FF7900]' : 'border-slate-300 bg-white group-hover:border-[#003B5C]/50'
+                }`}>
+                  {isSelected && <div className="w-2 h-2 bg-white rounded-full" />}
+                </div>
+              </div>
+              
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-sm ${
+                    reviewer.rank === 1 ? 'bg-[#FF7900] text-white' : 'bg-slate-200 text-slate-500'
+                  }`}>
+                    #{reviewer.rank}
+                  </span>
+                  <h4 className={`font-serif text-base truncate transition-colors ${isSelected ? 'font-bold text-[#002B49]' : 'font-semibold text-slate-800'}`}>
+                    {reviewer.displayName}
+                  </h4>
+                </div>
+                <p className="text-xs text-slate-500 font-mono truncate mb-1">
+                  {reviewer.email}
+                </p>
+                {reviewer.institution && (
+                  <p className="text-[10px] text-slate-400 uppercase tracking-widest truncate flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                    {reviewer.institution}
+                  </p>
+                )}
+                <span className="inline-block mt-1.5 text-[10px] px-2 py-0.5 bg-slate-100 text-slate-600 uppercase tracking-wider rounded-sm">
+                  {reviewer.tierLabel}
+                </span>
+              </div>
+            </div>
+
+            {/* COLUMNA 2: Afinidad y Métricas de Rendimiento */}
+            <div className="md:w-3/12 flex flex-col justify-center border-t md:border-t-0 md:border-l border-slate-200 pt-4 md:pt-0 md:pl-6">
+              <div className="mb-4">
+                <div className="flex justify-between items-end mb-1">
+                  <span className="text-[10px] uppercase tracking-widest font-bold text-slate-500">
+                    {isSpanish ? 'Índice de Afinidad' : 'Affinity Index'}
+                  </span>
+                  <span className={`text-sm font-bold leading-none ${scoreText}`}>{scorePercent}%</span>
+                </div>
+                <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                  <div className={`h-full ${scoreColor}`} style={{ width: `${scorePercent}%` }} />
+                </div>
+              </div>
+              
+              {/* Score Breakdown */}
+              {reviewer.scores && (
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  {Object.entries(reviewer.scores).map(([key, value]) => (
+                    <span key={key} className="text-[9px] bg-slate-50 px-1.5 py-0.5 text-slate-500 uppercase tracking-wider rounded-sm border border-slate-200">
+                      {key}: {Math.round(value * 100)}%
+                    </span>
+                  ))}
+                  {reviewer.isParetoOptimal && (
+                    <span className="text-[9px] bg-amber-50 text-amber-700 px-1.5 py-0.5 border border-amber-200 uppercase tracking-wider rounded-sm">
+                      Pareto
+                    </span>
+                  )}
+                </div>
+              )}
+              
+              <div className="flex items-center justify-between text-[10px]">
+                <div className="bg-white border border-slate-200 px-2 py-1 rounded-sm shadow-sm flex flex-col items-center">
+                  <span className="text-slate-400 uppercase tracking-wider mb-0.5">{isSpanish ? 'Carga' : 'Load'}</span>
+                  <span className="font-mono font-bold text-[#002B49]">{reviewer.availability?.currentActiveReviews || 0}/{reviewer.availability?.maxActiveReviews || 3}</span>
+                </div>
+                <div className="bg-white border border-slate-200 px-2 py-1 rounded-sm shadow-sm flex flex-col items-center">
+                  <span className="text-slate-400 uppercase tracking-wider mb-0.5">{isSpanish ? 'Puntualidad' : 'On-Time'}</span>
+                  <span className="font-mono font-bold text-[#002B49]">{reviewer.stats?.onTimeRate || 100}%</span>
+                </div>
+                <div className="bg-white border border-slate-200 px-2 py-1 rounded-sm shadow-sm flex flex-col items-center">
+                  <span className="text-slate-400 uppercase tracking-wider mb-0.5">{isSpanish ? 'Completadas' : 'Done'}</span>
+                  <span className="font-mono font-bold text-[#002B49]">{reviewer.stats?.totalReviewsCompleted || 0}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* COLUMNA 3: Justificación Cualitativa de la IA (Insights) */}
+            <div className="md:w-5/12 flex flex-col justify-center border-t md:border-t-0 md:border-l border-slate-200 pt-4 md:pt-0 md:pl-6">
+              <span className="text-[9px] uppercase tracking-widest font-bold text-[#002B49] mb-2.5 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 bg-[#FF7900] rounded-full"></span>
+                {isSpanish ? 'Justificación del Sistema' : 'System Rationale'}
+              </span>
+              
+              <ul className="space-y-2">
+                {reviewer.recommendationReasons.map((reason, idx) => (
+                  <li key={idx} className="flex items-start gap-2 text-xs text-slate-600 leading-tight font-serif">
+                    <svg className="w-3 h-3 text-[#10B981] flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                    {reason}
+                  </li>
+                ))}
+                
+                {/* Etiqueta de Exploración si el revisor es nuevo (evita quemar siempre a los mismos) */}
+                {(reviewer.stats?.totalReviewsCompleted || 0) < 3 && (
+                  <li className="flex items-start gap-2 text-[11px] text-[#007398] leading-tight font-sans font-medium uppercase tracking-wider mt-2">
+                    <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    {isSpanish ? 'Perfil en desarrollo (Aporta diversidad al panel)' : 'Developing profile (Adds diversity to panel)'}
+                  </li>
+                )}
+              </ul>
+            </div>
+
+          </div>
+        );
+      })}
+    </div>
+  </div>
+)}
 
           {/* Buscador Manual */}
           <div className="border border-slate-200 rounded-sm bg-white overflow-hidden">
