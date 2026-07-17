@@ -36,6 +36,7 @@ export const decodeBase64IfNeeded = (text) => {
 
 export const ReviewerManagementTab = ({
   task,
+  articleArea,
   invitations,
   potentialReviewers,
   selectedReviewerId,
@@ -65,34 +66,20 @@ export const ReviewerManagementTab = ({
   });
   
   // Calcular recomendaciones
-  const recommendationResult = React.useMemo(() => {
-    console.log('🔍 DEBUG useMemo - calculando recomendaciones:', {
-      area: task?.area,
-      reviewersCount: potentialReviewers?.length,
-      hasArea: !!task?.area,
-      hasReviewers: !!potentialReviewers?.length
-    });
+   const recommendationResult = React.useMemo(() => {
+    const area = articleArea || task?.area || task?.submission?.area; // ✅ Usar articleArea primero
     
-    if (!task?.area || !potentialReviewers?.length) return null;
+    if (!area || !potentialReviewers?.length) return null;
     
-    const result = getRecommendedReviewers({
-      articleArea: task.area,
+    return getRecommendedReviewers({
+      articleArea: area,
       potentialReviewers: potentialReviewers,
       existingInvitations: invitations || [],
       maxRecommendations: 5,
       language: language
     });
+  }, [articleArea, task?.area, potentialReviewers, invitations, language]);
     
-    console.log('🔍 DEBUG resultado getRecommendedReviewers:', {
-      totalEligible: result?.totalEligible,
-      recommendationsCount: result?.recommendations?.length,
-      fallbackActivated: result?.fallbackActivated,
-      articleCategory: result?.articleCategory,
-      firstRecommendation: result?.recommendations?.[0]
-    });
-    
-    return result;
-  }, [task?.area, potentialReviewers, invitations, language]);
 
   // Extraer datos para el renderizado
   const recommendations = recommendationResult?.recommendations || [];

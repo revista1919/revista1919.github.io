@@ -1038,6 +1038,7 @@ useEffect(() => {
           {activeTab === 'reviewers' && (
             <ReviewerManagementTab
               task={task}
+              articleArea={articleArea}
               invitations={invitations}
               potentialReviewers={potentialReviewers}
               selectedReviewerId={selectedReviewerId}
@@ -1048,14 +1049,7 @@ useEffect(() => {
               onProceedToDecision={onProceedToDecision}
               loading={inviteLoading || isConsolidating}
               submittedReviews={submittedReviews}
-               recommendations={getRecommendedReviewers({
-    articleArea: task?.area,
-    potentialReviewers: potentialReviewers,
-    existingInvitations: invitations,
-    maxRecommendations: 5,
-    language: language
-  })}
-/>
+            />
           )}
 
           {/* PESTAÑA: DECISIÓN FINAL */}
