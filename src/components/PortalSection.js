@@ -1311,7 +1311,7 @@ const handleTabChange = (tabId, event) => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 bg-[#f4f5f7] min-h-screen font-sans">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 bg-white min-h-screen font-sans">
       
       {/* HEADER EDITORIAL */}
       <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between border-b-2 border-gray-300 pb-8">
