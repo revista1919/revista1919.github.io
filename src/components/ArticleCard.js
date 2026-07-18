@@ -156,10 +156,10 @@ const renderAuthorsWithIcons = (authors, language = 'es') => {
     const slug = generateSlug(name);
     
     return (
-      <span key={i} className="inline-flex items-center text-[13px] md:text-sm text-[#002B49] font-medium mr-1.5">
+      <span key={i} className="inline-flex items-center gap-1">
         <span
           onClick={(e) => { e.stopPropagation(); window.location.href = `/team/${slug}.html`; }}
-          className="hover:text-[#007398] hover:underline cursor-pointer transition-colors"
+          className="text-gray-800 hover:text-[#007398] hover:underline cursor-pointer font-medium"
         >
           {name}
         </span>
@@ -171,7 +171,7 @@ const renderAuthorsWithIcons = (authors, language = 'es') => {
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="ml-1 text-[#A6CE39] hover:opacity-80"
+            className="inline-block ml-0.5 text-[#A6CE39] hover:opacity-80"
             title="ORCID"
           >
             <svg className="w-3.5 h-3.5" viewBox="0 0 256 256">
@@ -179,7 +179,7 @@ const renderAuthorsWithIcons = (authors, language = 'es') => {
               <g fill="#FFFFFF">
                 <rect x="71" y="78" width="17" height="102"/>
                 <circle cx="79.5" cy="56" r="11"/>
-                <path d="M103 78 v102 h41.5 c28.2 0 51-22.8 51-51 s-22.8-51-51-51 H103 zm17 17 h24.5 c18.8 0 34 15.2 34 34 s-15.2 34-34 34 H120 V95 z" fillRule="evenodd"/>
+                <path d="M103 78 v102 h41.5 c28.2 0 51-22.8 51-51 s-22.8-51-51-51 H103 zm17 17 h24.5 c18.8 0 34 15.2 34 34 s-15.2 34-34 34 H120 V95 z" fill-rule="evenodd"/>
               </g>
             </svg>
           </a>
@@ -190,16 +190,17 @@ const renderAuthorsWithIcons = (authors, language = 'es') => {
           <a
             href={`mailto:${author.email}`}
             onClick={(e) => e.stopPropagation()}
-            className="ml-1 text-slate-400 hover:text-[#007398]"
+            className="inline-block ml-0.5 text-gray-400 hover:text-[#007398]"
             title="Email"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
             </svg>
           </a>
         )}
         
-        {i < authorsArray.length - 1 && <span className="text-slate-400 ml-0.5">,</span>}
+        {i < authorsArray.length - 1 && <span className="text-gray-400 mr-1">,</span>}
       </span>
     );
   });
@@ -283,18 +284,21 @@ function ArticleCard({ article }) {
   };
 
   const toggleExpand = (e) => {
-    const isInteractive = e.target.closest('a, button, .interactive-zone');
-    if (!isInteractive) setIsExpanded(!isExpanded);
+    const tag = e.target.tagName.toLowerCase();
+    const isInteractive = ['a', 'button', 'span'].includes(tag) || e.target.closest('a, button, span');
+    if (!isInteractive) {
+      setIsExpanded(!isExpanded);
+    }
   };
 
   if (!article || Object.keys(article).length === 0) {
     return (
-      <motion.div
-        className="group relative bg-white border border-gray-200 rounded-sm p-6 mb-6 hover:shadow-md transition-all duration-300"
+      <motion.article
+        className="py-8 md:py-10 border-b border-gray-200 last:border-0 group transition-colors hover:bg-gray-50/40 px-2 sm:px-6"
         layout
       >
         <p className="text-center text-gray-500 font-medium">No se encontraron datos para este artículo.</p>
-      </motion.div>
+      </motion.article>
     );
   }
 
@@ -307,198 +311,189 @@ function ArticleCard({ article }) {
 
   /* --------------------------- RENDER PRINCIPAL --------------------------- */
   return (
-    <article 
+    // Diseño tipo lista Elsevier: padding generoso, sin caja completa, separador inferior sutil
+    <motion.article 
+      layout 
       onClick={toggleExpand}
-      className={`group py-6 transition-colors duration-200 cursor-pointer ${isExpanded ? 'bg-[#F8FAFC]' : 'hover:bg-slate-50/50'}`}
+      className="py-8 md:py-10 border-b border-gray-200 last:border-0 group transition-colors hover:bg-gray-50/40 px-2 sm:px-6 cursor-pointer"
     >
-      <div className="px-2 md:px-6">
+      <div className="flex flex-col gap-3">
         
-        {/* Metadatos Superiores */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-sans text-slate-500 mb-2.5">
-          <span className="uppercase tracking-widest font-bold text-[#007398]">{article.area || 'Artículo'}</span>
-          <span className="hidden sm:inline text-slate-300">|</span>
-          <span className="uppercase tracking-wider">Vol. {article.volumen}, Núm. {article.numero} ({getYear(article.fecha)})</span>
-          {pages && (
-            <>
-              <span className="hidden sm:inline text-slate-300">|</span>
-              <span className="uppercase tracking-wider">pp. {pages}</span>
-            </>
-          )}
+        {/* Encabezado de Metadatos (Academic Style) */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] uppercase tracking-widest font-semibold text-gray-500">
+          <span className="text-[#007398]">{tipo}</span>
+          <span className="w-1 h-1 rounded-full bg-gray-300"></span>
+          <span>Vol. {article.volumen}, No. {article.numero}</span>
+          <span className="w-1 h-1 rounded-full bg-gray-300"></span>
+          <span>{getYear(article.fecha)}</span>
         </div>
 
-        {/* Título Principal */}
-        <a href={htmlUrlEs} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="interactive-zone block mb-2">
-          <h3 className="font-serif text-xl md:text-[22px] font-semibold text-[#002B49] leading-snug group-hover:text-[#007398] transition-colors">
+        {/* Título: Elegante, Serif, Gran Tamaño */}
+        <a 
+          href={htmlUrlEs} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="block w-full max-w-4xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <h3 className="font-serif text-xl md:text-3xl text-gray-900 leading-snug font-medium transition-colors hover:text-[#007398]">
             {article.titulo}
           </h3>
         </a>
 
         {/* Autores */}
-        <div className="mb-3 leading-relaxed interactive-zone">
+        <div className="flex flex-wrap items-center gap-x-1 text-sm md:text-base text-gray-700 mt-1" onClick={(e) => e.stopPropagation()}>
           {renderAuthorsWithIcons(article?.autores)}
         </div>
 
-        {/* Action Bar Rápido (Estado Colapsado) */}
+        {/* Resumen recortado (vista colapsada) */}
         {!isExpanded && (
-          <div className="flex items-center gap-4 mt-4 interactive-zone">
-            {pdfUrl && (
-              <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-red-600 hover:text-red-700 transition-colors">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M7 3v18h10V8l-5-5H7zm3 5h2v2h-2V8zm0 3h2v2h-2v-2zm0 3h2v2h-2v-2z" /></svg>
-                PDF
-              </a>
-            )}
-            <a href={htmlUrlEs} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-[#007398] hover:text-[#004B7F] transition-colors">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-              HTML
-            </a>
-            <button onClick={() => setIsExpanded(true)} className="ml-auto text-xs font-bold text-slate-400 uppercase tracking-widest hover:text-[#002B49] flex items-center gap-1">
-              Ver Abstract <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-            </button>
-          </div>
+          <p className="font-serif text-gray-600 text-sm md:text-base leading-relaxed line-clamp-3 max-w-5xl mt-2">
+            {abstractToShow}
+          </p>
         )}
 
-        {/* Contenido Expandido */}
+        {/* Botones de acción en línea (Estilo T&F) */}
+        <div className="flex flex-wrap items-center gap-6 mt-4 pt-2" onClick={(e) => e.stopPropagation()}>
+          {pdfUrl && (
+            <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-semibold text-[#007398] hover:text-[#005a77] transition-colors">
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+              Descargar PDF
+            </a>
+          )}
+          <a href={htmlUrlEs} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-[#007398] transition-colors">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+            Ver Texto Completo
+          </a>
+          {article.tituloEnglish && (
+            <a href={htmlUrlEn} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-[#007398] transition-colors">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m0 4v2" /></svg>
+              English Version
+            </a>
+          )}
+          <button onClick={() => setIsExpanded(!isExpanded)} className="flex items-center gap-1 text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors ml-auto">
+            {isExpanded ? 'Menos detalles' : 'Más detalles'}
+            <svg className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+          </button>
+        </div>
+
+        {/* Contenido Expandible: Diseño académico limpio */}
         <AnimatePresence>
           {isExpanded && (
-            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden interactive-zone">
-              <div className="pt-5 mt-4 border-t border-slate-200">
+            <motion.div 
+              initial={{ height: 0, opacity: 0 }} 
+              animate={{ height: 'auto', opacity: 1 }} 
+              exit={{ height: 0, opacity: 0 }} 
+              className="overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mt-6 pt-6 border-t border-gray-200">
                 
-                {/* Abstract */}
-                <div className="mb-6">
-                  <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Resumen</h4>
-                  <p className="text-sm md:text-[15px] text-slate-700 font-serif leading-relaxed text-justify">
+                {/* Fechas en línea plana (Academic string) */}
+                <div className="text-xs text-gray-500 font-medium tracking-wide mb-6">
+                  {article.receivedDate && <span>Recibido: {parseDateFlexible(article.receivedDate)} <span className="mx-2 text-gray-300">|</span> </span>}
+                  {article.acceptedDate && <span>Aceptado: {parseDateFlexible(article.acceptedDate)} <span className="mx-2 text-gray-300">|</span> </span>}
+                  <span>Publicado: {parseDateFlexible(article.fecha)}</span>
+                  <span className="mx-2 text-gray-300">|</span>
+                  <span>Páginas: {pages || 'N/A'}</span>
+                  <span className="mx-2 text-gray-300">|</span>
+                  <span>ISSN 3087-2839</span>
+                </div>
+
+                <div className="max-w-4xl">
+                  <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Abstract</h4>
+                  <p className="text-base text-gray-800 leading-relaxed font-serif text-justify mb-6">
                     {abstractToShow}
                   </p>
+
                   {article.abstract && article.abstract !== article.resumen && (
-                    <div className="border-l-2 border-blue-100 pl-4 py-1 mt-4">
-                      <button
-                        onClick={() => setShowEnglishAbstract(!showEnglishAbstract)}
-                        className="text-[#007398] text-[10px] font-bold uppercase tracking-tighter"
+                    <div className="mb-6">
+                      <button 
+                        onClick={() => setShowEnglishAbstract(!showEnglishAbstract)} 
+                        className="text-[#007398] text-xs font-bold uppercase tracking-wider hover:underline flex items-center gap-1"
                       >
-                        {showEnglishAbstract ? '↓ Ocultar Abstract' : '→ Read English Abstract'}
+                        {showEnglishAbstract ? 'Ocultar Abstract Original' : 'Leer Abstract en Inglés'}
                       </button>
                       {showEnglishAbstract && (
-                        <p className="mt-2 text-sm text-gray-600 italic font-serif leading-relaxed">
+                        <p className="mt-3 text-base text-gray-600 font-serif leading-relaxed text-justify">
                           {article.abstract}
                         </p>
                       )}
                     </div>
                   )}
-                </div>
 
-                {/* Keywords */}
-                {article.palabras_clave && article.palabras_clave.length > 0 && (
-                  <div className="mb-6 flex flex-wrap items-center gap-2">
-                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mr-2">Palabras Clave:</span>
-                    {article.palabras_clave.map((kw, idx) => (
-                      <span key={idx} className="bg-white border border-slate-200 text-xs text-slate-600 px-2.5 py-1 rounded-full">
-                        {kw}
-                      </span>
-                    ))}
-                  </div>
-                )}
+                  {/* Keywords limpios, sin cajas */}
+                  {article.palabras_clave && article.palabras_clave.length > 0 && (
+                    <div className="mb-6 text-sm">
+                      <span className="font-bold text-gray-900 mr-2">Palabras clave:</span>
+                      <span className="text-gray-700 italic">{article.palabras_clave.join(', ')}</span>
+                    </div>
+                  )}
 
-                {/* Keywords en inglés si existen */}
-                {article.keywords_english && article.keywords_english.length > 0 && (
-                  <div className="mb-6 flex flex-wrap items-center gap-2">
-                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mr-2">Keywords:</span>
-                    {article.keywords_english.map((kw, idx) => (
-                      <span key={idx} className="bg-white border border-slate-200 text-xs text-slate-600 px-2.5 py-1 rounded-full">
-                        {kw}
-                      </span>
-                    ))}
-                  </div>
-                )}
+                  {/* Keywords en inglés si existen */}
+                  {article.keywords_english && article.keywords_english.length > 0 && (
+                    <div className="mb-6 text-sm">
+                      <span className="font-bold text-gray-900 mr-2">Keywords:</span>
+                      <span className="text-gray-700 italic">{article.keywords_english.join(', ')}</span>
+                    </div>
+                  )}
 
-                {/* Información adicional (opcional) */}
-                {(article.funding || article.conflicts) && (
-                  <div className="text-[10px] text-gray-500 mb-6">
-                    {article.funding && (
-                      <p><strong>Financiación:</strong> {article.funding}</p>
-                    )}
-                    {article.conflicts && (
-                      <p className="mt-1"><strong>Conflictos de interés:</strong> {article.conflicts}</p>
-                    )}
-                  </div>
-                )}
+                  {/* Información adicional (opcional) */}
+                  {(article.funding || article.conflicts) && (
+                    <div className="mb-6 text-sm text-gray-600">
+                      {article.funding && (
+                        <p className="mb-1"><strong className="text-gray-900">Financiación:</strong> {article.funding}</p>
+                      )}
+                      {article.conflicts && (
+                        <p><strong className="text-gray-900">Conflictos de interés:</strong> {article.conflicts}</p>
+                      )}
+                    </div>
+                  )}
 
-                {/* Fechas de recepción/aceptación si existen */}
-                {(article.receivedDate || article.acceptedDate) && (
-                  <div className="grid grid-cols-2 gap-4 text-[11px] md:text-sm mb-6">
-                    {article.receivedDate && (
-                      <div className="bg-gray-50 p-2 rounded">
-                        <span className="block text-gray-400 uppercase text-[9px] font-bold">Recibido</span>
-                        <span className="font-medium">{parseDateFlexible(article.receivedDate)}</span>
-                      </div>
-                    )}
-                    {article.acceptedDate && (
-                      <div className="bg-gray-50 p-2 rounded">
-                        <span className="block text-gray-400 uppercase text-[9px] font-bold">Aceptado</span>
-                        <span className="font-medium">{parseDateFlexible(article.acceptedDate)}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Bottom Action Bar */}
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white border border-slate-200 p-4 rounded-sm shadow-sm">
-                  <div className="flex gap-4">
-                    {pdfUrl && (
-                      <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-red-50 text-red-700 border border-red-100 hover:bg-red-100 text-[11px] font-bold uppercase tracking-widest transition-colors flex items-center gap-2">
-                        PDF Completo
-                      </a>
-                    )}
-                    <a href={htmlUrlEs} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-[#F3F7F9] text-[#007398] border border-[#EBF4F7] hover:bg-[#EBF4F7] text-[11px] font-bold uppercase tracking-widest transition-colors">
-                      HTML
-                    </a>
-                    {article.tituloEnglish && (
-                      <a
-                        href={htmlUrlEn}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-4 py-2 bg-[#F3F7F9] text-gray-500 border border-gray-200 hover:bg-gray-100 text-[11px] font-bold uppercase tracking-widest transition-colors"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        ENGLISH
-                      </a>
-                    )}
-                    <button onClick={() => setShowCitations(!showCitations)} className="px-4 py-2 border border-slate-300 text-slate-700 hover:bg-slate-50 text-[11px] font-bold uppercase tracking-widest transition-colors">
-                      Citar
+                  {/* Botón para Citar */}
+                  <div className="mt-8 pt-6 border-t border-gray-100">
+                    <button 
+                      onClick={() => setShowCitations(!showCitations)} 
+                      className="px-4 py-2 bg-gray-100 text-gray-800 text-xs font-bold uppercase tracking-wider hover:bg-gray-200 transition-colors flex items-center gap-2 rounded-sm"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+                      Citar este artículo
                     </button>
-                  </div>
-                  <span className="text-[10px] text-slate-400 uppercase tracking-widest font-mono">
-                    ISSN 3087-2839
-                  </span>
-                </div>
 
-                {/* Caja de Citaciones */}
-                <AnimatePresence>
-                  {showCitations && (
-                    <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="mt-4 bg-[#F8FAFC] border border-slate-200 p-5 shadow-inner">
-                      <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-4 border-b border-slate-200 pb-2">Formatos de Citación</h4>
-                      <div className="space-y-5 text-sm font-serif">
-                        {[{ label: 'APA', ...getApa() }, { label: 'MLA', ...getMla() }, { label: 'Chicago', ...getChicago() }].map((cite) => (
-                          <div key={cite.label} className="group relative">
-                            <div className="flex justify-between items-center mb-1">
-                              <span className="font-sans font-bold text-[#002B49] text-xs">{cite.label}</span>
-                              <button onClick={() => copyToClipboard(cite.plain, cite.html, cite.label)} className="text-[10px] uppercase font-bold tracking-widest text-[#007398] hover:text-[#004B7F] bg-white border border-[#007398]/20 px-2 py-1 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity">
-                                {copiedFormat === cite.label ? 'Copiado ✓' : 'Copiar'}
+                    {showCitations && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: -10 }} 
+                        animate={{ opacity: 1, y: 0 }} 
+                        className="mt-4 bg-gray-50 border border-gray-200 p-5 rounded-sm space-y-5"
+                      >
+                        {[
+                          { label: 'APA', ...getApa() },
+                          { label: 'MLA', ...getMla() },
+                          { label: 'Chicago', ...getChicago() }
+                        ].map((cite) => (
+                          <div key={cite.label} className="border-b border-gray-200 pb-4 last:border-0 last:pb-0">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">{cite.label}</span>
+                              <button 
+                                onClick={() => copyToClipboard(cite.plain, cite.html, cite.label)} 
+                                className="text-[#007398] text-xs font-bold hover:underline"
+                              >
+                                {copiedFormat === cite.label ? 'COPIADO' : 'COPIAR'}
                               </button>
                             </div>
-                            <p className="text-slate-700 leading-relaxed bg-white p-3 border border-slate-100" dangerouslySetInnerHTML={{ __html: cite.html }} />
+                            <p className="text-sm text-gray-800 font-serif leading-relaxed" dangerouslySetInnerHTML={{ __html: cite.html }} />
                           </div>
                         ))}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
+                      </motion.div>
+                    )}
+                  </div>
+                </div>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
-    </article>
+    </motion.article>
   );
 }
 
