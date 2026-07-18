@@ -1021,7 +1021,7 @@ function App() {
         transition={{ duration: 0.3 }}
         className={`${
           s.name === 'home'
-            ? 'w-full flex-grow'
+            ? 'container mx-auto px-6 lg:px-8 flex-grow'
             : `w-full ${user && isLoginActive ? 'max-w-full px-0' : ''} flex-grow`
         }`}
       >
