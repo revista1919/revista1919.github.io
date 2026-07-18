@@ -339,7 +339,7 @@ function ArticleCardEN({ article }) {
               
               {/* Logo Open Access en línea perfectamente alineado */}
               <div title="Open Access" className="flex items-center text-[#f68212]">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-[18px] w-auto flex-shrink-0" viewBox="90 50 500 260">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-[18px] w-auto flex-shrink-0" viewBox="70 30 540 300">
                   <g transform="matrix(1.25 0 0 -1.25 0 360)">
                     <defs>
                       <path id="oa-bg-en" d="M-90-36h900v360H-90z"/>
