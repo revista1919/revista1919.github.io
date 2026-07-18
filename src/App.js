@@ -441,14 +441,18 @@ function App() {
   path: '/article',
   component: (
     <motion.div
-      className="py-10 max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8"
+      className="py-12 md:py-16 max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <div className="mb-8">
-        <h1 className="text-3xl font-serif text-gray-900 mb-2">Archivo de Artículos</h1>
-        <p className="text-gray-500">Explora investigaciones publicadas organizadas por volumen y disciplina.</p>
+      {/* Cabecera de página estilo editorial */}
+      <div className="mb-12 max-w-4xl">
+        <h1 className="text-4xl md:text-5xl font-serif text-gray-900 tracking-tight">Archivo de Artículos</h1>
+        <hr className="w-16 border-t-4 border-[#007398] my-6" />
+        <p className="text-lg text-gray-600 font-serif leading-relaxed">
+          Explora y descubre investigaciones revisadas por pares organizadas por disciplina, volumen y número.
+        </p>
       </div>
 
       <SearchAndFilters
@@ -459,7 +463,7 @@ function App() {
         areas={areas}
         onSearch={handleSearch}
         clearFilters={clearFilters}
-        placeholder="Buscar artículos..."
+        placeholder="Buscar por título, autor, palabras clave..."
         quickTags={['2025', 'Vol. 1', 'Núm. 1']}
         selectedVolume={selectedArticleVolume}
         setSelectedVolume={setSelectedArticleVolume}
@@ -471,25 +475,28 @@ function App() {
         numberLabel="Número"
       />
 
-      <div className="mt-8">
+      <div className="mt-12">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-32">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#007398]"></div>
-            <p className="mt-4 text-gray-500 font-serif italic">Consultando la base de datos...</p>
+            <p className="mt-6 text-gray-500 font-serif text-lg italic">Consultando la base de datos...</p>
           </div>
         ) : filteredArticles.length === 0 ? (
-          <div className="bg-gray-50 border border-gray-200 py-16 px-6 text-center">
-            <p className="text-lg text-gray-600 font-serif italic">
-              "No se han encontrado registros para los criterios seleccionados."
+          <div className="bg-gray-50 border border-gray-200 py-20 px-6 text-center rounded-sm">
+            <svg className="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            <p className="text-xl text-gray-600 font-serif italic mb-2">
+              No se han encontrado registros para los criterios seleccionados.
             </p>
-            <p className="mt-4 text-sm text-[#007398] font-semibold uppercase tracking-wider">
-              Modifica los filtros de búsqueda
-            </p>
+            <button onClick={clearFilters} className="mt-4 text-sm text-[#007398] font-bold uppercase tracking-wider hover:underline">
+              Limpiar todos los filtros
+            </button>
           </div>
         ) : (
           <>
-            {/* Contenedor tipo "Journal List" */}
-            <div className="bg-white border-t border-b sm:border sm:rounded-sm border-gray-200 shadow-sm">
+            {/* Contenedor principal de la lista sin fondo ni bordes de bloque completos, fluye natural */}
+            <div className="border-t border-gray-300">
               {filteredArticles.slice(0, visibleArticles).map((article, index) => (
                 <motion.div
                   key={article.titulo + index}
@@ -502,26 +509,26 @@ function App() {
               ))}
             </div>
 
-            {/* Paginación estilo editorial */}
-            <div className="mt-12 mb-16 flex flex-col items-center">
-              <p className="text-sm text-gray-500 mb-6">
-                Mostrando <span className="font-semibold text-gray-900">{Math.min(visibleArticles, filteredArticles.length)}</span> de <span className="font-semibold text-gray-900">{filteredArticles.length}</span> resultados
+            {/* Paginación estilo editorial limpio y tipográfico */}
+            <div className="mt-16 mb-20 flex flex-col items-center border-t border-gray-200 pt-10">
+              <p className="text-sm text-gray-500 mb-8 uppercase tracking-widest font-semibold">
+                Mostrando <span className="text-gray-900">{Math.min(visibleArticles, filteredArticles.length)}</span> de <span className="text-gray-900">{filteredArticles.length}</span> resultados
               </p>
               <div className="flex gap-4">
                 {filteredArticles.length > visibleArticles && (
                   <button
-                    className="px-6 py-2.5 bg-white border border-gray-300 text-gray-800 text-sm font-semibold hover:bg-gray-50 hover:text-[#007398] hover:border-[#007398] transition-all rounded-sm"
+                    className="px-8 py-3 bg-[#007398] text-white text-sm font-bold tracking-wide hover:bg-[#005a77] transition-colors rounded-sm shadow-sm"
                     onClick={loadMoreArticles}
                   >
-                    Cargar más artículos ↓
+                    Cargar más artículos
                   </button>
                 )}
                 {visibleArticles > 6 && (
                   <button
-                    className="px-6 py-2.5 bg-transparent text-gray-500 text-sm font-semibold hover:text-gray-800 transition-colors"
+                    className="px-8 py-3 bg-white border border-gray-300 text-gray-700 text-sm font-bold tracking-wide hover:bg-gray-50 hover:text-[#007398] hover:border-[#007398] transition-all rounded-sm"
                     onClick={showLessArticles}
                   >
-                    Ver menos ↑
+                    Ver menos
                   </button>
                 )}
               </div>
@@ -538,11 +545,19 @@ function App() {
       path: '/volume',
       component: (
         <motion.div
-          className="py-8 max-w-7xl mx-auto"
+          className="py-12 md:py-16 max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
+          <div className="mb-12 max-w-4xl">
+            <h1 className="text-4xl md:text-5xl font-serif text-gray-900 tracking-tight">Archivo de Volúmenes</h1>
+            <hr className="w-16 border-t-4 border-[#007398] my-6" />
+            <p className="text-lg text-gray-600 font-serif leading-relaxed">
+              Consulta nuestras ediciones pasadas y actuales completas.
+            </p>
+          </div>
+
           <SearchAndFilters
             searchTerm={volumeSearchTerm}
             setSearchTerm={setVolumeSearchTerm}
@@ -551,7 +566,7 @@ function App() {
             areas={volumeAreas}
             onSearch={handleVolumeSearch}
             clearFilters={clearVolumeFilters}
-            placeholder="Buscar volúmenes..."
+            placeholder="Buscar en volúmenes..."
             quickTags={['2025', 'Vol. 1', 'Núm. 1']}
             selectedVolume={selectedVolumeVolume}
             setSelectedVolume={setSelectedVolumeVolume}
@@ -562,20 +577,20 @@ function App() {
             volumeLabel="Volumen"
             numberLabel="Número"
           />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-12">
             {volumeLoading ? (
               <div className="flex flex-col items-center justify-center py-20 col-span-full">
                 <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#007398]"></div>
-                <p className="mt-4 text-gray-500 font-serif italic">Cargando volúmenes...</p>
+                <p className="mt-6 text-gray-500 font-serif text-lg italic">Cargando volúmenes...</p>
               </div>
             ) : filteredVolumes.length === 0 ? (
-              <div className="bg-white border border-gray-200 p-12 text-center rounded-sm col-span-full">
-                <p className="text-lg text-gray-600 font-serif italic">
-                  "No se han encontrado volúmenes para los criterios seleccionados."
+              <div className="bg-gray-50 border border-gray-200 py-20 px-6 text-center rounded-sm col-span-full">
+                <p className="text-xl text-gray-600 font-serif italic mb-2">
+                  No se han encontrado volúmenes para los criterios seleccionados.
                 </p>
-                <p className="mt-2 text-sm text-[#007398] font-bold uppercase tracking-wider">
-                  ¡Explora otras áreas!
-                </p>
+                <button onClick={clearVolumeFilters} className="mt-4 text-sm text-[#007398] font-bold uppercase tracking-wider hover:underline">
+                  Limpiar todos los filtros
+                </button>
               </div>
             ) : (
               filteredVolumes.map((volume, index) => (
@@ -603,20 +618,20 @@ function App() {
       name: 'submit',
       label: 'Enviar Artículo',
       path: '/submit',
-      component: <SubmitSection className="py-8 max-w-7xl mx-auto" />,
+      component: <SubmitSection className="py-12 max-w-[1280px] mx-auto" />,
     },
     {
       name: 'team',
       label: 'Nuestro Equipo',
       path: '/team',
-      component: <TeamSection className="py-8 max-w-7xl mx-auto" />,
+      component: <TeamSection className="py-12 max-w-[1280px] mx-auto" />,
     },
     {
       name: 'admin',
       label: '¡Postula a algún cargo!',
       path: '/admin',
       component: (
-        <div className="py-8 max-w-7xl mx-auto">
+        <div className="py-12 max-w-[1280px] mx-auto">
           <AdminSection />
         </div>
       ),
@@ -625,41 +640,42 @@ function App() {
       name: 'about',
       label: 'Acerca de',
       path: '/about',
-      component: <AboutSection className="py-8 max-w-7xl mx-auto" />,
+      component: <AboutSection className="py-12 max-w-[1280px] mx-auto" />,
     },
     {
       name: 'guidelines',
       label: 'Guías',
       path: '/guidelines',
-      component: <GuidelinesSection className="py-8 max-w-7xl mx-auto" />,
+      component: <GuidelinesSection className="py-12 max-w-[1280px] mx-auto" />,
     },
     {
       name: 'faq',
       label: 'Preguntas Frecuentes',
       path: '/faq',
-      component: <FAQSection className="py-8 max-w-7xl mx-auto" />,
+      component: <FAQSection className="py-12 max-w-[1280px] mx-auto" />,
     },
     {
       name: 'news',
       label: 'Noticias',
       path: '/new',
-      component: <NewsSection className="py-8 max-w-7xl mx-auto" />,
+      component: <NewsSection className="py-12 max-w-[1280px] mx-auto" />,
     },
     {
       name: 'login',
       label: 'Login',
       path: '/login',
       component: (
-        <div className={`py-8 ${user ? 'w-full' : 'max-w-lg mx-auto'}`}>
+        <div className={`py-12 ${user ? 'w-full' : 'max-w-lg mx-auto'}`}>
           {!user && (
-            <>
-              <h2 className="text-2xl font-bold text-center text-gray-800 mb-4">
-                Interfaz para Autores y Revisores
+            <div className="mb-8">
+              <h2 className="text-3xl font-serif text-gray-900 text-center mb-4">
+                Acceso Editorial
               </h2>
-              <p className="text-center text-gray-600 mb-6">
-                Esta sección es solo para autores y revisores/autores con permisos especiales.
+              <hr className="w-12 border-t-2 border-[#007398] mx-auto mb-6" />
+              <p className="text-center text-gray-600">
+                Plataforma de gestión para Autores, Revisores y Editores.
               </p>
-            </>
+            </div>
           )}
           {user ? (
             <PortalSection user={user} onLogout={handleLogout} />
@@ -675,11 +691,11 @@ function App() {
     return (
       <div className="h-screen flex items-center justify-center bg-white">
         <motion.div
-          animate={{ scale: [1, 1.1, 1] }}
-          transition={{ repeat: Infinity, duration: 2 }}
-          className="font-serif text-2xl font-bold tracking-tighter text-blue-900"
+          animate={{ opacity: [0.5, 1, 0.5] }}
+          transition={{ repeat: Infinity, duration: 1.5 }}
+          className="font-serif text-xl tracking-[0.2em] text-gray-500 uppercase"
         >
-          CARGANDO...
+          Inicializando...
         </motion.div>
       </div>
     );
@@ -700,14 +716,20 @@ function App() {
   });
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] flex flex-col font-sans text-gray-900">
+    <div className="min-h-screen bg-white flex flex-col font-sans text-gray-900 selection:bg-[#007398] selection:text-white">
+      {/* Accent Bar Superior (Detalle premium editorial) */}
+      <div className="h-2 w-full bg-[#007398] z-50"></div>
+
       {!isHome && <Header onOpenMenu={() => setIsMenuOpen(true)} />}
-      <nav className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4">
+
+      {/* Navegación sólida, sin blur, dando estructura de documento serio */}
+      <nav className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm transition-all duration-300">
+        <div className="max-w-[1400px] mx-auto px-4">
           <Tabs sections={sections} />
         </div>
       </nav>
-      <main className="flex-grow">
+
+      <main className="flex-grow flex flex-col">
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.key}>
             {/* Ruta para revisores - disponible en español e inglés */}
@@ -861,8 +883,7 @@ function App() {
             } />
             
             <Route path="/login/assignment" element={
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
+              <motion.div                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.3 }}
@@ -998,11 +1019,7 @@ function App() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.3 }}
-                    className={`container ${
-                      user && isLoginActive
-                        ? 'max-w-full px-0'
-                        : 'mx-auto px-6 lg:px-8'
-                    } flex-grow`}
+                    className={`w-full ${user && isLoginActive ? 'max-w-full px-0' : ''} flex-grow`}
                   >
                     {s.component}
                   </motion.div>
@@ -1024,35 +1041,35 @@ function App() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
               onClick={() => setIsMenuOpen(false)}
-              className="fixed inset-0 bg-black bg-opacity-50 z-40"
+              className="fixed inset-0 bg-gray-900 bg-opacity-40 backdrop-blur-sm z-40"
               aria-hidden="true"
             />
             <motion.div
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
-              transition={{ duration: 0.3 }}
-              className="fixed top-0 left-0 h-full w-4/5 max-w-xs bg-white shadow-lg z-50 overflow-y-auto"
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="fixed top-0 left-0 h-full w-[85%] max-w-sm bg-white shadow-2xl z-50 overflow-y-auto"
             >
-              <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-                <span className="font-medium text-gray-700">Menú</span>
+              <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                <span className="font-serif font-bold text-xl text-[#007398]">Navegación</span>
                 <button
                   onClick={() => setIsMenuOpen(false)}
-                  className="text-gray-600 hover:text-gray-800 focus:outline-none"
+                  className="text-gray-400 hover:text-gray-900 transition-colors bg-gray-50 p-2 rounded-sm"
                   aria-label="Cerrar menú"
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
-              <div className="p-4">
+              <div className="p-4 flex flex-col gap-1">
                 {sections.map((section, index) => (
                   <motion.div key={section.name} {...framerItem(index)}>
                     <NavLink
                       to={section.path}
                       className={({ isActive }) =>
-                        `block py-3 px-4 text-base font-medium rounded-md transition-colors ${isActive ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`
+                        `block py-3 px-4 text-sm uppercase tracking-wide font-semibold rounded-sm transition-all ${isActive ? 'bg-[#007398]/5 text-[#007398] border-l-2 border-[#007398]' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 border-l-2 border-transparent'}`
                       }
                       onClick={() => setIsMenuOpen(false)}
                       aria-label={`Ir a ${section.label}`}
@@ -1066,7 +1083,7 @@ function App() {
           </>
         )}
       </AnimatePresence>
-      <Footer className="w-full m-0 p-0 mt-auto" />
+      <Footer className="w-full mt-auto border-t border-gray-200 bg-[#FAFAFA]" />
     </div>
   );
 }
