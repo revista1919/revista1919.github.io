@@ -952,23 +952,27 @@ function AppEN() {
   {/* ========== FIN RUTAS DEL PORTAL EDITORIAL ========== */}
   
   {/* Rutas de secciones en inglés */}
-  {sections.map(s => (
-    <Route
-      key={s.name}
-      path={s.path.replace('/en', '')} // Importante: quita /en de la ruta porque ya estamos en el contexto /en
-      element={
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.3 }}
-          className={`w-full ${user && isLoginActive ? 'max-w-full px-0' : ''} flex-grow`}
-        >
-          {s.component}
-        </motion.div>
-      }
-    />
-  ))}
+ {sections.map(s => (
+  <Route
+    key={s.path}
+    path={s.path}
+    element={
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.3 }}
+        className={`${
+          s.name === 'home'
+            ? 'w-full flex-grow'
+            : `w-full ${user && isLoginActive ? 'max-w-full px-0' : ''} flex-grow`
+        }`}
+      >
+        {s.component}
+      </motion.div>
+    }
+  />
+))}
  <Route path="/collection/:folderName" element={
   <motion.div
     initial={{ opacity: 0, y: 10 }}

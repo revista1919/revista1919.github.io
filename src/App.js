@@ -1009,24 +1009,27 @@ function App() {
             } />
 
             {/* Rutas de secciones en español */}
-            {sections.map(s => (
-              <Route
-                key={s.path}
-                path={s.path}
-                element={
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.3 }}
-                    className={`w-full ${user && isLoginActive ? 'max-w-full px-0' : ''} flex-grow`}
-                  >
-                    {s.component}
-                  </motion.div>
-                }
-              />
-            ))}
-
+           {sections.map(s => (
+  <Route
+    key={s.path}
+    path={s.path}
+    element={
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.3 }}
+        className={`${
+          s.name === 'home'
+            ? 'w-full flex-grow'
+            : `w-full ${user && isLoginActive ? 'max-w-full px-0' : ''} flex-grow`
+        }`}
+      >
+        {s.component}
+      </motion.div>
+    }
+  />
+))}
             {/* Ruta comodín para redirigir rutas no encontradas a / */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
