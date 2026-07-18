@@ -4,14 +4,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 // Helper functions
 const getYear = (date) => {
   if (!date) return 'Desconocido';
-  // Forzar UTC para evitar desfase horario
   const parsedDate = new Date(date + 'T12:00:00Z');
   return isNaN(parsedDate) ? 'Desconocido' : parsedDate.getUTCFullYear();
 };
 
 const parseDateFlexible = (date) => {
   if (!date) return 'No disponible';
-  // Forzar UTC para evitar desfase horario
   const parsedDate = new Date(date + 'T12:00:00Z');
   if (isNaN(parsedDate)) return date;
   
@@ -19,47 +17,42 @@ const parseDateFlexible = (date) => {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-    timeZone: 'UTC' // Forzar UTC
+    timeZone: 'UTC'
   });
 };
 
-// Slug generator (consistente con el script Node.js)
-// Slug generator (CORREGIDO)
 const generateSlug = (name) => {
   if (!name) return '';
-  
-  // 1. Convertir a minúsculas
   let slug = name.toLowerCase();
-  
-  // 2. Eliminar tildes (esto ya funciona bien)
   slug = slug.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  
-  // 3. [NUEVO] Reemplazar puntos seguidos de letras o espacios por un guión
-  //    Esto convertirá "ee.uu" en "ee-uu"
   slug = slug.replace(/\.(?=[a-z]|\s)/g, '-');
-  
-  // 4. Reemplazar cualquier otro carácter no deseado (incluyendo puntos sueltos restantes) por guiones
-  //    Ahora los puntos ya se procesaron, este paso se encarga del resto.
   slug = slug.replace(/[^a-z0-9]+/g, '-');
-  
-  // 5. Eliminar guiones múltiples y guiones al principio o final
   slug = slug.replace(/-+/g, '-');
   slug = slug.replace(/^-+|-+$/g, '');
-  
   return slug;
 };
 
+// Validar y formatear enlace DOI
+const formatDOI = (doi) => {
+  if (!doi) return null;
+  const cleanDoi = String(doi).trim();
+  if (cleanDoi.startsWith('http')) return cleanDoi;
+  if (cleanDoi.startsWith('doi.org/')) return `https://${cleanDoi}`;
+  return `https://doi.org/${cleanDoi}`;
+};
+
+// Limpiar texto visual del DOI (para mostrar solo el identificador si se desea, o la URL corta)
+const displayDOI = (doi) => {
+  if (!doi) return null;
+  return formatDOI(doi).replace('https://', '');
+};
+
 /* -------------------------- FORMATOS DE AUTORES -------------------------- */
-// Obtener array de nombres de autores (para compatibilidad con funciones existentes)
 const getAuthorNames = (autores) => {
   if (!autores) return [];
-  
-  // Si es string (formato antiguo), convertir a array
   if (typeof autores === 'string') {
     return autores.split(';').map(a => a.trim()).filter(a => a);
   }
-  
-  // Si es array de objetos (nuevo formato)
   if (Array.isArray(autores)) {
     return autores.map(author => {
       if (typeof author === 'string') return author;
@@ -70,15 +63,11 @@ const getAuthorNames = (autores) => {
       return '';
     }).filter(Boolean);
   }
-  
   return [];
 };
 
-// Obtener array completo de objetos de autores
 const getAuthorsArray = (autores) => {
   if (!autores) return [];
-  
-  // Si es string, convertir a objetos simples
   if (typeof autores === 'string') {
     return autores.split(';').map(a => ({ 
       name: a.trim(),
@@ -88,8 +77,6 @@ const getAuthorsArray = (autores) => {
       orcid: null
     }));
   }
-  
-  // Si ya es array, devolverlo
   if (Array.isArray(autores)) {
     return autores.map(author => {
       if (typeof author === 'string') {
@@ -101,10 +88,9 @@ const getAuthorsArray = (autores) => {
           orcid: null
         };
       }
-      return author; // Ya es objeto
+      return author; 
     });
   }
-  
   return [];
 };
 
@@ -138,16 +124,6 @@ const mlaAuthors = (authors) => {
   return `${names[0]}, et al.`;
 };
 
-const formatAuthorsDisplay = (authors, language = 'es') => {
-  const names = getAuthorNames(authors);
-  if (names.length === 0) return 'Autor desconocido';
-  const connector = language === 'es' ? 'y' : 'and';
-  if (names.length === 1) return names[0];
-  if (names.length === 2) return `${names[0]} ${connector} ${names[1]}`;
-  return names.slice(0, -1).join(', ') + `, ${connector} ` + names[names.length - 1];
-};
-
-// Renderizar autores con iconos (ORCID, email)
 const renderAuthorsWithIcons = (authors, language = 'es') => {
   const authorsArray = getAuthorsArray(authors);
   
@@ -164,7 +140,6 @@ const renderAuthorsWithIcons = (authors, language = 'es') => {
           {name}
         </span>
         
-        {/* ORCID Icon */}
         {author.orcid && (
           <a
             href={`https://orcid.org/${author.orcid}`}
@@ -179,13 +154,12 @@ const renderAuthorsWithIcons = (authors, language = 'es') => {
               <g fill="#FFFFFF">
                 <rect x="71" y="78" width="17" height="102"/>
                 <circle cx="79.5" cy="56" r="11"/>
-                <path d="M103 78 v102 h41.5 c28.2 0 51-22.8 51-51 s-22.8-51-51-51 H103 zm17 17 h24.5 c18.8 0 34 15.2 34 34 s-15.2 34-34 34 H120 V95 z" fill-rule="evenodd"/>
+                <path d="M103 78 v102 h41.5 c28.2 0 51-22.8 51-51 s-22.8-51-51-51 H103 zm17 17 h24.5 c18.8 0 34 15.2 34 34 s-15.2 34-34 34 H120 V95 z" fillRule="evenodd"/>
               </g>
             </svg>
           </a>
         )}
         
-        {/* Email Icon */}
         {author.email && (
           <a
             href={`mailto:${author.email}`}
@@ -215,23 +189,16 @@ function ArticleCard({ article }) {
   const [copiedFormat, setCopiedFormat] = useState(null);
 
   const journal = 'Revista Nacional de las Ciencias para Estudiantes';
-  // Usar permalink si existe, si no, generar el slug tradicional
   const articleSlug = article?.permalink || `${generateSlug(article?.titulo || '')}-${article?.numeroArticulo || ''}`;
   
-  // Usar el pdfUrl directamente del artículo (tal como viene del JSON)
   const pdfUrl = article?.pdfUrl || article?.pdf || '';
+  const doiUrl = formatDOI(article?.doi);
+  const doiDisplay = displayDOI(article?.doi);
   
-  // URLs de las versiones HTML (consistentes con el script)
   const htmlUrlEs = `/articles/article-${articleSlug}.html`;
   const htmlUrlEn = `/articles/article-${articleSlug}EN.html`;
   
   const pages = `${article?.primeraPagina || ''}-${article?.ultimaPagina || ''}`.trim() || '';
-
-  const handleAuthorClick = (authorName) => {
-    if (!authorName) return;
-    const slug = generateSlug(authorName);
-    window.location.href = `/team/${slug}.html`;
-  };
 
   /* --------------------------- CITAS COMPLETAS ---------------------------- */
   const getChicago = () => {
@@ -285,7 +252,8 @@ function ArticleCard({ article }) {
 
   const toggleExpand = (e) => {
     const tag = e.target.tagName.toLowerCase();
-    const isInteractive = ['a', 'button', 'span'].includes(tag) || e.target.closest('a, button, span');
+    // Incluye 'svg' y 'path' para evitar que el clic en iconos expanda el artículo
+    const isInteractive = ['a', 'button', 'span', 'svg', 'path'].includes(tag) || e.target.closest('a, button');
     if (!isInteractive) {
       setIsExpanded(!isExpanded);
     }
@@ -302,16 +270,11 @@ function ArticleCard({ article }) {
     );
   }
 
-  const authorsArray = getAuthorsArray(article?.autores);
   const tipo = article.tipo || 'Artículo de Investigación';
-
-  // Determinar qué abstract mostrar
   const abstractToShow = article?.resumen || article?.abstract || 'Resumen no disponible';
-  const englishAbstract = article?.abstract || article?.resumen || 'Abstract not available';
 
   /* --------------------------- RENDER PRINCIPAL --------------------------- */
   return (
-    // Diseño tipo lista Elsevier: padding generoso, sin caja completa, separador inferior sutil
     <motion.article 
       layout 
       onClick={toggleExpand}
@@ -321,6 +284,26 @@ function ArticleCard({ article }) {
         
         {/* Encabezado de Metadatos (Academic Style) */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] uppercase tracking-widest font-semibold text-gray-500">
+          
+          {/* Logo Open Access en línea perfectamente alineado */}
+          <div title="Open Access" className="flex items-center text-[#f68212]">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-[18px] w-auto flex-shrink-0" viewBox="90 50 500 260">
+              <g transform="matrix(1.25 0 0 -1.25 0 360)">
+                <defs>
+                  <path id="oa-bg" d="M-90-36h900v360H-90z"/>
+                </defs>
+                <clipPath id="oa-clip">
+                  <use href="#oa-bg" overflow="visible"/>
+                </clipPath>
+                <g clipPath="url(#oa-clip)">
+                  <path d="M720-3H0v294.285h720V-3z" fill="#fff"/>
+                  <path d="M262.883 200.896v-8.846h25.938v8.846c0 21.412 17.421 38.831 38.831 38.831 21.409 0 38.829-17.419 38.829-38.831v-63.985h25.939v63.985c0 35.713-29.056 64.769-64.768 64.769-35.711 0-64.769-29.056-64.769-64.769M349.153 99.568c0-11.816-9.58-21.396-21.399-21.396-11.818 0-21.398 9.58-21.398 21.396 0 11.823 9.58 21.404 21.398 21.404 11.819 0 21.399-9.581 21.399-21.404" fill="currentColor"/>
+                  <path d="M277.068 99.799c0 27.811 22.627 50.436 50.438 50.436 27.809 0 50.433-22.625 50.433-50.436 0-27.809-22.624-50.438-50.433-50.438-27.811.001-50.438 22.63-50.438 50.438m-25.938 0c0-42.109 34.265-76.373 76.375-76.373 42.111 0 76.373 34.265 76.373 76.373 0 42.113-34.262 76.375-76.373 76.375-42.11 0-76.375-34.262-76.375-76.375" fill="currentColor"/>
+                </g>
+              </g>
+            </svg>
+          </div>
+
           <span className="text-[#007398]">{tipo}</span>
           <span className="w-1 h-1 rounded-full bg-gray-300"></span>
           <span>Vol. {article.volumen}, No. {article.numero}</span>
@@ -333,7 +316,7 @@ function ArticleCard({ article }) {
           href={htmlUrlEs} 
           target="_blank" 
           rel="noopener noreferrer" 
-          className="block w-full max-w-4xl"
+          className="block w-full max-w-4xl mt-1"
           onClick={(e) => e.stopPropagation()}
         >
           <h3 className="font-serif text-xl md:text-3xl text-gray-900 leading-snug font-medium transition-colors hover:text-[#007398]">
@@ -341,9 +324,24 @@ function ArticleCard({ article }) {
           </h3>
         </a>
 
-        {/* Autores */}
-        <div className="flex flex-wrap items-center gap-x-1 text-sm md:text-base text-gray-700 mt-1" onClick={(e) => e.stopPropagation()}>
-          {renderAuthorsWithIcons(article?.autores)}
+        {/* Autores y DOI */}
+        <div className="flex flex-col gap-1.5 mt-1" onClick={(e) => e.stopPropagation()}>
+          <div className="flex flex-wrap items-center gap-x-1 text-sm md:text-base text-gray-700">
+            {renderAuthorsWithIcons(article?.autores)}
+          </div>
+          
+          {/* DOI Visible debajo de los autores (Estilo Académico) */}
+          {doiUrl && (
+            <a 
+              href={doiUrl} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="text-[13px] font-medium text-gray-500 hover:text-[#007398] transition-colors inline-flex items-center gap-1 w-fit"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+              {doiDisplay}
+            </a>
+          )}
         </div>
 
         {/* Resumen recortado (vista colapsada) */}
@@ -390,7 +388,7 @@ function ArticleCard({ article }) {
               <div className="mt-6 pt-6 border-t border-gray-200">
                 
                 {/* Fechas en línea plana (Academic string) */}
-                <div className="text-xs text-gray-500 font-medium tracking-wide mb-6">
+                <div className="flex flex-wrap items-center text-xs text-gray-500 font-medium tracking-wide mb-6">
                   {article.receivedDate && <span>Recibido: {parseDateFlexible(article.receivedDate)} <span className="mx-2 text-gray-300">|</span> </span>}
                   {article.acceptedDate && <span>Aceptado: {parseDateFlexible(article.acceptedDate)} <span className="mx-2 text-gray-300">|</span> </span>}
                   <span>Publicado: {parseDateFlexible(article.fecha)}</span>
@@ -398,6 +396,12 @@ function ArticleCard({ article }) {
                   <span>Páginas: {pages || 'N/A'}</span>
                   <span className="mx-2 text-gray-300">|</span>
                   <span>ISSN 3087-2839</span>
+                  {doiUrl && (
+                    <>
+                      <span className="mx-2 text-gray-300">|</span>
+                      <span>DOI: <a href={doiUrl} target="_blank" rel="noopener noreferrer" className="hover:text-[#007398] hover:underline">{article.doi}</a></span>
+                    </>
+                  )}
                 </div>
 
                 <div className="max-w-4xl">

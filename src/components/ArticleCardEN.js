@@ -24,7 +24,6 @@ const parseDateFlexible = (date) => {
 };
 
 // Slug generator (consistente con el script Node.js)
-// Slug generator (CORREGIDO)
 const generateSlug = (name) => {
   if (!name) return '';
   
@@ -34,12 +33,10 @@ const generateSlug = (name) => {
   // 2. Eliminar tildes (esto ya funciona bien)
   slug = slug.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   
-  // 3. [NUEVO] Reemplazar puntos seguidos de letras o espacios por un guión
-  //    Esto convertirá "ee.uu" en "ee-uu"
+  // 3. Reemplazar puntos seguidos de letras o espacios por un guión
   slug = slug.replace(/\.(?=[a-z]|\s)/g, '-');
   
   // 4. Reemplazar cualquier otro carácter no deseado (incluyendo puntos sueltos restantes) por guiones
-  //    Ahora los puntos ya se procesaron, este paso se encarga del resto.
   slug = slug.replace(/[^a-z0-9]+/g, '-');
   
   // 5. Eliminar guiones múltiples y guiones al principio o final
@@ -47,6 +44,21 @@ const generateSlug = (name) => {
   slug = slug.replace(/^-+|-+$/g, '');
   
   return slug;
+};
+
+// Validar y formatear enlace DOI
+const formatDOI = (doi) => {
+  if (!doi) return null;
+  const cleanDoi = String(doi).trim();
+  if (cleanDoi.startsWith('http')) return cleanDoi;
+  if (cleanDoi.startsWith('doi.org/')) return `https://${cleanDoi}`;
+  return `https://doi.org/${cleanDoi}`;
+};
+
+// Limpiar texto visual del DOI (para mostrar solo el identificador si se desea, o la URL corta)
+const displayDOI = (doi) => {
+  if (!doi) return null;
+  return formatDOI(doi).replace('https://', '');
 };
 
 /* -------------------------- AUTHOR FORMATS -------------------------- */
@@ -170,7 +182,7 @@ const renderAuthorsWithIcons = (authors, language = 'en') => {
               <g fill="#FFFFFF">
                 <rect x="71" y="78" width="17" height="102"/>
                 <circle cx="79.5" cy="56" r="11"/>
-                <path d="M103 78 v102 h41.5 c28.2 0 51-22.8 51-51 s-22.8-51-51-51 H103 zm17 17 h24.5 c18.8 0 34 15.2 34 34 s-15.2 34-34 34 H120 V95 z" fill-rule="evenodd"/>
+                <path d="M103 78 v102 h41.5 c28.2 0 51-22.8 51-51 s-22.8-51-51-51 H103 zm17 17 h24.5 c18.8 0 34 15.2 34 34 s-15.2 34-34 34 H120 V95 z" fillRule="evenodd"/>
               </g>
             </svg>
           </a>
@@ -208,10 +220,14 @@ function ArticleCardEN({ article }) {
   const journalDisplay = 'The National Review of Sciences for Students';
   const journalFormal = 'Revista Nacional de las Ciencias para Estudiantes';
   // Usar permalink si existe, si no, generar el slug tradicional
-const articleSlug = article?.permalink || `${generateSlug(article?.titulo || '')}-${article?.numeroArticulo || ''}`;
+  const articleSlug = article?.permalink || `${generateSlug(article?.titulo || '')}-${article?.numeroArticulo || ''}`;
   
   // Usar el pdfUrl directamente del artículo (tal como viene del JSON)
   const pdfUrl = article?.pdfUrl || article?.pdf || '';
+  
+  // DOI
+  const doiUrl = formatDOI(article?.doi);
+  const doiDisplay = displayDOI(article?.doi);
 
   // URLs de las versiones HTML (consistentes con el script)
   const htmlUrlEn = `/articles/article-${articleSlug}EN.html`;
@@ -277,7 +293,8 @@ const articleSlug = article?.permalink || `${generateSlug(article?.titulo || '')
 
   const toggleExpand = (e) => {
     const tag = e.target.tagName.toLowerCase();
-    const isInteractive = ['a', 'button', 'span'].includes(tag) || e.target.closest('a, button, span');
+    // Incluye 'svg' y 'path' para evitar que el clic en iconos expanda el artículo
+    const isInteractive = ['a', 'button', 'span', 'svg', 'path'].includes(tag) || e.target.closest('a, button');
     if (!isInteractive) {
       setIsExpanded(!isExpanded);
     }
@@ -319,6 +336,26 @@ const articleSlug = article?.permalink || `${generateSlug(article?.titulo || '')
           <div className="flex-1">
             {/* Metadatos: Más pequeños y elegantes en móvil */}
             <div className="flex flex-wrap items-center gap-2 mb-2 text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-gray-500">
+              
+              {/* Logo Open Access en línea perfectamente alineado */}
+              <div title="Open Access" className="flex items-center text-[#f68212]">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-[18px] w-auto flex-shrink-0" viewBox="90 50 500 260">
+                  <g transform="matrix(1.25 0 0 -1.25 0 360)">
+                    <defs>
+                      <path id="oa-bg-en" d="M-90-36h900v360H-90z"/>
+                    </defs>
+                    <clipPath id="oa-clip-en">
+                      <use href="#oa-bg-en" overflow="visible"/>
+                    </clipPath>
+                    <g clipPath="url(#oa-clip-en)">
+                      <path d="M720-3H0v294.285h720V-3z" fill="#fff"/>
+                      <path d="M262.883 200.896v-8.846h25.938v8.846c0 21.412 17.421 38.831 38.831 38.831 21.409 0 38.829-17.419 38.829-38.831v-63.985h25.939v63.985c0 35.713-29.056 64.769-64.768 64.769-35.711 0-64.769-29.056-64.769-64.769M349.153 99.568c0-11.816-9.58-21.396-21.399-21.396-11.818 0-21.398 9.58-21.398 21.396 0 11.823 9.58 21.404 21.398 21.404 11.819 0 21.399-9.581 21.399-21.404" fill="currentColor"/>
+                      <path d="M277.068 99.799c0 27.811 22.627 50.436 50.438 50.436 27.809 0 50.433-22.625 50.433-50.436 0-27.809-22.624-50.438-50.433-50.438-27.811.001-50.438 22.63-50.438 50.438m-25.938 0c0-42.109 34.265-76.373 76.375-76.373 42.111 0 76.373 34.265 76.373 76.373 0 42.113-34.262 76.375-76.373 76.375-42.11 0-76.375-34.262-76.375-76.375" fill="currentColor"/>
+                    </g>
+                  </g>
+                </svg>
+              </div>
+
               <span className="text-[#007398]">{article.area || 'General'}</span>
               <span className="hidden xs:inline">•</span>
               <span className="bg-gray-100 px-1.5 py-0.5 rounded-sm">VOL. {article.volumen}</span>
@@ -337,9 +374,24 @@ const articleSlug = article?.permalink || `${generateSlug(article?.titulo || '')
                 {article.tituloEnglish || article.titulo}
               </h3>
             </a>
-            {/* Autores: Compactos con iconos */}
-            <div className="flex flex-wrap items-center gap-x-1 text-xs md:text-sm mb-3">
-              {renderAuthorsWithIcons(article?.autores)}
+            {/* Autores y DOI */}
+            <div className="flex flex-col gap-1.5 mb-3" onClick={(e) => e.stopPropagation()}>
+              <div className="flex flex-wrap items-center gap-x-1 text-xs md:text-sm">
+                {renderAuthorsWithIcons(article?.autores)}
+              </div>
+              
+              {/* DOI Visible debajo de los autores (Estilo Académico) */}
+              {doiUrl && (
+                <a 
+                  href={doiUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-[11px] md:text-[13px] font-medium text-gray-500 hover:text-[#007398] transition-colors inline-flex items-center gap-1 w-fit"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                  {doiDisplay}
+                </a>
+              )}
             </div>
             {/* Resumen corto: Se oculta si está expandido para no repetir con el completo */}
             {!isExpanded && (
@@ -412,6 +464,17 @@ const articleSlug = article?.permalink || `${generateSlug(article?.titulo || '')
                   </div>
                 )}
 
+                {/* ISSN y DOI en línea */}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] md:text-xs text-gray-500 font-medium">
+                  <span>ISSN 3087-2839</span>
+                  {doiUrl && (
+                    <>
+                      <span className="text-gray-300">|</span>
+                      <span>DOI: <a href={doiUrl} target="_blank" rel="noopener noreferrer" className="hover:text-[#007398] hover:underline">{article.doi}</a></span>
+                    </>
+                  )}
+                </div>
+
                 {/* Abstract con tipografía legible */}
                 <div className="space-y-4">
                   <div>
@@ -426,7 +489,7 @@ const articleSlug = article?.permalink || `${generateSlug(article?.titulo || '')
                         onClick={() => setShowSpanishAbstract(!showSpanishAbstract)}
                         className="text-[#007398] text-[10px] font-bold uppercase tracking-tighter"
                       >
-                        {showSpanishAbstract ? '↓ Ocultar Resumen' : '→ Leer Resumen en Español'}
+                        {showSpanishAbstract ? '↓ Hide Spanish Abstract' : '→ Read Spanish Abstract'}
                       </button>
                       {showSpanishAbstract && (
                         <p className="mt-2 text-sm text-gray-600 italic font-serif leading-relaxed">
@@ -504,9 +567,6 @@ const articleSlug = article?.permalink || `${generateSlug(article?.titulo || '')
                       </a>
                     )}
                   </div>
-                  
-                  {/* ISSN AGREGADO: Añadido permanentemente aquí como metadato en el footer de la tarjeta */}
-                  <span className="text-[9px] text-gray-400 uppercase tracking-widest">ISSN 3087-2839</span>
                 </div>
 
                 {/* Información adicional (opcional) */}
