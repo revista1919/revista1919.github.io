@@ -436,93 +436,105 @@ function App() {
       component: <HomeSection onOpenMenu={() => setIsMenuOpen(true)} />,
     },
     {
-      name: 'articles',
-      label: 'Artículos',
-      path: '/article',
-      component: (
-        <motion.div
-          className="py-8 max-w-7xl mx-auto"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <SearchAndFilters
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            selectedArea={selectedArea}
-            setSelectedArea={setSelectedArea}
-            areas={areas}
-            onSearch={handleSearch}
-            clearFilters={clearFilters}
-            placeholder="Buscar artículos..."
-            quickTags={['2025', 'Vol. 1', 'Núm. 1']}
-            selectedVolume={selectedArticleVolume}
-            setSelectedVolume={setSelectedArticleVolume}
-            volumesList={articleVolumes}
-            selectedNumber={selectedArticleNumber}
-            setSelectedNumber={setSelectedArticleNumber}
-            numbersList={articleNumbers}
-            volumeLabel="Volumen"
-            numberLabel="Número"
-          />
-          <div className="articles mt-8">
-            {loading ? (
-              <div className="flex flex-col items-center justify-center py-20">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#007398]"></div>
-                <p className="mt-4 text-gray-500 font-serif italic">Cargando archivo bibliográfico...</p>
-              </div>
-            ) : filteredArticles.length === 0 ? (
-              <div className="bg-white border border-gray-200 p-12 text-center rounded-sm">
-                <p className="text-lg text-gray-600 font-serif italic">
-                  "No se han encontrado registros para los criterios seleccionados."
-                </p>
-                <p className="mt-2 text-sm text-[#007398] font-bold uppercase tracking-wider">
-                  ¡Sé el primero en publicar en esta área!
-                </p>
-              </div>
-            ) : (
-              <>
-                <div className="space-y-6">
-                  {filteredArticles.slice(0, visibleArticles).map((article, index) => (
-                    <motion.div
-                      key={article.titulo + index}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index % 6 * 0.05, duration: 0.3 }}
-                    >
-                      <ArticleCard article={article} />
-                    </motion.div>
-                  ))}
-                </div>
-                <div className="mt-12 mb-8 flex flex-col items-center border-t border-gray-200 pt-8">
-                  <p className="text-xs text-gray-500 uppercase tracking-widest font-bold mb-6">
-                    Mostrando {Math.min(visibleArticles, filteredArticles.length)} de {filteredArticles.length} artículos
-                  </p>
-                  <div className="flex gap-4">
-                    {filteredArticles.length > visibleArticles && (
-                      <button
-                        className="px-8 py-3 bg-[#007398] text-white text-xs font-bold uppercase tracking-widest rounded-sm hover:bg-[#005a77] transition-all shadow-sm"
-                        onClick={loadMoreArticles}
-                      >
-                        Cargar más registros
-                      </button>
-                    )}
-                    {visibleArticles > 6 && (
-                      <button
-                        className="px-8 py-3 border border-gray-300 text-gray-600 text-xs font-bold uppercase tracking-widest rounded-sm hover:bg-white hover:text-black transition-all"
-                        onClick={showLessArticles}
-                      >
-                        Ver menos
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
+  name: 'articles',
+  label: 'Artículos',
+  path: '/article',
+  component: (
+    <motion.div
+      className="py-8 max-w-7xl mx-auto"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      <SearchAndFilters
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        selectedArea={selectedArea}
+        setSelectedArea={setSelectedArea}
+        areas={areas}
+        onSearch={handleSearch}
+        clearFilters={clearFilters}
+        placeholder="Buscar artículos..."
+        quickTags={['2025', 'Vol. 1', 'Núm. 1']}
+        selectedVolume={selectedArticleVolume}
+        setSelectedVolume={setSelectedArticleVolume}
+        volumesList={articleVolumes}
+        selectedNumber={selectedArticleNumber}
+        setSelectedNumber={setSelectedArticleNumber}
+        numbersList={articleNumbers}
+        volumeLabel="Volumen"
+        numberLabel="Número"
+      />
+      <div className="articles mt-8">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#007398]"></div>
+            <p className="mt-4 text-gray-500 font-serif italic">Cargando archivo bibliográfico...</p>
           </div>
-        </motion.div>
-      ),
-    },
+        ) : filteredArticles.length === 0 ? (
+          <div className="bg-white border border-gray-200 p-12 text-center rounded-sm">
+            <p className="text-lg text-gray-600 font-serif italic">
+              "No se han encontrado registros para los criterios seleccionados."
+            </p>
+            <p className="mt-2 text-sm text-[#007398] font-bold uppercase tracking-wider">
+              ¡Sé el primero en publicar en esta área!
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="bg-white border-y md:border border-slate-200 md:rounded-sm shadow-sm">
+              <div className="bg-[#F8FAFC] px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+                <h2 className="font-serif font-semibold text-lg text-[#002B49]">
+                  Índice de Artículos
+                </h2>
+                <span className="text-xs font-sans text-slate-500 uppercase tracking-widest">
+                  {filteredArticles.length} resultados
+                </span>
+              </div>
+
+              {/* CONTENEDOR CON DIVIDE-Y (Aquí está la magia del estilo Elsevier) */}
+              <div className="divide-y divide-slate-200">
+                {filteredArticles.slice(0, visibleArticles).map((article, index) => (
+                  <motion.div
+                    key={article.titulo + index}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <ArticleCard article={article} />
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+            <div className="mt-12 mb-8 flex flex-col items-center border-t border-gray-200 pt-8">
+              <p className="text-xs text-gray-500 uppercase tracking-widest font-bold mb-6">
+                Mostrando {Math.min(visibleArticles, filteredArticles.length)} de {filteredArticles.length} artículos
+              </p>
+              <div className="flex gap-4">
+                {filteredArticles.length > visibleArticles && (
+                  <button
+                    className="px-8 py-3 bg-[#007398] text-white text-xs font-bold uppercase tracking-widest rounded-sm hover:bg-[#005a77] transition-all shadow-sm"
+                    onClick={loadMoreArticles}
+                  >
+                    Cargar más registros
+                  </button>
+                )}
+                {visibleArticles > 6 && (
+                  <button
+                    className="px-8 py-3 border border-gray-300 text-gray-600 text-xs font-bold uppercase tracking-widest rounded-sm hover:bg-white hover:text-black transition-all"
+                    onClick={showLessArticles}
+                  >
+                    Ver menos
+                  </button>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </motion.div>
+  ),
+},
     {
       name: 'volumes',
       label: 'Volúmenes',
