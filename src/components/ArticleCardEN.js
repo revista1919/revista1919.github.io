@@ -3,15 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 // Helper functions
 const getYear = (date) => {
-  if (!date) return 'n.d.';
-  // Forzar UTC para evitar desfase horario
+  if (!date) return 'Unknown';
   const parsedDate = new Date(date + 'T12:00:00Z');
-  return isNaN(parsedDate) ? 'n.d.' : parsedDate.getUTCFullYear();
+  return isNaN(parsedDate) ? 'Unknown' : parsedDate.getUTCFullYear();
 };
 
 const parseDateFlexible = (date) => {
   if (!date) return 'Not available';
-  // Forzar UTC para evitar desfase horario
   const parsedDate = new Date(date + 'T12:00:00Z');
   if (isNaN(parsedDate)) return date;
   
@@ -19,34 +17,22 @@ const parseDateFlexible = (date) => {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-    timeZone: 'UTC' // Forzar UTC
+    timeZone: 'UTC'
   });
 };
 
-// Slug generator (consistente con el script Node.js)
 const generateSlug = (name) => {
   if (!name) return '';
-  
-  // 1. Convertir a minúsculas
   let slug = name.toLowerCase();
-  
-  // 2. Eliminar tildes (esto ya funciona bien)
   slug = slug.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  
-  // 3. Reemplazar puntos seguidos de letras o espacios por un guión
   slug = slug.replace(/\.(?=[a-z]|\s)/g, '-');
-  
-  // 4. Reemplazar cualquier otro carácter no deseado (incluyendo puntos sueltos restantes) por guiones
   slug = slug.replace(/[^a-z0-9]+/g, '-');
-  
-  // 5. Eliminar guiones múltiples y guiones al principio o final
   slug = slug.replace(/-+/g, '-');
   slug = slug.replace(/^-+|-+$/g, '');
-  
   return slug;
 };
 
-// Validar y formatear enlace DOI
+// Validate and format DOI link
 const formatDOI = (doi) => {
   if (!doi) return null;
   const cleanDoi = String(doi).trim();
@@ -55,23 +41,18 @@ const formatDOI = (doi) => {
   return `https://doi.org/${cleanDoi}`;
 };
 
-// Limpiar texto visual del DOI (para mostrar solo el identificador si se desea, o la URL corta)
+// Clean DOI display text
 const displayDOI = (doi) => {
   if (!doi) return null;
   return formatDOI(doi).replace('https://', '');
 };
 
 /* -------------------------- AUTHOR FORMATS -------------------------- */
-// Obtener array de nombres de autores (para compatibilidad con funciones existentes)
 const getAuthorNames = (autores) => {
   if (!autores) return [];
-  
-  // Si es string (formato antiguo), convertir a array
   if (typeof autores === 'string') {
     return autores.split(';').map(a => a.trim()).filter(a => a);
   }
-  
-  // Si es array de objetos (nuevo formato)
   if (Array.isArray(autores)) {
     return autores.map(author => {
       if (typeof author === 'string') return author;
@@ -82,15 +63,11 @@ const getAuthorNames = (autores) => {
       return '';
     }).filter(Boolean);
   }
-  
   return [];
 };
 
-// Obtener array completo de objetos de autores
 const getAuthorsArray = (autores) => {
   if (!autores) return [];
-  
-  // Si es string, convertir a objetos simples
   if (typeof autores === 'string') {
     return autores.split(';').map(a => ({ 
       name: a.trim(),
@@ -100,8 +77,6 @@ const getAuthorsArray = (autores) => {
       orcid: null
     }));
   }
-  
-  // Si ya es array, devolverlo
   if (Array.isArray(autores)) {
     return autores.map(author => {
       if (typeof author === 'string') {
@@ -113,14 +88,13 @@ const getAuthorsArray = (autores) => {
           orcid: null
         };
       }
-      return author; // Ya es objeto
+      return author; 
     });
   }
-  
   return [];
 };
 
-const formatChicagoAuthors = (authors) => {
+const chicagoAuthors = (authors) => {
   const names = getAuthorNames(authors);
   if (names.length === 1) return names[0];
   if (names.length === 2) return `${names[0]} and ${names[1]}`;
@@ -135,7 +109,7 @@ const apaFormatName = (fullName) => {
   return `${last}, ${initials}`;
 };
 
-const formatAPAAuthors = (authors) => {
+const apaAuthors = (authors) => {
   const names = getAuthorNames(authors);
   const formatted = names.map(apaFormatName);
   if (formatted.length === 1) return formatted[0];
@@ -143,14 +117,13 @@ const formatAPAAuthors = (authors) => {
   return formatted.slice(0, -1).join(', ') + ', & ' + formatted[formatted.length - 1];
 };
 
-const formatMLAAuthors = (authors) => {
+const mlaAuthors = (authors) => {
   const names = getAuthorNames(authors);
   if (names.length === 1) return names[0];
   if (names.length === 2) return `${names[0]} and ${names[1]}`;
   return `${names[0]}, et al.`;
 };
 
-// Renderizar autores con iconos (ORCID, email)
 const renderAuthorsWithIcons = (authors, language = 'en') => {
   const authorsArray = getAuthorsArray(authors);
   
@@ -162,12 +135,11 @@ const renderAuthorsWithIcons = (authors, language = 'en') => {
       <span key={i} className="inline-flex items-center gap-1">
         <span
           onClick={(e) => { e.stopPropagation(); window.location.href = `/team/${slug}.EN.html`; }}
-          className="text-[#007398] hover:underline cursor-pointer font-medium"
+          className="text-gray-800 hover:text-[#007398] hover:underline cursor-pointer font-medium"
         >
           {name}
         </span>
         
-        {/* ORCID Icon */}
         {author.orcid && (
           <a
             href={`https://orcid.org/${author.orcid}`}
@@ -188,12 +160,11 @@ const renderAuthorsWithIcons = (authors, language = 'en') => {
           </a>
         )}
         
-        {/* Email Icon */}
         {author.email && (
           <a
             href={`mailto:${author.email}`}
             onClick={(e) => e.stopPropagation()}
-            className="inline-block ml-0.5 text-[#007398] hover:opacity-80"
+            className="inline-block ml-0.5 text-gray-400 hover:text-[#007398]"
             title="Email"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -203,7 +174,7 @@ const renderAuthorsWithIcons = (authors, language = 'en') => {
           </a>
         )}
         
-        {i < authorsArray.length - 1 && <span className="text-gray-400">,</span>}
+        {i < authorsArray.length - 1 && <span className="text-gray-400 mr-1">,</span>}
       </span>
     );
   });
@@ -217,29 +188,17 @@ function ArticleCardEN({ article }) {
   const [showSpanishAbstract, setShowSpanishAbstract] = useState(false);
   const [copiedFormat, setCopiedFormat] = useState(null);
 
-  const journalDisplay = 'The National Review of Sciences for Students';
-  const journalFormal = 'Revista Nacional de las Ciencias para Estudiantes';
-  // Usar permalink si existe, si no, generar el slug tradicional
+  const journal = 'The National Review of Sciences for Students';
   const articleSlug = article?.permalink || `${generateSlug(article?.titulo || '')}-${article?.numeroArticulo || ''}`;
   
-  // Usar el pdfUrl directamente del artículo (tal como viene del JSON)
   const pdfUrl = article?.pdfUrl || article?.pdf || '';
-  
-  // DOI
   const doiUrl = formatDOI(article?.doi);
   const doiDisplay = displayDOI(article?.doi);
-
-  // URLs de las versiones HTML (consistentes con el script)
+  
   const htmlUrlEn = `/articles/article-${articleSlug}EN.html`;
   const htmlUrlEs = `/articles/article-${articleSlug}.html`;
   
   const pages = `${article?.primeraPagina || ''}-${article?.ultimaPagina || ''}`.trim() || '';
-
-  const handleAuthorClick = (authorName) => {
-    if (!authorName) return;
-    const slug = generateSlug(authorName);
-    window.location.href = `/team/${slug}.EN.html`;
-  };
 
   /* --------------------------- FULL CITATIONS ---------------------------- */
   const getChicago = () => {
@@ -248,8 +207,8 @@ function ArticleCardEN({ article }) {
     const volume = article?.volumen || '';
     const number = article?.numero || '';
     const year = getYear(article?.fecha);
-    const plain = `${formatChicagoAuthors(authorsRaw)}. "${title}." ${journalFormal} ${volume}, no. ${number} (${year}): ${pages}.`;
-    const html = `${formatChicagoAuthors(authorsRaw)}. "${title}." <i>${journalFormal}</i> ${volume}, no. ${number} (${year}): ${pages}.`;
+    const plain = `${chicagoAuthors(authorsRaw)}. "${title}." ${journal} ${volume}, no. ${number} (${year}): ${pages}.`;
+    const html = `${chicagoAuthors(authorsRaw)}. "${title}." <i>${journal}</i> ${volume}, no. ${number} (${year}): ${pages}.`;
     return { plain, html };
   };
 
@@ -259,8 +218,8 @@ function ArticleCardEN({ article }) {
     const volume = article?.volumen || '';
     const number = article?.numero || '';
     const year = getYear(article?.fecha);
-    const plain = `${formatAPAAuthors(authorsRaw)} (${year}). ${title}. ${journalFormal}, ${volume}(${number}), ${pages}.`;
-    const html = `${formatAPAAuthors(authorsRaw)} (${year}). ${title}. <i>${journalFormal}</i>, <i>${volume}</i>(${number}), ${pages}.`;
+    const plain = `${apaAuthors(authorsRaw)} (${year}). ${title}. ${journal}, ${volume}(${number}), ${pages}.`;
+    const html = `${apaAuthors(authorsRaw)} (${year}). ${title}. <i>${journal}</i>, <i>${volume}</i>(${number}), ${pages}.`;
     return { plain, html };
   };
 
@@ -270,8 +229,8 @@ function ArticleCardEN({ article }) {
     const volume = article?.volumen || '';
     const number = article?.numero || '';
     const year = getYear(article?.fecha);
-    const plain = `${formatMLAAuthors(authorsRaw)}. "${title}." ${journalFormal}, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}.`;
-    const html = `${formatMLAAuthors(authorsRaw)}. "${title}." <i>${journalFormal}</i>, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}.`;
+    const plain = `${mlaAuthors(authorsRaw)}. "${title}." ${journal}, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}.`;
+    const html = `${mlaAuthors(authorsRaw)}. "${title}." <i>${journal}</i>, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}.`;
     return { plain, html };
   };
   /* ----------------------------------------------------------------------- */
@@ -287,13 +246,12 @@ function ArticleCardEN({ article }) {
       setCopiedFormat(format);
       setTimeout(() => setCopiedFormat(null), 2000);
     } catch (err) {
-      console.error('Failed to copy: ', err);
+      console.error('Error copying: ', err);
     }
   };
 
   const toggleExpand = (e) => {
     const tag = e.target.tagName.toLowerCase();
-    // Incluye 'svg' y 'path' para evitar que el clic en iconos expanda el artículo
     const isInteractive = ['a', 'button', 'span', 'svg', 'path'].includes(tag) || e.target.closest('a, button');
     if (!isInteractive) {
       setIsExpanded(!isExpanded);
@@ -302,317 +260,243 @@ function ArticleCardEN({ article }) {
 
   if (!article || Object.keys(article).length === 0) {
     return (
-      <motion.div
-        className="group relative bg-white border border-gray-200 rounded-sm p-6 mb-6 hover:shadow-md transition-all duration-300"
+      <motion.article
+        className="py-8 md:py-10 border-b border-gray-200 last:border-0 group transition-colors hover:bg-gray-50/40 px-2 sm:px-6"
         layout
       >
         <p className="text-center text-gray-500 font-medium">No data found for this article.</p>
-      </motion.div>
+      </motion.article>
     );
   }
 
-  const authorsArray = getAuthorsArray(article?.autores);
-  const type = article.type || article.tipo || 'Research Article';
-
-  // Determinar qué abstracts mostrar
-  const englishAbstract = article?.abstract || article?.resumen || 'Abstract not available';
-  const spanishAbstract = article?.resumen || article?.abstract || 'Resumen no disponible';
+  const tipo = article.tipo || 'Research Article';
+  const abstractToShow = article?.abstract || article?.resumen || 'Abstract not available';
 
   /* --------------------------- MAIN RENDER --------------------------- */
   return (
-    <motion.div
-      layout
+    <motion.article 
+      layout 
       onClick={toggleExpand}
-      className={`group relative bg-white border border-gray-200 mb-4 md:mb-6 transition-all duration-300 cursor-pointer
-        ${isExpanded ? 'shadow-xl ring-1 ring-[#007398]/20' : 'hover:shadow-md'}`}
+      className="py-8 md:py-10 border-b border-gray-200 last:border-0 group transition-colors hover:bg-gray-50/40 px-2 sm:px-6 cursor-pointer"
     >
-      {/* Indicador lateral de color */}
-      <div className={`absolute left-0 top-0 bottom-0 w-1 transition-colors
-        ${isExpanded ? 'bg-[#007398]' : 'bg-gray-100 group-hover:bg-[#007398]'}`}
-      />
-      <div className="p-4 md:p-6">
-        <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
-         
-          <div className="flex-1">
-            {/* Metadatos: Más pequeños y elegantes en móvil */}
-            <div className="flex flex-wrap items-center gap-2 mb-2 text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-gray-500">
-              
-              {/* Logo Open Access en línea perfectamente alineado */}
-              <div title="Open Access" className="flex items-center text-[#f68212]">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-[18px] w-auto flex-shrink-0" viewBox="70 30 540 300">
-                  <g transform="matrix(1.25 0 0 -1.25 0 360)">
-                    <defs>
-                      <path id="oa-bg-en" d="M-90-36h900v360H-90z"/>
-                    </defs>
-                    <clipPath id="oa-clip-en">
-                      <use href="#oa-bg-en" overflow="visible"/>
-                    </clipPath>
-                    <g clipPath="url(#oa-clip-en)">
-                      <path d="M720-3H0v294.285h720V-3z" fill="#fff"/>
-                      <path d="M262.883 200.896v-8.846h25.938v8.846c0 21.412 17.421 38.831 38.831 38.831 21.409 0 38.829-17.419 38.829-38.831v-63.985h25.939v63.985c0 35.713-29.056 64.769-64.768 64.769-35.711 0-64.769-29.056-64.769-64.769M349.153 99.568c0-11.816-9.58-21.396-21.399-21.396-11.818 0-21.398 9.58-21.398 21.396 0 11.823 9.58 21.404 21.398 21.404 11.819 0 21.399-9.581 21.399-21.404" fill="currentColor"/>
-                      <path d="M277.068 99.799c0 27.811 22.627 50.436 50.438 50.436 27.809 0 50.433-22.625 50.433-50.436 0-27.809-22.624-50.438-50.433-50.438-27.811.001-50.438 22.63-50.438 50.438m-25.938 0c0-42.109 34.265-76.373 76.375-76.373 42.111 0 76.373 34.265 76.373 76.373 0 42.113-34.262 76.375-76.373 76.375-42.11 0-76.375-34.262-76.375-76.375" fill="currentColor"/>
-                    </g>
-                  </g>
-                </svg>
-              </div>
+      <div className="flex flex-col gap-3">
+        
+        {/* Metadata Header (Academic Style) */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] uppercase tracking-widest font-semibold text-gray-500">
+          
+          {/* Open Access Logo perfectly aligned inline */}
+          <div title="Open Access" className="flex items-center text-[#f68212]">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-[18px] w-auto flex-shrink-0" viewBox="70 30 540 300">
+              <g transform="matrix(1.25 0 0 -1.25 0 360)">
+                <defs>
+                  <path id="oa-bg-en" d="M-90-36h900v360H-90z"/>
+                </defs>
+                <clipPath id="oa-clip-en">
+                  <use href="#oa-bg-en" overflow="visible"/>
+                </clipPath>
+                <g clipPath="url(#oa-clip-en)">
+                  <path d="M720-3H0v294.285h720V-3z" fill="#fff"/>
+                  <path d="M262.883 200.896v-8.846h25.938v8.846c0 21.412 17.421 38.831 38.831 38.831 21.409 0 38.829-17.419 38.829-38.831v-63.985h25.939v63.985c0 35.713-29.056 64.769-64.768 64.769-35.711 0-64.769-29.056-64.769-64.769M349.153 99.568c0-11.816-9.58-21.396-21.399-21.396-11.818 0-21.398 9.58-21.398 21.396 0 11.823 9.58 21.404 21.398 21.404 11.819 0 21.399-9.581 21.399-21.404" fill="currentColor"/>
+                  <path d="M277.068 99.799c0 27.811 22.627 50.436 50.438 50.436 27.809 0 50.433-22.625 50.433-50.436 0-27.809-22.624-50.438-50.433-50.438-27.811.001-50.438 22.63-50.438 50.438m-25.938 0c0-42.109 34.265-76.373 76.375-76.373 42.111 0 76.373 34.265 76.373 76.373 0 42.113-34.262 76.375-76.373 76.375-42.11 0-76.375-34.262-76.375-76.375" fill="currentColor"/>
+                </g>
+              </g>
+            </svg>
+          </div>
 
-              <span className="text-[#007398]">{article.area || 'General'}</span>
-              <span className="hidden xs:inline">•</span>
-              <span className="bg-gray-100 px-1.5 py-0.5 rounded-sm">VOL. {article.volumen}</span>
-              <span className="bg-gray-100 px-1.5 py-0.5 rounded-sm">NO. {article.numero}</span>
-            </div>
-            {/* Título: Ajuste de tamaño responsivo - AHORA ES UN ENLACE */}
-            <a
-              href={htmlUrlEn}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="block"
-            >
-              <h3 className={`font-serif font-bold text-black leading-tight mb-2 transition-colors hover:text-[#007398]
-                ${isExpanded ? 'text-xl md:text-2xl' : 'text-lg md:text-xl line-clamp-2 md:line-clamp-none'}`}>
-                {article.tituloEnglish || article.titulo}
-              </h3>
-            </a>
-            {/* Autores y DOI */}
-            <div className="flex flex-col gap-1.5 mb-3" onClick={(e) => e.stopPropagation()}>
-              <div className="flex flex-wrap items-center gap-x-1 text-xs md:text-sm">
-                {renderAuthorsWithIcons(article?.autores)}
-              </div>
-              
-              {/* DOI Visible debajo de los autores (Estilo Académico) */}
-              {doiUrl && (
-                <a 
-                  href={doiUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="text-[11px] md:text-[13px] font-medium text-gray-500 hover:text-[#007398] transition-colors inline-flex items-center gap-1 w-fit"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
-                  {doiDisplay}
-                </a>
-              )}
-            </div>
-            {/* Resumen corto: Se oculta si está expandido para no repetir con el completo */}
-            {!isExpanded && (
-              <p className="text-xs md:text-sm text-gray-500 italic line-clamp-2">
-                {englishAbstract}
-              </p>
-            )}
-          </div>
-          {/* Botones de acción: En móvil son una fila compacta al final o al lado */}
-          <div className="flex flex-row md:flex-col gap-2 md:min-w-[110px]" onClick={(e) => e.stopPropagation()}>
-            {pdfUrl && (
-              <a
-                href={pdfUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-3 py-2 bg-[#007398] text-white text-[10px] font-bold rounded-sm hover:bg-[#005a77] transition-all"
-              >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                PDF
-              </a>
-            )}
-            <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="flex-1 md:flex-none px-3 py-2 border border-gray-300 text-gray-700 text-[10px] font-bold rounded-sm hover:bg-gray-50"
-            >
-              {isExpanded ? 'CLOSE' : 'DETAILS'}
-            </button>
-          </div>
+          <span className="text-[#007398]">{tipo}</span>
+          <span className="w-1 h-1 rounded-full bg-gray-300"></span>
+          <span>Vol. {article.volumen}, No. {article.numero}</span>
+          <span className="w-1 h-1 rounded-full bg-gray-300"></span>
+          <span>{getYear(article.fecha)}</span>
         </div>
-        {/* Contenido Expandible: Optimizado para scroll móvil */}
+
+        {/* Title: Elegant, Serif, Large */}
+        <a 
+          href={htmlUrlEn} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="block w-full max-w-4xl mt-1"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <h3 className="font-serif text-xl md:text-3xl text-gray-900 leading-snug font-medium transition-colors hover:text-[#007398]">
+            {article.tituloEnglish || article.titulo}
+          </h3>
+        </a>
+
+        {/* Authors and DOI */}
+        <div className="flex flex-col gap-1.5 mt-1" onClick={(e) => e.stopPropagation()}>
+          <div className="flex flex-wrap items-center gap-x-1 text-sm md:text-base text-gray-700">
+            {renderAuthorsWithIcons(article?.autores)}
+          </div>
+          
+          {/* DOI Visible below authors (Academic Style) */}
+          {doiUrl && (
+            <a 
+              href={doiUrl} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="text-[13px] font-medium text-gray-500 hover:text-[#007398] transition-colors inline-flex items-center gap-1 w-fit"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+              {doiDisplay}
+            </a>
+          )}
+        </div>
+
+        {/* Truncated abstract (collapsed view) */}
+        {!isExpanded && (
+          <p className="font-serif text-gray-600 text-sm md:text-base leading-relaxed line-clamp-3 max-w-5xl mt-2">
+            {abstractToShow}
+          </p>
+        )}
+
+        {/* Inline action buttons (Academic Style) */}
+        <div className="flex flex-wrap items-center gap-6 mt-4 pt-2" onClick={(e) => e.stopPropagation()}>
+          {pdfUrl && (
+            <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-semibold text-[#007398] hover:text-[#005a77] transition-colors">
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+              Download PDF
+            </a>
+          )}
+          <a href={htmlUrlEn} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-[#007398] transition-colors">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+            View Full Text
+          </a>
+          {article.titulo && (
+            <a href={htmlUrlEs} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-[#007398] transition-colors">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m0 4v2" /></svg>
+              Spanish Version
+            </a>
+          )}
+          <button onClick={() => setIsExpanded(!isExpanded)} className="flex items-center gap-1 text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors ml-auto">
+            {isExpanded ? 'Less details' : 'More details'}
+            <svg className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+          </button>
+        </div>
+
+        {/* Expandable Content: Clean academic design */}
         <AnimatePresence>
           {isExpanded && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
+            <motion.div 
+              initial={{ height: 0, opacity: 0 }} 
+              animate={{ height: 'auto', opacity: 1 }} 
+              exit={{ height: 0, opacity: 0 }} 
               className="overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
             >
-              <div className="mt-5 pt-5 border-t border-gray-100 space-y-5">
-               
-                {/* Info rápida en Grid 2 columnas incluso en móvil */}
-                <div className="grid grid-cols-2 gap-4 text-[11px] md:text-sm">
-                  <div className="bg-gray-50 p-2 rounded">
-                    <span className="block text-gray-400 uppercase text-[9px] font-bold">Published</span>
-                    <span className="font-medium">{parseDateFlexible(article.fecha)}</span>
-                  </div>
-                  <div className="bg-gray-50 p-2 rounded">
-                    <span className="block text-gray-400 uppercase text-[9px] font-bold">Pages</span>
-                    <span className="font-medium">{pages || 'N/A'}</span>
-                  </div>
-                </div>
-
-                {/* Fechas de recepción/aceptación si existen */}
-                {(article.receivedDate || article.acceptedDate) && (
-                  <div className="grid grid-cols-2 gap-4 text-[11px] md:text-sm">
-                    {article.receivedDate && (
-                      <div className="bg-gray-50 p-2 rounded">
-                        <span className="block text-gray-400 uppercase text-[9px] font-bold">Received</span>
-                        <span className="font-medium">{parseDateFlexible(article.receivedDate)}</span>
-                      </div>
-                    )}
-                    {article.acceptedDate && (
-                      <div className="bg-gray-50 p-2 rounded">
-                        <span className="block text-gray-400 uppercase text-[9px] font-bold">Accepted</span>
-                        <span className="font-medium">{parseDateFlexible(article.acceptedDate)}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* ISSN y DOI en línea */}
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] md:text-xs text-gray-500 font-medium">
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                
+                {/* Dates in flat line (Academic string) */}
+                <div className="flex flex-wrap items-center text-xs text-gray-500 font-medium tracking-wide mb-6">
+                  {article.receivedDate && <span>Received: {parseDateFlexible(article.receivedDate)} <span className="mx-2 text-gray-300">|</span> </span>}
+                  {article.acceptedDate && <span>Accepted: {parseDateFlexible(article.acceptedDate)} <span className="mx-2 text-gray-300">|</span> </span>}
+                  <span>Published: {parseDateFlexible(article.fecha)}</span>
+                  <span className="mx-2 text-gray-300">|</span>
+                  <span>Pages: {pages || 'N/A'}</span>
+                  <span className="mx-2 text-gray-300">|</span>
                   <span>ISSN 3087-2839</span>
                   {doiUrl && (
                     <>
-                      <span className="text-gray-300">|</span>
+                      <span className="mx-2 text-gray-300">|</span>
                       <span>DOI: <a href={doiUrl} target="_blank" rel="noopener noreferrer" className="hover:text-[#007398] hover:underline">{article.doi}</a></span>
                     </>
                   )}
                 </div>
 
-                {/* Abstract con tipografía legible */}
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Abstract</h4>
-                    <p className="text-sm md:text-base text-gray-800 leading-relaxed font-serif text-justify">
-                      {englishAbstract}
-                    </p>
-                  </div>
+                <div className="max-w-4xl">
+                  <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Abstract</h4>
+                  <p className="text-base text-gray-800 leading-relaxed font-serif text-justify mb-6">
+                    {abstractToShow}
+                  </p>
+
                   {article.resumen && article.resumen !== article.abstract && (
-                    <div className="border-l-2 border-blue-100 pl-4 py-1">
-                      <button
-                        onClick={() => setShowSpanishAbstract(!showSpanishAbstract)}
-                        className="text-[#007398] text-[10px] font-bold uppercase tracking-tighter"
+                    <div className="mb-6">
+                      <button 
+                        onClick={() => setShowSpanishAbstract(!showSpanishAbstract)} 
+                        className="text-[#007398] text-xs font-bold uppercase tracking-wider hover:underline flex items-center gap-1"
                       >
-                        {showSpanishAbstract ? '↓ Hide Spanish Abstract' : '→ Read Spanish Abstract'}
+                        {showSpanishAbstract ? 'Hide Spanish Abstract' : 'Read Spanish Abstract'}
                       </button>
                       {showSpanishAbstract && (
-                        <p className="mt-2 text-sm text-gray-600 italic font-serif leading-relaxed">
+                        <p className="mt-3 text-base text-gray-600 font-serif leading-relaxed text-justify">
                           {article.resumen}
                         </p>
                       )}
                     </div>
                   )}
-                </div>
 
-                {/* Palabras Clave */}
-                {article.keywords_english && article.keywords_english.length > 0 && (
-                  <div>
-                    <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Keywords</h4>
-                    <div className="flex flex-wrap gap-1.5">
-                      {article.keywords_english.map((kw, idx) => (
-                        <span key={idx} className="bg-white border border-gray-200 text-[10px] px-2 py-0.5 text-gray-600 italic">
-                          #{kw}
-                        </span>
-                      ))}
+                  {/* Keywords */}
+                  {article.keywords_english && article.keywords_english.length > 0 && (
+                    <div className="mb-6 text-sm">
+                      <span className="font-bold text-gray-900 mr-2">Keywords:</span>
+                      <span className="text-gray-700 italic">{article.keywords_english.join(', ')}</span>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Palabras clave en español si existen */}
-                {article.palabras_clave && article.palabras_clave.length > 0 && (
-                  <div>
-                    <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Keywords (Spanish)</h4>
-                    <div className="flex flex-wrap gap-1.5">
-                      {article.palabras_clave.map((kw, idx) => (
-                        <span key={idx} className="bg-white border border-gray-200 text-[10px] px-2 py-0.5 text-gray-600 italic">
-                          #{kw}
-                        </span>
-                      ))}
+                  {/* Spanish keywords if they exist */}
+                  {article.palabras_clave && article.palabras_clave.length > 0 && (
+                    <div className="mb-6 text-sm">
+                      <span className="font-bold text-gray-900 mr-2">Keywords (Spanish):</span>
+                      <span className="text-gray-700 italic">{article.palabras_clave.join(', ')}</span>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Footer de Acciones Secundarias */}
-                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 border-t border-gray-50">
-                  <div className="flex gap-4">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setShowCitations(!showCitations); }}
-                      className="text-[10px] font-bold text-gray-500 hover:text-[#007398] flex items-center gap-1"
+                  {/* Additional information (optional) */}
+                  {(article.fundingEnglish || article.conflictsEnglish) && (
+                    <div className="mb-6 text-sm text-gray-600">
+                      {article.fundingEnglish && (
+                        <p className="mb-1"><strong className="text-gray-900">Funding:</strong> {article.fundingEnglish}</p>
+                      )}
+                      {article.conflictsEnglish && (
+                        <p><strong className="text-gray-900">Conflicts of interest:</strong> {article.conflictsEnglish}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Cite button */}
+                  <div className="mt-8 pt-6 border-t border-gray-100">
+                    <button 
+                      onClick={() => setShowCitations(!showCitations)} 
+                      className="px-4 py-2 bg-gray-100 text-gray-800 text-xs font-bold uppercase tracking-wider hover:bg-gray-200 transition-colors flex items-center gap-2 rounded-sm"
                     >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                      </svg>
-                      CITE
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+                      Cite this article
                     </button>
-                    <a
-                      href={htmlUrlEn}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[10px] font-bold text-[#007398] flex items-center gap-1"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                      </svg>
-                      VIEW FULL-TEXT
-                    </a>
-                    {article.titulo && (
-                      <a
-                        href={htmlUrlEs}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[10px] font-bold text-gray-500 hover:text-[#007398] flex items-center gap-1"
-                        onClick={(e) => e.stopPropagation()}
+
+                    {showCitations && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: -10 }} 
+                        animate={{ opacity: 1, y: 0 }} 
+                        className="mt-4 bg-gray-50 border border-gray-200 p-5 rounded-sm space-y-5"
                       >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path d="M3 5h12M9 3v2m0 4v2" />
-                        </svg>
-                        SPANISH VERSION
-                      </a>
+                        {[
+                          { label: 'APA', ...getApa() },
+                          { label: 'MLA', ...getMla() },
+                          { label: 'Chicago', ...getChicago() }
+                        ].map((cite) => (
+                          <div key={cite.label} className="border-b border-gray-200 pb-4 last:border-0 last:pb-0">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">{cite.label}</span>
+                              <button 
+                                onClick={() => copyToClipboard(cite.plain, cite.html, cite.label)} 
+                                className="text-[#007398] text-xs font-bold hover:underline"
+                              >
+                                {copiedFormat === cite.label ? 'COPIED' : 'COPY'}
+                              </button>
+                            </div>
+                            <p className="text-sm text-gray-800 font-serif leading-relaxed" dangerouslySetInnerHTML={{ __html: cite.html }} />
+                          </div>
+                        ))}
+                      </motion.div>
                     )}
                   </div>
                 </div>
-
-                {/* Información adicional (opcional) */}
-                {(article.fundingEnglish || article.conflictsEnglish) && (
-                  <div className="text-[10px] text-gray-500 border-t border-gray-100 pt-4 mt-2">
-                    {article.fundingEnglish && (
-                      <p><strong>Funding:</strong> {article.fundingEnglish}</p>
-                    )}
-                    {article.conflictsEnglish && (
-                      <p className="mt-1"><strong>Conflicts of interest:</strong> {article.conflictsEnglish}</p>
-                    )}
-                  </div>
-                )}
-
-                {/* Sección de Citas optimizada para móvil */}
-                {showCitations && (
-                  <motion.div
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                    className="bg-gray-900 text-gray-300 p-4 rounded-sm text-[11px] space-y-4 font-mono"
-                  >
-                    {[
-                      { label: 'APA', ...getApa() },
-                      { label: 'MLA', ...getMla() },
-                      { label: 'Chicago', ...getChicago() }
-                    ].map((cite) => (
-                      <div key={cite.label} className="flex flex-col gap-2 border-b border-gray-800 pb-2 last:border-0">
-                        <div className="flex justify-between">
-                          <span className="text-white font-bold">{cite.label}</span>
-                          <button
-                            onClick={() => copyToClipboard(cite.plain, cite.html, cite.label)}
-                            className="text-[#007398] uppercase text-[9px] font-black"
-                          >
-                            {copiedFormat === cite.label ? 'Copied' : 'Copy'}
-                          </button>
-                        </div>
-                        <p className="leading-tight opacity-80" dangerouslySetInnerHTML={{ __html: cite.html }} />
-                      </div>
-                    ))}
-                  </motion.div>
-                )}
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
-    </motion.div>
+    </motion.article>
   );
 }
 
