@@ -188,7 +188,7 @@ function ArticleCard({ article }) {
   const [showSpanishAbstract, setShowSpanishAbstract] = useState(false);
   const [copiedFormat, setCopiedFormat] = useState(null);
 
-  const journal = 'National Review of Sciences for Students';
+  const journal = 'Revista Nacional de las Ciencias para Estudiantes';
   const articleSlug = article?.permalink || `${generateSlug(article?.titulo || '')}-${article?.numeroArticulo || ''}`;
   
   const pdfUrl = article?.pdfUrl || article?.pdf || '';
