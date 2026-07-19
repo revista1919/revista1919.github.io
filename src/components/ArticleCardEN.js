@@ -41,20 +41,20 @@ const formatDOI = (doi) => {
   return `https://doi.org/${cleanDoi}`;
 };
 
-// Clean DOI display text
+// Clean DOI display text (to show only the identifier if desired, or the short URL)
 const displayDOI = (doi) => {
   if (!doi) return null;
   return formatDOI(doi).replace('https://', '');
 };
 
 /* -------------------------- AUTHOR FORMATS -------------------------- */
-const getAuthorNames = (autores) => {
-  if (!autores) return [];
-  if (typeof autores === 'string') {
-    return autores.split(';').map(a => a.trim()).filter(a => a);
+const getAuthorNames = (authors) => {
+  if (!authors) return [];
+  if (typeof authors === 'string') {
+    return authors.split(';').map(a => a.trim()).filter(a => a);
   }
-  if (Array.isArray(autores)) {
-    return autores.map(author => {
+  if (Array.isArray(authors)) {
+    return authors.map(author => {
       if (typeof author === 'string') return author;
       if (author.name) return author.name;
       if (author.firstName || author.lastName) {
@@ -66,10 +66,10 @@ const getAuthorNames = (autores) => {
   return [];
 };
 
-const getAuthorsArray = (autores) => {
-  if (!autores) return [];
-  if (typeof autores === 'string') {
-    return autores.split(';').map(a => ({ 
+const getAuthorsArray = (authors) => {
+  if (!authors) return [];
+  if (typeof authors === 'string') {
+    return authors.split(';').map(a => ({ 
       name: a.trim(),
       authorId: null,
       email: null,
@@ -77,8 +77,8 @@ const getAuthorsArray = (autores) => {
       orcid: null
     }));
   }
-  if (Array.isArray(autores)) {
-    return autores.map(author => {
+  if (Array.isArray(authors)) {
+    return authors.map(author => {
       if (typeof author === 'string') {
         return { 
           name: author,
@@ -134,7 +134,7 @@ const renderAuthorsWithIcons = (authors, language = 'en') => {
     return (
       <span key={i} className="inline-flex items-center gap-1">
         <span
-          onClick={(e) => { e.stopPropagation(); window.location.href = `/team/${slug}.EN.html`; }}
+          onClick={(e) => { e.stopPropagation(); window.location.href = `/team/${slug}.html`; }}
           className="text-gray-800 hover:text-[#007398] hover:underline cursor-pointer font-medium"
         >
           {name}
@@ -181,29 +181,29 @@ const renderAuthorsWithIcons = (authors, language = 'en') => {
 };
 /* -------------------------------------------------------------------------- */
 
-function ArticleCardEN({ article }) {
+function ArticleCard({ article }) {
   console.log('Article object received:', article);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showCitations, setShowCitations] = useState(false);
   const [showSpanishAbstract, setShowSpanishAbstract] = useState(false);
   const [copiedFormat, setCopiedFormat] = useState(null);
 
-  const journal = 'The National Review of Sciences for Students';
+  const journal = 'National Review of Sciences for Students';
   const articleSlug = article?.permalink || `${generateSlug(article?.titulo || '')}-${article?.numeroArticulo || ''}`;
   
   const pdfUrl = article?.pdfUrl || article?.pdf || '';
   const doiUrl = formatDOI(article?.doi);
   const doiDisplay = displayDOI(article?.doi);
   
-  const htmlUrlEn = `/articles/article-${articleSlug}EN.html`;
-  const htmlUrlEs = `/articles/article-${articleSlug}.html`;
+  const htmlUrlEn = `/articles/article-${articleSlug}.html`;
+  const htmlUrlEs = `/articles/article-${articleSlug}ES.html`;
   
   const pages = `${article?.primeraPagina || ''}-${article?.ultimaPagina || ''}`.trim() || '';
 
   /* --------------------------- FULL CITATIONS ---------------------------- */
   const getChicago = () => {
     const authorsRaw = article?.autores || '';
-    const title = article?.tituloEnglish || article?.titulo || 'Untitled';
+    const title = article?.titulo || 'Untitled';
     const volume = article?.volumen || '';
     const number = article?.numero || '';
     const year = getYear(article?.fecha);
@@ -214,7 +214,7 @@ function ArticleCardEN({ article }) {
 
   const getApa = () => {
     const authorsRaw = article?.autores || '';
-    const title = article?.tituloEnglish || article?.titulo || 'Untitled';
+    const title = article?.titulo || 'Untitled';
     const volume = article?.volumen || '';
     const number = article?.numero || '';
     const year = getYear(article?.fecha);
@@ -225,7 +225,7 @@ function ArticleCardEN({ article }) {
 
   const getMla = () => {
     const authorsRaw = article?.autores || '';
-    const title = article?.tituloEnglish || article?.titulo || 'Untitled';
+    const title = article?.titulo || 'Untitled';
     const volume = article?.volumen || '';
     const number = article?.numero || '';
     const year = getYear(article?.fecha);
@@ -252,6 +252,7 @@ function ArticleCardEN({ article }) {
 
   const toggleExpand = (e) => {
     const tag = e.target.tagName.toLowerCase();
+    // Includes 'svg' and 'path' to prevent click on icons from expanding the article
     const isInteractive = ['a', 'button', 'span', 'svg', 'path'].includes(tag) || e.target.closest('a, button');
     if (!isInteractive) {
       setIsExpanded(!isExpanded);
@@ -289,12 +290,12 @@ function ArticleCardEN({ article }) {
             <svg xmlns="http://www.w3.org/2000/svg" className="h-[18px] w-auto flex-shrink-0" viewBox="70 30 540 300">
               <g transform="matrix(1.25 0 0 -1.25 0 360)">
                 <defs>
-                  <path id="oa-bg-en" d="M-90-36h900v360H-90z"/>
+                  <path id="oa-bg" d="M-90-36h900v360H-90z"/>
                 </defs>
-                <clipPath id="oa-clip-en">
-                  <use href="#oa-bg-en" overflow="visible"/>
+                <clipPath id="oa-clip">
+                  <use href="#oa-bg" overflow="visible"/>
                 </clipPath>
-                <g clipPath="url(#oa-clip-en)">
+                <g clipPath="url(#oa-clip)">
                   <path d="M720-3H0v294.285h720V-3z" fill="#fff"/>
                   <path d="M262.883 200.896v-8.846h25.938v8.846c0 21.412 17.421 38.831 38.831 38.831 21.409 0 38.829-17.419 38.829-38.831v-63.985h25.939v63.985c0 35.713-29.056 64.769-64.768 64.769-35.711 0-64.769-29.056-64.769-64.769M349.153 99.568c0-11.816-9.58-21.396-21.399-21.396-11.818 0-21.398 9.58-21.398 21.396 0 11.823 9.58 21.404 21.398 21.404 11.819 0 21.399-9.581 21.399-21.404" fill="currentColor"/>
                   <path d="M277.068 99.799c0 27.811 22.627 50.436 50.438 50.436 27.809 0 50.433-22.625 50.433-50.436 0-27.809-22.624-50.438-50.433-50.438-27.811.001-50.438 22.63-50.438 50.438m-25.938 0c0-42.109 34.265-76.373 76.375-76.373 42.111 0 76.373 34.265 76.373 76.373 0 42.113-34.262 76.375-76.373 76.375-42.11 0-76.375-34.262-76.375-76.375" fill="currentColor"/>
@@ -310,7 +311,7 @@ function ArticleCardEN({ article }) {
           <span>{getYear(article.fecha)}</span>
         </div>
 
-        {/* Title: Elegant, Serif, Large */}
+        {/* Title: Elegant, Serif, Large Size */}
         <a 
           href={htmlUrlEn} 
           target="_blank" 
@@ -319,7 +320,7 @@ function ArticleCardEN({ article }) {
           onClick={(e) => e.stopPropagation()}
         >
           <h3 className="font-serif text-xl md:text-3xl text-gray-900 leading-snug font-medium transition-colors hover:text-[#007398]">
-            {article.tituloEnglish || article.titulo}
+            {article.titulo}
           </h3>
         </a>
 
@@ -350,7 +351,7 @@ function ArticleCardEN({ article }) {
           </p>
         )}
 
-        {/* Inline action buttons (Academic Style) */}
+        {/* Inline action buttons (T&F Style) */}
         <div className="flex flex-wrap items-center gap-6 mt-4 pt-2" onClick={(e) => e.stopPropagation()}>
           {pdfUrl && (
             <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-semibold text-[#007398] hover:text-[#005a77] transition-colors">
@@ -362,7 +363,7 @@ function ArticleCardEN({ article }) {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
             View Full Text
           </a>
-          {article.titulo && (
+          {article.tituloEnglish && (
             <a href={htmlUrlEs} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-[#007398] transition-colors">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m0 4v2" /></svg>
               Spanish Version
@@ -415,7 +416,7 @@ function ArticleCardEN({ article }) {
                         onClick={() => setShowSpanishAbstract(!showSpanishAbstract)} 
                         className="text-[#007398] text-xs font-bold uppercase tracking-wider hover:underline flex items-center gap-1"
                       >
-                        {showSpanishAbstract ? 'Hide Spanish Abstract' : 'Read Spanish Abstract'}
+                        {showSpanishAbstract ? 'Hide Spanish Abstract' : 'Read Abstract in Spanish'}
                       </button>
                       {showSpanishAbstract && (
                         <p className="mt-3 text-base text-gray-600 font-serif leading-relaxed text-justify">
@@ -425,7 +426,7 @@ function ArticleCardEN({ article }) {
                     </div>
                   )}
 
-                  {/* Keywords */}
+                  {/* Clean keywords, no boxes */}
                   {article.keywords_english && article.keywords_english.length > 0 && (
                     <div className="mb-6 text-sm">
                       <span className="font-bold text-gray-900 mr-2">Keywords:</span>
@@ -442,18 +443,18 @@ function ArticleCardEN({ article }) {
                   )}
 
                   {/* Additional information (optional) */}
-                  {(article.fundingEnglish || article.conflictsEnglish) && (
+                  {(article.funding || article.conflicts) && (
                     <div className="mb-6 text-sm text-gray-600">
-                      {article.fundingEnglish && (
-                        <p className="mb-1"><strong className="text-gray-900">Funding:</strong> {article.fundingEnglish}</p>
+                      {article.funding && (
+                        <p className="mb-1"><strong className="text-gray-900">Funding:</strong> {article.funding}</p>
                       )}
-                      {article.conflictsEnglish && (
-                        <p><strong className="text-gray-900">Conflicts of interest:</strong> {article.conflictsEnglish}</p>
+                      {article.conflicts && (
+                        <p><strong className="text-gray-900">Conflicts of interest:</strong> {article.conflicts}</p>
                       )}
                     </div>
                   )}
 
-                  {/* Cite button */}
+                  {/* Cite Button */}
                   <div className="mt-8 pt-6 border-t border-gray-100">
                     <button 
                       onClick={() => setShowCitations(!showCitations)} 
@@ -500,4 +501,4 @@ function ArticleCardEN({ article }) {
   );
 }
 
-export default ArticleCardEN;
+export default ArticleCard;
