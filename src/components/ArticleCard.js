@@ -201,14 +201,21 @@ function ArticleCard({ article }) {
   const pages = `${article?.primeraPagina || ''}-${article?.ultimaPagina || ''}`.trim() || '';
 
   /* --------------------------- CITAS COMPLETAS ---------------------------- */
-  const getChicago = () => {
+ const getChicago = () => {
     const authorsRaw = article?.autores || '';
     const title = article?.titulo || 'Sin título';
     const volume = article?.volumen || '';
     const number = article?.numero || '';
     const year = getYear(article?.fecha);
-    const plain = `${chicagoAuthors(authorsRaw)}. "${title}." ${journal} ${volume}, no. ${number} (${year}): ${pages}.`;
-    const html = `${chicagoAuthors(authorsRaw)}. "${title}." <i>${journal}</i> ${volume}, no. ${number} (${year}): ${pages}.`;
+    let plain = `${chicagoAuthors(authorsRaw)}. "${title}." ${journal} ${volume}, no. ${number} (${year}): ${pages}.`;
+    let html = `${chicagoAuthors(authorsRaw)}. "${title}." <i>${journal}</i> ${volume}, no. ${number} (${year}): ${pages}.`;
+    
+    // Añadir DOI si existe
+    if (doiUrl) {
+      plain += ` ${doiUrl}`;
+      html += ` <a href="${doiUrl}" target="_blank" rel="noopener noreferrer">${doiUrl}</a>`;
+    }
+    
     return { plain, html };
   };
 
@@ -218,8 +225,15 @@ function ArticleCard({ article }) {
     const volume = article?.volumen || '';
     const number = article?.numero || '';
     const year = getYear(article?.fecha);
-    const plain = `${apaAuthors(authorsRaw)} (${year}). ${title}. ${journal}, ${volume}(${number}), ${pages}.`;
-    const html = `${apaAuthors(authorsRaw)} (${year}). ${title}. <i>${journal}</i>, <i>${volume}</i>(${number}), ${pages}.`;
+    let plain = `${apaAuthors(authorsRaw)} (${year}). ${title}. ${journal}, ${volume}(${number}), ${pages}.`;
+    let html = `${apaAuthors(authorsRaw)} (${year}). ${title}. <i>${journal}</i>, <i>${volume}</i>(${number}), ${pages}.`;
+    
+    // Añadir DOI si existe
+    if (doiUrl) {
+      plain += ` ${doiUrl}`;
+      html += ` <a href="${doiUrl}" target="_blank" rel="noopener noreferrer">${doiUrl}</a>`;
+    }
+    
     return { plain, html };
   };
 
@@ -229,8 +243,15 @@ function ArticleCard({ article }) {
     const volume = article?.volumen || '';
     const number = article?.numero || '';
     const year = getYear(article?.fecha);
-    const plain = `${mlaAuthors(authorsRaw)}. "${title}." ${journal}, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}.`;
-    const html = `${mlaAuthors(authorsRaw)}. "${title}." <i>${journal}</i>, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}.`;
+    let plain = `${mlaAuthors(authorsRaw)}. "${title}." ${journal}, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}.`;
+    let html = `${mlaAuthors(authorsRaw)}. "${title}." <i>${journal}</i>, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}.`;
+    
+    // Añadir DOI si existe
+    if (doiUrl) {
+      plain += ` ${doiUrl}`;
+      html += ` <a href="${doiUrl}" target="_blank" rel="noopener noreferrer">${doiUrl}</a>`;
+    }
+    
     return { plain, html };
   };
   /* ----------------------------------------------------------------------- */

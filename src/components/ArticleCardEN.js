@@ -41,7 +41,7 @@ const formatDOI = (doi) => {
   return `https://doi.org/${cleanDoi}`;
 };
 
-// Clean DOI display text (to show only the identifier if desired, or the short URL)
+// Clean DOI display text
 const displayDOI = (doi) => {
   if (!doi) return null;
   return formatDOI(doi).replace('https://', '');
@@ -200,15 +200,21 @@ function ArticleCard({ article }) {
   
   const pages = `${article?.primeraPagina || ''}-${article?.ultimaPagina || ''}`.trim() || '';
 
-  /* --------------------------- FULL CITATIONS ---------------------------- */
+  /* --------------------------- FULL CITATIONS WITH DOI ---------------------------- */
   const getChicago = () => {
     const authorsRaw = article?.autores || '';
     const title = article?.titulo || 'Untitled';
     const volume = article?.volumen || '';
     const number = article?.numero || '';
     const year = getYear(article?.fecha);
-    const plain = `${chicagoAuthors(authorsRaw)}. "${title}." ${journal} ${volume}, no. ${number} (${year}): ${pages}.`;
-    const html = `${chicagoAuthors(authorsRaw)}. "${title}." <i>${journal}</i> ${volume}, no. ${number} (${year}): ${pages}.`;
+    let plain = `${chicagoAuthors(authorsRaw)}. "${title}." ${journal} ${volume}, no. ${number} (${year}): ${pages}.`;
+    let html = `${chicagoAuthors(authorsRaw)}. "${title}." <i>${journal}</i> ${volume}, no. ${number} (${year}): ${pages}.`;
+    
+    if (doiUrl) {
+      plain += ` ${doiUrl}`;
+      html += ` <a href="${doiUrl}" target="_blank" rel="noopener noreferrer">${doiUrl}</a>`;
+    }
+    
     return { plain, html };
   };
 
@@ -218,8 +224,14 @@ function ArticleCard({ article }) {
     const volume = article?.volumen || '';
     const number = article?.numero || '';
     const year = getYear(article?.fecha);
-    const plain = `${apaAuthors(authorsRaw)} (${year}). ${title}. ${journal}, ${volume}(${number}), ${pages}.`;
-    const html = `${apaAuthors(authorsRaw)} (${year}). ${title}. <i>${journal}</i>, <i>${volume}</i>(${number}), ${pages}.`;
+    let plain = `${apaAuthors(authorsRaw)} (${year}). ${title}. ${journal}, ${volume}(${number}), ${pages}.`;
+    let html = `${apaAuthors(authorsRaw)} (${year}). ${title}. <i>${journal}</i>, <i>${volume}</i>(${number}), ${pages}.`;
+    
+    if (doiUrl) {
+      plain += ` ${doiUrl}`;
+      html += ` <a href="${doiUrl}" target="_blank" rel="noopener noreferrer">${doiUrl}</a>`;
+    }
+    
     return { plain, html };
   };
 
@@ -229,8 +241,14 @@ function ArticleCard({ article }) {
     const volume = article?.volumen || '';
     const number = article?.numero || '';
     const year = getYear(article?.fecha);
-    const plain = `${mlaAuthors(authorsRaw)}. "${title}." ${journal}, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}.`;
-    const html = `${mlaAuthors(authorsRaw)}. "${title}." <i>${journal}</i>, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}.`;
+    let plain = `${mlaAuthors(authorsRaw)}. "${title}." ${journal}, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}.`;
+    let html = `${mlaAuthors(authorsRaw)}. "${title}." <i>${journal}</i>, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}.`;
+    
+    if (doiUrl) {
+      plain += ` ${doiUrl}`;
+      html += ` <a href="${doiUrl}" target="_blank" rel="noopener noreferrer">${doiUrl}</a>`;
+    }
+    
     return { plain, html };
   };
   /* ----------------------------------------------------------------------- */
@@ -252,7 +270,6 @@ function ArticleCard({ article }) {
 
   const toggleExpand = (e) => {
     const tag = e.target.tagName.toLowerCase();
-    // Includes 'svg' and 'path' to prevent click on icons from expanding the article
     const isInteractive = ['a', 'button', 'span', 'svg', 'path'].includes(tag) || e.target.closest('a, button');
     if (!isInteractive) {
       setIsExpanded(!isExpanded);
@@ -270,7 +287,8 @@ function ArticleCard({ article }) {
     );
   }
 
-  const tipo = article.tipo || 'Research Article';
+  // Read from English field "type" instead of "tipo"
+  const tipo = article.type || 'Research Article';
   const abstractToShow = article?.abstract || article?.resumen || 'Abstract not available';
 
   /* --------------------------- MAIN RENDER --------------------------- */
@@ -442,7 +460,7 @@ function ArticleCard({ article }) {
                     </div>
                   )}
 
-                  {/* Additional information (optional) */}
+                  {/* Additional information - Now reading from English fields */}
                   {(article.funding || article.conflicts) && (
                     <div className="mb-6 text-sm text-gray-600">
                       {article.funding && (
