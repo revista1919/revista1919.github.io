@@ -600,9 +600,8 @@ const getVocabularyForArea = (area) => {
 };
 // ============ COMPONENTE: PALABRAS CLAVE CONTROLADAS ============
 
-const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language }) => {
+const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language, mode = 'keywords' }) => {
   const isSpanish = language === 'es';
-  const [newCode, setNewCode] = useState('');
   const [newTerm, setNewTerm] = useState('');
   const [error, setError] = useState('');
 
@@ -610,22 +609,16 @@ const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language })
   const minKeywords = 2;
   const keywords = Array.isArray(value) ? value : [];
 
-  // Limpiar error cuando cambian los inputs
-  useEffect(() => {
-    if (newCode.trim() && newTerm.trim()) {
-      setError('');
-    }
-  }, [newCode, newTerm]);
 
-  const addKeyword = () => {
-    const code = newCode.trim();
+
+    const addKeyword = () => {
     const term = newTerm.trim();
     
     // Validaciones con mensajes claros
-    if (!code || !term) {
+    if (!term) {
       setError(isSpanish 
-        ? 'Debes ingresar tanto el código como el término.' 
-        : 'You must enter both the code and the term.');
+        ? 'Debes ingresar una palabra clave.' 
+        : 'You must enter a keyword.');
       return;
     }
     
@@ -636,30 +629,27 @@ const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language })
       return;
     }
     
-    if (keywords.some(k => k.code === code)) {
+    if (keywords.some(k => k === term || k.term === term)) {
       setError(isSpanish 
-        ? 'Este código ya existe en tus palabras clave. Usa un código diferente.' 
-        : 'This code already exists in your keywords. Use a different code.');
+        ? 'Esta palabra clave ya existe.' 
+        : 'This keyword already exists.');
       return;
     }
 
-    const updatedKeywords = [...keywords, { code, term }];
+    const updatedKeywords = [...keywords, term];
     onChange(updatedKeywords);
-    setNewCode('');
     setNewTerm('');
     setError('');
   };
-
-  const removeKeyword = (index) => {
+   const removeKeyword = (index) => {
     const updatedKeywords = keywords.filter((_, i) => i !== index);
     onChange(updatedKeywords);
   };
 
-  const handleCodeKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      document.getElementById('controlled-term-input')?.focus();
-    }
+  // Para códigos especializados (usa formato {code, term})
+  const removeCode = (index) => {
+    const updatedKeywords = keywords.filter((_, i) => i !== index);
+    onChange(updatedKeywords);
   };
 
   const handleTermKeyPress = (e) => {
@@ -716,24 +706,11 @@ const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language })
         </div>
       </div>
 
-      {/* Campos de entrada */}
+            {/* Campos de entrada */}
       <div className="flex gap-3">
-        <div className="w-1/3">
-          <label className="block text-[10px] font-mono font-semibold uppercase tracking-wider text-[#546E7A] mb-1.5">
-            {isSpanish ? 'Código' : 'Code'} *
-          </label>
-          <input
-            type="text"
-            value={newCode}
-            onChange={(e) => setNewCode(e.target.value)}
-            onKeyPress={handleCodeKeyPress}
-            placeholder={vocabularyConfig.vocabulario === 'JEL' ? 'B14' : 'CCS2012.10010179'}
-            className="w-full p-3 bg-white border border-gray-200 rounded-sm text-sm font-mono focus:ring-2 focus:ring-[#003b5c] focus:border-transparent outline-none transition-all"
-          />
-        </div>
         <div className="flex-1">
           <label className="block text-[10px] font-mono font-semibold uppercase tracking-wider text-[#546E7A] mb-1.5">
-            {isSpanish ? 'Término' : 'Term'} *
+            {isSpanish ? 'Palabra clave' : 'Keyword'} *
           </label>
           <input
             id="controlled-term-input"
@@ -741,7 +718,7 @@ const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language })
             value={newTerm}
             onChange={(e) => setNewTerm(e.target.value)}
             onKeyPress={handleTermKeyPress}
-            placeholder="Machine learning"
+            placeholder={mode === 'keywords' ? "Machine learning" : "CCS2012.10010179"}
             className="w-full p-3 bg-white border border-gray-200 rounded-sm text-sm font-serif focus:ring-2 focus:ring-[#003b5c] focus:border-transparent outline-none transition-all"
           />
         </div>
@@ -749,7 +726,7 @@ const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language })
           <button
             type="button"
             onClick={addKeyword}
-            disabled={!newCode.trim() || !newTerm.trim() || keywords.length >= maxKeywords}
+            disabled={!newTerm.trim() || keywords.length >= maxKeywords}
             className="px-5 py-3 bg-[#003b5c] text-white rounded-sm text-xs font-bold uppercase tracking-wider hover:bg-[#002b44] transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
           >
             + {isSpanish ? 'Agregar' : 'Add'}
@@ -784,7 +761,7 @@ const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language })
         )}
       </div>
 
-      {/* Chips de palabras clave */}
+            {/* Chips de palabras clave */}
       {keywords.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {keywords.map((kw, index) => (
@@ -792,10 +769,7 @@ const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language })
               key={index}
               className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#f4f5f7] border border-gray-200 text-[#003b5c] rounded-sm text-xs font-medium"
             >
-              <code className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded-sm text-[#e86125]">
-                {kw.code}
-              </code>
-              <span className="font-serif">{kw.term}</span>
+              <span className="font-serif">{typeof kw === 'string' ? kw : kw.term}</span>
               <button
                 type="button"
                 onClick={() => removeKeyword(index)}
@@ -1135,8 +1109,9 @@ export default function SubmissionForm({ user, onSuccess }) {
     titleEn: '',
     abstract: '',
     abstractEn: '',
-    controlledKeywords: [],
-    controlledKeywordsEn: [],
+    keywordsEs: [],
+    keywordsEn: [],
+    specializedCodes: [],
     area: '',
     paperLanguage: 'es',
     articleType: '',
@@ -1485,8 +1460,8 @@ useEffect(() => {
       case 1:
         return formData.title.trim() &&
           formData.abstract.trim() &&
-          formData.controlledKeywords.length >= 2 && 
-          formData.controlledKeywords.length <= 6 &&
+          formData.keywordsEs.length >= 2 && 
+          formData.keywordsEs.length <= 6 &&
           formData.area.trim() &&
           formData.articleType;
       
@@ -1533,12 +1508,12 @@ useEffect(() => {
         if (!formData.abstract.trim()) {
           errors.abstract = isSpanish ? 'El resumen es obligatorio' : 'Abstract is required';
         }
-        if (!formData.controlledKeywords || formData.controlledKeywords.length < 2) {
+                if (!formData.keywordsEs || formData.keywordsEs.length < 2) {
           errors.controlledKeywords = isSpanish 
-            ? 'Debes agregar al menos 2 palabras clave (mínimo 2)' 
-            : 'You must add at least 2 keywords (minimum 2)';
+            ? 'Debes agregar al menos 2 palabras clave en español (mínimo 2)' 
+            : 'You must add at least 2 keywords in Spanish (minimum 2)';
         }
-        if (formData.controlledKeywords && formData.controlledKeywords.length > 6) {
+        if (formData.keywordsEs && formData.keywordsEs.length > 6) {
           errors.controlledKeywords = isSpanish 
             ? 'Máximo 6 palabras clave permitidas' 
             : 'Maximum 6 keywords allowed';
@@ -1687,13 +1662,10 @@ useEffect(() => {
       const manuscriptBase64 = await toBase64(formData.manuscript);
       
       // Serializar palabras clave
-      const keywordsSerialized = formData.controlledKeywords
-        .map(kw => `${kw.code}: ${kw.term}`)
-        .join('; ');
-      
-      const keywordsEnSerialized = formData.controlledKeywordsEn
-        .map(kw => `${kw.code}: ${kw.term}`)
-        .join('; ');
+            // Serializar palabras clave y códigos
+      const keywordsSerialized = formData.keywordsEs.join('; ');
+      const keywordsEnSerialized = formData.keywordsEn.join('; ');
+      const specializedCodesSerialized = formData.specializedCodes.join('; ');
 
       // Construir payload
       const payload = {
@@ -1702,10 +1674,12 @@ useEffect(() => {
         abstract: formData.abstract,
         abstractEn: formData.abstractEn,
         keywordsVocabulario: getVocabularyForArea(formData.area)?.vocabulario || 'unknown',
-        keywordsRaw: formData.controlledKeywords,
-        keywordsRawEn: formData.controlledKeywordsEn,
+        keywordsRaw: formData.keywordsEs,
+        keywordsRawEn: formData.keywordsEn,
         keywordsSerialized,
         keywordsEnSerialized,
+        specializedCodes: formData.specializedCodes,
+        specializedCodesSerialized,
         area: formData.area,
         paperLanguage: formData.paperLanguage,
         articleType: formData.articleType,
@@ -2258,50 +2232,88 @@ useEffect(() => {
                       </div>
                     </div>
 
-                    {/* Palabras clave controladas */}
-                    <div className="mt-5">
-                      <label className="block text-xs font-medium uppercase tracking-wider text-gray-600 mb-3">
-                        {isSpanish ? 'Palabras clave' : 'Keywords'} *
-                      </label>
-                     {formData.area && getVocabularyForArea(formData.area) ? (
-                        <div className="space-y-8">
-                          <div>
-                            <ControlledKeywordInput
-                              vocabularyConfig={getVocabularyForArea(formData.area)}
-                              value={formData.controlledKeywords}
-                              onChange={(val) => {
-                                setFormData(prev => ({ ...prev, controlledKeywords: val }));
-                                setValidationErrors(prev => {
-                                  const newErrors = { ...prev };
-                                  delete newErrors.controlledKeywords;
-                                  return newErrors;
-                                });
-                              }}
-                              language={language}
-                            />
-                            {validationErrors.controlledKeywords && (
-                              <p className="text-red-500 text-xs mt-1">{validationErrors.controlledKeywords}</p>
-                            )}
-                          </div>
-                          
-                          <div>
-                            <label className="block text-xs font-medium uppercase tracking-wider text-gray-600 mb-3">
-                              {isSpanish ? 'Keywords en inglés' : 'English Keywords'}
+                                        {/* Palabras clave y códigos especializados */}
+                    <div className="mt-5 space-y-8">
+                      {/* Palabras clave en español */}
+                      <div>
+                        <label className="block text-xs font-medium uppercase tracking-wider text-gray-600 mb-3">
+                          {isSpanish ? 'Palabras clave (español)' : 'Keywords (Spanish)'} *
+                        </label>
+                        <ControlledKeywordInput
+                          vocabularyConfig={getVocabularyForArea(formData.area) || {}}
+                          value={formData.keywordsEs}
+                          onChange={(val) => {
+                            setFormData(prev => ({ ...prev, keywordsEs: val }));
+                            setValidationErrors(prev => {
+                              const newErrors = { ...prev };
+                              delete newErrors.controlledKeywords;
+                              return newErrors;
+                            });
+                          }}
+                          language={language}
+                          mode="keywords"
+                        />
+                        {validationErrors.controlledKeywords && (
+                          <p className="text-red-500 text-xs mt-1">{validationErrors.controlledKeywords}</p>
+                        )}
+                      </div>
+
+                      {/* Palabras clave en inglés */}
+                      <div>
+                        <label className="block text-xs font-medium uppercase tracking-wider text-gray-600 mb-3">
+                          {isSpanish ? 'Keywords (inglés)' : 'Keywords (English)'} *
+                        </label>
+                        <ControlledKeywordInput
+                          vocabularyConfig={getVocabularyForArea(formData.area) || {}}
+                          value={formData.keywordsEn}
+                          onChange={(val) => setFormData(prev => ({ ...prev, keywordsEn: val }))}
+                          language={language}
+                          mode="keywords"
+                        />
+                      </div>
+
+                      {/* Códigos especializados (solo si hay área seleccionada con vocabulario) */}
+                      {formData.area && getVocabularyForArea(formData.area) ? (
+                        <div>
+                          <div className="flex items-center gap-2 mb-3">
+                            <label className="block text-xs font-medium uppercase tracking-wider text-gray-600">
+                              {isSpanish ? 'Códigos especializados' : 'Specialized Codes'}
                             </label>
-                            <ControlledKeywordInput
-                              vocabularyConfig={getVocabularyForArea(formData.area)}
-                              value={formData.controlledKeywordsEn}
-                              onChange={(val) => setFormData(prev => ({ ...prev, controlledKeywordsEn: val }))}
-                              language={language}
+                            <HelpCapsule 
+                              text={`Códigos del vocabulario ${getVocabularyForArea(formData.area)?.vocabulario || ''}. Ejemplo: ${getVocabularyForArea(formData.area)?.ejemplo || ''}. Debes agregar entre 2 y 4 códigos.`}
+                              textEn={`Codes from the ${getVocabularyForArea(formData.area)?.vocabulario || ''} vocabulary. Example: ${getVocabularyForArea(formData.area)?.ejemplo || ''}. You must add between 2 and 4 codes.`}
                             />
                           </div>
+                          <ControlledKeywordInput
+                            vocabularyConfig={getVocabularyForArea(formData.area)}
+                            value={formData.specializedCodes}
+                            onChange={(val) => setFormData(prev => ({ ...prev, specializedCodes: val }))}
+                            language={language}
+                            mode="codes"
+                          />
+                          <p className="text-xs text-gray-500 mt-2 font-sans">
+                            {isSpanish 
+                              ? `Vocabulario: ${getVocabularyForArea(formData.area)?.vocabulario} — ${getVocabularyForArea(formData.area)?.nombre}. Agrega de 2 a 4 códigos.`
+                              : `Vocabulary: ${getVocabularyForArea(formData.area)?.vocabulario} — ${getVocabularyForArea(formData.area)?.nombre}. Add 2 to 4 codes.`}
+                          </p>
+                          <a
+                            href={getVocabularyForArea(formData.area)?.searchUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 mt-2 text-[#003b5c] hover:text-[#e86125] text-xs font-medium transition-colors font-sans"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                            {isSpanish ? 'Abrir buscador' : 'Open search'} →
+                          </a>
                         </div>
                       ) : (
                         <div className="bg-[#f8f9fa] rounded-sm p-6 text-center border-2 border-dashed border-gray-200">
                           <p className="text-gray-500 text-sm font-sans">
                             {isSpanish 
-                              ? 'Selecciona primero un área temática para configurar el vocabulario controlado.'
-                              : 'Select a subject area first to configure the controlled vocabulary.'}
+                              ? 'Selecciona un área temática para ver los códigos especializados disponibles.'
+                              : 'Select a subject area to see available specialized codes.'}
                           </p>
                         </div>
                       )}

@@ -62,28 +62,15 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
   }, [hookError]);
 
   const formatValue = (value, fieldName = '') => {
-    if (value === null || value === undefined) return <span className="text-slate-400 italic font-sans text-xs">—</span>;
-    
-    if ((fieldName === 'keywords' || fieldName === 'keywordsEn') && Array.isArray(value)) {
+        if ((fieldName === 'keywords' || fieldName === 'keywordsEs' || fieldName === 'keywordsEn') && Array.isArray(value)) {
         return (
             <div className="flex flex-wrap gap-1.5">
                 {value.length === 0 ? <span className="text-slate-400 italic text-xs">—</span> : 
-                    value.map((kw, idx) => {
-                        const match = typeof kw === 'string' ? kw.match(/^([A-Za-z0-9.]+):\s*(.+)/) : null;
-                        if (match) {
-                            return (
-                                <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1 bg-white border border-slate-200 text-slate-700 rounded-sm text-xs shadow-sm font-sans">
-                                    <code className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded-sm text-slate-500 font-mono">{match[1]}</code>
-                                    <span>{match[2]}</span>
-                                </span>
-                            );
-                        }
-                        return (
-                            <span key={idx} className="px-3 py-1 bg-slate-100 text-slate-700 rounded-sm text-xs font-sans border border-slate-200">
-                                {typeof kw === 'string' ? kw : kw.term || String(kw)}
-                            </span>
-                        );
-                    })
+                    value.map((kw, idx) => (
+                        <span key={idx} className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-xs font-sans border border-slate-200">
+                            {typeof kw === 'string' ? kw : kw.term || String(kw)}
+                        </span>
+                    ))
                 }
             </div>
         );
@@ -125,7 +112,7 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
     { name: 'dataAvailability', label: isSpanish ? 'Disponibilidad de Datos' : 'Data Availability', type: 'textarea', requiresConsent: false }
   ];
 
-  const getCurrentValue = (fieldName) => {
+    const getCurrentValue = (fieldName) => {
     if (submission.currentMetadata && submission.currentMetadata[fieldName] !== undefined) {
         return submission.currentMetadata[fieldName];
     }
@@ -135,14 +122,19 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
     if (submission[fieldName] !== undefined) {
         return submission[fieldName];
     }
-    if (fieldName === 'keywords' && submission.keywordsRaw?.length > 0) {
-        return submission.keywordsRaw.map(k => k.code ? `${k.code}: ${k.term}` : k.term);
+    // Soporte para keywordsEs y keywordsEn como arrays
+    if (fieldName === 'keywords' && submission.keywordsEs?.length > 0) {
+        return submission.keywordsEs;
     }
-    if (fieldName === 'keywordsEn' && submission.keywordsRawEn?.length > 0) {
-        return submission.keywordsRawEn.map(k => k.code ? `${k.code}: ${k.term}` : k.term);
+    if (fieldName === 'keywordsEn' && submission.keywordsEn?.length > 0) {
+        return submission.keywordsEn;
     }
-    if (fieldName === 'keywordsEn' && submission.keywordsRaw?.length > 0) {
-        return submission.keywordsRaw.map(k => k.code ? `${k.code}: ${k.term}` : k.term);
+    // Fallback a keywords legacy
+    if (fieldName === 'keywords' && submission.keywords?.length > 0) {
+        return submission.keywords;
+    }
+    if (fieldName === 'keywordsEn' && submission.keywords?.length > 0) {
+        return submission.keywords;
     }
     return '';
   };

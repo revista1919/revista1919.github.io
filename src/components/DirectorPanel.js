@@ -1,4 +1,4 @@
-// DirectorPanel.js (Componente completo con flujo mejorado)
+// DirectorPanel.js (Componente completo - Nuevo Diseño Editorial + Lógicas Originales)
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { auth, db } from '../firebase';
@@ -12,7 +12,6 @@ import MailsTeam from './MailsTeam';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import CodeMirror from '@uiw/react-codemirror';
-
 import { html } from '@codemirror/lang-html';
 import { oneDark } from '@codemirror/theme-one-dark';
 import CollectionManager from './CollectionManager';
@@ -25,14 +24,13 @@ import {
   IdentificationIcon, AcademicCapIcon, ArrowDownTrayIcon, InformationCircleIcon,
   FolderIcon  
 } from '@heroicons/react/24/outline';
+
 // --- Constantes de Configuración ---
 const DOMAIN = 'https://www.revistacienciasestudiantes.com';
 const ARTICLES_JSON_URL = `${DOMAIN}/articles.json`;
 const MANAGE_ARTICLES_URL = 'https://managearticles-ggqsq2kkua-uc.a.run.app/manageArticles';
 const MANAGE_VOLUMES_URL = 'https://managevolumes-ggqsq2kkua-uc.a.run.app/';
 const REBUILD_URL = 'https://triggerrebuild-ggqsq2kkua-uc.a.run.app/';
-const REPO_OWNER = 'revista1919';
-const REPO_NAME = 'revista1919.github.io';
 
 const generateSlug = (name) => {
   if (!name) return '';
@@ -70,7 +68,7 @@ const initialAuthorState = {
   orcid: '',
   authorId: null,
   isCorresponding: false,
-  contribution: '', // Nuevo campo para CRediT
+  contribution: '',
 };
 
 // --- Estados Iniciales ---
@@ -84,6 +82,8 @@ const initialArticleState = {
   abstract: '',
   palabras_clave: '',
   keywords_english: '',
+  specialized_codes: '',
+  keywords_vocabulary: '',
   area: '',
   tipo: '',
   type: '',
@@ -111,7 +111,7 @@ const initialArticleState = {
   pdfFile: null,
   pdfUrl: null,
   htmlMode: 'code',
-  lastVersionFileUrl: null, // Para guardar el enlace al último archivo de versión
+  lastVersionFileUrl: null,
 };
 
 const initialVolumeState = {
@@ -140,29 +140,24 @@ export default function DirectorPanel({ user }) {
   const [expandedArticles, setExpandedArticles] = useState({});
   const [expandedVolumes, setExpandedVolumes] = useState({});
 
-  // Modales
   const [showArticleModal, setShowArticleModal] = useState(false);
   const [showVolumeModal, setShowVolumeModal] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   
-  // Modal de búsqueda de submissions (nuevo paso inicial)
   const [showSubmissionSelector, setShowSubmissionSelector] = useState(false);
   const [submissionSearchTerm, setSubmissionSearchTerm] = useState('');
   const [readySubmissions, setReadySubmissions] = useState([]);
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
-  const [importSummary, setImportSummary] = useState(null); // Para mostrar resumen después de importar
+  const [importSummary, setImportSummary] = useState(null);
 
-  // Forms
   const [articleForm, setArticleForm] = useState(initialArticleState);
   const [volumeForm, setVolumeForm] = useState(initialVolumeState);
 
-  // --- Lógica de Acceso y Datos ---
   const hasAccess = useMemo(() => user?.roles?.includes('Director General'), [user]);
 
-  // --- Cargar borradores SOLO al abrir modal (ahora solo cuando se edita, no al crear nuevo porque primero pasa por selector) ---
   useEffect(() => {
     if (showArticleModal && editingItem) {
       setArticleForm(prev => ({
@@ -173,14 +168,12 @@ export default function DirectorPanel({ user }) {
     }
   }, [showArticleModal, editingItem]);
 
-  // --- Guardar borradores solo para edición ---
   useEffect(() => {
     if (showArticleModal && editingItem) {
       localStorage.setItem('draftEditArticle', JSON.stringify(articleForm));
     }
   }, [articleForm, showArticleModal, editingItem]);
 
-  // --- Cargar artículos desde JSON ---
   useEffect(() => {
     if (!hasAccess) return;
 
@@ -197,7 +190,10 @@ export default function DirectorPanel({ user }) {
           palabras_clave: Array.isArray(article.palabras_clave) ? article.palabras_clave : 
                           (typeof article.palabras_clave === 'string' ? article.palabras_clave.split(';').map(k => k.trim()).filter(k => k) : []),
           keywords_english: Array.isArray(article.keywords_english) ? article.keywords_english : 
-                            (typeof article.keywords_english === 'string' ? article.keywords_english.split(';').map(k => k.trim()).filter(k => k) : [])
+                            (typeof article.keywords_english === 'string' ? article.keywords_english.split(';').map(k => k.trim()).filter(k => k) : []),
+          specialized_codes: Array.isArray(article.specialized_codes) ? article.specialized_codes :
+                            (typeof article.specialized_codes === 'string' ? article.specialized_codes.split(';').map(c => c.trim()).filter(Boolean) : []),
+          keywords_vocabulary: article.keywords_vocabulary || '',
         }));
         setArticles(processedArticles);
       } catch (error) {
@@ -221,7 +217,6 @@ export default function DirectorPanel({ user }) {
     return () => unsubVolumes();
   }, [hasAccess]);
 
-  // --- Cargar submissions listos (publicationReady = true) ---
   const loadReadySubmissions = async () => {
     setLoadingSubmissions(true);
     try {
@@ -232,13 +227,11 @@ export default function DirectorPanel({ user }) {
       
       for (const doc of querySnapshot.docs) {
         const data = doc.data();
-        // Obtener la última versión de archivo (subcolección 'versions')
         const versionsRef = collection(db, 'submissions', doc.id, 'versions');
         const versionsSnap = await getDocs(query(versionsRef, firestoreLimit(1)));
         let lastVersionFileUrl = null;
         versionsSnap.forEach(versionDoc => {
           const versionData = versionDoc.data();
-          // Tomar el archivo más reciente (asumiendo que están ordenados por versión)
           if (versionData.fileUrl) lastVersionFileUrl = versionData.fileUrl;
         });
 
@@ -256,7 +249,7 @@ export default function DirectorPanel({ user }) {
           createdAt: data.createdAt?.toDate?.() || null,
           publicationReadyAt: data.publicationReadyAt?.toDate?.() || null,
           decisionMadeAt: data.decisionMadeAt?.toDate?.() || null,
-          lastVersionFileUrl, // Guardamos el enlace
+          lastVersionFileUrl,
         });
       }
       
@@ -270,7 +263,6 @@ export default function DirectorPanel({ user }) {
     }
   };
 
-  // --- Abrir selector de envíos (primer paso) ---
   const handleOpenSubmissionSelector = () => {
     loadReadySubmissions();
     setSubmissionSearchTerm('');
@@ -279,225 +271,191 @@ export default function DirectorPanel({ user }) {
     setShowSubmissionSelector(true);
   };
 
-  // --- IMPORTAR TODOS LOS DATOS DESDE LA SUBMISSION SELECCIONADA ---
-  // --- IMPORTAR TODOS LOS DATOS DESDE LA SUBMISSION SELECCIONADA ---
-const importFromSubmission = async (submission) => {
-  if (!submission) return;
+  const importFromSubmission = async (submission) => {
+    if (!submission) return;
+    setIsProcessing(true);
+    setStatus({ type: 'info', msg: 'Importando datos del envío...' });
 
-  setIsProcessing(true);
-  setStatus({ type: 'info', msg: 'Importando datos del envío...' });
+    try {
+      const metadata = submission.currentMetadata || {};
+      
+      const getMeta = (field) => {
+        if (submission.currentMetadata && submission.currentMetadata[field] !== undefined && submission.currentMetadata[field] !== null) {
+          return submission.currentMetadata[field];
+        }
+        if (submission[field] !== undefined && submission[field] !== null) {
+          return submission[field];
+        }
+        return null;
+      };
+      
+      const importedAuthors = (getMeta('authors') || []).map(author => ({
+        name: author.name || `${author.firstName || ''} ${author.lastName || ''}`.trim() || '',
+        email: author.email || '',
+        institution: author.institution || '',
+        orcid: author.orcid || '',
+        authorId: author.uid || author.authorId || null,
+        isCorresponding: author.isCorresponding || false,
+        contribution: author.contribution || '',
+      }));
 
-  try {
-    // *** CORRECCIÓN: Usar currentMetadata como fuente principal ***
-    // currentMetadata contiene los metadatos consolidados (aprobados por el autor)
-    // Si no existe, usar los campos raíz del documento
-    const metadata = submission.currentMetadata || {};
-    
-    // Función helper para obtener un valor: primero de currentMetadata, luego de submission
-    const getMeta = (field) => {
-      if (submission.currentMetadata && submission.currentMetadata[field] !== undefined && submission.currentMetadata[field] !== null) {
-        return submission.currentMetadata[field];
+      if (importedAuthors.length === 0 && getMeta('authorName')) {
+        importedAuthors.push({
+          name: getMeta('authorName') || '',
+          email: getMeta('authorEmail') || '',
+          institution: getMeta('authorInstitution') || '',
+          orcid: getMeta('authorOrcid') || '',
+          authorId: getMeta('authorUID') || getMeta('uid') || null,
+          isCorresponding: true,
+          contribution: '',
+        });
       }
-      if (submission[field] !== undefined && submission[field] !== null) {
-        return submission[field];
+
+      const authorCreditsText = importedAuthors
+        .filter(a => a.contribution)
+        .map(a => `${a.name}: ${a.contribution}`)
+        .join('\n');
+      
+      let fundingText = 'No declarada';
+      const fundingData = getMeta('funding');
+      if (fundingData) {
+        if (typeof fundingData === 'object' && !Array.isArray(fundingData)) {
+          const sources = fundingData.sources || '';
+          const grants = fundingData.grantNumbers || '';
+          fundingText = [sources, grants].filter(Boolean).join(' - ') || 'No declarada';
+        } else if (typeof fundingData === 'string') {
+          fundingText = fundingData;
+        }
       }
-      return null;
-    };
-    
-    // 1. Procesar autores con sus contribuciones
-    const importedAuthors = (getMeta('authors') || []).map(author => ({
-      name: author.name || `${author.firstName || ''} ${author.lastName || ''}`.trim() || '',
-      email: author.email || '',
-      institution: author.institution || '',
-      orcid: author.orcid || '',
-      authorId: author.uid || author.authorId || null,
-      isCorresponding: author.isCorresponding || false,
-      contribution: author.contribution || '', // CRediT
-    }));
 
-    // Si no hay autores en el array, intentar con el autor principal
-    if (importedAuthors.length === 0 && getMeta('authorName')) {
-      importedAuthors.push({
-        name: getMeta('authorName') || '',
-        email: getMeta('authorEmail') || '',
-        institution: getMeta('authorInstitution') || '',
-        orcid: getMeta('authorOrcid') || '',
-        authorId: getMeta('authorUID') || getMeta('uid') || null,
-        isCorresponding: true,
-        contribution: '',
-      });
-    }
+      let palabrasClaveStr = '';
+      let keywordsEnglishStr = '';
+      let specializedCodesStr = '';
+      let keywordsVocabularyStr = '';
 
-    // 2. Consolidar contribuciones en authorCredits
-    const authorCreditsText = importedAuthors
-      .filter(a => a.contribution)
-      .map(a => `${a.name}: ${a.contribution}`)
-      .join('\n');
-    
-    // 3. Financiamiento: combinar sources y grantNumbers
-    let fundingText = 'No declarada';
-    const fundingData = getMeta('funding');
-    if (fundingData) {
-      if (typeof fundingData === 'object' && !Array.isArray(fundingData)) {
-        const sources = fundingData.sources || '';
-        const grants = fundingData.grantNumbers || '';
-        fundingText = [sources, grants].filter(Boolean).join(' - ') || 'No declarada';
-      } else if (typeof fundingData === 'string') {
-        fundingText = fundingData;
+      const keywordsEs = getMeta('keywordsEs');
+      if (keywordsEs && Array.isArray(keywordsEs) && keywordsEs.length > 0) {
+        palabrasClaveStr = keywordsEs.join('; ');
+      } else {
+        const keywords = getMeta('keywords');
+        if (keywords && Array.isArray(keywords) && keywords.length > 0) {
+          palabrasClaveStr = keywords.join('; ');
+        } else if (typeof keywords === 'string') {
+          palabrasClaveStr = keywords;
+        }
       }
-    }
 
-    // 4. Palabras clave - DETECCIÓN AUTOMÁTICA DE FORMATO (legacy + controlled)
-    let palabrasClaveStr = '';
-    let keywordsEnglishStr = '';
-
-    // Intentar usar keywordsRaw primero (formato nuevo controlado)
-    const keywordsRaw = getMeta('keywordsRaw');
-    if (keywordsRaw && Array.isArray(keywordsRaw) && keywordsRaw.length > 0) {
-      palabrasClaveStr = keywordsRaw
-        .map(k => k.code ? `${k.code}: ${k.term}` : k.term)
-        .join('; ');
-    } else {
-      // Intentar con keywords (array)
-      const keywords = getMeta('keywords');
-      if (keywords && Array.isArray(keywords) && keywords.length > 0) {
-        palabrasClaveStr = keywords.join('; ');
-      } else if (typeof keywords === 'string') {
-        palabrasClaveStr = keywords;
-      }
-    }
-
-    // Mismo proceso para inglés
-    const keywordsRawEn = getMeta('keywordsRawEn');
-    if (keywordsRawEn && Array.isArray(keywordsRawEn) && keywordsRawEn.length > 0) {
-      keywordsEnglishStr = keywordsRawEn
-        .map(k => k.code ? `${k.code}: ${k.term}` : k.term)
-        .join('; ');
-    } else {
       const keywordsEn = getMeta('keywordsEn');
       if (keywordsEn && Array.isArray(keywordsEn) && keywordsEn.length > 0) {
         keywordsEnglishStr = keywordsEn.join('; ');
-      } else if (typeof keywordsEn === 'string') {
-        keywordsEnglishStr = keywordsEn;
+      } else if (!keywordsEnglishStr && palabrasClaveStr) {
+        keywordsEnglishStr = palabrasClaveStr;
       }
+
+      const specializedCodes = getMeta('specializedCodes');
+      if (specializedCodes && Array.isArray(specializedCodes) && specializedCodes.length > 0) {
+        specializedCodesStr = specializedCodes.join('; ');
+      }
+
+      keywordsVocabularyStr = getMeta('keywordsVocabulario') || getMeta('keywords_vocabulary') || '';
+      
+      const receivedDate = submission.createdAt ? 
+        (submission.createdAt.toDate ? submission.createdAt.toDate().toISOString().split('T')[0] : 
+         new Date(submission.createdAt).toISOString().split('T')[0]) : '';
+      
+      const acceptedDate = submission.publicationReadyAt ? 
+        (submission.publicationReadyAt.toDate ? submission.publicationReadyAt.toDate().toISOString().split('T')[0] : 
+         new Date(submission.publicationReadyAt).toISOString().split('T')[0]) : 
+        (submission.decisionMadeAt ? 
+          (submission.decisionMadeAt.toDate ? submission.decisionMadeAt.toDate().toISOString().split('T')[0] : 
+           new Date(submission.decisionMadeAt).toISOString().split('T')[0]) : '');
+
+      const articleType = getMeta('articleType') || '';
+      const articleTypeMap = {
+        'research': { es: 'Artículo de Investigación', en: 'Research Article' },
+        'review': { es: 'Artículo de Revisión', en: 'Review Article' },
+        'case_study': { es: 'Estudio de Caso', en: 'Case Study' },
+        'essay': { es: 'Ensayo', en: 'Essay' },
+        'letter': { es: 'Carta al Editor', en: 'Letter to the Editor' },
+      };
+      
+      const tipoMapped = articleTypeMap[articleType] || { es: articleType, en: articleType };
+
+      const importedData = {
+        titulo: getMeta('title') || '',
+        tituloEnglish: getMeta('titleEn') || '',
+        autores: importedAuthors,
+        resumen: getMeta('abstract') || '',
+        abstract: getMeta('abstractEn') || '',
+        palabras_clave: palabrasClaveStr,
+        keywords_english: keywordsEnglishStr,
+        specialized_codes: specializedCodesStr,
+        keywords_vocabulary: keywordsVocabularyStr,
+        area: getMeta('area') || '',
+        tipo: tipoMapped.es,
+        type: tipoMapped.en,
+        acknowledgments: getMeta('acknowledgments') || '',
+        acknowledgmentsEnglish: getMeta('acknowledgmentsEn') || '',
+        conflicts: getMeta('conflictOfInterest') || 'Los autores declaran no tener conflictos de interés.',
+        conflictsEnglish: getMeta('conflictsEnglish') || 'The authors declare no conflicts of interest.',
+        funding: fundingText,
+        fundingEnglish: getMeta('fundingEnglish') || fundingText,
+        dataAvailability: getMeta('dataAvailability') || '',
+        dataAvailabilityEnglish: getMeta('dataAvailabilityEn') || '',
+        authorCredits: authorCreditsText,
+        authorCreditsEnglish: getMeta('authorCreditsEnglish') || authorCreditsText,
+        receivedDate: receivedDate,
+        acceptedDate: acceptedDate,
+        submissionId: submission.submissionId || submission.id,
+        lastVersionFileUrl: submission.lastVersionFileUrl || null,
+        driveFolderUrl: submission.driveFolderUrl || null,
+        editorialFolderUrl: submission.editorialFolderUrl || null,
+      };
+
+      setArticleForm(prev => ({ ...prev, ...importedData }));
+
+      const importedFields = [];
+      if (importedData.titulo) importedFields.push('título');
+      if (importedData.tituloEnglish) importedFields.push('título inglés');
+      if (importedData.resumen) importedFields.push('resumen');
+      if (importedData.abstract) importedFields.push('abstract');
+      if (importedData.palabras_clave) importedFields.push('palabras clave');
+      if (importedData.keywords_english) importedFields.push('keywords');
+      if (importedData.specialized_codes) importedFields.push('códigos especializados');
+      if (importedData.keywords_vocabulary) importedFields.push('vocabulario');
+      if (importedData.area) importedFields.push('área');
+      if (importedData.tipo) importedFields.push('tipo de artículo');
+      if (importedData.autores.length > 0) importedFields.push(`autores (${importedData.autores.length})`);
+      if (importedData.authorCredits) importedFields.push('contribuciones');
+      if (importedData.conflicts) importedFields.push('conflictos');
+      if (importedData.funding && importedData.funding !== 'No declarada') importedFields.push('financiamiento');
+      if (importedData.acknowledgments) importedFields.push('agradecimientos');
+      if (importedData.dataAvailability) importedFields.push('disponibilidad de datos');
+      if (importedData.receivedDate) importedFields.push('fecha recepción');
+      if (importedData.acceptedDate) importedFields.push('fecha aceptación');
+      if (importedData.submissionId) importedFields.push('submission ID');
+
+      setImportSummary({
+        fields: importedFields,
+        lastVersionFileUrl: submission.lastVersionFileUrl,
+        driveFolderUrl: submission.driveFolderUrl,
+        editorialFolderUrl: submission.editorialFolderUrl,
+      });
+
+      setStatus({ type: 'success', msg: `Datos importados correctamente. Revise y complete los que faltan.` });
+      
+      setShowSubmissionSelector(false);
+      setSelectedSubmission(submission);
+      setShowArticleModal(true);
+      
+    } catch (error) {
+      console.error("Error importing submission:", error);
+      setStatus({ type: 'error', msg: `Error al importar: ${error.message}` });
+    } finally {
+      setIsProcessing(false);
     }
+  };
 
-    // Si no hay inglés, usar español como fallback
-    if (!keywordsEnglishStr && palabrasClaveStr) {
-      keywordsEnglishStr = palabrasClaveStr;
-    }
-
-    // 5. Fechas aproximadas
-    const receivedDate = submission.createdAt ? 
-      (submission.createdAt.toDate ? submission.createdAt.toDate().toISOString().split('T')[0] : 
-       new Date(submission.createdAt).toISOString().split('T')[0]) : '';
-    
-    const acceptedDate = submission.publicationReadyAt ? 
-      (submission.publicationReadyAt.toDate ? submission.publicationReadyAt.toDate().toISOString().split('T')[0] : 
-       new Date(submission.publicationReadyAt).toISOString().split('T')[0]) : 
-      (submission.decisionMadeAt ? 
-        (submission.decisionMadeAt.toDate ? submission.decisionMadeAt.toDate().toISOString().split('T')[0] : 
-         new Date(submission.decisionMadeAt).toISOString().split('T')[0]) : '');
-
-    // 6. Tipo de artículo (usar articleType, no tipo/type)
-    const articleType = getMeta('articleType') || '';
-    // Mapear tipos comunes si es necesario
-    const articleTypeMap = {
-      'research': { es: 'Artículo de Investigación', en: 'Research Article' },
-      'review': { es: 'Artículo de Revisión', en: 'Review Article' },
-      'case_study': { es: 'Estudio de Caso', en: 'Case Study' },
-      'essay': { es: 'Ensayo', en: 'Essay' },
-      'letter': { es: 'Carta al Editor', en: 'Letter to the Editor' },
-    };
-    
-    const tipoMapped = articleTypeMap[articleType] || { es: articleType, en: articleType };
-
-    // 7. Construir objeto con todos los campos
-    const importedData = {
-      titulo: getMeta('title') || '',
-      tituloEnglish: getMeta('titleEn') || '',
-      autores: importedAuthors,
-      resumen: getMeta('abstract') || '',
-      abstract: getMeta('abstractEn') || '',
-      palabras_clave: palabrasClaveStr,
-      keywords_english: keywordsEnglishStr,
-      area: getMeta('area') || '',
-      tipo: tipoMapped.es,
-      type: tipoMapped.en,
-      acknowledgments: getMeta('acknowledgments') || '',
-      acknowledgmentsEnglish: getMeta('acknowledgmentsEn') || '',
-      conflicts: getMeta('conflictOfInterest') || 'Los autores declaran no tener conflictos de interés.',
-      conflictsEnglish: getMeta('conflictsEnglish') || 'The authors declare no conflicts of interest.',
-      funding: fundingText,
-      fundingEnglish: getMeta('fundingEnglish') || fundingText,
-      dataAvailability: getMeta('dataAvailability') || '',
-      dataAvailabilityEnglish: getMeta('dataAvailabilityEn') || '',
-      authorCredits: authorCreditsText,
-      authorCreditsEnglish: getMeta('authorCreditsEnglish') || authorCreditsText,
-      receivedDate: receivedDate,
-      acceptedDate: acceptedDate,
-      submissionId: submission.submissionId || submission.id,
-      lastVersionFileUrl: submission.lastVersionFileUrl || null,
-      // Links de Drive para referencia
-      driveFolderUrl: submission.driveFolderUrl || null,
-      editorialFolderUrl: submission.editorialFolderUrl || null,
-    };
-
-    console.log('📥 Datos importados:', {
-      titulo: importedData.titulo,
-      tituloEnglish: importedData.tituloEnglish,
-      autores: importedData.autores.length,
-      palabras_clave: importedData.palabras_clave,
-      area: importedData.area,
-      tipo: importedData.tipo,
-      submissionId: importedData.submissionId,
-    });
-
-    setArticleForm(prev => ({ ...prev, ...importedData }));
-
-    // Guardar resumen de importación
-    const importedFields = [];
-    if (importedData.titulo) importedFields.push('título');
-    if (importedData.tituloEnglish) importedFields.push('título inglés');
-    if (importedData.resumen) importedFields.push('resumen');
-    if (importedData.abstract) importedFields.push('abstract');
-    if (importedData.palabras_clave) importedFields.push('palabras clave');
-    if (importedData.keywords_english) importedFields.push('keywords');
-    if (importedData.area) importedFields.push('área');
-    if (importedData.tipo) importedFields.push('tipo de artículo');
-    if (importedData.autores.length > 0) importedFields.push(`autores (${importedData.autores.length})`);
-    if (importedData.authorCredits) importedFields.push('contribuciones');
-    if (importedData.conflicts) importedFields.push('conflictos');
-    if (importedData.funding && importedData.funding !== 'No declarada') importedFields.push('financiamiento');
-    if (importedData.acknowledgments) importedFields.push('agradecimientos');
-    if (importedData.dataAvailability) importedFields.push('disponibilidad de datos');
-    if (importedData.receivedDate) importedFields.push('fecha recepción');
-    if (importedData.acceptedDate) importedFields.push('fecha aceptación');
-    if (importedData.submissionId) importedFields.push('submission ID');
-
-    setImportSummary({
-      fields: importedFields,
-      lastVersionFileUrl: submission.lastVersionFileUrl,
-      driveFolderUrl: submission.driveFolderUrl,
-      editorialFolderUrl: submission.editorialFolderUrl,
-    });
-
-    setStatus({ type: 'success', msg: `✅ Datos importados correctamente (${importedFields.length} campos). Revise y complete los que faltan.` });
-    
-    // Cerrar selector y abrir modal de artículo
-    setShowSubmissionSelector(false);
-    setSelectedSubmission(submission);
-    setShowArticleModal(true);
-    
-  } catch (error) {
-    console.error("Error importing submission:", error);
-    setStatus({ type: 'error', msg: `❌ Error al importar: ${error.message}` });
-  } finally {
-    setIsProcessing(false);
-  }
-};
-
-  // --- Filtrado de submissions ---
   const filteredReadySubmissions = useMemo(() => {
     if (!submissionSearchTerm.trim()) return readySubmissions;
     const term = submissionSearchTerm.toLowerCase();
@@ -508,13 +466,11 @@ const importFromSubmission = async (submission) => {
     );
   }, [readySubmissions, submissionSearchTerm]);
 
-  // --- Filtrado de artículos publicados ---
   const filteredArticles = articles.filter(a => 
     a.titulo?.toLowerCase().includes(searchTerm.toLowerCase()) || 
     a.autores?.some(author => author.name?.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  // --- Rebuild ---
   const triggerRebuild = async () => {
     try {
       const token = await auth.currentUser.getIdToken();
@@ -534,13 +490,12 @@ const importFromSubmission = async (submission) => {
     try {
       setStatus({ type: 'info', msg: 'Iniciando reconstrucción del sitio...' });
       await triggerRebuild();
-      setStatus({ type: 'success', msg: '✅ Sitio web actualizándose en segundo plano.' });
+      setStatus({ type: 'success', msg: 'Sitio web actualizándose en segundo plano.' });
     } catch (e) { 
       setStatus({ type: 'error', msg: 'Error al reconstruir: ' + e.message }); 
     }
   };
 
-  // --- Guardar artículo ---
   const handleSaveArticle = async (e) => {
     e.preventDefault();
     setIsProcessing(true);
@@ -564,21 +519,19 @@ const importFromSubmission = async (submission) => {
         email: autor.email,
         institution: autor.institution,
         orcid: autor.orcid,
-        contribution: autor.contribution, // Incluir contribution
+        contribution: autor.contribution,
         isCorresponding: autor.isCorresponding || false,
       }));
 
-      // Procesar palabras clave
-      // 🔄 Procesar palabras clave (normalizar string → array)
-const processKeywordString = (input) => {
-    if (!input) return [];
-    if (Array.isArray(input)) return input.map(k => typeof k === 'string' ? k.trim() : String(k)).filter(Boolean);
-    if (typeof input === 'string') return input.split(';').map(k => k.trim()).filter(Boolean);
-    return [];
-};
+      const processKeywordString = (input) => {
+        if (!input) return [];
+        if (Array.isArray(input)) return input.map(k => typeof k === 'string' ? k.trim() : String(k)).filter(Boolean);
+        if (typeof input === 'string') return input.split(';').map(k => k.trim()).filter(Boolean);
+        return [];
+      };
 
-const palabrasClaveArray = processKeywordString(articleForm.palabras_clave);
-const keywordsArray = processKeywordString(articleForm.keywords_english);
+      const palabrasClaveArray = processKeywordString(articleForm.palabras_clave);
+      const keywordsArray = processKeywordString(articleForm.keywords_english);
 
       const articleData = {
         titulo: articleForm.titulo,
@@ -589,6 +542,8 @@ const keywordsArray = processKeywordString(articleForm.keywords_english);
         abstract: articleForm.abstract,
         palabras_clave: palabrasClaveArray,
         keywords_english: keywordsArray,
+        specialized_codes: articleForm.specialized_codes,
+        keywords_vocabulary: articleForm.keywords_vocabulary,
         area: articleForm.area,
         tipo: articleForm.tipo,
         type: articleForm.type,
@@ -642,11 +597,11 @@ const keywordsArray = processKeywordString(articleForm.keywords_english);
       resetForms();
       await triggerRebuild();
       
-      setStatus({ type: 'success', msg: action === 'publish' ? '✅ Artículo publicado exitosamente' : '✅ Artículo guardado exitosamente' });
+      setStatus({ type: 'success', msg: action === 'publish' ? 'Artículo publicado exitosamente.' : 'Artículo guardado exitosamente.' });
       
     } catch (err) {
       console.error("Error saving article:", err);
-      setStatus({ type: 'error', msg: `❌ Error: ${err.message}` });
+      setStatus({ type: 'error', msg: `Error: ${err.message}` });
     } finally {
       setIsProcessing(false);
     }
@@ -697,19 +652,19 @@ const keywordsArray = processKeywordString(articleForm.keywords_english);
       setShowVolumeModal(false);
       resetForms();
       await triggerRebuild();
-      setStatus({ type: 'success', msg: '✅ Volumen guardado exitosamente' });
+      setStatus({ type: 'success', msg: 'Volumen guardado exitosamente.' });
     } catch (err) {
-      setStatus({ type: 'error', msg: `❌ Error: ${err.message}` });
+      setStatus({ type: 'error', msg: `Error: ${err.message}` });
     } finally {
       setIsProcessing(false);
     }
   };
 
   const handleDelete = async (id, type) => {
-    if (!confirm(`¿Estás seguro de eliminar este ${type === 'article' ? 'artículo' : 'volumen'}?`)) return;
+    if (!confirm(`¿Estás seguro de eliminar este ${type === 'article' ? 'artículo' : 'volumen'}? Esta acción es irreversible.`)) return;
     
     try {
-      setStatus({ type: 'info', msg: 'Eliminando...' });
+      setStatus({ type: 'info', msg: 'Eliminando registro...' });
       const token = await auth.currentUser.getIdToken();
       const url = type === 'article' ? MANAGE_ARTICLES_URL : MANAGE_VOLUMES_URL;
       
@@ -722,13 +677,12 @@ const keywordsArray = processKeywordString(articleForm.keywords_english);
       if (!response.ok) throw new Error(await response.text());
 
       await triggerRebuild();
-      setStatus({ type: 'success', msg: '✅ Eliminado exitosamente' });
+      setStatus({ type: 'success', msg: 'Registro eliminado exitosamente.' });
     } catch (err) {
-      setStatus({ type: 'error', msg: `❌ Error: ${err.message}` });
+      setStatus({ type: 'error', msg: `Error: ${err.message}` });
     }
   };
 
-  // --- UI Helpers ---
   const resetForms = () => {
     setArticleForm(initialArticleState);
     setVolumeForm(initialVolumeState);
@@ -748,103 +702,93 @@ const keywordsArray = processKeywordString(articleForm.keywords_english);
   if (loading) return <LoadingScreen />;
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-[#f4f7f9] text-[#1a1a1a]">
-      {/* Mobile Header y Sidebar (igual que antes) */}
-      <div className="lg:hidden bg-[#001529] text-white p-4 flex justify-between items-center sticky top-0 z-30">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-slate-50 text-slate-800 font-sans">
+      {/* Mobile Header */}
+      <div className="lg:hidden bg-slate-900 text-white p-4 flex justify-between items-center sticky top-0 z-30 shadow-md">
         <div>
-          <h1 className="text-xl font-bold">RNCPE Admin</h1>
-          <p className="text-xs text-gray-400">Director General</p>
+          <h1 className="text-xl font-bold font-serif tracking-tight">RNCPE</h1>
+          <p className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">Editorial Dashboard</p>
         </div>
-        <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 hover:bg-white/10 rounded-lg">
+        <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 hover:bg-slate-800 rounded-md transition-colors">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
       </div>
 
       <AnimatePresence>
         {mobileMenuOpen && (
-          <motion.div initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }} className="lg:hidden fixed inset-0 z-40 bg-[#001529] w-64 pt-20">
-            <nav className="p-4 space-y-2">
+          <motion.div initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }} className="lg:hidden fixed inset-0 z-40 bg-slate-900 w-64 pt-20 shadow-2xl">
+            <nav className="p-4 space-y-1">
               <SidebarItemMobile active={activeTab === 'articles'} onClick={() => { setActiveTab('articles'); setMobileMenuOpen(false); }} icon={<DocumentTextIcon />} label="Artículos" />
               <SidebarItemMobile active={activeTab === 'volumes'} onClick={() => { setActiveTab('volumes'); setMobileMenuOpen(false); }} icon={<BookOpenIcon />} label="Volúmenes" />
               <SidebarItemMobile active={activeTab === 'team'} onClick={() => { setActiveTab('team'); setMobileMenuOpen(false); }} icon={<UserGroupIcon />} label="Equipo / Mails" />
               <SidebarItemMobile active={activeTab === 'admissions'} onClick={() => { setActiveTab('admissions'); setMobileMenuOpen(false); }} icon={<InboxIcon />} label="Admisiones" />
-              <SidebarItemMobile active={activeTab === 'usersearch'} onClick={() => { setActiveTab('usersearch'); setMobileMenuOpen(false); }} icon={<MagnifyingGlassIcon />} label="Buscar Usuarios" />
-              <SidebarItemMobile active={activeTab === 'images'} onClick={() => { setActiveTab('images'); setMobileMenuOpen(false); }} icon={<PhotoIcon />} label="Gestor de Imágenes" />
+              <SidebarItemMobile active={activeTab === 'usersearch'} onClick={() => { setActiveTab('usersearch'); setMobileMenuOpen(false); }} icon={<MagnifyingGlassIcon />} label="Buscador" />
+              <SidebarItemMobile active={activeTab === 'images'} onClick={() => { setActiveTab('images'); setMobileMenuOpen(false); }} icon={<PhotoIcon />} label="Imágenes" />
               <SidebarItemMobile active={activeTab === 'collections'} onClick={() => { setActiveTab('collections'); setMobileMenuOpen(false); }} icon={<FolderIcon />} label="Colecciones" />
             </nav>
-            <div className="absolute bottom-4 left-4 right-4">
-              <button onClick={handleRebuild} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all font-medium text-sm shadow-lg">
-                <ArrowPathIcon className="w-4 h-4" /> Rebuild Site
-              </button>
-            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <aside className="hidden lg:flex w-64 bg-[#001529] text-white flex-col sticky h-screen top-0">
-        <div className="p-6 border-b border-white/10">
-          <h1 className="text-xl font-bold tracking-tight">RNCPE <span className="text-blue-400">Admin</span></h1>
-          <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest">Director General</p>
+      <aside className="hidden lg:flex w-72 bg-slate-900 text-slate-300 flex-col sticky h-screen top-0 border-r border-slate-800 shadow-xl">
+        <div className="p-8 border-b border-slate-800 bg-slate-950">
+          <h1 className="text-2xl font-bold font-serif text-white tracking-tight">RNCPE</h1>
+          <p className="text-xs text-indigo-400 mt-2 uppercase tracking-widest font-semibold">Director Panel</p>
         </div>
-        <nav className="flex-1 p-4 space-y-2 mt-4">
-          <SidebarItem active={activeTab === 'articles'} onClick={() => setActiveTab('articles')} icon={<DocumentTextIcon />} label="Artículos" />
-          <SidebarItem active={activeTab === 'volumes'} onClick={() => setActiveTab('volumes')} icon={<BookOpenIcon />} label="Volúmenes" />
-          <SidebarItem active={activeTab === 'team'} onClick={() => setActiveTab('team')} icon={<UserGroupIcon />} label="Equipo / Mails" />
-          <SidebarItem active={activeTab === 'images'} onClick={() => setActiveTab('images')} icon={<PhotoIcon />} label="Gestor de Imágenes" />
-          <SidebarItem active={activeTab === 'admissions'} onClick={() => setActiveTab('admissions')} icon={<InboxIcon />} label="Admisiones" />
-          <SidebarItem active={activeTab === 'usersearch'} onClick={() => setActiveTab('usersearch')} icon={<MagnifyingGlassIcon />} label="Buscar Usuarios" />
-          <SidebarItem active={activeTab === 'collections'} onClick={() => setActiveTab('collections')} icon={<FolderIcon />} label="Colecciones" />
+        <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+          <p className="px-4 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2 mt-4">Publicación</p>
+          <SidebarItem active={activeTab === 'articles'} onClick={() => setActiveTab('articles')} icon={<DocumentTextIcon />} label="Gestión de Artículos" />
+          <SidebarItem active={activeTab === 'volumes'} onClick={() => setActiveTab('volumes')} icon={<BookOpenIcon />} label="Archivo de Volúmenes" />
+          <SidebarItem active={activeTab === 'collections'} onClick={() => setActiveTab('collections')} icon={<FolderIcon />} label="Colecciones Especiales" />
+          
+          <p className="px-4 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2 mt-8">Administración</p>
+          <SidebarItem active={activeTab === 'admissions'} onClick={() => setActiveTab('admissions')} icon={<InboxIcon />} label="Centro de Admisiones" />
+          <SidebarItem active={activeTab === 'team'} onClick={() => setActiveTab('team')} icon={<UserGroupIcon />} label="Directorio y Correos" />
+          <SidebarItem active={activeTab === 'usersearch'} onClick={() => setActiveTab('usersearch')} icon={<MagnifyingGlassIcon />} label="Buscador de Autores" />
+          <SidebarItem active={activeTab === 'images'} onClick={() => setActiveTab('images')} icon={<PhotoIcon />} label="Repositorio Gráfico" />
         </nav>
-        <div className="p-4 border-t border-white/10">
-          <button onClick={handleRebuild} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all font-medium text-sm shadow-lg">
-            <ArrowPathIcon className="w-4 h-4" /> Rebuild Site
+        <div className="p-6 border-t border-slate-800 bg-slate-950">
+          <button onClick={handleRebuild} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-indigo-600 text-white rounded-md transition-all font-medium text-sm border border-slate-700 hover:border-indigo-500">
+            <ArrowPathIcon className="w-4 h-4" /> Reconstruir Sitio
           </button>
         </div>
       </aside>
 
-      <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <main className="flex-1 p-6 lg:p-10 overflow-y-auto bg-slate-50">
+        <header className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-10">
           <div>
-            <h2 className="text-2xl lg:text-3xl font-extrabold text-[#001529] font-serif">
-              {activeTab === 'articles' ? 'Gestión Editorial' : 
+            <h2 className="text-3xl font-bold text-slate-900 font-serif tracking-tight">
+              {activeTab === 'articles' ? 'Gestión Editorial de Artículos' : 
                activeTab === 'volumes' ? 'Archivo de Volúmenes' : 
-               activeTab === 'usersearch' ? 'Buscador de Usuarios' : 'Administración'}
+               activeTab === 'usersearch' ? 'Directorio de Usuarios' : 'Panel de Administración'}
             </h2>
-            <p className="text-sm lg:text-base text-gray-500">Hola {user.displayName || 'Director'}, tienes {articles.length} artículos publicados.</p>
+            <p className="text-sm text-slate-500 mt-2 font-medium">Panel principal del Director General. Total publicados: {articles.length}</p>
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <div className="relative flex-1">
-              <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input type="text" placeholder="Buscar..." className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-full focus:ring-2 focus:ring-blue-500 outline-none shadow-sm text-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            <div className="relative flex-1 min-w-[250px]">
+              <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input type="text" placeholder="Buscar registros..." className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none shadow-sm text-sm transition-all" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
-            {activeTab === 'images' && (
-              <button
-                onClick={() => setShowImageModal(true)}
-                className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2.5 rounded-full flex items-center justify-center gap-2 font-medium shadow-md transition-all active:scale-95 text-sm"
-              >
-                <PhotoIcon className="w-5 h-5" /> Gestionar Imágenes
-              </button>
-            )}
+            
             {activeTab === 'articles' && (
-              <button onClick={handleOpenSubmissionSelector} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-full flex items-center justify-center gap-2 font-medium shadow-md transition-all active:scale-95 text-sm">
-                <PlusIcon className="w-5 h-5" /> Subir nuevo
+              <button onClick={handleOpenSubmissionSelector} className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-md flex items-center justify-center gap-2 font-medium shadow-sm transition-all text-sm whitespace-nowrap">
+                <PlusIcon className="w-4 h-4" /> Nuevo Artículo
               </button>
             )}
             {activeTab === 'volumes' && (
-              <button onClick={() => { resetForms(); setShowVolumeModal(true); }} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-full flex items-center justify-center gap-2 font-medium shadow-md transition-all active:scale-95 text-sm">
-                <PlusIcon className="w-5 h-5" /> Nuevo Volumen
+              <button onClick={() => { resetForms(); setShowVolumeModal(true); }} className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-md flex items-center justify-center gap-2 font-medium shadow-sm transition-all text-sm whitespace-nowrap">
+                <PlusIcon className="w-4 h-4" /> Registrar Volumen
               </button>
             )}
-            
           </div>
         </header>
 
         <AnimatePresence>{status && <Notification status={status} clear={() => setStatus(null)} />}</AnimatePresence>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 min-h-[60vh] overflow-hidden">
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 min-h-[65vh] overflow-hidden">
           {activeTab === 'articles' && (
             <ArticleList 
               articles={filteredArticles}
@@ -860,6 +804,8 @@ const keywordsArray = processKeywordString(articleForm.keywords_english);
                   autores: autoresParaEdicion,
                   palabras_clave: arrayToString(article.palabras_clave),
                   keywords_english: arrayToString(article.keywords_english),
+                  specialized_codes: arrayToString(article.specialized_codes),
+                  keywords_vocabulary: article.keywords_vocabulary || '',
                   htmlMode: 'code',
                   html_es: article.html_es || '',
                   html_en: article.html_en || '',
@@ -882,32 +828,19 @@ const keywordsArray = processKeywordString(articleForm.keywords_english);
               formatDate={formatDate}
             />
           )}
-          {activeTab === 'collections' && (
-  <div className="p-4 lg:p-6">
-    <CollectionManager user={user} />
-  </div>
-)}
-          
-          {activeTab === 'team' && <div className="p-4 lg:p-6"><MailsTeam /></div>}
-          {activeTab === 'admissions' && <div className="p-4 lg:p-6"><Admissions /></div>}
-          {activeTab === 'usersearch' && <div className="p-4 lg:p-6"><UserSearch /></div>}
-          {activeTab === 'images' && (
-  <div className="p-4 lg:p-6">
-    <ImageManager
-      user={user}
-      onClose={() => {}} // onClose es opcional aquí, pero puedes dejarlo vacío o para limpiar algo
-      allowSelection={false} // Ponlo en 'true' si quieres poder seleccionar imágenes para un artículo
-    />
-  </div>
-)}
+          {activeTab === 'collections' && <div className="p-6"><CollectionManager user={user} /></div>}
+          {activeTab === 'team' && <div className="p-6"><MailsTeam /></div>}
+          {activeTab === 'admissions' && <div className="p-6"><Admissions /></div>}
+          {activeTab === 'usersearch' && <div className="p-6"><UserSearch /></div>}
+          {activeTab === 'images' && <div className="p-6"><ImageManager user={user} onClose={() => {}} allowSelection={false} /></div>}
         </div>
       </main>
 
-      {/* SELECTOR DE ENVÍOS (primer paso) */}
+      {/* Selectores y Modales */}
       <Modal 
         show={showSubmissionSelector} 
         onClose={() => setShowSubmissionSelector(false)}
-        title="Seleccionar Envío Listo para Publicación"
+        title="Repositorio de Manuscritos Aprobados"
         isProcessing={loadingSubmissions}
         hideSaveButton={true}
         size="lg"
@@ -922,29 +855,27 @@ const keywordsArray = processKeywordString(articleForm.keywords_english);
         />
       </Modal>
 
-      {/* MODAL ARTÍCULO (segundo paso) - ahora con más espacio */}
       <Modal 
         show={showArticleModal} 
         onClose={() => setShowArticleModal(false)}
-        title={editingItem ? "Editar Artículo Académico" : "Publicar Nuevo Artículo"}
+        title={editingItem ? "Edición de Metadatos del Artículo" : "Publicación de Nuevo Manuscrito"}
         isProcessing={isProcessing}
         onSave={handleSaveArticle}
-        size="xl" // Modal más grande
+        size="xl" 
       >
         {importSummary && !editingItem && (
-          <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200 flex items-start gap-3">
-            <InformationCircleIcon className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-blue-800">
-              <p className="font-medium mb-1">✅ Importación completada:</p>
-              <p>Se importaron: {importSummary.fields.join(', ')}.</p>
+          <div className="mb-6 p-4 bg-indigo-50/50 rounded-md border border-indigo-100 flex items-start gap-3">
+            <InformationCircleIcon className="w-5 h-5 text-indigo-700 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-indigo-900">
+              <p className="font-semibold mb-1">Migración de metadatos completada</p>
+              <p className="text-indigo-800">Campos integrados: <span className="font-medium">{importSummary.fields.join(', ')}</span>.</p>
               {importSummary.lastVersionFileUrl && (
-                <p className="mt-1">
-                  <a href={importSummary.lastVersionFileUrl} target="_blank" rel="noopener noreferrer" className="underline flex items-center gap-1">
-                    <DocumentIcon className="w-4 h-4" /> Último archivo de versión (para generar PDF)
+                <p className="mt-2">
+                  <a href={importSummary.lastVersionFileUrl} target="_blank" rel="noopener noreferrer" className="font-medium underline decoration-indigo-300 hover:decoration-indigo-600 flex items-center gap-1">
+                    <DocumentIcon className="w-4 h-4" /> Acceder al archivo original para maquetación final
                   </a>
                 </p>
               )}
-              <p className="mt-1 text-blue-600">Revise los campos y complete los que faltan (volumen, número, páginas, fechas exactas, etc.)</p>
             </div>
           </div>
         )}
@@ -957,117 +888,102 @@ const keywordsArray = processKeywordString(articleForm.keywords_english);
         />
       </Modal>
 
-      {/* MODAL VOLÚMENES */}
       <Modal 
         show={showVolumeModal} 
         onClose={() => setShowVolumeModal(false)}
-        title={editingItem ? "Editar Volumen" : "Nuevo Volumen"}
+        title={editingItem ? "Modificar Volumen Editorial" : "Registro de Nuevo Volumen"}
         isProcessing={isProcessing}
         onSave={handleSaveVolume}
       >
         <VolumeForm formData={volumeForm} setFormData={setVolumeForm} isEditing={!!editingItem} />
       </Modal>
-       <Modal
+      
+      <Modal
         show={showImageModal}
         onClose={() => setShowImageModal(false)}
-        title="Gestor de Imágenes"
+        title="Repositorio Gráfico Global"
         hideSaveButton={true}
         size="xl"
       >
-        <ImageManager
-          user={user}
-          onClose={() => setShowImageModal(false)}
-          allowSelection={false} // true si quieres poder seleccionar imágenes
-        />
+        <ImageManager user={user} onClose={() => setShowImageModal(false)} allowSelection={false} />
       </Modal>
     </div>
   );
 }
 
-// --- COMPONENTE SELECTOR DE ENVÍOS ---
+// ==================== SUBCOMPONENTES ====================
+
 const SubmissionSelector = ({ submissions, searchTerm, setSearchTerm, onSelect, loading, onRefresh }) => {
   return (
-    <div className="space-y-4 min-h-[400px] flex flex-col">
-      <div className="flex gap-2">
+    <div className="space-y-5 min-h-[400px] flex flex-col">
+      <div className="flex gap-3">
         <div className="relative flex-1">
-          <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            placeholder="Buscar por título, ID o autor..."
-            className="w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
+            placeholder="Buscar manuscrito por título, ID o autor principal..."
+            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-300 rounded-md focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none shadow-sm text-sm"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             autoFocus
           />
         </div>
-        <button
-          onClick={onRefresh}
-          disabled={loading}
-          className="px-4 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl flex items-center gap-2 text-gray-700 transition-colors"
-          title="Actualizar lista"
-        >
-          <ArrowPathIcon className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+        <button onClick={onRefresh} disabled={loading} className="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 rounded-md flex items-center gap-2 text-slate-700 transition-colors shadow-sm" title="Actualizar repositorio">
+          <ArrowPathIcon className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto border border-gray-200 rounded-xl bg-gray-50 p-2 min-h-[300px] max-h-[500px]">
+      <div className="flex-1 overflow-y-auto border border-slate-200 rounded-md bg-slate-50 p-3 min-h-[300px] max-h-[500px]">
         {loading ? (
           <div className="flex items-center justify-center h-full">
-            <ArrowPathIcon className="w-8 h-8 animate-spin text-blue-600" />
+            <ArrowPathIcon className="w-6 h-6 animate-spin text-indigo-600" />
           </div>
         ) : submissions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-500">
-            <DocumentTextIcon className="w-12 h-12 text-gray-300 mb-2" />
-            <p>No hay envíos listos para publicación</p>
-            <p className="text-xs mt-1">Los artículos deben estar marcados como "Listos" por el editor</p>
+          <div className="flex flex-col items-center justify-center h-full text-slate-400">
+            <DocumentTextIcon className="w-10 h-10 mb-3 text-slate-300" />
+            <p className="font-medium text-sm text-slate-600">No hay manuscritos en cola de publicación</p>
+            <p className="text-xs mt-1">Los trabajos deben ser marcados como aprobados por el comité.</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {submissions.map((sub) => (
               <motion.div
                 key={sub.id}
                 initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-4 bg-white rounded-xl border border-gray-200 hover:border-blue-400 hover:shadow-md cursor-pointer transition-all"
+                className="p-4 bg-white rounded-md border border-slate-200 hover:border-indigo-400 hover:shadow-md cursor-pointer transition-all"
                 onClick={() => onSelect(sub)}
               >
-                <div className="flex justify-between items-start mb-2">
-                  <h4 className="font-medium text-gray-900 flex-1">{sub.title}</h4>
-                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full ml-2">Listo</span>
+                <div className="flex justify-between items-start mb-3">
+                  <h4 className="font-serif font-bold text-slate-900 text-base leading-tight pr-4">{sub.title}</h4>
+                  <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-50 border border-emerald-200 text-emerald-700 px-2 py-1 rounded">Aprobado</span>
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
-                  <div><span className="font-medium">ID:</span> {sub.submissionId}</div>
-                  <div><span className="font-medium">Autor:</span> {sub.authorName}</div>
-                  <div><span className="font-medium">Idioma:</span> {sub.paperLanguage === 'es' ? 'Español' : 'Inglés'}</div>
-                  <div><span className="font-medium">Actualizado:</span> {sub.updatedAt.toLocaleDateString()}</div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-slate-600 border-t border-slate-100 pt-3">
+                  <div><span className="text-slate-400 block mb-0.5 uppercase tracking-wider text-[10px]">ID Ref</span> <span className="font-mono">{sub.submissionId}</span></div>
+                  <div><span className="text-slate-400 block mb-0.5 uppercase tracking-wider text-[10px]">Contacto</span> <span className="font-medium">{sub.authorName}</span></div>
+                  <div><span className="text-slate-400 block mb-0.5 uppercase tracking-wider text-[10px]">Idioma</span> <span>{sub.paperLanguage === 'es' ? 'Español' : 'Inglés'}</span></div>
+                  <div><span className="text-slate-400 block mb-0.5 uppercase tracking-wider text-[10px]">Aprobación</span> <span>{sub.updatedAt.toLocaleDateString()}</span></div>
                 </div>
-                {sub.driveFolderUrl && (
-                  <a href={sub.driveFolderUrl} target="_blank" rel="noopener noreferrer" className="mt-2 text-xs text-blue-600 hover:underline flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                    <DocumentIcon className="w-3 h-3" /> Ver carpeta en Drive
-                  </a>
-                )}
               </motion.div>
             ))}
           </div>
         )}
       </div>
-      <p className="text-xs text-gray-400 text-center">Selecciona un envío para importar todos los metadatos automáticamente</p>
     </div>
   );
 };
 
-// --- COMPONENTE DE FORMULARIO DE ARTÍCULO (sin botón de importar) ---
 const ArticleForm = ({ formData, setFormData, isProcessing, isEditing, submissionId }) => {
   const [activeStep, setActiveStep] = useState(0);
   
   const steps = [
-    { id: 0, name: 'Identidad', icon: '📋' },
-    { id: 1, name: 'Publicación', icon: '📅' },
-    { id: 2, name: 'Contenido HTML (ES)', icon: '🇪🇸' },
-    { id: 3, name: 'Contenido HTML (EN)', icon: '🇬🇧' },
-    { id: 4, name: 'Referencias', icon: '📚' },
-    { id: 5, name: 'Metadatos', icon: '📎' },
-    { id: 6, name: 'Archivos', icon: '📁' }
+    { id: 0, name: 'Identidad y Autoría' },
+    { id: 1, name: 'Datos de Publicación' },
+    { id: 2, name: 'Maquetación HTML (ES)' },
+    { id: 3, name: 'Maquetación HTML (EN)' },
+    { id: 4, name: 'Bibliografía' },
+    { id: 5, name: 'Indexación y Metadatos' },
+    { id: 6, name: 'Manuscrito y Créditos' }
   ];
 
   const handleChange = (e) => {
@@ -1076,17 +992,11 @@ const ArticleForm = ({ formData, setFormData, isProcessing, isEditing, submissio
   };
 
   const addAuthor = () => {
-    setFormData(prev => ({
-      ...prev,
-      autores: [...prev.autores, { ...initialAuthorState }]
-    }));
+    setFormData(prev => ({ ...prev, autores: [...prev.autores, { ...initialAuthorState }] }));
   };
 
   const removeAuthor = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      autores: prev.autores.filter((_, i) => i !== index)
-    }));
+    setFormData(prev => ({ ...prev, autores: prev.autores.filter((_, i) => i !== index) }));
   };
 
   const updateAuthor = (index, field, value) => {
@@ -1098,243 +1008,459 @@ const ArticleForm = ({ formData, setFormData, isProcessing, isEditing, submissio
   };
 
   return (
-    <div className="flex flex-col h-[80vh] lg:h-[75vh]">
-      {/* Indicador de Submission ID */}
+    <div className="flex flex-col h-[75vh]">
       {submissionId && (
-        <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200 flex items-center gap-2">
-          <CheckIcon className="w-5 h-5 text-green-600" />
-          <span className="text-sm text-green-700"><strong>Submission ID:</strong> {submissionId}</span>
+        <div className="mb-4 text-xs font-mono text-slate-500 flex items-center gap-2 pb-2 border-b border-slate-100">
+          <IdentificationIcon className="w-4 h-4" /> ID de Trazabilidad: {submissionId}
         </div>
       )}
 
-      {/* Progress Steps */}
-      <div className="flex overflow-x-auto pb-2 mb-4 lg:mb-6 scrollbar-hide border-b border-gray-100">
-        <div className="flex space-x-2 lg:space-x-0 lg:grid lg:grid-cols-7 lg:w-full">
-          {steps.map((step) => (
+      <div className="mb-8 border-b border-slate-200">
+        <div className="flex overflow-x-auto scrollbar-hide space-x-1 pb-px">
+          {steps.map((step, idx) => (
             <button
               key={step.id}
               onClick={() => setActiveStep(step.id)}
               className={`
-                flex items-center space-x-2 px-4 py-2 rounded-full whitespace-nowrap transition-all
-                lg:flex-col lg:space-x-0 lg:space-y-1 lg:rounded-lg lg:py-3
+                px-4 py-2.5 text-xs font-semibold uppercase tracking-wider whitespace-nowrap transition-colors border-b-2
                 ${activeStep === step.id 
-                  ? 'bg-blue-600 text-white shadow-md' 
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}
+                  ? 'border-indigo-600 text-indigo-700 bg-indigo-50/30' 
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'}
               `}
             >
-              <span className="text-lg">{step.icon}</span>
-              <span className="text-sm font-medium lg:text-xs">{step.name}</span>
+              {idx + 1}. {step.name}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pr-2 space-y-6">
+      <div className="flex-1 overflow-y-auto pr-4 space-y-8 pb-10">
         {activeStep === 0 && (
-          <div className="space-y-4">
-            <Input label="Título Original (ES) *" name="titulo" value={formData.titulo} onChange={handleChange} required />
-            <Input label="Título (EN)" name="tituloEnglish" value={formData.tituloEnglish} onChange={handleChange} />
-            <Input label="Título Original (ES) *" name="titulo" value={formData.titulo} onChange={handleChange} required />
-<Input label="Título (EN)" name="tituloEnglish" value={formData.tituloEnglish} onChange={handleChange} />
-<Input 
-  label="DOI" 
-  name="doi" 
-  value={formData.doi} 
-  onChange={handleChange} 
-  placeholder="10.1234/revista.2024.001" 
-/>
-            {/* AUTORES */}
-            <div className="space-y-3">
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Autores *</label>
-              {formData.autores.map((autor, index) => (
-                <div key={index} className="p-4 border border-gray-200 rounded-xl bg-gray-50 space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium text-sm">Autor #{index + 1}</span>
-                    {formData.autores.length > 1 && (
-                      <button type="button" onClick={() => removeAuthor(index)} className="text-red-600 hover:text-red-800 p-1">
-                        <TrashIcon className="w-5 h-5" />
-                      </button>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <Input label="Nombre Completo *" value={autor.name} onChange={(e) => updateAuthor(index, 'name', e.target.value)} placeholder="Ej: Javier Vergara" />
-                    <Input label="Email *" type="email" value={autor.email} onChange={(e) => updateAuthor(index, 'email', e.target.value)} placeholder="autor@email.com" />
-                    <Input label="Institución" value={autor.institution} onChange={(e) => updateAuthor(index, 'institution', e.target.value)} placeholder="Afiliación institucional" />
-                    <Input label="ORCID" value={autor.orcid} onChange={(e) => updateAuthor(index, 'orcid', e.target.value)} placeholder="0000-0002-1825-0097" />
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <Input label="Contribución (CRediT)" value={autor.contribution || ''} onChange={(e) => updateAuthor(index, 'contribution', e.target.value)} placeholder="Ej: Conceptualización, metodología..." />
-                    <div className="flex items-center gap-4">
-                      <label className="flex items-center gap-2 text-sm">
-                        <input type="checkbox" checked={autor.isCorresponding} onChange={(e) => updateAuthor(index, 'isCorresponding', e.target.checked)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                        Autor de Correspondencia
-                      </label>
-                      <Input label="ID de Autor" value={autor.authorId || ''} onChange={(e) => updateAuthor(index, 'authorId', e.target.value)} placeholder="ID" className="flex-1" />
+          <div className="space-y-6">
+            <Input label="Título Original (ES) *" name="titulo" value={formData.titulo} onChange={handleChange} required className="font-serif text-lg" />
+            <Input label="Título Traducido (EN)" name="tituloEnglish" value={formData.tituloEnglish} onChange={handleChange} className="font-serif text-lg" />
+            <Input label="Identificador de Objeto Digital (DOI)" name="doi" value={formData.doi} onChange={handleChange} placeholder="Ej: 10.1234/revista.2024.001" className="font-mono text-sm" />
+            
+            <div className="pt-4 border-t border-slate-200">
+              <div className="flex justify-between items-center mb-4">
+                <label className="text-xs font-bold text-slate-800 uppercase tracking-wider">Filiación y Autores *</label>
+              </div>
+              
+              <div className="space-y-4">
+                {formData.autores.map((autor, index) => (
+                  <div key={index} className="p-5 border border-slate-200 rounded-md bg-white shadow-sm space-y-4 relative">
+                    <div className="absolute top-4 right-4">
+                      {formData.autores.length > 1 && (
+                        <button type="button" onClick={() => removeAuthor(index)} className="text-slate-400 hover:text-red-600 transition-colors">
+                          <TrashIcon className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2 block w-full">Autor {index + 1}</span>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <Input label="Nombre Completo *" value={autor.name} onChange={(e) => updateAuthor(index, 'name', e.target.value)} />
+                      <Input label="Correo Electrónico *" type="email" value={autor.email} onChange={(e) => updateAuthor(index, 'email', e.target.value)} />
+                      <Input label="Institución Académica" value={autor.institution} onChange={(e) => updateAuthor(index, 'institution', e.target.value)} />
+                      <Input label="ID ORCID" value={autor.orcid} onChange={(e) => updateAuthor(index, 'orcid', e.target.value)} placeholder="0000-0000-0000-0000" className="font-mono text-sm" />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                      <Input label="Taxonomía CRediT" value={autor.contribution || ''} onChange={(e) => updateAuthor(index, 'contribution', e.target.value)} placeholder="Conceptualización, Metodología..." />
+                      <div className="flex flex-col justify-end gap-2">
+                         <label className="flex items-center gap-2 text-sm text-slate-700 bg-slate-50 p-2 rounded border border-slate-200 cursor-pointer">
+                          <input type="checkbox" checked={autor.isCorresponding} onChange={(e) => updateAuthor(index, 'isCorresponding', e.target.checked)} className="rounded-sm border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                          <EnvelopeIcon className="w-4 h-4 text-slate-400" /> Designar como Correspondencia
+                        </label>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-              <button type="button" onClick={addAuthor} className="mt-2 w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-500 hover:text-blue-600 transition-colors flex items-center justify-center gap-2 text-sm">
-                <PlusIcon className="w-5 h-5" /> Añadir otro autor
-              </button>
+                ))}
+                <button type="button" onClick={addAuthor} className="w-full py-3 border border-dashed border-slate-300 rounded-md text-slate-600 hover:border-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 transition-all flex items-center justify-center gap-2 text-sm font-medium">
+                  <PlusIcon className="w-4 h-4" /> Registrar Coautor
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input label="Área de estudio" name="area" value={formData.area} onChange={handleChange} />
-              <Input label="Tipo de Artículo (ES)" name="tipo" value={formData.tipo} onChange={handleChange} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-200">
+              <Input label="Disciplina Académica" name="area" value={formData.area} onChange={handleChange} />
+              <Input label="Clasificación (ES)" name="tipo" value={formData.tipo} onChange={handleChange} placeholder="Ej: Artículo de Investigación" />
             </div>
-            <Input label="Type of Article (EN)" name="type" value={formData.type} onChange={handleChange} />
+            <Input label="Classification (EN)" name="type" value={formData.type} onChange={handleChange} />
           </div>
         )}
 
         {activeStep === 1 && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-6">
               <Input label="Volumen" name="volumen" value={formData.volumen} onChange={handleChange} />
-              <Input label="Número" name="numero" value={formData.numero} onChange={handleChange} />
+              <Input label="Número (Issue)" name="numero" value={formData.numero} onChange={handleChange} />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               <Input label="Fecha Publicación" name="fecha" type="date" value={formData.fecha} onChange={handleChange} />
+              <Input label="Paginación Inicial" name="primeraPagina" value={formData.primeraPagina} onChange={handleChange} placeholder="01" />
+              <Input label="Paginación Final" name="ultimaPagina" value={formData.ultimaPagina} onChange={handleChange} placeholder="15" />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <Input label="Primera Página" name="primeraPagina" value={formData.primeraPagina} onChange={handleChange} />
-              <Input label="Última Página" name="ultimaPagina" value={formData.ultimaPagina} onChange={handleChange} />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input label="Fecha de Recepción" name="receivedDate" type="date" value={formData.receivedDate} onChange={handleChange} />
-              <Input label="Fecha de Aceptación" name="acceptedDate" type="date" value={formData.acceptedDate} onChange={handleChange} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6 border-t border-slate-200">
+              <Input label="Recepción (Historial)" name="receivedDate" type="date" value={formData.receivedDate} onChange={handleChange} />
+              <Input label="Aceptación (Historial)" name="acceptedDate" type="date" value={formData.acceptedDate} onChange={handleChange} />
             </div>
           </div>
         )}
 
         {activeStep === 2 && (
-          <div className="space-y-6">
-            <div className="flex space-x-2 mb-4">
-              <button onClick={() => setFormData({...formData, htmlMode: 'visual'})} className={`flex-1 py-2 px-3 rounded-lg flex items-center justify-center space-x-2 text-sm font-medium transition-all ${formData.htmlMode === 'visual' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                <PencilSquareIcon className="w-4 h-4" /><span>Editor Visual</span>
+          <div className="space-y-4">
+            <div className="flex space-x-1 mb-4 bg-slate-100 p-1 rounded-md max-w-fit">
+              <button type="button" onClick={() => setFormData({...formData, htmlMode: 'visual'})} className={`py-1.5 px-4 rounded flex items-center gap-2 text-xs font-semibold uppercase tracking-wider transition-all ${formData.htmlMode === 'visual' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>
+                <PencilSquareIcon className="w-4 h-4" /> WYSIWYG
               </button>
-              <button onClick={() => setFormData({...formData, htmlMode: 'code'})} className={`flex-1 py-2 px-3 rounded-lg flex items-center justify-center space-x-2 text-sm font-medium transition-all ${formData.htmlMode === 'code' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                <CodeBracketIcon className="w-4 h-4" /><span>Editor HTML</span>
+              <button type="button" onClick={() => setFormData({...formData, htmlMode: 'code'})} className={`py-1.5 px-4 rounded flex items-center gap-2 text-xs font-semibold uppercase tracking-wider transition-all ${formData.htmlMode === 'code' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>
+                <CodeBracketIcon className="w-4 h-4" /> Fuente HTML
               </button>
             </div>
             {formData.htmlMode === 'visual' ? (
-              <div>
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">HTML Completo (ES) - Editor Visual</label>
-                <div className="border rounded-xl overflow-hidden">
-                  <ReactQuill theme="snow" modules={quillModules} value={formData.html_es} onChange={(v) => setFormData({...formData, html_es: v})} className="h-64 mb-12 lg:mb-16" placeholder="Escribe o pega el contenido aquí..." />
-                </div>
+              <div className="border border-slate-200 rounded-md overflow-hidden bg-white">
+                <ReactQuill theme="snow" modules={quillModules} value={formData.html_es} onChange={(v) => setFormData({...formData, html_es: v})} className="h-80" />
               </div>
             ) : (
-              <div>
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">HTML Completo (ES) - Editor Directo</label>
-                <div className="border rounded-xl overflow-hidden">
-                  <CodeMirror value={formData.html_es || ''} height="300px" extensions={[html()]} theme={oneDark} onChange={(value) => setFormData({...formData, html_es: value})} className="text-sm" />
-                </div>
-                <p className="text-xs text-gray-500 mt-2">Puedes pegar código HTML directamente.</p>
+              <div className="border border-slate-300 rounded-md overflow-hidden">
+                <CodeMirror value={formData.html_es || ''} height="400px" extensions={[html()]} theme={oneDark} onChange={(value) => setFormData({...formData, html_es: value})} className="text-sm font-mono" />
               </div>
             )}
           </div>
         )}
 
         {activeStep === 3 && (
-          <div className="space-y-6">
-            <div>
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">HTML Completo (EN) - Versión Inglés</label>
-              <div className="border rounded-xl overflow-hidden">
-                <CodeMirror value={formData.html_en || ''} height="300px" extensions={[html()]} theme={oneDark} onChange={(value) => setFormData({...formData, html_en: value})} className="text-sm" />
-              </div>
+          <div className="space-y-4">
+             <label className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2 block">Cuerpo del Artículo (Inglés)</label>
+            <div className="border border-slate-300 rounded-md overflow-hidden">
+              <CodeMirror value={formData.html_en || ''} height="400px" extensions={[html()]} theme={oneDark} onChange={(value) => setFormData({...formData, html_en: value})} className="text-sm font-mono" />
             </div>
           </div>
         )}
 
         {activeStep === 4 && (
-          <div className="space-y-6">
-            <div>
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Referencias (Único campo para ambos idiomas)</label>
-              <div className="border rounded-xl overflow-hidden">
-                <CodeMirror value={formData.referencias || ''} height="300px" extensions={[html()]} theme={oneDark} onChange={(value) => setFormData({...formData, referencias: value})} className="text-sm" />
-              </div>
+          <div className="space-y-4">
+             <label className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2 block">Referencias Bibliográficas (Formato HTML)</label>
+            <div className="border border-slate-300 rounded-md overflow-hidden">
+              <CodeMirror value={formData.referencias || ''} height="400px" extensions={[html()]} theme={oneDark} onChange={(value) => setFormData({...formData, referencias: value})} className="text-sm font-mono" />
             </div>
           </div>
         )}
 
         {activeStep === 5 && (
-          <div className="space-y-4">
-            <div>
-    <Input 
-        label="Palabras Clave (ES) * (separar con ;)" 
-        name="palabras_clave" 
-        value={formData.palabras_clave} 
-        onChange={handleChange} 
-        placeholder="Ej: B14: Marxismo; D00: Economía general" 
-    />
-    <p className="text-[10px] text-gray-400 mt-1 ml-1">
-        Formato controlado: "CÓDIGO: Término; CÓDIGO: Término" | Simple: "término1; término2"
-    </p>
-</div>
-<div>
-    <Input 
-        label="Keywords (EN) (separar con ;)" 
-        name="keywords_english" 
-        value={formData.keywords_english} 
-        onChange={handleChange} 
-        placeholder="Ej: B14: Marxism; D00: General economics" 
-    />
-    <p className="text-[10px] text-gray-400 mt-1 ml-1">
-        Controlled format: "CODE: Term; CODE: Term" | Simple: "term1; term2"
-    </p>
-</div>
-            <div><label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Resumen (ES)</label><textarea className="w-full p-3 border rounded-xl h-24 outline-none focus:ring-2 focus:ring-blue-500 text-sm" value={formData.resumen} onChange={(e) => setFormData({...formData, resumen: e.target.value})} placeholder="Resumen en español..." /></div>
-            <div><label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Abstract (EN)</label><textarea className="w-full p-3 border rounded-xl h-24 outline-none focus:ring-2 focus:ring-blue-500 text-sm" value={formData.abstract} onChange={(e) => setFormData({...formData, abstract: e.target.value})} placeholder="English abstract..." /></div>
-            <div><label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Conflictos de Interés (ES)</label><textarea className="w-full p-3 border rounded-xl h-20 outline-none focus:ring-2 focus:ring-blue-500 text-sm" name="conflicts" value={formData.conflicts} onChange={handleChange} placeholder="Declaración de conflictos de interés..." /></div>
-            <div><label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Conflicts of Interest (EN)</label><textarea className="w-full p-3 border rounded-xl h-20 outline-none focus:ring-2 focus:ring-blue-500 text-sm" name="conflictsEnglish" value={formData.conflictsEnglish} onChange={handleChange} placeholder="Conflicts of interest statement..." /></div>
-            <div><label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Financiación (ES)</label><textarea className="w-full p-3 border rounded-xl h-20 outline-none focus:ring-2 focus:ring-blue-500 text-sm" name="funding" value={formData.funding} onChange={handleChange} placeholder="Información de financiamiento..." /></div>
-            <div><label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Funding (EN)</label><textarea className="w-full p-3 border rounded-xl h-20 outline-none focus:ring-2 focus:ring-blue-500 text-sm" name="fundingEnglish" value={formData.fundingEnglish} onChange={handleChange} placeholder="Funding information..." /></div>
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <Input label="Descriptores (ES)" name="palabras_clave" value={formData.palabras_clave} onChange={handleChange} placeholder="Ej: marxismo; sociología" />
+                <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-wider">Separadas por punto y coma (;)</p>
+              </div>
+              <div>
+                <Input label="Keywords (EN)" name="keywords_english" value={formData.keywords_english} onChange={handleChange} placeholder="Ej: marxism; sociology" />
+                <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-wider">Separated by semicolons (;)</p>
+              </div>
+              <div>
+                <Input label="Clasificación JEL / Códigos" name="specialized_codes" value={formData.specialized_codes} onChange={handleChange} placeholder="Ej: B14; Z13" className="font-mono text-sm" />
+                <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-wider">Códigos alfanuméricos (;)</p>
+              </div>
+              <div>
+                <Input label="Sistema de Vocabulario" name="keywords_vocabulary" value={formData.keywords_vocabulary} onChange={handleChange} placeholder="Ej: JEL, MeSH" />
+                <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-wider">Taxonomía utilizada</p>
+              </div>
+            </div>
+            
+            <div className="pt-6 border-t border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 block">Resumen Documental (ES)</label>
+                <textarea className="w-full p-3 border border-slate-300 rounded-md h-32 focus:ring-1 focus:ring-indigo-500 outline-none text-sm leading-relaxed resize-y" value={formData.resumen} onChange={(e) => setFormData({...formData, resumen: e.target.value})} />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 block">Abstract (EN)</label>
+                <textarea className="w-full p-3 border border-slate-300 rounded-md h-32 focus:ring-1 focus:ring-indigo-500 outline-none text-sm leading-relaxed resize-y" value={formData.abstract} onChange={(e) => setFormData({...formData, abstract: e.target.value})} />
+              </div>
+            </div>
           </div>
         )}
 
         {activeStep === 6 && (
           <div className="space-y-6">
-            <div className="p-6 border-2 border-dashed border-gray-200 rounded-2xl text-center">
-              <DocumentIcon className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 mb-4">Sube el manuscrito final en formato PDF</p>
+            <div className="bg-slate-50 border border-slate-200 rounded-md p-6 flex flex-col items-center justify-center text-center">
+              <DocumentTextIcon className="w-10 h-10 text-slate-400 mb-3" />
+              <p className="text-sm font-medium text-slate-800 mb-1">Versión Final PDF (Galley)</p>
+              <p className="text-xs text-slate-500 mb-4">Sube el documento maquetado para la lectura pública</p>
               <input type="file" accept=".pdf" className="hidden" id="pdf-upload" onChange={(e) => setFormData({...formData, pdfFile: e.target.files[0]})} />
-              <label htmlFor="pdf-upload" className="bg-white border border-gray-300 px-6 py-2 rounded-full cursor-pointer hover:bg-gray-50 shadow-sm transition-all inline-block text-sm">
-                {formData.pdfFile ? formData.pdfFile.name : "Seleccionar Archivo"}
+              <label htmlFor="pdf-upload" className="bg-white border border-slate-300 px-4 py-2 rounded text-sm font-medium text-slate-700 cursor-pointer hover:bg-slate-50 shadow-sm transition-all">
+                {formData.pdfFile ? formData.pdfFile.name : "Examinar Archivos"}
               </label>
-              {formData.pdfUrl && !formData.pdfFile && <p className="text-xs text-gray-400 mt-2">PDF actual: {formData.pdfUrl.split('/').pop()}</p>}
+              {formData.pdfUrl && !formData.pdfFile && <p className="text-[10px] text-slate-400 mt-3 font-mono">Galley actual: {formData.pdfUrl.split('/').pop()}</p>}
             </div>
 
-            {formData.lastVersionFileUrl && (
-              <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                <p className="text-sm font-medium text-yellow-800 mb-1">📄 Última versión del archivo (importado)</p>
-                <a href={formData.lastVersionFileUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm flex items-center gap-1">
-                  <DocumentIcon className="w-4 h-4" /> Abrir en Google Docs
-                </a>
-                <p className="text-xs text-gray-500 mt-1">Puedes usarlo para generar el PDF final.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+              <div>
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 block">Declaración de Financiación</label>
+                <textarea className="w-full p-3 border border-slate-300 rounded-md h-20 text-sm" name="funding" value={formData.funding} onChange={handleChange} />
               </div>
-            )}
-
-            <div><label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Agradecimientos (ES)</label><textarea className="w-full p-3 border rounded-xl h-20 outline-none focus:ring-2 focus:ring-blue-500 text-sm" name="acknowledgments" value={formData.acknowledgments} onChange={handleChange} placeholder="Agradecimientos..." /></div>
-            <div><label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Acknowledgments (EN)</label><textarea className="w-full p-3 border rounded-xl h-20 outline-none focus:ring-2 focus:ring-blue-500 text-sm" name="acknowledgmentsEnglish" value={formData.acknowledgmentsEnglish} onChange={handleChange} placeholder="Acknowledgments..." /></div>
-            <div><label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Créditos de Autores (ES)</label><textarea className="w-full p-3 border rounded-xl h-20 outline-none focus:ring-2 focus:ring-blue-500 text-sm" name="authorCredits" value={formData.authorCredits} onChange={handleChange} placeholder="CRediT - Contribuciones de autores..." /></div>
-            <div><label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Author Credits (EN)</label><textarea className="w-full p-3 border rounded-xl h-20 outline-none focus:ring-2 focus:ring-blue-500 text-sm" name="authorCreditsEnglish" value={formData.authorCreditsEnglish} onChange={handleChange} placeholder="CRediT - Author contributions..." /></div>
-            <div><label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Disponibilidad de Datos (ES)</label><textarea className="w-full p-3 border rounded-xl h-20 outline-none focus:ring-2 focus:ring-blue-500 text-sm" name="dataAvailability" value={formData.dataAvailability} onChange={handleChange} placeholder="Declaración de disponibilidad de datos..." /></div>
-            <div><label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Data Availability (EN)</label><textarea className="w-full p-3 border rounded-xl h-20 outline-none focus:ring-2 focus:ring-blue-500 text-sm" name="dataAvailabilityEnglish" value={formData.dataAvailabilityEnglish} onChange={handleChange} placeholder="Data availability statement..." /></div>
+              <div>
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 block">Funding Statement</label>
+                <textarea className="w-full p-3 border border-slate-300 rounded-md h-20 text-sm" name="fundingEnglish" value={formData.fundingEnglish} onChange={handleChange} />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 block">Conflictos de Interés</label>
+                <textarea className="w-full p-3 border border-slate-300 rounded-md h-20 text-sm" name="conflicts" value={formData.conflicts} onChange={handleChange} />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 block">Conflicts of Interest</label>
+                <textarea className="w-full p-3 border border-slate-300 rounded-md h-20 text-sm" name="conflictsEnglish" value={formData.conflictsEnglish} onChange={handleChange} />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 block">Disponibilidad de Datos (Data Availability)</label>
+                <textarea className="w-full p-3 border border-slate-300 rounded-md h-20 text-sm" name="dataAvailability" value={formData.dataAvailability} onChange={handleChange} />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 block">Agradecimientos (Acknowledgments)</label>
+                <textarea className="w-full p-3 border border-slate-300 rounded-md h-20 text-sm" name="acknowledgments" value={formData.acknowledgments} onChange={handleChange} />
+              </div>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Step Navigation */}
-      <div className="flex justify-between mt-4 pt-4 border-t border-gray-100">
-        <button type="button" onClick={() => setActiveStep(Math.max(0, activeStep - 1))} disabled={activeStep === 0} className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">Anterior</button>
-        <button type="button" onClick={() => setActiveStep(Math.min(6, activeStep + 1))} disabled={activeStep === 6} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">Siguiente</button>
+      <div className="flex justify-between mt-auto pt-4 border-t border-slate-200">
+        <button type="button" onClick={() => setActiveStep(Math.max(0, activeStep - 1))} disabled={activeStep === 0} className="px-5 py-2 text-sm font-semibold text-slate-600 bg-white border border-slate-300 rounded-md disabled:opacity-40 disabled:bg-slate-50 transition-colors">Anterior</button>
+        <button type="button" onClick={() => setActiveStep(Math.min(6, activeStep + 1))} disabled={activeStep === 6} className="px-5 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-md disabled:opacity-40 hover:bg-indigo-700 shadow-sm transition-colors">Siguiente Etapa</button>
       </div>
     </div>
   );
 };
 
-// --- COMPONENTE DE BÚSQUEDA DE USUARIOS (sin cambios, pero incluido por completitud) ---
+// ==================== COMPONENTES DE LISTA ====================
+
+const ArticleList = ({ articles, expandedArticles, onToggleExpand, onEdit, onDelete, formatDate }) => (
+  <div className="divide-y divide-slate-100">
+    {articles.length === 0 ? (
+      <div className="px-8 py-20 text-center bg-slate-50">
+        <DocumentTextIcon className="mx-auto h-12 w-12 text-slate-300" />
+        <h3 className="mt-4 text-sm font-bold uppercase tracking-widest text-slate-600">No hay registros</h3>
+      </div>
+    ) : (
+      <div className="max-h-[70vh] overflow-y-auto bg-white">
+        {articles.map((article) => (
+          <motion.div key={article.numeroArticulo || article.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-slate-50/50 transition-colors">
+            <div className="px-6 py-5 cursor-pointer flex justify-between items-start" onClick={() => onToggleExpand(article.numeroArticulo)}>
+              <div className="flex-1 min-w-0 pr-4">
+                <h3 className="text-lg font-bold text-slate-900 font-serif leading-snug" title={article.titulo}>{article.titulo}</h3>
+                <p className="mt-1.5 text-sm text-slate-600 truncate" title={article.autores?.map(a => a.name).join('; ')}>{article.autores?.map(a => a.name).join('; ')}</p>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <span className="px-2 py-0.5 border border-slate-200 text-slate-700 rounded text-[10px] font-bold uppercase tracking-wider">Vol. {article.volumen} ({article.numero})</span>
+                  <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-bold uppercase tracking-wider">{article.area}</span>
+                  {article.doi && (
+                    <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded text-[10px] font-mono">
+                      DOI: {article.doi?.substring(0, 20)}...
+                    </span>
+                  )}
+                </div>
+              </div>
+              <ChevronDownIcon className={`w-5 h-5 text-slate-400 transition-transform duration-300 mt-1 ${expandedArticles[article.numeroArticulo] ? 'rotate-180' : ''}`} />
+            </div>
+            
+            <AnimatePresence>
+              {expandedArticles[article.numeroArticulo] && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="px-6 pb-6 bg-slate-50 border-t border-slate-100">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-6 text-sm">
+                    <div className="lg:col-span-2 space-y-6">
+                      <div>
+                        <h4 className="font-bold text-slate-900 uppercase tracking-wider text-xs mb-2">Resumen</h4>
+                        <div className="text-slate-700 leading-relaxed text-sm text-justify" dangerouslySetInnerHTML={{ __html: article.resumen || 'No disponible' }} />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-900 uppercase tracking-wider text-xs mb-2">Abstract</h4>
+                        <div className="text-slate-700 leading-relaxed text-sm text-justify" dangerouslySetInnerHTML={{ __html: article.abstract || 'No disponible' }} />
+                      </div>
+                      
+                      {article.specialized_codes && (Array.isArray(article.specialized_codes) ? article.specialized_codes : 
+                        (typeof article.specialized_codes === 'string' ? article.specialized_codes.split(';').map(c => c.trim()).filter(Boolean) : [])
+                      ).length > 0 && (
+                        <div>
+                          <h4 className="font-bold text-slate-900 uppercase tracking-wider text-xs mb-2">
+                            Códigos Especializados
+                            {article.keywords_vocabulary && <span className="text-xs font-normal text-slate-500 ml-2">({article.keywords_vocabulary})</span>}
+                          </h4>
+                          <div className="flex flex-wrap gap-1.5">
+                            {(Array.isArray(article.specialized_codes) ? article.specialized_codes : 
+                              (typeof article.specialized_codes === 'string' ? article.specialized_codes.split(';').map(c => c.trim()).filter(Boolean) : [])
+                            ).map((code, idx) => (
+                              <span key={idx} className="inline-flex items-center px-2 py-0.5 bg-amber-50 border border-amber-300 rounded-full text-xs font-mono font-bold text-amber-800">
+                                {code}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div>
+                        <h4 className="font-bold text-slate-900 uppercase tracking-wider text-xs mb-2">Palabras Clave (ES)</h4>
+                        <div className="flex flex-wrap gap-1.5">
+                          {(Array.isArray(article.palabras_clave) ? article.palabras_clave : 
+                            (typeof article.palabras_clave === 'string' ? article.palabras_clave.split(';').map(k => k.trim()).filter(Boolean) : [])
+                          ).map((kw, idx) => (
+                            <span key={idx} className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs">
+                              {kw}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-bold text-slate-900 uppercase tracking-wider text-xs mb-2">Keywords (EN)</h4>
+                        <div className="flex flex-wrap gap-1.5">
+                          {(Array.isArray(article.keywords_english) ? article.keywords_english : 
+                            (typeof article.keywords_english === 'string' ? article.keywords_english.split(';').map(k => k.trim()).filter(Boolean) : [])
+                          ).map((kw, idx) => (
+                            <span key={idx} className="px-2 py-0.5 bg-purple-50 text-purple-700 rounded-full text-xs">
+                              {kw}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      {article.referencias && (
+                        <div>
+                          <h4 className="font-bold text-slate-900 uppercase tracking-wider text-xs mb-2">Referencias</h4>
+                          <div className="text-slate-700 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: article.referencias }} />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div><p className="text-slate-500 text-[10px] uppercase tracking-wider">Publicación</p><p className="font-medium text-sm">{formatDate(article.fecha)}</p></div>
+                        <div><p className="text-slate-500 text-[10px] uppercase tracking-wider">Vol/Núm</p><p className="font-medium text-sm">{article.volumen}/{article.numero}</p></div>
+                        <div><p className="text-slate-500 text-[10px] uppercase tracking-wider">Páginas</p><p className="font-medium text-sm">{article.primeraPagina}-{article.ultimaPagina}</p></div>
+                        <div><p className="text-slate-500 text-[10px] uppercase tracking-wider">Área</p><p className="font-medium text-sm">{article.area}</p></div>
+                        <div><p className="text-slate-500 text-[10px] uppercase tracking-wider">Tipo</p><p className="font-medium text-sm">{article.tipo}</p></div>
+                        <div><p className="text-slate-500 text-[10px] uppercase tracking-wider">Type</p><p className="font-medium text-sm">{article.type || 'N/A'}</p></div>
+                        {article.doi && (
+                          <div className="col-span-2">
+                            <p className="text-slate-500 text-[10px] uppercase tracking-wider">DOI</p>
+                            <a href={`https://doi.org/${article.doi}`} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline text-sm font-medium">{article.doi}</a>
+                          </div>
+                        )}
+                      </div>
+
+                      {article.autores && article.autores.length > 0 && (
+                        <div>
+                          <h4 className="font-bold text-slate-900 uppercase tracking-wider text-xs mb-2">Detalle de Autores</h4>
+                          <div className="space-y-2">
+                            {article.autores.map((autor, idx) => (
+                              <div key={idx} className="text-xs bg-white p-3 rounded border border-slate-200">
+                                <p className="font-bold text-sm">{autor.name}</p>
+                                <div className="grid grid-cols-2 gap-2 mt-2 text-slate-600">
+                                  {autor.email && <p className="flex items-center gap-1"><EnvelopeIcon className="w-3 h-3" /> {autor.email}</p>}
+                                  {autor.institution && <p className="flex items-center gap-1"><AcademicCapIcon className="w-3 h-3" /> {autor.institution}</p>}
+                                  {autor.orcid && <p className="flex items-center gap-1 font-mono text-[10px]">{autor.orcid}</p>}
+                                  {autor.contribution && <p className="col-span-2 flex items-start gap-1"><PencilIcon className="w-3 h-3 mt-0.5" /> {autor.contribution}</p>}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {article.submissionId && (
+                        <div>
+                          <p className="text-slate-500 text-[10px] uppercase tracking-wider">Submission ID</p>
+                          <p className="font-mono text-xs text-slate-700">{article.submissionId}</p>
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center gap-3 pt-4 border-t border-slate-200">
+                        {article.pdfUrl && (
+                          <a href={article.pdfUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 transition-colors text-xs">
+                            <DocumentIcon className="w-4 h-4 mr-2" /> PDF Galley
+                          </a>
+                        )}
+                        <button onClick={(e) => { e.stopPropagation(); onEdit(article); }} className="px-4 py-2 text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-md hover:bg-indigo-100 font-medium text-xs transition-colors">
+                          Editar Metadatos
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); onDelete(article.numeroArticulo); }} className="px-4 py-2 text-red-700 bg-red-50 border border-red-100 rounded-md hover:bg-red-100 font-medium text-xs transition-colors ml-auto">
+                          <TrashIcon className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        ))}
+      </div>
+    )}
+  </div>
+);
+
+const VolumeList = ({ volumes, expandedVolumes, onToggleExpand, onEdit, onDelete, formatDate }) => (
+  <div className="divide-y divide-slate-100">
+    {volumes.length === 0 ? (
+      <div className="px-8 py-16 text-center">
+        <BookOpenIcon className="mx-auto h-16 w-16 text-slate-400" />
+        <h3 className="mt-4 text-lg font-medium text-slate-900">No hay volúmenes</h3>
+        <p className="mt-2 text-slate-500">Comienza agregando tu primer volumen.</p>
+      </div>
+    ) : (
+      <div className="max-h-[600px] overflow-y-auto">
+        {volumes.map((volume) => (
+          <motion.div key={volume.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-slate-50 transition-colors">
+            <div className="px-6 py-4 cursor-pointer flex justify-between items-center" onClick={() => onToggleExpand(volume.id)}>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-semibold text-slate-900 truncate" title={volume.titulo}>{volume.titulo}</h3>
+                <p className="mt-1 text-sm text-slate-600">Volumen {volume.volumen}, Número {volume.numero}</p>
+                <div className="mt-2 flex items-center space-x-2">
+                  <span className="px-2.5 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs font-medium">{formatDate(volume.fecha)}</span>
+                  {volume.issn && <span className="px-2.5 py-1 bg-slate-100 text-slate-800 rounded-full text-xs font-medium hidden sm:inline-block">ISSN: {volume.issn}</span>}
+                </div>
+              </div>
+              <ChevronDownIcon className={`w-5 h-5 text-slate-400 transition-transform duration-300 flex-shrink-0 ${expandedVolumes[volume.id] ? 'rotate-180' : ''}`} />
+            </div>
+            <AnimatePresence>
+              {expandedVolumes[volume.id] && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="px-6 pb-6 bg-slate-50">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {volume.editorial && <div><h4 className="font-semibold text-slate-900 mb-2">Nota Editorial</h4><div className="text-slate-700 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: volume.editorial }} /></div>}
+                    {volume.englishEditorial && <div><h4 className="font-semibold text-slate-900 mb-2">Editorial Note</h4><div className="text-slate-700 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: volume.englishEditorial }} /></div>}
+                    <div className="lg:col-span-2">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div><p className="text-slate-500 text-xs">Volumen</p><p className="font-medium">{volume.volumen}</p></div>
+                        <div><p className="text-slate-500 text-xs">Número</p><p className="font-medium">{volume.numero}</p></div>
+                        <div><p className="text-slate-500 text-xs">Fecha</p><p className="font-medium">{formatDate(volume.fecha)}</p></div>
+                        {volume.issn && <div><p className="text-slate-500 text-xs">ISSN</p><p className="font-medium">{volume.issn}</p></div>}
+                      </div>
+                    </div>
+                    {volume.portada && <div className="lg:col-span-2"><h4 className="font-semibold text-slate-900 mb-2">Portada</h4><img src={volume.portada} alt={volume.titulo} className="max-h-48 rounded-lg shadow-md" /></div>}
+                    {volume.heroImage && (
+                      <div className="lg:col-span-2">
+                        <h4 className="font-semibold text-slate-900 mb-2">Imagen Hero</h4>
+                        <img src={volume.heroImage} alt={`Hero de ${volume.titulo}`} className="max-h-48 rounded-lg shadow-md" />
+                      </div>
+                    )}
+                    <div className="lg:col-span-2 flex items-center justify-between pt-4 border-t border-slate-200">
+                      {volume.pdf && <a href={volume.pdf} target="_blank" rel="noopener noreferrer" className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm"><DocumentIcon className="w-4 h-4 mr-2" /> Ver PDF del Volumen</a>}
+                      <div className="flex space-x-2 ml-auto">
+                        <button onClick={(e) => { e.stopPropagation(); onEdit(volume); }} className="p-2 text-amber-600 bg-amber-100 rounded-lg hover:bg-amber-200 transition-colors"><PencilIcon className="w-4 h-4" /></button>
+                        <button onClick={(e) => { e.stopPropagation(); onDelete(volume.id); }} className="p-2 text-red-600 bg-red-100 rounded-lg hover:bg-red-200 transition-colors"><TrashIcon className="w-4 h-4" /></button>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        ))}
+      </div>
+    )}
+  </div>
+);
+
+// ==================== COMPONENTES ATÓMICOS Y AUXILIARES ====================
+
 const UserSearch = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -1378,48 +1504,48 @@ const UserSearch = () => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row gap-3">
-        <input type="text" placeholder="Buscar por email o nombre..." className="flex-1 px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none shadow-sm text-base" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearch()} />
-        <button onClick={handleSearch} disabled={isSearching} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl flex items-center justify-center gap-2 font-medium shadow-md transition-all disabled:opacity-50">
-          {isSearching ? <ArrowPathIcon className="w-5 h-5 animate-spin" /> : <MagnifyingGlassIcon className="w-5 h-5" />} Buscar
+        <input type="text" placeholder="Buscar por email o nombre..." className="flex-1 px-4 py-3 bg-white border border-slate-300 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none shadow-sm text-sm" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearch()} />
+        <button onClick={handleSearch} disabled={isSearching} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-md flex items-center justify-center gap-2 font-medium shadow-sm transition-all disabled:opacity-50 text-sm">
+          {isSearching ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : <MagnifyingGlassIcon className="w-4 h-4" />} Buscar
         </button>
       </div>
       {searchPerformed && (
         <div className="mt-4">
-          <p className="text-sm text-gray-500 mb-3">{searchResults.length === 0 ? 'No se encontraron usuarios.' : `Se encontraron ${searchResults.length} usuario(s).`}</p>
+          <p className="text-sm text-slate-500 mb-3">{searchResults.length === 0 ? 'No se encontraron usuarios.' : `Se encontraron ${searchResults.length} usuario(s).`}</p>
           <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
             {searchResults.map((user) => (
-              <div key={user.id} className="border border-gray-200 rounded-xl overflow-hidden">
-                <div className="px-4 py-3 bg-gray-50 cursor-pointer flex justify-between items-center hover:bg-gray-100 transition-colors" onClick={() => toggleUserExpand(user.id)}>
+              <div key={user.id} className="border border-slate-200 rounded-md overflow-hidden">
+                <div className="px-4 py-3 bg-slate-50 cursor-pointer flex justify-between items-center hover:bg-slate-100 transition-colors" onClick={() => toggleUserExpand(user.id)}>
                   <div className="flex items-center gap-3">
-                    <UserIcon className="w-5 h-5 text-gray-500" />
+                    <UserIcon className="w-5 h-5 text-slate-400" />
                     <div>
-                      <h4 className="font-medium text-gray-900">{user.displayName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Sin nombre'}</h4>
-                      <p className="text-sm text-gray-500">{user.email}</p>
+                      <h4 className="font-medium text-slate-900">{user.displayName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Sin nombre'}</h4>
+                      <p className="text-sm text-slate-500">{user.email}</p>
                     </div>
                   </div>
-                  <ChevronDownIcon className={`w-5 h-5 text-gray-400 transition-transform ${expandedUser === user.id ? 'rotate-180' : ''}`} />
+                  <ChevronDownIcon className={`w-5 h-5 text-slate-400 transition-transform ${expandedUser === user.id ? 'rotate-180' : ''}`} />
                 </div>
                 <AnimatePresence>
                   {expandedUser === user.id && (
-                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="px-4 py-4 bg-white border-t border-gray-100">
+                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="px-4 py-4 bg-white border-t border-slate-100">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                         <div>
-                          <h5 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Datos Personales</h5>
+                          <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Datos Personales</h5>
                           <ul className="space-y-1">
-                            <li><span className="font-medium">UID:</span> <span className="text-gray-600 font-mono text-xs">{user.id}</span></li>
+                            <li><span className="font-medium">UID:</span> <span className="text-slate-600 font-mono text-xs">{user.id}</span></li>
                             <li><span className="font-medium">Email:</span> {user.email}</li>
                             <li><span className="font-medium">Teléfono:</span> {user.phoneNumber || 'No disponible'}</li>
                             <li><span className="font-medium">Verificado:</span> {user.emailVerified ? 'Sí' : 'No'}</li>
                           </ul>
                         </div>
                         <div>
-                          <h5 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Roles</h5>
+                          <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Roles</h5>
                           <div className="flex flex-wrap gap-1">
-                            {user.roles && user.roles.length > 0 ? user.roles.map((role, idx) => <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">{role}</span>) : <span className="text-gray-400">Sin roles</span>}
+                            {user.roles && user.roles.length > 0 ? user.roles.map((role, idx) => <span key={idx} className="px-2 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs">{role}</span>) : <span className="text-slate-400">Sin roles</span>}
                           </div>
                         </div>
                         <div className="md:col-span-2">
-                          <h5 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Metadatos</h5>
+                          <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Metadatos</h5>
                           <ul className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                             <li><span className="font-medium">Creado:</span> {user.createdAt?.toDate?.()?.toLocaleString() || user.createdAt || 'N/A'}</li>
                             <li><span className="font-medium">Último acceso:</span> {user.lastLoginAt?.toDate?.()?.toLocaleString() || user.lastLoginAt || 'N/A'}</li>
@@ -1428,8 +1554,8 @@ const UserSearch = () => {
                           </ul>
                         </div>
                         {user.claimedAnonymousUid && (
-                          <div className="md:col-span-2 bg-yellow-50 p-2 rounded-lg">
-                            <p className="text-xs text-yellow-800"><span className="font-bold">Perfil anónimo reclamado:</span> {user.claimedAnonymousName} ({user.claimedAnonymousUid})</p>
+                          <div className="md:col-span-2 bg-amber-50 p-2 rounded border border-amber-100">
+                            <p className="text-xs text-amber-800"><span className="font-bold">Perfil anónimo reclamado:</span> {user.claimedAnonymousName} ({user.claimedAnonymousUid})</p>
                           </div>
                         )}
                       </div>
@@ -1445,7 +1571,6 @@ const UserSearch = () => {
   );
 };
 
-// --- COMPONENTE VOLUME FORM (sin cambios) ---
 const VolumeForm = ({ formData, setFormData, isEditing }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -1474,257 +1599,46 @@ const VolumeForm = ({ formData, setFormData, isEditing }) => {
       <Input label="ISSN" name="issn" value={formData.issn} onChange={handleChange} />
       <Input label="URL de Portada" name="portada" value={formData.portada} onChange={handleChange} />
       <Input label="URL de Imagen Hero" name="heroImage" value={formData.heroImage} onChange={handleChange} placeholder="URL para la imagen de fondo del hero" />
-      <div><label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Editorial Note (Español)</label><textarea className="w-full p-3 border rounded-xl h-24 outline-none focus:ring-2 focus:ring-blue-500 text-sm" name="editorial" value={formData.editorial} onChange={handleChange} placeholder="Nota editorial en español..." /></div>
-      <div><label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Editorial Note (English)</label><textarea className="w-full p-3 border rounded-xl h-24 outline-none focus:ring-2 focus:ring-blue-500 text-sm" name="englishEditorial" value={formData.englishEditorial} onChange={handleChange} placeholder="Editorial note in English..." /></div>
-      <div className="p-6 border-2 border-dashed border-gray-200 rounded-2xl text-center">
-        <DocumentIcon className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-        <p className="text-gray-500 mb-4">PDF del volumen completo (opcional)</p>
+      <div><label className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 block">Editorial Note (Español)</label><textarea className="w-full p-3 border border-slate-300 rounded-md h-24 focus:ring-1 focus:ring-indigo-500 outline-none text-sm" name="editorial" value={formData.editorial} onChange={handleChange} placeholder="Nota editorial en español..." /></div>
+      <div><label className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 block">Editorial Note (English)</label><textarea className="w-full p-3 border border-slate-300 rounded-md h-24 focus:ring-1 focus:ring-indigo-500 outline-none text-sm" name="englishEditorial" value={formData.englishEditorial} onChange={handleChange} placeholder="Editorial note in English..." /></div>
+      <div className="p-6 border-2 border-dashed border-slate-200 rounded-md text-center">
+        <DocumentIcon className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+        <p className="text-slate-500 mb-4">PDF del volumen completo (opcional)</p>
         <input type="file" accept=".pdf" className="hidden" id="volume-pdf-upload" onChange={(e) => setFormData({...formData, pdfFile: e.target.files[0]})} />
-        <label htmlFor="volume-pdf-upload" className="bg-white border border-gray-300 px-6 py-2 rounded-full cursor-pointer hover:bg-gray-50 shadow-sm transition-all inline-block text-sm">
+        <label htmlFor="volume-pdf-upload" className="bg-white border border-slate-300 px-6 py-2 rounded-md cursor-pointer hover:bg-slate-50 shadow-sm transition-all inline-block text-sm">
           {formData.pdfFile ? formData.pdfFile.name : "Seleccionar Archivo"}
         </label>
-        {formData.pdf && !formData.pdfFile && <p className="text-xs text-gray-400 mt-2">PDF actual: {formData.pdf.split('/').pop()}</p>}
+        {formData.pdf && !formData.pdfFile && <p className="text-xs text-slate-400 mt-2">PDF actual: {formData.pdf.split('/').pop()}</p>}
       </div>
     </div>
   );
 };
 
-// --- COMPONENTES DE LISTA (sin cambios significativos) ---
-const ArticleList = ({ articles, expandedArticles, onToggleExpand, onEdit, onDelete, formatDate }) => (
-  <div className="divide-y divide-gray-200">
-    {articles.length === 0 ? (
-      <div className="px-8 py-16 text-center">
-        <DocumentTextIcon className="mx-auto h-16 w-16 text-gray-400" />
-        <h3 className="mt-4 text-lg font-medium text-gray-900">No hay artículos</h3>
-        <p className="mt-2 text-gray-500">Comienza agregando tu primer artículo.</p>
-      </div>
-    ) : (
-      <div className="max-h-[600px] overflow-y-auto">
-        {articles.map((article) => (
-          <motion.div key={article.numeroArticulo || article.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-gray-50 transition-colors">
-            <div className="px-4 lg:px-6 py-4 cursor-pointer flex justify-between items-center" onClick={() => onToggleExpand(article.numeroArticulo)}>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-base lg:text-lg font-semibold text-[#001529] truncate" title={article.titulo}>{article.titulo}</h3>
-                <p className="mt-1 text-xs lg:text-sm text-gray-600 truncate" title={article.autores?.map(a => a.name).join('; ')}>{article.autores?.map(a => a.name).join('; ')}</p>
-                <div className="mt-2 flex items-center space-x-2">
-                  <span className="px-2.5 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">Vol. {article.volumen} N° {article.numero}</span>
-                  <span className="px-2.5 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium hidden sm:inline-block">{article.area}</span>
-                  {article.doi && (
-                    <span className="px-2.5 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium hidden sm:inline-block">
-                      DOI: {article.doi?.substring(0, 20) || article.doi}...
-                    </span>
-                  )}
-                  {article.status === 'published' && <span className="px-2.5 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Publicado</span>}
-                </div>
-              </div>
-              <ChevronDownIcon className={`w-5 h-5 lg:w-6 lg:h-6 text-gray-400 transition-transform duration-300 flex-shrink-0 ${expandedArticles[article.numeroArticulo] ? 'rotate-180' : ''}`} />
-            </div>
-            <AnimatePresence>
-              {expandedArticles[article.numeroArticulo] && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="px-4 lg:px-6 pb-6 bg-gray-50">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 text-sm">
-                    {/* COLUMNA IZQUIERDA */}
-                    <div className="space-y-4">
-                      <div><h4 className="font-semibold text-gray-900 mb-2">Resumen</h4><div className="text-gray-700 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: article.resumen || 'No disponible' }} /></div>
-                      <div><h4 className="font-semibold text-gray-900 mb-2">Abstract</h4><div className="text-gray-700 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: article.abstract || 'No disponible' }} /></div>
-                      <div>
-    <h4 className="font-semibold text-gray-900 mb-2">Palabras Clave</h4>
-    <div className="flex flex-wrap gap-1.5">
-        {(Array.isArray(article.palabras_clave) ? article.palabras_clave : 
-          (typeof article.palabras_clave === 'string' ? article.palabras_clave.split(';').map(k => k.trim()).filter(Boolean) : [])
-        ).map((kw, idx) => {
-            const match = typeof kw === 'string' ? kw.match(/^([A-Za-z0-9.]+):\s*(.+)/) : null;
-            if (match) {
-                return (
-                    <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-200 rounded-full text-xs">
-                        <code className="text-[10px] font-mono text-blue-700 font-bold">{match[1]}</code>
-                        <span className="text-blue-900">{match[2]}</span>
-                    </span>
-                );
-            }
-            return (
-                <span key={idx} className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs">
-                    {kw}
-                </span>
-            );
-        })}
-        {(!article.palabras_clave || (Array.isArray(article.palabras_clave) && article.palabras_clave.length === 0)) && 
-            <span className="text-gray-400 text-xs">No disponible</span>
-        }
-    </div>
-</div>
-<div>
-    <h4 className="font-semibold text-gray-900 mb-2">Keywords</h4>
-    <div className="flex flex-wrap gap-1.5">
-        {(Array.isArray(article.keywords_english) ? article.keywords_english : 
-          (typeof article.keywords_english === 'string' ? article.keywords_english.split(';').map(k => k.trim()).filter(Boolean) : [])
-        ).map((kw, idx) => {
-            const match = typeof kw === 'string' ? kw.match(/^([A-Za-z0-9.]+):\s*(.+)/) : null;
-            if (match) {
-                return (
-                    <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-50 border border-purple-200 rounded-full text-xs">
-                        <code className="text-[10px] font-mono text-purple-700 font-bold">{match[1]}</code>
-                        <span className="text-purple-900">{match[2]}</span>
-                    </span>
-                );
-            }
-            return (
-                <span key={idx} className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs">
-                    {kw}
-                </span>
-            );
-        })}
-        {(!article.keywords_english || (Array.isArray(article.keywords_english) && article.keywords_english.length === 0)) && 
-            <span className="text-gray-400 text-xs">No disponible</span>
-        }
-    </div>
-</div>
-                      {article.referencias && <div><h4 className="font-semibold text-gray-900 mb-2">Referencias</h4><div className="text-gray-700 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: article.referencias }} /></div>}
-                    </div>
-
-                    {/* COLUMNA DERECHA */}
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div><p className="text-gray-500 text-xs">Fecha de publicación</p><p className="font-medium">{formatDate(article.fecha)}</p></div>
-                        <div><p className="text-gray-500 text-xs">Volumen/Número</p><p className="font-medium">{article.volumen}/{article.numero}</p></div>
-                        <div><p className="text-gray-500 text-xs">Páginas</p><p className="font-medium">{article.primeraPagina}-{article.ultimaPagina}</p></div>
-                        <div><p className="text-gray-500 text-xs">Área</p><p className="font-medium">{article.area}</p></div>
-                        <div><p className="text-gray-500 text-xs">Tipo</p><p className="font-medium">{article.tipo}</p></div>
-                        <div><p className="text-gray-500 text-xs">Type</p><p className="font-medium">{article.type || 'N/A'}</p></div>
-                        {article.doi && <div className="col-span-2"><p className="text-gray-500 text-xs">DOI</p><p className="font-medium"><a href={`https://doi.org/${article.doi}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{article.doi}</a></p></div>}
-                      </div>
-
-                      {article.autores && article.autores.length > 0 && (
-                        <div>
-                          <h4 className="font-semibold text-gray-900 mb-2">Detalle de Autores</h4>
-                          <div className="space-y-2">
-                            {article.autores.map((autor, idx) => (
-                              <div key={idx} className="text-xs bg-white p-2 rounded-lg border border-gray-100">
-                                <p className="font-medium">{autor.name}</p>
-                                <div className="grid grid-cols-2 gap-2 mt-1 text-gray-600">
-                                  {autor.email && <p>📧 {autor.email}</p>}
-                                  {autor.institution && <p>🏛️ {autor.institution}</p>}
-                                  {autor.orcid && <p>🆔 {autor.orcid}</p>}
-                                  {autor.authorId && <p className="font-mono">🔑 {autor.authorId}</p>}
-                                  {autor.contribution && <p className="col-span-2">📝 {autor.contribution}</p>}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {article.submissionId && <div><p className="text-gray-500 text-xs">Submission ID</p><p className="font-medium text-xs">{article.submissionId}</p></div>}
-                      {article.conflicts && article.conflicts !== 'Los autores declaran no tener conflictos de interés.' && <div><h4 className="font-semibold text-gray-900 mb-2">Conflictos de Interés</h4><div className="text-gray-700 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: article.conflicts }} /></div>}
-                      <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                        {article.pdfUrl && <a href={article.pdfUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"><DocumentIcon className="w-4 h-4 mr-2" /> Ver PDF</a>}
-                        <div className="flex space-x-2 ml-auto">
-                          <button onClick={(e) => { e.stopPropagation(); onEdit(article); }} className="p-2 text-yellow-600 bg-yellow-100 rounded-lg hover:bg-yellow-200 transition-colors"><PencilIcon className="w-4 h-4 lg:w-5 lg:h-5" /></button>
-                          <button onClick={(e) => { e.stopPropagation(); onDelete(article.numeroArticulo); }} className="p-2 text-red-600 bg-red-100 rounded-lg hover:bg-red-200 transition-colors"><TrashIcon className="w-4 h-4 lg:w-5 lg:h-5" /></button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
-        ))}
-      </div>
-    )}
-  </div>
-);
-const VolumeList = ({ volumes, expandedVolumes, onToggleExpand, onEdit, onDelete, formatDate }) => (
-  <div className="divide-y divide-gray-200">
-    {volumes.length === 0 ? (
-      <div className="px-8 py-16 text-center">
-        <BookOpenIcon className="mx-auto h-16 w-16 text-gray-400" />
-        <h3 className="mt-4 text-lg font-medium text-gray-900">No hay volúmenes</h3>
-        <p className="mt-2 text-gray-500">Comienza agregando tu primer volumen.</p>
-      </div>
-    ) : (
-      <div className="max-h-[600px] overflow-y-auto">
-        {volumes.map((volume) => (
-          <motion.div key={volume.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-gray-50 transition-colors">
-            <div className="px-4 lg:px-6 py-4 cursor-pointer flex justify-between items-center" onClick={() => onToggleExpand(volume.id)}>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-base lg:text-lg font-semibold text-[#001529] truncate" title={volume.titulo}>{volume.titulo}</h3>
-                <p className="mt-1 text-xs lg:text-sm text-gray-600">Volumen {volume.volumen}, Número {volume.numero}</p>
-                <div className="mt-2 flex items-center space-x-2">
-                  <span className="px-2.5 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">{formatDate(volume.fecha)}</span>
-                  {volume.issn && <span className="px-2.5 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium hidden sm:inline-block">ISSN: {volume.issn}</span>}
-                </div>
-              </div>
-              <ChevronDownIcon className={`w-5 h-5 lg:w-6 lg:h-6 text-gray-400 transition-transform duration-300 flex-shrink-0 ${expandedVolumes[volume.id] ? 'rotate-180' : ''}`} />
-            </div>
-            <AnimatePresence>
-              {expandedVolumes[volume.id] && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="px-4 lg:px-6 pb-6 bg-gray-50">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {volume.editorial && <div><h4 className="font-semibold text-gray-900 mb-2">Nota Editorial</h4><div className="text-gray-700 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: volume.editorial }} /></div>}
-                    {volume.englishEditorial && <div><h4 className="font-semibold text-gray-900 mb-2">Editorial Note</h4><div className="text-gray-700 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: volume.englishEditorial }} /></div>}
-                    <div className="lg:col-span-2">
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div><p className="text-gray-500 text-xs">Volumen</p><p className="font-medium">{volume.volumen}</p></div>
-                        <div><p className="text-gray-500 text-xs">Número</p><p className="font-medium">{volume.numero}</p></div>
-                        <div><p className="text-gray-500 text-xs">Fecha</p><p className="font-medium">{formatDate(volume.fecha)}</p></div>
-                        {volume.issn && <div><p className="text-gray-500 text-xs">ISSN</p><p className="font-medium">{volume.issn}</p></div>}
-                      </div>
-                    </div>
-                    {volume.portada && <div className="lg:col-span-2"><h4 className="font-semibold text-gray-900 mb-2">Portada</h4><img src={volume.portada} alt={volume.titulo} className="max-h-48 rounded-lg shadow-md" /></div>}
-                    {volume.heroImage && (
-  <div className="lg:col-span-2">
-    <h4 className="font-semibold text-gray-900 mb-2">Imagen Hero</h4>
-    <img src={volume.heroImage} alt={`Hero de ${volume.titulo}`} className="max-h-48 rounded-lg shadow-md" />
-  </div>
-)}
-                    <div className="lg:col-span-2 flex items-center justify-between pt-4 border-t border-gray-200">
-                      {volume.pdf && <a href={volume.pdf} target="_blank" rel="noopener noreferrer" className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"><DocumentIcon className="w-4 h-4 mr-2" /> Ver PDF del Volumen</a>}
-                      <div className="flex space-x-2 ml-auto">
-                        <button onClick={(e) => { e.stopPropagation(); onEdit(volume); }} className="p-2 text-yellow-600 bg-yellow-100 rounded-lg hover:bg-yellow-200 transition-colors"><PencilIcon className="w-4 h-4 lg:w-5 lg:h-5" /></button>
-                        <button onClick={(e) => { e.stopPropagation(); onDelete(volume.id); }} className="p-2 text-red-600 bg-red-100 rounded-lg hover:bg-red-200 transition-colors"><TrashIcon className="w-4 h-4 lg:w-5 lg:h-5" /></button>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
-        ))}
-      </div>
-    )}
-  </div>
-);
-
-// --- COMPONENTES ATÓMICOS ---
-const Input = ({ label, ...props }) => (
+const Input = ({ label, className, ...props }) => (
   <div>
-    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">{label}</label>
-    <input className="w-full px-4 py-2.5 bg-[#f8f9fa] border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm text-sm" {...props} />
+    <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1.5 block">{label}</label>
+    <input className={`w-full px-3 py-2 bg-white border border-slate-300 rounded-md focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all shadow-sm text-sm text-slate-800 ${className || ''}`} {...props} />
   </div>
 );
 
 const Modal = ({ show, onClose, title, children, onSave, isProcessing, hideSaveButton = false, size = 'lg' }) => {
-  const sizeClasses = {
-    sm: 'max-w-2xl',
-    lg: 'max-w-4xl',
-    xl: 'max-w-6xl',
-  };
+  const sizeClasses = { sm: 'max-w-2xl', lg: 'max-w-4xl', xl: 'max-w-6xl' };
   return (
     <AnimatePresence>
       {show && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-2 lg:p-4">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-[#001529]/60 backdrop-blur-sm" onClick={onClose} />
-          <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className={`bg-white w-full ${sizeClasses[size]} rounded-2xl lg:rounded-3xl shadow-2xl relative z-10 overflow-hidden max-h-[95vh] flex flex-col`}>
-            <div className="px-4 lg:px-8 py-4 lg:py-6 border-b flex justify-between items-center bg-gray-50 sticky top-0">
-              <h3 className="text-lg lg:text-xl font-bold font-serif truncate pr-4">{title}</h3>
-              <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full flex-shrink-0"><XMarkIcon className="w-5 h-5 lg:w-6 lg:h-6" /></button>
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" onClick={onClose} />
+          <motion.div initial={{ scale: 0.95, y: 10 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 10 }} className={`bg-white w-full ${sizeClasses[size]} rounded-lg shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]`}>
+            <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+              <h3 className="text-lg font-bold font-serif text-slate-900">{title}</h3>
+              <button onClick={onClose} className="p-1.5 hover:bg-slate-200 rounded text-slate-500"><XMarkIcon className="w-5 h-5" /></button>
             </div>
-            <div className="p-4 lg:p-8 overflow-y-auto flex-1">{children}</div>
+            <div className="p-6 overflow-y-auto">{children}</div>
             {!hideSaveButton && (
-              <div className="px-4 lg:px-8 py-4 lg:py-6 bg-gray-50 border-t flex justify-end gap-3 sticky bottom-0">
-                <button onClick={onClose} className="px-4 lg:px-6 py-2 font-semibold text-gray-500 text-sm lg:text-base" disabled={isProcessing}>Cancelar</button>
-                <button onClick={onSave} disabled={isProcessing} className="bg-blue-600 text-white px-6 lg:px-8 py-2 rounded-xl font-bold hover:bg-blue-700 shadow-lg flex items-center gap-2 disabled:opacity-50 text-sm lg:text-base">
-                  {isProcessing ? <><ArrowPathIcon className="w-4 h-4 lg:w-5 lg:h-5 animate-spin" /> Procesando...</> : <><CheckIcon className="w-4 h-4 lg:w-5 lg:h-5" /> Guardar</>}
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
+                <button onClick={onClose} className="px-4 py-2 font-medium text-slate-600 hover:text-slate-900 text-sm">Cancelar</button>
+                <button onClick={onSave} disabled={isProcessing} className="bg-indigo-600 text-white px-6 py-2 rounded-md font-semibold hover:bg-indigo-700 shadow-sm flex items-center gap-2 text-sm">
+                  {isProcessing ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : <CheckIcon className="w-4 h-4" />} {isProcessing ? 'Guardando...' : 'Confirmar Cambios'}
                 </button>
               </div>
             )}
@@ -1736,44 +1650,40 @@ const Modal = ({ show, onClose, title, children, onSave, isProcessing, hideSaveB
 };
 
 const Notification = ({ status, clear }) => (
-  <motion.div initial={{ x: 100, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 100, opacity: 0 }} className={`fixed top-4 right-4 lg:top-8 lg:right-8 z-[2000] p-4 rounded-2xl shadow-2xl border-l-4 min-w-[280px] lg:min-w-[300px] flex items-center justify-between ${status.type === 'success' ? 'bg-emerald-50 border-emerald-500 text-emerald-800' : status.type === 'error' ? 'bg-red-50 border-red-500 text-red-800' : 'bg-blue-50 border-blue-500 text-blue-800'}`}>
+  <motion.div initial={{ x: 100, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 100, opacity: 0 }} className="fixed bottom-6 right-6 z-[2000] p-4 rounded-md shadow-lg border-l-4 min-w-[300px] flex items-center justify-between bg-white border-slate-200">
     <div className="flex items-center gap-3">
-      {status.type === 'success' ? <CheckIcon className="w-5 h-5 lg:w-6 lg:h-6" /> : <ExclamationTriangleIcon className="w-5 h-5 lg:w-6 lg:h-6" />}
-      <span className="font-medium text-sm lg:text-base">{status.msg}</span>
+      {status.type === 'success' ? <CheckIcon className="w-5 h-5 text-emerald-600" /> : <ExclamationTriangleIcon className="w-5 h-5 text-rose-600" />}
+      <span className="font-medium text-sm text-slate-800">{status.msg}</span>
     </div>
-    <button onClick={clear} className="p-1 hover:bg-black/5 rounded-full"><XMarkIcon className="w-4 h-4" /></button>
+    <button onClick={clear} className="text-slate-400 hover:text-slate-600"><XMarkIcon className="w-4 h-4" /></button>
   </motion.div>
 );
 
 const SidebarItem = ({ active, onClick, icon, label }) => (
-  <button onClick={onClick} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${active ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}>
-    {React.cloneElement(icon, { className: "w-5 h-5" })}<span className="font-medium">{label}</span>
+  <button onClick={onClick} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-md transition-all text-sm font-medium ${active ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}>
+    {React.cloneElement(icon, { className: "w-5 h-5" })} <span>{label}</span>
   </button>
 );
 
 const SidebarItemMobile = ({ active, onClick, icon, label }) => (
-  <button onClick={onClick} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${active ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}>
-    {React.cloneElement(icon, { className: "w-5 h-5" })}<span className="font-medium">{label}</span>
+  <button onClick={onClick} className={`w-full flex items-center gap-3 px-4 py-3 rounded-md transition-all text-sm font-medium ${active ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}>
+    {React.cloneElement(icon, { className: "w-5 h-5" })} <span>{label}</span>
   </button>
 );
 
-// --- LOADING & ACCESS COMPONENTS ---
 const LoadingScreen = () => (
-  <div className="min-h-screen flex items-center justify-center bg-white">
-    <div className="flex flex-col items-center gap-4">
-      <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-      <p className="font-serif italic text-gray-400 tracking-widest uppercase text-xs">Cargando Editorial...</p>
-    </div>
+  <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
+    <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4" />
+    <p className="font-bold text-[10px] uppercase tracking-widest text-slate-400">Iniciando Portal Editorial...</p>
   </div>
 );
 
-
 const AccessDenied = () => (
-  <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-    <div className="text-center p-8 lg:p-12 bg-white rounded-3xl shadow-xl border border-gray-100 max-w-sm">
-      <ExclamationTriangleIcon className="w-16 h-16 text-red-500 mx-auto mb-6" />
-      <h2 className="text-xl lg:text-2xl font-bold text-[#001529] mb-2">Acceso Restringido</h2>
-      <p className="text-sm lg:text-base text-gray-500">Esta área es exclusiva para la Dirección General de la Revista.</p>
+  <div className="min-h-screen flex items-center justify-center bg-slate-50">
+    <div className="text-center p-10 bg-white rounded-lg shadow-sm border border-slate-200 max-w-sm">
+      <ExclamationTriangleIcon className="w-12 h-12 text-rose-500 mx-auto mb-4" />
+      <h2 className="text-lg font-bold text-slate-900 font-serif mb-2">Acceso Denegado</h2>
+      <p className="text-sm text-slate-500">Credenciales insuficientes para la capa directiva.</p>
     </div>
   </div>
 );

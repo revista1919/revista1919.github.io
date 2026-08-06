@@ -1430,10 +1430,13 @@ async function getSubmissionLanguage(submissionId) {
           autores: authorsArray,
           resumen: article.resumen,
           abstract: article.abstract || '',
-          palabras_clave: Array.isArray(article.palabras_clave) ? article.palabras_clave : 
+                    palabras_clave: Array.isArray(article.palabras_clave) ? article.palabras_clave : 
                           (article.palabras_clave ? article.palabras_clave.split(';').map(k => k.trim()) : []),
           keywords_english: Array.isArray(article.keywords_english) ? article.keywords_english :
                            (article.keywords_english ? article.keywords_english.split(';').map(k => k.trim()) : []),
+          specialized_codes: Array.isArray(article.specialized_codes) ? article.specialized_codes :
+                            (article.specialized_codes ? article.specialized_codes.split(';').map(c => c.trim()) : []),
+          keywords_vocabulary: article.keywords_vocabulary || '',
           area: article.area,
           tipo: article.tipo || 'Artículo de Investigación',
           type: article.type || 'Research Article',
@@ -1546,12 +1549,16 @@ async function getSubmissionLanguage(submissionId) {
           doi: article.doi !== undefined ? article.doi : oldArticle.doi,
           resumen: article.resumen !== undefined ? article.resumen : oldArticle.resumen,
           abstract: article.abstract !== undefined ? article.abstract : oldArticle.abstract,
-          palabras_clave: article.palabras_clave ? 
+                    palabras_clave: article.palabras_clave ? 
             (Array.isArray(article.palabras_clave) ? article.palabras_clave : article.palabras_clave.split(';').map(k => k.trim())) 
             : oldArticle.palabras_clave,
           keywords_english: article.keywords_english ?
             (Array.isArray(article.keywords_english) ? article.keywords_english : article.keywords_english.split(';').map(k => k.trim()))
             : oldArticle.keywords_english,
+          specialized_codes: article.specialized_codes ?
+            (Array.isArray(article.specialized_codes) ? article.specialized_codes : article.specialized_codes.split(';').map(c => c.trim()))
+            : (oldArticle.specialized_codes || []),
+          keywords_vocabulary: article.keywords_vocabulary !== undefined ? article.keywords_vocabulary : (oldArticle.keywords_vocabulary || ''),
           area: article.area || oldArticle.area,
           tipo: article.tipo || oldArticle.tipo,
           type: article.type || oldArticle.type,
@@ -1699,10 +1706,13 @@ if (action === "publish") {
       autores: authorsArray,
       resumen: article.resumen || '',
       abstract: article.abstract || '',
-      palabras_clave: Array.isArray(article.palabras_clave) ? article.palabras_clave : 
+            palabras_clave: Array.isArray(article.palabras_clave) ? article.palabras_clave : 
                       (article.palabras_clave ? article.palabras_clave.split(';').map(k => k.trim()) : []),
       keywords_english: Array.isArray(article.keywords_english) ? article.keywords_english :
                        (article.keywords_english ? article.keywords_english.split(';').map(k => k.trim()) : []),
+      specialized_codes: Array.isArray(article.specialized_codes) ? article.specialized_codes :
+                        (article.specialized_codes ? article.specialized_codes.split(';').map(c => c.trim()) : []),
+      keywords_vocabulary: article.keywords_vocabulary || '',
       area: article.area || '',
       tipo: article.tipo || 'Artículo de Investigación',
       type: article.type || 'Research Article',
@@ -1791,12 +1801,16 @@ if (action === "publish") {
       autores: authorsArray,
       resumen: article.resumen !== undefined ? article.resumen : oldArticle.resumen,
       abstract: article.abstract !== undefined ? article.abstract : oldArticle.abstract,
-      palabras_clave: article.palabras_clave ? 
+            palabras_clave: article.palabras_clave ? 
         (Array.isArray(article.palabras_clave) ? article.palabras_clave : article.palabras_clave.split(';').map(k => k.trim())) 
         : oldArticle.palabras_clave,
       keywords_english: article.keywords_english ?
         (Array.isArray(article.keywords_english) ? article.keywords_english : article.keywords_english.split(';').map(k => k.trim()))
         : oldArticle.keywords_english,
+      specialized_codes: article.specialized_codes ?
+        (Array.isArray(article.specialized_codes) ? article.specialized_codes : article.specialized_codes.split(';').map(c => c.trim()))
+        : (oldArticle.specialized_codes || []),
+      keywords_vocabulary: article.keywords_vocabulary !== undefined ? article.keywords_vocabulary : (oldArticle.keywords_vocabulary || ''),
       area: article.area || oldArticle.area,
       tipo: article.tipo || oldArticle.tipo,
       type: article.type || oldArticle.type,
@@ -2084,6 +2098,7 @@ async function createImmutableArticleHistory(article, user, action, requestId) {
     
     const keywordsArray = processKeywords(article.palabras_clave);
     const keywordsEnArray = processKeywords(article.keywords_english);
+    const specializedCodesArray = processKeywords(article.specialized_codes);
     
     // 4. Construir el objeto de historia
     const immutableHistory = {
@@ -2112,12 +2127,16 @@ async function createImmutableArticleHistory(article, user, action, requestId) {
         authorsCount: processedAuthors.length,
         
         // Contenido académico
+                // Contenido académico
         abstract: article.resumen || '',
         abstractEn: article.abstract || '',
         keywords: keywordsArray,
         keywordsEn: keywordsEnArray,
         keywordsCount: keywordsArray.length,
         keywordsEnCount: keywordsEnArray.length,
+        specializedCodes: specializedCodesArray,
+        specializedCodesCount: specializedCodesArray.length,
+        keywordsVocabulary: article.keywords_vocabulary || '',
         
         // Clasificación
         area: article.area || '',
@@ -2254,26 +2273,32 @@ async function createImmutableArticleHistory(article, user, action, requestId) {
       console.log(`[${requestId}] 🆕 Primer historial creado para artículo #${article.numeroArticulo}`);
     }
     
-    console.log(`[${requestId}] ✅ Historial guardado exitosamente:`);
+        console.log(`[${requestId}] ✅ Historial guardado exitosamente:`);
     console.log(`[${requestId}]    - ID: ${historyRef.id}`);
     console.log(`[${requestId}]    - Artículo: #${article.numeroArticulo}`);
     console.log(`[${requestId}]    - Título: "${article.titulo?.substring(0, 50)}..."`);
     console.log(`[${requestId}]    - DOI: "${article.doi || 'NO ASIGNADO'}"`);
     console.log(`[${requestId}]    - Autores: ${processedAuthors.length}`);
+    console.log(`[${requestId}]    - Keywords ES: ${keywordsArray.length}`);
+    console.log(`[${requestId}]    - Keywords EN: ${keywordsEnArray.length}`);
+    console.log(`[${requestId}]    - Códigos especializados: ${specializedCodesArray.length} (${article.keywords_vocabulary || 'N/A'})`);
     console.log(`[${requestId}]    - Versión: ${immutableHistory.traceability.totalVersions}`);
     console.log(`[${requestId}]    - Hash: ${immutableHistory.hash.substring(0, 16)}...`);
-    
     // 8. Registrar en audit log del artículo (si existe submissionId)
     if (article.submissionId) {
       try {
         await db.collection('submissions').doc(article.submissionId)
           .collection('auditLogs').add({
-            action: 'immutable_history_created',
+                        action: 'immutable_history_created',
             historyId: historyRef.id,
             articleNumber: article.numeroArticulo,
             doi: article.doi || null,
             hash: immutableHistory.hash,
             version: immutableHistory.traceability.totalVersions,
+            keywordsCount: keywordsArray.length,
+            keywordsEnCount: keywordsEnArray.length,
+            specializedCodesCount: specializedCodesArray.length,
+            keywordsVocabulary: article.keywords_vocabulary || null,
             by: user.uid,
             timestamp: admin.firestore.FieldValue.serverTimestamp()
           });
@@ -4073,15 +4098,17 @@ exports.submitArticle = onRequest(
       }
 
       // --- EXTRACCIÓN COMPLETA DE TODOS LOS CAMPOS ---
-      const {
+            const {
     // Campos básicos del artículo
     title, titleEn, abstract, abstractEn, 
-    keywords, keywordsEn, area, paperLanguage = 'es',
+    keywordsEs, keywordsEn, area, paperLanguage = 'es',
+    
+    // NUEVO: Códigos especializados (universales, sin idioma)
+    specializedCodes = [],
+    specializedCodesSerialized,
     
     // NUEVO: Metadatos del vocabulario controlado
     keywordsVocabulario,        // "JEL" | "MeSH" | "ACM" | "UNESCO"
-    keywordsRaw = [],           // [{code: "B14", term: "Marxism"}, ...]
-    keywordsRawEn = [],         // Versión en inglés
     
         // Autores
         authors, 
@@ -4150,135 +4177,44 @@ exports.submitArticle = onRequest(
           missingFields: ['aiTools']
         });
       }
-// 🔄 CAMBIO: Función normalizadora de keywords (soporte dual legacy/controlled)
-const normalizeKeywords = (keywordsInput, keywordsRawInput, vocabularioInput) => {
-    // CASO 1: Vienen keywordsRaw estructuradas (formulario nuevo)
-    if (keywordsRawInput && Array.isArray(keywordsRawInput) && keywordsRawInput.length > 0) {
-        const valid = keywordsRawInput.filter(k => k.code?.trim() && k.term?.trim());
-        if (valid.length > 0) {
-            return {
-                keywords: valid.map(k => `${k.code}: ${k.term}`),
-                keywordsRaw: valid.map(k => ({
-                    code: sanitizeText(k.code),
-                    term: sanitizeText(k.term)
-                })),
-                keywordsVocabulario: vocabularioInput || 'unknown',
-                keywordsFormat: 'controlled'
-            };
-        }
-    }
 
-    // CASO 2: Vienen como string serializado (formulario antiguo o mixto)
-    if (keywordsInput && typeof keywordsInput === 'string' && keywordsInput.trim()) {
-        const parts = keywordsInput.split(';').map(k => sanitizeText(k.trim())).filter(Boolean);
-        
-        // Detectar si tiene formato controlado (CÓDIGO: Término)
-        const looksControlled = parts.length > 0 && parts.every(p => /^[A-Za-z0-9.]+:/.test(p));
-        
-        if (looksControlled) {
-            const raw = parts.map(p => {
-                const colonIndex = p.indexOf(':');
-                return {
-                    code: sanitizeText(p.substring(0, colonIndex).trim()),
-                    term: sanitizeText(p.substring(colonIndex + 1).trim())
-                };
-            });
-            return {
-                keywords: parts,
-                keywordsRaw: raw,
-                keywordsVocabulario: vocabularioInput || 'unknown',
-                keywordsFormat: 'controlled'
-            };
-        }
-        
-        // Formato legacy (strings simples)
-        return {
-            keywords: parts,
-            keywordsRaw: parts.map(k => ({ code: '', term: k })),
-            keywordsVocabulario: 'legacy',
-            keywordsFormat: 'legacy'
-        };
-    }
-
-    // CASO 3: Ya es un array (viene de Firestore)
-    if (Array.isArray(keywordsInput) && keywordsInput.length > 0) {
-        const parts = keywordsInput.map(k => typeof k === 'string' ? sanitizeText(k.trim()) : String(k));
-        const looksControlled = parts.every(p => /^[A-Za-z0-9.]+:/.test(p));
-        
-        if (looksControlled) {
-            const raw = parts.map(p => {
-                const colonIndex = p.indexOf(':');
-                return {
-                    code: sanitizeText(p.substring(0, colonIndex).trim()),
-                    term: sanitizeText(p.substring(colonIndex + 1).trim())
-                };
-            });
-            return {
-                keywords: parts,
-                keywordsRaw: raw,
-                keywordsVocabulario: vocabularioInput || 'unknown',
-                keywordsFormat: 'controlled'
-            };
-        }
-        
-        return {
-            keywords: parts,
-            keywordsRaw: parts.map(k => ({ code: '', term: typeof k === 'string' ? k : String(k) })),
-            keywordsVocabulario: 'legacy',
-            keywordsFormat: 'legacy'
-        };
-    }
-
-    // CASO 4: Vacío
-    return {
-        keywords: [],
-        keywordsRaw: [],
-        keywordsVocabulario: 'legacy',
-        keywordsFormat: 'legacy'
-    };
-};
-
-// 🔄 CAMBIO: Aplicar normalización
-const normalizedKeywordsES = normalizeKeywords(keywords, keywordsRaw, keywordsVocabulario);
-const normalizedKeywordsEN = normalizeKeywords(keywordsEn, keywordsRawEn, keywordsVocabulario);
-
-// 🔄 CAMBIO: Validación de keywords normalizada (mínimo 2, máximo 6)
-const totalKeywords = normalizedKeywordsES.keywords.length;
-if (totalKeywords < 2) {
+// Validación de palabras clave en español (mínimo 2, máximo 6)
+const totalKeywordsEs = Array.isArray(keywordsEs) ? keywordsEs.length : 0;
+if (totalKeywordsEs < 2) {
     return res.status(400).json({
-        error: 'Debes incluir al menos 2 palabras clave',
-        missingFields: ['keywords']
+        error: 'Debes incluir al menos 2 palabras clave en español',
+        missingFields: ['keywordsEs']
     });
 }
-if (totalKeywords > 6) {
+if (totalKeywordsEs > 6) {
     return res.status(400).json({
-        error: 'Máximo 6 palabras clave permitidas',
-        missingFields: ['keywords']
+        error: 'Máximo 6 palabras clave en español permitidas',
+        missingFields: ['keywordsEs']
     });
 }
 
-if (keywordsRaw.length > 6) {
+// Validación de palabras clave en inglés (mínimo 2, máximo 6)
+const totalKeywordsEn = Array.isArray(keywordsEn) ? keywordsEn.length : 0;
+if (totalKeywordsEn < 2) {
     return res.status(400).json({
-        error: 'Máximo 6 palabras clave permitidas',
-        missingFields: ['keywordsRaw']
+        error: 'Debes incluir al menos 2 keywords en inglés',
+        missingFields: ['keywordsEn']
+    });
+}
+if (totalKeywordsEn > 6) {
+    return res.status(400).json({
+        error: 'Máximo 6 keywords en inglés permitidas',
+        missingFields: ['keywordsEn']
     });
 }
 
-// Validar que cada keyword tenga code y term
-const invalidKeywords = keywordsRaw.filter(k => !k.code?.trim() || !k.term?.trim());
-if (invalidKeywords.length > 0) {
+// Validación de códigos especializados (2 a 4 códigos)
+const totalCodes = Array.isArray(specializedCodes) ? specializedCodes.length : 0;
+if (totalCodes < 2 || totalCodes > 4) {
     return res.status(400).json({
-        error: 'Cada palabra clave debe tener un código y un término',
-        missingFields: ['keywordsRaw']
+        error: 'Debes incluir entre 2 y 4 códigos especializados',
+        missingFields: ['specializedCodes']
     });
-}
-      const requiredFields = { title, abstract, area, manuscriptBase64, authors, articleType };
-      // Y agregar validación específica para keywordsRaw:
-if (!keywordsRaw || !Array.isArray(keywordsRaw) || keywordsRaw.length < 2) {
-  return res.status(400).json({
-    error: 'Faltan campos requeridos',
-    missingFields: ['keywords']
-  });
 }
       const missingFields = Object.entries(requiredFields)
         .filter(([_, value]) => !value)
@@ -4599,14 +4535,16 @@ try {
         titleEn: titleEn ? sanitizeText(titleEn) : null,
         abstract: sanitizeText(abstract),
         abstractEn: abstractEn ? sanitizeText(abstractEn) : null,
-        // NUEVO: Procesar palabras clave controladas
-// 🔄 CAMBIO: Keywords normalizadas (soporte dual)
-keywords: normalizedKeywordsES.keywords,
-keywordsEn: normalizedKeywordsEN.keywords.length > 0 ? normalizedKeywordsEN.keywords : normalizedKeywordsES.keywords,
-keywordsVocabulario: normalizedKeywordsES.keywordsVocabulario,
-keywordsRaw: normalizedKeywordsES.keywordsRaw,
-keywordsRawEn: normalizedKeywordsEN.keywordsRaw.length > 0 ? normalizedKeywordsEN.keywordsRaw : normalizedKeywordsES.keywordsRaw,
-keywordsFormat: normalizedKeywordsES.keywordsFormat,
+// Palabras clave (arrays simples de strings)
+keywordsEs: Array.isArray(keywordsEs) ? keywordsEs : [],
+keywordsEn: Array.isArray(keywordsEn) ? keywordsEn : [],
+
+// Códigos especializados (universales, sin idioma)
+specializedCodes: Array.isArray(specializedCodes) ? specializedCodes : [],
+specializedCodesSerialized: specializedCodesSerialized || (Array.isArray(specializedCodes) ? specializedCodes.join('; ') : ''),
+
+// Vocabulario controlado utilizado
+keywordsVocabulario: keywordsVocabulario || 'unknown',
         area: sanitizeText(area),
         paperLanguage: paperLanguage === 'en' ? 'en' : 'es',
         
@@ -4774,9 +4712,10 @@ submissionData.documentStatus = 'processed'; // o 'processing' si falló
             hasMinorAuthors: processedAuthors.some(a => a.isMinor),
             dataAvailability,
             codeAvailability: codeAvailability || null,
-            keywordsVocabulario: normalizedKeywordsES.keywordsVocabulario,
-keywordsCount: normalizedKeywordsES.keywords.length,
-keywordsFormat: normalizedKeywordsES.keywordsFormat,
+            keywordsVocabulario: keywordsVocabulario || 'unknown',
+keywordsEsCount: Array.isArray(keywordsEs) ? keywordsEs.length : 0,
+keywordsEnCount: Array.isArray(keywordsEn) ? keywordsEn.length : 0,
+specializedCodesCount: Array.isArray(specializedCodes) ? specializedCodes.length : 0,
 hasEditorComment: !!editorComment,
 editorCommentPreview: editorComment 
   ? editorComment.replace(/<[^>]*>/g, '').substring(0, 100) + (editorComment.length > 100 ? '...' : '') 
@@ -4838,17 +4777,16 @@ editorCommentPreview: editorComment
         const ethicsInfo = requiresEthicsApproval
           ? `<p style="color: #0A1929;"><strong>✅ Aprobación ética:</strong> ${ethicsCommitteeName || 'Declarada'}</p>`
           : '';
-// NUEVO: Información de palabras clave
-// 🔄 CAMBIO: Keywords info para correos (usa datos normalizados)
-const keywordsInfo = normalizedKeywordsES.keywords.length > 0
-    ? `<p><strong>🏷️ Palabras clave (${normalizedKeywordsES.keywordsVocabulario || 'Vocabulario'}):</strong><br>
-        ${normalizedKeywordsES.keywordsRaw.map(k => 
-            k.code 
-                ? `<code style="background:#f0f0f0;padding:1px 4px;border-radius:3px;">${sanitizeText(k.code)}</code> ${sanitizeText(k.term)}`
-                : sanitizeText(k.term)
-        ).join('<br>')}
-      </p>`
-    : '';
+// Información de palabras clave para correos
+const keywordsEsList = Array.isArray(keywordsEs) ? keywordsEs.join('; ') : '';
+const keywordsEnList = Array.isArray(keywordsEn) ? keywordsEn.join('; ') : '';
+const codesList = Array.isArray(specializedCodes) ? specializedCodes.join('; ') : '';
+
+const keywordsInfo = `
+    <p><strong>🏷️ Palabras clave (ES):</strong> ${keywordsEsList}</p>
+    <p><strong>🏷️ Keywords (EN):</strong> ${keywordsEnList}</p>
+    <p><strong>🔢 Códigos especializados (${keywordsVocabulario || 'Vocabulario'}):</strong> ${codesList}</p>
+`;
         // NUEVO: Información de IA
         const aiInfo = aiUsed && processedAITools.length > 0
           ? `<p style="color: #0A1929;"><strong>🤖 IA utilizada:</strong> ${processedAITools.map(t => `${t.name} (${t.purpose})`).join(', ')}</p>`
@@ -4875,7 +4813,7 @@ const keywordsInfo = normalizedKeywordsES.keywords.length > 0
             ${ethicsInfo}
             ${aiInfo}
             ${availabilityInfo}
-            ${keywordsInfo}
+            ${keywordsInfoAuthor}
             <p><strong>Autores (${processedAuthors.length}):</strong><br>${authorsList}</p>
           </div>
           
@@ -4930,17 +4868,16 @@ const keywordsInfo = normalizedKeywordsES.keywords.length > 0
                We have received the consent documents. They will be reviewed during the editorial process.
              </p>`;
       }
-// NUEVO: Información de palabras clave
-// 🔄 CAMBIO: Keywords info para correos (usa datos normalizados)
-const keywordsInfo = normalizedKeywordsES.keywords.length > 0
-    ? `<p><strong>🏷️ Palabras clave (${normalizedKeywordsES.keywordsVocabulario || 'Vocabulario'}):</strong><br>
-        ${normalizedKeywordsES.keywordsRaw.map(k => 
-            k.code 
-                ? `<code style="background:#f0f0f0;padding:1px 4px;border-radius:3px;">${sanitizeText(k.code)}</code> ${sanitizeText(k.term)}`
-                : sanitizeText(k.term)
-        ).join('<br>')}
-      </p>`
-    : '';
+// Información de palabras clave para correo de autor
+const keywordsEsListAuthor = Array.isArray(keywordsEs) ? keywordsEs.join('; ') : '';
+const keywordsEnListAuthor = Array.isArray(keywordsEn) ? keywordsEn.join('; ') : '';
+const codesListAuthor = Array.isArray(specializedCodes) ? specializedCodes.join('; ') : '';
+
+const keywordsInfoAuthor = `
+    <p><strong>🏷️ Palabras clave (ES):</strong> ${keywordsEsListAuthor}</p>
+    <p><strong>🏷️ Keywords (EN):</strong> ${keywordsEnListAuthor}</p>
+    <p><strong>🔢 Códigos especializados (${keywordsVocabulario || 'Vocabulario'}):</strong> ${codesListAuthor}</p>
+`;
       // NUEVO: Información de disponibilidad para el autor
       const availabilityMessage = paperLanguage === 'es'
         ? `

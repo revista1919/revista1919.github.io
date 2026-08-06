@@ -492,54 +492,76 @@ useEffect(() => {
                     </div>
                   </InfoBlock>
 
-                  <InfoBlock icon={Icons.Tag} title={isSpanish ? 'Palabras Clave / Keywords' : 'Keywords / Palabras Clave'}>
+                                    <InfoBlock icon={Icons.Tag} title={isSpanish ? 'Palabras Clave / Keywords' : 'Keywords / Palabras Clave'}>
                     <div className="space-y-4">
+                      {/* Vocabulario y Códigos Especializados */}
                       {submission.keywordsVocabulario && (
-                        <div className="mb-4">
+                        <div className="mb-4 space-y-3">
                           <span className="inline-block px-2.5 py-1 bg-[#003b5c] text-white text-[10px] font-bold uppercase tracking-wider rounded-sm">
                             Vocabulario: {submission.keywordsVocabulario}
                           </span>
+                          
+                          {/* Códigos especializados (universales) */}
+                          {submission.specializedCodes && submission.specializedCodes.length > 0 && (
+                            <div>
+                              <p className="text-[10px] font-sans font-bold uppercase tracking-wider text-slate-400 mb-2">
+                                {isSpanish ? 'Códigos Especializados' : 'Specialized Codes'}
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                {submission.specializedCodes.map((code, idx) => (
+                                  <span key={idx} className="inline-flex items-center px-3 py-1 bg-slate-100 border border-slate-300 text-slate-700 rounded-sm text-xs font-mono font-bold">
+                                    {code}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                       
+                      {/* Palabras clave en español */}
                       <div>
                         <p className="text-[10px] font-sans font-bold uppercase tracking-wider text-slate-400 mb-2">ESPAÑOL</p>
                         <div className="flex flex-wrap gap-2">
-                          {submission.keywordsRaw?.map((kw, idx) => (
-                            <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1 bg-white border border-slate-200 text-slate-700 rounded-sm text-xs shadow-sm font-sans">
-                              <code className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded-sm text-slate-500 font-mono">{kw.code}</code>
-                              {kw.term}
-                            </span>
-                          )) || <span className="text-slate-400 text-xs italic">No especificadas</span>}
+                          {submission.keywordsEs?.length > 0 ? (
+                            submission.keywordsEs.map((keyword, idx) => (
+                              <span key={idx} className="px-3 py-1 bg-white border border-slate-200 text-slate-700 rounded-full text-xs font-sans">
+                                {keyword}
+                              </span>
+                            ))
+                          ) : submission.keywords?.length > 0 ? (
+                            submission.keywords.map((keyword, index) => (
+                              <span key={index} className="px-3 py-1 bg-white border border-slate-200 text-slate-700 rounded-full text-xs font-sans">
+                                {typeof keyword === 'string' ? keyword : keyword.term || String(keyword)}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-slate-400 text-xs italic">No especificadas</span>
+                          )}
                         </div>
                       </div>
                       
-                      {submission.keywordsRawEn?.length > 0 && (
-                        <div className="border-t border-slate-100 pt-4">
-                          <p className="text-[10px] font-sans font-bold uppercase tracking-wider text-slate-400 mb-2">ENGLISH</p>
-                          <div className="flex flex-wrap gap-2">
-                            {submission.keywordsRawEn.map((kw, idx) => (
-                              <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1 bg-white border border-slate-200 text-slate-700 rounded-sm text-xs shadow-sm font-sans">
-                                <code className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded-sm text-slate-500 font-mono">{kw.code}</code>
-                                {kw.term}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {(!submission.keywordsRaw || submission.keywordsRaw.length === 0) && submission.keywords && submission.keywords.length > 0 && (
-                        <div>
-                          <span className="inline-block px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold tracking-wider rounded-sm mb-2">ES (formato libre)</span>
-                          <div className="flex flex-wrap gap-2">
-                            {submission.keywords.map((keyword, index) => (
-                              <span key={index} className="px-3 py-1 bg-white border border-slate-200 text-slate-700 rounded-full text-xs font-sans">
+                      {/* Palabras clave en inglés */}
+                      <div className="border-t border-slate-100 pt-4">
+                        <p className="text-[10px] font-sans font-bold uppercase tracking-wider text-slate-400 mb-2">ENGLISH</p>
+                        <div className="flex flex-wrap gap-2">
+                          {submission.keywordsEn?.length > 0 ? (
+                            submission.keywordsEn.map((keyword, idx) => (
+                              <span key={idx} className="px-3 py-1 bg-white border border-slate-200 text-slate-700 rounded-full text-xs font-sans">
                                 {keyword}
                               </span>
-                            ))}
-                          </div>
+                            ))
+                          ) : submission.keywords?.length > 0 ? (
+                            submission.keywords.map((keyword, index) => (
+                              <span key={index} className="px-3 py-1 bg-white border border-slate-200 text-slate-700 rounded-full text-xs font-sans">
+                                {typeof keyword === 'string' ? keyword : keyword.term || String(keyword)}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-slate-400 text-xs italic">No especificadas</span>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </div>
                   </InfoBlock>
                 </div>
@@ -1012,21 +1034,69 @@ useEffect(() => {
                     </div>
                   </div>
 
-                  <div>
+                                    <div>
                     <h4 className="font-sans font-bold text-slate-500 text-xs uppercase tracking-wider mb-2">
-                      {isSpanish ? 'Palabras Clave' : 'Keywords'}
+                      {isSpanish ? 'Palabras Clave / Keywords' : 'Keywords / Palabras Clave'}
                     </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {submission.keywordsRaw?.map((kw, idx) => (
-                        <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 text-slate-700 rounded-sm text-sm font-sans">
-                          <code className="text-[10px] bg-white px-1.5 py-0.5 rounded-sm text-slate-500 font-mono">{kw.code}</code>
-                          {kw.term}
-                        </span>
-                      )) || submission.keywords?.map((keyword, index) => (
-                        <span key={index} className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-sm font-sans">
-                          {keyword}
-                        </span>
-                      )) || <span className="text-slate-400 italic">—</span>}
+                    
+                    {/* Códigos especializados */}
+                    {submission.specializedCodes && submission.specializedCodes.length > 0 && (
+                      <div className="mb-3">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                          {isSpanish ? 'Códigos' : 'Codes'} ({submission.keywordsVocabulario})
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {submission.specializedCodes.map((code, idx) => (
+                            <span key={idx} className="inline-flex items-center px-3 py-1 bg-slate-200 text-slate-700 rounded-sm text-sm font-mono font-bold">
+                              {code}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Palabras clave español */}
+                    <div className="mb-2">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">ESPAÑOL</p>
+                      <div className="flex flex-wrap gap-2">
+                        {submission.keywordsEs?.length > 0 ? (
+                          submission.keywordsEs.map((keyword, idx) => (
+                            <span key={idx} className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-sm font-sans">
+                              {keyword}
+                            </span>
+                          ))
+                        ) : submission.keywords?.length > 0 ? (
+                          submission.keywords.map((keyword, index) => (
+                            <span key={index} className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-sm font-sans">
+                              {typeof keyword === 'string' ? keyword : keyword.term || String(keyword)}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-slate-400 italic text-sm">—</span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Palabras clave inglés */}
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">ENGLISH</p>
+                      <div className="flex flex-wrap gap-2">
+                        {submission.keywordsEn?.length > 0 ? (
+                          submission.keywordsEn.map((keyword, idx) => (
+                            <span key={idx} className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-sm font-sans">
+                              {keyword}
+                            </span>
+                          ))
+                        ) : submission.keywords?.length > 0 ? (
+                          submission.keywords.map((keyword, index) => (
+                            <span key={index} className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-sm font-sans">
+                              {typeof keyword === 'string' ? keyword : keyword.term || String(keyword)}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-slate-400 italic text-sm">—</span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
