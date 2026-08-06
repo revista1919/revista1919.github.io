@@ -46,7 +46,6 @@ const HelpCapsule = ({ text, textEn }) => {
 
 // ============ CONFIGURACIÓN DE ÁREAS TEMÁTICAS ============
 
-// ============ CONFIGURACIÓN DE ÁREAS TEMÁTICAS ============
 
 const AREAS_TEMATICAS = {
   es: {
@@ -136,447 +135,446 @@ const getAreasByLanguage = (language) => {
   return AREAS_TEMATICAS[language] || AREAS_TEMATICAS.es;
 };
 // ============ CONFIGURACIÓN DE VOCABULARIOS CONTROLADOS ============
-
 const VOCABULARIO_POR_AREA = {
   "Matemáticas": {
     vocabulario: "MSC",
     nombre: "Mathematics Subject Classification (MSC2020)",
-    formato: "Código MSC: Término",
-    ejemplo: "11N05: Distribution of primes",
+    formato: "Solo código MSC",
+    ejemplo: "11N05",
     searchUrl: "https://mathscinet.ams.org/mathscinet/msc/msc2020.html",
-    instrucciones: "Busca tu código en la clasificación MSC2020 de la AMS y copia el código y descriptor exacto."
+    instrucciones: "Ingresa solo el código MSC (ej: 11N05). No incluyas el descriptor."
   },
   "Física": {
     vocabulario: "PhySH",
     nombre: "Physics Subject Headings (APS)",
-    formato: "Término PhySH",
-    ejemplo: "Quantum mechanics",
+    formato: "Solo código PhySH",
+    ejemplo: "quantum-mechanics",
     searchUrl: "https://physh.aps.org/",
-    instrucciones: "Usa PhySH, el esquema actual de la American Physical Society, y copia el descriptor."
+    instrucciones: "Ingresa solo el identificador PhySH. No incluyas el término completo."
   },
   "Química": {
     vocabulario: "CAS",
     nombre: "Chemical Abstracts Service Classification",
-    formato: "Número CAS: Término",
-    ejemplo: "78-10-4: Tetraethyl silicate",
+    formato: "Solo número CAS",
+    ejemplo: "78-10-4",
     searchUrl: "https://commonchemistry.cas.org/",
-    instrucciones: "Busca tu compuesto o sustancia en CAS Common Chemistry y copia el número de registro CAS."
+    instrucciones: "Ingresa solo el número de registro CAS (ej: 78-10-4). No incluyas el nombre del compuesto."
   },
   "Biología": {
     vocabulario: "MeSH",
     nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D001777: Biology",
+    formato: "Solo código MeSH",
+    ejemplo: "D001777",
     searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca y copia el código y descriptor MeSH."
+    instrucciones: "Ingresa solo el código MeSH (ej: D001777). No incluyas el descriptor."
   },
   "Geología": {
     vocabulario: "GeoRef",
     nombre: "GeoRef Thesaurus",
-    formato: "Término controlado GeoRef",
-    ejemplo: "Igneous rocks: Petrology",
+    formato: "Solo código GeoRef",
+    ejemplo: "igneous-rocks",
     searchUrl: "https://www.americangeosciences.org/georef/georef-thesaurus",
-    instrucciones: "Busca el descriptor controlado aceptado en el tesauro GeoRef."
+    instrucciones: "Ingresa solo el identificador del tesauro GeoRef. No incluyas el término."
   },
   "Astronomía y Astrofísica": {
     vocabulario: "UAT",
     nombre: "Unified Astronomy Thesaurus",
-    formato: "Código UAT: Término",
-    ejemplo: "1087: Exoplanet astronomy",
+    formato: "Solo código UAT",
+    ejemplo: "1087",
     searchUrl: "https://astrothesaurus.org/",
-    instrucciones: "Navega por el tesauro astronómico unificado y copia el código numérico y descriptor."
+    instrucciones: "Ingresa solo el código numérico UAT (ej: 1087). No incluyas el descriptor."
   },
   "Ciencias Ambientales y Ecología": {
     vocabulario: "EnvThes",
     nombre: "Environmental Thesaurus",
-    formato: "Código EnvThes: Término",
-    ejemplo: "20286: Ecosystem services",
+    formato: "Solo código EnvThes",
+    ejemplo: "20286",
     searchUrl: "https://vocabs.lter-europe.net/envthes/en/",
-    instrucciones: "Busca tu término en el tesauro ambiental europeo EnvThes."
+    instrucciones: "Ingresa solo el código EnvThes (ej: 20286). No incluyas el término."
   },
   "Oceanografía": {
     vocabulario: "BODC",
     nombre: "British Oceanographic Data Centre Vocabulary",
-    formato: "Código BODC: Término",
-    ejemplo: "P021: Ocean circulation",
+    formato: "Solo código BODC",
+    ejemplo: "P021",
     searchUrl: "https://vocab.nerc.ac.uk/",
-    instrucciones: "Navega por el NERC Vocabulary Server y copia el código alfanumérico."
+    instrucciones: "Ingresa solo el código alfanumérico BODC (ej: P021). No incluyas el descriptor."
   },
   "Meteorología y Ciencias Atmosféricas": {
     vocabulario: "WMO",
     nombre: "World Meteorological Organization Vocabulary",
-    formato: "Código WMO: Término",
-    ejemplo: "3720: Atmospheric pressure",
+    formato: "Solo código WMO",
+    ejemplo: "3720",
     searchUrl: "https://codes.wmo.int/",
-    instrucciones: "Busca tu código en los estándares de la Organización Meteorológica Mundial."
+    instrucciones: "Ingresa solo el código WMO (ej: 3720). No incluyas el descriptor."
   },
   "Paleontología": {
     vocabulario: "PBDB",
     nombre: "Paleobiology Database Taxonomy",
-    formato: "Código PBDB: Término",
-    ejemplo: "52822: Tyrannosauridae",
+    formato: "Solo código PBDB",
+    ejemplo: "52822",
     searchUrl: "https://paleobiodb.org/navigator/",
-    instrucciones: "Busca tu taxón o grupo fósil en el navegador de la base de datos paleobiológica."
+    instrucciones: "Ingresa solo el código numérico PBDB (ej: 52822). No incluyas el nombre del taxón."
   },
   "Medicina General e Interna": {
     vocabulario: "MeSH",
     nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D008112: Internal Medicine",
+    formato: "Solo código MeSH",
+    ejemplo: "D008112",
     searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca y copia el código y descriptor MeSH exacto."
+    instrucciones: "Ingresa solo el código MeSH (ej: D008112). No incluyas el descriptor."
   },
   "Salud Pública y Epidemiología": {
     vocabulario: "MeSH",
     nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D011635: Public Health",
+    formato: "Solo código MeSH",
+    ejemplo: "D011635",
     searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+    instrucciones: "Ingresa solo el código MeSH (ej: D011635). No incluyas el descriptor."
   },
   "Enfermería": {
     vocabulario: "MeSH",
     nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D009729: Nursing",
+    formato: "Solo código MeSH",
+    ejemplo: "D009729",
     searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+    instrucciones: "Ingresa solo el código MeSH (ej: D009729). No incluyas el descriptor."
   },
   "Nutrición y Dietética": {
     vocabulario: "MeSH",
     nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D009750: Nutritional Sciences",
+    formato: "Solo código MeSH",
+    ejemplo: "D009750",
     searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+    instrucciones: "Ingresa solo el código MeSH (ej: D009750). No incluyas el descriptor."
   },
   "Farmacología y Farmacia": {
     vocabulario: "MeSH",
     nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D010597: Pharmacology",
+    formato: "Solo código MeSH",
+    ejemplo: "D010597",
     searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+    instrucciones: "Ingresa solo el código MeSH (ej: D010597). No incluyas el descriptor."
   },
   "Odontología": {
     vocabulario: "MeSH",
     nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D003813: Dentistry",
+    formato: "Solo código MeSH",
+    ejemplo: "D003813",
     searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+    instrucciones: "Ingresa solo el código MeSH (ej: D003813). No incluyas el descriptor."
   },
   "Kinesiología y Fisioterapia": {
     vocabulario: "MeSH",
     nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D026801: Physical Therapy Specialty",
+    formato: "Solo código MeSH",
+    ejemplo: "D026801",
     searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+    instrucciones: "Ingresa solo el código MeSH (ej: D026801). No incluyas el descriptor."
   },
   "Tecnología Médica y Bioanálisis": {
     vocabulario: "MeSH",
     nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D008364: Medical Laboratory Science",
+    formato: "Solo código MeSH",
+    ejemplo: "D008364",
     searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+    instrucciones: "Ingresa solo el código MeSH (ej: D008364). No incluyas el descriptor."
   },
   "Veterinaria": {
     vocabulario: "MeSH",
     nombre: "Medical Subject Headings",
-    formato: "Código MeSH: Término",
-    ejemplo: "D014730: Veterinary Medicine",
+    formato: "Solo código MeSH",
+    ejemplo: "D014730",
     searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Busca tu término en MeSH y copia el código y el descriptor exacto."
+    instrucciones: "Ingresa solo el código MeSH (ej: D014730). No incluyas el descriptor."
   },
   "Ingeniería Civil": {
     vocabulario: "Ei",
     nombre: "Engineering Index Thesaurus (Compendex)",
-    formato: "Código Ei: Término",
-    ejemplo: "405.1: Construction management",
+    formato: "Solo código Ei",
+    ejemplo: "405.1",
     searchUrl: "https://www.engineeringvillage.com/",
-    instrucciones: "Busca tu término en el Engineering Index Thesaurus de Compendex."
+    instrucciones: "Ingresa solo el código Ei (ej: 405.1). No incluyas el término."
   },
   "Ingeniería Industrial y de Sistemas": {
     vocabulario: "IIE",
     nombre: "Industrial Engineering Terminology (IISE)",
-    formato: "Código IIE: Término",
-    ejemplo: "4.2.1: Supply chain optimization",
+    formato: "Solo código IIE",
+    ejemplo: "4.2.1",
     searchUrl: "https://www.iise.org/",
-    instrucciones: "Usa la terminología estándar de ingeniería industrial del IISE."
+    instrucciones: "Ingresa solo el código IIE (ej: 4.2.1). No incluyas el descriptor."
   },
   "Ingeniería Mecánica": {
     vocabulario: "ASME",
     nombre: "ASME Subject Classification",
-    formato: "Código ASME: Término",
-    ejemplo: "10-01: Thermodynamics",
+    formato: "Solo código ASME",
+    ejemplo: "10-01",
     searchUrl: "https://www.asme.org/",
-    instrucciones: "Navega por las áreas temáticas de la ASME."
+    instrucciones: "Ingresa solo el código ASME (ej: 10-01). No incluyas el término."
   },
   "Ingeniería Eléctrica y Electrónica": {
     vocabulario: "IEEE",
     nombre: "IEEE Thesaurus",
-    formato: "Término normalizado IEEE",
-    ejemplo: "B6210L: Computer communications",
+    formato: "Solo código IEEE",
+    ejemplo: "B6210L",
     searchUrl: "https://www.ieee.org/publications/services/thesaurus-access-page.html",
-    instrucciones: "Busca tu término técnico en el tesauro oficial del IEEE."
+    instrucciones: "Ingresa solo el código IEEE (ej: B6210L). No incluyas el descriptor."
   },
   "Ingeniería Química y Biotecnología": {
     vocabulario: "IChemE",
     nombre: "Institution of Chemical Engineers Thesaurus",
-    formato: "Código IChemE: Término",
-    ejemplo: "BIO-04: Bioprocessing",
+    formato: "Solo código IChemE",
+    ejemplo: "BIO-04",
     searchUrl: "https://www.icheme.org/",
-    instrucciones: "Usa la clasificación temática de ingeniería química de IChemE."
+    instrucciones: "Ingresa solo el código IChemE (ej: BIO-04). No incluyas el descriptor."
   },
   "Ingeniería en Computación e Informática": {
     vocabulario: "ACM",
     nombre: "ACM Computing Classification System",
-    formato: "Código ACM: Término",
-    ejemplo: "CCS2012.10003116: Software engineering",
+    formato: "Solo código ACM",
+    ejemplo: "CCS2012.10003116",
     searchUrl: "https://dl.acm.org/ccs",
-    instrucciones: "ACM CCS es el estándar jerárquico global para ciencias de la computación."
+    instrucciones: "Ingresa solo el código ACM CCS (ej: CCS2012.10003116). No incluyas el descriptor."
   },
   "Ciencia de Datos e Inteligencia Artificial": {
     vocabulario: "ACM",
     nombre: "ACM Computing Classification System",
-    formato: "Código ACM: Término",
-    ejemplo: "CCS2012.10010179: Machine learning",
+    formato: "Solo código ACM",
+    ejemplo: "CCS2012.10010179",
     searchUrl: "https://dl.acm.org/ccs",
-    instrucciones: "ACM CCS cubre ramas de ML e IA extensamente."
+    instrucciones: "Ingresa solo el código ACM CCS (ej: CCS2012.10010179). No incluyas el descriptor."
   },
   "Robótica y Automatización": {
     vocabulario: "ACM",
     nombre: "ACM Computing Classification System",
-    formato: "Código ACM: Término",
-    ejemplo: "CCS2012.10010187: Robotics",
+    formato: "Solo código ACM",
+    ejemplo: "CCS2012.10010187",
     searchUrl: "https://dl.acm.org/ccs",
-    instrucciones: "Navega por la clasificación ACM y copia el código y descriptor."
+    instrucciones: "Ingresa solo el código ACM CCS (ej: CCS2012.10010187). No incluyas el descriptor."
   },
   "Ingeniería de Materiales y Nanotecnología": {
     vocabulario: "ASM",
     nombre: "ASM International Materials Thesaurus",
-    formato: "Término controlado ASM",
-    ejemplo: "Nanocomposites: Materials science",
+    formato: "Solo código ASM",
+    ejemplo: "nanocomposites",
     searchUrl: "https://www.asminternational.org/",
-    instrucciones: "Busca tu material o proceso en el vocabulario controlado de ASM."
+    instrucciones: "Ingresa solo el identificador ASM. No incluyas el término completo."
   },
   "Ingeniería Aeroespacial": {
     vocabulario: "NASA",
     nombre: "NASA Thesaurus",
-    formato: "Término controlado NASA",
-    ejemplo: "Aircraft design: Aeronautics",
+    formato: "Solo código NASA",
+    ejemplo: "aircraft-design",
     searchUrl: "https://sti.nasa.gov/nasa-thesaurus/",
-    instrucciones: "Busca tu término en el tesauro aeroespacial de la NASA."
+    instrucciones: "Ingresa solo el identificador del tesauro NASA. No incluyas el descriptor."
   },
   "Energías Renovables y Sostenibilidad": {
     vocabulario: "ETDE",
     nombre: "Energy Technology Data Exchange Thesaurus",
-    formato: "Término controlado ETDE",
-    ejemplo: "Solar energy: Photovoltaics",
+    formato: "Solo código ETDE",
+    ejemplo: "solar-energy",
     searchUrl: "https://www.etde.org/",
-    instrucciones: "Busca tu término en el tesauro de tecnología energética ETDE."
+    instrucciones: "Ingresa solo el identificador ETDE. No incluyas el término."
   },
   "Sociología": {
     vocabulario: "JEL",
     nombre: "JEL Classification System",
-    formato: "Código JEL: Término",
-    ejemplo: "Z13: Economic Sociology",
+    formato: "Solo código JEL",
+    ejemplo: "Z13",
     searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
-    instrucciones: "Busca el código JEL que mejor describa tu tema sociológico."
+    instrucciones: "Ingresa solo el código JEL (ej: Z13). No incluyas el descriptor."
   },
   "Antropología y Arqueología": {
     vocabulario: "JEL",
     nombre: "JEL Classification System",
-    formato: "Código JEL: Término",
-    ejemplo: "Z19: Other Cultural Economics",
+    formato: "Solo código JEL",
+    ejemplo: "Z19",
     searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
-    instrucciones: "Busca el código JEL más cercano a tu tema de antropología."
+    instrucciones: "Ingresa solo el código JEL (ej: Z19). No incluyas el descriptor."
   },
   "Psicología": {
     vocabulario: "APA",
     nombre: "APA Thesaurus of Psychological Index Terms",
-    formato: "Término indexado APA",
-    ejemplo: "Cognitive Processes: Memory",
+    formato: "Solo código APA",
+    ejemplo: "cognitive-processes",
     searchUrl: "https://psycnet.apa.org/thesaurus/",
-    instrucciones: "Busca tu término de indexación en el tesauro oficial de la APA."
+    instrucciones: "Ingresa solo el identificador APA. No incluyas el término completo."
   },
   "Economía y Negocios": {
     vocabulario: "JEL",
     nombre: "JEL Classification System",
-    formato: "Código JEL: Término",
-    ejemplo: "D00: General Economics",
+    formato: "Solo código JEL",
+    ejemplo: "D00",
     searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
-    instrucciones: "Selecciona los códigos JEL que mejor describan tu investigación."
+    instrucciones: "Ingresa solo el código JEL (ej: D00). No incluyas el descriptor."
   },
   "Ciencias Políticas y Relaciones Internacionales": {
     vocabulario: "JEL",
     nombre: "JEL Classification System",
-    formato: "Código JEL: Término",
-    ejemplo: "F50: International Relations",
+    formato: "Solo código JEL",
+    ejemplo: "F50",
     searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
-    instrucciones: "Busca códigos JEL en categorías F o H."
+    instrucciones: "Ingresa solo el código JEL (ej: F50). No incluyas el descriptor."
   },
   "Derecho": {
     vocabulario: "LCSH",
     nombre: "Library of Congress Subject Headings",
-    formato: "Código/Descriptor LCSH",
-    ejemplo: "KF385: Common law",
+    formato: "Solo código LCSH",
+    ejemplo: "KF385",
     searchUrl: "https://id.loc.gov/authorities/subjects.html",
-    instrucciones: "Busca en los encabezamientos temáticos de la Biblioteca del Congreso."
+    instrucciones: "Ingresa solo el código de clasificación LCSH (ej: KF385). No incluyas el descriptor."
   },
   "Geografía Humana y Ordenamiento Territorial": {
     vocabulario: "JEL",
     nombre: "JEL Classification System",
-    formato: "Código JEL: Término",
-    ejemplo: "R10: General Regional Economics",
+    formato: "Solo código JEL",
+    ejemplo: "R10",
     searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
-    instrucciones: "Usa categorías R o Q del sistema JEL."
+    instrucciones: "Ingresa solo el código JEL (ej: R10). No incluyas el descriptor."
   },
   "Estudios de Género": {
     vocabulario: "JEL",
     nombre: "JEL Classification System",
-    formato: "Código JEL: Término",
-    ejemplo: "J16: Economics of Gender",
+    formato: "Solo código JEL",
+    ejemplo: "J16",
     searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
-    instrucciones: "Busca en categorías J para estudios de género."
+    instrucciones: "Ingresa solo el código JEL (ej: J16). No incluyas el descriptor."
   },
   "Comunicación Social y Periodismo": {
     vocabulario: "CIOS",
     nombre: "Communication Institute for Online Scholarship Thesaurus",
-    formato: "Término normalizado CIOS",
-    ejemplo: "Mass media effects: Journalism",
+    formato: "Solo código CIOS",
+    ejemplo: "mass-media-effects",
     searchUrl: "https://www.cios.org/",
-    instrucciones: "Navega por las categorías controladas especializadas en comunicación."
+    instrucciones: "Ingresa solo el identificador CIOS. No incluyas el término completo."
   },
   "Educación y Pedagogía": {
     vocabulario: "ERIC",
     nombre: "Education Resources Information Center Thesaurus",
-    formato: "Término Descriptor ERIC",
-    ejemplo: "Educational technology: Pedagogy",
+    formato: "Solo código ERIC",
+    ejemplo: "educational-technology",
     searchUrl: "https://eric.ed.gov/?ti=all",
-    instrucciones: "Busca e identifica descriptores específicos en ERIC."
+    instrucciones: "Ingresa solo el identificador ERIC. No incluyas el descriptor completo."
   },
   "Trabajo Social": {
     vocabulario: "JEL",
     nombre: "JEL Classification System",
-    formato: "Código JEL: Término",
-    ejemplo: "I38: Welfare, Well-Being, and Poverty",
+    formato: "Solo código JEL",
+    ejemplo: "I38",
     searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
-    instrucciones: "Busca en categorías I o J del sistema JEL."
+    instrucciones: "Ingresa solo el código JEL (ej: I38). No incluyas el descriptor."
   },
   "Historia": {
     vocabulario: "UNESCO",
     nombre: "UNESCO Thesaurus",
-    formato: "Código UNESCO: Término",
-    ejemplo: "6.25: Historia",
+    formato: "Solo código UNESCO",
+    ejemplo: "6.25",
     searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
-    instrucciones: "Navega por el tesauro de la UNESCO y copia el código y descriptor."
+    instrucciones: "Ingresa solo el código numérico UNESCO (ej: 6.25). No incluyas el descriptor."
   },
   "Filosofía": {
     vocabulario: "UNESCO",
     nombre: "UNESCO Thesaurus",
-    formato: "Código UNESCO: Término",
-    ejemplo: "6.05: Filosofía",
+    formato: "Solo código UNESCO",
+    ejemplo: "6.05",
     searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
-    instrucciones: "Navega por el tesauro de la UNESCO."
+    instrucciones: "Ingresa solo el código numérico UNESCO (ej: 6.05). No incluyas el descriptor."
   },
   "Lingüística y Filología": {
     vocabulario: "UNESCO",
     nombre: "UNESCO Thesaurus",
-    formato: "Código UNESCO: Término",
-    ejemplo: "6.10: Lingüística",
+    formato: "Solo código UNESCO",
+    ejemplo: "6.10",
     searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
-    instrucciones: "Navega por el tesauro de la UNESCO."
+    instrucciones: "Ingresa solo el código numérico UNESCO (ej: 6.10). No incluyas el descriptor."
   },
   "Literatura": {
     vocabulario: "UNESCO",
     nombre: "UNESCO Thesaurus",
-    formato: "Código UNESCO: Término",
-    ejemplo: "6.15: Literatura",
+    formato: "Solo código UNESCO",
+    ejemplo: "6.15",
     searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
-    instrucciones: "Navega por el tesauro de la UNESCO."
+    instrucciones: "Ingresa solo el código numérico UNESCO (ej: 6.15). No incluyas el descriptor."
   },
   "Estudios Clásicos": {
     vocabulario: "UNESCO",
     nombre: "UNESCO Thesaurus",
-    formato: "Código UNESCO: Término",
-    ejemplo: "6.20: Estudios Clásicos",
+    formato: "Solo código UNESCO",
+    ejemplo: "6.20",
     searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
-    instrucciones: "Navega por el tesauro de la UNESCO."
+    instrucciones: "Ingresa solo el código numérico UNESCO (ej: 6.20). No incluyas el descriptor."
   },
   "Teología y Ciencias de la Religión": {
     vocabulario: "UNESCO",
     nombre: "UNESCO Thesaurus",
-    formato: "Código UNESCO: Término",
-    ejemplo: "6.30: Teología",
+    formato: "Solo código UNESCO",
+    ejemplo: "6.30",
     searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
-    instrucciones: "Navega por el tesauro de la UNESCO."
+    instrucciones: "Ingresa solo el código numérico UNESCO (ej: 6.30). No incluyas el descriptor."
   },
   "Estudios Culturales": {
     vocabulario: "UNESCO",
     nombre: "UNESCO Thesaurus",
-    formato: "Código UNESCO: Término",
-    ejemplo: "6.35: Cultura",
+    formato: "Solo código UNESCO",
+    ejemplo: "6.35",
     searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
-    instrucciones: "Navega por el tesauro de la UNESCO."
+    instrucciones: "Ingresa solo el código numérico UNESCO (ej: 6.35). No incluyas el descriptor."
   },
   "Arte, Música y Cine": {
     vocabulario: "AAT",
     nombre: "Art & Architecture Thesaurus",
-    formato: "Código AAT: Término",
-    ejemplo: "300033618: Oil paintings",
+    formato: "Solo código AAT",
+    ejemplo: "300033618",
     searchUrl: "https://www.getty.edu/research/tools/vocabularies/aat/",
-    instrucciones: "Busca descriptores artísticos en la base del Getty Research Institute."
+    instrucciones: "Ingresa solo el código numérico AAT (ej: 300033618). No incluyas el descriptor."
   },
   "Arquitectura y Urbanismo": {
     vocabulario: "AAT",
     nombre: "Art & Architecture Thesaurus",
-    formato: "Código AAT: Término",
-    ejemplo: "300008125: Skyscrapers",
+    formato: "Solo código AAT",
+    ejemplo: "300008125",
     searchUrl: "https://www.getty.edu/research/tools/vocabularies/aat/",
-    instrucciones: "Busca estructuras o conceptos espaciales en la base del Getty."
+    instrucciones: "Ingresa solo el código numérico AAT (ej: 300008125). No incluyas el descriptor."
   },
   "Agronomía y Producción Agrícola": {
     vocabulario: "AGROVOC",
     nombre: "FAO Agricultural Thesaurus (AGROVOC)",
-    formato: "Código AGROVOC: Término",
-    ejemplo: "c_867: Crop rotation",
+    formato: "Solo código AGROVOC",
+    ejemplo: "c_867",
     searchUrl: "https://agrovoc.fao.org/browse/agrovoc/en/",
-    instrucciones: "AGROVOC es el estándar para ciencias agrícolas de la FAO."
+    instrucciones: "Ingresa solo el código AGROVOC (ej: c_867). No incluyas el término."
   },
   "Ciencias Forestales": {
     vocabulario: "AGROVOC",
     nombre: "FAO Agricultural Thesaurus (AGROVOC)",
-    formato: "Código AGROVOC: Término",
-    ejemplo: "c_3014: Forest ecology",
+    formato: "Solo código AGROVOC",
+    ejemplo: "c_3014",
     searchUrl: "https://agrovoc.fao.org/browse/agrovoc/en/",
-    instrucciones: "AGROVOC cubre ciencias forestales."
+    instrucciones: "Ingresa solo el código AGROVOC (ej: c_3014). No incluyas el término."
   },
   "Acuicultura y Pesca": {
     vocabulario: "ASFA",
     nombre: "Aquatic Sciences and Fisheries Abstracts Thesaurus",
-    formato: "Código ASFA: Término",
-    ejemplo: "Q5 01521: Fish culture",
+    formato: "Solo código ASFA",
+    ejemplo: "Q5 01521",
     searchUrl: "https://www.fao.org/fishery/asfa/en",
-    instrucciones: "Busca en el tesauro ASFA de la FAO."
+    instrucciones: "Ingresa solo el código ASFA (ej: Q5 01521). No incluyas el descriptor."
   },
   "Zootecnia y Producción Animal": {
     vocabulario: "AGROVOC",
     nombre: "FAO Agricultural Thesaurus (AGROVOC)",
-    formato: "Código AGROVOC: Término",
-    ejemplo: "c_433: Animal breeding",
+    formato: "Solo código AGROVOC",
+    ejemplo: "c_433",
     searchUrl: "https://agrovoc.fao.org/browse/agrovoc/en/",
-    instrucciones: "Busca tu término en AGROVOC."
+    instrucciones: "Ingresa solo el código AGROVOC (ej: c_433). No incluyas el término."
   },
   "Ingeniería de Alimentos": {
     vocabulario: "FSTA",
     nombre: "Food Science and Technology Abstracts Thesaurus",
-    formato: "Código FSTA: Término",
-    ejemplo: "Q04: Food microbiology",
+    formato: "Solo código FSTA",
+    ejemplo: "Q04",
     searchUrl: "https://www.ifis.org/fsta",
-    instrucciones: "Usa el tesauro de ciencia y tecnología de alimentos FSTA."
+    instrucciones: "Ingresa solo el código FSTA (ej: Q04). No incluyas el descriptor."
   }
 };
 // Agrega esto después de AREAS_TEMATICAS
@@ -592,6 +590,7 @@ Object.entries(AREAS_TEMATICAS.es).forEach(([catEs, areasEs]) => {
   });
 });
 
+
 // Helper para obtener vocabulario
 const getVocabularyForArea = (area) => {
   // Si el área está en inglés, buscar su equivalente en español
@@ -605,8 +604,8 @@ const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language, m
   const [newTerm, setNewTerm] = useState('');
   const [error, setError] = useState('');
 
-  const maxKeywords = 6;
-  const minKeywords = 2;
+    const maxKeywords = mode === 'codes' ? 4 : 6;
+  const minKeywords = mode === 'codes' ? 2 : 2;
   const keywords = Array.isArray(value) ? value : [];
 
 
@@ -615,10 +614,11 @@ const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language, m
     const term = newTerm.trim();
     
     // Validaciones con mensajes claros
-    if (!term) {
-      setError(isSpanish 
-        ? 'Debes ingresar una palabra clave.' 
-        : 'You must enter a keyword.');
+        if (!term) {
+      setError(mode === 'codes'
+        ? (isSpanish ? 'Debes ingresar un código.' : 'You must enter a code.')
+        : (isSpanish ? 'Debes ingresar una palabra clave.' : 'You must enter a keyword.')
+      );
       return;
     }
     
@@ -629,13 +629,13 @@ const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language, m
       return;
     }
     
-    if (keywords.some(k => k === term || k.term === term)) {
-      setError(isSpanish 
-        ? 'Esta palabra clave ya existe.' 
-        : 'This keyword already exists.');
+        if (keywords.some(k => k === term || k.term === term)) {
+      setError(mode === 'codes'
+        ? (isSpanish ? 'Este código ya existe.' : 'This code already exists.')
+        : (isSpanish ? 'Esta palabra clave ya existe.' : 'This keyword already exists.')
+      );
       return;
     }
-
     const updatedKeywords = [...keywords, term];
     onChange(updatedKeywords);
     setNewTerm('');
@@ -661,56 +661,60 @@ const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language, m
 
   return (
     <div className="space-y-4">
-      {/* Info del vocabulario */}
-      <div className="bg-[#f0f4f8] border border-[#003b5c]/20 rounded-sm p-5 space-y-3">
-        <div className="flex items-start gap-3">
-          <span className="text-[#003b5c] mt-0.5">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-            </svg>
-          </span>
-          <div className="flex-1">
-            <h4 className="font-serif font-bold text-[#003b5c] text-sm uppercase tracking-wider">
-              {vocabularyConfig.vocabulario}: {vocabularyConfig.nombre}
-            </h4>
-            <p className="text-[#5A6B7A] text-xs mt-1 font-sans">
-              {vocabularyConfig.instrucciones}
-            </p>
-            <a
-              href={vocabularyConfig.searchUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 mt-2 text-[#003b5c] hover:text-[#e86125] text-xs font-medium transition-colors font-sans"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            {/* Info del vocabulario - SOLO para códigos especializados */}
+      {mode === 'codes' && (
+        <div className="bg-[#f0f4f8] border border-[#003b5c]/20 rounded-sm p-5 space-y-3">
+          <div className="flex items-start gap-3">
+            <span className="text-[#003b5c] mt-0.5">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
               </svg>
-              {isSpanish ? 'Abrir buscador' : 'Open search'} →
-            </a>
+            </span>
+            <div className="flex-1">
+              <h4 className="font-serif font-bold text-[#003b5c] text-sm uppercase tracking-wider">
+                {vocabularyConfig.vocabulario}: {vocabularyConfig.nombre}
+              </h4>
+              <p className="text-[#5A6B7A] text-xs mt-1 font-sans">
+                {vocabularyConfig.instrucciones}
+              </p>
+              <a
+                href={vocabularyConfig.searchUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 mt-2 text-[#003b5c] hover:text-[#e86125] text-xs font-medium transition-colors font-sans"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+                {isSpanish ? 'Abrir buscador' : 'Open search'} →
+              </a>
+            </div>
+          </div>
+          <div className="bg-white rounded-sm p-3 border border-gray-200">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-[#5A6B7A]">
+              {isSpanish ? 'Formato esperado:' : 'Expected format:'}
+            </span>
+            <code className="ml-2 text-sm font-mono text-[#003b5c] bg-[#F5F7FA] px-2 py-0.5 rounded-sm">
+              {vocabularyConfig.formato}
+            </code>
+            <span className="text-[#5A6B7A] text-sm mx-2">·</span>
+            <span className="text-[10px] font-mono uppercase tracking-wider text-[#5A6B7A]">
+              {isSpanish ? 'Ejemplo:' : 'Example:'}
+            </span>
+            <code className="ml-2 text-sm font-mono text-[#e86125] bg-[#F5F7FA] px-2 py-0.5 rounded-sm">
+              {vocabularyConfig.ejemplo}
+            </code>
           </div>
         </div>
-        <div className="bg-white rounded-sm p-3 border border-gray-200">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-[#5A6B7A]">
-            {isSpanish ? 'Formato esperado:' : 'Expected format:'}
-          </span>
-          <code className="ml-2 text-sm font-mono text-[#003b5c] bg-[#F5F7FA] px-2 py-0.5 rounded-sm">
-            {vocabularyConfig.formato}
-          </code>
-          <span className="text-[#5A6B7A] text-sm mx-2">·</span>
-          <span className="text-[10px] font-mono uppercase tracking-wider text-[#5A6B7A]">
-            {isSpanish ? 'Ejemplo:' : 'Example:'}
-          </span>
-          <code className="ml-2 text-sm font-mono text-[#e86125] bg-[#F5F7FA] px-2 py-0.5 rounded-sm">
-            {vocabularyConfig.ejemplo}
-          </code>
-        </div>
-      </div>
-
+      )}
             {/* Campos de entrada */}
       <div className="flex gap-3">
         <div className="flex-1">
-          <label className="block text-[10px] font-mono font-semibold uppercase tracking-wider text-[#546E7A] mb-1.5">
-            {isSpanish ? 'Palabra clave' : 'Keyword'} *
+                    <label className="block text-[10px] font-mono font-semibold uppercase tracking-wider text-[#546E7A] mb-1.5">
+            {mode === 'codes' 
+              ? (isSpanish ? 'Código' : 'Code') + ' *'
+              : (isSpanish ? 'Palabra clave' : 'Keyword') + ' *'
+            }
           </label>
           <input
             id="controlled-term-input"
@@ -718,7 +722,7 @@ const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language, m
             value={newTerm}
             onChange={(e) => setNewTerm(e.target.value)}
             onKeyPress={handleTermKeyPress}
-            placeholder={mode === 'keywords' ? "Machine learning" : "CCS2012.10010179"}
+                        placeholder={mode === 'codes' ? "CCS2012.10010179" : (isSpanish ? "Aprendizaje automático" : "Machine learning")}
             className="w-full p-3 bg-white border border-gray-200 rounded-sm text-sm font-serif focus:ring-2 focus:ring-[#003b5c] focus:border-transparent outline-none transition-all"
           />
         </div>
@@ -743,14 +747,20 @@ const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language, m
 
       {/* Contador y validación */}
       <div className="flex items-center justify-between">
-        <p className={`text-xs font-mono ${keywords.length < minKeywords ? 'text-red-600' : 'text-[#5A6B7A]'}`}>
-          {isSpanish 
-            ? `${keywords.length} de ${minKeywords}-${maxKeywords} palabras clave requeridas`
-            : `${keywords.length} of ${minKeywords}-${maxKeywords} required keywords`
+                <p className={`text-xs font-mono ${keywords.length < minKeywords ? 'text-red-600' : 'text-[#5A6B7A]'}`}>
+          {mode === 'codes' 
+            ? (isSpanish 
+                ? `${keywords.length} de 2-4 códigos requeridos`
+                : `${keywords.length} of 2-4 required codes`)
+            : (isSpanish 
+                ? `${keywords.length} de ${minKeywords}-${maxKeywords} palabras clave requeridas`
+                : `${keywords.length} of ${minKeywords}-${maxKeywords} required keywords`)
           }
           {keywords.length < minKeywords && (
             <span className="ml-2">
-              {isSpanish ? `(mínimo ${minKeywords})` : `(minimum ${minKeywords})`}
+              {mode === 'codes' 
+                ? (isSpanish ? '(mínimo 2)' : '(minimum 2)')
+                : (isSpanish ? `(mínimo ${minKeywords})` : `(minimum ${minKeywords})`)}
             </span>
           )}
         </p>
@@ -762,14 +772,18 @@ const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language, m
       </div>
 
             {/* Chips de palabras clave */}
-      {keywords.length > 0 && (
+            {keywords.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {keywords.map((kw, index) => (
             <span
               key={index}
-              className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#f4f5f7] border border-gray-200 text-[#003b5c] rounded-sm text-xs font-medium"
+              className={`inline-flex items-center gap-2 px-3 py-1.5 border rounded-sm text-xs font-medium
+                ${mode === 'codes' 
+                  ? 'bg-amber-50 border-amber-200 text-amber-800 font-mono font-bold' 
+                  : 'bg-[#f4f5f7] border-gray-200 text-[#003b5c] font-serif'
+                }`}
             >
-              <span className="font-serif">{typeof kw === 'string' ? kw : kw.term}</span>
+              <span>{typeof kw === 'string' ? kw : kw.term}</span>
               <button
                 type="button"
                 onClick={() => removeKeyword(index)}
@@ -2279,10 +2293,10 @@ useEffect(() => {
                             <label className="block text-xs font-medium uppercase tracking-wider text-gray-600">
                               {isSpanish ? 'Códigos especializados' : 'Specialized Codes'}
                             </label>
-                            <HelpCapsule 
-                              text={`Códigos del vocabulario ${getVocabularyForArea(formData.area)?.vocabulario || ''}. Ejemplo: ${getVocabularyForArea(formData.area)?.ejemplo || ''}. Debes agregar entre 2 y 4 códigos.`}
-                              textEn={`Codes from the ${getVocabularyForArea(formData.area)?.vocabulario || ''} vocabulary. Example: ${getVocabularyForArea(formData.area)?.ejemplo || ''}. You must add between 2 and 4 codes.`}
-                            />
+                                                      <HelpCapsule 
+                            text={`Solo necesitas ingresar el código del vocabulario ${getVocabularyForArea(formData.area)?.vocabulario || ''}. No incluyas el término, solo el código. Ejemplo: ${getVocabularyForArea(formData.area)?.ejemplo?.split(':')[0] || getVocabularyForArea(formData.area)?.ejemplo || ''}. Debes agregar entre 2 y 4 códigos.`}
+                            textEn={`You only need to enter the code from the ${getVocabularyForArea(formData.area)?.vocabulario || ''} vocabulary. Do not include the term, just the code. Example: ${getVocabularyForArea(formData.area)?.ejemplo?.split(':')[0] || getVocabularyForArea(formData.area)?.ejemplo || ''}. You must add between 2 and 4 codes.`}
+                          />
                           </div>
                           <ControlledKeywordInput
                             vocabularyConfig={getVocabularyForArea(formData.area)}
@@ -2291,10 +2305,10 @@ useEffect(() => {
                             language={language}
                             mode="codes"
                           />
-                          <p className="text-xs text-gray-500 mt-2 font-sans">
+                                                    <p className="text-xs text-gray-500 mt-2 font-sans">
                             {isSpanish 
-                              ? `Vocabulario: ${getVocabularyForArea(formData.area)?.vocabulario} — ${getVocabularyForArea(formData.area)?.nombre}. Agrega de 2 a 4 códigos.`
-                              : `Vocabulary: ${getVocabularyForArea(formData.area)?.vocabulario} — ${getVocabularyForArea(formData.area)?.nombre}. Add 2 to 4 codes.`}
+                              ? `Solo ingresa el código (ej: ${getVocabularyForArea(formData.area)?.ejemplo?.split(':')[0] || '11N05'}). No incluyas el término. Vocabulario: ${getVocabularyForArea(formData.area)?.vocabulario}. Agrega de 2 a 4 códigos.`
+                              : `Enter only the code (e.g., ${getVocabularyForArea(formData.area)?.ejemplo?.split(':')[0] || '11N05'}). Do not include the term. Vocabulary: ${getVocabularyForArea(formData.area)?.vocabulario}. Add 2 to 4 codes.`}
                           </p>
                           <a
                             href={getVocabularyForArea(formData.area)?.searchUrl}
