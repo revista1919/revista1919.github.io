@@ -2083,45 +2083,50 @@ useEffect(() => {
   initial={{ opacity: 0, y: 10 }}
   animate={{ opacity: 1, y: 0 }}
   transition={{ duration: 0.5, delay: 0.2 }}
-  className="bg-gradient-to-r from-[#003b5c] to-[#005a8a] border border-[#003b5c] rounded-sm p-6 shadow-md"
+  className="bg-white border border-[#e6e8ea] border-l-4 border-l-[#004b87] p-6 shadow-sm rounded-sm"
 >
-  <div className="flex flex-col md:flex-row items-start md:items-center gap-5">
-    {/* Icono de rayo (rápido, ágil) */}
-    <div className="flex-shrink-0 w-14 h-14 bg-white/10 rounded-sm flex items-center justify-center">
-      <svg className="w-7 h-7 text-[#c0a86a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+  <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+    {/* Icono de documento/lista (más académico y estructurado) */}
+    <div className="flex-shrink-0 w-12 h-12 bg-[#f4f5f7] border border-[#e6e8ea] rounded-sm flex items-center justify-center">
+      <svg className="w-6 h-6 text-[#004b87]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
       </svg>
     </div>
 
     <div className="flex-1">
-      <h3 className="text-lg font-serif font-bold text-white mb-1">
+      <h3 className="text-lg font-sans font-semibold text-[#004b87] mb-1.5 tracking-tight">
         {isSpanish 
-          ? '¿Primera vez publicando? Empieza aquí'
-          : 'First time publishing? Start here'}
+          ? 'Guía Rápida para Autores (Dashboard Interactivo)'
+          : 'Quick Guide for Authors (Interactive Dashboard)'}
       </h3>
-      <p className="text-sm text-gray-200 leading-relaxed mb-2 font-sans">
+      <p className="text-[14px] text-[#2b2b2b] leading-relaxed mb-4 font-sans">
         {isSpanish 
-          ? 'La Guía Rápida Interactiva te toma 5 minutos y tiene un checklist visual con todo lo esencial. Sin leer documentos largos.'
-          : 'The Interactive Quick Guide takes 5 minutes and has a visual checklist with everything essential. No long documents to read.'}
+          ? 'Revise los requisitos esenciales de envío, políticas de formato y el proceso de anonimización a través de nuestra lista de verificación interactiva.'
+          : 'Review essential submission requirements, formatting policies, and the anonymization process through our interactive checklist.'}
       </p>
+      
+      {/* Botón sólido estilo Elsevier (Azul que pasa a Naranja en el hover) */}
       <a
         href={isSpanish ? '/quick.html' : '/quickEN.html'}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-2 mt-1 text-[#c0a86a] hover:text-white text-xs font-bold uppercase tracking-wider transition-colors font-sans"
+        className="inline-flex items-center gap-2 bg-[#004b87] hover:bg-[#e86125] text-white px-5 py-2.5 text-xs font-semibold uppercase tracking-wider transition-colors font-sans rounded-sm"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
         </svg>
-        {isSpanish ? 'Abrir Guía Rápida (5 min)' : 'Open Quick Guide (5 min)'} →
+        {isSpanish ? 'Acceder al Panel de Envío' : 'Access Submission Dashboard'}
       </a>
     </div>
 
-    {/* Badge de tiempo */}
-    <div className="hidden lg:block bg-white/10 rounded-sm px-4 py-2 text-center">
-      <span className="text-2xl font-serif font-bold text-[#c0a86a] block">5</span>
-      <span className="text-[10px] uppercase tracking-widest text-gray-300 font-sans">
-        {isSpanish ? 'minutos' : 'minutes'}
+    {/* Divisor vertical y métrica de tiempo estilo "Article Metrics" */}
+    <div className="hidden lg:flex flex-col items-center justify-center border-l border-[#e6e8ea] pl-8 min-w-[120px]">
+      <span className="text-3xl font-sans font-light text-[#004b87] leading-none mb-1">5</span>
+      <span className="text-[10px] uppercase tracking-widest text-[#666666] font-sans font-semibold">
+        {isSpanish ? 'Minutos' : 'Minutes'}
+      </span>
+      <span className="text-[10px] text-[#a0a0a0] font-sans mt-1 text-center">
+        {isSpanish ? 'Tiempo est.' : 'Est. time'}
       </span>
     </div>
   </div>
