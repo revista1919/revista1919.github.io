@@ -65,6 +65,11 @@ function FAQSection() {
           { text: 'Ver tipos de manuscritos', url: '/policies.html#alcance' }
         ]
       },
+      {
+        id: 'basico',
+        q: '¿Puedo publicar mi trabajo del colegio o de una feria de ciencias?',
+        a: '¡Sí! De hecho, es una excelente manera de transformar un proyecto escolar en una contribución académica real. Muchos artículos publicados en revistas científicas estudiantiles comenzaron como proyectos de feria de ciencias o trabajos de clase. Asegúrate de que cumpla con el formato de artículo, tenga citas apropiadas y no supere el 15% de similitud con la versión original. Es una gran oportunidad para llevar tu curiosidad científica al siguiente nivel.',
+      },
 
       // ========== ENVÍO ==========
       {
@@ -98,6 +103,11 @@ function FAQSection() {
         id: 'envio',
         q: '¿En qué idioma debo enviar mi artículo?',
         a: 'Aceptamos artículos en español e inglés. Sea cual sea el idioma principal, debes incluir el título, resumen y palabras clave en ambos idiomas. Esto ayuda a que tu trabajo sea encontrado por más personas en bases de datos internacionales.',
+      },
+      {
+        id: 'envio',
+        q: '¿Necesito registrarme en algún sistema? ¿Es complicado?',
+        a: 'Sí, necesitas crear una cuenta en nuestro portal editorial. El proceso es muy sencillo: solo te pedimos tu nombre, correo electrónico y una contraseña. No solicitamos datos bancarios ni información personal innecesaria. Una vez registrado, podrás enviar tu artículo y hacer seguimiento de su estado cuando quieras.',
       },
 
       // ========== FORMATO ==========
@@ -142,6 +152,11 @@ function FAQSection() {
         q: '¿Puedo usar plantillas o formatos predefinidos?',
         a: 'No proporcionamos una plantilla obligatoria. Lo importante es que tu documento use encabezados reales (Heading 1, 2, 3) y siga las normas de citación Chicago 17. La maquetación final la hacemos nosotros. Enfócate en el contenido y la estructura, no en el diseño visual.',
       },
+      {
+        id: 'formato',
+        q: '¿Debo incluir un resumen (abstract) de mi artículo?',
+        a: 'Sí, es obligatorio incluir un resumen de máximo 250 palabras que resuma el objetivo, metodología, resultados (si los hay) y conclusiones de tu trabajo. Debes adjuntarlo tanto en español como en inglés. Un buen resumen es la tarjeta de presentación de tu artículo: es lo primero que ven los revisores y los lectores.',
+      },
 
       // ========== ÉTICA ==========
       {
@@ -171,6 +186,11 @@ function FAQSection() {
         id: 'etica',
         q: '¿Qué es un conflicto de interés?',
         a: 'Es cualquier situación donde un interés personal podría influir en tu trabajo. Por ejemplo: recibiste dinero de una empresa cuyo producto analizas, o tu familiar es editor de la revista. Si no tienes nada que declarar, escribe: "Los autores declaran no tener conflictos de interés".',
+      },
+      {
+        id: 'etica',
+        q: '¿Qué es el plagio y cómo lo evito?',
+        a: 'El plagio es usar las ideas, palabras o datos de otra persona sin darle crédito, como si fueran tuyos. Para evitarlo: 1) Cita siempre la fuente de cada idea que no sea tuya, incluso si la parafraseas; 2) Usa comillas para citas textuales; 3) No reutilices tus propios trabajos publicados (autoplagio); 4) Mantén un registro de todas tus fuentes durante la investigación. Las herramientas de detección de similitud son un aliado, no un enemigo.',
       },
 
       // ========== REVISIÓN ==========
@@ -216,7 +236,12 @@ function FAQSection() {
         id: 'revision',
         q: '¿Dónde se publicará mi artículo?',
         a: 'Tu artículo se publicará en el sitio web oficial de la revista, con acceso abierto y gratuito para todo el mundo. También se indexará en Google Académico y se preservará en repositorios digitales como Zenodo. Cualquier persona con internet podrá leerlo, descargarlo y citarlo.',
-      }
+      },
+      {
+        id: 'revision',
+        q: '¿Puedo rastrear el estado de mi envío?',
+        a: 'Sí. Una vez que envías tu artículo, puedes ingresar a tu cuenta en el portal editorial y ver en qué etapa se encuentra: recepción, revisión preliminar, revisión por pares, decisión, etc. Te notificaremos por correo electrónico cada vez que haya una actualización importante. Es como rastrear un paquete, pero para tu investigación.',
+      },
     ],
     en: [
       // ========== BASICS ==========
@@ -254,6 +279,11 @@ function FAQSection() {
           { text: 'See manuscript types', url: '/policiesEN.html#scope' }
         ]
       },
+      {
+        id: 'basico',
+        q: 'Can I publish my school project or science fair work?',
+        a: 'Yes! In fact, it is an excellent way to transform a school project into a real academic contribution. Many articles published in student scientific journals began as science fair projects or class assignments. Make sure it meets the article format, has appropriate citations, and does not exceed 15% similarity with the original version. It is a great opportunity to take your scientific curiosity to the next level.',
+      },
 
       // ========== SUBMISSION ==========
       {
@@ -287,6 +317,11 @@ function FAQSection() {
         id: 'envio',
         q: 'In what language should I submit my article?',
         a: 'We accept articles in Spanish and English. Whatever the main language, you must include the title, abstract, and keywords in both languages. This helps your work be found by more people in international databases.',
+      },
+      {
+        id: 'envio',
+        q: 'Do I need to register in any system? Is it complicated?',
+        a: 'Yes, you need to create an account in our editorial portal. The process is very simple: we only ask for your name, email address, and a password. We do not request bank details or unnecessary personal information. Once registered, you will be able to submit your article and track its status whenever you want.',
       },
 
       // ========== FORMAT ==========
@@ -331,6 +366,11 @@ function FAQSection() {
         q: 'Can I use templates or predefined formats?',
         a: 'We do not provide a mandatory template. The important thing is that your document uses real headings (Heading 1, 2, 3) and follows Chicago 17 citation rules. We do the final layout. Focus on content and structure, not on visual design.',
       },
+      {
+        id: 'formato',
+        q: 'Should I include an abstract for my article?',
+        a: 'Yes, it is mandatory to include an abstract of no more than 250 words summarizing the objective, methodology, results (if any), and conclusions of your work. You must attach it in both Spanish and English. A good abstract is the business card of your article: it is the first thing reviewers and readers see.',
+      },
 
       // ========== ETHICS ==========
       {
@@ -360,6 +400,11 @@ function FAQSection() {
         id: 'etica',
         q: 'What is a conflict of interest?',
         a: 'It is any situation where a personal interest could influence your work. For example: you received money from a company whose product you analyze, or your relative is the journal editor. If you have nothing to declare, write: "The authors declare no conflicts of interest".',
+      },
+      {
+        id: 'etica',
+        q: 'What is plagiarism and how do I avoid it?',
+        a: 'Plagiarism is using another person\'s ideas, words, or data without giving them credit, as if they were your own. To avoid it: 1) Always cite the source of every idea that is not yours, even if you paraphrase it; 2) Use quotation marks for direct quotes; 3) Do not reuse your own published works (self-plagiarism); 4) Keep a record of all your sources during research. Similarity detection tools are an ally, not an enemy.',
       },
 
       // ========== REVIEW ==========
@@ -405,7 +450,12 @@ function FAQSection() {
         id: 'revision',
         q: 'Where will my article be published?',
         a: 'Your article will be published on the journal\'s official website, with open and free access for everyone. It will also be indexed in Google Scholar and preserved in digital repositories such as Zenodo. Anyone with internet access will be able to read it, download it, and cite it.',
-      }
+      },
+      {
+        id: 'revision',
+        q: 'Can I track the status of my submission?',
+        a: 'Yes. Once you submit your article, you can log into your account on the editorial portal and see what stage it is in: reception, preliminary review, peer review, decision, etc. We will notify you by email whenever there is an important update. It is like tracking a package, but for your research.',
+      },
     ]
   };
 
@@ -423,21 +473,22 @@ function FAQSection() {
   return (
     <section className="py-20 bg-[#f4f5f7]">
       <div className="max-w-4xl mx-auto px-6">
-        {/* Encabezado estilo editorial */}
+        
+        {/* ENCABEZADO EDITORIAL */}
         <div className="mb-12 text-center">
-          <h2 className="text-3xl sm:text-4xl font-serif font-bold text-[#004b87] mb-3">
+          <h2 className="text-3xl sm:text-4xl font-sans font-bold text-[#004b87] mb-3 tracking-tight">
             {isSpanish ? 'Preguntas Frecuentes' : 'Frequently Asked Questions'}
           </h2>
-          <p className="text-sm text-gray-500 font-serif italic max-w-2xl mx-auto">
+          <p className="text-[15px] text-[#666666] max-w-2xl mx-auto font-sans">
             {isSpanish 
-              ? 'Resolvemos las dudas más comunes de estudiantes que publican por primera vez.'
-              : 'We answer the most common questions from students publishing for the first time.'}
+              ? 'Consulte nuestro repositorio de respuestas sobre los procesos editoriales, requisitos de envío y políticas de publicación de la Revista.'
+              : 'Consult our repository of answers regarding the editorial processes, submission requirements, and publication policies of the Journal.'}
           </p>
-          <div className="h-px w-24 bg-[#004b87] mx-auto mt-6"></div>
+          <div className="h-[2px] w-16 bg-[#e86125] mx-auto mt-6"></div>
         </div>
 
-        {/* Filtros por categoría */}
-        <div className="flex flex-wrap justify-center gap-2 mb-10">
+        {/* FILTROS TIPO "TABS" ACADÉMICAS */}
+        <div className="flex flex-wrap justify-center gap-2 mb-10 border-b border-[#e6e8ea] pb-2">
           {currentCategories.map(cat => (
             <button
               key={cat.id}
@@ -445,161 +496,167 @@ function FAQSection() {
                 setFilter(cat.id);
                 setOpenIndex(null);
               }}
-              className={`px-5 py-2 text-xs font-bold uppercase tracking-wider rounded-sm transition-all
+              className={`px-4 py-2 text-[13px] font-sans font-semibold uppercase tracking-wider transition-all border-b-2 -mb-[2px]
                 ${filter === cat.id 
-                  ? 'bg-[#004b87] text-white shadow-sm' 
-                  : 'bg-white text-gray-600 border border-gray-200 hover:border-[#004b87] hover:text-[#004b87]'}`}
+                  ? 'border-[#004b87] text-[#004b87]' 
+                  : 'border-transparent text-[#666666] hover:text-[#004b87] hover:border-[#cbd0d5]'}`}
             >
               {cat.label}
             </button>
           ))}
         </div>
 
-        {/* Acordeones estilo Elsevier */}
-        <div className="space-y-3">
+        {/* CONTENEDOR DE ACORDEONES ESTILO CAJA DE DOCUMENTOS */}
+        <div className="bg-white border border-[#e6e8ea] rounded-sm shadow-sm mb-12">
           {filteredFaqs.map((faq, index) => {
             const isOpen = openIndex === index;
+            const isLast = index === filteredFaqs.length - 1;
             
             return (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 10 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.05, duration: 0.3 }}
-                className={`bg-white rounded-sm border transition-all overflow-hidden
-                  ${isOpen 
-                    ? 'border-[#004b87] shadow-md' 
-                    : 'border-gray-200 hover:border-[#006dae] hover:shadow-sm'}`}
+              <div 
+                key={index} 
+                className={`transition-colors ${!isLast ? 'border-b border-[#e6e8ea]' : ''} ${isOpen ? 'bg-[#f8f9fa]' : 'hover:bg-[#fcfcfd]'}`}
               >
-                {/* Encabezado del acordeón */}
                 <button
                   onClick={() => toggleAccordion(index)}
-                  className="w-full flex items-center justify-between p-5 text-left group"
+                  className="w-full flex items-start justify-between p-6 text-left"
                 >
-                  <span className={`text-sm font-bold transition-colors
-                    ${isOpen ? 'text-[#004b87]' : 'text-gray-900 group-hover:text-[#006dae]'}`}>
-                    {faq.q}
-                  </span>
-                  <span className={`flex-shrink-0 ml-4 w-8 h-8 rounded-sm flex items-center justify-center transition-all
-                    ${isOpen ? 'bg-[#004b87] text-white' : 'bg-gray-100 text-gray-500 group-hover:bg-[#e0ecf4] group-hover:text-[#004b87]'}`}>
-                    <svg 
-                      className={`w-4 h-4 transition-transform duration-300 ${isOpen ? 'rotate-45' : ''}`}
-                      fill="none" 
-                      stroke="currentColor" 
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                  <div className="flex items-center gap-4">
+                    <span className={`flex-shrink-0 text-[18px] font-bold font-serif leading-none mt-0.5 ${isOpen ? 'text-[#e86125]' : 'text-[#cbd0d5]'}`}>
+                      Q.
+                    </span>
+                    <span className={`text-[15px] font-sans font-semibold leading-snug transition-colors ${isOpen ? 'text-[#004b87]' : 'text-[#2b2b2b]'}`}>
+                      {faq.q}
+                    </span>
+                  </div>
+                  
+                  <span className={`flex-shrink-0 ml-6 text-[#004b87] transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </span>
                 </button>
 
-                {/* Contenido expandible */}
                 <AnimatePresence>
                   {isOpen && (
                     <motion.div
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.3, ease: 'easeInOut' }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
                     >
-                      <div className="px-5 pb-5 pt-0">
-                        <div className="border-t border-gray-100 pt-4">
-                          <p className="text-sm text-gray-700 font-serif leading-relaxed">
-                            {faq.a}
-                          </p>
-                          
-                          {/* Enlaces adicionales */}
-                          {faq.links && faq.links.length > 0 && (
-                            <div className="flex flex-wrap gap-3 mt-4">
-                              {faq.links.map((link, i) => (
-                                <a
-                                  key={i}
-                                  href={link.url}
-                                  target={link.url.startsWith('http') ? '_blank' : undefined}
-                                  rel={link.url.startsWith('http') ? 'noopener noreferrer' : undefined}
-                                  className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#006dae] hover:text-[#e86125] transition-colors"
-                                >
-                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                  </svg>
-                                  {link.text} →
-                                </a>
-                              ))}
-                            </div>
-                          )}
+                      <div className="pl-[52px] pr-6 pb-6 pt-0">
+                        <div className="text-[14px] text-[#2b2b2b] font-sans leading-relaxed">
+                          {faq.a}
                         </div>
+                        
+                        {faq.links && faq.links.length > 0 && (
+                          <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-[#e6e8ea]">
+                            {faq.links.map((link, i) => (
+                              <a
+                                key={i}
+                                href={link.url}
+                                target={link.url.startsWith('http') ? '_blank' : undefined}
+                                rel={link.url.startsWith('http') ? 'noopener noreferrer' : undefined}
+                                className="inline-flex items-center gap-1 text-[12px] font-bold font-sans uppercase tracking-wider text-[#006dae] hover:text-[#e86125] transition-colors"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                                {link.text}
+                              </a>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </motion.div>
+              </div>
             );
           })}
         </div>
 
-        {/* Contador de preguntas */}
-        <div className="mt-8 text-center text-xs text-gray-500 font-sans uppercase tracking-wider">
+        {/* CONTADOR DE PREGUNTAS */}
+        <div className="mb-12 text-center text-[11px] text-[#a0a0a0] font-sans uppercase tracking-wider">
           {isSpanish 
             ? `${filteredFaqs.length} preguntas mostrando` 
             : `${filteredFaqs.length} questions showing`}
         </div>
 
-        {/* Banner final: Guía Rápida */}
-        {/* ============ BANNER: GUÍA RÁPIDA INTERACTIVA ============ */}
-<motion.div
-  initial={{ opacity: 0, y: 10 }}
-  animate={{ opacity: 1, y: 0 }}
-  transition={{ duration: 0.5, delay: 0.2 }}
-  className="bg-white border border-[#e6e8ea] border-l-4 border-l-[#004b87] p-6 shadow-sm rounded-sm"
->
-  <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-    {/* Icono de documento/lista (más académico y estructurado) */}
-    <div className="flex-shrink-0 w-12 h-12 bg-[#f4f5f7] border border-[#e6e8ea] rounded-sm flex items-center justify-center">
-      <svg className="w-6 h-6 text-[#004b87]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-      </svg>
-    </div>
+        {/* CAJA DE CONTACTO Y SOPORTE */}
+        <div className="bg-[#f8f9fa] border border-[#cbd0d5] border-l-4 border-l-[#006dae] p-6 rounded-sm mb-12 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+          <div>
+            <h4 className="text-[15px] font-bold font-sans text-[#004b87] mb-1">
+              {isSpanish ? '¿No encontró lo que buscaba?' : 'Did not find what you were looking for?'}
+            </h4>
+            <p className="text-[13px] text-[#666666] font-sans">
+              {isSpanish 
+                ? 'Nuestro equipo editorial está a su disposición para resolver consultas adicionales sobre el proceso de publicación.'
+                : 'Our editorial team is available to answer any additional questions regarding the publication process.'}
+            </p>
+          </div>
+          <a
+            href="mailto:contact@revistacienciasestudiantes.com"
+            className="flex-shrink-0 inline-flex items-center gap-2 bg-white border border-[#006dae] text-[#006dae] hover:bg-[#006dae] hover:text-white px-5 py-2 text-[12px] font-bold font-sans uppercase tracking-wider transition-colors rounded-sm"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            {isSpanish ? 'Contactar al Soporte' : 'Contact Support'}
+          </a>
+        </div>
 
-    <div className="flex-1">
-      <h3 className="text-lg font-sans font-semibold text-[#004b87] mb-1.5 tracking-tight">
-        {isSpanish 
-          ? 'Guía Rápida para Autores (Dashboard Interactivo)'
-          : 'Quick Guide for Authors (Interactive Dashboard)'}
-      </h3>
-      <p className="text-[14px] text-[#2b2b2b] leading-relaxed mb-4 font-sans">
-        {isSpanish 
-          ? 'Revise los requisitos esenciales de envío, políticas de formato y el proceso de anonimización a través de nuestra lista de verificación interactiva.'
-          : 'Review essential submission requirements, formatting policies, and the anonymization process through our interactive checklist.'}
-      </p>
-      
-      {/* Botón sólido estilo Elsevier (Azul que pasa a Naranja en el hover) */}
-      <a
-        href={isSpanish ? '/quick.html' : '/quickEN.html'}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-2 bg-[#004b87] hover:bg-[#e86125] text-white px-5 py-2.5 text-xs font-semibold uppercase tracking-wider transition-colors font-sans rounded-sm"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-        </svg>
-        {isSpanish ? 'Acceder al Panel de Envío' : 'Access Submission Dashboard'}
-      </a>
-    </div>
+        {/* BANNER GUÍA RÁPIDA */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="bg-white border border-[#e6e8ea] border-l-4 border-l-[#004b87] p-6 shadow-sm rounded-sm"
+        >
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+            <div className="flex-shrink-0 w-12 h-12 bg-[#f4f5f7] border border-[#e6e8ea] rounded-sm flex items-center justify-center">
+              <svg className="w-6 h-6 text-[#004b87]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
 
-    {/* Divisor vertical y métrica de tiempo estilo "Article Metrics" */}
-    <div className="hidden lg:flex flex-col items-center justify-center border-l border-[#e6e8ea] pl-8 min-w-[120px]">
-      <span className="text-3xl font-sans font-light text-[#004b87] leading-none mb-1">5</span>
-      <span className="text-[10px] uppercase tracking-widest text-[#666666] font-sans font-semibold">
-        {isSpanish ? 'Minutos' : 'Minutes'}
-      </span>
-      <span className="text-[10px] text-[#a0a0a0] font-sans mt-1 text-center">
-        {isSpanish ? 'Tiempo est.' : 'Est. time'}
-      </span>
-    </div>
-  </div>
-</motion.div>
-{/* ============ FIN BANNER GUÍA RÁPIDA ============ */}
+            <div className="flex-1">
+              <h3 className="text-lg font-sans font-semibold text-[#004b87] mb-1.5 tracking-tight">
+                {isSpanish ? 'Guía Rápida para Autores' : 'Quick Guide for Authors'}
+              </h3>
+              <p className="text-[14px] text-[#2b2b2b] leading-relaxed mb-4 font-sans">
+                {isSpanish 
+                  ? 'Revise los requisitos esenciales de envío a través de nuestra lista de verificación interactiva.'
+                  : 'Review essential submission requirements through our interactive checklist.'}
+              </p>
+              
+              <a
+                href={isSpanish ? '/quick.html' : '/quickEN.html'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 bg-[#004b87] hover:bg-[#e86125] text-white px-5 py-2.5 text-xs font-semibold uppercase tracking-wider transition-colors font-sans rounded-sm"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+                {isSpanish ? 'Acceder al Panel de Envío' : 'Access Submission Dashboard'}
+              </a>
+            </div>
+
+            <div className="hidden lg:flex flex-col items-center justify-center border-l border-[#e6e8ea] pl-8 min-w-[120px]">
+              <span className="text-3xl font-sans font-light text-[#004b87] leading-none mb-1">5</span>
+              <span className="text-[10px] uppercase tracking-widest text-[#666666] font-sans font-semibold">
+                {isSpanish ? 'Minutos' : 'Minutes'}
+              </span>
+              <span className="text-[10px] text-[#a0a0a0] font-sans mt-1 text-center">
+                {isSpanish ? 'Tiempo est.' : 'Est. time'}
+              </span>
+            </div>
+          </div>
+        </motion.div>
+
       </div>
     </section>
   );
