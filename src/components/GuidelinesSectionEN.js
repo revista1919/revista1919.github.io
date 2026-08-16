@@ -21,23 +21,39 @@ function GuidelinesSection() {
           >
             <h2 className="text-3xl font-serif font-bold mb-8">Author Guidelines</h2>
             
-            {/* Policy Notice */}
+            {/* Quick Guide Notice */}
             <div className="bg-[#001f3f] text-white p-6 rounded-lg mb-8">
               <p className="text-sm font-serif italic leading-relaxed mb-4">
-                Submitting a manuscript implies full acceptance of our Editorial Policies. 
-                We urge you to read them carefully before preparing your contribution. Failure 
-                to comply with any of its provisions may result in the rejection of the submission.
+                First time publishing? We have an <strong>Interactive Quick Guide</strong> with a visual checklist. 
+                It takes 5 minutes and tells you exactly what you need. 
+                Full policies are still here if you want to go deeper.
               </p>
               <a 
-                href="https://www.revistacienciasestudiantes.com/policies.html" 
-                className="inline-block bg-white text-[#001f3f] px-6 py-3 text-[10px] uppercase font-bold tracking-[0.2em] hover:bg-[#c0a86a] hover:text-white transition-colors"
+                href="/quickEN.html" 
+                className="inline-block bg-[#c0a86a] text-[#001f3f] px-6 py-3 text-[10px] uppercase font-bold tracking-[0.2em] hover:bg-white transition-colors"
               >
-                Read Full Editorial Policies →
+                Open Quick Guide (5 min) →
               </a>
             </div>
 
             {/* Links to Complete Guides */}
             <div className="space-y-3 mb-8">
+              {/* Quick Guide as first highlighted link */}
+              <a 
+                href="/quickEN.html" 
+                className="block p-4 bg-white rounded-lg border-2 border-[#c0a86a] hover:shadow-lg transition-all group"
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-[#001f3f] group-hover:text-[#007398] transition-colors mb-1">
+                    Interactive Quick Guide
+                  </h3>
+                  <span className="text-[8px] font-black uppercase text-white bg-[#c0a86a] px-2 py-1 rounded-full">Recommended</span>
+                </div>
+                <p className="text-xs text-gray-500 font-serif">
+                  Visual checklist with the essentials for submitting your manuscript. Includes links to controlled vocabularies.
+                </p>
+              </a>
+
               <a 
                 href="/authorEN.html" 
                 className="block p-4 bg-white rounded-lg border border-gray-200 hover:border-[#007398] hover:shadow-md transition-all group"
@@ -197,7 +213,7 @@ function GuidelinesSection() {
                   "et al." in the reference. In-text, use "et al." from three authors. 
                   Personal communications (emails, messages) are cited only in the text and not included 
                   in the references. For any other document type, refer to the 
-                  <a href="https://www.revistacienciasestudiantes.com/policies.html" target="_blank" rel="noopener noreferrer" className="text-[#007398] underline"> Full Editorial Policies</a> and the 
+                  <a href="https://www.revistacienciasestudiantes.com/policiesEN.html" target="_blank" rel="noopener noreferrer" className="text-[#007398] underline"> Full Editorial Policies</a> and the 
                   <a href="https://www.chicagomanualofstyle.org/tools_citationguide/citation-guide-2.html" target="_blank" rel="noopener noreferrer" className="text-[#007398] underline"> official Chicago manual</a>.
                 </p>
               </div>

@@ -26,39 +26,45 @@ function SubmitSection() {
         </p>
       </header>
 
-      {/* PROMINENT NOTICE: Mandatory reading of Guidelines and Policies */}
+      {/* PROMINENT NOTICE: Quick Guide first */}
       <div className="bg-[#001f3f] text-white p-8 rounded-sm mb-10 shadow-md">
         <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-          {/* Book / Warning Icon */}
+          {/* Lightning / Checklist Icon */}
           <div className="flex-shrink-0">
             <svg className="w-12 h-12 text-[#c0a86a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} 
-                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
           <div className="flex-1">
             <h3 className="text-lg font-serif font-bold text-[#c0a86a] mb-2">
-              Mandatory reading before submitting
+              Before submitting: review the essentials in 5 minutes
             </h3>
             <p className="text-sm text-gray-200 leading-relaxed mb-4">
-              Submitting a manuscript implies <strong>full acceptance</strong> of our 
-              Editorial Policies and a commitment to comply with the Author Guidelines. 
-              Failure to comply with any of their provisions —including Chicago 17th ed. 
-              (author-date) citation style, document anonymization, ethical declaration, 
-              controlled vocabulary keywords, and similarity limits— may result in the 
-              <strong> immediate rejection</strong> of the manuscript, without peer review.
+              We know that reading full policies can feel heavy. That's why we created an 
+              <strong> Interactive Quick Guide </strong> with a visual checklist: check the boxes 
+              and you'll know if your manuscript is ready. If you need more detail later, check the full guide.
             </p>
             <div className="flex flex-wrap gap-3">
+              <a
+                href="/quickEN.html"
+                className="inline-flex items-center gap-2 bg-[#c0a86a] text-[#001f3f] px-5 py-2.5 text-xs uppercase font-bold tracking-[0.15em] hover:bg-white hover:text-[#001f3f] transition-colors rounded-sm"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                </svg>
+                Quick Guide (Checklist)
+              </a>
               <a
                 href="https://www.revistacienciasestudiantes.com/policiesEN.html"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-[#c0a86a] text-[#001f3f] px-5 py-2.5 text-xs uppercase font-bold tracking-[0.15em] hover:bg-white hover:text-[#001f3f] transition-colors rounded-sm"
+                className="inline-flex items-center gap-2 bg-transparent border-2 border-white text-white px-5 py-2.5 text-xs uppercase font-bold tracking-[0.15em] hover:bg-white hover:text-[#001f3f] transition-colors rounded-sm"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
-                Full Editorial Policies
+                Full Policies (PDF)
               </a>
               <button
                 onClick={() => navigate('/en/guidelines')}
@@ -67,7 +73,7 @@ function SubmitSection() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                Author Guidelines
+                Complete Author Guidelines
               </button>
             </div>
           </div>
@@ -125,27 +131,33 @@ function SubmitSection() {
 
         <div className="flex flex-col justify-center bg-[#f0f4f8] p-8 rounded-sm border border-[#c0a86a]">
           <h4 className="text-xs font-bold text-[#001f3f] uppercase tracking-tighter mb-3">
-            Have you read the policies?
+            Have you checked the quick guide?
           </h4>
           <p className="text-xs text-gray-700 mb-5 leading-relaxed">
-            By checking the acceptance box on the submission form, you declare that you have read, 
-            understood, and fully accepted the Journal's Editorial Policies. 
-            <strong className="text-[#001f3f]"> This is not optional.</strong>
+            The interactive quick guide takes 5 minutes and has a visual checklist. 
+            If you've already completed it, you're ready to continue. 
+            <strong className="text-[#001f3f]"> Full policies are still available if you need to go deeper.</strong>
           </p>
           <div className="space-y-2">
+            <a
+              href="/quickEN.html"
+              className="block text-center text-xs font-bold uppercase tracking-widest text-white bg-[#001f3f] py-2.5 px-4 hover:bg-[#c0a86a] hover:text-[#001f3f] transition-colors rounded-sm"
+            >
+              Open Interactive Quick Guide
+            </a>
             <a
               href="https://www.revistacienciasestudiantes.com/policiesEN.html"
               target="_blank"
               rel="noopener noreferrer"
               className="block text-center text-xs font-bold uppercase tracking-widest text-[#001f3f] border-2 border-[#001f3f] py-2.5 px-4 hover:bg-[#001f3f] hover:text-white transition-colors rounded-sm"
             >
-              Read Editorial Policies
+              Full Policies
             </a>
             <button
               onClick={() => navigate('/en/guidelines')}
               className="block w-full text-center text-xs font-bold uppercase tracking-widest text-[#c0a86a] border-2 border-[#c0a86a] py-2.5 px-4 hover:bg-[#c0a86a] hover:text-white transition-colors rounded-sm"
             >
-              Consult Author Guidelines
+              Complete Guide
             </button>
           </div>
         </div>

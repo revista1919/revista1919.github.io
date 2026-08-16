@@ -26,39 +26,45 @@ function SubmitSection() {
         </p>
       </header>
 
-      {/* AVISO PROMINENTE: Lectura obligatoria de Guías y Políticas */}
+      {/* AVISO PROMINENTE: Guía Rápida como primer paso */}
       <div className="bg-[#001f3f] text-white p-8 rounded-sm mb-10 shadow-md">
         <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-          {/* Icono de advertencia / libro */}
+          {/* Icono de rayo / checklist */}
           <div className="flex-shrink-0">
             <svg className="w-12 h-12 text-[#c0a86a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} 
-                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
           <div className="flex-1">
             <h3 className="text-lg font-serif font-bold text-[#c0a86a] mb-2">
-              Lectura obligatoria antes de enviar
+              Antes de enviar: revisa lo esencial en 5 minutos
             </h3>
             <p className="text-sm text-gray-200 leading-relaxed mb-4">
-              El envío de un manuscrito implica la <strong>aceptación íntegra</strong> de nuestras 
-              Políticas Editoriales y el compromiso de cumplir con las Directrices para Autores. 
-              El incumplimiento de cualquiera de sus disposiciones —incluyendo el estilo de citación 
-              Chicago 17.ª ed. (autor-fecha), la anonimización del documento, la declaración ética, 
-              las palabras clave con vocabulario controlado y los límites de similitud— podrá dar 
-              lugar al <strong>rechazo inmediato</strong> del manuscrito, sin pasar a revisión por pares.
+              Sabemos que leer políticas completas puede ser pesado. Por eso creamos una 
+              <strong> Guía Rápida Interactiva </strong> con checklist visual: marca los puntos 
+              y sabrás si tu manuscrito está listo. Si luego necesitas detalle, consulta la guía completa.
             </p>
             <div className="flex flex-wrap gap-3">
+              <a
+                href="/quick.html"
+                className="inline-flex items-center gap-2 bg-[#c0a86a] text-[#001f3f] px-5 py-2.5 text-xs uppercase font-bold tracking-[0.15em] hover:bg-white hover:text-[#001f3f] transition-colors rounded-sm"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                </svg>
+                Guía Rápida (Checklist)
+              </a>
               <a
                 href="https://www.revistacienciasestudiantes.com/policies.html"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-[#c0a86a] text-[#001f3f] px-5 py-2.5 text-xs uppercase font-bold tracking-[0.15em] hover:bg-white hover:text-[#001f3f] transition-colors rounded-sm"
+                className="inline-flex items-center gap-2 bg-transparent border-2 border-white text-white px-5 py-2.5 text-xs uppercase font-bold tracking-[0.15em] hover:bg-white hover:text-[#001f3f] transition-colors rounded-sm"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
-                Políticas Editoriales Completas
+                Políticas Completas (PDF)
               </a>
               <button
                 onClick={() => navigate('/guidelines')}
@@ -67,7 +73,7 @@ function SubmitSection() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                Guía para Autores
+                Guía Completa para Autores
               </button>
             </div>
           </div>
@@ -125,27 +131,33 @@ function SubmitSection() {
 
         <div className="flex flex-col justify-center bg-[#f0f4f8] p-8 rounded-sm border border-[#c0a86a]">
           <h4 className="text-xs font-bold text-[#001f3f] uppercase tracking-tighter mb-3">
-            ¿Ha leído las políticas?
+            ¿Ya revisaste la guía rápida?
           </h4>
           <p className="text-xs text-gray-700 mb-5 leading-relaxed">
-            Al marcar la casilla de aceptación en el formulario de envío, usted declara haber leído, 
-            comprendido y aceptado en su totalidad las Políticas Editoriales de la Revista. 
-            <strong className="text-[#001f3f]"> Este no es un trámite opcional.</strong>
+            La guía rápida interactiva te toma 5 minutos y tiene un checklist visual. 
+            Si ya la completaste, estás listo para continuar. 
+            <strong className="text-[#001f3f]"> Las políticas completas siguen disponibles si necesitas profundizar.</strong>
           </p>
           <div className="space-y-2">
+            <a
+              href="/quick.html"
+              className="block text-center text-xs font-bold uppercase tracking-widest text-white bg-[#001f3f] py-2.5 px-4 hover:bg-[#c0a86a] hover:text-[#001f3f] transition-colors rounded-sm"
+            >
+              Abrir Guía Rápida Interactiva
+            </a>
             <a
               href="https://www.revistacienciasestudiantes.com/policies.html"
               target="_blank"
               rel="noopener noreferrer"
               className="block text-center text-xs font-bold uppercase tracking-widest text-[#001f3f] border-2 border-[#001f3f] py-2.5 px-4 hover:bg-[#001f3f] hover:text-white transition-colors rounded-sm"
             >
-              Leer Políticas Editoriales
+              Políticas Completas
             </a>
             <button
               onClick={() => navigate('/guidelines')}
               className="block w-full text-center text-xs font-bold uppercase tracking-widest text-[#c0a86a] border-2 border-[#c0a86a] py-2.5 px-4 hover:bg-[#c0a86a] hover:text-white transition-colors rounded-sm"
             >
-              Consultar Guía para Autores
+              Guía Completa
             </button>
           </div>
         </div>

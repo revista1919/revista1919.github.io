@@ -206,11 +206,13 @@ const defineEnvVars = {
           { from: 'public/author.html', to: 'author.html', noErrorOnMissing: true },
           { from: 'public/practices.html', to: 'practices.html', noErrorOnMissing: true },
           { from: 'public/open-access.html', to: 'open-access.html', noErrorOnMissing: true },
+          { from: 'public/quick.html', to: 'quick.html', noErrorOnMissing: true },
           
           // NUEVOS ARCHIVOS HTML - Guías para Autores - Inglés
           { from: 'public/authorEN.html', to: 'authorEN.html', noErrorOnMissing: true },
           { from: 'public/practicesEN.html', to: 'practicesEN.html', noErrorOnMissing: true },
           { from: 'public/open-accessEN.html', to: 'open-accessEN.html', noErrorOnMissing: true },
+          { from: 'public/quickEN.html', to: 'quickEN.html', noErrorOnMissing: true },
         ],
       }),
       

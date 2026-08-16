@@ -2078,6 +2078,55 @@ useEffect(() => {
   </div>
 </motion.div>
 {/* ============ FIN GUÍAS PARA AUTORES ============ */}
+{/* ============ BANNER: GUÍA RÁPIDA INTERACTIVA ============ */}
+<motion.div
+  initial={{ opacity: 0, y: 10 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.5, delay: 0.2 }}
+  className="bg-gradient-to-r from-[#003b5c] to-[#005a8a] border border-[#003b5c] rounded-sm p-6 shadow-md"
+>
+  <div className="flex flex-col md:flex-row items-start md:items-center gap-5">
+    {/* Icono de rayo (rápido, ágil) */}
+    <div className="flex-shrink-0 w-14 h-14 bg-white/10 rounded-sm flex items-center justify-center">
+      <svg className="w-7 h-7 text-[#c0a86a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+      </svg>
+    </div>
+
+    <div className="flex-1">
+      <h3 className="text-lg font-serif font-bold text-white mb-1">
+        {isSpanish 
+          ? '¿Primera vez publicando? Empieza aquí'
+          : 'First time publishing? Start here'}
+      </h3>
+      <p className="text-sm text-gray-200 leading-relaxed mb-2 font-sans">
+        {isSpanish 
+          ? 'La Guía Rápida Interactiva te toma 5 minutos y tiene un checklist visual con todo lo esencial. Sin leer documentos largos.'
+          : 'The Interactive Quick Guide takes 5 minutes and has a visual checklist with everything essential. No long documents to read.'}
+      </p>
+      <a
+        href={isSpanish ? '/quick.html' : '/quickEN.html'}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-2 mt-1 text-[#c0a86a] hover:text-white text-xs font-bold uppercase tracking-wider transition-colors font-sans"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+        </svg>
+        {isSpanish ? 'Abrir Guía Rápida (5 min)' : 'Open Quick Guide (5 min)'} →
+      </a>
+    </div>
+
+    {/* Badge de tiempo */}
+    <div className="hidden lg:block bg-white/10 rounded-sm px-4 py-2 text-center">
+      <span className="text-2xl font-serif font-bold text-[#c0a86a] block">5</span>
+      <span className="text-[10px] uppercase tracking-widest text-gray-300 font-sans">
+        {isSpanish ? 'minutos' : 'minutes'}
+      </span>
+    </div>
+  </div>
+</motion.div>
+{/* ============ FIN BANNER GUÍA RÁPIDA ============ */}
               {/* PASO 1: INFORMACIÓN DEL ARTÍCULO */}
               {currentStep === 1 && (
                 <motion.div

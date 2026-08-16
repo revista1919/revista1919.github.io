@@ -230,7 +230,6 @@ const HomeSection = ({ onOpenMenu }) => {
         </div>
 
         {/* AUTHOR GUIDES - Direct links section */}
-               {/* AUTHOR GUIDES - Direct links section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -247,6 +246,37 @@ const HomeSection = ({ onOpenMenu }) => {
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
+
+            {/* NUEVA TARJETA PRINCIPAL: Interactive Quick Guide */}
+            <a
+              href="/quickEN.html"
+              className="group relative p-6 bg-white rounded-xl border-2 border-[#007398] hover:shadow-xl transition-all overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 w-full h-1 bg-[#007398]"></div>
+              <div className="absolute top-3 right-3 bg-[#007398] text-white text-[8px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">
+                5 min
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-[#e0ecf4] rounded-lg">
+                  <svg className="w-5 h-5 text-[#001f3f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900 group-hover:text-[#007398] transition-colors mb-1">
+                    Interactive Quick Guide
+                  </h3>
+                  <p className="text-xs text-gray-500 leading-relaxed">
+                    Visual checklist with the essentials. No long documents to read.
+                  </p>
+                  <span className="inline-block mt-2 text-[10px] font-bold uppercase tracking-wider text-[#007398]">
+                    Start now →
+                  </span>
+                </div>
+              </div>
+            </a>
+
+            {/* Author Guidelines */}
             <a
               href="/authorEN.html"
               className="group relative p-6 bg-white rounded-xl border border-gray-200 hover:border-[#007398] hover:shadow-lg transition-all overflow-hidden"
@@ -260,10 +290,10 @@ const HomeSection = ({ onOpenMenu }) => {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-gray-900 group-hover:text-[#007398] transition-colors mb-1">
-                    Author Guidelines
+                    Complete Author Guidelines
                   </h3>
                   <p className="text-xs text-gray-500 leading-relaxed">
-                    Detailed instructions to prepare and submit your manuscript.
+                    Extensive document with templates, citation examples, and technical requirements. (Recommended if you have specific doubts)
                   </p>
                   <span className="inline-block mt-2 text-[10px] font-bold uppercase tracking-wider text-[#007398] opacity-0 group-hover:opacity-100 transition-all transform translate-x-0 group-hover:translate-x-1">
                     View →
@@ -272,6 +302,7 @@ const HomeSection = ({ onOpenMenu }) => {
               </div>
             </a>
 
+            {/* Good Practices */}
             <a
               href="/practicesEN.html"
               className="group relative p-6 bg-white rounded-xl border border-gray-200 hover:border-[#007398] hover:shadow-lg transition-all overflow-hidden"
@@ -297,6 +328,7 @@ const HomeSection = ({ onOpenMenu }) => {
               </div>
             </a>
 
+            {/* Open Access */}
             <a
               href="/open-accessEN.html"
               className="group relative p-6 bg-white rounded-xl border border-gray-200 hover:border-[#007398] hover:shadow-lg transition-all overflow-hidden"
@@ -322,6 +354,7 @@ const HomeSection = ({ onOpenMenu }) => {
               </div>
             </a>
 
+            {/* Editorial Policies */}
             <a
               href="/policiesEN.html"
               className="group relative p-6 bg-white rounded-xl border border-gray-200 hover:border-[#c0a86a] hover:shadow-lg transition-all overflow-hidden"
@@ -348,12 +381,14 @@ const HomeSection = ({ onOpenMenu }) => {
             </a>
           </div>
         </motion.div>
+
         {/* GRID */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {cards.map((card, index) => (
             <Card key={card.path} card={card} index={index} />
           ))}
         </div>
+
         {/* INVITATION */}
         <motion.div
           initial={{ opacity: 0, y: 40 }}
@@ -380,4 +415,5 @@ const HomeSection = ({ onOpenMenu }) => {
     </div>
   );
 };
+
 export default HomeSection;
