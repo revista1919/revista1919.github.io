@@ -248,12 +248,12 @@ const HomeSection = ({ onOpenMenu }) => {
               Consulte nuestros recursos completos antes de preparar su manuscrito
             </p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 max-w-6xl mx-auto">
 
             {/* NUEVA TARJETA PRINCIPAL: Guía Rápida Interactiva */}
             <a
               href="/quick.html"
-              className="group relative p-6 bg-white rounded-xl border-2 border-[#007398] hover:shadow-xl transition-all overflow-hidden"
+              className="group relative p-4 bg-white rounded-xl border-2 border-[#007398] hover:shadow-xl transition-all overflow-hidden"
             >
               <div className="absolute top-0 left-0 w-full h-1 bg-[#007398]"></div>
               <div className="absolute top-3 right-3 bg-[#007398] text-white text-[8px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">
@@ -282,7 +282,7 @@ const HomeSection = ({ onOpenMenu }) => {
             {/* TARJETA: Guía Completa para Autores */}
             <a
               href="/author.html"
-              className="group relative p-6 bg-white rounded-xl border border-gray-200 hover:border-[#007398] hover:shadow-lg transition-all overflow-hidden"
+              className="group relative p-4 bg-white rounded-xl border border-gray-200 hover:border-[#007398] hover:shadow-lg transition-all overflow-hidden"
             >
               <div className="absolute top-0 left-0 w-full h-1 bg-[#001f3f] group-hover:bg-[#007398] transition-colors"></div>
               <div className="flex items-start gap-3">
@@ -308,7 +308,7 @@ const HomeSection = ({ onOpenMenu }) => {
             {/* TARJETA: Buenas Prácticas */}
             <a
               href="/practices.html"
-              className="group relative p-6 bg-white rounded-xl border border-gray-200 hover:border-[#007398] hover:shadow-lg transition-all overflow-hidden"
+              className="group relative p-4 bg-white rounded-xl border border-gray-200 hover:border-[#007398] hover:shadow-lg transition-all overflow-hidden"
             >
               <div className="absolute top-0 left-0 w-full h-1 bg-[#001f3f] group-hover:bg-[#007398] transition-colors"></div>
               <div className="flex items-start gap-3">
@@ -334,7 +334,7 @@ const HomeSection = ({ onOpenMenu }) => {
             {/* TARJETA: Open Access */}
             <a
               href="/open-access.html"
-              className="group relative p-6 bg-white rounded-xl border border-gray-200 hover:border-[#007398] hover:shadow-lg transition-all overflow-hidden"
+              className="group relative p-4 bg-white rounded-xl border border-gray-200 hover:border-[#007398] hover:shadow-lg transition-all overflow-hidden"
             >
               <div className="absolute top-0 left-0 w-full h-1 bg-[#001f3f] group-hover:bg-[#007398] transition-colors"></div>
               <div className="flex items-start gap-3">
@@ -360,7 +360,7 @@ const HomeSection = ({ onOpenMenu }) => {
             {/* TARJETA: Políticas Editoriales */}
             <a
               href="/policies.html"
-              className="group relative p-6 bg-white rounded-xl border border-gray-200 hover:border-[#c0a86a] hover:shadow-lg transition-all overflow-hidden"
+              className="group relative p-4 bg-white rounded-xl border border-gray-200 hover:border-[#c0a86a] hover:shadow-lg transition-all overflow-hidden"
             >
               <div className="absolute top-0 left-0 w-full h-1 bg-[#001f3f] group-hover:bg-[#c0a86a] transition-colors"></div>
               <div className="flex items-start gap-3">
