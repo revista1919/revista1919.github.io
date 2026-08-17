@@ -34,10 +34,8 @@ function FAQSection() {
       {
   id: 'basico', 
   q: '¿Qué pasa si soy menor de edad?',
-  a: 'No hay problema. Si eres menor de 18 años, puedes publicar igualmente, pero necesitamos una autorización firmada por tu padre, madre o tutor legal. En el formulario de envío te preguntaremos si eres menor de edad; si marcas "Sí", se te mostrará un documento de autorización pre-rellenado que solo debes descargar, firmar y adjuntar. También puedes enviarlo por correo electrónico si te resulta más cómodo. Es un trámite rápido y no retrasa el proceso editorial.',
-  links: [
-    { text: 'Descargar formulario de autorización', url: '/authorization-minor.html' }
-  ]
+  a: 'No hay problema. Si eres menor de 18 años, puedes publicar igualmente, pero necesitamos una autorización firmada por tu padre, madre o tutor legal. En el formulario de envío te preguntaremos si eres menor de edad; si marcas "Sí", se te mostrará un documento de autorización que debes rellenar, firmar y adjuntar junto a tu apoderado. También puede tu apoderado enviar un correo que aparece pre-rellenado en el formulario si te resulta más cómodo. Es un trámite rápido y no retrasa el proceso editorial.',
+
 },
       {
         id: 'basico',
@@ -256,7 +254,7 @@ function FAQSection() {
       {
   id: 'basico', 
   q: 'What happens if I am a minor?',
-  a: 'No problem. If you are under 18, you can still publish, but we need an authorization signed by your parent or legal guardian. In the submission form, we will ask if you are a minor; if you check "Yes", a pre-filled authorization document will be shown. You just need to download it, sign it, and attach it. You can also send it by email if that is more convenient for you. It is a quick process and does not delay the editorial review.',
+  a: 'No problem. If you are under 18, you can still publish, but we need an authorization signed by your parent or legal guardian. In the submission form, we will ask if you are a minor; if you check "Yes", a authorization document will be shown. You just need to download it, fill it out, sign it, and attach it. Your parent or legal guardian can also send an email (that appear pre-filled in the form) if that is more convenient for you. It is a quick process and does not delay the editorial review.',
   links: [
     { text: 'Download authorization form', url: '/authorization-minorEN.html' }
   ]
