@@ -1125,7 +1125,14 @@ export default function SubmissionForm({ user, onSuccess }) {
       { value: 'not_applicable', label: 'Not applicable (theoretical essay, review without new data)' }
     ]
   };
+// Después de availabilityOptions y antes de los useEffect:
 
+// ============ STEPS ============
+const steps = [
+  { id: 1, title: isSpanish ? 'Manuscrito' : 'Manuscript' },
+  { id: 2, title: isSpanish ? 'Autores' : 'Authors' },
+  { id: 3, title: isSpanish ? 'Envío' : 'Submission' }
+];
   // Sincronizar refs
   useEffect(() => {
     formDataRef.current = formData;
