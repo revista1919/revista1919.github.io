@@ -559,12 +559,8 @@ const getVocabularyForArea = (area) => {
   const spanishArea = AREA_MAPPING[area] || area;
   return VOCABULARIO_POR_AREA[spanishArea];
 };
-const HelpCapsule = ({ text, textEn, title, titleEn }) => {
+const HelpCapsule = ({ text, title }) => {
   const [show, setShow] = useState(false);
-  const { language } = useLanguage();
-  const isSpanish = language === 'es';
-  const displayText = isSpanish ? text : textEn;
-  const displayTitle = isSpanish ? (title || 'Ayuda') : (titleEn || 'Help');
 
   return (
     <div className="relative inline-flex items-center ml-2 align-middle">
@@ -574,7 +570,7 @@ const HelpCapsule = ({ text, textEn, title, titleEn }) => {
         onMouseLeave={() => setShow(false)}
         onClick={() => setShow(!show)}
         className="w-5 h-5 rounded-full bg-slate-100 hover:bg-[#003b5c] text-slate-500 hover:text-white flex items-center justify-center transition-all duration-300 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#003b5c]/30"
-        aria-label={isSpanish ? 'Información de ayuda' : 'Help information'}
+        aria-label={title || 'Help'}
       >
         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -597,8 +593,8 @@ const HelpCapsule = ({ text, textEn, title, titleEn }) => {
                 </svg>
               </div>
               <div>
-                <h4 className="font-bold text-sm mb-1 text-white/90">{displayTitle}</h4>
-                <p className="text-white/70 text-xs leading-relaxed">{displayText}</p>
+                <h4 className="font-bold text-sm mb-1 text-white/90">{title || 'Help'}</h4>
+                <p className="text-white/70 text-xs leading-relaxed">{text}</p>
               </div>
             </div>
           </motion.div>
@@ -2329,29 +2325,33 @@ const steps = [
                         {/* Menor de edad */}
                         <div className="mt-6 pt-4 border-t border-slate-200">
                           <label className="flex items-center gap-3 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={author.isMinor}
-                              onChange={(e) => {
-                                handleAuthorChange(index, 'isMinor', e.target.checked);
-                                if (!e.target.checked) {
-                                  handleAuthorChange(index, 'guardianName', '');
-                                  handleAuthorChange(index, 'consentMethod', 'none');
-                                  handleAuthorChange(index, 'consentFile', null);
-                                }
-                              }}
-                              className="w-4 h-4 text-[#003b5c] rounded"
-                            />
-                            <span className="text-sm text-slate-700 font-sans">
-                              {isSpanish ? 'Este autor es menor de edad' : 'This author is a minor'}
-                            </span>
-                            <HelpCapsule
-                              title={isSpanish ? '¿Qué significa ser menor?' : 'What does being a minor mean?'}
-                              text={isSpanish
-                                ? 'Si alguno de los autores tiene menos de 18 años, debe marcarse esta casilla. Se requerirá autorización de un tutor legal para poder publicar el artículo.'
-                                : 'If any of the authors is under 18 years old, this box must be checked. Authorization from a legal guardian will be required to publish the article.'}
-                            />
-                          </label>
+  <input
+    type="checkbox"
+    checked={author.isMinor}
+    onChange={(e) => {
+      const isMinor = e.target.checked;
+      const newAuthors = [...formData.authors];
+      newAuthors[index] = {
+        ...newAuthors[index],
+        isMinor: isMinor,
+        guardianName: isMinor ? newAuthors[index].guardianName : '',
+        consentMethod: isMinor ? newAuthors[index].consentMethod : 'none',
+        consentFile: isMinor ? newAuthors[index].consentFile : null
+      };
+      setFormData(prev => ({ ...prev, authors: newAuthors }));
+    }}
+    className="w-4 h-4 text-[#003b5c] rounded"
+  />
+  <span className="text-sm text-slate-700 font-sans">
+    {isSpanish ? 'Este autor es menor de edad' : 'This author is a minor'}
+  </span>
+  <HelpCapsule
+    title={isSpanish ? '¿Qué significa ser menor?' : 'What does being a minor mean?'}
+    text={isSpanish
+      ? 'Si alguno de los autores tiene menos de 18 años, debe marcarse esta casilla. Se requerirá autorización de un tutor legal para poder publicar el artículo.'
+      : 'If any of the authors is under 18 years old, this box must be checked. Authorization from a legal guardian will be required to publish the article.'}
+  />
+</label>
 
                           {author.isMinor && (
                             <MinorConsentSection
