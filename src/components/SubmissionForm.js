@@ -1,4 +1,4 @@
-// src/components/SubmissionForm.js (DISEÑO EDITORIAL - LÓGICA INTACTA)
+// src/components/SubmissionForm.js (DISEÑO EDITORIAL + LÓGICA COMPLETA + HELP CAPSULES)
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { auth } from '../firebase';
@@ -7,45 +7,7 @@ import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { UserIcon } from '@heroicons/react/24/outline';
 
-// ============ COMPONENTES AUXILIARES ============
-
-// Componente de Tooltip/Cápsula explicativa
-const HelpCapsule = ({ text, textEn }) => {
-  const [show, setShow] = useState(false);
-  const { language } = useLanguage();
-  const displayText = language === 'es' ? text : textEn;
-
-  return (
-    <div className="relative inline-block ml-1.5 align-middle">
-      <button
-        type="button"
-        onMouseEnter={() => setShow(true)}
-        onMouseLeave={() => setShow(false)}
-        onClick={() => setShow(!show)}
-        className="w-4 h-4 rounded-full border border-zinc-300 text-zinc-400 text-xs flex items-center justify-center hover:border-[#003b5c] hover:text-[#003b5c] hover:bg-[#E5E9F0] transition-all duration-200 font-serif"
-        aria-label="Ayuda"
-      >
-        i
-      </button>
-      <AnimatePresence>
-        {show && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 8 }}
-            className="absolute z-50 bottom-full mb-3 left-1/2 -translate-x-1/2 w-72 p-4 bg-[#003b5c] text-white text-xs rounded-sm shadow-2xl leading-relaxed font-serif"
-          >
-            <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-[#003b5c]" />
-            {displayText}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
-
-// ============ CONFIGURACIÓN DE ÁREAS TEMÁTICAS ============
-
+// ============ COMPONENTE: HELP CAPSULE (PIN DE AYUDA) ============
 
 const AREAS_TEMATICAS = {
   es: {
@@ -597,6 +559,55 @@ const getVocabularyForArea = (area) => {
   const spanishArea = AREA_MAPPING[area] || area;
   return VOCABULARIO_POR_AREA[spanishArea];
 };
+const HelpCapsule = ({ text, textEn, title, titleEn }) => {
+  const [show, setShow] = useState(false);
+  const { language } = useLanguage();
+  const isSpanish = language === 'es';
+  const displayText = isSpanish ? text : textEn;
+  const displayTitle = isSpanish ? (title || 'Ayuda') : (titleEn || 'Help');
+
+  return (
+    <div className="relative inline-flex items-center ml-2 align-middle">
+      <button
+        type="button"
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+        onClick={() => setShow(!show)}
+        className="w-5 h-5 rounded-full bg-slate-100 hover:bg-[#003b5c] text-slate-500 hover:text-white flex items-center justify-center transition-all duration-300 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#003b5c]/30"
+        aria-label={isSpanish ? 'Información de ayuda' : 'Help information'}
+      >
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </button>
+      <AnimatePresence>
+        {show && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 8 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="absolute z-50 bottom-full mb-3 left-1/2 -translate-x-1/2 w-80 p-5 bg-gradient-to-br from-[#003b5c] to-[#002b44] text-white text-xs rounded-xl shadow-2xl leading-relaxed font-sans ring-1 ring-white/10 backdrop-blur-sm"
+          >
+            <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-[#002b44]" />
+            <div className="flex items-start gap-3 mb-2">
+              <div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg className="w-4 h-4 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+              </div>
+              <div>
+                <h4 className="font-bold text-sm mb-1 text-white/90">{displayTitle}</h4>
+                <p className="text-white/70 text-xs leading-relaxed">{displayText}</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
 // ============ COMPONENTE: PALABRAS CLAVE CONTROLADAS ============
 
 const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language, mode = 'keywords' }) => {
@@ -604,17 +615,14 @@ const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language, m
   const [newTerm, setNewTerm] = useState('');
   const [error, setError] = useState('');
 
-    const maxKeywords = mode === 'codes' ? 4 : 6;
+  const maxKeywords = mode === 'codes' ? 4 : 6;
   const minKeywords = mode === 'codes' ? 2 : 2;
   const keywords = Array.isArray(value) ? value : [];
 
-
-
-    const addKeyword = () => {
+  const addKeyword = () => {
     const term = newTerm.trim();
     
-    // Validaciones con mensajes claros
-        if (!term) {
+    if (!term) {
       setError(mode === 'codes'
         ? (isSpanish ? 'Debes ingresar un código.' : 'You must enter a code.')
         : (isSpanish ? 'Debes ingresar una palabra clave.' : 'You must enter a keyword.')
@@ -629,7 +637,7 @@ const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language, m
       return;
     }
     
-        if (keywords.some(k => k === term || k.term === term)) {
+    if (keywords.some(k => k === term || k.term === term)) {
       setError(mode === 'codes'
         ? (isSpanish ? 'Este código ya existe.' : 'This code already exists.')
         : (isSpanish ? 'Esta palabra clave ya existe.' : 'This keyword already exists.')
@@ -641,13 +649,8 @@ const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language, m
     setNewTerm('');
     setError('');
   };
-   const removeKeyword = (index) => {
-    const updatedKeywords = keywords.filter((_, i) => i !== index);
-    onChange(updatedKeywords);
-  };
 
-  // Para códigos especializados (usa formato {code, term})
-  const removeCode = (index) => {
+  const removeKeyword = (index) => {
     const updatedKeywords = keywords.filter((_, i) => i !== index);
     onChange(updatedKeywords);
   };
@@ -661,93 +664,97 @@ const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language, m
 
   return (
     <div className="space-y-4">
-            {/* Info del vocabulario - SOLO para códigos especializados */}
-      {mode === 'codes' && (
-        <div className="bg-[#f0f4f8] border border-[#003b5c]/20 rounded-sm p-5 space-y-3">
-          <div className="flex items-start gap-3">
-            <span className="text-[#003b5c] mt-0.5">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      {mode === 'codes' && vocabularyConfig && (
+        <div className="bg-gradient-to-br from-slate-50 to-white border border-slate-200 rounded-xl p-5 space-y-4 shadow-sm">
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 bg-[#003b5c]/5 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 text-[#003b5c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
               </svg>
-            </span>
+            </div>
             <div className="flex-1">
-              <h4 className="font-serif font-bold text-[#003b5c] text-sm uppercase tracking-wider">
+              <h4 className="font-serif font-bold text-[#003b5c] text-sm tracking-wide">
                 {vocabularyConfig.vocabulario}: {vocabularyConfig.nombre}
               </h4>
-              <p className="text-[#5A6B7A] text-xs mt-1 font-sans">
+              <p className="text-slate-500 text-xs mt-1.5 font-sans leading-relaxed">
                 {vocabularyConfig.instrucciones}
               </p>
               <a
                 href={vocabularyConfig.searchUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 mt-2 text-[#003b5c] hover:text-[#e86125] text-xs font-medium transition-colors font-sans"
+                className="inline-flex items-center gap-1.5 mt-3 text-[#003b5c] hover:text-[#e86125] text-xs font-semibold transition-colors font-sans"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
-                {isSpanish ? 'Abrir buscador' : 'Open search'} →
+                {isSpanish ? 'Explorar vocabulario' : 'Explore vocabulary'} 
+                <span aria-hidden="true">&rarr;</span>
               </a>
             </div>
           </div>
-          <div className="bg-white rounded-sm p-3 border border-gray-200">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-[#5A6B7A]">
+          <div className="bg-white rounded-lg p-4 border border-slate-100">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500">
               {isSpanish ? 'Formato esperado:' : 'Expected format:'}
             </span>
-            <code className="ml-2 text-sm font-mono text-[#003b5c] bg-[#F5F7FA] px-2 py-0.5 rounded-sm">
+            <code className="ml-2 text-sm font-mono text-[#003b5c] bg-slate-50 px-2 py-1 rounded">
               {vocabularyConfig.formato}
             </code>
-            <span className="text-[#5A6B7A] text-sm mx-2">·</span>
-            <span className="text-[10px] font-mono uppercase tracking-wider text-[#5A6B7A]">
+            <span className="text-slate-400 text-sm mx-2">·</span>
+            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500">
               {isSpanish ? 'Ejemplo:' : 'Example:'}
             </span>
-            <code className="ml-2 text-sm font-mono text-[#e86125] bg-[#F5F7FA] px-2 py-0.5 rounded-sm">
+            <code className="ml-2 text-sm font-mono text-[#e86125] bg-slate-50 px-2 py-1 rounded">
               {vocabularyConfig.ejemplo}
             </code>
           </div>
         </div>
       )}
-            {/* Campos de entrada */}
+
       <div className="flex gap-3">
-        <div className="flex-1">
-                    <label className="block text-[10px] font-mono font-semibold uppercase tracking-wider text-[#546E7A] mb-1.5">
-            {mode === 'codes' 
-              ? (isSpanish ? 'Código' : 'Code') + ' *'
-              : (isSpanish ? 'Palabra clave' : 'Keyword') + ' *'
-            }
-          </label>
+        <div className="flex-1 relative">
           <input
-            id="controlled-term-input"
             type="text"
             value={newTerm}
             onChange={(e) => setNewTerm(e.target.value)}
             onKeyPress={handleTermKeyPress}
-                        placeholder={mode === 'codes' ? "CCS2012.10010179" : (isSpanish ? "Aprendizaje automático" : "Machine learning")}
-            className="w-full p-3 bg-white border border-gray-200 rounded-sm text-sm font-serif focus:ring-2 focus:ring-[#003b5c] focus:border-transparent outline-none transition-all"
+            placeholder={mode === 'codes' ? "Ej: CCS2012.10010179" : (isSpanish ? "Ej: Aprendizaje automático" : "e.g., Machine learning")}
+            className="w-full p-3.5 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm font-sans focus:ring-2 focus:ring-[#003b5c] focus:bg-slate-50 outline-none transition-all duration-300 shadow-sm"
           />
+          {mode === 'keywords' && (
+            <HelpCapsule
+              title={isSpanish ? '¿Qué son las palabras clave?' : 'What are keywords?'}
+              text={isSpanish 
+                ? 'Son términos que describen tu investigación. Usa palabras específicas de tu campo. Por ejemplo: "machine learning", "células madre", "cambio climático". Ayudan a que otros investigadores encuentren tu trabajo.'
+                : 'These are terms that describe your research. Use specific words from your field. For example: "machine learning", "stem cells", "climate change". They help other researchers find your work.'}
+            />
+          )}
         </div>
-        <div className="flex items-end">
-          <button
-            type="button"
-            onClick={addKeyword}
-            disabled={!newTerm.trim() || keywords.length >= maxKeywords}
-            className="px-5 py-3 bg-[#003b5c] text-white rounded-sm text-xs font-bold uppercase tracking-wider hover:bg-[#002b44] transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-          >
-            + {isSpanish ? 'Agregar' : 'Add'}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={addKeyword}
+          disabled={!newTerm.trim() || keywords.length >= maxKeywords}
+          className="px-6 py-3.5 bg-slate-900 text-white rounded-lg text-sm font-semibold tracking-wide hover:bg-[#003b5c] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+        >
+          {isSpanish ? 'Añadir' : 'Add'}
+        </button>
       </div>
 
-      {/* Mensaje de error */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-sm p-3 text-xs text-red-600 font-sans">
+        <motion.div 
+          initial={{ opacity: 0, y: -5 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          className="flex items-center gap-2 text-xs text-red-500 font-medium bg-red-50 px-3 py-2 rounded-lg"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
           {error}
-        </div>
+        </motion.div>
       )}
 
-      {/* Contador y validación */}
       <div className="flex items-center justify-between">
-                <p className={`text-xs font-mono ${keywords.length < minKeywords ? 'text-red-600' : 'text-[#5A6B7A]'}`}>
+        <p className={`text-xs font-mono ${keywords.length < minKeywords ? 'text-red-600' : 'text-slate-500'}`}>
           {mode === 'codes' 
             ? (isSpanish 
                 ? `${keywords.length} de 2-4 códigos requeridos`
@@ -771,28 +778,34 @@ const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language, m
         )}
       </div>
 
-            {/* Chips de palabras clave */}
-            {keywords.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {keywords.map((kw, index) => (
-            <span
-              key={index}
-              className={`inline-flex items-center gap-2 px-3 py-1.5 border rounded-sm text-xs font-medium
-                ${mode === 'codes' 
-                  ? 'bg-amber-50 border-amber-200 text-amber-800 font-mono font-bold' 
-                  : 'bg-[#f4f5f7] border-gray-200 text-[#003b5c] font-serif'
-                }`}
-            >
-              <span>{typeof kw === 'string' ? kw : kw.term}</span>
-              <button
-                type="button"
-                onClick={() => removeKeyword(index)}
-                className="ml-1 text-gray-400 hover:text-red-600 transition-colors"
+      {keywords.length > 0 && (
+        <div className="flex flex-wrap gap-2 pt-2">
+          <AnimatePresence>
+            {keywords.map((kw, index) => (
+              <motion.span
+                initial={{ opacity: 0, scale: 0.8 }} 
+                animate={{ opacity: 1, scale: 1 }} 
+                exit={{ opacity: 0, scale: 0.8 }}
+                key={index}
+                className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-medium shadow-sm ring-1 transition-all
+                  ${mode === 'codes' 
+                    ? 'bg-amber-50 ring-amber-200/60 text-amber-900 font-mono font-bold' 
+                    : 'bg-slate-50 ring-slate-200/60 text-slate-700 hover:bg-white'
+                  }`}
               >
-                ✕
-              </button>
-            </span>
-          ))}
+                <span>{typeof kw === 'string' ? kw : kw.term}</span>
+                <button 
+                  type="button" 
+                  onClick={() => removeKeyword(index)} 
+                  className="ml-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full p-0.5 transition-colors"
+                >
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </motion.span>
+            ))}
+          </AnimatePresence>
         </div>
       )}
     </div>
@@ -809,13 +822,6 @@ const MinorConsentSection = ({ author, index, onUpdate }) => {
   const consentUrls = {
     es: 'https://www.revistacienciasestudiantes.com/consent.pdf',
     en: 'https://www.revistacienciasestudiantes.com/consentEN.pdf'
-  };
-
-  const handleConsentChange = (method) => {
-    onUpdate(index, 'consentMethod', method);
-    if (method !== 'upload') {
-      onUpdate(index, 'consentFile', null);
-    }
   };
 
   const handleFileUpload = (e) => {
@@ -838,265 +844,173 @@ const MinorConsentSection = ({ author, index, onUpdate }) => {
       initial={{ opacity: 0, height: 0 }}
       animate={{ opacity: 1, height: 'auto' }}
       exit={{ opacity: 0, height: 0 }}
-      className="mt-6 pt-6 border-t border-gray-200 space-y-5 bg-[#f8f9fa] rounded-sm p-5"
+      className="mt-6 pt-6 border-t border-slate-200 space-y-6 bg-gradient-to-br from-amber-50/50 to-white rounded-xl p-6"
     >
-      <div className="flex items-center gap-2 text-red-600">
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-        </svg>
-        <p className="text-sm font-medium font-sans uppercase tracking-wider">
-          {isSpanish
-            ? 'Autor menor de edad: se requiere consentimiento legal'
-            : 'Minor author: legal guardian consent required'}
-        </p>
+      <div className="flex items-center gap-3 text-amber-800">
+        <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+        </div>
+        <h4 className="font-serif font-bold text-sm tracking-wide">
+          {isSpanish 
+            ? 'Autorización de Tutor Legal Requerida' 
+            : 'Legal Guardian Consent Required'}
+        </h4>
+        <HelpCapsule
+          title={isSpanish ? '¿Por qué se requiere esto?' : 'Why is this required?'}
+          text={isSpanish
+            ? 'Por razones legales, los autores menores de 18 años necesitan que su tutor legal autorice la publicación. Esto protege al menor y asegura que toda su investigación cumpla con estándares éticos.'
+            : 'For legal reasons, authors under 18 years old need their legal guardian to authorize publication. This protects the minor and ensures all research meets ethical standards.'}
+        />
       </div>
 
-      <div>
-        <label className="block text-xs font-medium text-[#1A2B3C] mb-1.5 font-sans uppercase tracking-wider">
-          {isSpanish ? 'Nombre completo del tutor legal *' : 'Legal guardian full name *'}
+      <div className="space-y-2">
+        <label className="block text-xs font-semibold text-slate-700 tracking-wide">
+          {isSpanish ? 'Nombre completo del tutor legal' : 'Legal guardian full name'} 
+          <span className="text-red-500">*</span>
+          <HelpCapsule
+            title={isSpanish ? '¿Quién es el tutor legal?' : 'Who is the legal guardian?'}
+            text={isSpanish
+              ? 'Es la persona responsable legalmente del menor: padre, madre o tutor designado. Su nombre aparecerá en la autorización formal.'
+              : 'This is the person legally responsible for the minor: father, mother, or designated guardian. Their name will appear in the formal authorization.'}
+          />
         </label>
         <input
           type="text"
           value={author.guardianName || ''}
           onChange={(e) => onUpdate(index, 'guardianName', e.target.value)}
-          className="w-full p-3 bg-white border border-gray-200 rounded-sm text-sm focus:ring-2 focus:ring-[#003b5c] focus:border-transparent outline-none font-sans"
-          placeholder={isSpanish ? 'Juan Pérez López' : 'John Doe Smith'}
+          className="w-full p-3.5 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] transition-all shadow-sm"
+          placeholder={isSpanish ? 'Ej: Juan Pérez López' : 'e.g., John Doe Smith'}
         />
       </div>
 
-      {/* Reemplaza ESTE bloque en tu código */}
-<div className="space-y-4">
-  <p className="text-xs uppercase tracking-widest text-[#546E7A] font-mono font-bold">
-    {isSpanish ? 'Método de consentimiento' : 'Consent method'}
-  </p>
+      <div className="space-y-4">
+        <label className="block text-xs font-semibold text-slate-700 tracking-wide">
+          {isSpanish ? 'Método de validación' : 'Validation method'}
+          <HelpCapsule
+            title={isSpanish ? '¿Cómo funciona la validación?' : 'How does validation work?'}
+            text={isSpanish
+              ? 'Puedes elegir entre enviar el consentimiento por correo electrónico o subir un formulario firmado. Ambos métodos son igualmente válidos.'
+              : 'You can choose between sending consent by email or uploading a signed form. Both methods are equally valid.'}
+          />
+        </label>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label className={`relative flex cursor-pointer rounded-xl bg-white p-4 ring-1 transition-all hover:bg-slate-50 ${author.consentMethod === 'email' ? 'ring-2 ring-[#003b5c] shadow-md' : 'ring-slate-200 shadow-sm'}`}>
+            <input 
+              type="radio" 
+              name={`consent-${index}-${author.firstName}-${author.lastName}`}
+              value="email" 
+              checked={author.consentMethod === 'email'} 
+              onChange={() => onUpdate(index, 'consentMethod', 'email')} 
+              className="peer sr-only" 
+            />
+            <span className="flex items-center gap-3">
+              <div className={`flex items-center justify-center w-5 h-5 rounded-full border ${author.consentMethod === 'email' ? 'border-[#003b5c] bg-[#003b5c]' : 'border-slate-300'}`}>
+                {author.consentMethod === 'email' && <div className="w-2 h-2 rounded-full bg-white" />}
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold text-slate-900">{isSpanish ? 'Vía Correo' : 'Via Email'}</span>
+                <span className="text-xs text-slate-500">contact@revistacienciasestudiantes.com</span>
+              </div>
+            </span>
+          </label>
 
-  <label className="flex items-start gap-3 cursor-pointer">
-    <input
-      type="radio"
-      name={`consent-${index}-${author.firstName}-${author.lastName}`}
-      value="email"
-      checked={author.consentMethod === 'email'}
-      onChange={() => onUpdate(index, 'consentMethod', 'email')}
-      className="mt-0.5 w-4 h-4 text-[#003b5c]"
-    />
-    <div>
-      <span className="text-sm text-[#1A2B3C] block font-sans">
-        {isSpanish ? 'Enviar por correo electrónico' : 'Send by email'}
-      </span>
-      <span className="text-xs text-[#546E7A] font-sans">contact@revistacienciasestudiantes.com</span>
-    </div>
-  </label>
+          <label className={`relative flex cursor-pointer rounded-xl bg-white p-4 ring-1 transition-all hover:bg-slate-50 ${author.consentMethod === 'upload' ? 'ring-2 ring-[#003b5c] shadow-md' : 'ring-slate-200 shadow-sm'}`}>
+            <input 
+              type="radio" 
+              name={`consent-${index}-${author.firstName}-${author.lastName}`}
+              value="upload" 
+              checked={author.consentMethod === 'upload'} 
+              onChange={() => onUpdate(index, 'consentMethod', 'upload')} 
+              className="peer sr-only" 
+            />
+            <span className="flex items-center gap-3">
+              <div className={`flex items-center justify-center w-5 h-5 rounded-full border ${author.consentMethod === 'upload' ? 'border-[#003b5c] bg-[#003b5c]' : 'border-slate-300'}`}>
+                {author.consentMethod === 'upload' && <div className="w-2 h-2 rounded-full bg-white" />}
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold text-slate-900">{isSpanish ? 'Subir Documento' : 'Upload File'}</span>
+                <span className="text-xs text-slate-500">{isSpanish ? 'PDF firmado' : 'Signed PDF'}</span>
+              </div>
+            </span>
+          </label>
+        </div>
+      </div>
 
- {author.consentMethod === 'email' && (
-  <div className="ml-7 space-y-4">
-    <div className="p-4 bg-white border border-gray-200 rounded-sm text-xs text-[#1A2B3C] font-sans">
-      {isSpanish ? (
-        <>
-          <p className="font-medium mb-2">El correo debe contener:</p>
-          <ul className="list-disc pl-5 space-y-1 mb-4">
-            <li>Nombre del autor menor</li>
-            <li>Nombre completo del tutor</li>
-            <li>Documento de identidad del tutor</li>
-            <li>Frase: "Autorizo la publicacion en Revista Nacional de las Ciencias"</li>
-          </ul>
-        </>
-      ) : (
-        <>
-          <p className="font-medium mb-2">Email must include:</p>
-          <ul className="list-disc pl-5 space-y-1 mb-4">
-            <li>Minor author name</li>
-            <li>Guardian full name</li>
-            <li>Guardian ID document</li>
-            <li>Phrase: "I authorize publication in National Review of Sciences"</li>
-          </ul>
-        </>
-      )}
-      
-
-<button
-  type="button"
-  onClick={() => {
-    const minorName = `${author.firstName} ${author.lastName}`.trim();
-    const guardianName = author.guardianName || (isSpanish ? '[Nombre del tutor]' : '[Guardian name]');
-    
-    const titleElement = document.querySelector('input[name="title"]');
-    const articleTitle = titleElement ? titleElement.value : (isSpanish ? '[Título del artículo]' : '[Article title]');
-    
-    const subject = isSpanish
-      ? `Consentimiento para publicación - Autor menor: ${minorName}`
-      : `Publication Consent - Minor Author: ${minorName}`;
-    
-    // Texto en español
-    const bodyEs = 
-`CONSENTIMIENTO PARA PUBLICACIÓN — AUTOR MENOR DE EDAD
-Revista Nacional de las Ciencias para Estudiantes
-
-Estimado equipo editorial,
-
-Por medio del presente correo electrónico, yo, ${guardianName}, en calidad de tutor legal de ${minorName}, declaro y manifiesto lo siguiente:
-
-— AUTORIZACIÓN DE PUBLICACIÓN —
-Autorizo expresamente la publicación del artículo titulado «${articleTitle}» en la Revista Nacional de las Ciencias para Estudiantes, bajo la licencia Creative Commons CC-BY 4.0, de acceso abierto y con posibilidad de reutilización por terceros con la debida atribución.
-
-— DATOS DEL TUTOR LEGAL —
-Nombre completo: ${guardianName}
-Relación con el menor: [Indicar: Padre / Madre / Tutor legal]
-Documento de identidad: [Indicar tipo y número]
-
-— DATOS DEL MENOR AUTOR —
-Nombre completo: ${minorName}
-Edad: [Indicar edad]
-Fecha de nacimiento: [Indicar fecha]
-
-— DECLARACIONES —
-• He leído el manuscrito completo y apruebo su contenido.
-• Comprendo que el artículo será de acceso público en internet.
-• No recibo compensación económica por esta publicación.
-• Entiendo que puedo retirar este consentimiento antes de la publicación efectiva, notificándolo por escrito a contact@revistacienciasestudiantes.com.
-
-Sin otro particular, saluda atentamente,
-
-${guardianName}
-[Ciudad, país] — [Fecha]`;
-
-    // Texto en inglés
-    const bodyEn = 
-`PUBLICATION CONSENT — MINOR AUTHOR
-National Review of Sciences for Students
-
-Dear Editorial Team,
-
-Through this email, I, ${guardianName}, as legal guardian of ${minorName}, hereby declare and state the following:
-
-— PUBLICATION AUTHORIZATION —
-I expressly authorize the publication of the article titled «${articleTitle}» in the National Review of Sciences for Students, under the Creative Commons CC-BY 4.0 license, open access, with possibility of reuse by third parties with proper attribution.
-
-— LEGAL GUARDIAN INFORMATION —
-Full name: ${guardianName}
-Relationship to minor: [Specify: Father / Mother / Legal guardian]
-ID document: [Specify type and number]
-
-— MINOR AUTHOR INFORMATION —
-Full name: ${minorName}
-Age: [Specify age]
-Date of birth: [Specify date]
-
-— DECLARATIONS —
-• I have read the complete manuscript and approve its content.
-• I understand that the article will be publicly accessible on the internet.
-• I receive no financial compensation for this publication.
-• I understand that I may withdraw this consent prior to effective publication by notifying in writing to contact@revistacienciasestudiantes.com.
-
-Sincerely,
-
-${guardianName}
-[City, country] — [Date]`;
-
-    const body = isSpanish ? bodyEs : bodyEn;
-    
-    // Codificar manualmente los caracteres especiales
-    const encodedSubject = subject
-      .replace(/á/g, '%C3%A1')
-      .replace(/é/g, '%C3%A9')
-      .replace(/í/g, '%C3%AD')
-      .replace(/ó/g, '%C3%B3')
-      .replace(/ú/g, '%C3%BA')
-      .replace(/ñ/g, '%C3%B1')
-      .replace(/Á/g, '%C3%81')
-      .replace(/É/g, '%C3%89')
-      .replace(/Í/g, '%C3%8D')
-      .replace(/Ó/g, '%C3%93')
-      .replace(/Ú/g, '%C3%9A')
-      .replace(/Ñ/g, '%C3%91')
-      .replace(/ü/g, '%C3%BC')
-      .replace(/Ü/g, '%C3%9C');
-    
-    const encodedBody = body
-      .replace(/á/g, '%C3%A1')
-      .replace(/é/g, '%C3%A9')
-      .replace(/í/g, '%C3%AD')
-      .replace(/ó/g, '%C3%B3')
-      .replace(/ú/g, '%C3%BA')
-      .replace(/ñ/g, '%C3%B1')
-      .replace(/Á/g, '%C3%81')
-      .replace(/É/g, '%C3%89')
-      .replace(/Í/g, '%C3%8D')
-      .replace(/Ó/g, '%C3%93')
-      .replace(/Ú/g, '%C3%9A')
-      .replace(/Ñ/g, '%C3%91')
-      .replace(/ü/g, '%C3%BC')
-      .replace(/Ü/g, '%C3%9C')
-      .replace(/«/g, '%C2%AB')
-      .replace(/»/g, '%C2%BB')
-      .replace(/—/g, '%E2%80%94')
-      .replace(/•/g, '%E2%80%A2')
-      .replace(/\n/g, '%0A');
-    
-    const gmailUrl = `https://mail.google.com/mail/u/0/?fs=1&to=contact@revistacienciasestudiantes.com&su=${encodedSubject}&body=${encodedBody}&tf=cm`;
-    
-    window.open(gmailUrl, '_blank', 'noopener,noreferrer');
-  }}
-  className="w-full px-5 py-3 bg-[#003b5c] text-white rounded-sm text-sm font-bold uppercase tracking-wider hover:bg-[#002b44] transition-colors flex items-center justify-center gap-2"
->
-  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-  </svg>
-  {isSpanish ? 'Redactar correo en Gmail' : 'Compose email in Gmail'}
-</button>
-      
-      <p className="text-[10px] text-gray-400 leading-relaxed">
-        {isSpanish 
-          ? 'Se abrira una nueva ventana de Gmail con el formulario pre-completado. Complete los campos marcados con [ ] y envie el correo. No olvide adjuntar el documento de identidad del tutor si es necesario.'
-          : 'A new Gmail window will open with the pre-filled form. Complete the fields marked with [ ] and send the email. Do not forget to attach the guardian ID document if necessary.'}
-      </p>
-    </div>
-  </div>
-)}
-
-  <label className="flex items-start gap-3 cursor-pointer">
-    <input
-      type="radio"
-      name={`consent-${index}-${author.firstName}-${author.lastName}`}
-      value="upload"
-      checked={author.consentMethod === 'upload'}
-      onChange={() => onUpdate(index, 'consentMethod', 'upload')}
-      className="mt-0.5 w-4 h-4 text-[#003b5c]"
-    />
-    <span className="text-sm text-[#1A2B3C] font-sans">
-      {isSpanish ? 'Subir formulario firmado' : 'Upload signed form'}
-    </span>
-  </label>
-
-  {author.consentMethod === 'upload' && (
-    <div className="ml-7 space-y-4">
-      <a
-        href={consentUrls[language]}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-2 text-[#003b5c] hover:text-[#e86125] text-sm underline-offset-4 hover:underline font-sans font-medium"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v-4m0 0l4 4m-4-4l4-4m12 4v4m0-4l-4 4m4-4l-4-4" />
-        </svg>
-        {isSpanish ? 'Descargar formulario' : 'Download form'}
-      </a>
-
-      <input
-        type="file"
-        accept=".pdf,.jpg,.jpeg,.png"
-        onChange={handleFileUpload}
-        className="block w-full text-sm text-[#546E7A] file:mr-4 file:py-2.5 file:px-5 file:rounded-sm file:border-0 file:text-xs file:font-bold file:bg-[#f4f5f7] file:text-[#003b5c] hover:file:bg-gray-200 font-sans uppercase tracking-wider"
-      />
-
-      {author.consentFile && (
-        <div className="flex items-center gap-2 text-[#003b5c] text-xs font-sans">
-          <span>✓</span>
-          <span>{author.consentFile.name}</span>
+      {author.consentMethod === 'email' && (
+        <div className="space-y-4">
+          <div className="p-4 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 font-sans">
+            <p className="font-medium mb-2">{isSpanish ? 'El correo debe contener:' : 'Email must include:'}</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>{isSpanish ? 'Nombre del autor menor' : 'Minor author name'}</li>
+              <li>{isSpanish ? 'Nombre completo del tutor' : 'Guardian full name'}</li>
+              <li>{isSpanish ? 'Documento de identidad del tutor' : 'Guardian ID document'}</li>
+              <li>{isSpanish ? 'Frase: "Autorizo la publicación en Revista Nacional de las Ciencias"' : 'Phrase: "I authorize publication in National Review of Sciences"'}</li>
+            </ul>
+          </div>
+          
+          <button
+            type="button"
+            onClick={() => {
+              const minorName = `${author.firstName} ${author.lastName}`.trim();
+              const guardianName = author.guardianName || (isSpanish ? '[Nombre del tutor]' : '[Guardian name]');
+              const titleElement = document.querySelector('input[name="title"]');
+              const articleTitle = titleElement ? titleElement.value : (isSpanish ? '[Título del artículo]' : '[Article title]');
+              
+              const subject = isSpanish
+                ? `Consentimiento para publicación - Autor menor: ${minorName}`
+                : `Publication Consent - Minor Author: ${minorName}`;
+              
+              const body = isSpanish
+                ? `CONSENTIMIENTO PARA PUBLICACIÓN — AUTOR MENOR DE EDAD\nRevista Nacional de las Ciencias para Estudiantes\n\nEstimado equipo editorial,\n\nPor medio del presente correo electrónico, yo, ${guardianName}, en calidad de tutor legal de ${minorName}, declaro y manifiesto lo siguiente:\n\n— AUTORIZACIÓN DE PUBLICACIÓN —\nAutorizo expresamente la publicación del artículo titulado «${articleTitle}» en la Revista Nacional de las Ciencias para Estudiantes, bajo la licencia Creative Commons CC-BY 4.0, de acceso abierto y con posibilidad de reutilización por terceros con la debida atribución.\n\n— DATOS DEL TUTOR LEGAL —\nNombre completo: ${guardianName}\nRelación con el menor: [Indicar: Padre / Madre / Tutor legal]\nDocumento de identidad: [Indicar tipo y número]\n\n— DATOS DEL MENOR AUTOR —\nNombre completo: ${minorName}\nEdad: [Indicar edad]\nFecha de nacimiento: [Indicar fecha]\n\n— DECLARACIONES —\n• He leído el manuscrito completo y apruebo su contenido.\n• Comprendo que el artículo será de acceso público en internet.\n• No recibo compensación económica por esta publicación.\n• Entiendo que puedo retirar este consentimiento antes de la publicación efectiva, notificándolo por escrito a contact@revistacienciasestudiantes.com.\n\nSin otro particular, saluda atentamente,\n\n${guardianName}\n[Ciudad, país] — [Fecha]`
+                : `PUBLICATION CONSENT — MINOR AUTHOR\nNational Review of Sciences for Students\n\nDear Editorial Team,\n\nThrough this email, I, ${guardianName}, as legal guardian of ${minorName}, hereby declare and state the following:\n\n— PUBLICATION AUTHORIZATION —\nI expressly authorize the publication of the article titled «${articleTitle}» in the National Review of Sciences for Students, under the Creative Commons CC-BY 4.0 license, open access, with possibility of reuse by third parties with proper attribution.\n\n— LEGAL GUARDIAN INFORMATION —\nFull name: ${guardianName}\nRelationship to minor: [Specify: Father / Mother / Legal guardian]\nID document: [Specify type and number]\n\n— MINOR AUTHOR INFORMATION —\nFull name: ${minorName}\nAge: [Specify age]\nDate of birth: [Specify date]\n\n— DECLARATIONS —\n• I have read the complete manuscript and approve its content.\n• I understand that the article will be publicly accessible on the internet.\n• I receive no financial compensation for this publication.\n• I understand that I may withdraw this consent prior to effective publication by notifying in writing to contact@revistacienciasestudiantes.com.\n\nSincerely,\n\n${guardianName}\n[City, country] — [Date]`;
+              
+              const gmailUrl = `https://mail.google.com/mail/u/0/?fs=1&to=contact@revistacienciasestudiantes.com&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}&tf=cm`;
+              window.open(gmailUrl, '_blank', 'noopener,noreferrer');
+            }}
+            className="w-full px-5 py-3 bg-[#003b5c] text-white rounded-lg text-sm font-bold uppercase tracking-wider hover:bg-[#002b44] transition-colors flex items-center justify-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            {isSpanish ? 'Redactar correo en Gmail' : 'Compose email in Gmail'}
+          </button>
         </div>
       )}
-    </div>
-  )}
-</div>
+
+      {author.consentMethod === 'upload' && (
+        <div className="space-y-4">
+          <a
+            href={consentUrls[language]}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-[#003b5c] hover:text-[#e86125] text-sm underline-offset-4 hover:underline font-sans font-medium"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v-4m0 0l4 4m-4-4l4-4m12 4v4m0-4l-4 4m4-4l-4-4" />
+            </svg>
+            {isSpanish ? 'Descargar formulario' : 'Download form'}
+          </a>
+
+          <input
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png"
+            onChange={handleFileUpload}
+            className="block w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-slate-100 file:text-[#003b5c] hover:file:bg-slate-200 font-sans uppercase tracking-wider"
+          />
+
+          {author.consentFile && (
+            <div className="flex items-center gap-2 text-[#003b5c] text-xs font-sans bg-green-50 px-3 py-2 rounded-lg">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              <span>{author.consentFile.name}</span>
+            </div>
+          )}
+        </div>
+      )}
     </motion.div>
   );
 };
@@ -1115,7 +1029,6 @@ export default function SubmissionForm({ user, onSuccess }) {
   const [submissionId, setSubmissionId] = useState('');
   const [driveFolderId, setDriveFolderId] = useState('');
   const [validationErrors, setValidationErrors] = useState({});
- 
   
   // Estado inicial del formulario
   const initialFormState = {
@@ -1176,6 +1089,7 @@ export default function SubmissionForm({ user, onSuccess }) {
   };
 
   const [formData, setFormData] = useState(initialFormState);
+  const formDataRef = useRef(formData);
 
   // Opciones de tipo de artículo
   const articleTypeOptions = {
@@ -1212,78 +1126,43 @@ export default function SubmissionForm({ user, onSuccess }) {
     ]
   };
 
-// 1. Primero, añade estos refs al inicio de tu componente
-const formDataRef = useRef(formData);
-
-// 2. Sincroniza los refs
-useEffect(() => {
-  formDataRef.current = formData;
-}, [formData]);
-
-// 3. Corrige el useEffect de carga del borrador
-useEffect(() => {
-  const savedData = localStorage.getItem('submissionFormDraft');
-  if (savedData) {
-    try {
-      const parsed = JSON.parse(savedData);
-      setFormData(prev => ({
-        ...prev,
-        ...parsed,
-        manuscript: null,
-        manuscriptName: parsed.manuscriptName || '',
-        editorComment: parsed.editorComment || '' // Carga el editorComment del localStorage
-      }));
-    } catch (e) {
-      console.error('[DEBUG] Error cargando borrador:', e);
-    }
-  }
-}, []); // ✅ Solo al montar
-
-useEffect(() => {
-  const interval = setInterval(() => {
-    const dataToSave = {
-      ...formDataRef.current,
-      manuscript: null,
-      manuscriptName: formDataRef.current.manuscriptName,
-      // Ya no es necesario sobreescribir editorComment, viene incluido en formDataRef
-    };
-    localStorage.setItem('submissionFormDraft', JSON.stringify(dataToSave));
-  }, 30000);
-  return () => clearInterval(interval);
-}, []);
-  // ============ DEBUG: Mostrar estado del paso 3 ============
+  // Sincronizar refs
   useEffect(() => {
-    if (currentStep === 3) {
-      console.log('═══════════════════════════════════');
-      console.log('🔍 DIAGNÓSTICO PASO 3:');
-      console.log('───────────────────────────────────');
-      console.log('📋 Declaraciones:', allDeclarationsAccepted() ? '✅ TODAS' : '❌ FALTAN');
-      
-      // Mostrar qué declaraciones faltan
-      const faltantes = Object.entries(formData.declarations)
-        .filter(([, v]) => !v)
-        .map(([k]) => k);
-      if (faltantes.length > 0) {
-        console.log('   Faltan:', faltantes.join(', '));
-      }
-      
-      console.log('📄 Manuscrito:', formData.manuscriptName || '❌ NO SUBIDO');
-      console.log('💾 Datos:', formData.dataAvailability || '❌ NO SELECCIONADO');
-      console.log('🏥 Ética requerida:', formData.requiresEthicsApproval);
-      if (formData.requiresEthicsApproval === 'yes') {
-        console.log('   Comité:', formData.ethicsCommitteeName || '❌ VACÍO');
-      }
-      console.log('🤖 IA usada:', formData.aiUsed);
-      if (formData.aiUsed === 'yes') {
-        console.log('   Herramientas:', formData.aiTools);
-      }
-      console.log('───────────────────────────────────');
-      console.log('🎯 isStepValid(3):', isStepValid(3));
-      console.log('═══════════════════════════════════');
-    }
-  }, [currentStep, formData, formData.declarations]);
+    formDataRef.current = formData;
+  }, [formData]);
 
-  
+  // Carga del borrador
+  useEffect(() => {
+    const savedData = localStorage.getItem('submissionFormDraft');
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+        setFormData(prev => ({
+          ...prev,
+          ...parsed,
+          manuscript: null,
+          manuscriptName: parsed.manuscriptName || '',
+          editorComment: parsed.editorComment || ''
+        }));
+      } catch (e) {
+        console.error('[DEBUG] Error cargando borrador:', e);
+      }
+    }
+  }, []);
+
+  // Autoguardado
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const dataToSave = {
+        ...formDataRef.current,
+        manuscript: null,
+        manuscriptName: formDataRef.current.manuscriptName,
+      };
+      localStorage.setItem('submissionFormDraft', JSON.stringify(dataToSave));
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Utilidad para convertir archivo a base64
   const toBase64 = (file) =>
     new Promise((resolve, reject) => {
@@ -1310,7 +1189,6 @@ useEffect(() => {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
     
-    // Limpiar error del campo cuando se modifica
     setValidationErrors(prev => {
       const newErrors = { ...prev };
       delete newErrors[name];
@@ -1325,35 +1203,27 @@ useEffect(() => {
     setFormData(prev => ({ ...prev, authors: newAuthors }));
   };
 
-  // ============ FUNCIÓN PARA IMPORTAR PERFIL DEL USUARIO LOGUEADO ============
+  // Importar perfil del usuario logueado
   const handleImportMyProfile = (authorIndex) => {
     if (!user) return;
 
     const updatedAuthors = [...formData.authors];
     const author = updatedAuthors[authorIndex];
 
-    // Mapeo de campos del perfil de usuario a campos del autor
-    const importedData = {
+    updatedAuthors[authorIndex] = {
       firstName: user.firstName || author.firstName,
       lastName: user.lastName || author.lastName,
       email: user.email || author.email,
       institution: user.institution || author.institution || '',
       orcid: user.orcid || author.orcid || '',
-      // La contribución NO se importa automáticamente, debe ser manual
       contribution: author.contribution,
-      // No tocamos isMinor, guardianName, consentMethod, consentFile
       isMinor: author.isMinor,
       guardianName: author.guardianName,
       consentMethod: author.consentMethod,
       consentFile: author.consentFile,
       isCorresponding: author.isCorresponding,
     };
-
-    updatedAuthors[authorIndex] = importedData;
     setFormData(prev => ({ ...prev, authors: updatedAuthors }));
-
-    // Pequeña notificación visual (opcional)
-    console.log(`✅ Perfil importado para autor #${authorIndex + 1}: ${importedData.firstName} ${importedData.lastName}`);
   };
 
   // Agregar autor
@@ -1428,30 +1298,22 @@ useEffect(() => {
   };
 
   // Manejador de declaraciones
-  // Versión blindada: actualiza directamente sin dependencia de estado previo complejo
   const handleDeclarationChange = (key) => {
-    setFormData(prev => {
-      const newDeclarations = { ...prev.declarations };
-      newDeclarations[key] = !newDeclarations[key];
-      
-      const newFormData = {
-        ...prev,
-        declarations: newDeclarations
-      };
-      
-      // Verificación de seguridad: forzar true/false explícito
-      Object.keys(newFormData.declarations).forEach(k => {
-        if (typeof newFormData.declarations[k] !== 'boolean') {
-          newFormData.declarations[k] = false;
-        }
-      });
-      
-      return newFormData;
+    setFormData(prev => ({
+      ...prev,
+      declarations: {
+        ...prev.declarations,
+        [key]: !prev.declarations[key]
+      }
+    }));
+    setValidationErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors.declarations;
+      return newErrors;
     });
   };
 
   // Verificar si todas las declaraciones están aceptadas
-  // Versión blindada: verifica una por una, sin depender de Object.values
   const allDeclarationsAccepted = () => {
     const d = formData.declarations;
     return (
@@ -1466,9 +1328,7 @@ useEffect(() => {
     );
   };
 
-  // ============ FUNCIÓN DE VALIDACIÓN ============
-  
-  // Función pura para validar sin modificar estado (para usar en el renderizado)
+  // Validación sin modificar estado (para renderizado)
   const isStepValid = (step) => {
     switch (step) {
       case 1:
@@ -1510,7 +1370,7 @@ useEffect(() => {
     }
   };
 
-  // Función de validación con efectos secundarios (solo para navegación y envío)
+  // Validación con efectos secundarios (para navegación y envío)
   const validateAndProceed = (step) => {
     const errors = {};
     
@@ -1522,10 +1382,10 @@ useEffect(() => {
         if (!formData.abstract.trim()) {
           errors.abstract = isSpanish ? 'El resumen es obligatorio' : 'Abstract is required';
         }
-                if (!formData.keywordsEs || formData.keywordsEs.length < 2) {
+        if (!formData.keywordsEs || formData.keywordsEs.length < 2) {
           errors.controlledKeywords = isSpanish 
-            ? 'Debes agregar al menos 2 palabras clave en español (mínimo 2)' 
-            : 'You must add at least 2 keywords in Spanish (minimum 2)';
+            ? 'Debes agregar al menos 2 palabras clave en español' 
+            : 'You must add at least 2 keywords in Spanish';
         }
         if (formData.keywordsEs && formData.keywordsEs.length > 6) {
           errors.controlledKeywords = isSpanish 
@@ -1613,87 +1473,61 @@ useEffect(() => {
     return Object.keys(errors).length === 0;
   };
 
-  // ============ STEPS ============
-  const steps = [
-    { id: 1, title: isSpanish ? 'Manuscrito' : 'Manuscript' },
-    { id: 2, title: isSpanish ? 'Autores' : 'Authors' },
-    { id: 3, title: isSpanish ? 'Envío' : 'Submission' }
-  ];
-
   // Navegación entre pasos
   const nextStep = () => {
-    console.log(`[DEBUG] Intentando avanzar del paso ${currentStep} al ${currentStep + 1}`);
-    
     if (validateAndProceed(currentStep)) {
-      console.log(`[DEBUG] Validación exitosa, avanzando al paso ${currentStep + 1}`);
-      setValidationErrors({}); // Limpiar errores al avanzar
+      setValidationErrors({});
       setCurrentStep(prev => prev + 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
-      console.log('[DEBUG] Validación fallida:', validationErrors);
-      
-      // Construir mensaje de error detallado
       const errorList = Object.entries(validationErrors)
         .map(([key, msg]) => `• ${msg}`)
         .join('\n');
       
       if (errorList) {
         alert(isSpanish 
-          ? `Completa los campos requeridos antes de continuar:\n${errorList}` 
-          : `Complete required fields before continuing:\n${errorList}`);
+          ? `Completa los campos requeridos antes de continuar:\n\n${errorList}` 
+          : `Complete required fields before continuing:\n\n${errorList}`);
       }
     }
   };
 
   const prevStep = () => {
-    console.log(`[DEBUG] Retrocediendo del paso ${currentStep} al ${currentStep - 1}`);
     setValidationErrors({});
     setCurrentStep(prev => prev - 1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // ============ FUNCIÓN DE ENVÍO ============
-  
+  // Función de envío
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    console.log('[DEBUG] Iniciando validación del paso 3...');
-    
     if (!validateAndProceed(3)) {
-      console.log('[DEBUG] Validación fallida:', validationErrors);
+      const errorList = Object.entries(validationErrors)
+        .map(([key, msg]) => `• ${msg}`)
+        .join('\n');
+      
       alert(isSpanish 
-        ? 'Completa todos los campos requeridos antes de enviar.' 
-        : 'Complete all required fields before submitting.');
+        ? `Completa todos los campos requeridos antes de enviar:\n\n${errorList}` 
+        : `Complete all required fields before submitting:\n\n${errorList}`);
       return;
     }
 
-    console.log('[DEBUG] Validación exitosa, preparando envío...');
     setUploading(true);
     setSubmitStatus(isSpanish ? 'Enviando artículo...' : 'Submitting article...');
 
     try {
       const token = await auth.currentUser.getIdToken();
-      
-      // Convertir manuscrito a base64
       const manuscriptBase64 = await toBase64(formData.manuscript);
       
-      // Serializar palabras clave
-            // Serializar palabras clave y códigos
-      const keywordsSerialized = formData.keywordsEs.join('; ');
-      const keywordsEnSerialized = formData.keywordsEn.join('; ');
-      const specializedCodesSerialized = formData.specializedCodes.join('; ');
-
-      // Construir payload
       const payload = {
         title: formData.title,
         titleEn: formData.titleEn,
         abstract: formData.abstract,
         abstractEn: formData.abstractEn,
-        keywordsVocabulario: getVocabularyForArea(formData.area)?.vocabulario || 'unknown',
-        keywordsRaw: formData.keywordsEs,
-        keywordsRawEn: formData.keywordsEn,
-        keywordsSerialized,
-        keywordsEnSerialized,
-        specializedCodes: formData.specializedCodes,
-        specializedCodesSerialized,
+        keywordsSerialized: formData.keywordsEs.join('; '),
+        keywordsEnSerialized: formData.keywordsEn.join('; '),
+        specializedCodesSerialized: formData.specializedCodes.join('; '),
         area: formData.area,
         paperLanguage: formData.paperLanguage,
         articleType: formData.articleType,
@@ -1738,8 +1572,6 @@ useEffect(() => {
         authorName: user.displayName || `${formData.authors[0].firstName} ${formData.authors[0].lastName}`.trim()
       };
 
-      console.log('[DEBUG] Payload preparado:', { ...payload, manuscriptBase64: '[BASE64_DATA]' });
-
       const response = await fetch('https://submitarticle-ggqsq2kkua-uc.a.run.app', {
         method: 'POST',
         headers: {
@@ -1751,17 +1583,14 @@ useEffect(() => {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('[DEBUG] Error del servidor:', errorText);
         throw new Error(errorText);
       }
 
       const result = await response.json();
-      console.log('[DEBUG] Respuesta exitosa:', result);
-
       localStorage.removeItem('submissionFormDraft');
       setSubmissionId(result.submissionId);
       setDriveFolderId(result.driveFolderId);
-      setSubmitStatus(isSpanish ? '✅ Artículo enviado con éxito' : '✅ Article submitted successfully');
+      setSubmitStatus(isSpanish ? 'Artículo enviado con éxito' : 'Article submitted successfully');
       setSubmitted(true);
 
       if (onSuccess) onSuccess(result.submissionId);
@@ -1769,48 +1598,46 @@ useEffect(() => {
     } catch (error) {
       console.error('[DEBUG] Error en el envío:', error);
       setSubmitStatus(isSpanish 
-        ? `❌ Error: ${error.message}` 
-        : `❌ Error: ${error.message}`);
+        ? `Error: ${error.message}` 
+        : `Error: ${error.message}`);
     } finally {
       setUploading(false);
     }
   };
 
-  // ============ PANTALLA DE ÉXITO ============
-  
+  // Pantalla de éxito
   if (submitted) {
     return (
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="max-w-2xl mx-auto py-16 px-4"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="max-w-3xl mx-auto py-20 px-4"
       >
-        <div className="bg-white border border-gray-200 shadow-sm rounded-sm overflow-hidden">
-          <div className="bg-[#003b5c] p-12 text-center">
-            <div className="mx-auto w-20 h-20 bg-white/10 rounded-sm flex items-center justify-center mb-6">
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden ring-1 ring-slate-100">
+          <div className="bg-gradient-to-br from-[#003b5c] to-[#001f30] p-16 text-center relative overflow-hidden">
+            <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-white opacity-5 rounded-full blur-3xl"></div>
+            <div className="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-6">
               <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h2 className="text-3xl font-light text-white mb-3 font-serif">
-              {isSpanish ? '¡Gracias por tu envío!' : 'Thank you for your submission!'}
+            <h2 className="text-4xl font-serif font-light text-white mb-4 tracking-tight">
+              {isSpanish ? 'Manuscrito Recibido' : 'Manuscript Received'}
             </h2>
-            <p className="text-gray-300 font-sans text-sm">
-              {isSpanish
-                ? 'Tu artículo ha sido recibido y será revisado por el equipo editorial.'
-                : 'Your article has been received and will be reviewed by the editorial team.'}
+            <p className="text-slate-300 text-sm font-sans tracking-wide max-w-md mx-auto">
+              {isSpanish ? 'Tu investigación está ahora en manos de nuestro equipo editorial.' : 'Your research is now in the hands of our editorial team.'}
             </p>
           </div>
           
           <div className="p-12 space-y-8">
-            <div className="bg-[#f8f9fa] border border-gray-200 rounded-sm p-6">
-              <p className="text-xs font-mono text-gray-500 mb-2 uppercase tracking-widest">Submission ID</p>
+            <div className="bg-slate-50 rounded-xl p-6">
+              <p className="text-xs font-mono text-slate-500 mb-2 uppercase tracking-widest">Submission ID</p>
               <p className="text-2xl font-serif text-[#003b5c] tracking-wider">{submissionId}</p>
             </div>
 
-            <div className="border border-gray-200 rounded-sm p-8 hover:border-[#003b5c] transition-colors">
+            <div className="border border-slate-200 rounded-xl p-8 hover:border-[#003b5c] transition-colors">
               <div className="flex items-start gap-6">
-                <div className="w-14 h-14 bg-[#f4f5f7] rounded-sm flex items-center justify-center flex-shrink-0">
+                <div className="w-14 h-14 bg-slate-50 rounded-lg flex items-center justify-center flex-shrink-0">
                   <svg className="w-7 h-7 text-[#003b5c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
                   </svg>
@@ -1819,7 +1646,7 @@ useEffect(() => {
                   <h3 className="text-lg font-serif text-[#003b5c] mb-2">
                     {isSpanish ? 'Tu carpeta de documentos' : 'Your documents folder'}
                   </h3>
-                  <p className="text-sm text-gray-500 mb-4 font-sans">
+                  <p className="text-sm text-slate-500 mb-4 font-sans">
                     {isSpanish 
                       ? 'Aquí puedes ver los documentos que subiste (solo lectura)' 
                       : 'Here you can view the documents you uploaded (read-only)'}
@@ -1830,15 +1657,16 @@ useEffect(() => {
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 text-[#003b5c] text-sm font-bold hover:text-[#e86125] transition-colors uppercase tracking-wider"
                   >
-                    {isSpanish ? 'Abrir en Google Drive' : 'Open in Google Drive'} →
+                    {isSpanish ? 'Abrir en Google Drive' : 'Open in Google Drive'} 
+                    <span aria-hidden="true">&rarr;</span>
                   </a>
                 </div>
               </div>
             </div>
 
-            <div className="bg-[#f8f9fa] border border-gray-200 rounded-sm p-8">
+            <div className="bg-slate-50 rounded-xl p-8">
               <div className="flex items-start gap-6">
-                <div className="w-14 h-14 bg-white rounded-sm flex items-center justify-center flex-shrink-0 border border-gray-200">
+                <div className="w-14 h-14 bg-white rounded-lg flex items-center justify-center flex-shrink-0 border border-slate-200">
                   <svg className="w-7 h-7 text-[#003b5c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                   </svg>
@@ -1847,25 +1675,17 @@ useEffect(() => {
                   <h3 className="text-lg font-serif text-[#003b5c] mb-2">
                     {isSpanish ? 'Seguimiento del envío' : 'Submission tracking'}
                   </h3>
-                  <p className="text-sm text-gray-500 mb-4 font-sans">
+                  <p className="text-sm text-slate-500 mb-4 font-sans">
                     {isSpanish 
                       ? 'Puedes ver el estado de tu artículo en la pestaña "Mis envíos" del portal' 
                       : 'You can check your article status in the "My submissions" tab on the portal'}
                   </p>
                   <div className="inline-flex items-center gap-2 text-sm text-[#003b5c] font-bold uppercase tracking-wider">
-                    <span className="text-[#e86125]">⬤</span>
+                    <span className="w-2 h-2 bg-[#e86125] rounded-full"></span>
                     {isSpanish ? 'Estado actual: Recibido' : 'Current status: Received'}
                   </div>
                 </div>
               </div>
-            </div>
-
-            <div className="text-center pt-6 border-t border-gray-200">
-              <p className="text-xs text-gray-500 font-sans">
-                {isSpanish 
-                  ? 'Recibirás un correo con los detalles del envío' 
-                  : 'You will receive an email with submission details'}
-              </p>
             </div>
           </div>
         </div>
@@ -1873,650 +1693,454 @@ useEffect(() => {
     );
   }
 
-  // ============ RENDERIZADO DEL FORMULARIO ============
-  
+  // Renderizado principal del formulario
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="w-full min-h-screen bg-[#f3f4f6] font-sans"
-    >
-      <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <svg className="w-5 h-5 text-[#003b5c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <span className="text-[#003b5c] text-sm font-bold uppercase tracking-widest hidden sm:inline">
-              {isSpanish ? 'Editorial · Gestión' : 'Editorial · Management'}
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans selection:bg-[#003b5c] selection:text-white pb-24">
+      {/* HEADER SUPERIOR */}
+      <header className="bg-white sticky top-0 z-40 border-b border-slate-200/80 shadow-sm backdrop-blur-md bg-white/90">
+        <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-[#003b5c] flex items-center justify-center text-white shadow-inner">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
+            </div>
+            <span className="font-serif font-semibold text-[#003b5c] tracking-wide text-lg">
+              {isSpanish ? 'Portal de Autores' : 'Author Portal'}
             </span>
           </div>
-          <div className="flex items-center space-x-4 text-gray-500 text-xs">
-            {user && (
-              <>
-                <UserIcon className="w-4 h-4" />
-                <span className="hidden sm:inline font-medium">{user.email}</span>
-              </>
-            )}
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full ring-1 ring-slate-200">
+            <UserIcon className="w-4 h-4" />
+            {user?.email || 'Autor'}
           </div>
         </div>
-      </div>
+      </header>
 
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        {/* Indicador de progreso - tabs planas contiguas */}
-        <div className="flex border-b border-gray-200 mb-8 bg-white rounded-sm shadow-sm overflow-x-auto">
-          {steps.map((step) => (
-            <div
-              key={step.id}
-              className={`flex-1 text-center py-3 px-2 text-xs font-bold uppercase tracking-widest transition-colors border-r border-gray-100 last:border-r-0
-                ${currentStep >= step.id ? 'text-[#003b5c] border-b-2 border-b-[#003b5c]' : 'text-gray-400'}`}
-            >
-              <span className="mr-2">
-                {step.id === 1 && (
-                  <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                )}
-                {step.id === 2 && (
-                  <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                  </svg>
-                )}
-                {step.id === 3 && (
-                  <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                  </svg>
-                )}
-              </span>
-              {step.title}
-            </div>
-          ))}
-        </div>
-
-        {/* Formulario principal */}
-        <div className="bg-white border border-gray-200 rounded-sm shadow-sm">
-          <form onSubmit={handleSubmit} className="p-8 md:p-12 space-y-16">
-            <AnimatePresence mode="wait">
-              {/* ============ GUÍAS PARA AUTORES ============ */}
-<motion.div
-  initial={{ opacity: 0, y: 20 }}
-  animate={{ opacity: 1, y: 0 }}
-  transition={{ duration: 0.6 }}
-  className="bg-[#f8f9fa] border border-gray-200 rounded-sm p-8"
->
-  <div className="text-center mb-6">
-    <h2 className="text-xl font-serif font-bold text-[#003b5c] mb-2">
-      {isSpanish ? 'Guías para Autores' : 'Author Guidelines'}
-    </h2>
-    <p className="text-xs text-gray-500 font-sans max-w-xl mx-auto">
-      {isSpanish 
-        ? 'Consulte nuestros recursos completos antes de preparar su manuscrito' 
-        : 'Consult our complete resources before preparing your manuscript'}
-    </p>
-  </div>
-
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-    {/* Tarjeta 1: Guía para Autores */}
-    <a
-      href={isSpanish ? '/author.html' : '/authorEN.html'}
-      className="group relative p-5 bg-white rounded-sm border border-gray-200 hover:border-[#003b5c] hover:shadow-sm transition-all overflow-hidden"
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      <div className="absolute top-0 left-0 w-full h-0.5 bg-[#003b5c] group-hover:bg-[#e86125] transition-colors"></div>
-      <div className="flex items-start gap-3">
-        <div className="p-2 bg-[#f0f4f8] rounded-sm group-hover:bg-[#e0ecf4] transition-colors flex-shrink-0">
-          <svg className="w-4 h-4 text-[#003b5c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-        </div>
-        <div className="min-w-0">
-          <h3 className="text-xs font-bold text-gray-900 group-hover:text-[#003b5c] transition-colors mb-1 font-sans uppercase tracking-wider">
-            {isSpanish ? 'Guía para Autores' : 'Author Guide'}
-          </h3>
-          <p className="text-[11px] text-gray-500 leading-relaxed font-sans">
-            {isSpanish 
-              ? 'Instrucciones detalladas para preparar y enviar su manuscrito.' 
-              : 'Detailed instructions to prepare and submit your manuscript.'}
-          </p>
-          <span className="inline-block mt-2 text-[10px] font-bold uppercase tracking-wider text-[#003b5c] opacity-0 group-hover:opacity-100 transition-all transform translate-x-0 group-hover:translate-x-1">
-            {isSpanish ? 'Consultar →' : 'View →'}
-          </span>
-        </div>
-      </div>
-    </a>
-
-    {/* Tarjeta 2: Buenas Prácticas */}
-    <a
-      href={isSpanish ? '/practices.html' : '/practicesEN.html'}
-      className="group relative p-5 bg-white rounded-sm border border-gray-200 hover:border-[#003b5c] hover:shadow-sm transition-all overflow-hidden"
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      <div className="absolute top-0 left-0 w-full h-0.5 bg-[#003b5c] group-hover:bg-[#e86125] transition-colors"></div>
-      <div className="flex items-start gap-3">
-        <div className="p-2 bg-[#f0f4f8] rounded-sm group-hover:bg-[#e0ecf4] transition-colors flex-shrink-0">
-          <svg className="w-4 h-4 text-[#003b5c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-          </svg>
-        </div>
-        <div className="min-w-0">
-          <h3 className="text-xs font-bold text-gray-900 group-hover:text-[#003b5c] transition-colors mb-1 font-sans uppercase tracking-wider">
-            {isSpanish ? 'Buenas Prácticas' : 'Best Practices'}
-          </h3>
-          <p className="text-[11px] text-gray-500 leading-relaxed font-sans">
-            {isSpanish 
-              ? 'Estándares éticos y mejores prácticas para publicar.' 
-              : 'Ethical standards and best practices for publishing.'}
-          </p>
-          <span className="inline-block mt-2 text-[10px] font-bold uppercase tracking-wider text-[#003b5c] opacity-0 group-hover:opacity-100 transition-all transform translate-x-0 group-hover:translate-x-1">
-            {isSpanish ? 'Consultar →' : 'View →'}
-          </span>
-        </div>
-      </div>
-    </a>
-
-    {/* Tarjeta 3: Open Access */}
-    <a
-      href={isSpanish ? '/open-access.html' : '/open-accessEN.html'}
-      className="group relative p-5 bg-white rounded-sm border border-gray-200 hover:border-[#003b5c] hover:shadow-sm transition-all overflow-hidden"
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      <div className="absolute top-0 left-0 w-full h-0.5 bg-[#003b5c] group-hover:bg-[#e86125] transition-colors"></div>
-      <div className="flex items-start gap-3">
-        <div className="p-2 bg-[#f0f4f8] rounded-sm group-hover:bg-[#e0ecf4] transition-colors flex-shrink-0">
-          <svg className="w-4 h-4 text-[#003b5c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-          </svg>
-        </div>
-        <div className="min-w-0">
-          <h3 className="text-xs font-bold text-gray-900 group-hover:text-[#003b5c] transition-colors mb-1 font-sans uppercase tracking-wider">
-            Open Access
-          </h3>
-          <p className="text-[11px] text-gray-500 leading-relaxed font-sans">
-            {isSpanish 
-              ? 'Políticas de acceso abierto, licencias y derechos de autor.' 
-              : 'Open access policies, licenses, and copyright.'}
-          </p>
-          <span className="inline-block mt-2 text-[10px] font-bold uppercase tracking-wider text-[#003b5c] opacity-0 group-hover:opacity-100 transition-all transform translate-x-0 group-hover:translate-x-1">
-            {isSpanish ? 'Consultar →' : 'View →'}
-          </span>
-        </div>
-      </div>
-    </a>
-
-    {/* Tarjeta 4: Políticas Editoriales */}
-    <a
-      href={isSpanish ? '/policies.html' : '/policiesEN.html'}
-      className="group relative p-5 bg-white rounded-sm border border-gray-200 hover:border-[#003b5c] hover:shadow-sm transition-all overflow-hidden"
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      <div className="absolute top-0 left-0 w-full h-0.5 bg-[#003b5c] group-hover:bg-[#e86125] transition-colors"></div>
-      <div className="flex items-start gap-3">
-        <div className="p-2 bg-[#f0f4f8] rounded-sm group-hover:bg-[#e0ecf4] transition-colors flex-shrink-0">
-          <svg className="w-4 h-4 text-[#003b5c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
-          </svg>
-        </div>
-        <div className="min-w-0">
-          <h3 className="text-xs font-bold text-gray-900 group-hover:text-[#003b5c] transition-colors mb-1 font-sans uppercase tracking-wider">
-            {isSpanish ? 'Políticas Editoriales' : 'Editorial Policies'}
-          </h3>
-          <p className="text-[11px] text-gray-500 leading-relaxed font-sans">
-            {isSpanish 
-              ? 'Normas, procesos y requisitos editoriales de la revista.' 
-              : 'Standards, processes, and editorial requirements of the journal.'}
-          </p>
-          <span className="inline-block mt-2 text-[10px] font-bold uppercase tracking-wider text-[#003b5c] opacity-0 group-hover:opacity-100 transition-all transform translate-x-0 group-hover:translate-x-1">
-            {isSpanish ? 'Consultar →' : 'View →'}
-          </span>
-        </div>
-      </div>
-    </a>
-  </div>
-</motion.div>
-{/* ============ FIN GUÍAS PARA AUTORES ============ */}
-{/* ============ BANNER: GUÍA RÁPIDA INTERACTIVA ============ */}
-<motion.div
-  initial={{ opacity: 0, y: 10 }}
-  animate={{ opacity: 1, y: 0 }}
-  transition={{ duration: 0.5, delay: 0.2 }}
-  className="bg-white border border-[#e6e8ea] border-l-4 border-l-[#004b87] p-6 shadow-sm rounded-sm"
->
-  <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-    {/* Icono de documento/lista (más académico y estructurado) */}
-    <div className="flex-shrink-0 w-12 h-12 bg-[#f4f5f7] border border-[#e6e8ea] rounded-sm flex items-center justify-center">
-      <svg className="w-6 h-6 text-[#004b87]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-      </svg>
-    </div>
-
-    <div className="flex-1">
-      <h3 className="text-lg font-sans font-semibold text-[#004b87] mb-1.5 tracking-tight">
-        {isSpanish 
-          ? 'Guía Rápida para Autores (Dashboard Interactivo)'
-          : 'Quick Guide for Authors (Interactive Dashboard)'}
-      </h3>
-      <p className="text-[14px] text-[#2b2b2b] leading-relaxed mb-4 font-sans">
-        {isSpanish 
-          ? 'Revise los requisitos esenciales de envío, políticas de formato y el proceso de anonimización a través de nuestra lista de verificación interactiva.'
-          : 'Review essential submission requirements, formatting policies, and the anonymization process through our interactive checklist.'}
-      </p>
-      
-      {/* Botón sólido estilo Elsevier (Azul que pasa a Naranja en el hover) */}
-      <a
-        href={isSpanish ? '/quick.html' : '/quickEN.html'}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-2 bg-[#004b87] hover:bg-[#e86125] text-white px-5 py-2.5 text-xs font-semibold uppercase tracking-wider transition-colors font-sans rounded-sm"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-        </svg>
-        {isSpanish ? 'Acceder a la Guía Rápida' : 'Access Quick Guide'}
-      </a>
-    </div>
-
-    {/* Divisor vertical y métrica de tiempo estilo "Article Metrics" */}
-    <div className="hidden lg:flex flex-col items-center justify-center border-l border-[#e6e8ea] pl-8 min-w-[120px]">
-      <span className="text-3xl font-sans font-light text-[#004b87] leading-none mb-1">5</span>
-      <span className="text-[10px] uppercase tracking-widest text-[#666666] font-sans font-semibold">
-        {isSpanish ? 'Minutos' : 'Minutes'}
-      </span>
-      <span className="text-[10px] text-[#a0a0a0] font-sans mt-1 text-center">
-        {isSpanish ? 'Tiempo est.' : 'Est. time'}
-      </span>
-    </div>
-  </div>
-</motion.div>
-{/* ============ FIN BANNER GUÍA RÁPIDA ============ */}
-              {/* PASO 1: INFORMACIÓN DEL ARTÍCULO */}
-              {currentStep === 1 && (
-                <motion.div
-                  key="step1"
-                  initial={{ opacity: 0, x: 30 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -30 }}
-                  className="space-y-12"
-                >
-                  {/* Bloque: Manuscrito */}
-                  <div className="p-6 border-b border-gray-200">
-                    <div className="flex items-center gap-2 mb-4">
-                      <svg className="w-4 h-4 text-[#003b5c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 mt-10">
+        {/* STEPPER ACADÉMICO */}
+        <div className="mb-12 relative">
+          <div className="absolute top-5 left-8 right-8 h-0.5 bg-slate-200 -z-10 rounded-full"></div>
+          <div className="absolute top-5 left-8 h-0.5 bg-[#003b5c] -z-10 transition-all duration-700 ease-out rounded-full" 
+               style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}></div>
+          
+          <div className="flex justify-between">
+            {steps.map((step) => {
+              const isActive = currentStep === step.id;
+              const isPast = currentStep > step.id;
+              return (
+                <div key={step.id} className="flex flex-col items-center gap-3 relative">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-500 shadow-sm ring-4 ring-[#F8FAFC]
+                    ${isActive ? 'bg-[#003b5c] text-white scale-110 shadow-md' : isPast ? 'bg-[#003b5c] text-white' : 'bg-white text-slate-400 border border-slate-300'}`}>
+                    {isPast ? (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
-                      <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">Manuscrito</span>
+                    ) : (
+                      <span className="text-sm font-bold">{step.id}</span>
+                    )}
+                  </div>
+                  <span className={`text-xs font-bold uppercase tracking-widest text-center transition-colors duration-300
+                    ${isActive ? 'text-[#003b5c]' : isPast ? 'text-slate-700' : 'text-slate-400'}`}>
+                    {step.title}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* FORMULARIO CONTENEDOR */}
+        <div className="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-slate-100">
+          <form onSubmit={handleSubmit} className="p-8 sm:p-12">
+            <AnimatePresence mode="wait">
+              {/* PASO 1: MANUSCRITO */}
+              {currentStep === 1 && (
+                <motion.div 
+                  key="step1" 
+                  initial={{ opacity: 0, x: 20 }} 
+                  animate={{ opacity: 1, x: 0 }} 
+                  exit={{ opacity: 0, x: -20 }} 
+                  className="space-y-10"
+                >
+                  <div className="border-b border-slate-100 pb-4 mb-8">
+                    <h2 className="text-2xl font-serif text-[#003b5c] font-medium">
+                      {isSpanish ? 'Metadatos del Artículo' : 'Article Metadata'}
+                    </h2>
+                    <p className="text-slate-500 text-sm mt-1">
+                      {isSpanish ? 'Asegúrese de que el título y resumen coincidan exactamente con su documento Word.' : 'Ensure that the title and abstract match exactly with your Word document.'}
+                    </p>
+                  </div>
+
+                  <div className="space-y-6">
+                    {/* Título */}
+                    <div className="group">
+                      <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2 transition-colors group-focus-within:text-[#003b5c]">
+                        {isSpanish ? 'Título del Trabajo' : 'Article Title'} 
+                        <span className="text-red-500 ml-1">*</span>
+                        <HelpCapsule
+                          title={isSpanish ? '¿Qué título debo usar?' : 'What title should I use?'}
+                          text={isSpanish
+                            ? 'Escribe el título completo y exacto de tu investigación. Debe ser descriptivo y específico. Evita títulos genéricos como "Estudio de investigación". Un buen título resume el tema principal y el enfoque de tu trabajo.'
+                            : 'Write the complete and exact title of your research. It should be descriptive and specific. Avoid generic titles like "Research study". A good title summarizes the main topic and focus of your work.'}
+                        />
+                      </label>
+                      <input 
+                        type="text" 
+                        name="title" 
+                        value={formData.title} 
+                        onChange={handleInputChange} 
+                        className={`w-full p-4 bg-slate-50/50 border-0 ring-1 rounded-xl text-lg font-serif text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#003b5c] transition-all shadow-sm
+                          ${validationErrors.title ? 'ring-red-300' : 'ring-slate-200'}`}
+                        placeholder={isSpanish ? 'Escriba el título completo aquí...' : 'Write the full title here...'}
+                      />
+                      {validationErrors.title && (
+                        <p className="text-red-500 text-xs mt-1">{validationErrors.title}</p>
+                      )}
                     </div>
-                    <div className="grid grid-cols-1 gap-5">
-                      {/* Título */}
-                      <div>
-                        <label className="block text-xs font-medium uppercase tracking-wider text-gray-600 mb-1">
-                          {isSpanish ? 'Título del trabajo' : 'Article title'} *
-                        </label>
-                        <input
-                          type="text"
-                          name="title"
-                          value={formData.title}
-                          onChange={handleInputChange}
-                          className={`w-full p-3 border rounded-sm text-base font-serif focus:ring-2 focus:ring-[#003b5c] focus:border-transparent outline-none transition-all
-                            ${validationErrors.title ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-gray-50 text-gray-800 placeholder-gray-400'}`}
-                          placeholder={isSpanish ? 'Título del manuscrito · ejemplo' : 'Manuscript title · example'}
-                        />
-                        {validationErrors.title && (
-                          <p className="text-red-500 text-xs mt-1">{validationErrors.title}</p>
-                        )}
-                      </div>
 
-                      {/* Título en inglés */}
-                      <div>
-                        <label className="block text-xs font-medium uppercase tracking-wider text-gray-600 mb-1">
-                          {isSpanish ? 'Título en inglés (recomendado)' : 'English title (recommended)'}
-                        </label>
-                        <input
-                          type="text"
-                          name="titleEn"
-                          value={formData.titleEn}
-                          onChange={handleInputChange}
-                          className="w-full p-3 border border-gray-200 rounded-sm text-base bg-gray-50 font-serif focus:ring-2 focus:ring-[#003b5c] focus:border-transparent outline-none transition-all"
+                    {/* Título en inglés */}
+                    <div className="group">
+                      <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2 transition-colors group-focus-within:text-[#003b5c]">
+                        {isSpanish ? 'Título en Inglés (Recomendado)' : 'English Title (Recommended)'}
+                        <HelpCapsule
+                          title={isSpanish ? '¿Por qué en inglés?' : 'Why in English?'}
+                          text={isSpanish
+                            ? 'El inglés es el idioma internacional de la ciencia. Incluir un título en inglés aumenta la visibilidad de tu trabajo y permite que más investigadores lo encuentren en bases de datos internacionales.'
+                            : 'English is the international language of science. Including an English title increases the visibility of your work and allows more researchers to find it in international databases.'}
                         />
-                      </div>
+                      </label>
+                      <input 
+                        type="text" 
+                        name="titleEn" 
+                        value={formData.titleEn} 
+                        onChange={handleInputChange} 
+                        className="w-full p-4 bg-slate-50/50 border-0 ring-1 ring-slate-200 rounded-xl text-lg font-serif text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#003b5c] transition-all shadow-sm"
+                        placeholder={isSpanish ? 'English title...' : 'English title...'}
+                      />
+                    </div>
 
-                      {/* Resumen */}
-                      <div>
-                        <label className="block text-xs font-medium uppercase tracking-wider text-gray-600 mb-1">
-                          {isSpanish ? 'Resumen' : 'Abstract'} *
-                        </label>
-                        <textarea
-                          name="abstract"
-                          value={formData.abstract}
-                          onChange={handleInputChange}
-                          rows={7}
-                          className={`w-full p-3 border rounded-sm text-sm font-serif focus:ring-2 focus:ring-[#003b5c] focus:border-transparent outline-none transition-all resize-y
-                            ${validationErrors.abstract ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-gray-50 text-gray-800 placeholder-gray-400'}`}
-                          placeholder={isSpanish ? 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit...' : 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit...'}
-                        />
-                        {validationErrors.abstract && (
-                          <p className="text-red-500 text-xs mt-1">{validationErrors.abstract}</p>
-                        )}
-                      </div>
-
-                      {/* Abstract en inglés */}
-                      <div>
-                        <label className="block text-xs font-medium uppercase tracking-wider text-gray-600 mb-1">
-                          {isSpanish ? 'Abstract en inglés' : 'English abstract'}
-                        </label>
-                        <textarea
-                          name="abstractEn"
-                          value={formData.abstractEn}
-                          onChange={handleInputChange}
-                          rows={7}
-                          className="w-full p-3 border border-gray-200 rounded-sm text-sm bg-gray-50 font-serif focus:ring-2 focus:ring-[#003b5c] focus:border-transparent outline-none transition-all resize-y"
-                        />
-                      </div>
-
-                      {/* Comentarios al editor (serif) */}
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <label className="block text-xs font-medium uppercase tracking-wider text-gray-600">
-                            {isSpanish ? 'Comentarios al editor' : 'Comments to the editor'}
-                          </label>
-                          <HelpCapsule 
-                            text="Explica brevemente por qué tu tema es relevante y merece ser considerado para publicación. No es una cover letter extensa, solo un párrafo conciso."
-                            textEn="Briefly explain why your topic is relevant and deserves consideration for publication. This is not a lengthy cover letter, just a concise paragraph."
+                    {/* Resumen */}
+                    <div className="group">
+                      <label className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-600 mb-2 transition-colors group-focus-within:text-[#003b5c]">
+                        <span className="flex items-center">
+                          {isSpanish ? 'Resumen / Abstract' : 'Abstract'} 
+                          <span className="text-red-500 ml-1">*</span>
+                          <HelpCapsule
+                            title={isSpanish ? '¿Cómo escribir un buen resumen?' : 'How to write a good abstract?'}
+                            text={isSpanish
+                              ? 'Tu resumen debe incluir: 1) Contexto del problema, 2) Objetivo de la investigación, 3) Metodología utilizada, 4) Resultados principales, 5) Conclusión breve. Máximo 250 palabras. Es lo primero que leen los evaluadores, ¡hazlo claro y conciso!'
+                              : 'Your abstract should include: 1) Problem context, 2) Research objective, 3) Methodology used, 4) Main results, 5) Brief conclusion. Maximum 250 words. It is the first thing reviewers read, make it clear and concise!'}
                           />
-                        </div>
-                        <div className="border border-gray-200 rounded-sm overflow-hidden bg-gray-50 focus-within:border-[#003b5c] transition-colors">
-                          <ReactQuill
-                            theme="snow"
-                              value={formData.editorComment}
-  onChange={(value) => setFormData(prev => ({ ...prev, editorComment: value }))}
-                            placeholder={isSpanish 
-                              ? 'Comentarios para el equipo editorial...' 
-                              : 'Comments for the editorial team...'}
-                            modules={{
-                              toolbar: [
-                                ['bold', 'italic', 'underline'],
-                                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                                ['clean']
-                              ]
-                            }}
-                            formats={['bold', 'italic', 'underline', 'list', 'bullet']}
-                            className="font-serif text-sm"
-                            style={{ height: '160px' }}
-                          />
-                        </div>
+                        </span>
+                        <span className="text-[10px] font-mono text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
+                          {isSpanish ? 'Máx 250 palabras' : 'Max 250 words'}
+                        </span>
+                      </label>
+                      <textarea 
+                        name="abstract" 
+                        value={formData.abstract} 
+                        onChange={handleInputChange} 
+                        rows={6}
+                        className={`w-full p-4 bg-slate-50/50 border-0 ring-1 rounded-xl text-sm font-sans text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#003b5c] transition-all resize-y shadow-sm leading-relaxed
+                          ${validationErrors.abstract ? 'ring-red-300' : 'ring-slate-200'}`}
+                        placeholder={isSpanish ? 'Contexto, metodología, resultados principales y conclusiones...' : 'Context, methodology, main results and conclusions...'}
+                      />
+                      {validationErrors.abstract && (
+                        <p className="text-red-500 text-xs mt-1">{validationErrors.abstract}</p>
+                      )}
+                    </div>
+
+                    {/* Abstract en inglés */}
+                    <div className="group">
+                      <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2 transition-colors group-focus-within:text-[#003b5c]">
+                        {isSpanish ? 'Abstract en Inglés' : 'English Abstract'}
+                        <HelpCapsule
+                          title={isSpanish ? '¿Es obligatorio?' : 'Is it mandatory?'}
+                          text={isSpanish
+                            ? 'Es altamente recomendado. Traduce tu resumen al inglés para maximizar la difusión internacional. No uses traductores automáticos sin revisar; pide ayuda a alguien con buen nivel de inglés académico.'
+                            : 'It is highly recommended. Translate your abstract to English to maximize international dissemination. Do not use automatic translators without review; ask someone with good academic English level for help.'}
+                        />
+                      </label>
+                      <textarea 
+                        name="abstractEn" 
+                        value={formData.abstractEn} 
+                        onChange={handleInputChange} 
+                        rows={6}
+                        className="w-full p-4 bg-slate-50/50 border-0 ring-1 ring-slate-200 rounded-xl text-sm font-sans text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#003b5c] transition-all resize-y shadow-sm leading-relaxed"
+                        placeholder="English abstract..."
+                      />
+                    </div>
+
+                    {/* Comentarios al editor */}
+                    <div className="group">
+                      <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                        {isSpanish ? 'Comentarios al Editor' : 'Comments to the Editor'}
+                        <HelpCapsule
+                          title={isSpanish ? '¿Qué debo escribir aquí?' : 'What should I write here?'}
+                          text={isSpanish
+                            ? 'Explica brevemente por qué tu tema es relevante y merece ser considerado para publicación. No es una carta larga, solo un párrafo conciso. Menciona si tu trabajo tiene implicaciones prácticas o contribuye a resolver un problema importante.'
+                            : 'Briefly explain why your topic is relevant and deserves consideration for publication. This is not a long letter, just a concise paragraph. Mention if your work has practical implications or contributes to solving an important problem.'}
+                        />
+                      </label>
+                      <div className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50/50 focus-within:border-[#003b5c] transition-colors">
+                        <ReactQuill
+                          theme="snow"
+                          value={formData.editorComment}
+                          onChange={(value) => setFormData(prev => ({ ...prev, editorComment: value }))}
+                          placeholder={isSpanish ? 'Comentarios para el equipo editorial...' : 'Comments for the editorial team...'}
+                          modules={{
+                            toolbar: [
+                              ['bold', 'italic', 'underline'],
+                              [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                              ['clean']
+                            ]
+                          }}
+                          formats={['bold', 'italic', 'underline', 'list', 'bullet']}
+                          className="font-serif text-sm"
+                          style={{ height: '160px' }}
+                        />
                       </div>
                     </div>
                   </div>
 
-                  {/* Tipo de artículo y área temática */}
-                  <div className="p-6 bg-white rounded-b-sm">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      <div>
-                        <label className="block text-xs font-medium uppercase tracking-wider text-gray-600 mb-1">
-                          {isSpanish ? 'Tipo de artículo' : 'Article type'} *
-                        </label>
-                        <select
-                          name="articleType"
-                          value={formData.articleType}
-                          onChange={handleInputChange}
-                          className={`w-full p-3 border rounded-sm text-sm font-sans focus:ring-2 focus:ring-[#003b5c] focus:border-transparent outline-none transition-all appearance-none bg-white
-                            ${validationErrors.articleType ? 'border-red-400 bg-red-50' : 'border-gray-200 text-gray-600'}`}
-                        >
-                          <option value="">— {isSpanish ? 'Seleccionar tipo...' : 'Select type...'} —</option>
-                          {articleTypeOptions[isSpanish ? 'es' : 'en'].map(opt => (
-                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                          ))}
-                        </select>
-                        {validationErrors.articleType && (
-                          <p className="text-red-500 text-xs mt-1">{validationErrors.articleType}</p>
-                        )}
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium uppercase tracking-wider text-gray-600 mb-1">
-                          {isSpanish ? 'Área temática' : 'Subject area'} *
-                        </label>
-                        <select
-                          name="area"
-                          value={formData.area}
-                          onChange={handleInputChange}
-                          className={`w-full p-3 border rounded-sm text-sm font-sans focus:ring-2 focus:ring-[#003b5c] focus:border-transparent outline-none transition-all appearance-none bg-white
-                            ${validationErrors.area ? 'border-red-400 bg-red-50' : 'border-gray-200 text-gray-600'}`}
-                        >
-                          <option value="">— {isSpanish ? 'Seleccionar área...' : 'Select area...'} —</option>
-                          {Object.entries(getAreasByLanguage(language)).map(([categoria, subareas]) => (
-                            <optgroup key={categoria} label={categoria}>
-                              {subareas.map(sub => (
-                                <option key={sub} value={sub}>{sub}</option>
-                              ))}
-                            </optgroup>
-                          ))}
-                        </select>
-                        {validationErrors.area && (
-                          <p className="text-red-500 text-xs mt-1">{validationErrors.area}</p>
-                        )}
-                      </div>
-                    </div>
-
-                                        {/* Palabras clave y códigos especializados */}
-                    <div className="mt-5 space-y-8">
-                      {/* Palabras clave en español */}
-                      <div>
-                        <label className="block text-xs font-medium uppercase tracking-wider text-gray-600 mb-3">
-                          {isSpanish ? 'Palabras clave (español)' : 'Keywords (Spanish)'} *
-                        </label>
-                        <ControlledKeywordInput
-                          vocabularyConfig={getVocabularyForArea(formData.area) || {}}
-                          value={formData.keywordsEs}
-                          onChange={(val) => {
-                            setFormData(prev => ({ ...prev, keywordsEs: val }));
-                            setValidationErrors(prev => {
-                              const newErrors = { ...prev };
-                              delete newErrors.controlledKeywords;
-                              return newErrors;
-                            });
-                          }}
-                          language={language}
-                          mode="keywords"
+                  {/* Tipo de artículo y área */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                        {isSpanish ? 'Tipo de Artículo' : 'Article Type'} 
+                        <span className="text-red-500 ml-1">*</span>
+                        <HelpCapsule
+                          title={isSpanish ? '¿Qué tipo de artículo es el tuyo?' : 'What type of article is yours?'}
+                          text={isSpanish
+                            ? 'Elige la categoría que mejor describa tu trabajo: Investigación Original (datos nuevos), Revisión (análisis de literatura existente), Ensayo (reflexión académica), Reporte de Caso (estudio de caso único), o Reseña (crítica de un libro).'
+                            : 'Choose the category that best describes your work: Original Research (new data), Review (analysis of existing literature), Essay (academic reflection), Case Report (single case study), or Book Review (critique of a book).'}
                         />
-                        {validationErrors.controlledKeywords && (
-                          <p className="text-red-500 text-xs mt-1">{validationErrors.controlledKeywords}</p>
-                        )}
-                      </div>
-
-                      {/* Palabras clave en inglés */}
-                      <div>
-                        <label className="block text-xs font-medium uppercase tracking-wider text-gray-600 mb-3">
-                          {isSpanish ? 'Keywords (inglés)' : 'Keywords (English)'} *
-                        </label>
-                        <ControlledKeywordInput
-                          vocabularyConfig={getVocabularyForArea(formData.area) || {}}
-                          value={formData.keywordsEn}
-                          onChange={(val) => setFormData(prev => ({ ...prev, keywordsEn: val }))}
-                          language={language}
-                          mode="keywords"
-                        />
-                      </div>
-
-                      {/* Códigos especializados (solo si hay área seleccionada con vocabulario) */}
-                      {formData.area && getVocabularyForArea(formData.area) ? (
-                        <div>
-                          <div className="flex items-center gap-2 mb-3">
-                            <label className="block text-xs font-medium uppercase tracking-wider text-gray-600">
-                              {isSpanish ? 'Códigos especializados' : 'Specialized Codes'}
-                            </label>
-                                                      <HelpCapsule 
-                            text={`Solo necesitas ingresar el código del vocabulario ${getVocabularyForArea(formData.area)?.vocabulario || ''}. No incluyas el término, solo el código. Ejemplo: ${getVocabularyForArea(formData.area)?.ejemplo?.split(':')[0] || getVocabularyForArea(formData.area)?.ejemplo || ''}. Debes agregar entre 2 y 4 códigos.`}
-                            textEn={`You only need to enter the code from the ${getVocabularyForArea(formData.area)?.vocabulario || ''} vocabulary. Do not include the term, just the code. Example: ${getVocabularyForArea(formData.area)?.ejemplo?.split(':')[0] || getVocabularyForArea(formData.area)?.ejemplo || ''}. You must add between 2 and 4 codes.`}
-                          />
-                          </div>
-                          <ControlledKeywordInput
-                            vocabularyConfig={getVocabularyForArea(formData.area)}
-                            value={formData.specializedCodes}
-                            onChange={(val) => setFormData(prev => ({ ...prev, specializedCodes: val }))}
-                            language={language}
-                            mode="codes"
-                          />
-                                                    <p className="text-xs text-gray-500 mt-2 font-sans">
-                            {isSpanish 
-                              ? `Solo ingresa el código (ej: ${getVocabularyForArea(formData.area)?.ejemplo?.split(':')[0] || '11N05'}). No incluyas el término. Vocabulario: ${getVocabularyForArea(formData.area)?.vocabulario}. Agrega de 2 a 4 códigos.`
-                              : `Enter only the code (e.g., ${getVocabularyForArea(formData.area)?.ejemplo?.split(':')[0] || '11N05'}). Do not include the term. Vocabulary: ${getVocabularyForArea(formData.area)?.vocabulario}. Add 2 to 4 codes.`}
-                          </p>
-                          <a
-                            href={getVocabularyForArea(formData.area)?.searchUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 mt-2 text-[#003b5c] hover:text-[#e86125] text-xs font-medium transition-colors font-sans"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                            </svg>
-                            {isSpanish ? 'Abrir buscador' : 'Open search'} →
-                          </a>
-                        </div>
-                      ) : (
-                        <div className="bg-[#f8f9fa] rounded-sm p-6 text-center border-2 border-dashed border-gray-200">
-                          <p className="text-gray-500 text-sm font-sans">
-                            {isSpanish 
-                              ? 'Selecciona un área temática para ver los códigos especializados disponibles.'
-                              : 'Select a subject area to see available specialized codes.'}
-                          </p>
-                        </div>
+                      </label>
+                      <select
+                        name="articleType"
+                        value={formData.articleType}
+                        onChange={handleInputChange}
+                        className={`w-full p-3.5 border-0 ring-1 rounded-xl text-sm font-sans focus:ring-2 focus:ring-[#003b5c] outline-none appearance-none bg-white transition-all
+                          ${validationErrors.articleType ? 'ring-red-300' : 'ring-slate-200 text-slate-600'}`}
+                      >
+                        <option value="">— {isSpanish ? 'Seleccionar tipo...' : 'Select type...'} —</option>
+                        {articleTypeOptions[isSpanish ? 'es' : 'en'].map(opt => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                      {validationErrors.articleType && (
+                        <p className="text-red-500 text-xs mt-1">{validationErrors.articleType}</p>
                       )}
                     </div>
 
-                    {/* Idioma del manuscrito */}
-                    <div className="mt-5">
-                      <label className="block text-xs font-medium uppercase tracking-wider text-gray-600 mb-1">
-                        {isSpanish ? 'Idioma del manuscrito' : 'Manuscript language'} *
+                    <div>
+                      <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                        {isSpanish ? 'Área Temática' : 'Subject Area'} 
+                        <span className="text-red-500 ml-1">*</span>
+                        <HelpCapsule
+                          title={isSpanish ? '¿Qué área elegir?' : 'What area to choose?'}
+                          text={isSpanish
+                            ? 'Selecciona el área que mejor se ajuste a tu investigación. Esto ayuda a asignar los revisores adecuados y a indexar tu artículo correctamente. Si tu trabajo es interdisciplinario, elige el área principal.'
+                            : 'Select the area that best fits your research. This helps assign appropriate reviewers and index your article correctly. If your work is interdisciplinary, choose the main area.'}
+                        />
                       </label>
                       <select
-                        name="paperLanguage"
-                        value={formData.paperLanguage}
+                        name="area"
+                        value={formData.area}
                         onChange={handleInputChange}
-                        className="w-full p-3 border border-gray-200 rounded-sm text-sm font-sans text-gray-600 focus:ring-2 focus:ring-[#003b5c] focus:border-transparent outline-none transition-all appearance-none bg-white"
+                        className={`w-full p-3.5 border-0 ring-1 rounded-xl text-sm font-sans focus:ring-2 focus:ring-[#003b5c] outline-none appearance-none bg-white transition-all
+                          ${validationErrors.area ? 'ring-red-300' : 'ring-slate-200 text-slate-600'}`}
                       >
-                        <option value="es">Español</option>
-                        <option value="en">English</option>
+                        <option value="">— {isSpanish ? 'Seleccionar área...' : 'Select area...'} —</option>
+                        {Object.entries(getAreasByLanguage(language)).map(([categoria, subareas]) => (
+                          <optgroup key={categoria} label={categoria}>
+                            {subareas.map(sub => (
+                              <option key={sub} value={sub}>{sub}</option>
+                            ))}
+                          </optgroup>
+                        ))}
                       </select>
+                      {validationErrors.area && (
+                        <p className="text-red-500 text-xs mt-1">{validationErrors.area}</p>
+                      )}
                     </div>
+                  </div>
+
+                  {/* Palabras clave */}
+                  <div className="space-y-8">
+                    <div>
+                      <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-3">
+                        {isSpanish ? 'Palabras Clave (Español)' : 'Keywords (Spanish)'} 
+                        <span className="text-red-500 ml-1">*</span>
+                      </label>
+                      <ControlledKeywordInput
+                        vocabularyConfig={getVocabularyForArea(formData.area) || {}}
+                        value={formData.keywordsEs}
+                        onChange={(val) => {
+                          setFormData(prev => ({ ...prev, keywordsEs: val }));
+                          setValidationErrors(prev => {
+                            const newErrors = { ...prev };
+                            delete newErrors.controlledKeywords;
+                            return newErrors;
+                          });
+                        }}
+                        language={language}
+                        mode="keywords"
+                      />
+                      {validationErrors.controlledKeywords && (
+                        <p className="text-red-500 text-xs mt-1">{validationErrors.controlledKeywords}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-3">
+                        {isSpanish ? 'Keywords (Inglés)' : 'Keywords (English)'} 
+                        <span className="text-red-500 ml-1">*</span>
+                      </label>
+                      <ControlledKeywordInput
+                        vocabularyConfig={getVocabularyForArea(formData.area) || {}}
+                        value={formData.keywordsEn}
+                        onChange={(val) => setFormData(prev => ({ ...prev, keywordsEn: val }))}
+                        language={language}
+                        mode="keywords"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Idioma del manuscrito */}
+                  <div>
+                    <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                      {isSpanish ? 'Idioma del Manuscrito' : 'Manuscript Language'} 
+                      <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <select
+                      name="paperLanguage"
+                      value={formData.paperLanguage}
+                      onChange={handleInputChange}
+                      className="w-full p-3.5 border-0 ring-1 ring-slate-200 rounded-xl text-sm font-sans text-slate-600 focus:ring-2 focus:ring-[#003b5c] outline-none appearance-none bg-white transition-all"
+                    >
+                      <option value="es">Español</option>
+                      <option value="en">English</option>
+                    </select>
                   </div>
                 </motion.div>
               )}
 
               {/* PASO 2: AUTORES Y ÉTICA */}
               {currentStep === 2 && (
-                <motion.div
-                  key="step2"
-                  initial={{ opacity: 0, x: 30 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -30 }}
-                  className="space-y-14"
+                <motion.div 
+                  key="step2" 
+                  initial={{ opacity: 0, x: 20 }} 
+                  animate={{ opacity: 1, x: 0 }} 
+                  exit={{ opacity: 0, x: -20 }} 
+                  className="space-y-10"
                 >
-                  {/* Sección de autores */}
-                  <div className="p-6 border-b border-gray-200 bg-gray-50">
-                    <div className="flex items-center gap-2 mb-4">
-                      <svg className="w-4 h-4 text-[#003b5c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                      <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">Autores</span>
-                      <button
-                        type="button"
-                        onClick={addAuthor}
-                        className="ml-auto text-xs text-gray-400 bg-white px-2 py-0.5 rounded-sm border border-gray-200 hover:border-[#003b5c] hover:text-[#003b5c] transition-colors"
-                      >
-                        + {isSpanish ? 'agregar' : 'add'}
-                      </button>
-                    </div>
+                  <div className="border-b border-slate-100 pb-4 mb-8">
+                    <h2 className="text-2xl font-serif text-[#003b5c] font-medium">
+                      {isSpanish ? 'Autores y Ética' : 'Authors & Ethics'}
+                    </h2>
+                    <p className="text-slate-500 text-sm mt-1">
+                      {isSpanish ? 'Incluya a todos los autores que contribuyeron significativamente al trabajo.' : 'Include all authors who significantly contributed to the work.'}
+                    </p>
+                  </div>
 
+                  {/* Sección de autores */}
+                  <div className="space-y-6">
                     {formData.authors.map((author, index) => (
-                      <motion.div
-                        key={index}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="mb-6 bg-white border border-gray-200 rounded-sm p-6 relative shadow-sm"
-                      >
-                        {index > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => removeAuthor(index)}
-                            className="absolute top-4 right-4 text-gray-400 hover:text-[#e86125] transition-colors"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
-                        )}
+                      <div key={index} className="bg-slate-50/50 rounded-xl p-6 ring-1 ring-slate-200/60 relative">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="font-serif font-bold text-[#003b5c] text-sm">
+                            {isSpanish ? `Autor ${index + 1}` : `Author ${index + 1}`}
+                          </h3>
+                          {index > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => removeAuthor(index)}
+                              className="text-slate-400 hover:text-red-500 transition-colors"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div>
-                            <label className="block text-[10px] font-medium uppercase tracking-wider text-gray-500 mb-1">
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
                               {isSpanish ? 'Nombre' : 'First name'} *
                             </label>
                             <input
                               type="text"
                               value={author.firstName}
                               onChange={(e) => handleAuthorChange(index, 'firstName', e.target.value)}
-                              className={`w-full p-2.5 border rounded-sm text-sm focus:ring-2 focus:ring-[#003b5c] focus:border-transparent outline-none font-sans
-                                ${validationErrors[`author_${index}_firstName`] ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-white text-gray-600'}`}
-                              placeholder={isSpanish ? 'Autor 1' : 'Author 1'}
+                              className={`w-full p-3 bg-white border-0 ring-1 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all
+                                ${validationErrors[`author_${index}_firstName`] ? 'ring-red-300' : 'ring-slate-200'}`}
                             />
                             {validationErrors[`author_${index}_firstName`] && (
                               <p className="text-red-500 text-xs mt-1">{validationErrors[`author_${index}_firstName`]}</p>
                             )}
                           </div>
                           <div>
-                            <label className="block text-[10px] font-medium uppercase tracking-wider text-gray-500 mb-1">
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
                               {isSpanish ? 'Apellido' : 'Last name'} *
                             </label>
                             <input
                               type="text"
                               value={author.lastName}
                               onChange={(e) => handleAuthorChange(index, 'lastName', e.target.value)}
-                              className={`w-full p-2.5 border rounded-sm text-sm focus:ring-2 focus:ring-[#003b5c] focus:border-transparent outline-none font-sans
-                                ${validationErrors[`author_${index}_lastName`] ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-white text-gray-600'}`}
+                              className={`w-full p-3 bg-white border-0 ring-1 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all
+                                ${validationErrors[`author_${index}_lastName`] ? 'ring-red-300' : 'ring-slate-200'}`}
                             />
                             {validationErrors[`author_${index}_lastName`] && (
                               <p className="text-red-500 text-xs mt-1">{validationErrors[`author_${index}_lastName`]}</p>
                             )}
                           </div>
                           <div>
-                            <label className="block text-[10px] font-medium uppercase tracking-wider text-gray-500 mb-1">
+                            <label className="flex items-center text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
                               {isSpanish ? 'Institución' : 'Institution'} *
+                              <HelpCapsule
+                                title={isSpanish ? '¿Qué institución pongo?' : 'What institution do I put?'}
+                                text={isSpanish
+                                  ? 'Escribe el nombre completo de tu escuela, universidad o centro de investigación. Si no estás afiliado a ninguna institución, escribe "Investigador independiente".'
+                                  : 'Write the full name of your school, university, or research center. If you are not affiliated with any institution, write "Independent researcher".'}
+                              />
                             </label>
                             <input
                               type="text"
                               value={author.institution}
                               onChange={(e) => handleAuthorChange(index, 'institution', e.target.value)}
-                              className={`w-full p-2.5 border rounded-sm text-sm focus:ring-2 focus:ring-[#003b5c] focus:border-transparent outline-none font-sans
-                                ${validationErrors[`author_${index}_institution`] ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-white text-gray-600'}`}
-                              placeholder={isSpanish ? 'Universidad' : 'University'}
+                              className={`w-full p-3 bg-white border-0 ring-1 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all
+                                ${validationErrors[`author_${index}_institution`] ? 'ring-red-300' : 'ring-slate-200'}`}
                             />
                             {validationErrors[`author_${index}_institution`] && (
                               <p className="text-red-500 text-xs mt-1">{validationErrors[`author_${index}_institution`]}</p>
                             )}
                           </div>
                           <div>
-                            <label className="block text-[10px] font-medium uppercase tracking-wider text-gray-500 mb-1">
-                              {isSpanish ? 'Correo' : 'Email'} *
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                              {isSpanish ? 'Email' : 'Email'} *
                             </label>
                             <input
                               type="email"
                               value={author.email}
                               onChange={(e) => handleAuthorChange(index, 'email', e.target.value)}
-                              className={`w-full p-2.5 border rounded-sm text-sm focus:ring-2 focus:ring-[#003b5c] focus:border-transparent outline-none font-sans
-                                ${validationErrors[`author_${index}_email`] ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-white text-gray-600'}`}
-                              placeholder="autor1@email"
+                              className={`w-full p-3 bg-white border-0 ring-1 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all
+                                ${validationErrors[`author_${index}_email`] ? 'ring-red-300' : 'ring-slate-200'}`}
                             />
                             {validationErrors[`author_${index}_email`] && (
                               <p className="text-red-500 text-xs mt-1">{validationErrors[`author_${index}_email`]}</p>
                             )}
                           </div>
                           <div>
-                            <label className="block text-[10px] font-medium uppercase tracking-wider text-gray-500 mb-1">
+                            <label className="flex items-center text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
                               ORCID
+                              <HelpCapsule
+                                title={isSpanish ? '¿Qué es ORCID?' : 'What is ORCID?'}
+                                text={isSpanish
+                                  ? 'ORCID es un identificador digital único para investigadores. Si no tienes uno, puedes registrarte gratis en orcid.org. Ayuda a distinguirte de otros investigadores con nombres similares.'
+                                  : 'ORCID is a unique digital identifier for researchers. If you do not have one, you can register for free at orcid.org. It helps distinguish you from other researchers with similar names.'}
+                              />
                             </label>
                             <div className="flex gap-2">
                               <input
@@ -2524,14 +2148,13 @@ useEffect(() => {
                                 value={author.orcid}
                                 onChange={(e) => handleAuthorChange(index, 'orcid', e.target.value)}
                                 placeholder="0000-0000-0000-0000"
-                                className="flex-1 p-2.5 border border-gray-200 rounded-sm text-sm font-mono focus:ring-2 focus:ring-[#003b5c] focus:border-transparent outline-none"
+                                className="flex-1 p-3 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm font-mono focus:ring-2 focus:ring-[#003b5c] outline-none transition-all"
                               />
                               {user && (
                                 <button
                                   type="button"
                                   onClick={() => handleImportMyProfile(index)}
-                                  className="px-3 py-2.5 bg-[#003b5c] hover:bg-[#002b44] text-white rounded-sm text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 whitespace-nowrap"
-                                  title={isSpanish ? 'Importar datos de mi perfil' : 'Import my profile data'}
+                                  className="px-3 py-2 bg-[#003b5c] hover:bg-[#002b44] text-white rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 whitespace-nowrap"
                                 >
                                   <UserIcon className="w-3 h-3" />
                                   {isSpanish ? 'Yo' : 'Me'}
@@ -2540,21 +2163,27 @@ useEffect(() => {
                             </div>
                           </div>
                           <div>
-                            <label className="block text-[10px] font-medium uppercase tracking-wider text-gray-500 mb-1">
-                              {isSpanish ? 'Contribución (CRediT)' : 'Contribution (CRediT)'} *
+                            <label className="flex items-center text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                              {isSpanish ? 'Contribución' : 'Contribution'} *
+                              <HelpCapsule
+                                title={isSpanish ? '¿Qué pongo aquí?' : 'What do I put here?'}
+                                text={isSpanish
+                                  ? 'Describe brevemente qué hizo cada autor. Por ejemplo: "Diseñó el estudio, recolectó datos, analizó resultados, escribió el manuscrito". Esto sigue el estándar CRediT.'
+                                  : 'Briefly describe what each author did. For example: "Designed the study, collected data, analyzed results, wrote the manuscript". This follows the CRediT standard.'}
+                              />
                             </label>
                             <textarea
                               value={author.contribution}
                               onChange={(e) => handleAuthorChange(index, 'contribution', e.target.value)}
                               rows={2}
-                              className="w-full p-2.5 border border-gray-200 rounded-sm text-sm focus:ring-2 focus:ring-[#003b5c] focus:border-transparent outline-none font-sans resize-y"
+                              className="w-full p-3 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all resize-y"
                               placeholder={isSpanish ? 'Conceptualización, análisis...' : 'Conceptualization, analysis...'}
                             />
                           </div>
                         </div>
 
                         {/* Menor de edad */}
-                        <div className="mt-6 border-t border-gray-200 pt-4">
+                        <div className="mt-6 pt-4 border-t border-slate-200">
                           <label className="flex items-center gap-3 cursor-pointer">
                             <input
                               type="checkbox"
@@ -2569,9 +2198,15 @@ useEffect(() => {
                               }}
                               className="w-4 h-4 text-[#003b5c] rounded"
                             />
-                            <span className="text-sm text-gray-700 font-sans">
+                            <span className="text-sm text-slate-700 font-sans">
                               {isSpanish ? 'Este autor es menor de edad' : 'This author is a minor'}
                             </span>
+                            <HelpCapsule
+                              title={isSpanish ? '¿Qué significa ser menor?' : 'What does being a minor mean?'}
+                              text={isSpanish
+                                ? 'Si alguno de los autores tiene menos de 18 años, debe marcarse esta casilla. Se requerirá autorización de un tutor legal para poder publicar el artículo.'
+                                : 'If any of the authors is under 18 years old, this box must be checked. Authorization from a legal guardian will be required to publish the article.'}
+                            />
                           </label>
 
                           {author.isMinor && (
@@ -2592,18 +2227,32 @@ useEffect(() => {
                               onChange={(e) => handleAuthorChange(index, 'isCorresponding', e.target.checked)}
                               className="w-4 h-4 text-[#003b5c] rounded"
                             />
-                            <span className="text-sm text-gray-700 font-sans">
+                            <span className="text-sm text-slate-700 font-sans">
                               {isSpanish ? 'Autor de correspondencia' : 'Corresponding author'}
                             </span>
+                            <HelpCapsule
+                              title={isSpanish ? '¿Quién es el autor de correspondencia?' : 'Who is the corresponding author?'}
+                              text={isSpanish
+                                ? 'Es el autor que recibirá todas las comunicaciones de la revista. Debe ser alguien que revise su correo regularmente. Generalmente es el primer autor o el supervisor del proyecto.'
+                                : 'This is the author who will receive all communications from the journal. They should be someone who checks their email regularly. Usually the first author or project supervisor.'}
+                            />
                           </label>
                         </div>
-                      </motion.div>
+                      </div>
                     ))}
+
+                    <button
+                      type="button"
+                      onClick={addAuthor}
+                      className="w-full py-3 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 hover:border-[#003b5c] hover:text-[#003b5c] transition-colors font-sans text-sm"
+                    >
+                      + {isSpanish ? 'Agregar otro autor' : 'Add another author'}
+                    </button>
                   </div>
 
                   {/* Financiación */}
-                  <div className="p-6 border-b border-gray-200 bg-white">
-                    <h3 className="font-serif text-xl font-bold text-[#003b5c] mb-4 border-b border-gray-100 pb-3">
+                  <div className="bg-slate-50/50 rounded-xl p-6 ring-1 ring-slate-200/60">
+                    <h3 className="font-serif font-bold text-[#003b5c] mb-4">
                       {isSpanish ? 'Financiación' : 'Funding'}
                     </h3>
                     <label className="flex items-center gap-3 mb-4">
@@ -2614,7 +2263,7 @@ useEffect(() => {
                         onChange={handleInputChange}
                         className="w-4 h-4 text-[#003b5c] rounded"
                       />
-                      <span className="text-sm text-gray-700 font-sans">
+                      <span className="text-sm text-slate-700 font-sans">
                         {isSpanish ? 'Este trabajo recibió financiación externa' : 'This work received external funding'}
                       </span>
                     </label>
@@ -2622,7 +2271,7 @@ useEffect(() => {
                     {formData.funding.hasFunding && (
                       <div className="pl-7 space-y-4">
                         <div>
-                          <label className="text-xs text-gray-500 mb-1 block font-sans uppercase tracking-wider">
+                          <label className="text-xs text-slate-500 mb-1 block font-sans uppercase tracking-wider">
                             {isSpanish ? 'Entidad financiadora' : 'Funding entity'}
                           </label>
                           <input
@@ -2630,12 +2279,12 @@ useEffect(() => {
                             name="funding.sources"
                             value={formData.funding.sources}
                             onChange={handleInputChange}
-                            className="w-full p-2.5 border border-gray-200 rounded-sm text-sm font-sans focus:ring-2 focus:ring-[#003b5c] focus:border-transparent outline-none"
+                            className="w-full p-3 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all"
                             placeholder={isSpanish ? 'FONDECYT, ANID...' : 'NSF, NIH...'}
                           />
                         </div>
                         <div>
-                          <label className="text-xs text-gray-500 mb-1 block font-sans uppercase tracking-wider">
+                          <label className="text-xs text-slate-500 mb-1 block font-sans uppercase tracking-wider">
                             {isSpanish ? 'Código(s) de la subvención' : 'Grant number(s)'}
                           </label>
                           <input
@@ -2643,7 +2292,7 @@ useEffect(() => {
                             name="funding.grantNumbers"
                             value={formData.funding.grantNumbers}
                             onChange={handleInputChange}
-                            className="w-full p-2.5 border border-gray-200 rounded-sm text-sm font-sans focus:ring-2 focus:ring-[#003b5c] focus:border-transparent outline-none"
+                            className="w-full p-3 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all"
                             placeholder="123456, 789012"
                           />
                         </div>
@@ -2652,30 +2301,42 @@ useEffect(() => {
                   </div>
 
                   {/* Conflicto de intereses */}
-                  <div className="p-6 border-b border-gray-200 bg-white">
-                    <h3 className="font-serif text-xl font-bold text-[#003b5c] mb-4 border-b border-gray-100 pb-3">
-                      {isSpanish ? 'Conflicto de intereses' : 'Conflict of interest'}
-                    </h3>
+                  <div className="bg-slate-50/50 rounded-xl p-6 ring-1 ring-slate-200/60">
+                    <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                      {isSpanish ? 'Conflicto de Intereses' : 'Conflict of Interest'}
+                      <HelpCapsule
+                        title={isSpanish ? '¿Qué es un conflicto de intereses?' : 'What is a conflict of interest?'}
+                        text={isSpanish
+                          ? 'Un conflicto de intereses existe cuando un autor tiene intereses personales o financieros que podrían influir en su investigación. Si no tienes ninguno, escribe: "Los autores declaran no tener conflictos de interés".'
+                          : 'A conflict of interest exists when an author has personal or financial interests that could influence their research. If you have none, write: "The authors declare no conflicts of interest."'}
+                      />
+                    </label>
                     <textarea
                       name="conflictOfInterest"
                       value={formData.conflictOfInterest}
                       onChange={handleInputChange}
                       rows={3}
-                      className="w-full p-3 border border-gray-200 rounded-sm text-sm font-sans focus:ring-2 focus:ring-[#003b5c] focus:border-transparent outline-none resize-y"
+                      className="w-full p-3 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all resize-y"
                       placeholder={isSpanish ? 'Los autores declaran no tener conflictos de interés.' : 'The authors declare no conflicts of interest.'}
                     />
                   </div>
 
                   {/* Aprobación ética */}
-                  <div className="p-6 bg-white rounded-b-sm">
-                    <h3 className="font-serif text-xl font-bold text-[#003b5c] mb-4 border-b border-gray-100 pb-3">
+                  <div className="bg-slate-50/50 rounded-xl p-6 ring-1 ring-slate-200/60">
+                    <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
                       {isSpanish ? 'Aprobación Ética' : 'Ethics Approval'}
-                    </h3>
+                      <HelpCapsule
+                        title={isSpanish ? '¿Necesito aprobación ética?' : 'Do I need ethics approval?'}
+                        text={isSpanish
+                          ? 'Si tu investigación involucra personas, animales o datos sensibles, probablemente necesitas aprobación de un comité de ética. Si es un ensayo teórico o revisión sin datos nuevos, generalmente no aplica.'
+                          : 'If your research involves people, animals, or sensitive data, you probably need approval from an ethics committee. If it is a theoretical essay or review without new data, it generally does not apply.'}
+                      />
+                    </label>
                     <select
                       name="requiresEthicsApproval"
                       value={formData.requiresEthicsApproval}
                       onChange={handleInputChange}
-                      className="w-full p-3 border border-gray-200 rounded-sm text-sm font-sans text-gray-600 focus:ring-2 focus:ring-[#003b5c] focus:border-transparent outline-none appearance-none bg-white mb-4"
+                      className="w-full p-3 border-0 ring-1 ring-slate-200 rounded-lg text-sm font-sans text-slate-600 focus:ring-2 focus:ring-[#003b5c] outline-none appearance-none bg-white mb-4 transition-all"
                     >
                       <option value="no">
                         {isSpanish ? 'No, mi estudio está exento o no involucra sujetos humanos' : 'No, my study is exempt or does not involve human subjects'}
@@ -2687,15 +2348,12 @@ useEffect(() => {
 
                     {formData.requiresEthicsApproval === 'yes' && (
                       <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
-                        <label className="text-xs text-gray-500 mb-1 block font-sans uppercase tracking-wider">
-                          {isSpanish ? 'Nombre del comité, código de aprobación y fecha *' : 'Committee name, approval code and date *'}
-                        </label>
                         <input
                           type="text"
                           name="ethicsCommitteeName"
                           value={formData.ethicsCommitteeName}
                           onChange={handleInputChange}
-                          className="w-full p-2.5 border border-gray-200 rounded-sm text-sm font-sans focus:ring-2 focus:ring-[#003b5c] focus:border-transparent outline-none"
+                          className="w-full p-3 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all"
                           placeholder={isSpanish ? 'Comité de Ética Universidad X, Acta 123, 01/2024' : 'Ethics Committee University X, Protocol 123, 01/2024'}
                         />
                       </motion.div>
@@ -2704,40 +2362,40 @@ useEffect(() => {
                 </motion.div>
               )}
 
-              {/* PASO 3: DATOS, IA Y DECLARACIONES */}
+              {/* PASO 3: DECLARACIONES Y ENVÍO */}
               {currentStep === 3 && (
-                <motion.div
-                  key="step3"
-                  initial={{ opacity: 0, x: 30 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -30 }}
-                  className="space-y-14"
+                <motion.div 
+                  key="step3" 
+                  initial={{ opacity: 0, x: 20 }} 
+                  animate={{ opacity: 1, x: 0 }} 
+                  exit={{ opacity: 0, x: -20 }} 
+                  className="space-y-10"
                 >
-                  {/* Uso de IA */}
-                  <div className="p-6 border-b border-gray-200 bg-gray-50">
-                    <div className="flex items-center gap-2 mb-4">
-                      <svg className="w-4 h-4 text-[#003b5c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
-                      <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                        {isSpanish ? 'Herramientas IA' : 'AI Tools'}
-                      </span>
-                      {formData.aiUsed === 'yes' && (
-                        <button
-                          type="button"
-                          onClick={addAITool}
-                          className="ml-auto text-xs text-gray-400 bg-white px-2 py-0.5 rounded-sm border border-gray-200 hover:border-[#003b5c] hover:text-[#003b5c] transition-colors"
-                        >
-                          + {isSpanish ? 'añadir' : 'add'}
-                        </button>
-                      )}
-                    </div>
+                  <div className="border-b border-slate-100 pb-4 mb-8">
+                    <h2 className="text-2xl font-serif text-[#003b5c] font-medium">
+                      {isSpanish ? 'Declaraciones Finales' : 'Final Declarations'}
+                    </h2>
+                    <p className="text-slate-500 text-sm mt-1">
+                      {isSpanish ? 'Requisito obligatorio para el proceso de revisión por pares.' : 'Mandatory requirement for the peer review process.'}
+                    </p>
+                  </div>
 
+                  {/* Uso de IA */}
+                  <div className="bg-slate-50/50 rounded-xl p-6 ring-1 ring-slate-200/60">
+                    <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                      {isSpanish ? 'Uso de Inteligencia Artificial' : 'Use of Artificial Intelligence'}
+                      <HelpCapsule
+                        title={isSpanish ? '¿Debo declarar uso de IA?' : 'Should I declare AI use?'}
+                        text={isSpanish
+                          ? 'Sé transparente sobre el uso de herramientas de IA. Si usaste ChatGPT u otra IA para redactar, analizar datos o generar código, decláralo. La transparencia es fundamental para la integridad científica.'
+                          : 'Be transparent about the use of AI tools. If you used ChatGPT or other AI to write, analyze data, or generate code, declare it. Transparency is fundamental for scientific integrity.'}
+                      />
+                    </label>
                     <select
                       name="aiUsed"
                       value={formData.aiUsed}
                       onChange={handleInputChange}
-                      className="w-full p-3 border border-gray-200 rounded-sm text-sm font-sans text-gray-600 focus:ring-2 focus:ring-[#003b5c] focus:border-transparent outline-none appearance-none bg-white mb-4"
+                      className="w-full p-3 border-0 ring-1 ring-slate-200 rounded-lg text-sm font-sans text-slate-600 focus:ring-2 focus:ring-[#003b5c] outline-none appearance-none bg-white mb-4 transition-all"
                     >
                       <option value="no">{isSpanish ? 'No se utilizó IA en este trabajo' : 'AI was not used in this work'}</option>
                       <option value="yes">{isSpanish ? 'Sí, se utilizó IA en este trabajo' : 'Yes, AI was used in this work'}</option>
@@ -2746,37 +2404,37 @@ useEffect(() => {
                     {formData.aiUsed === 'yes' && (
                       <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-4">
                         {formData.aiTools.map((tool, index) => (
-                          <div key={index} className="bg-white border border-gray-200 rounded-sm p-4 shadow-sm">
+                          <div key={index} className="bg-white rounded-lg p-4 ring-1 ring-slate-200">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                               <div>
-                                <label className="block text-[10px] font-medium uppercase tracking-wider text-gray-500 mb-1">
+                                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
                                   {isSpanish ? 'Herramienta y versión' : 'Tool and version'}
                                 </label>
                                 <input
                                   type="text"
                                   value={tool.name}
                                   onChange={(e) => handleAIToolChange(index, 'name', e.target.value)}
-                                  placeholder="GPT-4 · análisis"
-                                  className="w-full p-2.5 border border-gray-200 rounded-sm text-sm focus:ring-2 focus:ring-[#003b5c] focus:border-transparent outline-none font-sans"
+                                  placeholder="GPT-4"
+                                  className="w-full p-2.5 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all"
                                 />
                               </div>
                               <div>
-                                <label className="block text-[10px] font-medium uppercase tracking-wider text-gray-500 mb-1">
-                                  {isSpanish ? 'Propósito / sección' : 'Purpose / section'}
+                                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                                  {isSpanish ? 'Propósito' : 'Purpose'}
                                 </label>
                                 <div className="flex gap-2">
                                   <input
                                     type="text"
                                     value={tool.purpose}
                                     onChange={(e) => handleAIToolChange(index, 'purpose', e.target.value)}
-                                    placeholder={isSpanish ? 'v1.2 · revisión' : 'v1.2 · review'}
-                                    className="flex-1 p-2.5 border border-gray-200 rounded-sm text-sm focus:ring-2 focus:ring-[#003b5c] focus:border-transparent outline-none font-sans"
+                                    placeholder={isSpanish ? 'Análisis de datos' : 'Data analysis'}
+                                    className="flex-1 p-2.5 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all"
                                   />
                                   {formData.aiTools.length > 1 && (
                                     <button 
                                       type="button" 
                                       onClick={() => removeAITool(index)} 
-                                      className="text-gray-400 hover:text-[#e86125] p-2 transition-colors"
+                                      className="text-slate-400 hover:text-red-500 p-2 transition-colors"
                                     >
                                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -2788,514 +2446,183 @@ useEffect(() => {
                             </div>
                           </div>
                         ))}
+                        <button
+                          type="button"
+                          onClick={addAITool}
+                          className="w-full py-2 border-2 border-dashed border-slate-300 rounded-lg text-slate-500 hover:border-[#003b5c] hover:text-[#003b5c] transition-colors font-sans text-sm"
+                        >
+                          + {isSpanish ? 'Agregar otra herramienta' : 'Add another tool'}
+                        </button>
                       </motion.div>
                     )}
                   </div>
 
-                  {/* Disponibilidad de datos y código */}
-                  <div className="p-6 border-b border-gray-200 bg-white">
-                    <h3 className="font-serif text-xl font-bold text-[#003b5c] mb-4 border-b border-gray-100 pb-3">
-                      {isSpanish ? 'Disponibilidad de Datos y Código' : 'Data and Code Availability'}
-                    </h3>
-                    
-                    <div className="space-y-5">
-                      <div>
-                        <label className="block text-xs font-medium uppercase tracking-wider text-gray-600 mb-1">
-                          {isSpanish ? 'Declaración de disponibilidad de los datos' : 'Data availability statement'} *
-                        </label>
-                        <select
-                          name="dataAvailability"
-                          value={formData.dataAvailability}
-                          onChange={handleInputChange}
-                          className={`w-full p-3 border rounded-sm text-sm font-sans focus:ring-2 focus:ring-[#003b5c] focus:border-transparent outline-none appearance-none bg-white mb-3
-                            ${validationErrors.dataAvailability ? 'border-red-400 bg-red-50' : 'border-gray-200 text-gray-600'}`}
-                        >
-                          <option value="">— {isSpanish ? 'Selecciona una opción' : 'Select an option'} —</option>
-                          {availabilityOptions[isSpanish ? 'es' : 'en'].map(opt => (
-                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                          ))}
-                        </select>
-                        {validationErrors.dataAvailability && (
-                          <p className="text-red-500 text-xs mt-1">{validationErrors.dataAvailability}</p>
-                        )}
-                        <input
-                          type="text"
-                          name="dataAvailabilityEn"
-                          value={formData.dataAvailabilityEn}
-                          onChange={handleInputChange}
-                          placeholder={isSpanish ? 'Especificar en inglés (si aplica)' : 'Specify in English (if applicable)'}
-                          className="w-full p-2.5 border border-gray-200 rounded-sm text-sm font-sans focus:ring-2 focus:ring-[#003b5c] focus:border-transparent outline-none"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-medium uppercase tracking-wider text-gray-600 mb-1">
-                          {isSpanish ? 'Declaración de disponibilidad del código' : 'Code availability statement'}
-                        </label>
-                        <select
-                          name="codeAvailability"
-                          value={formData.codeAvailability}
-                          onChange={handleInputChange}
-                          className="w-full p-3 border border-gray-200 rounded-sm text-sm font-sans text-gray-600 focus:ring-2 focus:ring-[#003b5c] focus:border-transparent outline-none appearance-none bg-white mb-3"
-                        >
-                          <option value="">— {isSpanish ? 'Selecciona una opción (opcional)' : 'Select an option (optional)'} —</option>
-                          {availabilityOptions[isSpanish ? 'es' : 'en'].map(opt => (
-                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                          ))}
-                        </select>
-                        <input
-                          type="text"
-                          name="codeAvailabilityEn"
-                          value={formData.codeAvailabilityEn}
-                          onChange={handleInputChange}
-                          placeholder={isSpanish ? 'Especificar en inglés (si aplica)' : 'Specify in English (if applicable)'}
-                          className="w-full p-2.5 border border-gray-200 rounded-sm text-sm font-sans focus:ring-2 focus:ring-[#003b5c] focus:border-transparent outline-none"
-                        />
-                      </div>
-                    </div>
+                  {/* Disponibilidad de datos */}
+                  <div className="bg-slate-50/50 rounded-xl p-6 ring-1 ring-slate-200/60">
+                    <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                      {isSpanish ? 'Disponibilidad de Datos' : 'Data Availability'} *
+                      <HelpCapsule
+                        title={isSpanish ? '¿Qué es la disponibilidad de datos?' : 'What is data availability?'}
+                        text={isSpanish
+                          ? 'Indica dónde pueden otros investigadores acceder a tus datos. Esto promueve la transparencia y reproducibilidad de tu investigación. Si no tienes datos nuevos (ensayo teórico), selecciona "No aplica".'
+                          : 'Indicate where other researchers can access your data. This promotes transparency and reproducibility of your research. If you have no new data (theoretical essay), select "Not applicable".'}
+                      />
+                    </label>
+                    <select
+                      name="dataAvailability"
+                      value={formData.dataAvailability}
+                      onChange={handleInputChange}
+                      className={`w-full p-3 border-0 ring-1 rounded-lg text-sm font-sans focus:ring-2 focus:ring-[#003b5c] outline-none appearance-none bg-white mb-3 transition-all
+                        ${validationErrors.dataAvailability ? 'ring-red-300' : 'ring-slate-200 text-slate-600'}`}
+                    >
+                      <option value="">— {isSpanish ? 'Selecciona una opción' : 'Select an option'} —</option>
+                      {availabilityOptions[isSpanish ? 'es' : 'en'].map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                    {validationErrors.dataAvailability && (
+                      <p className="text-red-500 text-xs mt-1">{validationErrors.dataAvailability}</p>
+                    )}
                   </div>
 
-                  {/* DECLARACIONES OBLIGATORIAS - VERSIÓN BLINDADA */}
-                  <div className="p-6 border-b border-gray-200 bg-white">
-                    <h3 className="font-serif text-xl font-bold text-[#003b5c] mb-4 border-b border-gray-100 pb-3">
-                      {isSpanish ? 'Declaraciones obligatorias' : 'Mandatory declarations'}
+                  {/* Declaraciones obligatorias */}
+                  <div className="bg-slate-50/50 rounded-xl p-6 ring-1 ring-slate-200/60">
+                    <h3 className="font-serif font-bold text-[#003b5c] mb-4">
+                      {isSpanish ? 'Declaraciones Obligatorias' : 'Mandatory Declarations'}
                     </h3>
                     <div className="space-y-4">
-                      {/* Declaración 1: Originalidad y similitud */}
-                      <label className="flex gap-4 cursor-pointer group p-3 hover:bg-gray-50 rounded-sm transition-colors">
-                        <input
-                          type="checkbox"
-                          checked={formData.declarations.originalAndSimilarity === true}
-                          onChange={() => {
-                            setFormData(prev => ({
-                              ...prev,
-                              declarations: {
-                                ...prev.declarations,
-                                originalAndSimilarity: !prev.declarations.originalAndSimilarity
-                              }
-                            }));
-                            setValidationErrors(prev => {
-                              const newErrors = { ...prev };
-                              delete newErrors.declarations;
-                              return newErrors;
-                            });
-                          }}
-                          className="mt-0.5 w-4 h-4 text-[#003b5c] rounded"
-                        />
-                        <span className="text-sm text-gray-700 group-hover:text-[#003b5c] font-sans">
-                          {isSpanish 
-                            ? 'El manuscrito es inédito y, en caso de derivar de un trabajo previo, la superposición textual no excede el 15%.' 
-                            : 'The manuscript is unpublished and, if derived from previous work, the textual overlap does not exceed 15%.'}
-                        </span>
-                      </label>
-
-                      {/* Declaración 2: Envío exclusivo */}
-                      <label className="flex gap-4 cursor-pointer group p-3 hover:bg-gray-50 rounded-sm transition-colors">
-                        <input
-                          type="checkbox"
-                          checked={formData.declarations.exclusiveSubmission === true}
-                          onChange={() => {
-                            setFormData(prev => ({
-                              ...prev,
-                              declarations: {
-                                ...prev.declarations,
-                                exclusiveSubmission: !prev.declarations.exclusiveSubmission
-                              }
-                            }));
-                            setValidationErrors(prev => {
-                              const newErrors = { ...prev };
-                              delete newErrors.declarations;
-                              return newErrors;
-                            });
-                          }}
-                          className="mt-0.5 w-4 h-4 text-[#003b5c] rounded"
-                        />
-                        <span className="text-sm text-gray-700 group-hover:text-[#003b5c] font-sans">
-                          {isSpanish 
-                            ? 'El manuscrito no está siendo evaluado simultáneamente en otra revista.' 
-                            : 'The manuscript is not being simultaneously evaluated in another journal.'}
-                        </span>
-                      </label>
-
-                      {/* Declaración 3: Criterios de autoría */}
-                      <label className="flex gap-4 cursor-pointer group p-3 hover:bg-gray-50 rounded-sm transition-colors">
-                        <input
-                          type="checkbox"
-                          checked={formData.declarations.authorshipCriteria === true}
-                          onChange={() => {
-                            setFormData(prev => ({
-                              ...prev,
-                              declarations: {
-                                ...prev.declarations,
-                                authorshipCriteria: !prev.declarations.authorshipCriteria
-                              }
-                            }));
-                            setValidationErrors(prev => {
-                              const newErrors = { ...prev };
-                              delete newErrors.declarations;
-                              return newErrors;
-                            });
-                          }}
-                          className="mt-0.5 w-4 h-4 text-[#003b5c] rounded"
-                        />
-                        <span className="text-sm text-gray-700 group-hover:text-[#003b5c] font-sans">
-                          {isSpanish 
-                            ? 'Todos los autores cumplen los 4 criterios de autoría del ICMJE y sus roles CRediT están declarados.' 
-                            : 'All authors meet the 4 ICMJE authorship criteria and their CRediT roles are declared.'}
-                        </span>
-                      </label>
-
-                      {/* Declaración 4: Datos auténticos */}
-                      <label className="flex gap-4 cursor-pointer group p-3 hover:bg-gray-50 rounded-sm transition-colors">
-                        <input
-                          type="checkbox"
-                          checked={formData.declarations.dataAuthentic === true}
-                          onChange={() => {
-                            setFormData(prev => ({
-                              ...prev,
-                              declarations: {
-                                ...prev.declarations,
-                                dataAuthentic: !prev.declarations.dataAuthentic
-                              }
-                            }));
-                            setValidationErrors(prev => {
-                              const newErrors = { ...prev };
-                              delete newErrors.declarations;
-                              return newErrors;
-                            });
-                          }}
-                          className="mt-0.5 w-4 h-4 text-[#003b5c] rounded"
-                        />
-                        <span className="text-sm text-gray-700 group-hover:text-[#003b5c] font-sans">
-                          {isSpanish 
-                            ? 'Los datos presentados son auténticos, no han sido manipulados y la investigación cumplió con los estándares éticos aplicables.' 
-                            : 'The data presented are authentic, have not been manipulated, and the research complied with applicable ethical standards.'}
-                        </span>
-                      </label>
-
-                      {/* Declaración 5: Consentimiento informado */}
-                      <label className="flex gap-4 cursor-pointer group p-3 hover:bg-gray-50 rounded-sm transition-colors">
-                        <input
-                          type="checkbox"
-                          checked={formData.declarations.informedConsent === true}
-                          onChange={() => {
-                            setFormData(prev => ({
-                              ...prev,
-                              declarations: {
-                                ...prev.declarations,
-                                informedConsent: !prev.declarations.informedConsent
-                              }
-                            }));
-                            setValidationErrors(prev => {
-                              const newErrors = { ...prev };
-                              delete newErrors.declarations;
-                              return newErrors;
-                            });
-                          }}
-                          className="mt-0.5 w-4 h-4 text-[#003b5c] rounded"
-                        />
-                        <span className="text-sm text-gray-700 group-hover:text-[#003b5c] font-sans">
-                          {isSpanish 
-                            ? 'Se obtuvo el consentimiento/asentimiento informado cuando fue necesario y se declara en el manuscrito.' 
-                            : 'Informed consent/assent was obtained when necessary and is declared in the manuscript.'}
-                        </span>
-                      </label>
-
-                      {/* Declaración 6: Divulgación de IA */}
-                      <label className="flex gap-4 cursor-pointer group p-3 hover:bg-gray-50 rounded-sm transition-colors">
-                        <input
-                          type="checkbox"
-                          checked={formData.declarations.aiDisclosure === true}
-                          onChange={() => {
-                            setFormData(prev => ({
-                              ...prev,
-                              declarations: {
-                                ...prev.declarations,
-                                aiDisclosure: !prev.declarations.aiDisclosure
-                              }
-                            }));
-                            setValidationErrors(prev => {
-                              const newErrors = { ...prev };
-                              delete newErrors.declarations;
-                              return newErrors;
-                            });
-                          }}
-                          className="mt-0.5 w-4 h-4 text-[#003b5c] rounded"
-                        />
-                        <span className="text-sm text-gray-700 group-hover:text-[#003b5c] font-sans">
-                          {isSpanish 
-                            ? 'El uso de cualquier herramienta de IA ha sido declarado en el formulario y en el manuscrito (Capítulo 7).' 
-                            : 'The use of any AI tool has been declared in this form and in the manuscript (Chapter 7).'}
-                        </span>
-                      </label>
-
-                      {/* Declaración 7: Conflictos de interés */}
-                      <label className="flex gap-4 cursor-pointer group p-3 hover:bg-gray-50 rounded-sm transition-colors">
-                        <input
-                          type="checkbox"
-                          checked={formData.declarations.conflicts === true}
-                          onChange={() => {
-                            setFormData(prev => ({
-                              ...prev,
-                              declarations: {
-                                ...prev.declarations,
-                                conflicts: !prev.declarations.conflicts
-                              }
-                            }));
-                            setValidationErrors(prev => {
-                              const newErrors = { ...prev };
-                              delete newErrors.declarations;
-                              return newErrors;
-                            });
-                          }}
-                          className="mt-0.5 w-4 h-4 text-[#003b5c] rounded"
-                        />
-                        <span className="text-sm text-gray-700 group-hover:text-[#003b5c] font-sans">
-                          {isSpanish 
-                            ? 'Todos los conflictos de interés (reales, potenciales o aparentes) están declarados en el formulario y en el manuscrito.' 
-                            : 'All conflicts of interest (real, potential, or apparent) are declared in this form and in the manuscript.'}
-                        </span>
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Licencia CC-BY */}
-                  <div className="p-6 border-b border-gray-200 bg-[#f8f9fa]">
-                    <label className="flex gap-4 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={formData.declarations.ccByLicense}
-                        onChange={() => handleDeclarationChange('ccByLicense')}
-                        className="mt-1 w-4 h-4 text-[#003b5c] rounded"
-                      />
-                      <div>
-                        <div className="font-bold text-[#003b5c] font-sans uppercase tracking-wider text-sm">
-                          {isSpanish ? 'Acuerdo de Licencia Creative Commons CC-BY 4.0' : 'Creative Commons CC-BY 4.0 License Agreement'}
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1 font-sans">
-                          {isSpanish
-                            ? 'Al marcar esta casilla, acepto que el artículo, si es aceptado, se publique bajo la licencia de acceso abierto CC BY 4.0.'
-                            : 'By checking this box, I agree that the article, if accepted, will be published under the CC BY 4.0 open access license.'}
-                        </p>
-                      </div>
-                    </label>
-                  </div>
-
-                  {/* Agradecimientos */}
-                  <div className="p-6 border-b border-gray-200 bg-white">
-                    <label className="block text-xs font-medium uppercase tracking-wider text-gray-600 mb-1">
-                      {isSpanish ? 'Agradecimientos' : 'Acknowledgments'} (opcional)
-                    </label>
-                    <textarea
-                      name="acknowledgments"
-                      value={formData.acknowledgments}
-                      onChange={handleInputChange}
-                      rows={3}
-                      className="w-full p-3 border border-gray-200 rounded-sm text-sm font-serif focus:ring-2 focus:ring-[#003b5c] focus:border-transparent outline-none resize-y"
-                      placeholder={isSpanish ? 'Agradecemos al Dr. Juan Pérez por sus comentarios...' : 'We thank Dr. John Smith for his comments...'}
-                    />
-                  </div>
-
-                  {/* Revisores excluidos */}
-                  <div className="p-6 border-b border-gray-200 bg-white">
-                    <label className="block text-xs font-medium uppercase tracking-wider text-gray-600 mb-1">
-                      {isSpanish ? 'Revisores sugeridos a excluir (opcional)' : 'Reviewers to exclude (optional)'}
-                    </label>
-                    <input
-                      type="text"
-                      name="excludedReviewers"
-                      value={formData.excludedReviewers}
-                      onChange={handleInputChange}
-                      className="w-full p-3 border border-gray-200 rounded-sm text-sm font-sans focus:ring-2 focus:ring-[#003b5c] focus:border-transparent outline-none"
-                      placeholder={isSpanish ? 'Dra. Ana López; Dr. Carlos Mendoza' : 'Dr. Jane Smith; Prof. Michael Brown'}
-                    />
-                  </div>
-{/* ============ NUEVA SECCIÓN: POSTULACIÓN COMO REVISOR ============ */}
-<motion.div
-  initial={{ opacity: 0 }}
-  animate={{ opacity: 1 }}
-  className="p-6 border-b border-gray-200 bg-gradient-to-r from-[#f8f9fa] to-white"
->
-  <div className="flex items-start gap-4">
-    <div className="w-12 h-12 bg-[#003b5c] rounded-sm flex items-center justify-center flex-shrink-0 mt-1">
-      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-      </svg>
-    </div>
-    
-    <div className="flex-1">
-      <h3 className="font-serif text-lg font-bold text-[#003b5c] mb-2">
-        {isSpanish 
-          ? '¿Te gustaría ser revisor/a?' 
-          : 'Would you like to be a reviewer?'}
-      </h3>
-      <p className="text-sm text-gray-600 mb-5 font-sans leading-relaxed">
-        {isSpanish 
-          ? 'Nuestra revista busca constantemente revisores comprometidos. Si te interesa contribuir con tu experiencia, indícalo aquí. Esto no afecta la evaluación de tu artículo actual.'
-          : 'Our journal is constantly seeking committed reviewers. If you are interested in contributing with your expertise, please indicate it here. This does not affect the evaluation of your current article.'}
-      </p>
-
-      {/* Toggle de postulación */}
-      <label className="flex items-center gap-3 cursor-pointer group mb-5">
-        <div className="relative">
-          <input
-            type="checkbox"
-            checked={formData.wantsToBeReviewer}
-            onChange={(e) => {
-              setFormData(prev => ({
-                ...prev,
-                wantsToBeReviewer: e.target.checked,
-                reviewerAreas: e.target.checked ? prev.reviewerAreas : []
-              }));
-            }}
-            className="sr-only peer"
-          />
-          <div className="w-12 h-6 bg-gray-200 rounded-full peer-checked:bg-[#003b5c] transition-colors duration-300"></div>
-          <div className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm peer-checked:translate-x-6 transition-transform duration-300"></div>
-        </div>
-        <span className="text-sm font-medium text-gray-700 group-hover:text-[#003b5c] transition-colors font-sans">
-          {isSpanish 
-            ? 'Sí, deseo ser considerado/a como revisor/a en mi área de especialización'
-            : 'Yes, I wish to be considered as a reviewer in my area of expertise'}
-        </span>
-      </label>
-
-      {/* Selección de áreas (solo si aceptó) */}
-      <AnimatePresence>
-        {formData.wantsToBeReviewer && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="space-y-4"
-          >
-            <div className="bg-white border border-[#003b5c]/20 rounded-sm p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <svg className="w-4 h-4 text-[#003b5c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
-                <span className="text-xs font-bold uppercase tracking-wider text-[#003b5c] font-sans">
-                  {isSpanish 
-                    ? 'Selecciona hasta 4 áreas de especialización'
-                    : 'Select up to 4 areas of expertise'}
-                </span>
-                <span className="text-[10px] text-gray-400 font-sans">
-                  ({formData.reviewerAreas.length}/4)
-                </span>
-              </div>
-
-              {/* Grid de áreas seleccionables */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {Object.entries(getAreasByLanguage(language)).map(([categoria, subareas]) => (
-                  <div key={categoria} className="space-y-2">
-                    <h4 className="text-[11px] font-bold uppercase tracking-wider text-gray-500 font-sans border-b border-gray-200 pb-1">
-                      {categoria}
-                    </h4>
-                    <div className="space-y-1.5">
-                      {subareas.map(area => {
-                        const isSelected = formData.reviewerAreas.includes(area);
-                        const isDisabled = !isSelected && formData.reviewerAreas.length >= 4;
-                        
+                      {[
+                        { key: 'originalAndSimilarity', 
+                          title: isSpanish ? 'Originalidad y Similitud' : 'Originality and Similarity',
+                          desc: isSpanish ? 'El manuscrito es inédito y la superposición textual no excede el 15%.' : 'The manuscript is unpublished and textual overlap does not exceed 15%.',
+                          help: isSpanish ? 'Esto significa que tu trabajo no ha sido publicado antes y no es muy similar a otros trabajos existentes.' : 'This means your work has not been published before and is not very similar to other existing works.' },
+                        { key: 'exclusiveSubmission', 
+                          title: isSpanish ? 'Envío Exclusivo' : 'Exclusive Submission',
+                          desc: isSpanish ? 'El manuscrito no está siendo evaluado simultáneamente en otra revista.' : 'The manuscript is not being simultaneously evaluated in another journal.',
+                          help: isSpanish ? 'No puedes enviar el mismo artículo a dos revistas al mismo tiempo. Es una práctica no ética.' : 'You cannot submit the same article to two journals at the same time. It is an unethical practice.' },
+                        { key: 'authorshipCriteria', 
+                          title: isSpanish ? 'Criterios de Autoría' : 'Authorship Criteria',
+                          desc: isSpanish ? 'Todos los autores cumplen los criterios de autoría y sus roles están declarados.' : 'All authors meet authorship criteria and their roles are declared.',
+                          help: isSpanish ? 'Solo deben aparecer como autores quienes realmente contribuyeron significativamente al trabajo.' : 'Only those who really contributed significantly to the work should appear as authors.' },
+                        { key: 'dataAuthentic', 
+                          title: isSpanish ? 'Datos Auténticos' : 'Authentic Data',
+                          desc: isSpanish ? 'Los datos son auténticos y no han sido manipulados.' : 'The data are authentic and have not been manipulated.',
+                          help: isSpanish ? 'Los datos presentados deben ser reales. Manipular o fabricar datos es una falta grave a la ética científica.' : 'The data presented must be real. Manipulating or fabricating data is a serious breach of scientific ethics.' },
+                        { key: 'informedConsent', 
+                          title: isSpanish ? 'Consentimiento Informado' : 'Informed Consent',
+                          desc: isSpanish ? 'Se obtuvo consentimiento cuando fue necesario.' : 'Consent was obtained when necessary.',
+                          help: isSpanish ? 'Si tu investigación involucra personas, debes haber obtenido su permiso informado.' : 'If your research involves people, you must have obtained their informed permission.' },
+                        { key: 'aiDisclosure', 
+                          title: isSpanish ? 'Divulgación de IA' : 'AI Disclosure',
+                          desc: isSpanish ? 'El uso de IA ha sido declarado en el formulario y manuscrito.' : 'AI use has been declared in the form and manuscript.',
+                          help: isSpanish ? 'Sé transparente sobre cualquier herramienta de IA que hayas utilizado en tu investigación.' : 'Be transparent about any AI tools you have used in your research.' },
+                        { key: 'conflicts', 
+                          title: isSpanish ? 'Conflictos de Interés' : 'Conflicts of Interest',
+                          desc: isSpanish ? 'Todos los conflictos de interés están declarados.' : 'All conflicts of interest are declared.',
+                          help: isSpanish ? 'Declara cualquier interés personal o financiero que pueda influir en tu trabajo.' : 'Declare any personal or financial interest that may influence your work.' },
+                      ].map((decl) => {
+                        const isChecked = formData.declarations[decl.key];
                         return (
-                          <button
-                            key={area}
-                            type="button"
-                            onClick={() => {
-                              setFormData(prev => {
-                                const current = prev.reviewerAreas;
-                                if (isSelected) {
-                                  return {
-                                    ...prev,
-                                    reviewerAreas: current.filter(a => a !== area)
-                                  };
-                                } else if (current.length < 4) {
-                                  return {
-                                    ...prev,
-                                    reviewerAreas: [...current, area]
-                                  };
-                                }
-                                return prev;
-                              });
-                            }}
-                            disabled={isDisabled}
-                            className={`
-                              w-full text-left px-3 py-2 rounded-sm text-xs font-sans transition-all duration-200
-                              ${isSelected 
-                                ? 'bg-[#003b5c] text-white shadow-sm' 
-                                : isDisabled
-                                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                  : 'bg-gray-50 text-gray-600 hover:bg-[#E5E9F0] hover:text-[#003b5c] border border-transparent hover:border-[#003b5c]/30'
-                              }
-                            `}
-                          >
-                            <span className="flex items-center gap-2">
-                              {isSelected ? (
-                                <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                          <label key={decl.key} className={`group relative flex items-start p-5 cursor-pointer rounded-xl transition-all duration-300 transform hover:-translate-y-0.5
+                            ${isChecked ? 'bg-[#003b5c]/5 ring-2 ring-[#003b5c] shadow-md' : 'bg-white ring-1 ring-slate-200 shadow-sm hover:shadow-md'}`}>
+                            <div className="flex items-center h-6 mr-4 mt-0.5">
+                              <input 
+                                type="checkbox" 
+                                className="sr-only peer" 
+                                checked={isChecked} 
+                                onChange={() => handleDeclarationChange(decl.key)} 
+                              />
+                              <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-colors
+                                ${isChecked ? 'bg-[#003b5c] border-[#003b5c]' : 'bg-white border-slate-300 group-hover:border-[#003b5c]/50'}`}>
+                                <svg className={`w-4 h-4 text-white transition-transform duration-300 ${isChecked ? 'scale-100' : 'scale-0'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                 </svg>
-                              ) : (
-                                <svg className="w-3.5 h-3.5 flex-shrink-0 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                </svg>
-                              )}
-                              {area}
-                            </span>
-                          </button>
+                              </div>
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <h4 className={`text-sm font-bold tracking-wide transition-colors ${isChecked ? 'text-[#003b5c]' : 'text-slate-800'}`}>
+                                  {decl.title}
+                                </h4>
+                                <HelpCapsule
+                                  title={decl.title}
+                                  text={decl.help}
+                                />
+                              </div>
+                              <p className="mt-1 text-xs text-slate-500 font-sans leading-relaxed">
+                                {decl.desc}
+                              </p>
+                            </div>
+                          </label>
                         );
                       })}
+
+                      {/* Licencia CC-BY */}
+                      <label className={`group relative flex items-start p-5 cursor-pointer rounded-xl transition-all duration-300 transform hover:-translate-y-0.5
+                        ${formData.declarations.ccByLicense ? 'bg-[#003b5c]/5 ring-2 ring-[#003b5c] shadow-md' : 'bg-white ring-1 ring-slate-200 shadow-sm hover:shadow-md'}`}>
+                        <div className="flex items-center h-6 mr-4 mt-0.5">
+                          <input 
+                            type="checkbox" 
+                            className="sr-only peer" 
+                            checked={formData.declarations.ccByLicense} 
+                            onChange={() => handleDeclarationChange('ccByLicense')} 
+                          />
+                          <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-colors
+                            ${formData.declarations.ccByLicense ? 'bg-[#003b5c] border-[#003b5c]' : 'bg-white border-slate-300 group-hover:border-[#003b5c]/50'}`}>
+                            <svg className={`w-4 h-4 text-white transition-transform duration-300 ${formData.declarations.ccByLicense ? 'scale-100' : 'scale-0'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-sm font-bold tracking-wide">
+                              {isSpanish ? 'Licencia Creative Commons CC-BY 4.0' : 'Creative Commons CC-BY 4.0 License'}
+                            </h4>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-[#e86125]/10 text-[#e86125] uppercase">
+                              Open Access
+                            </span>
+                            <HelpCapsule
+                              title={isSpanish ? '¿Qué es CC-BY 4.0?' : 'What is CC-BY 4.0?'}
+                              text={isSpanish
+                                ? 'Esta licencia permite que otros compartan y adapten tu trabajo, incluso con fines comerciales, siempre que te den crédito. Es la licencia más abierta y la que promueve la revista.'
+                                : 'This license allows others to share and adapt your work, even for commercial purposes, as long as they give you credit. It is the most open license and the one promoted by the journal.'}
+                            />
+                          </div>
+                          <p className="mt-1 text-xs text-slate-500 font-sans leading-relaxed">
+                            {isSpanish
+                              ? 'Al marcar esta casilla, acepto que el artículo, si es aceptado, se publique bajo la licencia de acceso abierto CC BY 4.0.'
+                              : 'By checking this box, I agree that the article, if accepted, will be published under the CC BY 4.0 open access license.'}
+                          </p>
+                        </div>
+                      </label>
                     </div>
+                    {validationErrors.declarations && (
+                      <p className="text-red-500 text-xs mt-2">{validationErrors.declarations}</p>
+                    )}
                   </div>
-                ))}
-              </div>
 
-              {/* Mensaje de áreas seleccionadas */}
-              {formData.reviewerAreas.length > 0 && (
-                <div className="mt-4 p-3 bg-[#f0f4f8] rounded-sm border border-[#003b5c]/10">
-                  <p className="text-xs text-[#003b5c] font-sans">
-                    <strong>
-                      {isSpanish ? 'Áreas seleccionadas:' : 'Selected areas:'}
-                    </strong>
-                    {' '}
-                    {formData.reviewerAreas.join(' • ')}
-                  </p>
-                </div>
-              )}
-
-              {/* Nota informativa */}
-              <div className="mt-4 flex items-start gap-2 text-[10px] text-gray-400 font-sans">
-                <svg className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>
-                  {isSpanish
-                    ? 'Al postularte, aceptas que tu información de contacto y áreas de especialización sean consideradas para futuras invitaciones de revisión. Podrás actualizar tus preferencias en cualquier momento desde tu perfil.'
-                    : 'By applying, you agree that your contact information and areas of expertise may be considered for future review invitations. You can update your preferences at any time from your profile.'}
-                </span>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  </div>
-</motion.div>
-{/* ============ FIN SECCIÓN POSTULACIÓN REVISOR ============ */}
-                  {/* Archivo manuscrito */}
-                  <div className="p-6 bg-white rounded-b-sm">
-                    <label className="block text-xs font-medium uppercase tracking-wider text-gray-600 mb-1">
-                      {isSpanish ? 'Manuscrito anonimizado' : 'Anonymized manuscript'} *
+                  {/* Subir manuscrito */}
+                  <div className="bg-slate-50/50 rounded-xl p-6 ring-1 ring-slate-200/60">
+                    <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                      {isSpanish ? 'Manuscrito Anonimizado' : 'Anonymized Manuscript'} *
+                      <HelpCapsule
+                        title={isSpanish ? '¿Qué es un manuscrito anonimizado?' : 'What is an anonymized manuscript?'}
+                        text={isSpanish
+                          ? 'Debes subir tu manuscrito SIN nombres de autores ni afiliaciones. Esto permite una revisión por pares imparcial. Revisa que no haya metadatos con tu nombre en el documento.'
+                          : 'You must upload your manuscript WITHOUT author names or affiliations. This allows impartial peer review. Check that there are no metadata with your name in the document.'}
+                      />
                     </label>
-                    <div className={`border rounded-sm p-6 ${
-                      validationErrors.manuscript ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-[#f8f9fa]'
-                    }`}>
+                    <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors
+                      ${validationErrors.manuscript ? 'border-red-300 bg-red-50' : 'border-slate-300 bg-white hover:border-[#003b5c]'}`}>
                       <input
                         type="file"
                         accept=".doc,.docx"
                         onChange={handleFileChange}
-                        className="block w-full text-sm text-gray-500 file:py-3 file:px-6 file:rounded-sm file:border-0 file:bg-white file:text-[#003b5c] file:font-bold file:uppercase file:tracking-wider file:text-xs font-sans"
+                        className="block w-full text-sm text-slate-500 file:mr-4 file:py-3 file:px-6 file:rounded-lg file:border-0 file:bg-[#003b5c] file:text-white file:font-bold file:uppercase file:tracking-wider file:text-xs hover:file:bg-[#002b44] font-sans"
                       />
                       {formData.manuscriptName && (
-                        <div className="mt-4 flex items-center gap-3 text-[#003b5c] text-sm font-sans">
+                        <div className="mt-4 flex items-center justify-center gap-3 text-[#003b5c] text-sm font-sans bg-green-50 px-4 py-2 rounded-lg">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                           </svg>
@@ -3307,80 +2634,221 @@ useEffect(() => {
                       <p className="text-red-500 text-xs mt-1">{validationErrors.manuscript}</p>
                     )}
                   </div>
+
+                  {/* Agradecimientos */}
+                  <div className="bg-slate-50/50 rounded-xl p-6 ring-1 ring-slate-200/60">
+                    <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                      {isSpanish ? 'Agradecimientos' : 'Acknowledgments'} (opcional)
+                      <HelpCapsule
+                        title={isSpanish ? '¿A quién agradezco?' : 'Who do I thank?'}
+                        text={isSpanish
+                          ? 'Agradece a personas que ayudaron pero no son autores, o a instituciones que brindaron apoyo. Sé breve y específico.'
+                          : 'Thank people who helped but are not authors, or institutions that provided support. Be brief and specific.'}
+                      />
+                    </label>
+                    <textarea
+                      name="acknowledgments"
+                      value={formData.acknowledgments}
+                      onChange={handleInputChange}
+                      rows={3}
+                      className="w-full p-3 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all resize-y"
+                      placeholder={isSpanish ? 'Agradecemos al Dr. Juan Pérez por sus comentarios...' : 'We thank Dr. John Smith for his comments...'}
+                    />
+                  </div>
+
+                  {/* Revisores excluidos */}
+                  <div className="bg-slate-50/50 rounded-xl p-6 ring-1 ring-slate-200/60">
+                    <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                      {isSpanish ? 'Revisores a Excluir' : 'Reviewers to Exclude'} (opcional)
+                      <HelpCapsule
+                        title={isSpanish ? '¿Por qué excluir revisores?' : 'Why exclude reviewers?'}
+                        text={isSpanish
+                          ? 'Si hay investigadores que podrían tener un conflicto de intereses con tu trabajo (por ejemplo, competidores directos), puedes solicitar que no revisen tu artículo. Separa los nombres con punto y coma.'
+                          : 'If there are researchers who might have a conflict of interest with your work (e.g., direct competitors), you can request that they not review your article. Separate names with semicolons.'}
+                      />
+                    </label>
+                    <input
+                      type="text"
+                      name="excludedReviewers"
+                      value={formData.excludedReviewers}
+                      onChange={handleInputChange}
+                      className="w-full p-3 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all"
+                      placeholder={isSpanish ? 'Dra. Ana López; Dr. Carlos Mendoza' : 'Dr. Jane Smith; Prof. Michael Brown'}
+                    />
+                  </div>
+
+                  {/* Postulación como revisor */}
+                  <div className="bg-gradient-to-br from-slate-50 to-white rounded-xl p-6 ring-1 ring-slate-200/60">
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 bg-[#003b5c] rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                      </div>
+                      
+                      <div className="flex-1">
+                        <h3 className="font-serif text-lg font-bold text-[#003b5c] mb-2">
+                          {isSpanish ? '¿Te gustaría ser revisor/a?' : 'Would you like to be a reviewer?'}
+                        </h3>
+                        <p className="text-sm text-slate-600 mb-5 font-sans leading-relaxed">
+                          {isSpanish 
+                            ? 'Nuestra revista busca constantemente revisores comprometidos. Si te interesa contribuir con tu experiencia, indícalo aquí. Esto no afecta la evaluación de tu artículo actual.'
+                            : 'Our journal is constantly seeking committed reviewers. If you are interested in contributing with your expertise, please indicate it here. This does not affect the evaluation of your current article.'}
+                        </p>
+
+                        <label className="flex items-center gap-3 cursor-pointer group mb-5">
+                          <div className="relative">
+                            <input
+                              type="checkbox"
+                              checked={formData.wantsToBeReviewer}
+                              onChange={(e) => {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  wantsToBeReviewer: e.target.checked,
+                                  reviewerAreas: e.target.checked ? prev.reviewerAreas : []
+                                }));
+                              }}
+                              className="sr-only peer"
+                            />
+                            <div className="w-12 h-6 bg-slate-200 rounded-full peer-checked:bg-[#003b5c] transition-colors duration-300"></div>
+                            <div className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm peer-checked:translate-x-6 transition-transform duration-300"></div>
+                          </div>
+                          <span className="text-sm font-medium text-slate-700 group-hover:text-[#003b5c] transition-colors font-sans">
+                            {isSpanish 
+                              ? 'Sí, deseo ser considerado/a como revisor/a en mi área de especialización'
+                              : 'Yes, I wish to be considered as a reviewer in my area of expertise'}
+                          </span>
+                        </label>
+
+                        <AnimatePresence>
+                          {formData.wantsToBeReviewer && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="space-y-4"
+                            >
+                              <div className="bg-white rounded-lg p-5 ring-1 ring-slate-200">
+                                <div className="flex items-center gap-2 mb-4">
+                                  <span className="text-xs font-bold uppercase tracking-wider text-[#003b5c] font-sans">
+                                    {isSpanish ? 'Selecciona hasta 4 áreas de especialización' : 'Select up to 4 areas of expertise'}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 font-sans">
+                                    ({formData.reviewerAreas.length}/4)
+                                  </span>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  {Object.entries(getAreasByLanguage(language)).map(([categoria, subareas]) => (
+                                    <div key={categoria} className="space-y-2">
+                                      <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 font-sans border-b border-slate-200 pb-1">
+                                        {categoria}
+                                      </h4>
+                                      <div className="space-y-1.5">
+                                        {subareas.map(area => {
+                                          const isSelected = formData.reviewerAreas.includes(area);
+                                          const isDisabled = !isSelected && formData.reviewerAreas.length >= 4;
+                                          
+                                          return (
+                                            <button
+                                              key={area}
+                                              type="button"
+                                              onClick={() => {
+                                                setFormData(prev => {
+                                                  const current = prev.reviewerAreas;
+                                                  if (isSelected) {
+                                                    return {
+                                                      ...prev,
+                                                      reviewerAreas: current.filter(a => a !== area)
+                                                    };
+                                                  } else if (current.length < 4) {
+                                                    return {
+                                                      ...prev,
+                                                      reviewerAreas: [...current, area]
+                                                    };
+                                                  }
+                                                  return prev;
+                                                });
+                                              }}
+                                              disabled={isDisabled}
+                                              className={`w-full text-left px-3 py-2 rounded-lg text-xs font-sans transition-all duration-200
+                                                ${isSelected 
+                                                  ? 'bg-[#003b5c] text-white shadow-sm' 
+                                                  : isDisabled
+                                                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-[#003b5c] border border-transparent hover:border-[#003b5c]/30'
+                                                }`}
+                                            >
+                                              <span className="flex items-center gap-2">
+                                                {isSelected ? (
+                                                  <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                                  </svg>
+                                                ) : (
+                                                  <svg className="w-3.5 h-3.5 flex-shrink-0 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                                  </svg>
+                                                )}
+                                                {area}
+                                              </span>
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+
+                                {formData.reviewerAreas.length > 0 && (
+                                  <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                                    <p className="text-xs text-[#003b5c] font-sans">
+                                      <strong>{isSpanish ? 'Áreas seleccionadas:' : 'Selected areas:'}</strong>{' '}
+                                      {formData.reviewerAreas.join(' • ')}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </div>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* Botones de acción */}
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-wrap justify-end gap-3">
-              {currentStep > 1 && (
-                <button
-                  type="button"
-                  onClick={prevStep}
-                  className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-gray-600 bg-white border border-gray-300 rounded-sm hover:bg-gray-50 transition-colors"
-                >
-                  {isSpanish ? 'Anterior' : 'Previous'}
-                </button>
-              )}
-
+            {/* Botones de navegación */}
+            <div className="mt-12 pt-6 border-t border-slate-200 flex items-center justify-between bg-white">
+              <button 
+                type="button" 
+                onClick={prevStep} 
+                className={`px-6 py-3 rounded-xl font-bold text-sm tracking-wide transition-all 
+                  ${currentStep === 1 ? 'opacity-0 pointer-events-none' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'}`}
+              >
+                &larr; {isSpanish ? 'Volver' : 'Back'}
+              </button>
+              
               {currentStep < 3 ? (
-                <button
-                  type="button"
-                  onClick={nextStep}
-                  className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white bg-[#003b5c] rounded-sm hover:bg-[#002b44] transition-colors shadow-sm"
+                <button 
+                  type="button" 
+                  onClick={nextStep} 
+                  className="px-8 py-3 bg-[#003b5c] text-white rounded-xl font-bold text-sm tracking-wide hover:bg-[#00273f] hover:shadow-lg hover:shadow-[#003b5c]/20 transition-all active:scale-95"
                 >
-                  {isSpanish ? 'Guardar borrador' : 'Save draft'}
+                  {isSpanish ? 'Continuar' : 'Continue'} &rarr;
                 </button>
               ) : (
-                <button
-                  type="submit"
+                <button 
+                  type="submit" 
                   disabled={uploading || !isStepValid(3)}
-                  title={
-                    !isStepValid(3) 
-                      ? (isSpanish ? 'Completa todos los campos requeridos' : 'Complete all required fields')
-                      : (isSpanish ? 'Haz clic para enviar tu artículo' : 'Click to submit your article')
-                  }
-                  onClick={(e) => {
-                    // VERIFICACIÓN REDUNDANTE ANTES DE ENVIAR
-                    const d = formData.declarations;
-                    const todasMarcadas = 
-                      d.originalAndSimilarity === true &&
-                      d.exclusiveSubmission === true &&
-                      d.authorshipCriteria === true &&
-                      d.dataAuthentic === true &&
-                      d.informedConsent === true &&
-                      d.aiDisclosure === true &&
-                      d.conflicts === true &&
-                      d.ccByLicense === true;
-                    
-                    if (!todasMarcadas) {
-                      e.preventDefault();
-                      
-                      const faltantes = [];
-                      if (!d.originalAndSimilarity) faltantes.push('Originalidad y similitud');
-                      if (!d.exclusiveSubmission) faltantes.push('Envío exclusivo');
-                      if (!d.authorshipCriteria) faltantes.push('Criterios de autoría');
-                      if (!d.dataAuthentic) faltantes.push('Datos auténticos');
-                      if (!d.informedConsent) faltantes.push('Consentimiento informado');
-                      if (!d.aiDisclosure) faltantes.push('Divulgación de IA');
-                      if (!d.conflicts) faltantes.push('Conflictos de interés');
-                      if (!d.ccByLicense) faltantes.push('Licencia CC-BY');
-                      
-                      alert(
-                        (isSpanish ? '❌ Faltan declaraciones por aceptar:\n\n' : '❌ Missing declarations:\n\n') + 
-                        faltantes.map(f => `• ${f}`).join('\n')
-                      );
-                      
-                      return;
-                    }
-                    
-                    console.log('✅ VERIFICACIÓN FINAL: Todas las declaraciones aceptadas');
-                  }}
-                  className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white bg-[#003b5c] rounded-sm hover:bg-[#002b44] disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                  className="px-10 py-3 bg-gradient-to-r from-[#003b5c] to-[#005282] text-white rounded-xl font-bold text-sm tracking-wide hover:shadow-xl hover:shadow-[#003b5c]/30 transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {uploading
-                    ? (isSpanish ? 'Enviando...' : 'Submitting...')
-                    : (isSpanish ? 'Enviar' : 'Submit')}
+                  {uploading 
+                    ? (isSpanish ? 'Enviando...' : 'Submitting...') 
+                    : (isSpanish ? 'Enviar Manuscrito' : 'Submit Manuscript')}
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
                 </button>
               )}
             </div>
@@ -3391,7 +2859,7 @@ useEffect(() => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className={`text-center text-xs font-bold uppercase tracking-wider mt-4 font-sans ${
-                  submitStatus.includes('❌') ? 'text-red-600' : 'text-green-700'
+                  submitStatus.includes('Error') ? 'text-red-600' : 'text-green-700'
                 }`}
               >
                 {submitStatus}
@@ -3399,12 +2867,13 @@ useEffect(() => {
             )}
 
             {/* Indicador de guardado automático */}
-            <div className="mt-4 text-[10px] text-gray-400 text-center tracking-widest uppercase border-t border-gray-200 pt-4 font-sans">
-              ⏺ {isSpanish ? 'Borrador guardado automáticamente cada 30 segundos' : 'Draft auto-saved every 30 seconds'}
+            <div className="mt-4 text-[10px] text-slate-400 text-center tracking-widest uppercase border-t border-slate-200 pt-4 font-sans">
+              <span className="inline-block w-1.5 h-1.5 bg-green-500 rounded-full mr-2"></span>
+              {isSpanish ? 'Borrador guardado automáticamente cada 30 segundos' : 'Draft auto-saved every 30 seconds'}
             </div>
           </form>
         </div>
-      </div>
-    </motion.div>
+      </main>
+    </div>
   );
 }
