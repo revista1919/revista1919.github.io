@@ -255,9 +255,6 @@ function FAQSection() {
   id: 'basico', 
   q: 'What happens if I am a minor?',
   a: 'No problem. If you are under 18, you can still publish, but we need an authorization signed by your parent or legal guardian. In the submission form, we will ask if you are a minor; if you check "Yes", a authorization document will be shown. You just need to download it, fill it out, sign it, and attach it. Your parent or legal guardian can also send an email (that appear pre-filled in the form) if that is more convenient for you. It is a quick process and does not delay the editorial review.',
-  links: [
-    { text: 'Download authorization form', url: '/authorization-minorEN.html' }
-  ]
 },
       {
         id: 'basico',
