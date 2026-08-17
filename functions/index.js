@@ -7248,7 +7248,7 @@ async function notifyEditorAboutOverdueAssignment(deadline, db) {
 exports.onEditorialReviewUpdated = onDocumentUpdated(
   {
     document: 'editorialReviews/{reviewId}',
-    secrets: [], // Usa la extensión de email
+    secrets: [],
     memory: '256MiB'
   },
   async (event) => {
@@ -7274,73 +7274,124 @@ exports.onEditorialReviewUpdated = onDocumentUpdated(
       }
 
       const submissionData = submissionSnap.data();
-      
-      let newSubmissionStatus = 'submitted';
-      let newTaskStatus = '';
-      let emailHtml = '';
       const lang = submissionData.paperLanguage || 'es';
       const authorName = submissionData.authorName || 'Autor';
+      const currentRound = submissionData.currentRound || 1;
 
-      // --- LÓGICA CORREGIDA: SOLO CAMBIA ESTADOS, NO CREA TAREAS ---
-      switch (afterData.decision) {
-        case 'reject':
-          newSubmissionStatus = 'rejected';
-          newTaskStatus = 'completed'; // La tarea del editor termina aquí
-          emailHtml = getRejectionEmailBody(afterData.feedbackToAuthor, submissionData.title, lang, authorName);
-          break;
+      // Determinar si es decisión final o desk review
+      const isFinalDecision = ['accept', 'reject'].includes(afterData.decision);
+      
+      // Preparar datos para actualizar submission
+      const submissionUpdateData = {
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      };
+      
+      // Preparar datos para actualizar tarea
+      const taskUpdateData = {
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      };
+      
+      let emailHtml = '';
+      let newTaskStatus = '';
+
+      if (isFinalDecision) {
+        // ===== DECISIÓN FINAL: Guardar en campos separados =====
+        console.log(`🎯 Decisión FINAL detectada: ${afterData.decision}`);
+        
+        submissionUpdateData.finalDecision = afterData.decision;
+        submissionUpdateData.finalFeedback = afterData.feedbackToAuthor || '';
+        submissionUpdateData.finalCompletedAt = admin.firestore.FieldValue.serverTimestamp();
+        submissionUpdateData.finalDecisionRound = currentRound;
+        submissionUpdateData.decisionMadeAt = admin.firestore.FieldValue.serverTimestamp();
+        submissionUpdateData.decisionMadeBy = afterData.editorUid || null;
+        
+        // Estado del submission según decisión final
+        submissionUpdateData.status = afterData.decision === 'accept' ? 'accepted' : 'rejected';
+        
+        // Datos para la tarea
+        taskUpdateData.finalDecision = afterData.decision;
+        taskUpdateData.finalFeedbackToAuthor = afterData.feedbackToAuthor || '';
+        taskUpdateData.finalComments = afterData.commentsToEditorial || '';
+        taskUpdateData.finalCompletedAt = admin.firestore.FieldValue.serverTimestamp();
+        newTaskStatus = 'completed';
+        
+        // Email según decisión final
+        emailHtml = afterData.decision === 'accept' 
+          ? getAcceptanceEmailBody(afterData.feedbackToAuthor, submissionData.title, lang, authorName)
+          : getRejectionEmailBody(afterData.feedbackToAuthor, submissionData.title, lang, authorName);
           
-        case 'minor-revision':
-        case 'major-revision':
-          // ¡CORRECCIÓN! El editor pide cambios. El artículo y la tarea pasan a esperar al autor.
-          newSubmissionStatus = 'revisions-requested';
-          newTaskStatus = 'awaiting-author-revision'; // La tarea espera la acción del autor
-          emailHtml = getRevisionEmailBody(afterData.feedbackToAuthor, submissionData.title, afterData.decision === 'minor-revision' ? 'minor' : 'major', lang, authorName);
-          break;
-          
-        case 'revision-required': // Este es el caso para INICIAR REVISIÓN POR PARES
-          console.log(`🎯 Decisión 'revision-required' tomada. Iniciando selección de revisores.`);
-          newSubmissionStatus = 'in-reviewer-selection'; // Estado del artículo
-          newTaskStatus = 'reviewer-selection'; // <<<--- ¡¡ESTADO CORRECTO DE LA TAREA!!
-          // El email al autor es de "inicio de revisión por pares"
+      } else {
+        // ===== DESK REVIEW: Guardar en campos de desk review =====
+        console.log(`📋 Desk Review detectada: ${afterData.decision}`);
+        
+        submissionUpdateData.deskReviewDecision = afterData.decision;
+        submissionUpdateData.deskReviewFeedback = afterData.feedbackToAuthor || '';
+        submissionUpdateData.deskReviewCompletedAt = admin.firestore.FieldValue.serverTimestamp();
+        submissionUpdateData.deskReviewRound = currentRound;
+        
+        // Estado del submission según desk review
+        if (afterData.decision === 'revision-required') {
+          submissionUpdateData.status = 'in-reviewer-selection';
+          newTaskStatus = 'reviewer-selection';
           emailHtml = getPeerReviewStartEmailBody(submissionData.title, lang, authorName);
-          break;
-          
-        case 'accept':
-          newSubmissionStatus = 'accepted';
-          newTaskStatus = 'completed';
-          emailHtml = getAcceptanceEmailBody(afterData.feedbackToAuthor, submissionData.title, lang, authorName);
-          break;
-          
-        default:
-          console.warn(`⚠️ Decisión desconocida: ${afterData.decision}`);
-          return;
+        } else if (['minor-revision', 'major-revision'].includes(afterData.decision)) {
+          submissionUpdateData.status = 'revisions-requested';
+          newTaskStatus = 'awaiting-author-revision';
+          const revisionType = afterData.decision === 'minor-revision' ? 'minor' : 'major';
+          emailHtml = getRevisionEmailBody(
+            afterData.feedbackToAuthor, 
+            submissionData.title, 
+            revisionType, 
+            lang, 
+            authorName
+          );
+        } else {
+          submissionUpdateData.status = 'in-editorial-review';
+          newTaskStatus = 'desk-review-in-progress';
+        }
+        
+        // Datos para la tarea
+        taskUpdateData.deskReviewDecision = afterData.decision;
+        taskUpdateData.deskReviewFeedback = afterData.feedbackToAuthor || '';
+        taskUpdateData.deskReviewComments = afterData.commentsToEditorial || '';
+        taskUpdateData.deskReviewCompletedAt = admin.firestore.FieldValue.serverTimestamp();
       }
 
-      // Actualizar el submission
-      await submissionRef.update({
-        status: newSubmissionStatus,
-        deskReviewDecision: afterData.decision,
-        deskReviewFeedback: afterData.feedbackToAuthor,
-        deskReviewCompletedAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      });
+      // Actualizar submission con los campos correspondientes
+      await submissionRef.update(submissionUpdateData);
+      console.log(`✅ Submission ${afterData.submissionId} actualizado con ${isFinalDecision ? 'decisión final' : 'desk review'}`);
 
       // Actualizar la tarea editorial si existe
       if (afterData.editorialTaskId) {
         const taskRef = db.collection('editorialTasks').doc(afterData.editorialTaskId);
         
-        const updateData = {
-          deskReviewDecision: afterData.decision,
-          deskReviewFeedback: afterData.feedbackToAuthor,
-          deskReviewComments: afterData.commentsToEditorial || '',
-          deskReviewCompletedAt: admin.firestore.FieldValue.serverTimestamp(),
-          status: newTaskStatus, // <<<--- AHORA SÍ SE ACTUALIZA EL ESTADO
-          updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        };
-        
-        await taskRef.update(updateData);
+        taskUpdateData.status = newTaskStatus;
+        await taskRef.update(taskUpdateData);
         console.log(`✅ Tarea editorial ${afterData.editorialTaskId} actualizada a estado: ${newTaskStatus}`);
       }
+
+      // Guardar en el historial de rondas del submission
+      const roundHistoryRef = submissionRef.collection('roundHistory').doc(`round_${currentRound}`);
+      const roundHistoryData = {
+        round: currentRound,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      };
+      
+      if (isFinalDecision) {
+        roundHistoryData.finalDecision = afterData.decision;
+        roundHistoryData.finalFeedback = afterData.feedbackToAuthor || '';
+        roundHistoryData.finalCompletedAt = admin.firestore.FieldValue.serverTimestamp();
+        roundHistoryData.finalEditor = afterData.editorUid || null;
+      } else {
+        roundHistoryData.deskReviewDecision = afterData.decision;
+        roundHistoryData.deskReviewFeedback = afterData.feedbackToAuthor || '';
+        roundHistoryData.deskReviewComments = afterData.commentsToEditorial || '';
+        roundHistoryData.deskReviewCompletedAt = admin.firestore.FieldValue.serverTimestamp();
+        roundHistoryData.deskReviewEditor = afterData.editorUid || null;
+      }
+      
+      await roundHistoryRef.set(roundHistoryData, { merge: true });
+      console.log(`✅ Historial de ronda ${currentRound} actualizado`);
 
       // Enviar email al autor
       if (emailHtml && submissionData.authorEmail) {
@@ -7349,11 +7400,16 @@ exports.onEditorialReviewUpdated = onDocumentUpdated(
         console.log(`✅ Email enviado a autor: ${submissionData.authorEmail}`);
       }
 
-      console.log(`✅ Envío ${afterData.submissionId} actualizado a estado: ${newSubmissionStatus}`);
+      console.log(`✅ Proceso completado para ${afterData.submissionId}`);
 
     } catch (error) {
       console.error(`❌ [onEditorialReviewUpdated] Error:`, error.message);
-      await logSystemError('onEditorialReviewUpdated', error, { reviewId, ...afterData });
+      console.error(error.stack);
+      await logSystemError('onEditorialReviewUpdated', error, { 
+        reviewId, 
+        submissionId: afterData.submissionId,
+        decision: afterData.decision 
+      });
     }
   }
 );
@@ -9775,7 +9831,6 @@ async function sendEmailToEditor(editorEmail, eventType, submissionId) {
 // ===================== AUTO CREATE NEXT ROUND ON REVISION - VERSIÓN FINAL CORREGIDA =====================
 // ===================== AUTO CREATE NEXT ROUND ON REVISION - VERSIÓN CORREGIDA =====================
 // REEMPLAZA la función existente con esta.
-// ===================== AUTO CREATE NEXT ROUND ON REVISION - VERSIÓN CON NUEVA TAREA =====================
 exports.onAuthorRevisionSubmitted = onDocumentCreated(
   {
     document: 'submissions/{submissionId}/versions/{versionId}',
@@ -9805,11 +9860,31 @@ exports.onAuthorRevisionSubmitted = onDocumentCreated(
       }
 
       const submissionData = submissionSnap.data();
-      const newRound = (submissionData.currentRound || 1) + 1;
+      const currentRound = submissionData.currentRound || 1;
+      const newRound = currentRound + 1;
 
       console.log(`🎯 Procesando revisión para ronda ${newRound} de ${submissionId}`);
 
-      // ===== 1. BUSCAR LA TAREA PENDIENTE EN ESPERA DEL AUTOR (ronda anterior) =====
+      // ===== 1. PRESERVAR HISTORIAL DE LA RONDA ACTUAL =====
+      const currentRoundHistoryRef = submissionRef.collection('roundHistory').doc(`round_${currentRound}`);
+      const currentRoundData = {
+        round: currentRound,
+        deskReviewDecision: submissionData.deskReviewDecision || null,
+        deskReviewFeedback: submissionData.deskReviewFeedback || '',
+        deskReviewComments: submissionData.deskReviewComments || '',
+        deskReviewCompletedAt: submissionData.deskReviewCompletedAt || null,
+        finalDecision: submissionData.finalDecision || null,
+        finalFeedback: submissionData.finalFeedback || '',
+        finalCompletedAt: submissionData.finalCompletedAt || null,
+        authorRevisionVersionId: versionId,
+        authorRevisionSubmittedAt: admin.firestore.FieldValue.serverTimestamp(),
+        roundCompletedAt: admin.firestore.FieldValue.serverTimestamp()
+      };
+      
+      await currentRoundHistoryRef.set(currentRoundData, { merge: true });
+      console.log(`✅ Historial de ronda ${currentRound} preservado antes de crear nueva ronda`);
+
+      // ===== 2. BUSCAR LA TAREA PENDIENTE EN ESPERA DEL AUTOR (ronda anterior) =====
       const pendingTaskSnapshot = await db.collection('editorialTasks')
         .where('submissionId', '==', submissionId)
         .where('status', '==', 'awaiting-author-revision')
@@ -9821,17 +9896,18 @@ exports.onAuthorRevisionSubmitted = onDocumentCreated(
       let assignedTo, assignedToEmail, assignedToName;
 
       if (pendingTaskSnapshot.empty) {
-        // No debería pasar, pero por si acaso, intentamos obtener la última tarea de cualquier estado
         console.log(`⚠️ No se encontró tarea en espera. Buscando la última tarea para obtener editor...`);
         const lastTaskSnapshot = await db.collection('editorialTasks')
           .where('submissionId', '==', submissionId)
           .orderBy('createdAt', 'desc')
           .limit(1)
           .get();
+          
         if (lastTaskSnapshot.empty) {
           console.error(`❌ No hay tareas previas para el envío ${submissionId}. No se puede asignar editor.`);
           return;
         }
+        
         const lastTask = lastTaskSnapshot.docs[0].data();
         assignedTo = lastTask.assignedTo;
         assignedToEmail = lastTask.assignedToEmail;
@@ -9846,34 +9922,49 @@ exports.onAuthorRevisionSubmitted = onDocumentCreated(
         assignedToName = oldTaskData.assignedToName;
       }
 
-      // ===== 2. MARCAR LA TAREA ANTERIOR COMO COMPLETADA (si existe) =====
+      // ===== 3. MARCAR LA TAREA ANTERIOR COMO COMPLETADA =====
       if (oldTaskId) {
-        await db.collection('editorialTasks').doc(oldTaskId).update({
+        const oldTaskRef = db.collection('editorialTasks').doc(oldTaskId);
+        
+        // Guardar historial en la tarea anterior
+        await oldTaskRef.update({
           status: 'completed',
           completedAt: admin.firestore.FieldValue.serverTimestamp(),
           nextTaskId: null, // Se actualizará después con el ID de la nueva tarea
+          authorRevisionVersionId: versionId,
+          authorRevisionSubmittedAt: admin.firestore.FieldValue.serverTimestamp(),
+          roundCompletedAt: admin.firestore.FieldValue.serverTimestamp(),
           updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
         console.log(`✅ Tarea anterior ${oldTaskId} marcada como completada.`);
       }
 
-      // ===== 3. CREAR NUEVA TAREA EDITORIAL PARA LA NUEVA RONDA =====
+      // ===== 4. CREAR NUEVA TAREA EDITORIAL PARA LA NUEVA RONDA =====
       const newTaskData = {
         submissionId: submissionId,
         submissionTitle: submissionData.title || 'Sin título',
         round: newRound,
-        status: 'desk-review-in-progress', // La ponemos directamente en este estado para que el editor vea la pestaña de desk review
+        status: 'desk-review-in-progress',
         assignedTo: assignedTo,
         assignedToEmail: assignedToEmail,
         assignedToName: assignedToName,
-        assignedBy: assignedTo, // Asumimos que el mismo editor se asigna a sí mismo (o podría ser el sistema)
-        assignmentNotes: `Nueva ronda generada automáticamente tras recibir revisión del autor.`,
+        assignedBy: assignedTo,
+        assignmentNotes: `Nueva ronda ${newRound} generada automáticamente tras recibir revisión del autor.`,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         // Inicializar contadores
         acceptedReviewers: 0,
         reviewsSubmitted: 0,
-        reviewerIds: []
+        reviewerIds: [],
+        // Resetear campos de decisiones para la nueva ronda
+        deskReviewDecision: null,
+        deskReviewFeedback: '',
+        deskReviewComments: '',
+        deskReviewCompletedAt: null,
+        finalDecision: null,
+        finalFeedbackToAuthor: '',
+        finalComments: '',
+        finalCompletedAt: null
       };
 
       const newTaskRef = await db.collection('editorialTasks').add(newTaskData);
@@ -9887,11 +9978,11 @@ exports.onAuthorRevisionSubmitted = onDocumentCreated(
         });
       }
 
-      // ===== 4. CREAR NUEVA REVISIÓN EDITORIAL VINCULADA A LA NUEVA TAREA =====
+      // ===== 5. CREAR NUEVA REVISIÓN EDITORIAL VINCULADA A LA NUEVA TAREA =====
       const editorialReviewData = {
         submissionId: submissionId,
         round: newRound,
-        status: 'pending', // La revisión editorial empieza pendiente (aunque la tarea esté en desk-review-in-progress)
+        status: 'pending',
         editorUid: assignedTo,
         editorEmail: assignedToEmail,
         editorName: assignedToName,
@@ -9903,44 +9994,53 @@ exports.onAuthorRevisionSubmitted = onDocumentCreated(
       const editorialReviewRef = await db.collection('editorialReviews').add(editorialReviewData);
       console.log(`✅ Nueva revisión editorial creada: ${editorialReviewRef.id} para tarea ${newTaskId}`);
 
-      // ===== 5. ACTUALIZAR LA NUEVA TAREA CON EL ID DE LA REVIEW =====
+      // ===== 6. ACTUALIZAR LA NUEVA TAREA CON EL ID DE LA REVIEW =====
       await newTaskRef.update({
         editorialReviewId: editorialReviewRef.id,
         currentReviewId: editorialReviewRef.id
       });
 
-      // ===== 6. ACTUALIZAR EL SUBMISSION CON LAS NUEVAS REFERENCIAS =====
-      await submissionRef.update({
-  currentRound: newRound,
-  status: 'in-editorial-review',
-  currentEditorialTaskId: newTaskId,
-  currentEditorialReviewId: editorialReviewRef.id,
-  lastRevisionAt: admin.firestore.FieldValue.serverTimestamp(),
-  updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-  // Resetear campos de decisión (opcional pero recomendado)
-  deskReviewDecision: null,
-  deskReviewFeedback: '',
-  deskReviewCompletedAt: null,
-  finalDecision: null,
-  finalFeedback: '',
-  decisionMadeAt: null,
-  decisionMadeBy: null
-});
-      // ===== 7. REGISTRAR EN AUDIT LOG =====
-      await db.collection('submissions').doc(submissionId)
-        .collection('auditLogs').add({
-          action: 'new_round_created_with_new_task',
-          round: newRound,
-          details: `Ronda ${newRound} creada con nueva tarea ${newTaskId} y revisión ${editorialReviewRef.id}`,
-          oldTaskId: oldTaskId,
-          newTaskId: newTaskId,
-          editorialReviewId: editorialReviewRef.id,
-          versionId: versionId,
-          assignedTo: assignedToEmail,
-          timestamp: admin.firestore.FieldValue.serverTimestamp()
-        });
+      // ===== 7. ACTUALIZAR EL SUBMISSION CON LAS NUEVAS REFERENCIAS =====
+      // NO borramos las decisiones anteriores, solo las movemos al historial
+      const submissionUpdateData = {
+        currentRound: newRound,
+        status: 'in-editorial-review',
+        currentEditorialTaskId: newTaskId,
+        currentEditorialReviewId: editorialReviewRef.id,
+        lastRevisionAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        // Limpiar SOLO los campos de la ronda actual para la nueva ronda
+        // Las decisiones anteriores ya fueron guardadas en roundHistory
+        deskReviewDecision: null,
+        deskReviewFeedback: '',
+        deskReviewComments: '',
+        deskReviewCompletedAt: null,
+        finalDecision: null,
+        finalFeedback: '',
+        finalComments: '',
+        finalCompletedAt: null,
+        decisionMadeAt: null,
+        decisionMadeBy: null
+      };
+      
+      await submissionRef.update(submissionUpdateData);
+      console.log(`✅ Submission actualizado para ronda ${newRound}`);
 
-      // ===== 8. ENVIAR NOTIFICACIÓN AL EDITOR =====
+      // ===== 8. REGISTRAR EN AUDIT LOG =====
+      await submissionRef.collection('auditLogs').add({
+        action: 'new_round_created_with_new_task',
+        round: newRound,
+        details: `Ronda ${newRound} creada con nueva tarea ${newTaskId} y revisión ${editorialReviewRef.id}`,
+        oldTaskId: oldTaskId,
+        newTaskId: newTaskId,
+        editorialReviewId: editorialReviewRef.id,
+        versionId: versionId,
+        assignedTo: assignedToEmail,
+        previousRound: currentRound,
+        timestamp: admin.firestore.FieldValue.serverTimestamp()
+      });
+
+      // ===== 9. ENVIAR NOTIFICACIÓN AL EDITOR =====
       await sendNewRoundNotificationToEditor(
         submissionData,
         { ...newTaskData, id: newTaskId },

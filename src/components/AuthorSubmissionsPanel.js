@@ -6,7 +6,9 @@ import {
   collection, 
   query, 
   where, 
-  onSnapshot
+  onSnapshot,
+  getDocs,
+  orderBy
 } from 'firebase/firestore';
 import { useLanguage } from '../hooks/useLanguage';
 import { AuthorMetadataResponseTab } from './AuthorMetadataResponseTab';
@@ -46,7 +48,10 @@ const Icons = {
   
   Refresh: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>,
   
-  CheckBadge: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" /></svg>
+    CheckBadge: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" /></svg>,
+  ChevronDown: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>,
+  ChevronUp: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>,
+  History: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
 };
 // ================= COMPONENTE: GUÍA DE REVISIONES =================
 const RevisionGuideCard = ({ language, onNavigateToDocuments }) => {
@@ -243,6 +248,342 @@ const RevisionGuideCard = ({ language, onNavigateToDocuments }) => {
     </motion.div>
   );
 };
+const AuthorHistoryTimeline = ({ submission, isSpanish }) => {
+  const [rounds, setRounds] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [expandedRounds, setExpandedRounds] = useState({});
+
+  useEffect(() => {
+    const loadHistory = async () => {
+      if (!submission?.id) return;
+      
+      setLoading(true);
+      try {
+        const roundsMap = new Map();
+        
+        // Cargar tareas editoriales para obtener decisiones por ronda
+        const tasksQuery = query(
+          collection(db, 'editorialTasks'),
+          where('submissionId', '==', submission.id),
+          orderBy('round', 'asc')
+        );
+        const tasksSnapshot = await getDocs(tasksQuery);
+        
+        tasksSnapshot.forEach((doc) => {
+          const data = doc.data();
+          const round = data.round || 1;
+          
+          if (!roundsMap.has(round)) {
+            roundsMap.set(round, {
+              roundNumber: round,
+              status: data.status || 'pending',
+              createdAt: data.createdAt?.toDate?.() || new Date(),
+              updatedAt: data.updatedAt?.toDate?.() || new Date(),
+              events: []
+            });
+          }
+          
+          const roundData = roundsMap.get(round);
+          
+          // Evento: Envío recibido
+          if (data.createdAt) {
+            roundData.events.push({
+              type: 'submission_received',
+              date: data.createdAt.toDate(),
+              title: isSpanish ? 'Manuscrito Recibido' : 'Manuscript Received',
+              description: isSpanish 
+                ? 'Su manuscrito fue recibido y registrado en el sistema.'
+                : 'Your manuscript was received and registered in the system.'
+            });
+          }
+          
+          // Evento: Decisión de desk review
+          if (data.deskReviewDecision && data.deskReviewCompletedAt) {
+            const decision = data.deskReviewDecision;
+            let title, description, color;
+            
+            if (decision === 'minor-revision' || decision === 'major-revision') {
+              title = isSpanish ? 'Se Solicitaron Revisiones' : 'Revisions Requested';
+              description = isSpanish 
+                ? 'El comité editorial solicitó modificaciones a su manuscrito.'
+                : 'The editorial committee requested modifications to your manuscript.';
+              color = 'bg-amber-50 border-amber-300 text-amber-700';
+            } else if (decision === 'revision-required') {
+              title = isSpanish ? 'Enviado a Revisión por Pares' : 'Sent to Peer Review';
+              description = isSpanish 
+                ? 'Su manuscrito fue enviado para evaluación por pares revisores.'
+                : 'Your manuscript was sent for peer review evaluation.';
+              color = 'bg-sky-50 border-sky-300 text-sky-700';
+            }
+            
+            if (title) {
+              roundData.events.push({
+                type: 'desk_review',
+                date: data.deskReviewCompletedAt.toDate(),
+                title,
+                description,
+                color,
+                feedback: data.deskReviewFeedback || null
+              });
+            }
+          }
+          
+          // Evento: Decisión final
+          if (data.finalDecision && data.finalCompletedAt) {
+            const decision = data.finalDecision;
+            let title, description, color;
+            
+            if (decision === 'accept') {
+              title = isSpanish ? 'Manuscrito Aceptado' : 'Manuscript Accepted';
+              description = isSpanish 
+                ? 'Su manuscrito fue aceptado para publicación.'
+                : 'Your manuscript was accepted for publication.';
+              color = 'bg-emerald-50 border-emerald-300 text-emerald-700';
+            } else if (decision === 'reject') {
+              title = isSpanish ? 'Manuscrito Rechazado' : 'Manuscript Rejected';
+              description = isSpanish 
+                ? 'Su manuscrito fue rechazado después de la revisión.'
+                : 'Your manuscript was rejected after review.';
+              color = 'bg-rose-50 border-rose-300 text-rose-700';
+            }
+            
+            if (title) {
+              roundData.events.push({
+                type: 'final_decision',
+                date: data.finalCompletedAt.toDate(),
+                title,
+                description,
+                color,
+                feedback: data.finalFeedbackToAuthor || null
+              });
+            }
+          }
+          
+          // Evento: Revisión del autor enviada (si hay versión)
+          if (data.authorRevisionVersionId) {
+            roundData.events.push({
+              type: 'author_revision',
+              date: data.authorRevisionSubmittedAt?.toDate?.() || data.updatedAt?.toDate?.() || new Date(),
+              title: isSpanish ? 'Revisión Enviada' : 'Revision Submitted',
+              description: isSpanish 
+                ? 'Usted envió una versión corregida del manuscrito.'
+                : 'You submitted a corrected version of the manuscript.'
+            });
+          }
+        });
+        
+        // Cargar versiones para detectar envíos de revisiones
+        const versionsQuery = query(
+          collection(db, 'submissions', submission.id, 'versions'),
+          orderBy('createdAt', 'asc')
+        );
+        const versionsSnapshot = await getDocs(versionsQuery);
+        
+        versionsSnapshot.forEach((doc) => {
+          const data = doc.data();
+          const round = data.round || 1;
+          
+          if (!roundsMap.has(round)) {
+            roundsMap.set(round, {
+              roundNumber: round,
+              status: data.status || 'completed',
+              createdAt: data.createdAt?.toDate?.() || new Date(),
+              updatedAt: data.createdAt?.toDate?.() || new Date(),
+              events: []
+            });
+          }
+          
+          const roundData = roundsMap.get(round);
+          
+          if (data.type === 'revision') {
+            roundData.events.push({
+              type: 'revision_uploaded',
+              date: data.createdAt?.toDate?.() || new Date(),
+              title: isSpanish ? 'Nueva Versión Enviada' : 'New Version Submitted',
+              description: isSpanish 
+                ? `Versión ${data.version || ''} enviada para revisión.`
+                : `Version ${data.version || ''} submitted for review.`
+            });
+          } else if (data.type === 'original') {
+            roundData.events.push({
+              type: 'original_submitted',
+              date: data.createdAt?.toDate?.() || new Date(),
+              title: isSpanish ? 'Manuscrito Original Enviado' : 'Original Manuscript Submitted',
+              description: isSpanish 
+                ? 'Envío inicial del manuscrito.'
+                : 'Initial manuscript submission.'
+            });
+          }
+        });
+        
+        // Ordenar eventos por fecha
+        roundsMap.forEach((roundData) => {
+          roundData.events.sort((a, b) => a.date - b.date);
+        });
+        
+        // Convertir a array y ordenar por ronda
+        const roundsArray = Array.from(roundsMap.entries())
+          .sort((a, b) => a[0] - b[0])
+          .map(([roundNumber, data]) => ({
+            roundNumber,
+            ...data
+          }));
+        
+        setRounds(roundsArray);
+        
+        // Expandir la última ronda por defecto
+        if (roundsArray.length > 0) {
+          setExpandedRounds({ [roundsArray[roundsArray.length - 1].roundNumber]: true });
+        }
+      } catch (error) {
+        console.error('Error loading author history:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadHistory();
+  }, [submission?.id, isSpanish]);
+
+  const toggleRound = (roundNumber) => {
+    setExpandedRounds(prev => ({
+      ...prev,
+      [roundNumber]: !prev[roundNumber]
+    }));
+  };
+
+  const formatDate = (date) => {
+    if (!date) return '—';
+    return date.toLocaleDateString(isSpanish ? 'es-ES' : 'en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="w-10 h-10 border-2 border-t-[#003b5c] border-slate-200 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (rounds.length === 0) {
+    return (
+      <div className="bg-white border border-slate-200 shadow-sm p-12 text-center">
+        <Icons.Document />
+        <p className="text-slate-500 font-serif italic mt-4">
+          {isSpanish ? 'No hay historial disponible para este manuscrito.' : 'No history available for this manuscript.'}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <h2 className="font-serif text-2xl sm:text-3xl text-[#003b5c] mb-2">
+        {isSpanish ? 'Historial del Manuscrito' : 'Manuscript History'}
+      </h2>
+      <p className="text-slate-500 font-sans text-sm mb-8">
+        {isSpanish 
+          ? 'Seguimiento de las etapas y decisiones de su manuscrito a lo largo del proceso editorial.'
+          : 'Timeline of your manuscript stages and decisions throughout the editorial process.'}
+      </p>
+      
+      {rounds.map((round) => (
+        <div key={round.roundNumber} className="bg-white border border-slate-200 shadow-sm overflow-hidden">
+          {/* Encabezado de la ronda */}
+          <button
+            onClick={() => toggleRound(round.roundNumber)}
+            className="w-full flex items-center justify-between px-6 py-4 bg-slate-50 hover:bg-slate-100 transition-colors border-b border-slate-200"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-[#003b5c] text-white flex items-center justify-center font-serif font-bold">
+                {round.roundNumber}
+              </div>
+              <div className="text-left">
+                <h3 className="font-sans font-bold text-slate-800 text-sm uppercase tracking-wider">
+                  {isSpanish ? 'Ronda' : 'Round'} {round.roundNumber}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {round.events.length} {isSpanish ? 'eventos' : 'events'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {round.roundNumber === (submission?.currentRound || 1) && (
+                <span className="px-2 py-1 bg-[#003b5c] text-white text-[10px] font-bold uppercase tracking-wider rounded-sm">
+                  {isSpanish ? 'Actual' : 'Current'}
+                </span>
+              )}
+              {expandedRounds[round.roundNumber] ? <Icons.ChevronUp /> : <Icons.ChevronDown />}
+            </div>
+          </button>
+          
+          {/* Eventos de la ronda */}
+          {expandedRounds[round.roundNumber] && (
+            <div className="p-6">
+              <div className="relative">
+                {/* Línea vertical */}
+                <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-slate-200"></div>
+                
+                <div className="space-y-6">
+                  {round.events.map((event, idx) => (
+                    <div key={idx} className="relative pl-12">
+                      {/* Punto en la línea */}
+                      <div className={`absolute left-2 top-1 w-4 h-4 rounded-full border-2 ${
+                        event.type === 'final_decision' && event.title.includes('Aceptado') 
+                          ? 'bg-emerald-500 border-emerald-600'
+                          : event.type === 'final_decision' && event.title.includes('Rechazado')
+                          ? 'bg-rose-500 border-rose-600'
+                          : event.type === 'desk_review'
+                          ? 'bg-sky-500 border-sky-600'
+                          : 'bg-slate-400 border-slate-500'
+                      }`}></div>
+                      
+                      <div className={`p-4 border rounded-sm ${
+                        event.color || 'bg-white border-slate-200'
+                      }`}>
+                        <div className="flex items-start justify-between gap-4 mb-2">
+                          <h4 className="font-sans font-bold text-sm text-slate-800">
+                            {event.title}
+                          </h4>
+                          <span className="text-xs text-slate-500 flex-shrink-0">
+                            {formatDate(event.date)}
+                          </span>
+                        </div>
+                        <p className="text-sm text-slate-600 leading-relaxed">
+                          {event.description}
+                        </p>
+                        
+                        {/* Feedback si existe */}
+                        {event.feedback && (
+                          <div className="mt-4 pt-4 border-t border-slate-200">
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                              {isSpanish ? 'Comentarios del Editor' : 'Editor Comments'}
+                            </p>
+                            <div 
+                              className="review-content ql-editor read-only prose prose-sm max-w-none font-serif text-slate-700 leading-relaxed"
+                              dangerouslySetInnerHTML={{ __html: event.feedback }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
 // ================= FUNCIONES UTILITARIAS =================
 const decodeBase64IfNeeded = (text) => {
   if (!text || typeof text !== 'string') return text;
@@ -841,6 +1182,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
                 {[
                   { id: 'overview', label: isSpanish ? 'Resumen' : 'Overview', icon: Icons.Document },
                   { id: 'submission', label: isSpanish ? 'Envío Completo' : 'Full Submission', icon: Icons.Database },
+                  { id: 'history', label: isSpanish ? 'Historial' : 'History', icon: Icons.History },
                   { id: 'documents', label: isSpanish ? 'Documentos' : 'Documents', icon: Icons.Download },
                   { id: 'reviews', label: isSpanish ? 'Revisiones' : 'Reviews', icon: Icons.Users },
                   { id: 'tasks', label: isSpanish ? 'Acciones' : 'Actions', icon: Icons.Alert, alert: requiresAction(activePortal) }
@@ -1547,7 +1889,13 @@ const AuthorSubmissionsPanel = ({ user }) => {
                     </div>
                   </div>
                 )}
-
+                {/* ---------------- PESTAÑA: HISTORIAL ---------------- */}
+                {activeTab === 'history' && (
+                  <AuthorHistoryTimeline 
+                    submission={activePortal} 
+                    isSpanish={isSpanish} 
+                  />
+                )}
                 {/* ---------------- PESTAÑA: REVISIONES DE PARES ---------------- */}
                 {activeTab === 'reviews' && (
                   <div className="space-y-6 animate-in fade-in">
