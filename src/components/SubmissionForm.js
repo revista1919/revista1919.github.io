@@ -1370,10 +1370,14 @@ const steps = [
           }
         }
       
-      case 2:
+            case 2:
         const basicOk = formData.authors.every(a =>
           a.firstName.trim() && a.lastName.trim() && a.email.trim() && a.institution.trim()
         );
+        
+        // Verificar contribución CRediT si hay más de un autor
+        const creditOk = formData.authors.length === 1 || formData.authors.every(a => a.contribution.trim());
+        
         const minorsOk = formData.authors
           .filter(a => a.isMinor)
           .every(a =>
@@ -1381,7 +1385,7 @@ const steps = [
             a.consentMethod !== 'none' &&
             (a.consentMethod !== 'upload' || !!a.consentFile)
           );
-        return basicOk && minorsOk;
+        return basicOk && creditOk && minorsOk;
       
       case 3:
         let isValid = allDeclarationsAccepted() && 
@@ -1444,7 +1448,7 @@ const steps = [
         }
         break;
         
-      case 2:
+            case 2:
         formData.authors.forEach((author, index) => {
           if (!author.firstName.trim()) {
             errors[`author_${index}_firstName`] = isSpanish ? 'Nombre requerido' : 'First name required';
@@ -1457,6 +1461,13 @@ const steps = [
           }
           if (!author.institution.trim()) {
             errors[`author_${index}_institution`] = isSpanish ? 'Institución requerida' : 'Institution required';
+          }
+          
+          // NUEVO: Validación de contribución CRediT (solo si hay más de un autor)
+          if (formData.authors.length > 1 && !author.contribution.trim()) {
+            errors[`author_${index}_contribution`] = isSpanish 
+              ? 'Debes especificar la contribución CRediT de este autor' 
+              : 'You must specify the CRediT contribution for this author';
           }
           if (author.isMinor) {
             if (!author.guardianName.trim()) {
@@ -2265,24 +2276,54 @@ const steps = [
                               )}
                             </div>
                           </div>
-                          <div>
-                            <label className="flex items-center text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                              {isSpanish ? 'Contribución' : 'Contribution'} *
-                              <HelpCapsule
-                                title={isSpanish ? '¿Qué pongo aquí?' : 'What do I put here?'}
-                                text={isSpanish
-                                  ? 'Describe brevemente qué hizo cada autor. Por ejemplo: "Diseñó el estudio, recolectó datos, analizó resultados, escribió el manuscrito". Esto sigue el estándar CRediT.'
-                                  : 'Briefly describe what each author did. For example: "Designed the study, collected data, analyzed results, wrote the manuscript". This follows the CRediT standard.'}
+                                                    {/* Contribución - SOLO si hay más de un autor */}
+                          {formData.authors.length > 1 ? (
+                            <div>
+                              <label className="flex items-center text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                                {isSpanish ? 'Contribución (CRediT)' : 'Contribution (CRediT)'} *
+                                <HelpCapsule
+                                  title={isSpanish ? '¿Qué es el formato CRediT?' : 'What is the CRediT format?'}
+                                  text={isSpanish
+                                    ? 'CRediT (Contributor Roles Taxonomy) es un estándar internacional que define 14 roles específicos de contribución científica: Conceptualización, Curación de datos, Análisis formal, Adquisición de fondos, Investigación, Metodología, Administración del proyecto, Recursos, Software, Supervisión, Validación, Visualización, Redacción - borrador original, Redacción - revisión y edición. Solo necesitas completar este campo cuando hay múltiples autores, para dejar claro qué hizo cada uno. Ejemplo: "Conceptualización, Metodología, Análisis formal, Redacción - borrador original".'
+                                    : 'CRediT (Contributor Roles Taxonomy) is an international standard that defines 14 specific scientific contribution roles: Conceptualization, Data curation, Formal analysis, Funding acquisition, Investigation, Methodology, Project administration, Resources, Software, Supervision, Validation, Visualization, Writing - original draft, Writing - review & editing. You only need to complete this field when there are multiple authors, to make clear what each one did. Example: "Conceptualization, Methodology, Formal analysis, Writing - original draft".'}
+                                />
+                              </label>
+                              <textarea
+                                value={author.contribution}
+                                onChange={(e) => handleAuthorChange(index, 'contribution', e.target.value)}
+                                rows={3}
+                                className={`w-full p-3 bg-white border-0 ring-1 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all resize-y
+                                  ${validationErrors[`author_${index}_contribution`] ? 'ring-red-300' : 'ring-slate-200'}`}
+                                placeholder={isSpanish 
+                                  ? 'Ej: Conceptualización, Metodología, Análisis formal, Redacción - borrador original' 
+                                  : 'e.g., Conceptualization, Methodology, Formal analysis, Writing - original draft'}
                               />
-                            </label>
-                            <textarea
-                              value={author.contribution}
-                              onChange={(e) => handleAuthorChange(index, 'contribution', e.target.value)}
-                              rows={2}
-                              className="w-full p-3 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all resize-y"
-                              placeholder={isSpanish ? 'Conceptualización, análisis...' : 'Conceptualization, analysis...'}
-                            />
-                          </div>
+                              {validationErrors[`author_${index}_contribution`] && (
+                                <p className="text-red-500 text-xs mt-1">{validationErrors[`author_${index}_contribution`]}</p>
+                              )}
+                              <p className="text-[10px] text-slate-400 mt-1 font-sans">
+                                {isSpanish 
+                                  ? 'Separa los roles con comas. Usa los términos estándar CRediT.'
+                                  : 'Separate roles with commas. Use standard CRediT terms.'}
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="bg-slate-100 rounded-lg p-4 text-xs text-slate-500 font-sans flex items-start gap-3">
+                              <svg className="w-4 h-4 flex-shrink-0 mt-0.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <div>
+                                <p className="font-semibold text-slate-600 mb-1">
+                                  {isSpanish ? 'Autor único' : 'Single author'}
+                                </p>
+                                <p>
+                                  {isSpanish 
+                                    ? 'La contribución CRediT solo es necesaria cuando hay más de un autor. Al ser el único autor, se asume que realizaste todas las etapas del trabajo.'
+                                    : 'CRediT contribution is only required when there are multiple authors. As the sole author, it is assumed you performed all stages of the work.'}
+                                </p>
+                              </div>
+                            </div>
+                          )}
                         </div>
 
                         {/* Menor de edad */}
