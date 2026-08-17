@@ -8,19 +8,18 @@
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap');
 
     :root {
-      /* Academic Editorial Palette (Elsevier/T&F Style) */
-      --primary: #004b87;       /* Deep academic blue */
-      --secondary: #006dae;     /* Interactive blue */
-      --accent: #e86125;        /* Elsevier-style orange for alerts/buttons */
-      --text-main: #2b2b2b;     /* Soft black */
-      --text-muted: #666666;    /* Gray for metadata */
-      --border-light: #e6e8ea;  /* Subtle borders */
-      --border-dark: #cbd0d5;   /* Structural borders */
-      --bg-out: #f4f5f7;        /* External background */
-      --bg-paper: #ffffff;      /* Document background */
-      --bg-highlight: #f8f9fa;  /* Standard text boxes */
-      --bg-example: #f0f4f8;    /* Background for examples */
-      --success: #0d8246;       /* Green for validations */
+      --primary: #004b87;
+      --secondary: #006dae;
+      --accent: #e86125;
+      --text-main: #2b2b2b;
+      --text-muted: #666666;
+      --border-light: #e6e8ea;
+      --border-dark: #cbd0d5;
+      --bg-out: #f4f5f7;
+      --bg-paper: #ffffff;
+      --bg-highlight: #f8f9fa;
+      --bg-example: #f0f4f8;
+      --success: #0d8246;
     }
 
     body {
@@ -44,7 +43,6 @@
       align-items: start;
     }
 
-    /* Sidebar Reference */
     .sidebar {
       background-color: var(--bg-paper);
       border: 1px solid var(--border-light);
@@ -115,7 +113,6 @@
       letter-spacing: 0.05em;
     }
 
-    /* Main Content */
     .main-content {
       background-color: var(--bg-paper);
       border: 1px solid var(--border-light);
@@ -172,7 +169,6 @@
       font-weight: 600;
     }
 
-    /* Interactive Accordions */
     details {
       background-color: var(--bg-highlight);
       border: 1px solid var(--border-light);
@@ -284,7 +280,6 @@
       .grid-2col { grid-template-columns: 1fr; }
     }
 
-    /* Interactive Checklist */
     .checklist-container {
       background-color: var(--bg-highlight);
       border: 1px solid var(--border-light);
@@ -388,7 +383,58 @@
       letter-spacing: 0.02em;
     }
 
-    /* Footer */
+    /* Editorial Process */
+    .editorial-process {
+      background-color: #fcfcfd;
+      border: 1px solid var(--border-light);
+      border-radius: 4px;
+      padding: 25px;
+      margin-top: 20px;
+    }
+
+    .process-step {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 20px;
+      background-color: var(--bg-paper);
+      border-radius: 4px;
+      padding: 15px 20px;
+      border-left: 4px solid var(--primary);
+      box-shadow: 0 1px 5px rgba(0,0,0,0.02);
+    }
+
+    .step-number {
+      background-color: var(--primary);
+      color: white;
+      font-weight: 700;
+      font-size: 1.2em;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 15px;
+      flex-shrink: 0;
+    }
+
+    .step-content {
+      font-size: 0.95em;
+    }
+
+    .step-content strong {
+      font-family: 'Inter', sans-serif;
+      color: var(--primary);
+    }
+
+    .arrow-icon {
+      text-align: center;
+      color: var(--border-dark);
+      font-size: 1.2em;
+      margin: 5px 0;
+      letter-spacing: 0.2em;
+    }
+
     .footer {
       margin-top: 50px;
       text-align: center;
@@ -450,6 +496,30 @@
       </div>
 
       <h2>1. Understanding the key requirements</h2>
+
+      <details>
+        <summary>1.0 The Abstract – your gateway</summary>
+        <div class="details-content">
+          <ul>
+            <li><strong>What is it?</strong> A brief, self-contained synthesis of your article. Think of it as the first (and sometimes the only) thing an editor or reviewer reads to decide if your work deserves a full read.</li>
+            <li><strong>Recommended length:</strong> Between <strong>150 and 250 words</strong>. Do not use citations, complex formulas, or bibliographic references.</li>
+            <li><strong>Suggested structure (mini IMRaD, this apply mainly to scientific research papers):</strong>
+              <ul>
+                <li><strong>Context/Problem:</strong> What is studied and why does it matter? (1–2 sentences)</li>
+                <li><strong>Objective:</strong> What were you trying to answer? (1 sentence)</li>
+                <li><strong>Methods:</strong> How did you do it? (1–2 sentences, without too much detail)</li>
+                <li><strong>Main results:</strong> What did you find? (2–3 sentences with key data or findings)</li>
+                <li><strong>Conclusion/Implication:</strong> What does your finding mean? (1 sentence)</li>
+              </ul>
+            </li>
+            <li><strong>Tip:</strong> Write it at the end, once the whole article is ready, so it faithfully reflects your work. It should be readable on its own, like a mini-essay.</li>
+            <li><strong>English version:</strong> The journal requires an abstract in English so that your work is internationally visible. It must be a faithful translation of the Spanish abstract.</li>
+          </ul>
+          <div class="example-box">
+            <strong>Simplified example:</strong> <em>"This study examines the effect of classical music on the concentration of university students. Using an experimental design with 60 participants, performance on an attention test with and without background music was compared. Results show a 15% improvement in short-term memory tasks with instrumental music, although there were no differences in reasoning tasks. It is concluded that ambient music can be a low-cost tool to optimize certain cognitive processes in academic settings."</em>
+          </div>
+        </div>
+      </details>
 
       <details>
         <summary>1.1 The file and anonymity</summary>
@@ -578,27 +648,37 @@
           
           <div class="checklist-item">
             <input type="checkbox" id="check2" class="check-input">
-            <label for="check2">The length is between <strong>1,000 and 10,000 words</strong>. If it is longer, I know the editor might suggest cuts.</label>
+            <label for="check2">I included an <strong>abstract</strong> of 150 to 250 words that synthesizes the problem, method, results, and conclusion, in both English and Spanish.</label>
           </div>
-          
+
           <div class="checklist-item">
             <input type="checkbox" id="check3" class="check-input">
-            <label for="check3">I used the real <strong>Heading 1, 2, 3</strong> styles to organize sections (not just bold or manual sizes).</label>
+            <label for="check3">I wrote <strong>2 to 6 keywords</strong> in English and their equivalents in Spanish, using terms that truly describe my topic.</label>
           </div>
-          
+
           <div class="checklist-item">
             <input type="checkbox" id="check4" class="check-input">
-            <label for="check4">Each citation in the text has its full reference in <strong>Chicago 17 (Author-Date)</strong>, and vice versa.</label>
+            <label for="check4">The length is between <strong>1,000 and 10,000 words</strong>. If it is longer, I know the editor might suggest cuts.</label>
           </div>
           
           <div class="checklist-item">
             <input type="checkbox" id="check5" class="check-input">
-            <label for="check5">I have <strong>2 to 4 controlled vocabulary codes</strong> (e.g., JEL, MeSH) ready to enter in the submission form.</label>
+            <label for="check5">I used the real <strong>Heading 1, 2, 3</strong> styles to organize sections (not just bold or manual sizes).</label>
+          </div>
+          
+          <div class="checklist-item">
+            <input type="checkbox" id="check6" class="check-input">
+            <label for="check6">Each citation in the text has its full reference in <strong>Chicago 17 (Author-Date)</strong>, and vice versa.</label>
+          </div>
+          
+          <div class="checklist-item">
+            <input type="checkbox" id="check7" class="check-input">
+            <label for="check7">I have <strong>2 to 4 controlled vocabulary codes</strong> (e.g., JEL, MeSH) ready to enter in the submission form.</label>
           </div>
 
           <div class="checklist-item">
-            <input type="checkbox" id="check6" class="check-input">
-            <label for="check6">I declared the <strong>use of AI</strong> (if applicable), <strong>funding</strong>, and confirmed that the work is not submitted to another journal.</label>
+            <input type="checkbox" id="check8" class="check-input">
+            <label for="check8">I declared the <strong>use of AI</strong> (if applicable), <strong>funding</strong>, and confirmed that the work is not submitted to another journal.</label>
           </div>
         </form>
 
@@ -606,6 +686,76 @@
           Done. You have verified all the basic points. Your manuscript is ready for the formal submission process.
         </div>
       </div>
+
+      <!-- NEW SECTION: EDITORIAL PROCESS -->
+      <h2>3. What happens after submission? Simplified editorial process</h2>
+      <p style="font-family: 'Lora', serif; color: var(--text-muted); margin-bottom: 20px;">
+        We understand that waiting can raise questions. Here we explain, in a schematic and plain-language way, the standard path your manuscript follows under a <strong>double-blind review</strong> model. Don't be alarmed if there are rounds of corrections: it is a normal part of the academic improvement process.
+      </p>
+
+      <div class="editorial-process">
+        
+        <div class="process-step">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <strong>Reception and technical check</strong><br>
+            Your manuscript arrives on the platform. A journal editor reviews that it meets the basic requirements (anonymity, .docx format, structure, references). If something obvious is missing, it will be returned to you with observations.
+          </div>
+        </div>
+        <div class="arrow-icon">↓</div>
+
+        <div class="process-step">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <strong>Assignment to an academic editor</strong><br>
+            The main editor assigns your manuscript to a <strong>section editor</strong> or thematic editor, who is a specialist in your area. He or she will evaluate whether the topic fits the journal and has potential.
+          </div>
+        </div>
+        <div class="arrow-icon">↓</div>
+
+        <div class="process-step">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <strong>Invitation to anonymous reviewers (double-blind)</strong><br>
+            The editor invites <strong>2 or 3 external experts</strong> (peer reviewers). These reviewers do not know your identity (that's why it's double-blind) and you will not know theirs. They rate the quality, originality, and methodology of your work.
+          </div>
+        </div>
+        <div class="arrow-icon">↓</div>
+
+        <div class="process-step">
+          <div class="step-number">4</div>
+          <div class="step-content">
+            <strong>Editor's decision</strong><br>
+            Based on the reviewers' reports, the editor makes a decision. The possibilities are:
+            <ul style="margin-top: 5px; padding-left: 20px;">
+              <li><strong>Accept</strong> (rare in the first round)</li>
+              <li><strong>Accept with minor changes</strong> (style adjustments or details)</li>
+              <li><strong>Revise and resubmit</strong> (major changes, you will need a new round of evaluation)</li>
+              <li><strong>Reject</strong> (does not fit or quality is insufficient)</li>
+            </ul>
+          </div>
+        </div>
+        <div class="arrow-icon">↓</div>
+
+        <div class="process-step">
+          <div class="step-number">5</div>
+          <div class="step-content">
+            <strong>Rounds of corrections (if applicable)</strong><br>
+            If changes are requested, you will have a deadline (normally 2–4 weeks) to send a revised version. You must include a <strong>response letter</strong> explaining how you addressed each reviewer comment. The editor may send this new version to the same reviewers or decide on their own.
+          </div>
+        </div>
+        <div class="arrow-icon">↓</div>
+
+        <div class="process-step">
+          <div class="step-number">6</div>
+          <div class="step-content">
+            <strong>Final acceptance and production</strong><br>
+            Once accepted, your manuscript goes to the <strong>layout and copyediting</strong> stage. You will receive the final proofs (galley proofs) to give your approval. Then it is published in the journal with its DOI and open access license.
+          </div>
+        </div>
+
+      </div>
+      <!-- END EDITORIAL PROCESS -->
 
       <div class="footer">
         National Review of Sciences for Students · ISSN 3087-2839<br>
@@ -616,7 +766,6 @@
 
   <script>
     (function() {
-      // Interactive Checklist Logic
       const checkboxes = document.querySelectorAll('.check-input');
       const progressBar = document.getElementById('progress-bar');
       const progressText = document.getElementById('progress-text');

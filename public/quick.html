@@ -9,18 +9,18 @@
 
     :root {
       /* Paleta Editorial Académica (Elsevier/T&F Style) */
-      --primary: #004b87;       /* Azul académico profundo */
-      --secondary: #006dae;     /* Azul interactivo */
-      --accent: #e86125;        /* Naranja tipo Elsevier para alertas/botones */
-      --text-main: #2b2b2b;     /* Negro suave */
-      --text-muted: #666666;    /* Gris para metadatos */
-      --border-light: #e6e8ea;  /* Bordes sutiles */
-      --border-dark: #cbd0d5;   /* Bordes estructurales */
-      --bg-out: #f4f5f7;        /* Fondo exterior */
-      --bg-paper: #ffffff;      /* Fondo del documento */
-      --bg-highlight: #f8f9fa;  /* Cajas de texto estándar */
-      --bg-example: #f0f4f8;    /* Fondo para ejemplos */
-      --success: #0d8246;       /* Verde para validaciones */
+      --primary: #004b87;
+      --secondary: #006dae;
+      --accent: #e86125;
+      --text-main: #2b2b2b;
+      --text-muted: #666666;
+      --border-light: #e6e8ea;
+      --border-dark: #cbd0d5;
+      --bg-out: #f4f5f7;
+      --bg-paper: #ffffff;
+      --bg-highlight: #f8f9fa;
+      --bg-example: #f0f4f8;
+      --success: #0d8246;
     }
 
     body {
@@ -44,7 +44,6 @@
       align-items: start;
     }
 
-    /* Barra Lateral de Referencia */
     .sidebar {
       background-color: var(--bg-paper);
       border: 1px solid var(--border-light);
@@ -115,7 +114,6 @@
       letter-spacing: 0.05em;
     }
 
-    /* Contenido Principal */
     .main-content {
       background-color: var(--bg-paper);
       border: 1px solid var(--border-light);
@@ -180,7 +178,6 @@
       font-weight: 600;
     }
 
-    /* Acordeones Interactivos */
     details {
       background-color: var(--bg-highlight);
       border: 1px solid var(--border-light);
@@ -396,6 +393,58 @@
       letter-spacing: 0.02em;
     }
 
+    /* Proceso Editorial esquemático */
+    .editorial-process {
+      background-color: #fcfcfd;
+      border: 1px solid var(--border-light);
+      border-radius: 4px;
+      padding: 25px;
+      margin-top: 20px;
+    }
+
+    .process-step {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 20px;
+      background-color: var(--bg-paper);
+      border-radius: 4px;
+      padding: 15px 20px;
+      border-left: 4px solid var(--primary);
+      box-shadow: 0 1px 5px rgba(0,0,0,0.02);
+    }
+
+    .step-number {
+      background-color: var(--primary);
+      color: white;
+      font-weight: 700;
+      font-size: 1.2em;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 15px;
+      flex-shrink: 0;
+    }
+
+    .step-content {
+      font-size: 0.95em;
+    }
+
+    .step-content strong {
+      font-family: 'Inter', sans-serif;
+      color: var(--primary);
+    }
+
+    .arrow-icon {
+      text-align: center;
+      color: var(--border-dark);
+      font-size: 1.2em;
+      margin: 5px 0;
+      letter-spacing: 0.2em;
+    }
+
     /* Footer */
     .footer {
       margin-top: 50px;
@@ -458,6 +507,30 @@
       </div>
 
       <h2>1. Entendiendo los requisitos clave</h2>
+
+      <details>
+        <summary>1.0 El Resumen (Abstract) – la puerta de entrada</summary>
+        <div class="details-content">
+          <ul>
+            <li><strong>¿Qué es?</strong> Es una síntesis breve y autónoma de tu artículo. Piensa que es lo primero (y a veces lo único) que lee un editor o revisor para decidir si tu trabajo merece una lectura completa.</li>
+            <li><strong>Longitud recomendada:</strong> Entre <strong>150 y 250 palabras</strong>. No uses citas, fórmulas complejas ni referencias bibliográficas.</li>
+            <li><strong>Estructura sugerida (IMRyD en miniatura, esto aplica principalmente para los artículos científicos):</strong>
+              <ul>
+                <li><strong>Contexto/Problema:</strong> ¿Qué se estudia y por qué importa? (1-2 frases)</li>
+                <li><strong>Objetivo:</strong> ¿Qué buscabas responder? (1 frase)</li>
+                <li><strong>Métodos:</strong> ¿Cómo lo hiciste? (1-2 frases, sin demasiado detalle)</li>
+                <li><strong>Resultados principales:</strong> ¿Qué encontraste? (2-3 frases con datos o hallazgos clave)</li>
+                <li><strong>Conclusión/Implicancia:</strong> ¿Qué significa tu hallazgo? (1 frase)</li>
+              </ul>
+            </li>
+            <li><strong>Consejo:</strong> Escríbelo al final, cuando todo el artículo esté listo, así reflejará fielmente tu trabajo. Debe ser legible de forma independiente, como un mini-ensayo.</li>
+            <li><strong>Versión en inglés:</strong> La revista solicita un resumen en inglés (Abstract) para que tu trabajo sea visible internacionalmente. Debe ser una traducción fiel del resumen en español.</li>
+          </ul>
+          <div class="example-box">
+            <strong>Ejemplo simplificado:</strong> <em>"Este estudio examina el efecto de la música clásica en la concentración de estudiantes universitarios. Utilizando un diseño experimental con 60 participantes, se comparó el rendimiento en una prueba de atención con y sin música de fondo. Los resultados muestran una mejora del 15% en tareas de memoria a corto plazo con música instrumental, aunque sin diferencias en tareas de razonamiento. Se concluye que la música ambiental puede ser una herramienta de bajo costo para optimizar ciertos procesos cognitivos en entornos académicos."</em>
+          </div>
+        </div>
+      </details>
 
       <details>
         <summary>1.1 El archivo y el anonimato</summary>
@@ -568,52 +641,132 @@
       </p>
 
       <div class="checklist-container">
-        <div class="progress-wrapper">
-          <div class="progress-header">
-            <span>Progreso de verificación</span>
-            <span id="progress-text">0%</span>
+  <div class="progress-wrapper">
+    <div class="progress-header">
+      <span>Progreso de verificación</span>
+      <span id="progress-text">0%</span>
+    </div>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" id="progress-bar"></div>
+    </div>
+  </div>
+
+  <form id="submission-checklist">
+    <div class="checklist-item">
+      <input type="checkbox" id="check1" class="check-input">
+      <label for="check1">El archivo está en <strong>.docx</strong> y no contiene mi nombre, institución ni agradecimientos que me identifiquen.</label>
+    </div>
+    
+    <div class="checklist-item">
+      <input type="checkbox" id="check2" class="check-input">
+      <label for="check2">Incluí un <strong>resumen (abstract)</strong> de 150 a 250 palabras que sintetiza el problema, método, resultados y conclusión, tanto en español como en inglés.</label>
+    </div>
+
+    <div class="checklist-item">
+      <input type="checkbox" id="check3" class="check-input">
+      <label for="check3">Redacté <strong>2 a 6 palabras clave</strong> en español y sus equivalentes en inglés, usando términos que realmente describen mi tema.</label>
+    </div>
+    
+    <div class="checklist-item">
+      <input type="checkbox" id="check4" class="check-input">
+      <label for="check4">La extensión está entre <strong>1.000 y 10.000 palabras</strong>. Si es mayor, sé que el editor podría sugerir recortes.</label>
+    </div>
+    
+    <div class="checklist-item">
+      <input type="checkbox" id="check5" class="check-input">
+      <label for="check5">Usé los estilos <strong>Heading 1, 2, 3</strong> reales para organizar las secciones (no solo negrita o tamaños manuales).</label>
+    </div>
+    
+    <div class="checklist-item">
+      <input type="checkbox" id="check6" class="check-input">
+      <label for="check6">Cada cita en el texto tiene su referencia completa en <strong>Chicago 17 (Autor-Fecha)</strong>, y viceversa.</label>
+    </div>
+    
+    <div class="checklist-item">
+      <input type="checkbox" id="check7" class="check-input">
+      <label for="check7">Tengo <strong>2 a 4 códigos de vocabulario controlado</strong> (ej. JEL, MeSH) listos para escribir en el formulario de envío.</label>
+    </div>
+
+    <div class="checklist-item">
+      <input type="checkbox" id="check8" class="check-input">
+      <label for="check8">Declaré el <strong>uso de IA</strong> (si corresponde), el <strong>financiamiento</strong> y confirmé que el trabajo no está enviado a otra revista.</label>
+    </div>
+  </form>
+
+  <div id="success-message">
+    Listo. Has verificado todos los puntos básicos. Tu manuscrito está listo para el proceso de envío formal.
+  </div>
+</div>
+
+      <!-- NUEVA SECCIÓN: PROCESO EDITORIAL ESQUEMÁTICO -->
+      <h2>3. ¿Qué pasa después de enviar? Proceso editorial simplificado</h2>
+      <p style="font-family: 'Lora', serif; color: var(--text-muted); margin-bottom: 20px;">
+        Entendemos que la espera puede generar dudas. Aquí te explicamos, de forma esquemática y sin tecnicismos, el camino estándar que sigue tu manuscrito bajo un modelo de <strong>revisión doble ciego</strong>. No te asustes si hay rondas de correcciones: es parte normal del proceso de mejora académica.
+      </p>
+
+      <div class="editorial-process">
+        
+        <div class="process-step">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <strong>Recepción y verificación técnica</strong><br>
+            Tu manuscrito llega a la plataforma. Un editor de la revista revisa que cumpla con los requisitos básicos (anonimato, formato .docx, estructura, referencias). Si falta algo obvio, te lo devuelven con observaciones.
           </div>
-          <div class="progress-bar-bg">
-            <div class="progress-bar-fill" id="progress-bar"></div>
+        </div>
+        <div class="arrow-icon">↓</div>
+
+        <div class="process-step">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <strong>Asignación a un editor académico</strong><br>
+            El editor principal asigna tu manuscrito a un <strong>editor de sección</strong> o editor temático, que es un especialista en tu área. Él o ella evaluará si el tema encaja con la revista y si tiene potencial.
+          </div>
+        </div>
+        <div class="arrow-icon">↓</div>
+
+        <div class="process-step">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <strong>Invitación a revisores anónimos (doble ciego)</strong><br>
+            El editor invita a <strong>2 o 3 expertos externos</strong> (revisores pares). Estos revisores no conocen tu identidad (por eso es doble ciego) y tú no conocerás la de ellos. Ellos califican la calidad, la originalidad y la metodología de tu trabajo.
+          </div>
+        </div>
+        <div class="arrow-icon">↓</div>
+
+        <div class="process-step">
+          <div class="step-number">4</div>
+          <div class="step-content">
+            <strong>Decisión del editor</strong><br>
+            Con base en los informes de los revisores, el editor toma una decisión. Las posibilidades son:
+            <ul style="margin-top: 5px; padding-left: 20px;">
+              <li><strong>Aceptar</strong> (raro en la primera ronda)</li>
+              <li><strong>Aceptar con cambios menores</strong> (ajustes de estilo o detalles)</li>
+              <li><strong>Revisar y reenviar</strong> (cambios mayores, necesitarás una nueva ronda de evaluación)</li>
+              <li><strong>Rechazar</strong> (no encaja o la calidad no es suficiente)</li>
+            </ul>
+          </div>
+        </div>
+        <div class="arrow-icon">↓</div>
+
+        <div class="process-step">
+          <div class="step-number">5</div>
+          <div class="step-content">
+            <strong>Rondas de correcciones (si aplican)</strong><br>
+            Si te piden cambios, tendrás un plazo (normalmente 2-4 semanas) para enviar una versión revisada. Deberás incluir una <strong>carta de respuesta</strong> explicando cómo abordaste cada comentario de los revisores. El editor puede enviar esta nueva versión a los mismos revisores o decidir por sí mismo.
+          </div>
+        </div>
+        <div class="arrow-icon">↓</div>
+
+        <div class="process-step">
+          <div class="step-number">6</div>
+          <div class="step-content">
+            <strong>Aceptación final y producción</strong><br>
+            Una vez aceptado, tu manuscrito pasa a la etapa de <strong>maquetación y corrección de estilo</strong>. Recibirás las pruebas finales (galeradas) para dar tu visto bueno. Luego se publica en la revista con su DOI y licencia de acceso abierto.
           </div>
         </div>
 
-        <form id="submission-checklist">
-          <div class="checklist-item">
-            <input type="checkbox" id="check1" class="check-input">
-            <label for="check1">El archivo está en <strong>.docx</strong> y no contiene mi nombre, institución ni agradecimientos que me identifiquen.</label>
-          </div>
-          
-          <div class="checklist-item">
-            <input type="checkbox" id="check2" class="check-input">
-            <label for="check2">La extensión está entre <strong>1.000 y 10.000 palabras</strong>. Si es mayor, sé que el editor podría sugerir recortes.</label>
-          </div>
-          
-          <div class="checklist-item">
-            <input type="checkbox" id="check3" class="check-input">
-            <label for="check3">Usé los estilos <strong>Heading 1, 2, 3</strong> reales para organizar las secciones (no solo negrita o tamaños manuales).</label>
-          </div>
-          
-          <div class="checklist-item">
-            <input type="checkbox" id="check4" class="check-input">
-            <label for="check4">Cada cita en el texto tiene su referencia completa en <strong>Chicago 17 (Autor-Fecha)</strong>, y viceversa.</label>
-          </div>
-          
-          <div class="checklist-item">
-            <input type="checkbox" id="check5" class="check-input">
-            <label for="check5">Tengo <strong>2 a 4 códigos de vocabulario controlado</strong> (ej. JEL, MeSH) listos para escribir en el formulario de envío.</label>
-          </div>
-
-          <div class="checklist-item">
-            <input type="checkbox" id="check6" class="check-input">
-            <label for="check6">Declaré el <strong>uso de IA</strong> (si corresponde), el <strong>financiamiento</strong> y confirmé que el trabajo no está enviado a otra revista.</label>
-          </div>
-        </form>
-
-        <div id="success-message">
-          Listo. Has verificado todos los puntos básicos. Tu manuscrito está listo para el proceso de envío formal.
-        </div>
       </div>
+      <!-- FIN PROCESO EDITORIAL -->
 
       <div class="footer">
         Revista Nacional de las Ciencias para Estudiantes · ISSN 3087-2839<br>
@@ -624,7 +777,6 @@
 
   <script>
     (function() {
-      // Lógica del Checklist Interactivo
       const checkboxes = document.querySelectorAll('.check-input');
       const progressBar = document.getElementById('progress-bar');
       const progressText = document.getElementById('progress-text');
