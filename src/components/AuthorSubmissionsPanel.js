@@ -35,7 +35,7 @@ const Icons = {
   Key: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>,
   File: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>,
   Send: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" /></svg>,
-  
+  EditorIcon: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>,
   Search: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>,
   
   XCircle: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
@@ -377,7 +377,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
   const isSpanish = language === 'es';
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+  const [assignedEditor, setAssignedEditor] = useState(null);
   // Estado para el Portal (Modal de pantalla completa)
   const [activePortal, setActivePortal] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
@@ -416,7 +416,53 @@ const AuthorSubmissionsPanel = ({ user }) => {
 
       setSubmissions(baseSubmissionsList);
       setLoading(false);
-
+      // Cargar editor asignado para cada submission
+      snapshot.docs.forEach(doc => {
+        const submissionId = doc.id;
+        
+        // Query para editorialTasks
+        const tasksQuery = query(
+          collection(db, 'editorialTasks'),
+          where('submissionId', '==', submissionId),
+          where('status', 'in', ['in-review', 'awaiting-decision', 'awaiting-author-revision', 'in-peer-review', 'awaiting-review'])
+        );
+        
+        const unsubTask = onSnapshot(tasksQuery, (tasksSnap) => {
+          if (!tasksSnap.empty) {
+            // Obtener la tarea más reciente
+            const task = tasksSnap.docs
+              .map(d => ({ id: d.id, ...d.data() }))
+              .sort((a, b) => (b.round || 0) - (a.round || 0))[0];
+            
+            if (task && task.assignedToName && task.assignedToEmail) {
+              const editorInfo = {
+                name: task.assignedToName,
+                email: task.assignedToEmail,
+                round: task.round || 1,
+                taskId: task.id
+              };
+              
+              // Actualizar el submission con el editor asignado
+              setSubmissions(prev => prev.map(sub => 
+                sub.id === submissionId ? { ...sub, assignedEditor: editorInfo } : sub
+              ));
+              
+              // Actualizar el portal activo si está abierto
+              setActivePortal(prev => {
+                if (prev?.id === submissionId) {
+                  return { ...prev, assignedEditor: editorInfo };
+                }
+                return prev;
+              });
+            }
+          }
+        });
+        
+        // Agregar el listener a la limpieza
+        if (!reviewsListeners.has(`task-${submissionId}`)) {
+          reviewsListeners.set(`task-${submissionId}`, unsubTask);
+        }
+      });
       // Limpiar listeners anteriores
       reviewsListeners.forEach(unsub => unsub());
       reviewsListeners.clear();
@@ -496,7 +542,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
     return needsRevisionUpload(sub?.status) || hasPendingMetadataProposals(sub);
   };
 
-  const handleOpenPortal = (sub) => {
+    const handleOpenPortal = (sub) => {
     setActivePortal(sub);
     // Enrutamiento inteligente al abrir
     if (requiresAction(sub)) {
@@ -828,6 +874,44 @@ const AuthorSubmissionsPanel = ({ user }) => {
                     
                     {/* Estado del Expediente */}
                     <div className="bg-white p-6 sm:p-8 border border-slate-200 shadow-sm">
+                                          {/* Editor Asignado */}
+                    {activePortal.assignedEditor && (
+                      <div className="bg-white p-6 sm:p-8 border border-slate-200 shadow-sm border-l-4 border-l-[#C0A86A]">
+                        <h3 className="font-sans font-bold text-xs uppercase tracking-widest text-slate-400 mb-4">
+                          {isSpanish ? 'Editor Asignado' : 'Assigned Editor'}
+                        </h3>
+                        <div className="flex items-start gap-4">
+                          {/* Avatar del editor */}
+                          <div className="w-14 h-14 bg-[#003b5c] text-white flex items-center justify-center flex-shrink-0">
+                            <Icons.EditorIcon />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex flex-wrap items-center gap-2 mb-1">
+                              <p className="font-serif text-lg sm:text-xl text-[#003b5c] font-bold">
+                                {activePortal.assignedEditor.name}
+                              </p>
+                              {activePortal.assignedEditor.round && (
+                                <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold uppercase tracking-wider rounded-sm">
+                                  {isSpanish ? 'Ronda' : 'Round'} {activePortal.assignedEditor.round}
+                                </span>
+                              )}
+                            </div>
+                            <a 
+                              href={`mailto:${activePortal.assignedEditor.email}`}
+                              className="text-sm text-slate-600 hover:text-[#003b5c] transition-colors flex items-center gap-2 font-sans"
+                            >
+                              <Icons.Email />
+                              {activePortal.assignedEditor.email}
+                            </a>
+                            <p className="text-xs text-slate-400 mt-2 font-sans italic">
+                              {isSpanish 
+                                ? 'Su manuscrito está siendo gestionado por este editor. Puede contactarlo para consultas sobre el proceso editorial.'
+                                : 'Your manuscript is being managed by this editor. You can contact them for inquiries about the editorial process.'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                       <h3 className="font-sans font-bold text-xs uppercase tracking-widest text-slate-400 mb-4">
                         {isSpanish ? 'Estado del Expediente' : 'Record Status'}
                       </h3>
