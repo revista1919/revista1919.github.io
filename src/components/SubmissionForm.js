@@ -819,9 +819,15 @@ const MinorConsentSection = ({ author, index, onUpdate }) => {
   const isSpanish = language === 'es';
   const consentMethod = author.consentMethod || 'none';
 
-  const consentUrls = {
-    es: 'https://www.revistacienciasestudiantes.com/consent.pdf',
-    en: 'https://www.revistacienciasestudiantes.com/consentEN.pdf'
+    const consentUrls = {
+    es: {
+      pdf: 'https://www.revistacienciasestudiantes.com/consent.pdf',
+      docx: 'https://www.revistacienciasestudiantes.com/acuerdo_publicacion_autor_menor_ES.docx'
+    },
+    en: {
+      pdf: 'https://www.revistacienciasestudiantes.com/consentEN.pdf',
+      docx: 'https://www.revistacienciasestudiantes.com/publication_agreement_minor_author_EN.docx'
+    }
   };
 
   const handleFileUpload = (e) => {
@@ -964,9 +970,9 @@ const MinorConsentSection = ({ author, index, onUpdate }) => {
                 : `Publication Consent - Minor Author: ${minorName}`;
               
               const body = isSpanish
-                ? `CONSENTIMIENTO PARA PUBLICACIÓN — AUTOR MENOR DE EDAD\nRevista Nacional de las Ciencias para Estudiantes\n\nEstimado equipo editorial,\n\nPor medio del presente correo electrónico, yo, ${guardianName}, en calidad de tutor legal de ${minorName}, declaro y manifiesto lo siguiente:\n\n— AUTORIZACIÓN DE PUBLICACIÓN —\nAutorizo expresamente la publicación del artículo titulado «${articleTitle}» en la Revista Nacional de las Ciencias para Estudiantes, bajo la licencia Creative Commons CC-BY 4.0, de acceso abierto y con posibilidad de reutilización por terceros con la debida atribución.\n\n— DATOS DEL TUTOR LEGAL —\nNombre completo: ${guardianName}\nRelación con el menor: [Indicar: Padre / Madre / Tutor legal]\nDocumento de identidad: [Indicar tipo y número]\n\n— DATOS DEL MENOR AUTOR —\nNombre completo: ${minorName}\nEdad: [Indicar edad]\nFecha de nacimiento: [Indicar fecha]\n\n— DECLARACIONES —\n• He leído el manuscrito completo y apruebo su contenido.\n• Comprendo que el artículo será de acceso público en internet.\n• No recibo compensación económica por esta publicación.\n• Entiendo que puedo retirar este consentimiento antes de la publicación efectiva, notificándolo por escrito a contact@revistacienciasestudiantes.com.\n\nSin otro particular, saluda atentamente,\n\n${guardianName}\n[Ciudad, país] — [Fecha]`
-                : `PUBLICATION CONSENT — MINOR AUTHOR\nNational Review of Sciences for Students\n\nDear Editorial Team,\n\nThrough this email, I, ${guardianName}, as legal guardian of ${minorName}, hereby declare and state the following:\n\n— PUBLICATION AUTHORIZATION —\nI expressly authorize the publication of the article titled «${articleTitle}» in the National Review of Sciences for Students, under the Creative Commons CC-BY 4.0 license, open access, with possibility of reuse by third parties with proper attribution.\n\n— LEGAL GUARDIAN INFORMATION —\nFull name: ${guardianName}\nRelationship to minor: [Specify: Father / Mother / Legal guardian]\nID document: [Specify type and number]\n\n— MINOR AUTHOR INFORMATION —\nFull name: ${minorName}\nAge: [Specify age]\nDate of birth: [Specify date]\n\n— DECLARATIONS —\n• I have read the complete manuscript and approve its content.\n• I understand that the article will be publicly accessible on the internet.\n• I receive no financial compensation for this publication.\n• I understand that I may withdraw this consent prior to effective publication by notifying in writing to contact@revistacienciasestudiantes.com.\n\nSincerely,\n\n${guardianName}\n[City, country] — [Date]`;
-              
+                ? `ACUERDO DE PUBLICACIÓN — AUTOR MENOR DE EDAD\nRevista Nacional de las Ciencias para Estudiantes\n\nEstimado equipo editorial,\n\nPor medio del presente documento, en mi calidad de tutor legal de ${minorName}, declaro, consiento y autorizo expresamente los siguientes términos institucionales:\n\n1. REPRESENTACIÓN LEGAL:\nTengo plena autoridad legal para otorgar este consentimiento en representación del menor autor. He leído, analizado y aprobado el contenido íntegro del manuscrito postulado titulado «${articleTitle}».\n\n2. LICENCIAMIENTO Y ACCESO ABIERTO:\nAutorizo la publicación, reproducción y distribución del artículo en la Revista Nacional de las Ciencias para Estudiantes bajo los términos de la licencia Creative Commons Atribución 4.0 Internacional (CC-BY 4.0). Comprendo que esto permite el libre acceso, uso y adaptación de la obra por parte de terceros, garantizando siempre el reconocimiento de la autoría original.\n\n3. TRATAMIENTO DE DATOS PERSONALES:\nAutorizo a la Revista a almacenar, procesar y gestionar los datos personales proporcionados en el formulario de envío. Estos datos se guardan de forma segura en una base de datos privada y no se exponen públicamente. Solo se mostrarán los datos necesarios para la publicación, incluyendo el email proporcionado en el formulario, por lo que queda a discreción del autor y tutor elegir con cuidado el mismo. El autor puede editar su perfil público en la página en cualquier momento.\n\n4. PARTICIPACIÓN COMO REVISOR CIENTÍFICO:\nEn caso de que el menor haya manifestado afirmativamente su deseo en el formulario de envío, autorizo expresamente que sea contactado e invitado a participar como revisor de pares para otros trabajos que se enmarquen dentro de sus áreas de conocimiento.\n\n5. NATURALEZA DEL ACUERDO:\nComprendo que la postulación y potencial publicación no conllevan ningún tipo de retribución económica ni obligación pecuniaria entre las partes.\n\n6. DERECHO DE RETRACTACIÓN:\nEntiendo que dispongo del derecho inalienable de retirar este consentimiento en cualquier momento antes de que el manuscrito alcance la fase de producción (publicación efectiva), mediante notificación formal al correo electrónico contact@revistacienciasestudiantes.com.\n\nDATOS DEL TUTOR LEGAL:\nNombre completo: ${guardianName}\nRelación con el menor: [Indicar: Padre / Madre / Tutor legal]\nDocumento de identidad: [Indicar tipo y número]\n\nDATOS DEL MENOR AUTOR:\nNombre completo: ${minorName}\nEdad: [Indicar edad]\nFecha de nacimiento: [Indicar fecha]\n\nSin otro particular, saluda atentamente,\n\n${guardianName}\n[Ciudad, país] — [Fecha]`
+                : `PUBLICATION AGREEMENT — MINOR AUTHOR\nNational Review of Sciences for Students\n\nDear Editorial Team,\n\nThrough this document, as legal guardian of ${minorName}, I declare, consent to, and expressly authorize the following institutional terms:\n\n1. LEGAL REPRESENTATION:\nI have full legal authority to grant this consent on behalf of the minor author. I have read, analyzed, and approved the complete content of the submitted manuscript titled «${articleTitle}».\n\n2. LICENSING AND OPEN ACCESS:\nI authorize the publication, reproduction, and distribution of the article in the National Review of Sciences for Students under the terms of the Creative Commons Attribution 4.0 International license (CC-BY 4.0). I understand that this allows free access, use, and adaptation of the work by third parties, always guaranteeing recognition of the original authorship.\n\n3. PERSONAL DATA PROCESSING:\nI authorize the Journal to store, process, and manage the personal data provided in the submission form. This data is securely stored in a private database and is not publicly exposed. Only the necessary data for publication will be displayed, including the email provided in the form, so it is at the discretion of the author and guardian to choose it carefully. The author can edit their public profile on the page at any time.\n\n4. PARTICIPATION AS SCIENTIFIC REVIEWER:\nIn the event that the minor has affirmatively expressed their desire in the submission form, I expressly authorize that they be contacted and invited to participate as a peer reviewer for other works within their areas of knowledge.\n\n5. NATURE OF THE AGREEMENT:\nI understand that submission and potential publication do not entail any financial compensation or pecuniary obligation between the parties.\n\n6. RIGHT OF RETRACTION:\nI understand that I have the inalienable right to withdraw this consent at any time before the manuscript reaches the production phase (effective publication), by formal notification to contact@revistacienciasestudiantes.com.\n\nLEGAL GUARDIAN INFORMATION:\nFull name: ${guardianName}\nRelationship to minor: [Specify: Father / Mother / Legal guardian]\nID document: [Specify type and number]\n\nMINOR AUTHOR INFORMATION:\nFull name: ${minorName}\nAge: [Specify age]\nDate of birth: [Specify date]\n\nSincerely,\n\n${guardianName}\n[City, country] — [Date]`;
+
               const gmailUrl = `https://mail.google.com/mail/u/0/?fs=1&to=contact@revistacienciasestudiantes.com&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}&tf=cm`;
               window.open(gmailUrl, '_blank', 'noopener,noreferrer');
             }}
@@ -980,23 +986,36 @@ const MinorConsentSection = ({ author, index, onUpdate }) => {
         </div>
       )}
 
-      {author.consentMethod === 'upload' && (
+            {author.consentMethod === 'upload' && (
         <div className="space-y-4">
-          <a
-            href={consentUrls[language]}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-[#003b5c] hover:text-[#e86125] text-sm underline-offset-4 hover:underline font-sans font-medium"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v-4m0 0l4 4m-4-4l4-4m12 4v4m0-4l-4 4m4-4l-4-4" />
-            </svg>
-            {isSpanish ? 'Descargar formulario' : 'Download form'}
-          </a>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <a
+              href={consentUrls[language].pdf}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-[#003b5c] hover:text-[#e86125] text-sm underline-offset-4 hover:underline font-sans font-medium bg-white rounded-lg px-4 py-2.5 ring-1 ring-slate-200 hover:ring-[#003b5c] transition-all"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+              {isSpanish ? 'Descargar PDF' : 'Download PDF'}
+            </a>
+            <a
+              href={consentUrls[language].docx}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-[#003b5c] hover:text-[#e86125] text-sm underline-offset-4 hover:underline font-sans font-medium bg-white rounded-lg px-4 py-2.5 ring-1 ring-slate-200 hover:ring-[#003b5c] transition-all"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              {isSpanish ? 'Descargar DOCX' : 'Download DOCX'}
+            </a>
+          </div>
 
           <input
             type="file"
-            accept=".pdf,.jpg,.jpeg,.png"
+            accept=".pdf,.jpg,.jpeg,.png,.docx"
             onChange={handleFileUpload}
             className="block w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-slate-100 file:text-[#003b5c] hover:file:bg-slate-200 font-sans uppercase tracking-wider"
           />
@@ -1345,6 +1364,11 @@ const steps = [
           formData.keywordsEs.length <= 6 &&
           formData.area.trim() &&
           formData.articleType;
+           if (formData.area && getVocabularyForArea(formData.area)) {
+          if (!formData.specializedCodes || formData.specializedCodes.length < 2) {
+            return false;
+          }
+        }
       
       case 2:
         const basicOk = formData.authors.every(a =>
@@ -1401,6 +1425,19 @@ const steps = [
         }
         if (!formData.area.trim()) {
           errors.area = isSpanish ? 'El área temática es obligatoria' : 'Subject area is required';
+        }
+                // Validación de códigos especializados (si hay área con vocabulario)
+        if (formData.area && getVocabularyForArea(formData.area)) {
+          if (!formData.specializedCodes || formData.specializedCodes.length < 2) {
+            errors.specializedCodes = isSpanish 
+              ? `Debes agregar al menos 2 códigos especializados (${getVocabularyForArea(formData.area)?.vocabulario})` 
+              : `You must add at least 2 specialized codes (${getVocabularyForArea(formData.area)?.vocabulario})`;
+          }
+          if (formData.specializedCodes && formData.specializedCodes.length > 4) {
+            errors.specializedCodes = isSpanish 
+              ? 'Máximo 4 códigos especializados permitidos' 
+              : 'Maximum 4 specialized codes allowed';
+          }
         }
         if (!formData.articleType) {
           errors.articleType = isSpanish ? 'El tipo de artículo es obligatorio' : 'Article type is required';
@@ -2013,7 +2050,66 @@ const steps = [
                       />
                     </div>
                   </div>
-
+{/* Códigos especializados - SOLO si hay área seleccionada con vocabulario */}
+{formData.area && getVocabularyForArea(formData.area) ? (
+  <div className="bg-gradient-to-br from-slate-50 to-white rounded-xl p-6 ring-1 ring-slate-200/60 shadow-sm">
+    <div className="flex items-center gap-2 mb-4">
+      <div className="w-10 h-10 bg-[#003b5c]/5 rounded-lg flex items-center justify-center">
+        <svg className="w-5 h-5 text-[#003b5c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 21h7a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v11m0 5l4.879-4.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242z" />
+        </svg>
+      </div>
+      <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600">
+        {isSpanish ? 'Códigos Especializados' : 'Specialized Codes'}
+        <HelpCapsule
+          title={isSpanish ? '¿Qué son los códigos especializados?' : 'What are specialized codes?'}
+          text={isSpanish
+            ? `Son códigos estandarizados del vocabulario ${getVocabularyForArea(formData.area)?.vocabulario || ''}. Solo necesitas ingresar el código (ej: ${getVocabularyForArea(formData.area)?.ejemplo?.split(':')[0] || getVocabularyForArea(formData.area)?.ejemplo || ''}). No incluyas el término completo. Debes agregar entre 2 y 4 códigos.`
+            : `These are standardized codes from the ${getVocabularyForArea(formData.area)?.vocabulario || ''} vocabulary. You only need to enter the code (e.g., ${getVocabularyForArea(formData.area)?.ejemplo?.split(':')[0] || getVocabularyForArea(formData.area)?.ejemplo || ''}). Do not include the full term. You must add between 2 and 4 codes.`}
+        />
+      </label>
+    </div>
+    
+    <ControlledKeywordInput
+      vocabularyConfig={getVocabularyForArea(formData.area)}
+      value={formData.specializedCodes}
+      onChange={(val) => {
+        setFormData(prev => ({ ...prev, specializedCodes: val }));
+        setValidationErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.specializedCodes;
+          return newErrors;
+        });
+      }}
+      language={language}
+      mode="codes"
+    />
+    
+    {validationErrors.specializedCodes && (
+      <p className="text-red-500 text-xs mt-2 flex items-center gap-1">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        {validationErrors.specializedCodes}
+      </p>
+    )}
+  </div>
+) : (
+  <div className="bg-slate-50/50 rounded-xl p-6 text-center border-2 border-dashed border-slate-200">
+    <div className="flex flex-col items-center gap-3">
+      <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center">
+        <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+        </svg>
+      </div>
+      <p className="text-slate-500 text-sm font-sans">
+        {isSpanish 
+          ? 'Selecciona un área temática para ver los códigos especializados disponibles.'
+          : 'Select a subject area to see available specialized codes.'}
+      </p>
+    </div>
+  </div>
+)}
                   {/* Idioma del manuscrito */}
                   <div>
                     <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">

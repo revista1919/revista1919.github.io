@@ -15,49 +15,43 @@ require('dotenv').config({ path: path.resolve(__dirname, '.env'), override: true
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
 
-// Debug: Print environment variables
-console.log('🔍 Webpack Environment Variables:', {
-  'REACT_APP_FIREBASE_API_KEY': process.env.REACT_APP_FIREBASE_API_KEY ? 'PRESENT' : 'MISSING',
-  'REACT_APP_FIREBASE_PROJECT_ID': process.env.REACT_APP_FIREBASE_PROJECT_ID || 'MISSING',
-  'REACT_APP_USERS_CSV': process.env.REACT_APP_USERS_CSV ? `${process.env.REACT_APP_USERS_CSV.slice(0, 40)}...` : 'MISSING',
-  'REACT_APP_FORM_CSV': process.env.REACT_APP_FORM_CSV ? `${process.env.REACT_APP_FORM_CSV.slice(0, 40)}...` : 'MISSING',
-  'REACT_APP_ARTICULOS_SCRIPT_URL': process.env.REACT_APP_ARTICULOS_SCRIPT_URL ? `${process.env.REACT_APP_ARTICULOS_SCRIPT_URL.slice(0, 40)}...` : 'MISSING',
-  'REACT_APP_VOLUMES_SCRIPT_URL': process.env.REACT_APP_VOLUMES_SCRIPT_URL ? `${process.env.REACT_APP_VOLUMES_SCRIPT_URL.slice(0, 40)}...` : 'MISSING',
-  'REACT_APP_TEAM_SCRIPT_URL': process.env.REACT_APP_TEAM_SCRIPT_URL ? `${process.env.REACT_APP_TEAM_SCRIPT_URL.slice(0, 40)}...` : 'MISSING',
-  'REACT_APP_APPLICATIONS_SCRIPT_URL': process.env.REACT_APP_APPLICATIONS_SCRIPT_URL ? `${process.env.REACT_APP_APPLICATIONS_SCRIPT_URL.slice(0, 40)}...` : 'MISSING',
-  'REACT_APP_REBUILD_TOKEN': process.env.REACT_APP_REBUILD_TOKEN ? 'PRESENT' : 'MISSING',
-  'REACT_APP_API_GEMINI': process.env.REACT_APP_API_GEMINI ? 'PRESENT' : 'MISSING',
-  'NODE_ENV': process.env.NODE_ENV || 'development',
-  'DEBUG': process.env.DEBUG || false,
-  '.env.local loaded': dotenvConfig.parsed ? Object.keys(dotenvConfig.parsed).length : 0,
-});
+  // Debug: Print environment variables
+  console.log('🔍 Webpack Environment Variables:', {
+    'REACT_APP_FIREBASE_API_KEY': process.env.REACT_APP_FIREBASE_API_KEY ? 'PRESENT' : 'MISSING',
+    'REACT_APP_FIREBASE_PROJECT_ID': process.env.REACT_APP_FIREBASE_PROJECT_ID || 'MISSING',
+    'REACT_APP_USERS_CSV': process.env.REACT_APP_USERS_CSV ? `${process.env.REACT_APP_USERS_CSV.slice(0, 40)}...` : 'MISSING',
+    'REACT_APP_FORM_CSV': process.env.REACT_APP_FORM_CSV ? `${process.env.REACT_APP_FORM_CSV.slice(0, 40)}...` : 'MISSING',
+    'REACT_APP_ARTICULOS_SCRIPT_URL': process.env.REACT_APP_ARTICULOS_SCRIPT_URL ? `${process.env.REACT_APP_ARTICULOS_SCRIPT_URL.slice(0, 40)}...` : 'MISSING',
+    'REACT_APP_VOLUMES_SCRIPT_URL': process.env.REACT_APP_VOLUMES_SCRIPT_URL ? `${process.env.REACT_APP_VOLUMES_SCRIPT_URL.slice(0, 40)}...` : 'MISSING',
+    'REACT_APP_TEAM_SCRIPT_URL': process.env.REACT_APP_TEAM_SCRIPT_URL ? `${process.env.REACT_APP_TEAM_SCRIPT_URL.slice(0, 40)}...` : 'MISSING',
+    'REACT_APP_APPLICATIONS_SCRIPT_URL': process.env.REACT_APP_APPLICATIONS_SCRIPT_URL ? `${process.env.REACT_APP_APPLICATIONS_SCRIPT_URL.slice(0, 40)}...` : 'MISSING',
+    'REACT_APP_REBUILD_TOKEN': process.env.REACT_APP_REBUILD_TOKEN ? 'PRESENT' : 'MISSING',
+    'REACT_APP_API_GEMINI': process.env.REACT_APP_API_GEMINI ? 'PRESENT' : 'MISSING',
+    'NODE_ENV': process.env.NODE_ENV || 'development',
+    'DEBUG': process.env.DEBUG || false,
+    '.env.local loaded': dotenvConfig.parsed ? Object.keys(dotenvConfig.parsed).length : 0,
+  });
 
-// Inject environment variables
-const defineEnvVars = {
-  'process.env.NODE_ENV': JSON.stringify(isProduction ? 'production' : 'development'),
-
-  'process.env.REACT_APP_ARTICULOS_SCRIPT_URL': JSON.stringify(process.env.REACT_APP_ARTICULOS_SCRIPT_URL || ''),
-  'process.env.REACT_APP_VOLUMES_SCRIPT_URL': JSON.stringify(process.env.REACT_APP_VOLUMES_SCRIPT_URL || ''),
-  'process.env.REACT_APP_TEAM_SCRIPT_URL': JSON.stringify(process.env.REACT_APP_TEAM_SCRIPT_URL || ''),
-  'process.env.REACT_APP_APPLICATIONS_SCRIPT_URL': JSON.stringify(process.env.REACT_APP_APPLICATIONS_SCRIPT_URL || ''),
-  'process.env.REACT_APP_REBUILD_TOKEN': JSON.stringify(process.env.REACT_APP_REBUILD_TOKEN || ''),
-
-  'process.env.REACT_APP_USERS_CSV': JSON.stringify(process.env.REACT_APP_USERS_CSV || ''),
-  'process.env.REACT_APP_FORM_CSV': JSON.stringify(process.env.REACT_APP_FORM_CSV || ''),
-
-  'process.env.REACT_APP_FIREBASE_API_KEY': JSON.stringify(process.env.REACT_APP_FIREBASE_API_KEY || ''),
-  'process.env.REACT_APP_FIREBASE_AUTH_DOMAIN': JSON.stringify(process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || 'usuarios-rnce.firebaseapp.com'),
-  'process.env.REACT_APP_FIREBASE_PROJECT_ID': JSON.stringify(process.env.REACT_APP_FIREBASE_PROJECT_ID || 'usuarios-rnce'),
-  'process.env.REACT_APP_FIREBASE_STORAGE_BUCKET': JSON.stringify(process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || 'usuarios-rnce.firebasestorage.app'),
-  'process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID': JSON.stringify(process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID || '688242139131'),
-  'process.env.REACT_APP_FIREBASE_APP_ID': JSON.stringify(process.env.REACT_APP_FIREBASE_APP_ID || '1:688242139131:web:3a98663545e73110c3f55e'),
-  'process.env.REACT_APP_FIREBASE_MEASUREMENT_ID': JSON.stringify(process.env.REACT_APP_FIREBASE_MEASUREMENT_ID || 'G-K90MKB7BDP'),
-
-  'process.env.REACT_APP_API_GEMINI': JSON.stringify(process.env.REACT_APP_API_GEMINI || ''),
-
-  'process.env.DEBUG': JSON.stringify(process.env.DEBUG === 'true' || process.env.DEBUG === true),
-};
-
+  // Inject environment variables
+  const defineEnvVars = {
+    'process.env.NODE_ENV': JSON.stringify(isProduction ? 'production' : 'development'),
+    'process.env.REACT_APP_ARTICULOS_SCRIPT_URL': JSON.stringify(process.env.REACT_APP_ARTICULOS_SCRIPT_URL || ''),
+    'process.env.REACT_APP_VOLUMES_SCRIPT_URL': JSON.stringify(process.env.REACT_APP_VOLUMES_SCRIPT_URL || ''),
+    'process.env.REACT_APP_TEAM_SCRIPT_URL': JSON.stringify(process.env.REACT_APP_TEAM_SCRIPT_URL || ''),
+    'process.env.REACT_APP_APPLICATIONS_SCRIPT_URL': JSON.stringify(process.env.REACT_APP_APPLICATIONS_SCRIPT_URL || ''),
+    'process.env.REACT_APP_REBUILD_TOKEN': JSON.stringify(process.env.REACT_APP_REBUILD_TOKEN || ''),
+    'process.env.REACT_APP_USERS_CSV': JSON.stringify(process.env.REACT_APP_USERS_CSV || ''),
+    'process.env.REACT_APP_FORM_CSV': JSON.stringify(process.env.REACT_APP_FORM_CSV || ''),
+    'process.env.REACT_APP_FIREBASE_API_KEY': JSON.stringify(process.env.REACT_APP_FIREBASE_API_KEY || ''),
+    'process.env.REACT_APP_FIREBASE_AUTH_DOMAIN': JSON.stringify(process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || 'usuarios-rnce.firebaseapp.com'),
+    'process.env.REACT_APP_FIREBASE_PROJECT_ID': JSON.stringify(process.env.REACT_APP_FIREBASE_PROJECT_ID || 'usuarios-rnce'),
+    'process.env.REACT_APP_FIREBASE_STORAGE_BUCKET': JSON.stringify(process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || 'usuarios-rnce.firebasestorage.app'),
+    'process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID': JSON.stringify(process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID || '688242139131'),
+    'process.env.REACT_APP_FIREBASE_APP_ID': JSON.stringify(process.env.REACT_APP_FIREBASE_APP_ID || '1:688242139131:web:3a98663545e73110c3f55e'),
+    'process.env.REACT_APP_FIREBASE_MEASUREMENT_ID': JSON.stringify(process.env.REACT_APP_FIREBASE_MEASUREMENT_ID || 'G-K90MKB7BDP'),
+    'process.env.REACT_APP_API_GEMINI': JSON.stringify(process.env.REACT_APP_API_GEMINI || ''),
+    'process.env.DEBUG': JSON.stringify(process.env.DEBUG === 'true' || process.env.DEBUG === true),
+  };
 
   return {
     entry: {
@@ -128,15 +122,22 @@ const defineEnvVars = {
           test: /\.pdf$/i,
           type: 'asset/resource',
           generator: {
-            filename: '[name][ext]', // Los PDFs se guardan en la raíz
+            filename: '[name][ext]',
+          },
+        },
+        {
+          test: /\.docx$/i,
+          type: 'asset/resource',
+          generator: {
+            filename: '[name][ext]',
           },
         },
         {
           test: /\.html$/i,
           type: 'asset/resource',
-          exclude: path.resolve(__dirname, 'public/index.html'), // Excluir index.html porque ya lo maneja HtmlWebpackPlugin
+          exclude: path.resolve(__dirname, 'public/index.html'),
           generator: {
-            filename: '[name][ext]', // Los HTMLs se copian directamente a la raíz
+            filename: '[name][ext]',
           },
         },
       ],
@@ -170,10 +171,10 @@ const defineEnvVars = {
       new CopyWebpackPlugin({
         patterns: [
           // Archivos estáticos existentes
-          { from: 'public/logo.png', to: '.' },
-          { from: 'public/team.jpg', to: '.' },
-          { from: 'public/logoEN.png', to: '.' },
-          { from: 'public/site.webmanifest', to: 'manifest.json' },
+          { from: 'public/logo.png', to: '.', noErrorOnMissing: true },
+          { from: 'public/team.jpg', to: '.', noErrorOnMissing: true },
+          { from: 'public/logoEN.png', to: '.', noErrorOnMissing: true },
+          { from: 'public/site.webmanifest', to: 'manifest.json', noErrorOnMissing: true },
           { from: 'public/404.html', to: '404.html', noErrorOnMissing: true },
           { from: 'public/CNAME', to: 'CNAME', toType: 'file', noErrorOnMissing: true },
           { from: 'public/sw.js', to: 'sw.js', noErrorOnMissing: true },
@@ -191,6 +192,10 @@ const defineEnvVars = {
           // Archivos PDF de consentimiento
           { from: 'public/consent.pdf', to: 'consent.pdf', noErrorOnMissing: true },
           { from: 'public/consentEN.pdf', to: 'consentEN.pdf', noErrorOnMissing: true },
+          
+          // NUEVOS ARCHIVOS DOCX - Acuerdos de publicación para menores
+          { from: 'public/acuerdo_publicacion_autor_menor_ES.docx', to: 'acuerdo_publicacion_autor_menor_ES.docx', noErrorOnMissing: true },
+          { from: 'public/publication_agreement_minor_author_EN.docx', to: 'publication_agreement_minor_author_EN.docx', noErrorOnMissing: true },
           
           // NUEVOS ARCHIVOS HTML LEGALES - Español
           { from: 'public/privacy.html', to: 'privacy.html', noErrorOnMissing: true },
@@ -228,6 +233,9 @@ const defineEnvVars = {
         process: 'process/browser.js',
       }),
 
+      // DefinePlugin para variables de entorno
+      new webpack.DefinePlugin(defineEnvVars),
+
       ...(isProduction ? [
         new webpack.BannerPlugin({
           banner: `/* Revista 1919 - Built ${new Date().toISOString()} | Firebase Auth Enabled */`,
@@ -244,7 +252,7 @@ const defineEnvVars = {
     ],
     devtool: isProduction ? 'source-map' : 'eval-cheap-module-source-map',
     resolve: {
-      extensions: ['.js', '.jsx', '.json'],
+      extensions: ['.js', '.jsx', '.json', '.docx'],
       fallback: {
         "fs": false,
         "path": false,
@@ -270,14 +278,14 @@ const defineEnvVars = {
         chunks: 'all',
         cacheGroups: {
           vendor: {
-            test: '/[\\/]node_modules[\\/](?!firebase)/',
+            test: /[\\/]node_modules[\\/](?!firebase)/,
             name: 'vendors',
             chunks: 'all',
             priority: 10,
             enforce: true,
           },
           firebase: {
-            test: '/[\\/]node_modules[\\/]firebase[\\/]/ ',
+            test: /[\\/]node_modules[\\/]firebase[\\/]/,
             name: 'firebase',
             chunks: 'all',
             priority: 20,
