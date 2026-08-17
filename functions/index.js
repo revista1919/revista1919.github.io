@@ -8277,23 +8277,80 @@ async function notifyEditorNewReview(taskData, reviewData, submittedCount, requi
   
   const editorEmails = editorsSnapshot.docs.map(doc => doc.data().email);
   
-  if (editorEmails.length === 0) return;
+  if (editorEmails.length === 0) {
+    console.warn('⚠️ No se encontraron editores asignados');
+    return;
+  }
   
-  const mailOptions = {
-    to: editorEmails.join(','),
-    subject: `Nueva revisión recibida (${submittedCount}/${requiredReviews}) - ${taskData.submissionTitle || taskData.submissionId}`,
-    html: `
-      <h2>Nueva revisión completada</h2>
-      <p><strong>Revisor:</strong> ${reviewData.reviewerName || reviewData.reviewerEmail}</p>
-      <p><strong>Progreso:</strong> ${submittedCount}/${requiredReviews} revisiones completadas</p>
-      <p><strong>Artículo:</strong> ${taskData.submissionTitle || taskData.submissionId}</p>
-      <p>Puedes revisar los detalles en el panel editorial. Cuando todas las revisiones estén completas, podrás proceder a la decisión final.</p>
+  // Determinar idioma
+  const lang = taskData.language || 'es';
+  const isSpanish = lang === 'es';
+  
+  // Construir contenido del email
+  const emailTitle = isSpanish
+    ? `📝 Nueva revisión recibida (${submittedCount}/${requiredReviews})`
+    : `📝 New review received (${submittedCount}/${requiredReviews})`;
+    
+  const emailGreeting = isSpanish
+    ? 'Estimado/a Editor/a:'
+    : 'Dear Editor:';
+    
+  const bodyContent = isSpanish
+    ? `
+      <p>Se ha completado una nueva revisión para el artículo:</p>
+      
+      <div class="highlight-box">
+        <p><strong>Artículo:</strong> ${taskData.submissionTitle || taskData.submissionId}</p>
+        <p><strong>Revisor:</strong> ${reviewData.reviewerName || reviewData.reviewerEmail}</p>
+        <p><strong>Progreso:</strong> ${submittedCount}/${requiredReviews} revisiones completadas</p>
+      </div>
+      
+      <p>Puede revisar los detalles en el panel editorial. Cuando todas las revisiones estén completas, podrá proceder a la decisión final.</p>
+      
+      <div class="button-container">
+        <a href="https://www.revistacienciasestudiantes.com/es/editorial-panel" class="btn">IR AL PANEL EDITORIAL</a>
+      </div>
     `
-  };
+    : `
+      <p>A new review has been completed for the article:</p>
+      
+      <div class="highlight-box">
+        <p><strong>Article:</strong> ${taskData.submissionTitle || taskData.submissionId}</p>
+        <p><strong>Reviewer:</strong> ${reviewData.reviewerName || reviewData.reviewerEmail}</p>
+        <p><strong>Progress:</strong> ${submittedCount}/${requiredReviews} reviews completed</p>
+      </div>
+      
+      <p>You can review the details in the editorial panel. When all reviews are complete, you can proceed to the final decision.</p>
+      
+      <div class="button-container">
+        <a href="https://www.revistacienciasestudiantes.com/en/editorial-panel" class="btn">GO TO EDITORIAL PANEL</a>
+      </div>
+    `;
+    
+  const htmlBody = getEmailTemplate(
+    emailTitle,
+    emailGreeting,
+    bodyContent,
+    isSpanish ? 'Sistema Editorial' : 'Editorial System',
+    isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
+    lang
+  );
   
-  await sendEmail(mailOptions);
+  // Enviar email a cada editor usando sendEmailViaExtension
+  for (const email of editorEmails) {
+    try {
+      await sendEmailViaExtension(
+        email,
+        emailTitle,
+        htmlBody
+      );
+      console.log(`✅ Email enviado a editor: ${email}`);
+    } catch (emailError) {
+      console.error(`❌ Error enviando email a ${email}:`, emailError.message);
+      throw emailError; // Propagar el error para que se registre
+    }
+  }
 }
-
 
 // src/functions/proceedToFinalDecision.js
 

@@ -8,7 +8,7 @@ import { ReviewerManagementTab } from './ReviewerManagementTab';
 import { FinalDecisionTab } from './FinalDecisionTab';
 import { MetadataRefinementTab } from './MetadataRefinementTab';
 import { getRecommendedReviewers } from '../hooks/reviewerRecommendationEngine';
-
+import { ReviewHistoryTab } from './ReviewHistoryTab';
 // ============ ICONOS SVG PROFESIONALES ============
 const Icons = {
   User: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
@@ -280,6 +280,7 @@ useEffect(() => {
   {[
     { id: 'review', icon: Icons.Edit, label: isSpanish ? 'Revisión' : 'Review', shortLabel: isSpanish ? 'Rev.' : 'Rev.' },
     { id: 'article', icon: Icons.Eye, label: isSpanish ? 'Ver Artículo' : 'View Article', shortLabel: isSpanish ? 'Art.' : 'Art.' },
+    { id: 'history', icon: Icons.ClipboardCheck, label: isSpanish ? 'Historial' : 'History', shortLabel: isSpanish ? 'Hist.' : 'Hist.' },
     { id: 'reviewers', icon: Icons.Users, label: isSpanish ? 'Revisores' : 'Reviewers', shortLabel: isSpanish ? 'Rev.' : 'Rev.', badge: submittedReviews.length },
     ...(isConsolidated || task.status === 'awaiting_decision' ? [{ id: 'decision', icon: Icons.ClipboardCheck, label: isSpanish ? 'Decisión Final' : 'Final Decision', shortLabel: isSpanish ? 'Dec.' : 'Dec.' }] : []),
     ...(submission.status === 'accepted' ? [{ id: 'metadata', icon: Icons.Refresh, label: isSpanish ? 'Refinar Metadatos' : 'Refine Metadata', shortLabel: isSpanish ? 'Meta.' : 'Meta.' }] : [])
@@ -1117,7 +1118,14 @@ useEffect(() => {
           )}
 
           {/* ==================== NUEVAS PESTAÑAS INTEGRADAS ==================== */}
-          
+          {activeTab === 'history' && (
+  <ReviewHistoryTab
+    submissionId={submission.submissionId || task.submissionId}
+    currentRound={submission.currentRound || task.round || 1}
+    submissionTitle={isSpanish ? submission.title : submission.titleEn || submission.title}
+    isSpanish={isSpanish}
+  />
+)}
           {/* PESTAÑA: GESTIÓN DE REVISORES */}
           {activeTab === 'reviewers' && (
   <ReviewerManagementTab
