@@ -193,7 +193,75 @@ function isValidDocument(base64Sample) {
 function base64DecodeUnicode(str) {
   try { return str ? Buffer.from(str, "base64").toString("utf-8") : ""; } catch { return ""; }
 }
+// Función para validar archivos de consentimiento (PDF, DOC, DOCX)
+function isValidConsentFile(base64Header, fileName) {
+  try {
+    if (!base64Header || base64Header.length < 30) return false;
+    
+    // Obtener extensión del archivo
+    const ext = fileName?.toLowerCase().split('.').pop();
+    
+    // Validar PDF por extensión y firma
+    if (ext === 'pdf') {
+      const buffer = Buffer.from(base64Header.substring(0, 10), 'base64');
+      const header = buffer.toString('ascii');
+      return header.startsWith('%PDF');
+    }
+    
+    // Validar DOCX por extensión y firma
+    if (ext === 'docx') {
+      const buffer = Buffer.from(base64Header.substring(0, 30), 'base64');
+      const header = buffer.toString('hex').substring(0, 8);
+      return header.startsWith('504b0304'); // Firma ZIP (DOCX)
+    }
+    
+    // Validar DOC por extensión y firma
+    if (ext === 'doc') {
+      const buffer = Buffer.from(base64Header.substring(0, 30), 'base64');
+      const header = buffer.toString('hex').substring(0, 8);
+      return header.startsWith('d0cf11e0'); // Firma OLE (DOC)
+    }
+    
+    // Si no hay extensión válida, intentar detectar por firma
+    const buffer = Buffer.from(base64Header.substring(0, 30), 'base64');
+    const header = buffer.toString('hex').substring(0, 8);
+    
+    return header.startsWith('504b0304') || 
+           header.startsWith('d0cf11e0') || 
+           Buffer.from(base64Header.substring(0, 10), 'base64')
+                 .toString('ascii')
+                 .startsWith('%PDF');
+    
+  } catch {
+    return false;
+  }
+}
 
+// Función para obtener la extensión correcta del archivo de consentimiento
+function getConsentFileExtension(fileName, base64Header) {
+  // Primero intentar con la extensión del nombre
+  const ext = fileName?.toLowerCase().split('.').pop();
+  if (ext === 'pdf' || ext === 'docx' || ext === 'doc') {
+    return `.${ext}`;
+  }
+  
+  // Si no hay extensión válida, detectar por firma
+  try {
+    const buffer = Buffer.from(base64Header.substring(0, 30), 'base64');
+    const header = buffer.toString('hex').substring(0, 8);
+    
+    if (header.startsWith('504b0304')) return '.docx';
+    if (header.startsWith('d0cf11e0')) return '.doc';
+    
+    const asciiHeader = Buffer.from(base64Header.substring(0, 10), 'base64').toString('ascii');
+    if (asciiHeader.startsWith('%PDF')) return '.pdf';
+  } catch {
+    // Si falla la detección, usar PDF como predeterminado
+    return '.pdf';
+  }
+  
+  return '.pdf';
+}
 function sanitizeInput(input) {
   if (!input) return "";
   return input.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
@@ -4471,11 +4539,48 @@ try {
       console.log(`📧 Autor de correspondencia: ${correspondingAuthorData.firstName} ${correspondingAuthorData.lastName} (${correspondingAuthorData.email})`);
 
       // Procesar consentimientos de autores menores
+           // Procesar consentimientos de autores menores
       if (Array.isArray(minorAuthors)) {
         for (const minor of minorAuthors) {
           if (minor.consentMethod === 'upload' && minor.consentFile?.data) {
             try {
-              const consentFileName = `CONSENT_${minor.name.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.pdf`;
+              // Obtener nombre original del archivo
+              const originalFileName = minor.consentFile.name || minor.consentFile.fileName || '';
+              
+              // Validar el archivo de consentimiento (PDF, DOC, DOCX)
+              const base64Header = minor.consentFile.data.substring(0, 100);
+              if (!isValidConsentFile(base64Header, originalFileName)) {
+                console.error(`❌ Archivo de consentimiento inválido para ${minor.name}`);
+                consentFiles.push({
+                  author: minor.name,
+                  method: 'upload',
+                  error: 'Formato de archivo no soportado. Use PDF, DOC o DOCX'
+                });
+                continue; // Saltar al siguiente autor menor
+              }
+              
+              // Obtener la extensión correcta
+              const fileExt = getConsentFileExtension(originalFileName, base64Header);
+              
+              // Crear nombre seguro para el archivo
+              const safeMinorName = minor.name.replace(/[^a-zA-Z0-9]/g, '_');
+              const consentFileName = `CONSENT_${safeMinorName}_${Date.now()}${fileExt}`;
+              
+              // Verificar tamaño del archivo de consentimiento (máximo 5MB)
+              const consentFileSize = Buffer.from(minor.consentFile.data, 'base64').length;
+              const maxConsentSize = 5 * 1024 * 1024; // 5MB
+              
+              if (consentFileSize > maxConsentSize) {
+                console.error(`❌ Archivo de consentimiento muy grande para ${minor.name}`);
+                consentFiles.push({
+                  author: minor.name,
+                  method: 'upload',
+                  error: 'El archivo excede el tamaño máximo de 5MB'
+                });
+                continue;
+              }
+              
+              // Subir a Drive
               const consentFile = await uploadToDrive(
                 drive, 
                 minor.consentFile.data, 
@@ -4483,14 +4588,23 @@ try {
                 authorFolder.id
               );
 
+              // Registrar información completa del archivo
               consentFiles.push({
                 author: minor.name,
                 fileId: consentFile.id,
                 fileUrl: consentFile.webViewLink,
-                method: 'upload'
+                fileName: consentFileName,
+                originalFileName: originalFileName || consentFileName,
+                fileType: fileExt.replace('.', ''), // 'pdf', 'docx', 'doc'
+                fileSize: consentFileSize,
+                method: 'upload',
+                uploadedAt: new Date().toISOString()
               });
+              
+              console.log(`✅ Consentimiento subido: ${consentFileName} (${fileExt})`);
+              
             } catch (consentError) {
-              console.error(`Error subiendo consentimiento de ${minor.name}:`, consentError);
+              console.error(`❌ Error subiendo consentimiento de ${minor.name}:`, consentError);
               consentFiles.push({
                 author: minor.name,
                 method: 'upload',

@@ -1015,7 +1015,7 @@ const MinorConsentSection = ({ author, index, onUpdate }) => {
 
           <input
             type="file"
-            accept=".pdf,.jpg,.jpeg,.png,.docx"
+            accept=".pdf,.docx"
             onChange={handleFileUpload}
             className="block w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-slate-100 file:text-[#003b5c] hover:file:bg-slate-200 font-sans uppercase tracking-wider"
           />
