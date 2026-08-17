@@ -3,7 +3,398 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useLanguage } from '../hooks/useLanguage';
+// ============ IMPORTS ADICIONALES (agregar al inicio del archivo) ============
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 
+// ============ FUNCIÓN PARA EXPORTAR A EXCEL DIRECTO (reemplazar exportToCSV) ============
+const exportToExcel = (auditLogs, rounds, submissionTitle, isSpanish) => {
+  const data = [];
+  
+  // Preparar datos para Excel
+  auditLogs
+    .sort((a, b) => {
+      const dateA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp || 0);
+      const dateB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp || 0);
+      return dateA - dateB;
+    })
+    .forEach(log => {
+      const details = formatLogDetails(log, isSpanish);
+      const detailMap = {};
+      details.forEach(d => {
+        detailMap[d.label] = d.value;
+      });
+      
+      data.push({
+        [isSpanish ? 'Fecha' : 'Date']: formatDate(log.timestamp, isSpanish),
+        [isSpanish ? 'Acción' : 'Action']: translateAction(log.action, isSpanish),
+        [isSpanish ? 'Ronda' : 'Round']: log.round || '1',
+        [isSpanish ? 'Realizado por' : 'Performed by']: log.by === 'system' ? (isSpanish ? 'Sistema' : 'System') : (log.byEmail || log.by || ''),
+        [isSpanish ? 'Email' : 'Email']: log.byEmail || log.toEmail || '',
+        [isSpanish ? 'Detalles' : 'Details']: detailMap[isSpanish ? 'Detalles' : 'Details'] || '',
+        [isSpanish ? 'Recomendación' : 'Recommendation']: log.recommendation ? translateDecision(log.recommendation, isSpanish) : '',
+        [isSpanish ? 'Notas' : 'Notes']: log.notes || '',
+        [isSpanish ? 'Archivo' : 'File']: log.fileName || '',
+      });
+    });
+
+  // Crear worksheet
+  const ws = XLSX.utils.json_to_sheet(data);
+  
+  // Ajustar anchos de columna
+  const colWidths = [
+    { wch: 25 }, // Fecha
+    { wch: 30 }, // Acción
+    { wch: 8 },  // Ronda
+    { wch: 25 }, // Realizado por
+    { wch: 30 }, // Email
+    { wch: 40 }, // Detalles
+    { wch: 20 }, // Recomendación
+    { wch: 30 }, // Notas
+    { wch: 30 }, // Archivo
+  ];
+  ws['!cols'] = colWidths;
+  
+  // Crear workbook
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, isSpanish ? 'Historial' : 'History');
+  
+  // Generar archivo
+  const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  saveAs(blob, `historial_${submissionTitle || 'submission'}.xlsx`);
+};
+
+// ============ FUNCIÓN PARA EXPORTAR A PDF DIRECTO (reemplazar exportToPDF) ============
+const exportToPDF = (auditLogs, rounds, submissionTitle, isSpanish) => {
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 20;
+  let yPosition = margin;
+
+  // Función para agregar nueva página si es necesario
+  const checkPageBreak = (neededSpace) => {
+    if (yPosition + neededSpace > pageHeight - margin) {
+      doc.addPage();
+      yPosition = margin;
+    }
+  };
+
+  // Título principal
+  doc.setFontSize(24);
+  doc.setTextColor(0, 59, 92);
+  doc.setFont('helvetica', 'bold');
+  doc.text(isSpanish ? 'Historial de Auditoría' : 'Audit History', margin, yPosition);
+  
+  yPosition += 10;
+  
+  // Línea separadora
+  doc.setDrawColor(0, 59, 92);
+  doc.setLineWidth(0.5);
+  doc.line(margin, yPosition, pageWidth - margin, yPosition);
+  
+  yPosition += 8;
+  
+  // Subtítulo
+  if (submissionTitle) {
+    doc.setFontSize(12);
+    doc.setTextColor(100, 116, 139);
+    doc.setFont('helvetica', 'normal');
+    doc.text(submissionTitle, margin, yPosition);
+    yPosition += 15;
+  }
+
+  // Ordenar logs por fecha
+  const sortedLogs = [...auditLogs].sort((a, b) => {
+    const dateA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp || 0);
+    const dateB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp || 0);
+    return dateA - dateB;
+  });
+
+  // Procesar cada ronda
+  rounds.forEach((round, roundIndex) => {
+    const roundLogs = sortedLogs.filter(log => 
+      log.round === round.roundNumber || (log.round === undefined && round.roundNumber === 1)
+    );
+    
+    if (roundLogs.length === 0 && !round.deskReview && !round.finalDecision) return;
+    
+    // Espacio para el encabezado de la ronda
+    checkPageBreak(40);
+    
+    // Encabezado de ronda
+    doc.setFillColor(248, 250, 252);
+    doc.rect(margin, yPosition - 6, pageWidth - 2 * margin, 12, 'F');
+    
+    // Barra lateral
+    doc.setFillColor(0, 59, 92);
+    doc.rect(margin, yPosition - 6, 4, 12, 'F');
+    
+    doc.setFontSize(14);
+    doc.setTextColor(0, 59, 92);
+    doc.setFont('helvetica', 'bold');
+    const roundTitle = `${isSpanish ? 'Ronda' : 'Round'} ${round.roundNumber}`;
+    doc.text(roundTitle, margin + 10, yPosition + 2);
+    
+    yPosition += 15;
+
+    // Desk Review
+    if (round.deskReview) {
+      checkPageBreak(30);
+      
+      doc.setFontSize(11);
+      doc.setTextColor(0, 59, 92);
+      doc.setFont('helvetica', 'bold');
+      doc.text(isSpanish ? 'Desk Review' : 'Desk Review', margin, yPosition);
+      
+      yPosition += 6;
+      
+      doc.setFontSize(10);
+      doc.setTextColor(71, 85, 105);
+      doc.setFont('helvetica', 'normal');
+      
+      if (round.deskReview.feedback) {
+        const cleanText = round.deskReview.feedback.replace(/<[^>]*>/g, '');
+        const lines = doc.splitTextToSize(cleanText, pageWidth - 2 * margin - 20);
+        checkPageBreak(lines.length * 5 + 10);
+        doc.text(lines, margin + 10, yPosition);
+        yPosition += lines.length * 5 + 5;
+      }
+      
+      if (round.deskReview.decision) {
+        doc.text(`${isSpanish ? 'Decisión' : 'Decision'}: ${translateDecision(round.deskReview.decision, isSpanish)}`, margin + 10, yPosition);
+        yPosition += 5;
+      }
+      
+      yPosition += 10;
+    }
+
+    // Final Decision
+    if (round.finalDecision) {
+      checkPageBreak(30);
+      
+      doc.setFontSize(11);
+      doc.setTextColor(5, 150, 105);
+      doc.setFont('helvetica', 'bold');
+      doc.text(isSpanish ? 'Decisión Final' : 'Final Decision', margin, yPosition);
+      
+      yPosition += 6;
+      
+      doc.setFontSize(10);
+      doc.setTextColor(71, 85, 105);
+      doc.setFont('helvetica', 'normal');
+      
+      if (round.finalDecision.feedback) {
+        const cleanText = round.finalDecision.feedback.replace(/<[^>]*>/g, '');
+        const lines = doc.splitTextToSize(cleanText, pageWidth - 2 * margin - 20);
+        checkPageBreak(lines.length * 5 + 10);
+        doc.text(lines, margin + 10, yPosition);
+        yPosition += lines.length * 5 + 5;
+      }
+      
+      if (round.finalDecision.decision) {
+        doc.text(`${isSpanish ? 'Decisión' : 'Decision'}: ${translateDecision(round.finalDecision.decision, isSpanish)}`, margin + 10, yPosition);
+        yPosition += 5;
+      }
+      
+      yPosition += 10;
+    }
+
+    // Logs de la ronda
+    roundLogs.forEach((log, logIndex) => {
+      const details = formatLogDetails(log, isSpanish);
+      const estimatedHeight = details.length * 15 + 20;
+      
+      checkPageBreak(estimatedHeight);
+      
+      // Fondo del log
+      doc.setFillColor(255, 255, 255);
+      doc.rect(margin, yPosition - 5, pageWidth - 2 * margin, details.length * 15 + 15, 'F');
+      
+      // Borde
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.3);
+      doc.rect(margin, yPosition - 5, pageWidth - 2 * margin, details.length * 15 + 15);
+      
+      // Acción y fecha
+      doc.setFontSize(11);
+      doc.setTextColor(30, 41, 59);
+      doc.setFont('helvetica', 'bold');
+      doc.text(translateAction(log.action, isSpanish), margin + 10, yPosition);
+      
+      doc.setFontSize(9);
+      doc.setTextColor(100, 116, 139);
+      doc.setFont('helvetica', 'normal');
+      doc.text(formatDate(log.timestamp, isSpanish), pageWidth - margin - 10, yPosition, { align: 'right' });
+      
+      yPosition += 8;
+      
+      // Detalles
+      details.forEach(detail => {
+        doc.setFontSize(9);
+        doc.setTextColor(148, 163, 184);
+        doc.setFont('helvetica', 'bold');
+        doc.text(detail.label.toUpperCase(), margin + 15, yPosition);
+        
+        doc.setTextColor(51, 65, 85);
+        doc.setFont('helvetica', 'normal');
+        const valueLines = doc.splitTextToSize(String(detail.value), pageWidth - 2 * margin - 40);
+        doc.text(valueLines, margin + 50, yPosition);
+        
+        yPosition += valueLines.length * 4 + 2;
+      });
+      
+      yPosition += 12;
+    });
+    
+    yPosition += 15;
+  });
+
+  // Footer
+  const totalPages = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(148, 163, 184);
+    doc.setFont('helvetica', 'normal');
+    const footerText = isSpanish 
+      ? 'Documento generado automáticamente por el sistema editorial' 
+      : 'Document automatically generated by the editorial system';
+    doc.text(footerText, pageWidth / 2, pageHeight - 10, { align: 'center' });
+    doc.text(`${i} / ${totalPages}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
+  }
+
+  // Guardar PDF
+  doc.save(`historial_${submissionTitle || 'submission'}.pdf`);
+};
+
+// ============ FUNCIÓN PARA EXPORTAR A CSV (mantener como opción adicional) ============
+const exportToCSV = (auditLogs, rounds, submissionTitle, isSpanish) => {
+  const headers = [
+    isSpanish ? 'Fecha' : 'Date',
+    isSpanish ? 'Acción' : 'Action',
+    isSpanish ? 'Ronda' : 'Round',
+    isSpanish ? 'Realizado por' : 'Performed by',
+    isSpanish ? 'Email' : 'Email',
+    isSpanish ? 'Detalles' : 'Details',
+    isSpanish ? 'Recomendación' : 'Recommendation',
+    isSpanish ? 'Notas' : 'Notes',
+    isSpanish ? 'Archivo' : 'File',
+  ];
+  
+  const rows = auditLogs
+    .sort((a, b) => {
+      const dateA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp || 0);
+      const dateB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp || 0);
+      return dateA - dateB;
+    })
+    .map(log => {
+      const details = formatLogDetails(log, isSpanish);
+      const detailMap = {};
+      details.forEach(d => {
+        detailMap[d.label] = d.value;
+      });
+      
+      return [
+        formatDate(log.timestamp, isSpanish),
+        translateAction(log.action, isSpanish),
+        log.round || '1',
+        log.by === 'system' ? (isSpanish ? 'Sistema' : 'System') : (log.byEmail || log.by || ''),
+        log.byEmail || log.toEmail || '',
+        detailMap[isSpanish ? 'Detalles' : 'Details'] || '',
+        log.recommendation ? translateDecision(log.recommendation, isSpanish) : '',
+        log.notes || '',
+        log.fileName || '',
+      ];
+    });
+  
+  const csvContent = [
+    headers.join(','),
+    ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+  ].join('\n');
+  
+  const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+  saveAs(blob, `historial_${submissionTitle || 'submission'}.csv`);
+};
+
+// ============ FUNCIÓN PARA EXPORTAR A WORD ============
+const exportToWord = (auditLogs, rounds, submissionTitle, isSpanish) => {
+  const sortedLogs = [...auditLogs].sort((a, b) => {
+    const dateA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp || 0);
+    const dateB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp || 0);
+    return dateA - dateB;
+  });
+
+  let htmlContent = `
+    <html xmlns:o="urn:schemas-microsoft-com:office:office" 
+          xmlns:w="urn:schemas-microsoft-com:office:word" 
+          xmlns="http://www.w3.org/TR/REC-html40">
+    <head>
+      <meta charset="UTF-8">
+      <title>${isSpanish ? 'Historial de Auditoría' : 'Audit History'}</title>
+      <style>
+        body { font-family: 'Georgia', serif; color: #1a202c; }
+        h1 { font-family: Arial, sans-serif; font-size: 24px; color: #003b5c; }
+        .round-header { font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; color: #003b5c; background: #f8fafc; padding: 8px; }
+        .log-item { margin: 10px 0; padding: 8px; border: 1px solid #e2e8f0; }
+        .log-action { font-weight: bold; color: #1e293b; }
+        .log-date { color: #64748b; font-size: 11px; }
+        .detail-label { font-weight: bold; color: #94a3b8; font-size: 10px; text-transform: uppercase; }
+        .detail-value { color: #334155; }
+      </style>
+    </head>
+    <body>
+      <h1>${isSpanish ? 'Historial de Auditoría' : 'Audit History'}</h1>
+      <p>${submissionTitle || ''}</p>
+  `;
+
+  rounds.forEach(round => {
+    const roundLogs = sortedLogs.filter(log => 
+      log.round === round.roundNumber || (log.round === undefined && round.roundNumber === 1)
+    );
+    
+    htmlContent += `
+      <div class="round-header">${isSpanish ? 'Ronda' : 'Round'} ${round.roundNumber}</div>
+    `;
+    
+    if (round.deskReview) {
+      htmlContent += `
+        <div class="log-item">
+          <div class="log-action">${isSpanish ? 'Desk Review' : 'Desk Review'}</div>
+          ${round.deskReview.feedback ? `<p>${round.deskReview.feedback.replace(/<[^>]*>/g, '')}</p>` : ''}
+        </div>
+      `;
+    }
+    
+    roundLogs.forEach(log => {
+      const details = formatLogDetails(log, isSpanish);
+      htmlContent += `
+        <div class="log-item">
+          <div>
+            <span class="log-action">${translateAction(log.action, isSpanish)}</span>
+            <span class="log-date"> - ${formatDate(log.timestamp, isSpanish)}</span>
+          </div>
+          <table>
+            ${details.map(d => `
+              <tr>
+                <td class="detail-label">${d.label}</td>
+                <td class="detail-value">${d.value}</td>
+              </tr>
+            `).join('')}
+          </table>
+        </div>
+      `;
+    });
+  });
+
+  htmlContent += '</body></html>';
+
+  const blob = new Blob(['\ufeff' + htmlContent], { type: 'application/msword' });
+  saveAs(blob, `historial_${submissionTitle || 'submission'}.doc`);
+};
 // ============ ICONOS SVG ============
 const Icons = {
   Calendar: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
@@ -977,22 +1368,36 @@ export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, 
           </div>
           
           {/* Botones de exportación */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => exportToCSV(auditLogs, rounds, submissionTitle, isSpanish)}
-              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-sm transition-colors text-xs font-bold uppercase tracking-wider"
-            >
-              <Icons.FileSpreadsheet />
-              {isSpanish ? 'Excel (CSV)' : 'Excel (CSV)'}
-            </button>
-            <button
-              onClick={() => exportToPDF(auditLogs, rounds, submissionTitle, isSpanish)}
-              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-sm transition-colors text-xs font-bold uppercase tracking-wider"
-            >
-              <Icons.FilePdf />
-              PDF
-            </button>
-          </div>
+<div className="flex gap-2">
+  <button
+    onClick={() => exportToExcel(auditLogs, rounds, submissionTitle, isSpanish)}
+    className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-sm transition-colors text-xs font-bold uppercase tracking-wider"
+  >
+    <Icons.FileSpreadsheet />
+    Excel
+  </button>
+  <button
+    onClick={() => exportToPDF(auditLogs, rounds, submissionTitle, isSpanish)}
+    className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-sm transition-colors text-xs font-bold uppercase tracking-wider"
+  >
+    <Icons.FilePdf />
+    PDF
+  </button>
+  <button
+    onClick={() => exportToWord(auditLogs, rounds, submissionTitle, isSpanish)}
+    className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-sm transition-colors text-xs font-bold uppercase tracking-wider"
+  >
+    <Icons.DocumentText />
+    Word
+  </button>
+  <button
+    onClick={() => exportToCSV(auditLogs, rounds, submissionTitle, isSpanish)}
+    className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-sm transition-colors text-xs font-bold uppercase tracking-wider"
+  >
+    <Icons.Download />
+    CSV
+  </button>
+</div>
         </div>
       </div>
 
