@@ -17,8 +17,12 @@
     "crypto": "^1.0.1",
     "csv-parse": "^6.1.0",
     "csv-parser": "^3.2.0",
-    "firebase-admin": "^13.6.1",
+    "firebase-admin": "^13.10.0",
+    "google-auth-library": "^11.0.2",
+    "googleapis": "^175.0.0",
     "papaparse": "^5.5.3",
+    "pdfkit": "^0.19.1",
+    "qrcode": "^1.5.4",
     "sharp": "^0.34.5"
   }
 }

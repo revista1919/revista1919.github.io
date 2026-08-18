@@ -250,8 +250,10 @@ const RevisionGuideCard = ({ language, onNavigateToDocuments }) => {
 };
 const AuthorHistoryTimeline = ({ submission, isSpanish }) => {
   const [rounds, setRounds] = useState([]);
+  const [versions, setVersions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedRounds, setExpandedRounds] = useState({});
+  const [expandedVersions, setExpandedVersions] = useState({});
 
   useEffect(() => {
     const loadHistory = async () => {
@@ -260,6 +262,25 @@ const AuthorHistoryTimeline = ({ submission, isSpanish }) => {
       setLoading(true);
       try {
         const roundsMap = new Map();
+        
+        // Cargar versiones del manuscrito
+        const versionsQuery = query(
+          collection(db, 'submissions', submission.id, 'versions'),
+          orderBy('uploadedAt', 'asc')
+        );
+        const versionsSnapshot = await getDocs(versionsQuery);
+        
+        const versionsData = [];
+        versionsSnapshot.forEach((doc) => {
+          const data = doc.data();
+          versionsData.push({
+            id: doc.id,
+            ...data,
+            round: data.round || data.version || 1,
+            uploadedAt: data.uploadedAt?.toDate?.() || new Date()
+          });
+        });
+        setVersions(versionsData);
         
         // Cargar tareas editoriales para obtener decisiones por ronda
         const tasksQuery = query(
@@ -358,62 +379,6 @@ const AuthorHistoryTimeline = ({ submission, isSpanish }) => {
               });
             }
           }
-          
-          // Evento: Revisión del autor enviada (si hay versión)
-          if (data.authorRevisionVersionId) {
-            roundData.events.push({
-              type: 'author_revision',
-              date: data.authorRevisionSubmittedAt?.toDate?.() || data.updatedAt?.toDate?.() || new Date(),
-              title: isSpanish ? 'Revisión Enviada' : 'Revision Submitted',
-              description: isSpanish 
-                ? 'Usted envió una versión corregida del manuscrito.'
-                : 'You submitted a corrected version of the manuscript.'
-            });
-          }
-        });
-        
-        // Cargar versiones para detectar envíos de revisiones
-        const versionsQuery = query(
-          collection(db, 'submissions', submission.id, 'versions'),
-          orderBy('createdAt', 'asc')
-        );
-        const versionsSnapshot = await getDocs(versionsQuery);
-        
-        versionsSnapshot.forEach((doc) => {
-          const data = doc.data();
-          const round = data.round || 1;
-          
-          if (!roundsMap.has(round)) {
-            roundsMap.set(round, {
-              roundNumber: round,
-              status: data.status || 'completed',
-              createdAt: data.createdAt?.toDate?.() || new Date(),
-              updatedAt: data.createdAt?.toDate?.() || new Date(),
-              events: []
-            });
-          }
-          
-          const roundData = roundsMap.get(round);
-          
-          if (data.type === 'revision') {
-            roundData.events.push({
-              type: 'revision_uploaded',
-              date: data.createdAt?.toDate?.() || new Date(),
-              title: isSpanish ? 'Nueva Versión Enviada' : 'New Version Submitted',
-              description: isSpanish 
-                ? `Versión ${data.version || ''} enviada para revisión.`
-                : `Version ${data.version || ''} submitted for review.`
-            });
-          } else if (data.type === 'original') {
-            roundData.events.push({
-              type: 'original_submitted',
-              date: data.createdAt?.toDate?.() || new Date(),
-              title: isSpanish ? 'Manuscrito Original Enviado' : 'Original Manuscript Submitted',
-              description: isSpanish 
-                ? 'Envío inicial del manuscrito.'
-                : 'Initial manuscript submission.'
-            });
-          }
         });
         
         // Ordenar eventos por fecha
@@ -435,6 +400,11 @@ const AuthorHistoryTimeline = ({ submission, isSpanish }) => {
         if (roundsArray.length > 0) {
           setExpandedRounds({ [roundsArray[roundsArray.length - 1].roundNumber]: true });
         }
+        
+        // Expandir la versión más reciente
+        if (versionsData.length > 0) {
+          setExpandedVersions({ [versionsData[versionsData.length - 1].id]: true });
+        }
       } catch (error) {
         console.error('Error loading author history:', error);
       } finally {
@@ -449,6 +419,13 @@ const AuthorHistoryTimeline = ({ submission, isSpanish }) => {
     setExpandedRounds(prev => ({
       ...prev,
       [roundNumber]: !prev[roundNumber]
+    }));
+  };
+  
+  const toggleVersion = (versionId) => {
+    setExpandedVersions(prev => ({
+      ...prev,
+      [versionId]: !prev[versionId]
     }));
   };
 
@@ -471,7 +448,7 @@ const AuthorHistoryTimeline = ({ submission, isSpanish }) => {
     );
   }
 
-  if (rounds.length === 0) {
+  if (rounds.length === 0 && versions.length === 0) {
     return (
       <div className="bg-white border border-slate-200 shadow-sm p-12 text-center">
         <Icons.Document />
@@ -489,10 +466,126 @@ const AuthorHistoryTimeline = ({ submission, isSpanish }) => {
       </h2>
       <p className="text-slate-500 font-sans text-sm mb-8">
         {isSpanish 
-          ? 'Seguimiento de las etapas y decisiones de su manuscrito a lo largo del proceso editorial.'
-          : 'Timeline of your manuscript stages and decisions throughout the editorial process.'}
+          ? 'Seguimiento de las etapas y versiones de su manuscrito a lo largo del proceso editorial.'
+          : 'Timeline of your manuscript stages and versions throughout the editorial process.'}
       </p>
       
+      {/* Versiones del Manuscrito */}
+      {versions.length > 0 && (
+        <div className="space-y-4 mb-8">
+          <h3 className="font-sans font-bold text-slate-700 text-sm uppercase tracking-wider flex items-center gap-2">
+            <Icons.File />
+            {isSpanish ? 'Versiones del Manuscrito' : 'Manuscript Versions'} ({versions.length})
+          </h3>
+          
+          <div className="space-y-3">
+            {versions
+              .sort((a, b) => b.uploadedAt - a.uploadedAt)
+              .map((version, idx) => (
+                <div key={version.id || idx} className="bg-white border border-slate-200 shadow-sm overflow-hidden">
+                  <button
+                    onClick={() => toggleVersion(version.id || idx)}
+                    className="w-full flex items-center justify-between px-4 sm:px-6 py-4 hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="w-10 h-10 bg-[#003b5c] text-white flex items-center justify-center flex-shrink-0">
+                        <Icons.File />
+                      </div>
+                      <div className="text-left flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-sans font-bold text-slate-800 text-sm">
+                            {isSpanish ? 'Versión' : 'Version'} {version.version || idx + 1}
+                          </span>
+                          <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded-sm ${
+                            version.type === 'revision' 
+                              ? 'bg-amber-100 text-amber-700' 
+                              : 'bg-blue-100 text-blue-700'
+                          }`}>
+                            {version.type === 'revision' 
+                              ? (isSpanish ? 'Revisión' : 'Revision') 
+                              : (isSpanish ? 'Original' : 'Original')}
+                          </span>
+                          {version.round && (
+                            <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold rounded-sm">
+                              R{version.round}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-xs text-slate-500 block truncate">
+                          {version.fileName || '—'}
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          {formatDate(version.uploadedAt)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {/* Botón de descarga */}
+                      {version.fileUrl && (
+                        <a
+                          href={getDriveDownloadUrl(version.fileUrl)}
+                          onClick={(e) => e.stopPropagation()}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 bg-[#003b5c] hover:bg-[#002840] text-white px-3 py-2 rounded-sm transition-colors text-xs font-bold uppercase tracking-wider"
+                          title={isSpanish ? 'Descargar documento' : 'Download document'}
+                        >
+                          <Icons.Download />
+                          <span className="hidden sm:inline">{isSpanish ? 'Descargar' : 'Download'}</span>
+                        </a>
+                      )}
+                      {expandedVersions[version.id || idx] ? <Icons.ChevronUp /> : <Icons.ChevronDown />}
+                    </div>
+                  </button>
+                  
+                  {/* Contenido expandido de la versión */}
+                  {expandedVersions[version.id || idx] && (
+                    <div className="border-t border-slate-200 px-4 sm:px-6 py-4 space-y-3 bg-slate-50/50">
+                      {/* Notas del autor */}
+                      {version.notes && (
+                        <div className="bg-white rounded-sm p-4 border border-slate-200">
+                          <label className="text-[10px] font-sans font-bold uppercase tracking-wider text-slate-400 mb-2 block">
+                            {isSpanish ? 'Notas del Autor' : 'Author Notes'}
+                          </label>
+                          <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap font-serif">
+                            {version.notes}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {/* Comentario de revisión */}
+                      {version.revisionComment && (
+                        <div className="bg-white rounded-sm p-4 border border-slate-200">
+                          <label className="text-[10px] font-sans font-bold uppercase tracking-wider text-slate-400 mb-2 block">
+                            {isSpanish ? 'Carta de Respuesta' : 'Response Letter'}
+                          </label>
+                          <div 
+                            className="review-content ql-editor read-only prose prose-sm max-w-none font-serif text-slate-700 leading-relaxed"
+                            dangerouslySetInnerHTML={{ __html: version.revisionComment }}
+                          />
+                        </div>
+                      )}
+                      
+                      {/* Información del archivo */}
+                      <div className="flex flex-wrap gap-4 text-xs text-slate-500">
+                        {version.fileSize && (
+                          <span>
+                            {isSpanish ? 'Tamaño:' : 'Size:'} {(version.fileSize / 1024).toFixed(2)} KB
+                          </span>
+                        )}
+                        {version.uploadedByEmail && (
+                          <span>{version.uploadedByEmail}</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+      
+      {/* Rondas del proceso editorial */}
       {rounds.map((round) => (
         <div key={round.roundNumber} className="bg-white border border-slate-200 shadow-sm overflow-hidden">
           {/* Encabezado de la ronda */}
@@ -583,7 +676,7 @@ const AuthorHistoryTimeline = ({ submission, isSpanish }) => {
     </div>
   );
 };
-
+// ================= FUNCIONES UTILITARIAS =================
 // ================= FUNCIONES UTILITARIAS =================
 const decodeBase64IfNeeded = (text) => {
   if (!text || typeof text !== 'string') return text;
@@ -605,21 +698,34 @@ const decodeBase64IfNeeded = (text) => {
   return text;
 };
 
-const getDocsExportUrl = (docsUrl) => {
-  if (!docsUrl) return null;
-  const match = docsUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  if (match && match[1]) return `https://docs.google.com/document/d/${match[1]}/export?format=pdf`;
-  const driveMatch = docsUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-  if (driveMatch && driveMatch[1]) return `https://docs.google.com/document/d/${driveMatch[1]}/export?format=pdf`;
+// Función para obtener URL de descarga directa de Google Drive
+const getDriveDownloadUrl = (url) => {
+  if (!url) return null;
+  // Para Google Docs
+  const docMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (docMatch && docMatch[1]) {
+    return `https://docs.google.com/document/d/${docMatch[1]}/export?format=docx`;
+  }
+  // Para Google Drive file
+  const driveMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (driveMatch && driveMatch[1]) {
+    return `https://drive.google.com/uc?export=download&id=${driveMatch[1]}`;
+  }
+  // Para URLs con id parameter
+  const idMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (idMatch && idMatch[1]) {
+    return `https://drive.google.com/uc?export=download&id=${idMatch[1]}`;
+  }
   return null;
 };
 
-const getDocsExportDocxUrl = (docsUrl) => {
-  if (!docsUrl) return null;
-  const match = docsUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  if (match && match[1]) return `https://docs.google.com/document/d/${match[1]}/export?format=docx`;
-  const driveMatch = docsUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-  if (driveMatch && driveMatch[1]) return `https://docs.google.com/document/d/${driveMatch[1]}/export?format=docx`;
+// Función para obtener URL de descarga PDF
+const getDriveDownloadPdfUrl = (url) => {
+  if (!url) return null;
+  const docMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (docMatch && docMatch[1]) {
+    return `https://docs.google.com/document/d/${docMatch[1]}/export?format=pdf`;
+  }
   return null;
 };
 
@@ -978,7 +1084,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
     }
   };
 
-  const handleDownloadManuscript = () => {
+    const handleDownloadManuscript = () => {
     let downloadUrl = null;
     let fileName = 'manuscrito.pdf';
     
@@ -992,7 +1098,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
         fileName = `manuscrito_${activePortal.submissionId || activePortal.id?.substring(0, 8)}.pdf`;
       }
     } else if (activePortal.originalFileUrl) {
-      downloadUrl = activePortal.originalFileUrl;
+      downloadUrl = getDriveDownloadUrl(activePortal.originalFileUrl);
       fileName = activePortal.originalFileName || 'manuscrito_original.pdf';
     }
     
@@ -1009,7 +1115,6 @@ const AuthorSubmissionsPanel = ({ user }) => {
       alert(isSpanish ? 'No hay documento disponible para descargar' : 'No document available for download');
     }
   };
-
   const handleDownloadConsent = (consent) => {
     if (consent.fileUrl) {
       window.open(consent.fileUrl, '_blank', 'noopener noreferrer');
@@ -1830,7 +1935,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
                         </button>
                       </div>
 
-                      {/* Docx de Revisiones */}
+                                            {/* Docx de Revisiones */}
                       {activePortal.finalReviewDocUrl && (
                         <div className="bg-white p-6 border border-slate-200 shadow-sm flex flex-col border-l-4 border-l-[#C0A86A]">
                           <div className="flex-1">
@@ -1844,12 +1949,15 @@ const AuthorSubmissionsPanel = ({ user }) => {
                               {isSpanish ? 'Contiene comentarios directos de revisores (DOCX).' : 'Contains direct reviewer comments (DOCX).'}
                             </p>
                           </div>
-                          <button 
-                            onClick={() => window.open(getDocsExportDocxUrl(activePortal.finalReviewDocUrl), '_blank')}
+                          <a 
+                            href={getDriveDownloadUrl(activePortal.finalReviewDocUrl)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            download
                             className="w-full py-2.5 bg-[#003b5c] text-white hover:bg-[#002840] transition-colors text-xs font-bold uppercase tracking-wider flex justify-center items-center gap-2"
                           >
                             <Icons.Download /> {isSpanish ? 'Descargar DOCX' : 'Download DOCX'}
-                          </button>
+                          </a>
                         </div>
                       )}
 

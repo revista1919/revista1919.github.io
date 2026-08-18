@@ -7352,13 +7352,6 @@ async function notifyEditorAboutOverdueAssignment(deadline, db) {
 
 /* ===================== CORRECCIÓN DE onEditorialReviewUpdated ===================== */
 
-/**
- * VERSIÓN CORREGIDA de onEditorialReviewUpdated
- * Reemplaza la función existente con esta versión
- */
-// ===================== VERSIÓN CORREGIDA de onEditorialReviewUpdated =====================
-// ===================== VERSIÓN CORREGIDA de onEditorialReviewUpdated =====================
-// REEMPLAZA la función existente con esta.
 exports.onEditorialReviewUpdated = onDocumentUpdated(
   {
     document: 'editorialReviews/{reviewId}',
@@ -10362,12 +10355,593 @@ exports.onEditorialReviewCreated = onDocumentCreated(
     }
   }
 );
-// ===================== NOTIFICAR DIRECTOR CUANDO ARTÍCULO ESTÉ LISTO =====================
+/* ===================== CONSTANTES PARA CERTIFICADOS ===================== */
+const FIRMA_BASE64 = "TU_FIRMA_EN_BASE64_AQUI"; // Constante con la firma en base64
+
+/* ===================== FUNCIÓN: COMPILAR LATEX A PDF ===================== */
+/**
+ * Compila un archivo .tex a PDF usando tectonic (motor ligero de LaTeX)
+ * @param {string} latexContent - Contenido LaTeX
+ * @param {string} requestId - ID para logging
+ * @returns {Buffer} - Buffer del PDF compilado
+ */
+async function compileLatexToPDF(latexContent, requestId = 'unknown') {
+  console.log(`[${requestId}] 🔧 Compilando LaTeX a PDF...`);
+  
+  try {
+    // Cargar dependencias necesarias
+    if (!https || !http) {
+      await loadDependencies();
+    }
+    
+    // Opción 1: Usar tectonic (motor LaTeX ligero, ~30MB, sin dependencias del sistema)
+    // Descargar tectonic si no está disponible (solo una vez por instancia)
+    const tectonicVersion = '0.15.0';
+    const tectonicArch = process.platform === 'linux' ? 'x86_64-unknown-linux-musl' : 'x86_64-pc-windows-msvc';
+    const tectonicUrl = `https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%40${tectonicVersion}/tectonic-${tectonicVersion}-${tectonicArch}.tar.gz`;
+    
+    // Crear directorio temporal
+    const os = require('os');
+    const fs = require('fs');
+    const path = require('path');
+    const { execSync, spawn } = require('child_process');
+    
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'latex-'));
+    const texFile = path.join(tempDir, 'certificate.tex');
+    const pdfFile = path.join(tempDir, 'certificate.pdf');
+    
+    // Escribir archivo .tex
+    fs.writeFileSync(texFile, latexContent);
+    
+    // Intentar compilar con tectonic (si está disponible)
+    let pdfBuffer = null;
+    
+    try {
+      // Verificar si tectonic está instalado
+      execSync('which tectonic', { stdio: 'ignore' });
+      
+      // Compilar con tectonic (motor XeLaTeX compatible)
+      execSync(`tectonic -X compile ${texFile} --outdir ${tempDir}`, {
+        stdio: 'pipe',
+        timeout: 30000
+      });
+      
+      pdfBuffer = fs.readFileSync(pdfFile);
+      console.log(`[${requestId}] ✅ PDF compilado con tectonic: ${(pdfBuffer.length / 1024).toFixed(2)}KB`);
+      
+    } catch (tectonicError) {
+      console.log(`[${requestId}] ⚠️ Tectonic no disponible, intentando con latexmk/xelatex...`);
+      
+      try {
+        // Fallback: Intentar con xelatex (si está instalado)
+        execSync(`cd ${tempDir} && xelatex -interaction=nonstopmode certificate.tex`, {
+          stdio: 'pipe',
+          timeout: 30000
+        });
+        
+        pdfBuffer = fs.readFileSync(pdfFile);
+        console.log(`[${requestId}] ✅ PDF compilado con xelatex: ${(pdfBuffer.length / 1024).toFixed(2)}KB`);
+        
+      } catch (xelatexError) {
+        console.log(`[${requestId}] ⚠️ XeLaTeX no disponible, usando compilación remota...`);
+        
+        // Último recurso: Usar API de compilación LaTeX en línea
+        // (puedes usar latexonline.cc, o similar)
+        const latexApiUrl = 'https://latexonline.cc/compile';
+        
+        const formData = new FormData();
+        formData.append('file', fs.createReadStream(texFile));
+        formData.append('command', 'xelatex');
+        
+        const response = await fetch(latexApiUrl, {
+          method: 'POST',
+          body: formData,
+          agent: httpsAgent
+        });
+        
+        if (!response.ok) {
+          throw new Error(`API de compilación falló: ${response.status}`);
+        }
+        
+        pdfBuffer = Buffer.from(await response.arrayBuffer());
+        console.log(`[${requestId}] ✅ PDF compilado remotamente: ${(pdfBuffer.length / 1024).toFixed(2)}KB`);
+      }
+    }
+    
+    // Limpiar archivos temporales
+    try {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    } catch (cleanupError) {
+      console.log(`[${requestId}] ⚠️ No se pudo limpiar tempDir: ${cleanupError.message}`);
+    }
+    
+    return pdfBuffer;
+    
+  } catch (error) {
+    console.error(`[${requestId}] ❌ Error compilando LaTeX:`, error.message);
+    throw new Error(`LaTeX compilation failed: ${error.message}`);
+  }
+}
+
+/* ===================== FUNCIÓN: GENERAR CERTIFICADO LATEX ===================== */
+/**
+ * Genera el contenido LaTeX del certificado según el idioma
+ * @param {Object} data - Datos del certificado
+ * @param {string} lang - 'es' o 'en'
+ * @returns {string} - Contenido LaTeX
+ */
+function generateLatexCertificate(data, lang = 'es') {
+  const isSpanish = lang === 'es';
+  
+  // Escapar caracteres especiales de LaTeX
+  const escapeLatex = (text) => {
+    if (!text) return '';
+    return String(text)
+      .replace(/\\/g, '\\textbackslash{}')
+      .replace(/[&%$#_{}]/g, (match) => '\\' + match)
+      .replace(/~|\\^/g, (match) => '\\textasciitilde{}')
+      .replace(/"/g, '\\textquotedbl{}')
+      .replace(/«/g, '\\guillemotleft{}')
+      .replace(/»/g, '\\guillemotright{}')
+      .replace(/'/g, '\\textquotesingle{}');
+  };
+  
+  // Formatear autores
+  const authorsList = data.authors
+    ?.map(a => {
+      const firstName = a.firstName || '';
+      const lastName = a.lastName || '';
+      const fullName = `${firstName} ${lastName}`.trim();
+      return fullName || a.email || 'Autor';
+    })
+    .join(', ') || 'Autores';
+  
+  // Fecha de aceptación formateada
+  const acceptanceDate = data.acceptanceDate || new Date().toISOString().split('T')[0];
+  
+  // Número de certificado
+  const certificateNumber = data.certificateNumber || 
+    `RNCE-${data.submissionId?.substring(0, 8) || 'XXXXXXXX'}-${new Date().getFullYear()}`;
+  
+  // ID del manuscrito
+  const manuscriptId = data.submissionId || 'N/A';
+  
+  // Título del artículo (escapado)
+  const articleTitle = escapeLatex(data.title || 'Sin título');
+  
+  // Autores (escapados)
+  const authors = escapeLatex(authorsList);
+  
+  // URL del logo según idioma
+  const logoUrl = isSpanish 
+    ? 'https://www.revistacienciasestudiantes.com/logo.png'
+    : 'https://www.revistacienciasestudiantes.com/logoEN.png';
+  
+  // Textos según idioma
+  const texts = isSpanish ? {
+    journalName1: 'Revista Nacional de las Ciencias',
+    journalName2: 'para Estudiantes',
+    journalNameEn: 'The National Review of Sciences for Students',
+    motto: 'Excelencia y rigor en la investigación estudiantil',
+    certificateTitle: 'CERTIFICADO DE ACEPTACIÓN',
+    introText: 'El Comité Editorial tiene el honor de certificar que el manuscrito original titulado:',
+    authoredBy: 'De autoría a cargo de:',
+    resolution: 'Ha superado exitosamente el proceso de revisión por pares doble ciego y control de calidad editorial, siendo \\textbf{ACEPTADO} para su publicación oficial. El trabajo se encuentra actualmente en fase de producción y será publicado bajo la modalidad \\textbf{\\textit{Online First}}.',
+    manuscriptIdLabel: 'ID del Manuscrito:',
+    acceptanceDateLabel: 'Fecha de Aceptación:',
+    mottoText: '«Una revista por y para estudiantes»',
+    editorName: 'Javier Vergara Ríos',
+    editorRole: 'Fundador y Editor en Jefe',
+    journalFull: 'Revista Nacional de las Ciencias para Estudiantes'
+  } : {
+    journalName1: 'National Review of Sciences',
+    journalName2: 'for Students',
+    journalNameEn: 'Revista Nacional de las Ciencias para Estudiantes',
+    motto: 'Excellence and rigor in student research',
+    certificateTitle: 'CERTIFICATE OF ACCEPTANCE',
+    introText: 'The Editorial Committee has the honor to certify that the original manuscript entitled:',
+    authoredBy: 'Authored by:',
+    resolution: 'Has successfully passed the double-blind peer review process and editorial quality control, being \\textbf{ACCEPTED} for official publication. The work is currently in production phase and will be published under the \\textbf{\\textit{Online First}} modality.',
+    manuscriptIdLabel: 'Manuscript ID:',
+    acceptanceDateLabel: 'Acceptance Date:',
+    mottoText: '"A journal by and for students"',
+    editorName: 'Javier Vergara Ríos',
+    editorRole: 'Founder and Editor-in-Chief',
+    journalFull: 'The National Review of Sciences for Students'
+  };
+  
+  // Construir el LaTeX
+  return `\\documentclass[12pt, a4paper, landscape]{article}
+
+% ==========================================
+% CONFIGURACIÓN DEL COMPILADOR Y TIPOGRAFÍA
+% ==========================================
+\\usepackage{fontspec}
+\\usepackage[${isSpanish ? 'spanish,es-lcroman' : 'english'}]{babel}
+
+\\usepackage{libertinus}
+\\setsansfont{Linux Biolinum O}
+
+% ==========================================
+% DISEÑO DE PÁGINA Y COLORES
+% ==========================================
+\\usepackage[top=2cm, bottom=2.5cm, left=2.5cm, right=2.5cm]{geometry} 
+\\usepackage{xcolor}
+\\usepackage{tikz}
+\\usetikzlibrary{calc, positioning}
+\\usepackage{graphicx}
+\\usepackage{setspace}
+
+\\definecolor{JournalBlue}{HTML}{003B5C}
+\\definecolor{JournalOrange}{HTML}{E86125}
+\\definecolor{LightGray}{HTML}{F4F5F7}
+\\definecolor{TextGray}{HTML}{64748B}
+
+\\pagestyle{empty}
+
+\\begin{document}
+
+% ==========================================
+% MARCO PERIMETRAL (TIKZ)
+% ==========================================
+\\begin{tikzpicture}[overlay,remember picture]
+    \\fill[LightGray!30] (current page.south west) rectangle (current page.north east);
+    
+    \\draw[JournalBlue, line width=4pt] 
+        ($(current page.south west) + (1.2cm, 1.2cm)$) rectangle ($(current page.north east) - (1.2cm, 1.2cm)$);
+        
+    \\draw[JournalOrange, line width=1pt] 
+        ($(current page.south west) + (1.4cm, 1.4cm)$) rectangle ($(current page.north east) - (1.4cm, 1.4cm)$);
+        
+    \\fill[JournalBlue] ($(current page.north west) + (1.2cm, -1.2cm)$) -- ($(current page.north west) + (3.5cm, -1.2cm)$) -- ($(current page.north west) + (1.2cm, -3.5cm)$) -- cycle;
+    \\fill[JournalOrange] ($(current page.north west) + (1.2cm, -1.2cm)$) -- ($(current page.north west) + (2.5cm, -1.2cm)$) -- ($(current page.north west) + (1.2cm, -2.5cm)$) -- cycle;
+
+    \\fill[JournalBlue] ($(current page.south east) + (-1.2cm, 1.2cm)$) -- ($(current page.south east) + (-3.5cm, 1.2cm)$) -- ($(current page.south east) + (-1.2cm, 3.5cm)$) -- cycle;
+    \\fill[JournalOrange] ($(current page.south east) + (-1.2cm, 1.2cm)$) -- ($(current page.south east) + (-2.5cm, 1.2cm)$) -- ($(current page.south east) + (-1.2cm, 2.5cm)$) -- cycle;
+    
+    \\node[opacity=0.03] at (current page.center) {\\includegraphics[width=12cm]{${logoUrl}}};
+\\end{tikzpicture}
+
+% ==========================================
+% CABECERA INSTITUCIONAL
+% ==========================================
+\\noindent
+\\begin{minipage}[c]{0.15\\textwidth}
+    \\centering
+    \\includegraphics[width=2.5cm]{${logoUrl}}
+\\end{minipage}%
+\\begin{minipage}[c]{0.85\\textwidth}
+    \\raggedright
+    {\\sffamily\\color{JournalBlue}\\Huge\\bfseries ${texts.journalName1}}\\\\[0.1em]
+    {\\sffamily\\color{JournalBlue}\\Large\\bfseries ${texts.journalName2}}\\\\[0.2em]
+    {\\sffamily\\color{TextGray}\\fontsize{9}{11}\\selectfont \\textit{${texts.journalNameEn}}}\\\\[0.4em]
+    {\\sffamily\\color{JournalOrange}\\large ${texts.motto}}
+\\end{minipage}
+
+\\vspace{0.5cm}
+
+% ==========================================
+% CUERPO DEL CERTIFICADO
+% ==========================================
+\\begin{center}
+    {\\sffamily\\color{JournalBlue}\\fontsize{28}{34}\\selectfont \\textbf{${texts.certificateTitle}}} \\\\[0.4cm]
+    
+    {\\large ${texts.introText}} \\\\[0.4cm]
+    
+    % TÍTULO DEL ARTÍCULO
+    \\begin{minipage}{0.95\\textwidth}
+        \\centering
+        \\setstretch{1.3}
+        {\\sffamily\\color{JournalBlue}\\Large\\bfseries «${articleTitle}»}
+    \\end{minipage}
+    
+    \\vfill
+    
+    {\\large ${texts.authoredBy}} \\\\[0.4cm]
+    
+    % AUTORES
+    \\begin{minipage}{0.95\\textwidth}
+        \\centering
+        \\setstretch{1.3}
+        {\\sffamily\\Large\\bfseries ${authors}}
+    \\end{minipage}
+    
+    \\vfill
+    
+    % RESOLUCIÓN
+    \\begin{minipage}{0.9\\textwidth}
+        \\centering
+        \\setstretch{1.2}
+        {\\large ${texts.resolution}}
+    \\end{minipage}
+\\end{center}
+
+\\vfill
+
+% ==========================================
+% PIE DE FIRMAS Y METADATOS
+% ==========================================
+\\noindent
+\\makebox[\\textwidth]{%
+    % Bloque Izquierdo: Metadatos
+    \\begin{minipage}[b]{0.3\\textwidth}
+        \\raggedright
+        \\sffamily\\small\\color{TextGray}
+        \\textbf{${texts.manuscriptIdLabel}} ${escapeLatex(manuscriptId)}\\\\[0.4em]
+        \\textbf{${texts.acceptanceDateLabel}} ${escapeLatex(acceptanceDate)}
+    \\end{minipage}%
+    \\hfill
+    % Bloque Central: Sello y Lema
+    \\begin{minipage}[b]{0.35\\textwidth}
+        \\centering
+        {\\rmfamily\\itshape\\color{JournalBlue}\\small ${texts.mottoText}} \\\\[0.4cm]
+    \\end{minipage}%
+    \\hfill
+    % Bloque Derecho: Firma e Información
+    \\begin{minipage}[b]{0.35\\textwidth}
+        \\centering
+        \\makebox[6.5cm][c]{\\smash{\\raisebox{-1.2cm}{\\includegraphics[height=2.5cm]{firma.png}}}} \\\\ 
+        \\rule{6.5cm}{1pt} \\\\[0.3cm]
+        \\sffamily\\color{JournalBlue}\\textbf{${texts.editorName}} \\\\
+        {\\footnotesize ${texts.editorRole}}\\\\
+        {\\footnotesize ${texts.journalFull}}
+    \\end{minipage}
+}
+
+\\end{document}`;
+}
+
+/* ===================== FUNCIÓN: GENERAR Y SUBIR CERTIFICADO ===================== */
+/**
+ * Genera el certificado de aceptación, lo compila a PDF y lo sube a Drive
+ * @param {Object} submissionData - Datos del submission con metadata final
+ * @param {Object} options - Opciones adicionales
+ * @returns {Object} - Información del certificado generado
+ */
+async function generateAcceptanceCertificate(submissionData, options = {}) {
+  const requestId = `CERT-${submissionData.submissionId || 'unknown'}-${Date.now()}`;
+  console.log(`[${requestId}] 🏆 Generando certificado de aceptación...`);
+  
+  try {
+    const db = admin.firestore();
+    
+    // 1. Determinar idioma del certificado
+    const lang = submissionData.paperLanguage || submissionData.language || 'es';
+    const isSpanish = lang === 'es';
+    
+    console.log(`[${requestId}] 📝 Idioma del certificado: ${lang}`);
+    
+    // 2. Obtener metadatos finales consolidados
+    const finalMetadata = submissionData.currentMetadata || submissionData;
+    
+    // 3. Preparar datos para el certificado
+    const certificateData = {
+      title: finalMetadata.title || submissionData.title || 'Sin título',
+      authors: finalMetadata.authors || submissionData.authors || [],
+      submissionId: submissionData.submissionId,
+      acceptanceDate: options.acceptanceDate || 
+        (submissionData.acceptedAt?.toDate?.() || new Date()).toISOString().split('T')[0],
+      certificateNumber: `RNCE-${submissionData.submissionId?.substring(0, 8) || 'XXXXXXXX'}-${new Date().getFullYear()}`,
+      volume: submissionData.volumen || 'En prensa',
+      issue: submissionData.numero || 'En prensa',
+      pages: submissionData.primeraPagina && submissionData.ultimaPagina 
+        ? `${submissionData.primeraPagina}-${submissionData.ultimaPagina}`
+        : 'En prensa',
+      doi: submissionData.doi || null
+    };
+    
+    console.log(`[${requestId}] 📊 Datos del certificado:`, {
+      title: certificateData.title.substring(0, 50) + '...',
+      authorsCount: certificateData.authors.length,
+      certNumber: certificateData.certificateNumber
+    });
+    
+    // 4. Generar contenido LaTeX
+    const latexContent = generateLatexCertificate(certificateData, lang);
+    
+    // 5. Compilar LaTeX a PDF
+    const pdfBuffer = await compileLatexToPDF(latexContent, requestId);
+    
+    if (!pdfBuffer || pdfBuffer.length === 0) {
+      throw new Error('PDF vacío generado');
+    }
+    
+    console.log(`[${requestId}] 📄 PDF generado: ${(pdfBuffer.length / 1024).toFixed(2)}KB`);
+    
+    // 6. Inicializar Drive
+    const { drive } = await getDriveClient(requestId);
+    
+    // 7. Obtener o crear carpeta para certificados
+    const editorialFolderId = submissionData.editorialFolderId || submissionData.driveFolderId;
+    
+    if (!editorialFolderId) {
+      throw new Error('No se encontró carpeta editorial para el submission');
+    }
+    
+    // Crear subcarpeta para certificados
+    const certificateFolderName = `CERTIFICATES_${submissionData.submissionId}`;
+    let certificateFolder;
+    
+    try {
+      // Intentar buscar carpeta existente
+      const folderResponse = await drive.files.list({
+        q: `name='${certificateFolderName}' and '${editorialFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+        fields: 'files(id, name)',
+        spaces: 'drive'
+      });
+      
+      if (folderResponse.data.files.length > 0) {
+        certificateFolder = folderResponse.data.files[0];
+        console.log(`[${requestId}] 📁 Carpeta de certificados existente: ${certificateFolder.id}`);
+      } else {
+        certificateFolder = await createDriveFolder(drive, certificateFolderName, editorialFolderId);
+        console.log(`[${requestId}] 📁 Carpeta de certificados creada: ${certificateFolder.id}`);
+      }
+    } catch (folderError) {
+      console.log(`[${requestId}] ⚠️ Error buscando carpeta, creando nueva:`, folderError.message);
+      certificateFolder = await createDriveFolder(drive, certificateFolderName, editorialFolderId);
+    }
+    
+    // 8. Subir PDF a Drive
+    const fileName = `CERTIFICATE_${submissionData.submissionId}_${Date.now()}.pdf`;
+    const pdfBase64 = pdfBuffer.toString('base64');
+    
+    const certificateFile = await uploadToDrive(
+      drive,
+      pdfBase64,
+      fileName,
+      certificateFolder.id
+    );
+    
+    console.log(`[${requestId}] ✅ Certificado subido a Drive: ${certificateFile.id}`);
+    console.log(`[${requestId}] 🔗 URL: ${certificateFile.webViewLink}`);
+    
+    // 9. Guardar referencia en Firestore
+    const certificateRef = {
+      fileId: certificateFile.id,
+      fileUrl: certificateFile.webViewLink,
+      fileName: certificateFile.name,
+      certificateNumber: certificateData.certificateNumber,
+      generatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      generatedBy: 'system',
+      language: lang,
+      acceptanceDate: certificateData.acceptanceDate
+    };
+    
+    await db.collection('submissions').doc(submissionData.submissionId).update({
+      certificate: certificateRef,
+      certificateGenerated: true
+    });
+    
+    console.log(`[${requestId}] 💾 Referencia guardada en Firestore`);
+    
+    // 10. Registrar en audit log
+    await db.collection('submissions').doc(submissionData.submissionId)
+      .collection('auditLogs').add({
+        action: 'certificate_generated',
+        certificateId: certificateFile.id,
+        certificateUrl: certificateFile.webViewLink,
+        certificateNumber: certificateData.certificateNumber,
+        language: lang,
+        timestamp: admin.firestore.FieldValue.serverTimestamp()
+      });
+    
+    // 11. Enviar email al autor con el certificado
+    try {
+      await sendCertificateEmail(
+        submissionData.authorEmail || submissionData.correspondingAuthorEmail,
+        certificateFile.webViewLink,
+        certificateData,
+        lang
+      );
+      console.log(`[${requestId}] 📧 Email enviado al autor`);
+    } catch (emailError) {
+      console.error(`[${requestId}] ⚠️ Error enviando email:`, emailError.message);
+      // No interrumpir el flujo si falla el email
+    }
+    
+    return {
+      success: true,
+      certificateId: certificateFile.id,
+      certificateUrl: certificateFile.webViewLink,
+      certificateNumber: certificateData.certificateNumber,
+      language: lang
+    };
+    
+  } catch (error) {
+    console.error(`[${requestId}] ❌ Error generando certificado:`, error.message);
+    throw error;
+  }
+}
+
+/* ===================== FUNCIÓN: ENVIAR EMAIL CON CERTIFICADO ===================== */
+/**
+ * Envía email al autor con el enlace del certificado
+ */
+async function sendCertificateEmail(to, certificateUrl, certificateData, lang = 'es') {
+  if (!to) {
+    console.log('⚠️ No hay email de autor para enviar certificado');
+    return;
+  }
+  
+  const isSpanish = lang === 'es';
+  
+  const emailTitle = isSpanish
+    ? `🏆 Certificado de Aceptación - ${certificateData.title.substring(0, 50)}`
+    : `🏆 Acceptance Certificate - ${certificateData.title.substring(0, 50)}`;
+  
+  const authorsList = certificateData.authors
+    ?.map(a => `${a.firstName || ''} ${a.lastName || ''}`.trim())
+    .filter(Boolean)
+    .join(', ') || 'N/A';
+  
+  const bodyContent = isSpanish
+    ? `
+      <div style="background: #f0f7ff; padding: 20px; border-left: 4px solid #003B5C; margin: 20px 0; border-radius: 4px;">
+        <h2 style="color: #003B5C; margin: 0 0 10px 0;">¡Felicidades!</h2>
+        <p style="margin: 10px 0;">Su artículo <strong>"${certificateData.title}"</strong> ha sido aceptado para su publicación en la <strong>Revista Nacional de las Ciencias para Estudiantes</strong>.</p>
+      </div>
+      
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${certificateUrl}" 
+           style="background: #003B5C; color: white; padding: 14px 30px; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold;">
+          📄 DESCARGAR CERTIFICADO
+        </a>
+      </div>
+      
+      <p><strong>Detalles del certificado:</strong></p>
+      <ul style="color: #333;">
+        <li><strong>Artículo:</strong> ${certificateData.title}</li>
+        <li><strong>Autores:</strong> ${authorsList}</li>
+        <li><strong>Fecha de aceptación:</strong> ${certificateData.acceptanceDate}</li>
+        <li><strong>Código de certificado:</strong> ${certificateData.certificateNumber}</li>
+      </ul>
+    `
+    : `
+      <div style="background: #f0f7ff; padding: 20px; border-left: 4px solid #003B5C; margin: 20px 0; border-radius: 4px;">
+        <h2 style="color: #003B5C; margin: 0 0 10px 0;">Congratulations!</h2>
+        <p style="margin: 10px 0;">Your article <strong>"${certificateData.title}"</strong> has been accepted for publication in <strong>The National Review of Sciences for Students</strong>.</p>
+      </div>
+      
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${certificateUrl}" 
+           style="background: #003B5C; color: white; padding: 14px 30px; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold;">
+          📄 DOWNLOAD CERTIFICATE
+        </a>
+      </div>
+      
+      <p><strong>Certificate details:</strong></p>
+      <ul style="color: #333;">
+        <li><strong>Article:</strong> ${certificateData.title}</li>
+        <li><strong>Authors:</strong> ${authorsList}</li>
+        <li><strong>Acceptance date:</strong> ${certificateData.acceptanceDate}</li>
+        <li><strong>Certificate code:</strong> ${certificateData.certificateNumber}</li>
+      </ul>
+    `;
+  
+  const htmlBody = getEmailTemplate(
+    emailTitle,
+    isSpanish ? 'Estimado/a autor/a:' : 'Dear Author:',
+    bodyContent,
+    isSpanish ? 'Equipo Editorial' : 'Editorial Team',
+    isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
+    lang
+  );
+  
+  await sendEmailViaExtension(to, emailTitle, htmlBody);
+}
+
+/* ===================== FUNCIÓN ACTUALIZADA: onArticleReadyForPublication ===================== */
+/**
+ * TRIGGER: Cuando un artículo es marcado como listo para publicación,
+ * genera automáticamente el certificado de aceptación
+ */
 exports.onArticleReadyForPublication = onDocumentUpdated(
   {
     document: 'submissions/{submissionId}',
-    secrets: [],
-    memory: '256MiB'
+    secrets: [OAUTH2_CLIENT_ID, OAUTH2_CLIENT_SECRET, OAUTH2_REFRESH_TOKEN],
+    memory: '512MiB',
+    timeoutSeconds: 540
   },
   async (event) => {
     const beforeData = event.data.before.data();
@@ -10380,16 +10954,106 @@ exports.onArticleReadyForPublication = onDocumentUpdated(
     }
 
     console.log(`📢 [onArticleReadyForPublication] Artículo ${submissionId} marcado como listo para publicación.`);
-
+    
+    const db = admin.firestore();
+    const submissionRef = db.collection('submissions').doc(submissionId);
+    
     try {
-      const db = admin.firestore();
-      const submissionRef = db.collection('submissions').doc(submissionId);
-
-      // 1. Obtener los emails de los Directores Generales
+      // ============ PASO 1: CONSOLIDACIÓN DE METADATOS ============
+      console.log(`[${submissionId}] 📦 Consolidando metadatos finales...`);
+      
+      const metadataFields = [
+        'title', 'titleEn', 'abstract', 'abstractEn', 
+        'keywords', 'keywordsEn', 'authors', 'funding', 
+        'conflictOfInterest', 'dataAvailability', 'dataAvailabilityEn',
+        'acknowledgments', 'area', 'articleType'
+      ];
+      
+      // Extraer metadatos actuales
+      const baseMetadata = {};
+      metadataFields.forEach(field => {
+        if (afterData[field] !== undefined) {
+          baseMetadata[field] = afterData[field];
+        }
+      });
+      
+      // Obtener propuestas de metadatos aprobadas
+      const proposalsSnapshot = await db.collection('submissions')
+        .doc(submissionId)
+        .collection('metadataProposals')
+        .where('status', '==', 'approved')
+        .orderBy('proposedAt', 'desc')
+        .get();
+      
+      // Aplicar propuestas aprobadas (más recientes tienen prioridad)
+      let finalMetadata = { ...baseMetadata };
+      const updatedFields = new Set();
+      
+      proposalsSnapshot.forEach(doc => {
+        const proposal = doc.data();
+        if (proposal.changes && Array.isArray(proposal.changes)) {
+          proposal.changes.forEach(change => {
+            const field = change.field;
+            if (!updatedFields.has(field)) {
+              finalMetadata[field] = change.proposedValue;
+              updatedFields.add(field);
+            }
+          });
+        }
+      });
+      
+      // Guardar metadatos consolidados
+      await submissionRef.update({
+        metadataBeforeConsolidation: baseMetadata,
+        currentMetadata: finalMetadata,
+        ...finalMetadata,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+      
+      console.log(`[${submissionId}] ✅ Metadatos consolidados:`, Object.keys(finalMetadata));
+      
+      // ============ PASO 2: GENERAR CERTIFICADO ============
+      console.log(`[${submissionId}] 🏆 Generando certificado de aceptación...`);
+      
+      try {
+        // Obtener datos completos del submission actualizado
+        const updatedDoc = await submissionRef.get();
+        const updatedSubmission = {
+          ...updatedDoc.data(),
+          submissionId: submissionId
+        };
+        
+        // Generar certificado con metadata final
+        const certificateResult = await generateAcceptanceCertificate(
+          updatedSubmission,
+          {
+            acceptanceDate: afterData.publicationReadyAt?.toDate?.() || new Date()
+          }
+        );
+        
+        console.log(`[${submissionId}] ✅ Certificado generado: ${certificateResult.certificateNumber}`);
+        console.log(`[${submissionId}] 🔗 URL: ${certificateResult.certificateUrl}`);
+        
+      } catch (certError) {
+        console.error(`[${submissionId}] ❌ Error generando certificado:`, certError.message);
+        // No interrumpir el flujo si falla el certificado
+        // Pero registrar el error
+        await db.collection('submissions').doc(submissionId)
+          .collection('auditLogs').add({
+            action: 'certificate_generation_failed',
+            error: certError.message,
+            timestamp: admin.firestore.FieldValue.serverTimestamp()
+          });
+      }
+      
+      // ============ PASO 3: NOTIFICAR A DIRECTORES ============
+      console.log(`[${submissionId}] 📧 Notificando a directores generales...`);
+      
+      // Obtener emails de directores generales
       const directorsSnapshot = await db.collection('users')
         .where('roles', 'array-contains', 'Director General')
         .get();
-
+      
       const directorEmails = [];
       directorsSnapshot.forEach(doc => {
         const userData = doc.data();
@@ -10400,230 +11064,116 @@ exports.onArticleReadyForPublication = onDocumentUpdated(
           });
         }
       });
-
+      
+      // Fallback si no hay directores
       if (directorEmails.length === 0) {
-        console.warn('⚠️ No se encontraron Directores Generales en la base de datos.');
-        directorEmails.push({ email: 'contact@revistacienciasestudiantes.com', name: 'Director General' });
-      }
-
-      // 2. Obtener datos del artículo y CONSOLIDAR METADATOS
-      const submission = afterData;
-      const lang = submission.paperLanguage || 'es';
-      const isSpanish = lang === 'es';
-
-      // *** LÓGICA DE CONSOLIDACIÓN DE METADATOS (CORREGIDA) ***
-      console.log(`🔄 Iniciando consolidación de metadatos para ${submissionId}...`);
-      
-      // 2.1 Definir los metadatos base (campos que pueden ser modificados)
-      const metadataFields = [
-        'title', 'titleEn', 'abstract', 'abstractEn', 
-        'keywords', 'keywordsEn', 'authors', 'funding', 
-        'conflictOfInterest', 'dataAvailability', 'dataAvailabilityEn',
-        'acknowledgments', 'area', 'articleType'
-      ];
-      
-      // 2.2 Extraer solo los metadatos del documento actual
-      const baseMetadata = {};
-      metadataFields.forEach(field => {
-        if (submission[field] !== undefined) {
-          baseMetadata[field] = submission[field];
-        }
-      });
-      
-      // También incluir currentMetadata si existe
-      if (submission.currentMetadata) {
-        metadataFields.forEach(field => {
-          if (submission.currentMetadata[field] !== undefined && !(field in baseMetadata)) {
-            baseMetadata[field] = submission.currentMetadata[field];
-          }
+        directorEmails.push({ 
+          email: 'contact@revistacienciasestudiantes.com', 
+          name: 'Director General' 
         });
       }
       
-      console.log('📋 Metadatos base extraídos:', Object.keys(baseMetadata).join(', '));
+      const isSpanish = (finalMetadata.language || afterData.paperLanguage || 'es') === 'es';
       
-      // 2.3 Obtener todas las propuestas de metadatos
-      const proposalsSnapshot = await db.collection('submissions')
-        .doc(submissionId)
-        .collection('metadataProposals')
-        .get();
-
-      let finalMetadata = { ...baseMetadata }; // Por defecto, mantener los metadatos actuales
-      
-      if (!proposalsSnapshot.empty) {
-        // 2.4 Filtrar solo las propuestas aprobadas y ordenarlas por fecha (más reciente primero)
-        const approvedProposals = proposalsSnapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() }))
-          .filter(proposal => proposal.status === 'approved' && proposal.changes)
-          .sort((a, b) => {
-            const dateA = a.proposedAt?.toDate?.() || new Date(0);
-            const dateB = b.proposedAt?.toDate?.() || new Date(0);
-            return dateB - dateA; // Más reciente primero = mayor prioridad
-          });
-
-        if (approvedProposals.length > 0) {
-          console.log(`✅ Se encontraron ${approvedProposals.length} propuestas aprobadas.`);
-          
-          // 2.5 Rastrear campos ya actualizados para resolver conflictos
-          const updatedFields = new Set();
-          
-          // 2.6 Aplicar cambios - los más recientes tienen prioridad
-          for (const proposal of approvedProposals) {
-            if (!Array.isArray(proposal.changes)) continue;
+      // Enviar email a cada director
+      for (const director of directorEmails) {
+        const emailTitle = isSpanish
+          ? `✅ Artículo listo para publicación - "${finalMetadata.title || afterData.title}"`
+          : `✅ Article ready for publication - "${finalMetadata.titleEn || finalMetadata.title || afterData.title}"`;
+        
+        const bodyContent = isSpanish
+          ? `
+            <p>El artículo <strong>"${finalMetadata.title || afterData.title}"</strong> ha sido marcado como <strong>listo para publicación</strong> por el equipo editorial.</p>
             
-            console.log(`📝 Procesando propuesta ${proposal.id} (${proposal.proposedAt?.toDate?.()})`);
+            <div style="background: #f5f7f9; padding: 15px; border-left: 4px solid #003B5C; margin: 20px 0;">
+              <p><strong>ID del envío:</strong> ${submissionId}</p>
+              <p><strong>Autor/a:</strong> ${afterData.authorName || 'N/A'}</p>
+              <p><strong>Certificado generado:</strong> ${afterData.certificate?.fileUrl ? '✅ Sí' : '❌ No'}</p>
+            </div>
             
-            for (const change of proposal.changes) {
-              const field = change.field;
-              
-              // Si este campo YA fue actualizado por una propuesta más reciente, lo saltamos
-              if (updatedFields.has(field)) {
-                console.log(`  ⚠️ Campo "${field}" ya fue actualizado por propuesta más reciente. Se ignora.`);
-                continue;
-              }
-              
-              // Aplicar el cambio propuesto
-              console.log(`  ✅ Campo "${field}" actualizado:`);
-              console.log(`     De: ${JSON.stringify(change.currentValue)?.substring(0, 80)}`);
-              console.log(`     A: ${JSON.stringify(change.proposedValue)?.substring(0, 80)}`);
-              
-              finalMetadata[field] = change.proposedValue;
-              updatedFields.add(field);
-            }
-          }
-          
-          console.log(`📊 Total campos actualizados: ${updatedFields.size} (${Array.from(updatedFields).join(', ')})`);
-        }
-      } else {
-        console.log('ℹ️ No se encontraron propuestas de metadatos para consolidar.');
-      }
-      
-      // 2.7 Actualizar el documento de submission
-      await submissionRef.update({
-        metadataBeforeConsolidation: baseMetadata,  // Respaldo del estado original
-        currentMetadata: finalMetadata,             // Los metadatos finales consolidados
-        ...finalMetadata                            // Actualizar también los campos raíz
-      });
-
-      console.log(`💾 Metadatos consolidados y guardados en Firestore para ${submissionId}.`);
-      // *** FIN DE LA SECCIÓN DE CONSOLIDACIÓN ***
-
-      // 3. Construir el email (usando los datos ya actualizados)
-      const updatedSubmissionDoc = await submissionRef.get();
-      const updatedSubmission = updatedSubmissionDoc.data();
-      
-      const emailTitle = isSpanish
-        ? `✅ Artículo listo para publicación: "${updatedSubmission.title?.substring(0, 60)}..."`
-        : `✅ Article ready for publication: "${updatedSubmission.title?.substring(0, 60)}..."`;
-
-      // Información de los metadatos finales
-      const finalMetadataForEmail = updatedSubmission.currentMetadata || updatedSubmission;
-      
-      const metadataList = `
-        <ul style="margin-top: 10px;">
-          <li><strong>Título:</strong> ${finalMetadataForEmail.title || 'N/A'}</li>
-          ${finalMetadataForEmail.titleEn ? `<li><strong>Title (EN):</strong> ${finalMetadataForEmail.titleEn}</li>` : ''}
-          <li><strong>Autores:</strong> ${finalMetadataForEmail.authors?.map(a => `${a.firstName} ${a.lastName}`).join('; ') || 'N/A'}</li>
-          <li><strong>Área:</strong> ${finalMetadataForEmail.area || 'N/A'}</li>
-          <li><strong>Palabras clave:</strong> ${finalMetadataForEmail.keywords?.join('; ') || 'N/A'}</li>
-        </ul>
-      `;
-
-      const bodyContent = isSpanish
-        ? `
-          <p>El artículo <strong>"${updatedSubmission.title}"</strong> ha sido marcado como <strong>listo para publicación</strong> por el equipo editorial. Los metadatos finales han sido consolidados.</p>
-          
-          <div class="highlight-box">
-            <p class="article-title">"${updatedSubmission.title}"</p>
-            <p><strong>ID del envío:</strong> ${updatedSubmission.submissionId}</p>
-            <p><strong>Autor/a:</strong> ${updatedSubmission.authorName || 'N/A'} (${updatedSubmission.authorEmail || 'N/A'})</p>
-            <p><strong>Marcado por:</strong> ${afterData.publicationReadyBy || 'Sistema'}</p>
-            <p><strong>Fecha:</strong> ${afterData.publicationReadyAt?.toDate?.()?.toLocaleString('es-CL') || 'Fecha no disponible'}</p>
-          </div>
-          
-          <h3>📄 Metadatos finales consolidados:</h3>
-          ${metadataList}
-          
-          <h3>🔍 Acciones requeridas:</h3>
-          <ol>
-            <li>Revisar los metadatos finales del artículo.</li>
-            <li>Verificar que todos los documentos (manuscrito, figuras, etc.) estén en orden.</li>
-            <li>Proceder con la maquetación y asignación de DOI (si corresponde).</li>
-            <li>Programar la publicación en el próximo número/volumen.</li>
-          </ol>
-          
-          <div class="button-container">
-            <a href="https://www.revistacienciasestudiantes.com/${isSpanish ? 'es' : 'en'}/director/dashboard" class="btn">IR AL PANEL</a>
-            <a href="${updatedSubmission.driveFolderUrl || '#'}" class="btn btn-secondary">VER CARPETA EN DRIVE</a>
-          </div>
-        `
-        : `
-          <p>The article <strong>"${updatedSubmission.title}"</strong> has been marked as <strong>ready for publication</strong> by the editorial team. Final metadata has been consolidated.</p>
-          
-          <div class="highlight-box">
-            <p class="article-title">"${updatedSubmission.title}"</p>
-            <p><strong>Submission ID:</strong> ${updatedSubmission.submissionId}</p>
-            <p><strong>Author:</strong> ${updatedSubmission.authorName || 'N/A'} (${updatedSubmission.authorEmail || 'N/A'})</p>
-            <p><strong>Marked by:</strong> ${afterData.publicationReadyBy || 'System'}</p>
-            <p><strong>Date:</strong> ${afterData.publicationReadyAt?.toDate?.()?.toLocaleString('en-US') || 'Date not available'}</p>
-          </div>
-          
-          <h3>📄 Final consolidated metadata:</h3>
-          ${metadataList}
-          
-          <h3>🔍 Required actions:</h3>
-          <ol>
-            <li>Review the final article metadata.</li>
-            <li>Verify that all documents (manuscript, figures, etc.) are in order.</li>
-            <li>Proceed with layout and DOI assignment (if applicable).</li>
-            <li>Schedule publication in the next issue/volume.</li>
-          </ol>
-          
-          <div class="button-container">
-            <a href="https://www.revistacienciasestudiantes.com/${isSpanish ? 'es' : 'en'}/director/dashboard" class="btn">GO TO DASHBOARD</a>
-            <a href="${updatedSubmission.driveFolderUrl || '#'}" class="btn btn-secondary">VIEW DRIVE FOLDER</a>
-          </div>
-        `;
-
-      const htmlBody = getEmailTemplate(
-        emailTitle,
-        isSpanish ? 'Estimado/a Director General:' : 'Dear General Director:',
-        bodyContent,
-        isSpanish ? 'Sistema Editorial' : 'Editorial System',
-        isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
-        isSpanish ? 'es' : 'en'
-      );
-
-      // 4. Enviar email a cada Director General
-      const emailPromises = directorEmails.map(director => {
-        const personalizedBody = htmlBody.replace(
-          isSpanish ? 'Estimado/a Director General:' : 'Dear General Director:',
-          isSpanish ? `Estimado/a ${director.name}:` : `Dear ${director.name}:`
+            <h3>📄 Metadatos finales consolidados:</h3>
+            <ul>
+              <li><strong>Título:</strong> ${finalMetadata.title || 'N/A'}</li>
+              <li><strong>Autores:</strong> ${finalMetadata.authors?.map(a => `${a.firstName} ${a.lastName}`).join('; ') || 'N/A'}</li>
+              <li><strong>Área:</strong> ${finalMetadata.area || 'N/A'}</li>
+            </ul>
+            
+            <h3>🔍 Acciones requeridas:</h3>
+            <ol>
+              <li>Revisar los metadatos finales del artículo.</li>
+              <li>Verificar que el certificado se haya generado correctamente.</li>
+              <li>Proceder con la maquetación y asignación de DOI.</li>
+              <li>Programar la publicación en el próximo número/volumen.</li>
+            </ol>
+          `
+          : `
+            <p>The article <strong>"${finalMetadata.titleEn || finalMetadata.title || afterData.title}"</strong> has been marked as <strong>ready for publication</strong> by the editorial team.</p>
+            
+            <div style="background: #f5f7f9; padding: 15px; border-left: 4px solid #003B5C; margin: 20px 0;">
+              <p><strong>Submission ID:</strong> ${submissionId}</p>
+              <p><strong>Author:</strong> ${afterData.authorName || 'N/A'}</p>
+              <p><strong>Certificate generated:</strong> ${afterData.certificate?.fileUrl ? '✅ Yes' : '❌ No'}</p>
+            </div>
+            
+            <h3>📄 Final consolidated metadata:</h3>
+            <ul>
+              <li><strong>Title:</strong> ${finalMetadata.titleEn || finalMetadata.title || 'N/A'}</li>
+              <li><strong>Authors:</strong> ${finalMetadata.authors?.map(a => `${a.firstName} ${a.lastName}`).join('; ') || 'N/A'}</li>
+              <li><strong>Area:</strong> ${finalMetadata.area || 'N/A'}</li>
+            </ul>
+            
+            <h3>🔍 Required actions:</h3>
+            <ol>
+              <li>Review the final article metadata.</li>
+              <li>Verify the certificate was generated correctly.</li>
+              <li>Proceed with layout and DOI assignment.</li>
+              <li>Schedule publication in the next issue/volume.</li>
+            </ol>
+          `;
+        
+        const htmlBody = getEmailTemplate(
+          emailTitle,
+          isSpanish ? `Estimado/a ${director.name}:` : `Dear ${director.name}:`,
+          bodyContent,
+          isSpanish ? 'Sistema Editorial' : 'Editorial System',
+          isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
+          isSpanish ? 'es' : 'en'
         );
         
-        return sendEmailViaExtension(
+        await sendEmailViaExtension(
           director.email,
           emailTitle,
-          personalizedBody
-        ).catch(err => {
-          console.error(`⚠️ Error enviando email a ${director.email}:`, err.message);
-        });
-      });
-
-      await Promise.allSettled(emailPromises);
-      console.log(`✅ Notificaciones enviadas a ${directorEmails.length} Directores Generales.`);
-
-      // 5. Registrar en audit log
+          htmlBody
+        );
+      }
+      
+      console.log(`[${submissionId}] ✅ Emails enviados a ${directorEmails.length} directores`);
+      
+      // ============ PASO 4: REGISTRAR EN AUDIT LOG ============
       await db.collection('submissions').doc(submissionId)
         .collection('auditLogs').add({
-          action: 'director_notified_publication_ready',
-          notifiedEmails: directorEmails.map(d => d.email),
+          action: 'publication_ready_complete',
+          metadataConsolidated: true,
+          certificateGenerated: afterData.certificate?.fileUrl ? true : false,
+          directorsNotified: directorEmails.map(d => d.email),
           by: 'system',
           timestamp: admin.firestore.FieldValue.serverTimestamp()
         });
-
+      
+      console.log(`[${submissionId}] ✅ Flujo de publicación completado`);
+      
     } catch (error) {
-      console.error(`❌ Error en onArticleReadyForPublication:`, error.message);
-      await logSystemError('onArticleReadyForPublication', error, { submissionId });
+      console.error(`[${submissionId}] ❌ Error en flujo de publicación:`, error.message);
+      
+      // Registrar error en audit log
+      await db.collection('submissions').doc(submissionId)
+        .collection('auditLogs').add({
+          action: 'publication_ready_error',
+          error: error.message,
+          timestamp: admin.firestore.FieldValue.serverTimestamp()
+        });
+      
+      throw error;
     }
   }
 );
@@ -14110,22 +14660,6 @@ async function initializeReviewerWelcome(userId, reviewerData) {
       })
     );
 
-    // 2. Enviar email de bienvenida (si tienes un sistema de emails)
-    tasks.push(
-      db.collection('emailQueue').add({
-        to: reviewerData.email,
-        template: 'reviewer_welcome',
-        data: {
-          firstName: reviewerData.firstName || 'Estimado revisor',
-          reviewerId: userId,
-          dashboardUrl: `https://revista.com/revisor/${userId}`,
-        },
-        priority: 'high',
-        status: 'pending',
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      })
-    );
-
     // 3. Agregar a estadísticas globales
     const statsRef = db.collection('systemStats').doc('reviewers');
     tasks.push(
@@ -14147,4 +14681,611 @@ async function initializeReviewerWelcome(userId, reviewerData) {
     // No lanzamos error para no interrumpir el flujo principal
     return false;
   }
+}
+/* ===================== FUNCIÓN: GENERAR CERTIFICADO CON PDFKIT ===================== */
+/**
+ * Genera el certificado de aceptación usando PDFKit
+ * @param {Object} submissionData - Datos del submission con metadata final
+ * @param {Object} options - Opciones adicionales
+ * @returns {Object} - Información del certificado generado
+ */
+async function generateAcceptanceCertificate(submissionData, options = {}) {
+  const requestId = `CERT-${submissionData.submissionId || 'unknown'}-${Date.now()}`;
+  console.log(`[${requestId}] 🏆 Generando certificado de aceptación...`);
+  
+  try {
+    const db = admin.firestore();
+    
+    // 1. Determinar idioma del certificado
+    const lang = submissionData.paperLanguage || submissionData.language || 'es';
+    const isSpanish = lang === 'es';
+    
+    console.log(`[${requestId}] 📝 Idioma del certificado: ${lang}`);
+    
+    // 2. Obtener metadatos finales consolidados
+    const finalMetadata = submissionData.currentMetadata || submissionData;
+    
+    // 3. Preparar datos para el certificado
+    const certificateData = {
+      title: finalMetadata.title || submissionData.title || 'Sin título',
+      authors: finalMetadata.authors || submissionData.authors || [],
+      submissionId: submissionData.submissionId,
+      acceptanceDate: options.acceptanceDate || 
+        (submissionData.acceptedAt?.toDate?.() || new Date()).toISOString().split('T')[0],
+      certificateNumber: `RNCE-${submissionData.submissionId?.substring(0, 8) || 'XXXXXXXX'}-${new Date().getFullYear()}`,
+      volume: submissionData.volumen || 'En prensa',
+      issue: submissionData.numero || 'En prensa',
+      pages: submissionData.primeraPagina && submissionData.ultimaPagina 
+        ? `${submissionData.primeraPagina}-${submissionData.ultimaPagina}`
+        : 'En prensa',
+      doi: submissionData.doi || null
+    };
+    
+    console.log(`[${requestId}] 📊 Datos del certificado:`, {
+      title: certificateData.title.substring(0, 50) + '...',
+      authorsCount: certificateData.authors.length,
+      certNumber: certificateData.certificateNumber
+    });
+    
+    // 4. Generar PDF con PDFKit
+    const pdfBuffer = await generateCertificatePDF(certificateData, lang, requestId);
+    
+    if (!pdfBuffer || pdfBuffer.length === 0) {
+      throw new Error('PDF vacío generado');
+    }
+    
+    console.log(`[${requestId}] 📄 PDF generado: ${(pdfBuffer.length / 1024).toFixed(2)}KB`);
+    
+    // 5. Inicializar Drive
+    const { drive } = await getDriveClient(requestId);
+    
+    // 6. Obtener o crear carpeta para certificados
+    const editorialFolderId = submissionData.editorialFolderId || submissionData.driveFolderId;
+    
+    if (!editorialFolderId) {
+      throw new Error('No se encontró carpeta editorial para el submission');
+    }
+    
+    // Crear subcarpeta para certificados
+    const certificateFolderName = `CERTIFICATES_${submissionData.submissionId}`;
+    let certificateFolder;
+    
+    try {
+      // Intentar buscar carpeta existente
+      const folderResponse = await drive.files.list({
+        q: `name='${certificateFolderName}' and '${editorialFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+        fields: 'files(id, name)',
+        spaces: 'drive'
+      });
+      
+      if (folderResponse.data.files.length > 0) {
+        certificateFolder = folderResponse.data.files[0];
+        console.log(`[${requestId}] 📁 Carpeta de certificados existente: ${certificateFolder.id}`);
+      } else {
+        certificateFolder = await createDriveFolder(drive, certificateFolderName, editorialFolderId);
+        console.log(`[${requestId}] 📁 Carpeta de certificados creada: ${certificateFolder.id}`);
+      }
+    } catch (folderError) {
+      console.log(`[${requestId}] ⚠️ Error buscando carpeta, creando nueva:`, folderError.message);
+      certificateFolder = await createDriveFolder(drive, certificateFolderName, editorialFolderId);
+    }
+    
+    // 7. Subir PDF a Drive
+    const fileName = `CERTIFICATE_${submissionData.submissionId}_${Date.now()}.pdf`;
+    const pdfBase64 = pdfBuffer.toString('base64');
+    
+    const certificateFile = await uploadToDrive(
+      drive,
+      pdfBase64,
+      fileName,
+      certificateFolder.id
+    );
+    
+    console.log(`[${requestId}] ✅ Certificado subido a Drive: ${certificateFile.id}`);
+    console.log(`[${requestId}] 🔗 URL: ${certificateFile.webViewLink}`);
+    
+    // 8. Guardar referencia en Firestore
+    const certificateRef = {
+      fileId: certificateFile.id,
+      fileUrl: certificateFile.webViewLink,
+      fileName: certificateFile.name,
+      certificateNumber: certificateData.certificateNumber,
+      generatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      generatedBy: 'system',
+      language: lang,
+      acceptanceDate: certificateData.acceptanceDate
+    };
+    
+    await db.collection('submissions').doc(submissionData.submissionId).update({
+      certificate: certificateRef,
+      certificateGenerated: true
+    });
+    
+    console.log(`[${requestId}] 💾 Referencia guardada en Firestore`);
+    
+    // 9. Registrar en audit log
+    await db.collection('submissions').doc(submissionData.submissionId)
+      .collection('auditLogs').add({
+        action: 'certificate_generated',
+        certificateId: certificateFile.id,
+        certificateUrl: certificateFile.webViewLink,
+        certificateNumber: certificateData.certificateNumber,
+        language: lang,
+        timestamp: admin.firestore.FieldValue.serverTimestamp()
+      });
+    
+    // 10. Enviar email al autor con el certificado
+    try {
+      await sendCertificateEmail(
+        submissionData.authorEmail || submissionData.correspondingAuthorEmail,
+        certificateFile.webViewLink,
+        certificateData,
+        lang
+      );
+      console.log(`[${requestId}] 📧 Email enviado al autor`);
+    } catch (emailError) {
+      console.error(`[${requestId}] ⚠️ Error enviando email:`, emailError.message);
+      // No interrumpir el flujo si falla el email
+    }
+    
+    return {
+      success: true,
+      certificateId: certificateFile.id,
+      certificateUrl: certificateFile.webViewLink,
+      certificateNumber: certificateData.certificateNumber,
+      language: lang
+    };
+    
+  } catch (error) {
+    console.error(`[${requestId}] ❌ Error generando certificado:`, error.message);
+    throw error;
+  }
+}
+
+/* ===================== FUNCIÓN: GENERAR PDF CON PDFKIT ===================== */
+/**
+ * Genera el PDF del certificado usando PDFKit
+ * @param {Object} data - Datos del certificado
+ * @param {string} lang - 'es' o 'en'
+ * @param {string} requestId - ID para logging
+ * @returns {Buffer} - Buffer del PDF generado
+ */
+/* ===================== FUNCIÓN: GENERAR PDF CON PDFKIT ===================== */
+/**
+ * Genera el PDF del certificado usando PDFKit
+ * @param {Object} data - Datos del certificado
+ * @param {string} lang - 'es' o 'en'
+ * @param {string} requestId - ID para logging
+ * @returns {Buffer} - Buffer del PDF generado
+ */
+async function generateCertificatePDF(data, lang = 'es', requestId = 'unknown') {
+  console.log(`[${requestId}] 🔧 Generando PDF con PDFKit...`);
+  
+  try {
+    // Cargar dependencias
+    const PDFDocument = require('pdfkit');
+    const QRCode = require('qrcode');
+    
+    const isSpanish = lang === 'es';
+    
+    // Configuración del certificado (basada en el diseño original)
+    const CONFIG = {
+      qr: {
+        sizeCm: 2,
+        offsetYCm: -0.5,
+        offsetXCm: 0,
+        errorCorrection: 'M',
+        margin: 2,
+        debug: false
+      },
+      urlVerificacion: `https://www.revistacienciasestudiantes.com/verificar/${data.certificateNumber}`,
+      cabecera: {
+        marginTopCm: 2.2,
+        extraSpaceCm: 0.3,
+        logoWidthCm: 3.2,
+        tituloSize: 22,
+        subtituloSize: 16,
+      }
+    };
+    
+    // Inicializar documento A4 apaisado sin márgenes automáticos
+    const doc = new PDFDocument({
+      size: 'A4',
+      layout: 'landscape',
+      margins: { top: 0, left: 0, right: 0, bottom: 0 },
+      autoFirstPage: true,
+      bufferPages: true
+    });
+    
+    // Capturar chunks del PDF
+    const chunks = [];
+    doc.on('data', (chunk) => chunks.push(chunk));
+    
+    // Promesa para esperar a que termine
+    const pdfPromise = new Promise((resolve, reject) => {
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+    });
+    
+    const pageWidth = doc.page.width;   // A4 Landscape: 841.89 pts
+    const pageHeight = doc.page.height; // A4 Landscape: 595.28 pts
+    
+    // Definición de colores
+    const journalBlue = '#003B5C';
+    const journalOrange = '#E86125';
+    const lightGray = '#FBFBFC';
+    const textGray = '#64748B';
+    const textDark = '#333333';
+    const textSlate = '#475569';
+    
+    // Funciones auxiliares
+    function mmToPoints(mm) {
+      return mm * 2.83465;
+    }
+    
+    function cmToPoints(cm) {
+      return cm * 28.3465;
+    }
+    
+    // Configuración de fuentes nativas
+    const fontSans = 'Helvetica';
+    const fontSansBold = 'Helvetica-Bold';
+    const fontSansItalic = 'Helvetica-Oblique';
+    const fontSerif = 'Times-Roman';
+    const fontSerifBold = 'Times-Bold';
+    const fontSerifItalic = 'Times-Italic';
+    const fontSerifSemiBold = 'Times-Bold';
+    
+    console.log(`[${requestId}] ✓ Usando fuentes nativas de PDFKit`);
+    
+    // Textos según idioma
+    const texts = isSpanish ? {
+      journalName1: 'Revista Nacional de las Ciencias',
+      journalName2: 'para Estudiantes',
+      journalNameEn: 'The National Review of Sciences for Students',
+      motto: 'Excelencia y rigor en la investigación estudiantil',
+      certificateTitle: 'CERTIFICADO DE ACEPTACIÓN',
+      introText: 'El Comité Editorial tiene el honor de certificar que el manuscrito original titulado:',
+      authoredBy: 'De autoría a cargo de:',
+      resolution: 'Ha superado exitosamente el proceso de revisión por pares doble ciego y control de calidad editorial, siendo ACEPTADO para su publicación oficial. El trabajo se encuentra actualmente en fase de producción y será publicado bajo la modalidad Online First.',
+      manuscriptIdLabel: 'ID del Manuscrito:',
+      acceptanceDateLabel: 'Fecha de Aceptación:',
+      mottoText: '«Una revista por y para estudiantes»',
+      verifyLabel: 'VERIFICAR AUTENTICIDAD'
+    } : {
+      journalName1: 'National Review of Sciences',
+      journalName2: 'for Students',
+      journalNameEn: 'Revista Nacional de las Ciencias para Estudiantes',
+      motto: 'Excellence and rigor in student research',
+      certificateTitle: 'CERTIFICATE OF ACCEPTANCE',
+      introText: 'The Editorial Committee has the honor to certify that the original manuscript entitled:',
+      authoredBy: 'Authored by:',
+      resolution: 'Has successfully passed the double-blind peer review process and editorial quality control, being ACCEPTED for official publication. The work is currently in production phase and will be published under the Online First modality.',
+      manuscriptIdLabel: 'Manuscript ID:',
+      acceptanceDateLabel: 'Acceptance Date:',
+      mottoText: '"A journal by and for students"',
+      verifyLabel: 'VERIFY AUTHENTICITY'
+    };
+    
+    // Formatear autores
+    const authorsList = data.authors
+      ?.map(a => {
+        const firstName = a.firstName || '';
+        const lastName = a.lastName || '';
+        const fullName = `${firstName} ${lastName}`.trim();
+        return fullName || a.email || 'Author';
+      })
+      .join(', ') || 'Authors';
+    
+    // Formatear fecha de aceptación
+    const formattedDate = new Date(data.acceptanceDate).toLocaleDateString(
+      isSpanish ? 'es-ES' : 'en-US',
+      { day: 'numeric', month: 'long', year: 'numeric' }
+    );
+    
+    // ==========================================
+    // MARCO PERIMETRAL Y FONDO
+    // ==========================================
+    // Fondo general sutil
+    doc.rect(0, 0, pageWidth, pageHeight).fill(lightGray);
+    
+    // Borde azul principal
+    const borderOffset1 = cmToPoints(1.2);
+    doc.lineWidth(4).strokeColor(journalBlue);
+    doc.rect(borderOffset1, borderOffset1, 
+             pageWidth - 2 * borderOffset1, 
+             pageHeight - 2 * borderOffset1).stroke();
+    
+    // Borde naranja fino interior
+    const borderOffset2 = cmToPoints(1.4);
+    doc.lineWidth(1).strokeColor(journalOrange);
+    doc.rect(borderOffset2, borderOffset2, 
+             pageWidth - 2 * borderOffset2, 
+             pageHeight - 2 * borderOffset2).stroke();
+    
+    // Acentos geométricos
+    const largeTriangle = mmToPoints(23);
+    const smallTriangle = mmToPoints(13);
+    
+    doc.fillColor(journalBlue);
+    doc.moveTo(borderOffset1, borderOffset1)
+       .lineTo(borderOffset1 + largeTriangle, borderOffset1)
+       .lineTo(borderOffset1, borderOffset1 + largeTriangle)
+       .fill();
+    
+    doc.fillColor(journalOrange);
+    doc.moveTo(borderOffset1, borderOffset1)
+       .lineTo(borderOffset1 + smallTriangle, borderOffset1)
+       .lineTo(borderOffset1, borderOffset1 + smallTriangle)
+       .fill();
+    
+    doc.fillColor(journalBlue);
+    doc.moveTo(pageWidth - borderOffset1, pageHeight - borderOffset1)
+       .lineTo(pageWidth - borderOffset1 - largeTriangle, pageHeight - borderOffset1)
+       .lineTo(pageWidth - borderOffset1, pageHeight - borderOffset1 - largeTriangle)
+       .fill();
+    
+    doc.fillColor(journalOrange);
+    doc.moveTo(pageWidth - borderOffset1, pageHeight - borderOffset1)
+       .lineTo(pageWidth - borderOffset1 - smallTriangle, pageHeight - borderOffset1)
+       .lineTo(pageWidth - borderOffset1, pageHeight - borderOffset1 - smallTriangle)
+       .fill();
+    
+    // Marca de agua (si es posible cargar el logo)
+    const watermarkWidth = cmToPoints(12);
+    doc.save();
+    doc.opacity(0.03);
+    try {
+      const logoUrl = isSpanish ? 'https://www.revistacienciasestudiantes.com/logo.png' : 'https://www.revistacienciasestudiantes.com/logoEN.png';
+      const response = await fetch(logoUrl);
+      if (response.ok) {
+        const logoBuffer = await response.buffer();
+        doc.image(logoBuffer, (pageWidth - watermarkWidth) / 2, (pageHeight - watermarkWidth) / 2, { width: watermarkWidth });
+      }
+    } catch(e) {
+      console.log(`[${requestId}] ⚠ Error al cargar marca de agua:`, e.message);
+    }
+    doc.restore();
+    
+    // ==========================================
+    // MÁRGENES DE TRABAJO
+    // ==========================================
+    const marginX = cmToPoints(2.5);
+    const marginY = cmToPoints(CONFIG.cabecera.marginTopCm);
+    const contentWidth = pageWidth - (2 * marginX);
+    
+    // ==========================================
+    // CABECERA INSTITUCIONAL
+    // ==========================================
+    let currentY = marginY + cmToPoints(CONFIG.cabecera.extraSpaceCm);
+    
+    // Imagen Logo Izquierda
+    const logoWidth = cmToPoints(CONFIG.cabecera.logoWidthCm);
+    try {
+      const logoUrl = isSpanish ? 'https://www.revistacienciasestudiantes.com/logo.png' : 'https://www.revistacienciasestudiantes.com/logoEN.png';
+      const response = await fetch(logoUrl);
+      if (response.ok) {
+        const logoBuffer = await response.buffer();
+        doc.image(logoBuffer, marginX, currentY, { width: logoWidth });
+      } else {
+        // Placeholder si no hay logo
+        doc.rect(marginX, currentY, logoWidth, logoWidth).strokeColor('#CCCCCC').lineWidth(1).stroke();
+        doc.font(fontSans).fontSize(9).fillColor(textGray).text('LOGO', marginX, currentY + logoWidth/2 - 5, { width: logoWidth, align: 'center' });
+      }
+    } catch(e) {
+      console.log(`[${requestId}] ⚠ Error al cargar logo:`, e.message);
+      // Placeholder si hay error
+      doc.rect(marginX, currentY, logoWidth, logoWidth).strokeColor('#CCCCCC').lineWidth(1).stroke();
+      doc.font(fontSans).fontSize(9).fillColor(textGray).text('LOGO', marginX, currentY + logoWidth/2 - 5, { width: logoWidth, align: 'center' });
+    }
+    
+    // Bloque de Textos Cabecera
+    const headerTextX = marginX + cmToPoints(3.8);
+    const extraSpace = cmToPoints(CONFIG.cabecera.extraSpaceCm);
+    
+    doc.font(fontSansBold).fontSize(CONFIG.cabecera.tituloSize).fillColor(journalBlue)
+       .text(texts.journalName1, headerTextX, currentY + extraSpace);
+       
+    doc.font(fontSansBold).fontSize(CONFIG.cabecera.subtituloSize).fillColor(journalBlue)
+       .text(texts.journalName2, headerTextX, currentY + 26 + extraSpace);
+       
+    doc.font(fontSansItalic).fontSize(8.5).fillColor(textGray)
+       .text(texts.journalNameEn, headerTextX, currentY + 48 + extraSpace);
+       
+    doc.font(fontSans).fontSize(13).fillColor(journalOrange)
+       .text(texts.motto, headerTextX, currentY + 62 + extraSpace);
+    
+    // ==========================================
+    // CUERPO DEL CERTIFICADO
+    // ==========================================
+    const bodyStartY = cmToPoints(6.5);
+    
+    // Título Principal
+    doc.font(fontSansBold).fontSize(26).fillColor(journalBlue)
+       .text(texts.certificateTitle, marginX, bodyStartY, { width: contentWidth, align: 'center', characterSpacing: 1 });
+    
+    // Texto introductorio
+    doc.font(fontSerif).fontSize(13.5).fillColor(textDark)
+       .text(texts.introText, 
+             marginX, bodyStartY + cmToPoints(1.4), { width: contentWidth, align: 'center' });
+    
+    // TÍTULO DEL ARTÍCULO
+    doc.font(fontSansBold).fontSize(16.5).fillColor(journalBlue)
+       .text(`«${data.title}»`, 
+             marginX + cmToPoints(0.5), bodyStartY + cmToPoints(2.3), { width: contentWidth - cmToPoints(1), align: 'center', lineGap: 4 });
+    
+    let afterTitleY = doc.y + cmToPoints(0.4);
+    
+    // Texto intermedio
+    doc.font(fontSerif).fontSize(13.5).fillColor(textDark)
+       .text(texts.authoredBy, marginX, afterTitleY, { width: contentWidth, align: 'center' });
+    
+    // AUTORES
+    doc.font(fontSerifSemiBold).fontSize(16).fillColor(textDark)
+       .text(authorsList, 
+             marginX + cmToPoints(0.5), afterTitleY + cmToPoints(0.6), { width: contentWidth - cmToPoints(1), align: 'center', lineGap: 4 });
+    
+    let afterAuthorsY = doc.y + cmToPoints(0.7);
+    
+    // RESOLUCIÓN
+    const resBoxWidth = contentWidth - cmToPoints(2);
+    const resBoxX = marginX + cmToPoints(1);
+    
+    doc.font(fontSerif).fontSize(12.5).fillColor(textDark)
+       .text(texts.resolution, 
+             resBoxX, afterAuthorsY, { width: resBoxWidth, align: 'center', lineGap: 3 });
+    
+    // ==========================================
+    // PIE CON QR DE AUTENTICIDAD
+    // ==========================================
+    const footerY = pageHeight - cmToPoints(4.5);
+    
+    // Bloque Izquierdo: Metadatos
+    doc.font(fontSansBold).fontSize(10).fillColor(textSlate)
+       .text(`${texts.manuscriptIdLabel} `, marginX, footerY, { continued: true })
+       .font(fontSans).text(data.submissionId);
+       
+    doc.font(fontSansBold)
+       .text(`${texts.acceptanceDateLabel} `, marginX, footerY + 16, { continued: true })
+       .font(fontSans).text(formattedDate);
+    
+    // Bloque Central: Sello y Lema
+    const colCenterWidth = contentWidth * 0.35;
+    const colCenterX = marginX + (contentWidth * 0.325);
+    doc.font(fontSerifItalic).fontSize(11).fillColor(journalBlue)
+       .text(texts.mottoText, colCenterX, footerY, { width: colCenterWidth, align: 'center' });
+    
+    // Bloque Derecho: QR e Información
+    const colRightWidth = contentWidth * 0.35;
+    const colRightX = marginX + (contentWidth * 0.65);
+    
+    // Área para el QR
+    const qrAreaWidth = cmToPoints(3);
+    const qrAreaX = colRightX + (colRightWidth - qrAreaWidth) / 2;
+    const qrAreaY = footerY + cmToPoints(0.5);
+    
+    // Texto "Verificar autenticidad" antes del QR
+    doc.font(fontSansBold).fontSize(9).fillColor(journalBlue)
+       .text(texts.verifyLabel, colRightX, qrAreaY - cmToPoints(0.8), { 
+           width: colRightWidth, 
+           align: 'center' 
+       });
+    
+    // Generar e insertar QR
+    try {
+      const qrDataURL = await QRCode.toDataURL(CONFIG.urlVerificacion, {
+        errorCorrectionLevel: CONFIG.qr.errorCorrection,
+        margin: CONFIG.qr.margin,
+        width: 500,
+        color: {
+          dark: '#003B5C',
+          light: '#FFFFFF'
+        }
+      });
+      
+      const qrBuffer = Buffer.from(qrDataURL.split(',')[1], 'base64');
+      const qrSize = cmToPoints(CONFIG.qr.sizeCm);
+      const qrX = qrAreaX + (qrAreaWidth - qrSize) / 2 + cmToPoints(CONFIG.qr.offsetXCm);
+      const qrY = qrAreaY + cmToPoints(CONFIG.qr.offsetYCm);
+      
+      doc.image(qrBuffer, qrX, qrY, {
+        width: qrSize,
+        height: qrSize
+      });
+      
+      console.log(`[${requestId}] ✅ QR insertado correctamente`);
+    } catch (qrError) {
+      console.error(`[${requestId}] ❌ Error al insertar QR:`, qrError.message);
+    }
+    
+    // Finalizar documento
+    doc.end();
+    
+    // Esperar a que termine la generación
+    const pdfBuffer = await pdfPromise;
+    console.log(`[${requestId}] ✅ PDF generado: ${(pdfBuffer.length / 1024).toFixed(2)}KB`);
+    
+    return pdfBuffer;
+    
+  } catch (error) {
+    console.error(`[${requestId}] ❌ Error generando PDF:`, error.message);
+    throw new Error(`PDF generation failed: ${error.message}`);
+  }
+}
+
+/* ===================== FUNCIÓN: ENVIAR EMAIL CON CERTIFICADO ===================== */
+/**
+ * Envía email al autor con el enlace del certificado
+ */
+async function sendCertificateEmail(to, certificateUrl, certificateData, lang = 'es') {
+  if (!to) {
+    console.log('⚠️ No hay email de autor para enviar certificado');
+    return;
+  }
+  
+  const isSpanish = lang === 'es';
+  
+  const emailTitle = isSpanish
+    ? `🏆 Certificado de Aceptación - ${certificateData.title.substring(0, 50)}`
+    : `🏆 Acceptance Certificate - ${certificateData.title.substring(0, 50)}`;
+  
+  const authorsList = certificateData.authors
+    ?.map(a => `${a.firstName || ''} ${a.lastName || ''}`.trim())
+    .filter(Boolean)
+    .join(', ') || 'N/A';
+  
+  const bodyContent = isSpanish
+    ? `
+      <div style="background: #f0f7ff; padding: 20px; border-left: 4px solid #003B5C; margin: 20px 0; border-radius: 4px;">
+        <h2 style="color: #003B5C; margin: 0 0 10px 0;">¡Felicidades!</h2>
+        <p style="margin: 10px 0;">Su artículo <strong>"${certificateData.title}"</strong> ha sido aceptado para su publicación en la <strong>Revista Nacional de las Ciencias para Estudiantes</strong>.</p>
+      </div>
+      
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${certificateUrl}" 
+           style="background: #003B5C; color: white; padding: 14px 30px; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold;">
+          📄 DESCARGAR CERTIFICADO
+        </a>
+      </div>
+      
+      <p><strong>Detalles del certificado:</strong></p>
+      <ul style="color: #333;">
+        <li><strong>Artículo:</strong> ${certificateData.title}</li>
+        <li><strong>Autores:</strong> ${authorsList}</li>
+        <li><strong>Fecha de aceptación:</strong> ${certificateData.acceptanceDate}</li>
+        <li><strong>Código de certificado:</strong> ${certificateData.certificateNumber}</li>
+      </ul>
+    `
+    : `
+      <div style="background: #f0f7ff; padding: 20px; border-left: 4px solid #003B5C; margin: 20px 0; border-radius: 4px;">
+        <h2 style="color: #003B5C; margin: 0 0 10px 0;">Congratulations!</h2>
+        <p style="margin: 10px 0;">Your article <strong>"${certificateData.title}"</strong> has been accepted for publication in <strong>The National Review of Sciences for Students</strong>.</p>
+      </div>
+      
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${certificateUrl}" 
+           style="background: #003B5C; color: white; padding: 14px 30px; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold;">
+          📄 DOWNLOAD CERTIFICATE
+        </a>
+      </div>
+      
+      <p><strong>Certificate details:</strong></p>
+      <ul style="color: #333;">
+        <li><strong>Article:</strong> ${certificateData.title}</li>
+        <li><strong>Authors:</strong> ${authorsList}</li>
+        <li><strong>Acceptance date:</strong> ${certificateData.acceptanceDate}</li>
+        <li><strong>Certificate code:</strong> ${certificateData.certificateNumber}</li>
+      </ul>
+    `;
+  
+  const htmlBody = getEmailTemplate(
+    emailTitle,
+    isSpanish ? 'Estimado/a autor/a:' : 'Dear Author:',
+    bodyContent,
+    isSpanish ? 'Equipo Editorial' : 'Editorial Team',
+    isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
+    lang
+  );
+  
+  await sendEmailViaExtension(to, emailTitle, htmlBody);
 }
