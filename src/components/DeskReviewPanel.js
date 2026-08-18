@@ -1,6 +1,7 @@
 // src/components/DeskReviewPanel.js
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSearchParams } from 'react-router-dom';
 import { db, functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
 import { 
@@ -55,9 +56,20 @@ const DeskReviewPanel = ({ user }) => {
   const { language } = useLanguage();
   const isSpanish = language === 'es';
   
+  // ========== SEARCH PARAMS PARA PERSISTENCIA EN URL ==========
+  const [searchParams, setSearchParams] = useSearchParams();
+  
   const [assignedTasks, setAssignedTasks] = useState([]);
-  const [selectedSubmissionId, setSelectedSubmissionId] = useState(null);
-  const [selectedRound, setSelectedRound] = useState(1);
+  
+  // Inicializar desde URL
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState(() => {
+    return searchParams.get('submission') || null;
+  });
+  
+  const [selectedRound, setSelectedRound] = useState(() => {
+    const roundFromUrl = searchParams.get('round');
+    return roundFromUrl ? parseInt(roundFromUrl, 10) : 1;
+  });
   
   const [potentialReviewers, setPotentialReviewers] = useState([]);
   const [selectedReviewerId, setSelectedReviewerId] = useState('');
@@ -79,6 +91,55 @@ const DeskReviewPanel = ({ user }) => {
   const userRoles = user?.roles || [];
   const hasPermission = userRoles.includes('Editor de Sección') || userRoles.includes('Director General');
   
+  // ========== FUNCIÓN PARA CAMBIAR ARTÍCULO Y ACTUALIZAR URL ==========
+  const handleSelectManuscript = (submissionId, round, group) => {
+    setSelectedSubmissionId(submissionId);
+    setSelectedRound(round);
+    
+    // Actualizar URL
+    const newParams = new URLSearchParams(searchParams);
+    if (submissionId) {
+      newParams.set('submission', submissionId);
+      newParams.set('round', round.toString());
+    } else {
+      newParams.delete('submission');
+      newParams.delete('round');
+    }
+    // Mantener la pestaña si existe
+    setSearchParams(newParams, { replace: true });
+  };
+
+  // ========== FUNCIÓN PARA VOLVER AL PANEL (limpiar URL) ==========
+  const handleBackToPanel = () => {
+    setSelectedSubmissionId(null);
+    setSelectedRound(1);
+    
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete('submission');
+    newParams.delete('round');
+    // Mantener la pestaña si existe
+    setSearchParams(newParams, { replace: true });
+  };
+
+  // ========== SINCRONIZAR CON URL (botón atrás/adelante) ==========
+  useEffect(() => {
+    const submissionFromUrl = searchParams.get('submission');
+    const roundFromUrl = searchParams.get('round');
+    
+    if (submissionFromUrl !== selectedSubmissionId) {
+      setSelectedSubmissionId(submissionFromUrl);
+    }
+    
+    if (roundFromUrl) {
+      const parsedRound = parseInt(roundFromUrl, 10);
+      if (!isNaN(parsedRound) && parsedRound !== selectedRound) {
+        setSelectedRound(parsedRound);
+      }
+    } else if (selectedRound !== 1) {
+      setSelectedRound(1);
+    }
+  }, [searchParams, selectedSubmissionId, selectedRound]);
+
   useEffect(() => {
     if (!user || !hasPermission) return;
 
@@ -196,9 +257,8 @@ const DeskReviewPanel = ({ user }) => {
     loadAllAssignments();
   }, [selectedTask]);
 
-useEffect(() => {
+  useEffect(() => {
     const loadReviewers = async () => {
-      // Cargar de la coleccion 'reviewers' que tiene areasOfExpertise y stats
       const reviewersSnapshot = await getDocs(collection(db, 'reviewers'));
       const reviewersData = {};
       
@@ -213,7 +273,6 @@ useEffect(() => {
         }
       });
       
-      // Cargar de 'users' como fallback para los que no estan en 'reviewers'
       const usersSnapshot = await getDocs(
         query(collection(db, 'users'), where('roles', 'array-contains-any', ['Revisor', 'Editor de Sección']))
       );
@@ -225,10 +284,8 @@ useEffect(() => {
         const uid = doc.id;
         
         if (reviewersData[uid]) {
-          // Ya existe en reviewers, usar esos datos (mas completos)
           allReviewers.push(reviewersData[uid]);
         } else {
-          // No tiene perfil en reviewers, usar datos de users
           allReviewers.push({
             id: uid,
             ...userData,
@@ -280,7 +337,7 @@ useEffect(() => {
         alert(isSpanish 
           ? 'Manuscrito rechazado. El autor será notificado.' 
           : 'Manuscript rejected. The author will be notified.');
-        setSelectedSubmissionId(null);
+        handleBackToPanel();
       } else {
         alert(isSpanish 
           ? 'Revisión completada. Ahora puedes gestionar revisores.' 
@@ -370,14 +427,8 @@ useEffect(() => {
     const result = await makeFinalDecision(taskId, decisionData);
     if (result.success) {
       alert(isSpanish ? 'Decisión final guardada' : 'Final decision saved');
-      setSelectedSubmissionId(null);
-      setSelectedRound(1);
+      handleBackToPanel();
     }
-  };
-
-  const handleSelectManuscript = (submissionId, round, group) => {
-    setSelectedSubmissionId(submissionId);
-    setSelectedRound(round);
   };
 
   const invitedEmails = new Set([
@@ -705,7 +756,7 @@ useEffect(() => {
                 user={user}
                 onComplete={handleCompleteDeskReview}
                 loading={reviewLoading}
-                onBackToPanel={() => setSelectedSubmissionId(null)}
+                onBackToPanel={handleBackToPanel}
                 invitations={invitations}
                 potentialReviewers={filteredReviewers}
                 selectedReviewerId={selectedReviewerId}
