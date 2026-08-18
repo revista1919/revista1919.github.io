@@ -15039,7 +15039,7 @@ async function generateCertificatePDF(data, lang = 'es', requestId = 'unknown') 
       const logoUrl = isSpanish ? 'https://www.revistacienciasestudiantes.com/logo.png' : 'https://www.revistacienciasestudiantes.com/logoEN.png';
       const response = await fetch(logoUrl);
       if (response.ok) {
-        const logoBuffer = await response.buffer();
+        const arrayBuffer = await response.arrayBuffer();
         doc.image(logoBuffer, (pageWidth - watermarkWidth) / 2, (pageHeight - watermarkWidth) / 2, { width: watermarkWidth });
       }
     } catch(e) {
@@ -15065,7 +15065,7 @@ async function generateCertificatePDF(data, lang = 'es', requestId = 'unknown') 
       const logoUrl = isSpanish ? 'https://www.revistacienciasestudiantes.com/logo.png' : 'https://www.revistacienciasestudiantes.com/logoEN.png';
       const response = await fetch(logoUrl);
       if (response.ok) {
-        const logoBuffer = await response.buffer();
+        const arrayBuffer = await response.arrayBuffer();
         doc.image(logoBuffer, marginX, currentY, { width: logoWidth });
       } else {
         // Placeholder si no hay logo
