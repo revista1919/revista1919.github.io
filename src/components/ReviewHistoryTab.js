@@ -101,7 +101,7 @@ const exportToPDF = (auditLogs, rounds, submissionTitle, isSpanish) => {
       log.round === round.roundNumber || (log.round === undefined && round.roundNumber === 1)
     );
     
-    if (roundLogs.length === 0 && !round.deskReview && !round.finalDecision) return;
+    if (roundLogs.length === 0 && !round.deskReview && !round.finalDecision && !round.versions?.length) return;
     
     checkPageBreak(40);
     
@@ -118,6 +118,53 @@ const exportToPDF = (auditLogs, rounds, submissionTitle, isSpanish) => {
     doc.text(roundTitle, margin + 10, yPosition + 2);
     
     yPosition += 15;
+
+    // Mostrar versiones del manuscrito
+    if (round.versions && round.versions.length > 0) {
+      round.versions.forEach((version, vIdx) => {
+        checkPageBreak(30);
+        
+        doc.setFontSize(11);
+        doc.setTextColor(59, 130, 246);
+        doc.setFont('helvetica', 'bold');
+        const versionTitle = `${isSpanish ? 'Versión' : 'Version'} ${version.version || vIdx + 1}`;
+        doc.text(versionTitle, margin, yPosition);
+        
+        yPosition += 6;
+        
+        doc.setFontSize(9);
+        doc.setTextColor(71, 85, 105);
+        doc.setFont('helvetica', 'normal');
+        
+        if (version.fileName) {
+          doc.text(`${isSpanish ? 'Archivo' : 'File'}: ${version.fileName}`, margin + 10, yPosition);
+          yPosition += 5;
+        }
+        
+        if (version.uploadedAt) {
+          doc.text(`${isSpanish ? 'Subido' : 'Uploaded'}: ${formatDate(version.uploadedAt, isSpanish)}`, margin + 10, yPosition);
+          yPosition += 5;
+        }
+        
+        if (version.notes) {
+          const cleanNotes = version.notes.replace(/<[^>]*>/g, '');
+          const lines = doc.splitTextToSize(cleanNotes, pageWidth - 2 * margin - 20);
+          checkPageBreak(lines.length * 5 + 10);
+          doc.text(lines, margin + 10, yPosition);
+          yPosition += lines.length * 5 + 5;
+        }
+        
+        if (version.revisionComment) {
+          const cleanComment = version.revisionComment.replace(/<[^>]*>/g, '');
+          const lines = doc.splitTextToSize(cleanComment, pageWidth - 2 * margin - 20);
+          checkPageBreak(lines.length * 5 + 10);
+          doc.text(lines, margin + 10, yPosition);
+          yPosition += lines.length * 5 + 5;
+        }
+        
+        yPosition += 10;
+      });
+    }
 
     if (round.deskReview) {
       checkPageBreak(30);
@@ -313,6 +360,7 @@ const exportToWord = (auditLogs, rounds, submissionTitle, isSpanish) => {
         .log-date { color: #64748b; font-size: 11px; }
         .detail-label { font-weight: bold; color: #94a3b8; font-size: 10px; text-transform: uppercase; }
         .detail-value { color: #334155; }
+        .version-item { margin: 10px 0; padding: 8px; border: 1px solid #bfdbfe; background: #eff6ff; }
       </style>
     </head>
     <body>
@@ -328,6 +376,21 @@ const exportToWord = (auditLogs, rounds, submissionTitle, isSpanish) => {
     htmlContent += `
       <div class="round-header">${isSpanish ? 'Ronda' : 'Round'} ${round.roundNumber}</div>
     `;
+    
+    // Versiones del manuscrito
+    if (round.versions && round.versions.length > 0) {
+      round.versions.forEach((version, vIdx) => {
+        htmlContent += `
+          <div class="version-item">
+            <div class="log-action">${isSpanish ? 'Versión' : 'Version'} ${version.version || vIdx + 1}</div>
+            ${version.fileName ? `<p><strong>${isSpanish ? 'Archivo' : 'File'}:</strong> ${version.fileName}</p>` : ''}
+            ${version.uploadedAt ? `<p><strong>${isSpanish ? 'Subido' : 'Uploaded'}:</strong> ${formatDate(version.uploadedAt, isSpanish)}</p>` : ''}
+            ${version.notes ? `<p><strong>${isSpanish ? 'Notas del Autor' : 'Author Notes'}:</strong> ${version.notes.replace(/<[^>]*>/g, '')}</p>` : ''}
+            ${version.revisionComment ? `<p><strong>${isSpanish ? 'Comentario de Revisión' : 'Revision Comment'}:</strong> ${version.revisionComment.replace(/<[^>]*>/g, '')}</p>` : ''}
+          </div>
+        `;
+      });
+    }
     
     if (round.deskReview) {
       htmlContent += `
@@ -382,6 +445,9 @@ const Icons = {
   FilePdf: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>,
   Activity: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>,
   Info: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+  ExternalLink: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>,
+  Message: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>,
+  File: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>,
 };
 
 // ============ TRADUCCIONES DE ACCIONES ============
@@ -613,8 +679,112 @@ const AuditLogItem = ({ log, isSpanish, isExpanded, onToggle }) => {
   );
 };
 
+// ============ COMPONENTE: VERSIÓN DEL MANUSCRITO ============
+const VersionCard = ({ version, isSpanish }) => {
+  const [expanded, setExpanded] = useState(false);
+  
+  return (
+    <div className="bg-blue-50/50 rounded-sm border border-blue-200 overflow-hidden">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between px-3 sm:px-4 py-3 hover:bg-blue-50 transition-colors"
+      >
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="w-8 h-8 bg-blue-600 rounded-sm flex items-center justify-center flex-shrink-0">
+            <Icons.File className="w-4 h-4 text-white" />
+          </div>
+          <div className="text-left flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-sans font-bold text-slate-800 text-sm">
+                {isSpanish ? 'Versión' : 'Version'} {version.version || '—'}
+              </span>
+              <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold rounded-sm">
+                {version.type === 'revision' ? (isSpanish ? 'Revisión' : 'Revision') : (isSpanish ? 'Original' : 'Original')}
+              </span>
+            </div>
+            <span className="text-xs text-slate-500 block truncate">
+              {version.fileName || '—'}
+            </span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {version.fileUrl && (
+            <a
+              href={version.fileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-sm transition-colors text-xs font-bold uppercase tracking-wider"
+            >
+              <Icons.ExternalLink />
+              <span className="hidden sm:inline">{isSpanish ? 'Ver' : 'View'}</span>
+            </a>
+          )}
+          {expanded ? <Icons.ChevronUp /> : <Icons.ChevronDown />}
+        </div>
+      </button>
+      
+      {expanded && (
+        <div className="border-t border-blue-200 px-3 sm:px-4 py-3 space-y-3">
+          {version.uploadedAt && (
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              <Icons.Calendar />
+              <span>
+                {isSpanish ? 'Subido:' : 'Uploaded:'} {formatDate(version.uploadedAt, isSpanish)}
+              </span>
+            </div>
+          )}
+          
+          {version.uploadedByEmail && (
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              <Icons.User />
+              <span>{version.uploadedByEmail}</span>
+            </div>
+          )}
+          
+          {version.fileSize && (
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              <Icons.DocumentText />
+              <span>
+                {isSpanish ? 'Tamaño:' : 'Size:'} {(version.fileSize / 1024).toFixed(2)} KB
+              </span>
+            </div>
+          )}
+          
+          {/* Notas del autor - LO MÁS DESTACADO */}
+          {version.notes && (
+            <div className="bg-white rounded-sm p-3 border border-blue-100">
+              <label className="text-[10px] font-sans font-bold uppercase tracking-wider text-blue-600 mb-1 block flex items-center gap-1">
+                <Icons.Message />
+                {isSpanish ? 'Notas del Autor' : 'Author Notes'}
+              </label>
+              <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap font-serif">
+                {version.notes}
+              </p>
+            </div>
+          )}
+          
+          {/* Comentario de revisión */}
+          {version.revisionComment && (
+            <div className="bg-white rounded-sm p-3 border border-blue-100">
+              <label className="text-[10px] font-sans font-bold uppercase tracking-wider text-blue-600 mb-1 block flex items-center gap-1">
+                <Icons.ClipboardCheck />
+                {isSpanish ? 'Comentario de Revisión' : 'Revision Comment'}
+              </label>
+              <div 
+                className="review-content ql-editor read-only prose prose-sm max-w-none font-serif text-slate-700 leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: version.revisionComment }}
+              />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ============ COMPONENTE: RONDA ============
-const RoundCard = ({ roundNumber, roundData, isCurrentRound, isSpanish, auditLogs }) => {
+const RoundCard = ({ roundNumber, roundData, isCurrentRound, isSpanish, auditLogs, versions }) => {
   const [expanded, setExpanded] = useState(isCurrentRound);
   const [expandedLogs, setExpandedLogs] = useState({});
   
@@ -626,6 +796,7 @@ const RoundCard = ({ roundNumber, roundData, isCurrentRound, isSpanish, auditLog
   };
   
   const roundLogs = auditLogs.filter(log => log.round === roundNumber || (log.round === undefined && roundNumber === 1));
+  const roundVersions = versions.filter(v => v.round === roundNumber);
   
   return (
     <div className={`bg-white rounded-sm border-2 shadow-sm mb-4 ${isCurrentRound ? 'border-[#003b5c]' : 'border-gray-200'}`}>
@@ -650,6 +821,7 @@ const RoundCard = ({ roundNumber, roundData, isCurrentRound, isSpanish, auditLog
               )}
               <span className="text-xs text-slate-400">
                 {roundLogs.length} {isSpanish ? 'eventos' : 'events'}
+                {roundVersions.length > 0 && ` · ${roundVersions.length} ${isSpanish ? 'versiones' : 'versions'}`}
               </span>
             </div>
             <span className="text-xs text-slate-500">
@@ -674,7 +846,36 @@ const RoundCard = ({ roundNumber, roundData, isCurrentRound, isSpanish, auditLog
 
       {expanded && (
         <div className="border-t border-gray-200 p-4 sm:p-6 space-y-6">
-          {/* Desk Review - Compatibilidad con ambos sistemas */}
+          {/* Versiones del manuscrito */}
+          {roundVersions.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="w-1 h-5 bg-blue-500 rounded-full"></span>
+                <h4 className="font-sans font-bold text-slate-800 text-sm uppercase tracking-wider">
+                  <Icons.File className="inline w-4 h-4 mr-1" />
+                  {isSpanish ? 'Versiones del Manuscrito' : 'Manuscript Versions'} ({roundVersions.length})
+                </h4>
+              </div>
+
+              <div className="space-y-3">
+                {roundVersions
+                  .sort((a, b) => {
+                    const dateA = a.uploadedAt?.toDate ? a.uploadedAt.toDate() : new Date(a.uploadedAt || 0);
+                    const dateB = b.uploadedAt?.toDate ? b.uploadedAt.toDate() : new Date(b.uploadedAt || 0);
+                    return dateB - dateA;
+                  })
+                  .map((version, idx) => (
+                    <VersionCard
+                      key={version.id || idx}
+                      version={version}
+                      isSpanish={isSpanish}
+                    />
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* Desk Review */}
           {roundData.deskReview && (
             <div className="space-y-4">
               <div className="flex items-center gap-2">
@@ -795,7 +996,7 @@ const RoundCard = ({ roundNumber, roundData, isCurrentRound, isSpanish, auditLog
             </div>
           )}
 
-          {/* Decisión Final - Compatibilidad con campos antiguos y nuevos */}
+          {/* Decisión Final */}
           {roundData.finalDecision && (
             <div className="space-y-4">
               <div className="flex items-center gap-2">
@@ -876,7 +1077,7 @@ const RoundCard = ({ roundNumber, roundData, isCurrentRound, isSpanish, auditLog
             </div>
           )}
 
-          {!roundData.deskReview && !roundData.reviews?.length && !roundData.finalDecision && roundLogs.length === 0 && (
+          {!roundData.deskReview && !roundData.reviews?.length && !roundData.finalDecision && roundLogs.length === 0 && roundVersions.length === 0 && (
             <div className="text-center py-6">
               <Icons.DocumentText className="w-8 h-8 text-slate-300 mx-auto mb-2" />
               <p className="text-slate-500 text-sm italic">
@@ -894,6 +1095,7 @@ const RoundCard = ({ roundNumber, roundData, isCurrentRound, isSpanish, auditLog
 export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, isSpanish }) => {
   const [rounds, setRounds] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
+  const [versions, setVersions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
@@ -941,6 +1143,22 @@ export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, 
         });
         setAuditLogs(logs);
 
+        // Cargar versiones del manuscrito
+        const versionsRef = collection(db, 'submissions', submissionId, 'versions');
+        const versionsQuery = query(versionsRef, orderBy('uploadedAt', 'asc'));
+        const versionsSnapshot = await getDocs(versionsQuery);
+        
+        const versionsData = [];
+        versionsSnapshot.forEach((doc) => {
+          const data = doc.data();
+          versionsData.push({
+            id: doc.id,
+            ...data,
+            round: data.round || data.version || 1,
+          });
+        });
+        setVersions(versionsData);
+
         // Cargar roundHistory si existe (nuevo sistema)
         let roundHistoryData = {};
         try {
@@ -978,7 +1196,6 @@ export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, 
           roundData.startedAt = data.startedAt || data.createdAt || roundData.startedAt;
           roundData.completedAt = data.completedAt || roundData.completedAt;
 
-          // Compatibilidad: verificar campos antiguos y nuevos
           if (data.deskReviewDecision || data.deskReviewFeedback || data.deskReviewComments) {
             roundData.deskReview = {
               decision: data.deskReviewDecision || null,
@@ -989,11 +1206,9 @@ export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, 
             };
           }
 
-          // Verificar campos de decisión final (nuevos y antiguos)
           if (data.finalDecision || data.finalFeedbackToAuthor || data.finalComments || 
               (data.status === 'completed' && (data.deskReviewDecision === 'accept' || data.deskReviewDecision === 'reject'))) {
             
-            // Compatibilidad: si solo hay campos antiguos, mapearlos
             const finalDecisionData = {
               decision: data.finalDecision || (data.status === 'completed' ? data.deskReviewDecision : null),
               feedback: data.finalFeedbackToAuthor || (data.status === 'completed' ? data.deskReviewFeedback : null),
@@ -1024,7 +1239,6 @@ export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, 
 
           const roundData = roundsMap.get(round);
           
-          // Solo agregar como review si tiene feedback o comentarios
           if (data.feedbackToAuthor || data.commentsToEditorial || data.decision) {
             roundData.reviews.push({
               reviewerName: data.reviewerName || data.editorName || data.editorUid || null,
@@ -1057,7 +1271,6 @@ export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, 
             
             const roundData = roundsMap.get(roundNumber);
             
-            // Completar desk review desde history si no existe
             if (!roundData.deskReview && (historyData.deskReviewDecision || historyData.deskReviewFeedback)) {
               roundData.deskReview = {
                 decision: historyData.deskReviewDecision || null,
@@ -1068,7 +1281,6 @@ export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, 
               };
             }
             
-            // Completar final decision desde history si no existe
             if (!roundData.finalDecision && (historyData.finalDecision || historyData.finalFeedback)) {
               roundData.finalDecision = {
                 decision: historyData.finalDecision || null,
@@ -1178,6 +1390,7 @@ export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, 
               isCurrentRound={round.roundNumber === currentRound}
               isSpanish={isSpanish}
               auditLogs={auditLogs}
+              versions={versions}
             />
           ))}
         </div>

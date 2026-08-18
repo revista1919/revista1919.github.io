@@ -9,6 +9,7 @@ import { FinalDecisionTab } from './FinalDecisionTab';
 import { MetadataRefinementTab } from './MetadataRefinementTab';
 import { getRecommendedReviewers } from '../hooks/reviewerRecommendationEngine';
 import { ReviewHistoryTab } from './ReviewHistoryTab';
+
 // ============ ICONOS SVG PROFESIONALES ============
 const Icons = {
   User: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
@@ -33,7 +34,8 @@ const Icons = {
   Eye: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>,
   Edit: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>,
   ClipboardCheck: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>,
-  Refresh: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+  Refresh: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>,
+  Info: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
 };
 
 // Componente auxiliar para etiquetas de estado booleanas
@@ -51,7 +53,7 @@ const StatusBadge = ({ condition, trueLabel, trueColor, falseLabel, falseColor }
 // Componente para cada bloque de información estilo panel moderno
 const InfoBlock = ({ icon: Icon, title, children, className = '' }) => (
   <div className={`bg-white rounded-sm border border-gray-200 shadow-sm ${className}`}>
-  <div className="bg-slate-50 px-3 sm:px-5 py-2.5 sm:py-3 border-b border-gray-200 flex items-center gap-2">
+    <div className="bg-slate-50 px-3 sm:px-5 py-2.5 sm:py-3 border-b border-gray-200 flex items-center gap-2">
       {Icon && <span className="text-[#003b5c]"><Icon /></span>}
       <h3 className="font-sans font-bold text-slate-800 text-xs uppercase tracking-wider">
         {title}
@@ -108,26 +110,15 @@ export const DeskReviewTab = ({
   // Estados para datos adicionales
   const [editorialReview, setEditorialReview] = useState(null);
   const [loadingReview, setLoadingReview] = useState(false);
-  const [latestRevisionUrl, setLatestRevisionUrl] = useState(null);
-  const [latestRevisionComment, setLatestRevisionComment] = useState(null);
+  const [latestRevision, setLatestRevision] = useState(null);
   const [latestRevisionNotes, setLatestRevisionNotes] = useState('');
+  const [latestRevisionComment, setLatestRevisionComment] = useState(null);
+  const [latestRevisionFileName, setLatestRevisionFileName] = useState('');
+  const [latestRevisionUploadedAt, setLatestRevisionUploadedAt] = useState(null);
+  const [hasActivePeerReview, setHasActivePeerReview] = useState(false);
   
   // Estado para controlar la pestaña activa
   const [activeTab, setActiveTab] = useState('review');
-  
-  // ===== DEBUG: Verificar props recibidas =====
-  useEffect(() => {
-    console.log('=== DESK REVIEW TAB - PROPS RECIBIDAS ===');
-    console.log('task:', task);
-    console.log('task?.submission:', task?.submission);
-    console.log('task?.submission?.area:', task?.submission?.area);
-    console.log('task?.area:', task?.area);
-    console.log('articleArea (submission.area):', task?.submission?.area);
-    console.log('potentialReviewers count:', potentialReviewers?.length);
-    console.log('invitations count:', invitations?.length);
-    console.log('==========================================');
-  }, [task, potentialReviewers, invitations]);
-  // ===== FIN DEBUG =====
   
   const { loading: hookLoading, error, submitDeskReviewDecision } = useEditorialReview(user);
   const submission = task.submission || {};
@@ -156,7 +147,8 @@ export const DeskReviewTab = ({
     loadEditorialReview();
   }, [task.editorialReviewId]);
 
-useEffect(() => {
+  // Cargar la última revisión y verificar si hay revisión por pares activa
+  useEffect(() => {
     let cancelled = false;
     const fetchLatestRevision = async () => {
       if (!task.submissionId) return;
@@ -166,9 +158,11 @@ useEffect(() => {
         const snapshot = await getDocs(q);
         if (!snapshot.empty && !cancelled) {
           const data = snapshot.docs[0].data();
-          setLatestRevisionUrl(data.fileUrl);
-          setLatestRevisionComment(data.revisionComment || null);
+          setLatestRevision(data);
           setLatestRevisionNotes(data.notes || '');
+          setLatestRevisionComment(data.revisionComment || null);
+          setLatestRevisionFileName(data.fileName || '');
+          setLatestRevisionUploadedAt(data.uploadedAt || null);
         }
       } catch (error) {
         if (!cancelled) console.error('Error fetching latest revision:', error);
@@ -177,6 +171,23 @@ useEffect(() => {
     fetchLatestRevision();
     return () => { cancelled = true; };
   }, [task.submissionId]);
+
+  // Verificar si hay revisión por pares activa
+  useEffect(() => {
+    const checkPeerReviewStatus = () => {
+      // Si hay revisiones enviadas o el estado indica que está en revisión por pares
+      const hasPeerReview = 
+        submittedReviews.length > 0 || 
+        task.status === 'in_peer_review' || 
+        task.status === 'peer_review' ||
+        task.status === 'awaiting_reviewers' ||
+        submission.status === 'in_peer_review' ||
+        submission.status === 'peer_review';
+      
+      setHasActivePeerReview(hasPeerReview);
+    };
+    checkPeerReviewStatus();
+  }, [submittedReviews, task.status, submission.status]);
 
   const handleSubmit = async () => {
     try {
@@ -251,66 +262,65 @@ useEffect(() => {
     <div className="fixed inset-0 bg-slate-100 z-50 flex flex-col">
       {/* ==================== BARRA SUPERIOR ==================== */}
       <div className="bg-[#003b5c] text-white px-3 sm:px-6 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 shadow-lg flex-shrink-0">
-  <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
-    <button
-      onClick={() => onBackToPanel && onBackToPanel()}
-      className="flex items-center gap-1 sm:gap-2 bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-sm transition-colors text-xs sm:text-sm font-sans font-bold uppercase tracking-wider flex-shrink-0"
-    >
-      <Icons.ArrowLeft />
-      <span className="hidden sm:inline">{isSpanish ? 'Volver al Panel' : 'Back to Panel'}</span>
-    </button>
-    <div className="hidden sm:block h-6 w-px bg-white/20"></div>
-    <div className="min-w-0 flex-1">
-      <span className="text-[9px] sm:text-[10px] font-sans uppercase tracking-wider text-sky-200">Desk Review</span>
-      <h2 className="font-serif text-sm sm:text-lg font-bold leading-tight truncate max-w-full sm:max-w-2xl">
-        {isSpanish ? submission.title : submission.titleEn || submission.title}
-      </h2>
-    </div>
-  </div>
-  <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
-    <span className="px-2 py-0.5 sm:px-3 sm:py-1 bg-white/15 text-white text-[10px] sm:text-xs font-mono rounded-sm truncate max-w-[150px] sm:max-w-none">
-      ID: {submission.submissionId || 'PENDIENTE'}
-    </span>
-  </div>
-
+        <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
+          <button
+            onClick={() => onBackToPanel && onBackToPanel()}
+            className="flex items-center gap-1 sm:gap-2 bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-sm transition-colors text-xs sm:text-sm font-sans font-bold uppercase tracking-wider flex-shrink-0"
+          >
+            <Icons.ArrowLeft />
+            <span className="hidden sm:inline">{isSpanish ? 'Volver al Panel' : 'Back to Panel'}</span>
+          </button>
+          <div className="hidden sm:block h-6 w-px bg-white/20"></div>
+          <div className="min-w-0 flex-1">
+            <span className="text-[9px] sm:text-[10px] font-sans uppercase tracking-wider text-sky-200">Desk Review</span>
+            <h2 className="font-serif text-sm sm:text-lg font-bold leading-tight truncate max-w-full sm:max-w-2xl">
+              {isSpanish ? submission.title : submission.titleEn || submission.title}
+            </h2>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
+          <span className="px-2 py-0.5 sm:px-3 sm:py-1 bg-white/15 text-white text-[10px] sm:text-xs font-mono rounded-sm truncate max-w-[150px] sm:max-w-none">
+            ID: {submission.submissionId || 'PENDIENTE'}
+          </span>
+        </div>
       </div>
 
       {/* ==================== PESTAÑAS DE NAVEGACIÓN UNIFICADAS ==================== */}
       <div className="bg-white border-b border-gray-200 px-2 sm:px-6 flex items-center gap-0 sm:gap-1 flex-shrink-0 overflow-x-auto scrollbar-hide">
-  {[
-    { id: 'review', icon: Icons.Edit, label: isSpanish ? 'Revisión' : 'Review', shortLabel: isSpanish ? 'Rev.' : 'Rev.' },
-    { id: 'article', icon: Icons.Eye, label: isSpanish ? 'Ver Artículo' : 'View Article', shortLabel: isSpanish ? 'Art.' : 'Art.' },
-    { id: 'history', icon: Icons.ClipboardCheck, label: isSpanish ? 'Historial' : 'History', shortLabel: isSpanish ? 'Hist.' : 'Hist.' },
-    { id: 'reviewers', icon: Icons.Users, label: isSpanish ? 'Revisores' : 'Reviewers', shortLabel: isSpanish ? 'Rev.' : 'Rev.', badge: submittedReviews.length },
-    ...(isConsolidated || task.status === 'awaiting_decision' ? [{ id: 'decision', icon: Icons.ClipboardCheck, label: isSpanish ? 'Decisión Final' : 'Final Decision', shortLabel: isSpanish ? 'Dec.' : 'Dec.' }] : []),
-    ...(submission.status === 'accepted' ? [{ id: 'metadata', icon: Icons.Refresh, label: isSpanish ? 'Refinar Metadatos' : 'Refine Metadata', shortLabel: isSpanish ? 'Meta.' : 'Meta.' }] : [])
-  ].map(tab => (
-    <button
-      key={tab.id}
-      onClick={() => setActiveTab(tab.id)}
-      className={`px-2 sm:px-5 py-2.5 sm:py-3 font-sans text-xs sm:text-sm font-bold uppercase tracking-wider border-b-2 transition-colors whitespace-nowrap flex-shrink-0 ${
-        activeTab === tab.id
-          ? 'border-[#003b5c] text-[#003b5c]'
-          : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-      }`}
-    >
-      <span className="flex items-center gap-1 sm:gap-2">
-        <span className="w-4 h-4"><tab.icon /></span>
-        <span className="hidden sm:inline">{tab.label}</span>
-        <span className="sm:hidden">{tab.shortLabel}</span>
-        {tab.badge > 0 && (
-          <span className="bg-[#003b5c] text-white text-[10px] px-1.5 py-0.5 rounded-full">
-            {tab.badge}
-          </span>
-        )}
-      </span>
-    </button>
-  ))}
-</div>
+        {[
+          { id: 'review', icon: Icons.Edit, label: isSpanish ? 'Revisión' : 'Review', shortLabel: isSpanish ? 'Rev.' : 'Rev.' },
+          { id: 'article', icon: Icons.Eye, label: isSpanish ? 'Ver Artículo' : 'View Article', shortLabel: isSpanish ? 'Art.' : 'Art.' },
+          { id: 'history', icon: Icons.ClipboardCheck, label: isSpanish ? 'Historial' : 'History', shortLabel: isSpanish ? 'Hist.' : 'Hist.' },
+          { id: 'reviewers', icon: Icons.Users, label: isSpanish ? 'Revisores' : 'Reviewers', shortLabel: isSpanish ? 'Rev.' : 'Rev.', badge: submittedReviews.length },
+          ...(isConsolidated || task.status === 'awaiting_decision' ? [{ id: 'decision', icon: Icons.ClipboardCheck, label: isSpanish ? 'Decisión Final' : 'Final Decision', shortLabel: isSpanish ? 'Dec.' : 'Dec.' }] : []),
+          ...(submission.status === 'accepted' ? [{ id: 'metadata', icon: Icons.Refresh, label: isSpanish ? 'Refinar Metadatos' : 'Refine Metadata', shortLabel: isSpanish ? 'Meta.' : 'Meta.' }] : [])
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-2 sm:px-5 py-2.5 sm:py-3 font-sans text-xs sm:text-sm font-bold uppercase tracking-wider border-b-2 transition-colors whitespace-nowrap flex-shrink-0 ${
+              activeTab === tab.id
+                ? 'border-[#003b5c] text-[#003b5c]'
+                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+            }`}
+          >
+            <span className="flex items-center gap-1 sm:gap-2">
+              <span className="w-4 h-4"><tab.icon /></span>
+              <span className="hidden sm:inline">{tab.label}</span>
+              <span className="sm:hidden">{tab.shortLabel}</span>
+              {tab.badge > 0 && (
+                <span className="bg-[#003b5c] text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                  {tab.badge}
+                </span>
+              )}
+            </span>
+          </button>
+        ))}
+      </div>
 
       {/* ==================== CONTENIDO PRINCIPAL CON SCROLL ==================== */}
       <div className="flex-1 overflow-y-auto overscroll-contain">
-  <div className="max-w-7xl mx-auto p-3 sm:p-6">
+        <div className="max-w-7xl mx-auto p-3 sm:p-6">
           
           {/* ==================== PESTAÑA: REVISIÓN EDITORIAL ==================== */}
           {activeTab === 'review' && (
@@ -321,10 +331,77 @@ useEffect(() => {
                 </div>
               )}
               
-              {/* Encabezado editorial y formulario de decisión (EXACTAMENTE IGUAL que antes) */}
+              {/* ===== ALERTA DE NUEVA REVISIÓN (SI EXISTE) ===== */}
+              {latestRevision && (
+                <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-sm shadow-lg border-2 border-emerald-400 overflow-hidden">
+                  <div className="px-4 sm:px-6 py-4 sm:py-5">
+                    <div className="flex items-start gap-3 sm:gap-4">
+                      <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-full flex items-center justify-center">
+                        <Icons.DocumentText />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white text-emerald-700 text-[10px] font-bold uppercase tracking-wider rounded-sm">
+                            <Icons.Refresh />
+                            {isSpanish ? 'Nueva Revisión Recibida' : 'New Revision Received'}
+                          </span>
+                          {latestRevisionUploadedAt && (
+                            <span className="text-[10px] font-mono text-emerald-100">
+                              {latestRevisionUploadedAt.toDate ? latestRevisionUploadedAt.toDate().toLocaleString() : latestRevisionUploadedAt}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* Notas del autor - LO PRIMERO QUE SE VE */}
+                        {latestRevisionNotes && (
+                          <div className="mt-3 bg-white/15 rounded-sm p-3 sm:p-4 border border-white/20">
+                            <h4 className="font-sans font-bold text-white text-xs uppercase tracking-wider mb-2 flex items-center gap-2">
+                              <Icons.Message />
+                              {isSpanish ? 'Notas del Autor' : 'Author Notes'}
+                            </h4>
+                            <p className="text-white text-sm leading-relaxed whitespace-pre-wrap font-serif">
+                              {latestRevisionNotes}
+                            </p>
+                          </div>
+                        )}
+                        
+                        {/* Comentario de revisión */}
+                        {latestRevisionComment && (
+                          <div className="mt-3 bg-white/15 rounded-sm p-3 sm:p-4 border border-white/20">
+                            <h4 className="font-sans font-bold text-white text-xs uppercase tracking-wider mb-2 flex items-center gap-2">
+                              <Icons.ClipboardCheck />
+                              {isSpanish ? 'Comentario de Revisión' : 'Revision Comment'}
+                            </h4>
+                            <div 
+                              className="review-content ql-editor read-only prose prose-sm max-w-none font-serif text-white leading-relaxed"
+                              dangerouslySetInnerHTML={{ __html: latestRevisionComment }}
+                            />
+                          </div>
+                        )}
+                        
+                        {/* Botón para ver el documento */}
+                        {latestRevision?.fileUrl && (
+                          <a 
+                            href={latestRevision.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-3 inline-flex items-center gap-2 bg-white text-emerald-700 px-4 py-2 rounded-sm transition-colors text-xs font-bold uppercase tracking-wider hover:bg-emerald-50"
+                          >
+                            <Icons.File />
+                            {isSpanish ? 'Ver Documento Revisado' : 'View Revised Document'}
+                            <Icons.ExternalLink />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Encabezado editorial */}
               <div className="bg-[#003b5c] text-white rounded-sm p-4 sm:p-6 lg:p-8 shadow-sm">
-  <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 sm:gap-6">
-    <div className="flex-1 min-w-0">
+                <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 sm:gap-6">
+                  <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-3">
                       <span className="inline-block px-2.5 py-0.5 bg-white text-[#003b5c] text-[10px] font-bold uppercase tracking-wider rounded-sm">
                         ID: {submission.submissionId || 'PENDIENTE'}
@@ -341,8 +418,8 @@ useEffect(() => {
                     </div>
                     
                     <h2 className="font-serif text-lg sm:text-2xl font-bold mb-2 leading-tight break-words">
-        {isSpanish ? submission.title : submission.titleEn || submission.title}
-      </h2>
+                      {isSpanish ? submission.title : submission.titleEn || submission.title}
+                    </h2>
                     
                     {submission.titleEn && isSpanish && (
                       <p className="text-sky-200 text-sm font-serif italic mb-4 border-l-2 border-sky-400 pl-3">
@@ -409,8 +486,8 @@ useEffect(() => {
                       </a>
                     )}
 
-                    {latestRevisionUrl && (
-                      <a href={latestRevisionUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-sm transition-colors text-xs font-bold uppercase tracking-wider">
+                    {latestRevision?.fileUrl && (
+                      <a href={latestRevision.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-sm transition-colors text-xs font-bold uppercase tracking-wider">
                         <Icons.DocumentText /> {isSpanish ? 'Última Revisión' : 'Latest Revision'}
                       </a>
                     )}
@@ -493,16 +570,14 @@ useEffect(() => {
                     </div>
                   </InfoBlock>
 
-                                    <InfoBlock icon={Icons.Tag} title={isSpanish ? 'Palabras Clave / Keywords' : 'Keywords / Palabras Clave'}>
+                  <InfoBlock icon={Icons.Tag} title={isSpanish ? 'Palabras Clave / Keywords' : 'Keywords / Palabras Clave'}>
                     <div className="space-y-4">
-                      {/* Vocabulario y Códigos Especializados */}
                       {submission.keywordsVocabulario && (
                         <div className="mb-4 space-y-3">
                           <span className="inline-block px-2.5 py-1 bg-[#003b5c] text-white text-[10px] font-bold uppercase tracking-wider rounded-sm">
                             Vocabulario: {submission.keywordsVocabulario}
                           </span>
                           
-                          {/* Códigos especializados (universales) */}
                           {submission.specializedCodes && submission.specializedCodes.length > 0 && (
                             <div>
                               <p className="text-[10px] font-sans font-bold uppercase tracking-wider text-slate-400 mb-2">
@@ -520,7 +595,6 @@ useEffect(() => {
                         </div>
                       )}
                       
-                      {/* Palabras clave en español */}
                       <div>
                         <p className="text-[10px] font-sans font-bold uppercase tracking-wider text-slate-400 mb-2">ESPAÑOL</p>
                         <div className="flex flex-wrap gap-2">
@@ -542,7 +616,6 @@ useEffect(() => {
                         </div>
                       </div>
                       
-                      {/* Palabras clave en inglés */}
                       <div className="border-t border-slate-100 pt-4">
                         <p className="text-[10px] font-sans font-bold uppercase tracking-wider text-slate-400 mb-2">ENGLISH</p>
                         <div className="flex flex-wrap gap-2">
@@ -694,31 +767,9 @@ useEffect(() => {
                   {submission.editorComment && (
                     <InfoBlock icon={Icons.Message} title={isSpanish ? 'Mensaje al Editor' : 'Message to Editor'} className="border-l-4 border-l-[#003b5c]">
                       <div 
-                         className="review-content ql-editor read-only prose prose-sm max-w-none font-serif text-slate-700 leading-relaxed"
+                        className="review-content ql-editor read-only prose prose-sm max-w-none font-serif text-slate-700 leading-relaxed"
                         dangerouslySetInnerHTML={{ __html: submission.editorComment }}
                       />
-                    </InfoBlock>
-                  )}
-
-                  {latestRevisionComment && (
-                    <InfoBlock icon={Icons.Message} title={isSpanish ? 'Comentario de Revisión' : 'Revision Comment'} className="border-l-4 border-l-emerald-500">
-                      <div className="mb-3">
-                        <span className="inline-block px-2.5 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wider rounded-sm border border-emerald-200">
-                          Respuesta de la última ronda
-                        </span>
-                      </div>
-                      <div 
-                         className="review-content ql-editor read-only prose prose-sm max-w-none font-serif text-slate-700 leading-relaxed"
-                        dangerouslySetInnerHTML={{ __html: latestRevisionComment }}
-                      />
-                    </InfoBlock>
-                  )}
-
-                  {!latestRevisionComment && latestRevisionNotes && (
-                    <InfoBlock icon={Icons.DocumentText} title={isSpanish ? 'Notas de Revisión' : 'Revision Notes'}>
-                      <p className="text-slate-800 text-sm leading-relaxed whitespace-pre-wrap font-serif">
-                        {latestRevisionNotes}
-                      </p>
                     </InfoBlock>
                   )}
 
@@ -763,81 +814,120 @@ useEffect(() => {
                 </InfoBlock>
               )}
 
-              {/* Panel de decisión editorial */}
-              <div className="bg-slate-50 border border-slate-200 rounded-sm p-6 lg:p-8 mt-12 shadow-sm">
-                <h3 className="font-sans font-bold text-[#003b5c] text-lg uppercase tracking-wider mb-6 pb-4 border-b border-slate-200">
-                  {isSpanish ? 'Resolución Editorial (Desk Review)' : 'Editorial Decision (Desk Review)'}
-                </h3>
+              {/* Panel de decisión editorial - DESHABILITADO SI HAY REVISIÓN POR PARES ACTIVA */}
+              <div className={`bg-slate-50 border rounded-sm p-6 lg:p-8 mt-12 shadow-sm ${hasActivePeerReview ? 'border-amber-300 bg-amber-50/50' : 'border-slate-200'}`}>
+                <div className="flex items-start gap-3 mb-6 pb-4 border-b border-slate-200">
+                  <div className="flex-shrink-0">
+                    {hasActivePeerReview ? (
+                      <Icons.Info />
+                    ) : (
+                      <Icons.ClipboardCheck />
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="font-sans font-bold text-[#003b5c] text-lg uppercase tracking-wider">
+                      {isSpanish ? 'Resolución Editorial (Desk Review)' : 'Editorial Decision (Desk Review)'}
+                    </h3>
+                    {hasActivePeerReview && (
+                      <div className="mt-2 flex items-center gap-2 text-amber-700 text-sm font-sans">
+                        <Icons.Warning />
+                        <span>
+                          {isSpanish 
+                            ? 'No disponible - Hay una revisión por pares en curso. La decisión editorial se tomará después de la revisión por pares.'
+                            : 'Unavailable - Peer review in progress. Editorial decision will be made after peer review.'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
                 
-               <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-6 sm:mb-8">
-                  {[
-                    { value: 'reject', label: isSpanish ? 'Rechazar' : 'Reject', color: 'red' },
-                    { value: 'minor-revision', label: isSpanish ? 'Revisión Menor' : 'Minor Revision', color: 'amber' },
-                    { value: 'revision-required', label: isSpanish ? 'Enviar a Pares' : 'Send to Review', color: 'sky' },
-                    { value: 'accept', label: isSpanish ? 'Aceptar' : 'Accept', color: 'emerald' }
-                  ].map(opt => {
-                    const isSelected = decision === opt.value;
-                    const colorClasses = {
-                      red: isSelected ? 'bg-red-50 border-red-500 text-red-700' : 'bg-white border-slate-200 text-slate-500 hover:border-red-300',
-                      amber: isSelected ? 'bg-amber-50 border-amber-500 text-amber-700' : 'bg-white border-slate-200 text-slate-500 hover:border-amber-300',
-                      sky: isSelected ? 'bg-sky-50 border-sky-500 text-sky-700' : 'bg-white border-slate-200 text-slate-500 hover:border-sky-300',
-                      emerald: isSelected ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'bg-white border-slate-200 text-slate-500 hover:border-emerald-300'
-                    };
-
-                    return (
-                      <button
-                        key={opt.value}
-                        onClick={() => setDecision(opt.value)}
-                        className={`px-2 sm:px-4 py-3 sm:py-4 rounded-sm border-2 font-sans font-bold text-xs sm:text-sm uppercase tracking-wider transition-all duration-200 text-center ${colorClasses[opt.color]}`}
-                      >
-                        {opt.label}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-xs font-sans font-bold uppercase tracking-wider text-slate-700 mb-2">
-                      {isSpanish ? 'Feedback para el Autor' : 'Feedback to Author'}
-                    </label>
-                    <textarea
-                      value={feedback}
-                      onChange={(e) => setFeedback(e.target.value)}
-                      rows="4"
-                      className="w-full p-3 sm:p-4 bg-white border border-slate-300 rounded-sm focus:ring-2 focus:ring-[#003b5c] focus:border-transparent font-serif text-sm sm:text-base text-slate-800 placeholder:text-slate-400"
-                      placeholder={isSpanish ? 'El autor leerá este comentario...' : 'The author will read this comment...'}
-                    />
+                {hasActivePeerReview ? (
+                  <div className="text-center py-8">
+                    <div className="inline-flex items-center gap-2 px-4 py-3 bg-amber-100 border border-amber-300 rounded-sm">
+                      <Icons.Info />
+                      <span className="text-amber-800 font-sans font-bold text-sm uppercase tracking-wider">
+                        {isSpanish ? 'Decisión bloqueada temporalmente' : 'Decision temporarily blocked'}
+                      </span>
+                    </div>
+                    <p className="text-slate-600 text-sm mt-3">
+                      {isSpanish 
+                        ? 'La decisión de desk review no está disponible mientras haya revisión por pares activa.'
+                        : 'Desk review decision is unavailable while peer review is active.'}
+                    </p>
                   </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-6 sm:mb-8">
+                      {[
+                        { value: 'reject', label: isSpanish ? 'Rechazar' : 'Reject', color: 'red' },
+                        { value: 'minor-revision', label: isSpanish ? 'Revisión Menor' : 'Minor Revision', color: 'amber' },
+                        { value: 'revision-required', label: isSpanish ? 'Enviar a Pares' : 'Send to Review', color: 'sky' },
+                        { value: 'accept', label: isSpanish ? 'Aceptar' : 'Accept', color: 'emerald' }
+                      ].map(opt => {
+                        const isSelected = decision === opt.value;
+                        const colorClasses = {
+                          red: isSelected ? 'bg-red-50 border-red-500 text-red-700' : 'bg-white border-slate-200 text-slate-500 hover:border-red-300',
+                          amber: isSelected ? 'bg-amber-50 border-amber-500 text-amber-700' : 'bg-white border-slate-200 text-slate-500 hover:border-amber-300',
+                          sky: isSelected ? 'bg-sky-50 border-sky-500 text-sky-700' : 'bg-white border-slate-200 text-slate-500 hover:border-sky-300',
+                          emerald: isSelected ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'bg-white border-slate-200 text-slate-500 hover:border-emerald-300'
+                        };
 
-                  <div>
-                    <label className="block text-xs font-sans font-bold uppercase tracking-wider text-slate-700 mb-2">
-                      {isSpanish ? 'Notas Internas (Solo Editores)' : 'Internal Notes (Editors Only)'}
-                    </label>
-                    <textarea
-                      value={internalComments}
-                      onChange={(e) => setInternalComments(e.target.value)}
-                      rows="3"
-                      className="w-full p-3 sm:p-4 bg-slate-100 border border-slate-300 rounded-sm focus:ring-2 focus:ring-[#003b5c] focus:border-transparent font-serif text-sm sm:text-base text-slate-800 placeholder:text-slate-400"
-                      placeholder={isSpanish ? 'Notas privadas para el equipo editorial...' : 'Private notes for the editorial team...'}
-                    />
-                  </div>
+                        return (
+                          <button
+                            key={opt.value}
+                            onClick={() => setDecision(opt.value)}
+                            className={`px-2 sm:px-4 py-3 sm:py-4 rounded-sm border-2 font-sans font-bold text-xs sm:text-sm uppercase tracking-wider transition-all duration-200 text-center ${colorClasses[opt.color]}`}
+                          >
+                            {opt.label}
+                          </button>
+                        );
+                      })}
+                    </div>
 
-                  <div className="pt-4 border-t border-slate-200 flex justify-end">
-                    <button
-                      onClick={handleSubmit}
-                      disabled={isLoading || !decision}
-                      className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-[#003b5c] hover:bg-sky-900 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-sans font-bold text-sm uppercase tracking-wider rounded-sm shadow-sm transition-colors flex items-center justify-center sm:min-w-[200px]"
-                    >
-                      {isLoading ? (isSpanish ? 'GUARDANDO...' : 'SAVING...') : (isSpanish ? 'CONFIRMAR DECISIÓN' : 'CONFIRM DECISION')}
-                    </button>
-                  </div>
-                </div>
+                    <div className="space-y-6">
+                      <div>
+                        <label className="block text-xs font-sans font-bold uppercase tracking-wider text-slate-700 mb-2">
+                          {isSpanish ? 'Feedback para el Autor' : 'Feedback to Author'}
+                        </label>
+                        <textarea
+                          value={feedback}
+                          onChange={(e) => setFeedback(e.target.value)}
+                          rows="4"
+                          className="w-full p-3 sm:p-4 bg-white border border-slate-300 rounded-sm focus:ring-2 focus:ring-[#003b5c] focus:border-transparent font-serif text-sm sm:text-base text-slate-800 placeholder:text-slate-400"
+                          placeholder={isSpanish ? 'El autor leerá este comentario...' : 'The author will read this comment...'}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-sans font-bold uppercase tracking-wider text-slate-700 mb-2">
+                          {isSpanish ? 'Notas Internas (Solo Editores)' : 'Internal Notes (Editors Only)'}
+                        </label>
+                        <textarea
+                          value={internalComments}
+                          onChange={(e) => setInternalComments(e.target.value)}
+                          rows="3"
+                          className="w-full p-3 sm:p-4 bg-slate-100 border border-slate-300 rounded-sm focus:ring-2 focus:ring-[#003b5c] focus:border-transparent font-serif text-sm sm:text-base text-slate-800 placeholder:text-slate-400"
+                          placeholder={isSpanish ? 'Notas privadas para el equipo editorial...' : 'Private notes for the editorial team...'}
+                        />
+                      </div>
+
+                      <div className="pt-4 border-t border-slate-200 flex justify-end">
+                        <button
+                          onClick={handleSubmit}
+                          disabled={isLoading || !decision}
+                          className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-[#003b5c] hover:bg-sky-900 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-sans font-bold text-sm uppercase tracking-wider rounded-sm shadow-sm transition-colors flex items-center justify-center sm:min-w-[200px]"
+                        >
+                          {isLoading ? (isSpanish ? 'GUARDANDO...' : 'SAVING...') : (isSpanish ? 'CONFIRMAR DECISIÓN' : 'CONFIRM DECISION')}
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )}
 
-           {activeTab === 'article' && (
+          {activeTab === 'article' && (
             <div className="space-y-6 pb-8">
               {/* Selector de documento */}
               <div className="bg-white rounded-sm border border-gray-200 shadow-sm p-6">
@@ -887,9 +977,9 @@ useEffect(() => {
                   )}
 
                   {/* Última Revisión */}
-                  {latestRevisionUrl && (
+                  {latestRevision?.fileUrl && (
                     <a 
-                      href={latestRevisionUrl}
+                      href={latestRevision.fileUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex flex-col items-center justify-center p-4 sm:p-8 bg-slate-50 border-2 border-slate-200 hover:border-blue-500 rounded-sm transition-all group cursor-pointer"
@@ -901,7 +991,7 @@ useEffect(() => {
                         {isSpanish ? 'Última Revisión' : 'Latest Revision'}
                       </span>
                       <span className="text-[10px] text-slate-400 mt-2 font-mono">
-                        {isSpanish ? 'Versión del autor' : 'Author version'}
+                        {latestRevisionFileName || (isSpanish ? 'Versión del autor' : 'Author version')}
                       </span>
                     </a>
                   )}
@@ -1035,12 +1125,11 @@ useEffect(() => {
                     </div>
                   </div>
 
-                                    <div>
+                  <div>
                     <h4 className="font-sans font-bold text-slate-500 text-xs uppercase tracking-wider mb-2">
                       {isSpanish ? 'Palabras Clave / Keywords' : 'Keywords / Palabras Clave'}
                     </h4>
                     
-                    {/* Códigos especializados */}
                     {submission.specializedCodes && submission.specializedCodes.length > 0 && (
                       <div className="mb-3">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
@@ -1056,7 +1145,6 @@ useEffect(() => {
                       </div>
                     )}
                     
-                    {/* Palabras clave español */}
                     <div className="mb-2">
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">ESPAÑOL</p>
                       <div className="flex flex-wrap gap-2">
@@ -1078,7 +1166,6 @@ useEffect(() => {
                       </div>
                     </div>
                     
-                    {/* Palabras clave inglés */}
                     <div>
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">ENGLISH</p>
                       <div className="flex flex-wrap gap-2">
@@ -1119,36 +1206,37 @@ useEffect(() => {
 
           {/* ==================== NUEVAS PESTAÑAS INTEGRADAS ==================== */}
           {activeTab === 'history' && (
-  <ReviewHistoryTab
-    submissionId={submission.submissionId || task.submissionId}
-    currentRound={submission.currentRound || task.round || 1}
-    submissionTitle={isSpanish ? submission.title : submission.titleEn || submission.title}
-    isSpanish={isSpanish}
-  />
-)}
+            <ReviewHistoryTab
+              submissionId={submission.submissionId || task.submissionId}
+              currentRound={submission.currentRound || task.round || 1}
+              submissionTitle={isSpanish ? submission.title : submission.titleEn || submission.title}
+              isSpanish={isSpanish}
+            />
+          )}
+          
           {/* PESTAÑA: GESTIÓN DE REVISORES */}
           {activeTab === 'reviewers' && (
-  <ReviewerManagementTab
-    task={task}
-    articleArea={
-  task?.submission?.area || 
-  task?.area || 
-  submission?.area || 
-  (Array.isArray(submission?.area) ? submission.area[0] : null) ||
-  ''
-}
-    invitations={invitations}
-    potentialReviewers={potentialReviewers}
-    selectedReviewerId={selectedReviewerId}
-    setSelectedReviewerId={setSelectedReviewerId}
-    searchTerm={searchTerm}
-    setSearchTerm={setSearchTerm}
-    onSendInvitation={onSendInvitation}
-    onProceedToDecision={onProceedToDecision}
-    loading={inviteLoading || isConsolidating}
-    submittedReviews={submittedReviews}
-  />
-)}
+            <ReviewerManagementTab
+              task={task}
+              articleArea={
+                task?.submission?.area || 
+                task?.area || 
+                submission?.area || 
+                (Array.isArray(submission?.area) ? submission.area[0] : null) ||
+                ''
+              }
+              invitations={invitations}
+              potentialReviewers={potentialReviewers}
+              selectedReviewerId={selectedReviewerId}
+              setSelectedReviewerId={setSelectedReviewerId}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              onSendInvitation={onSendInvitation}
+              onProceedToDecision={onProceedToDecision}
+              loading={inviteLoading || isConsolidating}
+              submittedReviews={submittedReviews}
+            />
+          )}
 
           {/* PESTAÑA: DECISIÓN FINAL */}
           {activeTab === 'decision' && (
@@ -1172,29 +1260,29 @@ useEffect(() => {
         </div>
       </div>
       <style jsx>{`
-  /* Ocultar scrollbar en pestañas */
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
-  }
-  
-  /* Prevenir zoom en inputs en iOS */
-  @media (max-width: 640px) {
-    textarea, input {
-      font-size: 16px !important;
-    }
-  }
-  
-  /* Breakpoint extra pequeño */
-  @media (min-width: 480px) {
-    .xs\:grid-cols-2 {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-`}</style>
+        /* Ocultar scrollbar en pestañas */
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        
+        /* Prevenir zoom en inputs en iOS */
+        @media (max-width: 640px) {
+          textarea, input {
+            font-size: 16px !important;
+          }
+        }
+        
+        /* Breakpoint extra pequeño */
+        @media (min-width: 480px) {
+          .xs\\:grid-cols-2 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+        }
+      `}</style>
     </div>
   );
 };
