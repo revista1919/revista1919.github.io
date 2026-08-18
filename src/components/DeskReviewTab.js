@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../hooks/useLanguage';
 import { useEditorialReview } from '../hooks/useEditorialReview';
+import { useSearchParams } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import { ReviewerManagementTab } from './ReviewerManagementTab';
@@ -10,6 +11,7 @@ import { MetadataRefinementTab } from './MetadataRefinementTab';
 import { getRecommendedReviewers } from '../hooks/reviewerRecommendationEngine';
 import { ReviewHistoryTab } from './ReviewHistoryTab';
 import ExternalReviewerInviteModal from './ExternalReviewerInviteModal';
+
 // ============ ICONOS SVG PROFESIONALES ============
 const Icons = {
   User: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
@@ -101,12 +103,16 @@ export const DeskReviewTab = ({
 }) => {
   const { language } = useLanguage();
   const isSpanish = language === 'es';
+  const [searchParams, setSearchParams] = useSearchParams();
   
   // Estados para el formulario
   const [decision, setDecision] = useState('');
   const [feedback, setFeedback] = useState('');
   const [internalComments, setInternalComments] = useState('');
-  const [showExternalInvite, setShowExternalInvite] = useState(false);
+  const [showExternalInvite, setShowExternalInvite] = useState(() => {
+    return searchParams.get('invite') === 'true';
+  });
+  
   // Estados para datos adicionales
   const [editorialReview, setEditorialReview] = useState(null);
   const [loadingReview, setLoadingReview] = useState(false);
@@ -117,12 +123,55 @@ export const DeskReviewTab = ({
   const [latestRevisionUploadedAt, setLatestRevisionUploadedAt] = useState(null);
   const [hasActivePeerReview, setHasActivePeerReview] = useState(false);
   
-  // Estado para controlar la pestaña activa
-  const [activeTab, setActiveTab] = useState('review');
+  // Estado para controlar la pestaña activa - INICIALIZADO DESDE URL
+  const [activeTab, setActiveTab] = useState(() => {
+    const tabFromUrl = searchParams.get('tab');
+    const validTabs = ['review', 'article', 'history', 'reviewers', 'decision', 'metadata'];
+    return validTabs.includes(tabFromUrl) ? tabFromUrl : 'review';
+  });
   
   const { loading: hookLoading, error, submitDeskReviewDecision } = useEditorialReview(user);
   const submission = task.submission || {};
   const isLoading = externalLoading || hookLoading || loadingReview;
+
+  // Función para cambiar pestaña y actualizar URL
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    
+    // Actualizar URL sin recargar la página
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set('tab', tabId);
+    setSearchParams(newParams, { replace: true });
+  };
+
+  // Función para abrir/cerrar modal de invitación
+  const toggleInviteModal = (show) => {
+    setShowExternalInvite(show);
+    
+    const newParams = new URLSearchParams(searchParams);
+    if (show) {
+      newParams.set('invite', 'true');
+    } else {
+      newParams.delete('invite');
+    }
+    setSearchParams(newParams, { replace: true });
+  };
+
+  // Sincronizar con cambios en URL (botón atrás/adelante del navegador)
+  useEffect(() => {
+    const tabFromUrl = searchParams.get('tab');
+    const validTabs = ['review', 'article', 'history', 'reviewers', 'decision', 'metadata'];
+    
+    if (tabFromUrl && validTabs.includes(tabFromUrl) && tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl);
+    }
+    
+    // Sincronizar modal de invitación
+    const inviteFromUrl = searchParams.get('invite') === 'true';
+    if (inviteFromUrl !== showExternalInvite) {
+      setShowExternalInvite(inviteFromUrl);
+    }
+  }, [searchParams]);
 
   // Cargar la revisión editorial
   useEffect(() => {
@@ -297,7 +346,7 @@ export const DeskReviewTab = ({
         ].map(tab => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => handleTabChange(tab.id)}
             className={`px-2 sm:px-5 py-2.5 sm:py-3 font-sans text-xs sm:text-sm font-bold uppercase tracking-wider border-b-2 transition-colors whitespace-nowrap flex-shrink-0 ${
               activeTab === tab.id
                 ? 'border-[#003b5c] text-[#003b5c]'
@@ -1215,56 +1264,55 @@ export const DeskReviewTab = ({
           )}
           
           {activeTab === 'reviewers' && (
-  <>
-    {/* Botón para invitar revisor externo */}
-    <div className="mb-4 flex justify-end">
-      <button
-        onClick={() => setShowExternalInvite(true)}
-        className="flex items-center gap-2 px-4 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-sm font-sans font-bold text-xs uppercase tracking-wider transition-colors"
-      >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-        </svg>
-        {isSpanish ? 'Invitar Revisor Externo' : 'Invite External Reviewer'}
-      </button>
-    </div>
+            <>
+              {/* Botón para invitar revisor externo */}
+              <div className="mb-4 flex justify-end">
+                <button
+                  onClick={() => toggleInviteModal(true)}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-sm font-sans font-bold text-xs uppercase tracking-wider transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                  </svg>
+                  {isSpanish ? 'Invitar Revisor Externo' : 'Invite External Reviewer'}
+                </button>
+              </div>
 
-    <ReviewerManagementTab
-      task={task}
-      articleArea={
-        task?.submission?.area || 
-        task?.area || 
-        submission?.area || 
-        (Array.isArray(submission?.area) ? submission.area[0] : null) ||
-        ''
-      }
-      invitations={invitations}
-      potentialReviewers={potentialReviewers}
-      selectedReviewerId={selectedReviewerId}
-      setSelectedReviewerId={setSelectedReviewerId}
-      searchTerm={searchTerm}
-      setSearchTerm={setSearchTerm}
-      onSendInvitation={onSendInvitation}
-      onProceedToDecision={onProceedToDecision}
-      loading={inviteLoading || isConsolidating}
-      submittedReviews={submittedReviews}
-    />
+              <ReviewerManagementTab
+                task={task}
+                articleArea={
+                  task?.submission?.area || 
+                  task?.area || 
+                  submission?.area || 
+                  (Array.isArray(submission?.area) ? submission.area[0] : null) ||
+                  ''
+                }
+                invitations={invitations}
+                potentialReviewers={potentialReviewers}
+                selectedReviewerId={selectedReviewerId}
+                setSelectedReviewerId={setSelectedReviewerId}
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                onSendInvitation={onSendInvitation}
+                onProceedToDecision={onProceedToDecision}
+                loading={inviteLoading || isConsolidating}
+                submittedReviews={submittedReviews}
+              />
 
-    {/* Modal de invitación externa */}
-    <ExternalReviewerInviteModal
-      isOpen={showExternalInvite}
-      onClose={() => setShowExternalInvite(false)}
-      submissionId={submission.submissionId || task.submissionId}
-      currentUser={user}
-      onSuccess={(invitationId) => {
-        console.log('Invitación externa creada:', invitationId);
-        setShowExternalInvite(false);
-        // Opcional: mostrar notificación
-        alert(isSpanish ? 'Invitación enviada exitosamente' : 'Invitation sent successfully');
-      }}
-    />
-  </>
-)}
+              {/* Modal de invitación externa */}
+              <ExternalReviewerInviteModal
+                isOpen={showExternalInvite}
+                onClose={() => toggleInviteModal(false)}
+                submissionId={submission.submissionId || task.submissionId}
+                currentUser={user}
+                onSuccess={(invitationId) => {
+                  console.log('Invitación externa creada:', invitationId);
+                  toggleInviteModal(false);
+                  alert(isSpanish ? 'Invitación enviada exitosamente' : 'Invitation sent successfully');
+                }}
+              />
+            </>
+          )}
 
           {/* PESTAÑA: DECISIÓN FINAL */}
           {activeTab === 'decision' && (
