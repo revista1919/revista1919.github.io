@@ -697,28 +697,100 @@ const decodeBase64IfNeeded = (text) => {
   }
   return text;
 };
-
 // Función para obtener URL de descarga directa de Google Drive
 const getDriveDownloadUrl = (url) => {
   if (!url) return null;
-  // Para Google Docs
-  const docMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  if (docMatch && docMatch[1]) {
-    return `https://docs.google.com/document/d/${docMatch[1]}/export?format=docx`;
+  
+  // Normalizar la URL para extraer el ID
+  let fileId = null;
+  let isGoogleDoc = false;
+  
+  // Caso 1: URL de Google Docs (documento)
+  if (url.includes('docs.google.com/document')) {
+    const docMatch = url.match(/\/document\/d\/([a-zA-Z0-9_-]+)/);
+    if (docMatch && docMatch[1]) {
+      fileId = docMatch[1];
+      isGoogleDoc = true;
+    }
   }
-  // Para Google Drive file
-  const driveMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-  if (driveMatch && driveMatch[1]) {
-    return `https://drive.google.com/uc?export=download&id=${driveMatch[1]}`;
+  
+  // Caso 2: URL de Google Drive file
+  if (!fileId && url.includes('drive.google.com/file/d/')) {
+    const driveMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (driveMatch && driveMatch[1]) {
+      fileId = driveMatch[1];
+      isGoogleDoc = false;
+    }
   }
-  // Para URLs con id parameter
-  const idMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-  if (idMatch && idMatch[1]) {
-    return `https://drive.google.com/uc?export=download&id=${idMatch[1]}`;
+  
+  // Caso 3: URL con parámetro id
+  if (!fileId) {
+    const idMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (idMatch && idMatch[1]) {
+      fileId = idMatch[1];
+      isGoogleDoc = false; // Asumimos que es un archivo regular
+    }
   }
+  
+  // Caso 4: URL directa de Google Docs (formato corto)
+  if (!fileId && url.includes('docs.google.com')) {
+    const docMatch = url.match(/\/document\/u\/\d+\/d\/([a-zA-Z0-9_-]+)/);
+    if (docMatch && docMatch[1]) {
+      fileId = docMatch[1];
+      isGoogleDoc = true;
+    }
+  }
+  
+  // Construir URL de descarga según el tipo
+  if (fileId) {
+    if (isGoogleDoc) {
+      return `https://docs.google.com/document/d/${fileId}/export?format=docx`;
+    } else {
+      return `https://drive.google.com/uc?export=download&id=${fileId}`;
+    }
+  }
+  
   return null;
 };
-
+// Función para obtener URL de descarga del certificado
+const getCertificateDownloadUrl = (url) => {
+  if (!url) return null;
+  
+  // Extraer el ID del archivo
+  let fileId = null;
+  
+  // Caso 1: URL de Google Drive file
+  if (url.includes('drive.google.com/file/d/')) {
+    const driveMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (driveMatch && driveMatch[1]) {
+      fileId = driveMatch[1];
+    }
+  }
+  
+  // Caso 2: URL con parámetro id
+  if (!fileId) {
+    const idMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (idMatch && idMatch[1]) {
+      fileId = idMatch[1];
+    }
+  }
+  
+  // Caso 3: URL directa de Google Docs
+  if (!fileId && url.includes('docs.google.com')) {
+    const docMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (docMatch && docMatch[1]) {
+      fileId = docMatch[1];
+    }
+  }
+  
+  // Si encontramos el ID, construir URL de descarga directa
+  if (fileId) {
+    return `https://drive.google.com/uc?export=download&id=${fileId}`;
+  }
+  
+  // Si no podemos extraer el ID, devolver la URL original
+  return url;
+};
 // Función para obtener URL de descarga PDF
 const getDriveDownloadPdfUrl = (url) => {
   if (!url) return null;
@@ -1116,38 +1188,38 @@ const AuthorSubmissionsPanel = ({ user }) => {
     }
   };
     const handleDownloadCertificate = () => {
-    // Verificar si existe certificado
-    const certificate = activePortal.certificateFileUrl || activePortal.certificateUrl;
+  // Verificar si existe certificado
+  const certificate = activePortal.certificateFileUrl || activePortal.certificateUrl;
+  
+  if (!certificate) {
+    alert(isSpanish 
+      ? 'El certificado aún no está disponible. Se generará cuando el manuscrito sea aceptado formalmente.' 
+      : 'The certificate is not yet available. It will be generated when the manuscript is formally accepted.');
+    return;
+  }
+  
+  // Usar la función específica para certificados
+  const downloadUrl = getCertificateDownloadUrl(certificate);
+  
+  if (downloadUrl) {
+    // Crear nombre elegante para el archivo
+    const submissionId = activePortal.submissionId || activePortal.id?.substring(0, 8);
+    const fileName = `Certificado_${submissionId}_RNCE.pdf`;
     
-    if (!certificate) {
-      alert(isSpanish 
-        ? 'El certificado aún no está disponible. Se generará cuando el manuscrito sea aceptado formalmente.' 
-        : 'The certificate is not yet available. It will be generated when the manuscript is formally accepted.');
-      return;
-    }
-    
-    // Convertir URL de Drive a URL de descarga directa
-    const downloadUrl = getDriveDownloadUrl(certificate);
-    
-    if (downloadUrl) {
-      // Crear nombre elegante para el archivo
-      const submissionId = activePortal.submissionId || activePortal.id?.substring(0, 8);
-      const fileName = `Certificado_${submissionId}_RNCE.pdf`;
-      
-      // Crear elemento de descarga
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = fileName;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } else {
-      // Si no se puede convertir, abrir en nueva pestaña
-      window.open(certificate, '_blank', 'noopener noreferrer');
-    }
-  };
+    // Crear elemento de descarga
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = fileName;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } else {
+    // Si no se puede convertir, abrir en nueva pestaña
+    window.open(certificate, '_blank', 'noopener noreferrer');
+  }
+};
   const handleDownloadConsent = (consent) => {
     if (consent.fileUrl) {
       window.open(consent.fileUrl, '_blank', 'noopener noreferrer');
