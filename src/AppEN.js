@@ -30,7 +30,7 @@ import { Routes, Route, useLocation, NavLink, useSearchParams, Navigate } from '
 import HomeSectionEN from './components/HomeSectionEN';
 import './index.css';
 import { motion, AnimatePresence } from 'framer-motion';
-
+import ReviewerOnboarding from './components/ReviewerOnboarding';
 const ARTICLES_JSON = '/articles.json';
 const VOLUMES_JSON = '/volumes.json';
 
@@ -731,7 +731,17 @@ function AppEN() {
                 <ReviewerResponsePage />
               </motion.div>
             } />
-
+ <Route path="/reviewer-onboarding" element={
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    transition={{ duration: 0.3 }}
+    className="flex-grow"
+  >
+    <ReviewerOnboarding />
+  </motion.div>
+} />
             {/* ========== RUTAS DEL PORTAL EDITORIAL EN INGLÉS ========== */}
             <Route path="/login/submit" element={
               <motion.div
@@ -778,6 +788,7 @@ function AppEN() {
                 )}
               </motion.div>
             } />
+           
             <Route path="/login/deskreview" element={
               <motion.div
                 initial={{ opacity: 0, y: 10 }}

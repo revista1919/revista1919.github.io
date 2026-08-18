@@ -9,7 +9,7 @@ import { FinalDecisionTab } from './FinalDecisionTab';
 import { MetadataRefinementTab } from './MetadataRefinementTab';
 import { getRecommendedReviewers } from '../hooks/reviewerRecommendationEngine';
 import { ReviewHistoryTab } from './ReviewHistoryTab';
-
+import ExternalReviewerInviteModal from './ExternalReviewerInviteModal';
 // ============ ICONOS SVG PROFESIONALES ============
 const Icons = {
   User: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
@@ -106,7 +106,7 @@ export const DeskReviewTab = ({
   const [decision, setDecision] = useState('');
   const [feedback, setFeedback] = useState('');
   const [internalComments, setInternalComments] = useState('');
-  
+  const [showExternalInvite, setShowExternalInvite] = useState(false);
   // Estados para datos adicionales
   const [editorialReview, setEditorialReview] = useState(null);
   const [loadingReview, setLoadingReview] = useState(false);
@@ -1214,29 +1214,57 @@ export const DeskReviewTab = ({
             />
           )}
           
-          {/* PESTAÑA: GESTIÓN DE REVISORES */}
           {activeTab === 'reviewers' && (
-            <ReviewerManagementTab
-              task={task}
-              articleArea={
-                task?.submission?.area || 
-                task?.area || 
-                submission?.area || 
-                (Array.isArray(submission?.area) ? submission.area[0] : null) ||
-                ''
-              }
-              invitations={invitations}
-              potentialReviewers={potentialReviewers}
-              selectedReviewerId={selectedReviewerId}
-              setSelectedReviewerId={setSelectedReviewerId}
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-              onSendInvitation={onSendInvitation}
-              onProceedToDecision={onProceedToDecision}
-              loading={inviteLoading || isConsolidating}
-              submittedReviews={submittedReviews}
-            />
-          )}
+  <>
+    {/* Botón para invitar revisor externo */}
+    <div className="mb-4 flex justify-end">
+      <button
+        onClick={() => setShowExternalInvite(true)}
+        className="flex items-center gap-2 px-4 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-sm font-sans font-bold text-xs uppercase tracking-wider transition-colors"
+      >
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+        </svg>
+        {isSpanish ? 'Invitar Revisor Externo' : 'Invite External Reviewer'}
+      </button>
+    </div>
+
+    <ReviewerManagementTab
+      task={task}
+      articleArea={
+        task?.submission?.area || 
+        task?.area || 
+        submission?.area || 
+        (Array.isArray(submission?.area) ? submission.area[0] : null) ||
+        ''
+      }
+      invitations={invitations}
+      potentialReviewers={potentialReviewers}
+      selectedReviewerId={selectedReviewerId}
+      setSelectedReviewerId={setSelectedReviewerId}
+      searchTerm={searchTerm}
+      setSearchTerm={setSearchTerm}
+      onSendInvitation={onSendInvitation}
+      onProceedToDecision={onProceedToDecision}
+      loading={inviteLoading || isConsolidating}
+      submittedReviews={submittedReviews}
+    />
+
+    {/* Modal de invitación externa */}
+    <ExternalReviewerInviteModal
+      isOpen={showExternalInvite}
+      onClose={() => setShowExternalInvite(false)}
+      submissionId={submission.submissionId || task.submissionId}
+      currentUser={user}
+      onSuccess={(invitationId) => {
+        console.log('Invitación externa creada:', invitationId);
+        setShowExternalInvite(false);
+        // Opcional: mostrar notificación
+        alert(isSpanish ? 'Invitación enviada exitosamente' : 'Invitation sent successfully');
+      }}
+    />
+  </>
+)}
 
           {/* PESTAÑA: DECISIÓN FINAL */}
           {activeTab === 'decision' && (

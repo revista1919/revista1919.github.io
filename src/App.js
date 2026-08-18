@@ -8,6 +8,7 @@ import {
   signOut,
 } from 'firebase/auth';
 import { useLanguage } from './hooks/useLanguage';
+import ReviewerOnboarding from './components/ReviewerOnboarding';
 import ReviewerWorkspacePage from './components/ReviewerWorkspacePage';
 import Header from './components/Header';
 import CollectionView from './components/CollectionView';      // <--- NUEVO
@@ -757,7 +758,17 @@ function App() {
                 <ReviewerWorkspacePage />
               </motion.div>
             } />
-
+<Route path="/reviewer-onboarding" element={
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    transition={{ duration: 0.3 }}
+    className="flex-grow"
+  >
+    <ReviewerOnboarding />
+  </motion.div>
+} />
             {/* <-- NUEVO: Rutas anidadas para el portal editorial */}
             <Route path="/login" element={
               <motion.div

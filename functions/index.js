@@ -10355,581 +10355,7 @@ exports.onEditorialReviewCreated = onDocumentCreated(
     }
   }
 );
-/* ===================== CONSTANTES PARA CERTIFICADOS ===================== */
-const FIRMA_BASE64 = "TU_FIRMA_EN_BASE64_AQUI"; // Constante con la firma en base64
 
-/* ===================== FUNCIÓN: COMPILAR LATEX A PDF ===================== */
-/**
- * Compila un archivo .tex a PDF usando tectonic (motor ligero de LaTeX)
- * @param {string} latexContent - Contenido LaTeX
- * @param {string} requestId - ID para logging
- * @returns {Buffer} - Buffer del PDF compilado
- */
-async function compileLatexToPDF(latexContent, requestId = 'unknown') {
-  console.log(`[${requestId}] 🔧 Compilando LaTeX a PDF...`);
-  
-  try {
-    // Cargar dependencias necesarias
-    if (!https || !http) {
-      await loadDependencies();
-    }
-    
-    // Opción 1: Usar tectonic (motor LaTeX ligero, ~30MB, sin dependencias del sistema)
-    // Descargar tectonic si no está disponible (solo una vez por instancia)
-    const tectonicVersion = '0.15.0';
-    const tectonicArch = process.platform === 'linux' ? 'x86_64-unknown-linux-musl' : 'x86_64-pc-windows-msvc';
-    const tectonicUrl = `https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%40${tectonicVersion}/tectonic-${tectonicVersion}-${tectonicArch}.tar.gz`;
-    
-    // Crear directorio temporal
-    const os = require('os');
-    const fs = require('fs');
-    const path = require('path');
-    const { execSync, spawn } = require('child_process');
-    
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'latex-'));
-    const texFile = path.join(tempDir, 'certificate.tex');
-    const pdfFile = path.join(tempDir, 'certificate.pdf');
-    
-    // Escribir archivo .tex
-    fs.writeFileSync(texFile, latexContent);
-    
-    // Intentar compilar con tectonic (si está disponible)
-    let pdfBuffer = null;
-    
-    try {
-      // Verificar si tectonic está instalado
-      execSync('which tectonic', { stdio: 'ignore' });
-      
-      // Compilar con tectonic (motor XeLaTeX compatible)
-      execSync(`tectonic -X compile ${texFile} --outdir ${tempDir}`, {
-        stdio: 'pipe',
-        timeout: 30000
-      });
-      
-      pdfBuffer = fs.readFileSync(pdfFile);
-      console.log(`[${requestId}] ✅ PDF compilado con tectonic: ${(pdfBuffer.length / 1024).toFixed(2)}KB`);
-      
-    } catch (tectonicError) {
-      console.log(`[${requestId}] ⚠️ Tectonic no disponible, intentando con latexmk/xelatex...`);
-      
-      try {
-        // Fallback: Intentar con xelatex (si está instalado)
-        execSync(`cd ${tempDir} && xelatex -interaction=nonstopmode certificate.tex`, {
-          stdio: 'pipe',
-          timeout: 30000
-        });
-        
-        pdfBuffer = fs.readFileSync(pdfFile);
-        console.log(`[${requestId}] ✅ PDF compilado con xelatex: ${(pdfBuffer.length / 1024).toFixed(2)}KB`);
-        
-      } catch (xelatexError) {
-        console.log(`[${requestId}] ⚠️ XeLaTeX no disponible, usando compilación remota...`);
-        
-        // Último recurso: Usar API de compilación LaTeX en línea
-        // (puedes usar latexonline.cc, o similar)
-        const latexApiUrl = 'https://latexonline.cc/compile';
-        
-        const formData = new FormData();
-        formData.append('file', fs.createReadStream(texFile));
-        formData.append('command', 'xelatex');
-        
-        const response = await fetch(latexApiUrl, {
-          method: 'POST',
-          body: formData,
-          agent: httpsAgent
-        });
-        
-        if (!response.ok) {
-          throw new Error(`API de compilación falló: ${response.status}`);
-        }
-        
-        pdfBuffer = Buffer.from(await response.arrayBuffer());
-        console.log(`[${requestId}] ✅ PDF compilado remotamente: ${(pdfBuffer.length / 1024).toFixed(2)}KB`);
-      }
-    }
-    
-    // Limpiar archivos temporales
-    try {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    } catch (cleanupError) {
-      console.log(`[${requestId}] ⚠️ No se pudo limpiar tempDir: ${cleanupError.message}`);
-    }
-    
-    return pdfBuffer;
-    
-  } catch (error) {
-    console.error(`[${requestId}] ❌ Error compilando LaTeX:`, error.message);
-    throw new Error(`LaTeX compilation failed: ${error.message}`);
-  }
-}
-
-/* ===================== FUNCIÓN: GENERAR CERTIFICADO LATEX ===================== */
-/**
- * Genera el contenido LaTeX del certificado según el idioma
- * @param {Object} data - Datos del certificado
- * @param {string} lang - 'es' o 'en'
- * @returns {string} - Contenido LaTeX
- */
-function generateLatexCertificate(data, lang = 'es') {
-  const isSpanish = lang === 'es';
-  
-  // Escapar caracteres especiales de LaTeX
-  const escapeLatex = (text) => {
-    if (!text) return '';
-    return String(text)
-      .replace(/\\/g, '\\textbackslash{}')
-      .replace(/[&%$#_{}]/g, (match) => '\\' + match)
-      .replace(/~|\\^/g, (match) => '\\textasciitilde{}')
-      .replace(/"/g, '\\textquotedbl{}')
-      .replace(/«/g, '\\guillemotleft{}')
-      .replace(/»/g, '\\guillemotright{}')
-      .replace(/'/g, '\\textquotesingle{}');
-  };
-  
-  // Formatear autores
-  const authorsList = data.authors
-    ?.map(a => {
-      const firstName = a.firstName || '';
-      const lastName = a.lastName || '';
-      const fullName = `${firstName} ${lastName}`.trim();
-      return fullName || a.email || 'Autor';
-    })
-    .join(', ') || 'Autores';
-  
-  // Fecha de aceptación formateada
-  const acceptanceDate = data.acceptanceDate || new Date().toISOString().split('T')[0];
-  
-  // Número de certificado
-  const certificateNumber = data.certificateNumber || 
-    `RNCE-${data.submissionId?.substring(0, 8) || 'XXXXXXXX'}-${new Date().getFullYear()}`;
-  
-  // ID del manuscrito
-  const manuscriptId = data.submissionId || 'N/A';
-  
-  // Título del artículo (escapado)
-  const articleTitle = escapeLatex(data.title || 'Sin título');
-  
-  // Autores (escapados)
-  const authors = escapeLatex(authorsList);
-  
-  // URL del logo según idioma
-  const logoUrl = isSpanish 
-    ? 'https://www.revistacienciasestudiantes.com/logo.png'
-    : 'https://www.revistacienciasestudiantes.com/logoEN.png';
-  
-  // Textos según idioma
-  const texts = isSpanish ? {
-    journalName1: 'Revista Nacional de las Ciencias',
-    journalName2: 'para Estudiantes',
-    journalNameEn: 'The National Review of Sciences for Students',
-    motto: 'Excelencia y rigor en la investigación estudiantil',
-    certificateTitle: 'CERTIFICADO DE ACEPTACIÓN',
-    introText: 'El Comité Editorial tiene el honor de certificar que el manuscrito original titulado:',
-    authoredBy: 'De autoría a cargo de:',
-    resolution: 'Ha superado exitosamente el proceso de revisión por pares doble ciego y control de calidad editorial, siendo \\textbf{ACEPTADO} para su publicación oficial. El trabajo se encuentra actualmente en fase de producción y será publicado bajo la modalidad \\textbf{\\textit{Online First}}.',
-    manuscriptIdLabel: 'ID del Manuscrito:',
-    acceptanceDateLabel: 'Fecha de Aceptación:',
-    mottoText: '«Una revista por y para estudiantes»',
-    editorName: 'Javier Vergara Ríos',
-    editorRole: 'Fundador y Editor en Jefe',
-    journalFull: 'Revista Nacional de las Ciencias para Estudiantes'
-  } : {
-    journalName1: 'National Review of Sciences',
-    journalName2: 'for Students',
-    journalNameEn: 'Revista Nacional de las Ciencias para Estudiantes',
-    motto: 'Excellence and rigor in student research',
-    certificateTitle: 'CERTIFICATE OF ACCEPTANCE',
-    introText: 'The Editorial Committee has the honor to certify that the original manuscript entitled:',
-    authoredBy: 'Authored by:',
-    resolution: 'Has successfully passed the double-blind peer review process and editorial quality control, being \\textbf{ACCEPTED} for official publication. The work is currently in production phase and will be published under the \\textbf{\\textit{Online First}} modality.',
-    manuscriptIdLabel: 'Manuscript ID:',
-    acceptanceDateLabel: 'Acceptance Date:',
-    mottoText: '"A journal by and for students"',
-    editorName: 'Javier Vergara Ríos',
-    editorRole: 'Founder and Editor-in-Chief',
-    journalFull: 'The National Review of Sciences for Students'
-  };
-  
-  // Construir el LaTeX
-  return `\\documentclass[12pt, a4paper, landscape]{article}
-
-% ==========================================
-% CONFIGURACIÓN DEL COMPILADOR Y TIPOGRAFÍA
-% ==========================================
-\\usepackage{fontspec}
-\\usepackage[${isSpanish ? 'spanish,es-lcroman' : 'english'}]{babel}
-
-\\usepackage{libertinus}
-\\setsansfont{Linux Biolinum O}
-
-% ==========================================
-% DISEÑO DE PÁGINA Y COLORES
-% ==========================================
-\\usepackage[top=2cm, bottom=2.5cm, left=2.5cm, right=2.5cm]{geometry} 
-\\usepackage{xcolor}
-\\usepackage{tikz}
-\\usetikzlibrary{calc, positioning}
-\\usepackage{graphicx}
-\\usepackage{setspace}
-
-\\definecolor{JournalBlue}{HTML}{003B5C}
-\\definecolor{JournalOrange}{HTML}{E86125}
-\\definecolor{LightGray}{HTML}{F4F5F7}
-\\definecolor{TextGray}{HTML}{64748B}
-
-\\pagestyle{empty}
-
-\\begin{document}
-
-% ==========================================
-% MARCO PERIMETRAL (TIKZ)
-% ==========================================
-\\begin{tikzpicture}[overlay,remember picture]
-    \\fill[LightGray!30] (current page.south west) rectangle (current page.north east);
-    
-    \\draw[JournalBlue, line width=4pt] 
-        ($(current page.south west) + (1.2cm, 1.2cm)$) rectangle ($(current page.north east) - (1.2cm, 1.2cm)$);
-        
-    \\draw[JournalOrange, line width=1pt] 
-        ($(current page.south west) + (1.4cm, 1.4cm)$) rectangle ($(current page.north east) - (1.4cm, 1.4cm)$);
-        
-    \\fill[JournalBlue] ($(current page.north west) + (1.2cm, -1.2cm)$) -- ($(current page.north west) + (3.5cm, -1.2cm)$) -- ($(current page.north west) + (1.2cm, -3.5cm)$) -- cycle;
-    \\fill[JournalOrange] ($(current page.north west) + (1.2cm, -1.2cm)$) -- ($(current page.north west) + (2.5cm, -1.2cm)$) -- ($(current page.north west) + (1.2cm, -2.5cm)$) -- cycle;
-
-    \\fill[JournalBlue] ($(current page.south east) + (-1.2cm, 1.2cm)$) -- ($(current page.south east) + (-3.5cm, 1.2cm)$) -- ($(current page.south east) + (-1.2cm, 3.5cm)$) -- cycle;
-    \\fill[JournalOrange] ($(current page.south east) + (-1.2cm, 1.2cm)$) -- ($(current page.south east) + (-2.5cm, 1.2cm)$) -- ($(current page.south east) + (-1.2cm, 2.5cm)$) -- cycle;
-    
-    \\node[opacity=0.03] at (current page.center) {\\includegraphics[width=12cm]{${logoUrl}}};
-\\end{tikzpicture}
-
-% ==========================================
-% CABECERA INSTITUCIONAL
-% ==========================================
-\\noindent
-\\begin{minipage}[c]{0.15\\textwidth}
-    \\centering
-    \\includegraphics[width=2.5cm]{${logoUrl}}
-\\end{minipage}%
-\\begin{minipage}[c]{0.85\\textwidth}
-    \\raggedright
-    {\\sffamily\\color{JournalBlue}\\Huge\\bfseries ${texts.journalName1}}\\\\[0.1em]
-    {\\sffamily\\color{JournalBlue}\\Large\\bfseries ${texts.journalName2}}\\\\[0.2em]
-    {\\sffamily\\color{TextGray}\\fontsize{9}{11}\\selectfont \\textit{${texts.journalNameEn}}}\\\\[0.4em]
-    {\\sffamily\\color{JournalOrange}\\large ${texts.motto}}
-\\end{minipage}
-
-\\vspace{0.5cm}
-
-% ==========================================
-% CUERPO DEL CERTIFICADO
-% ==========================================
-\\begin{center}
-    {\\sffamily\\color{JournalBlue}\\fontsize{28}{34}\\selectfont \\textbf{${texts.certificateTitle}}} \\\\[0.4cm]
-    
-    {\\large ${texts.introText}} \\\\[0.4cm]
-    
-    % TÍTULO DEL ARTÍCULO
-    \\begin{minipage}{0.95\\textwidth}
-        \\centering
-        \\setstretch{1.3}
-        {\\sffamily\\color{JournalBlue}\\Large\\bfseries «${articleTitle}»}
-    \\end{minipage}
-    
-    \\vfill
-    
-    {\\large ${texts.authoredBy}} \\\\[0.4cm]
-    
-    % AUTORES
-    \\begin{minipage}{0.95\\textwidth}
-        \\centering
-        \\setstretch{1.3}
-        {\\sffamily\\Large\\bfseries ${authors}}
-    \\end{minipage}
-    
-    \\vfill
-    
-    % RESOLUCIÓN
-    \\begin{minipage}{0.9\\textwidth}
-        \\centering
-        \\setstretch{1.2}
-        {\\large ${texts.resolution}}
-    \\end{minipage}
-\\end{center}
-
-\\vfill
-
-% ==========================================
-% PIE DE FIRMAS Y METADATOS
-% ==========================================
-\\noindent
-\\makebox[\\textwidth]{%
-    % Bloque Izquierdo: Metadatos
-    \\begin{minipage}[b]{0.3\\textwidth}
-        \\raggedright
-        \\sffamily\\small\\color{TextGray}
-        \\textbf{${texts.manuscriptIdLabel}} ${escapeLatex(manuscriptId)}\\\\[0.4em]
-        \\textbf{${texts.acceptanceDateLabel}} ${escapeLatex(acceptanceDate)}
-    \\end{minipage}%
-    \\hfill
-    % Bloque Central: Sello y Lema
-    \\begin{minipage}[b]{0.35\\textwidth}
-        \\centering
-        {\\rmfamily\\itshape\\color{JournalBlue}\\small ${texts.mottoText}} \\\\[0.4cm]
-    \\end{minipage}%
-    \\hfill
-    % Bloque Derecho: Firma e Información
-    \\begin{minipage}[b]{0.35\\textwidth}
-        \\centering
-        \\makebox[6.5cm][c]{\\smash{\\raisebox{-1.2cm}{\\includegraphics[height=2.5cm]{firma.png}}}} \\\\ 
-        \\rule{6.5cm}{1pt} \\\\[0.3cm]
-        \\sffamily\\color{JournalBlue}\\textbf{${texts.editorName}} \\\\
-        {\\footnotesize ${texts.editorRole}}\\\\
-        {\\footnotesize ${texts.journalFull}}
-    \\end{minipage}
-}
-
-\\end{document}`;
-}
-
-/* ===================== FUNCIÓN: GENERAR Y SUBIR CERTIFICADO ===================== */
-/**
- * Genera el certificado de aceptación, lo compila a PDF y lo sube a Drive
- * @param {Object} submissionData - Datos del submission con metadata final
- * @param {Object} options - Opciones adicionales
- * @returns {Object} - Información del certificado generado
- */
-async function generateAcceptanceCertificate(submissionData, options = {}) {
-  const requestId = `CERT-${submissionData.submissionId || 'unknown'}-${Date.now()}`;
-  console.log(`[${requestId}] 🏆 Generando certificado de aceptación...`);
-  
-  try {
-    const db = admin.firestore();
-    
-    // 1. Determinar idioma del certificado
-    const lang = submissionData.paperLanguage || submissionData.language || 'es';
-    const isSpanish = lang === 'es';
-    
-    console.log(`[${requestId}] 📝 Idioma del certificado: ${lang}`);
-    
-    // 2. Obtener metadatos finales consolidados
-    const finalMetadata = submissionData.currentMetadata || submissionData;
-    
-    // 3. Preparar datos para el certificado
-    const certificateData = {
-      title: finalMetadata.title || submissionData.title || 'Sin título',
-      authors: finalMetadata.authors || submissionData.authors || [],
-      submissionId: submissionData.submissionId,
-      acceptanceDate: options.acceptanceDate || 
-        (submissionData.acceptedAt?.toDate?.() || new Date()).toISOString().split('T')[0],
-      certificateNumber: `RNCE-${submissionData.submissionId?.substring(0, 8) || 'XXXXXXXX'}-${new Date().getFullYear()}`,
-      volume: submissionData.volumen || 'En prensa',
-      issue: submissionData.numero || 'En prensa',
-      pages: submissionData.primeraPagina && submissionData.ultimaPagina 
-        ? `${submissionData.primeraPagina}-${submissionData.ultimaPagina}`
-        : 'En prensa',
-      doi: submissionData.doi || null
-    };
-    
-    console.log(`[${requestId}] 📊 Datos del certificado:`, {
-      title: certificateData.title.substring(0, 50) + '...',
-      authorsCount: certificateData.authors.length,
-      certNumber: certificateData.certificateNumber
-    });
-    
-    // 4. Generar contenido LaTeX
-    const latexContent = generateLatexCertificate(certificateData, lang);
-    
-    // 5. Compilar LaTeX a PDF
-    const pdfBuffer = await compileLatexToPDF(latexContent, requestId);
-    
-    if (!pdfBuffer || pdfBuffer.length === 0) {
-      throw new Error('PDF vacío generado');
-    }
-    
-    console.log(`[${requestId}] 📄 PDF generado: ${(pdfBuffer.length / 1024).toFixed(2)}KB`);
-    
-    // 6. Inicializar Drive
-    const { drive } = await getDriveClient(requestId);
-    
-    // 7. Obtener o crear carpeta para certificados
-    const editorialFolderId = submissionData.editorialFolderId || submissionData.driveFolderId;
-    
-    if (!editorialFolderId) {
-      throw new Error('No se encontró carpeta editorial para el submission');
-    }
-    
-    // Crear subcarpeta para certificados
-    const certificateFolderName = `CERTIFICATES_${submissionData.submissionId}`;
-    let certificateFolder;
-    
-    try {
-      // Intentar buscar carpeta existente
-      const folderResponse = await drive.files.list({
-        q: `name='${certificateFolderName}' and '${editorialFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
-        fields: 'files(id, name)',
-        spaces: 'drive'
-      });
-      
-      if (folderResponse.data.files.length > 0) {
-        certificateFolder = folderResponse.data.files[0];
-        console.log(`[${requestId}] 📁 Carpeta de certificados existente: ${certificateFolder.id}`);
-      } else {
-        certificateFolder = await createDriveFolder(drive, certificateFolderName, editorialFolderId);
-        console.log(`[${requestId}] 📁 Carpeta de certificados creada: ${certificateFolder.id}`);
-      }
-    } catch (folderError) {
-      console.log(`[${requestId}] ⚠️ Error buscando carpeta, creando nueva:`, folderError.message);
-      certificateFolder = await createDriveFolder(drive, certificateFolderName, editorialFolderId);
-    }
-    
-    // 8. Subir PDF a Drive
-    const fileName = `CERTIFICATE_${submissionData.submissionId}_${Date.now()}.pdf`;
-    const pdfBase64 = pdfBuffer.toString('base64');
-    
-    const certificateFile = await uploadToDrive(
-      drive,
-      pdfBase64,
-      fileName,
-      certificateFolder.id
-    );
-    
-    console.log(`[${requestId}] ✅ Certificado subido a Drive: ${certificateFile.id}`);
-    console.log(`[${requestId}] 🔗 URL: ${certificateFile.webViewLink}`);
-    
-    // 9. Guardar referencia en Firestore
-    const certificateRef = {
-      fileId: certificateFile.id,
-      fileUrl: certificateFile.webViewLink,
-      fileName: certificateFile.name,
-      certificateNumber: certificateData.certificateNumber,
-      generatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      generatedBy: 'system',
-      language: lang,
-      acceptanceDate: certificateData.acceptanceDate
-    };
-    
-    await db.collection('submissions').doc(submissionData.submissionId).update({
-      certificate: certificateRef,
-      certificateGenerated: true
-    });
-    
-    console.log(`[${requestId}] 💾 Referencia guardada en Firestore`);
-    
-    // 10. Registrar en audit log
-    await db.collection('submissions').doc(submissionData.submissionId)
-      .collection('auditLogs').add({
-        action: 'certificate_generated',
-        certificateId: certificateFile.id,
-        certificateUrl: certificateFile.webViewLink,
-        certificateNumber: certificateData.certificateNumber,
-        language: lang,
-        timestamp: admin.firestore.FieldValue.serverTimestamp()
-      });
-    
-    // 11. Enviar email al autor con el certificado
-    try {
-      await sendCertificateEmail(
-        submissionData.authorEmail || submissionData.correspondingAuthorEmail,
-        certificateFile.webViewLink,
-        certificateData,
-        lang
-      );
-      console.log(`[${requestId}] 📧 Email enviado al autor`);
-    } catch (emailError) {
-      console.error(`[${requestId}] ⚠️ Error enviando email:`, emailError.message);
-      // No interrumpir el flujo si falla el email
-    }
-    
-    return {
-      success: true,
-      certificateId: certificateFile.id,
-      certificateUrl: certificateFile.webViewLink,
-      certificateNumber: certificateData.certificateNumber,
-      language: lang
-    };
-    
-  } catch (error) {
-    console.error(`[${requestId}] ❌ Error generando certificado:`, error.message);
-    throw error;
-  }
-}
-
-/* ===================== FUNCIÓN: ENVIAR EMAIL CON CERTIFICADO ===================== */
-/**
- * Envía email al autor con el enlace del certificado
- */
-async function sendCertificateEmail(to, certificateUrl, certificateData, lang = 'es') {
-  if (!to) {
-    console.log('⚠️ No hay email de autor para enviar certificado');
-    return;
-  }
-  
-  const isSpanish = lang === 'es';
-  
-  const emailTitle = isSpanish
-    ? `🏆 Certificado de Aceptación - ${certificateData.title.substring(0, 50)}`
-    : `🏆 Acceptance Certificate - ${certificateData.title.substring(0, 50)}`;
-  
-  const authorsList = certificateData.authors
-    ?.map(a => `${a.firstName || ''} ${a.lastName || ''}`.trim())
-    .filter(Boolean)
-    .join(', ') || 'N/A';
-  
-  const bodyContent = isSpanish
-    ? `
-      <div style="background: #f0f7ff; padding: 20px; border-left: 4px solid #003B5C; margin: 20px 0; border-radius: 4px;">
-        <h2 style="color: #003B5C; margin: 0 0 10px 0;">¡Felicidades!</h2>
-        <p style="margin: 10px 0;">Su artículo <strong>"${certificateData.title}"</strong> ha sido aceptado para su publicación en la <strong>Revista Nacional de las Ciencias para Estudiantes</strong>.</p>
-      </div>
-      
-      <div style="text-align: center; margin: 30px 0;">
-        <a href="${certificateUrl}" 
-           style="background: #003B5C; color: white; padding: 14px 30px; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold;">
-          📄 DESCARGAR CERTIFICADO
-        </a>
-      </div>
-      
-      <p><strong>Detalles del certificado:</strong></p>
-      <ul style="color: #333;">
-        <li><strong>Artículo:</strong> ${certificateData.title}</li>
-        <li><strong>Autores:</strong> ${authorsList}</li>
-        <li><strong>Fecha de aceptación:</strong> ${certificateData.acceptanceDate}</li>
-        <li><strong>Código de certificado:</strong> ${certificateData.certificateNumber}</li>
-      </ul>
-    `
-    : `
-      <div style="background: #f0f7ff; padding: 20px; border-left: 4px solid #003B5C; margin: 20px 0; border-radius: 4px;">
-        <h2 style="color: #003B5C; margin: 0 0 10px 0;">Congratulations!</h2>
-        <p style="margin: 10px 0;">Your article <strong>"${certificateData.title}"</strong> has been accepted for publication in <strong>The National Review of Sciences for Students</strong>.</p>
-      </div>
-      
-      <div style="text-align: center; margin: 30px 0;">
-        <a href="${certificateUrl}" 
-           style="background: #003B5C; color: white; padding: 14px 30px; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold;">
-          📄 DOWNLOAD CERTIFICATE
-        </a>
-      </div>
-      
-      <p><strong>Certificate details:</strong></p>
-      <ul style="color: #333;">
-        <li><strong>Article:</strong> ${certificateData.title}</li>
-        <li><strong>Authors:</strong> ${authorsList}</li>
-        <li><strong>Acceptance date:</strong> ${certificateData.acceptanceDate}</li>
-        <li><strong>Certificate code:</strong> ${certificateData.certificateNumber}</li>
-      </ul>
-    `;
-  
-  const htmlBody = getEmailTemplate(
-    emailTitle,
-    isSpanish ? 'Estimado/a autor/a:' : 'Dear Author:',
-    bodyContent,
-    isSpanish ? 'Equipo Editorial' : 'Editorial Team',
-    isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
-    lang
-  );
-  
-  await sendEmailViaExtension(to, emailTitle, htmlBody);
-}
 
 /* ===================== FUNCIÓN ACTUALIZADA: onArticleReadyForPublication ===================== */
 /**
@@ -14831,30 +14257,39 @@ async function generateAcceptanceCertificate(submissionData, options = {}) {
     
     console.log(`[${requestId}] ✅ Certificado subido a Drive: ${certificateFile.id}`);
     console.log(`[${requestId}] 🔗 URL: ${certificateFile.webViewLink}`);
-    
-    // 10. Guardar en colección pública 'certificates'
-    const publicCertificateData = {
-      fileId: certificateFile.id,
-      fileUrl: certificateFile.webViewLink,
-      fileName: certificateFile.name,
-      certificateNumber: certificateData.certificateNumber,
-      generatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      generatedBy: 'system',
-      language: lang,
-      acceptanceDate: certificateData.acceptanceDate,
-      title: certificateData.title,
-      submissionId: submissionData.submissionId,
-      authors: authors,
-      volume: certificateData.volume,
-      issue: certificateData.issue,
-      pages: certificateData.pages,
-      doi: certificateData.doi,
-      paperLanguage: lang,
-      articleType: certificateData.articleType,
-      area: certificateData.area,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
-    };
+    console.log(`[${requestId}] 🔓 Configurando permisos públicos...`);
+const publicPermissionResult = await makeFilePublic(drive, certificateFile.id);
+if (publicPermissionResult.success) {
+  console.log(`[${requestId}] ✅ Certificado configurado como público (solo lectura)`);
+} else {
+  console.warn(`[${requestId}] ⚠️ No se pudo configurar como público: ${publicPermissionResult.message}`);
+}
+   // 10. Guardar en colección pública 'certificates'
+const publicCertificateData = {
+  fileId: certificateFile.id,
+  fileUrl: certificateFile.webViewLink,
+  fileName: certificateFile.name,
+  certificateNumber: certificateData.certificateNumber,
+  generatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  generatedBy: 'system',
+  language: lang,
+  acceptanceDate: certificateData.acceptanceDate,
+  title: certificateData.title,
+  submissionId: submissionData.submissionId,
+  authors: authors,
+  volume: certificateData.volume,
+  issue: certificateData.issue,
+  pages: certificateData.pages,
+  doi: certificateData.doi,
+  paperLanguage: lang,
+  articleType: certificateData.articleType,
+  area: certificateData.area,
+  isPublic: true, // Indicar que es público
+  permissionType: 'anyone_reader', // Tipo de permiso
+  permissionsUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  updatedAt: admin.firestore.FieldValue.serverTimestamp()
+};
     
     // Verificar si ya existe un certificado con el mismo número
     const existingCertQuery = await db.collection('certificates')
@@ -14897,51 +14332,63 @@ async function generateAcceptanceCertificate(submissionData, options = {}) {
     const certificateDocId = certificateDocRef.id;
     console.log(`[${requestId}] 🔑 ID del documento para QR: ${certificateDocId}`);
     
-    // 12. REGENERAR PDF CON EL ID DEL DOCUMENTO EN EL QR
-    const pdfBufferWithDocId = await generateCertificatePDFWithDocId(
-      certificateData, 
-      lang, 
-      requestId, 
-      certificateDocId
-    );
-    
-    if (pdfBufferWithDocId && pdfBufferWithDocId.length > 0) {
-      // Subir el PDF actualizado con el ID en el QR
-      const finalFileName = `CERTIFICATE_${submissionData.submissionId}_${Date.now()}_final.pdf`;
-      const finalFile = await uploadToDrive(
-        drive,
-        pdfBufferWithDocId.toString('base64'),
-        finalFileName,
-        certificateFolder.id
-      );
-      
-      console.log(`[${requestId}] ✅ PDF final con ID en QR subido: ${finalFile.id}`);
-      
-      // Eliminar el PDF anterior (sin ID en QR)
-      try {
-        await drive.files.delete({ fileId: certificateFile.id });
-        console.log(`[${requestId}] ✓ PDF anterior eliminado`);
-      } catch (deleteError) {
-        console.log(`[${requestId}] ⚠️ No se pudo eliminar PDF anterior: ${deleteError.message}`);
-      }
-      
-      // Actualizar documento con la información final
-      await certificateDocRef.update({
-        fileId: finalFile.id,
-        fileUrl: finalFile.webViewLink,
-        fileName: finalFile.name,
-        verificationId: certificateDocId,
-        qrContainsDocId: true,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      });
-      
-      console.log(`[${requestId}] ✅ Documento actualizado con PDF final`);
-      
-      // Actualizar variable para usar en el resto del flujo
-      certificateFile.id = finalFile.id;
-      certificateFile.webViewLink = finalFile.webViewLink;
-      certificateFile.name = finalFile.name;
-    }
+// 12. REGENERAR PDF CON EL ID DEL DOCUMENTO EN EL QR
+const pdfBufferWithDocId = await generateCertificatePDFWithDocId(
+  certificateData, 
+  lang, 
+  requestId, 
+  certificateDocId
+);
+
+if (pdfBufferWithDocId && pdfBufferWithDocId.length > 0) {
+  // Subir el PDF actualizado con el ID en el QR
+  const finalFileName = `CERTIFICATE_${submissionData.submissionId}_${Date.now()}_final.pdf`;
+  const finalFile = await uploadToDrive(
+    drive,
+    pdfBufferWithDocId.toString('base64'),
+    finalFileName,
+    certificateFolder.id
+  );
+  
+  console.log(`[${requestId}] ✅ PDF final con ID en QR subido: ${finalFile.id}`);
+  
+  // HACER EL ARCHIVO FINAL PÚBLICO (SOLO LECTURA)
+  console.log(`[${requestId}] 🔓 Configurando permisos públicos del PDF final...`);
+  const finalPublicPermission = await makeFilePublic(drive, finalFile.id);
+  if (finalPublicPermission.success) {
+    console.log(`[${requestId}] ✅ PDF final configurado como público (solo lectura)`);
+  } else {
+    console.warn(`[${requestId}] ⚠️ No se pudo configurar PDF final como público: ${finalPublicPermission.message}`);
+  }
+  
+  // Eliminar el PDF anterior (sin ID en QR)
+  try {
+    await drive.files.delete({ fileId: certificateFile.id });
+    console.log(`[${requestId}] ✓ PDF anterior eliminado`);
+  } catch (deleteError) {
+    console.log(`[${requestId}] ⚠️ No se pudo eliminar PDF anterior: ${deleteError.message}`);
+  }
+  
+  // Actualizar documento con la información final
+  await certificateDocRef.update({
+    fileId: finalFile.id,
+    fileUrl: finalFile.webViewLink,
+    fileName: finalFile.name,
+    verificationId: certificateDocId,
+    qrContainsDocId: true,
+    isPublic: true, // Indicar que es público
+    permissionType: 'anyone_reader', // Tipo de permiso
+    permissionsUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+  });
+  
+  console.log(`[${requestId}] ✅ Documento actualizado con PDF final y permisos públicos`);
+  
+  // Actualizar variable para usar en el resto del flujo
+  certificateFile.id = finalFile.id;
+  certificateFile.webViewLink = finalFile.webViewLink;
+  certificateFile.name = finalFile.name;
+}
     
     // 13. Actualizar submission con referencia al certificado
     const submissionRef = db.collection('submissions').doc(submissionData.submissionId);
@@ -15000,17 +14447,33 @@ async function generateAcceptanceCertificate(submissionData, options = {}) {
     console.log(`[${requestId}] 📝 Audit log registrado`);
     
     // 17. Enviar email al autor con el certificado
-    try {
-      await sendCertificateEmail(
-        submissionData.authorEmail || submissionData.correspondingAuthorEmail,
-        certificateFile.webViewLink,
-        certificateData,
-        lang
-      );
-      console.log(`[${requestId}] 📧 Email enviado al autor`);
-    } catch (emailError) {
-      console.error(`[${requestId}] ⚠️ Error enviando email:`, emailError.message);
-    }
+   
+try {
+  // Determinar el email del autor de correspondencia
+  const authorEmail = submissionData.correspondingAuthorEmail || 
+                      submissionData.authorEmail ||
+                      (submissionData.authors?.find(a => a.isCorresponding)?.email) ||
+                      (finalMetadata.authors?.find(a => a.isCorresponding)?.email) ||
+                      null;
+  
+  if (authorEmail) {
+    await sendCertificateEmail(
+      authorEmail,
+      certificateFile.webViewLink,
+      {
+        ...certificateData,
+        authors: authors // Asegurar que los autores estén incluidos
+      },
+      lang
+    );
+    console.log(`[${requestId}] 📧 Email enviado al autor: ${authorEmail}`);
+  } else {
+    console.warn(`[${requestId}] ⚠️ No se encontró email del autor para enviar certificado`);
+  }
+} catch (emailError) {
+  console.error(`[${requestId}] ⚠️ Error enviando email:`, emailError.message);
+  // No es crítico, el certificado ya está generado
+}
     
     return {
       success: true,
@@ -15325,6 +14788,7 @@ async function generateCertificatePDFWithDocId(data, lang = 'es', requestId = 'u
 /* ===================== FUNCIÓN: ENVIAR EMAIL CON CERTIFICADO ===================== */
 /**
  * Envía email al autor con el enlace del certificado
+ * USANDO EL DISEÑO INSTITUCIONAL DE getEmailTemplate
  */
 async function sendCertificateEmail(to, certificateUrl, certificateData, lang = 'es') {
   if (!to) {
@@ -15335,66 +14799,897 @@ async function sendCertificateEmail(to, certificateUrl, certificateData, lang = 
   const isSpanish = lang === 'es';
   
   const emailTitle = isSpanish
-    ? `🏆 Certificado de Aceptación - ${certificateData.title.substring(0, 50)}`
-    : `🏆 Acceptance Certificate - ${certificateData.title.substring(0, 50)}`;
+    ? `🏆 Certificado de Aceptación - ${certificateData.title.substring(0, 50)}${certificateData.title.length > 50 ? '...' : ''}`
+    : `🏆 Acceptance Certificate - ${certificateData.title.substring(0, 50)}${certificateData.title.length > 50 ? '...' : ''}`;
   
   const authorsList = certificateData.authors
     ?.map(a => `${a.firstName || ''} ${a.lastName || ''}`.trim())
     .filter(Boolean)
     .join(', ') || 'N/A';
   
-  const bodyContent = isSpanish
+  // Formatear fecha
+  const formattedDate = certificateData.acceptanceDate
+    ? new Date(certificateData.acceptanceDate).toLocaleDateString(
+        isSpanish ? 'es-CL' : 'en-US',
+        { day: 'numeric', month: 'long', year: 'numeric' }
+      )
+    : (isSpanish ? 'No disponible' : 'Not available');
+  
+  // Detalles del artículo
+  const articleDetails = `
+    <div class="highlight-box">
+      <p class="article-title">"${sanitizeText(certificateData.title)}"</p>
+      <p><strong>${isSpanish ? 'ID del Manuscrito:' : 'Manuscript ID:'}</strong> ${certificateData.submissionId || 'N/A'}</p>
+      <p><strong>${isSpanish ? 'Autores:' : 'Authors:'}</strong> ${sanitizeText(authorsList)}</p>
+      <p><strong>${isSpanish ? 'Fecha de Aceptación:' : 'Acceptance Date:'}</strong> ${formattedDate}</p>
+      <p><strong>${isSpanish ? 'Código de Certificado:' : 'Certificate Code:'}</strong> ${certificateData.certificateNumber || 'N/A'}</p>
+    </div>
+  `;
+  
+  // Botón de descarga
+  const downloadButton = `
+    <div class="button-container">
+      <a href="${certificateUrl}" class="btn">
+        ${isSpanish ? '📄 DESCARGAR CERTIFICADO' : '📄 DOWNLOAD CERTIFICATE'}
+      </a>
+    </div>
+  `;
+  
+  // Mensaje de felicitación
+  const congratulationMessage = isSpanish
     ? `
-      <div style="background: #f0f7ff; padding: 20px; border-left: 4px solid #003B5C; margin: 20px 0; border-radius: 4px;">
-        <h2 style="color: #003B5C; margin: 0 0 10px 0;">¡Felicidades!</h2>
-        <p style="margin: 10px 0;">Su artículo <strong>"${certificateData.title}"</strong> ha sido aceptado para su publicación en la <strong>Revista Nacional de las Ciencias para Estudiantes</strong>.</p>
+      <div class="highlight-box" style="background-color: #f0fdf4; border-left-color: #16a34a;">
+        <p style="margin: 0; color: #14532d;">
+          <strong>¡Felicidades!</strong><br>
+          Su artículo ha superado exitosamente el proceso de revisión por pares doble ciego 
+          y ha sido <strong>ACEPTADO</strong> para su publicación oficial en la 
+          <strong>Revista Nacional de las Ciencias para Estudiantes</strong>.
+        </p>
       </div>
-      
-      <div style="text-align: center; margin: 30px 0;">
-        <a href="${certificateUrl}" 
-           style="background: #003B5C; color: white; padding: 14px 30px; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold;">
-          📄 DESCARGAR CERTIFICADO
-        </a>
+    `
+    : `
+      <div class="highlight-box" style="background-color: #f0fdf4; border-left-color: #16a34a;">
+        <p style="margin: 0; color: #14532d;">
+          <strong>Congratulations!</strong><br>
+          Your article has successfully passed the double-blind peer review process 
+          and has been <strong>ACCEPTED</strong> for official publication in 
+          <strong>The National Review of Sciences for Students</strong>.
+        </p>
       </div>
+    `;
+  
+  // Información adicional
+  const additionalInfo = isSpanish
+    ? `
+      <p>El certificado oficial de aceptación está disponible para su descarga inmediata a través del siguiente enlace. 
+      Este documento incluye un código QR de verificación que puede ser utilizado para autenticar la validez del certificado.</p>
       
-      <p><strong>Detalles del certificado:</strong></p>
-      <ul style="color: #333;">
-        <li><strong>Artículo:</strong> ${certificateData.title}</li>
-        <li><strong>Autores:</strong> ${authorsList}</li>
-        <li><strong>Fecha de aceptación:</strong> ${certificateData.acceptanceDate}</li>
-        <li><strong>Código de certificado:</strong> ${certificateData.certificateNumber}</li>
+      <p><strong>Información importante:</strong></p>
+      <ul style="text-align: left; margin: 20px 0; padding-left: 20px; color: #333;">
+        <li>El certificado contiene un código QR único de verificación</li>
+        <li>Puede compartir este certificado con su institución o empleador</li>
+        <li>El artículo será publicado bajo la modalidad <em>Online First</em></li>
+        <li>Se le notificará cuando el artículo esté disponible en línea</li>
       </ul>
     `
     : `
-      <div style="background: #f0f7ff; padding: 20px; border-left: 4px solid #003B5C; margin: 20px 0; border-radius: 4px;">
-        <h2 style="color: #003B5C; margin: 0 0 10px 0;">Congratulations!</h2>
-        <p style="margin: 10px 0;">Your article <strong>"${certificateData.title}"</strong> has been accepted for publication in <strong>The National Review of Sciences for Students</strong>.</p>
-      </div>
+      <p>The official acceptance certificate is available for immediate download through the link below. 
+      This document includes a verification QR code that can be used to authenticate the validity of the certificate.</p>
       
-      <div style="text-align: center; margin: 30px 0;">
-        <a href="${certificateUrl}" 
-           style="background: #003B5C; color: white; padding: 14px 30px; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold;">
-          📄 DOWNLOAD CERTIFICATE
-        </a>
-      </div>
-      
-      <p><strong>Certificate details:</strong></p>
-      <ul style="color: #333;">
-        <li><strong>Article:</strong> ${certificateData.title}</li>
-        <li><strong>Authors:</strong> ${authorsList}</li>
-        <li><strong>Acceptance date:</strong> ${certificateData.acceptanceDate}</li>
-        <li><strong>Certificate code:</strong> ${certificateData.certificateNumber}</li>
+      <p><strong>Important information:</strong></p>
+      <ul style="text-align: left; margin: 20px 0; padding-left: 20px; color: #333;">
+        <li>The certificate contains a unique verification QR code</li>
+        <li>You can share this certificate with your institution or employer</li>
+        <li>The article will be published under the <em>Online First</em> modality</li>
+        <li>You will be notified when the article is available online</li>
       </ul>
     `;
   
+  // Cuerpo completo del email
+  const emailBody = `
+    ${congratulationMessage}
+    
+    ${articleDetails}
+    
+    ${downloadButton}
+    
+    ${additionalInfo}
+  `;
+  
+  // Usar getEmailTemplate para el diseño institucional
   const htmlBody = getEmailTemplate(
     emailTitle,
     isSpanish ? 'Estimado/a autor/a:' : 'Dear Author:',
-    bodyContent,
+    emailBody,
     isSpanish ? 'Equipo Editorial' : 'Editorial Team',
     isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
     lang
   );
   
+  // Enviar email con el diseño institucional
   await sendEmailViaExtension(to, emailTitle, htmlBody);
 }
+/* ===================== FUNCIÓN: HACER ARCHIVO PÚBLICO ===================== */
+/**
+ * Configura un archivo en Drive para que sea público (solo lectura)
+ * @param {Object} drive - Cliente de Google Drive
+ * @param {string} fileId - ID del archivo
+ * @returns {Promise<Object>} - Resultado de la operación
+ */
+async function makeFilePublic(drive, fileId) {
+  try {
+    await drive.permissions.create({
+      fileId: fileId,
+      requestBody: {
+        role: 'reader',
+        type: 'anyone',
+      },
+      fields: 'id',
+    });
+    
+    console.log(`✅ Archivo ${fileId} configurado como público (solo lectura)`);
+    return { success: true, message: 'Permiso público de solo lectura otorgado' };
+  } catch (error) {
+    // Si el permiso ya existe, no es un error crítico
+    if (error.message.includes('already exists') || error.message.includes('duplicate')) {
+      console.log(`✓ El archivo ${fileId} ya tiene permiso público`);
+      return { success: true, message: 'Permiso público ya existente' };
+    }
+    
+    console.error(`❌ Error al hacer público el archivo ${fileId}:`, error.message);
+    return { success: false, message: `Error: ${error.message}` };
+  }
+}
+/* ===================== INVITAR REVISOR EXTERNO ===================== */
+exports.createExternalReviewerInvitation = onCall(async (request) => {
+  const { HttpsError } = require("firebase-functions/v2/https");
+  const functionStartTime = Date.now();
+  const requestId = `EXT-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 8)}`;
+  
+  console.log('='.repeat(60));
+  console.log(`🚀 [${requestId}] createExternalReviewerInvitation INICIO - ${new Date().toISOString()}`);
+  
+  try {
+    // --- VALIDACIÓN 1: Autenticación ---
+    if (!request.auth) {
+      console.error(`[${requestId}] ❌ Usuario no autenticado`);
+      throw new HttpsError('unauthenticated', 'Debes iniciar sesión / You must be logged in');
+    }
+    
+    const callerUid = request.auth.uid;
+    console.log(`[${requestId}] 👤 Usuario: ${callerUid}`);
+    
+    // --- VALIDACIÓN 2: Datos requeridos ---
+    const { 
+      submissionId, 
+      reviewerName, 
+      reviewerEmail, 
+      institution = '', 
+      position = '', 
+      area = '', 
+      message = '',
+      language = 'es'
+    } = request.data;
+    
+    const isSpanish = language === 'es';
+    
+    if (!submissionId || !reviewerName || !reviewerEmail) {
+      console.error(`[${requestId}] ❌ Faltan campos requeridos`);
+      throw new HttpsError(
+        'invalid-argument', 
+        isSpanish 
+          ? 'Faltan campos requeridos: submissionId, reviewerName, reviewerEmail' 
+          : 'Missing required fields: submissionId, reviewerName, reviewerEmail'
+      );
+    }
+    
+    // Validar email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(reviewerEmail)) {
+      throw new HttpsError(
+        'invalid-argument',
+        isSpanish ? 'Email inválido' : 'Invalid email'
+      );
+    }
+    
+    // Sanitizar inputs
+    const sanitizedName = reviewerName.trim().replace(/<[^>]*>/g, '');
+    const sanitizedEmail = reviewerEmail.trim().toLowerCase();
+    const sanitizedInstitution = institution.trim().replace(/<[^>]*>/g, '');
+    const sanitizedPosition = position.trim().replace(/<[^>]*>/g, '');
+    const sanitizedArea = area.trim().replace(/<[^>]*>/g, '');
+    const sanitizedMessage = message.trim().replace(/<[^>]*>/g, '');
+    
+    console.log(`[${requestId}] 📝 Datos:`, {
+      submissionId,
+      reviewerName: sanitizedName,
+      reviewerEmail: sanitizedEmail,
+      language
+    });
+    
+    // --- VALIDACIÓN 3: Permisos del editor ---
+    const db = admin.firestore();
+    const userDoc = await db.collection('users').doc(callerUid).get();
+    
+    if (!userDoc.exists) {
+      console.error(`[${requestId}] ❌ Usuario no encontrado`);
+      throw new HttpsError(
+        'not-found', 
+        isSpanish ? 'Usuario no encontrado' : 'User not found'
+      );
+    }
+    
+    const userData = userDoc.data();
+    const hasEditorPermission = ['Editor de Sección', 'Editor en Jefe', 'Director General', 'Encargado de Asignación de Artículos']
+      .some(role => (userData.roles || []).includes(role));
+    
+    if (!hasEditorPermission) {
+      console.error(`[${requestId}] ❌ Sin permisos de editor`);
+      throw new HttpsError(
+        'permission-denied', 
+        isSpanish 
+          ? 'No tienes permisos para invitar revisores' 
+          : 'You do not have permission to invite reviewers'
+      );
+    }
+    
+    // --- VALIDACIÓN 4: Verificar submission ---
+    const submissionDoc = await db.collection('submissions').doc(submissionId).get();
+    
+    if (!submissionDoc.exists) {
+      console.error(`[${requestId}] ❌ Submission no encontrado: ${submissionId}`);
+      throw new HttpsError(
+        'not-found', 
+        isSpanish ? 'Submission no encontrado' : 'Submission not found'
+      );
+    }
+    
+    const submission = submissionDoc.data();
+    console.log(`[${requestId}] 📄 Submission: "${submission.title || submissionId}"`);
+    
+    // --- VERIFICAR INVITACIONES EXISTENTES ---
+    const existingInvitations = await db.collection('reviewerInvitations')
+      .where('submissionId', '==', submissionId)
+      .where('reviewerEmail', '==', sanitizedEmail)
+      .where('status', 'in', ['pending', 'accepted'])
+      .limit(1)
+      .get();
+    
+    if (!existingInvitations.empty) {
+      const existingInv = existingInvitations.docs[0];
+      const existingStatus = existingInv.data().status;
+      console.warn(`[${requestId}] ⚠️ Ya existe invitación ${existingStatus}: ${existingInv.id}`);
+      
+      throw new HttpsError(
+        'already-exists',
+        existingStatus === 'accepted'
+          ? (isSpanish 
+              ? 'Este revisor ya aceptó revisar este artículo' 
+              : 'This reviewer has already accepted to review this article')
+          : (isSpanish 
+              ? 'Ya existe una invitación pendiente para este revisor' 
+              : 'A pending invitation already exists for this reviewer')
+      );
+    }
+    
+    // --- GENERAR TOKENS ---
+    const crypto = require('crypto');
+    const onboardingToken = crypto.randomBytes(32).toString('hex');
+    const inviteHash = crypto.randomBytes(16).toString('hex');
+    const tokenExpiryDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 días
+    
+    console.log(`[${requestId}] 🔐 Tokens generados`);
+    
+    // --- CREAR DOCUMENTO DE INVITACIÓN ---
+    const invitationRef = await db.collection('reviewerInvitations').add({
+      submissionId,
+      reviewerEmail: sanitizedEmail,
+      reviewerName: sanitizedName,
+      institution: sanitizedInstitution,
+      position: sanitizedPosition,
+      area: sanitizedArea,
+      invitedByUid: callerUid,
+      invitedByName: userData.displayName || userData.email,
+      invitedByEmail: userData.email,
+      inviteHash,
+      onboardingToken,
+      tokenExpiresAt: admin.firestore.Timestamp.fromDate(tokenExpiryDate),
+      status: 'pending',
+      type: 'external',
+      language: language || 'es',
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      prefillData: {
+        name: sanitizedName,
+        email: sanitizedEmail,
+        institution: sanitizedInstitution,
+        position: sanitizedPosition,
+        area: sanitizedArea
+      }
+    });
+    
+    console.log(`[${requestId}] ✅ Invitación creada: ${invitationRef.id}`);
+    
+    // --- CONSTRUIR LINK ---
+    const baseUrl = 'https://www.revistacienciasestudiantes.com';
+    const onboardingLink = `${baseUrl}/reviewer-onboarding?token=${onboardingToken}&lang=${language}`;
+    
+    // --- ENVIAR EMAIL ---
+    console.log(`[${requestId}] 📧 Enviando email...`);
+    
+    const emailSubject = isSpanish
+      ? '📋 Invitación a ser Revisor - Revista de Ciencias'
+      : '📋 Reviewer Invitation - Science Journal';
+    
+    const greeting = isSpanish
+      ? `Estimado/a ${sanitizedName}:`
+      : `Dear ${sanitizedName}:`;
+    
+    const intro = isSpanish
+      ? `<p>${sanitizeText(userData.displayName || userData.email)} te ha invitado a ser revisor/a para la <strong>Revista Nacional de las Ciencias para Estudiantes</strong>.</p>`
+      : `<p>${sanitizeText(userData.displayName || userData.email)} has invited you to be a reviewer for <strong>The National Review of Sciences for Students</strong>.</p>`;
+    
+    const articleInfo = `
+      <div class="highlight-box">
+        <p class="article-title">"${sanitizeText(submission.title || (isSpanish ? 'Sin título' : 'Untitled'))}"</p>
+        <p><strong>${isSpanish ? 'Área:' : 'Area:'}</strong> ${sanitizeText(submission.area || (isSpanish ? 'No especificada' : 'Not specified'))}</p>
+        ${submission.abstract ? `<p><strong>${isSpanish ? 'Resumen:' : 'Abstract:'}</strong> ${sanitizeText(submission.abstract.substring(0, 200))}${submission.abstract.length > 200 ? '...' : ''}</p>` : ''}
+      </div>
+    `;
+    
+    const customMessageSection = sanitizedMessage
+      ? `
+        <div class="highlight-box" style="background-color: #f0f7ff; border-left-color: #0A1929;">
+          <p><strong>${isSpanish ? 'Mensaje personal de' : 'Personal message from'} ${sanitizeText(userData.displayName || userData.email)}:</strong></p>
+          <p style="font-style: italic;">"${sanitizeText(sanitizedMessage)}"</p>
+        </div>
+      `
+      : '';
+    
+    const instructions = isSpanish
+      ? `
+        <p>Para comenzar, simplemente haz clic en el siguiente enlace y sigue los pasos:</p>
+        <ol style="text-align: left; margin: 20px 0; padding-left: 20px;">
+          <li><strong>Crear tu cuenta</strong> con una contraseña</li>
+          <li><strong>Configurar tu disponibilidad</strong> como revisor</li>
+          <li><strong>Acceder directamente</strong> al panel de revisión</li>
+        </ol>
+        <p>Todo el proceso toma menos de 2 minutos.</p>
+      `
+      : `
+        <p>To get started, simply click the link below and follow the steps:</p>
+        <ol style="text-align: left; margin: 20px 0; padding-left: 20px;">
+          <li><strong>Create your account</strong> with a password</li>
+          <li><strong>Set up your availability</strong> as a reviewer</li>
+          <li><strong>Access directly</strong> the review panel</li>
+        </ol>
+        <p>The entire process takes less than 2 minutes.</p>
+      `;
+    
+    const buttonText = isSpanish ? 'COMENZAR AHORA' : 'GET STARTED NOW';
+    
+    const expiryWarning = isSpanish
+      ? '<p style="font-size: 12px; color: #666;"><strong>Este enlace expira en 7 días.</strong></p>'
+      : '<p style="font-size: 12px; color: #666;"><strong>This link expires in 7 days.</strong></p>';
+    
+    const emailBody = `
+      ${intro}
+      ${articleInfo}
+      ${customMessageSection}
+      ${instructions}
+      <div class="button-container">
+        <a href="${onboardingLink}" class="btn">${buttonText}</a>
+      </div>
+      ${expiryWarning}
+    `;
+    
+    const htmlBody = getEmailTemplate(
+      emailSubject,
+      greeting,
+      emailBody,
+      isSpanish ? 'Equipo Editorial' : 'Editorial Team',
+      isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
+      language
+    );
+    
+    await sendEmailViaExtension(
+      sanitizedEmail,
+      emailSubject,
+      htmlBody
+    ).catch(emailError => {
+      console.error(`[${requestId}] ❌ Error email:`, emailError.message);
+      throw new HttpsError(
+        'internal', 
+        isSpanish 
+          ? 'Error al enviar el email de invitación' 
+          : 'Error sending invitation email'
+      );
+    });
+    
+    // --- ACTUALIZAR INVITACIÓN ---
+    await invitationRef.update({
+      onboardingLink,
+      emailSentAt: admin.firestore.FieldValue.serverTimestamp(),
+      emailSent: true
+    });
+    
+    // --- AUDIT LOG ---
+    await submissionDoc.ref.collection('auditLogs').add({
+      action: 'external_reviewer_invited',
+      by: callerUid,
+      byName: userData.displayName || userData.email,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      details: {
+        invitationId: invitationRef.id,
+        reviewerEmail: sanitizedEmail,
+        reviewerName: sanitizedName,
+        institution: sanitizedInstitution,
+        position: sanitizedPosition,
+        language
+      }
+    });
+    
+    const totalTime = Date.now() - functionStartTime;
+    console.log(`[${requestId}] ✅ Completado en ${totalTime}ms`);
+    console.log('='.repeat(60));
+    
+    return {
+      success: true,
+      invitationId: invitationRef.id,
+      onboardingLink,
+      message: isSpanish ? 'Invitación enviada exitosamente' : 'Invitation sent successfully'
+    };
+    
+  } catch (error) {
+    console.error(`[${requestId}] ❌ Error:`, error.message);
+    console.error(`[${requestId}] Stack:`, error.stack);
+    console.log('='.repeat(60));
+    
+    if (error instanceof HttpsError) {
+      throw error;
+    }
+    
+    throw new HttpsError('internal', error.message);
+  }
+});
+
+/* ===================== VERIFICAR TOKEN DE INVITACIÓN ===================== */
+exports.verifyReviewerToken = onCall(async (request) => {
+  const { HttpsError } = require("firebase-functions/v2/https");
+  
+  try {
+    const { token, language = 'es' } = request.data;
+    const isSpanish = language === 'es';
+    
+    if (!token) {
+      throw new HttpsError(
+        'invalid-argument', 
+        isSpanish ? 'Token requerido' : 'Token required'
+      );
+    }
+    
+    const db = admin.firestore();
+    
+    const invitationQuery = await db.collection('reviewerInvitations')
+      .where('onboardingToken', '==', token)
+      .limit(1)
+      .get();
+    
+    if (invitationQuery.empty) {
+      return {
+        success: false,
+        error: isSpanish ? 'Token no válido' : 'Invalid token'
+      };
+    }
+    
+    const invitationDoc = invitationQuery.docs[0];
+    const invitationData = invitationDoc.data();
+    
+    // Verificar expiración
+    if (invitationData.tokenExpiresAt) {
+      const expiryDate = invitationData.tokenExpiresAt.toDate();
+      if (expiryDate < new Date()) {
+        return {
+          success: false,
+          error: isSpanish ? 'La invitación ha expirado' : 'The invitation has expired'
+        };
+      }
+    }
+    
+    // Verificar si ya fue completado
+    if (invitationData.onboardingCompleted) {
+      return {
+        success: false,
+        error: isSpanish ? 'Invitación ya completada' : 'Invitation already completed'
+      };
+    }
+    
+    return {
+      success: true,
+      invitation: {
+        id: invitationDoc.id,
+        submissionId: invitationData.submissionId,
+        reviewerEmail: invitationData.reviewerEmail,
+        reviewerName: invitationData.reviewerName,
+        prefillData: invitationData.prefillData || {},
+        language: invitationData.language || 'es'
+      }
+    };
+    
+  } catch (error) {
+    console.error('Error verificando token:', error);
+    throw new HttpsError('internal', error.message);
+  }
+});
+
+/* ===================== COMPLETAR ONBOARDING DEL REVISOR ===================== */
+exports.completeReviewerOnboarding = onCall(async (request) => {
+  const { HttpsError } = require("firebase-functions/v2/https");
+  const functionStartTime = Date.now();
+  const requestId = `ONB-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 8)}`;
+  
+  console.log('='.repeat(60));
+  console.log(`🚀 [${requestId}] completeReviewerOnboarding INICIO - ${new Date().toISOString()}`);
+  
+  try {
+    // --- VALIDACIÓN 1: Datos requeridos ---
+    const { 
+      token, 
+      name, 
+      email, 
+      password, 
+      institution = '', 
+      position = '', 
+      area = '',
+      language = 'es'
+    } = request.data;
+    
+    const isSpanish = language === 'es';
+    
+    if (!token || !name || !email || !password) {
+      console.error(`[${requestId}] ❌ Faltan campos requeridos`);
+      throw new HttpsError(
+        'invalid-argument', 
+        isSpanish 
+          ? 'Faltan campos requeridos: token, name, email, password' 
+          : 'Missing required fields: token, name, email, password'
+      );
+    }
+    
+    if (password.length < 6) {
+      throw new HttpsError(
+        'invalid-argument', 
+        isSpanish 
+          ? 'La contraseña debe tener al menos 6 caracteres' 
+          : 'Password must be at least 6 characters'
+      );
+    }
+    
+    const sanitizedName = name.trim().replace(/<[^>]*>/g, '');
+    const sanitizedEmail = email.trim().toLowerCase();
+    
+    console.log(`[${requestId}] 📝 Datos:`, {
+      token: token.substring(0, 16) + '...',
+      name: sanitizedName,
+      email: sanitizedEmail
+    });
+    
+    const db = admin.firestore();
+    
+    // --- PASO 1: Verificar token ---
+    console.log(`[${requestId}] 🔍 Verificando token...`);
+    
+    const invitationQuery = await db.collection('reviewerInvitations')
+      .where('onboardingToken', '==', token)
+      .limit(1)
+      .get();
+    
+    if (invitationQuery.empty) {
+      console.error(`[${requestId}] ❌ Token no encontrado`);
+      throw new HttpsError(
+        'not-found', 
+        isSpanish ? 'Token de invitación no válido' : 'Invalid invitation token'
+      );
+    }
+    
+    const invitationDoc = invitationQuery.docs[0];
+    const invitationData = invitationDoc.data();
+    
+    console.log(`[${requestId}] ✅ Invitación encontrada: ${invitationDoc.id}`);
+    
+    // --- PASO 2: Verificar expiración ---
+    if (invitationData.tokenExpiresAt) {
+      const expiryDate = invitationData.tokenExpiresAt.toDate();
+      if (expiryDate < new Date()) {
+        console.error(`[${requestId}] ❌ Token expirado`);
+        throw new HttpsError(
+          'deadline-exceeded', 
+          isSpanish 
+            ? 'La invitación ha expirado. Por favor contacta al editor.' 
+            : 'The invitation has expired. Please contact the editor.'
+        );
+      }
+    }
+    
+    // --- PASO 3: Verificar email ---
+    if (invitationData.reviewerEmail !== sanitizedEmail) {
+      console.error(`[${requestId}] ❌ Email no coincide`);
+      throw new HttpsError(
+        'invalid-argument', 
+        isSpanish 
+          ? 'El email no coincide con la invitación' 
+          : 'Email does not match the invitation'
+      );
+    }
+    
+    // --- PASO 4: Verificar si ya fue completado ---
+    if (invitationData.onboardingCompleted) {
+      console.warn(`[${requestId}] ⚠️ Invitación ya completada`);
+      throw new HttpsError(
+        'already-exists', 
+        isSpanish 
+          ? 'Esta invitación ya fue completada' 
+          : 'This invitation has already been completed'
+      );
+    }
+    
+    // --- PASO 5: Crear/actualizar usuario en Auth ---
+    console.log(`[${requestId}] 👤 Creando usuario en Auth...`);
+    
+    let userRecord;
+    
+    try {
+      userRecord = await admin.auth().createUser({
+        email: sanitizedEmail,
+        password: password,
+        displayName: sanitizedName,
+        emailVerified: true
+      });
+      console.log(`[${requestId}] ✅ Usuario creado: ${userRecord.uid}`);
+    } catch (authError) {
+      if (authError.code === 'auth/email-already-exists') {
+        console.log(`[${requestId}] ℹ️ Usuario existente, actualizando...`);
+        const existingUser = await admin.auth().getUserByEmail(sanitizedEmail);
+        userRecord = existingUser;
+        
+        if (!existingUser.providerData.some(p => p.providerId !== 'password')) {
+          await admin.auth().updateUser(existingUser.uid, {
+            password: password,
+            displayName: sanitizedName,
+            emailVerified: true
+          });
+          console.log(`[${requestId}] ✅ Usuario actualizado: ${existingUser.uid}`);
+        }
+      } else {
+        throw authError;
+      }
+    }
+    
+    // --- TRANSACCIÓN EN FIRESTORE ---
+    console.log(`[${requestId}] 💾 Guardando en Firestore...`);
+    
+    let assignmentId = null;
+    
+    await db.runTransaction(async (transaction) => {
+      const userRef = db.collection('users').doc(userRecord.uid);
+      const userDoc = await transaction.get(userRef);
+      
+      const baseUserData = {
+        uid: userRecord.uid,
+        email: sanitizedEmail,
+        firstName: sanitizedName.split(' ')[0] || '',
+        lastName: sanitizedName.split(' ').slice(1).join(' ') || '',
+        displayName: sanitizedName,
+        institution: institution,
+        position: position,
+        area: area,
+        publicEmail: sanitizedEmail,
+        externalReviewer: true,
+        invitedVia: invitationDoc.id,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      };
+      
+      if (userDoc.exists) {
+        // Usuario existente
+        const existingRoles = userDoc.data().roles || [];
+        if (!existingRoles.includes('Revisor')) {
+          baseUserData.roles = [...existingRoles, 'Revisor'];
+        }
+        transaction.update(userRef, baseUserData);
+      } else {
+        // Usuario nuevo
+        baseUserData.roles = ['Revisor'];
+        baseUserData.description = { es: '', en: '' };
+        baseUserData.interests = { es: [], en: [] };
+        baseUserData.imageUrl = '';
+        baseUserData.social = {};
+        baseUserData.createdAt = admin.firestore.FieldValue.serverTimestamp();
+        transaction.set(userRef, baseUserData);
+      }
+      
+      // Actualizar invitación
+      transaction.update(invitationDoc.ref, {
+        status: 'accepted',
+        reviewerUid: userRecord.uid,
+        respondedAt: admin.firestore.FieldValue.serverTimestamp(),
+        onboardingCompleted: true,
+        onboardingCompletedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+      
+      // Crear/actualizar perfil de revisor
+      const reviewerProfileRef = db.collection('reviewerProfiles').doc(userRecord.uid);
+      transaction.set(reviewerProfileRef, {
+        uid: userRecord.uid,
+        email: sanitizedEmail,
+        name: sanitizedName,
+        institution: institution,
+        position: position,
+        area: area,
+        isExternal: true,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      
+      // Crear asignación de revisión
+      if (invitationData.submissionId) {
+        const dueDate = new Date();
+        dueDate.setDate(dueDate.getDate() + 21);
+        
+        const assignmentRef = db.collection('reviewerAssignments').doc();
+        assignmentId = assignmentRef.id;
+        
+        transaction.set(assignmentRef, {
+          submissionId: invitationData.submissionId,
+          round: invitationData.round || 1,
+          reviewerUid: userRecord.uid,
+          reviewerEmail: sanitizedEmail,
+          reviewerName: sanitizedName,
+          invitationId: invitationDoc.id,
+          status: 'assigned',
+          conflictOfInterest: invitationData.conflictOfInterest || false,
+          assignedAt: admin.firestore.FieldValue.serverTimestamp(),
+          dueDate: admin.firestore.Timestamp.fromDate(dueDate),
+          isExternal: true,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+      }
+    });
+    
+    console.log(`[${requestId}] ✅ Firestore actualizado`);
+    
+    // --- AUDIT LOG ---
+    if (invitationData.submissionId) {
+      await db.collection('submissions')
+        .doc(invitationData.submissionId)
+        .collection('auditLogs')
+        .add({
+          action: 'external_reviewer_onboarded',
+          by: userRecord.uid,
+          byName: sanitizedName,
+          timestamp: admin.firestore.FieldValue.serverTimestamp(),
+          details: {
+            invitationId: invitationDoc.id,
+            assignmentId: assignmentId,
+            reviewerEmail: sanitizedEmail,
+            reviewerName: sanitizedName
+          }
+        });
+    }
+    
+    const totalTime = Date.now() - functionStartTime;
+    console.log(`[${requestId}] ✅ Completado en ${totalTime}ms`);
+    console.log('='.repeat(60));
+    
+    return {
+      success: true,
+      uid: userRecord.uid,
+      invitationId: invitationDoc.id,
+      submissionId: invitationData.submissionId,
+      assignmentId: assignmentId,
+      message: isSpanish ? 'Cuenta creada exitosamente' : 'Account created successfully'
+    };
+    
+  } catch (error) {
+    console.error(`[${requestId}] ❌ Error:`, error.message);
+    console.error(`[${requestId}] Stack:`, error.stack);
+    console.log('='.repeat(60));
+    
+    try {
+      await admin.firestore().collection('systemErrors').add({
+        function: 'completeReviewerOnboarding',
+        error: { 
+          message: error.message, 
+          stack: error.stack,
+          code: error.code || 'UNKNOWN'
+        },
+        requestId,
+        timestamp: admin.firestore.FieldValue.serverTimestamp()
+      });
+    } catch (logError) {
+      console.error(`❌ Error al registrar error:`, logError.message);
+    }
+    
+    if (error instanceof HttpsError) {
+      throw error;
+    }
+    
+    throw new HttpsError('internal', error.message);
+  }
+});
+
+/* ===================== GUARDAR PERFIL DE REVISOR ===================== */
+exports.saveReviewerProfile = onCall(async (request) => {
+  const { HttpsError } = require("firebase-functions/v2/https");
+  
+  try {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Debes iniciar sesión / You must be logged in');
+    }
+    
+    const { token, profile, language = 'es' } = request.data;
+    const isSpanish = language === 'es';
+    
+    if (!token || !profile) {
+      throw new HttpsError(
+        'invalid-argument', 
+        isSpanish ? 'Faltan datos requeridos' : 'Missing required data'
+      );
+    }
+    
+    const db = admin.firestore();
+    
+    // Verificar token
+    const invitationQuery = await db.collection('reviewerInvitations')
+      .where('onboardingToken', '==', token)
+      .where('reviewerUid', '==', request.auth.uid)
+      .limit(1)
+      .get();
+    
+    if (invitationQuery.empty) {
+      throw new HttpsError(
+        'not-found', 
+        isSpanish ? 'Invitación no encontrada' : 'Invitation not found'
+      );
+    }
+    
+    // Actualizar perfil de revisor
+    const reviewerProfileRef = db.collection('reviewerProfiles').doc(request.auth.uid);
+    
+    await reviewerProfileRef.set({
+      uid: request.auth.uid,
+      availability: profile.availability || 'medium',
+      maxConcurrentReviews: profile.maxReviews || 2,
+      reviewedBefore: profile.reviewedBefore || false,
+      orcid: profile.orcid || '',
+      interests: profile.interests || [],
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    
+    // También actualizar en users
+    await db.collection('users').doc(request.auth.uid).update({
+      reviewerProfile: {
+        availability: profile.availability || 'medium',
+        maxConcurrentReviews: profile.maxReviews || 2,
+        reviewedBefore: profile.reviewedBefore || false,
+        orcid: profile.orcid || ''
+      },
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+    
+    return {
+      success: true,
+      message: isSpanish ? 'Perfil guardado exitosamente' : 'Profile saved successfully'
+    };
+    
+  } catch (error) {
+    console.error('Error guardando perfil:', error);
+    
+    if (error instanceof HttpsError) {
+      throw error;
+    }
+    
+    throw new HttpsError('internal', error.message);
+  }
+});
