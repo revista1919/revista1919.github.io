@@ -1572,7 +1572,6 @@ const steps = [
       const manuscriptBase64 = await toBase64(formData.manuscript);
       
       const payload = {
-        const payload = {
   title: formData.title,
   titleEn: formData.titleEn,
   abstract: formData.abstract,
