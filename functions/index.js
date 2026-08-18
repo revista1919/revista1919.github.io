@@ -29,7 +29,7 @@ if (!admin.apps.length) {
 // ==================== IMPORTACIONES DINÁMICAS ====================
 // Cargamos las dependencias pesadas de forma diferida para evitar fallos en el healthcheck
 let GoogleGenAI, Octokit, FormData, fetch, google, http, https;
-
+let docxLib = null; // ← NUEVO
 // Función para cargar dependencias bajo demanda
 // Función para cargar dependencias bajo demanda - VERSIÓN MEJORADA
 async function loadDependencies() {
@@ -43,7 +43,8 @@ async function loadDependencies() {
       import('node-fetch').then(m => m.default).catch(e => { console.error('Error cargando fetch:', e.message); return null; }),
       import('googleapis').then(m => m.google).catch(e => { console.error('Error cargando googleapis:', e.message); return null; }),
       import('http').then(m => m.default).catch(e => { console.error('Error cargando http:', e.message); return null; }),
-      import('https').then(m => m.default).catch(e => { console.error('Error cargando https:', e.message); return null; })
+           import('https').then(m => m.default).catch(e => { console.error('Error cargando https:', e.message); return null; }),
+      import('docx').then(m => m).catch(e => { console.error('Error cargando docx:', e.message); return null; })
     ]);
     
     GoogleGenAI = modules[0].status === 'fulfilled' ? modules[0].value : null;
@@ -53,15 +54,16 @@ async function loadDependencies() {
     google = modules[4].status === 'fulfilled' ? modules[4].value : null;
     http = modules[5].status === 'fulfilled' ? modules[5].value : null;
     https = modules[6].status === 'fulfilled' ? modules[6].value : null;
-    
-    console.log("📦 Estado de dependencias:", {
+    docxLib = modules[7].status === 'fulfilled' ? modules[7].value : null; // ← NUEVO
+      console.log("📦 Estado de dependencias:", {
       GoogleGenAI: !!GoogleGenAI,
       Octokit: !!Octokit,
       FormData: !!FormData,
       fetch: !!fetch,
       google: !!google,
       http: !!http,
-      https: !!https
+      https: !!https,
+      docx: !!docxLib // ← NUEVO
     });
     
     // Inicializar agentes si es posible
@@ -3091,793 +3093,334 @@ async function createDriveFolder(drive, folderName, parentId = null) {
     throw new Error(`Failed to create folder: ${error.message}`);
   }
 }
-/* ===================== PROCESAR DOCUMENTO CON GOOGLE DOCS API ===================== */
+/* ===================== NUEVO: GENERAR DOCUMENTO PREMIUM CON LIBRERÍA DOCX ===================== */
 
-/**
- * Procesa el documento Word subido:
- * 1. Lo convierte a Google Docs
- * 2. Elimina metadatos del autor
- * 3. Aplica estilos profesionales
- * 4. Añade portada institucional
- * 5. Inserta marca de agua
- */
-const { Readable } = require('stream');
-
-// ============================================================
-// CONFIGURACIÓN GLOBAL - DEFINIDA FUERA PARA ACCESO GLOBAL
-// ============================================================
-const CONFIG = {
-  COLORS: {
-    academicBlue: { red: 0.0, green: 0.15, blue: 0.35 },
-    darkCharcoal: { red: 0.08, green: 0.08, blue: 0.08 },
-    bodyGray: { red: 0.15, green: 0.15, blue: 0.15 },
-    metadataGray: { red: 0.08, green: 0.08, blue: 0.08 },
-    academicRed: { red: 0.5, green: 0.0, blue: 0.0 }
-  },
-  
-  TYPOGRAPHY: {
-    journalName: { family: 'Open Sans', weight: 600, size: 10 },
-    journalSubtitle: { family: 'Open Sans', weight: 400, size: 9 },
-    articleTitle: { family: 'Lora', weight: 700, size: 22 },
-    metadata: { family: 'Open Sans', weight: 400, size: 9 },
-    metadataLabel: { family: 'Open Sans', weight: 600, size: 9 },
-    body: { family: 'Lora', weight: 400, size: 11 },
-    confidential: { family: 'Open Sans', weight: 600, size: 8 },
-    
-    heading1: { 
-      family: 'Open Sans', 
-      weight: 700,
-      size: 15,
-      color: 'darkCharcoal',
-      alignment: 'CENTER' 
-    },
-    heading2: { 
-      family: 'Open Sans', 
-      weight: 600,
-      size: 12.5,
-      color: 'darkCharcoal',
-      alignment: 'START' 
-    },
-    heading3: { 
-      family: 'Lora',
-      weight: 700,
-      italic: true,
-      size: 11,
-      color: 'darkCharcoal',
-      alignment: 'START' 
-    },
-    blockquote: {
-      family: 'Lora',
-      weight: 400,
-      italic: true,
-      size: 10,
-      color: 'bodyGray'
-    }
-  }
+const COLORS = {
+  primary: "003B5C",
+  accent: "E86125",
+  textDark: "1F2937",
+  textMuted: "64748B",
+  border: "E2E8F0",
+  bgLight: "F8FAFC"
 };
 
-// ============================================================
-// FUNCIONES DE ESTILO PARA TÍTULOS Y BLOCKQUOTES (CORREGIDAS)
-// ============================================================
-
-// CORRECCIÓN: Ahora reciben directamente startIndex y endIndex absolutos de la API
-function createHeading1Style(startIndex, endIndex) {
-    const style = CONFIG.TYPOGRAPHY.heading1;
-    const color = CONFIG.COLORS[style.color];
-
-    return [
-        {
-            updateParagraphStyle: {
-                range: { startIndex: startIndex, endIndex: endIndex },
-                paragraphStyle: {
-                    namedStyleType: 'HEADING_1',
-                    alignment: style.alignment,
-                    spaceAbove: { magnitude: 24, unit: 'PT' }, 
-                    spaceBelow: { magnitude: 12, unit: 'PT' }
-                },
-                fields: 'namedStyleType,alignment,spaceAbove,spaceBelow' 
-            }
-        },
-        {
-            updateTextStyle: {
-                range: { startIndex: startIndex, endIndex: endIndex },
-                textStyle: {
-                    weightedFontFamily: { fontFamily: style.family, weight: style.weight },
-                    fontSize: { magnitude: style.size, unit: 'PT' },
-                    foregroundColor: { color: { rgbColor: color } }
-                },
-                fields: 'weightedFontFamily,fontSize,foregroundColor'
-            }
-        }
-    ];
-}
-
-function createHeading2Style(startIndex, endIndex) {
-    const style = CONFIG.TYPOGRAPHY.heading2;
-    const color = CONFIG.COLORS[style.color];
-
-    return [
-        {
-            updateParagraphStyle: {
-                range: { startIndex: startIndex, endIndex: endIndex },
-                paragraphStyle: {
-                    namedStyleType: 'HEADING_2',
-                    alignment: style.alignment, 
-                    spaceAbove: { magnitude: 18, unit: 'PT' }, 
-                    spaceBelow: { magnitude: 8, unit: 'PT' }
-                },
-                fields: 'namedStyleType,alignment,spaceAbove,spaceBelow' 
-            }
-        },
-        {
-            updateTextStyle: {
-                range: { startIndex: startIndex, endIndex: endIndex },
-                textStyle: {
-                    weightedFontFamily: { fontFamily: style.family, weight: style.weight },
-                    fontSize: { magnitude: style.size, unit: 'PT' },
-                    foregroundColor: { color: { rgbColor: color } }
-                },
-                fields: 'weightedFontFamily,fontSize,foregroundColor'
-            }
-        }
-    ];
-}
-
-function createHeading3Style(startIndex, endIndex) {
-    const style = CONFIG.TYPOGRAPHY.heading3;
-    const color = CONFIG.COLORS[style.color];
-
-    return [
-        {
-            updateParagraphStyle: {
-                range: { startIndex: startIndex, endIndex: endIndex },
-                paragraphStyle: {
-                    namedStyleType: 'HEADING_3',
-                    alignment: style.alignment, 
-                    spaceAbove: { magnitude: 14, unit: 'PT' }, 
-                    spaceBelow: { magnitude: 2, unit: 'PT' }
-                },
-                fields: 'namedStyleType,alignment,spaceAbove,spaceBelow' 
-            }
-        },
-        {
-            updateTextStyle: {
-                range: { startIndex: startIndex, endIndex: endIndex },
-                textStyle: {
-                    weightedFontFamily: { fontFamily: style.family, weight: style.weight },
-                    fontSize: { magnitude: style.size, unit: 'PT' },
-                    italic: style.italic,
-                    foregroundColor: { color: { rgbColor: color } }
-                },
-                fields: 'weightedFontFamily,fontSize,italic,foregroundColor'
-            }
-        }
-    ];
-}
-
-/**
- * Aplica estilo Blockquote: Bloque de cita como objeto de diseño
- */
-function createBlockquoteStyle(startIndex, endIndex) {
-    const style = CONFIG.TYPOGRAPHY.blockquote;
-    const color = CONFIG.COLORS[style.color];
-    const accentColor = CONFIG.COLORS.academicBlue;
-
-    return [
-        {
-            updateParagraphStyle: {
-                range: { startIndex: startIndex, endIndex: endIndex },
-                paragraphStyle: {
-                    indentStart: { magnitude: 36, unit: 'PT' },
-                    indentEnd: { magnitude: 36, unit: 'PT' },
-                    spaceAbove: { magnitude: 14, unit: 'PT' }, 
-                    spaceBelow: { magnitude: 14, unit: 'PT' },
-                    borderLeft: {
-                        color: { rgbColor: accentColor },
-                        width: { magnitude: 2.5 }, 
-                        padding: 12, 
-                        dashStyle: 'SOLID'
-                    },
-                    lineSpacing: 120.0,
-                    alignment: 'JUSTIFIED'
-                },
-                fields: 'indentStart,indentEnd,spaceAbove,spaceBelow,borderLeft,lineSpacing,alignment' 
-            }
-        },
-        {
-            updateTextStyle: {
-                range: { startIndex: startIndex, endIndex: endIndex },
-                textStyle: {
-                    weightedFontFamily: { fontFamily: style.family, weight: style.weight },
-                    fontSize: { magnitude: style.size, unit: 'PT' },
-                    italic: style.italic,
-                    foregroundColor: { color: { rgbColor: color } } 
-                },
-                fields: 'weightedFontFamily,fontSize,italic,foregroundColor'
-            }
-        }
-    ];
-}
-
-/**
- * Aplica estilo al cuerpo del documento (párrafos normales)
- */
-function createBodyStyle(startIndex, endIndex) {
-    const style = CONFIG.TYPOGRAPHY.body;
-    const color = CONFIG.COLORS.bodyGray;
-
-    return [
-        {
-            updateParagraphStyle: {
-                range: { startIndex: startIndex, endIndex: endIndex },
-                paragraphStyle: {
-                    namedStyleType: 'NORMAL_TEXT',
-                    alignment: 'JUSTIFIED',
-                    lineSpacing: 140.0,
-                    spaceBelow: { magnitude: 8, unit: 'PT' },
-                    indentFirstLine: { magnitude: 0, unit: 'PT' }
-                },
-                fields: 'namedStyleType,alignment,lineSpacing,spaceBelow,indentFirstLine'
-            }
-        },
-        {
-            updateTextStyle: {
-                range: { startIndex: startIndex, endIndex: endIndex },
-                textStyle: {
-                    weightedFontFamily: { fontFamily: style.family, weight: style.weight },
-                    fontSize: { magnitude: style.size, unit: 'PT' },
-                    foregroundColor: { color: { rgbColor: color } }
-                },
-                fields: 'weightedFontFamily,fontSize,foregroundColor'
-            }
-        }
-    ];
-}
-
-
-// ============================================================
-// FUNCIÓN PRINCIPAL: PROCESAR DOCUMENTO (VERSIÓN COMPLETA)
-// ============================================================
-async function processDocumentWithDocsAPI(drive, docsClient, fileId, submissionData, requestId) {
-  console.log(`[${requestId}] 📝 Iniciando procesamiento de documento con diseño completo...`);
-  
-  const result = {
-    success: true,
-    docsFileId: null,
-    docsFileUrl: null,
-    pdfFileId: null,
-    pdfFileUrl: null,
-    warnings: [],
-    errors: []
-  };
-  
+async function getLogoBuffer(language = 'es') {
   try {
-    const submissionId = submissionData?.submissionId || requestId;
-    const editorialFolderId = submissionData?.editorialFolderId || null;
-    const authors = submissionData.authors || ['Autor no especificado'];
-    const authorNames = Array.isArray(authors) ? authors.join(', ') : authors;
-    const articleTitle = submissionData.title || 'Untitled';
-    const articleType = (submissionData.articleType || 'RESEARCH ARTICLE').toUpperCase();
-    const date = new Date().toLocaleDateString('es-CL');
+    const logoUrl = language === 'es' 
+      ? 'https://www.revistacienciasestudiantes.com/logo.png'
+      : 'https://www.revistacienciasestudiantes.com/logoEN.png';
     
-    // ============================================================
-    // PASO 1: CONVERTIR WORD A GOOGLE DOCS
-    // ============================================================
-    let docsFileId = null;
-    
-    try {
-      const copyRequest = {
-        fileId: fileId,
-        requestBody: {
-          name: `PROCESSED_${submissionId}`,
-          mimeType: 'application/vnd.google-apps.document'
-        },
-        fields: 'id, webViewLink'
-      };
-      
-      if (editorialFolderId) {
-        copyRequest.requestBody.parents = [editorialFolderId];
-      }
-      
-      const docsFile = await drive.files.copy(copyRequest);
-      docsFileId = docsFile.data.id;
-      result.docsFileId = docsFileId;
-      result.docsFileUrl = docsFile.data.webViewLink;
-      
-      console.log(`[${requestId}] ✅ Google Docs creado: ${docsFileId}`);
-      
-      // Pequeña pausa para asegurar que el documento esté listo
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-    } catch (error) {
-      throw new Error(`Error creando documento: ${error.message}`);
+    if (!fetch) {
+      console.warn('Fetch no disponible para obtener logo');
+      return null;
     }
     
-    // ============================================================
-    // PASO 2: CONSTRUIR PORTADA SIMPLE Y CENTRADA
-    // ============================================================
-    const COLORS = CONFIG.COLORS;
-    const TYPO = CONFIG.TYPOGRAPHY;
-    
-    // Texto de la portada con marcadores de estilo
-    const coverText = [
-      'REVISTA NACIONAL DE LAS CIENCIAS PARA ESTUDIANTES\n',
-      'National Review of Sciences for Students\n',
-      '\n',
-      '──────────────────────────────────────────────────\n',
-      '\n',
-      articleTitle + '\n',
-      '\n',
-      `Submission ID: ${submissionId}\n`,
-      `Article Type: ${articleType}\n`,
-      `Date: ${date}\n`,
-      '\n',
-      '──────────────────────────────────────────────────\n',
-      'CONFIDENTIAL DOCUMENT // FOR EDITORIAL REVIEW ONLY\n'
-    ].join('');
-    
-    // ============================================================
-    // PASO 3: GENERAR SOLICITUDES DE FORMATO PARA LA PORTADA
-    // ============================================================
-    const requests = [];
-    
-    // Insertar texto de la portada
-    requests.push({
-      insertText: {
-        location: { index: 1 },
-        text: coverText
-      }
-    });
-    
-    // Calcular posiciones para aplicar estilos de portada
-    let currentPos = 1;
-    
-    // 1. Nombre de la revista
-    const journalText = 'REVISTA NACIONAL DE LAS CIENCIAS PARA ESTUDIANTES\n';
-    requests.push({
-      updateTextStyle: {
-        range: { startIndex: currentPos, endIndex: currentPos + journalText.length },
-        textStyle: {
-          weightedFontFamily: { fontFamily: TYPO.journalName.family, weight: TYPO.journalName.weight },
-          fontSize: { magnitude: TYPO.journalName.size, unit: 'PT' },
-          bold: true,
-          foregroundColor: { color: { rgbColor: COLORS.academicBlue } }
-        },
-        fields: 'weightedFontFamily,fontSize,bold,foregroundColor'
-      }
-    });
-    requests.push({
-      updateParagraphStyle: {
-        range: { startIndex: currentPos, endIndex: currentPos + journalText.length },
-        paragraphStyle: { alignment: 'CENTER', spaceBelow: { magnitude: 2, unit: 'PT' } },
-        fields: 'alignment,spaceBelow'
-      }
-    });
-    currentPos += journalText.length;
-    
-    // 2. Subtítulo en inglés
-    const subtitleText = 'National Review of Sciences for Students\n';
-    requests.push({
-      updateTextStyle: {
-        range: { startIndex: currentPos, endIndex: currentPos + subtitleText.length },
-        textStyle: {
-          weightedFontFamily: { fontFamily: TYPO.journalSubtitle.family, weight: TYPO.journalSubtitle.weight },
-          fontSize: { magnitude: TYPO.journalSubtitle.size, unit: 'PT' },
-          italic: true,
-          foregroundColor: { color: { rgbColor: COLORS.metadataGray } }
-        },
-        fields: 'weightedFontFamily,fontSize,italic,foregroundColor'
-      }
-    });
-    requests.push({
-      updateParagraphStyle: {
-        range: { startIndex: currentPos, endIndex: currentPos + subtitleText.length },
-        paragraphStyle: { alignment: 'CENTER', spaceBelow: { magnitude: 12, unit: 'PT' } },
-        fields: 'alignment,spaceBelow'
-      }
-    });
-    currentPos += subtitleText.length;
-    
-    // 3. Espacio
-    currentPos += '\n'.length;
-    
-    // 4. Línea decorativa superior
-    const dividerText = '──────────────────────────────────────────────────\n';
-    requests.push({
-      updateTextStyle: {
-        range: { startIndex: currentPos, endIndex: currentPos + dividerText.length },
-        textStyle: {
-          foregroundColor: { color: { rgbColor: COLORS.academicBlue } },
-          fontSize: { magnitude: 6, unit: 'PT' }
-        },
-        fields: 'foregroundColor,fontSize'
-      }
-    });
-    requests.push({
-      updateParagraphStyle: {
-        range: { startIndex: currentPos, endIndex: currentPos + dividerText.length },
-        paragraphStyle: { alignment: 'CENTER', spaceBelow: { magnitude: 18, unit: 'PT' } },
-        fields: 'alignment,spaceBelow'
-      }
-    });
-    currentPos += dividerText.length;
-    
-    // 5. Espacio
-    currentPos += '\n'.length;
-    
-    // 6. Título del artículo
-    const titleText = articleTitle + '\n';
-    requests.push({
-      updateTextStyle: {
-        range: { startIndex: currentPos, endIndex: currentPos + titleText.length },
-        textStyle: {
-          weightedFontFamily: { fontFamily: TYPO.articleTitle.family, weight: TYPO.articleTitle.weight },
-          fontSize: { magnitude: TYPO.articleTitle.size, unit: 'PT' },
-          bold: true,
-          foregroundColor: { color: { rgbColor: COLORS.darkCharcoal } }
-        },
-        fields: 'weightedFontFamily,fontSize,bold,foregroundColor'
-      }
-    });
-    requests.push({
-      updateParagraphStyle: {
-        range: { startIndex: currentPos, endIndex: currentPos + titleText.length },
-        paragraphStyle: { alignment: 'CENTER', spaceBelow: { magnitude: 24, unit: 'PT' } },
-        fields: 'alignment,spaceBelow'
-      }
-    });
-    currentPos += titleText.length;
-    
-    // 7. Espacio
-    currentPos += '\n'.length;
-    
-    // 8. Metadatos (aplicar estilo a cada línea)
-    const metadataLines = [
-      `Submission ID: ${submissionId}\n`,
-      `Article Type: ${articleType}\n`,
-      `Date: ${date}\n`
-    ];
-    
-    for (const line of metadataLines) {
-      // Buscar el punto y aparte para estilizar la etiqueta
-      const colonIndex = line.indexOf(':');
-      if (colonIndex > 0) {
-        // Estilo para la etiqueta (antes de los dos puntos)
-        requests.push({
-          updateTextStyle: {
-            range: { startIndex: currentPos, endIndex: currentPos + colonIndex + 1 },
-            textStyle: {
-              weightedFontFamily: { fontFamily: TYPO.metadataLabel.family, weight: TYPO.metadataLabel.weight },
-              fontSize: { magnitude: TYPO.metadataLabel.size, unit: 'PT' },
-              bold: true,
-              foregroundColor: { color: { rgbColor: COLORS.academicBlue } }
-            },
-            fields: 'weightedFontFamily,fontSize,bold,foregroundColor'
-          }
-        });
-        
-        // Estilo para el valor (después de los dos puntos)
-        requests.push({
-          updateTextStyle: {
-            range: { startIndex: currentPos + colonIndex + 1, endIndex: currentPos + line.length },
-            textStyle: {
-              weightedFontFamily: { fontFamily: TYPO.metadata.family, weight: TYPO.metadata.weight },
-              fontSize: { magnitude: TYPO.metadata.size, unit: 'PT' },
-              foregroundColor: { color: { rgbColor: COLORS.bodyGray } }
-            },
-            fields: 'weightedFontFamily,fontSize,foregroundColor'
-          }
-        });
-      }
-      
-      requests.push({
-        updateParagraphStyle: {
-          range: { startIndex: currentPos, endIndex: currentPos + line.length },
-          paragraphStyle: { alignment: 'CENTER', spaceBelow: { magnitude: 4, unit: 'PT' } },
-          fields: 'alignment,spaceBelow'
-        }
-      });
-      
-      currentPos += line.length;
-    }
-    
-    // 9. Espacio
-    currentPos += '\n'.length;
-    
-    // 10. Línea decorativa inferior
-    requests.push({
-      updateTextStyle: {
-        range: { startIndex: currentPos, endIndex: currentPos + dividerText.length },
-        textStyle: {
-          foregroundColor: { color: { rgbColor: COLORS.academicBlue } },
-          fontSize: { magnitude: 6, unit: 'PT' }
-        },
-        fields: 'foregroundColor,fontSize'
-      }
-    });
-    requests.push({
-      updateParagraphStyle: {
-        range: { startIndex: currentPos, endIndex: currentPos + dividerText.length },
-        paragraphStyle: { alignment: 'CENTER', spaceBelow: { magnitude: 18, unit: 'PT' } },
-        fields: 'alignment,spaceBelow'
-      }
-    });
-    currentPos += dividerText.length;
-    
-    // 11. Texto confidencial
-    const confidentialText = 'CONFIDENTIAL DOCUMENT // FOR EDITORIAL REVIEW ONLY\n';
-    requests.push({
-      updateTextStyle: {
-        range: { startIndex: currentPos, endIndex: currentPos + confidentialText.length },
-        textStyle: {
-          weightedFontFamily: { fontFamily: TYPO.confidential.family, weight: TYPO.confidential.weight },
-          fontSize: { magnitude: TYPO.confidential.size, unit: 'PT' },
-          foregroundColor: { color: { rgbColor: COLORS.academicRed } },
-          bold: true
-        },
-        fields: 'weightedFontFamily,fontSize,foregroundColor,bold'
-      }
-    });
-    requests.push({
-      updateParagraphStyle: {
-        range: { startIndex: currentPos, endIndex: currentPos + confidentialText.length },
-        paragraphStyle: { alignment: 'CENTER', spaceAbove: { magnitude: 12, unit: 'PT' } },
-        fields: 'alignment,spaceAbove'
-      }
-    });
-    currentPos += confidentialText.length;
-    
-    // 12. Insertar salto de página después de la portada
-    requests.push({
-      insertPageBreak: {
-        location: { index: currentPos }
-      }
-    });
-    
-    // ============================================================
-    // PASO 4: APLICAR ESTILOS DE PORTADA
-    // ============================================================
-    console.log(`[${requestId}] 🎨 Aplicando estilos de portada (${requests.length} solicitudes)...`);
-    
-    await docsClient.documents.batchUpdate({
-      documentId: docsFileId,
-      requestBody: { requests: requests }
-    });
-    
-    console.log(`[${requestId}] ✅ Estilos de portada aplicados`);
-    
-
-// ============================================================
-// PASO 5: ANALIZAR Y APLICAR ESTILOS AL CUERPO DEL DOCUMENTO
-// ============================================================
-try {
-  console.log(`[${requestId}] 🔍 Analizando estructura del documento...`);
-  
-  const updatedDoc = await docsClient.documents.get({
-    documentId: docsFileId
-  });
-  
-  const bodyContent = updatedDoc.data.body.content;
-  const bodyRequests = [];
-  let bodyStart = currentPos + 2; // Después del salto de página
-  
-  // Recorrer el contenido del documento para identificar títulos y blockquotes
-  let structuralElements = [];
-  
-  if (bodyContent && bodyContent.length > 0) {
-    for (let i = 0; i < bodyContent.length; i++) {
-      const element = bodyContent[i];
-      
-      // Verificar si es un párrafo
-      if (element.paragraph) {
-        const paragraph = element.paragraph;
-        const paragraphStyle = paragraph.paragraphStyle;
-        const startIdx = element.startIndex;
-        const endIdx = element.endIndex;
-        
-        // Saltar elementos de la portada (índices menores a bodyStart)
-        if (startIdx < bodyStart) continue;
-        
-        // Extraer el texto del párrafo
-        let paragraphText = '';
-        if (paragraph.elements) {
-          for (const elem of paragraph.elements) {
-            if (elem.textRun && elem.textRun.content) {
-              paragraphText += elem.textRun.content;
-            }
-          }
-        }
-        
-        // Trim para análisis (pero mantenemos el texto original con saltos de línea)
-        const trimmedText = paragraphText.trim();
-        if (trimmedText.length === 0) continue; // Saltar párrafos vacíos
-        
-        // Detectar tipo de elemento estructural
-        let elementType = 'body'; 
-        
-        // Verificar si tiene estilo de heading del documento original
-        if (paragraphStyle && paragraphStyle.namedStyleType) {
-          const styleType = paragraphStyle.namedStyleType;
-          if (styleType === 'HEADING_1' || styleType === 'HEADING_2' || styleType === 'HEADING_3') {
-            elementType = styleType.toLowerCase();
-          }
-        }
-        
-        // Detectar blockquotes: párrafos que empiezan con ">" o están entre comillas grandes
-        if (!elementType.startsWith('heading')) {
-          if (trimmedText.startsWith('>') || 
-              (trimmedText.startsWith('"') && trimmedText.endsWith('"') && trimmedText.length > 50) ||
-              (trimmedText.startsWith('«') && trimmedText.endsWith('»') && trimmedText.length > 50)) {
-            elementType = 'blockquote';
-          }
-        }
-        
-        // Almacenar el elemento estructural con sus índices absolutos nativos
-        structuralElements.push({
-          type: elementType,
-          startIndex: startIdx,
-          endIndex: endIdx, // Guardamos el fin absoluto real dado por la API
-          text: paragraphText
-        });
-      }
-    }
-  }
-  
-  console.log(`[${requestId}] 📊 Elementos estructurales encontrados: ${structuralElements.length}`);
-  
-  // Aplicar estilos según el tipo de elemento utilizando rangos absolutos precisos
-  for (const element of structuralElements) {
-    let styleRequests = [];
-    
-    // NOTA EXTRA: Asegúrate de adaptar tus funciones auxiliares para que reciban (startIndex, endIndex) directos
-    switch (element.type) {
-      case 'heading_1':
-        styleRequests = createHeading1Style(element.startIndex, element.endIndex);
-        console.log(`[${requestId}] 📌 Aplicando estilo Heading 1: "${element.text.trim().substring(0, 50)}..."`);
-        break;
-        
-      case 'heading_2':
-        styleRequests = createHeading2Style(element.startIndex, element.endIndex);
-        console.log(`[${requestId}] 📌 Aplicando estilo Heading 2: "${element.text.trim().substring(0, 50)}..."`);
-        break;
-        
-      case 'heading_3':
-        styleRequests = createHeading3Style(element.startIndex, element.endIndex);
-        console.log(`[${requestId}] 📌 Aplicando estilo Heading 3: "${element.text.trim().substring(0, 50)}..."`);
-        break;
-        
-      case 'blockquote':
-        styleRequests = createBlockquoteStyle(element.startIndex, element.endIndex);
-        console.log(`[${requestId}] 💬 Aplicando estilo Blockquote: "${element.text.trim().substring(0, 50)}..."`);
-        break;
-        
-      default:
-        styleRequests = createBodyStyle(element.startIndex, element.endIndex);
-        break;
-    }
-    
-    bodyRequests.push(...styleRequests);
-  }
-  
-  // Si no se encontraron elementos estructurales, aplicar estilo base a todo el cuerpo
-  if (structuralElements.length === 0) {
-    const docEnd = bodyContent[bodyContent.length - 1].endIndex;
-    if (bodyStart < docEnd - 1) {
-      bodyRequests.push(...createBodyStyle(bodyStart, docEnd - 1));
-      console.log(`[${requestId}] 📄 Aplicando estilo base a todo el cuerpo del documento`);
-    }
-  }
-  
-  // Aplicar todos los estilos del cuerpo
-  if (bodyRequests.length > 0) {
-    console.log(`[${requestId}] 🎨 Aplicando ${bodyRequests.length} solicitudes de estilo al cuerpo...`);
-    
-    await docsClient.documents.batchUpdate({
-      documentId: docsFileId,
-      requestBody: { requests: bodyRequests }
-    });
-    
-    console.log(`[${requestId}] ✅ Estilos del cuerpo aplicados exitosamente`);
-  } else {
-    console.log(`[${requestId}] ℹ️ No se encontraron elementos para estilizar en el cuerpo`);
-  }
-  
-} catch (bodyError) {
-  console.warn(`[${requestId}] ⚠️ Error aplicando estilos al cuerpo:`, bodyError.message);
-  result.warnings.push(`Estilos cuerpo: ${bodyError.message}`);
-  
-  // Fallback seguro: aplicar estilo base si falló el análisis estructural mapeando CONFIG correctamente
-  try {
-    const updatedDoc = await docsClient.documents.get({
-      documentId: docsFileId
-    });
-    
-    const docEnd = updatedDoc.data.body.content[updatedDoc.data.body.content.length - 1].endIndex;
-    const bodyStart = currentPos + 2;
-    
-    if (bodyStart < docEnd - 1) {
-      await docsClient.documents.batchUpdate({
-        documentId: docsFileId,
-        requestBody: {
-          requests: [
-            {
-              updateTextStyle: {
-                range: { startIndex: bodyStart, endIndex: docEnd - 1 },
-                textStyle: {
-                  weightedFontFamily: { fontFamily: CONFIG.TYPOGRAPHY.body.family, weight: CONFIG.TYPOGRAPHY.body.weight }, // CORREGIDO
-                  fontSize: { magnitude: CONFIG.TYPOGRAPHY.body.size, unit: 'PT' }, // CORREGIDO
-                  foregroundColor: { color: { rgbColor: CONFIG.COLORS.bodyGray } } // CORREGIDO
-                },
-                fields: 'weightedFontFamily,fontSize,foregroundColor'
-              }
-            },
-            {
-              updateParagraphStyle: {
-                range: { startIndex: bodyStart, endIndex: docEnd - 1 },
-                paragraphStyle: {
-                  lineSpacing: 140,
-                  spaceBelow: { magnitude: 8, unit: 'PT' },
-                  alignment: 'JUSTIFIED'
-                },
-                fields: 'lineSpacing,spaceBelow,alignment'
-              }
-            }
-          ]
-        }
-      });
-      console.log(`[${requestId}] ✅ Estilo base de respaldo aplicado al cuerpo`);
-    }
-  } catch (fallbackError) {
-    console.warn(`[${requestId}] ⚠️ Error en estilo de respaldo:`, fallbackError.message);
-  }
-}
-    // ============================================================
-    // PASO 6: EXPORTAR A PDF
-    // ============================================================
-    try {
-      console.log(`[${requestId}] 📄 Exportando a PDF...`);
-      
-      const pdfExport = await drive.files.export({
-        fileId: docsFileId,
-        mimeType: 'application/pdf'
-      }, { responseType: 'arraybuffer' });
-      
-      const pdfStream = Readable.from(Buffer.from(pdfExport.data));
-      
-      const pdfUpload = await drive.files.create({
-        requestBody: {
-          name: `FORMATTED_${submissionId}.pdf`,
-          mimeType: 'application/pdf',
-          parents: editorialFolderId ? [editorialFolderId] : undefined
-        },
-        media: {
-          mimeType: 'application/pdf',
-          body: pdfStream
-        },
-        fields: 'id, webViewLink'
-      });
-      
-      result.pdfFileId = pdfUpload.data.id;
-      result.pdfFileUrl = pdfUpload.data.webViewLink;
-      
-      console.log(`[${requestId}] ✅ PDF creado: ${result.pdfFileId}`);
-      
-    } catch (pdfError) {
-      console.warn(`[${requestId}] ⚠️ Error creando PDF:`, pdfError.message);
-      result.warnings.push(`PDF: ${pdfError.message}`);
-    }
-    
-    return result;
-    
+    const response = await fetch(logoUrl);
+    if (!response.ok) throw new Error(`Error: ${response.status}`);
+    return Buffer.from(await response.arrayBuffer());
   } catch (error) {
-    console.error(`[${requestId}] ❌ Error fatal:`, error.message);
-    result.success = false;
-    result.errors.push(error.message);
-    return result;
+    console.error('Error obteniendo logo:', error);
+    return null;
   }
 }
 
+function createMetadataTable(submissionData, docxElements) {
+  const { Table, TableRow, TableCell, Paragraph, TextRun, 
+          BorderStyle, WidthType, VerticalAlign } = docxElements;
+  
+  const borderThick = { style: BorderStyle.SINGLE, size: 12, color: COLORS.primary };
+  const borderThin = { style: BorderStyle.SINGLE, size: 4, color: COLORS.border };
+  const noBorder = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
 
+  const tableBorders = {
+    top: borderThick,
+    bottom: borderThick,
+    left: noBorder,
+    right: noBorder,
+    insideHorizontal: borderThin,
+    insideVertical: noBorder,
+  };
+
+  const createRow = (label, value, isMonospace = false) => {
+    return new TableRow({
+      children: [
+        new TableCell({
+          width: { size: 35, type: WidthType.PERCENTAGE },
+          borders: { top: noBorder, bottom: borderThin, left: noBorder, right: noBorder },
+          shading: { fill: COLORS.bgLight },
+          verticalAlign: VerticalAlign.CENTER,
+          margins: { top: 150, bottom: 150, left: 150, right: 150 },
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: label.toUpperCase(),
+                  bold: true,
+                  color: COLORS.primary,
+                  size: 18,
+                  font: "Helvetica",
+                }),
+              ],
+            }),
+          ],
+        }),
+        new TableCell({
+          width: { size: 65, type: WidthType.PERCENTAGE },
+          borders: { top: noBorder, bottom: borderThin, left: noBorder, right: noBorder },
+          verticalAlign: VerticalAlign.CENTER,
+          margins: { top: 150, bottom: 150, left: 150, right: 150 },
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: value || 'No especificado',
+                  color: COLORS.textDark,
+                  size: 20,
+                  font: isMonospace ? "Courier New" : "Georgia",
+                }),
+              ],
+            }),
+          ],
+        }),
+      ],
+    });
+  };
+
+  const formatDate = () => {
+    return new Date().toLocaleDateString('es-CL', {
+      year: 'numeric', month: 'long', day: 'numeric'
+    });
+  };
+
+  const formatKeywords = (kw) => Array.isArray(kw) ? kw.join('; ') : '';
+
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: tableBorders,
+    rows: [
+      createRow("ID del Manuscrito", submissionData.submissionId, true),
+      createRow("Fecha de Recepción", formatDate()),
+      createRow("Área Temática", submissionData.area),
+      createRow("Tipo de Artículo", (submissionData.articleType || '').toUpperCase()),
+      createRow("Idioma del Texto", submissionData.paperLanguage === 'es' ? 'Español' : 'English'),
+      createRow("Palabras Clave (ES)", formatKeywords(submissionData.keywordsEs)),
+      createRow("Keywords (EN)", formatKeywords(submissionData.keywordsEn)),
+      createRow("Códigos de Clasificación", `${submissionData.specializedCodesSerialized || ''} (${submissionData.keywordsVocabulario || 'N/A'})`),
+    ],
+  });
+}
+
+async function createPremiumDocument(submissionData, requestId) {
+  try {
+    if (!docxLib) {
+      throw new Error('docx lib no disponible');
+    }
+    
+    const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, 
+            ImageRun, AlignmentType, BorderStyle, WidthType, HeadingLevel,
+            VerticalAlign, PageBreak, PageOrientation } = docxLib;
+    
+    const docxElements = {
+      Table, TableRow, TableCell, Paragraph, TextRun,
+      BorderStyle, WidthType, VerticalAlign
+    };
+    
+    const logoBuffer = await getLogoBuffer(submissionData.paperLanguage || 'es');
+    const children = [];
+
+    // ========== PORTADA EDITORIAL ==========
+    if (logoBuffer) {
+      children.push(
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 400, after: 400 },
+          children: [
+            new ImageRun({
+              data: logoBuffer,
+              transformation: { width: 140, height: 140 },
+            }),
+          ],
+        })
+      );
+    }
+
+    children.push(
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 200 },
+        children: [
+          new TextRun({
+            text: submissionData.paperLanguage === 'es' 
+              ? "REVISTA NACIONAL DE LAS CIENCIAS PARA ESTUDIANTES"
+              : "THE NATIONAL REVIEW OF SCIENCES FOR STUDENTS",
+            bold: true,
+            color: COLORS.primary,
+            size: 24,
+            font: "Helvetica",
+          }),
+        ],
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 600 },
+        children: [
+          new TextRun({
+            text: "REPORTE OFICIAL DE METADATOS DEL MANUSCRITO",
+            color: COLORS.textMuted,
+            size: 18,
+            font: "Helvetica",
+            italics: true,
+          }),
+        ],
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 800 },
+        children: [
+          new TextRun({
+            text: "─────────",
+            color: COLORS.accent,
+            size: 24,
+          }),
+        ],
+      })
+    );
+
+    children.push(
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: submissionData.titleEn ? 200 : 800 },
+        children: [
+          new TextRun({
+            text: submissionData.title,
+            bold: true,
+            color: COLORS.primary,
+            size: 36,
+            font: "Georgia",
+          }),
+        ],
+      })
+    );
+
+    if (submissionData.titleEn) {
+      children.push(
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 800 },
+          children: [
+            new TextRun({
+              text: submissionData.titleEn,
+              italics: true,
+              color: COLORS.textMuted,
+              size: 28,
+              font: "Georgia",
+            }),
+          ],
+        })
+      );
+    }
+
+    children.push(createMetadataTable(submissionData, docxElements));
+    children.push(new Paragraph({ children: [new PageBreak()] }));
+
+    // ========== SEGUNDA PÁGINA: CUERPO ACADÉMICO ==========
+    const addAbstractSection = (title, content, keywordsLabel, keywordsArray) => {
+      if (!content) return;
+
+      children.push(
+        new Paragraph({
+          heading: HeadingLevel.HEADING_1,
+          spacing: { before: 400, after: 200 },
+          borders: {
+            bottom: { style: BorderStyle.SINGLE, size: 6, color: COLORS.primary, space: 4 }
+          },
+          children: [
+            new TextRun({
+              text: title,
+              bold: true,
+              color: COLORS.primary,
+              size: 24,
+              font: "Helvetica",
+            }),
+          ],
+        }),
+        new Paragraph({
+          alignment: AlignmentType.JUSTIFIED,
+          spacing: { after: 300, line: 360 },
+          children: [
+            new TextRun({
+              text: content,
+              color: COLORS.textDark,
+              size: 22,
+              font: "Georgia",
+            }),
+          ],
+        })
+      );
+
+      if (Array.isArray(keywordsArray) && keywordsArray.length > 0) {
+        children.push(
+          new Paragraph({
+            spacing: { after: 600 },
+            children: [
+              new TextRun({
+                text: `${keywordsLabel}: `,
+                bold: true,
+                color: COLORS.primary,
+                size: 20,
+                font: "Helvetica",
+              }),
+              new TextRun({
+                text: keywordsArray.join(" · "),
+                color: COLORS.textDark,
+                size: 20,
+                italics: true,
+                font: "Georgia",
+              }),
+            ],
+          })
+        );
+      }
+    };
+
+    addAbstractSection(
+      submissionData.paperLanguage === 'es' ? "RESUMEN" : "ABSTRACT", 
+      submissionData.abstract, 
+      "Palabras clave", 
+      submissionData.keywordsEs
+    );
+
+    addAbstractSection(
+      "ABSTRACT", 
+      submissionData.abstractEn, 
+      "Keywords", 
+      submissionData.keywordsEn
+    );
+
+    const doc = new Document({
+      styles: {
+        default: {
+          document: {
+            run: { font: "Georgia", size: 22, color: COLORS.textDark },
+          },
+        },
+      },
+      sections: [{
+        properties: {
+          page: {
+            size: { orientation: PageOrientation.PORTRAIT },
+            margin: { top: 1440, bottom: 1440, left: 1440, right: 1440 },
+          },
+        },
+        children: children,
+      }],
+    });
+
+    return await Packer.toBuffer(doc);
+  } catch (error) {
+    throw error;
+  }
+}
 // ============================================================
 // FUNCIÓN AUXILIAR: CREAR CARPETA
 // ============================================================
@@ -4736,60 +4279,187 @@ keywordsVocabulario: keywordsVocabulario || 'unknown',
         requestId
       };
 
-// PROCESAR DOCUMENTO CON GOOGLE DOCS API
-// PROCESAR DOCUMENTO CON GOOGLE DOCS API
+// ============================================================
+// NUEVO FLUJO: GENERAR DOCX PREMIUM Y SUBIR A DRIVE
+// ============================================================
 let formattedDocsFile = null;
 let formattedPdfFile = null;
 
 try {
-  console.log(`[${requestId}] 🎨 Iniciando formateo del documento...`);
+  console.log(`[${requestId}] 🎨 Generando documento premium...`);
   
-  // ✅ NUEVO: Verificar que google esté disponible antes de formatear
-  if (!google) {
-    console.log(`[${requestId}] ⏳ google no disponible para formateo, intentando cargar...`);
+  // 1. Verificar que docx esté disponible
+  if (!docxLib) {
+    console.log(`[${requestId}] ⏳ Cargando librería docx...`);
     await loadDependencies();
   }
   
-  // Si después de cargar sigue sin estar disponible, saltamos el formateo
-  if (!google) {
-    console.warn(`[${requestId}] ⚠️ Google APIs no disponibles para formateo, continuando sin formatear`);
-    throw new Error('Google APIs no disponibles');
+  if (!docxLib) {
+    throw new Error('docx lib no disponible');
   }
   
-  const formattingResult = await processDocumentWithDocsAPI(
-    drive, 
-    docs,
-    file.id, 
-    submissionData, 
-    requestId
-  );
+  // 2. Generar el buffer del documento premium
+  const premiumDocBuffer = await createPremiumDocument(submissionData, requestId);
   
-  formattedDocsFile = {
-    id: formattingResult.docsFileId,
-    url: formattingResult.docsFileUrl
-  };
+  // 3. Subir DOCX a carpeta editorial (editores)
+  if (editorialFolder) {
+    try {
+      const { Readable } = require('stream');
+      const docStream = Readable.from(premiumDocBuffer);
+      
+      const docxUpload = await drive.files.create({
+        requestBody: {
+          name: `FORMATTED_${submissionId}.docx`,
+          mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          parents: [editorialFolder.id]
+        },
+        media: {
+          mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          body: docStream
+        },
+        fields: 'id, webViewLink'
+      });
+      
+      formattedDocsFile = {
+        id: docxUpload.data.id,
+        url: docxUpload.data.webViewLink
+      };
+      
+      console.log(`[${requestId}] ✅ DOCX premium subido a carpeta editorial`);
+      
+      // 4. Convertir DOCX a Google Docs temporalmente para exportar PDF
+      try {
+        const tempDocsFile = await drive.files.copy({
+          fileId: docxUpload.data.id,
+          requestBody: {
+            name: `TEMP_${submissionId}`,
+            mimeType: 'application/vnd.google-apps.document'
+          },
+          fields: 'id'
+        });
+        
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // 5. Exportar como PDF
+        const pdfExport = await drive.files.export({
+          fileId: tempDocsFile.data.id,
+          mimeType: 'application/pdf'
+        }, { responseType: 'arraybuffer' });
+        
+        const pdfBuffer = Buffer.from(pdfExport.data);
+        const pdfStream = Readable.from(pdfBuffer);
+        
+        // 6. Subir PDF a carpeta del autor (autor ve esto)
+        const pdfUpload = await drive.files.create({
+          requestBody: {
+            name: `FORMATTED_${submissionId}.pdf`,
+            mimeType: 'application/pdf',
+            parents: [authorFolder.id]
+          },
+          media: {
+            mimeType: 'application/pdf',
+            body: pdfStream
+          },
+          fields: 'id, webViewLink'
+        });
+        
+        formattedPdfFile = {
+          id: pdfUpload.data.id,
+          url: pdfUpload.data.webViewLink
+        };
+        
+        // 7. Crear acceso directo al PDF en carpeta editorial
+        if (editorialFolder) {
+          await drive.files.create({
+            resource: {
+              name: `[PDF] FORMATTED_${submissionId}.pdf`,
+              mimeType: 'application/vnd.google-apps.shortcut',
+              parents: [editorialFolder.id],
+              shortcutDetails: {
+                targetId: pdfUpload.data.id
+              }
+            },
+            fields: 'id'
+          });
+        }
+        
+        // 8. Permisos del PDF para el autor
+        try {
+          await drive.permissions.create({
+            fileId: pdfUpload.data.id,
+            requestBody: {
+              role: 'reader',
+              type: 'user',
+              emailAddress: decodedToken.email
+            },
+            sendNotificationEmail: false
+          });
+        } catch (permErr) {
+          console.error(`⚠️ Error permiso PDF para autor:`, permErr.message);
+        }
+        
+        // 9. Permisos del PDF para editores
+        for (const email of editorEmailsForPermissions) {
+          try {
+            await drive.permissions.create({
+              fileId: pdfUpload.data.id,
+              requestBody: {
+                role: 'reader',
+                type: 'user',
+                emailAddress: email
+              },
+              sendNotificationEmail: false
+            });
+          } catch (permErr) {
+            console.error(`⚠️ Error permiso PDF para ${email}:`, permErr.message);
+          }
+        }
+        
+        // 10. Eliminar temporal
+        try {
+          await drive.files.delete({
+            fileId: tempDocsFile.data.id
+          });
+        } catch (deleteErr) {
+          console.warn(`⚠️ No se pudo eliminar temporal:`, deleteErr.message);
+        }
+        
+        console.log(`[${requestId}] ✅ PDF comprimido generado y subido`);
+        
+      } catch (pdfError) {
+        console.warn(`[${requestId}] ⚠️ Error generando PDF:`, pdfError.message);
+      }
+      
+      // 11. Permisos del DOCX para editores
+      for (const email of editorEmailsForPermissions) {
+        try {
+          await drive.permissions.create({
+            fileId: docxUpload.data.id,
+            requestBody: {
+              role: 'writer',
+              type: 'user',
+              emailAddress: email
+            },
+            sendNotificationEmail: false
+          });
+        } catch (permErr) {
+          console.error(`⚠️ Error permiso DOCX para ${email}:`, permErr.message);
+        }
+      }
+      
+    } catch (uploadError) {
+      console.error(`[${requestId}] ⚠️ Error subiendo documento premium:`, uploadError.message);
+    }
+  }
   
-  formattedPdfFile = formattingResult.pdfFileUrl ? {
-    id: formattingResult.pdfFileId,
-    url: formattingResult.pdfFileUrl
-  } : null;
-  
-  console.log(`[${requestId}] ✅ Documento formateado exitosamente`);
 } catch (formatError) {
-  console.error(`[${requestId}] ⚠️ Error en formateo (no crítico):`, formatError.message);
-  // No es crítico, continuamos con el flujo normal
+  console.error(`[${requestId}] ⚠️ Error generando documento premium (no crítico):`, formatError.message);
 }
 
 // Agregar al submissionData los archivos formateados
 submissionData.formattedDocsFile = formattedDocsFile;
 submissionData.formattedPdfFile = formattedPdfFile;
 submissionData.documentStatus = formattedDocsFile ? 'processed' : 'submitted';
-
-// Agregar al submissionData los archivos formateados
-submissionData.formattedDocsFile = formattedDocsFile;
-submissionData.formattedPdfFile = formattedPdfFile;
-submissionData.documentStatus = 'processed'; // o 'processing' si falló
-
 
       // --- TRANSACCIÓN EN FIRESTORE ---
       await db.runTransaction(async (transaction) => {
@@ -4927,7 +4597,7 @@ const keywordsInfo = `
             ${ethicsInfo}
             ${aiInfo}
             ${availabilityInfo}
-            ${keywordsInfoAuthor}
+            ${keywordsInfo}
             <p><strong>Autores (${processedAuthors.length}):</strong><br>${authorsList}</p>
           </div>
           
@@ -4982,16 +4652,7 @@ const keywordsInfo = `
                We have received the consent documents. They will be reviewed during the editorial process.
              </p>`;
       }
-// Información de palabras clave para correo de autor
-const keywordsEsListAuthor = Array.isArray(keywordsEs) ? keywordsEs.join('; ') : '';
-const keywordsEnListAuthor = Array.isArray(keywordsEn) ? keywordsEn.join('; ') : '';
-const codesListAuthor = Array.isArray(specializedCodes) ? specializedCodes.join('; ') : '';
 
-const keywordsInfoAuthor = `
-    <p><strong>🏷️ Palabras clave (ES):</strong> ${keywordsEsListAuthor}</p>
-    <p><strong>🏷️ Keywords (EN):</strong> ${keywordsEnListAuthor}</p>
-    <p><strong>🔢 Códigos especializados (${keywordsVocabulario || 'Vocabulario'}):</strong> ${codesListAuthor}</p>
-`;
       // NUEVO: Información de disponibilidad para el autor
       const availabilityMessage = paperLanguage === 'es'
         ? `
@@ -14108,21 +13769,24 @@ async function initializeReviewerWelcome(userId, reviewerData) {
     return false;
   }
 }
-/* ===================== FUNCIÓN: GENERAR CERTIFICADO CON PDFKIT ===================== */
+/* ===================== FUNCIÓN: GENERAR CERTIFICADO CON PDFKIT (OPTIMIZADA) ===================== */
 /**
  * Genera el certificado de aceptación usando PDFKit
+ * FLUJO OPTIMIZADO: Crea documento Firestore primero, genera PDF una sola vez con QR
  * @param {Object} submissionData - Datos del submission con metadata final
  * @param {Object} options - Opciones adicionales
  * @returns {Object} - Información del certificado generado
  */
 async function generateAcceptanceCertificate(submissionData, options = {}) {
   const requestId = `CERT-${submissionData.submissionId || 'unknown'}-${Date.now()}`;
-  console.log(`[${requestId}] 🏆 Generando certificado de aceptación...`);
+  console.log(`[${requestId}] 🏆 Generando certificado de aceptación (FLUJO OPTIMIZADO)...`);
   
   try {
     const db = admin.firestore();
     
+    // ==========================================
     // 1. Determinar idioma del certificado
+    // ==========================================
     const lang = submissionData.paperLanguage || 
                  submissionData.currentMetadata?.paperLanguage ||
                  submissionData.currentMetadata?.language ||
@@ -14132,10 +13796,14 @@ async function generateAcceptanceCertificate(submissionData, options = {}) {
     
     console.log(`[${requestId}] 📝 Idioma del certificado: ${lang}`);
     
+    // ==========================================
     // 2. Obtener metadatos finales consolidados
+    // ==========================================
     const finalMetadata = submissionData.currentMetadata || submissionData;
     
-    // 3. Determinar fecha de aceptación con múltiples fuentes
+    // ==========================================
+    // 3. Determinar fecha de aceptación
+    // ==========================================
     function getAcceptanceDate() {
       if (options.acceptanceDate) return options.acceptanceDate;
       
@@ -14166,7 +13834,9 @@ async function generateAcceptanceCertificate(submissionData, options = {}) {
     const acceptanceDate = getAcceptanceDate();
     console.log(`[${requestId}] 📅 Fecha de aceptación: ${acceptanceDate}`);
     
+    // ==========================================
     // 4. Preparar autores formateados
+    // ==========================================
     const authors = (finalMetadata.authors || submissionData.authors || []).map(a => ({
       firstName: a.firstName || '',
       lastName: a.lastName || '',
@@ -14177,7 +13847,9 @@ async function generateAcceptanceCertificate(submissionData, options = {}) {
       isCorresponding: a.isCorresponding || false
     }));
     
+    // ==========================================
     // 5. Preparar datos para el certificado
+    // ==========================================
     const certificateData = {
       title: finalMetadata.title || submissionData.title || 'Sin título',
       authors: authors,
@@ -14202,26 +13874,111 @@ async function generateAcceptanceCertificate(submissionData, options = {}) {
       certNumber: certificateData.certificateNumber
     });
     
-    // 6. Generar PDF con PDFKit (sin el certificateDocId aún, lo generamos después)
-    const pdfBuffer = await generateCertificatePDF(certificateData, lang, requestId);
+    // ==========================================
+    // 6. CREAR DOCUMENTO EN FIRESTORE PRIMERO
+    // ==========================================
+    console.log(`[${requestId}] 📝 Creando documento en Firestore para obtener ID...`);
+    
+    // Verificar si ya existe un certificado con el mismo número
+    const existingCertQuery = await db.collection('certificates')
+      .where('certificateNumber', '==', certificateData.certificateNumber)
+      .limit(1)
+      .get();
+    
+    let certificateDocRef;
+    let oldFileId = null;
+    
+    if (!existingCertQuery.empty) {
+      // Actualizar certificado existente
+      certificateDocRef = existingCertQuery.docs[0].ref;
+      oldFileId = existingCertQuery.docs[0].data().fileId || null;
+      
+      console.log(`[${requestId}] 🔄 Certificado existente encontrado: ${certificateDocRef.id}`);
+      
+      // Actualizar con datos preliminares
+      await certificateDocRef.update({
+        title: certificateData.title,
+        authors: authors,
+        acceptanceDate: certificateData.acceptanceDate,
+        status: 'regenerating',
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+    } else {
+      // Crear nuevo documento con datos preliminares
+      certificateDocRef = await db.collection('certificates').add({
+        certificateNumber: certificateData.certificateNumber,
+        submissionId: submissionData.submissionId,
+        title: certificateData.title,
+        authors: authors,
+        acceptanceDate: certificateData.acceptanceDate,
+        language: lang,
+        status: 'generating',
+        generatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        generatedBy: 'system',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+      
+      console.log(`[${requestId}] ✅ Documento creado con ID: ${certificateDocRef.id}`);
+    }
+    
+    // OBTENER EL ID DEL DOCUMENTO PARA EL QR
+    const certificateDocId = certificateDocRef.id;
+    console.log(`[${requestId}] 🔑 ID del documento para QR: ${certificateDocId}`);
+    
+    // ==========================================
+    // 7. GENERAR PDF UNA SOLA VEZ CON QR Y COMPRESIÓN
+    // ==========================================
+    console.log(`[${requestId}] 📄 Generando PDF único con QR y compresión...`);
+    
+    const pdfBuffer = await generateCertificatePDFWithDocId(
+      certificateData, 
+      lang, 
+      requestId, 
+      certificateDocId,
+      {
+        compress: true,
+        compressionLevel: options.compressionLevel || 7
+      }
+    );
     
     if (!pdfBuffer || pdfBuffer.length === 0) {
       throw new Error('PDF vacío generado');
     }
     
-    console.log(`[${requestId}] 📄 PDF generado: ${(pdfBuffer.length / 1024).toFixed(2)}KB`);
+    const initialSizeKB = (pdfBuffer.length / 1024).toFixed(2);
+    console.log(`[${requestId}] 📄 PDF generado: ${initialSizeKB}KB`);
     
-    // 7. Inicializar Drive
+    // ==========================================
+    // 8. COMPRIMIR PDF ADICIONALMENTE SI ES NECESARIO
+    // ==========================================
+    let finalPdfBuffer = pdfBuffer;
+    
+    if (options.enableExtraCompression !== false) {
+      finalPdfBuffer = await compressPDFBuffer(pdfBuffer, requestId, {
+        compressionLevel: options.compressionLevel || 7,
+        minSizeToCompress: options.minSizeToCompress || 500 * 1024 // 500KB
+      });
+    }
+    
+    const finalSizeKB = (finalPdfBuffer.length / 1024).toFixed(2);
+    console.log(`[${requestId}] 📊 Tamaño final del PDF: ${finalSizeKB}KB`);
+    
+    // ==========================================
+    // 9. Inicializar Drive USANDO TU FUNCIÓN EXISTENTE
+    // ==========================================
     const { drive } = await getDriveClient(requestId);
     
-    // 8. Obtener o crear carpeta para certificados
+    // ==========================================
+    // 10. Obtener o crear carpeta para certificados
+    // ==========================================
     const editorialFolderId = submissionData.editorialFolderId || submissionData.driveFolderId;
     
     if (!editorialFolderId) {
       throw new Error('No se encontró carpeta editorial para el submission');
     }
     
-    // Crear subcarpeta para certificados
+    // Crear subcarpeta para certificados usando TU FUNCIÓN EXISTENTE
     const certificateFolderName = `CERTIFICATES_${submissionData.submissionId}`;
     let certificateFolder;
     
@@ -14244,9 +14001,11 @@ async function generateAcceptanceCertificate(submissionData, options = {}) {
       certificateFolder = await createDriveFolder(drive, certificateFolderName, editorialFolderId);
     }
     
-    // 9. Subir PDF a Drive
-    const fileName = `CERTIFICATE_${submissionData.submissionId}_${Date.now()}.pdf`;
-    const pdfBase64 = pdfBuffer.toString('base64');
+    // ==========================================
+    // 11. Subir PDF a Drive (UNA SOLA VEZ)
+    // ==========================================
+    const fileName = `CERTIFICATE_${submissionData.submissionId}_${certificateDocId.substring(0, 8)}.pdf`;
+    const pdfBase64 = finalPdfBuffer.toString('base64');
     
     const certificateFile = await uploadToDrive(
       drive,
@@ -14258,139 +14017,63 @@ async function generateAcceptanceCertificate(submissionData, options = {}) {
     console.log(`[${requestId}] ✅ Certificado subido a Drive: ${certificateFile.id}`);
     console.log(`[${requestId}] 🔗 URL: ${certificateFile.webViewLink}`);
     console.log(`[${requestId}] 🔓 Configurando permisos públicos...`);
-const publicPermissionResult = await makeFilePublic(drive, certificateFile.id);
-if (publicPermissionResult.success) {
-  console.log(`[${requestId}] ✅ Certificado configurado como público (solo lectura)`);
-} else {
-  console.warn(`[${requestId}] ⚠️ No se pudo configurar como público: ${publicPermissionResult.message}`);
-}
-   // 10. Guardar en colección pública 'certificates'
-const publicCertificateData = {
-  fileId: certificateFile.id,
-  fileUrl: certificateFile.webViewLink,
-  fileName: certificateFile.name,
-  certificateNumber: certificateData.certificateNumber,
-  generatedAt: admin.firestore.FieldValue.serverTimestamp(),
-  generatedBy: 'system',
-  language: lang,
-  acceptanceDate: certificateData.acceptanceDate,
-  title: certificateData.title,
-  submissionId: submissionData.submissionId,
-  authors: authors,
-  volume: certificateData.volume,
-  issue: certificateData.issue,
-  pages: certificateData.pages,
-  doi: certificateData.doi,
-  paperLanguage: lang,
-  articleType: certificateData.articleType,
-  area: certificateData.area,
-  isPublic: true, // Indicar que es público
-  permissionType: 'anyone_reader', // Tipo de permiso
-  permissionsUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
-  createdAt: admin.firestore.FieldValue.serverTimestamp(),
-  updatedAt: admin.firestore.FieldValue.serverTimestamp()
-};
     
-    // Verificar si ya existe un certificado con el mismo número
-    const existingCertQuery = await db.collection('certificates')
-      .where('certificateNumber', '==', certificateData.certificateNumber)
-      .limit(1)
-      .get();
-    
-    let certificateDocRef;
-    
-    if (!existingCertQuery.empty) {
-      // Actualizar certificado existente
-      certificateDocRef = existingCertQuery.docs[0].ref;
-      
-      // Eliminar archivo anterior de Drive
-      const oldFileId = existingCertQuery.docs[0].data().fileId;
-      if (oldFileId && oldFileId !== certificateFile.id) {
-        try {
-          await drive.files.delete({ fileId: oldFileId });
-          console.log(`[${requestId}] ✓ Archivo anterior eliminado de Drive: ${oldFileId}`);
-        } catch (deleteError) {
-          console.log(`[${requestId}] ⚠️ No se pudo eliminar archivo anterior: ${deleteError.message}`);
-        }
-      }
-      
-      await certificateDocRef.update({
-        ...publicCertificateData,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        regeneratedAt: admin.firestore.FieldValue.serverTimestamp(),
-        previousFileId: oldFileId || null
-      });
-      
-      console.log(`[${requestId}] 🔄 Certificado existente actualizado: ${certificateDocRef.id}`);
+    const publicPermissionResult = await makeFilePublic(drive, certificateFile.id);
+    if (publicPermissionResult.success) {
+      console.log(`[${requestId}] ✅ Certificado configurado como público (solo lectura)`);
     } else {
-      // Crear nuevo certificado
-      certificateDocRef = await db.collection('certificates').add(publicCertificateData);
-      console.log(`[${requestId}] ✅ Certificado guardado en colección pública: ${certificateDocRef.id}`);
+      console.warn(`[${requestId}] ⚠️ No se pudo configurar como público: ${publicPermissionResult.message}`);
     }
     
-    // 11. OBTENER EL ID DEL DOCUMENTO PARA EL QR
-    const certificateDocId = certificateDocRef.id;
-    console.log(`[${requestId}] 🔑 ID del documento para QR: ${certificateDocId}`);
+    // ==========================================
+    // 12. Actualizar documento en Firestore con info final
+    // ==========================================
+    const publicCertificateData = {
+      fileId: certificateFile.id,
+      fileUrl: certificateFile.webViewLink,
+      fileName: certificateFile.name,
+      certificateNumber: certificateData.certificateNumber,
+      verificationId: certificateDocId,
+      qrContainsDocId: true,
+      status: 'generated',
+      language: lang,
+      acceptanceDate: certificateData.acceptanceDate,
+      title: certificateData.title,
+      submissionId: submissionData.submissionId,
+      authors: authors,
+      volume: certificateData.volume,
+      issue: certificateData.issue,
+      pages: certificateData.pages,
+      doi: certificateData.doi,
+      paperLanguage: lang,
+      articleType: certificateData.articleType,
+      area: certificateData.area,
+      isPublic: true,
+      permissionType: 'anyone_reader',
+      permissionsUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      pdfSizeKB: parseFloat(finalSizeKB),
+      compressionApplied: finalPdfBuffer !== pdfBuffer,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    };
     
-// 12. REGENERAR PDF CON EL ID DEL DOCUMENTO EN EL QR
-const pdfBufferWithDocId = await generateCertificatePDFWithDocId(
-  certificateData, 
-  lang, 
-  requestId, 
-  certificateDocId
-);
-
-if (pdfBufferWithDocId && pdfBufferWithDocId.length > 0) {
-  // Subir el PDF actualizado con el ID en el QR
-  const finalFileName = `CERTIFICATE_${submissionData.submissionId}_${Date.now()}_final.pdf`;
-  const finalFile = await uploadToDrive(
-    drive,
-    pdfBufferWithDocId.toString('base64'),
-    finalFileName,
-    certificateFolder.id
-  );
-  
-  console.log(`[${requestId}] ✅ PDF final con ID en QR subido: ${finalFile.id}`);
-  
-  // HACER EL ARCHIVO FINAL PÚBLICO (SOLO LECTURA)
-  console.log(`[${requestId}] 🔓 Configurando permisos públicos del PDF final...`);
-  const finalPublicPermission = await makeFilePublic(drive, finalFile.id);
-  if (finalPublicPermission.success) {
-    console.log(`[${requestId}] ✅ PDF final configurado como público (solo lectura)`);
-  } else {
-    console.warn(`[${requestId}] ⚠️ No se pudo configurar PDF final como público: ${finalPublicPermission.message}`);
-  }
-  
-  // Eliminar el PDF anterior (sin ID en QR)
-  try {
-    await drive.files.delete({ fileId: certificateFile.id });
-    console.log(`[${requestId}] ✓ PDF anterior eliminado`);
-  } catch (deleteError) {
-    console.log(`[${requestId}] ⚠️ No se pudo eliminar PDF anterior: ${deleteError.message}`);
-  }
-  
-  // Actualizar documento con la información final
-  await certificateDocRef.update({
-    fileId: finalFile.id,
-    fileUrl: finalFile.webViewLink,
-    fileName: finalFile.name,
-    verificationId: certificateDocId,
-    qrContainsDocId: true,
-    isPublic: true, // Indicar que es público
-    permissionType: 'anyone_reader', // Tipo de permiso
-    permissionsUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    updatedAt: admin.firestore.FieldValue.serverTimestamp()
-  });
-  
-  console.log(`[${requestId}] ✅ Documento actualizado con PDF final y permisos públicos`);
-  
-  // Actualizar variable para usar en el resto del flujo
-  certificateFile.id = finalFile.id;
-  certificateFile.webViewLink = finalFile.webViewLink;
-  certificateFile.name = finalFile.name;
-}
+    await certificateDocRef.update(publicCertificateData);
+    console.log(`[${requestId}] 💾 Documento Firestore actualizado con información final`);
     
-    // 13. Actualizar submission con referencia al certificado
+    // ==========================================
+    // 13. Eliminar archivo anterior si existe
+    // ==========================================
+    if (oldFileId && oldFileId !== certificateFile.id) {
+      try {
+        await drive.files.delete({ fileId: oldFileId });
+        console.log(`[${requestId}] ✓ Archivo anterior eliminado de Drive: ${oldFileId}`);
+      } catch (deleteError) {
+        console.log(`[${requestId}] ⚠️ No se pudo eliminar archivo anterior: ${deleteError.message}`);
+      }
+    }
+    
+    // ==========================================
+    // 14. Actualizar submission con referencia al certificado
+    // ==========================================
     const submissionRef = db.collection('submissions').doc(submissionData.submissionId);
     
     await submissionRef.update({
@@ -14404,7 +14087,9 @@ if (pdfBufferWithDocId && pdfBufferWithDocId.length > 0) {
     
     console.log(`[${requestId}] 💾 Submission actualizado con referencia al certificado`);
     
-    // 14. Eliminar campo certificate antiguo si existe
+    // ==========================================
+    // 15. Eliminar campo certificate antiguo si existe
+    // ==========================================
     try {
       const submissionDoc = await submissionRef.get();
       if (submissionDoc.exists && submissionDoc.data().certificate) {
@@ -14417,7 +14102,9 @@ if (pdfBufferWithDocId && pdfBufferWithDocId.length > 0) {
       console.log(`[${requestId}] ⚠️ No se pudo limpiar campo antiguo: ${cleanupError.message}`);
     }
     
-    // 15. Eliminar subcolección certificate si existe
+    // ==========================================
+    // 16. Eliminar subcolección certificate si existe
+    // ==========================================
     try {
       const oldSubCertificates = await submissionRef.collection('certificate').get();
       if (!oldSubCertificates.empty) {
@@ -14432,7 +14119,9 @@ if (pdfBufferWithDocId && pdfBufferWithDocId.length > 0) {
       console.log(`[${requestId}] ⚠️ No se pudo limpiar subcolección: ${subCleanupError.message}`);
     }
     
-    // 16. Registrar en audit log
+    // ==========================================
+    // 17. Registrar en audit log
+    // ==========================================
     await submissionRef.collection('auditLogs').add({
       action: 'certificate_generated',
       certificateId: certificateDocId,
@@ -14441,40 +14130,44 @@ if (pdfBufferWithDocId && pdfBufferWithDocId.length > 0) {
       language: lang,
       storedInPublicCollection: true,
       qrContainsDocId: true,
+      pdfSizeKB: parseFloat(finalSizeKB),
+      compressionApplied: finalPdfBuffer !== pdfBuffer,
       timestamp: admin.firestore.FieldValue.serverTimestamp()
     });
     
     console.log(`[${requestId}] 📝 Audit log registrado`);
     
-    // 17. Enviar email al autor con el certificado
-   
-try {
-  // Determinar el email del autor de correspondencia
-  const authorEmail = submissionData.correspondingAuthorEmail || 
-                      submissionData.authorEmail ||
-                      (submissionData.authors?.find(a => a.isCorresponding)?.email) ||
-                      (finalMetadata.authors?.find(a => a.isCorresponding)?.email) ||
-                      null;
-  
-  if (authorEmail) {
-    await sendCertificateEmail(
-      authorEmail,
-      certificateFile.webViewLink,
-      {
-        ...certificateData,
-        authors: authors // Asegurar que los autores estén incluidos
-      },
-      lang
-    );
-    console.log(`[${requestId}] 📧 Email enviado al autor: ${authorEmail}`);
-  } else {
-    console.warn(`[${requestId}] ⚠️ No se encontró email del autor para enviar certificado`);
-  }
-} catch (emailError) {
-  console.error(`[${requestId}] ⚠️ Error enviando email:`, emailError.message);
-  // No es crítico, el certificado ya está generado
-}
+    // ==========================================
+    // 18. Enviar email al autor con el certificado
+    // ==========================================
+    try {
+      const authorEmail = submissionData.correspondingAuthorEmail || 
+                          submissionData.authorEmail ||
+                          (submissionData.authors?.find(a => a.isCorresponding)?.email) ||
+                          (finalMetadata.authors?.find(a => a.isCorresponding)?.email) ||
+                          null;
+      
+      if (authorEmail) {
+        await sendCertificateEmail(
+          authorEmail,
+          certificateFile.webViewLink,
+          {
+            ...certificateData,
+            authors: authors
+          },
+          lang
+        );
+        console.log(`[${requestId}] 📧 Email enviado al autor: ${authorEmail}`);
+      } else {
+        console.warn(`[${requestId}] ⚠️ No se encontró email del autor para enviar certificado`);
+      }
+    } catch (emailError) {
+      console.error(`[${requestId}] ⚠️ Error enviando email:`, emailError.message);
+    }
     
+    // ==========================================
+    // 19. Retornar resultado
+    // ==========================================
     return {
       success: true,
       certificateId: certificateDocId,
@@ -14482,7 +14175,9 @@ try {
       certificateNumber: certificateData.certificateNumber,
       language: lang,
       storedIn: 'certificates',
-      qrContainsDocId: true
+      qrContainsDocId: true,
+      pdfSizeKB: parseFloat(finalSizeKB),
+      compressionApplied: finalPdfBuffer !== pdfBuffer
     };
     
   } catch (error) {
@@ -14491,8 +14186,68 @@ try {
   }
 }
 
-/* ===================== FUNCIÓN: GENERAR PDF CON ID DE DOCUMENTO EN QR ===================== */
-async function generateCertificatePDFWithDocId(data, lang = 'es', requestId = 'unknown', certificateDocId = null) {
+/* ===================== FUNCIÓN: COMPRIMIR BUFFER PDF ===================== */
+/**
+ * Comprime un buffer PDF usando zlib con optimizaciones
+ * @param {Buffer} pdfBuffer - Buffer del PDF original
+ * @param {string} requestId - ID de seguimiento
+ * @param {Object} options - Opciones de compresión
+ * @returns {Promise<Buffer>} - PDF comprimido
+ */
+async function compressPDFBuffer(pdfBuffer, requestId = 'unknown', options = {}) {
+  const zlib = require('zlib');
+  
+  const compressionOptions = {
+    level: options.compressionLevel || 7,
+    minSizeToCompress: options.minSizeToCompress || 500 * 1024, // 500KB por defecto
+    maxCompressionRatio: options.maxCompressionRatio || 0.7 // No comprimir si no se logra al menos 30% de reducción
+  };
+  
+  try {
+    // Verificar si vale la pena comprimir
+    if (pdfBuffer.length < compressionOptions.minSizeToCompress) {
+      console.log(`[${requestId}] 📏 PDF menor a ${(compressionOptions.minSizeToCompress / 1024).toFixed(0)}KB, no requiere compresión adicional`);
+      return pdfBuffer;
+    }
+    
+    console.log(`[${requestId}] 🔄 Comprimiendo PDF de ${(pdfBuffer.length / 1024).toFixed(2)}KB...`);
+    
+    // Intentar compresión con zlib
+    const compressedBuffer = await new Promise((resolve, reject) => {
+      zlib.deflate(pdfBuffer, {
+        level: compressionOptions.level,
+        strategy: zlib.constants.Z_DEFAULT_STRATEGY,
+        windowBits: 15,
+        memLevel: 8
+      }, (err, result) => {
+        if (err) reject(err);
+        else resolve(result);
+      });
+    });
+    
+    const originalSize = pdfBuffer.length;
+    const compressedSize = compressedBuffer.length;
+    const compressionRatio = compressedSize / originalSize;
+    
+    console.log(`[${requestId}] 📊 Compresión: ${(originalSize / 1024).toFixed(2)}KB → ${(compressedSize / 1024).toFixed(2)}KB`);
+    console.log(`[${requestId}] 💾 Reducción: ${((1 - compressionRatio) * 100).toFixed(2)}%`);
+    
+    // Verificar si la compresión fue efectiva
+    if (compressionRatio < compressionOptions.maxCompressionRatio) {
+      console.log(`[${requestId}] ✅ Compresión efectiva, usando PDF comprimido`);
+      return compressedBuffer;
+    } else {
+      console.log(`[${requestId}] ⚠️ Compresión no significativa, usando PDF original`);
+      return pdfBuffer;
+    }
+    
+  } catch (error) {
+    console.warn(`[${requestId}] ⚠️ Error en compresión: ${error.message}, usando PDF original`);
+    return pdfBuffer;
+  }
+}
+/* ===================== FUNCIÓN: GENERAR PDF - DISEÑO EXACTO ORIGINAL ===================== */
+async function generateCertificatePDFWithDocId(data, lang = 'es', requestId = 'unknown', certificateDocId = null, options = {}) {
   console.log(`[${requestId}] 🔧 Generando PDF con ID de documento en QR...`);
   
   try {
@@ -14505,30 +14260,39 @@ async function generateCertificatePDFWithDocId(data, lang = 'es', requestId = 'u
     const verificationId = certificateDocId || data.certificateNumber;
     
     const CONFIG = {
-      qr: {
-        sizeCm: 2,
-        offsetYCm: -0.5,
-        offsetXCm: 0,
-        errorCorrection: 'M',
+      qr: { 
+        sizeCm: 2, 
+        offsetYCm: -0.5, 
+        offsetXCm: 0, 
+        errorCorrection: 'M', 
         margin: 2,
-        debug: false
+        width: 500, // Mantener tamaño original
+        debug: false 
       },
       urlVerificacion: `https://www.revistacienciasestudiantes.com/verificar/index.html?id=${verificationId}`,
-      cabecera: {
-        marginTopCm: 2.2,
-        extraSpaceCm: 0.3,
-        logoWidthCm: 3.2,
-        tituloSize: 22,
-        subtituloSize: 16,
+      cabecera: { 
+        marginTopCm: 2.2, 
+        extraSpaceCm: 0.3, 
+        logoWidthCm: 3.2, 
+        tituloSize: 22, 
+        subtituloSize: 16 
+      },
+      // Solo agregar compresión, sin cambiar diseño
+      compression: {
+        enabled: options.compress !== false,
+        level: options.compressionLevel || 7
       }
     };
     
+    // Configuración IDÉNTICA al original, solo con compresión adicional
     const doc = new PDFDocument({
       size: 'A4',
       layout: 'landscape',
       margins: { top: 0, left: 0, right: 0, bottom: 0 },
       autoFirstPage: true,
-      bufferPages: true
+      bufferPages: true,
+      compress: CONFIG.compression.enabled, // Única adición
+      pdfVersion: '1.7' // Única adición
     });
     
     const chunks = [];
@@ -14588,6 +14352,7 @@ async function generateCertificatePDFWithDocId(data, lang = 'es', requestId = 'u
       verifyLabel: 'VERIFY AUTHENTICITY'
     };
     
+    // Formatear autores - IDÉNTICO al original
     const authorsList = data.authors
       ?.map(a => a.fullName || `${a.firstName || ''} ${a.lastName || ''}`.trim() || a.email || 'Author')
       .join(', ') || 'Authors';
@@ -14598,7 +14363,7 @@ async function generateCertificatePDFWithDocId(data, lang = 'es', requestId = 'u
     );
     
     // ==========================================
-    // MARCO PERIMETRAL Y FONDO
+    // MARCO PERIMETRAL Y FONDO (IDÉNTICO)
     // ==========================================
     doc.rect(0, 0, pageWidth, pageHeight).fill(lightGray);
     
@@ -14637,7 +14402,7 @@ async function generateCertificatePDFWithDocId(data, lang = 'es', requestId = 'u
        .lineTo(pageWidth - borderOffset1, pageHeight - borderOffset1 - smallTriangle)
        .fill();
     
-    // Marca de agua
+    // Marca de agua (IDÉNTICA)
     const watermarkWidth = cmToPoints(12);
     doc.save();
     doc.opacity(0.03);
@@ -14655,14 +14420,14 @@ async function generateCertificatePDFWithDocId(data, lang = 'es', requestId = 'u
     doc.restore();
     
     // ==========================================
-    // MÁRGENES DE TRABAJO
+    // MÁRGENES DE TRABAJO (IDÉNTICOS)
     // ==========================================
     const marginX = cmToPoints(2.5);
     const marginY = cmToPoints(CONFIG.cabecera.marginTopCm);
     const contentWidth = pageWidth - (2 * marginX);
     
     // ==========================================
-    // CABECERA INSTITUCIONAL
+    // CABECERA INSTITUCIONAL (IDÉNTICA)
     // ==========================================
     let currentY = marginY + cmToPoints(CONFIG.cabecera.extraSpaceCm);
     const logoWidth = cmToPoints(CONFIG.cabecera.logoWidthCm);
@@ -14699,7 +14464,7 @@ async function generateCertificatePDFWithDocId(data, lang = 'es', requestId = 'u
        .text(texts.motto, headerTextX, currentY + 62 + extraSpace);
     
     // ==========================================
-    // CUERPO DEL CERTIFICADO
+    // CUERPO DEL CERTIFICADO (IDÉNTICO)
     // ==========================================
     const bodyStartY = cmToPoints(6.5);
     
@@ -14728,7 +14493,7 @@ async function generateCertificatePDFWithDocId(data, lang = 'es', requestId = 'u
        .text(texts.resolution, resBoxX, afterAuthorsY, { width: resBoxWidth, align: 'center', lineGap: 3 });
     
     // ==========================================
-    // PIE CON QR DE AUTENTICIDAD
+    // PIE CON QR DE AUTENTICIDAD (IDÉNTICO)
     // ==========================================
     const footerY = pageHeight - cmToPoints(4.5);
     
@@ -14758,7 +14523,7 @@ async function generateCertificatePDFWithDocId(data, lang = 'es', requestId = 'u
       const qrDataURL = await QRCode.toDataURL(CONFIG.urlVerificacion, {
         errorCorrectionLevel: CONFIG.qr.errorCorrection,
         margin: CONFIG.qr.margin,
-        width: 500,
+        width: CONFIG.qr.width,
         color: { dark: '#003B5C', light: '#FFFFFF' }
       });
       
@@ -14776,7 +14541,7 @@ async function generateCertificatePDFWithDocId(data, lang = 'es', requestId = 'u
     
     doc.end();
     const pdfBuffer = await pdfPromise;
-    console.log(`[${requestId}] ✅ PDF generado con Doc ID en QR: ${(pdfBuffer.length / 1024).toFixed(2)}KB`);
+    console.log(`[${requestId}] ✅ PDF generado: ${(pdfBuffer.length / 1024).toFixed(2)}KB`);
     
     return pdfBuffer;
     
@@ -14785,6 +14550,155 @@ async function generateCertificatePDFWithDocId(data, lang = 'es', requestId = 'u
     throw new Error(`PDF generation with Doc ID failed: ${error.message}`);
   }
 }
+/* ===================== FUNCIÓN: OPTIMIZAR IMAGEN BUFFER ===================== */
+/**
+ * Optimiza un buffer de imagen para reducir su tamaño
+ * @param {Buffer} imageBuffer - Buffer de la imagen original
+ * @param {Object} options - Opciones de optimización
+ * @returns {Promise<Buffer>} - Imagen optimizada
+ */
+async function optimizeImageBuffer(imageBuffer, options = {}) {
+  try {
+    const sharp = require('sharp');
+    
+    const optimizationOptions = {
+      maxWidth: options.maxWidth || 400,
+      quality: options.quality || 80,
+      format: options.format || 'jpeg',
+      compressionLevel: options.compressionLevel || 9
+    };
+    
+    let sharpInstance = sharp(imageBuffer);
+    
+    // Redimensionar si es necesario
+    const metadata = await sharpInstance.metadata();
+    if (metadata.width > optimizationOptions.maxWidth) {
+      sharpInstance = sharpInstance.resize(optimizationOptions.maxWidth, null, {
+        fit: 'inside',
+        withoutEnlargement: true
+      });
+    }
+    
+    // Aplicar formato y compresión
+    switch (optimizationOptions.format) {
+      case 'jpeg':
+        sharpInstance = sharpInstance.jpeg({ 
+          quality: optimizationOptions.quality,
+          progressive: true,
+          optimizeScans: true
+        });
+        break;
+      case 'png':
+        sharpInstance = sharpInstance.png({ 
+          compressionLevel: optimizationOptions.compressionLevel,
+          adaptiveFiltering: true,
+          quality: optimizationOptions.quality
+        });
+        break;
+      case 'webp':
+        sharpInstance = sharpInstance.webp({ 
+          quality: optimizationOptions.quality,
+          lossless: false
+        });
+        break;
+      default:
+        sharpInstance = sharpInstance.jpeg({ 
+          quality: optimizationOptions.quality,
+          progressive: true
+        });
+    }
+    
+    const optimizedBuffer = await sharpInstance.toBuffer();
+    
+    console.log(`🖼️ Imagen optimizada: ${(imageBuffer.length / 1024).toFixed(2)}KB → ${(optimizedBuffer.length / 1024).toFixed(2)}KB`);
+    
+    return optimizedBuffer;
+  } catch (error) {
+    console.warn('⚠️ Error optimizando imagen, usando original:', error.message);
+    return imageBuffer;
+  }
+}
+
+/* ===================== FUNCIÓN: SUBIR ARCHIVO A DRIVE (COMPATIBLE CON TU SISTEMA) ===================== */
+/**
+ * Sube un archivo a Google Drive
+ * @param {Object} drive - Cliente de Google Drive
+ * @param {string} base64Content - Contenido en base64
+ * @param {string} fileName - Nombre del archivo
+ * @param {string} folderId - ID de la carpeta destino
+ * @returns {Promise<Object>} - Información del archivo subido
+ */
+async function uploadToDrive(drive, base64Content, fileName, folderId) {
+  try {
+    if (!drive) throw new Error('Drive client no inicializado');
+    if (!base64Content) throw new Error('base64Content es requerido');
+    if (!fileName) throw new Error('fileName es requerido');
+    
+    const buffer = Buffer.from(base64Content, 'base64');
+    
+    const fileMetadata = {
+      name: fileName,
+      parents: folderId ? [folderId] : []
+    };
+    
+    const media = {
+      mimeType: 'application/pdf',
+      body: Readable.from(buffer)
+    };
+    
+    const file = await drive.files.create({
+      requestBody: fileMetadata,
+      media: media,
+      fields: 'id, name, webViewLink, webContentLink, size'
+    });
+    
+    console.log(`📤 Archivo subido: ${file.data.name} (${file.data.id})`);
+    if (file.data.size) {
+      console.log(`📏 Tamaño: ${(parseInt(file.data.size) / 1024).toFixed(2)}KB`);
+    }
+    
+    return file.data;
+  } catch (error) {
+    console.error('❌ Error subiendo archivo a Drive:', error.message);
+    throw new Error(`Failed to upload file: ${error.message}`);
+  }
+}
+
+/* ===================== FUNCIÓN: HACER ARCHIVO PÚBLICO ===================== */
+/**
+ * Configura un archivo en Drive para que sea público (solo lectura)
+ * @param {Object} drive - Cliente de Google Drive
+ * @param {string} fileId - ID del archivo
+ * @returns {Promise<Object>} - Resultado de la operación
+ */
+async function makeFilePublic(drive, fileId) {
+  try {
+    if (!drive) throw new Error('Drive client no inicializado');
+    if (!fileId) throw new Error('fileId es requerido');
+    
+    await drive.permissions.create({
+      fileId: fileId,
+      requestBody: {
+        role: 'reader',
+        type: 'anyone',
+      },
+      fields: 'id',
+    });
+    
+    console.log(`✅ Archivo ${fileId} configurado como público (solo lectura)`);
+    return { success: true, message: 'Permiso público de solo lectura otorgado' };
+  } catch (error) {
+    // Si el permiso ya existe, no es un error crítico
+    if (error.message.includes('already exists') || error.message.includes('duplicate')) {
+      console.log(`✓ El archivo ${fileId} ya tiene permiso público`);
+      return { success: true, message: 'Permiso público ya existente' };
+    }
+    
+    console.error(`❌ Error al hacer público el archivo ${fileId}:`, error.message);
+    return { success: false, message: `Error: ${error.message}` };
+  }
+}
+
 /* ===================== FUNCIÓN: ENVIAR EMAIL CON CERTIFICADO ===================== */
 /**
  * Envía email al autor con el enlace del certificado
@@ -14909,6 +14823,26 @@ async function sendCertificateEmail(to, certificateUrl, certificateData, lang = 
   // Enviar email con el diseño institucional
   await sendEmailViaExtension(to, emailTitle, htmlBody);
 }
+
+/* ===================== FUNCIÓN: SANITIZAR TEXTO ===================== */
+/**
+ * Sanitiza texto para prevenir inyección HTML
+ * @param {string} text - Texto a sanitizar
+ * @returns {string} - Texto sanitizado
+ */
+function sanitizeText(text) {
+  if (!text) return '';
+  
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;');
+}
+
+
 /* ===================== FUNCIÓN: HACER ARCHIVO PÚBLICO ===================== */
 /**
  * Configura un archivo en Drive para que sea público (solo lectura)
@@ -14916,30 +14850,7 @@ async function sendCertificateEmail(to, certificateUrl, certificateData, lang = 
  * @param {string} fileId - ID del archivo
  * @returns {Promise<Object>} - Resultado de la operación
  */
-async function makeFilePublic(drive, fileId) {
-  try {
-    await drive.permissions.create({
-      fileId: fileId,
-      requestBody: {
-        role: 'reader',
-        type: 'anyone',
-      },
-      fields: 'id',
-    });
-    
-    console.log(`✅ Archivo ${fileId} configurado como público (solo lectura)`);
-    return { success: true, message: 'Permiso público de solo lectura otorgado' };
-  } catch (error) {
-    // Si el permiso ya existe, no es un error crítico
-    if (error.message.includes('already exists') || error.message.includes('duplicate')) {
-      console.log(`✓ El archivo ${fileId} ya tiene permiso público`);
-      return { success: true, message: 'Permiso público ya existente' };
-    }
-    
-    console.error(`❌ Error al hacer público el archivo ${fileId}:`, error.message);
-    return { success: false, message: `Error: ${error.message}` };
-  }
-}
+
 /* ===================== INVITAR REVISOR EXTERNO ===================== */
 exports.createExternalReviewerInvitation = onCall(async (request) => {
   const { HttpsError } = require("firebase-functions/v2/https");

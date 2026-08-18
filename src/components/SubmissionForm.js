@@ -1572,14 +1572,15 @@ const steps = [
       const manuscriptBase64 = await toBase64(formData.manuscript);
       
       const payload = {
-        title: formData.title,
-        titleEn: formData.titleEn,
-        abstract: formData.abstract,
-        abstractEn: formData.abstractEn,
-        keywordsSerialized: formData.keywordsEs.join('; '),
-        keywordsEnSerialized: formData.keywordsEn.join('; '),
-        specializedCodesSerialized: formData.specializedCodes.join('; '),
-        area: formData.area,
+        const payload = {
+  title: formData.title,
+  titleEn: formData.titleEn,
+  abstract: formData.abstract,
+  abstractEn: formData.abstractEn,
+  keywordsEs: formData.keywordsEs,  // ✅ Nombre correcto
+  keywordsEn: formData.keywordsEn,  // ✅ Nombre correcto
+  specializedCodes: formData.specializedCodes,  // ✅ Nombre correcto (si el backend lo espera así)
+  area: formData.area,
         paperLanguage: formData.paperLanguage,
         articleType: formData.articleType,
         acknowledgments: formData.acknowledgments,
